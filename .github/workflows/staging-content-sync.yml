@@ -1,0 +1,78 @@
+name: Staging Content Sync
+
+# Copies PUBLIC CONTENT ONLY from the prod Neon branch into staging, so the
+# staging environment holds realistic data shapes and volume. It never copies a
+# user row — see scripts/seed-staging/sync-prod-public-data.ts's "Never synced"
+# docblock for the list and the reason (the staging transactional-email gate
+# fails OPEN).
+#
+# Two guards sit under this workflow rather than in it: assertWriteHostNotProd()
+# throws before any connection opens if both URLs resolve to the same Neon host,
+# and openProdReadonly() hands the prod connection back as a select-only proxy.
+
+on:
+  schedule:
+    # Mondays 15:00 UTC (09:00 MDT) — after the weekend's nightly crawls have
+    # landed in prod, inside working hours so a failure is noticed same day.
+    - cron: '0 15 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Read prod + staging and report what would change, without writing'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-content-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync prod content to staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Preflight — required secrets present
+        env:
+          NEON_PROD_DIRECT: ${{ secrets.NEON_PROD_DIRECT }}
+          NEON_STAGING_DIRECT: ${{ secrets.NEON_STAGING_DIRECT }}
+        run: |
+          missing=""
+          [ -n "$NEON_PROD_DIRECT" ] || missing="$missing NEON_PROD_DIRECT"
+          [ -n "$NEON_STAGING_DIRECT" ] || missing="$missing NEON_STAGING_DIRECT"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required repository secret(s):$missing"
+            exit 1
+          fi
+          echo "Both connection secrets are present."
+
+      - name: Run sync
+        env:
+          NEON_PROD_DIRECT: ${{ secrets.NEON_PROD_DIRECT }}
+          NEON_STAGING_DIRECT: ${{ secrets.NEON_STAGING_DIRECT }}
+        run: |
+          # A scheduled run always commits. A manual dispatch defaults to
+          # dry-run so an operator has to opt in to writing.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm db:seed:staging:sync -- --dry-run
+          else
+            pnpm db:seed:staging:sync
+          fi
