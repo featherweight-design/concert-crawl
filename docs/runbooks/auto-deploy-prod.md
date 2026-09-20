@@ -304,7 +304,9 @@ dashboard, not in this repo:
    prod web app.
 3. Set `AUTO_DEPLOY_PROD_ENABLED=true` in repo variables. Counter-intuitively
    this is the switch that **arms the promotion workflow** — with it `false`,
-   `deploy-prod.yml` silently skips and there is no path to prod at all.
+   `deploy-prod.yml` silently skips, so no promotion can run. The manual
+   controls below (Render Manual Deploy, Vercel Redeploy, `rollback-prod.yml`)
+   are deliberately not gated by it, so recovery stays possible.
 
 `render.yaml` records these values (`autoDeploy: false` on the five prod
 services) but does **not** apply them — it is descriptive, not a Blueprint.
@@ -329,10 +331,12 @@ prod without deploying, and watch it run install → smoke → green.
 
 ### Pausing the pipeline
 
-- **To stop all prod deploys:** flip `AUTO_DEPLOY_PROD_ENABLED=false`. The
+- **To stop automated prod deploys:** flip `AUTO_DEPLOY_PROD_ENABLED=false`. The
   promotion workflow's `gate` job then silently skips, so a dispatch looks idle
-  rather than failing. `rollback-prod.yml` is deliberately **not** gated by it —
-  incident response must not be pausable by a feature flag.
+  rather than failing. This does not seal prod: a Render dashboard Manual Deploy,
+  a Vercel Redeploy, and `rollback-prod.yml` all still reach production, and
+  `rollback-prod.yml` is deliberately **not** gated by it — incident response
+  must not be pausable by a feature flag.
 - **To stop staging deploys:** flip `Auto-Deploy: no` on the three staging Render
   services. Prod is unaffected, but you lose the validation surface the
   promotion decision rests on.
