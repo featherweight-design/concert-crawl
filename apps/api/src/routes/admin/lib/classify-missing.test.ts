@@ -8,6 +8,7 @@ describe('classifyMissing', () => {
         date: '2026-08-01',
         venueHorizon: '2026-12-01',
         hasLiveSibling: true,
+        movedCandidateId: null,
       }),
     ).toBe('duplicate')
   })
@@ -18,6 +19,7 @@ describe('classifyMissing', () => {
         date: '2026-12-15',
         venueHorizon: '2026-11-30',
         hasLiveSibling: false,
+        movedCandidateId: null,
       }),
     ).toBe('crawl_gap')
   })
@@ -28,6 +30,7 @@ describe('classifyMissing', () => {
         date: '2026-08-01',
         venueHorizon: null,
         hasLiveSibling: false,
+        movedCandidateId: null,
       }),
     ).toBe('crawl_gap')
   })
@@ -38,6 +41,7 @@ describe('classifyMissing', () => {
         date: '2026-08-01',
         venueHorizon: '2026-12-01',
         hasLiveSibling: false,
+        movedCandidateId: null,
       }),
     ).toBe('removed')
   })
@@ -48,7 +52,52 @@ describe('classifyMissing', () => {
         date: '2026-12-01',
         venueHorizon: '2026-12-01',
         hasLiveSibling: false,
+        movedCandidateId: null,
       }),
     ).toBe('removed')
+  })
+
+  it('returns moved when a relocation candidate was matched', () => {
+    expect(
+      classifyMissing({
+        date: '2026-08-01',
+        venueHorizon: '2026-12-01',
+        hasLiveSibling: false,
+        movedCandidateId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toBe('moved')
+  })
+
+  it('prefers duplicate over moved when both signals fire', () => {
+    expect(
+      classifyMissing({
+        date: '2026-08-01',
+        venueHorizon: '2026-12-01',
+        hasLiveSibling: true,
+        movedCandidateId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toBe('duplicate')
+  })
+
+  it('prefers moved over crawl_gap when the event is beyond the horizon', () => {
+    expect(
+      classifyMissing({
+        date: '2026-12-15',
+        venueHorizon: '2026-11-30',
+        hasLiveSibling: false,
+        movedCandidateId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toBe('moved')
+  })
+
+  it('prefers moved over crawl_gap when the venue horizon is unknown', () => {
+    expect(
+      classifyMissing({
+        date: '2026-08-01',
+        venueHorizon: null,
+        hasLiveSibling: false,
+        movedCandidateId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).toBe('moved')
   })
 })

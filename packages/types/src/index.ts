@@ -119,8 +119,18 @@ import type { EventStatus } from './event-status.js'
  * - removed: crawl reaches past this date but stopped returning this show (venue de-listed it)
  * - crawl_gap: event is beyond the furthest date the crawl currently reaches (likely pagination/depth)
  * - duplicate: a live sibling row for the same show is still being crawled
+ * - moved: a newly-created row looks like this same show rescheduled to another
+ *   date, or relocated to another venue. Suggestion only — never auto-applied.
  */
-export type MissingClassification = 'removed' | 'crawl_gap' | 'duplicate'
+export type MissingClassification =
+  'removed' | 'crawl_gap' | 'duplicate' | 'moved'
+
+/**
+ * Which predicate the moved-candidate matcher relaxed to find the suggestion.
+ * - date: same venue, different date
+ * - venue: same date (+/- 1 day), different venue
+ */
+export type MovedReason = 'date' | 'venue'
 
 // Price source — identifies where ticket price data originated
 export type PriceSource =

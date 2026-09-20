@@ -397,6 +397,220 @@ describe('POST /v1/admin/events/:id/available', () => {
   })
 })
 
+describe('GET /v1/admin/events?missing=true — moved-candidate detection', () => {
+  const addDays = (base: string, days: number): string => {
+    const dt = new Date(base + 'T12:00:00Z')
+    dt.setUTCDate(dt.getUTCDate() + days)
+    return dt.toISOString().slice(0, 10)
+  }
+  const today = (): string =>
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' })
+
+  interface MissingRow {
+    id: string
+    date: string
+    classification: string
+    movedCandidateId: string | null
+    movedReason: string | null
+  }
+
+  const fetchMissing = async (): Promise<MissingRow[]> => {
+    const res = await app.request(
+      '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body: { data: { rows: MissingRow[] } } = await res.json()
+    return body.data.rows
+  }
+
+  // The orphan is seeded with last_seen_at in the past so a candidate created
+  // "now" clears the freshness bar, which is how the real sequence runs: we
+  // last saw the old row, then the venue published the replacement.
+  const seedOrphan = async (
+    venueId: string,
+    date: string,
+    lastSeenAt: Date,
+  ): Promise<{ id: string }> =>
+    seedEvent(venueId, {
+      title: 'Wednesday Night Residency',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'wednesday night residency',
+      date,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+      lastSeenAt,
+    })
+
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('suggests a date move: same venue, new night, created after we last saw the orphan', async () => {
+    const base = today()
+    const venue = await seedVenue({ slug: 'moved-date-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+
+    const orphan = await seedOrphan(venue.id, addDays(base, 10), lastSeen)
+    const replacement = await seedEvent(venue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: addDays(base, 45),
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.classification).toBe('moved')
+    expect(row?.movedReason).toBe('date')
+    expect(row?.movedCandidateId).toBe(replacement.id)
+  })
+
+  it('suggests a venue move: same night, different room', async () => {
+    const base = today()
+    const fromVenue = await seedVenue({ slug: 'moved-from-venue' })
+    const toVenue = await seedVenue({ slug: 'moved-to-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+    const showDate = addDays(base, 20)
+
+    const orphan = await seedOrphan(fromVenue.id, showDate, lastSeen)
+    const relocated = await seedEvent(toVenue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: showDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.classification).toBe('moved')
+    expect(row?.movedReason).toBe('venue')
+    expect(row?.movedCandidateId).toBe(relocated.id)
+  })
+
+  // The falsifier the freshness predicate exists for. A multi-night residency
+  // matches on venue and artist exactly like a reschedule does; the only thing
+  // separating them is that the other nights were created BEFORE the orphan
+  // went missing. Without `created_at >= last_seen_at` this row reads 'moved'
+  // and an admin is invited to merge two real, separate shows.
+  it('does not treat an existing residency night as a move', async () => {
+    const base = today()
+    const venue = await seedVenue({ slug: 'residency-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+
+    const orphan = await seedOrphan(venue.id, addDays(base, 10), lastSeen)
+    await seedEvent(venue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: addDays(base, 17),
+      status: 'upcoming',
+      firstMissingAt: null,
+      // Booked a week before we last saw the orphan — not a replacement.
+      createdAt: new Date(lastSeen.getTime() - 7 * 24 * 60 * 60 * 1000),
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.classification).toBe('removed')
+    expect(row?.movedCandidateId).toBeNull()
+    expect(row?.movedReason).toBeNull()
+  })
+
+  it('does not suggest a candidate beyond the date window', async () => {
+    const base = today()
+    const venue = await seedVenue({ slug: 'far-future-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+
+    const orphan = await seedOrphan(venue.id, addDays(base, 10), lastSeen)
+    await seedEvent(venue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: addDays(base, 200),
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.movedCandidateId).toBeNull()
+    expect(row?.classification).not.toBe('moved')
+  })
+
+  it('keeps duplicate ahead of moved when both signals fire', async () => {
+    const base = today()
+    const venue = await seedVenue({ slug: 'dup-beats-moved-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+    const showDate = addDays(base, 10)
+
+    const orphan = await seedOrphan(venue.id, showDate, lastSeen)
+    // Live sibling on the orphan's own date → duplicate.
+    await seedEvent(venue.id, {
+      title: 'Moved Artist And Friends',
+      artist: 'Some Headliner',
+      canonicalArtist: 'some headliner',
+      canonicalTitle: 'moved artist and friends',
+      date: showDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+      showTime: '21:00:00',
+    })
+    // And a plausible relocation on another night → would be 'moved' alone.
+    await seedEvent(venue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: addDays(base, 45),
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.classification).toBe('duplicate')
+    // The suggestion is still carried so the admin can see the alternative.
+    expect(row?.movedCandidateId).not.toBeNull()
+  })
+
+  it('ignores a candidate that is itself missing or admin-hidden', async () => {
+    const base = today()
+    const venue = await seedVenue({ slug: 'unusable-candidate-venue' })
+    const lastSeen = new Date(Date.now() - 60 * 60 * 1000)
+
+    const orphan = await seedOrphan(venue.id, addDays(base, 10), lastSeen)
+    await seedEvent(venue.id, {
+      title: 'Moved Artist Live',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist live',
+      date: addDays(base, 45),
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+    })
+    await seedEvent(venue.id, {
+      title: 'Moved Artist Late Show',
+      artist: 'Moved Artist',
+      canonicalArtist: 'moved artist',
+      canonicalTitle: 'moved artist late show',
+      date: addDays(base, 50),
+      status: 'upcoming',
+      firstMissingAt: null,
+      hiddenFromConsumer: true,
+    })
+
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
+    expect(row?.movedCandidateId).toBeNull()
+  })
+})
+
 describe('GET /v1/admin/events?missing=true — classification + cluster', () => {
   beforeEach(() => {
     setAdminAuth()

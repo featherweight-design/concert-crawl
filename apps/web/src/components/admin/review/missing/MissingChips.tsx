@@ -22,6 +22,10 @@ const classificationBadge: Record<
     label: ADMIN_COPY.review.missing.classificationDuplicate,
     kind: 'neutral',
   },
+  moved: {
+    label: ADMIN_COPY.review.missing.classificationMoved,
+    kind: 'warning',
+  },
 }
 
 export interface MissingChipsProps {

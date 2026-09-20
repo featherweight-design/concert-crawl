@@ -1661,6 +1661,7 @@ export const ADMIN_COPY = {
       classificationRemoved: 'Likely removed',
       classificationCrawlGap: 'Possible crawl gap',
       classificationDuplicate: 'Possible duplicate',
+      classificationMoved: 'Possibly moved',
       clusterBadge: (count: number, venue: string) =>
         `${count} missing at ${venue}`,
       skeletonAriaLabel: 'Loading missing events',

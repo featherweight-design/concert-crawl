@@ -35,6 +35,10 @@ import {
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 import { classifyMissing } from './lib/classify-missing.js'
+import {
+  movedCandidateExpr,
+  parseMovedCandidate,
+} from './lib/moved-candidate.js'
 
 const eventIdSchema = z.object({ id: z.string().uuid() })
 
@@ -442,6 +446,10 @@ eventsAdminRouter.get(
             AND c.date >= ${today}
             AND c.hidden_from_consumer = false
         )`,
+        // Relocation suggestion: a newly-created row that looks like this
+        // same show on another night, or in another room. Read-only — the
+        // admin confirms it, nothing here applies it.
+        movedCandidate: movedCandidateExpr(today),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
@@ -453,18 +461,28 @@ eventsAdminRouter.get(
         date: string
         venueHorizon: string | null
         hasLiveSibling: boolean
+        movedCandidate: unknown
       },
     >(
       rows: TRow[],
     ) =>
-      rows.map(({ venueHorizon, hasLiveSibling, ...row }) => ({
-        ...row,
-        classification: classifyMissing({
-          date: row.date,
-          venueHorizon,
-          hasLiveSibling,
-        }),
-      }))
+      rows.map(({ venueHorizon, hasLiveSibling, movedCandidate, ...row }) => {
+        const moved = parseMovedCandidate(movedCandidate)
+        return {
+          ...row,
+          classification: classifyMissing({
+            date: row.date,
+            venueHorizon,
+            hasLiveSibling,
+            movedCandidateId: moved?.id ?? null,
+          }),
+          // Surfaced so the row can offer a one-click confirm, and so the
+          // reason can be shown rather than the admin guessing why we think
+          // this matched.
+          movedCandidateId: moved?.id ?? null,
+          movedReason: moved?.reason ?? null,
+        }
+      })
 
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
