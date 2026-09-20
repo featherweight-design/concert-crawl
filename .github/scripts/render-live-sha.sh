@@ -41,11 +41,24 @@ fi
 # bound, a stalled Render endpoint hangs until the 10-minute job timeout and the
 # measurement-failure alert arrives ten minutes late instead of fifteen seconds
 # late, while holding a runner the whole time.
-response=$(curl -sS --fail-with-body \
+#
+# Wrapped in `if !` rather than assigned bare, the same way
+# render-trigger-deploy.sh does it: `--fail-with-body` writes Render's error
+# body to stdout, but a bare command substitution aborts under `set -e` before
+# anything can print it, so a 401 or a 404 would reach the log as an exit code
+# with no explanation. This is the script the drift alert calls when it cannot
+# measure, so the error body is the whole diagnostic.
+if ! response=$(curl -sS --fail-with-body \
   --connect-timeout 5 --max-time 15 \
   -H "Authorization: Bearer $RENDER_API_TOKEN" \
   -H 'Accept: application/json' \
-  "https://api.render.com/v1/services/${service_id}/deploys?limit=50")
+  "https://api.render.com/v1/services/${service_id}/deploys?limit=50"); then
+  echo "✗ Render rejected the deploys request for $service_id:" >&2
+  # Truncated by parameter expansion for the same reason as the shape check
+  # below: `head -c` would SIGPIPE the writer and replace this exit code.
+  printf '%s\n' "${response:0:500}" >&2
+  exit 1
+fi
 
 # `(.deploy // .)` is not optional politeness: some Render deploy endpoints wrap
 # the object as `{ "deploy": { ... } }` and some return it flat. All four
