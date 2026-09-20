@@ -1,3 +1,16 @@
+# [1.296.0](https://github.com/HartiganHM/concert-crawl/compare/v1.295.0...v1.296.0) (2026-09-20)
+
+
+### Bug Fixes
+
+* **admin:** give the move-confirm dialog real keyboard and focus behaviour ([8b8c3e8](https://github.com/HartiganHM/concert-crawl/commit/8b8c3e89f102142f56bbc7a3cdfa4977251fc109))
+* **admin:** notify only the watchers whose watch actually moved ([d612209](https://github.com/HartiganHM/concert-crawl/commit/d612209aecfda6d17c38ace26462160f8ee822bc))
+
+
+### Features
+
+* **admin:** confirm a moved event, and tell the people watching it ([21ac4fa](https://github.com/HartiganHM/concert-crawl/commit/21ac4fa49027f0ad2b657552c2ecd8e6a747d58f))
+
 # [1.295.0](https://github.com/HartiganHM/concert-crawl/compare/v1.294.1...v1.295.0) (2026-09-20)
 
 
