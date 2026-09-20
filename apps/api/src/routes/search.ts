@@ -6,7 +6,10 @@ import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
 import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm'
 import { canonicalizeArtist } from '@concert-crawl/types'
 import type { ArtistSearchResult } from '@concert-crawl/types'
-import { loadFollowedCanonicalNames } from '../lib/artist-follows.js'
+import {
+  loadFollowedCanonicalNames,
+  loadNextShowByCanonical,
+} from '../lib/artist-follows.js'
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
@@ -171,8 +174,16 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       canonicalSupporting: events.canonicalSupporting,
       date: events.date,
       status: events.status,
+      venueActive: venues.active,
     })
     .from(events)
+    // Joined rather than filtered, because the two things read off these rows
+    // want different answers about a deactivated venue. Deactivation removes a
+    // venue from everything FORWARD-LOOKING and does not un-happen the shows it
+    // already hosted (#1299) — so the upcoming count below excludes it while
+    // the "does this artist have anything to show" gate does not, exactly as
+    // the artist page's own upcoming and past queries split.
+    .innerJoin(venues, eq(events.venueId, venues.id))
     .where(
       and(
         appearsOnBill,
@@ -187,13 +198,34 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
 
   for (const row of billRows) {
     const onBill = billedCanonicalNames(row)
+    // A future date at a deactivated venue appears on NEITHER half of the
+    // artist page: its upcoming query filters on `venues.active` and its past
+    // query only reaches dates that have been. So a row like that is not
+    // "something to show" — an artist whose only row is one has a page with
+    // nothing on it, which is exactly what this gate exists to keep out of
+    // search. A PAST date at a deactivated venue still counts, because
+    // deactivation does not un-happen it and the page still lists it (#1299).
+    //
+    // Cancelled is the exception the page draws itself: a cancelled show never
+    // happened, so its past query excludes it while keeping postponed rows —
+    // the date moved, the show still occurred. This gate follows that ruling
+    // rather than restating it, or an artist whose only row is a cancelled
+    // past date reaches a page with nothing on either half.
+    const isPast = row.date < today && row.status !== 'cancelled'
     // Same status triple the artist page's own upcoming section uses
     // (artists-public.ts) — counting only 'upcoming' would undercount, and
     // read "Past shows only" for an artist whose next date is postponed.
+    // `venueActive` is what keeps this count in step with `nextShow` below,
+    // which reaches the artist through a loader that inner-joins on it. Without
+    // it an artist whose only future date is at a deactivated venue reported a
+    // count with no date beside it, and the row had to choose which half to
+    // believe.
     const isUpcoming =
-      UPCOMING_STATUSES.has(row.status ?? '') && row.date >= today
+      UPCOMING_STATUSES.has(row.status ?? '') &&
+      row.date >= today &&
+      row.venueActive
     for (const canonical of onBill) {
-      hasVisibleEvent.add(canonical)
+      if (isPast || isUpcoming) hasVisibleEvent.add(canonical)
       if (isUpcoming) {
         upcomingCounts.set(canonical, (upcomingCounts.get(canonical) ?? 0) + 1)
       }
@@ -208,17 +240,31 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     ? await loadFollowedCanonicalNames(searchAuth.userId)
     : null
 
+  // The soonest date per artist, from the same loader the suggestions endpoint
+  // and the follows list use — so a row drawn from search carries the same
+  // shape as one drawn from either, and there is no second definition of
+  // "next show" to drift. Restricted to the artists that survived the
+  // visible-event gate rather than every candidate: the loader answers in one
+  // query, so the saving is a shorter name list in a single `where` rather than
+  // a query per artist — small, and free.
+  const visible = candidates.filter((row) =>
+    hasVisibleEvent.has(row.canonicalName),
+  )
+  const nextShows = await loadNextShowByCanonical(
+    visible.slice(0, ARTIST_RESULT_LIMIT).map((row) => row.canonicalName),
+  )
+
   // "At least one non-hidden event" is the gate — an artist whose only rows
   // are hidden or stale has a page with nothing on it, so it stays out of
   // search even though the projection row exists.
-  const data: ArtistSearchResult[] = candidates
-    .filter((row) => hasVisibleEvent.has(row.canonicalName))
+  const data: ArtistSearchResult[] = visible
     .slice(0, ARTIST_RESULT_LIMIT)
     .map((row) => ({
       name: row.name,
       slug: row.slug,
       photoUrl: row.photoUrl,
       upcomingShowCount: upcomingCounts.get(row.canonicalName) ?? 0,
+      nextShow: nextShows.get(row.canonicalName) ?? null,
       following: followed?.has(row.canonicalName) ?? false,
     }))
 

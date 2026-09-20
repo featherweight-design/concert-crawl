@@ -250,6 +250,164 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     })
   })
 
+  // The date the row draws. It comes from `loadNextShowByCanonical`, the same
+  // loader the suggestions endpoint and the follows list use, so a row drawn
+  // from search carries the same shape as one drawn from either.
+  it('carries the soonest upcoming date, venue attached', async () => {
+    const venue = await seedVenue({ slug: 'next-show-venue', name: 'Hi-Dive' })
+    await seedArtist({ name: 'Next Show Band' })
+    // Seeded out of order on purpose: the row must carry the SOONEST date, and
+    // a loader that took the first row it read would pass on a sorted fixture.
+    await seedEvent(venue.id, {
+      artist: 'Next Show Band',
+      date: '2027-11-02',
+      showTime: '20:00:00',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Next Show Band',
+      date: '2027-09-15',
+      showTime: '20:00:00',
+    })
+
+    const res = await app.request('/v1/search/artists?q=next show')
+    const body = (await res.json()) as {
+      data: Array<{
+        upcomingShowCount: number
+        nextShow: { iso: string; venue: string; venueSlug: string } | null
+      }>
+    }
+    expect(body.data[0]?.upcomingShowCount).toBe(2)
+    expect(body.data[0]?.nextShow).toMatchObject({
+      iso: '2027-09-15',
+      venue: 'Hi-Dive',
+      venueSlug: 'next-show-venue',
+    })
+  })
+
+  // "Played Denver before, nothing upcoming" is a real and common state here —
+  // search lists any artist with at least one non-hidden event — and it is the
+  // clearest case for following someone. Null, never an absent field, so a
+  // reader can tell it apart from a row that was never asked about.
+  //
+  // A deactivated venue reaches the same pair of values by the other road, and
+  // has its own case below — that is the one where the count and the date
+  // could disagree, and did.
+  it('returns a null next show for an artist whose only date has passed', async () => {
+    const venue = await seedVenue({ slug: 'past-only-venue' })
+    await seedArtist({ name: 'Past Only Band' })
+    await seedEvent(venue.id, {
+      artist: 'Past Only Band',
+      date: '2020-03-01',
+      showTime: '20:00:00',
+    })
+
+    const res = await app.request('/v1/search/artists?q=past only')
+    const body = (await res.json()) as {
+      data: Array<{ upcomingShowCount: number; nextShow: unknown }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.upcomingShowCount).toBe(0)
+    expect(body.data[0]?.nextShow).toBeNull()
+  })
+
+  // The one case where the count and the date could disagree. Deactivation
+  // removes a venue from everything forward-looking (#1299), which
+  // `loadNextShowByCanonical` applies and this route's own count did not — so
+  // an artist whose only future date was at a deactivated venue reported
+  // "1 upcoming" with no date beside it, and a row drawing both had to pick
+  // which half to believe. The artist still appears: a show at a venue we have
+  // since dropped still happened, and the artist page still lists it as past.
+  it('excludes a future date at a deactivated venue from the count as well as the date', async () => {
+    const dead = await seedVenue({ slug: 'closed-venue', active: false })
+    const live = await seedVenue({ slug: 'open-venue' })
+    await seedArtist({ name: 'Shuttered Room' })
+    await seedEvent(dead.id, {
+      artist: 'Shuttered Room',
+      date: '2027-12-01',
+      showTime: '20:00:00',
+    })
+    // A past date at the same dead venue, so the artist still has a page with
+    // something on it and stays in the results. Without it this case would be
+    // asserting the gate below rather than the count.
+    await seedEvent(dead.id, {
+      artist: 'Shuttered Room',
+      date: '2020-01-01',
+      showTime: '20:00:00',
+    })
+    // And one live date, so the row proves the count follows the venue rather
+    // than simply reading zero for everything at a dead venue.
+    await seedEvent(live.id, {
+      artist: 'Shuttered Room',
+      date: '2027-10-01',
+      showTime: '20:00:00',
+    })
+
+    const res = await app.request('/v1/search/artists?q=shuttered')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: Array<{
+        upcomingShowCount: number
+        nextShow: { iso: string } | null
+      }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.upcomingShowCount).toBe(1)
+    expect(body.data[0]?.nextShow).toMatchObject({ iso: '2027-10-01' })
+  })
+
+  // The same rule, for the status the page draws itself: its past query keeps
+  // postponed rows and drops cancelled ones, because a cancelled show never
+  // happened. An artist whose only row is a cancelled past date therefore has
+  // a page with nothing on either half.
+  it('drops an artist whose only past date was cancelled, and keeps one that was postponed', async () => {
+    const venue = await seedVenue({ slug: 'status-past-venue' })
+    await seedArtist({ name: 'Called Off' })
+    await seedArtist({ name: 'Moved Night' })
+    await seedEvent(venue.id, {
+      artist: 'Called Off',
+      date: '2020-05-01',
+      showTime: '20:00:00',
+      status: 'cancelled',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Moved Night',
+      date: '2020-05-02',
+      showTime: '20:00:00',
+      status: 'postponed',
+    })
+
+    const cancelled = (await (
+      await app.request('/v1/search/artists?q=called off')
+    ).json()) as { data: unknown[] }
+    expect(cancelled.data).toHaveLength(0)
+
+    // The pair is the assertion: without the postponed half this case would
+    // pass against a gate that dropped every past status.
+    const postponed = (await (
+      await app.request('/v1/search/artists?q=moved night')
+    ).json()) as { data: unknown[] }
+    expect(postponed.data).toHaveLength(1)
+  })
+
+  // The gate's own rule, stated the other way round: a future date at a
+  // deactivated venue is on NEITHER half of the artist page — upcoming filters
+  // on the venue, past has not happened yet — so an artist whose only row is
+  // one has a page with nothing on it and does not belong in search.
+  it('drops an artist whose only date is a future one at a deactivated venue', async () => {
+    const dead = await seedVenue({ slug: 'ghost-venue', active: false })
+    await seedArtist({ name: 'Ghost Booking' })
+    await seedEvent(dead.id, {
+      artist: 'Ghost Booking',
+      date: '2027-12-01',
+      showTime: '20:00:00',
+    })
+
+    const res = await app.request('/v1/search/artists?q=ghost booking')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: unknown[] }
+    expect(body.data).toHaveLength(0)
+  })
+
   it('counts a future cancelled or postponed show as upcoming, matching the artist page', async () => {
     const venue = await seedVenue({ slug: 'status-search-venue' })
     await seedArtist({ name: 'Status Band' })

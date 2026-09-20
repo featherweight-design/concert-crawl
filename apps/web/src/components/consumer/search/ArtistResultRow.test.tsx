@@ -25,6 +25,15 @@ const ARTIST: ArtistSearchResult = {
   slug: 'turnstile',
   photoUrl: null,
   upcomingShowCount: 2,
+  // Paired with the count: ArtistSearchResult says null means zero upcoming,
+  // so a fixture with both would be a payload the API cannot produce.
+  nextShow: {
+    eventId: '11111111-1111-4111-8111-111111111111',
+    iso: '2027-09-15',
+    venue: 'Hi-Dive',
+    venueSlug: 'hi-dive',
+    price: null,
+  },
   following: false,
 }
 

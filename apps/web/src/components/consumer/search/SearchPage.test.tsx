@@ -336,6 +336,16 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
       slug: 'radiohead',
       photoUrl: null,
       upcomingShowCount: 2,
+      // Stated rather than null: the contract says nextShow is null exactly
+      // when the count is 0, and a fixture that breaks it lets the component
+      // be written against a payload the API cannot produce.
+      nextShow: {
+        eventId: '11111111-1111-4111-8111-111111111111',
+        iso: '2027-09-15',
+        venue: 'Hi-Dive',
+        venueSlug: 'hi-dive',
+        price: null,
+      },
       // PR 5 renders the inline Follow button off this; PR 3 only adds the
       // field to the contract.
       following: false,
@@ -361,7 +371,9 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     render(
       <SearchResultsState
         artistResults={[]}
-        artistPageResults={[{ ...ARTIST_PAGES[0]!, upcomingShowCount: 0 }]}
+        artistPageResults={[
+          { ...ARTIST_PAGES[0]!, upcomingShowCount: 0, nextShow: null },
+        ]}
         venueResults={[]}
         onNavigateTo={mockNavigateTo}
       />,
@@ -466,6 +478,15 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     slug: 'radiohead',
     photoUrl: null,
     upcomingShowCount: 2,
+    // Paired with the count, per the contract on ArtistSearchResult. The
+    // `upcomingShowCount: 0` override below pairs its own null.
+    nextShow: {
+      eventId: '11111111-1111-4111-8111-111111111111',
+      iso: '2027-09-15',
+      venue: 'Hi-Dive',
+      venueSlug: 'hi-dive',
+      price: null,
+    },
     following: false,
     ...overrides,
   })
@@ -494,7 +515,7 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
   // The clearest case the whole feature exists for: nothing on the books yet.
   // The row says so and still lets you follow.
   it('keeps the button live for an artist with nothing upcoming', () => {
-    renderRows([artistPage({ upcomingShowCount: 0 })])
+    renderRows([artistPage({ upcomingShowCount: 0, nextShow: null })])
     expect(screen.getByText('Past shows only')).toBeTruthy()
     const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'))
     expect(button.hasAttribute('disabled')).toBe(false)

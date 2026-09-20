@@ -92,6 +92,18 @@ export interface ArtistSearchResult {
   /** Consumer-visible upcoming shows. May be 0 for an artist with only past shows. */
   upcomingShowCount: number
   /**
+   * The soonest consumer-visible Denver date, or null when the artist has only
+   * past shows — which is a normal state here, not a defect: search lists any
+   * artist with at least one non-hidden event, past or upcoming, and "played
+   * Denver before, nothing upcoming" is a perfectly good reason to follow
+   * someone. Null exactly when `upcomingShowCount` is 0: both sides apply the
+   * same forward-looking rule, a deactivated venue included.
+   *
+   * Same shape the suggestions endpoint returns, so a surface drawing rows
+   * from either reads one field rather than two.
+   */
+  nextShow: FollowedArtistNextShow | null
+  /**
    * Whether the requesting viewer follows this artist, from ANY source. Always
    * `false` for an anonymous request — the search route stays public, so there
    * is no session to read.
