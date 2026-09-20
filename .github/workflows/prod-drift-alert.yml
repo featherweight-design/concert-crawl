@@ -58,6 +58,16 @@ jobs:
       - name: Read the API service's build-filter paths
         id: filter
         run: |
+          # This step never exits non-zero. Every way it can break — a pip
+          # install that cannot reach the index, a render.yaml that stopped
+          # parsing, a renamed service, a buildFilter that lost its paths —
+          # means prod is unwatched, which is the thing this workflow exists to
+          # report. Failing here would end the run before the step that reports
+          # it to Sentry, so instead an empty `paths` is written and Measure
+          # drift raises measure_failed. Same shape prod-deploy-health.yml uses
+          # for a checker that could not run.
+          set +e
+
           # PyYAML happens to be present on today's ubuntu-latest image, but it
           # is not in the Python standard library and runner images change
           # without notice. Install it explicitly so this monitor cannot go
@@ -84,11 +94,12 @@ jobs:
           PY
           )
           if [ -z "${paths}" ]; then
-            echo "::error::concert-crawl-api has no buildFilter paths in render.yaml; cannot tell a deployable commit from an undeployable one."
-            exit 1
+            echo "::error::Could not read concert-crawl-api's buildFilter paths from render.yaml; cannot tell a deployable commit from an undeployable one. Measure drift will report the detector as broken."
+          else
+            echo "Build-filter pathspecs: ${paths}"
           fi
-          echo "Build-filter pathspecs: ${paths}"
           echo "paths=${paths}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Measure drift
         id: measure
@@ -100,6 +111,19 @@ jobs:
           # failing here: a broken detector means prod is unwatched, which is
           # worth an alert of its own, and a red Actions run alone is the signal
           # prod-deploy-health.yml already records as having gone unread.
+
+          # An empty FILTER_PATHS is a failed read, not "no filter". Running
+          # `git rev-list` with no pathspec would count every commit on main,
+          # so a broken filter step would surface as a confident drift report
+          # on a week where nothing deployable was merged at all — a false
+          # alarm in the exact monitor whose credibility the whole workflow
+          # depends on.
+          if [ -z "${FILTER_PATHS}" ]; then
+            echo "measure_failed=1" >> "$GITHUB_OUTPUT"
+            echo "::error::The API's build-filter paths could not be read; drift is unmeasured. Counting unfiltered commits would report drift that does not exist."
+            exit 0
+          fi
+
           set +e
           live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
           read_status=$?

@@ -16,6 +16,19 @@ command -v jq >/dev/null 2>&1 || {
 service_id="${1:?usage: render-live-sha.sh <service-id>}"
 : "${RENDER_API_TOKEN:?RENDER_API_TOKEN must be set}"
 
+# Same anchored regex the sibling render-*.sh helpers use, for the same
+# reason: a glob like `srv-*` matches `"srv-abc "` with a trailing space, so a
+# variable with stray whitespace would reach the API and come back as an opaque
+# 404 instead of naming the misconfigured variable. Render service IDs are
+# `^(srv|crn)-[a-z0-9]+$` in practice.
+if ! [[ "${service_id}" =~ ^(srv|crn)-[a-z0-9]+$ ]]; then
+  echo "✗ Unrecognized or malformed Render service ID: '${service_id}'" >&2
+  echo "  Expected srv-* (web service) or crn-* (cron job), with only" >&2
+  echo "  lowercase alphanumerics after the prefix and no whitespace." >&2
+  echo "  Check for typos or whitespace in the RENDER_SERVICE_ID_* variable." >&2
+  exit 1
+fi
+
 # limit=50 matches render-wait-for-live.sh and render-rollback.sh, and for the
 # same reason: a streak of failed or in-progress deploys after the last
 # successful one can push the currently-`live` deploy off a shorter page. The
