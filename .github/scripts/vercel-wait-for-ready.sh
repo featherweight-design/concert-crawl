@@ -16,7 +16,9 @@
 #         Build Step skips pushes that do not touch the web app, so this is the
 #         common outcome on an API- or docs-only merge, not an exception.
 #   125 — NOT benign: a deployment for this SHA exists and failed, was
-#         cancelled, or its state could not be read.
+#         cancelled, or was still building when the timeout expired. A build
+#         that legitimately takes longer than the timeout lands here too, so
+#         the message names the state it saw rather than asserting a failure.
 #   1   — script or API failure.
 set -euo pipefail
 
@@ -30,6 +32,29 @@ expected_sha="${2:?usage: vercel-wait-for-ready.sh <project-id> <commit-sha> [ti
 timeout_seconds="${3:-300}"
 : "${VERCEL_TOKEN:?VERCEL_TOKEN must be set}"
 : "${VERCEL_ORG_ID:?VERCEL_ORG_ID must be set}"
+
+# Normalized and shape-checked the same way render-trigger-deploy.sh does it,
+# and for a sharper reason: a mismatch here is silent. The jq filter below
+# compares against `meta.githubCommitSha`, which Vercel stores lowercase, so an
+# uppercase or abbreviated SHA simply never matches — the script would poll for
+# the full timeout and exit 124, which the caller reads as a benign skip and
+# runs its suite against whatever the app currently serves. `printf '%s'` rather
+# than `echo` because some echo implementations eat a leading `-` as an option.
+expected_sha=$(printf '%s' "${expected_sha}" | tr 'A-F' 'a-f')
+if ! [[ "${expected_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "✗ commit SHA must be a 40-character hex git SHA" >&2
+  echo "  got: '${expected_sha}'" >&2
+  exit 1
+fi
+
+# Same check render-wait-for-live.sh makes, for the same reason: a value like
+# "5m" or "300s" aborts inside the arithmetic below under `set -e`, and the
+# caller's catch-all branch would report "a script or API failure" rather than
+# naming the bad argument.
+if ! [[ "${timeout_seconds}" =~ ^[0-9]+$ ]] || [ "${timeout_seconds}" -le 0 ]; then
+  echo "✗ timeout arg must be a positive integer (seconds); got '${3:-}'" >&2
+  exit 1
+fi
 
 # Anchored rather than a glob, for the same reason the render-*.sh helpers
 # check their service IDs: a variable carrying stray whitespace would reach the
@@ -106,8 +131,14 @@ while :; do
       # No deployment for this SHA yet. Indistinguishable from one the Ignored
       # Build Step skipped, which is why the timeout below reports 124 rather
       # than failing: exiting non-zero here would turn every API-only merge
-      # into a red run. A dropped webhook reading as a skipped build is covered
-      # by prod-drift-alert.yml, which compares state over time.
+      # into a red run.
+      #
+      # Be clear about what that costs. Nothing else currently watches the
+      # Vercel side over time — prod-deploy-health.yml polls Render service IDs
+      # only — so a dropped Vercel webhook reads as a benign skip here and is
+      # not caught elsewhere. The residual risk is bounded by what this caller
+      # is for: it gates a test suite, and the suite still runs against the
+      # build the app is actually serving. It is not a deploy monitor.
       ;;
     *)
       # BUILDING, QUEUED, INITIALIZING — in flight, keep polling.

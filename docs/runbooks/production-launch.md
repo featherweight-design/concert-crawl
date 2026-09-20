@@ -160,6 +160,31 @@ Create the **prod** Vercel project. (The staging project should already exist as
 4. **Framework Preset:** Next.js (should auto-detect)
 5. **Build and Output Settings:** leave all defaults (Vercel handles Turborepo + pnpm)
 
+### Git builds are disabled on the prod project
+
+The prod project's **Settings → Git → Ignored Build Step** is set to `exit 0`, so
+a push to `main` does **not** build it. `deploy-prod.yml` promotes the web app
+with `vercel deploy --prod` after the Render API deploy has gone live, which is
+what makes a prod promotion a single gated decision rather than two independent
+races. See `docs/runbooks/auto-deploy-prod.md`.
+
+Consequences worth knowing before changing anything here:
+
+- The CLI deploy runs from the **repository root**, not `apps/web`. The Root
+  Directory above is applied to whatever is uploaded, so deploying from
+  `apps/web` would have Vercel look for `apps/web/apps/web`. The root is also
+  the only upload that carries `pnpm-workspace.yaml`, the lockfile and
+  `packages/`, which `apps/web`'s `workspace:*` dependencies need.
+- `deploy-prod.yml` needs three items in the **production** GitHub environment:
+  the `VERCEL_TOKEN` secret, and the `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`
+  variables. Its preflight step fails fast and names any that are missing.
+- Re-enabling git builds would double-deploy every push — once by Vercel, once
+  by the workflow. Turn one off before turning the other on.
+
+The **staging** project keeps its git integration. Its Ignored Build Step skips
+pushes that do not touch the web app, which is why `staging-e2e.yml`'s web-readiness
+wait treats "no deployment for this SHA" as benign.
+
 ### Environment variables
 
 Add under **Production-only** scope on the prod Vercel project. **Do NOT** apply them to the Preview environment — scoping these to Preview would cause accidental preview deploys to run against real prod Clerk sessions, the prod Sentry environment, and the prod `INTERNAL_API_SECRET`. Leave Preview unset on the prod project so any preview deploy fails closed (missing required env vars) rather than failing open (running with prod credentials).

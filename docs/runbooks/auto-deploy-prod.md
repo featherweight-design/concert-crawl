@@ -38,6 +38,15 @@ push to main
                   └──► failure: render-rollback.sh + Resend admin email
 ```
 
+The prod **web** app is not in that tree. Its Vercel project has git builds
+disabled (Settings → Git → Ignored Build Step = `exit 0`), so a push to `main`
+deploys the Render services only. `deploy-prod.yml` promotes the web app with
+`vercel deploy --prod` as its last step, after the Render waits have cleared —
+so a failed API deploy aborts the job before a new front end can reach a
+customer. The reverse order is survivable (expand/contract means the old web
+app works against the new API), which is why the promotion runs last and not
+first.
+
 Render's git integration handles BOTH staging and prod deploys directly — there is no GH Actions chain. Staging and prod build + smoke in parallel. The pre-merge gate is CI on the PR; post-merge, staging-smoke is a canary (alert-only) and prod-smoke is the safety net (auto-rollback). If we ever scale past solo, GitHub merge queue is the upgrade path for a true pre-prod gate.
 
 | Workflow                              | Path                                            | Trigger                            | Kill switch                     |
@@ -106,14 +115,36 @@ All four prod **cron jobs** require manual rollback because Render's
 service rollback" section above for the manual paths. **Vercel web
 prod is NOT auto-rolled back** either, because Vercel already offers
 a one-click instant promote and Vercel deploys are reliable in our
-experience. If a post-deploy smoke failure looks web-related:
+experience. Scripting it would also mean holding a deployment id across
+the `deploy` and `rollback` jobs, which nothing else in this pipeline
+needs.
+
+This matters more than it used to. `deploy-prod.yml` now promotes the
+web app itself (`vercel deploy --prod`), so when auto-rollback fires,
+prod is left serving the **new** front end against the **rolled-back**
+API until an operator acts. That is the one mixed state the automation
+cannot resolve on its own, and the rollback notification email names it.
+
+Either path works, and both take effect within seconds with no rebuild:
+
+**Dashboard**
 
 1. Open the Vercel dashboard → `concert-crawl` (production) project
 2. Deployments tab → find the most recent prior deploy marked `Ready`
-3. Click ⋯ → **Promote to Production** — takes effect within seconds, no rebuild
+3. Click ⋯ → **Instant Rollback** (older Vercel UIs label this **Promote to Production**)
 
-The auto-rollback workflow's log explicitly reminds the operator to check
-Vercel in addition to the Render rollback it just performed.
+**CLI** — from a checkout, with a token that can write to the prod project:
+
+```bash
+vercel rollback --token "$VERCEL_TOKEN"   # reverts to the previous production deployment
+```
+
+Pass a specific deployment URL or id as an argument to roll back to
+something other than the immediately preceding deployment.
+
+The auto-rollback workflow's log and notification email both remind the
+operator to roll Vercel back in addition to the Render rollback it just
+performed.
 
 ## Enabling the pipeline
 

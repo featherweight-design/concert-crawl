@@ -122,7 +122,7 @@ jobs:
               echo "::warning title=No web deployment for this SHA::The staging web app never deployed ${{ github.sha }} within 5 min — most likely its Ignored Build Step skipped a push that does not touch apps/web. Running E2E against the web build it currently serves."
             fi
           else
-            echo "::error title=Staging web app not ready::vercel-wait-for-ready.sh exited ${exit_code}. 125 means a deployment for this SHA exists and failed, was cancelled, or its state could not be read — read the script's log lines above, then check the deployment in Vercel. Any other code is a script or API failure. Failing — nothing was tested."
+            echo "::error title=Staging web app not ready::vercel-wait-for-ready.sh exited ${exit_code}. 125 means a deployment for this SHA exists and failed, was cancelled, or was still building when the 5 min timeout expired — read the script's log lines above, which name the state it saw, then check the deployment in Vercel. Any other code is a script or API failure. Failing — nothing was tested."
             exit "${exit_code}"
           fi
 

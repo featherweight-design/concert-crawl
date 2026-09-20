@@ -210,13 +210,21 @@ jobs:
     name: Trigger Render prod deploys
     needs: gate
     runs-on: ubuntu-latest
-    # 20 min: render-wait-for-live polls for up to 10 min for the prod
+    # 35 min: render-wait-for-live polls for up to 10 min for the prod
     # API to reach `live` on the new SHA, plus checkout, preflight,
     # and the five Render-API deploy triggers (each returns
     # immediately on enqueue; the actual build runs async on Render).
     # 10 min was tight enough that a legitimately slow Render build
     # could time the job out before the wait completed.
-    timeout-minutes: 20
+    #
+    # Raised from 20 when the Vercel promotion step was added: `vercel
+    # deploy` blocks for the whole Next.js + serwist production build,
+    # so a slow Render build and a normal web build together fit inside
+    # 20 only barely. Timing out here is worse than a plain failure —
+    # the Render services are already promoted, `smoke` is skipped, and
+    # `rollback` never fires because it keys off a smoke output that was
+    # never written.
+    timeout-minutes: 35
     # `environment: production` is requested ONLY here, after the
     # gate job has validated all conditions. This avoids tripping
     # the production environment's approval/notification flow on
@@ -470,6 +478,14 @@ jobs:
       # web app reaches production. --prod makes it the production deployment
       # and assigns the production domains once the build is healthy; Vercel
       # keeps serving the previous deployment until then.
+      #
+      # Runs from the repository root, NOT from apps/web. The prod project's
+      # Root Directory is already set to `apps/web` (production-launch.md
+      # Step 6) and is applied to whatever is uploaded, so deploying from
+      # apps/web would have Vercel look for `apps/web/apps/web`. The root is
+      # also the only upload that carries pnpm-workspace.yaml, the lockfile and
+      # packages/ — apps/web declares `workspace:*` dependencies that cannot
+      # resolve without them.
       - name: Promote web app to Vercel production
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
@@ -477,8 +493,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           npx --yes vercel@latest deploy --prod --yes \
-            --token "$VERCEL_TOKEN" \
-            --cwd apps/web
+            --token "$VERCEL_TOKEN"
 
       # `inputs.*` is only defined for `workflow_dispatch`. Using
       # `github.event.inputs.reason` is safe on `workflow_run` too — it
@@ -658,8 +673,9 @@ jobs:
   # Vercel is NOT rolled back here. Its rollback is instant and
   # deployment-scoped (`vercel rollback` / Instant Rollback in the
   # dashboard), it needs no rebuild, and scripting it would mean holding a
-  # deployment id across jobs. The runbook carries the two-command manual
-  # procedure; see docs/runbooks/auto-deploy-prod.md.
+  # deployment id across jobs. Both manual paths — the dashboard click-path
+  # and the CLI one-liner — are in docs/runbooks/auto-deploy-prod.md
+  # § "Vercel + cron rollback is manual".
   #
   # So when this job fires, prod is left on the old API and the NEW web
   # app until an operator rolls Vercel back by hand. That is the one
