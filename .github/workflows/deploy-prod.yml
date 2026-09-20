@@ -473,8 +473,8 @@ jobs:
       # the old web app works against the new API — which is why this ordering
       # and not the other.
       #
-      # The Vercel prod project's git builds are disabled (Settings → Git →
-      # Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
+      # The Vercel prod project's git builds are disabled (Settings → Build and
+      # Deployment → Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
       # web app reaches production. --prod makes it the production deployment
       # and assigns the production domains once the build is healthy; Vercel
       # keeps serving the previous deployment until then.

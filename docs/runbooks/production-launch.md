@@ -166,7 +166,8 @@ Create the **prod** Vercel project. (The staging project should already exist as
 
 ### Git builds are disabled on the prod project
 
-The prod project's **Settings → Git → Ignored Build Step** is set to `exit 0`, so
+The prod project's **Settings → Build and Deployment → Ignored Build Step** is
+set to `exit 0`, so
 a push to `main` does **not** build it. `deploy-prod.yml` promotes the web app
 with `vercel deploy --prod` after the Render API deploy has gone live, which is
 what makes a prod promotion a single gated decision rather than two independent

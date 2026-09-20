@@ -77,17 +77,21 @@ incident. Staging validation is a judgement call under an incident, not a
 mechanical gate — the gate is the dispatch itself.
 
 **How long a promotion takes: about 9 minutes.** Measured on the first
-end-to-end dispatch (run 35521276174, 2026-09-20): 8m38s wall clock, of which
-the gate took 8s, the five Render deploys plus the wait for the API to report
-the new SHA live took 6m33s, and prod smoke took 1m48s. Answer "when will this
-be live?" with that number rather than an estimate, and treat a run materially
-longer than it as a Render build problem worth looking at rather than a slow
-day — the gate and smoke are near-constant, so essentially all the variance
-lives in the middle segment.
+end-to-end dispatch (run 35521276174, 2026-09-20), 8m35s from the gate starting
+to smoke finishing, in four parts: the gate 8s, firing the five Render deploys
+and then waiting for the prod API to report the new SHA 2m33s, the Vercel
+promotion 3m57s, and prod smoke 1m48s. The rest is queue time between jobs.
+Answer "when will this be live?" with about nine minutes rather than an estimate.
+
+Note which part is largest. The gate and smoke are near-constant, so a
+materially longer run is either a slow Render build or a slow Next build — and
+the Vercel promotion is the bigger of the two, so read the per-step timings on
+the `deploy` job before assuming Render is at fault.
 
 The prod **web** app is not in that tree. Its Vercel project has git builds
 disabled (Settings → Build and Deployment → Ignored Build Step = `exit 0`), so a
-push to `main` deploys the Render services only. `deploy-prod.yml` promotes the web app with
+push to `main` deploys nothing to production at all — staging's Render services
+and its own Vercel project are the only things a merge touches. `deploy-prod.yml` promotes the web app with
 `vercel deploy --prod` as the last step of the `deploy` job, after the Render
 waits have cleared but **before** the `smoke` job runs — so a failed API deploy
 aborts the job before a new front end can reach a customer, while a failed smoke
@@ -355,10 +359,12 @@ leaves no way to reach production except a hand-driven Render deploy.
 5. Confirm the gate holds: merge anything to `main` (a docs change is ideal) and
    check that the staging API builds, the prod API records no new deploy, the
    prod Vercel project records a **skipped** deployment while
-   `concert-crawl-staging` builds normally, `staging-smoke` and `staging-e2e`
-   both run, and `prod-smoke-after-deploy.yml` does not. A staging project that
-   also skips means the Ignored Build Step went on the wrong project — back it
-   out before going further.
+   `concert-crawl-staging` builds normally, and `staging-smoke` and `staging-e2e`
+   both run. A staging project that also skips means the Ignored Build Step went
+   on the wrong project — back it out before going further. Do not read
+   `prod-smoke-after-deploy.yml` staying quiet as evidence of anything: it is
+   `workflow_dispatch`-only, so it cannot run on a merge whatever these settings
+   say.
 
 `render.yaml` records these values (`autoDeploy: false` on the five prod
 services) but does **not** apply them — it is descriptive, not a Blueprint.
@@ -412,16 +418,16 @@ prod without deploying, and watch it run install → smoke → green.
 
 ### `production` environment — Variables (Settings → Environments → production)
 
-| Variable                             | Required by                                                                      | Notes                                                                                                                                                                                                                                 |
-| ------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_SERVICE_ID_API`              | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and rollback.                                       |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler triggers cron service ID. Used by smoke's rollback step (auto-skips for crons), deploy-prod's API POST, and rollback-prod.                                                                                               |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler daily cron service ID. Same.                                                                                                                                                                                             |
-| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod match-artists cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                               |
-| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod spotify-weekly cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                              |
-| `VERCEL_ORG_ID`                      | deploy-prod                                                                      | The Vercel **Team ID** (`team_*`). Vercel renamed Org to Team in the dashboard but the CLI and API still call it `orgId`, so the dashboard offers no field with this name — read the Team ID from Vercel → Settings → General.        |
-| `VERCEL_PROJECT_ID`                  | deploy-prod                                                                      | `prj_*`, from the **production** `concert-crawl` project → Settings → General. Taking it from `concert-crawl-staging` by mistake makes a promotion deploy the staging web app onto the production domain, reporting green throughout. |
-| `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                                    | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option. |
+| Variable                             | Required by                                                                      | Notes                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_SERVICE_ID_API`              | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and rollback.                                                                                                                                                            |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler triggers cron service ID. Used by smoke's rollback step (auto-skips for crons), deploy-prod's API POST, and rollback-prod.                                                                                                                                                                                                                    |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler daily cron service ID. Same.                                                                                                                                                                                                                                                                                                                  |
+| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod match-artists cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                                                                                                                                                    |
+| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod spotify-weekly cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                                                                                                                                                   |
+| `VERCEL_ORG_ID`                      | deploy-prod                                                                      | The Vercel **Team ID** (`team_*`). Vercel renamed Org to Team in the dashboard but the CLI and API still call it `orgId`, so the dashboard offers no field with this name — read the Team ID from Vercel → Settings → General.                                                                                                                             |
+| `VERCEL_PROJECT_ID`                  | deploy-prod                                                                      | `prj_*`, from the **production** `concert-crawl` project → Settings → General. Taking it from `concert-crawl-staging` by mistake sends every promotion to the staging project instead: `--prod` aliases whichever project the id names, so the build lands on staging's domains and `concertcrawl.app` is never updated. The run reports green throughout. |
+| `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                                    | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option.                                                                                                                      |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
 
