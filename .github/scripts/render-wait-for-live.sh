@@ -27,11 +27,12 @@
 #         are disabled, the live deploy is over an hour old, or the
 #         timeout could not be
 #         classified (service metadata unreadable, autoDeploy absent or
-#         unrecognized, live deploy timestamp missing or unparseable).
+#         unrecognized, live deploy timestamp missing or unparseable,
+#         or the service has no live deploy at all).
 #         The pushed SHA will never go live on its own, so smoke and
 #         rollback would be skipped forever. Callers must fail on this.
 #   1   — hard failure (jq missing, missing env, malformed timeout
-#         arg, curl/auth/network failure, no live deploy found)
+#         arg, curl/auth/network failure)
 #
 # Callers that want to distinguish benign timeout from real failure
 # should branch on the exit code explicitly. Treating any non-zero as
@@ -277,8 +278,8 @@ if [ "$((now_epoch - live_epoch))" -gt 3600 ]; then
 fi
 
 # Exit 124 = timeout (matches GNU timeout(1) convention). Distinct from
-# the script's other non-zero exits (jq missing, missing env, curl
-# failure, no live deploy found), all of which use exit 1, and from 125
+# the script's hard failures (jq missing, missing env, curl
+# failure), all of which use exit 1, and from 125
 # above, which means the timeout is real rather than a supersede. Callers
 # that treat timeout as a benign-skip should key off this code
 # explicitly — anything other than 0 or 124 indicates a real failure.
