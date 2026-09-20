@@ -1,3 +1,13 @@
+## [1.291.1](https://github.com/HartiganHM/concert-crawl/compare/v1.291.0...v1.291.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** fail closed when the Render deploy list cannot be parsed ([4602ebc](https://github.com/HartiganHM/concert-crawl/commit/4602ebc6b74fc48c7716aecdea4027c67cad2552))
+* **ci:** keep a service with no live deploy on the hard-failure path ([ef22cfa](https://github.com/HartiganHM/concert-crawl/commit/ef22cfa3d326c77456db0c397a1c19d441c0fdb0))
+* **ci:** rule out a failed or in-progress deploy before calling a timeout benign ([a5c4480](https://github.com/HartiganHM/concert-crawl/commit/a5c44802b74d71918ca771c35424449de8f6bbf1))
+* **ci:** rule out a suspended service and validate deploy entries ([263caf7](https://github.com/HartiganHM/concert-crawl/commit/263caf7649f114cb34fa150bb98bd6c032d125aa))
+
 # [1.291.0](https://github.com/HartiganHM/concert-crawl/compare/v1.290.0...v1.291.0) (2026-09-20)
 
 
