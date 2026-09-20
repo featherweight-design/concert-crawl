@@ -54,8 +54,12 @@ response=$(curl -sS --fail-with-body \
 # to explain itself.
 if ! echo "$response" | jq -e 'type == "array"' >/dev/null 2>&1; then
   echo "✗ Render returned an unexpected shape for $service_id (expected an array of deploys):" >&2
-  echo "$response" | head -c 500 >&2
-  echo >&2
+  # Truncated with parameter expansion rather than `| head -c 500`: head
+  # closes the pipe at 500 bytes, the writer takes SIGPIPE, and under
+  # `set -euo pipefail` that aborts the script at 141 before it can print the
+  # trailing newline or reach the `exit 1` below. An error path whose own exit
+  # code depends on how long the response was is not an error path.
+  printf '%s\n' "${response:0:500}" >&2
   exit 1
 fi
 
