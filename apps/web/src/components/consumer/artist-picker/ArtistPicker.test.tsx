@@ -137,6 +137,115 @@ describe('ArtistPicker', () => {
   })
 })
 
+// A pick made in search has no tile in the suggestions, so closing the field
+// returned the visitor to a grid that said nothing about the artist they had
+// just chosen. The rail counted it and the grid did not, which reads as the
+// pick having been dropped.
+describe('ArtistPicker — a pick made in search keeps a tile', () => {
+  const GRIZ: PickArtist = {
+    slug: 'griz',
+    name: 'GRiZ',
+    photoUrl: null,
+    dateLabel: null,
+  }
+
+  // The picker learns an artist from whatever list it has drawn, so the pick
+  // has to be MADE in search rather than asserted into the selection: a slug
+  // the component has never seen has no name or art to draw a tile with.
+  function pickInSearchThenClose(
+    overrides: Partial<Parameters<typeof ArtistPicker>[0]> = {},
+  ) {
+    const props = {
+      artists: ARTISTS,
+      selected: new Set<string>(),
+      onToggle: vi.fn(),
+      loading: false,
+      columns: 2,
+      searching: true,
+      searchQuery: 'griz',
+      onSearchQueryChange: vi.fn(),
+      onSearchOpen: vi.fn(),
+      onSearchClose: vi.fn(),
+      searchResults: [GRIZ],
+      searchState: 'results' as const,
+      ...overrides,
+    }
+    const { rerender } = render(<ArtistPicker {...props} />)
+    const closed = (selected: ReadonlySet<string>, extra = {}) =>
+      rerender(
+        <ArtistPicker
+          {...props}
+          selected={selected}
+          searching={false}
+          searchQuery=""
+          searchResults={[]}
+          searchState="rest"
+          {...extra}
+        />,
+      )
+    closed(new Set(['griz']))
+    return { ...props, closed }
+  }
+
+  it('draws the searched-for artist after the field closes', () => {
+    pickInSearchThenClose()
+    const box = screen.getByRole('checkbox', { name: /GRiZ/ })
+    expect(box).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('appends it rather than dropping it into the ranking', () => {
+    pickInSearchThenClose()
+    const names = screen
+      .getAllByRole('checkbox')
+      .map((box) => box.getAttribute('aria-label') ?? box.textContent ?? '')
+    expect(names).toHaveLength(3)
+    expect(names[2]).toMatch(/GRiZ/)
+  })
+
+  it('still toggles from the appended tile', () => {
+    const props = pickInSearchThenClose()
+    fireEvent.click(screen.getByRole('checkbox', { name: /GRiZ/ }))
+    expect(props.onToggle).toHaveBeenCalledWith('griz')
+  })
+
+  // The lane with nothing booked in it is where search matters most, so the
+  // notice and the pick are siblings rather than alternatives.
+  it('shows the pick beside the empty notice, not instead of it', () => {
+    pickInSearchThenClose({ artists: [] })
+    expect(screen.getByText(ARTIST_PICKER_COPY.emptyTitle)).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /GRiZ/ })).toBeInTheDocument()
+  })
+
+  // Keyed on the live selection the appended tile is a readout, not a tile:
+  // it vanishes the moment it is unticked, reflowing the grid and leaving no
+  // way back to that artist short of retyping the query.
+  it('keeps the tile once unticked, unchecked, the way a suggestion behaves', () => {
+    const { closed } = pickInSearchThenClose()
+    closed(new Set())
+    const tile = screen.getByRole('checkbox', { name: /GRiZ/ })
+    expect(tile).toHaveAttribute('aria-checked', 'false')
+  })
+
+  // The retry runs FROM the failed state, so skeletons-only here takes the
+  // appended tiles away on the way out of the state that needed them most.
+  it('keeps drawing it while a refetch is in flight', () => {
+    const { closed } = pickInSearchThenClose({ artists: [], errored: true })
+    closed(new Set(['griz']), { loading: true, errored: false })
+    expect(screen.getByRole('checkbox', { name: /GRiZ/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('status', { name: ARTIST_PICKER_COPY.loading }),
+    ).toBeInTheDocument()
+  })
+
+  it('shows the pick beside a failed read too', () => {
+    pickInSearchThenClose({ artists: [], errored: true })
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      ARTIST_PICKER_COPY.errorTitle,
+    )
+    expect(screen.getByRole('checkbox', { name: /GRiZ/ })).toBeInTheDocument()
+  })
+})
+
 describe('ArtistPicker — where the trigger sits', () => {
   it('draws it under the grid on the phone', () => {
     renderPicker({ columns: 2 })

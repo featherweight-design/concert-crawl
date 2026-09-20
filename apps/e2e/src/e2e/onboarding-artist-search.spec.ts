@@ -74,12 +74,26 @@ test.describe('onboarding step 7 — artist search', () => {
       // The rail has to be counting, or it is not the state being preserved.
       expect(railBefore).toMatch(/follow 1 artist/i)
 
+      // Where the head block sits BEFORE the swap. The field is supposed to
+      // take this slot; the defect was the step's body re-centring itself
+      // once the grid left, which slid the field ~150px down the card and
+      // made a swap read as a relayout. Only a laid-out page can answer it.
+      const headTop = await visible(
+        page.getByRole('heading', { name: /follow a few of these/i }),
+      ).evaluate((node) => node.getBoundingClientRect().top)
+
       await trigger.click()
 
       const field = visible(
         page.getByRole('textbox', { name: /search artists by name/i }),
       )
       await expect(field).toBeVisible()
+      const fieldTop = await field.evaluate(
+        (node) => node.getBoundingClientRect().top,
+      )
+      // Generous, because the field's box and the eyebrow's cap height do not
+      // start on the same pixel — and still far inside the drop it catches.
+      expect(Math.abs(fieldTop - headTop)).toBeLessThan(24)
       // The mode swap moves focus, or a keyboard reader is left on a control
       // that is no longer there.
       await expect(field).toBeFocused()
@@ -103,14 +117,52 @@ test.describe('onboarding step 7 — artist search', () => {
       ).toBeVisible()
 
       await field.fill('the')
+      // WAIT FOR A SETTLED ANSWER, never a fixed sleep. The read is debounced
+      // and then goes to the network, so a timeout races it: a slow staging
+      // response leaves the skeletons up, every "no results" branch below
+      // takes itself out of the run, and the walk reports green having
+      // exercised none of it. Rows or a notice — both are answers; skeletons
+      // are not.
+      const resultRows = page.getByRole('checkbox').filter({ visible: true })
+      const searchNotice = visible(
+        page.getByText(/nobody by that name|already follow those/i),
+      )
+      await expect
+        .poll(
+          async () =>
+            (await resultRows.count()) > 0 || (await searchNotice.count()) > 0,
+          { timeout: 15_000 },
+        )
+        .toBe(true)
       // Results or "nobody by that name" — both are a real answer. What must
       // not happen is the step leaving, so the URL is the assertion.
-      await page.waitForTimeout(800)
       expect(new URL(page.url()).pathname).toBe('/onboarding')
       // And the pick is still counted with a query in the box, which is the
       // case that made the strip necessary: a pick leaves the visible list
       // the moment the query moves past it.
       await expect(rail).toHaveText(/follow 1 artist/i)
+
+      // A pick made in SEARCH has to survive the trip back to the grid with a
+      // tile of its own — the rail counted it and the grid drew nothing, which
+      // reads as the pick having been dropped. Skipped rather than failed when
+      // the query matched nothing on this account: no result is no subject.
+      //
+      // The row has to be an UNCHECKED one. Search drops artists the server
+      // says you already follow, not ones ticked in this uncommitted tour, so
+      // the tile picked above can come back as a match — and clicking it
+      // blind unticks it, drops the count to zero and fails the assertion on
+      // a perfectly good build.
+      const row = page
+        .getByRole('checkbox', { checked: false })
+        .filter({ visible: true })
+        .first()
+      let searchPickName: string | null = null
+      if ((await row.count()) > 0) {
+        searchPickName =
+          (await row.getByTestId('pick-name').textContent())?.trim() ?? null
+        await row.click()
+        await expect(rail).toHaveText(/follow 2 artists/i)
+      }
 
       // Back to the grid, and focus comes back with it. The field's own X is
       // the control that exists in EVERY search state — the labelled "Back to
@@ -119,6 +171,24 @@ test.describe('onboarding step 7 — artist search', () => {
       await visible(page.getByRole('button', { name: /close search/i })).click()
       await expect(trigger).toBeVisible()
       await expect(trigger).toBeFocused()
+
+      if (searchPickName !== null) {
+        // By NAME rather than by position: it is appended after the
+        // suggestions, and asserting the last tile would pass just as well on
+        // a build that drew the wrong artist there.
+        const tile = page
+          .getByRole('checkbox')
+          .filter({ visible: true })
+          .filter({
+            has: page
+              .getByTestId('pick-name')
+              .and(page.getByText(searchPickName, { exact: true })),
+          })
+          .first()
+        await expect(tile).toBeVisible()
+        await expect(tile).toHaveAttribute('aria-checked', 'true')
+        await expect(rail).toHaveText(/follow 2 artists/i)
+      }
     })
   }
 })

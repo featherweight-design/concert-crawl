@@ -277,6 +277,43 @@ export const ArtistPicker = ({
   const pickedArtists = Array.from(selected)
     .map((slug) => onScreen.get(slug))
     .filter((artist): artist is PickArtist => artist !== undefined)
+  // A pick made in search has no tile in the suggestions, so closing the field
+  // used to return the visitor to a grid that said nothing about the artist
+  // they had just chosen — the rail counted it and the grid did not, which
+  // reads as the pick having been lost. Those picks are APPENDED rather than
+  // merged in rank order: the suggestions are a ranking, and dropping a
+  // searched-for name into the middle of one hides the very tile this exists
+  // to show. Resolved through the same cache the strip uses, so a pick made
+  // two queries ago still draws.
+  //
+  // Once appended, the tile STAYS for the visit, ticked or not. Keying it on
+  // the live selection instead makes it a readout rather than a tile: it
+  // would vanish the moment it was unticked, reflowing the grid and leaving
+  // no way back to that artist but reopening search and retyping the query —
+  // where every suggestion tile simply goes unchecked and waits.
+  const suggested = new Set(artists.map((artist) => artist.slug))
+  const appended = useRef<string[]>([])
+  for (const slug of selected) {
+    if (suggested.has(slug)) continue
+    if (appended.current.includes(slug)) continue
+    // Written during render rather than from an effect, so the tile is there
+    // on the frame the mode flips back rather than one after it. Idempotent
+    // by the guard above, which is what makes that safe: a double invoke adds
+    // nothing the first pass did not.
+    appended.current.push(slug)
+  }
+  const appendedArtists = appended.current
+    // A slug the suggestions have since picked up is drawn in rank order
+    // rather than twice.
+    .filter((slug) => !suggested.has(slug))
+    .map((slug) => onScreen.get(slug))
+    .filter((artist): artist is PickArtist => artist !== undefined)
+  // While a read is in flight the suggestions are whatever the last one left
+  // behind, and the skeletons below stand in for them. The appended tiles are
+  // not standing in for anything, so they keep drawing.
+  const gridArtists = loading
+    ? appendedArtists
+    : [...artists, ...appendedArtists]
   const notice = searchNoticeFor(state)
   const fieldRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -360,44 +397,60 @@ export const ArtistPicker = ({
               the thing they both have to agree with. */}
           <PickedStrip count={selected.size} picked={pickedArtists} />
         </>
-      ) : loading ? (
-        // Placeholders keep the grid at roughly its final height, so the CTA
-        // rail below does not jump under a thumb already on its way to it.
-        <div role="status" aria-label={ARTIST_PICKER_COPY.loading}>
-          <PickGrid columns={columns}>
-            {Array.from({ length: PICK_SKELETON_COUNT }, (_, index) => (
-              <SkeletonTile key={index} />
-            ))}
-          </PickGrid>
-        </div>
-      ) : errored ? (
-        <div
-          role="alert"
-          style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-        >
-          <Notice
-            title={ARTIST_PICKER_COPY.errorTitle}
-            body={ARTIST_PICKER_COPY.errorBody}
-          />
-          {onRetry ? <RetryButton onClick={onRetry} /> : null}
-        </div>
-      ) : artists.length === 0 ? (
-        <Notice
-          title={ARTIST_PICKER_COPY.emptyTitle}
-          body={ARTIST_PICKER_COPY.emptyBody}
-        />
       ) : (
-        <div role="group" aria-label={ARTIST_PICKER_COPY.groupLabel}>
-          <PickGrid columns={columns}>
-            {artists.map((artist) => (
-              <ArtistPickTile
-                key={artist.slug}
-                artist={artist}
-                selected={selected.has(artist.slug)}
-                onToggle={onToggle}
+        // The notice and the tiles are SIBLINGS rather than alternatives. A
+        // lane with no bookings, a read that failed, or a retry still in
+        // flight all still owe the visitor the picks they made in search —
+        // that is the state search exists for, and hiding the tiles behind
+        // the notice is the same lost-pick complaint in the one place it
+        // bites hardest. The retry is the sharpest of the three: it runs FROM
+        // the failed state, so a skeletons-only loading branch takes the
+        // appended tiles away again on the way out of the very state that
+        // needed them.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {loading ? (
+            // Placeholders keep the grid at roughly its final height, so the
+            // CTA rail below does not jump under a thumb already on its way
+            // to it.
+            <div role="status" aria-label={ARTIST_PICKER_COPY.loading}>
+              <PickGrid columns={columns}>
+                {Array.from({ length: PICK_SKELETON_COUNT }, (_, index) => (
+                  <SkeletonTile key={index} />
+                ))}
+              </PickGrid>
+            </div>
+          ) : errored ? (
+            <div
+              role="alert"
+              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
+              <Notice
+                title={ARTIST_PICKER_COPY.errorTitle}
+                body={ARTIST_PICKER_COPY.errorBody}
               />
-            ))}
-          </PickGrid>
+              {onRetry ? <RetryButton onClick={onRetry} /> : null}
+            </div>
+          ) : artists.length === 0 ? (
+            <Notice
+              title={ARTIST_PICKER_COPY.emptyTitle}
+              body={ARTIST_PICKER_COPY.emptyBody}
+            />
+          ) : null}
+
+          {gridArtists.length === 0 ? null : (
+            <div role="group" aria-label={ARTIST_PICKER_COPY.groupLabel}>
+              <PickGrid columns={columns}>
+                {gridArtists.map((artist) => (
+                  <ArtistPickTile
+                    key={artist.slug}
+                    artist={artist}
+                    selected={selected.has(artist.slug)}
+                    onToggle={onToggle}
+                  />
+                ))}
+              </PickGrid>
+            </div>
+          )}
         </div>
       )}
 

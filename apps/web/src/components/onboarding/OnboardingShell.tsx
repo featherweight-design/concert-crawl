@@ -64,6 +64,23 @@ const FLOW = [
 ] as const
 type StepKey = (typeof FLOW)[number]
 
+/**
+ * Every other step centres its body in the card: a short step floating
+ * mid-card reads better than one pinned to the top.
+ *
+ * The artists step cannot. Search REPLACES its head block with a field, and
+ * the search body is shorter than a 12-tile grid, so a centred box slides the
+ * field a few hundred pixels down the card the moment the mode flips — which
+ * is a swap becoming a relayout. Top-aligned in BOTH modes: aligning only
+ * search mode would trade the jump for a different one, on the way back.
+ *
+ * One definition rather than a copy per tree, because both are mounted at
+ * once and the two disagreeing is the whole class of bug this file keeps
+ * hitting.
+ */
+const bodyJustifyFor = (stepKey: StepKey): string =>
+  stepKey === 'artists' ? 'flex-start' : 'safe center'
+
 const DESKTOP_CARD_WIDTH = 620
 // The artists step needs a wider card for its 5-column grid (OB-12).
 const DESKTOP_PICKER_CARD_WIDTH = 760
@@ -295,21 +312,28 @@ export function OnboardingShell({
   // Read through a ref rather than closed over: this callback is declared
   // above the mode state, and a dependency on it would rebuild the handler
   // every time the mode flips for no gain.
-  const searchingRef = useRef(false)
   const pickedRef = useRef<ReadonlySet<string>>(pickedArtists)
+  const suggestedRef = useRef<ReadonlySet<string>>(new Set())
   const toggleArtist = useCallback((slug: string) => {
     // The marker follows the TRANSITION, not the mode. Toggling it on the mode
     // alone marks a grid pick as a search pick when it is unticked with the
     // field open — and that stale mark then exempts it from the prune the next
     // time the grid refetches, which is the bug the prune exists to prevent.
     //
-    // So: mark only when a search click SELECTS something, and clear the mark
-    // on every unselect and on every grid click, because either one means the
-    // slug is no longer a pick this component has to protect.
+    // What it keys on is MEMBERSHIP rather than the field being open, because
+    // the picker now appends a searched-for artist to the grid and keeps the
+    // tile there. Ticking that tile is a grid click on an artist the
+    // suggestions do not contain: marked on the mode, it would go unprotected
+    // and be pruned away by the next refetch — the exact silent drop this
+    // marker exists to stop, arriving through the fix for it.
+    //
+    // So: mark when a SELECT lands on a slug the suggestions do not hold, and
+    // clear the mark on every unselect and on every pick of a suggested one,
+    // because either one means the slug is no longer a pick to protect.
     const selecting = !pickedRef.current.has(slug)
     setPickedArtists((previous) => toggleIn(previous, slug))
     setSearchPicks((previous) => {
-      if (selecting && searchingRef.current) {
+      if (selecting && !suggestedRef.current.has(slug)) {
         return previous.has(slug) ? previous : new Set(previous).add(slug)
       }
       if (!previous.has(slug)) return previous
@@ -337,7 +361,6 @@ export function OnboardingShell({
   const { results: searchResults, state: searchState } = useArtistSearch(
     searching ? searchQuery : '',
   )
-  searchingRef.current = searching
   pickedRef.current = pickedArtists
   const openSearch = useCallback(() => setSearching(true), [])
   const closeSearch = useCallback(() => {
@@ -362,6 +385,11 @@ export function OnboardingShell({
   useEffect(() => {
     if (!onArtistsStep || !suggestionsLoaded) return
     const visible = new Set(suggestions.map((artist) => artist.slug))
+    // Read by `toggleArtist`, which is declared above the suggestions and
+    // must not be rebuilt on every refetch. Kept in step with the same list
+    // the prune runs against, so the two can never disagree about what the
+    // grid holds.
+    suggestedRef.current = visible
     setPickedArtists((previous) => {
       // A search pick is exempt: it never had a tile here, so "no longer in
       // the grid" says nothing about it. Without this it vanished the moment
@@ -529,7 +557,7 @@ export function OnboardingShell({
               minHeight: '100%',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'safe center',
+              justifyContent: bodyJustifyFor(stepKey),
             }}
           >
             <StepContent {...stepProps} columns={PICK_COLUMNS_MOBILE} />
@@ -842,7 +870,7 @@ function OnboardingDesktop({
                 minHeight: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'safe center',
+                justifyContent: bodyJustifyFor(stepKey),
               }}
             >
               <StepContent {...stepProps} columns={PICK_COLUMNS_DESKTOP} />

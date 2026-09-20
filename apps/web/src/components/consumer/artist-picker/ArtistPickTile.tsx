@@ -97,6 +97,9 @@ export const ArtistPickTile = ({
     </span>
 
     <span
+      // Same handle as the search row's name, so a walk can prove the artist
+      // picked in one is the artist drawn in the other.
+      data-testid="pick-name"
       className="block overflow-hidden text-ellipsis whitespace-nowrap text-fg"
       style={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '-0.01em' }}
     >

@@ -68,6 +68,10 @@ export const ArtistSearchRow = ({
 
     <span className="flex min-w-0 flex-1 flex-col" style={{ gap: 2 }}>
       <span
+        // Named for the walk that reads it: a row's text runs name-then-date,
+        // so the artist a search pick is ABOUT cannot be recovered from the
+        // row's textContent without re-parsing the layout.
+        data-testid="pick-name"
         className="block overflow-hidden text-ellipsis whitespace-nowrap text-fg"
         style={{ fontSize: 13.5, fontWeight: 800, letterSpacing: '-0.01em' }}
       >

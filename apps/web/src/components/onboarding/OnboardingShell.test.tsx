@@ -530,6 +530,86 @@ describe('OnboardingShell — genres then artists', () => {
     expect(readMark()).toEqual([])
   })
 
+  // The picker appends a searched-for artist to the grid and keeps the tile
+  // there, so a tile click can now land on an artist the suggestions do not
+  // hold. Marked on the MODE, re-ticking that tile with the field closed left
+  // it unprotected and the next refetch pruned it away — the silent drop the
+  // marker exists to stop, arriving through the fix for it.
+  //
+  // The pick is MADE through the field rather than restored from the mirror:
+  // the picker can only draw an artist it has seen, so a slug out of storage
+  // has no tile to re-tick and the case would measure nothing.
+  it('protects a re-ticked appended tile, which no suggestion holds', async () => {
+    // A real `Response` over the bytes the route would send, never a cast
+    // object with a `json` method: the reader validates this payload field by
+    // field, and a stub shaped to satisfy the compiler is the one thing that
+    // cannot tell us it still parses.
+    // Built per call rather than resolved once: a `Response` body reads
+    // exactly once, so a single instance serves the first fetch and hands
+    // every later one an already-consumed stream.
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                slug: 'ghost',
+                name: 'Ghost',
+                photoUrl: null,
+                following: false,
+                nextShow: null,
+              },
+            ],
+          }),
+          { headers: { 'content-type': 'application/json' } },
+        ),
+    )
+    try {
+      renderShell()
+      await goToArtists()
+
+      act(() =>
+        fireEvent.click(
+          screen.getAllByRole('button', {
+            name: ARTIST_PICKER_COPY.searchEscape,
+            hidden: true,
+          })[0]!,
+        ),
+      )
+      const field = screen.getAllByRole('textbox', { hidden: true })[0]!
+      act(() => fireEvent.change(field, { target: { value: 'ghost' } }))
+      await waitFor(() => expect(tile(/ghost/i)).toBeTruthy())
+
+      act(() => fireEvent.click(tile(/ghost/i)))
+      act(() =>
+        fireEvent.click(
+          screen.getAllByRole('button', {
+            name: ARTIST_PICKER_COPY.searchCloseLabel,
+            hidden: true,
+          })[0]!,
+        ),
+      )
+
+      const readMark = (): unknown =>
+        JSON.parse(
+          window.sessionStorage.getItem('cc.onboarding.searchPicks') ?? '[]',
+        )
+      await waitFor(() => expect(readMark()).toEqual(['ghost']))
+
+      // Unticked from its appended tile: no longer a pick, so no longer marked.
+      act(() => fireEvent.click(tile(/ghost/i)))
+      await waitFor(() => expect(readMark()).toEqual([]))
+
+      // And re-ticked from the same tile, which the grid still draws. The
+      // suggestions never held `ghost`, so the mark has to come back with it.
+      act(() => fireEvent.click(tile(/ghost/i)))
+      await waitFor(() => expect(readMark()).toEqual(['ghost']))
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
   // A failed fetch also stops loading and also reports zero artists. Pruning
   // against that would wipe the selection the upgrade round-trip just restored.
   it('keeps a restored selection when the suggestions fetch fails', async () => {
