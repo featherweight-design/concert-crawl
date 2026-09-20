@@ -1,3 +1,11 @@
+## [1.292.1](https://github.com/HartiganHM/concert-crawl/compare/v1.292.0...v1.292.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **push:** state urgency, TTL and silence per category ([94d6ff6](https://github.com/HartiganHM/concert-crawl/commit/94d6ff68c2caea9421409855c506f5c32d2c6aa7))
+* **push:** wake for a price drop too, rather than only shortening its life ([270ec7a](https://github.com/HartiganHM/concert-crawl/commit/270ec7a018ffcd33886e70115f467b0dd043458d))
+
 # [1.292.0](https://github.com/HartiganHM/concert-crawl/compare/v1.291.3...v1.292.0) (2026-09-20)
 
 
