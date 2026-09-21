@@ -76,6 +76,26 @@ describe('AdminDialog', () => {
     expect(document.activeElement?.textContent).toBe('Confirm')
   })
 
+  // Boundary wrapping only fires when focus is already on the head or tail.
+  // Focus can sit outside the panel entirely — back from browser chrome, or
+  // moved programmatically — and Tab from there walks into the page behind a
+  // dialog still claiming it is inert.
+  it('pulls focus back in when Tab is pressed from outside the panel', () => {
+    const outside = document.createElement('button')
+    outside.textContent = 'Outside'
+    document.body.appendChild(outside)
+
+    renderDialog()
+    outside.focus()
+    expect(document.activeElement).toBe(outside)
+
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(
+      true,
+    )
+    outside.remove()
+  })
+
   it('restores focus to the opener on unmount', () => {
     const opener = document.createElement('button')
     opener.textContent = 'Open'

@@ -89,6 +89,22 @@ export const useDialogKeyboard = (
         return
       }
       if (evt.key !== 'Tab') return
+      const panel = panelRef.current
+      // Boundary wrapping alone is not containment: it only fires when focus
+      // is already ON the head or tail. Focus can sit outside the panel —
+      // returning from browser chrome, or anything that moves it
+      // programmatically — and from there Tab walks into the page behind a
+      // dialog still claiming it is inert. Pull it back in first.
+      if (panel && !panel.contains(document.activeElement)) {
+        evt.preventDefault()
+        const entry = focusable()[0]
+        if (entry) entry.focus()
+        else {
+          panel.tabIndex = -1
+          panel.focus()
+        }
+        return
+      }
       const items = focusable()
       const head = items[0]
       const tail = items[items.length - 1]
