@@ -1,3 +1,10 @@
+## [1.296.1](https://github.com/HartiganHM/concert-crawl/compare/v1.296.0...v1.296.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* **web:** give the cold page-import suites a realistic timeout ([dc156a1](https://github.com/HartiganHM/concert-crawl/commit/dc156a15decb3f8ce59dd9d783a3a32470479a78))
+
 # [1.296.0](https://github.com/HartiganHM/concert-crawl/compare/v1.295.0...v1.296.0) (2026-09-20)
 
 
