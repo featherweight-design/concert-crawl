@@ -51,8 +51,11 @@ const call = (url: string, ratio: string) =>
   GET(new Request(url), { params: Promise.resolve({ ratio }) })
 
 // The success cases rasterise a real 1080×1080 PNG through satori, which runs
-// 1.5–4s here and slower on a loaded CI box — the 5s default made them flake.
-// The error cases return before any render and keep the default.
+// 1.5–4s here and slower on a loaded CI box. This predates the suite-wide
+// 15s default in vitest.config.ts and stays above it: satori's cost is a
+// different and heavier thing than a cold module import, and it was the 5s
+// default it originally flaked against. The error cases return before any
+// render and take the suite default.
 const RENDER_TIMEOUT_MS = 30_000
 
 describe('GET /passport/[ratio]', () => {
