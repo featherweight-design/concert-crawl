@@ -1,3 +1,16 @@
+# [1.297.0](https://github.com/HartiganHM/concert-crawl/compare/v1.296.1...v1.297.0) (2026-09-21)
+
+
+### Bug Fixes
+
+* **admin:** exclude disabled controls from the focus trap ([011b679](https://github.com/HartiganHM/concert-crawl/commit/011b6790dbf0bbb83bfbbee50e8b7ee48e515be8))
+* **admin:** pull focus back in when Tab comes from outside the panel ([d8925c0](https://github.com/HartiganHM/concert-crawl/commit/d8925c0d9dda5fbc9373b955aa45afce5559e002))
+
+
+### Features
+
+* **admin:** honour aria-modal with a shared dialog primitive ([cc39713](https://github.com/HartiganHM/concert-crawl/commit/cc397135b28a96201c545695dba99dbaec97bfe4))
+
 ## [1.296.1](https://github.com/HartiganHM/concert-crawl/compare/v1.296.0...v1.296.1) (2026-09-21)
 
 
