@@ -119,6 +119,121 @@ describe('AdminDialog', () => {
   // A caller that renders its panel inline behind an `open` flag would
   // otherwise hold a document-level Escape listener for the whole time the
   // component is mounted, firing dismiss from anywhere on the page.
+  // A disabled button cannot take focus, so counting one as a trap member
+  // breaks the trap twice: the opening focus no-ops, and a disabled tail
+  // means the Tab-wrap comparison never matches and Tab leaves the dialog.
+  it('skips disabled controls when placing focus', () => {
+    render(
+      <AdminDialog
+        accent="var(--danger)"
+        label="Armed?"
+        eyebrow="Careful"
+        heading="Armed?"
+        onDismiss={vi.fn()}
+        footer={
+          <>
+            <button type="button" disabled>
+              Cancel
+            </button>
+            <button type="button">Confirm</button>
+          </>
+        }
+      >
+        <p>Body copy.</p>
+      </AdminDialog>,
+    )
+    expect(document.activeElement?.textContent).toBe('Confirm')
+  })
+
+  it('wraps Tab around the enabled controls only', () => {
+    render(
+      <AdminDialog
+        accent="var(--danger)"
+        label="Armed?"
+        eyebrow="Careful"
+        heading="Armed?"
+        onDismiss={vi.fn()}
+        footer={
+          <>
+            <button type="button">Cancel</button>
+            <button type="button" disabled>
+              Confirm
+            </button>
+          </>
+        }
+      >
+        <p>Body copy.</p>
+      </AdminDialog>,
+    )
+    // Cancel is both head and tail while Confirm is disabled, so Tab must
+    // stay on it rather than falling through to the page behind the scrim.
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement?.textContent).toBe('Cancel')
+  })
+
+  // Mid-request every control is disabled. Focus must still be inside a
+  // dialog that is telling assistive technology the page is inert.
+  it('falls back to the panel when every control is disabled', () => {
+    const { container } = render(
+      <AdminDialog
+        accent="var(--danger)"
+        label="Working"
+        eyebrow="Careful"
+        heading="Working"
+        dismissible={false}
+        onDismiss={vi.fn()}
+        footer={
+          <button type="button" disabled>
+            Cancel
+          </button>
+        }
+      >
+        <p>Body copy.</p>
+      </AdminDialog>,
+    )
+    const dialog = container.querySelector('[role="dialog"]')
+    expect(dialog?.contains(document.activeElement)).toBe(true)
+  })
+
+  // A caller passing a freshly-declared function each render must not cause
+  // the effect to tear down and rebuild. The harm is observable as a blur
+  // round trip: cleanup returns focus to the opener, setup pulls it back.
+  // Asserting the final focus position is NOT enough — it is identical
+  // either way, which is how the first version of this test passed against
+  // the bug.
+  it('does not re-run the effect when onDismiss identity changes', () => {
+    const opener = document.createElement('button')
+    document.body.appendChild(opener)
+    opener.focus()
+
+    const Harness = ({ tick }: { tick: number }) => (
+      <AdminDialog
+        accent="var(--danger)"
+        label="Stable"
+        eyebrow="Careful"
+        heading="Stable"
+        onDismiss={() => {
+          void tick
+        }}
+        footer={<button type="button">Cancel</button>}
+      >
+        <input aria-label="token" />
+      </AdminDialog>
+    )
+    const { rerender } = render(<Harness tick={0} />)
+
+    const input = screen.getByLabelText('token')
+    input.focus()
+    const blurs = vi.fn()
+    input.addEventListener('blur', blurs)
+
+    rerender(<Harness tick={1} />)
+
+    expect(blurs).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(input)
+    opener.remove()
+  })
+
   it('attaches nothing while disabled', () => {
     const onDismiss = vi.fn()
     const Harness = () => {
