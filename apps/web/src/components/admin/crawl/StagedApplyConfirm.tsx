@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { AdminButton } from '@/components/admin/primitives'
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -44,13 +44,11 @@ export const StagedApplyConfirm = ({
   const [triggerRecrawl, setTriggerRecrawl] = useState(false)
   const diff = STAGED_DIFFS[stagedId]
 
-  useEffect(() => {
-    const handleKeyDown = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel])
+  // One ref for both panels below: the missing-diff early return and the main
+  // confirm are mutually exclusive, so only ever one of them is mounted.
+  // Already had Escape; what it lacked was focus containment and restore.
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, onCancel)
 
   const handleApply = async () => {
     onApply()
@@ -78,6 +76,7 @@ export const StagedApplyConfirm = ({
         onClick={onCancel}
       >
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="staged-apply-title"
@@ -136,6 +135,7 @@ export const StagedApplyConfirm = ({
       onClick={onCancel}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="staged-apply-title"

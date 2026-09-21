@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useRef } from 'react'
 import {
   MonoLabel,
   AdminButton,
   ConfidenceBar,
+  useDialogKeyboard,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
@@ -42,13 +43,13 @@ export const BulkApproveConfirm = ({
   const previewEvents = events.slice(0, PREVIEW_LIMIT)
   const extraCount = events.length - PREVIEW_LIMIT
 
-  useEffect(() => {
-    const handleKeyDown = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') onCancel()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onCancel])
+  // Hook rather than AdminDialog: this panel's chrome is genuinely its own —
+  // aria-labelledby over aria-label, a shadowed border with no accent rule,
+  // and a preview list that sits outside the head block. Forcing it into the
+  // shared chrome would be a restyle wearing a refactor's clothes. It already
+  // had Escape; what it lacked was focus containment and restore.
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, onCancel)
 
   return (
     /* Overlay / scrim */
@@ -66,6 +67,7 @@ export const BulkApproveConfirm = ({
     >
       {/* Dialog */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="bulk-approve-title"

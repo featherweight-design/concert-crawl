@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import type {
   AdminFeatureFlag,
@@ -12,6 +12,7 @@ import {
   AdminButton,
   RelTime,
   StatusBadge,
+  useDialogKeyboard,
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -178,12 +179,15 @@ const FeatureFlagConfirm = ({
   onCancel,
   onConfirm,
 }: FeatureFlagConfirmProps) => {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
   const turningOn = !flag.enabled
   const heading = turningOn ? COPY.confirmTitleOn : COPY.confirmTitleOff
   const body = turningOn ? COPY.confirmBodyOn : COPY.confirmBodyOff
 
   return (
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label={heading}

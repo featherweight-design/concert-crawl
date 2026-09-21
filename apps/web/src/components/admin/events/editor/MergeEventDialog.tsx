@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { ApiError, apiClient } from '@/lib/api'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton } from '@/components/admin/primitives'
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
 
 const COPY = ADMIN_COPY.editor.mergeDialog
 
@@ -99,8 +99,18 @@ export const MergeEventDialog = ({
     }
   }
 
+  // Hook rather than AdminDialog: this is a search-and-pick flow, not a
+  // confirmation. It has a debounced query field, a result list and a
+  // selection state, none of which the shared chrome models — bending it in
+  // would mean growing AdminDialog a body it only ever uses once. Escape is
+  // gated on `pending` for the same reason the scrim is: mid-merge the work
+  // has already been committed.
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
+
   return (
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label={COPY.heading}

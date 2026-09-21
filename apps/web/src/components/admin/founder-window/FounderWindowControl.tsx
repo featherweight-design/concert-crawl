@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { Rocket } from 'lucide-react'
 import type {
@@ -13,6 +13,7 @@ import {
   Panel,
   AdminButton,
   RelTime,
+  useDialogKeyboard,
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -349,9 +350,12 @@ const FounderLaunchConfirm = ({
   onCancel,
   onConfirm,
 }: FounderLaunchConfirmProps) => {
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
   const accent = 'var(--danger)'
   return (
     <div
+      ref={panelRef}
       role="dialog"
       aria-modal="true"
       aria-label={COPY.confirm.heading}

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { X, Trash2, Loader2 } from 'lucide-react'
 import { deleteVenue } from '@/lib/actions/venues'
-import { AdminButton } from '@/components/admin/primitives'
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface DeleteVenueConfirmProps {
@@ -37,6 +37,14 @@ export function DeleteVenueConfirm({
     setErrorMessage(null)
   }
 
+  // Rendered inline behind `open`, so the hook is gated on it rather than
+  // holding a document-level Escape listener for this component's whole life.
+  const panelRef = useRef<HTMLDivElement>(null)
+  useDialogKeyboard(panelRef, handleClose, {
+    enabled: open,
+    dismissible: deleteState !== 'deleting',
+  })
+
   async function handleDelete() {
     if (!canDelete) return
     setDeleteState('deleting')
@@ -63,6 +71,7 @@ export function DeleteVenueConfirm({
 
       {open && (
         <div
+          ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="delete-venue-title"
