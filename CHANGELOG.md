@@ -1,3 +1,11 @@
+## [1.297.1](https://github.com/HartiganHM/concert-crawl/compare/v1.297.0...v1.297.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **db:** cap socket lifetime below the suspend window, not above it ([a536267](https://github.com/HartiganHM/concert-crawl/commit/a536267fd36807f3c82b8b611a162a9b5dbce762))
+* **db:** retire pooled sockets before Neon suspends the compute ([fc0fec9](https://github.com/HartiganHM/concert-crawl/commit/fc0fec94bfc78359c6c907b20a2543fcf3357a3a))
+
 # [1.297.0](https://github.com/HartiganHM/concert-crawl/compare/v1.296.1...v1.297.0) (2026-09-21)
 
 
