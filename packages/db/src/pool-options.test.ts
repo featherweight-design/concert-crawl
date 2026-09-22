@@ -18,11 +18,22 @@ describe('poolOptions', () => {
     )
   })
 
-  it('caps absolute socket age below postgres.js own 30-minute floor', () => {
-    // postgres.js: `max_lifetime = 60 * (30 + Math.random() * 30)`, so its
-    // shortest possible default is 30 minutes. Anything at or above that is
-    // not actually a cap.
-    expect(poolOptions(NEON).max_lifetime).toBeLessThan(30 * 60)
+  // `idle_timeout` only reclaims a socket that has gone quiet, so a socket in
+  // steady use is bounded by `max_lifetime` alone. Capping it above the suspend
+  // window would let that socket outlive several suspends and hit the same
+  // race. Asserting against 30 minutes — postgres.js's own shortest default —
+  // would pass for any value under 1,800s and so would not encode the fix.
+  it('caps absolute socket age below the suspend window too', () => {
+    expect(poolOptions(NEON).max_lifetime).toBeLessThan(
+      POOL_TIMEOUT_BOUNDS.neonSuspendSeconds,
+    )
+  })
+
+  it('reclaims a quiet socket before it reaches the absolute cap', () => {
+    // The ordering the two timeouts are meant to have: quiet sockets go first,
+    // and the lifetime cap is the backstop for the ones that never go quiet.
+    const { idle_timeout, max_lifetime } = poolOptions(NEON)
+    expect(idle_timeout).toBeLessThan(max_lifetime)
   })
 
   it('applies both timeouts locally too', () => {
@@ -32,7 +43,9 @@ describe('poolOptions', () => {
     expect(local.idle_timeout).toBeLessThan(
       POOL_TIMEOUT_BOUNDS.neonSuspendSeconds,
     )
-    expect(local.max_lifetime).toBeLessThan(30 * 60)
+    expect(local.max_lifetime).toBeLessThan(
+      POOL_TIMEOUT_BOUNDS.neonSuspendSeconds,
+    )
   })
 
   it('requires SSL for a remote host and skips it locally', () => {

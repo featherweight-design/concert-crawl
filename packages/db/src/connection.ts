@@ -44,14 +44,25 @@ export function isLocalConnectionString(connectionString: string): boolean {
 const NEON_SUSPEND_SECONDS = 300
 
 /** Close a socket that has gone unused for this long. Must stay below
+ * {@link MAX_LIFETIME_SECONDS}, which is itself below
  * {@link NEON_SUSPEND_SECONDS} — that ordering is the whole fix, and
  * `pool-options.test.ts` asserts it rather than trusting the comment. */
 const IDLE_TIMEOUT_SECONDS = 60
 
-/** Absolute cap on socket age, replacing postgres.js's random 30–60 minutes.
- * `idle_timeout` already covers the quiet case; this bounds a socket kept
- * nominally busy by steady traffic across a suspend it never noticed. */
-const MAX_LIFETIME_SECONDS = 20 * 60
+/**
+ * Absolute cap on socket age, replacing postgres.js's random 30–60 minutes.
+ * Also below {@link NEON_SUSPEND_SECONDS}, and that is the point rather than a
+ * nicety: `idle_timeout` only reclaims a socket that has gone quiet, so a
+ * socket kept in steady use is reclaimed by this bound alone. A cap above the
+ * suspend window would let such a socket outlive several suspends and hit the
+ * very race this change exists to close — a compute does not only suspend on
+ * idleness, it also restarts for maintenance and compute-release upgrades,
+ * neither of which the pool observes.
+ *
+ * Reconnecting every few minutes costs a handshake against a compute that is
+ * already cold-starting on a five-minute cycle, which is no cost at all.
+ */
+const MAX_LIFETIME_SECONDS = 240
 
 export type PoolOptions = {
   prepare: false
