@@ -34,6 +34,24 @@ const isoDateSchema = z
  * it. Same judgement `AdjudicatedNames` below already applies to a blank name:
  * a model that emits nothing for a name is not reporting an outage, and
  * throwing escalates a recoverable answer into a lost event.
+ *
+ * ⚠️ This is DELIBERATELY wider than the model-facing tool schemas, and the
+ * `items: { type: 'string' }` in `SAVE_EVENTS_TOOL` and `ADJUDICATE_TOOL` must
+ * NOT be widened to match it. What we ask for and what we tolerate are two
+ * different contracts: the tool schema is the request, this is the recovery.
+ *
+ * The distinction is not stylistic — those schemas already define the answer
+ * for a listing whose acts cannot be named, and it is not null. `headliners`
+ * says "when unsure, emit one"; `supportingArtists` says "omit or use an empty
+ * array if there are no named openers"; and the adjudicate prompt spells it
+ * out — "return an EMPTY headliners array instead. An empty array is a real
+ * answer." A null ELEMENT carries no meaning the empty array does not already
+ * carry, so sanctioning it in the request would invite a malformed answer in
+ * place of a defined one, and could raise the null rate this exists to absorb.
+ *
+ * Contrast `artist` and `tourName`, which ARE `type: ['string', 'null']`:
+ * there, null is a meaningful value with its own documented trigger. Inside a
+ * list it is only ever noise.
  */
 const NameList = z.array(z.string().nullable())
 
