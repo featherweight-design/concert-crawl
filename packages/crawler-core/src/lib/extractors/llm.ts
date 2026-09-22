@@ -16,6 +16,43 @@ const isoDateSchema = z
     return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
   }, 'date must be a valid calendar date')
 
+/**
+ * A list of act names as the MODEL emits it, which is not the same thing as a
+ * list of strings. Haiku intermittently returns a null element — most often
+ * `headliners: [null]` on a listing whose headline it could not resolve — and
+ * `z.array(z.string())` rejects the whole row for it.
+ *
+ * That rejection was silently costing events. Cervantes returned
+ * `droppedCount: 7` of `totalCount: 123` on 2026-09-16 (Sentry
+ * CONCERT-CRAWL-CRAWLER-9, 11 occurrences since 2026-08-14), every error the
+ * same null `headliners[0]` — and each dropped row took its title, date and
+ * venue with it, over a field `deriveArtists()` rebuilds from `artist` anyway.
+ * `artist` is already `.nullable()` for exactly this reason (#1162); the array
+ * elements never got the same treatment.
+ *
+ * So admit the null and drop it, rather than rejecting the row that carried
+ * it. Same judgement `AdjudicatedNames` below already applies to a blank name:
+ * a model that emits nothing for a name is not reporting an outage, and
+ * throwing escalates a recoverable answer into a lost event.
+ */
+const NameList = z.array(z.string().nullable())
+
+/**
+ * Drop the nulls and blanks {@link NameList} admits, trim the rest, and keep
+ * the model's billing order. Callers needing dedup do it themselves — they
+ * dedupe against `artist`, which is not known here.
+ */
+function presentNames(names: readonly (string | null)[]): string[] {
+  const present: string[] = []
+  for (const raw of names) {
+    if (raw === null) continue
+    const name = raw.trim()
+    if (name === '') continue
+    present.push(name)
+  }
+  return present
+}
+
 export const NormalizedEventSchema = z.object({
   title: z.string(),
   // EXACT source-headline copy used by the cross-venue presale filter to
@@ -32,8 +69,8 @@ export const NormalizedEventSchema = z.object({
   // one in `artist` (#1203). Optional: a model response that omits it falls
   // back to [artist] downstream. This is the extractor's best guess, not the
   // final answer — `deriveArtists()` re-derives it from `observedPerformers`.
-  headliners: z.array(z.string()).optional(),
-  supportingArtists: z.array(z.string()).optional(),
+  headliners: NameList.optional(),
+  supportingArtists: NameList.optional(),
   tourName: z.string().nullable().optional(),
   date: isoDateSchema,
   doorsTime: z.string().nullable().optional(),
@@ -476,9 +513,10 @@ export async function extractWithLlm(
     // `headliners` from `observedPerformers` and may legitimately empty it.
     const seenHeadliners = new Set<string>([artist.toLowerCase()])
     const headliners = [artist]
-    for (const rawName of evt.headliners ?? []) {
-      const name = rawName.trim()
-      if (name === '' || seenHeadliners.has(name.toLowerCase())) continue
+    // `presentNames` has already trimmed and dropped the nulls and blanks the
+    // model emits, so only the dedup against `artist` is left to do here.
+    for (const name of presentNames(evt.headliners ?? [])) {
+      if (seenHeadliners.has(name.toLowerCase())) continue
       seenHeadliners.add(name.toLowerCase())
       headliners.push(name)
     }
@@ -487,8 +525,8 @@ export async function extractWithLlm(
     // headliner as their own opener on the artist page.
     const supportingArtists = normalizeSupportingArtists(
       artist,
-      (evt.supportingArtists ?? []).filter(
-        (name) => !seenHeadliners.has(name.trim().toLowerCase()),
+      presentNames(evt.supportingArtists ?? []).filter(
+        (name) => !seenHeadliners.has(name.toLowerCase()),
       ),
     )
     // The billing the model actually read off the page, kept split. This is the
@@ -579,13 +617,16 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
 // arrays are the DISPLAY columns. `canonicalHeadliners` dedupes on its own, so
 // a model that names the same act twice would otherwise show a doubled chip
 // against a canonical array that disagrees with it.
-const AdjudicatedNames = z.array(z.string()).transform((names) => {
+//
+// Nulls are dropped on the same reasoning, via the shared `presentNames`: a
+// null name here would otherwise fail the whole adjudication, which has no
+// row-by-row salvage to fall back on.
+const AdjudicatedNames = NameList.transform((names) => {
   const seen = new Set<string>()
   const unique: string[] = []
-  for (const raw of names) {
-    const name = raw.trim()
+  for (const name of presentNames(names)) {
     const key = name.toLowerCase()
-    if (name === '' || seen.has(key)) continue
+    if (seen.has(key)) continue
     seen.add(key)
     unique.push(name)
   }

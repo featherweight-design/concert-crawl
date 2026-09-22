@@ -920,6 +920,91 @@ describe('extractWithLlm', () => {
     expect(result.events[0]?.artist).toBe('BPM Bingo')
   })
 
+  // Sentry CONCERT-CRAWL-CRAWLER-9: 11 occurrences since 2026-08-14, latest
+  // 2026-09-16 reporting `droppedCount: 7` of `totalCount: 123` from
+  // cervantesmasterpiece.com, every error the same null `headliners[0]`. The
+  // row-by-row salvage added for #1162 kept the other 116, but each of those 7
+  // lost its title, date and venue over a field the normalizer rebuilds from
+  // `artist` regardless.
+  describe('null names in the model output', () => {
+    it('keeps an event whose headliners came back [null]', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        mockCreate.mockResolvedValue(
+          makeAnthropicResponse([
+            {
+              title: 'Kitchen Dwellers',
+              rawTitle: 'Kitchen Dwellers',
+              artist: 'Kitchen Dwellers',
+              headliners: [null],
+              date: '2026-09-01',
+              confidence: 0.9,
+            },
+          ]),
+        )
+
+        const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+        expect(result.events).toHaveLength(1)
+        expect(result.events[0]?.artist).toBe('Kitchen Dwellers')
+        // The null is dropped, not carried through as a headliner.
+        expect(result.events[0]?.headliners).toEqual(['Kitchen Dwellers'])
+
+        // And nothing is reported, because nothing was lost.
+        const droppedLog = warnSpy.mock.calls
+          .map((args) => String(args[0]))
+          .find((line) => line.includes('llm.invalid_event_dropped'))
+        expect(droppedLog).toBeUndefined()
+      } finally {
+        warnSpy.mockRestore()
+      }
+    })
+
+    it('keeps the real headliners either side of a null', async () => {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          {
+            title: 'Co-Headline Night',
+            rawTitle: 'Co-Headline Night',
+            artist: 'First Act',
+            headliners: ['First Act', null, 'Second Act'],
+            date: '2026-09-02',
+            confidence: 0.9,
+          },
+        ]),
+      )
+
+      const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+      // Billing order preserved; only the null is gone.
+      expect(result.events[0]?.headliners).toEqual(['First Act', 'Second Act'])
+    })
+
+    it('keeps an event whose supportingArtists hold a null', async () => {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          {
+            title: 'Headliner With Openers',
+            rawTitle: 'Headliner With Openers',
+            artist: 'Headliner',
+            headliners: ['Headliner'],
+            supportingArtists: [null, 'Opener One', '  ', 'Opener Two'],
+            date: '2026-09-03',
+            confidence: 0.9,
+          },
+        ]),
+      )
+
+      const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+      expect(result.events).toHaveLength(1)
+      expect(result.events[0]?.observedSupportingArtists).toEqual([
+        'Opener One',
+        'Opener Two',
+      ])
+    })
+  })
+
   it("still reports 'llm.invalid_tool_input' when every row fails", async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -1133,6 +1218,36 @@ describe('adjudicateEvent', () => {
     // A whitespace name is a padded list, not an outage: throwing would turn a
     // usable verdict into a failed adjudication. But it must not survive into
     // headliners, where it would project an unnamed artist row.
+    expect(verdict.headliners).toEqual(['Turnstile'])
+    expect(verdict.supportingArtists).toEqual(['Snail Mail'])
+  })
+
+  it('drops a null name rather than failing the whole adjudication', async () => {
+    mockAdjudicate.mockResolvedValue({
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool_adj',
+          name: 'adjudicate_event',
+          input: {
+            isConcert: true,
+            headliners: [null, 'Turnstile'],
+            supportingArtists: ['Snail Mail', null],
+          },
+        },
+      ],
+      usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'tool_use',
+    })
+
+    // Same reasoning as the blank above, and it matters more here: a parse
+    // failure in `adjudicateEvent` THROWS — there is no row-by-row salvage to
+    // fall back on, so one null name would lose the entire verdict.
+    const verdict = await adjudicateEvent({
+      title: 'Turnstile',
+      description: undefined,
+    })
+
     expect(verdict.headliners).toEqual(['Turnstile'])
     expect(verdict.supportingArtists).toEqual(['Snail Mail'])
   })
