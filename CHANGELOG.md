@@ -1,3 +1,10 @@
+## [1.297.2](https://github.com/HartiganHM/concert-crawl/compare/v1.297.1...v1.297.2) (2026-09-22)
+
+
+### Bug Fixes
+
+* **crawler:** stop a null act name discarding the whole event ([f6153e0](https://github.com/HartiganHM/concert-crawl/commit/f6153e05f0e3d97197c7ccfcb163481547b89fd2)), closes [#1162](https://github.com/HartiganHM/concert-crawl/issues/1162) [#1162](https://github.com/HartiganHM/concert-crawl/issues/1162)
+
 ## [1.297.1](https://github.com/HartiganHM/concert-crawl/compare/v1.297.0...v1.297.1) (2026-09-22)
 
 
