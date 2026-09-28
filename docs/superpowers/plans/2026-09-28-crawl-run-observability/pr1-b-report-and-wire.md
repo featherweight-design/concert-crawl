@@ -4,20 +4,36 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-### Task 3: Report run health — notification, email, Sentry
+### Task 3: Report run health — Sentry and email
+
+**Channels, and why not an in-app row.** No admin screen lists `admin_alert` notifications in general: `apps/api/src/routes/admin/crawl.ts:276-285` reads only four categories and pins each to a crawl-run row through `metadata.crawlRunId`, and the notification panel (`apps/api/src/routes/notifications.ts:109-111`) is scoped to a user's own `user_notification` rows. A `crawl.run_degraded` row would reach no screen, so this task writes none. The run-level alert goes out as a Sentry event and an admin email, plus the failed cron run from Task 4. Building an admin surface for run-level alerts is a separate decision, not part of this plan.
 
 **Files:**
 
+- Modify: `packages/logger/src/index.ts` (`FailureReport`, ~line 61; the destructure at ~line 94; `captureMessage` at ~line 123)
+- Modify: `packages/logger/src/index.test.ts`
 - Modify: `packages/crawler-core/src/lib/run-health.ts` (append)
 - Modify: `packages/crawler-core/src/lib/email.ts` (add `sendRunDegradedEmail` after `sendCrawlFailureEmail`, ~line 194)
-- Modify: `packages/crawler-core/src/index.ts` (re-export)
+- Modify: `packages/crawler-core/src/index.ts` (re-exports)
 - Modify: `apps/api/src/emails/test-fixtures.ts` (sample for the admin test-email picker)
-- Test: `packages/crawler-core/src/lib/run-health.test.ts` (append)
+- Test: `packages/crawler-core/src/lib/run-health.test.ts` (extend)
 
-**Interfaces — Produces:**
+**Interfaces — Consumes:** `RunDegradation` (Task 2). **Produces:**
 
 ```ts
+// @concert-crawl/logger
+export interface FailureReport {
+  event: string
+  severity: FailureSeverity
+  /** Sentry grouping override. Omit for the default: one issue per `event`. */
+  fingerprint?: string[]
+  [key: string]: unknown
+}
+// run-health.ts
 export function describeDegradation(degradation: RunDegradation): string
+export function runHealthFingerprint(
+  degradations: readonly RunDegradation[],
+): string[]
 export async function reportRunHealth(
   degradations: readonly RunDegradation[],
   summary: { failed: number; total: number },
@@ -32,72 +48,164 @@ export async function sendRunDegradedEmail(
 ): Promise<void>
 ```
 
-- [ ] **Step 1: Write the failing tests.** Mock the side-effect modules the way `event-count-alert.test.ts` does (`vi.mock('@concert-crawl/db', …)`, `vi.mock('./email.js', …)`, `vi.mock('@concert-crawl/logger', …)`); copy that file's mock block rather than inventing one.
+- [ ] **Step 1: Failing tests.**
+
+In `packages/logger/src/index.test.ts`, beside the existing `captureMessageSpy` cases:
 
 ```ts
+it('forwards a fingerprint to Sentry when the report carries one', () => {
+  reportFailure({
+    event: 'crawl.run_degraded',
+    severity: 'error',
+    fingerprint: ['crawl.run_degraded', 'llm_quota'],
+  })
+  expect(captureMessageSpy).toHaveBeenCalledWith(
+    'crawl.run_degraded',
+    expect.objectContaining({
+      fingerprint: ['crawl.run_degraded', 'llm_quota'],
+    }),
+  )
+})
+
+it('keeps the fingerprint out of extra, and out of the context when absent', () => {
+  reportFailure({
+    event: 'crawl.failed',
+    severity: 'error',
+    fingerprint: ['crawl.failed', 'k'],
+  })
+  expect(captureMessageSpy.mock.calls.at(-1)?.[1]?.extra).not.toHaveProperty(
+    'fingerprint',
+  )
+
+  reportFailure({
+    event: 'llm.no_tool_use',
+    severity: 'warn',
+    sourceUrl: 'https://x.example',
+  })
+  expect(captureMessageSpy.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+    'fingerprint',
+  )
+})
+```
+
+At the top of `packages/crawler-core/src/lib/run-health.test.ts` (hoisted, so it applies to Task 2's tests too — they don't touch either module):
+
+```ts
+import { beforeEach, vi } from 'vitest'
+
+const { mockSendRunDegradedEmail, mockReportFailure } = vi.hoisted(() => ({
+  mockSendRunDegradedEmail: vi.fn(),
+  mockReportFailure: vi.fn(),
+}))
+vi.mock('./email.js', () => ({
+  sendRunDegradedEmail: mockSendRunDegradedEmail,
+}))
+vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockSendRunDegradedEmail.mockResolvedValue(undefined)
+})
+```
+
+Then append:
+
+```ts
+const QUOTA_CAUSE: RunDegradation = {
+  kind: 'shared_cause',
+  errorKey: 'llm_quota',
+  errorKind: 'llm_quota',
+  venueNames: ['Hi-Dive', 'Red Rocks'],
+}
+const RATE: RunDegradation = { kind: 'failure_rate', failed: 8, total: 20 }
+
 describe('describeDegradation', () => {
   it('says an llm_quota cause is account-wide, not a venue problem', () => {
-    const line = describeDegradation({
-      kind: 'shared_cause',
-      errorKey: 'llm_quota',
-      errorKind: 'llm_quota',
-      venueNames: ['Hi-Dive', 'Red Rocks'],
-    })
+    const line = describeDegradation(QUOTA_CAUSE)
     expect(line).toContain('account-wide')
     expect(line).toContain('Hi-Dive, Red Rocks')
+  })
+})
+
+describe('runHealthFingerprint', () => {
+  it('groups by the shared causes, sorted, so each cause is its own Sentry issue', () => {
+    const other: RunDegradation = {
+      ...QUOTA_CAUSE,
+      errorKey: 'TypeError: fetch failed',
+      errorKind: 'other',
+    }
+    expect(runHealthFingerprint([RATE, other, QUOTA_CAUSE])).toEqual([
+      'crawl.run_degraded',
+      'TypeError: fetch failed',
+      'llm_quota',
+    ])
+  })
+  it('falls back to failure_rate when no cause is shared', () => {
+    expect(runHealthFingerprint([RATE])).toEqual([
+      'crawl.run_degraded',
+      'failure_rate',
+    ])
   })
 })
 
 describe('reportRunHealth', () => {
   it('does nothing for a healthy run', async () => {
     await reportRunHealth([], { failed: 0, total: 20 })
-    expect(mockInsert).not.toHaveBeenCalled()
+    expect(mockReportFailure).not.toHaveBeenCalled()
     expect(mockSendRunDegradedEmail).not.toHaveBeenCalled()
   })
 
-  it('writes one admin notification, one email and one Sentry report', async () => {
-    await reportRunHealth([{ kind: 'failure_rate', failed: 8, total: 20 }], {
-      failed: 8,
-      total: 20,
-    })
-    expect(mockInsertValues).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'admin_alert',
-        category: 'crawl.run_degraded',
-        title: 'Daily crawl degraded: 8 of 20 venues failed',
-      }),
-    )
-    expect(mockSendRunDegradedEmail).toHaveBeenCalledTimes(1)
+  it('reports to Sentry with the cause fingerprint and emails the admin', async () => {
+    await reportRunHealth([RATE, QUOTA_CAUSE], { failed: 8, total: 20 })
     expect(mockReportFailure).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'crawl.run_degraded',
         severity: 'error',
+        fingerprint: ['crawl.run_degraded', 'llm_quota'],
       }),
     )
+    expect(mockSendRunDegradedEmail).toHaveBeenCalledWith({
+      title: 'Daily crawl degraded: 8 of 20 venues failed',
+      lines: [describeDegradation(RATE), describeDegradation(QUOTA_CAUSE)],
+    })
   })
 
-  it('still reports to Sentry when the email throws', async () => {
+  it('reports to Sentry before emailing, and survives the email throwing', async () => {
     mockSendRunDegradedEmail.mockRejectedValueOnce(new Error('resend down'))
-    await reportRunHealth([{ kind: 'failure_rate', failed: 8, total: 20 }], {
-      failed: 8,
-      total: 20,
-    })
-    expect(mockReportFailure).toHaveBeenCalledWith(
+    await expect(
+      reportRunHealth([RATE], { failed: 8, total: 20 }),
+    ).resolves.toBeUndefined()
+    expect(mockReportFailure).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({ event: 'crawl.run_degraded' }),
     )
-    expect(mockReportFailure).toHaveBeenCalledWith(
+    expect(mockReportFailure).toHaveBeenNthCalledWith(
+      2,
       expect.objectContaining({ event: 'crawl.email_error' }),
     )
   })
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail.**
+- [ ] **Step 2: Run to verify they fail** — `pnpm --filter @concert-crawl/logger test` and `pnpm --filter @concert-crawl/crawler-core test -- run-health`.
 
-- [ ] **Step 3: Implement.** Append to `run-health.ts`:
+- [ ] **Step 3: Implement.**
+
+`packages/logger/src/index.ts` — add the optional `fingerprint?: string[]` field to `FailureReport` above the index signature, destructure it out of `extra`, and pass it through only when set:
 
 ```ts
-import { db, notifications } from '@concert-crawl/db'
+const { event, severity, fingerprint, ...extra } = report
+// …console side unchanged…
+Sentry.captureMessage(event, {
+  level: severity === 'error' ? 'error' : 'warning',
+  extra,
+  ...(fingerprint ? { fingerprint } : {}),
+})
+```
+
+Append to `run-health.ts`:
+
+```ts
 import { reportFailure } from '@concert-crawl/logger'
 import { sendRunDegradedEmail } from './email.js'
 
@@ -113,6 +221,25 @@ export function describeDegradation(degradation: RunDegradation): string {
   return `${count} venues failed with the same error ("${degradation.errorKey}"): ${names}.`
 }
 
+/**
+ * One Sentry issue per shared cause. Without this every degraded night lands in
+ * a single `crawl.run_degraded` issue that stays open, and the issue-alert rule
+ * — which fires on transitions only — never pages for a new cause again.
+ */
+export function runHealthFingerprint(
+  degradations: readonly RunDegradation[],
+): string[] {
+  const causes = degradations
+    .flatMap((degradation) =>
+      degradation.kind === 'shared_cause' ? [degradation.errorKey] : [],
+    )
+    .sort()
+  return [
+    'crawl.run_degraded',
+    ...(causes.length > 0 ? causes : ['failure_rate']),
+  ]
+}
+
 export async function reportRunHealth(
   degradations: readonly RunDegradation[],
   summary: { failed: number; total: number },
@@ -122,23 +249,15 @@ export async function reportRunHealth(
   const title = `Daily crawl degraded: ${summary.failed} of ${summary.total} venues failed`
   const lines = degradations.map(describeDegradation)
 
-  // The notification first: it is the durable record the admin UI reads.
-  await db.insert(notifications).values({
-    type: 'admin_alert',
-    category: 'crawl.run_degraded',
-    title,
-    body: lines.join('\n'),
-    metadata: JSON.stringify({ degradations }),
-  })
-
+  // Sentry first: reportFailure never throws, so a failed email cannot cost the
+  // loud channel.
   reportFailure({
     event: 'crawl.run_degraded',
     severity: 'error',
+    fingerprint: runHealthFingerprint(degradations),
     failed: summary.failed,
     total: summary.total,
-    sharedCauses: degradations
-      .flatMap((d) => (d.kind === 'shared_cause' ? [d.errorKey] : []))
-      .join(' | '),
+    causes: lines.join(' | '),
   })
 
   try {
@@ -153,7 +272,7 @@ export async function reportRunHealth(
 }
 ```
 
-Add to `email.ts`, after `sendCrawlFailureEmail`:
+Add to `email.ts`, after `sendCrawlFailureEmail` (`escapeHtml`, `adminCrawlUrl` and `sendAdminAlert` are module-private there; `adminCrawlUrl`'s venue id is optional):
 
 ```ts
 export interface RunDegradedInput {
@@ -177,7 +296,7 @@ export async function sendRunDegradedEmail(
 
 Re-export from `packages/crawler-core/src/index.ts`: `evaluateRunHealth`, `reportRunHealth`, `type VenueRunOutcome`, `type RunDegradation`, `classifyCrawlError`.
 
-In `apps/api/src/emails/test-fixtures.ts`: add `'run_degraded'` to `OperationalTestKey` (line ~24); add `{ key: 'run_degraded', label: 'Degraded crawl run alert', group: 'Operational' }` to the options list after `event_count_drop`; add a builder mirroring `buildCrawlFailureSample` and register it in `OPERATIONAL_BUILDERS` (the `Record` type makes a missing builder a compile error):
+In `apps/api/src/emails/test-fixtures.ts`: add `'run_degraded'` to `OperationalTestKey` (line ~24); add `{ key: 'run_degraded', label: 'Degraded crawl run alert', group: 'Operational' }` after the `event_count_drop` option (`TEST_EMAIL_KEYS` derives from the options, so nothing else lists it); add this builder beside `buildCrawlFailureSample` and register it in `OPERATIONAL_BUILDERS` (~line 318 — a `Record`, so a missing builder fails to compile):
 
 ```ts
 function buildRunDegradedSample(): BuiltTestEmail {
@@ -193,88 +312,139 @@ function buildRunDegradedSample(): BuiltTestEmail {
 }
 ```
 
-- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/crawler-core test` and `pnpm --filter @concert-crawl/api test -- test-fixtures`; expected PASS.
+- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/logger test`, `pnpm --filter @concert-crawl/crawler-core test`, `pnpm --filter @concert-crawl/api test -- test-fixtures`; PASS. Mutation-check: drop `...(fingerprint ? { fingerprint } : {})` and confirm the first logger test fails; drop `fingerprint` from the destructure and confirm the second fails.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat(crawler): alert admins when a daily run degrades"`
+- [ ] **Step 5: Commit** — `git commit -m "feat(crawler): alert when a daily run degrades, grouped by cause"`
 
 ### Task 4: Wire it into the daily run, and fail the cron on a degraded run
 
 **Files:**
 
-- Modify: `apps/crawler/src/run.ts` (the batch loop ~lines 322–400 and the return at ~425)
-- Modify: `apps/crawler/src/index.ts` (`main` and the `.then` at ~line 44)
-- Test: `apps/crawler/src/run.test.ts`
+- Modify: `apps/crawler/src/run.ts` — the early return at ~line 303, the batch loop ~lines 316–397, the return at ~line 425
+- Modify: `apps/crawler/src/index.ts` — `main()` and the `.then` at ~line 44
+- Test: `apps/crawler/src/run.test.ts`, `apps/crawler/src/__tests__/exit-code.test.ts`
 
-**Interfaces — Consumes:** `evaluateRunHealth`, `reportRunHealth`, `VenueRunOutcome` from `@concert-crawl/crawler-core`. **Produces:** `runDailyCrawl(): Promise<{ succeeded: number; failed: number; total: number; degraded: boolean }>`.
+**Interfaces — Consumes:** `evaluateRunHealth`, `reportRunHealth`, `VenueRunOutcome` from `@concert-crawl/crawler-core`. **Produces:** `runDailyCrawl(): Promise<{ succeeded: number; failed: number; total: number; degraded: boolean }>`; `main(): Promise<{ degraded: boolean }>`.
 
-- [ ] **Step 1: Write the failing test.** `run.test.ts` mocks `@concert-crawl/crawler-core` wholesale (line ~101); add `evaluateRunHealth: mockEvaluateRunHealth` and `reportRunHealth: mockReportRunHealth` to that factory, then:
+- [ ] **Step 1: Failing tests.**
+
+`run.test.ts` — declare beside the other crawler-core mocks (~line 100) and add both to the `vi.mock('@concert-crawl/crawler-core', …)` factory:
 
 ```ts
-it('hands every venue outcome to the run-health check and returns degraded', async () => {
+const mockEvaluateRunHealth = vi.fn<(outcomes: unknown[]) => unknown[]>(
+  () => [],
+)
+const mockReportRunHealth = vi.fn().mockResolvedValue(undefined)
+```
+
+In the `runDailyCrawl` describe's `beforeEach` (after `vi.clearAllMocks()`, which keeps implementations), re-pin the defaults so no test's override can leak:
+
+```ts
+mockEvaluateRunHealth.mockReturnValue([])
+mockReportRunHealth.mockResolvedValue(undefined)
+```
+
+Then, following the file's pattern of importing `./run.js` inside each test (the default `where` mock already serves the four `mockVenues`):
+
+```ts
+it('hands one outcome per venue, in order, to the run-health check', async () => {
   mockCrawlVenue
     .mockResolvedValueOnce({
-      id: 'run-1',
+      ...SUCCESSFUL_CRAWL_RUN,
       status: 'failed',
       errorMessage: 'quota',
-      eventsFound: 0,
-      durationMs: 1,
     })
-    .mockResolvedValueOnce({
-      id: 'run-2',
-      status: 'success',
-      eventsFound: 3,
-      eventsInserted: 0,
-      durationMs: 1,
-      insertedEventIds: [],
-    })
-  mockEvaluateRunHealth.mockReturnValue([
-    { kind: 'failure_rate', failed: 1, total: 2 },
+    .mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
+  const { runDailyCrawl } = await import('./run.js')
+
+  await runDailyCrawl()
+
+  expect(mockEvaluateRunHealth).toHaveBeenCalledWith(
+    mockVenues.map((venue, i) =>
+      expect.objectContaining({
+        venueId: venue.id,
+        errorMessage: i === 0 ? 'quota' : null,
+      }),
+    ),
+  )
+})
+
+it('returns degraded when the check finds a degradation', async () => {
+  mockEvaluateRunHealth.mockReturnValueOnce([
+    { kind: 'failure_rate', failed: 4, total: 4 },
   ])
+  const { runDailyCrawl } = await import('./run.js')
 
   const result = await runDailyCrawl()
 
-  expect(mockEvaluateRunHealth).toHaveBeenCalledWith([
-    expect.objectContaining({ errorMessage: 'quota' }),
-    expect.objectContaining({ errorMessage: null }),
-  ])
   expect(mockReportRunHealth).toHaveBeenCalledTimes(1)
   expect(result.degraded).toBe(true)
 })
 
-it('never lets a run-health failure break the crawl', async () => {
-  mockEvaluateRunHealth.mockReturnValue([
-    { kind: 'failure_rate', failed: 1, total: 2 },
+it('never lets the run-health report break the crawl', async () => {
+  mockEvaluateRunHealth.mockReturnValueOnce([
+    { kind: 'failure_rate', failed: 4, total: 4 },
   ])
-  mockReportRunHealth.mockRejectedValueOnce(new Error('db down'))
+  mockReportRunHealth.mockRejectedValueOnce(new Error('resend down'))
+  const { runDailyCrawl } = await import('./run.js')
+
   await expect(runDailyCrawl()).resolves.toMatchObject({ degraded: true })
 })
 ```
 
-Seed `mockVenues` with two venues for these cases, following the existing tests' setup.
+`__tests__/exit-code.test.ts` — the default at ~line 39 is `runDailyCrawl.mockResolvedValue(undefined)`, which crashes once `main()` reads `.degraded` off it. Change it to:
 
-- [ ] **Step 2: Run to verify it fails.**
+```ts
+runDailyCrawl.mockResolvedValue({
+  succeeded: 1,
+  failed: 0,
+  total: 1,
+  degraded: false,
+})
+```
 
-- [ ] **Step 3: Implement.** In `runDailyCrawl`, declare `const outcomes: VenueRunOutcome[] = []` beside `succeeded`/`failed`. In the loop take `const venue = batch[idx]` and, when `venue` is defined, push one outcome per branch:
-  - fulfilled + `status === 'failed'`: `errorMessage: result.value.errorMessage ?? 'Crawl failed'`
-  - fulfilled otherwise: `errorMessage: null`
-  - rejected: `errorMessage: String(result.reason)`
+and add:
 
-  After `requestLandingRevalidationSafely(eventsInserted)`:
+```ts
+it('exits 1 without reporting a crash when the run is degraded', async () => {
+  runDailyCrawl.mockResolvedValue({
+    succeeded: 12,
+    failed: 8,
+    total: 20,
+    degraded: true,
+  })
+  const exitSpy = await importEntrypoint()
+
+  expect(exitSpy).toHaveBeenCalledTimes(1)
+  expect(exitSpy).toHaveBeenCalledWith(1)
+  expect(captureException).not.toHaveBeenCalled()
+  expect(loggerError).not.toHaveBeenCalled()
+})
+```
+
+- [ ] **Step 2: Run to verify the new cases fail** — `pnpm --filter @concert-crawl/crawler test`.
+
+- [ ] **Step 3: Implement.** In `run.ts`, change the no-venues early return (~line 303) to `return { succeeded: 0, failed: 0, total: 0, degraded: false }`. Declare `const outcomes: VenueRunOutcome[] = []` beside `succeeded`/`failed`. In the loop, take `const venue = batch[idx]` and, when it is defined, push one outcome per branch:
+
+- fulfilled with `status === 'failed'`: `{ venueId: venue.id, venueName: venue.name, errorMessage: result.value.errorMessage ?? 'Crawl failed' }`
+- fulfilled otherwise: `errorMessage: null`
+- rejected: `errorMessage: String(result.reason)`
+
+After `await requestLandingRevalidationSafely(eventsInserted)`:
 
 ```ts
 // Run-level health: the only check that sees a failure shared across venues
-// on the night it happens. Monitoring must never break the crawl.
-const degradations = evaluateRunHealth(outcomes)
+// on the night it happens. Evaluation sits inside the try too — monitoring
+// must never break the crawl.
+let degraded = false
 try {
+  const degradations = evaluateRunHealth(outcomes)
+  degraded = degradations.length > 0
   await reportRunHealth(degradations, { failed, total: activeVenues.length })
 } catch (healthErr: unknown) {
   Sentry.captureException(healthErr)
-  logger.error(
-    { healthErr },
-    'Run-health report failed — crawl data unaffected',
-  )
+  logger.error({ healthErr }, 'Run-health check failed — crawl data unaffected')
 }
-const degraded = degradations.length > 0
 
 logger.info(
   { succeeded, failed, total: activeVenues.length, degraded },
@@ -283,9 +453,32 @@ logger.info(
 return { succeeded, failed, total: activeVenues.length, degraded }
 ```
 
-In `index.ts`, make `main()` return `{ degraded: boolean }` (`false` unless the daily branch ran and reported it), and change the success handler:
+In `index.ts`:
 
 ```ts
+async function main(): Promise<{ degraded: boolean }> {
+  const mode = process.env['CRAWL_MODE'] ?? 'all'
+
+  if (mode !== 'triggers' && mode !== 'daily' && mode !== 'all') {
+    logger.error(
+      { mode },
+      'Unknown CRAWL_MODE; expected triggers | daily | all',
+    )
+    process.exit(1)
+  }
+
+  if (mode === 'triggers' || mode === 'all') {
+    await runTriggeredCrawls()
+  }
+  if (mode === 'daily' || mode === 'all') {
+    const { degraded } = await runDailyCrawl()
+    return { degraded }
+  }
+  // Triggers-only runs are admin-queued and a handful of venues at most; the
+  // run-level check does not apply to them.
+  return { degraded: false }
+}
+
 main().then(async ({ degraded }) => {
   await flushQuietly()
   // A degraded run exits 1 so Render marks the cron run failed. Before this,
@@ -294,8 +487,10 @@ main().then(async ({ degraded }) => {
 })
 ```
 
-- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/crawler test`; PASS. Mutation-check: drop the `reportRunHealth` call; the first test must fail.
+(the `.catch` branch is unchanged).
 
-- [ ] **Step 5: Commit, add a `progress.md` ✅ row (substantive reliability fix), open PR 1** with this plan file included. Ops note for the PR body: confirm Render → Notifications emails on a failed cron run — the crawler services carry `notifyOnFail: default`, which defers to the workspace setting.
+- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/crawler test`; PASS. Mutation-check: drop the `reportRunHealth` call and confirm "returns degraded…" fails; hard-code `process.exit(0)` and confirm the new exit-code case fails.
 
----
+- [ ] **Step 5: Commit, add a `progress.md` ✅ row (substantive reliability fix), run the §10b cold-eyes pass, open PR 1** with the whole plan directory included. PR body ops notes:
+  - Render's `notifyOnFail` for the crawler crons is `default` (read from the Render API `list_services` on 2026-09-22; not recorded in `render.yaml`), which defers to the workspace setting — confirm Render → Notifications emails on a failed cron run.
+  - `concert-crawl-crawler-daily-staging` runs the same code, so an un-suspended staging cron would also exit 1 on a degraded night and send `[STAGING]`-prefixed email. It was suspended as of the same read.

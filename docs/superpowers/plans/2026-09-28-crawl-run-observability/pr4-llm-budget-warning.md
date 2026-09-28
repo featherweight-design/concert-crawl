@@ -6,6 +6,8 @@
 
 **Recommendation: build this only once concert-crawl has its own Anthropic API key with its own limit.** On a shared account it compares this app's spend against a number that does not govern this app's availability — it would not have fired on 2026-09-28 (the app was at $18.96 of a cap the other project consumed). With a per-app key, `LLM_MONTHLY_BUDGET_USD` equals that key's limit and the warning becomes exactly predictive. Until then, PR 1 reports the refusal on its first night.
 
+**Known undercount — fix before trusting the percentage.** `cost_tracking` is written only for extraction (`crawl.ts` ~1559, from `tokenUsage`, which `crawl.ts` ~295 takes from `extractWithLlm` alone) and genre tagging (`genre-tagger.ts` ~243). `adjudicateEvent` (called via `deriveArtists`, `crawl.ts` ~877) also calls Anthropic and records nothing, so both this warning and the existing admin cost panel under-report. That is a defect against CLAUDE.md principle 4 in its own right, raised separately; this task assumes it is fixed first.
+
 ### Task 7: Warn at 80% and 100% of a per-app monthly budget
 
 **Files:**
@@ -24,7 +26,62 @@ export function crossedBudgetThreshold(
 export async function checkLlmBudget(now?: Date): Promise<void>
 ```
 
-- [ ] **Step 1: Failing tests.** The pure half in full; the side-effect half uses the `event-count-alert.test.ts` mock block, with `mockSelect` resolving spend then prior alerts in call order:
+- [ ] **Step 1: Failing tests.** No existing crawler-core unit test mocks `@concert-crawl/db`'s query builders (`event-count-alert` has only an integration test against real Postgres), so this file carries its own mocks. At the top of `llm-budget.test.ts`:
+
+```ts
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { mockSelect, mockInsertValues, mockReportFailure, selectQueue } =
+  vi.hoisted(() => ({
+    mockSelect: vi.fn(),
+    mockInsertValues: vi.fn(),
+    mockReportFailure: vi.fn(),
+    // Each select().from().where() chain resolves to the next queued array.
+    selectQueue: [] as unknown[][],
+  }))
+
+vi.mock('@concert-crawl/db', () => ({
+  costTracking: {
+    service: 'service',
+    costUsd: 'cost_usd',
+    recordedAt: 'recorded_at',
+  },
+  notifications: {
+    category: 'category',
+    createdAt: 'created_at',
+    metadata: 'metadata',
+  },
+  db: {
+    select: (...args: unknown[]) => {
+      mockSelect(...args)
+      return {
+        from: () => ({
+          where: () => Promise.resolve(selectQueue.shift() ?? []),
+        }),
+      }
+    },
+    insert: () => ({
+      values: (row: unknown) => {
+        mockInsertValues(row)
+        return Promise.resolve()
+      },
+    }),
+  },
+}))
+vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }))
+
+const mockSelectResults = (...results: unknown[][]) => {
+  selectQueue.length = 0
+  selectQueue.push(...results)
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  selectQueue.length = 0
+})
+```
+
+(`drizzle-orm` stays real: `and`/`eq`/`gte`/`inArray`/`sql` only build expressions, which the mock ignores.) Then the tests, pure half first:
 
 ```ts
 describe('crossedBudgetThreshold', () => {
@@ -80,7 +137,7 @@ describe('checkLlmBudget', () => {
 })
 ```
 
-`mockSelectResults(...results)` is a two-line helper in the test file that queues each array as the next `select()` chain's resolved value.
+`mockSelectResults` is defined in the mock block above.
 
 - [ ] **Step 2: Run to verify they fail.**
 

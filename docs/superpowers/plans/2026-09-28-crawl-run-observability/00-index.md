@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make a crawl run that fails for one shared reason say so on the first night, in the admin's own channels, and stop that reason from auto-pausing venues that were never broken.
+**Goal:** Make a crawl run that fails for one shared reason say so on the first night — naming the cause and the venues, in an admin email, a Sentry issue per cause, and a failed cron run — and stop that reason from auto-pausing venues that were never broken.
 
 **Architecture:** One shared, pure classifier (`classifyCrawlError`) turns a crawl error message into a stable kind + grouping key. A run-level health check consumes it at the end of `runDailyCrawl`; Sentry fingerprinting consumes it at the capture sites; the three-strikes path consumes it to exempt account-wide LLM refusals. An optional budget warning reads `cost_tracking` against a per-app monthly figure.
 
@@ -43,9 +43,11 @@ You will regain access on 2026-10-01 at 00:00 UTC."
 | `event_count_dropped` / `url_coverage_gap` / `event_ceiling`          | **Silent by construction** — all run on the success path (`crawl.ts:1615`).                                 |
 | Render cron status                                                    | **Success.** Per-venue failures are caught inside `runDailyCrawl`; `index.ts` exits 0.                      |
 
+**This plan does not add an in-app alert.** No admin screen lists `admin_alert` rows in general — the crawl dashboard reads four categories pinned to a crawl-run row (`apps/api/src/routes/admin/crawl.ts:276-285`) — so a run-level row would reach nobody. Surfacing run-level alerts in the admin UI is a separate decision.
+
 So the signal arrived, but as "sustained error volume" — not "the LLM account is out of budget, 8 named venues, auto-pause in 48 hours." And the three-strikes rule (`crawl.ts:1720`, non-block branch) would have set `active = false` on all 8 at the Sept 30 09:00 run — ~15 hours before the quota reset — requiring manual re-activation of each.
 
-**Threshold evidence (prod `crawl_runs`, 91 days to 2026-09-28):** 86 days with zero failures, 3 days with one, 1 day with two — both the _same venue_ (Levitt Pavilion, daily run plus a manual re-run) — and today with eight. The thresholds below fire on today only. The Levitt day is why shared-cause counting is by **distinct venue**, never by run.
+**Threshold evidence (prod `crawl_runs`, 91 days to 2026-09-28):** 86 days with zero failures, 3 days with one, 1 day with two — both the _same venue_ (Levitt Pavilion, daily run plus a manual re-run) — and today with eight. The thresholds below fire on today only. Shared-cause counting is by **distinct venue** — defensive, since the daily loop crawls each venue once, but it keeps one venue from ever reading as a shared cause.
 
 ---
 
@@ -69,18 +71,19 @@ Each PR carries its own plan file below, so spec, plan and code are reviewed tog
 
 ## File structure
 
-| File                                                       | Responsibility                                                           | PR   |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------ | ---- |
-| `packages/crawler-core/src/lib/crawl-error-class.ts` (new) | Pure: error message → `{ kind, key }`; later, Sentry capture context     | 1, 2 |
-| `packages/crawler-core/src/lib/run-health.ts` (new)        | Pure `evaluateRunHealth` + side-effecting `reportRunHealth`              | 1    |
-| `packages/crawler-core/src/lib/email.ts`                   | `sendRunDegradedEmail` beside the other admin alerts                     | 1    |
-| `packages/crawler-core/src/index.ts`                       | Re-exports                                                               | 1, 2 |
-| `apps/crawler/src/run.ts`                                  | Collect outcomes, report health, return `degraded`; fingerprint captures | 1, 2 |
-| `apps/crawler/src/index.ts`                                | Exit 1 on a degraded run                                                 | 1    |
-| `apps/api/src/emails/test-fixtures.ts`                     | Sample for the admin test-email picker                                   | 1    |
-| `packages/crawler-core/src/crawl.ts`                       | Exempt `llm_quota` from the three strikes                                | 3    |
-| `CLAUDE.md`                                                | Amend the three-strikes crawl rule                                       | 3    |
-| `packages/crawler-core/src/lib/llm-budget.ts` (new)        | Month-to-date spend vs `LLM_MONTHLY_BUDGET_USD`                          | 4    |
+| File                                                        | Responsibility                                                                   | PR   |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------- | ---- |
+| `packages/crawler-core/src/lib/crawl-error-class.ts` (new)  | Pure: error message → `{ kind, key }`; later, Sentry capture context             | 1, 2 |
+| `packages/crawler-core/src/lib/run-health.ts` (new)         | Pure `evaluateRunHealth` + side-effecting `reportRunHealth`                      | 1    |
+| `packages/crawler-core/src/lib/email.ts`                    | `sendRunDegradedEmail` beside the other admin alerts                             | 1    |
+| `packages/crawler-core/src/index.ts`                        | Re-exports                                                                       | 1, 2 |
+| `apps/crawler/src/run.ts`                                   | Collect outcomes, report health, return `degraded`; fingerprint captures         | 1, 2 |
+| `apps/crawler/src/index.ts` + `__tests__/exit-code.test.ts` | Exit 1 on a degraded run                                                         | 1    |
+| `packages/logger/src/index.ts`                              | Optional `fingerprint` on `FailureReport`                                        | 1    |
+| `apps/api/src/emails/test-fixtures.ts`                      | Sample for the admin test-email picker                                           | 1    |
+| `packages/crawler-core/src/crawl.ts`                        | Fingerprint the `crawl.failed` report; exempt `llm_quota` from the three strikes | 2, 3 |
+| `CLAUDE.md`                                                 | Amend the three-strikes crawl rule                                               | 3    |
+| `packages/crawler-core/src/lib/llm-budget.ts` (new)         | Month-to-date spend vs `LLM_MONTHLY_BUDGET_USD`                                  | 4    |
 
 ---
 

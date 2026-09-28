@@ -4,73 +4,120 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-### Task 5: Group Sentry issues by error class, not call site
+### Task 5: Group crawl-failure Sentry events by error class, not call site
 
-**Why:** both capture sites wrap the message in `new Error(...)`, so Sentry groups every crawl failure on the call site. `CONCERT-CRAWL-CRAWLER-2` has absorbed every distinct cause since 2026-05-11; the issue-alert rule fires on transitions only, so a new cause in an ongoing group never pages.
+**Why:** each failed crawl reaches Sentry twice, and both paths group every cause into one issue:
+
+1. `apps/crawler/src/run.ts` wraps the message in `new Error(...)` at both capture sites (triggers ~line 203, daily ~line 331), so Sentry groups on the call site. `CONCERT-CRAWL-CRAWLER-2` has absorbed every distinct cause since 2026-05-11.
+2. `packages/crawler-core/src/crawl.ts` ~line 1793 calls `reportFailure({ event: 'crawl.failed', … })`, a `captureMessage('crawl.failed')` — one issue for every cause.
+
+The issue-alert rule fires on transitions only, so a new cause landing in an ongoing issue never pages. Both paths get the same fingerprint, so one cause is one issue.
 
 **Files:**
 
 - Modify: `packages/crawler-core/src/lib/crawl-error-class.ts`, `packages/crawler-core/src/index.ts`
-- Modify: `apps/crawler/src/run.ts` (triggers capture ~line 203, daily capture ~line 331)
+- Modify: `apps/crawler/src/run.ts` (the two capture sites), `packages/crawler-core/src/crawl.ts` (~line 1793)
 - Test: `packages/crawler-core/src/lib/crawl-error-class.test.ts`, `apps/crawler/src/run.test.ts`
 
-**Interfaces — Produces:**
+**Interfaces — Consumes:** `classifyCrawlError`, `CrawlErrorKind` (Task 1); `FailureReport.fingerprint` (Task 3). **Produces:**
 
 ```ts
-export function crawlFailureCaptureContext(message: string): {
+export function crawlFailureGrouping(message: string): {
   fingerprint: string[]
-  tags: { crawl_error_kind: CrawlErrorKind }
+  errorKind: CrawlErrorKind
 }
 ```
 
-- [ ] **Step 1: Failing test** (in `crawl-error-class.test.ts`):
+- [ ] **Step 1: Failing tests.** In `crawl-error-class.test.ts` (reusing its `QUOTA` fixture):
 
 ```ts
-describe('crawlFailureCaptureContext', () => {
+describe('crawlFailureGrouping', () => {
   it('fingerprints on the class, so one cause is one Sentry issue', () => {
-    expect(crawlFailureCaptureContext(QUOTA)).toEqual({
+    expect(crawlFailureGrouping(QUOTA)).toEqual({
       fingerprint: ['crawl.failed', 'llm_quota'],
-      tags: { crawl_error_kind: 'llm_quota' },
+      errorKind: 'llm_quota',
     })
   })
   it('gives different causes different fingerprints', () => {
-    expect(crawlFailureCaptureContext('HTTP 403').fingerprint).not.toEqual(
-      crawlFailureCaptureContext('HTTP 500').fingerprint,
+    expect(crawlFailureGrouping('HTTP 403').fingerprint).not.toEqual(
+      crawlFailureGrouping('HTTP 500').fingerprint,
     )
   })
 })
 ```
 
-In `run.test.ts`, add `crawlFailureCaptureContext: vi.fn(() => ({ fingerprint: ['crawl.failed', 'k'], tags: { crawl_error_kind: 'other' } }))` to the crawler-core mock, and assert the daily failed path calls `Sentry.captureException` with `expect.objectContaining({ fingerprint: ['crawl.failed', 'k'] })`.
+In `run.test.ts`, add to the crawler-core mock factory:
+
+```ts
+  crawlFailureGrouping: vi.fn(() => ({ fingerprint: ['crawl.failed', 'k'], errorKind: 'other' })),
+```
+
+and add a case:
+
+```ts
+it('fingerprints a failed venue by cause', async () => {
+  mockCrawlVenue.mockResolvedValueOnce({
+    ...SUCCESSFUL_CRAWL_RUN,
+    status: 'failed',
+    errorMessage: 'boom',
+  })
+  const { runDailyCrawl } = await import('./run.js')
+
+  await runDailyCrawl()
+
+  expect(Sentry.captureException).toHaveBeenCalledWith(
+    expect.any(Error),
+    expect.objectContaining({
+      fingerprint: ['crawl.failed', 'k'],
+      tags: { crawl_error_kind: 'other' },
+    }),
+  )
+})
+```
+
+(`Sentry` is the file's existing `@sentry/node` mock, ~line 8; import it the way the file's other Sentry assertions do.)
 
 - [ ] **Step 2: Run to verify both fail.**
 
-- [ ] **Step 3: Implement.**
+- [ ] **Step 3: Implement.** In `crawl-error-class.ts`:
 
 ```ts
-export function crawlFailureCaptureContext(message: string) {
+/** Sentry grouping for a failed crawl: one issue per cause, on every path. */
+export function crawlFailureGrouping(message: string) {
   const { kind, key } = classifyCrawlError(message)
-  return {
-    fingerprint: ['crawl.failed', key],
-    tags: { crawl_error_kind: kind },
-  }
+  return { fingerprint: ['crawl.failed', key], errorKind: kind }
 }
 ```
 
-At both capture sites:
+Re-export it from `packages/crawler-core/src/index.ts`. At both `run.ts` capture sites:
 
 ```ts
 const message = result.value.errorMessage ?? 'Crawl failed'
+const grouping = crawlFailureGrouping(message)
 Sentry.captureException(new Error(message), {
-  ...crawlFailureCaptureContext(message),
+  fingerprint: grouping.fingerprint,
+  tags: { crawl_error_kind: grouping.errorKind },
   extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
 })
 ```
 
-(triggers path: `crawlRun.errorMessage`, `extra: { venueId: trigger.venueId, triggerId: trigger.id }`). Leave the `rejected` branch (~line 384) on default grouping — it carries a real stack trace, which is the right grouping for an unexpected throw.
+(triggers path: `crawlRun.errorMessage`, `extra: { venueId: trigger.venueId, triggerId: trigger.id }`). Leave the `rejected` branch (~line 384) on default grouping — it carries a real stack trace, the right grouping for an unexpected throw.
 
-- [ ] **Step 4: Run** both packages' tests; PASS. Mutation-check the fingerprint assertion.
+In `crawl.ts` ~line 1793, spread the same grouping into the existing report (`fingerprint` goes to Sentry, `errorKind` to `extra`):
 
-- [ ] **Step 5: Commit, open PR 2.** Ops step after deploy (record in the PR body): resolve `CONCERT-CRAWL-CRAWLER-2` so the old bucket stops absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.
+```ts
+reportFailure({
+  event: 'crawl.failed',
+  severity: 'error',
+  ...crawlFailureGrouping(String(err)),
+  venueId,
+  error: String(err),
+  durationMs,
+})
+```
 
----
+That one-line spread has no dedicated test: `crawl.test.ts` does not mock the logger, and the grouping itself is covered above. Typecheck and review cover the call.
+
+- [ ] **Step 4: Run** both packages' tests; PASS. Mutation-check: return `['crawl.failed']` from `crawlFailureGrouping` and confirm the "different causes" test fails.
+
+- [ ] **Step 5: Commit, run the §10b cold-eyes pass, open PR 2.** Ops step after deploy, recorded in the PR body: resolve `CONCERT-CRAWL-CRAWLER-2` and the `crawl.failed` message issue so the old buckets stop absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.

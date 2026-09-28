@@ -6,21 +6,24 @@
 
 ### Task 6: Exempt `llm_quota` from the three strikes
 
-**Why:** on 2026-09-28 the rule would have set `active = false` on 8 working venues at the Sept 30 run, ~15 hours before the quota reset, needing manual re-activation of each. Decision: an `llm_quota` failure **neither increments** `consecutive_failures` **nor notifies** per venue. Incrementing would leave every LLM venue one real failure from a pause after the account recovers; the run-level alert (PR 1) is the channel that reports it. The `crawl_runs` row is still written as `failed`.
+**Why:** on 2026-09-28 the rule would have set `active = false` on 8 working venues at the Sept 30 run, ~15 hours before the quota reset, needing manual re-activation of each. **Decision:** an `llm_quota` failure neither increments `consecutive_failures` nor notifies per venue. Incrementing would leave every LLM venue one real failure from a pause once the account recovers. The run-level alert (PR 1) is the channel that reports it. The `crawl_runs` row is still written as `failed`, and the final `reportFailure('crawl.failed')` still fires.
+
+**Verified precondition:** the Anthropic error reaches the outer `catch (err)` in `crawlVenue` (~line 1655). `extractWithLlm` does not catch around `stream.finalMessage()` (`lib/extractors/llm.ts` ~362–392), and `runExtraction` (`crawl.ts` ~293) and its call sites propagate. Nothing declared between `const isHttpBlocked` and the end of the `if (newFailureCount >= 3)` block is used after it, so the wrap below breaks no scope.
 
 **Files:**
 
 - Modify: `packages/crawler-core/src/crawl.ts` (outer `catch (err)` at ~line 1655)
-- Modify: `CLAUDE.md` (Crawl Architecture → non-negotiable rules)
+- Modify: `CLAUDE.md` (Crawl Architecture → non-negotiable crawl rules)
 - Test: `packages/crawler-core/src/crawl.test.ts`
 
-- [ ] **Step 1: Failing test** (append a `describe` to `crawl.test.ts`; `seedVenue`, `mockFetchPage`, `mockExtractWithLlm`, `HTML_V1`, `db`, `venues`, `notifications`, `eq` are already in scope):
+- [ ] **Step 1: Failing test.** Append to `crawl.test.ts`. Read venues from `stores.venues`, as the existing tests at ~lines 959 and 991 do. Note what the in-memory `update()` builder does (~line 108): it `Object.assign`s the `set()` payload onto the row verbatim, and `drizzle-orm` is not mocked — so after a real three-strikes update, `consecutiveFailures` holds a Drizzle SQL object, not a number. That is what makes "still the number 2" a sound assertion that no update ran, and why the control asserts "no longer 2" rather than 3.
 
 ```ts
 describe('crawlVenue — account-wide LLM quota', () => {
   const QUOTA =
     'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}'
 
+  const storedVenue = (id: string) => stores.venues.find((row) => row.id === id)
   const arrangeLlmPath = (venue: { websiteUrl: string }) =>
     mockFetchPage.mockResolvedValue({
       html: HTML_V1,
@@ -28,44 +31,33 @@ describe('crawlVenue — account-wide LLM quota', () => {
       finalUrl: venue.websiteUrl,
     })
 
-  it('records the run as failed without counting it toward the three strikes', async () => {
+  it('records the run as failed without touching the three-strikes counter', async () => {
     const venue = seedVenue({ consecutiveFailures: 2 })
     arrangeLlmPath(venue)
-    mockExtractWithLlm.mockRejectedValue(new Error(QUOTA))
+    mockExtractWithLlm.mockRejectedValueOnce(new Error(QUOTA))
 
     const run = await crawlVenue(venue.id, mockBrowser)
 
     expect(run.status).toBe('failed')
-    const [after] = await db
-      .select()
-      .from(venues)
-      .where(eq(venues.id, venue.id))
-    expect(after?.consecutiveFailures).toBe(2)
-    expect(after?.active).toBe(true)
-    const alerts = await db.select().from(notifications)
-    expect(
-      alerts.filter((row) => row.category === 'crawl.failed'),
-    ).toHaveLength(0)
+    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2)
+    expect(storedVenue(venue.id)?.active).toBe(true)
   })
 
-  it('still auto-pauses on an ordinary third failure', async () => {
+  it('still runs the three-strikes update for an ordinary failure (control)', async () => {
     const venue = seedVenue({ consecutiveFailures: 2 })
     arrangeLlmPath(venue)
-    mockExtractWithLlm.mockRejectedValue(new Error('TypeError: fetch failed'))
+    mockExtractWithLlm.mockRejectedValueOnce(
+      new Error('TypeError: fetch failed'),
+    )
 
     await crawlVenue(venue.id, mockBrowser)
 
-    const [after] = await db
-      .select()
-      .from(venues)
-      .where(eq(venues.id, venue.id))
-    expect(after?.consecutiveFailures).toBe(3)
-    expect(after?.active).toBe(false)
+    expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2)
   })
 })
 ```
 
-- [ ] **Step 2: Run to verify the first fails and the control passes.**
+- [ ] **Step 2: Run to verify the first fails and the control passes** — `pnpm --filter @concert-crawl/crawler-core test -- crawl.test`.
 
 - [ ] **Step 3: Implement.** Import `classifyCrawlError` from `./lib/crawl-error-class.js`. After the debug-HTML capture block and before `const isHttpBlocked`:
 
@@ -75,18 +67,17 @@ describe('crawlVenue — account-wide LLM quota', () => {
 // recovers. Counting it toward the three strikes would pause venues that
 // were never broken — on 2026-09-28 it would have deactivated eight, ~15
 // hours before the quota reset. It neither increments nor notifies; the
-// run-level alert (lib/run-health.ts) is what reports it. The crawl_runs
-// row below is still written as failed.
+// run-level alert (lib/run-health.ts) reports it. The crawl_runs row below
+// is still written as failed.
 const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota'
 ```
 
-Wrap everything from `const isHttpBlocked` through the end of the `if (newFailureCount >= 3) { … }` block in `if (!isAccountQuota) { … }`. The `const durationMs` line and the `crawl_runs` insert after it stay outside, unconditional.
+Wrap everything from `const isHttpBlocked` through the end of the `if (newFailureCount >= 3) { … }` block in `if (!isAccountQuota) { … }`. The `const durationMs` line, the `crawl_runs` insert and the final `reportFailure` stay outside it, unconditional.
 
 In `CLAUDE.md`, change the rule line to:
+
 `- 3 consecutive failures → pause venue + notify admin via in-app notification. An account-wide LLM refusal (usage limit, exhausted credit) is not a venue failure and does not count; the daily run-level alert reports it.`
 
-- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/crawler-core test`; PASS. Mutation-check: force `isAccountQuota = false`; the first test must fail.
+- [ ] **Step 4: Run** the crawler-core suite; PASS. Mutation-check: force `isAccountQuota = false` and confirm the first test fails.
 
-- [ ] **Step 5: Commit, open PR 3.**
-
----
+- [ ] **Step 5: Commit, run the §10b cold-eyes pass, open PR 3.**

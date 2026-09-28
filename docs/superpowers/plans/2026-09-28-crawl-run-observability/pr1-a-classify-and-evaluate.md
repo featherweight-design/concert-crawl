@@ -60,13 +60,13 @@ describe('classifyCrawlError', () => {
 
 describe('normalizeErrorMessage', () => {
   it('collapses per-venue URLs and long numbers so one cause shares one key', () => {
-    const a = normalizeErrorMessage(
+    const first = normalizeErrorMessage(
       'TimeoutError: page.goto: Timeout 30000ms exceeded navigating to https://a.example.com/events',
     )
-    const b = normalizeErrorMessage(
+    const second = normalizeErrorMessage(
       'TimeoutError: page.goto: Timeout 30000ms exceeded navigating to https://b.example.com/shows',
     )
-    expect(a).toBe(b)
+    expect(first).toBe(second)
   })
 
   it('keeps short status codes apart — HTTP 403 and HTTP 500 are different causes', () => {
@@ -244,8 +244,10 @@ describe('evaluateRunHealth', () => {
     expect(evaluateRunHealth(outcomes)).toEqual([])
   })
 
-  it('counts distinct venues, not runs — one venue twice is not a shared cause', () => {
-    // The 2026-07-18 Levitt Pavilion case: daily run plus a manual re-run.
+  it('counts distinct venues, not outcomes — one venue twice is not a shared cause', () => {
+    // Defensive: the daily loop crawls each venue once, but a caller that merged
+    // triggered and daily outcomes would not. Prod's only repeated-error day
+    // (2026-07-18, Levitt Pavilion) was exactly that shape across two runs.
     const robots = 'VenuePilotFetchError: robots.txt disallows ConcertCrawl/1.0'
     const outcomes = [
       failed('Levitt', robots),
@@ -254,7 +256,9 @@ describe('evaluateRunHealth', () => {
       ok('B'),
     ]
     expect(
-      evaluateRunHealth(outcomes).filter((d) => d.kind === 'shared_cause'),
+      evaluateRunHealth(outcomes).filter(
+        (degradation) => degradation.kind === 'shared_cause',
+      ),
     ).toEqual([])
   })
 
@@ -271,7 +275,7 @@ describe('evaluateRunHealth', () => {
       ...Array.from({ length: 18 }, (_, i) => ok(`ok-${i}`)),
     ]
     const shared = evaluateRunHealth(outcomes).filter(
-      (d) => d.kind === 'shared_cause',
+      (degradation) => degradation.kind === 'shared_cause',
     )
     expect(shared).toHaveLength(1)
   })
@@ -279,7 +283,7 @@ describe('evaluateRunHealth', () => {
   it('needs 3 failures before the rate alone fires, so a tiny run cannot trip it', () => {
     expect(
       evaluateRunHealth([failed('A', 'x'), failed('B', 'y'), ok('C')]).filter(
-        (d) => d.kind === 'failure_rate',
+        (degradation) => degradation.kind === 'failure_rate',
       ),
     ).toEqual([])
   })
@@ -344,7 +348,9 @@ export function evaluateRunHealth(
     degradations.push({ kind: 'failure_rate', failed: failures.length, total })
   }
 
-  // Keyed by venue id so a venue crawled twice in one run counts once.
+  // Keyed by venue id, defensively: the daily loop never crawls a venue twice,
+  // but one venue must never masquerade as a shared cause if a caller ever
+  // merges outcomes from more than one run.
   const byKey = new Map<
     string,
     { errorKind: CrawlErrorKind; venues: Map<string, string> }
