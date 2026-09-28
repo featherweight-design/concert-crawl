@@ -1,3 +1,11 @@
+## [1.298.2](https://github.com/HartiganHM/concert-crawl/compare/v1.298.1...v1.298.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **crawler:** group crawl-failure Sentry events by cause, not call site ([50984b0](https://github.com/HartiganHM/concert-crawl/commit/50984b0eef03e1c2bed18af1adabded601b55f44))
+* **crawler:** keep crawl.ts's failure report off the shared fingerprint ([6195559](https://github.com/HartiganHM/concert-crawl/commit/6195559c548c98170870e6dfc0ecbec774ce54cf))
+
 ## [1.298.1](https://github.com/HartiganHM/concert-crawl/compare/v1.298.0...v1.298.1) (2026-09-28)
 
 
