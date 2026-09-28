@@ -36,7 +36,12 @@ describe('crawler entrypoint exit code', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env['CRAWL_MODE'] = 'daily'
-    runDailyCrawl.mockResolvedValue(undefined)
+    runDailyCrawl.mockResolvedValue({
+      succeeded: 1,
+      failed: 0,
+      total: 1,
+      degraded: false,
+    })
     flush.mockResolvedValue(true)
   })
 
@@ -64,6 +69,21 @@ describe('crawler entrypoint exit code', () => {
     expect(exitSpy).toHaveBeenCalledTimes(1)
     expect(exitSpy).toHaveBeenCalledWith(0)
     expect(loggerWarn).toHaveBeenCalledTimes(1)
+    expect(captureException).not.toHaveBeenCalled()
+    expect(loggerError).not.toHaveBeenCalled()
+  })
+
+  it('exits 1 without reporting a crash when the run is degraded', async () => {
+    runDailyCrawl.mockResolvedValue({
+      succeeded: 12,
+      failed: 8,
+      total: 20,
+      degraded: true,
+    })
+    const exitSpy = await importEntrypoint()
+
+    expect(exitSpy).toHaveBeenCalledTimes(1)
+    expect(exitSpy).toHaveBeenCalledWith(1)
     expect(captureException).not.toHaveBeenCalled()
     expect(loggerError).not.toHaveBeenCalled()
   })

@@ -7,9 +7,12 @@ import { eq, and, isNull, lt, sql } from 'drizzle-orm'
 import {
   crawlVenue,
   runArtistFanoutSafely,
+  evaluateRunHealth,
+  reportRunHealth,
   sweepStaleEvents,
   tagEventsWithGenres,
   type CrossVenueCandidate,
+  type VenueRunOutcome,
 } from '@concert-crawl/crawler-core'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { requestLandingRevalidationSafely } from './revalidate.js'
@@ -283,6 +286,8 @@ export async function runDailyCrawl(): Promise<{
   succeeded: number
   failed: number
   total: number
+  /** True when the run-level health check found a failure shared across venues. */
+  degraded: boolean
 }> {
   logger.info('Starting daily crawl')
 
@@ -300,13 +305,15 @@ export async function runDailyCrawl(): Promise<{
   logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
 
   if (activeVenues.length === 0) {
-    return { succeeded: 0, failed: 0, total: 0 }
+    return { succeeded: 0, failed: 0, total: 0, degraded: false }
   }
 
   const crossVenueCandidates = await loadCrossVenueCandidates()
 
   let succeeded = 0
   let failed = 0
+  // One per venue, for the run-level health check after the loop.
+  const outcomes: VenueRunOutcome[] = []
   // #847 — see the triggered path.
   let eventsInserted = 0
 
@@ -325,9 +332,17 @@ export async function runDailyCrawl(): Promise<{
       )
 
       for (const [idx, result] of results.entries()) {
+        const venue = batch[idx]
         if (result.status === 'fulfilled') {
           if (result.value.status === 'failed') {
             failed++
+            if (venue) {
+              outcomes.push({
+                venueId: venue.id,
+                venueName: venue.name,
+                errorMessage: result.value.errorMessage ?? 'Crawl failed',
+              })
+            }
             Sentry.captureException(
               new Error(result.value.errorMessage ?? 'Crawl failed'),
               { extra: { venueId: batch[idx]?.id, name: batch[idx]?.name } },
@@ -346,6 +361,13 @@ export async function runDailyCrawl(): Promise<{
             )
           } else {
             succeeded++
+            if (venue) {
+              outcomes.push({
+                venueId: venue.id,
+                venueName: venue.name,
+                errorMessage: null,
+              })
+            }
             Sentry.logger.info('crawl.complete', {
               venue_id: batch[idx]?.id,
               venue_name: batch[idx]?.name,
@@ -381,6 +403,13 @@ export async function runDailyCrawl(): Promise<{
           }
         } else {
           failed++
+          if (venue) {
+            outcomes.push({
+              venueId: venue.id,
+              venueName: venue.name,
+              errorMessage: String(result.reason),
+            })
+          }
           Sentry.captureException(result.reason, {
             extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
           })
@@ -418,9 +447,25 @@ export async function runDailyCrawl(): Promise<{
 
   await requestLandingRevalidationSafely(eventsInserted)
 
+  // Run-level health: the only check that sees a failure shared across venues
+  // on the night it happens. Evaluation sits inside the try too; monitoring
+  // must never break the crawl.
+  let degraded = false
+  try {
+    const degradations = evaluateRunHealth(outcomes)
+    degraded = degradations.length > 0
+    await reportRunHealth(degradations, { failed, total: activeVenues.length })
+  } catch (healthErr: unknown) {
+    Sentry.captureException(healthErr)
+    logger.error(
+      { healthErr },
+      'Run-health check failed — crawl data unaffected',
+    )
+  }
+
   logger.info(
-    { succeeded, failed, total: activeVenues.length },
+    { succeeded, failed, total: activeVenues.length, degraded },
     'Daily crawl complete',
   )
-  return { succeeded, failed, total: activeVenues.length }
+  return { succeeded, failed, total: activeVenues.length, degraded }
 }

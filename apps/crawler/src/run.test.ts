@@ -98,11 +98,17 @@ const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
 // the resolved-null default is its worst-case observable behavior.
 const mockRunArtistFanoutSafely = vi.fn().mockResolvedValue(null)
 const mockSweepStaleEvents = vi.fn().mockResolvedValue({ cancelled: 0 })
+const mockEvaluateRunHealth = vi.fn<(outcomes: unknown[]) => unknown[]>(
+  () => [],
+)
+const mockReportRunHealth = vi.fn().mockResolvedValue(undefined)
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
   runArtistFanoutSafely: mockRunArtistFanoutSafely,
   sweepStaleEvents: mockSweepStaleEvents,
+  evaluateRunHealth: mockEvaluateRunHealth,
+  reportRunHealth: mockReportRunHealth,
 }))
 
 // Mock logger
@@ -131,6 +137,10 @@ describe('runDailyCrawl', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    // clearAllMocks keeps implementations, so re-pin the run-health defaults
+    // or one test's override would leak into the next.
+    mockEvaluateRunHealth.mockReturnValue([])
+    mockReportRunHealth.mockResolvedValue(undefined)
     mockDbChain.select.mockReturnThis()
     mockDbChain.from.mockReturnThis()
     mockDbChain.leftJoin.mockReturnThis()
@@ -482,6 +492,50 @@ describe('runDailyCrawl', () => {
         error: 'Error: blocked',
       }),
     )
+  })
+
+  it('hands one outcome per venue, in order, to the run-health check', async () => {
+    mockCrawlVenue
+      .mockResolvedValueOnce({
+        ...SUCCESSFUL_CRAWL_RUN,
+        status: 'failed',
+        errorMessage: 'quota',
+      })
+      .mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
+    const { runDailyCrawl } = await import('./run.js')
+
+    await runDailyCrawl()
+
+    expect(mockEvaluateRunHealth).toHaveBeenCalledWith(
+      mockVenues.map((venue, i) =>
+        expect.objectContaining({
+          venueId: venue.id,
+          errorMessage: i === 0 ? 'quota' : null,
+        }),
+      ),
+    )
+  })
+
+  it('returns degraded when the check finds a degradation', async () => {
+    mockEvaluateRunHealth.mockReturnValueOnce([
+      { kind: 'failure_rate', failed: 4, total: 4 },
+    ])
+    const { runDailyCrawl } = await import('./run.js')
+
+    const result = await runDailyCrawl()
+
+    expect(mockReportRunHealth).toHaveBeenCalledTimes(1)
+    expect(result.degraded).toBe(true)
+  })
+
+  it('never lets the run-health report break the crawl', async () => {
+    mockEvaluateRunHealth.mockReturnValueOnce([
+      { kind: 'failure_rate', failed: 4, total: 4 },
+    ])
+    mockReportRunHealth.mockRejectedValueOnce(new Error('resend down'))
+    const { runDailyCrawl } = await import('./run.js')
+
+    await expect(runDailyCrawl()).resolves.toMatchObject({ degraded: true })
   })
 })
 

@@ -5,7 +5,7 @@ import { runDailyCrawl, runTriggeredCrawls } from './run.js'
 
 const logger = createLogger('crawler')
 
-async function main() {
+async function main(): Promise<{ degraded: boolean }> {
   const mode = process.env['CRAWL_MODE'] ?? 'all'
 
   if (mode !== 'triggers' && mode !== 'daily' && mode !== 'all') {
@@ -20,8 +20,12 @@ async function main() {
     await runTriggeredCrawls()
   }
   if (mode === 'daily' || mode === 'all') {
-    await runDailyCrawl()
+    const { degraded } = await runDailyCrawl()
+    return { degraded }
   }
+  // Triggers-only runs are admin-queued and a handful of venues at most; the
+  // run-level health check does not apply to them.
+  return { degraded: false }
 }
 
 // Flushing is best-effort: losing buffered Sentry events is not worth changing
@@ -41,9 +45,11 @@ async function flushQuietly(): Promise<void> {
 }
 
 main()
-  .then(async () => {
+  .then(async ({ degraded }) => {
     await flushQuietly()
-    process.exit(0)
+    // A degraded run exits 1 so Render marks the cron run failed. Before this,
+    // 40% of venues failing still exited 0 and read as a healthy run.
+    process.exit(degraded ? 1 : 0)
   })
   .catch(async (err) => {
     logger.error({ err }, 'Fatal error in crawler')
