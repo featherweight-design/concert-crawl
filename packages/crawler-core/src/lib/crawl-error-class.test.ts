@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   classifyCrawlError,
+  crawlFailureGrouping,
   normalizeErrorMessage,
 } from './crawl-error-class.js'
 
@@ -54,5 +55,20 @@ describe('normalizeErrorMessage', () => {
     expect(out).not.toContain('req_011')
     expect(out).not.toContain('3f2b1c9e')
     expect(out.length).toBeLessThanOrEqual(160)
+  })
+})
+
+describe('crawlFailureGrouping', () => {
+  it('fingerprints on the class, so one cause is one Sentry issue', () => {
+    expect(crawlFailureGrouping(QUOTA)).toEqual({
+      fingerprint: ['crawl.failed', 'llm_quota'],
+      errorKind: 'llm_quota',
+    })
+  })
+
+  it('gives different causes different fingerprints', () => {
+    expect(crawlFailureGrouping('HTTP 403').fingerprint).not.toEqual(
+      crawlFailureGrouping('HTTP 500').fingerprint,
+    )
   })
 })

@@ -28,7 +28,7 @@ export function crawlFailureGrouping(message: string): {
 }
 ```
 
-- [ ] **Step 1: Failing tests.** In `crawl-error-class.test.ts` (reusing its `QUOTA` fixture):
+- [x] **Step 1: Failing tests.** In `crawl-error-class.test.ts` (reusing its `QUOTA` fixture):
 
 ```ts
 describe('crawlFailureGrouping', () => {
@@ -77,9 +77,9 @@ it('fingerprints a failed venue by cause', async () => {
 
 (`Sentry` is the file's existing `@sentry/node` mock, ~line 8; import it the way the file's other Sentry assertions do.)
 
-- [ ] **Step 2: Run to verify both fail.**
+- [x] **Step 2: Run to verify both fail.**
 
-- [ ] **Step 3: Implement.** In `crawl-error-class.ts`:
+- [x] **Step 3: Implement.** In `crawl-error-class.ts`:
 
 ```ts
 /** Sentry grouping for a failed crawl: one issue per cause, on every path. */
@@ -118,6 +118,6 @@ reportFailure({
 
 That one-line spread has no dedicated test: `crawl.test.ts` does not mock the logger, and the grouping itself is covered above. Typecheck and review cover the call.
 
-- [ ] **Step 4: Run** both packages' tests; PASS. Mutation-check: return `['crawl.failed']` from `crawlFailureGrouping` and confirm the "different causes" test fails.
+- [x] **Step 4: Run** both packages' tests; PASS. Mutation-check: return `['crawl.failed']` from `crawlFailureGrouping` and confirm the "different causes" test fails.
 
-- [ ] **Step 5: Commit, run the §10b cold-eyes pass, open PR 2.** Ops step after deploy, recorded in the PR body: resolve `CONCERT-CRAWL-CRAWLER-2` and the `crawl.failed` message issue so the old buckets stop absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.
+- [x] **Step 5: Commit, run the §10b cold-eyes pass, open PR 2.** Ops step after deploy, recorded in the PR body: resolve `CONCERT-CRAWL-CRAWLER-2` and the `crawl.failed` message issue so the old buckets stop absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.

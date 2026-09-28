@@ -109,6 +109,10 @@ vi.mock('@concert-crawl/crawler-core', () => ({
   sweepStaleEvents: mockSweepStaleEvents,
   evaluateRunHealth: mockEvaluateRunHealth,
   reportRunHealth: mockReportRunHealth,
+  crawlFailureGrouping: (message: string) => ({
+    fingerprint: ['crawl.failed', `key:${message}`],
+    errorKind: 'other',
+  }),
 }))
 
 // Mock logger
@@ -393,6 +397,9 @@ describe('runDailyCrawl', () => {
     expect(mockSentryCaptureException).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Timeout 30000ms exceeded' }),
       expect.objectContaining({
+        // Grouped by cause, not by this call site.
+        fingerprint: ['crawl.failed', 'key:Timeout 30000ms exceeded'],
+        tags: { crawl_error_kind: 'other' },
         extra: expect.objectContaining({ venueId: 'venue-1' }),
       }),
     )
@@ -810,6 +817,9 @@ describe('runTriggeredCrawls', () => {
     expect(mockSentryCaptureException).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'Timeout 30000ms exceeded' }),
       expect.objectContaining({
+        // Grouped by cause, not by this call site.
+        fingerprint: ['crawl.failed', 'key:Timeout 30000ms exceeded'],
+        tags: { crawl_error_kind: 'other' },
         extra: expect.objectContaining({
           venueId: 'venue-a',
           triggerId: 'trigger-1',

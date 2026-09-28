@@ -63,5 +63,8 @@ export type {
 } from './rederive-event-artists.js'
 export { evaluateRunHealth, reportRunHealth } from './lib/run-health.js'
 export type { RunDegradation, VenueRunOutcome } from './lib/run-health.js'
-export { classifyCrawlError } from './lib/crawl-error-class.js'
+export {
+  classifyCrawlError,
+  crawlFailureGrouping,
+} from './lib/crawl-error-class.js'
 export type { CrawlErrorKind } from './lib/crawl-error-class.js'

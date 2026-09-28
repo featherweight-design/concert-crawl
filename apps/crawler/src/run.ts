@@ -7,6 +7,7 @@ import { eq, and, isNull, lt, sql } from 'drizzle-orm'
 import {
   crawlVenue,
   runArtistFanoutSafely,
+  crawlFailureGrouping,
   evaluateRunHealth,
   reportRunHealth,
   sweepStaleEvents,
@@ -203,10 +204,14 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           trigger.force,
         )
         if (crawlRun.status === 'failed') {
-          Sentry.captureException(
-            new Error(crawlRun.errorMessage ?? 'Crawl failed'),
-            { extra: { venueId: trigger.venueId, triggerId: trigger.id } },
-          )
+          const message = crawlRun.errorMessage ?? 'Crawl failed'
+          const grouping = crawlFailureGrouping(message)
+          // Grouped by cause, not by this call site.
+          Sentry.captureException(new Error(message), {
+            fingerprint: grouping.fingerprint,
+            tags: { crawl_error_kind: grouping.errorKind },
+            extra: { venueId: trigger.venueId, triggerId: trigger.id },
+          })
           Sentry.logger.warn('crawl.failed', {
             venue_id: trigger.venueId,
             trigger_id: trigger.id,
@@ -343,10 +348,14 @@ export async function runDailyCrawl(): Promise<{
                 errorMessage: result.value.errorMessage ?? 'Crawl failed',
               })
             }
-            Sentry.captureException(
-              new Error(result.value.errorMessage ?? 'Crawl failed'),
-              { extra: { venueId: batch[idx]?.id, name: batch[idx]?.name } },
-            )
+            const message = result.value.errorMessage ?? 'Crawl failed'
+            const grouping = crawlFailureGrouping(message)
+            // Grouped by cause, not by this call site.
+            Sentry.captureException(new Error(message), {
+              fingerprint: grouping.fingerprint,
+              tags: { crawl_error_kind: grouping.errorKind },
+              extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
+            })
             Sentry.logger.warn('crawl.failed', {
               venue_id: batch[idx]?.id,
               venue_name: batch[idx]?.name,

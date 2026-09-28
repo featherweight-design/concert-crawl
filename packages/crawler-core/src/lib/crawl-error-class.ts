@@ -43,3 +43,17 @@ export function classifyCrawlError(message: string): CrawlErrorClass {
   }
   return { kind: 'other', key: normalizeErrorMessage(message) }
 }
+
+/**
+ * Sentry grouping for a failed crawl: one issue per cause, on every path that
+ * reports one. Without it, each path groups on its own call site or event name,
+ * so every distinct cause lands in one long-lived issue and the issue-alert
+ * rule (which fires on transitions only) never pages for a new cause.
+ */
+export function crawlFailureGrouping(message: string): {
+  fingerprint: string[]
+  errorKind: CrawlErrorKind
+} {
+  const { kind, key } = classifyCrawlError(message)
+  return { fingerprint: ['crawl.failed', key], errorKind: kind }
+}
