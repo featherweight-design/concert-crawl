@@ -3,7 +3,7 @@ import {
   describeDegradation,
   evaluateRunHealth,
   reportRunHealth,
-  runHealthFingerprint,
+  runHealthFingerprints,
   type RunDegradation,
   type VenueRunOutcome,
 } from './run-health.js'
@@ -134,24 +134,22 @@ describe('describeDegradation', () => {
   })
 })
 
-describe('runHealthFingerprint', () => {
-  it('groups by the shared causes, sorted, so each cause is its own Sentry issue', () => {
+describe('runHealthFingerprints', () => {
+  it('gives each shared cause its own fingerprint, so each is its own Sentry issue', () => {
     const other: RunDegradation = {
       ...QUOTA_CAUSE,
       errorKey: 'TypeError: fetch failed',
       errorKind: 'other',
     }
-    expect(runHealthFingerprint([RATE, other, QUOTA_CAUSE])).toEqual([
-      'crawl.run_degraded',
-      'TypeError: fetch failed',
-      'llm_quota',
+    expect(runHealthFingerprints([RATE, other, QUOTA_CAUSE])).toEqual([
+      ['crawl.run_degraded', 'TypeError: fetch failed'],
+      ['crawl.run_degraded', 'llm_quota'],
     ])
   })
 
-  it('falls back to failure_rate when no cause is shared', () => {
-    expect(runHealthFingerprint([RATE])).toEqual([
-      'crawl.run_degraded',
-      'failure_rate',
+  it('falls back to one failure_rate fingerprint when no cause is shared', () => {
+    expect(runHealthFingerprints([RATE])).toEqual([
+      ['crawl.run_degraded', 'failure_rate'],
     ])
   })
 })
@@ -176,6 +174,22 @@ describe('reportRunHealth', () => {
       title: 'Daily crawl degraded: 8 of 20 venues failed',
       lines: [describeDegradation(RATE), describeDegradation(QUOTA_CAUSE)],
     })
+  })
+
+  it('emits one Sentry event per shared cause but sends one email', async () => {
+    const other: RunDegradation = {
+      ...QUOTA_CAUSE,
+      errorKey: 'TypeError: fetch failed',
+      errorKind: 'other',
+    }
+    await reportRunHealth([RATE, other, QUOTA_CAUSE], { failed: 8, total: 20 })
+    expect(
+      mockReportFailure.mock.calls.map(([report]) => report.fingerprint),
+    ).toEqual([
+      ['crawl.run_degraded', 'TypeError: fetch failed'],
+      ['crawl.run_degraded', 'llm_quota'],
+    ])
+    expect(mockSendRunDegradedEmail).toHaveBeenCalledTimes(1)
   })
 
   it('reports to Sentry before emailing, and survives the email throwing', async () => {

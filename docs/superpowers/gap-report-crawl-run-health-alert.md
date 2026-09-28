@@ -8,7 +8,7 @@ Spec: `docs/superpowers/plans/2026-09-28-crawl-run-observability/00-index.md` (B
 - Normalization keeps 3-digit status codes apart and collapses URLs, request ids, UUIDs and 4+ digit runs [`crawl-error-class.ts` `normalizeErrorMessage`]
 - Run-level evaluation: failure rate (>=3 venues and >=25%) and shared cause (>=2 distinct venues), thresholds sized from 91 days of prod `crawl_runs` [`packages/crawler-core/src/lib/run-health.ts` `evaluateRunHealth`]
 - Report names the cause and the venues, and calls an `llm_quota` cause account-wide [`run-health.ts` `describeDegradation`]
-- One Sentry issue per shared cause, via a new optional `fingerprint` on `FailureReport` [`packages/logger/src/index.ts`; `run-health.ts` `runHealthFingerprint`]
+- One Sentry event, and so one issue, per shared cause, via a new optional `fingerprint` on `FailureReport` [`packages/logger/src/index.ts`; `run-health.ts` `runHealthFingerprints`]
 - Sentry reported before the admin email; a failed email cannot suppress it [`run-health.ts` `reportRunHealth`]
 - Admin email and its test-email picker sample [`packages/crawler-core/src/lib/email.ts` `sendRunDegradedEmail`; `apps/api/src/emails/test-fixtures.ts`]
 - Daily run collects one outcome per venue and returns `degraded`; the check cannot break a crawl [`apps/crawler/src/run.ts`]

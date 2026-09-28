@@ -95,22 +95,24 @@ export function describeDegradation(degradation: RunDegradation): string {
 }
 
 /**
- * One Sentry issue per shared cause. Without this every degraded night lands in
- * a single `crawl.run_degraded` issue that stays open, and the issue-alert rule
- * (which fires on transitions only) never pages for a new cause again.
+ * The Sentry fingerprints for one degraded run: one per shared cause, or a
+ * single failure-rate fingerprint when no cause is shared. Sentry groups on the
+ * whole fingerprint array, so a run with causes A and B must emit two events —
+ * one `[event, A]` array would otherwise create an `[A, B]` issue that a later
+ * A-only night could never join. Without per-cause grouping at all, every
+ * degraded night lands in one long-lived issue, and the issue-alert rule (which
+ * fires on transitions only) never pages for a new cause.
  */
-export function runHealthFingerprint(
+export function runHealthFingerprints(
   degradations: readonly RunDegradation[],
-): string[] {
+): string[][] {
   const causes = degradations
     .flatMap((degradation) =>
       degradation.kind === 'shared_cause' ? [degradation.errorKey] : [],
     )
     .sort()
-  return [
-    'crawl.run_degraded',
-    ...(causes.length > 0 ? causes : ['failure_rate']),
-  ]
+  const keys = causes.length > 0 ? causes : ['failure_rate']
+  return keys.map((key) => ['crawl.run_degraded', key])
 }
 
 export async function reportRunHealth(
@@ -122,18 +124,20 @@ export async function reportRunHealth(
   const title = `Daily crawl degraded: ${summary.failed} of ${summary.total} venues failed`
   const lines = degradations.map(describeDegradation)
 
-  // Sentry first: reportFailure never throws, so a failed email cannot cost
-  // the loud channel. No in-app row: no admin screen lists run-level alerts
+  // Sentry first, one event per cause: reportFailure never throws, so a failed
+  // email cannot cost the loud channel. No in-app row: no admin screen lists run-level alerts
   // (admin/crawl.ts reads four categories pinned to a crawl-run row), so one
   // would reach nobody.
-  reportFailure({
-    event: 'crawl.run_degraded',
-    severity: 'error',
-    fingerprint: runHealthFingerprint(degradations),
-    failed: summary.failed,
-    total: summary.total,
-    causes: lines.join(' | '),
-  })
+  for (const fingerprint of runHealthFingerprints(degradations)) {
+    reportFailure({
+      event: 'crawl.run_degraded',
+      severity: 'error',
+      fingerprint,
+      failed: summary.failed,
+      total: summary.total,
+      causes: lines.join(' | '),
+    })
+  }
 
   try {
     await sendRunDegradedEmail({ title, lines })

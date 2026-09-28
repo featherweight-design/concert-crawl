@@ -6,6 +6,8 @@
 
 ### Task 3: Report run health — Sentry and email
 
+> **Amended in review (PR #1744, round 1).** The code below plans a single `runHealthFingerprint` returning one array for the whole run. Sentry groups on the entire fingerprint array, so a run with causes A and B would have become one `[A, B]` issue that a later A-only night could never join. As shipped, `runHealthFingerprints` returns one `['crawl.run_degraded', key]` per shared cause (or one `failure_rate` fingerprint), and `reportRunHealth` emits one Sentry event per fingerprint while still sending a single email. `sendRunDegradedEmail` also gained direct tests in `email.test.ts`.
+
 **Channels, and why not an in-app row.** No admin screen lists `admin_alert` notifications in general: `apps/api/src/routes/admin/crawl.ts:276-285` reads only four categories and pins each to a crawl-run row through `metadata.crawlRunId`, and the notification panel (`apps/api/src/routes/notifications.ts:109-111`) is scoped to a user's own `user_notification` rows. A `crawl.run_degraded` row would reach no screen, so this task writes none. The run-level alert goes out as a Sentry event and an admin email, plus the failed cron run from Task 4. Building an admin surface for run-level alerts is a separate decision, not part of this plan.
 
 **Files:**

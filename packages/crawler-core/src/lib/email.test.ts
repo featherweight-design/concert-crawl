@@ -568,3 +568,58 @@ describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
     expect(call.subject).toContain('Venue')
   })
 })
+
+describe('sendRunDegradedEmail', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      ADMIN_EMAIL: 'admin@example.com',
+      SENTRY_ENVIRONMENT: 'production',
+      ADMIN_URL: 'https://concertcrawl.app',
+    }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('sends the title as the subject and one paragraph per line', async () => {
+    const { sendRunDegradedEmail } = await import('./email.js')
+    await sendRunDegradedEmail({
+      title: 'Daily crawl degraded: 8 of 20 venues failed',
+      lines: ['8 of 20 venues failed this run.', 'Second line.'],
+    })
+
+    expect(mockSend).toHaveBeenCalledOnce()
+    const call = mockSend.mock.calls[0][0]
+    expect(call.to).toBe('admin@example.com')
+    expect(call.subject).toBe('Daily crawl degraded: 8 of 20 venues failed')
+    expect(call.html).toContain('<p>8 of 20 venues failed this run.</p>')
+    expect(call.html).toContain('<p>Second line.</p>')
+  })
+
+  it('escapes each line, since error keys carry raw venue error text', async () => {
+    const { sendRunDegradedEmail } = await import('./email.js')
+    await sendRunDegradedEmail({
+      title: 'Daily crawl degraded: 2 of 20 venues failed',
+      lines: ['2 venues failed with the same error ("<script>x</script>")'],
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).not.toContain('<script>')
+    expect(call.html).toContain('&lt;script&gt;')
+  })
+
+  it('links the crawl dashboard itself, with no venue deep link', async () => {
+    const { sendRunDegradedEmail } = await import('./email.js')
+    await sendRunDegradedEmail({ title: 'Degraded', lines: ['x'] })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.html).toContain('href="https://concertcrawl.app/admin/crawl"')
+  })
+})
