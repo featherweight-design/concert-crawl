@@ -307,13 +307,17 @@ function buildCrawlFailureSample(): BuiltTestEmail {
 // Mirrors sendRunDegradedEmail in packages/crawler-core/src/lib/email.ts.
 function buildRunDegradedSample(): BuiltTestEmail {
   const url = `${SAMPLE_ADMIN_URL}/admin/crawl`
-  const line =
-    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Cervantes, Hi-Dive, Red Rocks."
+  // The 2026-09-28 run exactly as describeDegradation renders it: the failure
+  // rate line, then the shared cause naming every venue it hit.
+  const lines = [
+    '8 of 20 venues failed this run.',
+    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Ball Arena, Cervantes, Globe Hall, Hi-Dive, Larimer Lounge, Lost Lake Lounge, Meow Wolf Denver, Red Rocks Amphitheatre.",
+  ]
   return {
     fromCategory: 'alert',
     subject: 'Daily crawl degraded: 8 of 20 venues failed',
-    html: `<p>${line}</p><p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>`,
-    text: `${line} Visit ${url} to investigate.`,
+    html: `${lines.map((line) => `<p>${line}</p>`).join('')}<p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>`,
+    text: `${lines.join(' ')} Visit ${url} to investigate.`,
   }
 }
 

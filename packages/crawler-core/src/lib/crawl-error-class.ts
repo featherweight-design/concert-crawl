@@ -1,7 +1,6 @@
-// Turns a crawl error message into a stable class. Shared by the run-level
-// health check (run-health.ts), the Sentry capture sites (apps/crawler run.ts)
-// and the three-strikes path (crawl.ts), so all three agree on what "the same
-// failure" means.
+// Turns a crawl error message into a stable class: a kind, and a key that is
+// the same for one cause however many venues it hits. Any code asking "is this
+// the same failure?" should ask it here, so the answers never drift apart.
 
 export type CrawlErrorKind = 'llm_quota' | 'other'
 

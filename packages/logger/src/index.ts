@@ -64,18 +64,18 @@ export interface FailureReport {
   /** Routing severity. 'error' maps to Sentry level 'error'; 'warn' maps to 'warning'. */
   severity: FailureSeverity
   /**
+   * Sentry grouping override. Omit for the default: one issue per `event`,
+   * which merges every cause reported under one event name into a single
+   * long-lived issue.
+   */
+  fingerprint?: string[]
+  /**
    * Arbitrary structured context. Forwarded to Sentry `extra` verbatim.
    *
    * Avoid key names containing `token`, `password`, `secret`, `auth`, or
    * `apikey` — Sentry's default data scrubbing matches those substrings and
    * nulls the value out, so the field arrives empty on the issue page.
    */
-  /**
-   * Sentry grouping override. Omit for the default: one issue per `event`,
-   * which merges every cause reported under one event name into a single
-   * long-lived issue.
-   */
-  fingerprint?: string[]
   [key: string]: unknown
 }
 
