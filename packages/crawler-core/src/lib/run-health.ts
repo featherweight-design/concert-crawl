@@ -8,7 +8,9 @@
 // one failure, one with the same venue failing twice, and 2026-09-28. These
 // values fire on that last day only.
 
+import { reportFailure } from '@concert-crawl/logger'
 import { classifyCrawlError, type CrawlErrorKind } from './crawl-error-class.js'
+import { sendRunDegradedEmail } from './email.js'
 
 /** The failure rate alone never fires below this many failed venues. */
 export const RUN_FAILURE_MIN_VENUES = 3
@@ -78,4 +80,68 @@ export function evaluateRunHealth(
     }
   }
   return degradations
+}
+
+export function describeDegradation(degradation: RunDegradation): string {
+  if (degradation.kind === 'failure_rate') {
+    return `${degradation.failed} of ${degradation.total} venues failed this run.`
+  }
+  const names = degradation.venueNames.join(', ')
+  const count = degradation.venueNames.length
+  if (degradation.errorKind === 'llm_quota') {
+    return `${count} venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: ${names}.`
+  }
+  return `${count} venues failed with the same error ("${degradation.errorKey}"): ${names}.`
+}
+
+/**
+ * One Sentry issue per shared cause. Without this every degraded night lands in
+ * a single `crawl.run_degraded` issue that stays open, and the issue-alert rule
+ * (which fires on transitions only) never pages for a new cause again.
+ */
+export function runHealthFingerprint(
+  degradations: readonly RunDegradation[],
+): string[] {
+  const causes = degradations
+    .flatMap((degradation) =>
+      degradation.kind === 'shared_cause' ? [degradation.errorKey] : [],
+    )
+    .sort()
+  return [
+    'crawl.run_degraded',
+    ...(causes.length > 0 ? causes : ['failure_rate']),
+  ]
+}
+
+export async function reportRunHealth(
+  degradations: readonly RunDegradation[],
+  summary: { failed: number; total: number },
+): Promise<void> {
+  if (degradations.length === 0) return
+
+  const title = `Daily crawl degraded: ${summary.failed} of ${summary.total} venues failed`
+  const lines = degradations.map(describeDegradation)
+
+  // Sentry first: reportFailure never throws, so a failed email cannot cost
+  // the loud channel. No in-app row: no admin screen lists run-level alerts
+  // (admin/crawl.ts reads four categories pinned to a crawl-run row), so one
+  // would reach nobody.
+  reportFailure({
+    event: 'crawl.run_degraded',
+    severity: 'error',
+    fingerprint: runHealthFingerprint(degradations),
+    failed: summary.failed,
+    total: summary.total,
+    causes: lines.join(' | '),
+  })
+
+  try {
+    await sendRunDegradedEmail({ title, lines })
+  } catch (emailErr) {
+    reportFailure({
+      event: 'crawl.email_error',
+      severity: 'error',
+      error: String(emailErr),
+    })
+  }
 }

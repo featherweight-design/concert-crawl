@@ -193,6 +193,24 @@ export async function sendCrawlFailureEmail(
   })
 }
 
+export interface RunDegradedInput {
+  title: string
+  lines: string[]
+}
+
+export async function sendRunDegradedEmail(
+  input: RunDegradedInput,
+): Promise<void> {
+  const url = adminCrawlUrl()
+  await sendAdminAlert('sendRunDegradedEmail', {
+    subject: input.title,
+    html: `
+      ${input.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n')}
+      <p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>
+    `,
+  })
+}
+
 export interface EventCountDropInput {
   venueName: string
   venueId: string

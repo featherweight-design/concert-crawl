@@ -70,6 +70,12 @@ export interface FailureReport {
    * `apikey` — Sentry's default data scrubbing matches those substrings and
    * nulls the value out, so the field arrives empty on the issue page.
    */
+  /**
+   * Sentry grouping override. Omit for the default: one issue per `event`,
+   * which merges every cause reported under one event name into a single
+   * long-lived issue.
+   */
+  fingerprint?: string[]
   [key: string]: unknown
 }
 
@@ -91,7 +97,7 @@ export function reportFailure(report: FailureReport): void {
   // circular references or BigInt values in `extra`, and the Sentry SDK
   // can in principle raise; both are wrapped so a logging failure cannot
   // mask the original error.
-  const { event, severity, ...extra } = report
+  const { event, severity, fingerprint, ...extra } = report
   try {
     let json: string
     try {
@@ -123,6 +129,7 @@ export function reportFailure(report: FailureReport): void {
     Sentry.captureMessage(event, {
       level: severity === 'error' ? 'error' : 'warning',
       extra,
+      ...(fingerprint ? { fingerprint } : {}),
     })
   } catch {
     // Swallow per the no-throw contract.

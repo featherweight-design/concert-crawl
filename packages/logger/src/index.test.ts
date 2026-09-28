@@ -189,4 +189,38 @@ describe('reportFailure', () => {
     // the local structured log.
     expect(warnSpy).toHaveBeenCalledOnce()
   })
+
+  it('forwards a fingerprint to Sentry when the report carries one', () => {
+    reportFailure({
+      event: 'crawl.run_degraded',
+      severity: 'error',
+      fingerprint: ['crawl.run_degraded', 'llm_quota'],
+    })
+    expect(captureMessageSpy).toHaveBeenCalledWith(
+      'crawl.run_degraded',
+      expect.objectContaining({
+        fingerprint: ['crawl.run_degraded', 'llm_quota'],
+      }),
+    )
+  })
+
+  it('keeps the fingerprint out of extra, and out of the context when absent', () => {
+    reportFailure({
+      event: 'crawl.failed',
+      severity: 'error',
+      fingerprint: ['crawl.failed', 'k'],
+    })
+    expect(captureMessageSpy.mock.calls.at(-1)?.[1]?.extra).not.toHaveProperty(
+      'fingerprint',
+    )
+
+    reportFailure({
+      event: 'llm.no_tool_use',
+      severity: 'warn',
+      sourceUrl: 'https://x.example',
+    })
+    expect(captureMessageSpy.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+      'fingerprint',
+    )
+  })
 })

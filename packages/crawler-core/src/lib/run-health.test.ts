@@ -1,5 +1,26 @@
-import { describe, it, expect } from 'vitest'
-import { evaluateRunHealth, type VenueRunOutcome } from './run-health.js'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import {
+  describeDegradation,
+  evaluateRunHealth,
+  reportRunHealth,
+  runHealthFingerprint,
+  type RunDegradation,
+  type VenueRunOutcome,
+} from './run-health.js'
+
+const { mockSendRunDegradedEmail, mockReportFailure } = vi.hoisted(() => ({
+  mockSendRunDegradedEmail: vi.fn(),
+  mockReportFailure: vi.fn(),
+}))
+vi.mock('./email.js', () => ({
+  sendRunDegradedEmail: mockSendRunDegradedEmail,
+}))
+vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockSendRunDegradedEmail.mockResolvedValue(undefined)
+})
 
 const QUOTA =
   'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}'
@@ -94,5 +115,81 @@ describe('evaluateRunHealth', () => {
       ok('C'),
     ]).filter((degradation) => degradation.kind === 'failure_rate')
     expect(rate).toEqual([])
+  })
+})
+
+const QUOTA_CAUSE: RunDegradation = {
+  kind: 'shared_cause',
+  errorKey: 'llm_quota',
+  errorKind: 'llm_quota',
+  venueNames: ['Hi-Dive', 'Red Rocks'],
+}
+const RATE: RunDegradation = { kind: 'failure_rate', failed: 8, total: 20 }
+
+describe('describeDegradation', () => {
+  it('says an llm_quota cause is account-wide, not a venue problem', () => {
+    const line = describeDegradation(QUOTA_CAUSE)
+    expect(line).toContain('account-wide')
+    expect(line).toContain('Hi-Dive, Red Rocks')
+  })
+})
+
+describe('runHealthFingerprint', () => {
+  it('groups by the shared causes, sorted, so each cause is its own Sentry issue', () => {
+    const other: RunDegradation = {
+      ...QUOTA_CAUSE,
+      errorKey: 'TypeError: fetch failed',
+      errorKind: 'other',
+    }
+    expect(runHealthFingerprint([RATE, other, QUOTA_CAUSE])).toEqual([
+      'crawl.run_degraded',
+      'TypeError: fetch failed',
+      'llm_quota',
+    ])
+  })
+
+  it('falls back to failure_rate when no cause is shared', () => {
+    expect(runHealthFingerprint([RATE])).toEqual([
+      'crawl.run_degraded',
+      'failure_rate',
+    ])
+  })
+})
+
+describe('reportRunHealth', () => {
+  it('does nothing for a healthy run', async () => {
+    await reportRunHealth([], { failed: 0, total: 20 })
+    expect(mockReportFailure).not.toHaveBeenCalled()
+    expect(mockSendRunDegradedEmail).not.toHaveBeenCalled()
+  })
+
+  it('reports to Sentry with the cause fingerprint and emails the admin', async () => {
+    await reportRunHealth([RATE, QUOTA_CAUSE], { failed: 8, total: 20 })
+    expect(mockReportFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'crawl.run_degraded',
+        severity: 'error',
+        fingerprint: ['crawl.run_degraded', 'llm_quota'],
+      }),
+    )
+    expect(mockSendRunDegradedEmail).toHaveBeenCalledWith({
+      title: 'Daily crawl degraded: 8 of 20 venues failed',
+      lines: [describeDegradation(RATE), describeDegradation(QUOTA_CAUSE)],
+    })
+  })
+
+  it('reports to Sentry before emailing, and survives the email throwing', async () => {
+    mockSendRunDegradedEmail.mockRejectedValueOnce(new Error('resend down'))
+    await expect(
+      reportRunHealth([RATE], { failed: 8, total: 20 }),
+    ).resolves.toBeUndefined()
+    expect(mockReportFailure).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ event: 'crawl.run_degraded' }),
+    )
+    expect(mockReportFailure).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ event: 'crawl.email_error' }),
+    )
   })
 })

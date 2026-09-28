@@ -21,7 +21,11 @@ import type { EmailTemplateVars } from './types.js'
 // Completeness is enforced by OPERATIONAL_BUILDERS below: it's a
 // Record<OperationalTestKey, …>, so every key here needs a builder to compile.
 type OperationalTestKey =
-  'admin_alert' | 'invite_code' | 'crawl_failure' | 'event_count_drop'
+  | 'admin_alert'
+  | 'invite_code'
+  | 'crawl_failure'
+  | 'event_count_drop'
+  | 'run_degraded'
 
 export type TestEmailKey = EmailTemplateKey | OperationalTestKey
 
@@ -100,6 +104,11 @@ export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
   {
     key: 'event_count_drop',
     label: 'Event-count drop alert',
+    group: 'Operational',
+  },
+  {
+    key: 'run_degraded',
+    label: 'Degraded crawl run alert',
     group: 'Operational',
   },
 ]
@@ -295,6 +304,19 @@ function buildCrawlFailureSample(): BuiltTestEmail {
   }
 }
 
+// Mirrors sendRunDegradedEmail in packages/crawler-core/src/lib/email.ts.
+function buildRunDegradedSample(): BuiltTestEmail {
+  const url = `${SAMPLE_ADMIN_URL}/admin/crawl`
+  const line =
+    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Cervantes, Hi-Dive, Red Rocks."
+  return {
+    fromCategory: 'alert',
+    subject: 'Daily crawl degraded: 8 of 20 venues failed',
+    html: `<p>${line}</p><p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>`,
+    text: `${line} Visit ${url} to investigate.`,
+  }
+}
+
 function buildEventCountDropSample(): BuiltTestEmail {
   const venueName = 'Ogden Theatre'
   const url = `${SAMPLE_ADMIN_URL}/admin/crawl?venueId=sample-venue-id`
@@ -320,6 +342,7 @@ const OPERATIONAL_BUILDERS: Record<OperationalTestKey, () => BuiltTestEmail> = {
   invite_code: buildInviteCodeSample,
   crawl_failure: buildCrawlFailureSample,
   event_count_drop: buildEventCountDropSample,
+  run_degraded: buildRunDegradedSample,
 }
 
 /**
