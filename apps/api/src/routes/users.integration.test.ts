@@ -363,6 +363,14 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
   // separate switch, so the trial clock keys off founder_window.opensAt.
   const FOUNDER_WINDOW_OPENS_AT = new Date('2026-09-01T00:00:00.000Z')
   const DAY_MS = 86400000
+  const TRIAL_DAYS = 14
+  // Relative to the real clock, not a calendar date. The route judges the
+  // trial against now, so a fixed sign-up of 2026-09-10 made these tests pass
+  // until 2026-09-24 and fail on every PR after it. Two days ago stays inside
+  // the 14-day trial forever, and after the window opened for as long as the
+  // window's date is in the past.
+  let signedUpAt: Date
+  let expectedTrialEnd: Date
 
   const readBillingRow = async () => {
     const [row] = await testDb
@@ -377,7 +385,9 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
     clearAuth()
     clerkState.role = 'user'
     clerkState.plan = undefined
-    clerkState.createdAt = new Date('2026-09-10T12:00:00.000Z').getTime()
+    signedUpAt = new Date(Date.now() - 2 * DAY_MS)
+    expectedTrialEnd = new Date(signedUpAt.getTime() + TRIAL_DAYS * DAY_MS)
+    clerkState.createdAt = signedUpAt.getTime()
     await clearTables()
     await clearBillingTables()
     await setFounderWindow({ opensAt: FOUNDER_WINDOW_OPENS_AT })
@@ -388,10 +398,8 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
     const body = await fetchMe()
     expect(body.data.planState.plan).toBe('premium')
     expect(body.data.planState.onTrial).toBe(true)
-    expect(body.data.planState.trialEndsAt).toBe('2026-09-24T12:00:00.000Z')
-    expect((await readBillingRow())?.trialEndsAt).toEqual(
-      new Date('2026-09-24T12:00:00.000Z'),
-    )
+    expect(body.data.planState.trialEndsAt).toBe(expectedTrialEnd.toISOString())
+    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd)
   })
 
   it('never re-seeds — a second read cannot extend the trial', async () => {
@@ -456,9 +464,7 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
     const body = await fetchMe()
     expect(body.data.planState.plan).toBe('premium')
     expect(body.data.planState.onTrial).toBe(true)
-    expect((await readBillingRow())?.trialEndsAt).toEqual(
-      new Date('2026-09-24T12:00:00.000Z'),
-    )
+    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd)
   })
 })
 
