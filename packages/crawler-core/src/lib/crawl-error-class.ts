@@ -45,10 +45,17 @@ export function classifyCrawlError(message: string): CrawlErrorClass {
 }
 
 /**
- * Sentry grouping for a failed crawl: one issue per cause, on every path that
- * reports one. Without it, each path groups on its own call site or event name,
- * so every distinct cause lands in one long-lived issue and the issue-alert
- * rule (which fires on transitions only) never pages for a new cause.
+ * Sentry grouping for a recorded crawl failure (a crawl_runs row with status
+ * failed): one issue per cause. Used at the apps/crawler run.ts capture sites
+ * for both the daily and triggered paths. Without it those captures group on
+ * their call site, every distinct cause lands in one long-lived issue, and the
+ * issue-alert rule (which fires on transitions only) never pages for a new one.
+ *
+ * Two paths deliberately keep default grouping. An unexpected throw out of
+ * crawlVenue has no crawl_runs row but has a real stack trace, which is the
+ * right thing to group on. And crawl.ts's own `crawl.failed` report must not
+ * share this fingerprint: Sentry would merge its event into the same issue as
+ * the run.ts exception and double every count.
  */
 export function crawlFailureGrouping(message: string): {
   fingerprint: string[]

@@ -6,6 +6,8 @@
 
 ### Task 5: Group crawl-failure Sentry events by error class, not call site
 
+> **Amended before opening (pre-open review).** This task planned to fingerprint `crawl.ts`'s own `crawl.failed` report as well. Sharing the `['crawl.failed', key]` fingerprint would make Sentry merge that `captureMessage` into the same issue as `run.ts`'s `captureException` for every failure, doubling each issue's count (16 events for the 8 failures on 2026-09-28). As shipped, only the `run.ts` capture sites are fingerprinted; they carry the per-cause paging. `crawl.ts`'s report keeps default grouping, and `crawlFailureGrouping`'s docstring says why.
+
 **Why:** each failed crawl reaches Sentry twice, and both paths group every cause into one issue:
 
 1. `apps/crawler/src/run.ts` wraps the message in `new Error(...)` at both capture sites (triggers ~line 203, daily ~line 331), so Sentry groups on the call site. `CONCERT-CRAWL-CRAWLER-2` has absorbed every distinct cause since 2026-05-11.

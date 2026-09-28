@@ -31,10 +31,7 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
-import {
-  classifyCrawlError,
-  crawlFailureGrouping,
-} from './lib/crawl-error-class.js'
+import { classifyCrawlError } from './lib/crawl-error-class.js'
 import {
   deriveArtists,
   mergeObservedSupporting,
@@ -1807,12 +1804,9 @@ export async function crawlVenue(
       .returning()
     if (!crawlRun) throw new Error('crawl_runs insert returned no row')
 
-    // Same cause-keyed grouping as the run.ts capture sites; errorKind rides
-    // along in extra.
     reportFailure({
       event: 'crawl.failed',
       severity: 'error',
-      ...crawlFailureGrouping(String(err)),
       venueId,
       error: String(err),
       durationMs,
