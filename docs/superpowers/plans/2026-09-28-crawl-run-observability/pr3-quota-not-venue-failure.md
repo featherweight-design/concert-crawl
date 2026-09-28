@@ -16,7 +16,7 @@
 - Modify: `CLAUDE.md` (Crawl Architecture → non-negotiable crawl rules)
 - Test: `packages/crawler-core/src/crawl.test.ts`
 
-- [ ] **Step 1: Failing test.** Append to `crawl.test.ts`. Read venues from `stores.venues`, as the existing tests at ~lines 959 and 991 do. Note what the in-memory `update()` builder does (~line 108): it `Object.assign`s the `set()` payload onto the row verbatim, and `drizzle-orm` is not mocked — so after a real three-strikes update, `consecutiveFailures` holds a Drizzle SQL object, not a number. That is what makes "still the number 2" a sound assertion that no update ran, and why the control asserts "no longer 2" rather than 3.
+- [x] **Step 1: Failing test.** Append to `crawl.test.ts`. Read venues from `stores.venues`, as the existing tests at ~lines 959 and 991 do. Note what the in-memory `update()` builder does (~line 108): it `Object.assign`s the `set()` payload onto the row verbatim, and `drizzle-orm` is not mocked — so after a real three-strikes update, `consecutiveFailures` holds a Drizzle SQL object, not a number. That is what makes "still the number 2" a sound assertion that no update ran, and why the control asserts "no longer 2" rather than 3.
 
 ```ts
 describe('crawlVenue — account-wide LLM quota', () => {
@@ -57,9 +57,9 @@ describe('crawlVenue — account-wide LLM quota', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify the first fails and the control passes** — `pnpm --filter @concert-crawl/crawler-core test -- crawl.test`.
+- [x] **Step 2: Run to verify the first fails and the control passes** — `pnpm --filter @concert-crawl/crawler-core test -- crawl.test`.
 
-- [ ] **Step 3: Implement.** Import `classifyCrawlError` from `./lib/crawl-error-class.js`. After the debug-HTML capture block and before `const isHttpBlocked`:
+- [x] **Step 3: Implement.** Import `classifyCrawlError` from `./lib/crawl-error-class.js`. After the debug-HTML capture block and before `const isHttpBlocked`:
 
 ```ts
 // An account-wide LLM refusal (usage limit, exhausted credit) says nothing
@@ -78,6 +78,6 @@ In `CLAUDE.md`, change the rule line to:
 
 `- 3 consecutive failures → pause venue + notify admin via in-app notification. An account-wide LLM refusal (usage limit, exhausted credit) is not a venue failure and does not count; the daily run-level alert reports it.`
 
-- [ ] **Step 4: Run** the crawler-core suite; PASS. Mutation-check: force `isAccountQuota = false` and confirm the first test fails.
+- [x] **Step 4: Run** the crawler-core suite; PASS. Mutation-check: force `isAccountQuota = false` and confirm the first test fails.
 
-- [ ] **Step 5: Commit, run the §10b cold-eyes pass, open PR 3.**
+- [x] **Step 5: Commit, run the §10b cold-eyes pass, open PR 3.**

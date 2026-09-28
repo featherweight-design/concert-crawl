@@ -31,6 +31,7 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
+import { classifyCrawlError } from './lib/crawl-error-class.js'
 import {
   deriveArtists,
   mergeObservedSupporting,
@@ -1671,103 +1672,114 @@ export async function crawlVenue(
       })
     }
 
-    const isHttpBlocked =
-      err instanceof CrawlFetchError &&
-      (err.httpStatus === 403 || err.httpStatus === 429)
-    // Playwright TimeoutError fires when bot-detection silently hangs the connection
-    // (no HTTP error, just no response). When the current error is a TimeoutError
-    // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
-    // it the same as a 403/429 block so the venue is paused and admin is notified.
-    // CrawlSelectorTimeoutError wraps a Playwright TimeoutError to carry the
-    // captured HTML, which renames it — it must still count as a timeout here
-    // or a browser-mode venue would never reach the 3-strikes auto-pause.
-    const isTimeoutBlock =
-      err instanceof Error &&
-      (err.name === 'TimeoutError' ||
-        err instanceof CrawlSelectorTimeoutError) &&
-      venue.consecutiveFailures >= 2 // becomes 3 after the increment below
-    const isBlocked = isHttpBlocked || isTimeoutBlock
+    // An account-wide LLM refusal (usage limit, exhausted credit) says nothing
+    // about this venue: every LLM venue fails identically until the account
+    // recovers. Counting it toward the three strikes would pause venues that
+    // were never broken — on 2026-09-28 it would have deactivated eight, ~15
+    // hours before the quota reset. It neither increments nor notifies; the
+    // daily run-level alert (lib/run-health.ts) reports it. The crawl_runs row
+    // below is still written as failed.
+    const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota'
 
-    // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
-    // admin". Use a SQL increment + CASE so the increment, the auto-pause
-    // flip, and the threshold-derivation all serialize on the row UPDATE.
-    // This is what gives the auto-pause + crawl-failure email exactly-once
-    // semantics at the threshold under concurrent crawls of the same venue
-    // (the daily cron and the triggers cron CAN overlap on the same venue —
-    // there's no per-venue lock above this layer). The crawl.failed
-    // notification still inserts on every failure where newFailureCount >=
-    // 3 — that's intentional re-alerting; only the "venue auto-paused"
-    // wording is gated to the === 3 transition.
-    //
-    // Block vs auto-pause are intentionally separate signals: HTTP blocks
-    // (403/429) and TimeoutErrors set `blockedAt`, while non-block
-    // failures (schema errors, parse errors, etc.) auto-pause via
-    // `active = false`. Conflating them would prevent admins from
-    // manually queuing a recovery trigger on a blocked venue (the admin
-    // trigger endpoint rejects when !active), forcing an extra Admin UI
-    // un-pause step before retry. The CASE on `active` is therefore gated
-    // to the non-block branch, and an admin who manually re-activates a
-    // still-broken venue isn't fought by the crawler on the next failure
-    // (because newFailureCount === 4 doesn't satisfy the CASE). (#743,
-    // round-3 review on PR #746)
-    const [updatedVenue] = await db
-      .update(venues)
-      .set({
-        consecutiveFailures: sql`${venues.consecutiveFailures} + 1`,
-        ...(isBlocked
-          ? { blockedAt: new Date() }
-          : {
-              active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
-            }),
-        updatedAt: new Date(),
-      })
-      .where(eq(venues.id, venueId))
-      .returning()
+    if (!isAccountQuota) {
+      const isHttpBlocked =
+        err instanceof CrawlFetchError &&
+        (err.httpStatus === 403 || err.httpStatus === 429)
+      // Playwright TimeoutError fires when bot-detection silently hangs the connection
+      // (no HTTP error, just no response). When the current error is a TimeoutError
+      // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
+      // it the same as a 403/429 block so the venue is paused and admin is notified.
+      // CrawlSelectorTimeoutError wraps a Playwright TimeoutError to carry the
+      // captured HTML, which renames it — it must still count as a timeout here
+      // or a browser-mode venue would never reach the 3-strikes auto-pause.
+      const isTimeoutBlock =
+        err instanceof Error &&
+        (err.name === 'TimeoutError' ||
+          err instanceof CrawlSelectorTimeoutError) &&
+        venue.consecutiveFailures >= 2 // becomes 3 after the increment below
+      const isBlocked = isHttpBlocked || isTimeoutBlock
 
-    const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
-    // Auto-pause side-effects (active flip, email, "auto-paused" wording)
-    // align on a single gate: non-block 3rd consecutive failure only.
-    const shouldAutoPause = !isBlocked && newFailureCount === 3
+      // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
+      // admin". Use a SQL increment + CASE so the increment, the auto-pause
+      // flip, and the threshold-derivation all serialize on the row UPDATE.
+      // This is what gives the auto-pause + crawl-failure email exactly-once
+      // semantics at the threshold under concurrent crawls of the same venue
+      // (the daily cron and the triggers cron CAN overlap on the same venue —
+      // there's no per-venue lock above this layer). The crawl.failed
+      // notification still inserts on every failure where newFailureCount >=
+      // 3 — that's intentional re-alerting; only the "venue auto-paused"
+      // wording is gated to the === 3 transition.
+      //
+      // Block vs auto-pause are intentionally separate signals: HTTP blocks
+      // (403/429) and TimeoutErrors set `blockedAt`, while non-block
+      // failures (schema errors, parse errors, etc.) auto-pause via
+      // `active = false`. Conflating them would prevent admins from
+      // manually queuing a recovery trigger on a blocked venue (the admin
+      // trigger endpoint rejects when !active), forcing an extra Admin UI
+      // un-pause step before retry. The CASE on `active` is therefore gated
+      // to the non-block branch, and an admin who manually re-activates a
+      // still-broken venue isn't fought by the crawler on the next failure
+      // (because newFailureCount === 4 doesn't satisfy the CASE). (#743,
+      // round-3 review on PR #746)
+      const [updatedVenue] = await db
+        .update(venues)
+        .set({
+          consecutiveFailures: sql`${venues.consecutiveFailures} + 1`,
+          ...(isBlocked
+            ? { blockedAt: new Date() }
+            : {
+                active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
+              }),
+          updatedAt: new Date(),
+        })
+        .where(eq(venues.id, venueId))
+        .returning()
 
-    if (newFailureCount >= 3) {
-      const notificationBody = shouldAutoPause
-        ? `${newFailureCount} consecutive failures for ${venue.name} — venue auto-paused`
-        : `${newFailureCount} consecutive failures for ${venue.name}`
-      // Include crawlRunId in metadata so the admin UI can surface an
-      // alert badge on the specific failing row (see #804). A
-      // crawl.failed notification fires on every run once
-      // consecutive_failures >= 3 (the first, the auto-pause trip at
-      // exactly 3 on a non-blocked venue, and every subsequent failure)
-      // — the badge attaches to whichever of those failures is most
-      // recently unread per the API's first-match-wins join.
-      // event_count_dropped notifications have stored crawlRunId since
-      // their introduction; this brings crawl.failed to parity.
-      await db.insert(notifications).values({
-        type: 'admin_alert',
-        category: 'crawl.failed',
-        title: `Crawl failing: ${venue.name}`,
-        body: notificationBody,
-        metadata: JSON.stringify({ venueId, crawlRunId: id }),
-      })
+      const newFailureCount = updatedVenue?.consecutiveFailures ?? 0
+      // Auto-pause side-effects (active flip, email, "auto-paused" wording)
+      // align on a single gate: non-block 3rd consecutive failure only.
+      const shouldAutoPause = !isBlocked && newFailureCount === 3
 
-      if (shouldAutoPause) {
-        // Await the email send. The crawler hard-exits via process.exit(0)
-        // when main() resolves; a detached Promise here gets severed before
-        // the HTTP request to Resend completes, which is why no crawl.failed
-        // email has ever arrived since PR #51 (#649).
-        try {
-          await sendCrawlFailureEmail({
-            venueName: venue.name,
-            venueId,
-            consecutiveFailures: newFailureCount,
-          })
-        } catch (emailErr) {
-          reportFailure({
-            event: 'crawl.email_error',
-            severity: 'error',
-            venueId,
-            error: String(emailErr),
-          })
+      if (newFailureCount >= 3) {
+        const notificationBody = shouldAutoPause
+          ? `${newFailureCount} consecutive failures for ${venue.name} — venue auto-paused`
+          : `${newFailureCount} consecutive failures for ${venue.name}`
+        // Include crawlRunId in metadata so the admin UI can surface an
+        // alert badge on the specific failing row (see #804). A
+        // crawl.failed notification fires on every run once
+        // consecutive_failures >= 3 (the first, the auto-pause trip at
+        // exactly 3 on a non-blocked venue, and every subsequent failure)
+        // — the badge attaches to whichever of those failures is most
+        // recently unread per the API's first-match-wins join.
+        // event_count_dropped notifications have stored crawlRunId since
+        // their introduction; this brings crawl.failed to parity.
+        await db.insert(notifications).values({
+          type: 'admin_alert',
+          category: 'crawl.failed',
+          title: `Crawl failing: ${venue.name}`,
+          body: notificationBody,
+          metadata: JSON.stringify({ venueId, crawlRunId: id }),
+        })
+
+        if (shouldAutoPause) {
+          // Await the email send. The crawler hard-exits via process.exit(0)
+          // when main() resolves; a detached Promise here gets severed before
+          // the HTTP request to Resend completes, which is why no crawl.failed
+          // email has ever arrived since PR #51 (#649).
+          try {
+            await sendCrawlFailureEmail({
+              venueName: venue.name,
+              venueId,
+              consecutiveFailures: newFailureCount,
+            })
+          } catch (emailErr) {
+            reportFailure({
+              event: 'crawl.email_error',
+              severity: 'error',
+              venueId,
+              error: String(emailErr),
+            })
+          }
         }
       }
     }

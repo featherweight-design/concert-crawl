@@ -2156,3 +2156,44 @@ describe('crawlVenue — debug HTML capture', () => {
     )
   })
 })
+
+describe('crawlVenue — account-wide LLM quota', () => {
+  // The in-memory update() builder Object.assigns the set() payload verbatim
+  // and drizzle-orm is not mocked, so a real three-strikes update leaves a
+  // Drizzle SQL object in consecutiveFailures. "Still the number 2" is
+  // therefore proof no update ran, and the control asserts "no longer 2".
+  const QUOTA =
+    'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}'
+
+  const storedVenue = (id: string) => stores.venues.find((row) => row.id === id)
+  const arrangeLlmPath = (venue: { websiteUrl: string }) =>
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+
+  it('records the run as failed without touching the three-strikes counter', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    arrangeLlmPath(venue)
+    mockExtractWithLlm.mockRejectedValueOnce(new Error(QUOTA))
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('failed')
+    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2)
+    expect(storedVenue(venue.id)?.active).toBe(true)
+  })
+
+  it('still runs the three-strikes update for an ordinary failure (control)', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    arrangeLlmPath(venue)
+    mockExtractWithLlm.mockRejectedValueOnce(
+      new Error('TypeError: fetch failed'),
+    )
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2)
+  })
+})
