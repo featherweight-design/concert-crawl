@@ -48,7 +48,7 @@ export async function sendRunDegradedEmail(
 ): Promise<void>
 ```
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 In `packages/logger/src/index.test.ts`, beside the existing `captureMessageSpy` cases:
 
@@ -187,9 +187,9 @@ describe('reportRunHealth', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify they fail** — `pnpm --filter @concert-crawl/logger test` and `pnpm --filter @concert-crawl/crawler-core test -- run-health`.
+- [x] **Step 2: Run to verify they fail** — `pnpm --filter @concert-crawl/logger test` and `pnpm --filter @concert-crawl/crawler-core test -- run-health`.
 
-- [ ] **Step 3: Implement.**
+- [x] **Step 3: Implement.**
 
 `packages/logger/src/index.ts` — add the optional `fingerprint?: string[]` field to `FailureReport` above the index signature, destructure it out of `extra`, and pass it through only when set:
 
@@ -312,9 +312,9 @@ function buildRunDegradedSample(): BuiltTestEmail {
 }
 ```
 
-- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/logger test`, `pnpm --filter @concert-crawl/crawler-core test`, `pnpm --filter @concert-crawl/api test -- test-fixtures`; PASS. Mutation-check: drop `...(fingerprint ? { fingerprint } : {})` and confirm the first logger test fails; drop `fingerprint` from the destructure and confirm the second fails.
+- [x] **Step 4: Run** `pnpm --filter @concert-crawl/logger test`, `pnpm --filter @concert-crawl/crawler-core test`, `pnpm --filter @concert-crawl/api test -- test-fixtures`; PASS. Mutation-check: drop `...(fingerprint ? { fingerprint } : {})` and confirm the first logger test fails; drop `fingerprint` from the destructure and confirm the second fails.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat(crawler): alert when a daily run degrades, grouped by cause"`
+- [x] **Step 5: Commit** — `git commit -m "feat(crawler): alert when a daily run degrades, grouped by cause"`
 
 ### Task 4: Wire it into the daily run, and fail the cron on a degraded run
 
@@ -326,7 +326,7 @@ function buildRunDegradedSample(): BuiltTestEmail {
 
 **Interfaces — Consumes:** `evaluateRunHealth`, `reportRunHealth`, `VenueRunOutcome` from `@concert-crawl/crawler-core`. **Produces:** `runDailyCrawl(): Promise<{ succeeded: number; failed: number; total: number; degraded: boolean }>`; `main(): Promise<{ degraded: boolean }>`.
 
-- [ ] **Step 1: Failing tests.**
+- [x] **Step 1: Failing tests.**
 
 `run.test.ts` — declare beside the other crawler-core mocks (~line 100) and add both to the `vi.mock('@concert-crawl/crawler-core', …)` factory:
 
@@ -422,9 +422,9 @@ it('exits 1 without reporting a crash when the run is degraded', async () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify the new cases fail** — `pnpm --filter @concert-crawl/crawler test`.
+- [x] **Step 2: Run to verify the new cases fail** — `pnpm --filter @concert-crawl/crawler test`.
 
-- [ ] **Step 3: Implement.** In `run.ts`, change the no-venues early return (~line 303) to `return { succeeded: 0, failed: 0, total: 0, degraded: false }`. Declare `const outcomes: VenueRunOutcome[] = []` beside `succeeded`/`failed`. In the loop, take `const venue = batch[idx]` and, when it is defined, push one outcome per branch:
+- [x] **Step 3: Implement.** In `run.ts`, change the no-venues early return (~line 303) to `return { succeeded: 0, failed: 0, total: 0, degraded: false }`. Declare `const outcomes: VenueRunOutcome[] = []` beside `succeeded`/`failed`. In the loop, take `const venue = batch[idx]` and, when it is defined, push one outcome per branch:
 
 - fulfilled with `status === 'failed'`: `{ venueId: venue.id, venueName: venue.name, errorMessage: result.value.errorMessage ?? 'Crawl failed' }`
 - fulfilled otherwise: `errorMessage: null`
@@ -489,8 +489,8 @@ main().then(async ({ degraded }) => {
 
 (the `.catch` branch is unchanged).
 
-- [ ] **Step 4: Run** `pnpm --filter @concert-crawl/crawler test`; PASS. Mutation-check: drop the `reportRunHealth` call and confirm "returns degraded…" fails; hard-code `process.exit(0)` and confirm the new exit-code case fails.
+- [x] **Step 4: Run** `pnpm --filter @concert-crawl/crawler test`; PASS. Mutation-check: drop the `reportRunHealth` call and confirm "returns degraded…" fails; hard-code `process.exit(0)` and confirm the new exit-code case fails.
 
-- [ ] **Step 5: Commit, add a `progress.md` ✅ row (substantive reliability fix), run the §10b cold-eyes pass, open PR 1** with the whole plan directory included. PR body ops notes:
+- [x] **Step 5: Commit, add a `progress.md` ✅ row (substantive reliability fix), run the §10b cold-eyes pass, open PR 1** with the whole plan directory included. PR body ops notes:
   - Render's `notifyOnFail` for the crawler crons is `default` (read from the Render API `list_services` on 2026-09-22; not recorded in `render.yaml`), which defers to the workspace setting — confirm Render → Notifications emails on a failed cron run.
   - `concert-crawl-crawler-daily-staging` runs the same code, so an un-suspended staging cron would also exit 1 on a degraded night and send `[STAGING]`-prefixed email. It was suspended as of the same read.

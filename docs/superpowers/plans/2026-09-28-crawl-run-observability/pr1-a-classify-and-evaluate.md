@@ -23,7 +23,7 @@ export function normalizeErrorMessage(message: string): string
 export function classifyCrawlError(message: string): CrawlErrorClass
 ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -86,12 +86,12 @@ describe('normalizeErrorMessage', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm --filter @concert-crawl/crawler-core test -- crawl-error-class`
 Expected: FAIL — cannot resolve `./crawl-error-class.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // Turns a crawl error message into a stable class. Shared by the run-level
@@ -142,9 +142,9 @@ export function classifyCrawlError(message: string): CrawlErrorClass {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes** — same command, expected PASS.
+- [x] **Step 4: Run to verify it passes** — same command, expected PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/crawler-core/src/lib/crawl-error-class.ts packages/crawler-core/src/lib/crawl-error-class.test.ts
@@ -182,7 +182,7 @@ export function evaluateRunHealth(
 ): RunDegradation[]
 ```
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -290,9 +290,9 @@ describe('evaluateRunHealth', () => {
 })
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `pnpm --filter @concert-crawl/crawler-core test -- run-health`; expected FAIL, module not found.
+- [x] **Step 2: Run to verify it fails** — `pnpm --filter @concert-crawl/crawler-core test -- run-health`; expected FAIL, module not found.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```ts
 // Run-level health for the daily crawl. Every other crawl alert asks "is THIS
@@ -378,6 +378,6 @@ export function evaluateRunHealth(
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes.** Mutation-check: change `group.venues.set(failure.venueId, …)` to key on a counter; the Levitt test must fail. Restore.
+- [x] **Step 4: Run to verify it passes.** Mutation-check: change `group.venues.set(failure.venueId, …)` to key on a counter; the Levitt test must fail. Restore.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat(crawler): evaluate daily-run health across venues"`
+- [x] **Step 5: Commit** — `git commit -m "feat(crawler): evaluate daily-run health across venues"`
