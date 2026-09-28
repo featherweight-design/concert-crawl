@@ -8,17 +8,14 @@
 
 > **Amended before opening (pre-open review).** This task planned to fingerprint `crawl.ts`'s own `crawl.failed` report as well. Sharing the `['crawl.failed', key]` fingerprint would make Sentry merge that `captureMessage` into the same issue as `run.ts`'s `captureException` for every failure, doubling each issue's count (16 events for the 8 failures on 2026-09-28). As shipped, only the `run.ts` capture sites are fingerprinted; they carry the per-cause paging. `crawl.ts`'s report keeps default grouping, and `crawlFailureGrouping`'s docstring says why.
 
-**Why:** each failed crawl reaches Sentry twice, and both paths group every cause into one issue:
+**Why:** `apps/crawler/src/run.ts` wraps each failed crawl's message in `new Error(...)` at both capture sites (triggers ~line 203, daily ~line 331), so Sentry groups on the call site. `CONCERT-CRAWL-CRAWLER-2` has absorbed every distinct cause since 2026-05-11. The issue-alert rule fires on transitions only, so a new cause landing in an ongoing issue never pages. Fingerprinting both capture sites by cause makes one cause one issue.
 
-1. `apps/crawler/src/run.ts` wraps the message in `new Error(...)` at both capture sites (triggers ~line 203, daily ~line 331), so Sentry groups on the call site. `CONCERT-CRAWL-CRAWLER-2` has absorbed every distinct cause since 2026-05-11.
-2. `packages/crawler-core/src/crawl.ts` ~line 1793 calls `reportFailure({ event: 'crawl.failed', … })`, a `captureMessage('crawl.failed')` — one issue for every cause.
-
-The issue-alert rule fires on transitions only, so a new cause landing in an ongoing issue never pages. Both paths get the same fingerprint, so one cause is one issue.
+`crawl.ts`'s own `reportFailure({ event: 'crawl.failed' })` stays on default grouping, deliberately; see the amendment above. Do not add this fingerprint there.
 
 **Files:**
 
 - Modify: `packages/crawler-core/src/lib/crawl-error-class.ts`, `packages/crawler-core/src/index.ts`
-- Modify: `apps/crawler/src/run.ts` (the two capture sites), `packages/crawler-core/src/crawl.ts` (~line 1793)
+- Modify: `apps/crawler/src/run.ts` (the two capture sites)
 - Test: `packages/crawler-core/src/lib/crawl-error-class.test.ts`, `apps/crawler/src/run.test.ts`
 
 **Interfaces — Consumes:** `classifyCrawlError`, `CrawlErrorKind` (Task 1); `FailureReport.fingerprint` (Task 3). **Produces:**
@@ -105,21 +102,6 @@ Sentry.captureException(new Error(message), {
 
 (triggers path: `crawlRun.errorMessage`, `extra: { venueId: trigger.venueId, triggerId: trigger.id }`). Leave the `rejected` branch (~line 384) on default grouping — it carries a real stack trace, the right grouping for an unexpected throw.
 
-In `crawl.ts` ~line 1793, spread the same grouping into the existing report (`fingerprint` goes to Sentry, `errorKind` to `extra`):
-
-```ts
-reportFailure({
-  event: 'crawl.failed',
-  severity: 'error',
-  ...crawlFailureGrouping(String(err)),
-  venueId,
-  error: String(err),
-  durationMs,
-})
-```
-
-That one-line spread has no dedicated test: `crawl.test.ts` does not mock the logger, and the grouping itself is covered above. Typecheck and review cover the call.
-
 - [x] **Step 4: Run** both packages' tests; PASS. Mutation-check: return `['crawl.failed']` from `crawlFailureGrouping` and confirm the "different causes" test fails.
 
-- [x] **Step 5: Commit, run the §10b cold-eyes pass, open PR 2.** Ops step after deploy, recorded in the PR body: resolve `CONCERT-CRAWL-CRAWLER-2` and the `crawl.failed` message issue so the old buckets stop absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.
+- [x] **Step 5: Commit, run the §10b cold-eyes pass, open PR 2.** Ops step after deploy, recorded in the PR body: resolve `CONCERT-CRAWL-CRAWLER-2` so the old bucket stops absorbing. Expect one first-seen email per distinct cause as new groups form — that is the change working.
