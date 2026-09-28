@@ -1,3 +1,11 @@
+## [1.298.1](https://github.com/HartiganHM/concert-crawl/compare/v1.298.0...v1.298.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **crawler:** an account-wide LLM refusal is not a venue failure ([07d5148](https://github.com/HartiganHM/concert-crawl/commit/07d51489ac33d02ec267e2477bf19ce506e5a7e2))
+* **crawler:** pin the quota tests to a real failure; state what reports it ([8f03f99](https://github.com/HartiganHM/concert-crawl/commit/8f03f99e726ee72a83e3322ce6e4d0c8f163a942))
+
 # [1.298.0](https://github.com/HartiganHM/concert-crawl/compare/v1.297.2...v1.298.0) (2026-09-28)
 
 
