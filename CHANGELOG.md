@@ -1,3 +1,19 @@
+# [1.298.0](https://github.com/HartiganHM/concert-crawl/compare/v1.297.2...v1.298.0) (2026-09-28)
+
+
+### Bug Fixes
+
+* **crawler:** one Sentry event per shared cause; test the degraded-run email ([172df31](https://github.com/HartiganHM/concert-crawl/commit/172df314437f9887e6b5d25f6aad03119eef826c))
+* **crawler:** pre-open review — true email sample, accurate comments ([61eb722](https://github.com/HartiganHM/concert-crawl/commit/61eb7222e7ef863e4b7e258c0fcaa010dcba179b))
+
+
+### Features
+
+* **crawler:** alert when a daily run degrades, grouped by cause ([6378fb0](https://github.com/HartiganHM/concert-crawl/commit/6378fb05e934854941386ad81f4799dbfa5f14e6))
+* **crawler:** classify crawl errors into a shared kind and grouping key ([0d6d543](https://github.com/HartiganHM/concert-crawl/commit/0d6d5434615f7db8cfd750f47184a711ad14d851))
+* **crawler:** evaluate daily-run health across venues ([686a8ac](https://github.com/HartiganHM/concert-crawl/commit/686a8acb5c2780231f2f61f29b7510828c2bc45a))
+* **crawler:** fail the daily cron when a run degrades ([c203289](https://github.com/HartiganHM/concert-crawl/commit/c203289612ae727f48ca4f349aa49cff054aa208))
+
 ## [1.297.2](https://github.com/HartiganHM/concert-crawl/compare/v1.297.1...v1.297.2) (2026-09-22)
 
 
