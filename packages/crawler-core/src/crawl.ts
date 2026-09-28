@@ -1676,9 +1676,12 @@ export async function crawlVenue(
     // about this venue: every LLM venue fails identically until the account
     // recovers. Counting it toward the three strikes would pause venues that
     // were never broken — on 2026-09-28 it would have deactivated eight, ~15
-    // hours before the quota reset. It neither increments nor notifies; the
-    // daily run-level alert (lib/run-health.ts) reports it. The crawl_runs row
-    // below is still written as failed.
+    // hours before the quota reset. It neither increments nor notifies per
+    // venue. What still reports it: the crawl_runs row below (written as
+    // failed), the crawl.failed Sentry event every failure sends, and — when
+    // several venues hit it in the daily run — the run-level alert
+    // (lib/run-health.ts). A lone quota failure on a trigger-queued crawl gets
+    // the Sentry event only.
     const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota'
 
     if (!isAccountQuota) {

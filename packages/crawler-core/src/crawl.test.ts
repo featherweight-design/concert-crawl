@@ -2180,6 +2180,9 @@ describe('crawlVenue — account-wide LLM quota', () => {
 
     const run = await crawlVenue(venue.id, mockBrowser)
 
+    // The rejection must actually have been consumed: a crawl that took the
+    // JSON-LD or unchanged-hash path would never reach the catch block.
+    expect(mockExtractWithLlm).toHaveBeenCalled()
     expect(run.status).toBe('failed')
     expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2)
     expect(storedVenue(venue.id)?.active).toBe(true)
@@ -2192,8 +2195,12 @@ describe('crawlVenue — account-wide LLM quota', () => {
       new Error('TypeError: fetch failed'),
     )
 
-    await crawlVenue(venue.id, mockBrowser)
+    const run = await crawlVenue(venue.id, mockBrowser)
 
+    // "No longer 2" alone is also true of the success path, which resets the
+    // counter to 0, so pin that this was a real failure first.
+    expect(mockExtractWithLlm).toHaveBeenCalled()
+    expect(run.status).toBe('failed')
     expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2)
   })
 })

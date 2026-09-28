@@ -6,7 +6,7 @@
 
 ### Task 6: Exempt `llm_quota` from the three strikes
 
-**Why:** on 2026-09-28 the rule would have set `active = false` on 8 working venues at the Sept 30 run, ~15 hours before the quota reset, needing manual re-activation of each. **Decision:** an `llm_quota` failure neither increments `consecutive_failures` nor notifies per venue. Incrementing would leave every LLM venue one real failure from a pause once the account recovers. The run-level alert (PR 1) is the channel that reports it. The `crawl_runs` row is still written as `failed`, and the final `reportFailure('crawl.failed')` still fires.
+**Why:** on 2026-09-28 the rule would have set `active = false` on 8 working venues at the Sept 30 run, ~15 hours before the quota reset, needing manual re-activation of each. **Decision:** an `llm_quota` failure neither increments `consecutive_failures` nor notifies per venue. Incrementing would leave every LLM venue one real failure from a pause once the account recovers. The `crawl_runs` row is still written as `failed`, and the final `reportFailure('crawl.failed')` still fires. That Sentry event is what always reports it (as its own issue once PR 2 groups by cause); the run-level alert (PR 1) adds a report when it hits several venues in the daily run. A lone quota failure on a trigger-queued crawl gets the Sentry event only.
 
 **Verified precondition:** the Anthropic error reaches the outer `catch (err)` in `crawlVenue` (~line 1655). `extractWithLlm` does not catch around `stream.finalMessage()` (`lib/extractors/llm.ts` ~362–392), and `runExtraction` (`crawl.ts` ~293) and its call sites propagate. Nothing declared between `const isHttpBlocked` and the end of the `if (newFailureCount >= 3)` block is used after it, so the wrap below breaks no scope.
 
@@ -66,9 +66,12 @@ describe('crawlVenue — account-wide LLM quota', () => {
 // about this venue: every LLM venue fails identically until the account
 // recovers. Counting it toward the three strikes would pause venues that
 // were never broken — on 2026-09-28 it would have deactivated eight, ~15
-// hours before the quota reset. It neither increments nor notifies; the
-// run-level alert (lib/run-health.ts) reports it. The crawl_runs row below
-// is still written as failed.
+// hours before the quota reset. It neither increments nor notifies per
+// venue. What still reports it: the crawl_runs row below (written as
+// failed), the crawl.failed Sentry event every failure sends, and — when
+// several venues hit it in the daily run — the run-level alert
+// (lib/run-health.ts). A lone quota failure on a trigger-queued crawl gets
+// the Sentry event only.
 const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota'
 ```
 
@@ -76,7 +79,7 @@ Wrap everything from `const isHttpBlocked` through the end of the `if (newFailur
 
 In `CLAUDE.md`, change the rule line to:
 
-`- 3 consecutive failures → pause venue + notify admin via in-app notification. An account-wide LLM refusal (usage limit, exhausted credit) is not a venue failure and does not count; the daily run-level alert reports it.`
+`- 3 consecutive failures → pause venue + notify admin via in-app notification. An account-wide LLM refusal (usage limit, exhausted credit) is not a venue failure and does not count; it is reported by its `crawl.failed` Sentry event and, when it hits several venues in the daily run, by the run-level alert.`
 
 - [x] **Step 4: Run** the crawler-core suite; PASS. Mutation-check: force `isAccountQuota = false` and confirm the first test fails.
 
