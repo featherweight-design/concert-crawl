@@ -52,7 +52,7 @@ const withSerwist = withSerwistInit({
 })
 
 export default withSentryConfig(withSerwist(config), {
-  org: 'concert-crawl',
+  org: 'fw-design',
   project: 'concert-crawl-web',
   // Suppress output locally; print in CI for source map upload confirmation
   silent: !process.env['CI'],
