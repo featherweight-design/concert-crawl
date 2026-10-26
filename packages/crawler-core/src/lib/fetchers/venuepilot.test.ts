@@ -541,6 +541,37 @@ describe('venuePilotFetcher.fetch', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it("widens the run budget for the endpoint's longer Crawl-delay", async () => {
+    vi.useFakeTimers()
+    try {
+      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response(graphqlBody([], { totalPages: 2, currentPage: 1 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(graphqlBody([], { totalPages: 2, currentPage: 2 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        )
+      // A 5s budget sized for a 0ms venue delay would expire during the 10s
+      // wait the endpoint asks for between pages.
+      const run = venuePilotFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 5_000,
+      })
+      await vi.runAllTimersAsync()
+      await expect(run).resolves.toBeDefined()
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("reads the Crawl-delay from the endpoint's own robots.txt", async () => {
     mockFetchOk(LEVITT_FIXTURE)
     await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })

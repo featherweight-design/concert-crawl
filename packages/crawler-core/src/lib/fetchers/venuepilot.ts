@@ -397,7 +397,15 @@ async function venuePilotFetch(
 
   const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()
-  const deadline = createDeadline(opts)
+  // The run budget crawl.ts handed us was sized from the venue site's delay.
+  // When the endpoint asks for a longer one, widen the budget by the extra
+  // wait per page so honoring it can't time the run out.
+  const extraWaitMs = Math.max(0, crawlDelayMs - opts.crawlDelayMs) * MAX_PAGES
+  const deadline = createDeadline(
+    opts.overallTimeoutMs === undefined
+      ? opts
+      : { ...opts, overallTimeoutMs: opts.overallTimeoutMs + extraWaitMs },
+  )
   const events: NormalizedEvent[] = []
   let totalCount = 0
   let totalPages = 1
