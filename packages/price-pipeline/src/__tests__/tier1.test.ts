@@ -6,6 +6,9 @@ vi.mock('@concert-crawl/crawler-core/robots', async (importOriginal) => ({
     typeof import('@concert-crawl/crawler-core/robots')
   >()),
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  // Gates each redirect hop; robots.ts calls checkRobots internally, so the
+  // stub above would not reach it.
+  isAllowedOrSkip: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }))
 // No real 3-second waits in unit tests.
@@ -14,8 +17,10 @@ vi.mock('@concert-crawl/crawler-core/jitter', () => ({
 }))
 
 import {
+  CrawlSkipError,
   checkRobots,
   getCrawlDelayMs,
+  isAllowedOrSkip,
 } from '@concert-crawl/crawler-core/robots'
 import { jitter } from '@concert-crawl/crawler-core/jitter'
 import { tier1StructuredData } from '../tier1-structured-data.js'
@@ -42,7 +47,9 @@ describe('tier1StructuredData', () => {
   })
 
   it('identifies with the honest user agent on the domain we own', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: false, status: 500, headers: new Headers() })
     vi.stubGlobal('fetch', fetchMock)
 
     await tier1StructuredData(baseCtx)
@@ -79,14 +86,24 @@ describe('tier1StructuredData', () => {
   })
 
   it('paces each request by at least our 3-second floor', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 500, headers: new Headers() }),
+    )
     await tier1StructuredData(baseCtx)
     expect(jitter).toHaveBeenCalledWith(3000)
   })
 
   it("slows to the site's Crawl-delay", async () => {
     vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(10_000)
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 500, headers: new Headers() }),
+    )
     await tier1StructuredData(baseCtx)
     expect(jitter).toHaveBeenCalledWith(10_000)
   })
@@ -101,7 +118,12 @@ describe('tier1StructuredData', () => {
   })
 
   it('returns null on non-200 fetch', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue({ ok: false, status: 500, headers: new Headers() }),
+    )
     const result = await tier1StructuredData(baseCtx)
     expect(result).toBeNull()
   })
@@ -120,7 +142,12 @@ describe('tier1StructuredData', () => {
     `
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, text: async () => html }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => html,
+      }),
     )
     const result = await tier1StructuredData(baseCtx)
     expect(result).toEqual({
@@ -140,7 +167,12 @@ describe('tier1StructuredData', () => {
     `
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, text: async () => html }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => html,
+      }),
     )
     const result = await tier1StructuredData(baseCtx)
     expect(result).toEqual({
@@ -160,9 +192,44 @@ describe('tier1StructuredData', () => {
     `
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, text: async () => html }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => html,
+      }),
     )
     const result = await tier1StructuredData(baseCtx)
     expect(result).toBeNull()
+  })
+
+  it('defers when a redirect target has an unreachable robots.txt', async () => {
+    vi.mocked(isAllowedOrSkip).mockRejectedValueOnce(
+      new CrawlSkipError('robots.txt unreachable'),
+    )
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: 'https://tickets.example/e/1' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(tier1StructuredData(baseCtx)).rejects.toBeInstanceOf(
+      PriceFetchDeferredError,
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not follow a redirect robots.txt disallows', async () => {
+    vi.mocked(isAllowedOrSkip).mockResolvedValueOnce(false)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: 'https://tickets.example/e/1' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await tier1StructuredData(baseCtx)).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -4,6 +4,7 @@ import {
   getCrawlDelayMs,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots'
+import { fetchFollowingRobots } from '@concert-crawl/crawler-core/robots-fetch'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { TicketVendor } from '@concert-crawl/types'
 import { apiLogger } from './logger.js'
@@ -38,11 +39,10 @@ export async function detectTicketVendor(
     if (delayMs === null) return 'unknown'
     await new Promise((resolve) => setTimeout(resolve, jitter(delayMs)))
 
-    const res = await fetch(websiteUrl, {
-      headers: {
-        'User-Agent': CRAWLER_USER_AGENT,
-      },
-      signal: AbortSignal.timeout(8_000),
+    // Each redirect hop clears robots.txt and its pacing before we follow it.
+    const { response: res } = await fetchFollowingRobots(websiteUrl, {
+      crawlDelayMs: DETECT_FETCH_DELAY_MS,
+      timeoutMs: 8_000,
     })
     if (!res.ok) return 'unknown'
     const MAX_BYTES = 256 * 1024 // 256 KB

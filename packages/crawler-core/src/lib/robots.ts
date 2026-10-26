@@ -175,9 +175,17 @@ function groupsFor(groups: Group[], userAgent: string): Group[] {
 // meaning and stays escaped, upper-cased so `%2f` and `%2F` compare equal.
 // Non-ASCII in a rule is encoded the way `URL` encodes it in a target.
 function normalizePath(path: string): string {
-  const encoded = path.replace(/[^\x21-\x7e]/g, (char) =>
-    encodeURIComponent(char),
-  )
+  // `u` so a character outside the BMP is one match, not two surrogate
+  // halves that encodeURIComponent would throw on. A lone surrogate (invalid
+  // UTF-16) still can't be encoded and becomes U+FFFD, which matches nothing
+  // a URL produces.
+  const encoded = path.replace(/[^\x21-\x7e]/gu, (char) => {
+    try {
+      return encodeURIComponent(char)
+    } catch {
+      return '%EF%BF%BD'
+    }
+  })
   return encoded.replace(/%([0-9a-fA-F]{2})/g, (_match, hex: string) => {
     const char = String.fromCharCode(parseInt(hex, 16))
     return /[A-Za-z0-9\-._~]/.test(char) ? char : `%${hex.toUpperCase()}`
@@ -206,15 +214,18 @@ function ruleMatches(rulePath: string, target: string): boolean {
  */
 function isPathAllowed(rules: Rule[], target: string): boolean {
   if (target === '/robots.txt') return true
-  let best: Rule | null = null
+  // Precedence compares normalized lengths, so percent-encoding a character
+  // can't lengthen a rule past one it should lose to.
+  let best: { allow: boolean; length: number } | null = null
   for (const rule of rules) {
     if (!ruleMatches(rule.path, target)) continue
+    const length = normalizePath(rule.path).length
     if (
       best === null ||
-      rule.path.length > best.path.length ||
-      (rule.path.length === best.path.length && rule.allow)
+      length > best.length ||
+      (length === best.length && rule.allow)
     ) {
-      best = rule
+      best = { allow: rule.allow, length }
     }
   }
   return best?.allow ?? true

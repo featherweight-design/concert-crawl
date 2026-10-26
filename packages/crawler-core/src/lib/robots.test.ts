@@ -511,6 +511,27 @@ describe('robots.ts', () => {
       ).toBe(false)
     })
 
+    it('handles a rule with a character outside the BMP', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /events/🎵'])
+      expect(
+        await isAllowed(
+          'https://pct-emoji.example/events/%F0%9F%8E%B5',
+          USER_AGENT,
+        ),
+      ).toBe(false)
+      expect(
+        await isAllowed('https://pct-emoji.example/other', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('ranks rules by their normalized length', async () => {
+      // `/%65%76` is `/ev`: three characters, shorter than `/events`.
+      mockRobots(['User-agent: *', 'Allow: /%65%76', 'Disallow: /events'])
+      expect(
+        await isAllowed('https://pct-length.example/events', USER_AGENT),
+      ).toBe(false)
+    })
+
     it('matches the query string as part of the path', async () => {
       mockRobots(['User-agent: *', 'Disallow: /events?page='])
       expect(

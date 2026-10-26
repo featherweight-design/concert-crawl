@@ -1442,6 +1442,29 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     return { venue, fetch }
   }
 
+  it("asks the platform endpoint's AI verdict, not just each event's public link", async () => {
+    const { venue, fetch } = seedPlatformVenue(1)
+    fetch.mockResolvedValueOnce({
+      events: [
+        {
+          title: 'Metallica',
+          rawTitle: 'Metallica',
+          artist: 'Metallica',
+          date: '2026-08-15',
+          confidence: 1,
+          sourceUrl: 'https://venue.example.com/calendar',
+        },
+      ],
+      sourceUrl: 'https://platform.example.com/graphql',
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const asked = vi.mocked(isAiUseAllowed).mock.calls.map(([url]) => url)
+    expect(asked).toContain('https://venue.example.com/calendar')
+    expect(asked).toContain('https://platform.example.com/graphql')
+  })
+
   it('records a skipped run and no strike when the adapter declines on robots.txt', async () => {
     const { venue, fetch } = seedPlatformVenue(1)
     fetch.mockRejectedValueOnce(

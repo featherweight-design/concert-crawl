@@ -1,9 +1,11 @@
 import { jitter } from '@concert-crawl/crawler-core/jitter'
 import {
+  CrawlSkipError,
   checkRobots,
   getCrawlDelayMs,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots'
+import { fetchFollowingRobots } from '@concert-crawl/crawler-core/robots-fetch'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import { PriceFetchDeferredError } from './types.js'
@@ -65,13 +67,17 @@ export async function tier1StructuredData(
   if (delayMs === null) return null
   await new Promise((resolve) => setTimeout(resolve, jitter(delayMs)))
 
+  // Each redirect hop clears robots.txt and its pacing before we follow it.
   let res: Response
   try {
-    res = await fetch(ctx.priceUrl, {
-      headers: { 'User-Agent': CRAWLER_USER_AGENT },
-      signal: AbortSignal.timeout(10_000),
-    })
-  } catch {
+    ;({ response: res } = await fetchFollowingRobots(ctx.priceUrl, {
+      crawlDelayMs: PRICE_FETCH_DELAY_MS,
+      timeoutMs: 10_000,
+    }))
+  } catch (err) {
+    if (err instanceof CrawlSkipError) {
+      throw new PriceFetchDeferredError(err.message)
+    }
     return null
   }
 

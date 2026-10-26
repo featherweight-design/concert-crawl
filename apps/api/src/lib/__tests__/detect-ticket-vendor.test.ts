@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('@concert-crawl/crawler-core/robots', () => ({
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  isAllowedOrSkip: vi.fn().mockResolvedValue(true),
+  CrawlSkipError: class CrawlSkipError extends Error {},
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
   resolveCrawlDelayMs: vi.fn().mockReturnValue(3000),
 }))
@@ -14,6 +16,7 @@ vi.mock('@concert-crawl/crawler-core/jitter', () => ({
 import { jitter } from '@concert-crawl/crawler-core/jitter'
 import {
   checkRobots,
+  isAllowedOrSkip,
   resolveCrawlDelayMs,
 } from '@concert-crawl/crawler-core/robots'
 import { detectTicketVendor } from '../detect-ticket-vendor.js'
@@ -25,6 +28,8 @@ const mockFetch = (html: string) =>
     'fetch',
     vi.fn().mockResolvedValue({
       ok: true,
+      status: 200,
+      headers: new Headers(),
       arrayBuffer: async () => new TextEncoder().encode(html).buffer,
     }),
   )
@@ -95,7 +100,26 @@ describe('detectTicketVendor', () => {
   })
 
   it('returns unknown when response is not ok', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        headers: new Headers(),
+      }),
+    )
     expect(await detectTicketVendor('https://venue.example')).toBe('unknown')
+  })
+
+  it('does not follow a redirect robots.txt disallows', async () => {
+    vi.mocked(isAllowedOrSkip).mockResolvedValueOnce(false)
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: 'https://elsewhere.example/' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await detectTicketVendor('https://venue.example')).toBe('unknown')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

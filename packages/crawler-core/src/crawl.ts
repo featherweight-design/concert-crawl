@@ -557,6 +557,9 @@ export async function crawlVenue(
     let httpStatus: number | null
     let pageHash: string | null
     let resolvedMode: 'http' | 'browser'
+    // Where a platform adapter's event text actually came from (its API),
+    // which can differ from the public link each event carries.
+    let payloadSourceUrl: string | null = null
 
     if (platformFetcher) {
       const platformResult = await platformFetcher.fetch(venue, {
@@ -578,6 +581,7 @@ export async function crawlVenue(
       // row came from a platform fetcher.
       httpStatus = null
       pageHash = null
+      payloadSourceUrl = platformResult.sourceUrl
       // resolvedMode is only used by the existing crawlMode auto-detect
       // venue-update at line ~702; for platform venues we don't want to
       // touch crawlMode, so the value here is functionally a no-op as
@@ -959,7 +963,10 @@ export async function crawlVenue(
       }
       const derived = await deriveArtists(
         evt,
-        (await aiUseAllowedFor(evt.sourceUrl)) ? adjudicateEvent : null,
+        (await aiUseAllowedFor(evt.sourceUrl)) &&
+          (await aiUseAllowedFor(payloadSourceUrl))
+          ? adjudicateEvent
+          : null,
       )
       if (derived.adjudicated) adjudicationCount += 1
       normalizedEvents.push({

@@ -26,6 +26,10 @@
       "types": "./dist/lib/robots.d.ts",
       "import": "./dist/lib/robots.js"
     },
+    "./robots-fetch": {
+      "types": "./dist/lib/robots-fetch.d.ts",
+      "import": "./dist/lib/robots-fetch.js"
+    },
     "./jitter": {
       "types": "./dist/lib/fetchers/jitter.d.ts",
       "import": "./dist/lib/fetchers/jitter.js"

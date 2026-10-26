@@ -2,15 +2,12 @@ import type { Browser } from 'playwright'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import { jitter } from './fetchers/jitter.js'
-import { isAllowedOrSkip } from './robots.js'
+import { CrawlSkipError, isAllowedOrSkip } from './robots.js'
+import { clearRedirect, fetchFollowingRobots } from './robots-fetch.js'
 
-// The most redirect hops fetchPageHttp follows, matching fetch's own limit.
-const MAX_REDIRECTS = 20
-
-// robots.txt for wherever a redirect points must allow it before we follow.
-// The starting URL is checked by the caller; this covers the hops after it.
-// An unreachable robots.txt throws CrawlSkipError, like every other gate.
-async function assertRedirectAllowed(from: string, to: string): Promise<void> {
+// A server redirect Playwright already followed: all we can still do is
+// refuse to read a page whose chain passed through a disallowed URL.
+async function assertVisitedAllowed(from: string, to: string): Promise<void> {
   if (!(await isAllowedOrSkip(to, CRAWLER_USER_AGENT))) {
     console.log(
       JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
@@ -71,8 +68,11 @@ export async function fetchPage(
 
     // A navigation the page starts itself (a script or meta refresh sending it
     // elsewhere) is a new request we choose to make, so it clears robots.txt
-    // first. Server redirects inside goto() never reach a route handler in
-    // Playwright, so those are checked against the redirect chain below.
+    // and its pacing first. Server redirects inside goto() never reach a
+    // route handler in Playwright, so those are checked against the redirect
+    // chain below. A skip (robots.txt unreachable, Crawl-delay over the cap)
+    // is kept and rethrown, so the run records a skip rather than a failure.
+    let navigationSkip: CrawlSkipError | null = null
     await page.route('**/*', async (route) => {
       const request = route.request()
       if (
@@ -83,13 +83,11 @@ export async function fetchPage(
         await route.continue()
         return
       }
-      const allowed = await isAllowedOrSkip(
-        request.url(),
-        CRAWLER_USER_AGENT,
-      ).catch(() => false)
-      if (allowed) {
+      try {
+        await clearRedirect(page.url(), request.url(), crawlDelayMs)
         await route.continue()
-      } else {
+      } catch (err) {
+        if (err instanceof CrawlSkipError) navigationSkip = err
         console.log(
           JSON.stringify({
             event: 'fetch.navigation_disallowed',
@@ -100,6 +98,9 @@ export async function fetchPage(
         await route.abort('blockedbyclient')
       }
     })
+    const throwIfSkipped = (): void => {
+      if (navigationSkip) throw navigationSkip
+    }
 
     let httpStatus = 200
     page.on('response', (response) => {
@@ -114,10 +115,15 @@ export async function fetchPage(
     // When a CSS selector is provided, use domcontentloaded for navigation
     // (fast connection) then let waitForSelector handle SPA render timing —
     // avoids networkidle/load timeouts on pages with persistent third-party requests.
-    const response = await page.goto(url, {
-      waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
-      timeout: 60_000,
-    })
+    const response = await page
+      .goto(url, {
+        waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
+        timeout: 60_000,
+      })
+      .catch((err: unknown) => {
+        throwIfSkipped()
+        throw err
+      })
 
     const finalStatus = response?.status() ?? httpStatus
 
@@ -133,7 +139,7 @@ export async function fetchPage(
       hops.push(request.url())
     }
     for (const hop of [...hops, response?.url() ?? page.url()]) {
-      if (hop !== url) await assertRedirectAllowed(url, hop)
+      if (hop !== url) await assertVisitedAllowed(url, hop)
     }
 
     if (finalStatus === 403 || finalStatus === 429) {
@@ -157,6 +163,7 @@ export async function fetchPage(
       try {
         await page.waitForSelector(waitForSelector, { timeout: 30_000 })
       } catch (err) {
+        throwIfSkipped()
         // Only a genuine timeout means "loaded but never rendered". Other
         // failures here (invalid selector syntax, a closed page) are real
         // errors and must not be reclassified — blockedAt keys off this class.
@@ -209,6 +216,7 @@ export async function fetchPage(
       }
     }
 
+    throwIfSkipped()
     const html = await page.content()
     const finalUrl = page.url()
 
@@ -235,27 +243,12 @@ export async function fetchPageHttp(
 
   console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }))
 
-  // Follow redirects by hand so robots.txt can veto each hop before we
-  // request it, rather than learning where we went after the fact.
-  let currentUrl = url
-  let response: Response | undefined
-  for (let hop = 0; ; hop++) {
-    response = await fetch(currentUrl, {
-      headers: {
-        'User-Agent': CRAWLER_USER_AGENT,
-        Accept: 'text/html,application/xhtml+xml',
-      },
-      redirect: 'manual',
-    })
-    const location = response.headers.get('location')
-    if (response.status < 300 || response.status >= 400 || !location) break
-    if (hop >= MAX_REDIRECTS) {
-      throw new Error(`Too many redirects starting at ${url}`)
-    }
-    const next = new URL(location, currentUrl).toString()
-    await assertRedirectAllowed(currentUrl, next)
-    currentUrl = next
-  }
+  // Redirects are followed by hand so robots.txt and its pacing clear each
+  // hop before we request it, rather than learning where we went afterwards.
+  const { response, finalUrl } = await fetchFollowingRobots(url, {
+    headers: { Accept: 'text/html,application/xhtml+xml' },
+    crawlDelayMs,
+  })
 
   if (response.status === 403 || response.status === 429) {
     console.log(
@@ -275,7 +268,6 @@ export async function fetchPageHttp(
   }
 
   const html = await response.text()
-  const finalUrl = currentUrl
 
   console.log(
     JSON.stringify({

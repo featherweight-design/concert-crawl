@@ -19,9 +19,11 @@ import * as robots from './robots.js'
 // keeps any test that does pass a delay deterministic.
 // Every redirect hop clears robots.txt; allowed unless a test says otherwise.
 let isAllowedSpy: ReturnType<typeof vi.spyOn>
+let crawlDelaySpy: ReturnType<typeof vi.spyOn>
 beforeEach(() => {
   vi.spyOn(Math, 'random').mockReturnValue(0.5)
   isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
+  crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null)
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -264,6 +266,34 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(route.abort).toHaveBeenCalled()
     expect(route.continue).not.toHaveBeenCalled()
   })
+
+  it('reports a skip, not a failure, when a navigation target cannot be checked', async () => {
+    let handler: ((route: Route) => Promise<void>) | undefined
+    const page = makeMockPage({
+      route: vi.fn(async (_pattern: string, fn: typeof handler) => {
+        handler = fn
+      }) as unknown as Page['route'],
+      goto: vi.fn(async () => {
+        await handler?.({
+          request: () => ({
+            isNavigationRequest: () => true,
+            frame: () => 'main-frame',
+            url: () => 'https://elsewhere.example/',
+          }),
+          continue: vi.fn(),
+          abort: vi.fn(),
+        } as unknown as Route)
+        throw new Error('net::ERR_BLOCKED_BY_CLIENT')
+      }) as unknown as Page['goto'],
+    })
+    isAllowedSpy.mockRejectedValueOnce(
+      new robots.CrawlSkipError('robots.txt unreachable'),
+    )
+
+    await expect(
+      fetchPage('https://example.com', makeMockBrowser(page), 0),
+    ).rejects.toBeInstanceOf(robots.CrawlSkipError)
+  })
 })
 
 describe('fetchPageHttp', () => {
@@ -375,5 +405,46 @@ describe('fetchPageHttp', () => {
       'https://other.example/private',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
     )
+  })
+
+  it('skips rather than follow a redirect whose Crawl-delay exceeds the cap', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 302,
+      headers: new Headers({ location: 'https://slow.example/events' }),
+    } as unknown as Response)
+    crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000)
+
+    await expect(
+      fetchPageHttp('https://example.com', 0),
+    ).rejects.toBeInstanceOf(robots.CrawlSkipError)
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("waits the redirect target's Crawl-delay before following it", async () => {
+    vi.useFakeTimers()
+    try {
+      const mockFetch = vi.mocked(fetch)
+      mockFetch
+        .mockResolvedValueOnce({
+          status: 301,
+          headers: new Headers({ location: '/next' }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          status: 200,
+          headers: new Headers(),
+          text: vi.fn().mockResolvedValue('<html></html>'),
+        } as unknown as Response)
+      crawlDelaySpy.mockResolvedValueOnce(10_000)
+
+      const run = fetchPageHttp('https://example.com', 0)
+      await vi.advanceTimersByTimeAsync(9_000)
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(2_000)
+      await run
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
