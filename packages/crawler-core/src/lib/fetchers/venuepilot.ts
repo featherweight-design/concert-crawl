@@ -308,6 +308,9 @@ async function fetchPage(
       query: EVENTS_QUERY,
       variables: { args: { accountIds: [accountId], startDate, page } },
     }),
+    // The endpoint is the only URL robots.txt cleared for this run, so a
+    // redirect is not followed: it surfaces as a non-OK response below.
+    redirect: 'manual',
     ...(timeoutMs !== undefined
       ? { signal: AbortSignal.timeout(timeoutMs) }
       : {}),

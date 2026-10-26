@@ -581,6 +581,20 @@ describe('venuePilotFetcher.fetch', () => {
     )
   })
 
+  it('does not follow a redirect from the API endpoint', async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(null, {
+        status: 307,
+        headers: { location: 'https://elsewhere.example/graphql' },
+      }),
+    )
+    await expect(
+      venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toThrow('HTTP 307')
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' })
+  })
+
   it('loops pages up to metadata.totalPages and concatenates', async () => {
     const pageEvent = (id: number) => ({
       id,

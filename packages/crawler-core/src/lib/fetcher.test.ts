@@ -448,9 +448,11 @@ describe('fetchPageHttp', () => {
 
   it('does not follow a redirect robots.txt disallows', async () => {
     const mockFetch = vi.mocked(fetch)
+    const cancel = vi.fn().mockResolvedValue(undefined)
     mockFetch.mockResolvedValue({
       status: 302,
       headers: new Headers({ location: 'https://other.example/private' }),
+      body: { cancel },
     } as unknown as Response)
     isAllowedSpy.mockResolvedValueOnce(false)
 
@@ -458,6 +460,8 @@ describe('fetchPageHttp', () => {
       'robots.txt disallows redirect target https://other.example/private',
     )
     expect(mockFetch).toHaveBeenCalledTimes(1)
+    // The unread redirect body is released even though we stop here.
+    expect(cancel).toHaveBeenCalled()
     expect(isAllowedSpy).toHaveBeenCalledWith(
       'https://other.example/private',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',

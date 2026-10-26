@@ -89,6 +89,9 @@ export async function fetchFollowingRobots(
     if (response.status < 300 || response.status >= 400 || !location) {
       return { response, finalUrl: currentUrl }
     }
+    // We never read a redirect's body; release its connection now rather
+    // than hold it through the robots check and the wait below.
+    await response.body?.cancel().catch(() => undefined)
     if (hop >= MAX_REDIRECTS) {
       throw new Error(`Too many redirects starting at ${url}`)
     }

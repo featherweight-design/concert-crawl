@@ -113,6 +113,43 @@ describe('robots.ts', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
+  describe('cache expiry', () => {
+    const HOUR = 60 * 60 * 1000
+    const respond = (body: string, status = 200) =>
+      new Response(body, { status })
+
+    it('reuses an entry within the hour and refetches once it expires', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(respond('User-agent: *\nAllow: /'))
+        .mockResolvedValueOnce(respond('User-agent: *\nDisallow: /'))
+      const url = 'https://ttl-policy.example/events'
+
+      expect(await isAllowed(url, USER_AGENT)).toBe(true)
+      now.mockReturnValue(1_000_000 + HOUR - 1)
+      expect(await isAllowed(url, USER_AGENT)).toBe(true)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      // The site tightened its policy; we pick it up at expiry.
+      now.mockReturnValue(1_000_000 + HOUR)
+      expect(await isAllowed(url, USER_AGENT)).toBe(false)
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('recovers from a cached unreachable verdict at expiry', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(5_000_000)
+      vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(respond('', 503))
+        .mockResolvedValueOnce(respond('User-agent: *\nAllow: /'))
+      const url = 'https://ttl-recover.example/events'
+
+      expect((await checkRobots(url, USER_AGENT)).status).toBe('unreachable')
+      now.mockReturnValue(5_000_000 + HOUR)
+      expect((await checkRobots(url, USER_AGENT)).status).toBe('allowed')
+    })
+  })
+
   it('bounds the robots.txt fetch with an abort signal', async () => {
     // Runs before every crawl and outside the platform fetchers' deadline
     // budgets, so an unbounded request here hangs the nightly cron (#1199).
