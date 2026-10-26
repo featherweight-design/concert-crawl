@@ -11,6 +11,7 @@ import {
   userCred,
   priceSubmissions,
   events,
+  subscriptions,
   venues,
 } from '@concert-crawl/db'
 import { createClerkClient } from '@clerk/backend'
@@ -27,6 +28,7 @@ import type {
 import { displayHeadliner } from '../lib/event-billing.js'
 import { apiLogger } from '../lib/logger.js'
 import { deleteUserData } from '../lib/user-data.js'
+import { getStripeClient } from '../lib/stripe.js'
 import { isClerkNotFound } from '../lib/clerk-errors.js'
 import { evaluateNudgeFlags } from '../lib/nudges.js'
 import { loadPlanContext } from '../lib/plan.js'
@@ -431,11 +433,65 @@ usersRouter.get('/handle-availability', async (ctx) => {
   })
 })
 
+// Every status Stripe can still charge on. `cancelled` and
+// `incomplete_expired` are terminal; anything else may renew or retry.
+const CHARGEABLE_SUBSCRIPTION_STATUSES: readonly string[] = [
+  'active',
+  'trialing',
+  'past_due',
+  'incomplete',
+]
+
+/**
+ * Cancels the user's subscription in Stripe immediately, if one can still
+ * charge. True when nothing is left that could bill them.
+ */
+const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
+  const rows = await db
+    .select({
+      stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      status: subscriptions.status,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, userId))
+
+  for (const row of rows) {
+    if (!CHARGEABLE_SUBSCRIPTION_STATUSES.includes(row.status)) continue
+    try {
+      await getStripeClient().subscriptions.cancel(row.stripeSubscriptionId)
+    } catch (err) {
+      apiLogger.error(
+        { err, userId, subscriptionId: row.stripeSubscriptionId },
+        'Stripe cancel failed at account deletion',
+      )
+      return false
+    }
+  }
+  return true
+}
+
 // DELETE /v1/users/me — delete account
 usersRouter.delete('/me', async (ctx) => {
   const auth = getAuth(ctx)
   if (!auth?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  // Billing before anything else. Stripe renews on its own schedule, so a
+  // subscription left running would keep charging a card whose owner has no
+  // account to cancel from. If the cancel fails, nothing is deleted and the
+  // user can retry; deleting first would strand a live charge with no way
+  // back to it.
+  const billingClosed = await cancelLiveSubscription(auth.userId)
+  if (!billingClosed) {
+    return ctx.json(
+      {
+        success: false,
+        error:
+          'We could not cancel your subscription, so your account was not deleted',
+      },
+      502,
+    )
+  }
 
   // Application data first, in one transaction, across every table the
   // user-data registry classifies. If this throws, the Clerk account still

@@ -15,6 +15,29 @@ interface ClerkState {
   deleteUserFailsWith: number | null
 }
 
+const { stripeState } = vi.hoisted(() => ({
+  stripeState: {
+    cancelled: [] as string[],
+    cancelFails: false,
+  },
+}))
+
+// Account deletion cancels billing through the shared client.
+vi.mock('../lib/stripe.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/stripe.js')>()),
+  getStripeClient: () => ({
+    subscriptions: {
+      cancel: (subscriptionId: string) => {
+        if (stripeState.cancelFails) {
+          return Promise.reject(new Error('stripe unavailable'))
+        }
+        stripeState.cancelled.push(subscriptionId)
+        return Promise.resolve({})
+      },
+    },
+  }),
+}))
+
 const { authState, clerkState } = vi.hoisted(() => {
   const authState: AuthState = { current: null }
   const clerkState: ClerkState = {
@@ -62,6 +85,7 @@ import {
   giftedComps,
   subscriptions,
   userBilling,
+  userProfiles,
 } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import {
@@ -824,6 +848,61 @@ describe('DELETE /v1/users/me', () => {
       expect(body.success).toBe(false)
     } finally {
       clerkState.deleteUserFailsWith = null
+    }
+  })
+
+  // Stripe renews on its own: an account deleted with a live subscription
+  // would keep charging a card nobody can cancel from.
+  it('cancels a live subscription in Stripe before deleting', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    await seedSubscription('user_test123')
+    stripeState.cancelled = []
+
+    const res = await app.request('/v1/users/me', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test' },
+    })
+    expect(res.status).toBe(200)
+    expect(stripeState.cancelled).toEqual(['sub_user_test123'])
+  })
+
+  it('does not call Stripe for a subscription that already ended', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    await seedSubscription('user_test123', { status: 'cancelled' })
+    stripeState.cancelled = []
+
+    const res = await app.request('/v1/users/me', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test' },
+    })
+    expect(res.status).toBe(200)
+    expect(stripeState.cancelled).toEqual([])
+  })
+
+  it('deletes nothing when Stripe will not cancel', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    await seedSubscription('user_test123')
+    stripeState.cancelFails = true
+
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      })
+      expect(res.status).toBe(502)
+      const profiles = await testDb
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, 'user_test123'))
+      expect(profiles).toHaveLength(1)
+    } finally {
+      stripeState.cancelFails = false
     }
   })
 
