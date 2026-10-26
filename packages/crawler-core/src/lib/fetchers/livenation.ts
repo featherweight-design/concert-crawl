@@ -123,9 +123,13 @@ async function fetchText(
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
       crawlDelayMs,
-      // A hung connection must not pin the caller — the admin probe endpoint
+      // One signal for the whole redirect chain, pacing waits included, so a
+      // hop can't carry the request past the deadline's budget. A hung
+      // connection must not pin the caller either — the admin probe endpoint
       // holds an API worker slot while this resolves.
-      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+      ...(timeoutMs !== undefined
+        ? { signal: AbortSignal.timeout(timeoutMs) }
+        : {}),
     })
   } catch (err) {
     if (err instanceof RobotsDisallowedError) {

@@ -11,8 +11,24 @@ import {
 // The most redirect hops we follow, matching fetch's own limit.
 const MAX_REDIRECTS = 20
 
-const sleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+// Rejects with the signal's reason if it aborts first, so a caller's budget
+// bounds the pacing wait as well as the requests around it.
+const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason)
+      return
+    }
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal?.reason)
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 
 /** robots.txt disallows a URL a redirect or navigation pointed us to. */
 export class RobotsDisallowedError extends Error {
@@ -30,12 +46,14 @@ export class RobotsDisallowedError extends Error {
  * be one we can keep, before we follow. Waits that delay (never less than
  * `floorMs`), with jitter. Throws `CrawlSkipError` when robots.txt is
  * unreachable or asks for more than the cap, and `RobotsDisallowedError`
- * when it disallows the target.
+ * when it disallows the target. An aborted `signal` ends the wait early with
+ * its reason.
  */
 export async function clearRedirect(
   from: string,
   to: string,
   floorMs: number,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (!(await isAllowedOrSkip(to, CRAWLER_USER_AGENT))) {
     console.log(
@@ -54,7 +72,7 @@ export async function clearRedirect(
     )
   }
   const wait = jitter(delayMs)
-  if (wait > 0) await sleep(wait)
+  if (wait > 0) await sleep(wait, signal)
 }
 
 export interface RobotsFetchResult {
@@ -67,6 +85,8 @@ export interface RobotsFetchResult {
  * its pacing before we request it (see `clearRedirect`). The caller has
  * already checked and paced the starting URL. `timeoutMs` applies to each
  * request on its own, so a hop's wait never eats into the next one's budget.
+ * `signal` instead bounds the whole chain, waits included: pass it when the
+ * caller has one budget for the request however many hops it takes.
  */
 export async function fetchFollowingRobots(
   url: string,
@@ -74,16 +94,22 @@ export async function fetchFollowingRobots(
     headers?: Record<string, string>
     crawlDelayMs: number
     timeoutMs?: number
+    signal?: AbortSignal
   },
 ): Promise<RobotsFetchResult> {
   let currentUrl = url
   for (let hop = 0; ; hop++) {
+    options.signal?.throwIfAborted()
+    const signals = [
+      ...(options.signal ? [options.signal] : []),
+      ...(options.timeoutMs === undefined
+        ? []
+        : [AbortSignal.timeout(options.timeoutMs)]),
+    ]
     const response = await fetch(currentUrl, {
       headers: { 'User-Agent': CRAWLER_USER_AGENT, ...options.headers },
       redirect: 'manual',
-      ...(options.timeoutMs === undefined
-        ? {}
-        : { signal: AbortSignal.timeout(options.timeoutMs) }),
+      ...(signals.length === 0 ? {} : { signal: AbortSignal.any(signals) }),
     })
     const location = response.headers.get('location')
     if (response.status < 300 || response.status >= 400 || !location) {
@@ -96,7 +122,7 @@ export async function fetchFollowingRobots(
       throw new Error(`Too many redirects starting at ${url}`)
     }
     const next = new URL(location, currentUrl).toString()
-    await clearRedirect(currentUrl, next, options.crawlDelayMs)
+    await clearRedirect(currentUrl, next, options.crawlDelayMs, options.signal)
     currentUrl = next
   }
 }

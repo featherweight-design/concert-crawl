@@ -455,6 +455,23 @@ describe('liveNationFetcher.fetch', () => {
     expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false)
   })
 
+  it('keeps a redirect chain, pacing wait included, inside the overall budget', async () => {
+    const origin = 'https://redirect-budget.example.com'
+    const target = 'https://paced-host.example.com/calendar'
+    const fetchMock = mockCalendarRedirect(origin, target, {
+      otherRobots: 'User-agent: *\nAllow: /\nCrawl-delay: 20\n',
+    })
+    const startedAt = Date.now()
+    await expect(
+      liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 200,
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError)
+    expect(Date.now() - startedAt).toBeLessThan(5_000)
+    expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false)
+  })
+
   it('throws when robots.txt disallows every calendar month', async () => {
     mockSiteFetch({
       robots: 'User-agent: *\nDisallow: /shows/calendar/\n',
@@ -469,17 +486,31 @@ describe('liveNationFetcher.fetch', () => {
   })
 
   it('surfaces an HTTP error as LiveNationFetchError', async () => {
+    // robots.txt answers on its own, so the 503 reaches the page fetch
+    // whatever the robots cache holds from earlier tests.
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({
-        ok: false,
-        headers: new Headers(),
-        status: 503,
-        text: async () => '',
-      })),
+      vi.fn(async (url: string) =>
+        url.endsWith('/robots.txt')
+          ? {
+              ok: true,
+              headers: new Headers(),
+              status: 200,
+              text: async () => 'User-agent: *\nAllow: /\n',
+            }
+          : {
+              ok: false,
+              headers: new Headers(),
+              status: 503,
+              text: async () => '',
+            },
+      ),
     )
     await expect(
-      liveNationFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+      liveNationFetcher.fetch(
+        makeVenue({ websiteUrl: 'https://http-error.example.com/shows' }),
+        { crawlDelayMs: 0 },
+      ),
     ).rejects.toThrow(LiveNationFetchError)
   })
 

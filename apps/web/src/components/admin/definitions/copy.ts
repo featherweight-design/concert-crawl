@@ -233,8 +233,8 @@ export const ADMIN_COPY = {
             id: 'opt-manual',
             iconName: 'User',
             recommended: true,
-            title: 'Mark venue as manual entry',
-            body: 'Stop crawling. Events for this venue will be added by the admin only.',
+            title: 'Keep venue on manual entry',
+            body: 'The 403 already took this venue out of scheduled crawls. Its shows stay published; add new ones by hand.',
             cta: 'Stage manual mode',
           },
         ],
@@ -292,16 +292,9 @@ export const ADMIN_COPY = {
             cta: 'Stage selector wait',
           },
         ],
-        unknown: [
-          {
-            id: 'opt-manual',
-            iconName: 'User',
-            recommended: true,
-            title: 'Mark venue as manual entry',
-            body: 'Stop crawling and rely on admin entry.',
-            cta: 'Stage manual mode',
-          },
-        ],
+        // An unclassified failure records no block, so there is no crawl to
+        // leave off; errorReasons.unknown already says to inspect it.
+        unknown: [],
       },
     },
 
@@ -327,7 +320,6 @@ export const ADMIN_COPY = {
       footerTriggerLabel: 'Trigger re-crawl now',
       footerCancel: 'Cancel',
       footerApply: 'Apply change',
-      pauseFailed: "Couldn't pause this venue. Try again.",
       stagedDiffs: {
         'opt-delay': {
           title: 'Increase request delay to 8s',
@@ -363,15 +355,23 @@ export const ADMIN_COPY = {
           nextRunIn: 'manual re-crawl now, or next scheduled sweep',
         },
         'opt-manual': {
-          title: 'Mark venue as manual entry',
-          intent: 'Stop crawling and rely on admin entry for this venue.',
-          diff: [{ path: 'venue.active', before: 'true', after: 'false' }],
+          title: 'Keep venue on manual entry',
+          intent:
+            'A 403 records a block, and scheduled crawls skip blocked venues. Its shows stay published. Applying this queues no crawl, so the block stays in place and new shows are added by hand.',
+          diff: [
+            {
+              path: 'venue.blocked_at',
+              before: 'set by the 403',
+              after: 'set by the 403 (unchanged)',
+            },
+          ],
           risks: [
             'Events will stop being automatically discovered.',
             'Requires manual admin updates to keep event listings current.',
           ],
-          rollback: 'Reactivate the venue from the venues list.',
-          nextRunIn: 'no further crawls scheduled',
+          rollback:
+            "Once the venue allows ConcertCrawl, queue a crawl from the venue's page. A successful crawl clears the block.",
+          nextRunIn: 'none while the venue is blocked',
         },
         'opt-sched': {
           title: 'Reduce crawl schedule to every 12 hours',
