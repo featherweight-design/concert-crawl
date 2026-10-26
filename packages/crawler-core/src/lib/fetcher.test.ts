@@ -244,6 +244,26 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(page.content).not.toHaveBeenCalled()
   })
 
+  it('reports a block even when the redirect chain passed a disallowed URL', async () => {
+    const page = makeMockPage({
+      goto: vi
+        .fn()
+        .mockResolvedValue(
+          makeResponse(403, 'https://example.com/final', [
+            'https://example.com',
+            'https://example.com/private',
+          ]),
+        ),
+    })
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.endsWith('/private'),
+    )
+
+    await expect(
+      fetchPage('https://example.com', makeMockBrowser(page), 0),
+    ).rejects.toBeInstanceOf(CrawlFetchError)
+  })
+
   it('aborts a main-frame navigation the page starts to a disallowed URL', async () => {
     const page = makeMockPage()
     await fetchPage('https://example.com', makeMockBrowser(page), 0)

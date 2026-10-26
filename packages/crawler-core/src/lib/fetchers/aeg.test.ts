@@ -145,6 +145,20 @@ describe('aegFetcher.fetch', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it('does not follow a redirect from the blob URL', async () => {
+    fetchSpy.mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: 'https://elsewhere.example/events.json' },
+      }),
+    )
+    await expect(
+      aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(AegFetchError)
+    expect(fetchSpy).toHaveBeenCalledOnce()
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' })
+  })
+
   it("skips when the blob host's Crawl-delay exceeds the cap", async () => {
     crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000)
     mockFetchOk(BLUEBIRD_FIXTURE)

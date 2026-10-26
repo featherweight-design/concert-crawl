@@ -318,6 +318,10 @@ async function fetchAegBlob(
       'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'application/json',
     },
+    // The blob URL is the only one robots.txt cleared, and the payload's
+    // provenance for the AI gate, so a redirect is not followed: it surfaces
+    // as a non-OK response below.
+    redirect: 'manual',
     // A hung CDN connection must not pin the caller (the admin probe
     // endpoint holds an API worker slot while this resolves).
     ...(timeoutMs !== undefined

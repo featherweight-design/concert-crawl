@@ -176,7 +176,6 @@ export async function fetchPage(
     ) {
       hops.push(request.url())
     }
-    await assertVisitsAllowed([...hops, response?.url() ?? page.url()])
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
@@ -187,6 +186,10 @@ export async function fetchPage(
         `HTTP ${finalStatus} — venue may have blocked crawler`,
       )
     }
+
+    // After the block check: a 403/429 says the site blocked us, which must
+    // mark the venue blocked whatever the redirect chain looked like.
+    await assertVisitsAllowed([...hops, response?.url() ?? page.url()])
 
     if (finalStatus >= 400) {
       console.log(

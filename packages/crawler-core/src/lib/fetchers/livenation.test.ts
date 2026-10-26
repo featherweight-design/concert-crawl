@@ -359,6 +359,50 @@ describe('liveNationFetcher.fetch', () => {
     ).rejects.toThrow(LiveNationFetchError)
   })
 
+  it('reports the URLs it read, as they landed after redirects', async () => {
+    const origin = 'https://read-urls.example.com'
+    mockSiteFetch({ sitemap: sitemapFor(origin) })
+    const result = await liveNationFetcher.fetch(
+      makeVenue({ websiteUrl: `${origin}/shows` }),
+      { crawlDelayMs: 0 },
+    )
+    expect(result.readUrls).toContain(`${origin}/sitemap.xml`)
+    expect(
+      result.readUrls?.some((url) => url.includes('/shows/calendar/')),
+    ).toBe(true)
+  })
+
+  it('throws when a calendar page redirects somewhere robots.txt disallows', async () => {
+    const origin = 'https://redirect-disallowed.example.com'
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith('/robots.txt'))
+        return {
+          ok: true,
+          status: 200,
+          text: async () => 'User-agent: *\nDisallow: /private\n',
+        }
+      if (url.endsWith('/sitemap.xml'))
+        return {
+          ok: true,
+          status: 200,
+          url,
+          text: async () => sitemapFor(origin),
+        }
+      return {
+        ok: true,
+        status: 200,
+        url: `${origin}/private/calendar`,
+        text: async () => CALENDAR_HTML,
+      }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
+        crawlDelayMs: 0,
+      }),
+    ).rejects.toThrow(/which robots.txt disallows/)
+  })
+
   it('throws when robots.txt disallows every calendar month', async () => {
     mockSiteFetch({
       robots: 'User-agent: *\nDisallow: /shows/calendar/\n',

@@ -558,9 +558,10 @@ export async function crawlVenue(
     let httpStatus: number | null
     let pageHash: string | null
     let resolvedMode: 'http' | 'browser'
-    // Where a platform adapter's event text actually came from (its API),
-    // which can differ from the public link each event carries.
-    let payloadSourceUrl: string | null = null
+    // Where a platform adapter's event text actually came from (its API, and
+    // any page it read, after redirects), which can differ from the public
+    // link each event carries.
+    let payloadSourceUrls: string[] = []
 
     if (platformFetcher) {
       const platformResult = await platformFetcher.fetch(venue, {
@@ -582,7 +583,10 @@ export async function crawlVenue(
       // row came from a platform fetcher.
       httpStatus = null
       pageHash = null
-      payloadSourceUrl = platformResult.sourceUrl
+      payloadSourceUrls = [
+        platformResult.sourceUrl,
+        ...(platformResult.readUrls ?? []),
+      ]
       // resolvedMode is only used by the existing crawlMode auto-detect
       // venue-update at line ~702; for platform venues we don't want to
       // touch crawlMode, so the value here is functionally a no-op as
@@ -917,6 +921,17 @@ export async function crawlVenue(
     let adjudicationCount = 0
     let adjudicationReuseCount = 0
     const normalizedEvents: NormalizedEvent[] = []
+    // Every URL the platform payload came from must allow AI use. Asked once
+    // per run, not per event.
+    let payloadVerdict: Promise<boolean> | null = null
+    const payloadAiUseAllowed = (): Promise<boolean> =>
+      (payloadVerdict ??= (async () => {
+        for (const sourceUrl of payloadSourceUrls) {
+          if (!(await aiUseAllowedFor(sourceUrl))) return false
+        }
+        return true
+      })())
+
     for (const evt of survivingEvents) {
       const prior = existingMap.get(
         dedupKey(canonicalizeArtist(evt.artist), evt.date, evt.showTime),
@@ -970,8 +985,7 @@ export async function crawlVenue(
       }
       const derived = await deriveArtists(
         evt,
-        (await aiUseAllowedFor(evt.sourceUrl)) &&
-          (await aiUseAllowedFor(payloadSourceUrl))
+        (await aiUseAllowedFor(evt.sourceUrl)) && (await payloadAiUseAllowed())
           ? adjudicateEvent
           : null,
       )

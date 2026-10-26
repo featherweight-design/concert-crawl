@@ -202,7 +202,7 @@ import {
   fetchPageHttp,
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js'
-import { extractWithLlm } from './lib/extractors/llm.js'
+import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
 import {
   CrawlSkipError,
   checkRobots,
@@ -1464,6 +1464,34 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     const asked = vi.mocked(isAiUseAllowed).mock.calls.map(([url]) => url)
     expect(asked).toContain('https://venue.example.com/calendar')
     expect(asked).toContain('https://platform.example.com/graphql')
+  })
+
+  it('withholds adjudication when a page the adapter read disallows AI use', async () => {
+    const { venue, fetch } = seedPlatformVenue(1)
+    fetch.mockResolvedValueOnce({
+      events: [
+        {
+          title: 'Metallica',
+          rawTitle: 'Metallica',
+          artist: 'Metallica',
+          date: '2026-08-15',
+          confidence: 1,
+          sourceUrl: 'https://venue.example.com/calendar',
+        },
+      ],
+      sourceUrl: 'https://venue.example.com/sitemap.xml',
+      readUrls: ['https://venue.example.com/no-ai/calendar/2026-08'],
+    })
+    vi.mocked(isAiUseAllowed).mockImplementation(
+      async (url) => !url.includes('/no-ai/'),
+    )
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(adjudicateEvent).not.toHaveBeenCalled()
+    const asked = vi.mocked(isAiUseAllowed).mock.calls.map(([url]) => url)
+    expect(asked).toContain('https://venue.example.com/no-ai/calendar/2026-08')
+    vi.mocked(isAiUseAllowed).mockResolvedValue(true)
   })
 
   it('records a skipped run and no strike when the adapter declines on robots.txt', async () => {

@@ -103,7 +103,13 @@ export class LiveNationFetchError extends Error {
 // 'rescheduled' events keep their (new) date and stay in.
 const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled'])
 
-async function fetchText(url: string, timeoutMs?: number): Promise<string> {
+// The URL the body came from after redirects, keyed by what we asked for.
+// fetch() follows redirects, so provenance for the AI gate is the landing.
+async function fetchText(
+  url: string,
+  timeoutMs?: number,
+  landed?: string[],
+): Promise<string> {
   const response = await fetch(url, {
     headers: {
       'User-Agent': CRAWLER_USER_AGENT,
@@ -124,6 +130,20 @@ async function fetchText(url: string, timeoutMs?: number): Promise<string> {
       `Live Nation fetch failed: HTTP ${response.status} for ${url}`,
     )
   }
+  // A redirect lands somewhere robots.txt never cleared; check it before we
+  // read the body, as the detail-page adapter does.
+  const landedUrl = response.url || url
+  if (
+    landedUrl !== url &&
+    !(await isAllowedOrSkip(landedUrl, CRAWLER_USER_AGENT))
+  ) {
+    throw new LiveNationFetchError(
+      response.status,
+      url,
+      `Live Nation fetch for ${url} redirected to ${landedUrl}, which robots.txt disallows`,
+    )
+  }
+  landed?.push(landedUrl)
   return response.text()
 }
 
@@ -353,6 +373,7 @@ async function liveNationFetch(
 ): Promise<PlatformFetchResult> {
   const origin = new URL(venue.websiteUrl).origin
   const sitemapUrl = `${origin}/sitemap.xml`
+  const readUrls: string[] = []
   const startedAt = Date.now()
   const deadline = createDeadline(opts)
 
@@ -371,7 +392,7 @@ async function liveNationFetch(
 
   const allCalendarUrls = parseCalendarUrls(
     await deadline.run('sitemap', (timeoutMs) =>
-      fetchText(sitemapUrl, timeoutMs),
+      fetchText(sitemapUrl, timeoutMs, readUrls),
     ),
     origin,
   )
@@ -421,7 +442,7 @@ async function liveNationFetch(
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs))
     const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
-      fetchText(calendarUrl, timeoutMs),
+      fetchText(calendarUrl, timeoutMs, readUrls),
     )
     const records = extractEventRecords(reassembleFlightPayload(html))
     rawRecordCount += records.length
@@ -466,6 +487,7 @@ async function liveNationFetch(
   return {
     events,
     sourceUrl: sitemapUrl,
+    readUrls,
     meta: {
       fetchLatencyMs: Date.now() - startedAt,
       calendarMonthsFetched: calendarUrls.length,

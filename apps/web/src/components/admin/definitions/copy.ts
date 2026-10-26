@@ -327,6 +327,7 @@ export const ADMIN_COPY = {
       footerTriggerLabel: 'Trigger re-crawl now',
       footerCancel: 'Cancel',
       footerApply: 'Apply change',
+      pauseFailed: "Couldn't pause this venue. Try again.",
       stagedDiffs: {
         'opt-delay': {
           title: 'Increase request delay to 8s',
@@ -364,12 +365,12 @@ export const ADMIN_COPY = {
         'opt-manual': {
           title: 'Mark venue as manual entry',
           intent: 'Stop crawling and rely on admin entry for this venue.',
-          diff: [{ path: 'venue.crawl_mode', before: 'auto', after: 'manual' }],
+          diff: [{ path: 'venue.active', before: 'true', after: 'false' }],
           risks: [
             'Events will stop being automatically discovered.',
             'Requires manual admin updates to keep event listings current.',
           ],
-          rollback: 'Change crawl_mode back to auto from the venue settings.',
+          rollback: 'Reactivate the venue from the venues list.',
           nextRunIn: 'no further crawls scheduled',
         },
         'opt-sched': {

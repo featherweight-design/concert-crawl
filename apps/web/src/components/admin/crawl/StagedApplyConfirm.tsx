@@ -6,6 +6,7 @@ import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
 import { StatusBadge } from '@/components/admin/primitives'
 import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { pauseVenue } from '@/lib/actions/venues'
 
 interface ConfigDiffEntry {
   path: string
@@ -50,7 +51,22 @@ export const StagedApplyConfirm = ({
   const panelRef = useRef<HTMLDivElement>(null)
   useDialogKeyboard(panelRef, onCancel)
 
+  const [applyError, setApplyError] = useState<string | null>(null)
+
   const handleApply = async () => {
+    // Manual entry is the one remedy that changes stored config today: it
+    // pauses the venue so no scheduled crawl runs. A re-crawl would undo the
+    // point of it, so the checkbox is ignored here.
+    if (stagedId === 'opt-manual') {
+      try {
+        await pauseVenue(venueId)
+      } catch {
+        setApplyError(ADMIN_COPY.crawl.stagedApply.pauseFailed)
+        return
+      }
+      onApply()
+      return
+    }
     onApply()
     if (triggerRecrawl) {
       const token = await getToken()
@@ -458,6 +474,18 @@ export const StagedApplyConfirm = ({
             {ADMIN_COPY.crawl.stagedApply.footerTriggerLabel}
           </label>
           <div style={{ marginLeft: 'auto' }} />
+          {applyError && (
+            <span
+              role="alert"
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12,
+                color: 'var(--danger)',
+              }}
+            >
+              {applyError}
+            </span>
+          )}
           <AdminButton variant="ghost" onClick={onCancel}>
             {ADMIN_COPY.crawl.stagedApply.footerCancel}
           </AdminButton>

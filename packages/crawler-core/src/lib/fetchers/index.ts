@@ -31,6 +31,12 @@ export interface PlatformFetchResult {
    * adapter when normalizing each event.
    */
   sourceUrl: string
+  /**
+   * Every other URL whose body the adapter read, as it landed after any
+   * redirect. Event text came from these, so crawl.ts requires robots.txt to
+   * allow AI use on each before sending any event to the adjudicator.
+   */
+  readUrls?: string[]
   /** Platform-specific metadata logged with the crawl run (e.g. fetch
    * latency, JSON page count). */
   meta?: Record<string, unknown>
