@@ -77,6 +77,15 @@ export class DetailPageFetchError extends Error {
 }
 
 async function fetchText(url: string, timeoutMs?: number): Promise<string> {
+  return (await fetchTextLanded(url, timeoutMs)).html
+}
+
+// Like fetchText, but also returns the URL the body actually came from after
+// redirects, which is the page's provenance for the AI gate in crawl.ts.
+async function fetchTextLanded(
+  url: string,
+  timeoutMs?: number,
+): Promise<{ html: string; landedUrl: string }> {
   const response = await fetch(url, {
     headers: {
       'User-Agent': CRAWLER_USER_AGENT,
@@ -118,7 +127,7 @@ async function fetchText(url: string, timeoutMs?: number): Promise<string> {
       )
     }
   }
-  return response.text()
+  return { html: await response.text(), landedUrl: landed }
 }
 
 /**
@@ -331,10 +340,12 @@ async function detailPageFetch(
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs))
     let html: string
+    let landedUrl: string
     try {
-      html = await deadline.run(`detail ${detailUrl}`, (timeoutMs) =>
-        fetchText(detailUrl, timeoutMs),
-      )
+      ;({ html, landedUrl } = await deadline.run(
+        `detail ${detailUrl}`,
+        (timeoutMs) => fetchTextLanded(detailUrl, timeoutMs),
+      ))
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
         logger.warn(
@@ -376,7 +387,9 @@ async function detailPageFetch(
     // A page with no Event JSON-LD is simply not an event page. On a generic
     // link crawl that is expected (an about page, a FAQ), so it is counted,
     // not raised.
-    const pageEvents = extractJsonLd(html, detailUrl, venue.timezone)
+    // The landed URL, not the link we followed: after a same-origin redirect
+    // it is where the text came from, so it is what the AI gate must judge.
+    const pageEvents = extractJsonLd(html, landedUrl, venue.timezone)
     if (pageEvents.length === 0) {
       pagesWithoutEvents++
       continue

@@ -267,6 +267,29 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(route.continue).not.toHaveBeenCalled()
   })
 
+  it("does not re-pace goto()'s own request for a bare-origin URL", async () => {
+    const page = makeMockPage()
+    await fetchPage('https://example.com', makeMockBrowser(page), 0)
+    const handler = vi.mocked(page.route).mock.calls[0]?.[1] as (
+      route: Route,
+    ) => Promise<void>
+    const route = {
+      request: () => ({
+        isNavigationRequest: () => true,
+        frame: () => 'main-frame',
+        url: () => 'https://example.com/',
+      }),
+      continue: vi.fn(),
+      abort: vi.fn(),
+    } as unknown as Route
+    isAllowedSpy.mockClear()
+
+    await handler(route)
+
+    expect(route.continue).toHaveBeenCalled()
+    expect(isAllowedSpy).not.toHaveBeenCalled()
+  })
+
   it('gates a later navigation back to the starting URL', async () => {
     const page = makeMockPage()
     await fetchPage('https://example.com', makeMockBrowser(page), 0)
@@ -278,7 +301,7 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
         request: () => ({
           isNavigationRequest: () => true,
           frame: () => 'main-frame',
-          url: () => 'https://example.com',
+          url: () => 'https://example.com/',
         }),
         continue: vi.fn(),
         abort: vi.fn(),
@@ -288,7 +311,7 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     await handler(reload()) // a reload: must clear robots.txt and pacing
 
     expect(isAllowedSpy).toHaveBeenCalledWith(
-      'https://example.com',
+      'https://example.com/',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
     )
   })

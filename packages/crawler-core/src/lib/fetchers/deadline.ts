@@ -48,17 +48,25 @@ export interface FetchDeadline {
    * the next `run` sees the spent budget and throws the breach itself.
    */
   wait(delayMs: number): Promise<void>
+
+  /**
+   * Widens the overall budget. For an adapter that learns, after the budget
+   * was set, that the host it fetches asks for a longer Crawl-delay than the
+   * one the budget was sized from.
+   */
+  extend(extraMs: number): void
 }
 
 const ABORT_ERROR_NAMES = new Set(['TimeoutError', 'AbortError'])
 
 export const createDeadline = ({
   perRequestTimeoutMs,
-  overallTimeoutMs,
+  overallTimeoutMs: initialOverallTimeoutMs,
 }: {
   perRequestTimeoutMs?: number
   overallTimeoutMs?: number
 }): FetchDeadline => {
+  let overallTimeoutMs = initialOverallTimeoutMs
   const startedAt = Date.now()
   const elapsed = () => Date.now() - startedAt
 
@@ -95,6 +103,11 @@ export const createDeadline = ({
   }
 
   return {
+    extend(extraMs) {
+      if (overallTimeoutMs !== undefined && extraMs > 0)
+        overallTimeoutMs += extraMs
+    },
+
     async wait(delayMs) {
       if (delayMs <= 0) return
       const capped =

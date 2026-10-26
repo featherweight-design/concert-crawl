@@ -26,7 +26,12 @@ import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
-import { isAllowedOrSkip } from '../robots.js'
+import {
+  CrawlSkipError,
+  getCrawlDelayMs,
+  isAllowedOrSkip,
+  resolveCrawlDelayMs,
+} from '../robots.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -359,13 +364,28 @@ async function aegFetch(
     throw new AegFetchError(0, url, `robots.txt disallows ${url}`)
   }
 
+  // The blob host can state its own Crawl-delay. Take the longer of it and
+  // the venue's delay; one above the cap skips the run.
+  const crawlDelayMs = resolveCrawlDelayMs(
+    opts.crawlDelayMs,
+    await getCrawlDelayMs(url, CRAWLER_USER_AGENT),
+    { venueId: venue.id, url },
+  )
+  if (crawlDelayMs === null) {
+    throw new CrawlSkipError(
+      `robots.txt Crawl-delay for ${url} exceeds the cap; not crawled`,
+    )
+  }
+
+  // The budget crawl.ts set was sized from the venue's delay.
+  deadline.extend(crawlDelayMs - opts.crawlDelayMs)
+
   const fetchedAt = Date.now()
-  // Respect the venue's per-domain crawl delay. The platform blob is on
-  // a different domain from the venue's website, but rate-limiting our
-  // requests to AEG's CDN with the same conservative pacing is the
-  // crawl-ethics-conservative call. Jittered (±500ms) so repeat runs don't
-  // land on a bot-like fixed interval.
-  await deadline.wait(jitter(opts.crawlDelayMs))
+  // Pace the blob request too. It is on a different domain from the venue's
+  // website, but rate-limiting our requests to AEG's CDN is the
+  // crawl-ethics-conservative call. Jitter only adds time, so repeat runs
+  // don't land on a bot-like fixed interval.
+  await deadline.wait(jitter(crawlDelayMs))
   const raw = await deadline.run('events-blob', (timeoutMs) =>
     fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl), timeoutMs),
   )

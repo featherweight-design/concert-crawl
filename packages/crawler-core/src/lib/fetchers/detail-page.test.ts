@@ -489,6 +489,27 @@ describe('detailPageFetcher.fetch', () => {
     ).rejects.toThrow(/redirected off-origin/)
   })
 
+  it('records the URL a same-origin redirect landed on as the source', async () => {
+    mockSiteFetch({
+      listing: '<a href="/e/show-0">0</a>',
+      sitemap: '',
+      detail: (url) => ({
+        ok: true,
+        status: 200,
+        body: DETAIL_HTML,
+        url: url.replace('/e/', '/events/'),
+      }),
+    })
+    const result = await detailPageFetcher.fetch(
+      makeVenue({ websiteUrl: 'https://events.blackboxdenver.co/' }),
+      { crawlDelayMs: 0 },
+    )
+    expect(result.events.length).toBeGreaterThan(0)
+    for (const event of result.events) {
+      expect(event.sourceUrl).toContain('/events/show-0')
+    }
+  })
+
   it('stops checking robots.txt once the cap is reached', async () => {
     const robots = await import('../robots.js')
     const spy = vi.spyOn(robots, 'isAllowed')

@@ -22,6 +22,12 @@ async function assertVisitedAllowed(from: string, to: string): Promise<void> {
   }
 }
 
+function canonicalRequestUrl(url: string): string {
+  const parsed = new URL(url)
+  parsed.hash = ''
+  return parsed.href
+}
+
 export class CrawlFetchError extends Error {
   constructor(
     public readonly httpStatus: number,
@@ -80,6 +86,9 @@ export async function fetchPage(
     // is kept and rethrown, so the run records a skip rather than a failure.
     // Only the first request for `url` is goto()'s own; a reload or refresh
     // back to it later is a new request and goes through the gate too.
+    // `url` as the browser reports it: `https://venue.example` comes back as
+    // `https://venue.example/`, and the fragment is never sent.
+    const startUrl = canonicalRequestUrl(url)
     let navigationSkip: CrawlSkipError | null = null
     let initialRequestSeen = false
     await page.route('**/*', async (route) => {
@@ -91,7 +100,7 @@ export async function fetchPage(
         await route.continue()
         return
       }
-      if (!initialRequestSeen && request.url() === url) {
+      if (!initialRequestSeen && request.url() === startUrl) {
         initialRequestSeen = true
         await route.continue()
         return
@@ -127,7 +136,7 @@ export async function fetchPage(
     const assertVisitsAllowed = async (extra: string[] = []): Promise<void> => {
       throwIfSkipped()
       for (const hop of new Set([...visited, ...extra, page.url()])) {
-        if (hop !== url) await assertVisitedAllowed(url, hop)
+        if (hop !== startUrl) await assertVisitedAllowed(url, hop)
       }
     }
 

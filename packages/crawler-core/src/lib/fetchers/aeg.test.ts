@@ -94,12 +94,14 @@ describe('aegFetcher.canHandle', () => {
 describe('aegFetcher.fetch', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
   let isAllowedSpy: ReturnType<typeof vi.spyOn>
+  let crawlDelaySpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
     // Stub the robots gate so the rest of the suite keeps asserting on the
     // blob request alone. isAllowedOrSkip() would otherwise issue its own fetch.
     isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
+    crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -141,6 +143,36 @@ describe('aegFetcher.fetch', () => {
       aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toBeInstanceOf(AegFetchError)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("skips when the blob host's Crawl-delay exceeds the cap", async () => {
+    crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000)
+    mockFetchOk(BLUEBIRD_FIXTURE)
+
+    await expect(
+      aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(robots.CrawlSkipError)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("waits the blob host's longer Crawl-delay, within a widened budget", async () => {
+    vi.useFakeTimers()
+    try {
+      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      mockFetchOk(BLUEBIRD_FIXTURE)
+      // A 5s budget sized for the venue's 0ms delay would cut the 10s wait.
+      const run = aegFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 5_000,
+      })
+      await vi.advanceTimersByTimeAsync(9_000)
+      expect(fetchSpy).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(2_000)
+      await expect(run).resolves.toBeDefined()
+      expect(fetchSpy).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('checks robots.txt for the blob URL and proceeds when allowed', async () => {
