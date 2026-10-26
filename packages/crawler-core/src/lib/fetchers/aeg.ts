@@ -382,7 +382,9 @@ async function aegFetch(
   }
 
   // The budget crawl.ts set was sized from the venue's delay.
-  deadline.extend(crawlDelayMs - opts.crawlDelayMs)
+  if (opts.budgetFollowsCrawlDelay) {
+    deadline.extend(crawlDelayMs - opts.crawlDelayMs)
+  }
 
   const fetchedAt = Date.now()
   // Pace the blob request too. It is on a different domain from the venue's

@@ -563,10 +563,38 @@ describe('venuePilotFetcher.fetch', () => {
       const run = venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 5_000,
+        budgetFollowsCrawlDelay: true,
       })
       await vi.runAllTimersAsync()
       await expect(run).resolves.toBeDefined()
       expect(fetchSpy).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("keeps a fixed budget fixed when the endpoint's Crawl-delay is longer", async () => {
+    vi.useFakeTimers()
+    try {
+      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      fetchSpy.mockResolvedValueOnce(
+        new Response(graphqlBody([], { totalPages: 2, currentPage: 1 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      // The admin probe's ceiling: the 10s wait before the first page can't
+      // fit, so the run breaches instead of requesting early or running long.
+      const run = venuePilotFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 5_000,
+      })
+      const settled = expect(run).rejects.toBeInstanceOf(
+        PlatformFetchDeadlineError,
+      )
+      await vi.runAllTimersAsync()
+      await settled
+      expect(fetchSpy).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }

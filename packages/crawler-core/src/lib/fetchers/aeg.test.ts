@@ -10,6 +10,7 @@ import {
 } from './aeg.js'
 import type { Venue } from '@concert-crawl/db'
 import * as robots from '../robots.js'
+import { PlatformFetchDeadlineError } from './deadline.js'
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -178,12 +179,33 @@ describe('aegFetcher.fetch', () => {
       const run = aegFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 5_000,
+        budgetFollowsCrawlDelay: true,
       })
       await vi.advanceTimersByTimeAsync(9_000)
       expect(fetchSpy).not.toHaveBeenCalled()
       await vi.advanceTimersByTimeAsync(2_000)
       await expect(run).resolves.toBeDefined()
       expect(fetchSpy).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("keeps a fixed budget fixed when the blob host's Crawl-delay is longer", async () => {
+    vi.useFakeTimers()
+    try {
+      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      mockFetchOk(BLUEBIRD_FIXTURE)
+      const run = aegFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 5_000,
+      })
+      const settled = expect(run).rejects.toBeInstanceOf(
+        PlatformFetchDeadlineError,
+      )
+      await vi.runAllTimersAsync()
+      await settled
+      expect(fetchSpy).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }

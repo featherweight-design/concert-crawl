@@ -404,7 +404,9 @@ async function venuePilotFetch(
   // The run budget crawl.ts handed us was sized from the venue site's delay.
   // When the endpoint asks for a longer one, widen the budget by the extra
   // wait per page so honoring it can't time the run out.
-  deadline.extend((crawlDelayMs - opts.crawlDelayMs) * MAX_PAGES)
+  if (opts.budgetFollowsCrawlDelay) {
+    deadline.extend((crawlDelayMs - opts.crawlDelayMs) * MAX_PAGES)
+  }
   const events: NormalizedEvent[] = []
   let totalCount = 0
   let totalPages = 1

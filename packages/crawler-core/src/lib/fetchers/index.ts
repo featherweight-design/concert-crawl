@@ -55,6 +55,14 @@ export interface PlatformFetchOptions {
    * pages gathered so far (see deadline.ts for why partial is unsafe).
    */
   overallTimeoutMs?: number
+  /**
+   * Whether `overallTimeoutMs` was sized from `crawlDelayMs`, so an adapter
+   * that finds a longer Crawl-delay on another host should widen it to
+   * match. crawl.ts sets this; a fixed ceiling such as the admin probe's
+   * leaves it unset, and a long delay then breaches the deadline instead of
+   * stretching it. Either way the delay itself is never shortened.
+   */
+  budgetFollowsCrawlDelay?: boolean
 }
 
 export interface PlatformFetcher {

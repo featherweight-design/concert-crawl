@@ -472,6 +472,27 @@ describe('liveNationFetcher.fetch', () => {
     expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false)
   })
 
+  it("stops waiting on a redirect host's slow robots.txt when the budget runs out", async () => {
+    const origin = 'https://redirect-slow-robots.example.com'
+    const target = 'https://slow-robots-host.example.com/calendar'
+    const fetchMock = mockCalendarRedirect(origin, target)
+    const base = fetchMock.getMockImplementation()
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === 'https://slow-robots-host.example.com/robots.txt')
+        return new Promise(() => {})
+      return base?.(url)
+    })
+    const startedAt = Date.now()
+    await expect(
+      liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 200,
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError)
+    expect(Date.now() - startedAt).toBeLessThan(5_000)
+    expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false)
+  })
+
   it('throws when robots.txt disallows every calendar month', async () => {
     mockSiteFetch({
       robots: 'User-agent: *\nDisallow: /shows/calendar/\n',

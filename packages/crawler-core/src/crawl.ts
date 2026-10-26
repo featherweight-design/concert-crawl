@@ -570,6 +570,7 @@ export async function crawlVenue(
         overallTimeoutMs: platformOverallTimeoutMs(platformFetcher, {
           crawlDelayMs,
         }),
+        budgetFollowsCrawlDelay: true,
       })
       extraction = {
         normalizedEvents: platformResult.events,

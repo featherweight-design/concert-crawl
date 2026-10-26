@@ -30,6 +30,32 @@ const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
     signal?.addEventListener('abort', onAbort, { once: true })
   })
 
+// Settles with `promise`, or rejects with the signal's reason if it aborts
+// first. The robots.txt lookup underneath keeps running and caches whatever
+// the site answers, so a caller's deadline never gets cached as a site
+// failure; the caller just stops waiting for it.
+const raceSignal = <TResult>(
+  promise: Promise<TResult>,
+  signal?: AbortSignal,
+): Promise<TResult> => {
+  if (!signal) return promise
+  if (signal.aborted) return Promise.reject(signal.reason)
+  return new Promise<TResult>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason)
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        resolve(value)
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(err)
+      },
+    )
+  })
+}
+
 /** robots.txt disallows a URL a redirect or navigation pointed us to. */
 export class RobotsDisallowedError extends Error {
   constructor(
@@ -46,8 +72,8 @@ export class RobotsDisallowedError extends Error {
  * be one we can keep, before we follow. Waits that delay (never less than
  * `floorMs`), with jitter. Throws `CrawlSkipError` when robots.txt is
  * unreachable or asks for more than the cap, and `RobotsDisallowedError`
- * when it disallows the target. An aborted `signal` ends the wait early with
- * its reason.
+ * when it disallows the target. An aborted `signal` ends the robots.txt
+ * lookups and the wait early with its reason.
  */
 export async function clearRedirect(
   from: string,
@@ -55,7 +81,7 @@ export async function clearRedirect(
   floorMs: number,
   signal?: AbortSignal,
 ): Promise<void> {
-  if (!(await isAllowedOrSkip(to, CRAWLER_USER_AGENT))) {
+  if (!(await raceSignal(isAllowedOrSkip(to, CRAWLER_USER_AGENT), signal))) {
     console.log(
       JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
     )
@@ -63,7 +89,7 @@ export async function clearRedirect(
   }
   const delayMs = resolveCrawlDelayMs(
     floorMs,
-    await getCrawlDelayMs(to, CRAWLER_USER_AGENT),
+    await raceSignal(getCrawlDelayMs(to, CRAWLER_USER_AGENT), signal),
     { url: to },
   )
   if (delayMs === null) {
