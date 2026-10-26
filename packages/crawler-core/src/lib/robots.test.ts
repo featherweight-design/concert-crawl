@@ -511,6 +511,18 @@ describe('robots.ts', () => {
       ).toBe(false)
     })
 
+    it('does not let a Sitemap line split a run of User-agent lines', async () => {
+      mockRobots([
+        'User-agent: ConcertCrawl',
+        'Sitemap: https://sitemap-group.example/sitemap.xml',
+        'User-agent: *',
+        'Disallow: /private',
+      ])
+      expect(
+        await isAllowed('https://sitemap-group.example/private', USER_AGENT),
+      ).toBe(false)
+    })
+
     it('handles a rule with a character outside the BMP', async () => {
       mockRobots(['User-agent: *', 'Disallow: /events/🎵'])
       expect(
@@ -522,6 +534,26 @@ describe('robots.ts', () => {
       expect(
         await isAllowed('https://pct-emoji.example/other', USER_AGENT),
       ).toBe(true)
+    })
+
+    it('matches a hostile wildcard rule in linear time', async () => {
+      mockRobots(['User-agent: *', `Disallow: /${'*a'.repeat(16)}b`])
+      const started = Date.now()
+      expect(
+        await isAllowed(`https://redos.example/${'a'.repeat(80)}`, USER_AGENT),
+      ).toBe(true)
+      expect(Date.now() - started).toBeLessThan(500)
+    })
+
+    it('keeps wildcard and anchor semantics', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /a*b*c$', 'Disallow: /x*'])
+      const check = (path: string) =>
+        isAllowed(`https://glob.example${path}`, USER_AGENT)
+      expect(await check('/a-b-c')).toBe(false)
+      expect(await check('/abc')).toBe(false)
+      expect(await check('/a-b-c-d')).toBe(true)
+      expect(await check('/a-c')).toBe(true)
+      expect(await check('/xyz')).toBe(false)
     })
 
     it('ranks rules by their normalized length', async () => {

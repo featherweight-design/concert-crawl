@@ -3,7 +3,13 @@ import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import { jitter } from './fetchers/jitter.js'
 import { CrawlSkipError, isAllowedOrSkip } from './robots.js'
-import { clearRedirect, fetchFollowingRobots } from './robots-fetch.js'
+import {
+  RobotsDisallowedError,
+  clearRedirect,
+  fetchFollowingRobots,
+} from './robots-fetch.js'
+
+export { RobotsDisallowedError }
 
 // A server redirect Playwright already followed: all we can still do is
 // refuse to read a page whose chain passed through a disallowed URL.
@@ -12,7 +18,7 @@ async function assertVisitedAllowed(from: string, to: string): Promise<void> {
     console.log(
       JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
     )
-    throw new Error(`robots.txt disallows redirect target ${to} (from ${from})`)
+    throw new RobotsDisallowedError(to, from)
   }
 }
 
@@ -72,14 +78,21 @@ export async function fetchPage(
     // route handler in Playwright, so those are checked against the redirect
     // chain below. A skip (robots.txt unreachable, Crawl-delay over the cap)
     // is kept and rethrown, so the run records a skip rather than a failure.
+    // Only the first request for `url` is goto()'s own; a reload or refresh
+    // back to it later is a new request and goes through the gate too.
     let navigationSkip: CrawlSkipError | null = null
+    let initialRequestSeen = false
     await page.route('**/*', async (route) => {
       const request = route.request()
       if (
         !request.isNavigationRequest() ||
-        request.frame() !== page.mainFrame() ||
-        request.url() === url
+        request.frame() !== page.mainFrame()
       ) {
+        await route.continue()
+        return
+      }
+      if (!initialRequestSeen && request.url() === url) {
+        initialRequestSeen = true
         await route.continue()
         return
       }
@@ -100,6 +113,22 @@ export async function fetchPage(
     })
     const throwIfSkipped = (): void => {
       if (navigationSkip) throw navigationSkip
+    }
+
+    // Every main-frame URL the page loaded, server redirect hops included
+    // (Playwright emits a request for each). A navigation that cleared the
+    // gate can still redirect somewhere disallowed, so the whole set is
+    // checked before we read anything from the page.
+    const visited = new Set<string>()
+    page.on('request', (request) => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+        visited.add(request.url())
+    })
+    const assertVisitsAllowed = async (extra: string[] = []): Promise<void> => {
+      throwIfSkipped()
+      for (const hop of new Set([...visited, ...extra, page.url()])) {
+        if (hop !== url) await assertVisitedAllowed(url, hop)
+      }
     }
 
     let httpStatus = 200
@@ -138,9 +167,7 @@ export async function fetchPage(
     ) {
       hops.push(request.url())
     }
-    for (const hop of [...hops, response?.url() ?? page.url()]) {
-      if (hop !== url) await assertVisitedAllowed(url, hop)
-    }
+    await assertVisitsAllowed([...hops, response?.url() ?? page.url()])
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
@@ -181,6 +208,7 @@ export async function fetchPage(
 
         // Reading content() can itself fail if the page died; a null html still
         // beats losing the whole error.
+        await assertVisitsAllowed()
         const captured = await page.content().catch((contentErr: unknown) => {
           console.log(
             JSON.stringify({
@@ -216,7 +244,7 @@ export async function fetchPage(
       }
     }
 
-    throwIfSkipped()
+    await assertVisitsAllowed()
     const html = await page.content()
     const finalUrl = page.url()
 

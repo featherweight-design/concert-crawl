@@ -136,6 +136,9 @@ function parseGroups(text: string): Group[] {
     }
 
     if (current === null) continue
+    // RFC 9309 §2.2.4: records we don't know (Sitemap, Host, ...) must not
+    // affect grouping, so only a group member ends the run of User-agents.
+    if (!GROUP_MEMBER_KEYS.has(key)) continue
     sawDirective = true
 
     if (key === 'allow' || key === 'disallow') {
@@ -192,19 +195,46 @@ function normalizePath(path: string): string {
   })
 }
 
+// Directives that belong to a group. Anything else is ignored for grouping.
+const GROUP_MEMBER_KEYS = new Set([
+  'allow',
+  'disallow',
+  'crawl-delay',
+  'content-signal',
+])
+
+// Matches `target` against a rule body split on `*`, in linear time. A regex
+// built from `.*` runs can backtrack exponentially on a hostile rule, and
+// this runs synchronously. Each literal piece is matched at its leftmost
+// possible position, which is always safe for `*`-only patterns.
+function wildcardMatches(
+  pieces: string[],
+  target: string,
+  anchored: boolean,
+): boolean {
+  const first = pieces[0] ?? ''
+  if (!target.startsWith(first)) return false
+  if (pieces.length === 1) return !anchored || target === first
+  const last = pieces[pieces.length - 1] ?? ''
+  const end = anchored ? target.length - last.length : target.length
+  if (end < first.length) return false
+  let pos = first.length
+  for (const piece of pieces.slice(1, -1)) {
+    const found = target.indexOf(piece, pos)
+    if (found === -1 || found + piece.length > end) return false
+    pos = found + piece.length
+  }
+  if (anchored) return target.endsWith(last) && end >= pos
+  return target.indexOf(last, pos) !== -1
+}
+
 // The length a rule's path counts for in longest-match precedence, and whether
 // it matches. `*` matches any run of characters and a trailing `$` anchors the
 // end, per RFC 9309 §2.2.3.
 function ruleMatches(rulePath: string, target: string): boolean {
   const anchored = rulePath.endsWith('$')
   const body = normalizePath(anchored ? rulePath.slice(0, -1) : rulePath)
-  const pattern = body
-    .split('*')
-    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
-    .join('.*')
-  return new RegExp(`^${pattern}${anchored ? '$' : ''}`).test(
-    normalizePath(target),
-  )
+  return wildcardMatches(body.split('*'), normalizePath(target), anchored)
 }
 
 /**

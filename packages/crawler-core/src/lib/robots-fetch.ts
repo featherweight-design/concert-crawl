@@ -14,12 +14,23 @@ const MAX_REDIRECTS = 20
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
+/** robots.txt disallows a URL a redirect or navigation pointed us to. */
+export class RobotsDisallowedError extends Error {
+  constructor(
+    public readonly url: string,
+    from: string,
+  ) {
+    super(`robots.txt disallows redirect target ${url} (from ${from})`)
+    this.name = 'RobotsDisallowedError'
+  }
+}
+
 /**
  * robots.txt for a redirect target must allow it, and its Crawl-delay must
  * be one we can keep, before we follow. Waits that delay (never less than
  * `floorMs`), with jitter. Throws `CrawlSkipError` when robots.txt is
- * unreachable or asks for more than the cap, and a plain Error when it
- * disallows the target.
+ * unreachable or asks for more than the cap, and `RobotsDisallowedError`
+ * when it disallows the target.
  */
 export async function clearRedirect(
   from: string,
@@ -30,7 +41,7 @@ export async function clearRedirect(
     console.log(
       JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
     )
-    throw new Error(`robots.txt disallows redirect target ${to} (from ${from})`)
+    throw new RobotsDisallowedError(to, from)
   }
   const delayMs = resolveCrawlDelayMs(
     floorMs,

@@ -267,6 +267,63 @@ describe('fetchPage — robots.txt on redirects and navigations', () => {
     expect(route.continue).not.toHaveBeenCalled()
   })
 
+  it('gates a later navigation back to the starting URL', async () => {
+    const page = makeMockPage()
+    await fetchPage('https://example.com', makeMockBrowser(page), 0)
+    const handler = vi.mocked(page.route).mock.calls[0]?.[1] as (
+      route: Route,
+    ) => Promise<void>
+    const reload = () =>
+      ({
+        request: () => ({
+          isNavigationRequest: () => true,
+          frame: () => 'main-frame',
+          url: () => 'https://example.com',
+        }),
+        continue: vi.fn(),
+        abort: vi.fn(),
+      }) as unknown as Route
+    await handler(reload()) // goto()'s own request
+    isAllowedSpy.mockClear()
+    await handler(reload()) // a reload: must clear robots.txt and pacing
+
+    expect(isAllowedSpy).toHaveBeenCalledWith(
+      'https://example.com',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+    )
+  })
+
+  it('discards the page when a later navigation redirected somewhere disallowed', async () => {
+    const listeners: Record<string, (arg: unknown) => void> = {}
+    const page = makeMockPage({
+      on: vi.fn((event: string, fn: (arg: unknown) => void) => {
+        listeners[event] = fn
+      }) as unknown as Page['on'],
+      waitForSelector: vi.fn(async () => {
+        listeners.request?.({
+          isNavigationRequest: () => true,
+          frame: () => 'main-frame',
+          url: () => 'https://example.com/private',
+        })
+        return null
+      }) as unknown as Page['waitForSelector'],
+    })
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.endsWith('/private'),
+    )
+
+    await expect(
+      fetchPage(
+        'https://example.com',
+        makeMockBrowser(page),
+        0,
+        'networkidle',
+        '.event-card',
+      ),
+    ).rejects.toThrow('robots.txt disallows redirect target')
+    expect(page.content).not.toHaveBeenCalled()
+  })
+
   it('reports a skip, not a failure, when a navigation target cannot be checked', async () => {
     let handler: ((route: Route) => Promise<void>) | undefined
     const page = makeMockPage({

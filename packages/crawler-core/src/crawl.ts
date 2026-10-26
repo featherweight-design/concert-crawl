@@ -31,6 +31,7 @@ import {
   CrawlSelectorTimeoutError,
   type FetchResult,
 } from './lib/fetcher.js'
+import { RobotsDisallowedError } from './lib/robots-fetch.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
@@ -620,7 +621,13 @@ export async function crawlVenue(
         try {
           httpResult = await fetchPageHttp(venue.websiteUrl, crawlDelayMs)
         } catch (httpErr) {
-          if (venue.crawlMode === 'http') {
+          // A robots.txt verdict on a redirect is not an HTTP-mode problem the
+          // browser could solve: retrying would fetch what we just declined.
+          if (
+            venue.crawlMode === 'http' ||
+            httpErr instanceof CrawlSkipError ||
+            httpErr instanceof RobotsDisallowedError
+          ) {
             throw httpErr // forced HTTP — no browser fallback
           }
           // auto-detect: HTTP failed, will fall through to browser below

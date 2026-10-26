@@ -27,6 +27,7 @@ import {
   stripStyleBlocks,
 } from './crawl.js'
 import { hashEvent } from './lib/hash.js'
+import { RobotsDisallowedError } from './lib/robots-fetch.js'
 import { canonicalizeTitle } from './lib/canonical-title.js'
 
 const mockBrowser = {} as Browser
@@ -1688,6 +1689,32 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPage).not.toHaveBeenCalled()
     expect(run.status).toBe('skipped')
     expect(run.errorMessage).toContain('Crawl-delay')
+  })
+
+  it('skips, without a browser retry, when an auto-detect redirect hop asks for a skip', async () => {
+    const venue = seedVenue({ crawlMode: null })
+    mockFetchPageHttp.mockRejectedValueOnce(
+      new CrawlSkipError(
+        'robots.txt Crawl-delay for redirect target exceeds the cap',
+      ),
+    )
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).not.toHaveBeenCalled()
+    expect(run.status).toBe('skipped')
+  })
+
+  it('does not retry in the browser a redirect robots.txt disallows', async () => {
+    const venue = seedVenue({ crawlMode: null })
+    mockFetchPageHttp.mockRejectedValueOnce(
+      new RobotsDisallowedError('https://elsewhere.example/', venue.websiteUrl),
+    )
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPage).not.toHaveBeenCalled()
+    expect(run.status).toBe('failed')
   })
 
   it('skips the run without marking the venue blocked when robots.txt is unreachable', async () => {
