@@ -1,3 +1,4 @@
+import { checkRobots } from '@concert-crawl/crawler-core/robots'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { TicketVendor } from '@concert-crawl/types'
 import { apiLogger } from './logger.js'
@@ -15,6 +16,11 @@ export async function detectTicketVendor(
   websiteUrl: string,
 ): Promise<TicketVendor> {
   try {
+    // One request, so no pacing, but the same robots.txt gate as the crawler:
+    // this is a fetch of the venue's own site.
+    const robots = await checkRobots(websiteUrl, CRAWLER_USER_AGENT)
+    if (robots.status !== 'allowed') return 'unknown'
+
     const res = await fetch(websiteUrl, {
       headers: {
         'User-Agent': CRAWLER_USER_AGENT,

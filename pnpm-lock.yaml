@@ -263,6 +263,9 @@ importers:
       '@clerk/nextjs':
         specifier: ^7.6.5
         version: 7.6.5(next@15.5.25(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@concert-crawl/crawler-core':
+        specifier: workspace:*
+        version: link:../../packages/crawler-core
       '@concert-crawl/entitlements':
         specifier: workspace:*
         version: link:../../packages/entitlements

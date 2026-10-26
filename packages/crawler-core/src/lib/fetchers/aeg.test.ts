@@ -435,17 +435,16 @@ describe('aegFetcher.fetch', () => {
 
   it('sets a jittered crawlDelayMs as a leading delay before the fetch', async () => {
     mockFetchOk(BLUEBIRD_FIXTURE)
-    // Pin the jitter to its floor (-500ms) so the assertion is deterministic
-    // and the test doesn't pay for a random extra half second.
+    // Pin the jitter to its floor (+0ms) so the assertion is deterministic
+    // and the test doesn't pay for a random extra second.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
     const delays = recordSleepDelays()
     await aegFetcher.fetch(makeVenue({ crawlDelayMs: 600 }), {
       crawlDelayMs: 600,
     })
     randomSpy.mockRestore()
-    // 600ms - 500ms of jitter = 100ms: the jitter subtracted rather than
-    // being ignored.
-    expect(delays).toEqual([100])
+    // Jitter only ever adds, so the configured delay is the floor.
+    expect(delays).toEqual([600])
   })
 
   it('does not delay at all when crawlDelayMs is 0', async () => {

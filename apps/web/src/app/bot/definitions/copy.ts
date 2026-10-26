@@ -112,7 +112,7 @@ export const BOT_COPY = {
     ai: {
       label: 'AI extraction',
       value:
-        "When a page has no structured event data, an AI model (Anthropic's Claude) reads the listings from it. If your robots.txt disallows ClaudeBot or sets Content-Signal ai-input=no, your pages never go to it. We don't train any model on your pages.",
+        "When a page has no structured event data, an AI model (Anthropic's Claude) reads the listings from it. If your robots.txt disallows ClaudeBot or sets Content-Signal ai-input=no, we never send it your page text, though show titles and artist names still go to it to tag genres. We don't train any model on your pages.",
     },
     weNever: {
       label: 'We never',

@@ -32,7 +32,7 @@ vi.mock('@concert-crawl/db', () => ({
     update: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
   },
-  venues: {},
+  venues: { blockedAt: 'venues.blocked_at' },
   crawlRuns: {},
   crawlTriggers: {},
   notifications: {},
@@ -129,6 +129,15 @@ describe('Admin crawl routes', () => {
       expect(body.success).toBe(true)
       expect(body.data.triggerIds).toEqual([])
       expect(body.data.count).toBe(0)
+    })
+
+    it('leaves out venues that blocked us', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const { isNull } = await import('drizzle-orm')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+      await createApp().request('/v1/admin/crawl', { method: 'POST' })
+      expect(isNull).toHaveBeenCalledWith('venues.blocked_at')
     })
 
     it('returns 202 with triggerIds when active venues exist', async () => {

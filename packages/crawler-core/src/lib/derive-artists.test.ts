@@ -84,6 +84,33 @@ describe('ladder step 1 — observed performers win', () => {
 })
 
 describe('ladder step 2 — escalation', () => {
+  it('skips escalation without a verdict when AI use is not allowed', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: '@adsfradio presents: Daedelus',
+        observedPerformers: [],
+      },
+      null,
+    )
+
+    // No verdict, so the upsert keeps the stored bill and the show stays up.
+    expect(result).toEqual({
+      headliners: null,
+      supportingArtists: null,
+      isConcert: true,
+      adjudicated: false,
+    })
+  })
+
+  it('still takes observed performers when AI use is not allowed', async () => {
+    const result = await deriveArtists(
+      { ...base, title: 'Daedelus', observedPerformers: ['Daedelus Live'] },
+      null,
+    )
+    expect(result.headliners).toEqual(['Daedelus Live'])
+  })
+
   it('escalates when nobody was named', async () => {
     const adjudicate = vi.fn().mockResolvedValue({
       isConcert: true,

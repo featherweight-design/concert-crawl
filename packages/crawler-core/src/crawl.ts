@@ -946,7 +946,10 @@ export async function crawlVenue(
         })
         continue
       }
-      const derived = await deriveArtists(evt, adjudicateEvent)
+      const derived = await deriveArtists(
+        evt,
+        aiUseAllowed ? adjudicateEvent : null,
+      )
       if (derived.adjudicated) adjudicationCount += 1
       normalizedEvents.push({
         ...evt,

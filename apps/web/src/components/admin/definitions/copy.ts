@@ -208,7 +208,7 @@ export const ADMIN_COPY = {
       errorReasons: {
         bot_detection: {
           label: 'Bot detection or IP blocking',
-          body: '403 from this venue usually means their edge layer (Cloudflare or similar) is denying the request. Could be IP-rate-based, user-agent fingerprinting, or a JS challenge.',
+          body: '403 from this venue usually means their edge layer (Cloudflare or similar) is denying the request. Could be IP-rate-based, user-agent fingerprinting, or a JS challenge. We never work around a block: ask the venue to allow ConcertCrawl, or move it to manual entry.',
         },
         rate_limit: {
           label: 'Rate limiting',
@@ -230,25 +230,9 @@ export const ADMIN_COPY = {
       diagOptions: {
         bot_detection: [
           {
-            id: 'opt-headers',
-            iconName: 'FileEdit',
-            recommended: true,
-            title: 'Add custom request headers',
-            body: 'Send a browser-like User-Agent + Accept-Language. Lowest-impact change.',
-            cta: 'Stage header swap',
-          },
-          {
-            id: 'opt-playwright',
-            iconName: 'Play',
-            recommended: false,
-            title: 'Switch to Playwright with a real session',
-            body: 'Solve a JS challenge once, persist cookies, then re-use the session. Higher LLM cost.',
-            cta: 'Stage Playwright run',
-          },
-          {
             id: 'opt-manual',
             iconName: 'User',
-            recommended: false,
+            recommended: true,
             title: 'Mark venue as manual entry',
             body: 'Stop crawling. Events for this venue will be added by the admin only.',
             cta: 'Stage manual mode',
@@ -344,29 +328,6 @@ export const ADMIN_COPY = {
       footerCancel: 'Cancel',
       footerApply: 'Apply change',
       stagedDiffs: {
-        'opt-headers': {
-          title: 'Add custom request headers',
-          intent:
-            "Try to look more like a real browser so the venue's edge layer stops blocking us.",
-          diff: [
-            {
-              path: 'headers.User-Agent',
-              before: 'ConcertCrawl/1.0',
-              after:
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko)',
-            },
-            {
-              path: 'headers.Accept-Language',
-              before: '(unset)',
-              after: 'en-US,en;q=0.9',
-            },
-          ],
-          risks: [
-            "If the venue rolls out a tighter bot policy, this stops working on its own — won't break the consumer app.",
-          ],
-          rollback: 'One click to revert from the strategy history log.',
-          nextRunIn: 'next scheduled sweep · ~2h',
-        },
         'opt-delay': {
           title: 'Increase request delay to 8s',
           intent:
@@ -399,21 +360,6 @@ export const ADMIN_COPY = {
           ],
           rollback: 'Revert from the strategy history log.',
           nextRunIn: 'manual re-crawl now, or next scheduled sweep',
-        },
-        'opt-playwright': {
-          title: 'Switch to Playwright with a real session',
-          intent:
-            'Solve a JS challenge once, persist cookies, then re-use the session.',
-          diff: [
-            { path: 'extraction.mode', before: 'fetch', after: 'playwright' },
-            { path: 'session.persist_cookies', before: 'false', after: 'true' },
-          ],
-          risks: [
-            'Higher LLM cost per run.',
-            'Session may expire and require re-solving.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'trigger manual re-crawl now',
         },
         'opt-manual': {
           title: 'Mark venue as manual entry',

@@ -125,7 +125,10 @@ export async function deriveArtists(
     // ruled", which is most of the catalogue and must not read as a negative.
     isConcert?: boolean
   },
-  adjudicate: Adjudicator,
+  // Null when the site's robots.txt closes it to AI crawlers: the title and
+  // description are its page text, so step 2 is skipped and the event keeps
+  // whatever bill is stored, exactly as an adjudicator outage would.
+  adjudicate: Adjudicator | null,
 ): Promise<DerivedArtists> {
   // Step 0 — an extractor that already read the page and said "not a concert"
   // outranks every step below it. Re-adjudicating would spend a call to
@@ -166,6 +169,14 @@ export async function deriveArtists(
   }
 
   // Step 2 — no signal, or the signal is the title wearing a performer's hat.
+  if (adjudicate === null) {
+    return {
+      headliners: null,
+      supportingArtists: null,
+      isConcert: true,
+      adjudicated: false,
+    }
+  }
   try {
     const verdict = await adjudicate({
       title: event.title,

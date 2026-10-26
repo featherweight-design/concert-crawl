@@ -119,11 +119,19 @@ function parseAlertMetadata(
 export const crawlAdminRouter = new Hono<AdminVariables>()
 
 // POST /v1/admin/crawl — queue crawl triggers for all active + verified venues
+// that have not blocked us. A blocked venue is re-tried only by a person
+// queueing it on its own, the same exclusion the daily pass applies.
 crawlAdminRouter.post('/', async (ctx) => {
   const activeVenues = await db
     .select({ id: venues.id })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(
+      and(
+        eq(venues.active, true),
+        eq(venues.verified, true),
+        isNull(venues.blockedAt),
+      ),
+    )
 
   if (activeVenues.length === 0) {
     return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202)

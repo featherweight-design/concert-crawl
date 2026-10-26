@@ -7,7 +7,8 @@ import {
 } from './fetcher.js'
 import type { Browser, BrowserContext, Page, Response } from 'playwright'
 
-// jitter(0) = Math.floor(random * 1000) - 500; with random=0.5 → 0ms delay
+// jitter(0) = 0, so tests that pass crawlDelayMs 0 never wait. Pinning random
+// keeps any test that does pass a delay deterministic.
 beforeEach(() => {
   vi.spyOn(Math, 'random').mockReturnValue(0.5)
 })

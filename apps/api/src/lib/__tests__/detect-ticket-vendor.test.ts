@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+
+vi.mock('@concert-crawl/crawler-core/robots', () => ({
+  checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+}))
+
+import { checkRobots } from '@concert-crawl/crawler-core/robots'
 import { detectTicketVendor } from '../detect-ticket-vendor.js'
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => vi.clearAllMocks())
 
 const mockFetch = (html: string) =>
   vi.stubGlobal(
@@ -13,6 +19,14 @@ const mockFetch = (html: string) =>
   )
 
 describe('detectTicketVendor', () => {
+  it('does not fetch a site whose robots.txt disallows us', async () => {
+    vi.mocked(checkRobots).mockResolvedValueOnce({ status: 'disallowed' })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await detectTicketVendor('https://venue.example')).toBe('unknown')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('returns axs when AXS button class found', async () => {
     mockFetch('<button class="axs-btn">Buy</button>')
     expect(await detectTicketVendor('https://venue.example')).toBe('axs')
