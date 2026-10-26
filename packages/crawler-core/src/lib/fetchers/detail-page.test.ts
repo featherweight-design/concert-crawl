@@ -86,8 +86,8 @@ interface SiteOverrides {
     ok: boolean
     status: number
     body: string
-    /** Final URL after redirects, as `Response.url` reports it. */
-    url?: string
+    /** Answer with a 302 to this URL instead of the body. */
+    redirectTo?: string
   }
 }
 
@@ -106,31 +106,58 @@ function mockSiteFetch(
       return {
         ok: true,
         status: 200,
+        headers: new Headers(),
         text: async () => overrides.robots ?? 'User-agent: *\nAllow: /\n',
       }
     }
     if (asString.endsWith('/sitemap.xml')) {
       const body = overrides.sitemap ?? SITEMAP_XML
-      if (body === '') return { ok: false, status: 404, text: async () => '' }
-      return { ok: true, status: 200, text: async () => body }
+      if (body === '')
+        return {
+          ok: false,
+          status: 404,
+          headers: new Headers(),
+          text: async () => '',
+        }
+      return {
+        ok: true,
+        status: 200,
+        headers: new Headers(),
+        text: async () => body,
+      }
     }
     if (asString === LISTING_URL || asString === ORIGIN) {
       return {
         ok: true,
         status: 200,
+        headers: new Headers(),
         text: async () => overrides.listing ?? LISTING_HTML,
       }
     }
     const detail = overrides.detail?.(asString)
+    if (detail?.redirectTo) {
+      return {
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: detail.redirectTo }),
+        body: null,
+        text: async () => '',
+      }
+    }
     if (detail) {
       return {
         ok: detail.ok,
         status: detail.status,
-        url: detail.url,
+        headers: new Headers(),
         text: async () => detail.body,
       }
     }
-    return { ok: true, status: 200, text: async () => DETAIL_HTML }
+    return {
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => DETAIL_HTML,
+    }
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
@@ -468,8 +495,8 @@ describe('detailPageFetcher.fetch', () => {
     expect(pageRequests(fetchMock)).toHaveLength(3)
   })
 
-  it('refuses a detail page that redirected off-origin', async () => {
-    mockSiteFetch({
+  it('refuses a detail page that redirects off-origin, without requesting it', async () => {
+    const fetchMock = mockSiteFetch({
       listing: Array.from(
         { length: 5 },
         (_, i) => `<a href="/e/show-${i}">${i}</a>`,
@@ -479,26 +506,32 @@ describe('detailPageFetcher.fetch', () => {
         ok: true,
         status: 200,
         body: DETAIL_HTML,
-        // A 3xx would otherwise hand us an off-origin body that never passed
-        // the same-origin filter or the robots gate.
-        url: `https://evil.example${new URL(url).pathname}`,
+        redirectTo: `https://evil.example${new URL(url).pathname}`,
       }),
     })
     await expect(
       detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toThrow(/redirected off-origin/)
+    expect(
+      fetchMock.mock.calls.some(([url]) =>
+        String(url).includes('evil.example'),
+      ),
+    ).toBe(false)
   })
 
   it('records the URL a same-origin redirect landed on as the source', async () => {
     mockSiteFetch({
       listing: '<a href="/e/show-0">0</a>',
       sitemap: '',
-      detail: (url) => ({
-        ok: true,
-        status: 200,
-        body: DETAIL_HTML,
-        url: url.replace('/e/', '/events/'),
-      }),
+      detail: (url) =>
+        url.includes('/e/')
+          ? {
+              ok: true,
+              status: 200,
+              body: '',
+              redirectTo: url.replace('/e/', '/events/'),
+            }
+          : { ok: true, status: 200, body: DETAIL_HTML },
     })
     const result = await detailPageFetcher.fetch(
       makeVenue({ websiteUrl: 'https://events.blackboxdenver.co/' }),
@@ -508,6 +541,38 @@ describe('detailPageFetcher.fetch', () => {
     for (const event of result.events) {
       expect(event.sourceUrl).toContain('/events/show-0')
     }
+  })
+
+  it('never requests a disallowed hop in the middle of a redirect chain', async () => {
+    const fetchMock = mockSiteFetch({
+      robots: 'User-agent: *\nDisallow: /private/\n',
+      listing: '<a href="/e/show-0">0</a>',
+      sitemap: '',
+      detail: (url) =>
+        url.includes('/e/')
+          ? {
+              ok: true,
+              status: 200,
+              body: '',
+              redirectTo: url.replace('/e/', '/private/'),
+            }
+          : url.includes('/private/')
+            ? {
+                ok: true,
+                status: 200,
+                body: '',
+                redirectTo: url.replace('/private/', '/events/'),
+              }
+            : { ok: true, status: 200, body: DETAIL_HTML },
+    })
+    await detailPageFetcher
+      .fetch(makeVenue({ websiteUrl: 'https://mid-chain.example.com/' }), {
+        crawlDelayMs: 0,
+      })
+      .catch(() => undefined)
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).includes('/private/')),
+    ).toBe(false)
   })
 
   it('stops checking robots.txt once the cap is reached', async () => {

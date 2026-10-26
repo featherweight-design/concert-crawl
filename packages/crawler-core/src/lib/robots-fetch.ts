@@ -34,11 +34,15 @@ const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
 // first. The robots.txt lookup underneath keeps running and caches whatever
 // the site answers, so a caller's deadline never gets cached as a site
 // failure; the caller just stops waiting for it.
-const raceSignal = <TResult>(
+export const raceSignal = <TResult>(
   promise: Promise<TResult>,
   signal?: AbortSignal,
 ): Promise<TResult> => {
   if (!signal) return promise
+  // Handled here whatever happens next: once we stop waiting, a later
+  // rejection (an unreachable robots.txt's CrawlSkipError, say) must not
+  // surface as an unhandled rejection that takes the process down.
+  promise.catch(() => undefined)
   if (signal.aborted) return Promise.reject(signal.reason)
   return new Promise<TResult>((resolve, reject) => {
     const onAbort = () => reject(signal.reason)
@@ -81,6 +85,7 @@ export async function clearRedirect(
   floorMs: number,
   signal?: AbortSignal,
 ): Promise<void> {
+  signal?.throwIfAborted()
   if (!(await raceSignal(isAllowedOrSkip(to, CRAWLER_USER_AGENT), signal))) {
     console.log(
       JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
@@ -121,6 +126,8 @@ export async function fetchFollowingRobots(
     crawlDelayMs: number
     timeoutMs?: number
     signal?: AbortSignal
+    /** Runs before each hop is cleared; throw to refuse the redirect. */
+    onRedirect?: (from: string, to: string) => void
   },
 ): Promise<RobotsFetchResult> {
   let currentUrl = url
@@ -148,6 +155,7 @@ export async function fetchFollowingRobots(
       throw new Error(`Too many redirects starting at ${url}`)
     }
     const next = new URL(location, currentUrl).toString()
+    options.onRedirect?.(currentUrl, next)
     await clearRedirect(currentUrl, next, options.crawlDelayMs, options.signal)
     currentUrl = next
   }

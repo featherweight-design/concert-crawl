@@ -25,7 +25,12 @@ import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { extractJsonLd } from '../extractors/json-ld.js'
-import { isAllowed, isAllowedOrSkip } from '../robots.js'
+import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js'
+import {
+  fetchFollowingRobots,
+  RobotsDisallowedError,
+  type RobotsFetchResult,
+} from '../robots-fetch.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -76,27 +81,58 @@ export class DetailPageFetchError extends Error {
   }
 }
 
-async function fetchText(url: string, timeoutMs?: number): Promise<string> {
-  return (await fetchTextLanded(url, timeoutMs)).html
+async function fetchText(
+  url: string,
+  crawlDelayMs: number,
+  timeoutMs?: number,
+): Promise<string> {
+  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs)).html
 }
 
 // Like fetchText, but also returns the URL the body actually came from after
 // redirects, which is the page's provenance for the AI gate in crawl.ts.
+// Redirects are followed hop by hop through `fetchFollowingRobots`: each hop
+// must stay on the starting origin and clear robots.txt and its pacing
+// before we request it, so no intermediate page is fetched unchecked.
 async function fetchTextLanded(
   url: string,
+  crawlDelayMs: number,
   timeoutMs?: number,
 ): Promise<{ html: string; landedUrl: string }> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': CRAWLER_USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml',
-    },
-    // A hung connection must not pin the caller — the admin probe endpoint
-    // holds an API worker slot while this resolves.
-    ...(timeoutMs !== undefined
-      ? { signal: AbortSignal.timeout(timeoutMs) }
-      : {}),
-  })
+  const origin = new URL(url).origin
+  let fetched: RobotsFetchResult
+  try {
+    fetched = await fetchFollowingRobots(url, {
+      headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
+      crawlDelayMs,
+      // One signal for the whole chain, pacing waits included, so a hop
+      // can't carry the request past the deadline. A hung connection must
+      // not pin the caller either — the admin probe endpoint holds an API
+      // worker slot while this resolves.
+      ...(timeoutMs !== undefined
+        ? { signal: AbortSignal.timeout(timeoutMs) }
+        : {}),
+      onRedirect: (_from, to) => {
+        if (new URL(to).origin !== origin) {
+          throw new DetailPageFetchError(
+            0,
+            url,
+            `Detail-page fetch for ${url} redirected off-origin to ${to}`,
+          )
+        }
+      },
+    })
+  } catch (err) {
+    if (err instanceof RobotsDisallowedError) {
+      throw new DetailPageFetchError(
+        0,
+        url,
+        `Detail-page fetch for ${url} redirected to ${err.url}, which robots.txt disallows`,
+      )
+    }
+    throw err
+  }
+  const { response, finalUrl } = fetched
   if (!response.ok) {
     throw new DetailPageFetchError(
       response.status,
@@ -107,27 +143,7 @@ async function fetchTextLanded(
       `Detail-page fetch failed: HTTP ${response.status} for ${url}`,
     )
   }
-  // fetch() follows redirects by default, so the body we are about to parse
-  // may come from a URL that never passed the same-origin filter or the
-  // robots gate. Re-apply both to wherever we actually landed.
-  const landed = response.url || url
-  if (landed !== url) {
-    if (new URL(landed).origin !== new URL(url).origin) {
-      throw new DetailPageFetchError(
-        response.status,
-        url,
-        `Detail-page fetch for ${url} redirected off-origin to ${landed}`,
-      )
-    }
-    if (!(await isAllowed(landed, CRAWLER_USER_AGENT))) {
-      throw new DetailPageFetchError(
-        response.status,
-        url,
-        `Detail-page fetch for ${url} redirected to ${landed}, which robots.txt disallows`,
-      )
-    }
-  }
-  return { html: await response.text(), landedUrl: landed }
+  return { html: await response.text(), landedUrl: finalUrl }
 }
 
 /**
@@ -251,7 +267,7 @@ async function detailPageFetch(
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs) =>
-          fetchText(sitemapUrl, timeoutMs),
+          fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs),
         ),
         listingUrl,
       )
@@ -259,7 +275,9 @@ async function detailPageFetch(
       // Optional by design — plenty of venues publish no sitemap, and a
       // missing one must not fail a run that the listing page alone can
       // serve. A budget breach is not optional, though: it means the whole
-      // fetch is out of time, so let it propagate.
+      // fetch is out of time, so let it propagate. Nor is a skip: robots.txt
+      // couldn't be read, so nothing more may be fetched this run.
+      if (err instanceof CrawlSkipError) throw err
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
         logger.warn(
           { venueId: venue.id, sitemapUrl, err },
@@ -276,7 +294,7 @@ async function detailPageFetch(
 
   await deadline.wait(jitter(opts.crawlDelayMs))
   const listingHtml = await deadline.run('listing', (timeoutMs) =>
-    fetchText(listingUrl, timeoutMs),
+    fetchText(listingUrl, opts.crawlDelayMs, timeoutMs),
   )
   const candidates = extractCandidateUrls(listingHtml, listingUrl)
   if (candidates.length === 0) {
@@ -344,7 +362,7 @@ async function detailPageFetch(
     try {
       ;({ html, landedUrl } = await deadline.run(
         `detail ${detailUrl}`,
-        (timeoutMs) => fetchTextLanded(detailUrl, timeoutMs),
+        (timeoutMs) => fetchTextLanded(detailUrl, opts.crawlDelayMs, timeoutMs),
       ))
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
@@ -354,6 +372,8 @@ async function detailPageFetch(
         )
         throw err
       }
+      // A skip means robots.txt couldn't be read: the run stops, unpenalized.
+      if (err instanceof CrawlSkipError) throw err
       // A block or a rate limit is never a per-page problem. Continuing would
       // keep hitting a site that just told us to stop, so it ends the run
       // immediately and surfaces as a blocked venue.
