@@ -177,6 +177,8 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   // stubbing it would only ever test the stub. Keep the real one.
   ...(await importOriginal<typeof import('./lib/robots.js')>()),
   isAllowed: vi.fn().mockResolvedValue(true),
+  checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
@@ -199,7 +201,7 @@ import {
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
-import { CRAWL_DELAY_CAP_MS, getCrawlDelayMs } from './lib/robots.js'
+import { checkRobots, getCrawlDelayMs, isAiUseAllowed } from './lib/robots.js'
 import {
   db,
   venues,
@@ -1631,17 +1633,43 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPageHttp).toHaveBeenCalledWith(venue.websiteUrl, 3_000)
   })
 
-  it('caps a Crawl-delay that would stall the nightly pass', async () => {
+  it('skips the run when the site asks for a Crawl-delay longer than the cap', async () => {
     const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 3_000 })
     vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(300_000)
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).not.toHaveBeenCalled()
+    expect(mockFetchPage).not.toHaveBeenCalled()
+    expect(run.status).toBe('skipped')
+    expect(run.errorMessage).toContain('Crawl-delay')
+  })
+
+  it('skips the run without marking the venue blocked when robots.txt is unreachable', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    vi.mocked(checkRobots).mockResolvedValueOnce({
+      status: 'unreachable',
+      reason: 'HTTP 503',
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).not.toHaveBeenCalled()
+    expect(run.status).toBe('skipped')
+    expect(run.robotsTxtBlocked).toBe('unchecked')
+    expect(run.errorMessage).toContain('robots.txt unreachable')
+  })
+
+  it('never sends page text to the LLM when robots.txt closes the site to AI crawlers', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    vi.mocked(isAiUseAllowed).mockResolvedValueOnce(false)
     mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
 
-    await crawlVenue(venue.id, mockBrowser)
+    const run = await crawlVenue(venue.id, mockBrowser)
 
-    expect(mockFetchPageHttp).toHaveBeenCalledWith(
-      venue.websiteUrl,
-      CRAWL_DELAY_CAP_MS,
-    )
+    expect(extractWithLlm).not.toHaveBeenCalled()
+    expect(run.status).toBe('failed')
+    expect(run.errorMessage).toContain('does not allow AI extraction')
   })
 
   it('auto-detect: saves crawlMode=http when HTTP fetch returns JSON-LD events (no LLM called)', async () => {

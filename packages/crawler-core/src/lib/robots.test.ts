@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   CRAWL_DELAY_CAP_MS,
+  checkRobots,
   getCrawlDelayMs,
+  isAiUseAllowed,
   isAllowed,
   resolveCrawlDelayMs,
 } from './robots.js'
@@ -53,16 +55,41 @@ describe('robots.ts', () => {
     expect(result).toBe(false)
   })
 
-  it('returns true (fail open) when robots.txt fetch throws', async () => {
+  it('does not crawl when the robots.txt fetch throws (RFC 9309 unreachable)', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
-    const result = await isAllowed(
+    const verdict = await checkRobots(
       'https://fetch-error.example/events',
       USER_AGENT,
     )
-    expect(result).toBe(true)
+    expect(verdict.status).toBe('unreachable')
+    expect(
+      await isAllowed('https://fetch-error.example/events', USER_AGENT),
+    ).toBe(false)
   })
 
-  it('returns true (fail open) when robots.txt returns non-200 status', async () => {
+  it('does not crawl when robots.txt returns a server error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Bad gateway', { status: 502 }),
+    )
+    const verdict = await checkRobots(
+      'https://server-error.example/events',
+      USER_AGENT,
+    )
+    expect(verdict).toEqual({ status: 'unreachable', reason: 'HTTP 502' })
+  })
+
+  it('treats a 429 on robots.txt as unreachable, not as absent', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Slow down', { status: 429 }),
+    )
+    const verdict = await checkRobots(
+      'https://rate-limited.example/events',
+      USER_AGENT,
+    )
+    expect(verdict.status).toBe('unreachable')
+  })
+
+  it('allows the crawl when robots.txt does not exist (4xx)', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('Not found', { status: 404 }),
     )
@@ -367,34 +394,177 @@ describe('robots.ts', () => {
       expect(resolveCrawlDelayMs(3_000, 10_000)).toBe(10_000)
     })
 
-    it('caps an extreme requested delay', () => {
-      expect(resolveCrawlDelayMs(3_000, 300_000)).toBe(CRAWL_DELAY_CAP_MS)
+    it('returns null when the site asks for more than the cap, so the run skips it', () => {
+      expect(resolveCrawlDelayMs(3_000, 300_000)).toBeNull()
     })
 
-    it('logs when the cap bites, with the requested and applied values', () => {
+    it('honours a site delay exactly at the cap', () => {
+      expect(resolveCrawlDelayMs(3_000, CRAWL_DELAY_CAP_MS)).toBe(
+        CRAWL_DELAY_CAP_MS,
+      )
+    })
+
+    it('logs when a site delay exceeds the cap', () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       resolveCrawlDelayMs(3_000, 300_000, { venueId: 'venue-1' })
       const logged = logSpy.mock.calls.map(([line]) => String(line))
       expect(logged).toContainEqual(
         JSON.stringify({
-          event: 'robots.crawl_delay_capped',
+          event: 'robots.crawl_delay_exceeds_cap',
           venueId: 'venue-1',
           requestedMs: 300_000,
-          appliedMs: CRAWL_DELAY_CAP_MS,
+          capMs: CRAWL_DELAY_CAP_MS,
         }),
       )
     })
 
-    it('does not log when the cap does not bite', () => {
+    it('does not log when the site delay is within the cap', () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
       resolveCrawlDelayMs(3_000, 10_000)
       expect(logSpy).not.toHaveBeenCalled()
     })
 
-    it('applies max before min, so our own delay is capped too', () => {
+    it("caps our own per-venue delay, which is our choice rather than the site's", () => {
       // A venue configured above the cap must not smuggle a longer delay
       // through just because robots.txt was silent.
       expect(resolveCrawlDelayMs(60_000, null)).toBe(CRAWL_DELAY_CAP_MS)
+    })
+  })
+
+  describe('Allow precedence (RFC 9309)', () => {
+    function mockRobots(lines: string[]): void {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(lines.join('\n'), { status: 200 }),
+      )
+    }
+
+    it('lets a longer Allow override a shorter Disallow', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /', 'Allow: /events'])
+      expect(
+        await isAllowed('https://longer-allow.example/events/1', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('lets a longer Disallow override a shorter Allow', async () => {
+      mockRobots(['User-agent: *', 'Allow: /', 'Disallow: /events'])
+      expect(
+        await isAllowed('https://longer-disallow.example/events', USER_AGENT),
+      ).toBe(false)
+    })
+
+    it('resolves an equal-length tie in favour of Allow', async () => {
+      // The VenuePilot shape (#1016): a Cloudflare-managed `*` group granting
+      // `Allow: /` and a separate hand-written `*` group with `Disallow: /`.
+      // RFC 9309 combines both groups and the tie goes to Allow.
+      mockRobots([
+        'User-agent: *',
+        'Allow: /',
+        '',
+        'User-agent: *',
+        'Disallow: /',
+      ])
+      expect(
+        await isAllowed('https://equal-tie.example/graphql', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('matches a * wildcard inside a rule path', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /*/private'])
+      expect(
+        await isAllowed('https://wildcard.example/shows/private', USER_AGENT),
+      ).toBe(false)
+      expect(
+        await isAllowed('https://wildcard.example/shows/public', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('anchors a rule ending in $', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /events$'])
+      expect(await isAllowed('https://anchor.example/events', USER_AGENT)).toBe(
+        false,
+      )
+      expect(
+        await isAllowed('https://anchor.example/events/1', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('matches the query string as part of the path', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /events?page='])
+      expect(
+        await isAllowed('https://query.example/events?page=2', USER_AGENT),
+      ).toBe(false)
+    })
+  })
+
+  describe('isAiUseAllowed', () => {
+    function mockRobots(lines: string[]): void {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(lines.join('\n'), { status: 200 }),
+      )
+    }
+
+    it('allows AI use when no rule addresses an AI crawler', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /admin'])
+      expect(
+        await isAiUseAllowed('https://no-ai-rules.example/events', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('refuses AI use when ClaudeBot is disallowed, even though we are allowed', async () => {
+      // The Black Box shape (#1295).
+      mockRobots([
+        'User-agent: ClaudeBot',
+        'User-agent: Claude-Web',
+        'Disallow: /',
+        '',
+        'User-agent: *',
+        'Allow: /',
+      ])
+      const url = 'https://claudebot-blocked.example/events'
+      expect(await isAllowed(url, USER_AGENT)).toBe(true)
+      expect(await isAiUseAllowed(url, USER_AGENT)).toBe(false)
+    })
+
+    it('refuses AI use for an anthropic-ai disallow on the page path only', async () => {
+      mockRobots(['User-agent: anthropic-ai', 'Disallow: /events'])
+      expect(
+        await isAiUseAllowed('https://scoped-ai.example/events', USER_AGENT),
+      ).toBe(false)
+      expect(
+        await isAiUseAllowed('https://scoped-ai.example/about', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('refuses AI use when a group that applies to us signals ai-input=no', async () => {
+      mockRobots([
+        'User-agent: *',
+        'Content-Signal: search=yes, ai-input=no',
+        'Allow: /',
+      ])
+      expect(
+        await isAiUseAllowed('https://signal-no.example/events', USER_AGENT),
+      ).toBe(false)
+    })
+
+    it('allows AI use when the only signal is ai-train=no', async () => {
+      // We do not train on page text, so the training signal is not about us.
+      mockRobots([
+        'User-agent: *',
+        'Content-Signal: search=yes, ai-train=no',
+        'Allow: /',
+      ])
+      expect(
+        await isAiUseAllowed('https://train-no.example/events', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('allows AI use when robots.txt does not exist', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('Not found', { status: 404 }),
+      )
+      expect(
+        await isAiUseAllowed('https://no-robots-ai.example/events', USER_AGENT),
+      ).toBe(true)
     })
   })
 })

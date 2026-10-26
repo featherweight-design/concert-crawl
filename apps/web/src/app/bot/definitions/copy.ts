@@ -67,7 +67,7 @@ export const BOT_COPY = {
     disallow: {
       label: 'Disallow',
       value:
-        "We request robots.txt before crawling and obey any Disallow that applies to us. If it's unreachable, we proceed at our normal rate.",
+        "We check robots.txt before every request we make to your site, API calls included, and obey any Disallow that applies to us under the RFC 9309 rules. If it returns a server error or doesn't answer, we don't crawl you that day.",
     },
     recheck: {
       label: 'Re-check',
@@ -77,7 +77,7 @@ export const BOT_COPY = {
     crawlDelay: {
       label: 'Crawl-delay',
       value:
-        'Honored. Where you state one, we take the longer of your value and our own 3-second default. We never speed up because a site permits it.',
+        'Honored. Where you state one, we take the longer of your value and our own 3-second default. If you ask for more than 30 seconds, we skip your site that day rather than crawl it faster than you asked.',
     },
     rate: {
       label: 'Request rate',
@@ -108,6 +108,11 @@ export const BOT_COPY = {
       label: 'We read',
       value:
         'Public event pages only: show name, performing artists, date and time, ticket price, the event description and image you publish, and the link back to your own ticketing page.',
+    },
+    ai: {
+      label: 'AI extraction',
+      value:
+        "When a page has no structured event data, an AI model (Anthropic's Claude) reads the listings from it. If your robots.txt disallows ClaudeBot or sets Content-Signal ai-input=no, your pages never go to it. We don't train any model on your pages.",
     },
     weNever: {
       label: 'We never',
@@ -152,7 +157,7 @@ export const BOT_COPY = {
   },
 
   footer: {
-    updated: 'LAST UPDATED · SEP 2026',
+    updated: 'LAST UPDATED · OCT 2026',
     links: [
       { label: 'Terms', href: '/legal/terms' },
       { label: 'Privacy', href: '/legal/privacy' },

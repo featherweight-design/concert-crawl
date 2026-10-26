@@ -23,7 +23,7 @@ export const LEGAL_COPY = {
     acceptance: {
       title: '1. Acceptance',
       body1:
-        "By creating an account or using Concert Crawl (“the Service”), you agree to these Terms of Service. If you don't agree, don't use the Service.",
+        "Concert Crawl (“the Service”) is operated by Featherweight Design, LLC, a Colorado limited liability company (“we” or “us”). By creating an account or using the Service, you agree to these Terms of Service. If you don't agree, don't use the Service.",
       body2:
         "We may update these terms. When we do, we'll notify you by email and update the “Effective date” above. Continued use after notice constitutes acceptance.",
     },
@@ -73,7 +73,7 @@ export const LEGAL_COPY = {
 
     intellectualProperty: {
       title: '6. Intellectual property',
-      body: 'The Concert Crawl name, logo, and design are owned by Concert Crawl. Event data sourced from venues remains the property of those venues. Generative artwork displayed on the Service is produced by our systems and is owned by Concert Crawl.',
+      body: 'The Concert Crawl name, logo, and design are owned by Featherweight Design, LLC. Event data sourced from venues remains the property of those venues. Generative artwork displayed on the Service is produced by our systems and is owned by Featherweight Design, LLC.',
     },
 
     subscriptions: {

@@ -20,8 +20,12 @@ vi.mock('./lib/fetcher.js', async (importOriginal) => ({
   fetchPage: vi.fn(),
   fetchPageHttp: vi.fn(),
 }))
-vi.mock('./lib/robots.js', () => ({
+vi.mock('./lib/robots.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/robots.js')>()),
   isAllowed: vi.fn().mockResolvedValue(true),
+  checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  isAiUseAllowed: vi.fn().mockResolvedValue(true),
+  getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),

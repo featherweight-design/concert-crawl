@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { CrawlFetchError } from '../fetcher.js'
+import * as robots from '../robots.js'
 import { PlatformFetchDeadlineError } from './deadline.js'
 import {
   venuePilotFetcher,
@@ -119,12 +120,17 @@ describe('venuePilotFetcher.canHandle', () => {
 
 describe('venuePilotFetcher.fetch', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
+  let isAllowedSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
+    // Stub the robots gate so the rest of the suite keeps asserting on the
+    // API requests alone. isAllowed() would otherwise issue its own fetch.
+    isAllowedSpy = vi.spyOn(robots, 'isAllowed').mockResolvedValue(true)
   })
   afterEach(() => {
     fetchSpy.mockRestore()
+    isAllowedSpy.mockRestore()
   })
 
   function mockFetchOk(body: string): void {
@@ -505,25 +511,23 @@ describe('venuePilotFetcher.fetch', () => {
     },
   )
 
-  // The VenuePilot GraphQL API is a per-venue opt-in first-party integration,
-  // not a page we spider, so it is intentionally exempt from the robots.txt
-  // gate (see venuepilot.ts). Assert we hit the API directly and never issue a
-  // robots.txt request for it.
-  it('fetches the API directly without a robots.txt request', async () => {
+  // The GraphQL endpoint clears the same robots.txt gate as every page we
+  // fetch: it is a path on VenuePilot's host, and robots.txt covers the host.
+  it('checks robots.txt for the API endpoint before calling it', async () => {
     mockFetchOk(LEVITT_FIXTURE)
-    const result = await venuePilotFetcher.fetch(makeVenue(), {
-      crawlDelayMs: 0,
-    })
-    expect(result.events.length).toBeGreaterThan(0)
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    expect(fetchSpy).toHaveBeenCalledWith(
+    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    expect(isAllowedSpy).toHaveBeenCalledWith(
       'https://www.venuepilot.co/graphql',
-      expect.objectContaining({ method: 'POST' }),
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
     )
-    // fetch's first arg can be a string, URL, or Request — coerce to a string
-    // so the robots.txt assertion can't be silently bypassed by a non-string.
-    const requestedUrls = fetchSpy.mock.calls.map((call) => String(call[0]))
-    expect(requestedUrls).not.toContain('https://www.venuepilot.co/robots.txt')
+  })
+
+  it('refuses to call the API when robots.txt disallows it', async () => {
+    isAllowedSpy.mockResolvedValueOnce(false)
+    await expect(
+      venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toThrow('robots.txt disallows https://www.venuepilot.co/graphql')
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('loops pages up to metadata.totalPages and concatenates', async () => {

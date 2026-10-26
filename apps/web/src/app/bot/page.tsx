@@ -259,6 +259,7 @@ export default function BotPage() {
               <FactRow label={facts.weRead.label} first>
                 {facts.weRead.value}
               </FactRow>
+              <FactRow label={facts.ai.label}>{facts.ai.value}</FactRow>
               <FactRow label={facts.weNever.label}>
                 {facts.weNever.value}
               </FactRow>

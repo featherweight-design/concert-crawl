@@ -17,6 +17,7 @@ import {
   AegSchemaError,
   PlatformFetchDeadlineError,
 } from '@concert-crawl/crawler-core/fetchers'
+import { checkRobots } from '@concert-crawl/crawler-core/robots'
 import {
   CRAWLER_USER_AGENT,
   VENUE_PLATFORMS,
@@ -244,56 +245,19 @@ venuesAdminRouter.get('/robots-check', async (ctx) => {
     return ctx.json({ success: false, error: 'Invalid URL format' }, 400)
   }
 
-  const robotsUrl = `${parsedUrl.protocol}//${parsedUrl.host}/robots.txt`
-
-  try {
-    const response = await fetch(robotsUrl, {
-      headers: {
-        'User-Agent': CRAWLER_USER_AGENT,
-      },
-      signal: AbortSignal.timeout(5000),
-    })
-
-    if (!response.ok) {
-      return ctx.json({ allowed: true, checkedAt: new Date().toISOString() })
-    }
-
-    const text = await response.text()
-    const lines = text.split('\n').map((line) => line.trim())
-
-    let inConcertCrawlBlock = false
-    let inWildcardBlock = false
-    let concertCrawlDisallowed = false
-    let wildcardDisallowed = false
-
-    for (const line of lines) {
-      const lower = line.toLowerCase()
-      if (lower.startsWith('user-agent:')) {
-        const agent = line.slice('user-agent:'.length).trim().toLowerCase()
-        inConcertCrawlBlock = agent === 'concertcrawl'
-        inWildcardBlock = agent === '*'
-      } else if (lower.startsWith('disallow:')) {
-        const path = line.slice('disallow:'.length).trim()
-        // Empty Disallow means "allow all" per robots.txt spec — only '/' blocks
-        if (path === '/') {
-          if (inConcertCrawlBlock) concertCrawlDisallowed = true
-          if (inWildcardBlock) wildcardDisallowed = true
-        }
-      }
-    }
-
-    const disallowed = concertCrawlDisallowed || wildcardDisallowed
-
-    return ctx.json({
-      allowed: !disallowed,
-      checkedAt: new Date().toISOString(),
-    })
-  } catch {
+  // The same evaluation the crawler runs, so the admin chip can never disagree
+  // with what the nightly pass will actually do.
+  const verdict = await checkRobots(parsedUrl.href, CRAWLER_USER_AGENT)
+  if (verdict.status === 'unreachable') {
     return ctx.json({
       allowed: null,
       error: 'Could not fetch robots.txt',
     })
   }
+  return ctx.json({
+    allowed: verdict.status === 'allowed',
+    checkedAt: new Date().toISOString(),
+  })
 })
 
 // GET /v1/admin/venues/robots-audit — stored robots.txt status per active venue

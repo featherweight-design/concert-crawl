@@ -1,6 +1,15 @@
+import { jitter } from '@concert-crawl/crawler-core/jitter'
+import {
+  checkRobots,
+  getCrawlDelayMs,
+  resolveCrawlDelayMs,
+} from '@concert-crawl/crawler-core/robots'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import type { PipelineContext, PriceTierResult } from './types.js'
+
+// Our own floor between requests, the same 3 seconds `fetchPage` uses.
+const PRICE_FETCH_DELAY_MS = 3000
 
 const JSON_LD_RE =
   /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
@@ -36,6 +45,21 @@ export async function tier1StructuredData(
   ctx: PipelineContext,
 ): Promise<PriceTierResult | null> {
   if (!ctx.priceUrl) return null
+
+  // The same robots.txt gate and pacing as every crawler request: the price
+  // URL is a venue page, and the pipeline asks for it once per unpriced event.
+  if (
+    (await checkRobots(ctx.priceUrl, CRAWLER_USER_AGENT)).status !== 'allowed'
+  ) {
+    return null
+  }
+  const delayMs = resolveCrawlDelayMs(
+    PRICE_FETCH_DELAY_MS,
+    await getCrawlDelayMs(ctx.priceUrl, CRAWLER_USER_AGENT),
+    { venueId: ctx.venueId, url: ctx.priceUrl },
+  )
+  if (delayMs === null) return null
+  await new Promise((resolve) => setTimeout(resolve, jitter(delayMs)))
 
   let res: Response
   try {

@@ -21,6 +21,14 @@
     "./canonical": {
       "types": "./dist/lib/canonical-artist.d.ts",
       "import": "./dist/lib/canonical-artist.js"
+    },
+    "./robots": {
+      "types": "./dist/lib/robots.d.ts",
+      "import": "./dist/lib/robots.js"
+    },
+    "./jitter": {
+      "types": "./dist/lib/fetchers/jitter.d.ts",
+      "import": "./dist/lib/fetchers/jitter.js"
     }
   },
   "scripts": {

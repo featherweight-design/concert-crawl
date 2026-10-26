@@ -1,4 +1,23 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+
+vi.mock('@concert-crawl/crawler-core/robots', async (importOriginal) => ({
+  // resolveCrawlDelayMs is pure arithmetic, so keep the real one.
+  ...(await importOriginal<
+    typeof import('@concert-crawl/crawler-core/robots')
+  >()),
+  checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  getCrawlDelayMs: vi.fn().mockResolvedValue(null),
+}))
+// No real 3-second waits in unit tests.
+vi.mock('@concert-crawl/crawler-core/jitter', () => ({
+  jitter: vi.fn().mockReturnValue(0),
+}))
+
+import {
+  checkRobots,
+  getCrawlDelayMs,
+} from '@concert-crawl/crawler-core/robots'
+import { jitter } from '@concert-crawl/crawler-core/jitter'
 import { tier1StructuredData } from '../tier1-structured-data.js'
 import type { PipelineContext } from '../types.js'
 
@@ -11,7 +30,7 @@ const baseCtx: PipelineContext = {
 }
 
 afterEach(() => {
-  vi.restoreAllMocks()
+  vi.clearAllMocks()
   vi.unstubAllGlobals()
 })
 
@@ -33,6 +52,49 @@ describe('tier1StructuredData', () => {
         'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
       },
     })
+  })
+
+  it('does not fetch a price URL that robots.txt disallows', async () => {
+    vi.mocked(checkRobots).mockResolvedValueOnce({ status: 'disallowed' })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await tier1StructuredData(baseCtx)).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not fetch when robots.txt is unreachable', async () => {
+    vi.mocked(checkRobots).mockResolvedValueOnce({
+      status: 'unreachable',
+      reason: 'HTTP 503',
+    })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await tier1StructuredData(baseCtx)).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('paces each request by at least our 3-second floor', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    await tier1StructuredData(baseCtx)
+    expect(jitter).toHaveBeenCalledWith(3000)
+  })
+
+  it("slows to the site's Crawl-delay", async () => {
+    vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(10_000)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+    await tier1StructuredData(baseCtx)
+    expect(jitter).toHaveBeenCalledWith(10_000)
+  })
+
+  it('skips a site whose Crawl-delay is longer than one run can keep', async () => {
+    vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(300_000)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await tier1StructuredData(baseCtx)).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('returns null on non-200 fetch', async () => {

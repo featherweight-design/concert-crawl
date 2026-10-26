@@ -565,6 +565,9 @@ importers:
 
   packages/price-pipeline:
     dependencies:
+      '@concert-crawl/crawler-core':
+        specifier: workspace:*
+        version: link:../crawler-core
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:../db

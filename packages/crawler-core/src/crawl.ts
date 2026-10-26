@@ -12,8 +12,10 @@ import type { CrawlRun } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import {
+  CRAWL_DELAY_CAP_MS,
+  checkRobots,
   getCrawlDelayMs,
-  isAllowed,
+  isAiUseAllowed,
   resolveCrawlDelayMs,
 } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
@@ -270,6 +272,7 @@ async function runExtraction(
   html: string,
   finalUrl: string,
   timeZone: string,
+  aiUseAllowed: boolean,
 ): Promise<{
   normalizedEvents: NormalizedEvent[]
   strategy: 'structured_data' | 'llm'
@@ -290,6 +293,15 @@ async function runExtraction(
     normalizedEvents = extractTicketure(html, finalUrl, timeZone)
   }
   if (normalizedEvents.length === 0) {
+    // A site that closes its pages to Anthropic's crawlers, or signals
+    // `ai-input=no`, has said no to exactly what the LLM fallback does. Fail
+    // the run loudly so the venue is moved to structured data, a platform
+    // adapter or manual entry, rather than quietly reporting zero shows.
+    if (!aiUseAllowed) {
+      throw new Error(
+        `No structured data at ${finalUrl}, and robots.txt does not allow AI extraction`,
+      )
+    }
     strategy = 'llm'
     const llmResult = await extractWithLlm(html, finalUrl)
     normalizedEvents = llmResult.events
@@ -406,9 +418,36 @@ export async function crawlVenue(
     JSON.stringify({ event: 'crawl.start', venueId, venueName: venue.name }),
   )
 
-  // Check robots.txt — fails open on fetch errors, blocks only on explicit Disallow
-  const allowed = await isAllowed(venue.websiteUrl, CRAWLER_USER_AGENT)
-  if (!allowed) {
+  // Check robots.txt. An explicit Disallow marks the venue blocked; a robots.txt
+  // we could not reach (5xx, 429, timeout) skips this run without marking the
+  // venue, since RFC 9309 says to assume a full disallow until it answers.
+  const robots = await checkRobots(venue.websiteUrl, CRAWLER_USER_AGENT)
+  if (robots.status === 'unreachable') {
+    console.log(
+      JSON.stringify({
+        event: 'crawl.robots_unreachable',
+        venueId,
+        url: venue.websiteUrl,
+        reason: robots.reason,
+      }),
+    )
+    const [crawlRun] = await db
+      .insert(crawlRuns)
+      .values({
+        id,
+        venueId,
+        status: 'skipped',
+        robotsTxtBlocked: 'unchecked',
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: `robots.txt unreachable (${robots.reason}); not crawled`,
+        durationMs: Date.now() - startedAt,
+      })
+      .returning()
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    return { ...crawlRun, insertedEventIds: [] }
+  }
+  if (robots.status === 'disallowed') {
     console.log(
       JSON.stringify({
         event: 'crawl.robots_blocked',
@@ -442,11 +481,37 @@ export async function crawlVenue(
 
   // Reconcile our own pacing with the site's stated Crawl-delay, once, and
   // thread the result through every request this run makes. Reads the same
-  // cached robots.txt the isAllowed check above already fetched.
+  // cached robots.txt the check above already fetched. Null means the site
+  // asked for a longer gap than one run can keep, so we skip rather than pace
+  // faster than it asked.
   const crawlDelayMs = resolveCrawlDelayMs(
     venue.crawlDelayMs,
     await getCrawlDelayMs(venue.websiteUrl, CRAWLER_USER_AGENT),
     { venueId, url: venue.websiteUrl },
+  )
+  if (crawlDelayMs === null) {
+    const [crawlRun] = await db
+      .insert(crawlRuns)
+      .values({
+        id,
+        venueId,
+        status: 'skipped',
+        robotsTxtBlocked: 'no',
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: `robots.txt Crawl-delay exceeds ${CRAWL_DELAY_CAP_MS / 1000}s; not crawled`,
+        durationMs: Date.now() - startedAt,
+      })
+      .returning()
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    return { ...crawlRun, insertedEventIds: [] }
+  }
+
+  // Whether this site's robots.txt lets its page text go to an AI model. Only
+  // the LLM fallback needs it; structured data and platform adapters do not.
+  const aiUseAllowed = await isAiUseAllowed(
+    venue.websiteUrl,
+    CRAWLER_USER_AGENT,
   )
 
   try {
@@ -687,11 +752,17 @@ export async function crawlVenue(
             browserResult.html,
             browserResult.finalUrl,
             venue.timezone,
+            aiUseAllowed,
           )
           resolvedMode = 'browser'
         }
       } else {
-        extraction = await runExtraction(html, finalUrl, venue.timezone)
+        extraction = await runExtraction(
+          html,
+          finalUrl,
+          venue.timezone,
+          aiUseAllowed,
+        )
       }
     }
 
