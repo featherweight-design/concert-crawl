@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   CRAWL_DELAY_CAP_MS,
+  CrawlSkipError,
   checkRobots,
   getCrawlDelayMs,
   isAiUseAllowed,
   isAllowed,
+  isAllowedOrSkip,
   resolveCrawlDelayMs,
 } from './robots.js'
 
@@ -208,13 +210,13 @@ describe('robots.ts', () => {
       expect(result).toBe(true)
     })
 
-    it('treats a blank line as the end of a group', async () => {
+    it('keeps a group going across a blank line (RFC 9309)', async () => {
       mockRobots(['User-agent: ConcertCrawl', '', 'Disallow: /events'])
       const result = await isAllowed(
-        'https://blank-ends-group.example/events',
+        'https://blank-in-group.example/events',
         USER_AGENT,
       )
-      expect(result).toBe(true)
+      expect(result).toBe(false)
     })
   })
 
@@ -488,10 +490,51 @@ describe('robots.ts', () => {
       ).toBe(true)
     })
 
+    it('matches a percent-encoded unreserved character as its literal', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /foo/bar/baz'])
+      expect(
+        await isAllowed('https://pct.example/foo/bar/%62%61%7A', USER_AGENT),
+      ).toBe(false)
+    })
+
+    it('keeps an escaped reserved character distinct from its literal', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /a/b'])
+      expect(
+        await isAllowed('https://pct-reserved.example/a%2fb', USER_AGENT),
+      ).toBe(true)
+    })
+
+    it('matches a rule written with a literal non-ASCII path', async () => {
+      mockRobots(['User-agent: *', 'Disallow: /café'])
+      expect(
+        await isAllowed('https://pct-unicode.example/caf%C3%A9', USER_AGENT),
+      ).toBe(false)
+    })
+
     it('matches the query string as part of the path', async () => {
       mockRobots(['User-agent: *', 'Disallow: /events?page='])
       expect(
         await isAllowed('https://query.example/events?page=2', USER_AGENT),
+      ).toBe(false)
+    })
+  })
+
+  describe('isAllowedOrSkip', () => {
+    it('throws a skip, not a disallow, when robots.txt is unreachable', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('Unavailable', { status: 503 }),
+      )
+      await expect(
+        isAllowedOrSkip('https://skip-503.example/events', USER_AGENT),
+      ).rejects.toBeInstanceOf(CrawlSkipError)
+    })
+
+    it('returns false for an explicit disallow', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('User-agent: *\nDisallow: /', { status: 200 }),
+      )
+      expect(
+        await isAllowedOrSkip('https://skip-disallow.example/x', USER_AGENT),
       ).toBe(false)
     })
   })
@@ -521,6 +564,19 @@ describe('robots.ts', () => {
         'Allow: /',
       ])
       const url = 'https://claudebot-blocked.example/events'
+      expect(await isAllowed(url, USER_AGENT)).toBe(true)
+      expect(await isAiUseAllowed(url, USER_AGENT)).toBe(false)
+    })
+
+    it('applies a wildcard disallow to AI agents when only we are exempted', async () => {
+      mockRobots([
+        'User-agent: *',
+        'Disallow: /',
+        '',
+        'User-agent: ConcertCrawl',
+        'Allow: /',
+      ])
+      const url = 'https://only-us-exempt.example/events'
       expect(await isAllowed(url, USER_AGENT)).toBe(true)
       expect(await isAiUseAllowed(url, USER_AGENT)).toBe(false)
     })

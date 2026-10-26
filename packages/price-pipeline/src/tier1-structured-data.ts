@@ -6,6 +6,7 @@ import {
 } from '@concert-crawl/crawler-core/robots'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
+import { PriceFetchDeferredError } from './types.js'
 import type { PipelineContext, PriceTierResult } from './types.js'
 
 // Our own floor between requests, the same 3 seconds `fetchPage` uses.
@@ -48,11 +49,14 @@ export async function tier1StructuredData(
 
   // The same robots.txt gate and pacing as every crawler request: the price
   // URL is a venue page, and the pipeline asks for it once per unpriced event.
-  if (
-    (await checkRobots(ctx.priceUrl, CRAWLER_USER_AGENT)).status !== 'allowed'
-  ) {
-    return null
+  const robots = await checkRobots(ctx.priceUrl, CRAWLER_USER_AGENT)
+  if (robots.status === 'unreachable') {
+    // Not a verdict on this event: try again next run instead of giving up.
+    throw new PriceFetchDeferredError(
+      `robots.txt unreachable for ${ctx.priceUrl} (${robots.reason})`,
+    )
   }
+  if (robots.status !== 'allowed') return null
   const delayMs = resolveCrawlDelayMs(
     PRICE_FETCH_DELAY_MS,
     await getCrawlDelayMs(ctx.priceUrl, CRAWLER_USER_AGENT),

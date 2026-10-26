@@ -97,8 +97,9 @@ function parseContentSignals(raw: string): Map<string, string> {
  *
  * Group semantics follow RFC 9309: consecutive `User-agent:` lines accumulate
  * into one group, the group's directives start at the first non-`User-agent:`
- * line, and a comment line does not end a group. A blank line also ends one,
- * which is stricter than the RFC: directives stranded after it apply to nobody.
+ * line, and a `User-agent:` line after directives opens the next group. Blank
+ * lines and comment lines end nothing: a Disallow separated from its
+ * `User-agent:` by a blank line still applies.
  */
 function parseGroups(text: string): Group[] {
   const groups: Group[] = []
@@ -111,11 +112,7 @@ function parseGroups(text: string): Group[] {
     if (raw.startsWith('#')) continue
     const line = stripInlineComment(raw)
 
-    if (line === '') {
-      current = null
-      sawDirective = false
-      continue
-    }
+    if (line === '') continue
 
     const colon = line.indexOf(':')
     if (colon === -1) continue
@@ -172,17 +169,34 @@ function groupsFor(groups: Group[], userAgent: string): Group[] {
   return groups.filter((group) => group.agents.includes('*'))
 }
 
+// RFC 9309 §2.2.2 compares paths after percent-decoding: an escaped
+// unreserved character (`%62` for `b`) is the same path as the literal one,
+// so it is decoded, while an escaped reserved character (`%2F`) keeps its
+// meaning and stays escaped, upper-cased so `%2f` and `%2F` compare equal.
+// Non-ASCII in a rule is encoded the way `URL` encodes it in a target.
+function normalizePath(path: string): string {
+  const encoded = path.replace(/[^\x21-\x7e]/g, (char) =>
+    encodeURIComponent(char),
+  )
+  return encoded.replace(/%([0-9a-fA-F]{2})/g, (_match, hex: string) => {
+    const char = String.fromCharCode(parseInt(hex, 16))
+    return /[A-Za-z0-9\-._~]/.test(char) ? char : `%${hex.toUpperCase()}`
+  })
+}
+
 // The length a rule's path counts for in longest-match precedence, and whether
 // it matches. `*` matches any run of characters and a trailing `$` anchors the
 // end, per RFC 9309 §2.2.3.
 function ruleMatches(rulePath: string, target: string): boolean {
   const anchored = rulePath.endsWith('$')
-  const body = anchored ? rulePath.slice(0, -1) : rulePath
+  const body = normalizePath(anchored ? rulePath.slice(0, -1) : rulePath)
   const pattern = body
     .split('*')
     .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
     .join('.*')
-  return new RegExp(`^${pattern}${anchored ? '$' : ''}`).test(target)
+  return new RegExp(`^${pattern}${anchored ? '$' : ''}`).test(
+    normalizePath(target),
+  )
 }
 
 /**
@@ -262,6 +276,37 @@ async function fetchRobotsTxt(
   return result
 }
 
+/**
+ * A run that should not happen today, through no fault of the venue: its
+ * robots.txt could not be reached, or it asks for a longer gap between
+ * requests than one run can keep. Thrown by adapters so `crawlVenue` records
+ * a skipped run instead of a failure that counts toward pausing the venue.
+ */
+export class CrawlSkipError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CrawlSkipError'
+  }
+}
+
+/**
+ * Throws `CrawlSkipError` when robots.txt for `url` is unreachable, and
+ * returns whether the URL is allowed otherwise. For adapters, which turn a
+ * `false` into their own disallowed error.
+ */
+export async function isAllowedOrSkip(
+  url: string,
+  userAgent: string,
+): Promise<boolean> {
+  const verdict = await checkRobots(url, userAgent)
+  if (verdict.status === 'unreachable') {
+    throw new CrawlSkipError(
+      `robots.txt unreachable for ${url} (${verdict.reason}); not crawled`,
+    )
+  }
+  return verdict.status === 'allowed'
+}
+
 export type RobotsVerdict =
   | { status: 'allowed' }
   | { status: 'disallowed' }
@@ -307,7 +352,8 @@ export async function isAllowed(
 
 /**
  * Whether a page's text may be sent to an AI model, judged by the site's own
- * robots.txt: no applicable group for an Anthropic crawler disallows the path,
+ * robots.txt: no group that applies to an Anthropic crawler (its own, or `*`
+ * when it has none) disallows the path,
  * and no group that applies to us states `Content-Signal: ai-input=no`.
  *
  * Fetched as `userAgent` (ourselves) and read on the same cache as the
@@ -324,12 +370,11 @@ export async function isAiUseAllowed(
   const groups = parseGroups(robots.text)
   const target = pathOf(url)
 
+  // Each agent gets the same precedence the crawl gate uses: its own groups,
+  // or the wildcard groups when it has none. A site that disallows `*` and
+  // exempts only ConcertCrawl has not exempted Claude.
   for (const agent of AI_USER_AGENTS) {
-    const specific = groups.filter((group) =>
-      group.agents.includes(productToken(agent)),
-    )
-    if (specific.length === 0) continue
-    const rules = specific.flatMap((group) => group.rules)
+    const rules = groupsFor(groups, agent).flatMap((group) => group.rules)
     if (!isPathAllowed(rules, target)) return false
   }
 

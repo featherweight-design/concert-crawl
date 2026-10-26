@@ -19,6 +19,7 @@ import {
 } from '@concert-crawl/crawler-core/robots'
 import { jitter } from '@concert-crawl/crawler-core/jitter'
 import { tier1StructuredData } from '../tier1-structured-data.js'
+import { PriceFetchDeferredError } from '../types.js'
 import type { PipelineContext } from '../types.js'
 
 const baseCtx: PipelineContext = {
@@ -63,7 +64,7 @@ describe('tier1StructuredData', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('does not fetch when robots.txt is unreachable', async () => {
+  it('defers rather than fetching when robots.txt is unreachable', async () => {
     vi.mocked(checkRobots).mockResolvedValueOnce({
       status: 'unreachable',
       reason: 'HTTP 503',
@@ -71,7 +72,9 @@ describe('tier1StructuredData', () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await tier1StructuredData(baseCtx)).toBeNull()
+    await expect(tier1StructuredData(baseCtx)).rejects.toBeInstanceOf(
+      PriceFetchDeferredError,
+    )
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

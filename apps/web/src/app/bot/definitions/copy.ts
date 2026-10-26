@@ -67,7 +67,7 @@ export const BOT_COPY = {
     disallow: {
       label: 'Disallow',
       value:
-        "We check robots.txt before every request we make to your site, API calls included, and obey any Disallow that applies to us under the RFC 9309 rules. If it returns a server error or doesn't answer, we don't crawl you that day.",
+        "We check robots.txt before every page and API call we request, obey any Disallow that applies to us under the RFC 9309 rules, and throw away any page a redirect lands on that you disallow. If it returns a server error or doesn't answer, we don't crawl you that day.",
     },
     recheck: {
       label: 'Re-check',

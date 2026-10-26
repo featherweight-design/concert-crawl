@@ -2,9 +2,20 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 
 vi.mock('@concert-crawl/crawler-core/robots', () => ({
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
+  getCrawlDelayMs: vi.fn().mockResolvedValue(null),
+  resolveCrawlDelayMs: vi.fn().mockReturnValue(3000),
+}))
+// Zero out the pause so the suite doesn't sleep; the delay it was asked for
+// is asserted on the jitter call instead.
+vi.mock('@concert-crawl/crawler-core/jitter', () => ({
+  jitter: vi.fn().mockReturnValue(0),
 }))
 
-import { checkRobots } from '@concert-crawl/crawler-core/robots'
+import { jitter } from '@concert-crawl/crawler-core/jitter'
+import {
+  checkRobots,
+  resolveCrawlDelayMs,
+} from '@concert-crawl/crawler-core/robots'
 import { detectTicketVendor } from '../detect-ticket-vendor.js'
 
 afterEach(() => vi.clearAllMocks())
@@ -21,6 +32,20 @@ const mockFetch = (html: string) =>
 describe('detectTicketVendor', () => {
   it('does not fetch a site whose robots.txt disallows us', async () => {
     vi.mocked(checkRobots).mockResolvedValueOnce({ status: 'disallowed' })
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await detectTicketVendor('https://venue.example')).toBe('unknown')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('waits the crawl delay between the robots.txt read and the page fetch', async () => {
+    mockFetch('<p>nothing</p>')
+    await detectTicketVendor('https://venue.example')
+    expect(jitter).toHaveBeenCalledWith(3000)
+  })
+
+  it('does not fetch a site whose Crawl-delay exceeds the cap', async () => {
+    vi.mocked(resolveCrawlDelayMs).mockReturnValueOnce(null)
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     expect(await detectTicketVendor('https://venue.example')).toBe('unknown')

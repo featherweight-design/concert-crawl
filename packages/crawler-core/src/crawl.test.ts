@@ -177,6 +177,7 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   // stubbing it would only ever test the stub. Keep the real one.
   ...(await importOriginal<typeof import('./lib/robots.js')>()),
   isAllowed: vi.fn().mockResolvedValue(true),
+  isAllowedOrSkip: vi.fn().mockResolvedValue(true),
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
@@ -201,7 +202,12 @@ import {
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
-import { checkRobots, getCrawlDelayMs, isAiUseAllowed } from './lib/robots.js'
+import {
+  CrawlSkipError,
+  checkRobots,
+  getCrawlDelayMs,
+  isAiUseAllowed,
+} from './lib/robots.js'
 import {
   db,
   venues,
@@ -1436,6 +1442,22 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     return { venue, fetch }
   }
 
+  it('records a skipped run and no strike when the adapter declines on robots.txt', async () => {
+    const { venue, fetch } = seedPlatformVenue(1)
+    fetch.mockRejectedValueOnce(
+      new CrawlSkipError('robots.txt unreachable for the API; not crawled'),
+    )
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('skipped')
+    expect(run.robotsTxtBlocked).toBe('unchecked')
+    expect(run.errorMessage).toContain('robots.txt unreachable')
+    const stored = stores.venues.find((row) => row.id === venue.id)
+    expect(stored?.consecutiveFailures).toBe(0)
+    expect(stored?.blockedAt ?? null).toBeNull()
+  })
+
   it('never issues a platform fetch without a per-request timeout', async () => {
     // The adapters omit the AbortSignal entirely when the timeout is
     // undefined, so an unset budget means a hung connection on the nightly
@@ -1670,6 +1692,23 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(extractWithLlm).not.toHaveBeenCalled()
     expect(run.status).toBe('failed')
     expect(run.errorMessage).toContain('does not allow AI extraction')
+  })
+
+  it('checks the AI signal of the host a redirect lands on, not just the venue site', async () => {
+    const venue = seedVenue({ crawlMode: 'http' })
+    vi.mocked(isAiUseAllowed).mockImplementation(
+      async (url) => !url.startsWith('https://tickets.elsewhere.example'),
+    )
+    mockFetchPageHttp.mockResolvedValue({
+      ...FETCH_RESULT,
+      finalUrl: 'https://tickets.elsewhere.example/events',
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(extractWithLlm).not.toHaveBeenCalled()
+    expect(run.errorMessage).toContain('does not allow AI extraction')
+    vi.mocked(isAiUseAllowed).mockResolvedValue(true)
   })
 
   it('auto-detect: saves crawlMode=http when HTTP fetch returns JSON-LD events (no LLM called)', async () => {

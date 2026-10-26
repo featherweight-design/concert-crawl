@@ -98,8 +98,8 @@ describe('aegFetcher.fetch', () => {
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
     // Stub the robots gate so the rest of the suite keeps asserting on the
-    // blob request alone. isAllowed() would otherwise issue its own fetch.
-    isAllowedSpy = vi.spyOn(robots, 'isAllowed').mockResolvedValue(true)
+    // blob request alone. isAllowedOrSkip() would otherwise issue its own fetch.
+    isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
   })
 
   afterEach(() => {

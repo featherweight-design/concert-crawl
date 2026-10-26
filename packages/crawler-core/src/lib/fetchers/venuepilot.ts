@@ -18,7 +18,12 @@ import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { CrawlFetchError } from '../fetcher.js'
-import { isAllowed } from '../robots.js'
+import {
+  CrawlSkipError,
+  getCrawlDelayMs,
+  isAllowedOrSkip,
+  resolveCrawlDelayMs,
+} from '../robots.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -370,11 +375,23 @@ async function venuePilotFetch(
   // `User-agent: *` / `Disallow: /` group; RFC 9309 combines the two and an
   // equal-length tie goes to Allow, so today this passes. If VenuePilot ever
   // closes it for real, the venue fails here and is paused like any other.
-  if (!(await isAllowed(ENDPOINT, CRAWLER_USER_AGENT))) {
+  if (!(await isAllowedOrSkip(ENDPOINT, CRAWLER_USER_AGENT))) {
     throw new VenuePilotFetchError(
       0,
       ENDPOINT,
       `robots.txt disallows ${ENDPOINT}`,
+    )
+  }
+  // The endpoint's host states its own pacing, separate from the venue's
+  // website, and it is the host every page of this run is asked of.
+  const crawlDelayMs = resolveCrawlDelayMs(
+    opts.crawlDelayMs,
+    await getCrawlDelayMs(ENDPOINT, CRAWLER_USER_AGENT),
+    { venueId: venue.id, url: ENDPOINT },
+  )
+  if (crawlDelayMs === null) {
+    throw new CrawlSkipError(
+      `robots.txt Crawl-delay for ${ENDPOINT} exceeds the cap; not crawled`,
     )
   }
 
@@ -387,7 +404,7 @@ async function venuePilotFetch(
   let pagesFetched = 0
 
   for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
-    await deadline.wait(jitter(opts.crawlDelayMs))
+    await deadline.wait(jitter(crawlDelayMs))
     const paginated = await deadline.run(`page-${page}`, (timeoutMs) =>
       fetchPage(accountId, startDate, page, timeoutMs),
     )

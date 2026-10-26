@@ -13,6 +13,7 @@ import { reportFailure } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import {
   CRAWL_DELAY_CAP_MS,
+  CrawlSkipError,
   checkRobots,
   getCrawlDelayMs,
   isAiUseAllowed,
@@ -507,12 +508,22 @@ export async function crawlVenue(
     return { ...crawlRun, insertedEventIds: [] }
   }
 
-  // Whether this site's robots.txt lets its page text go to an AI model. Only
-  // the LLM fallback needs it; structured data and platform adapters do not.
-  const aiUseAllowed = await isAiUseAllowed(
+  // Whether robots.txt lets text from a given URL go to an AI model. The
+  // venue's own site must allow it, and so must the host the text actually
+  // came from: a redirect can land the page elsewhere, and a platform
+  // adapter's events come from the platform's host. Verdicts are cached per
+  // origin inside robots.ts, so asking per event costs no extra requests.
+  const siteAiUseAllowed = await isAiUseAllowed(
     venue.websiteUrl,
     CRAWLER_USER_AGENT,
   )
+  const aiUseAllowedFor = async (
+    sourceUrl: string | null | undefined,
+  ): Promise<boolean> => {
+    if (!siteAiUseAllowed) return false
+    if (!sourceUrl) return true
+    return isAiUseAllowed(sourceUrl, CRAWLER_USER_AGENT)
+  }
 
   try {
     // Platform fetcher dispatch (#623). If the venue is on a known
@@ -752,7 +763,7 @@ export async function crawlVenue(
             browserResult.html,
             browserResult.finalUrl,
             venue.timezone,
-            aiUseAllowed,
+            await aiUseAllowedFor(browserResult.finalUrl),
           )
           resolvedMode = 'browser'
         }
@@ -761,7 +772,7 @@ export async function crawlVenue(
           html,
           finalUrl,
           venue.timezone,
-          aiUseAllowed,
+          await aiUseAllowedFor(finalUrl),
         )
       }
     }
@@ -948,7 +959,7 @@ export async function crawlVenue(
       }
       const derived = await deriveArtists(
         evt,
-        aiUseAllowed ? adjudicateEvent : null,
+        (await aiUseAllowedFor(evt.sourceUrl)) ? adjudicateEvent : null,
       )
       if (derived.adjudicated) adjudicationCount += 1
       normalizedEvents.push({
@@ -1728,6 +1739,28 @@ export async function crawlVenue(
 
     return { ...crawlRun, insertedEventIds }
   } catch (err) {
+    // A platform adapter that could not read the robots.txt governing its
+    // endpoint, or was asked for a Crawl-delay above the cap, declines the
+    // run. That is our choice not to crawl, not a venue failure: record it as
+    // skipped and leave the strike count alone, like the pre-fetch skips above.
+    if (err instanceof CrawlSkipError) {
+      const [crawlRun] = await db
+        .insert(crawlRuns)
+        .values({
+          id,
+          venueId,
+          status: 'skipped',
+          robotsTxtBlocked: 'unchecked',
+          eventsFound: 0,
+          eventsInserted: 0,
+          errorMessage: err.message,
+          durationMs: Date.now() - startedAt,
+        })
+        .returning()
+      if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+      return { ...crawlRun, insertedEventIds: [] }
+    }
+
     // A selector timeout carries the HTML the page was showing when it gave up.
     // This is the only capture point for that failure — the successful-fetch
     // capture above is never reached when the selector never resolves.

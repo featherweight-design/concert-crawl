@@ -2,6 +2,22 @@ import type { Browser } from 'playwright'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import { jitter } from './fetchers/jitter.js'
+import { isAllowedOrSkip } from './robots.js'
+
+// The most redirect hops fetchPageHttp follows, matching fetch's own limit.
+const MAX_REDIRECTS = 20
+
+// robots.txt for wherever a redirect points must allow it before we follow.
+// The starting URL is checked by the caller; this covers the hops after it.
+// An unreachable robots.txt throws CrawlSkipError, like every other gate.
+async function assertRedirectAllowed(from: string, to: string): Promise<void> {
+  if (!(await isAllowedOrSkip(to, CRAWLER_USER_AGENT))) {
+    console.log(
+      JSON.stringify({ event: 'fetch.redirect_disallowed', from, to }),
+    )
+    throw new Error(`robots.txt disallows redirect target ${to} (from ${from})`)
+  }
+}
 
 export class CrawlFetchError extends Error {
   constructor(
@@ -53,6 +69,38 @@ export async function fetchPage(
 
     console.log(JSON.stringify({ event: 'fetch.start', url }))
 
+    // A navigation the page starts itself (a script or meta refresh sending it
+    // elsewhere) is a new request we choose to make, so it clears robots.txt
+    // first. Server redirects inside goto() never reach a route handler in
+    // Playwright, so those are checked against the redirect chain below.
+    await page.route('**/*', async (route) => {
+      const request = route.request()
+      if (
+        !request.isNavigationRequest() ||
+        request.frame() !== page.mainFrame() ||
+        request.url() === url
+      ) {
+        await route.continue()
+        return
+      }
+      const allowed = await isAllowedOrSkip(
+        request.url(),
+        CRAWLER_USER_AGENT,
+      ).catch(() => false)
+      if (allowed) {
+        await route.continue()
+      } else {
+        console.log(
+          JSON.stringify({
+            event: 'fetch.navigation_disallowed',
+            url,
+            to: request.url(),
+          }),
+        )
+        await route.abort('blockedbyclient')
+      }
+    })
+
     let httpStatus = 200
     page.on('response', (response) => {
       if (
@@ -72,6 +120,21 @@ export async function fetchPage(
     })
 
     const finalStatus = response?.status() ?? httpStatus
+
+    // Every hop of a server redirect, and where it landed, must be a URL
+    // robots.txt lets us fetch. Playwright follows redirects before we can
+    // intervene, so a disallowed hop means we discard the page unread.
+    const hops: string[] = []
+    for (
+      let request = response?.request().redirectedFrom() ?? null;
+      request;
+      request = request.redirectedFrom()
+    ) {
+      hops.push(request.url())
+    }
+    for (const hop of [...hops, response?.url() ?? page.url()]) {
+      if (hop !== url) await assertRedirectAllowed(url, hop)
+    }
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
@@ -172,13 +235,27 @@ export async function fetchPageHttp(
 
   console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }))
 
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': CRAWLER_USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml',
-    },
-    redirect: 'follow',
-  })
+  // Follow redirects by hand so robots.txt can veto each hop before we
+  // request it, rather than learning where we went after the fact.
+  let currentUrl = url
+  let response: Response | undefined
+  for (let hop = 0; ; hop++) {
+    response = await fetch(currentUrl, {
+      headers: {
+        'User-Agent': CRAWLER_USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml',
+      },
+      redirect: 'manual',
+    })
+    const location = response.headers.get('location')
+    if (response.status < 300 || response.status >= 400 || !location) break
+    if (hop >= MAX_REDIRECTS) {
+      throw new Error(`Too many redirects starting at ${url}`)
+    }
+    const next = new URL(location, currentUrl).toString()
+    await assertRedirectAllowed(currentUrl, next)
+    currentUrl = next
+  }
 
   if (response.status === 403 || response.status === 429) {
     console.log(
@@ -198,7 +275,7 @@ export async function fetchPageHttp(
   }
 
   const html = await response.text()
-  const finalUrl = response.url
+  const finalUrl = currentUrl
 
   console.log(
     JSON.stringify({

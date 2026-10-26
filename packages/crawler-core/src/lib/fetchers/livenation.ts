@@ -38,7 +38,7 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
-import { isAllowed } from '../robots.js'
+import { isAllowed, isAllowedOrSkip } from '../robots.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -361,7 +361,7 @@ async function liveNationFetch(
   // could allow /shows and disallow /sitemap.xml or /shows/calendar/ — each
   // URL we fetch has to clear the gate on its own. isAllowed() caches
   // robots.txt per domain, so this is one extra request for the whole run.
-  if (!(await isAllowed(sitemapUrl, CRAWLER_USER_AGENT))) {
+  if (!(await isAllowedOrSkip(sitemapUrl, CRAWLER_USER_AGENT))) {
     throw new LiveNationFetchError(
       0,
       sitemapUrl,

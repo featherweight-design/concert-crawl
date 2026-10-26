@@ -498,8 +498,9 @@ describe('detailPageFetcher.fetch', () => {
     ).join('')
     mockSiteFetch({ listing: links, sitemap: '' })
     await detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
-    // Listing + sitemap + exactly the capped detail pages — never the 40
-    // candidates past the cap, which are pre-flight work we would throw away.
-    expect(spy).toHaveBeenCalledTimes(MAX_DETAIL_PAGES + 2)
+    // Sitemap + exactly the capped detail pages — never the 40 candidates
+    // past the cap, which are pre-flight work we would throw away. (The
+    // listing goes through isAllowedOrSkip, which this spy does not see.)
+    expect(spy).toHaveBeenCalledTimes(MAX_DETAIL_PAGES + 1)
   })
 })

@@ -26,7 +26,7 @@ import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
-import { isAllowed } from '../robots.js'
+import { isAllowedOrSkip } from '../robots.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -351,10 +351,11 @@ async function aegFetch(
   // crawl.ts gates on venue.websiteUrl only, and the blob lives on a
   // different domain, so the URL we actually fetch has to clear robots.txt
   // on its own (#985) — the same gate Live Nation and detail-page apply.
-  // isAllowed() caches per domain and fails open, so today (the blob host
-  // has no robots.txt) this is one extra request for the whole run and
-  // changes nothing. It future-proofs us against AEG serving a policy.
-  if (!(await isAllowed(url, CRAWLER_USER_AGENT))) {
+  // The verdict is cached per origin, so today (the blob host has no
+  // robots.txt, which reads as no rules) this is one extra request for the
+  // whole run. An unreachable robots.txt skips the run rather than failing
+  // the venue. It future-proofs us against AEG serving a policy.
+  if (!(await isAllowedOrSkip(url, CRAWLER_USER_AGENT))) {
     throw new AegFetchError(0, url, `robots.txt disallows ${url}`)
   }
 

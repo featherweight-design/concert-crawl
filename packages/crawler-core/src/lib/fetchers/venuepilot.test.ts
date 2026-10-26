@@ -121,16 +121,19 @@ describe('venuePilotFetcher.canHandle', () => {
 describe('venuePilotFetcher.fetch', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
   let isAllowedSpy: ReturnType<typeof vi.spyOn>
+  let crawlDelaySpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
     // Stub the robots gate so the rest of the suite keeps asserting on the
-    // API requests alone. isAllowed() would otherwise issue its own fetch.
-    isAllowedSpy = vi.spyOn(robots, 'isAllowed').mockResolvedValue(true)
+    // API requests alone. isAllowedOrSkip() would otherwise issue its own fetch.
+    isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
+    crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null)
   })
   afterEach(() => {
     fetchSpy.mockRestore()
     isAllowedSpy.mockRestore()
+    crawlDelaySpy.mockRestore()
   })
 
   function mockFetchOk(body: string): void {
@@ -528,6 +531,23 @@ describe('venuePilotFetcher.fetch', () => {
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toThrow('robots.txt disallows https://www.venuepilot.co/graphql')
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('skips the run when the endpoint asks for a Crawl-delay above the cap', async () => {
+    crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000)
+    await expect(
+      venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(robots.CrawlSkipError)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("reads the Crawl-delay from the endpoint's own robots.txt", async () => {
+    mockFetchOk(LEVITT_FIXTURE)
+    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    expect(crawlDelaySpy).toHaveBeenCalledWith(
+      'https://www.venuepilot.co/graphql',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+    )
   })
 
   it('loops pages up to metadata.totalPages and concatenates', async () => {

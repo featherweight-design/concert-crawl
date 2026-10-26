@@ -15,7 +15,8 @@ vi.mock('@concert-crawl/db', () => ({
 vi.mock('../tier1-structured-data.js', () => ({ tier1StructuredData: vi.fn() }))
 vi.mock('../tier6-community.js', () => ({ tier6Community: vi.fn() }))
 
-const { runPricePipeline } = await import('../index.js')
+const { runPricePipeline, PriceFetchDeferredError } =
+  await import('../index.js')
 const { tier1StructuredData } = await import('../tier1-structured-data.js')
 const { tier6Community } = await import('../tier6-community.js')
 const { db } = await import('@concert-crawl/db')
@@ -73,14 +74,23 @@ describe('runPricePipeline', () => {
     expect(tier6Community).toHaveBeenCalledWith(ctx)
   })
 
+  it('does NOT stamp pipelineExhaustedAt when tier 1 deferred', async () => {
+    vi.mocked(tier1StructuredData).mockRejectedValue(
+      new PriceFetchDeferredError('robots.txt unreachable'),
+    )
+    await runPricePipeline(ctx)
+    // Tier 6 still runs; nothing hit, and the event is left for the next run.
+    expect(tier6Community).toHaveBeenCalledWith(ctx)
+    expect(vi.mocked(db.update)).not.toHaveBeenCalled()
+  })
+
   it('stamps pipelineExhaustedAt when both tiers return null', async () => {
     await runPricePipeline(ctx)
     expect(tier6Community).toHaveBeenCalledWith(ctx)
     // db.update always returns the same mock chain; retrieve set's call args
     // from the mock results without calling db.update again.
     const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
-      | ReturnType<typeof vi.fn>
-      | undefined
+      ReturnType<typeof vi.fn> | undefined
     const setCallArgs = (setMock?.mock?.calls ?? []).map(
       (callArgs: unknown[]) => callArgs[0],
     )
@@ -102,8 +112,7 @@ describe('runPricePipeline', () => {
     await runPricePipeline(ctx)
     expect(tier6Community).not.toHaveBeenCalled()
     const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
-      | ReturnType<typeof vi.fn>
-      | undefined
+      ReturnType<typeof vi.fn> | undefined
     const setCallArgs = (setMock?.mock?.calls ?? []).map(
       (callArgs: unknown[]) => callArgs[0],
     )
@@ -126,8 +135,7 @@ describe('runPricePipeline', () => {
     await runPricePipeline(ctx)
     expect(tier6Community).toHaveBeenCalledWith(ctx)
     const setMock = vi.mocked(db.update).mock.results[0]?.value?.set as
-      | ReturnType<typeof vi.fn>
-      | undefined
+      ReturnType<typeof vi.fn> | undefined
     const setCallArgs = (setMock?.mock?.calls ?? []).map(
       (callArgs: unknown[]) => callArgs[0],
     )

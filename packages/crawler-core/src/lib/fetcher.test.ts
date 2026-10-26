@@ -5,12 +5,23 @@ import {
   CrawlFetchError,
   CrawlSelectorTimeoutError,
 } from './fetcher.js'
-import type { Browser, BrowserContext, Page, Response } from 'playwright'
+import type {
+  Browser,
+  BrowserContext,
+  Page,
+  Request,
+  Response,
+  Route,
+} from 'playwright'
+import * as robots from './robots.js'
 
 // jitter(0) = 0, so tests that pass crawlDelayMs 0 never wait. Pinning random
 // keeps any test that does pass a delay deterministic.
+// Every redirect hop clears robots.txt; allowed unless a test says otherwise.
+let isAllowedSpy: ReturnType<typeof vi.spyOn>
 beforeEach(() => {
   vi.spyOn(Math, 'random').mockReturnValue(0.5)
+  isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -23,12 +34,35 @@ function makeTimeoutError(message: string): Error {
   return err
 }
 
+// A Playwright response for `url`, reached through `redirectedFrom` (oldest
+// hop first) when given.
+function makeResponse(
+  status: number,
+  url = 'https://example.com',
+  redirectedFrom: string[] = [],
+): Response {
+  let previous: Request | null = null
+  for (const hop of redirectedFrom) {
+    const prior = previous
+    previous = {
+      url: () => hop,
+      redirectedFrom: () => prior,
+    } as unknown as Request
+  }
+  const head = previous
+  return {
+    status: () => status,
+    url: () => url,
+    request: () => ({ redirectedFrom: () => head }),
+  } as unknown as Response
+}
+
 function makeMockPage(overrides: Partial<Page> = {}): Page {
   return {
     on: vi.fn(),
-    goto: vi
-      .fn()
-      .mockResolvedValue({ status: () => 200 } as unknown as Response),
+    route: vi.fn().mockResolvedValue(undefined),
+    mainFrame: vi.fn().mockReturnValue('main-frame'),
+    goto: vi.fn().mockResolvedValue(makeResponse(200)),
     waitForSelector: vi.fn().mockResolvedValue(null),
     content: vi.fn().mockResolvedValue('<html><body>loaded</body></html>'),
     url: vi.fn().mockReturnValue('https://example.com'),
@@ -105,9 +139,7 @@ describe('fetchPage — waitForSelector', () => {
 
   it('throws CrawlFetchError before calling waitForSelector when response is 403', async () => {
     const page = makeMockPage({
-      goto: vi
-        .fn()
-        .mockResolvedValue({ status: () => 403 } as unknown as Response),
+      goto: vi.fn().mockResolvedValue(makeResponse(403)),
     })
     const browser = makeMockBrowser(page)
 
@@ -188,6 +220,52 @@ describe('fetchPage — waitForSelector', () => {
   })
 })
 
+describe('fetchPage — robots.txt on redirects and navigations', () => {
+  it('discards the page when a server redirect passed through a disallowed URL', async () => {
+    const page = makeMockPage({
+      goto: vi
+        .fn()
+        .mockResolvedValue(
+          makeResponse(200, 'https://example.com/final', [
+            'https://example.com',
+            'https://example.com/private',
+          ]),
+        ),
+    })
+    isAllowedSpy.mockImplementation(
+      async (url: string) => !url.endsWith('/private'),
+    )
+
+    await expect(
+      fetchPage('https://example.com', makeMockBrowser(page), 0),
+    ).rejects.toThrow('robots.txt disallows redirect target')
+    expect(page.content).not.toHaveBeenCalled()
+  })
+
+  it('aborts a main-frame navigation the page starts to a disallowed URL', async () => {
+    const page = makeMockPage()
+    await fetchPage('https://example.com', makeMockBrowser(page), 0)
+    const handler = vi.mocked(page.route).mock.calls[0]?.[1] as (
+      route: Route,
+    ) => Promise<void>
+    isAllowedSpy.mockResolvedValueOnce(false)
+    const route = {
+      request: () => ({
+        isNavigationRequest: () => true,
+        frame: () => 'main-frame',
+        url: () => 'https://example.com/private',
+      }),
+      continue: vi.fn(),
+      abort: vi.fn(),
+    } as unknown as Route
+
+    await handler(route)
+
+    expect(route.abort).toHaveBeenCalled()
+    expect(route.continue).not.toHaveBeenCalled()
+  })
+})
+
 describe('fetchPageHttp', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
@@ -201,6 +279,7 @@ describe('fetchPageHttp', () => {
     mockFetch.mockResolvedValue({
       status: 200,
       url: 'https://example.com',
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue('<html>events</html>'),
     } as unknown as Response)
 
@@ -218,11 +297,16 @@ describe('fetchPageHttp', () => {
 
   it('returns html, httpStatus, and finalUrl on success', async () => {
     const mockFetch = vi.mocked(fetch)
-    mockFetch.mockResolvedValue({
-      status: 200,
-      url: 'https://example.com/redirected',
-      text: vi.fn().mockResolvedValue('<html>event content</html>'),
-    } as unknown as Response)
+    mockFetch
+      .mockResolvedValueOnce({
+        status: 301,
+        headers: new Headers({ location: '/redirected' }),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        status: 200,
+        headers: new Headers(),
+        text: vi.fn().mockResolvedValue('<html>event content</html>'),
+      } as unknown as Response)
 
     const result = await fetchPageHttp('https://example.com', 0)
 
@@ -238,6 +322,7 @@ describe('fetchPageHttp', () => {
     mockFetch.mockResolvedValue({
       status: 403,
       url: 'https://example.com',
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue(''),
     } as unknown as Response)
 
@@ -251,6 +336,7 @@ describe('fetchPageHttp', () => {
     mockFetch.mockResolvedValue({
       status: 429,
       url: 'https://example.com',
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue(''),
     } as unknown as Response)
 
@@ -264,11 +350,30 @@ describe('fetchPageHttp', () => {
     mockFetch.mockResolvedValue({
       status: 404,
       url: 'https://example.com',
+      headers: new Headers(),
       text: vi.fn().mockResolvedValue(''),
     } as unknown as Response)
 
     await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
       'HTTP 404',
+    )
+  })
+
+  it('does not follow a redirect robots.txt disallows', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValue({
+      status: 302,
+      headers: new Headers({ location: 'https://other.example/private' }),
+    } as unknown as Response)
+    isAllowedSpy.mockResolvedValueOnce(false)
+
+    await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
+      'robots.txt disallows redirect target https://other.example/private',
+    )
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(isAllowedSpy).toHaveBeenCalledWith(
+      'https://other.example/private',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
     )
   })
 })

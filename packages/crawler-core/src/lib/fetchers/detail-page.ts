@@ -25,7 +25,7 @@ import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { extractJsonLd } from '../extractors/json-ld.js'
-import { isAllowed } from '../robots.js'
+import { isAllowed, isAllowedOrSkip } from '../robots.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -221,7 +221,7 @@ async function detailPageFetch(
   // per-path — a site can allow the calendar index and disallow /e/. Every
   // URL we fetch clears the gate on its own. isAllowed() caches robots.txt
   // per domain, so this is one extra request for the whole run.
-  if (!(await isAllowed(listingUrl, CRAWLER_USER_AGENT))) {
+  if (!(await isAllowedOrSkip(listingUrl, CRAWLER_USER_AGENT))) {
     throw new DetailPageFetchError(
       0,
       listingUrl,
