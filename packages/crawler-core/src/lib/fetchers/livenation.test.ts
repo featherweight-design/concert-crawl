@@ -11,6 +11,7 @@ import {
 } from './livenation.js'
 import type { Venue } from '@concert-crawl/db'
 import { PlatformFetchDeadlineError } from './deadline.js'
+import { CrawlSkipError } from '../robots.js'
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -89,7 +90,12 @@ function mockSiteFetch(
     } else {
       body = overrides.calendar ?? CALENDAR_HTML
     }
-    return { ok: true, status: 200, text: async () => body }
+    return {
+      ok: true,
+      headers: new Headers(),
+      status: 200,
+      text: async () => body,
+    }
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
@@ -225,7 +231,12 @@ describe('liveNationFetcher.fetch', () => {
       if (url.endsWith('/robots.txt')) body = 'User-agent: *\nAllow: /\n'
       else if (url.endsWith('/sitemap.xml')) body = SITEMAP_XML
       else body = CALENDAR_HTML
-      return { ok: true, status: 200, text: async () => body }
+      return {
+        ok: true,
+        headers: new Headers(),
+        status: 200,
+        text: async () => body,
+      }
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -372,35 +383,76 @@ describe('liveNationFetcher.fetch', () => {
     ).toBe(true)
   })
 
-  it('throws when a calendar page redirects somewhere robots.txt disallows', async () => {
-    const origin = 'https://redirect-disallowed.example.com'
+  // Every calendar page 302s to `target`; robots.txt on the venue's own
+  // host is `robots`, and on any other host is `otherRobots`.
+  function mockCalendarRedirect(
+    origin: string,
+    target: string,
+    { robots = 'User-agent: *\nAllow: /\n', otherRobots = robots } = {},
+  ): ReturnType<typeof vi.fn> {
     const fetchMock = vi.fn(async (url: string) => {
-      if (url.endsWith('/robots.txt'))
-        return {
-          ok: true,
-          status: 200,
-          text: async () => 'User-agent: *\nDisallow: /private\n',
-        }
-      if (url.endsWith('/sitemap.xml'))
-        return {
-          ok: true,
-          status: 200,
-          url,
-          text: async () => sitemapFor(origin),
-        }
-      return {
+      const ok = (body: string) => ({
         ok: true,
         status: 200,
-        url: `${origin}/private/calendar`,
-        text: async () => CALENDAR_HTML,
+        headers: new Headers(),
+        text: async () => body,
+      })
+      if (url.endsWith('/robots.txt'))
+        return ok(url.startsWith(origin) ? robots : otherRobots)
+      if (url.endsWith('/sitemap.xml')) return ok(sitemapFor(origin))
+      if (url === target) return ok(CALENDAR_HTML)
+      return {
+        ok: false,
+        status: 302,
+        headers: new Headers({ location: target }),
+        body: null,
+        text: async () => '',
       }
     })
     vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('follows a calendar redirect that robots.txt allows and reports where it landed', async () => {
+    const origin = 'https://redirect-allowed.example.com'
+    const target = `${origin}/moved/calendar`
+    mockCalendarRedirect(origin, target)
+    const result = await liveNationFetcher.fetch(
+      makeVenue({ websiteUrl: `${origin}/shows` }),
+      { crawlDelayMs: 0 },
+    )
+    expect(result.readUrls).toContain(target)
+  })
+
+  it('throws when a calendar page redirects somewhere robots.txt disallows', async () => {
+    const origin = 'https://redirect-disallowed.example.com'
+    const fetchMock = mockCalendarRedirect(
+      origin,
+      `${origin}/private/calendar`,
+      { robots: 'User-agent: *\nDisallow: /private\n' },
+    )
     await expect(
       liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
         crawlDelayMs: 0,
       }),
     ).rejects.toThrow(/which robots.txt disallows/)
+    expect(
+      fetchMock.mock.calls.some(([url]) => url.includes('/private/')),
+    ).toBe(false)
+  })
+
+  it('skips the run when a redirect lands on a host whose Crawl-delay is over the cap', async () => {
+    const origin = 'https://redirect-slow.example.com'
+    const target = 'https://slow-host.example.com/calendar'
+    const fetchMock = mockCalendarRedirect(origin, target, {
+      otherRobots: 'User-agent: *\nAllow: /\nCrawl-delay: 3600\n',
+    })
+    await expect(
+      liveNationFetcher.fetch(makeVenue({ websiteUrl: `${origin}/shows` }), {
+        crawlDelayMs: 0,
+      }),
+    ).rejects.toThrow(CrawlSkipError)
+    expect(fetchMock.mock.calls.some(([url]) => url === target)).toBe(false)
   })
 
   it('throws when robots.txt disallows every calendar month', async () => {
@@ -419,7 +471,12 @@ describe('liveNationFetcher.fetch', () => {
   it('surfaces an HTTP error as LiveNationFetchError', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({ ok: false, status: 503, text: async () => '' })),
+      vi.fn(async () => ({
+        ok: false,
+        headers: new Headers(),
+        status: 503,
+        text: async () => '',
+      })),
     )
     await expect(
       liveNationFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),

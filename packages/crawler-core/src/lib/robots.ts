@@ -237,6 +237,16 @@ function ruleMatches(rulePath: string, target: string): boolean {
   return wildcardMatches(body.split('*'), normalizePath(target), anchored)
 }
 
+// A rule's length for precedence, ignoring trailing wildcards that match
+// nothing extra: `/events*` and `/events*$` cover exactly the URLs `/events`
+// does, so they must not outrank an equivalent Allow (RFC 9309 §2.2.2).
+function precedenceLength(rulePath: string): number {
+  let path = normalizePath(rulePath)
+  if (path.endsWith('*$')) path = path.slice(0, -1)
+  while (path.endsWith('*')) path = path.slice(0, -1)
+  return path.length
+}
+
 /**
  * RFC 9309 §2.2.2: the most specific (longest) matching rule wins, and on a
  * tie between an Allow and a Disallow, Allow wins. No matching rule = allowed.
@@ -249,7 +259,7 @@ function isPathAllowed(rules: Rule[], target: string): boolean {
   let best: { allow: boolean; length: number } | null = null
   for (const rule of rules) {
     if (!ruleMatches(rule.path, target)) continue
-    const length = normalizePath(rule.path).length
+    const length = precedenceLength(rule.path)
     if (
       best === null ||
       length > best.length ||

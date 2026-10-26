@@ -601,6 +601,20 @@ describe('robots.ts', () => {
       ).toBe(false)
     })
 
+    it('lets Allow win over an equivalent rule with a redundant trailing wildcard', async () => {
+      mockRobots(['User-agent: *', 'Allow: /events', 'Disallow: /events*'])
+      expect(
+        await isAllowed('https://trailing-star.example/events', USER_AGENT),
+      ).toBe(true)
+      expect(
+        await isAllowed('https://trailing-star.example/events/1', USER_AGENT),
+      ).toBe(true)
+      mockRobots(['User-agent: *', 'Allow: /shows', 'Disallow: /shows*$'])
+      expect(
+        await isAllowed('https://trailing-anchor.example/shows/1', USER_AGENT),
+      ).toBe(true)
+    })
+
     it('matches the query string as part of the path', async () => {
       mockRobots(['User-agent: *', 'Disallow: /events?page='])
       expect(

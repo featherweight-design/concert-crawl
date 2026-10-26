@@ -39,6 +39,11 @@ import { createLogger } from '@concert-crawl/logger'
 import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { isAllowed, isAllowedOrSkip } from '../robots.js'
+import {
+  fetchFollowingRobots,
+  RobotsDisallowedError,
+  type RobotsFetchResult,
+} from '../robots-fetch.js'
 import { createDeadline } from './deadline.js'
 import { jitter } from './jitter.js'
 import type {
@@ -103,24 +108,36 @@ export class LiveNationFetchError extends Error {
 // 'rescheduled' events keep their (new) date and stay in.
 const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled'])
 
-// The URL the body came from after redirects, keyed by what we asked for.
-// fetch() follows redirects, so provenance for the AI gate is the landing.
+// Redirects are followed hop by hop through `fetchFollowingRobots`, so each
+// landing clears robots.txt and its Crawl-delay before we request it (an
+// over-cap delay is a CrawlSkipError). The URL a body came from is pushed
+// onto `landed`, since provenance for the AI gate is the landing.
 async function fetchText(
   url: string,
+  crawlDelayMs: number,
   timeoutMs?: number,
   landed?: string[],
 ): Promise<string> {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': CRAWLER_USER_AGENT,
-      Accept: 'text/html,application/xhtml+xml,application/xml',
-    },
-    // A hung connection must not pin the caller — the admin probe endpoint
-    // holds an API worker slot while this resolves.
-    ...(timeoutMs !== undefined
-      ? { signal: AbortSignal.timeout(timeoutMs) }
-      : {}),
-  })
+  let fetched: RobotsFetchResult
+  try {
+    fetched = await fetchFollowingRobots(url, {
+      headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
+      crawlDelayMs,
+      // A hung connection must not pin the caller — the admin probe endpoint
+      // holds an API worker slot while this resolves.
+      ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    })
+  } catch (err) {
+    if (err instanceof RobotsDisallowedError) {
+      throw new LiveNationFetchError(
+        0,
+        url,
+        `Live Nation fetch for ${url} redirected to ${err.url}, which robots.txt disallows`,
+      )
+    }
+    throw err
+  }
+  const { response, finalUrl } = fetched
   if (!response.ok) {
     throw new LiveNationFetchError(
       response.status,
@@ -130,20 +147,7 @@ async function fetchText(
       `Live Nation fetch failed: HTTP ${response.status} for ${url}`,
     )
   }
-  // A redirect lands somewhere robots.txt never cleared; check it before we
-  // read the body, as the detail-page adapter does.
-  const landedUrl = response.url || url
-  if (
-    landedUrl !== url &&
-    !(await isAllowedOrSkip(landedUrl, CRAWLER_USER_AGENT))
-  ) {
-    throw new LiveNationFetchError(
-      response.status,
-      url,
-      `Live Nation fetch for ${url} redirected to ${landedUrl}, which robots.txt disallows`,
-    )
-  }
-  landed?.push(landedUrl)
+  landed?.push(finalUrl)
   return response.text()
 }
 
@@ -392,7 +396,7 @@ async function liveNationFetch(
 
   const allCalendarUrls = parseCalendarUrls(
     await deadline.run('sitemap', (timeoutMs) =>
-      fetchText(sitemapUrl, timeoutMs, readUrls),
+      fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs, readUrls),
     ),
     origin,
   )
@@ -442,7 +446,7 @@ async function liveNationFetch(
     // venue's configured per-domain delay applies to each of them.
     await deadline.wait(jitter(opts.crawlDelayMs))
     const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
-      fetchText(calendarUrl, timeoutMs, readUrls),
+      fetchText(calendarUrl, opts.crawlDelayMs, timeoutMs, readUrls),
     )
     const records = extractEventRecords(reassembleFlightPayload(html))
     rawRecordCount += records.length
