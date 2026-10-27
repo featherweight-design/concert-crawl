@@ -1,3 +1,23 @@
+## [1.298.4](https://github.com/HartiganHM/concert-crawl/compare/v1.298.3...v1.298.4) (2026-10-27)
+
+
+### Bug Fixes
+
+* **crawler:** address review on robots gating ([b16f7fc](https://github.com/HartiganHM/concert-crawl/commit/b16f7fc85ff23682c5d399d103575eecce5a86dc))
+* **crawler:** bound redirect chains by the fetch budget; keep manual-entry venues published ([f6ffb9f](https://github.com/HartiganHM/concert-crawl/commit/f6ffb9fbebcc552d6c46f1d98e3e2f2cfc67e4c6))
+* **crawler:** check and pace every detail-page redirect hop; handle late robots rejections ([f6b2a57](https://github.com/HartiganHM/concert-crawl/commit/f6b2a572c0689ad8099ca92417bc2bbc034042c7))
+* **crawler:** check every page a platform adapter read; wire manual-entry remedy ([900d5fc](https://github.com/HartiganHM/concert-crawl/commit/900d5fc5c40b4056dc19d7cba497a0ec052de149))
+* **crawler:** close the remaining gaps between /bot and the code ([1dbf299](https://github.com/HartiganHM/concert-crawl/commit/1dbf29937f7cd0c888d21fa92237d53263313d76))
+* **crawler:** follow RFC 9309 everywhere and match /bot to the code ([c0abe1d](https://github.com/HartiganHM/concert-crawl/commit/c0abe1d9e939c504a535c65dd7a97b7c907f7476))
+* **crawler:** judge detail pages by their landed URL; honor AEG blob Crawl-delay ([4368e5a](https://github.com/HartiganHM/concert-crawl/commit/4368e5a7143b2be8028db750dc9670034bdcc49f))
+* **crawler:** keep the admin probe's budget a hard ceiling ([746306f](https://github.com/HartiganHM/concert-crawl/commit/746306f29761973bc6fde1f6a8faf5ce267c1b4c))
+* **crawler:** no redirects off the VenuePilot endpoint; release redirect bodies ([75005b7](https://github.com/HartiganHM/concert-crawl/commit/75005b7d232f0bd6a8f5c05b505ac96cdd24b9f3))
+* **crawler:** pace and gate every redirect hop; robots matching edge cases ([f7ee886](https://github.com/HartiganHM/concert-crawl/commit/f7ee8865af240fa96d51e6e320ec208e5561ad88))
+* **crawler:** pace live nation redirects; ignore redundant trailing wildcards in rule precedence ([779192a](https://github.com/HartiganHM/concert-crawl/commit/779192a506046c0aaf7bf024d7fd9ebdb90c5777))
+* **robots:** linear-time wildcard matching; close remaining redirect gaps ([c769a69](https://github.com/HartiganHM/concert-crawl/commit/c769a6913424f947a0ab96c25070f52db2271d83))
+* **venuepilot:** count the endpoint's robots.txt lookups against the probe budget ([88209bc](https://github.com/HartiganHM/concert-crawl/commit/88209bc843c26f9200c68ec3fc457f81056cfb00))
+* **venuepilot:** widen the run budget for the endpoint's Crawl-delay ([28c626d](https://github.com/HartiganHM/concert-crawl/commit/28c626d8972fdb507731defdd8c89efaf1efce46))
+
 ## [1.298.3](https://github.com/HartiganHM/concert-crawl/compare/v1.298.2...v1.298.3) (2026-10-27)
 
 
