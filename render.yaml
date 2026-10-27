@@ -93,6 +93,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Required when this service is created; see render-service-config.md.
+      - key: NPM_CONFIG_PREFIX
+        value: /opt/render/.npm-global
       - key: DATABASE_URL
         sync: false # Neon prod branch connection string — enter manually
       - key: STRIPE_SECRET_KEY

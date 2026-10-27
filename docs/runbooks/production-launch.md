@@ -268,6 +268,7 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `SENTRY_ENVIRONMENT`    | `production`                                                                                            |
 | `LOG_LEVEL`             | `info`                                                                                                  |
 | `NODE_ENV`              | `production`                                                                                            |
+| `NPM_CONFIG_PREFIX`     | `/opt/render/.npm-global`. Without it the build's `npm install -g pnpm` fails with EROFS                |
 | `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                               |
 | `POSTHOG_KEY`           | PostHog project API key (`phc_*`) — server-truth monetization funnel analytics. Absent → capture no-ops |
 | `POSTHOG_HOST`          | `https://us.i.posthog.com` (US cloud region)                                                            |
@@ -288,9 +289,7 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 >
 > Staging auto-runs migrations on every deploy; prod does not — production migrations run manually per Step 3 to keep schema changes paired with deliberate code releases.
 >
-> Both commands work on Render's older Node base images (Node 22-era), which is what the staging services still run on. **They will break on newer Node 24+ images** with `EROFS: read-only file system` because Node 24 ships with pnpm pre-installed at `/usr/lib/node_modules/pnpm` and `npm install -g pnpm` cannot overwrite it.
->
-> If a Render service rebuilds onto a Node 24+ image (which can happen silently when Render refreshes their base images) and the build fails with EROFS, the durable fix is to replace `npm install -g pnpm &&` with `corepack enable &&` in the service's Build Command (Render dashboard → service → Settings). The current prod API was rebuilt this way on 2026-06-15.
+> On some Node versions Render serves Node from a read-only `/usr/lib` that already holds a pnpm, and `npm install -g pnpm` then fails with `EROFS: read-only file system`. Every Node service therefore sets `NPM_CONFIG_PREFIX=/opt/render/.npm-global`, which moves npm's global prefix somewhere writable. Set it when creating any Node service. See `render-service-config.md` → "`NPM_CONFIG_PREFIX` keeps `npm install -g pnpm` working". (An earlier version of this note recommended swapping in `corepack enable`; the live build commands never changed, and on 2026-10-27 the env var was the fix that shipped.)
 
 ### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
 

@@ -185,6 +185,7 @@ Env vars (all entered manually — `sync: false`; prod = **live** values, stagin
 | Key                  | Prod value                                                                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`           | `production`                                                                                                                                       |
+| `NPM_CONFIG_PREFIX`  | `/opt/render/.npm-global` (staging: same). Without it the build's `npm install -g pnpm` fails with EROFS; see `render-service-config.md`          |
 | `DATABASE_URL`       | Neon prod branch direct connection string                                                                                                          |
 | `STRIPE_SECRET_KEY`  | live `sk_live_*` (staging: sandbox key)                                                                                                            |
 | `RESEND_API_KEY`     | Resend key                                                                                                                                         |
