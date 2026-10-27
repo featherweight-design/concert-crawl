@@ -1,3 +1,10 @@
+## [1.298.3](https://github.com/HartiganHM/concert-crawl/compare/v1.298.2...v1.298.3) (2026-10-27)
+
+
+### Bug Fixes
+
+* patch Node for the October 2026 security release ([#1758](https://github.com/HartiganHM/concert-crawl/issues/1758)) ([80b4e92](https://github.com/HartiganHM/concert-crawl/commit/80b4e9226e34c14967f5c5e7b0060f68b1359f7c))
+
 ## [1.298.2](https://github.com/HartiganHM/concert-crawl/compare/v1.298.1...v1.298.2) (2026-09-28)
 
 
