@@ -600,6 +600,28 @@ describe('venuePilotFetcher.fetch', () => {
     }
   })
 
+  it('counts a slow robots.txt lookup against the overall budget', async () => {
+    vi.useFakeTimers()
+    try {
+      isAllowedSpy.mockImplementationOnce(
+        () => new Promise((resolve) => setTimeout(() => resolve(true), 4_000)),
+      )
+      mockFetchOk(LEVITT_FIXTURE)
+      const run = venuePilotFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 3_000,
+      })
+      const settled = expect(run).rejects.toBeInstanceOf(
+        PlatformFetchDeadlineError,
+      )
+      await vi.runAllTimersAsync()
+      await settled
+      expect(fetchSpy).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("reads the Crawl-delay from the endpoint's own robots.txt", async () => {
     mockFetchOk(LEVITT_FIXTURE)
     await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })

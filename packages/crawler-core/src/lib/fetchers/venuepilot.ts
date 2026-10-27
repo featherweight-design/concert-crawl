@@ -372,6 +372,11 @@ async function venuePilotFetch(
   }
   const accountId = Number(rawAccountId)
 
+  // Started before the robots.txt lookups below so a cold-cache lookup spends
+  // the same budget as the requests: the admin probe's ceiling covers the
+  // whole fetch, not just the GraphQL pages.
+  const deadline = createDeadline(opts)
+
   // The GraphQL endpoint is a path on VenuePilot's host like any other, so it
   // clears the same robots.txt gate as every page we fetch. Their file carries
   // a Cloudflare-managed `User-agent: *` / `Allow: /` group and a hand-written
@@ -400,7 +405,6 @@ async function venuePilotFetch(
 
   const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()
-  const deadline = createDeadline(opts)
   // The run budget crawl.ts handed us was sized from the venue site's delay.
   // When the endpoint asks for a longer one, widen the budget by the extra
   // wait per page so honoring it can't time the run out.
