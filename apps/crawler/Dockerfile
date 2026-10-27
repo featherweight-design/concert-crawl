@@ -2,11 +2,16 @@
 # Container Registry's anonymous-pull rate limits (200 req/6h per IP)
 # consistently throttle Render's build pool — and as of Jun 2026 also
 # hit GitHub Actions runners and local dev IPs. Replaced with a
-# self-rolled image on top of node:22-bookworm. Chromium plus its X11,
+# self-rolled image on top of node:22-bookworm (now pinned, below). Chromium plus its X11,
 # font, and audio runtime libs come from `playwright install-deps` and
 # `playwright install`, which pull from playwright.azureedge.net (separate
 # CDN from MCR, separate rate-limit regime).
-FROM node:22-bookworm
+#
+# Pinned to an exact patch, not the floating `22-bookworm` tag: a cached
+# base layer can keep serving an older Node after a security release.
+# 22.23.4 is the October 2026 release that fixes the TLS hostname-check
+# bypass and distrusts the compromised eMudhra intermediates.
+FROM node:22.23.4-bookworm
 
 # Install pnpm globally so the non-root user can use it without
 # corepack-permission gymnastics. Matches package.json#packageManager.
@@ -75,6 +80,13 @@ RUN pnpm install --frozen-lockfile
 # root-owned cache files into the tree, which is the exact problem the
 # recursive chown existed to paper over.
 USER root
+# Refresh the system certificate store as well: the base image's copy is
+# only as new as its build. OpenSSL-based tools such as curl read it; Node
+# carries its own bundle and Chromium its own root store, so neither depends
+# on this. It is a cached layer, so it refreshes when the base pin moves.
+RUN apt-get update \
+  && apt-get install -y --only-upgrade ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 RUN ./packages/crawler-core/node_modules/.bin/playwright install-deps chromium
 
 # The browser download half, back as pwuser so the unpacked Chromium under
