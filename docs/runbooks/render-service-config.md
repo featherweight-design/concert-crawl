@@ -134,6 +134,21 @@ and differ only in start command
 Docker crons (#3, #4) build from `./apps/crawler/Dockerfile` with context
 `.` and no override `dockerCommand` — the image's own `CMD` runs.
 
+### ⚠️ `NPM_CONFIG_PREFIX` keeps `npm install -g pnpm` working
+
+From Node 24.22.1, Render serves Node from a read-only `/usr/lib` that
+already holds a pnpm. The build command's first step, `npm install -g pnpm`,
+then fails with `EROFS: read-only file system` before anything else runs.
+That stopped every Node build on 2026-10-27, after #1758 bumped
+`.node-version` from 24.20.0.
+
+The fix is an environment variable, not a build-command change:
+`NPM_CONFIG_PREFIX=/opt/render/.npm-global` moves npm's global prefix to a
+writable directory, so the install succeeds. It is set on the four live Node
+services (#1, #2, #5, #6). The suspended staging crons and the never-deployed
+prod billing-jobs cron do not have it; **add it before resuming or creating
+any of them**, or their first build fails the same way.
+
 ### ⚠️ `pnpm db:migrate` runs inside the API build command
 
 This is the single most important fact on this page, and it constrains

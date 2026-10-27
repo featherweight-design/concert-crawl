@@ -55,6 +55,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Render serves Node 24.22.1 from a read-only /usr/lib, so the build
+      # command's `npm install -g pnpm` fails with EROFS without a writable
+      # global prefix. Set live on 2026-10-27; see render-service-config.md.
+      - key: NPM_CONFIG_PREFIX
+        value: /opt/render/.npm-global
       - key: DATABASE_URL
         sync: false # Neon prod branch connection string — enter manually
       - key: CLERK_SECRET_KEY
@@ -132,6 +137,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Render serves Node 24.22.1 from a read-only /usr/lib, so the build
+      # command's `npm install -g pnpm` fails with EROFS without a writable
+      # global prefix. Set live on 2026-10-27; see render-service-config.md.
+      - key: NPM_CONFIG_PREFIX
+        value: /opt/render/.npm-global
       - key: DATABASE_URL
         sync: false # Neon prod branch connection string — enter manually
       - key: RESEND_API_KEY
@@ -185,6 +195,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Render serves Node 24.22.1 from a read-only /usr/lib, so the build
+      # command's `npm install -g pnpm` fails with EROFS without a writable
+      # global prefix. Set live on 2026-10-27; see render-service-config.md.
+      - key: NPM_CONFIG_PREFIX
+        value: /opt/render/.npm-global
       - key: DATABASE_URL
         sync: false # Neon prod branch connection string — enter manually
       - key: SPOTIFY_CLIENT_ID
@@ -322,6 +337,11 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Render serves Node 24.22.1 from a read-only /usr/lib, so the build
+      # command's `npm install -g pnpm` fails with EROFS without a writable
+      # global prefix. Set live on 2026-10-27; see render-service-config.md.
+      - key: NPM_CONFIG_PREFIX
+        value: /opt/render/.npm-global
       - key: DATABASE_URL
         sync: false # Neon staging branch connection string — enter manually
       - key: CLERK_SECRET_KEY
