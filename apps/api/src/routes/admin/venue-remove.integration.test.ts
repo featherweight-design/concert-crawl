@@ -266,4 +266,40 @@ describe('prices on an inactive venue', () => {
     )
     expect(res.status).toBe(404)
   })
+
+  it('refuses a confirm through the legacy submissions route', async () => {
+    asUser('user_confirmer')
+    const res = await post(`/v1/submissions/${submissionId}/confirm`, {})
+    expect(res.status).toBe(404)
+  })
+
+  it('refuses a price check through the legacy submissions route', async () => {
+    asUser('user_checker')
+    const res = await post(`/v1/submissions/${submissionId}/dispute`, {
+      floor: 20,
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it("refuses an edit to the submitter's own price", async () => {
+    asUser('user_submitter')
+    const res = await app.request(`/v1/submissions/${submissionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({ floor: 20 }),
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('still lets the submitter delete their own price', async () => {
+    asUser('user_submitter')
+    const res = await app.request(`/v1/submissions/${submissionId}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer test-token' },
+    })
+    expect(res.status).toBeLessThan(300)
+  })
 })

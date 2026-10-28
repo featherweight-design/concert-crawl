@@ -12,7 +12,7 @@
 
 ## What removal does
 
-- **Shows leave the site.** The venue is set inactive, and every public query joins on `venues.active`. That covers browse, search, event detail, artist pages and the venue page. Inactive venues also take no new price submissions or confirms.
+- **Shows leave the site.** The venue is set inactive, and every public query joins on `venues.active`. That covers browse, search, event detail, artist pages and the venue page. Inactive venues also refuse new price submissions, confirms, price checks and edits; a submitter can still delete their own.
 - **Crawling stops.** `crawl_paused_at` is set, so no run fetches the venue, manual triggers and the price pipeline included.
 - **Every price is deleted.** That means the crawled price on each event (`ticket_price_min`, `ticket_price_max`, `price_source`) and every row in `price_submissions` for the venue's events, along with their confirms. This cannot be undone.
 - **Event rows stay.** Users' Watching and Concerts entries for those shows survive. Users who submitted a price lose that row from their Submitted prices list. Their earned price-cred is not taken back.

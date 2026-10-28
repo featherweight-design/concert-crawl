@@ -1,8 +1,14 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, eq, sql } from 'drizzle-orm'
-import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import {
+  db,
+  events,
+  priceSubmissions,
+  submissionConfirms,
+  venues,
+} from '@concert-crawl/db'
 import {
   SP_POLICY,
   VENDOR_VALUES,
@@ -64,6 +70,23 @@ submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
   return ctx.json({ success: true, data: submission })
 })
 
+// A submission whose show is on an inactive venue is off the site, and a
+// removed venue's prices are gone for good, so confirming, checking or
+// editing one is refused as if it did not exist. Deleting your own still
+// works, through the plain lookup in DELETE.
+function selectOnActiveVenue(id: string) {
+  return db
+    .select(getTableColumns(priceSubmissions))
+    .from(priceSubmissions)
+    .innerJoin(events, eq(events.id, priceSubmissions.eventId))
+    .innerJoin(
+      venues,
+      and(eq(venues.id, events.venueId), eq(venues.active, true)),
+    )
+    .where(eq(priceSubmissions.id, id))
+    .limit(1)
+}
+
 // POST /v1/submissions/:id/confirm
 submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
   const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
@@ -73,11 +96,7 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
   const submissionId = parsedId.data
   const { userId } = getAuthUser(ctx)
 
-  const [submission] = await db
-    .select()
-    .from(priceSubmissions)
-    .where(eq(priceSubmissions.id, submissionId))
-    .limit(1)
+  const [submission] = await selectOnActiveVenue(submissionId)
 
   if (!submission) {
     return ctx.json({ success: false, error: 'Not found' }, 404)
@@ -168,11 +187,7 @@ submissionsRouter.post(
     // identity is fixed; the dispute always inherits vendor from the parent.
     const { floor, ceiling } = ctx.req.valid('json')
 
-    const [parent] = await db
-      .select()
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, submissionId))
-      .limit(1)
+    const [parent] = await selectOnActiveVenue(submissionId)
 
     if (!parent) {
       return ctx.json({ success: false, error: 'Not found' }, 404)
@@ -321,11 +336,7 @@ submissionsRouter.patch(
     const { userId } = getAuthUser(ctx)
     const body = ctx.req.valid('json')
 
-    const [submission] = await db
-      .select()
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, id))
-      .limit(1)
+    const [submission] = await selectOnActiveVenue(id)
 
     if (!submission) {
       return ctx.json({ success: false, error: 'Not found' }, 404)
