@@ -1,3 +1,16 @@
+## [1.300.3](https://github.com/HartiganHM/concert-crawl/compare/v1.300.2...v1.300.3) (2026-10-28)
+
+
+### Bug Fixes
+
+* **billing:** never purge a user holding a premium role; defer when roles can't be read ([9a176a1](https://github.com/HartiganHM/concert-crawl/commit/9a176a19a7fc834d828fe48678b0dce17e08f8c7))
+* **billing:** never purge a user who holds a live gift ([f779a04](https://github.com/HartiganHM/concert-crawl/commit/f779a04e31f26758c5bd5dd96c8769442ed9d16a)), closes [#781](https://github.com/HartiganHM/concert-crawl/issues/781)
+* **billing:** start the 90-day purge clock when a Supporter cancels ([17632a8](https://github.com/HartiganHM/concert-crawl/commit/17632a834571faabd53fcc9cdea8fdd86abd1182)), closes [#1229](https://github.com/HartiganHM/concert-crawl/issues/1229)
+* **web:** close a tip when the viewport changes shell; widen the touch target to coarse pointers ([b122ca1](https://github.com/HartiganHM/concert-crawl/commit/b122ca137a8bacf9a4cd3596abba40a84fa37493))
+* **web:** four small UI defects from the copy audit ([f565afb](https://github.com/HartiganHM/concert-crawl/commit/f565afb73534f82e9dfa3c300d91d3d264941fc6)), closes [#1395](https://github.com/HartiganHM/concert-crawl/issues/1395) [#1396](https://github.com/HartiganHM/concert-crawl/issues/1396) [#1390](https://github.com/HartiganHM/concert-crawl/issues/1390) [#1455](https://github.com/HartiganHM/concert-crawl/issues/1455)
+* **web:** give a custom CCTip trigger the 44px touch target ([a27d06c](https://github.com/HartiganHM/concert-crawl/commit/a27d06c75d2f90bc662dc108324c6909adb4e39d))
+* **web:** give the cred chip its own tap band; leave CCTip as it was ([15461c1](https://github.com/HartiganHM/concert-crawl/commit/15461c168975a0403732f971f4371ae91a11b57d))
+
 ## [1.300.2](https://github.com/HartiganHM/concert-crawl/compare/v1.300.1...v1.300.2) (2026-10-28)
 
 
