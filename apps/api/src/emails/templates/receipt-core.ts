@@ -18,6 +18,7 @@ import {
   headerRow,
   ledeRow,
   pricePromise,
+  pricePromiseText,
   row,
   tierBadge,
 } from '../atoms.js'
@@ -172,17 +173,18 @@ export const renderReceipt = (
     '',
     sub,
     '',
+    // Same row order as the HTML dataTable: these are kept for tax (#1394).
+    `Plan: ${planLabel} · ${periodWord}`,
     `Amount: ${amountLabel}`,
     `Charged: ${chargedLong}`,
     ...(renewalLong === null ? [] : [`Next renewal: ${renewalLong}`]),
-    `Plan: ${planLabel} · ${periodWord}`,
     `Customer ID: ${customerId}`,
     ...(stripeReceiptUrl === null
       ? []
       : [`Full receipt on Stripe: ${stripeReceiptUrl}`]),
     ...(period === 'annual' ? ['', annualNote] : []),
     ...(isFounder && period === 'monthly'
-      ? ['', '$3 is $3. New folks may pay double someday. Never you.']
+      ? ['', pricePromiseText('founder')]
       : []),
   ]
 
@@ -194,6 +196,7 @@ export const renderReceipt = (
       body: textLines.join('\n'),
       family: 'billing',
       showManage: true,
+      note: FOOTER_NOTE,
     }),
   }
 }

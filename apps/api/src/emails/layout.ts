@@ -88,6 +88,9 @@ interface TextShellInput {
   family: EmailFamily
   showManage: boolean
   unsubscribeUrl?: string
+  // The same note the HTML footerRow carries (often the reply-to-us line).
+  // Plain-text readers dropped it until #1386.
+  note?: string
 }
 
 const TEXT_RULE = '----------------------------------------'
@@ -100,10 +103,12 @@ export const renderTextShell = ({
   family,
   showManage,
   unsubscribeUrl,
+  note,
 }: TextShellInput): string => {
   const lines = [
     body,
     '',
+    ...(note === undefined ? [] : [note, '']),
     TEXT_RULE,
     `${familyUnsubscribeLabel(family)}:  ${unsubscribeUrl ?? notificationsUrl()}`,
     `All email settings:       ${notificationsUrl()}`,

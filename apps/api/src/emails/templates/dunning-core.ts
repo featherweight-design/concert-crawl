@@ -134,6 +134,7 @@ export const renderDunning = (
       body: textLines.join('\n'),
       family: 'billing',
       showManage: true,
+      note: FOOTER_NOTE,
     }),
   }
 }

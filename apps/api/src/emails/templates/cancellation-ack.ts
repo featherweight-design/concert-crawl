@@ -78,6 +78,11 @@ ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 }
     subject: SUBJECT,
     preheader,
     html: renderEmailShell({ preheader, bodyRows }),
-    text: renderTextShell({ body: text, family: 'billing', showManage: false }),
+    text: renderTextShell({
+      body: text,
+      family: 'billing',
+      showManage: false,
+      note: FOOTER_NOTE,
+    }),
   }
 }

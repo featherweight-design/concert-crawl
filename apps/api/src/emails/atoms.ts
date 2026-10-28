@@ -209,6 +209,11 @@ interface PricePromiseInput {
   subtle?: boolean
 }
 
+// The plain-text twin of pricePromise: the same PRICE_PROMISE line, so editing
+// the promise can never desync a text email from its HTML (#1394).
+export const pricePromiseText = (tier: EmailTier): string =>
+  PRICE_PROMISE[tier] ?? ''
+
 export const pricePromise = ({
   tier,
   subtle = false,

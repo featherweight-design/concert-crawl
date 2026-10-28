@@ -157,8 +157,6 @@ ${
     ...textShows,
     ...textMore,
     `Open Concert Crawl: ${appUrl()}`,
-    '',
-    FOOTER_NOTE,
   ].join('\n')
 
   return {
@@ -169,6 +167,7 @@ ${
       body: text,
       family: 'digest',
       showManage: false,
+      note: FOOTER_NOTE,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
   }

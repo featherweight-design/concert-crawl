@@ -11,6 +11,7 @@ import {
   ledeRow,
   monoEyebrow,
   pricePromise,
+  pricePromiseText,
   row,
   seatStamp,
   tierBadge,
@@ -93,7 +94,7 @@ export const renderWelcomePaid: TemplateRenderer<
       '',
       microcopy,
       '',
-      'Whatever you pay, you pay. We never raise it.',
+      pricePromiseText('supporter'),
       '',
       `Wear it on your profile: ${profileUrl()}`,
     ].join('\n')
@@ -154,7 +155,7 @@ export const renderWelcomePaid: TemplateRenderer<
         : [`Founder #${founderSeatNumber} of 100: $3/mo.`, '']),
       ...featureTextLines(FOUNDER_FEATURES),
       '',
-      '$3 is $3. New folks may pay double someday. Never you.',
+      pricePromiseText('founder'),
       '',
       `Open Concert Crawl: ${appUrl()}`,
     ].join('\n')
@@ -203,7 +204,7 @@ export const renderWelcomePaid: TemplateRenderer<
     '',
     ...featureTextLines(PREMIUM_FEATURES),
     '',
-    'Whatever you pay, you pay. We never raise it.',
+    pricePromiseText('premium'),
     '',
     `Open Concert Crawl: ${appUrl()}`,
   ].join('\n')

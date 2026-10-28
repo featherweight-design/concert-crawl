@@ -99,6 +99,11 @@ export const renderCardExpiringSoon: TemplateRenderer<
     subject: SUBJECT,
     preheader: PREHEADER,
     html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
-    text: renderTextShell({ body: text, family: 'billing', showManage: true }),
+    text: renderTextShell({
+      body: text,
+      family: 'billing',
+      showManage: true,
+      note: FOOTER_NOTE,
+    }),
   }
 }
