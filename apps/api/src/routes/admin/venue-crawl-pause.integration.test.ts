@@ -155,6 +155,25 @@ describe('admin venue crawl pause', () => {
     )
   })
 
+  it('audits exactly one removed pause when two resumes overlap', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' })
+    await pause(venue.id, { reason: 'asked to stop' })
+
+    await Promise.all([resume(venue.id), resume(venue.id)])
+
+    const audits = await testDb
+      .select({ metadata: auditLog.metadata })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'venue.crawl_resume'))
+    expect(audits.map((row) => row.metadata)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ pausedSince: expect.any(String) }),
+        expect.objectContaining({ pausedSince: null }),
+      ]),
+    )
+  })
+
   it('refuses a platform probe for a paused venue', async () => {
     setAuth('admin')
     const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' })

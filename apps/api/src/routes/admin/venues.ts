@@ -1108,19 +1108,26 @@ venuesAdminRouter.delete(
   async (ctx) => {
     const { id } = ctx.req.valid('param')
 
-    const [existing] = await db
-      .select({ crawlPausedAt: venues.crawlPausedAt })
-      .from(venues)
-      .where(eq(venues.id, id))
-    if (!existing) {
+    // Locked like the pause, so the audit names the pause this call removed
+    // and not one an overlapping request has already replaced.
+    const result = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ crawlPausedAt: venues.crawlPausedAt })
+        .from(venues)
+        .where(eq(venues.id, id))
+        .for('update')
+      if (!existing) return null
+      const [updated] = await tx
+        .update(venues)
+        .set({ crawlPausedAt: null })
+        .where(eq(venues.id, id))
+        .returning()
+      return { existing, venue: updated }
+    })
+    if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
-
-    const [venue] = await db
-      .update(venues)
-      .set({ crawlPausedAt: null })
-      .where(eq(venues.id, id))
-      .returning()
+    const { existing, venue } = result
 
     ctx.set('auditAction', 'venue.crawl_resume')
     ctx.set('auditTargetId', id)
