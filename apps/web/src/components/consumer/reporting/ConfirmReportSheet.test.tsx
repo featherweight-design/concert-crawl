@@ -14,7 +14,7 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ isLoaded, isSignedIn, getToken: async () => 'token' }),
 }))
 
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ entry }: { entry: string }) => (
     <div data-testid="tier-picker" data-entry={entry} />
   ),

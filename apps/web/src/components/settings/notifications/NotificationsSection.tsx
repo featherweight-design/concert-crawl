@@ -15,7 +15,7 @@ import {
   type PushDeviceState,
 } from '@/lib/push/client'
 import { isIosSafari, isStandalone } from '@/lib/pwa/beforeinstallprompt'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import {
   useNotificationPreferences,

@@ -12,7 +12,7 @@ import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { unlockTierFor } from '@/lib/unlock-tier'
 import { ModalShell } from '@/components/consumer/modal-shell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { CreateCrewSheet } from './CreateCrewSheet'
 import { CREWS_COPY } from './definitions/copy'
 

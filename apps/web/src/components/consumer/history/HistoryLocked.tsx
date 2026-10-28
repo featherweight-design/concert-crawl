@@ -14,7 +14,7 @@
 import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
 import { usePlanState } from '@/lib/queries/use-plan-state'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { unlockTierFor } from '@/lib/unlock-tier'
 import { HISTORY_COPY } from './definitions/copy'
 

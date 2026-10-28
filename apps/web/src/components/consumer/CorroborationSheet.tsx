@@ -5,7 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 const copy = CONSUMER_COPY.corroborationSheet

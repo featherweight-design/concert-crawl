@@ -6,7 +6,7 @@ import { confirmEventReport } from '@/lib/events'
 import { REPORT_TOKENS } from './reportTokens'
 import { REPORTING_COPY } from './definitions/copy'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 const copy = REPORTING_COPY.confirmReportSheet

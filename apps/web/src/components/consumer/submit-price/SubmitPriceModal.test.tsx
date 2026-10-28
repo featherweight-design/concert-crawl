@@ -34,7 +34,7 @@ const mockGetToken = vi.fn(async () =>
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken, isLoaded, isSignedIn }),
 }))
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ entry }: { entry: string }) => (
     <div data-testid="tier-picker" data-entry={entry} />
   ),

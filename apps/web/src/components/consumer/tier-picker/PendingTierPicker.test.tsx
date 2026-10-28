@@ -19,7 +19,7 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
 
 // The sheet's own behaviour has its own suite; here it only has to report the
 // props that decide whether the reopen happened and on which card.
-vi.mock('./TierPickerSheet', () => ({
+vi.mock('./lazy', () => ({
   TierPickerSheet: ({
     initialTier,
     entry,

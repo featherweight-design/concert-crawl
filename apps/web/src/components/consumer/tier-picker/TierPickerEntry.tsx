@@ -9,7 +9,7 @@
 import { useState } from 'react'
 import type { PlanState, PickerEntry } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
-import { TierPickerSheet } from './TierPickerSheet'
+import { TierPickerSheet } from './lazy'
 import {
   usePlanOpenParam,
   type PlanOpenVariant,

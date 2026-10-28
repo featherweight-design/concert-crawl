@@ -6,7 +6,7 @@ import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 // ── Report type glyphs (15×15) ────────────────────────────────────

@@ -6,7 +6,7 @@ import { PENDING_TIER_PARAM, stripIntentParams } from '@/lib/auth/intent'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { decodePendingTier } from './lib/pending-tier'
 import type { TierKey } from './definitions/types'
-import { TierPickerSheet } from './TierPickerSheet'
+import { TierPickerSheet } from './lazy'
 
 /**
  * Reopens the tier picker on the tier a visitor chose before they had an
