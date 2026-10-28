@@ -200,6 +200,16 @@ describe('CCTip on mobile', () => {
     setMobile(true)
   })
 
+  it('gives a custom trigger the same 44px touch target as the info disc', () => {
+    render(
+      <CCTip tip={TEXT_TIP}>
+        <span>12 cred</span>
+      </CCTip>,
+    )
+    const hitArea = triggerFor('Days away').querySelector('.h-11.w-11')
+    expect(hitArea).not.toBeNull()
+  })
+
   it('opens a modal sheet on tap', () => {
     renderTip(DEFS_TIP)
     fireEvent.click(triggerFor('Going vs. Watching'))
