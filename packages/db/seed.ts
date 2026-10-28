@@ -1753,27 +1753,6 @@ async function seed() {
             },
             {
               venueId: venueForTests.id,
-              title: '[Test] Show With Setlist',
-              artist: '[Test] Setlist Artist',
-              date: '2026-09-20',
-              status: 'upcoming' as const,
-              confidenceScore: '0.92',
-              setlist: {
-                songs: [
-                  'Opening Track',
-                  'Second Song',
-                  'Fan Favorite',
-                  'Deep Cut',
-                  'Popular Hit',
-                  'Slow Ballad',
-                ],
-                encore: ['Classic Closer', 'Surprise Cover'],
-                source: 'Setlist.fm',
-                when: 'last tour',
-              },
-            },
-            {
-              venueId: venueForTests.id,
               title: '[Test] Low Confidence Event',
               artist: '[Test] Low Confidence Artist',
               date: '2026-09-25',
@@ -1783,7 +1762,7 @@ async function seed() {
           ]),
         )
         .onConflictDoNothing()
-      console.warn('Inserted 4 test events for UI state coverage.')
+      console.warn('Inserted 3 test events for UI state coverage.')
     }
   } else {
     console.warn('Events already seeded, skipping.')
