@@ -196,9 +196,14 @@ images on every Node bump for no effect. This is the one place the
 "bias filters broad" rule is knowingly inverted, because the file provably
 does not enter the docker build.
 
-The crawler base image is a separate, intentional decision: changing it busts
-the Docker layer cache and carries Playwright/Chromium compatibility risk, so
-it is not driven by this file and the two majors are allowed to differ.
+The crawler base image is pinned separately in `apps/crawler/Dockerfile`, but
+it tracks the same release as `.node-version` (both 24.22.1 since 2026-10-28),
+so a Node security release is one version to patch rather than two. **Bump the
+Dockerfile `FROM` line by hand in the same PR as `.node-version`**: nothing
+rebuilds the crawler images when only `.node-version` changes, so a missed
+`FROM` leaves both crawler crons on the old runtime. The `crawler-image` CI
+workflow builds the image and launches Chromium as `pwuser`, which is the
+compatibility check for the new base.
 
 ## Settings that need to stay set
 
