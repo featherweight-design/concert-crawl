@@ -293,4 +293,31 @@ describe('rederive-event-artists integration', () => {
     expect(after.canonicalHeadliners).toBeNull()
     expect(after.hiddenFromConsumer).toBe(false)
   })
+
+  // A VenuePilot venue's rows come from VenuePilot's endpoint, so its verdict
+  // counts even when the venue's own site allows AI use.
+  it('does not adjudicate a platform row whose payload host refuses AI use', async () => {
+    const venue = await seedVenue()
+    await db
+      .update(venues)
+      .set({ apiProvider: 'venuepilot', apiAccountId: '1105' })
+      .where(eq(venues.id, venue.id))
+    await seedEvent(venue.id, {
+      title: 'BASS BINGO NIGHT',
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      canonicalTitle: 'bass bingo night',
+      date: '2026-09-10',
+    })
+
+    const adjudicate = stubAdjudicator()
+    const result = await run(
+      adjudicate,
+      false,
+      async (url) => !url.startsWith('https://www.venuepilot.co/'),
+    )
+
+    expect(adjudicate).not.toHaveBeenCalled()
+    expect(result.strategies['ai-use-refused']).toBe(1)
+  })
 })

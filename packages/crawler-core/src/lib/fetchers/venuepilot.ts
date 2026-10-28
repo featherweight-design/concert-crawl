@@ -33,7 +33,7 @@ import type {
 } from './index.js'
 
 const logger = createLogger('venuepilot-fetcher')
-const ENDPOINT = 'https://www.venuepilot.co/graphql'
+export const ENDPOINT = 'https://www.venuepilot.co/graphql'
 // Guard against a runaway metadata.totalPages pinning the crawl.
 const MAX_PAGES = 50
 

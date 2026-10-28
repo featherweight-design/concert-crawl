@@ -45,6 +45,8 @@ import {
   type Adjudicator,
 } from './lib/derive-artists.js'
 import { isAiUseAllowed } from './lib/robots.js'
+import { endpointUrl as aegEndpointUrl } from './lib/fetchers/aeg.js'
+import { ENDPOINT as VENUEPILOT_ENDPOINT } from './lib/fetchers/venuepilot.js'
 
 /** How each row's answer was reached. Counted so a run reports where it went. */
 export type RederiveStrategy =
@@ -119,6 +121,20 @@ const sameBill = (stored: string[] | null, next: string[]): boolean =>
   stored.length === next.length &&
   stored.every((name, i) => name === next[i])
 
+// The payload host a platform adapter reads from, when it is not the venue's
+// own site. Live Nation and detail-page venues read from the venue's host,
+// which the website check already covers.
+const platformPayloadUrl = (venue: {
+  platform: string | null
+  platformVenueId: string | null
+  apiProvider: string | null
+}): string | null => {
+  if (venue.apiProvider === 'venuepilot') return VENUEPILOT_ENDPOINT
+  if (venue.platform === 'aeg' && venue.platformVenueId)
+    return aegEndpointUrl(venue.platformVenueId)
+  return null
+}
+
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -131,15 +147,18 @@ export async function rederiveEventArtists(
   const aiUseAllowed =
     options.aiUseAllowed ??
     ((url: string) => isAiUseAllowed(url, CRAWLER_USER_AGENT))
-  // The same rule the crawl applies before adjudicating: the venue's own site
-  // and the page the row came from must both allow AI use. Verdicts are
-  // cached per origin inside robots.ts, so this costs one lookup per host.
+  // The same rule the crawl applies before adjudicating: the venue's own site,
+  // the page the row came from, and the platform payload it was read from
+  // must all allow AI use. Verdicts are cached per origin inside robots.ts,
+  // so this costs one lookup per host.
   const mayAdjudicate = async (
-    websiteUrl: string | null,
-    sourceUrl: string | null,
-  ): Promise<boolean> =>
-    (websiteUrl === null || (await aiUseAllowed(websiteUrl))) &&
-    (sourceUrl === null || (await aiUseAllowed(sourceUrl)))
+    urls: readonly (string | null)[],
+  ): Promise<boolean> => {
+    for (const url of urls) {
+      if (url !== null && !(await aiUseAllowed(url))) return false
+    }
+    return true
+  }
 
   const strategies: Record<RederiveStrategy, number> = {
     observed: 0,
@@ -175,6 +194,9 @@ export async function rederiveEventArtists(
         hiddenFromConsumer: events.hiddenFromConsumer,
         sourceUrl: events.sourceUrl,
         websiteUrl: venues.websiteUrl,
+        platform: venues.platform,
+        platformVenueId: venues.platformVenueId,
+        apiProvider: venues.apiProvider,
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
@@ -222,7 +244,11 @@ export async function rederiveEventArtists(
       const willAdjudicate = wouldAdjudicate(input)
       if (
         willAdjudicate &&
-        !(await mayAdjudicate(row.websiteUrl ?? null, row.sourceUrl))
+        !(await mayAdjudicate([
+          row.websiteUrl ?? null,
+          row.sourceUrl,
+          platformPayloadUrl(row),
+        ]))
       ) {
         strategies['ai-use-refused'] += 1
         continue

@@ -124,7 +124,7 @@ export class AegSchemaError extends Error {
   }
 }
 
-function endpointUrl(shardId: string): string {
+export function endpointUrl(shardId: string): string {
   return `${BLOB_BASE}/${encodeURIComponent(shardId)}/events.json`
 }
 
