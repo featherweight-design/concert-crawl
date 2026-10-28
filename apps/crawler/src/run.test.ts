@@ -43,6 +43,7 @@ vi.mock('@concert-crawl/db', () => ({
     active: 'active',
     verified: 'verified',
     priceUrl: 'priceUrl',
+    crawlPausedAt: 'crawlPausedAt',
   },
   crawlTriggers: {
     id: 'id',
@@ -758,6 +759,25 @@ describe('runTriggeredCrawls', () => {
     await runTriggeredCrawls()
 
     expect(mockRunPricePipeline).not.toHaveBeenCalled()
+  })
+
+  // A paused venue's pages are not fetched for prices either. The triggered
+  // path runs prices after any run that did not fail, and a pause records a
+  // skipped run, so the price query itself has to exclude paused venues.
+  it('excludes paused venues from the price query and the daily venue list', async () => {
+    const { isNull } = await import('drizzle-orm')
+    mockDbChain.where.mockResolvedValue([])
+
+    const { runTriggeredCrawls, runDailyCrawl } = await import('./run.js')
+    await runTriggeredCrawls()
+    await runDailyCrawl()
+
+    expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt')
+    const pausedChecks = vi
+      .mocked(isNull)
+      .mock.calls.filter(([column]) => Object.is(column, 'crawlPausedAt'))
+    // One per triggered venue's price query, plus the daily venue list.
+    expect(pausedChecks.length).toBeGreaterThanOrEqual(2)
   })
 
   it('does not fail triggered crawl when runPricePipeline throws', async () => {

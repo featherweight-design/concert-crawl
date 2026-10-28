@@ -379,6 +379,7 @@ export interface Venue {
   robotsTxtCheckedAt: string | null
   consecutiveFailures: number
   blockedAt: string | null
+  crawlPausedAt: string | null
   extractionStrategy: ExtractionStrategy | null
   contactEmail: string | null
   priceUrl: string | null

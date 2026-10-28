@@ -37,6 +37,7 @@ import {
   identityFor,
 } from '@/components/consumer/identity-art/IdentityArt'
 import { DeleteVenueConfirm } from './DeleteVenueConfirm'
+import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   GenerateField,
@@ -2532,6 +2533,19 @@ export function VenueDetailsClient({
           danger
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <CrawlPauseControl
+              venueId={venue.id}
+              crawlPausedAt={venue.crawlPausedAt}
+            />
+
+            <div
+              style={{
+                height: 1,
+                background:
+                  'color-mix(in oklab, var(--danger) 16%, transparent)',
+              }}
+            />
+
             {/* Pause / activate */}
             <div
               style={{

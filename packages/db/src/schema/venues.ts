@@ -54,6 +54,12 @@ export const venues = pgTable('venues', {
   }),
   consecutiveFailures: integer('consecutive_failures').notNull().default(0),
   blockedAt: timestamp('blocked_at', { withTimezone: true }),
+  // Set by an admin to stop crawling a venue while keeping its shows published:
+  // a venue that asked us to stop, or one whose source we may not use yet.
+  // Unlike blockedAt, which the crawler sets on a 403/429 and a manual trigger
+  // clears, nothing but the admin resume action clears this, and every crawl
+  // path refuses a paused venue, manual triggers included.
+  crawlPausedAt: timestamp('crawl_paused_at', { withTimezone: true }),
   lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
     withTimezone: true,
   }),

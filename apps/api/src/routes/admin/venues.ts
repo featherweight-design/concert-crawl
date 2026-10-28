@@ -1039,6 +1039,86 @@ const faultAcknowledgementSchema = z
     }
   })
 
+const crawlPauseParamSchema = z.object({
+  id: z.string().uuid(),
+})
+
+const crawlPauseSchema = z.object({
+  // Why the venue is paused, kept in the audit log: "venue asked us to stop",
+  // "awaiting VenuePilot API access". Required so a pause is never unexplained.
+  reason: z.string().trim().min(1).max(500),
+})
+
+// POST /v1/admin/venues/:id/crawl-pause — stop every crawl of a venue while
+// its shows stay published. Idempotent: pausing a paused venue keeps the
+// original timestamp.
+venuesAdminRouter.post(
+  '/:id/crawl-pause',
+  zValidator('param', crawlPauseParamSchema),
+  zValidator('json', crawlPauseSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { reason } = ctx.req.valid('json')
+
+    const [existing] = await db
+      .select({ crawlPausedAt: venues.crawlPausedAt })
+      .from(venues)
+      .where(eq(venues.id, id))
+    if (!existing) {
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    const [venue] = await db
+      .update(venues)
+      .set({ crawlPausedAt: existing.crawlPausedAt ?? new Date() })
+      .where(eq(venues.id, id))
+      .returning()
+
+    ctx.set('auditAction', 'venue.crawl_pause')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditMeta', {
+      reason,
+      alreadyPaused: existing.crawlPausedAt !== null,
+    })
+
+    return ctx.json({ success: true, data: venue })
+  },
+)
+
+// DELETE /v1/admin/venues/:id/crawl-pause — resume crawling. The next daily
+// run picks the venue up again.
+venuesAdminRouter.delete(
+  '/:id/crawl-pause',
+  zValidator('param', crawlPauseParamSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+
+    const [existing] = await db
+      .select({ crawlPausedAt: venues.crawlPausedAt })
+      .from(venues)
+      .where(eq(venues.id, id))
+    if (!existing) {
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    const [venue] = await db
+      .update(venues)
+      .set({ crawlPausedAt: null })
+      .where(eq(venues.id, id))
+      .returning()
+
+    ctx.set('auditAction', 'venue.crawl_resume')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditMeta', {
+      pausedSince: existing.crawlPausedAt?.toISOString() ?? null,
+    })
+
+    return ctx.json({ success: true, data: venue })
+  },
+)
+
 const faultAcknowledgementParamSchema = z.object({
   id: z.string().uuid(),
 })

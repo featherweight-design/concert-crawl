@@ -247,6 +247,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     verified: true,
     consecutiveFailures: 0,
     blockedAt: null,
+    crawlPausedAt: null,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     crawlWaitForSelector: null,
@@ -1492,6 +1493,25 @@ describe('crawlVenue — platform fetch budget (#1199)', () => {
     const asked = vi.mocked(isAiUseAllowed).mock.calls.map(([url]) => url)
     expect(asked).toContain('https://venue.example.com/no-ai/calendar/2026-08')
     vi.mocked(isAiUseAllowed).mockResolvedValue(true)
+  })
+
+  // A manual trigger reaches crawlVenue directly, so the pause has to hold here
+  // and not only in the daily and run-all venue queries.
+  it('refuses a paused venue before any network request, with no strike', async () => {
+    const { venue, fetch } = seedPlatformVenue(1)
+    const stored = stores.venues.find((row) => row.id === venue.id)
+    if (!stored) throw new Error('seeded venue missing')
+    stored.crawlPausedAt = new Date('2026-10-28T00:00:00Z')
+    vi.mocked(checkRobots).mockClear()
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('skipped')
+    expect(run.errorMessage).toContain('paused')
+    expect(checkRobots).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+    expect(stored.consecutiveFailures).toBe(0)
+    expect(stored.blockedAt ?? null).toBeNull()
   })
 
   it('records a skipped run and no strike when the adapter declines on robots.txt', async () => {

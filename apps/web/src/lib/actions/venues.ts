@@ -138,6 +138,22 @@ export async function pauseVenue(id: string): Promise<void> {
   revalidatePath(`/admin/venues/${id}`)
 }
 
+export async function pauseCrawling(id: string, reason: string): Promise<void> {
+  const token = await getToken()
+  await apiClient.post<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token, {
+    reason,
+  })
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+}
+
+export async function resumeCrawling(id: string): Promise<void> {
+  const token = await getToken()
+  await apiClient.delete<Venue>(`/v1/admin/venues/${id}/crawl-pause`, token)
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+}
+
 export async function deleteVenue(
   id: string,
 ): Promise<{ eventsDetached: number }> {

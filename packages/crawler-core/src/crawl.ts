@@ -416,6 +416,27 @@ export async function crawlVenue(
     throw new Error(`Venue ${venueId} not found or not active/verified`)
   }
 
+  // An admin pause stops every path, manual triggers included, and is not a
+  // failure: no strike, no block, and the venue's shows stay published.
+  if (venue.crawlPausedAt !== null) {
+    console.log(JSON.stringify({ event: 'crawl.paused', venueId }))
+    const [crawlRun] = await db
+      .insert(crawlRuns)
+      .values({
+        id,
+        venueId,
+        status: 'skipped',
+        robotsTxtBlocked: 'unchecked',
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: 'Crawling paused by an admin; not crawled',
+        durationMs: Date.now() - startedAt,
+      })
+      .returning()
+    if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    return { ...crawlRun, insertedEventIds: [] }
+  }
+
   console.log(
     JSON.stringify({ event: 'crawl.start', venueId, venueName: venue.name }),
   )

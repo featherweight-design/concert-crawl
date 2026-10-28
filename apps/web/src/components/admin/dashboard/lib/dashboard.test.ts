@@ -68,6 +68,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     robotsTxtCheckedAt: null,
     consecutiveFailures: 0,
     blockedAt: null,
+    crawlPausedAt: null,
     extractionStrategy: null,
     contactEmail: null,
     priceUrl: null,

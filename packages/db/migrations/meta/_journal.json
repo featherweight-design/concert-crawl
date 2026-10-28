@@ -617,6 +617,13 @@
       "when": 1788739200000,
       "tag": "0087_hide_not_an_artist_rows",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1793145600000,
+      "tag": "0088_venue_crawl_paused_at",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@ function makeVenue(
     verifiedBy: null,
     verifiedAt: null,
     blockedAt: null,
+    crawlPausedAt: null,
     robotsTxtAllowed: null,
     robotsTxtCheckedAt: null,
     crawlNotes: null,

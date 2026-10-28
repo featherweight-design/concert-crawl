@@ -125,6 +125,8 @@ async function runPricesForVenue(venueId: string): Promise<void> {
         eq(events.venueId, venueId),
         isNull(events.ticketPriceMin),
         isNull(events.pipelineExhaustedAt),
+        // A paused venue's pages are not fetched at all, prices included.
+        isNull(venues.crawlPausedAt),
       ),
     )
 
@@ -304,6 +306,7 @@ export async function runDailyCrawl(): Promise<{
         eq(venues.active, true),
         eq(venues.verified, true),
         isNull(venues.blockedAt),
+        isNull(venues.crawlPausedAt),
       ),
     )
 

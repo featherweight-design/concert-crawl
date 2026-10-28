@@ -944,9 +944,20 @@ export const ADMIN_COPY = {
       blocked: 'robots blocked',
     },
     dangerZone: {
-      pause: {
+      crawlPause: {
         title: 'Pause crawling',
-        description: 'Stops scheduled runs. Existing events stay published.',
+        description:
+          'Stops every crawl of this venue, manual runs included. Its shows stay published.',
+        pausedSince: (date: string) => `Paused since ${date}.`,
+        reasonLabel: 'Reason (kept in the audit log)',
+        reasonPlaceholder: 'e.g. venue asked us to stop',
+        pauseButton: 'Pause crawling',
+        resumeButton: 'Resume crawling',
+      },
+      pause: {
+        title: 'Pause venue',
+        description:
+          'Takes the venue and all of its shows off the site, and stops crawls.',
         pauseButton: 'Pause venue',
         activateButton: 'Activate venue',
       },

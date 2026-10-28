@@ -130,6 +130,7 @@ crawlAdminRouter.post('/', async (ctx) => {
         eq(venues.active, true),
         eq(venues.verified, true),
         isNull(venues.blockedAt),
+        isNull(venues.crawlPausedAt),
       ),
     )
 
