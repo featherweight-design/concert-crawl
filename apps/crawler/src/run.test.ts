@@ -787,6 +787,45 @@ describe('runTriggeredCrawls', () => {
     expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt')
   })
 
+  it('stops a price batch when the venue is paused part-way through', async () => {
+    const unpriced = {
+      venueId: 'venue-a',
+      artist: 'Artist X',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-06-15',
+      ticketUrl: null,
+    }
+    // Answer each query by what it selected, not by call order: the price
+    // batch selects priceUrl, the pause re-check selects only crawlPausedAt.
+    const pauseChecks: (Date | null)[] = [null, new Date()]
+    mockDbChain.where.mockImplementation(() => {
+      const fields: unknown = mockDbChain.select.mock.lastCall?.[0]
+      if (fields && typeof fields === 'object' && 'priceUrl' in fields) {
+        return Promise.resolve([
+          { id: 'evt-1', ...unpriced },
+          { id: 'evt-2', ...unpriced },
+        ])
+      }
+      if (fields && typeof fields === 'object' && 'crawlPausedAt' in fields) {
+        // Not paused before evt-1; paused by the time evt-2 is reached.
+        const crawlPausedAt =
+          pauseChecks.length > 0 ? pauseChecks.shift() : new Date()
+        return Promise.resolve([{ crawlPausedAt }])
+      }
+      return Promise.resolve([])
+    })
+
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    const priced = mockRunPricePipeline.mock.calls.map(
+      ([input]) => input.eventId,
+    )
+    expect(priced).toContain('evt-1')
+    expect(priced).not.toContain('evt-2')
+  })
+
   it('does not fail triggered crawl when runPricePipeline throws', async () => {
     mockDbChain.where.mockResolvedValue([
       {

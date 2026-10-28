@@ -106,6 +106,14 @@ async function loadCrossVenueCandidates(): Promise<CrossVenueCandidate[]> {
     .where(eq(venues.verified, true))
 }
 
+async function isCrawlPaused(venueId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ crawlPausedAt: venues.crawlPausedAt })
+    .from(venues)
+    .where(eq(venues.id, venueId))
+  return row?.crawlPausedAt != null
+}
+
 async function runPricesForVenue(venueId: string): Promise<void> {
   const unpricedEvents = await db
     .select({
@@ -132,6 +140,9 @@ async function runPricesForVenue(venueId: string): Promise<void> {
 
   for (const event of unpricedEvents) {
     if (event.venueId === null) continue
+    // Each pipeline run can take a while, so a pause made while this batch is
+    // under way has to stop the events still waiting in it.
+    if (await isCrawlPaused(venueId)) return
     try {
       await runPricePipeline({
         eventId: event.id,
