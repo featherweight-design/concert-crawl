@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as ApiModule from '@/lib/api'
 
 const patch = vi.fn()
 
@@ -8,7 +9,7 @@ vi.mock('@clerk/nextjs/server', () => ({
 }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/api')>()
+  const actual = await importOriginal<typeof ApiModule>()
   return { ...actual, apiClient: { patch } }
 })
 
