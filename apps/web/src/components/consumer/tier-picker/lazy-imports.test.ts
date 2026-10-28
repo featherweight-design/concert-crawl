@@ -8,15 +8,18 @@ import { describe, expect, it } from 'vitest'
 // in silently, since both paths type-check and render, so this scans for one.
 const SRC = fileURLToPath(new URL('../../../', import.meta.url))
 
-// The plan page is where checkout belongs, so it may load the sheet eagerly
-// through the barrel; lazy.ts is the one module that imports it by design.
+// lazy.ts is the one module that imports the sheet by design, and the plan
+// page loads it eagerly through the barrel because checkout is what that page
+// is for. Every other file must take `tier-picker/lazy`.
 const ALLOWED = new Set([
-  'components/consumer/tier-picker/index.ts',
   'components/consumer/tier-picker/lazy.ts',
+  'components/settings/plan/PlanPanel.tsx',
 ])
 
+// A value import (not `import type`) naming TierPickerSheet from the sheet
+// module or the barrel, by alias or relative path.
 const STATIC_IMPORT =
-  /^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'(?:@\/components\/consumer\/tier-picker\/TierPickerSheet|\.\/TierPickerSheet)'/m
+  /^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'[^']*tier-picker(?:\/TierPickerSheet|\/index)?'|^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'\.\/(?:TierPickerSheet|index)?'/m
 
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
