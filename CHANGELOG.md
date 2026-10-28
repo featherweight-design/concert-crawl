@@ -1,3 +1,13 @@
+## [1.299.1](https://github.com/HartiganHM/concert-crawl/compare/v1.299.0...v1.299.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **crawler:** check the platform payload host before rederive adjudicates ([629d624](https://github.com/HartiganHM/concert-crawl/commit/629d62448f8a1c9d17849213452afbeb2ea6ff68))
+* **crawler:** drop AEG Origin, gate rederive on AI use, cut inert remedies ([95eda84](https://github.com/HartiganHM/concert-crawl/commit/95eda8421946da9d4422ede30d6fcc412d9d5de0))
+* **crawler:** judge rederive provenance by the row's recorded adapter ([69d5afd](https://github.com/HartiganHM/concert-crawl/commit/69d5afdcf076f3e0232d517146cdde3d4a88d88b))
+* **crawler:** skip rederive adjudication where provenance is unrecorded ([e3d3e9b](https://github.com/HartiganHM/concert-crawl/commit/e3d3e9b22485e8b268ed7cd2998635caba9cedbd))
+
 # [1.299.0](https://github.com/HartiganHM/concert-crawl/compare/v1.298.6...v1.299.0) (2026-10-28)
 
 
