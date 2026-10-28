@@ -1,3 +1,12 @@
+## [1.300.1](https://github.com/HartiganHM/concert-crawl/compare/v1.300.0...v1.300.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* skip already-hidden rows in bulk mark-non-concert; make price checks price-only ([a518c27](https://github.com/HartiganHM/concert-crawl/commit/a518c274442386f7fc952e8bbc53c0a1ac3897c3)), closes [#815](https://github.com/HartiganHM/concert-crawl/issues/815) [#698](https://github.com/HartiganHM/concert-crawl/issues/698)
+* **web:** price-check page stops asking for a vendor, uses the locked term ([fc02aa5](https://github.com/HartiganHM/concert-crawl/commit/fc02aa50f66029d66b4741d7e86615a58a6e13a9))
+* **web:** stop the price-check subheading asking for a vendor ([63cc27b](https://github.com/HartiganHM/concert-crawl/commit/63cc27b7eb9bab1a565b56ee7e7c84dec676be9b))
+
 # [1.300.0](https://github.com/HartiganHM/concert-crawl/compare/v1.299.2...v1.300.0) (2026-10-28)
 
 
