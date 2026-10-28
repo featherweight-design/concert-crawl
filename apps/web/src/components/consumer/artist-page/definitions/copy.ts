@@ -65,8 +65,8 @@ export const ARTIST_COPY = {
   historyMany: (count: number, venues: string) =>
     `${count} shows on our map: ${venues}.`,
 
-  // Past shows — crawl data only. #1170 blocks deep history and setlists; this
-  // is the modest version, and it says out loud where it stops.
+  // Past shows — crawl data only. Setlists and deep history were dropped with
+  // #1170; this is the modest version, and it says out loud where it stops.
   pastTitle: 'Previously',
   pastNote: (since: string) =>
     `Concert Crawl started crawling in ${since}. Shows before that aren't tracked.`,

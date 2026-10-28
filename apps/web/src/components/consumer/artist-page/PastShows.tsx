@@ -13,8 +13,9 @@ interface PastShowsProps {
 
 /**
  * Deliberately modest: no price, no link out, no artwork, and no setlist.
- * `events.setlist` exists but has never carried real data — #1170 owns deep
- * history, and until it lands this block only claims what the crawl saw.
+ * `events.setlist` exists but has never carried real data, and setlists were
+ * dropped with #1170 (no setlist.fm license), so this block only claims what
+ * the crawl saw.
  */
 export const PastShows = ({ name, past }: PastShowsProps) => {
   if (!past.length) return null

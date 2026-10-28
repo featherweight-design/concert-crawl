@@ -662,15 +662,6 @@ export interface EventReport {
   reporterHandle: string | null
 }
 
-// Setlist — likely setlist for an event, sourced from Setlist.fm
-export interface Setlist {
-  songs: string[]
-  encore?: string[]
-  source?: string
-  sourceUrl?: string
-  when?: string
-}
-
 // EventWithVenue — event joined with its venue, returned by the public events API
 export interface EventWithVenue extends Event {
   venue: Pick<
@@ -797,9 +788,8 @@ export interface EventWatchersResponse {
   named: EventWatcher[]
 }
 
-// EventDetailResponse — single event detail with computed watch state and setlist
+// EventDetailResponse — single event detail with computed watch state
 export interface EventDetailResponse extends EventWithVenue {
-  setlist: Setlist | null
   // #1115 PR-G — artist-page entry points. The headliner's `artists.slug`, or
   // null when the projection has no row for that canonical name (an unresolved
   // name renders as plain text rather than a dead link).

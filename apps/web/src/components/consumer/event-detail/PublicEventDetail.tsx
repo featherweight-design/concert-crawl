@@ -29,7 +29,6 @@ import { SectionHeader } from '@/components/consumer/section-header'
 import { HeroBand } from '@/components/consumer/image-slot'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
-import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import {
   formatEventDate,
   formatPrice,
@@ -187,12 +186,6 @@ export const PublicEventDetail = ({
               />
             )}
           </div>
-
-          {event.setlist && (
-            <div className="mt-5">
-              <SetlistPreview setlist={event.setlist} />
-            </div>
-          )}
 
           {!past && (
             <div className="mt-5">

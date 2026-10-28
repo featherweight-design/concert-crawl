@@ -28,7 +28,6 @@ import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
 import { EventDetailCtaBlock } from '@/components/consumer/going'
 import { CrewGoingZone } from '@/components/consumer/crews'
-import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import {
   EventDetailBanners,
@@ -336,13 +335,6 @@ export default async function EventDetailPage({
               currentUserId={userId ?? null}
             />
           </div>
-
-          {/* Setlist preview — owns its own card surface (bg, border, radius) */}
-          {event.setlist && (
-            <div className="mt-5">
-              <SetlistPreview setlist={event.setlist} />
-            </div>
-          )}
 
           {/* Primary CTA — always renders on all events including cancelled/postponed,
               per spec ("PrimaryCTA always renders with no cancelled carve-out").

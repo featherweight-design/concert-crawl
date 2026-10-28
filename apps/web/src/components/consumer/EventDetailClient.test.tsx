@@ -141,7 +141,6 @@ function buildBaseEvent(
       websiteUrl: 'https://example.com',
       timezone: 'America/Denver',
     },
-    setlist: null,
     watching: 0,
     isWatching: false,
     attendingAt: null,

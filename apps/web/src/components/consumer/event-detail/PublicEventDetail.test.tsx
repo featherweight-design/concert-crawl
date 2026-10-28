@@ -93,7 +93,6 @@ const buildEvent = (
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   venue: VENUE,
-  setlist: null,
   watching: 0,
   isWatching: false,
   attendingAt: null,

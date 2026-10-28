@@ -865,19 +865,6 @@ export const CONSUMER_COPY = {
     },
   },
 
-  // ── Setlist preview ─────────────────────────────────────────────
-  // Shown on the event detail page — setlist preview section
-  setlistPreview: {
-    // Encore rows are numbered E1, E2… against the main-set numbering
-    encoreNumber: (position: number) => `E${position}`,
-    sectionLabel: 'Likely setlist',
-    songCountSuffix: 'songs',
-    encoreLabel: 'Encore',
-    moreSuffix: 'more',
-    lastPlayedPrefix: 'Last played',
-    viaPrefix: 'via',
-  },
-
   // ── Venues index ────────────────────────────────────────────────
   // Shown on the /venues page — venue cards, filter bar, and empty states
   venuesIndex: {
@@ -1217,7 +1204,8 @@ export const CONSUMER_COPY = {
     // Desktop labels this section "Plan"; mobile uses `planSection`
     // ("Your plan"). Kept separate so neither shell silently changes.
     planSectionDesktop: 'Plan',
-    planSectionSubDesktop: "What you're paying us. (Spoiler: nothing.)",
+    // Shown to every plan, paid ones included, so it can't claim a price.
+    planSectionSubDesktop: "What you're on, and what it costs you.",
     appearanceSectionSub:
       'Three flavors. Pick the one that hurts your eyes least.',
     accountSectionSub:

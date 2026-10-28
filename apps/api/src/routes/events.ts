@@ -575,7 +575,7 @@ function markViewerScoped(ctx: Context, isAuthed: boolean): void {
   if (isAuthed) ctx.header('Cache-Control', 'private, no-store')
 }
 
-// GET /v1/events/:id — single event with venue, watching count, setlist
+// GET /v1/events/:id — single event with venue and watching count
 eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const rawId = ctx.req.param('id')
   const parsed = uuidSchema.safeParse(rawId)
@@ -607,7 +607,6 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       confidenceScore: events.confidenceScore,
       verified: events.verified,
       sourceUrl: events.sourceUrl,
-      setlist: events.setlist,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
       // Feed the followedArtists overlay; stripped from the response below.
