@@ -220,7 +220,7 @@ export const ADMIN_COPY = {
         },
         timeout: {
           label: 'Timeout',
-          body: "Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. Try setting the venue's wait condition to load on its settings page.",
+          body: "Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. Set the venue's Wait until to Load on its settings page.",
         },
         unknown: {
           label: 'Unclassified failure',
@@ -720,6 +720,21 @@ export const ADMIN_COPY = {
         httpDescription: 'plain request. Fails if events need JavaScript.',
         browserDescription:
           'always uses Playwright. Required for JS-rendered pages.',
+      },
+      waitUntil: {
+        label: 'Wait until',
+        options: {
+          networkidle: 'Network idle',
+          load: 'Load',
+          domcontentloaded: 'DOM ready',
+        },
+        hints: {
+          networkidle:
+            'Waits until the network goes quiet. Times out on pages that keep polling or hold a connection open.',
+          load: "Waits for the page's load event. Use when network idle times out.",
+          domcontentloaded:
+            'Waits only for the HTML to parse. Fastest; may miss events added by scripts.',
+        },
       },
       schedule: {
         label: 'Schedule (cron)',

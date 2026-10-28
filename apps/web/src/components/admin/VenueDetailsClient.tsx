@@ -415,6 +415,8 @@ interface VDSegToggleProps {
   ariaLabelledBy?: string
 }
 
+const WAIT_UNTIL_VALUES = ['networkidle', 'load', 'domcontentloaded'] as const
+
 function VDSegToggle({
   options,
   value,
@@ -1982,6 +1984,40 @@ export function VenueDetailsClient({
                       }
                     </>
                   )}
+                </div>
+              </VDField>
+
+              {/* Wait until — the page event Playwright waits for */}
+              <VDField
+                label={ADMIN_COPY.venueDetailsClient.fields.waitUntil.label}
+                htmlFor="edit-venue-wait-until"
+                labelAs="group"
+                hint={
+                  ADMIN_COPY.venueDetailsClient.fields.waitUntil.hints[
+                    waitUntilVal
+                  ]
+                }
+              >
+                <div style={{ alignSelf: 'flex-start' }}>
+                  <VDSegToggle
+                    id="edit-venue-wait-until"
+                    ariaLabelledBy="edit-venue-wait-until-label"
+                    options={WAIT_UNTIL_VALUES.map((value) => ({
+                      value,
+                      label:
+                        ADMIN_COPY.venueDetailsClient.fields.waitUntil.options[
+                          value
+                        ],
+                    }))}
+                    value={waitUntilVal}
+                    onChange={(val) => {
+                      const match = WAIT_UNTIL_VALUES.find(
+                        (option) => option === val,
+                      )
+                      if (match) setWaitUntilVal(match)
+                    }}
+                    disabled={isDisabled}
+                  />
                 </div>
               </VDField>
 
