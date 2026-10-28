@@ -88,7 +88,9 @@ export async function updateVenue(
 ): Promise<{
   success: boolean
   error?: string
-  field?: 'slug' | 'apiAccountId'
+  // Any input the API names; the form marks the ones it renders and shows the
+  // message at the top for the rest.
+  field?: string
 }> {
   const token = await getToken()
 
@@ -120,6 +122,17 @@ export async function updateVenue(
           error: apiAccountIdIssue.message,
           field: 'apiAccountId',
         }
+      }
+    }
+    // Any other 400 is a rule the route explains in its own words (the
+    // browser-mode wait-selector guard, for one). Rethrowing it showed the
+    // admin "An unexpected error occurred" and nothing else (#1344).
+    if (err instanceof ApiError && err.status === 400) {
+      console.warn('updateVenue: rejected', { id, field: err.field })
+      return {
+        success: false,
+        error: err.message,
+        ...(err.field === undefined ? {} : { field: err.field }),
       }
     }
     // Unexpected failure — the branches above convert the expected 409/400

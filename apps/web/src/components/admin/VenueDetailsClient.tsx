@@ -327,6 +327,7 @@ function VDInput({
       defaultValue={defaultValue}
       placeholder={placeholder}
       disabled={disabled}
+      aria-invalid={hasError || undefined}
       min={min}
       max={max}
       step={step}
@@ -630,6 +631,7 @@ export function VenueDetailsClient({
     slug?: string | undefined
     platformVenueId?: string | undefined
     apiAccountId?: string | undefined
+    crawlWaitForSelector?: string | undefined
   }>({})
 
   // Responsive breakpoint
@@ -849,6 +851,13 @@ export function VenueDetailsClient({
               result.error ??
               ADMIN_COPY.venueDetailsClient.fields.apiAccountId.errorRequired,
           })
+        } else if (
+          (result.field === 'crawlWaitForSelector' ||
+            result.field === 'platformVenueId') &&
+          result.error !== undefined
+        ) {
+          // The API names the field and the rule; mark the input with it.
+          setFieldErrors({ [result.field]: result.error })
         } else {
           setSaveError(
             result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
@@ -2088,6 +2097,9 @@ export function VenueDetailsClient({
                   </span>
                 }
                 hint={ADMIN_COPY.venueDetailsClient.fields.waitSelector.hint}
+                {...(fieldErrors.crawlWaitForSelector
+                  ? { error: fieldErrors.crawlWaitForSelector }
+                  : {})}
               >
                 <VDInput
                   id="edit-venue-wait-for-selector"
@@ -2097,7 +2109,16 @@ export function VenueDetailsClient({
                       .placeholder
                   }
                   disabled={isDisabled}
-                  onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
+                  hasError={Boolean(fieldErrors.crawlWaitForSelector)}
+                  onChange={(evt) => {
+                    setWaitForSelectorVal(evt.target.value)
+                    if (fieldErrors.crawlWaitForSelector) {
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        crawlWaitForSelector: undefined,
+                      }))
+                    }
+                  }}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
                 />
               </VDField>

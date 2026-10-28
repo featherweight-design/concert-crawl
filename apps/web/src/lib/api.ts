@@ -24,6 +24,10 @@ export class ApiError extends Error {
   // ('unknown' | 'expired' | 'revoked'). That body has no `error` field at
   // all, so without this the landing could not tell an expired link from a
   // retired one. Kept a plain string here; call sites narrow it themselves.
+  //
+  // `field` carries the input a hand-rolled 400 names (e.g. the admin venue
+  // route's browser-mode guard sends `field: 'crawlWaitForSelector'`), so a
+  // form can mark that input instead of showing a generic error (#1344).
   // Last in the parameter list so no existing throw site changes.
   constructor(
     public readonly status: number,
@@ -31,6 +35,7 @@ export class ApiError extends Error {
     public readonly code?: string,
     public readonly zodIssues?: ZodIssue[],
     public readonly reason?: string,
+    public readonly field?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -113,6 +118,8 @@ async function request<T>(
     typeof record['code'] === 'string' ? record['code'] : undefined
   const reasonField =
     typeof record['reason'] === 'string' ? record['reason'] : undefined
+  const fieldName =
+    typeof record['field'] === 'string' ? record['field'] : undefined
 
   if (!res.ok || !success) {
     const zodIssues = parseZodIssues(errorField)
@@ -124,7 +131,14 @@ async function request<T>(
         ? errorField
         : (zodIssues?.[0]?.message ??
           `Request failed with status ${res.status}`)
-    throw new ApiError(res.status, message, codeField, zodIssues, reasonField)
+    throw new ApiError(
+      res.status,
+      message,
+      codeField,
+      zodIssues,
+      reasonField,
+      fieldName,
+    )
   }
 
   // The success payload's shape is the caller's generic T; the API client

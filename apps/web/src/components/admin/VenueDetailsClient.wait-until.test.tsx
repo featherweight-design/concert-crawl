@@ -184,6 +184,36 @@ describe('VenueDetailsClient — Wait until control', () => {
     expect(formData.has('active')).toBe(false)
   })
 
+  it("marks the Wait selector with the API's reason when the guard refuses a save (#1344)", async () => {
+    const reason =
+      'crawlWaitForSelector is required for browser-mode venues: without it a slow client-side render is captured as an empty page'
+    mockUpdateVenue.mockResolvedValueOnce({
+      success: false,
+      error: reason,
+      field: 'crawlWaitForSelector',
+    })
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ crawlWaitUntil: 'networkidle' })}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: WAIT_COPY.options.load }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }))
+
+    const message = await screen.findByText(reason)
+    // At the field, not in the page-top banner: the input is marked invalid
+    // and the reason renders in the same field block.
+    const input = document.getElementById('edit-venue-wait-for-selector')
+    expect(input?.getAttribute('aria-invalid')).toBe('true')
+    expect(input?.parentElement?.contains(message)).toBe(true)
+    expect(
+      screen.queryByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
+    ).toBeNull()
+  })
+
   it('says the setting is ignored while a Wait selector is set', () => {
     render(
       <VenueDetailsClient

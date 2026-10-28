@@ -67,4 +67,27 @@ describe('apiClient', () => {
     expect(err instanceof ApiError ? err.reason : null).toBe('expired')
     expect(err instanceof ApiError ? err.status : null).toBe(404)
   })
+
+  // A hand-rolled 400 names the input it rejects; the admin venue form marks
+  // that input with it instead of a generic error (#1344).
+  it('carries `field` off an error body onto ApiError', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: 'crawlWaitForSelector is required for browser-mode venues',
+          field: 'crawlWaitForSelector',
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+
+    const { apiClient, ApiError } = await import('./api.js')
+    const err = await apiClient
+      .patch('/v1/admin/venues/v1', 'test-token', {})
+      .catch((caught: unknown) => caught)
+    expect(err instanceof ApiError ? err.field : null).toBe(
+      'crawlWaitForSelector',
+    )
+  })
 })
