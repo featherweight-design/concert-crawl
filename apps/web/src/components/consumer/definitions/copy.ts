@@ -139,8 +139,8 @@ export const CONSUMER_COPY = {
   // ── Price-update form ──────────────────────────────────────────────
   disputeForm: {
     heading: 'What did you see instead?',
-    subheading:
-      'Updates have to come with a price and a vendor. Keeps it honest.',
+    // Price only: the update keeps the original's seller and ticket type.
+    subheading: 'Just the price. Same seller, same ticket type.',
     floorLabel: 'Floor',
     floorPlaceholder: '35',
     floorErrorMin: 'Has to be at least $1.',
