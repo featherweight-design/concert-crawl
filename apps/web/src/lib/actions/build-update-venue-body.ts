@@ -34,12 +34,16 @@ export function buildUpdateVenueBody(
   const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const
   const crawlWaitUntil = matchLiteral(crawlWaitUntilRaw, VALID_WAIT_UNTIL)
 
+  // The browser-gate fields (crawl mode, selector, platform, API provider)
+  // leave the body when their keys are absent, so a save that does not touch
+  // them skips the API's browser-mode selector guard.
   const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector')
   const crawlWaitForSelector =
-    crawlWaitForSelectorRaw === null ||
-    String(crawlWaitForSelectorRaw).trim() === ''
-      ? null
-      : String(crawlWaitForSelectorRaw).trim()
+    crawlWaitForSelectorRaw === null
+      ? undefined
+      : String(crawlWaitForSelectorRaw).trim() === ''
+        ? null
+        : String(crawlWaitForSelectorRaw).trim()
 
   const ticketVendorRaw = formData.get('ticketVendor')
   const ticketVendor =
@@ -136,23 +140,26 @@ export function buildUpdateVenueBody(
         ? null
         : platformVenueIdTrimmed
 
-  // API integration routing (#506/#505). Empty string / whitespace-only /
-  // missing key all collapse to null ("None"). When the provider is null the
-  // account ID is forced to null so an orphaned ID can't linger after the
-  // admin sets the provider back to None; the API's superRefine independently
-  // rejects the inverse (provider set, account ID missing).
+  // API integration routing (#506/#505). A missing apiProvider key leaves
+  // both fields untouched; an empty or whitespace-only value is None. When the
+  // provider is null the account ID is forced to null so an orphaned ID can't
+  // linger after the admin sets the provider back to None; the API's
+  // superRefine independently rejects the inverse (provider set, account ID
+  // missing).
   const apiProviderRaw = formData.get('apiProvider')
   const apiProvider =
-    typeof apiProviderRaw === 'string' && apiProviderRaw.trim() !== ''
-      ? apiProviderRaw.trim()
-      : null
+    apiProviderRaw === null
+      ? undefined
+      : typeof apiProviderRaw === 'string' && apiProviderRaw.trim() !== ''
+        ? apiProviderRaw.trim()
+        : null
   const apiAccountIdRaw = formData.get('apiAccountId')
   const apiAccountIdStr =
     typeof apiAccountIdRaw === 'string' ? apiAccountIdRaw.trim() : ''
   const apiAccountId =
-    apiProvider === null
-      ? null
-      : apiAccountIdStr === ''
+    apiProvider === undefined
+      ? undefined
+      : apiProvider === null || apiAccountIdStr === ''
         ? null
         : apiAccountIdStr
 

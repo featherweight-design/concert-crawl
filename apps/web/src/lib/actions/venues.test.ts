@@ -19,10 +19,19 @@ describe('buildUpdateVenueBody — API integration fields', () => {
     expect(body.apiAccountId).toBeNull()
   })
 
-  it('treats a missing apiProvider key as None', () => {
-    const body = buildUpdateVenueBody(formDataFrom({}))
-    expect(body.apiProvider).toBeNull()
-    expect(body.apiAccountId).toBeNull()
+  it('leaves the browser-gate fields out when their keys are missing', () => {
+    const body = buildUpdateVenueBody(formDataFrom({ crawlWaitUntil: 'load' }))
+    expect(body.crawlWaitUntil).toBe('load')
+    for (const key of [
+      'crawlMode',
+      'crawlWaitForSelector',
+      'platform',
+      'platformVenueId',
+      'apiProvider',
+      'apiAccountId',
+    ]) {
+      expect(body[key]).toBeUndefined()
+    }
   })
 
   it('trims the account ID when a provider is selected', () => {

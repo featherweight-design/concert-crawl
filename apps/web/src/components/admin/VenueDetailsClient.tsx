@@ -445,6 +445,7 @@ function VDSegToggle({
           <button
             key={opt.value}
             type="button"
+            aria-pressed={isActive}
             onClick={() => !disabled && onChange(opt.value)}
             style={{
               padding: '6px 14px',
@@ -613,6 +614,13 @@ export function VenueDetailsClient({
     ...(neighborhoodVal !== (venue.neighborhood ?? '') ? ['Neighborhood'] : []),
   ]
   const isDirty = dirtyFields.length > 0
+  const browserGateDirty =
+    (waitForSelectorVal.trim() || null) !== venue.crawlWaitForSelector ||
+    crawlModeVal !== (venue.crawlMode ?? null) ||
+    platformVal !== (venue.platform ?? null) ||
+    platformVenueIdVal.trim() !== (venue.platformVenueId ?? '') ||
+    apiProviderVal !== (venue.apiProvider ?? null) ||
+    apiAccountIdVal.trim() !== (venue.apiAccountId ?? '')
 
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
@@ -802,19 +810,22 @@ export function VenueDetailsClient({
     formData.set('address', addressVal.trim())
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
-    formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
     formData.set('active', String(venue.active))
     if (ticketVendorVal !== null) {
       formData.set('ticketVendor', ticketVendorVal)
     }
-    formData.set('crawlMode', crawlModeVal ?? '')
     formData.set('extractionStrategy', extractionStrategyVal ?? '')
-    formData.set('platform', platformVal ?? '')
-    formData.set('platformVenueId', platformVenueIdVal.trim())
-    if (apiProviderVal !== null) {
-      formData.set('apiProvider', apiProviderVal)
+    // The API re-checks the browser-mode selector rule whenever any of these
+    // fields is in the body, so send them only when one changed. Otherwise a
+    // pre-existing browser venue without a selector could never save anything.
+    if (browserGateDirty) {
+      formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
+      formData.set('crawlMode', crawlModeVal ?? '')
+      formData.set('platform', platformVal ?? '')
+      formData.set('platformVenueId', platformVenueIdVal.trim())
+      formData.set('apiProvider', apiProviderVal ?? '')
+      formData.set('apiAccountId', apiAccountIdVal.trim())
     }
-    formData.set('apiAccountId', apiAccountIdVal.trim())
     formData.set('debugCaptureHtml', String(debugCaptureHtmlVal))
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
@@ -1995,12 +2006,12 @@ export function VenueDetailsClient({
                 hint={
                   // fetchPage navigates to domcontentloaded whenever a
                   // selector is set, and HTTP-only never launches Playwright.
-                  waitForSelectorVal.trim()
+                  crawlModeVal === 'http'
                     ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
-                        .ignoredWithSelector
-                    : crawlModeVal === 'http'
+                        .ignoredHttpOnly
+                    : waitForSelectorVal.trim()
                       ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
-                          .ignoredHttpOnly
+                          .ignoredWithSelector
                       : ADMIN_COPY.venueDetailsClient.fields.waitUntil.hints[
                           waitUntilVal
                         ]

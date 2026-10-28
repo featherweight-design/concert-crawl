@@ -195,4 +195,91 @@ describe('VenueDetailsClient — Wait until control', () => {
 
     expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy()
   })
+
+  it('describes HTTP only when a selector is also set', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({
+          crawlMode: 'http',
+          crawlWaitForSelector: '.event-card',
+        })}
+      />,
+    )
+
+    expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy()
+  })
+
+  it('marks the selected option as pressed', () => {
+    render(
+      <VenueDetailsClient venue={buildVenue({ crawlWaitUntil: 'load' })} />,
+    )
+
+    const load = screen.getByRole('button', { name: WAIT_COPY.options.load })
+    const idle = screen.getByRole('button', {
+      name: WAIT_COPY.options.networkidle,
+    })
+    expect(load.getAttribute('aria-pressed')).toBe('true')
+    expect(idle.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  // The API re-checks the browser-mode selector rule whenever a gate field is
+  // in the body, so resending them unchanged made this venue unsaveable.
+  it('omits unchanged browser-gate fields for a browser venue with no selector', async () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: WAIT_COPY.options.load }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }))
+
+    await waitFor(() => {
+      expect(mockUpdateVenue).toHaveBeenCalledTimes(1)
+    })
+    const formData = mockUpdateVenue.mock.calls[0]?.[1]
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData')
+    }
+    expect(formData.get('crawlWaitUntil')).toBe('load')
+    for (const key of [
+      'crawlMode',
+      'crawlWaitForSelector',
+      'platform',
+      'platformVenueId',
+      'apiProvider',
+      'apiAccountId',
+    ]) {
+      expect(formData.has(key)).toBe(false)
+    }
+  })
+
+  it('sends the whole browser-gate group when one of its fields changes', async () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ crawlMode: 'browser', crawlWaitForSelector: null })}
+      />,
+    )
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        ADMIN_COPY.venueDetailsClient.fields.waitSelector.placeholder,
+      ),
+      { target: { value: '.event-card' } },
+    )
+    fireEvent.click(screen.getByRole('button', { name: SAVE_LABEL }))
+
+    await waitFor(() => {
+      expect(mockUpdateVenue).toHaveBeenCalledTimes(1)
+    })
+    const formData = mockUpdateVenue.mock.calls[0]?.[1]
+    if (!(formData instanceof FormData)) {
+      throw new Error('Expected updateVenue to receive a FormData')
+    }
+    expect(formData.get('crawlWaitForSelector')).toBe('.event-card')
+    expect(formData.get('crawlMode')).toBe('browser')
+    expect(formData.get('apiProvider')).toBe('')
+  })
 })
