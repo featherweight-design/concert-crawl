@@ -1,3 +1,11 @@
+## [1.300.4](https://github.com/HartiganHM/concert-crawl/compare/v1.300.3...v1.300.4) (2026-10-28)
+
+
+### Bug Fixes
+
+* **admin:** link a field error to its input and announce it ([ced515e](https://github.com/HartiganHM/concert-crawl/commit/ced515e649adb7ada2f4fb5e6e909c64c5df75d1))
+* **admin:** show the API's reason at the field when a venue save is refused ([534bdb1](https://github.com/HartiganHM/concert-crawl/commit/534bdb12fbde2cd2925906e535e69a95f07bb346))
+
 ## [1.300.3](https://github.com/HartiganHM/concert-crawl/compare/v1.300.2...v1.300.3) (2026-10-28)
 
 
