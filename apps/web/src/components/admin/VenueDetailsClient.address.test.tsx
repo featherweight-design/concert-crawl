@@ -102,6 +102,7 @@ const buildVenue = (
   consecutiveFailures: 0,
   blockedAt: null,
   crawlPausedAt: null,
+  removedAt: null,
   extractionStrategy: null,
   contactEmail: null,
   priceUrl: null,

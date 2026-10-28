@@ -7,9 +7,14 @@ vi.mock('@concert-crawl/db', () => ({
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue([]) }),
     }),
+    // The price write's venue re-check is a subquery; only its shape matters.
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({}) }),
+    }),
   },
   priceRetrievalLog: {},
-  events: { id: 'id' },
+  events: { id: 'id', venueId: 'venue_id' },
+  venues: { id: 'id', active: 'active', crawlPausedAt: 'crawl_paused_at' },
 }))
 
 vi.mock('../tier1-structured-data.js', () => ({ tier1StructuredData: vi.fn() }))

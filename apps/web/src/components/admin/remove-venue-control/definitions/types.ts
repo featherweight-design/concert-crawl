@@ -1,6 +1,6 @@
 export interface RemoveVenueControlProps {
   venueId: string
   venueName: string
-  /** Inactive and crawl-paused: what a completed removal leaves behind. */
+  /** The venue's data was removed at its request (`venues.removed_at`). */
   removed: boolean
 }

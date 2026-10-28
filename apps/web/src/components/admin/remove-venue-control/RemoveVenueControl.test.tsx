@@ -71,6 +71,20 @@ describe('RemoveVenueControl', () => {
     expect(confirmButton()?.hasAttribute('disabled')).toBe(false)
   })
 
+  it('stays disarmed with the exact name but an empty or blank reason', () => {
+    renderControl()
+    openDialog()
+    fireEvent.change(screen.getByLabelText(COPY.dialog.typedInputAriaLabel), {
+      target: { value: 'The Church' },
+    })
+    expect(confirmButton()?.hasAttribute('disabled')).toBe(true)
+
+    fireEvent.change(screen.getByLabelText(COPY.dialog.reasonLabel), {
+      target: { value: '   ' },
+    })
+    expect(confirmButton()?.hasAttribute('disabled')).toBe(true)
+  })
+
   it('removes with the trimmed reason, then closes and refreshes', async () => {
     mockRemoveVenue.mockResolvedValue({
       submissionsDeleted: 2,

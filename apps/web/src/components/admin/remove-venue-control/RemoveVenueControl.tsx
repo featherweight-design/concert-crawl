@@ -51,7 +51,8 @@ export const RemoveVenueControl = ({
         setReason('')
         setTyped('')
         router.refresh()
-      } catch {
+      } catch (err) {
+        console.error('Venue removal failed', { venueId, err })
         setFailed(true)
       }
     })

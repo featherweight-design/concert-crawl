@@ -380,6 +380,8 @@ export interface Venue {
   consecutiveFailures: number
   blockedAt: string | null
   crawlPausedAt: string | null
+  // Set when the venue's data was removed at its request; cleared on activation.
+  removedAt: string | null
   extractionStrategy: ExtractionStrategy | null
   contactEmail: string | null
   priceUrl: string | null

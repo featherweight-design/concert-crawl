@@ -248,6 +248,7 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     consecutiveFailures: 0,
     blockedAt: null,
     crawlPausedAt: null,
+    removedAt: null,
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     crawlWaitForSelector: null,

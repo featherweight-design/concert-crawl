@@ -825,7 +825,8 @@ export const ADMIN_COPY = {
         description:
           "For a venue that asked us to take its data down. Takes its shows off the site, stops crawls and deletes every price for its shows, users' submitted prices included. Shows stay in users' lists.",
         trigger: 'Remove data',
-        removedNote: 'Off the site, crawling paused.',
+        removedNote:
+          'Removed: off the site, crawling paused, prices deleted. Activating the venue undoes the first two.',
         dialog: {
           eyebrow: 'Removal request',
           heading: (venueName: string) => `Remove ${venueName}'s data?`,

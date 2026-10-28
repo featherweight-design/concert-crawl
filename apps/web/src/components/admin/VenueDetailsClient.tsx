@@ -2604,7 +2604,7 @@ export function VenueDetailsClient({
             <RemoveVenueControl
               venueId={venue.id}
               venueName={venue.name}
-              removed={!venue.active && venue.crawlPausedAt !== null}
+              removed={venue.removedAt !== null}
             />
 
             <div

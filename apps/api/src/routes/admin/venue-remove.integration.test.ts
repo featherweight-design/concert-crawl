@@ -141,13 +141,13 @@ describe('admin venue removal', () => {
     ).toHaveLength(0)
     expect(await testDb.select().from(submissionConfirms)).toHaveLength(0)
 
-    // The event row and users' Watching entries survive.
-    expect(
-      await testDb
-        .select()
-        .from(userEvents)
-        .where(eq(userEvents.eventId, event.id)),
-    ).toHaveLength(1)
+    // The event row and users' Watching entries survive, without the price
+    // snapshot the entry captured.
+    const watching = await testDb
+      .select({ savedPrice: userEvents.savedPrice })
+      .from(userEvents)
+      .where(eq(userEvents.eventId, event.id))
+    expect(watching).toEqual([{ savedPrice: null }])
 
     const [audit] = await testDb
       .select()
