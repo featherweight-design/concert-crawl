@@ -132,6 +132,45 @@ describe('admin venue crawl pause', () => {
     expect((await resume(missing)).status).toBe(404)
   })
 
+  it('keeps one timestamp when two pauses overlap', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' })
+
+    const [first, second] = await Promise.all([
+      pause(venue.id, { reason: 'one' }),
+      pause(venue.id, { reason: 'two' }),
+    ])
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+
+    const audits = await testDb
+      .select({ metadata: auditLog.metadata })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'venue.crawl_pause'))
+    expect(audits.map((row) => row.metadata)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ alreadyPaused: false }),
+        expect.objectContaining({ alreadyPaused: true }),
+      ]),
+    )
+  })
+
+  it('refuses a platform probe for a paused venue', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Levitt', slug: 'levitt' })
+    await pause(venue.id, { reason: 'asked to stop' })
+
+    const res = await app.request(
+      `/v1/admin/venues/${venue.id}/probe-platform`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      },
+    )
+    expect(res.status).toBe(409)
+  })
+
   it('leaves a paused venue out of run-all', async () => {
     setAuth('admin')
     const paused = await seedVenue({ name: 'Levitt', slug: 'levitt' })

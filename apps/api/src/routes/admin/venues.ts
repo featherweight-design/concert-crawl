@@ -723,6 +723,13 @@ venuesAdminRouter.post(
     if (!venue) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
+    // A probe fetches the venue's source like a crawl does.
+    if (venue.crawlPausedAt !== null) {
+      return ctx.json(
+        { success: false, error: 'Crawling is paused for this venue' },
+        409,
+      )
+    }
 
     // Overlay proposed config (when present in the payload) on the saved
     // venue row. `undefined` means "not proposed — use saved"; `null` means
@@ -1060,19 +1067,26 @@ venuesAdminRouter.post(
     const { id } = ctx.req.valid('param')
     const { reason } = ctx.req.valid('json')
 
-    const [existing] = await db
-      .select({ crawlPausedAt: venues.crawlPausedAt })
-      .from(venues)
-      .where(eq(venues.id, id))
-    if (!existing) {
+    // The row lock makes overlapping pauses serialize, so the second one sees
+    // the first's timestamp instead of overwriting it.
+    const result = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({ crawlPausedAt: venues.crawlPausedAt })
+        .from(venues)
+        .where(eq(venues.id, id))
+        .for('update')
+      if (!existing) return null
+      const [updated] = await tx
+        .update(venues)
+        .set({ crawlPausedAt: existing.crawlPausedAt ?? new Date() })
+        .where(eq(venues.id, id))
+        .returning()
+      return { existing, venue: updated }
+    })
+    if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
-
-    const [venue] = await db
-      .update(venues)
-      .set({ crawlPausedAt: existing.crawlPausedAt ?? new Date() })
-      .where(eq(venues.id, id))
-      .returning()
+    const { existing, venue } = result
 
     ctx.set('auditAction', 'venue.crawl_pause')
     ctx.set('auditTargetId', id)
