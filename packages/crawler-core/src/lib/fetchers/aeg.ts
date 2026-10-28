@@ -292,29 +292,13 @@ function normalize(
   }
 }
 
-/**
- * Pull `https://host` out of an absolute URL. The AEG blob uses the
- * Origin header to authorize the request; deriving it from each venue's
- * own website URL means a per-venue branded subdomain check (if AEG ever
- * adds one) won't break us — and an audit log of who initiated the
- * fetch always points at the right venue.
- */
-function originFromVenueUrl(websiteUrl: string): string {
-  const parsed = new URL(websiteUrl)
-  return `${parsed.protocol}//${parsed.host}`
-}
-
-async function fetchAegBlob(
-  url: string,
-  origin: string,
-  timeoutMs?: number,
-): Promise<unknown> {
+async function fetchAegBlob(url: string, timeoutMs?: number): Promise<unknown> {
   const response = await fetch(url, {
     headers: {
-      // AEG's blob CORS layer checks Origin. We pass each venue's own
-      // origin so a per-venue allowlist (if AEG adds one) keeps working,
-      // and so any AEG-side telemetry attributes the request correctly.
-      Origin: origin,
+      // No Origin header. We used to send the venue's own origin, which made
+      // our request look like it came from the venue's page; the blob serves
+      // the same file without it (checked 2026-10-27), so we identify only
+      // as ourselves.
       'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'application/json',
     },
@@ -393,7 +377,7 @@ async function aegFetch(
   // don't land on a bot-like fixed interval.
   await deadline.wait(jitter(crawlDelayMs))
   const raw = await deadline.run('events-blob', (timeoutMs) =>
-    fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl), timeoutMs),
+    fetchAegBlob(url, timeoutMs),
   )
   const parseResult = AegResponseSchema.safeParse(raw)
   if (!parseResult.success) {

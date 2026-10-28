@@ -524,31 +524,19 @@ describe('aegFetcher.fetch', () => {
     expect(delays).toEqual([])
   })
 
-  it('derives the Origin header from the venue website per-venue', async () => {
-    // AEG's CORS layer may enforce origin per-venue; sending the venue's
-    // own origin means a future allowlist change doesn't silently 404
-    // a single venue. Verify two different venues produce two different
-    // Origin headers.
+  // An Origin naming the venue's own site would make the request look like it
+  // came from the venue's page. We identify only as ourselves.
+  it('sends no Origin header', async () => {
     mockFetchOk(BLUEBIRD_FIXTURE)
     await aegFetcher.fetch(
       makeVenue({ websiteUrl: 'https://www.bluebirdtheater.net/calendar/' }),
       { crawlDelayMs: 0 },
     )
-    const bluebirdHeaders = (fetchSpy.mock.calls[0]![1] as RequestInit)
-      .headers as Record<string, string>
-    expect(bluebirdHeaders.Origin).toBe('https://www.bluebirdtheater.net')
-
-    fetchSpy.mockClear()
-    mockFetchOk(BLUEBIRD_FIXTURE)
-    await aegFetcher.fetch(
-      makeVenue({
-        websiteUrl: 'https://www.gothictheatre.com/calendar/',
-        platformVenueId: '37',
-      }),
-      { crawlDelayMs: 0 },
+    const init: RequestInit | undefined = fetchSpy.mock.calls[0]?.[1]
+    const headers = new Headers(init?.headers)
+    expect(headers.has('Origin')).toBe(false)
+    expect(headers.get('User-Agent')).toBe(
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
     )
-    const gothicHeaders = (fetchSpy.mock.calls[0]![1] as RequestInit)
-      .headers as Record<string, string>
-    expect(gothicHeaders.Origin).toBe('https://www.gothictheatre.com')
   })
 })

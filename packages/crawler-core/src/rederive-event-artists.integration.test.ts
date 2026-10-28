@@ -66,11 +66,16 @@ describe('rederive-event-artists integration', () => {
       supportingArtists: [],
     }))
 
-  const run = (adjudicate: Adjudicator, dryRun: boolean) =>
+  const run = (
+    adjudicate: Adjudicator,
+    dryRun: boolean,
+    aiUseAllowed: (url: string) => Promise<boolean> = async () => true,
+  ) =>
     rederiveEventArtists({
       dryRun,
       adjudicate,
       adjudicationIntervalMs: 0,
+      aiUseAllowed,
     })
 
   beforeEach(async () => {
@@ -265,5 +270,27 @@ describe('rederive-event-artists integration', () => {
     expect(after.hiddenFromConsumer).toBe(false)
     expect(result.updated).toBe(0)
     expect(result.strategies['adjudicator-unavailable']).toBe(1)
+  })
+
+  // The crawl never sends a page to the model when robots.txt refuses AI use;
+  // this admin pass must not either. The row keeps its stored bill.
+  it('does not adjudicate a row whose venue refuses AI use', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      title: 'BASS BINGO NIGHT',
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      canonicalTitle: 'bass bingo night',
+      date: '2026-09-09',
+    })
+
+    const adjudicate = stubAdjudicator()
+    const result = await run(adjudicate, false, async () => false)
+
+    expect(adjudicate).not.toHaveBeenCalled()
+    expect(result.strategies['ai-use-refused']).toBe(1)
+    const after = await readEvent(event.id)
+    expect(after.canonicalHeadliners).toBeNull()
+    expect(after.hiddenFromConsumer).toBe(false)
   })
 })

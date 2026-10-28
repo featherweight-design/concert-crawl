@@ -374,57 +374,60 @@ export const DiagnosticsPanel = ({
         </div>
       </div>
 
-      {/* Options */}
-      <div>
-        <div
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase' as const,
-            color: 'var(--fg-subtle)',
-            marginBottom: 8,
-          }}
-        >
-          {ADMIN_COPY.crawl.diagnostics.optionsLabel}
+      {/* Options. A failure class with nothing safe to stage shows none: its
+          reason above names the setting to change instead. */}
+      {opts.length > 0 && (
+        <div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              color: 'var(--fg-subtle)',
+              marginBottom: 8,
+            }}
+          >
+            {ADMIN_COPY.crawl.diagnostics.optionsLabel}
+          </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gap: 10,
+            }}
+          >
+            {opts.map((opt) => (
+              <OptionCard
+                key={opt.id}
+                opt={opt}
+                staged={stagedId === opt.id}
+                onStage={onStage}
+                onApply={onApply}
+                onDiscard={onDiscard}
+              />
+            ))}
+          </div>
+          <div
+            style={{
+              marginTop: 10,
+              padding: '10px 12px',
+              background: 'var(--surface-1)',
+              border: '1px dashed var(--border-strong)',
+              borderRadius: 8,
+              fontFamily: 'var(--admin-font, Inter, sans-serif)',
+              fontSize: 11,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.5,
+            }}
+          >
+            Staged options are{' '}
+            <strong style={{ color: 'var(--fg)' }}>not auto-applied</strong>.
+            You&apos;ll review the diff and confirm before any change touches
+            the worker config.
+          </div>
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-            gap: 10,
-          }}
-        >
-          {opts.map((opt) => (
-            <OptionCard
-              key={opt.id}
-              opt={opt}
-              staged={stagedId === opt.id}
-              onStage={onStage}
-              onApply={onApply}
-              onDiscard={onDiscard}
-            />
-          ))}
-        </div>
-        <div
-          style={{
-            marginTop: 10,
-            padding: '10px 12px',
-            background: 'var(--surface-1)',
-            border: '1px dashed var(--border-strong)',
-            borderRadius: 8,
-            fontFamily: 'var(--admin-font, Inter, sans-serif)',
-            fontSize: 11,
-            color: 'var(--fg-muted)',
-            lineHeight: 1.5,
-          }}
-        >
-          Staged options are{' '}
-          <strong style={{ color: 'var(--fg)' }}>not auto-applied</strong>.
-          You&apos;ll review the diff and confirm before any change touches the
-          worker config.
-        </div>
-      </div>
+      )}
 
       {/* Strategy history */}
       {historyEntries.length > 0 && (

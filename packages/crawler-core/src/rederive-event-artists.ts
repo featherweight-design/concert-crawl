@@ -34,13 +34,17 @@
  */
 
 import { asc, eq, gt } from 'drizzle-orm'
-import { db, events } from '@concert-crawl/db'
-import { canonicalizeSupporting } from '@concert-crawl/types'
+import { db, events, venues } from '@concert-crawl/db'
+import {
+  CRAWLER_USER_AGENT,
+  canonicalizeSupporting,
+} from '@concert-crawl/types'
 import {
   deriveArtists,
   wouldAdjudicate,
   type Adjudicator,
 } from './lib/derive-artists.js'
+import { isAiUseAllowed } from './lib/robots.js'
 
 /** How each row's answer was reached. Counted so a run reports where it went. */
 export type RederiveStrategy =
@@ -52,6 +56,11 @@ export type RederiveStrategy =
   | 'settled'
   /** The adjudicator was unreachable. The row is left exactly as it was. */
   | 'adjudicator-unavailable'
+  /**
+   * The row needed the adjudicator, but robots.txt for its venue's site or its
+   * source page refuses AI use. Left exactly as it was, as the crawl does.
+   */
+  | 'ai-use-refused'
 
 export interface RederiveChange {
   eventId: string
@@ -97,6 +106,8 @@ export interface RederiveEventArtistsOptions {
    */
   adjudicationIntervalMs?: number
   sleepImpl?: (ms: number) => Promise<void>
+  /** Injected so the test can refuse AI use without fetching robots.txt. */
+  aiUseAllowed?: (url: string) => Promise<boolean>
 }
 
 const BATCH_SIZE = 500
@@ -117,12 +128,25 @@ export async function rederiveEventArtists(
   const intervalMs =
     options.adjudicationIntervalMs ?? DEFAULT_ADJUDICATION_INTERVAL_MS
   const sleep = options.sleepImpl ?? defaultSleep
+  const aiUseAllowed =
+    options.aiUseAllowed ??
+    ((url: string) => isAiUseAllowed(url, CRAWLER_USER_AGENT))
+  // The same rule the crawl applies before adjudicating: the venue's own site
+  // and the page the row came from must both allow AI use. Verdicts are
+  // cached per origin inside robots.ts, so this costs one lookup per host.
+  const mayAdjudicate = async (
+    websiteUrl: string | null,
+    sourceUrl: string | null,
+  ): Promise<boolean> =>
+    (websiteUrl === null || (await aiUseAllowed(websiteUrl))) &&
+    (sourceUrl === null || (await aiUseAllowed(sourceUrl)))
 
   const strategies: Record<RederiveStrategy, number> = {
     observed: 0,
     adjudicated: 0,
     settled: 0,
     'adjudicator-unavailable': 0,
+    'ai-use-refused': 0,
   }
   const sample: RederiveChange[] = []
   let scanned = 0
@@ -149,8 +173,11 @@ export async function rederiveEventArtists(
         canonicalHeadliners: events.canonicalHeadliners,
         canonicalSupporting: events.canonicalSupporting,
         hiddenFromConsumer: events.hiddenFromConsumer,
+        sourceUrl: events.sourceUrl,
+        websiteUrl: venues.websiteUrl,
       })
       .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
       .where(cursor === null ? undefined : gt(events.id, cursor))
       .orderBy(asc(events.id))
       .limit(Math.min(BATCH_SIZE, remaining))
@@ -193,6 +220,13 @@ export async function rederiveEventArtists(
       }
 
       const willAdjudicate = wouldAdjudicate(input)
+      if (
+        willAdjudicate &&
+        !(await mayAdjudicate(row.websiteUrl ?? null, row.sourceUrl))
+      ) {
+        strategies['ai-use-refused'] += 1
+        continue
+      }
       if (willAdjudicate && intervalMs > 0) await sleep(intervalMs)
 
       const result = await deriveArtists(input, options.adjudicate)

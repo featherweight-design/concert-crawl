@@ -212,15 +212,15 @@ export const ADMIN_COPY = {
         },
         rate_limit: {
           label: 'Rate limiting',
-          body: '429 means the venue is rate-limiting requests. Backing off the schedule or staggering with a delay is usually enough.',
+          body: "429 means the venue is rate-limiting requests. Raise the request delay on the venue's settings page, or ask the venue what rate it wants.",
         },
         parse_failure: {
           label: 'Parse failure',
-          body: "The page returned 200 but the parser couldn't find the expected structure. Likely a layout change, schema.org markup removed, or a new template.",
+          body: "The page returned 200 but the parser couldn't find the expected structure. Likely a layout change, schema.org markup removed, or a new template. Open the page and compare it with the last good run.",
         },
         timeout: {
           label: 'Timeout',
-          body: 'Request did not complete in time. Often a JavaScript-heavy page that Playwright is struggling to render fully.',
+          body: "Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. Try setting the venue's wait condition to load on its settings page.",
         },
         unknown: {
           label: 'Unclassified failure',
@@ -238,60 +238,9 @@ export const ADMIN_COPY = {
             cta: 'Stage manual mode',
           },
         ],
-        rate_limit: [
-          {
-            id: 'opt-delay',
-            iconName: 'RefreshCw',
-            recommended: true,
-            title: 'Increase request delay to 8s',
-            body: 'Slows the sweep but stays under typical 10 req/min limits.',
-            cta: 'Stage delay 8s',
-          },
-          {
-            id: 'opt-sched',
-            iconName: 'RefreshCw',
-            recommended: false,
-            title: 'Reduce schedule to every 12h',
-            body: 'Half as many requests per day.',
-            cta: 'Stage schedule',
-          },
-        ],
-        parse_failure: [
-          {
-            id: 'opt-llm',
-            iconName: 'FileEdit',
-            recommended: true,
-            title: 'Switch to LLM extraction',
-            body: 'Fallback while the page template stabilizes. Cost goes up.',
-            cta: 'Stage LLM strategy',
-          },
-          {
-            id: 'opt-struct',
-            iconName: 'FileEdit',
-            recommended: false,
-            title: 'Refresh selector hints',
-            body: 'Re-train the structured extractor against the current DOM.',
-            cta: 'Stage retrain',
-          },
-        ],
-        timeout: [
-          {
-            id: 'opt-pw',
-            iconName: 'Play',
-            recommended: true,
-            title: 'Increase render timeout to 30s',
-            body: 'Gives heavy pages more room to settle.',
-            cta: 'Stage timeout 30s',
-          },
-          {
-            id: 'opt-wait',
-            iconName: 'RefreshCw',
-            recommended: false,
-            title: 'Wait for selector instead of load',
-            body: 'Stop waiting on the full load event; key off `.event-card`.',
-            cta: 'Stage selector wait',
-          },
-        ],
+        rate_limit: [],
+        parse_failure: [],
+        timeout: [],
         // An unclassified failure records no block, so there is no crawl to
         // leave off; errorReasons.unknown already says to inspect it.
         unknown: [],
@@ -321,39 +270,6 @@ export const ADMIN_COPY = {
       footerCancel: 'Cancel',
       footerApply: 'Apply change',
       stagedDiffs: {
-        'opt-delay': {
-          title: 'Increase request delay to 8s',
-          intent:
-            'Slow the sweep to stay under typical 10 req/min rate limits.',
-          diff: [{ path: 'request.delay_ms', before: '1500', after: '8000' }],
-          risks: ['Sweep takes ~5× longer; LLM cost per sweep is unchanged.'],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'next scheduled sweep · ~2h',
-        },
-        'opt-llm': {
-          title: 'Switch to LLM extraction',
-          intent:
-            'Use the LLM to parse the page while the structured-data template stabilizes.',
-          diff: [
-            {
-              path: 'extraction.strategy',
-              before: 'structured_data',
-              after: 'llm',
-            },
-            {
-              path: 'extraction.model',
-              before: '(n/a)',
-              after: 'claude-haiku-4-5',
-            },
-            { path: 'budget.per_run_max_usd', before: '$0.00', after: '$0.60' },
-          ],
-          risks: [
-            'LLM cost jumps from $0 to ~$0.40/run for this venue.',
-            'Confidence scores drop; expect a flag spike in Review.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'manual re-crawl now, or next scheduled sweep',
-        },
         'opt-manual': {
           title: 'Keep venue on manual entry',
           intent:
@@ -372,75 +288,6 @@ export const ADMIN_COPY = {
           rollback:
             "Once the venue allows ConcertCrawl, queue a crawl from the venue's page. A successful crawl clears the block.",
           nextRunIn: 'none while the venue is blocked',
-        },
-        'opt-sched': {
-          title: 'Reduce crawl schedule to every 12 hours',
-          intent:
-            'Crawl more frequently so fresh events are discovered sooner after they go on sale.',
-          diff: [{ path: 'crawl.schedule_hours', before: '24', after: '12' }],
-          risks: [
-            'Doubles the number of crawl runs for this venue — higher infrastructure and LLM cost if extraction uses the LLM path.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'next scheduled sweep · ~2h',
-        },
-        'opt-struct': {
-          title: 'Retrain structured extractor selector hints',
-          intent:
-            'Refresh the cached CSS selector hints so the structured extractor can parse the page again after a venue redesign.',
-          diff: [
-            {
-              path: 'extraction.selector_hints',
-              before: 'stale',
-              after: 'regenerated',
-            },
-          ],
-          risks: [
-            'Regeneration requires one LLM-assisted crawl to rebuild hints.',
-            'Confidence scores may dip on the first run.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'trigger manual re-crawl now',
-        },
-        'opt-pw': {
-          title: 'Increase Playwright render timeout to 30s',
-          intent:
-            'Give the page more time to finish rendering before extraction — useful for slow SPAs or venues behind CDN challenges.',
-          diff: [
-            {
-              path: 'crawl.render_timeout_ms',
-              before: '10000',
-              after: '30000',
-            },
-          ],
-          risks: [
-            'Each crawl run takes up to 20s longer per page.',
-            'May mask a deeper issue if the venue is blocking or the page never fully loads.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'next scheduled sweep · ~2h',
-        },
-        'opt-wait': {
-          title: 'Switch from networkidle to selector-based wait',
-          intent:
-            'Wait for a specific DOM element rather than network idle — more reliable on pages that stream content or have persistent websocket connections.',
-          diff: [
-            {
-              path: 'crawl.waitUntil',
-              before: 'networkidle',
-              after: 'domcontentloaded',
-            },
-            {
-              path: 'crawl.waitForSelector',
-              before: '—',
-              after: '.event-card',
-            },
-          ],
-          risks: [
-            'If the selector changes or is absent, the crawl will time out waiting for an element that never appears.',
-          ],
-          rollback: 'Revert from the strategy history log.',
-          nextRunIn: 'next scheduled sweep · ~2h',
         },
       },
     },
