@@ -7,13 +7,9 @@ import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time'
 import { AdminButton } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { pauseCrawling, resumeCrawling } from '@/lib/actions/venues'
+import type { CrawlPauseControlProps } from './definitions/types'
 
 const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause
-
-interface CrawlPauseControlProps {
-  venueId: string
-  crawlPausedAt: string | null
-}
 
 /**
  * Stops every crawl of a venue while its shows stay published, for a venue
@@ -31,7 +27,7 @@ export const CrawlPauseControl = ({
   const paused = crawlPausedAt !== null
   const trimmedReason = reason.trim()
 
-  const handleClick = () => {
+  const toggleCrawlPause = () => {
     startTransition(async () => {
       if (paused) {
         await resumeCrawling(venueId)
@@ -83,7 +79,7 @@ export const CrawlPauseControl = ({
           size="sm"
           icon={paused ? Play : Pause}
           disabled={isPending || (!paused && trimmedReason === '')}
-          onClick={handleClick}
+          onClick={toggleCrawlPause}
           type="button"
         >
           {paused ? COPY.resumeButton : COPY.pauseButton}
