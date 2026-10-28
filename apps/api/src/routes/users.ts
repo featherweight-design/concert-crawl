@@ -460,6 +460,10 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
     try {
       await getStripeClient().subscriptions.cancel(row.stripeSubscriptionId)
     } catch (err) {
+      // Our mirror lags Stripe until the deletion webhook lands. A retry after
+      // a cancel that already went through would otherwise be refused here
+      // for ever, so ask Stripe what the subscription's state really is.
+      if (await isEndedInStripe(row.stripeSubscriptionId)) continue
       apiLogger.error(
         { err, userId, subscriptionId: row.stripeSubscriptionId },
         'Stripe cancel failed at account deletion',
@@ -468,6 +472,19 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
     }
   }
   return true
+}
+
+const isEndedInStripe = async (subscriptionId: string): Promise<boolean> => {
+  try {
+    const subscription =
+      await getStripeClient().subscriptions.retrieve(subscriptionId)
+    return (
+      subscription.status === 'canceled' ||
+      subscription.status === 'incomplete_expired'
+    )
+  } catch {
+    return false
+  }
 }
 
 // DELETE /v1/users/me — delete account

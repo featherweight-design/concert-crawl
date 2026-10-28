@@ -113,7 +113,8 @@ export function DeleteAccountSheet({
             ) : (
               ','
             )}{' '}
-            {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}
+            {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}{' '}
+            {DANGER_COPY.confirmBilling}
           </p>
           <label
             className="mb-1.5 block text-[13px] font-medium text-fg-muted"
@@ -228,7 +229,8 @@ export function DeleteAccountSheet({
           ) : (
             ','
           )}{' '}
-          {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}
+          {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}{' '}
+          {DANGER_COPY.confirmBilling}
         </p>
 
         <div className="flex flex-col gap-1.5">

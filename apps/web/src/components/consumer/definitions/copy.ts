@@ -1169,6 +1169,10 @@ export const CONSUMER_COPY = {
         `email, and plan are deleted. ${submissionCount} submitted ${
           submissionCount === 1 ? 'price stays' : 'prices stay'
         } on the public record. Your name is removed from them.`,
+      // Billing ends at deletion, ahead of the period end the Terms otherwise
+      // promise, so the cost is stated where the user commits to it.
+      confirmBilling:
+        "If you're on a paid plan, it ends now, and the rest of the month isn't refunded.",
       // "Type DELETE to confirm." — split because DELETE is bolded.
       confirmLabelLead: 'Type',
       confirmLabelToken: 'DELETE',

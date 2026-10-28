@@ -81,7 +81,7 @@ export const LEGAL_COPY = {
       body1:
         'Paid tiers are billed monthly through Stripe, our payment processor. We never see or store your card details. Subscriptions auto-renew each month until cancelled.',
       body2:
-        'You can cancel anytime from your settings page. Cancelling stops future charges; your paid features keep working until the end of the period you already paid for.',
+        'You can cancel anytime from your settings page. Cancelling stops future charges; your paid features keep working until the end of the period you already paid for. Deleting your account is different: it cancels your subscription immediately, paid features end at once, and the unused part of that period is not refunded.',
       body3:
         'The price you subscribe at is the price you keep. If we raise prices for new subscribers, your existing subscription is not affected.',
       refundsTitle: 'Refunds',

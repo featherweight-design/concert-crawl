@@ -19,6 +19,8 @@ const { stripeState } = vi.hoisted(() => ({
   stripeState: {
     cancelled: [] as string[],
     cancelFails: false,
+    // What `subscriptions.retrieve` reports after a refused cancel.
+    statusInStripe: 'active',
   },
 }))
 
@@ -34,6 +36,7 @@ vi.mock('../lib/stripe.js', async (importOriginal) => ({
         stripeState.cancelled.push(subscriptionId)
         return Promise.resolve({})
       },
+      retrieve: () => Promise.resolve({ status: stripeState.statusInStripe }),
     },
   }),
 }))
@@ -903,6 +906,34 @@ describe('DELETE /v1/users/me', () => {
       expect(profiles).toHaveLength(1)
     } finally {
       stripeState.cancelFails = false
+    }
+  })
+
+  // A first attempt can cancel in Stripe and then fail at Clerk. Our mirror
+  // still says active until the webhook lands, so the retry's cancel is
+  // refused; Stripe's own state has to decide, or the user is stuck.
+  it('deletes on retry when Stripe already ended the subscription', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    await seedSubscription('user_test123')
+    stripeState.cancelFails = true
+    stripeState.statusInStripe = 'canceled'
+
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      })
+      expect(res.status).toBe(200)
+      const profiles = await testDb
+        .select()
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, 'user_test123'))
+      expect(profiles).toHaveLength(0)
+    } finally {
+      stripeState.cancelFails = false
+      stripeState.statusInStripe = 'active'
     }
   })
 
