@@ -43,7 +43,7 @@ describe('updateVenue on a refused save (#1344)', () => {
   it("takes the field from a Zod issue's path", async () => {
     patch.mockRejectedValue(
       new ApiError(400, 'Invalid url', undefined, [
-        { path: ['priceUrl'], message: 'Invalid url', code: 'invalid_string' },
+        { path: ['priceUrl'], message: 'Invalid url' },
       ]),
     )
 
