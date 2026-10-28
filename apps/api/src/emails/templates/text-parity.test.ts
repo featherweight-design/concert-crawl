@@ -44,6 +44,6 @@ describe('plain-text emails match their HTML', () => {
       (label) => text.indexOf(label),
     )
     expect(order.every((index) => index >= 0)).toBe(true)
-    expect([...order].sort((a, b) => a - b)).toEqual(order)
+    expect([...order].sort((left, right) => left - right)).toEqual(order)
   })
 })
