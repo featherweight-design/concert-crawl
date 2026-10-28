@@ -17,9 +17,9 @@ const ALLOWED = new Set([
 ])
 
 // A value import (not `import type`) naming TierPickerSheet from the sheet
-// module or the barrel, by alias or relative path.
+// module or the barrel, by alias or by any relative path.
 const STATIC_IMPORT =
-  /^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'[^']*tier-picker(?:\/TierPickerSheet|\/index)?'|^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'\.\/(?:TierPickerSheet|index)?'/m
+  /^import\s+\{[^}]*\bTierPickerSheet\b[^}]*\}\s+from\s+'(?:[^']*\/TierPickerSheet|[^']*tier-picker(?:\/index)?|\.\/(?:index)?|\.\.(?:\/index)?)'/m
 
 const sourceFiles = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {

@@ -16,8 +16,21 @@ vi.mock('next/dynamic', () => ({
 import { TierPickerSheet } from './lazy'
 import type { TierPickerSheetProps } from './TierPickerSheet'
 
-const props = (open: boolean): TierPickerSheetProps =>
-  ({ open, onClose: () => {} }) as unknown as TierPickerSheetProps
+const props = (open: boolean): TierPickerSheetProps => ({
+  open,
+  onClose: () => {},
+  planState: {
+    plan: 'free',
+    onTrial: false,
+    trialEndsAt: null,
+    status: null,
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+    roleComped: false,
+  },
+  scaRegion: false,
+  entry: 'paywall',
+})
 
 afterEach(() => {
   cleanup()
