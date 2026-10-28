@@ -1170,6 +1170,11 @@ eventsAdminRouter.post(
 )
 
 // POST /v1/admin/events/bulk/mark-non-concert — set hiddenFromConsumer=true.
+//
+// Scoped to rows currently visible, mirroring bulk/mark-as-concert (#814 R2):
+// bulk-dock selections survive pagination, so the body can carry rows that
+// are already hidden, and those must not bump updatedAt or write audit
+// entries for a transition that didn't happen (#815).
 eventsAdminRouter.post(
   '/bulk/mark-non-concert',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
@@ -1185,7 +1190,9 @@ eventsAdminRouter.post(
       const updated = await tx
         .update(events)
         .set({ hiddenFromConsumer: true, updatedAt: new Date() })
-        .where(inArray(events.id, ids))
+        .where(
+          and(inArray(events.id, ids), eq(events.hiddenFromConsumer, false)),
+        )
         .returning({ id: events.id })
       if (updated.length > 0) {
         await tx.insert(auditLog).values(
@@ -1216,7 +1223,7 @@ eventsAdminRouter.post(
 // survive pagination, so the request body can include rows the caller no
 // longer sees as hidden; without the filter, those rows would still flip
 // updatedAt and emit audit noise. The mirror cleanup for bulk/mark-non-
-// concert is tracked separately as #815. (#809; #814 review round 2)
+// concert landed in #815. (#809; #814 review round 2)
 eventsAdminRouter.post(
   '/bulk/mark-as-concert',
   zValidator('json', bulkIdsSchema, (result, ctx) => {

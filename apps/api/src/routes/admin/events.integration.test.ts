@@ -2222,6 +2222,58 @@ describe('PR 10 — bulk endpoints', () => {
     expect(rows.every((row) => row.hiddenFromConsumer === true)).toBe(true)
   })
 
+  it('POST /bulk/mark-non-concert only flips + audits currently-visible rows (#815)', async () => {
+    // Mirror of the #814 R2 test: an already-hidden row left in a stale
+    // cross-page selection must not bump updatedAt or write an audit entry.
+    const venue = await seedVenue()
+    const visibleEvent = await seedEvent(venue.id, {
+      title: 'Visible',
+      artist: 'A',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(7),
+      hiddenFromConsumer: false,
+    })
+    const hiddenEvent = await seedEvent(venue.id, {
+      title: 'Hidden',
+      artist: 'B',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(8),
+      hiddenFromConsumer: true,
+    })
+    const hiddenBefore = await testDb
+      .select({ updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, hiddenEvent.id))
+    const hiddenUpdatedAtBefore = hiddenBefore[0]?.updatedAt
+
+    const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ ids: [visibleEvent.id, hiddenEvent.id] }),
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { count: number }
+    }
+    expect(body.data.count).toBe(1)
+
+    const hiddenAfter = await testDb
+      .select({ updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, hiddenEvent.id))
+    expect(hiddenAfter[0]?.updatedAt).toEqual(hiddenUpdatedAtBefore)
+
+    const audits = await testDb
+      .select({ targetId: auditLog.targetId })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.bulk_mark_non_concert'))
+    expect(audits).toHaveLength(1)
+    expect(audits[0]?.targetId).toBe(visibleEvent.id)
+  })
+
   it('POST /bulk/mark-as-concert sets hiddenFromConsumer=false (#809)', async () => {
     const venue = await seedVenue()
     const evt1 = await seedEvent(venue.id, {

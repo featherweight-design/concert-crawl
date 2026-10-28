@@ -149,7 +149,6 @@ export const CONSUMER_COPY = {
     ceilingPlaceholder: '75',
     ceilingErrorMax: 'Cap is $2,000.',
     ceilingErrorBelowFloor: "Ceiling can't be below floor.",
-    vendorError: "Pick where it's listed.",
     authError: 'You must be signed in to update a price.',
     genericError: 'Something went wrong.',
     cancelButton: 'Cancel',

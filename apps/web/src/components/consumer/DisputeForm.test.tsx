@@ -2,13 +2,7 @@
 
 import '@testing-library/jest-dom'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import type { PriceSubmission } from '@concert-crawl/types'
 
@@ -81,29 +75,21 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('DisputeForm vendor picker', () => {
-  it('renders the shared grouped picker, not a flat vendor chip list', () => {
+describe('DisputeForm fields', () => {
+  it('asks for a price only, with no vendor picker', () => {
     renderForm()
 
-    const group = screen.getByRole('radiogroup', {
-      name: VENDOR_PICKER_COPY.label,
-    })
-    expect(within(group).getAllByRole('radio')).toHaveLength(3)
     expect(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    ).toBeInTheDocument()
+      screen.queryByRole('radiogroup', { name: VENDOR_PICKER_COPY.label }),
+    ).toBeNull()
   })
 
-  it('posts a vendor the flat six-option list never offered', async () => {
+  it('posts the price without a vendor, which the server inherits', async () => {
     renderForm()
 
     fireEvent.change(screen.getByLabelText(/floor/i), {
       target: { value: '55' },
     })
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
-    fireEvent.click(screen.getByRole('option', { name: 'Etix' }))
     fireEvent.click(
       screen.getByRole('button', {
         name: CONSUMER_COPY.disputeForm.submitButton,
@@ -111,7 +97,7 @@ describe('DisputeForm vendor picker', () => {
     )
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
-    expect(lastPostBody()['vendor']).toBe('Etix')
+    expect(lastPostBody()).toEqual({ floor: 55 })
   })
 })
 
@@ -130,10 +116,6 @@ describe('DisputeForm error handling', () => {
     fireEvent.change(screen.getByLabelText(/floor/i), {
       target: { value: '55' },
     })
-    fireEvent.click(
-      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
-    fireEvent.click(screen.getByRole('option', { name: 'Etix' }))
     fireEvent.click(
       screen.getByRole('button', {
         name: CONSUMER_COPY.disputeForm.submitButton,

@@ -4,9 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { SPNumberField } from './SPNumberField'
-import { VendorField } from '@/components/consumer/submit-price/VendorField'
 import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
-import type { PriceSubmission, Vendor } from '@concert-crawl/types'
+import type { PriceSubmission } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
@@ -22,7 +21,6 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
   const { getToken } = useAuth()
   const [floor, setFloor] = useState('')
   const [ceiling, setCeiling] = useState('')
-  const [vendor, setVendor] = useState<Vendor | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -63,7 +61,6 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
         newErrors['ceiling'] = copy.disputeForm.ceilingErrorBelowFloor
       }
     }
-    if (!vendor) newErrors['vendor'] = copy.disputeForm.vendorError
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) return
 
@@ -85,8 +82,9 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
           },
           body: JSON.stringify({
             floor: floorNum,
+            // No vendor: a price check challenges the price in the parent's
+            // slot, and the server inherits its vendor (#698).
             ceiling: ceiling ? Number(ceiling) : undefined,
-            vendor,
           }),
         },
       )
@@ -137,12 +135,6 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
           error={errors['ceiling']}
         />
       </div>
-
-      <VendorField
-        value={vendor}
-        onChange={setVendor}
-        error={errors['vendor']}
-      />
 
       {errorMsg && <p className="text-xs text-danger">{errorMsg}</p>}
 
