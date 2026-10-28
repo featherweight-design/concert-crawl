@@ -1,3 +1,10 @@
+## [1.298.5](https://github.com/HartiganHM/concert-crawl/compare/v1.298.4...v1.298.5) (2026-10-28)
+
+
+### Bug Fixes
+
+* **web:** leave service worker registration to the app ([948347e](https://github.com/HartiganHM/concert-crawl/commit/948347e28e2e05e17ef712f2481e2852ba91a040))
+
 ## [1.298.4](https://github.com/HartiganHM/concert-crawl/compare/v1.298.3...v1.298.4) (2026-10-27)
 
 
