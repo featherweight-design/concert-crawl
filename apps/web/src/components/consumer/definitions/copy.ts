@@ -1766,10 +1766,11 @@ export const CONSUMER_COPY = {
   // ── Dispute price page ──────────────────────────────────────────
   disputePage: {
     cancelLink: '← Cancel',
-    heading: 'Dispute price',
-    disputingLabel: "You're disputing",
+    // "Price check" is the locked term; this page used to say "dispute".
+    heading: 'Price check',
+    disputingLabel: "You're checking",
     requirement:
-      "A dispute needs an alternate price + vendor. If you saw something different, log it. That's how we find the truth.",
+      "A price check needs the price you saw. Seller and ticket type stay the same. If you saw something different, log it. That's how we find the truth.",
   },
 } as const
 
