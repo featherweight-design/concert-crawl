@@ -1,3 +1,12 @@
+## [1.298.6](https://github.com/HartiganHM/concert-crawl/compare/v1.298.5...v1.298.6) (2026-10-28)
+
+
+### Bug Fixes
+
+* **billing:** cancel the Stripe subscription before deleting an account ([101347d](https://github.com/HartiganHM/concert-crawl/commit/101347d8d431a11e080280aeeb35e3a6009cb5b6))
+* **billing:** let a retried deletion through once Stripe ended the subscription ([a56f517](https://github.com/HartiganHM/concert-crawl/commit/a56f51702ea7bb100a53ad88b3af809525ba9566))
+* **billing:** validate Stripe's status response; log a failed lookup; bump Terms date ([efefe37](https://github.com/HartiganHM/concert-crawl/commit/efefe378e710f7e4855e8931fd1784fd692ba038))
+
 ## [1.298.5](https://github.com/HartiganHM/concert-crawl/compare/v1.298.4...v1.298.5) (2026-10-28)
 
 
