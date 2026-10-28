@@ -124,15 +124,19 @@ export async function updateVenue(
         }
       }
     }
-    // Any other 400 is a rule the route explains in its own words (the
-    // browser-mode wait-selector guard, for one). Rethrowing it showed the
+    // Any other 400 says what was wrong: either a hand-rolled rule with its
+    // own message and `field` (the browser-mode wait-selector guard), or a Zod
+    // issue, whose message and path name the input. Rethrowing showed the
     // admin "An unexpected error occurred" and nothing else (#1344).
     if (err instanceof ApiError && err.status === 400) {
-      console.warn('updateVenue: rejected', { id, field: err.field })
+      const zodPath = err.zodIssues?.[0]?.path[0]
+      const field =
+        err.field ?? (typeof zodPath === 'string' ? zodPath : undefined)
+      console.warn('updateVenue: rejected', { id, field })
       return {
         success: false,
         error: err.message,
-        ...(err.field === undefined ? {} : { field: err.field }),
+        ...(field === undefined ? {} : { field }),
       }
     }
     // Unexpected failure — the branches above convert the expected 409/400
