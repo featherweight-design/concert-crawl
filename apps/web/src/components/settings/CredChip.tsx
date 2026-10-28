@@ -3,6 +3,9 @@ import { CCTip } from '@/components/ui/cc-tip'
 
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
+export const CRED_TRIGGER_HIT_AREA =
+  "relative before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-['']"
+
 interface CredChipProps {
   cred: number
   size?: 'sm' | 'md'
@@ -55,6 +58,9 @@ export function CredChip({
       triggerLabel={SETTINGS_COPY.credChipTipLabel(cred.toLocaleString())}
       placement="bottom"
       align="start"
+      // The chip is ~19px tall; an invisible band takes the tap target to 44px
+      // without moving the layout. CCTip only adds one to its default disc.
+      triggerClassName={CRED_TRIGGER_HIT_AREA}
     >
       {chip}
     </CCTip>
