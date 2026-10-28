@@ -16,6 +16,11 @@ const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
+  // ServiceWorkerRegistration registers `/sw.js` and catches its failures.
+  // Serwist's auto-register would register it a second time with no catch,
+  // so any browser whose `register()` misbehaves surfaced an unhandled
+  // rejection (CONCERT-CRAWL-WEB-2).
+  register: false,
   reloadOnOnline: true,
   // `sw.ts` names `/~offline` as its navigation fallback, and a fallback is
   // served via `matchPrecache`, so the entry has to be in the precache manifest
