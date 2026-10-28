@@ -9,7 +9,9 @@ vi.mock('@concert-crawl/db', () => ({
     }),
     // The price write's venue re-check is a subquery; only its shape matters.
     select: vi.fn().mockReturnValue({
-      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({}) }),
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ for: vi.fn().mockReturnValue({}) }),
+      }),
     }),
   },
   priceRetrievalLog: {},

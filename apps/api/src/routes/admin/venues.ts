@@ -12,6 +12,7 @@ import {
   priceSubmissions,
   userEvents,
   auditLog,
+  notifications,
   venueFaultAcknowledgements,
 } from '@concert-crawl/db'
 import {
@@ -26,6 +27,7 @@ import {
   ne,
   not,
   or,
+  sql,
 } from 'drizzle-orm'
 import {
   dispatch,
@@ -1158,6 +1160,13 @@ venuesAdminRouter.delete(
   },
 )
 
+// Notifications that carry or concern a venue's prices, removed with them.
+const PRICE_NOTIFICATION_CATEGORIES = [
+  'watch.pricedrop',
+  'contest.resolved',
+  'contest.needs_info',
+]
+
 // POST /v1/admin/venues/:id/remove — honour a venue's removal request, the
 // one /bot promises within 30 days. Takes the venue's shows off the site
 // (active = false, which every public query joins on), stops every crawl
@@ -1237,7 +1246,26 @@ venuesAdminRouter.post(
         )
         .returning({ id: userEvents.id })
 
+      // Price-drop alerts quote the old and new price, and price-check
+      // notices are about a deleted submission. Both point at the show.
+      const deletedNotifications = await tx
+        .delete(notifications)
+        .where(
+          and(
+            inArray(notifications.category, PRICE_NOTIFICATION_CATEGORIES),
+            inArray(
+              notifications.actionUrl,
+              tx
+                .select({ url: sql<string>`'/events/' || ${events.id}` })
+                .from(events)
+                .where(eq(events.venueId, id)),
+            ),
+          ),
+        )
+        .returning({ id: notifications.id })
+
       const counts = {
+        notificationsDeleted: deletedNotifications.length,
         submissionsDeleted: deletedSubmissions.length,
         eventPricesCleared: clearedEvents.length,
         savedPricesCleared: clearedSavedPrices.length,

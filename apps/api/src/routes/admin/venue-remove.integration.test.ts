@@ -21,6 +21,7 @@ import {
   clearTables,
   seedArtist,
   seedEvent,
+  seedNotification,
   seedPriceSubmission,
   seedSubmissionConfirm,
   seedUserEvent,
@@ -30,6 +31,7 @@ import { testDb } from '../../test/helpers/db.js'
 import {
   auditLog,
   events,
+  notifications,
   priceSubmissions,
   submissionConfirms,
   userEvents,
@@ -70,6 +72,18 @@ async function seedPricedVenue(slug: string) {
   })
   await seedSubmissionConfirm(original.id, 'user_confirmer')
   await seedUserEvent('user_watcher', event.id, { savedPrice: '30' })
+  await seedNotification({
+    userId: 'user_watcher',
+    category: 'watch.pricedrop',
+    title: 'Price drop: $40 to $25',
+    actionUrl: `/events/${event.id}`,
+  })
+  // Not a price notice: stays.
+  await seedNotification({
+    userId: 'user_watcher',
+    category: 'watch.cancelled',
+    actionUrl: `/events/${event.id}`,
+  })
   return { venue, event, original, counter }
 }
 
@@ -149,6 +163,12 @@ describe('admin venue removal', () => {
       .where(eq(userEvents.eventId, event.id))
     expect(watching).toEqual([{ savedPrice: null }])
 
+    const left = await testDb
+      .select({ category: notifications.category })
+      .from(notifications)
+      .where(eq(notifications.actionUrl, `/events/${event.id}`))
+    expect(left).toEqual([{ category: 'watch.cancelled' }])
+
     const [audit] = await testDb
       .select()
       .from(auditLog)
@@ -163,6 +183,7 @@ describe('admin venue removal', () => {
       submissionsDeleted: 2,
       eventPricesCleared: 1,
       savedPricesCleared: 1,
+      notificationsDeleted: 1,
     })
     expect(
       await testDb

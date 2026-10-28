@@ -51,7 +51,10 @@ export async function updateEventPrice(
                 eq(venues.active, true),
                 isNull(venues.crawlPausedAt),
               ),
-            ),
+            )
+            // Waits out an uncommitted removal or pause, then re-reads the
+            // venue, so the check never sees the state that removal replaced.
+            .for('share'),
         ),
       ),
     )
