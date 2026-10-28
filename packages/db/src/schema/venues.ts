@@ -60,6 +60,11 @@ export const venues = pgTable('venues', {
   // clears, nothing but the admin resume action clears this, and every crawl
   // path refuses a paused venue, manual triggers included.
   crawlPausedAt: timestamp('crawl_paused_at', { withTimezone: true }),
+  // Set by the admin removal action (a venue asked us to take its data down).
+  // Such a venue is also inactive and crawl-paused; this marker additionally
+  // takes its PAST shows off artist pages and search, which deactivation alone
+  // keeps (#1299). Activating the venue clears it.
+  removedAt: timestamp('removed_at', { withTimezone: true }),
   lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
     withTimezone: true,
   }),

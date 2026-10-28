@@ -624,6 +624,13 @@
       "when": 1793145600000,
       "tag": "0088_venue_crawl_paused_at",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1793232000000,
+      "tag": "0089_venue_removed_at",
+      "breakpoints": true
     }
   ]
 }

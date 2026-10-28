@@ -175,6 +175,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       date: events.date,
       status: events.status,
       venueActive: venues.active,
+      venueRemovedAt: venues.removedAt,
     })
     .from(events)
     // Joined rather than filtered, because the two things read off these rows
@@ -211,7 +212,12 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     // the date moved, the show still occurred. This gate follows that ruling
     // rather than restating it, or an artist whose only row is a cancelled
     // past date reaches a page with nothing on either half.
-    const isPast = row.date < today && row.status !== 'cancelled'
+    // A venue removed at its own request takes its past shows off the artist
+    // page as well (venues.removed_at), so they are not something to show.
+    const isPast =
+      row.date < today &&
+      row.status !== 'cancelled' &&
+      row.venueRemovedAt === null
     // Same status triple the artist page's own upcoming section uses
     // (artists-public.ts) — counting only 'upcoming' would undercount, and
     // read "Past shows only" for an artist whose next date is postponed.

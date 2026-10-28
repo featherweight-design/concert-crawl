@@ -10,6 +10,8 @@ import {
   events,
   crawlRuns,
   priceSubmissions,
+  userEvents,
+  auditLog,
   venueFaultAcknowledgements,
 } from '@concert-crawl/db'
 import {
@@ -668,6 +670,9 @@ venuesAdminRouter.patch(
         ...platformClearFields,
         ...apiProviderClearFields,
         ...verificationFields,
+        // Activating a removed venue undoes the removal marker, so its past
+        // shows return to artist pages with the rest of it.
+        ...(body.active === true ? { removedAt: null } : {}),
         updatedAt: new Date(),
       })
       .where(eq(venues.id, id))
@@ -1159,7 +1164,9 @@ venuesAdminRouter.delete(
 // (crawl_paused_at, which also stops the price pipeline), and deletes every
 // price we hold for its shows: the crawled price on each event and every
 // user-submitted price. The event rows stay, so users' Watching and Concerts
-// entries survive; the prices do not come back if the venue is reactivated.
+// entries survive, minus the price snapshot each one captured. removed_at
+// also takes the venue's past shows off artist pages and search, which
+// deactivation alone keeps (#1299). Prices do not come back on reactivation.
 venuesAdminRouter.post(
   '/:id/remove',
   zValidator('param', crawlPauseParamSchema),
@@ -1167,6 +1174,7 @@ venuesAdminRouter.post(
   async (ctx) => {
     const { id } = ctx.req.valid('param')
     const { reason } = ctx.req.valid('json')
+    const actorId = getAuthUser(ctx).userId
 
     const result = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -1184,6 +1192,7 @@ venuesAdminRouter.post(
         .set({
           active: false,
           crawlPausedAt: existing.crawlPausedAt ?? new Date(),
+          removedAt: new Date(),
         })
         .where(eq(venues.id, id))
         .returning()
@@ -1215,33 +1224,46 @@ venuesAdminRouter.post(
         )
         .returning({ id: events.id })
 
-      return {
-        existing,
-        venue,
+      // The price a user's Watching entry captured when they saved the show
+      // is a copy of the venue's price, so it goes too. The entry stays.
+      const clearedSavedPrices = await tx
+        .update(userEvents)
+        .set({ savedPrice: null })
+        .where(
+          and(
+            inArray(userEvents.eventId, venueEventIds),
+            isNotNull(userEvents.savedPrice),
+          ),
+        )
+        .returning({ id: userEvents.id })
+
+      const counts = {
         submissionsDeleted: deletedSubmissions.length,
         eventPricesCleared: clearedEvents.length,
+        savedPricesCleared: clearedSavedPrices.length,
       }
+
+      // Written in the transaction, not by the audit middleware, which runs
+      // after commit and swallows its own failures: a deletion this
+      // irreversible must not succeed without its record.
+      await tx.insert(auditLog).values({
+        actorId,
+        action: 'venue.remove',
+        targetId: id,
+        metadata: {
+          reason,
+          wasActive: existing.active,
+          wasCrawlPaused: existing.crawlPausedAt !== null,
+          ...counts,
+        },
+      })
+
+      return { venue, ...counts }
     })
     if (!result) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
-    const { existing, venue, submissionsDeleted, eventPricesCleared } = result
-
-    ctx.set('auditAction', 'venue.remove')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
-    ctx.set('auditMeta', {
-      reason,
-      wasActive: existing.active,
-      wasCrawlPaused: existing.crawlPausedAt !== null,
-      submissionsDeleted,
-      eventPricesCleared,
-    })
-
-    return ctx.json({
-      success: true,
-      data: { venue, submissionsDeleted, eventPricesCleared },
-    })
+    return ctx.json({ success: true, data: result })
   },
 )
 

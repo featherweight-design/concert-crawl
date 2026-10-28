@@ -1,5 +1,5 @@
-import { eq, sql } from 'drizzle-orm'
-import { db, events, priceRetrievalLog } from '@concert-crawl/db'
+import { and, eq, exists, isNull, sql } from 'drizzle-orm'
+import { db, events, priceRetrievalLog, venues } from '@concert-crawl/db'
 import type { PriceSource } from '@concert-crawl/types'
 import { PriceFetchDeferredError } from './types.js'
 import type { PipelineContext, PriceTierResult } from './types.js'
@@ -23,7 +23,7 @@ async function logAttempt(
   })
 }
 
-async function updateEventPrice(
+export async function updateEventPrice(
   eventId: string,
   result: PriceTierResult,
 ): Promise<void> {
@@ -35,7 +35,26 @@ async function updateEventPrice(
       priceSource: result.source,
       updatedAt: sql`now()`,
     })
-    .where(eq(events.id, eventId))
+    .where(
+      and(
+        eq(events.id, eventId),
+        // Checked at write time, not only when the run picked the venue: a run
+        // walks a venue's shows for minutes, and an admin can pause or remove
+        // the venue partway through. A removed venue's prices must not refill.
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(venues)
+            .where(
+              and(
+                eq(venues.id, events.venueId),
+                eq(venues.active, true),
+                isNull(venues.crawlPausedAt),
+              ),
+            ),
+        ),
+      ),
+    )
 }
 
 async function runTier(

@@ -356,7 +356,12 @@ artistsPublicRouter.get(
       // Deliberately not filtered on venues.active (#1299), unlike the
       // upcoming query above. Deactivation removes a venue from everything
       // forward-looking; it does not un-happen the shows it already hosted.
-      .innerJoin(venues, eq(events.venueId, venues.id))
+      // A venue that asked us to remove its data is the exception: removed_at
+      // takes its past shows off too.
+      .innerJoin(
+        venues,
+        and(eq(events.venueId, venues.id), isNull(venues.removedAt)),
+      )
       .where(
         and(
           appearsOnBill,

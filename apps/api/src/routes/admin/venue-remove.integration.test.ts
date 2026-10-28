@@ -19,6 +19,7 @@ vi.mock('@hono/clerk-auth', () => ({
 import { createApp } from '../../app.js'
 import {
   clearTables,
+  seedArtist,
   seedEvent,
   seedPriceSubmission,
   seedSubmissionConfirm,
@@ -35,6 +36,7 @@ import {
   venues,
 } from '@concert-crawl/db'
 import { desc, eq } from 'drizzle-orm'
+import { updateEventPrice } from '@concert-crawl/price-pipeline'
 
 const app = createApp()
 
@@ -67,7 +69,7 @@ async function seedPricedVenue(slug: string) {
     tier: 'VIP',
   })
   await seedSubmissionConfirm(original.id, 'user_confirmer')
-  await seedUserEvent('user_watcher', event.id)
+  await seedUserEvent('user_watcher', event.id, { savedPrice: '30' })
   return { venue, event, original, counter }
 }
 
@@ -160,7 +162,58 @@ describe('admin venue removal', () => {
       wasCrawlPaused: false,
       submissionsDeleted: 2,
       eventPricesCleared: 1,
+      savedPricesCleared: 1,
     })
+    expect(
+      await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'venue.remove')),
+    ).toHaveLength(1)
+  })
+
+  it("takes the venue's past shows off the artist page, and activation brings them back", async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Church', slug: 'church' })
+    await seedArtist({ name: 'Past Band' })
+    await seedEvent(venue.id, { artist: 'Past Band', date: '2025-06-01' })
+    const pastShows = async () => {
+      const res = await app.request('/v1/artists/past-band')
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as { data: { past: unknown[] } }
+      return body.data.past
+    }
+    expect(await pastShows()).toHaveLength(1)
+
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
+    expect(await pastShows()).toHaveLength(0)
+
+    const reactivate = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ active: true }),
+    })
+    expect(reactivate.status).toBe(200)
+    expect(await pastShows()).toHaveLength(1)
+  })
+
+  it('stops an in-flight price pipeline from refilling a removed venue', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Church', slug: 'church' })
+    const event = await seedEvent(venue.id)
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
+
+    await updateEventPrice(event.id, {
+      priceMin: 20,
+      priceMax: 30,
+      source: 'structured_data',
+    })
+
+    const [row] = await testDb
+      .select({ min: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, event.id))
+    expect(row?.min).toBeNull()
   })
 
   it('leaves other venues untouched', async () => {
