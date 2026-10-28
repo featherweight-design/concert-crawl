@@ -1,3 +1,19 @@
+# [1.300.0](https://github.com/HartiganHM/concert-crawl/compare/v1.299.2...v1.300.0) (2026-10-28)
+
+
+### Bug Fixes
+
+* **admin:** delete price notices on removal and lock the pipeline's venue check ([1633667](https://github.com/HartiganHM/concert-crawl/commit/16336672e701b79e836f68c0f323df26915e581c))
+* **admin:** show removal from removed_at, not from pause state ([988d2c3](https://github.com/HartiganHM/concert-crawl/commit/988d2c381da62ce21c69f44da0ffce935c0898d4))
+* **admin:** stop the venue settings save from resending active ([40f6034](https://github.com/HartiganHM/concert-crawl/commit/40f60343ce15f48cf1dfd5122b6afb10d9ed42d5))
+* **admin:** take a removed venue's past shows and saved prices down too ([6a8a6a1](https://github.com/HartiganHM/concert-crawl/commit/6a8a6a192583de2ba1c8ed3bb163a28cdedf473e))
+* **api:** refuse legacy confirms, price checks and edits on inactive venues ([6536efc](https://github.com/HartiganHM/concert-crawl/commit/6536efc89c8da26236f5369e9e23f7f1423bfe84))
+
+
+### Features
+
+* **admin:** remove a venue's data on request ([13ab62f](https://github.com/HartiganHM/concert-crawl/commit/13ab62fcfa2271db329bbe5b491f2db37760ebfa))
+
 ## [1.299.2](https://github.com/HartiganHM/concert-crawl/compare/v1.299.1...v1.299.2) (2026-10-28)
 
 
