@@ -16,7 +16,7 @@ vi.mock('next/navigation', () => ({
 // The signed-out branch mounts the tier picker, which drags in Stripe and
 // React Query. The contract under test is that a dialog opens, not what is in
 // it, so the sheet is stubbed.
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open }: { open: boolean }) =>
     open ? <div role="dialog" aria-label="Pick a lane" /> : null,
 }))

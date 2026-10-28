@@ -10,7 +10,7 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
 
 // The real picker drags in the whole checkout tree; a marker is enough to
 // assert the CTA routes into it.
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }))

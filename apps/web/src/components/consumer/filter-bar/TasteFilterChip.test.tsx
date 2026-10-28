@@ -34,7 +34,7 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
 
 // The real tier picker pulls in checkout wiring — stub it down to a marker
 // that exposes open/entry so routing assertions stay cheap.
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }))

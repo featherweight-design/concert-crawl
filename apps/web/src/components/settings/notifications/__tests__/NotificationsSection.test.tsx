@@ -57,7 +57,7 @@ vi.mock('@/lib/push/client', () => ({
 
 // The tier picker reaches for the app router, which jsdom has no provider for.
 // Every sibling suite that renders a locked surface stubs it the same way.
-vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }))
