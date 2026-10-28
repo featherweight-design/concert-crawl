@@ -48,12 +48,13 @@ describe('PassportTeaser', () => {
     expect(screen.getByText(COPY.summary(4, 2, 'indie'))).toBeInTheDocument()
   })
 
-  it('falls back to an em dash when there is no top genre', () => {
+  it('drops the genre segment when there is no top genre', () => {
     render(
       <PassportTeaser stats={{ ...STATS, topGenre: null }} shows={SHOWS} />,
     )
 
-    expect(screen.getByText(/· —$/)).toBeInTheDocument()
+    expect(screen.getByText('4 nights · 2 venues')).toBeInTheDocument()
+    expect(screen.queryByText(/—/)).toBeNull()
   })
 
   it('singularizes a one-night, one-venue strip', () => {

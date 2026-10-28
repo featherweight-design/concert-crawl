@@ -789,7 +789,7 @@ function ErrorState({
         padding: '8px 0',
       }}
     >
-      <StatusRail tone="error" />
+      <StatusRail />
       <div
         style={{
           fontSize: 30,
@@ -1191,16 +1191,11 @@ function HeaderRail({ state }: { state: ModalState }) {
   )
 }
 
-function StatusRail({ tone }: { tone: 'success' | 'error' }) {
-  const accent = tone === 'success' ? 'var(--signal)' : 'var(--warning)'
-  const label =
-    tone === 'success'
-      ? CONSUMER_COPY.feedback.modal.statusRail.successLabel
-      : CONSUMER_COPY.feedback.modal.statusRail.errorLabel
-  const code =
-    tone === 'success'
-      ? CONSUMER_COPY.feedback.modal.statusRail.successCode
-      : CONSUMER_COPY.feedback.modal.statusRail.errorCode
+// Only the error state has a rail: the success screen carries its own header.
+function StatusRail() {
+  const accent = 'var(--warning)'
+  const label = CONSUMER_COPY.feedback.modal.statusRail.errorLabel
+  const code = CONSUMER_COPY.feedback.modal.statusRail.errorCode
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}

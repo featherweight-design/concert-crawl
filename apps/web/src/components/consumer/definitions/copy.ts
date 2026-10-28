@@ -318,7 +318,8 @@ export const CONSUMER_COPY = {
     },
     statusRail: {
       errorLabel: "Didn't save · price channel",
-      errorCode: 'ERR · 503',
+      // No number: see feedback.modal.statusRail.errorCode.
+      errorCode: 'ERR',
     },
     success: {
       heading: 'Got it.',
@@ -414,10 +415,10 @@ export const CONSUMER_COPY = {
         codeError: 'ERR',
       },
       statusRail: {
-        successLabel: 'Got it · beta channel',
         errorLabel: "Didn't send · beta channel",
-        successCode: '200 · OK',
-        errorCode: 'ERR · 503',
+        // No number: the rail doesn't know the real status, and a made-up one
+        // sends anyone who quotes it back to us looking in the wrong place.
+        errorCode: 'ERR',
       },
       draftBanner: {
         message: 'Saved draft restored.',
@@ -1279,8 +1280,8 @@ export const CONSUMER_COPY = {
 
     // ── CredChip ──────────────────────────────────────────────────
     credChipLabel: 'cred',
-    credChipTooltip:
-      "Cred is what you earn for every verified price. We're working on what you can spend it on.",
+    // The chip's accessible name when it opens the cred tip (TIP_CONTENT.cred).
+    credChipTipLabel: (cred: string) => `${cred} cred, what's this?`,
 
     // ── ProfileEntryAvatar ────────────────────────────────────────
     profileEntryAriaLabel: (handle: string) => `@${handle}, settings`,

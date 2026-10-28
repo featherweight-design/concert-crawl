@@ -1,4 +1,5 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CCTip } from '@/components/ui/cc-tip'
 
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
@@ -19,9 +20,8 @@ export function CredChip({
   const padding = size === 'sm' ? 'px-[7px] py-[3px]' : 'px-[9px] py-[4px]'
   const gap = size === 'sm' ? 'gap-[5px]' : 'gap-[6px]'
 
-  return (
+  const chip = (
     <span
-      title={showTooltip ? SETTINGS_COPY.credChipTooltip : undefined}
       className={`inline-flex shrink-0 items-baseline rounded-full border ${padding} ${gap}`}
       style={{
         background: isZero
@@ -43,5 +43,20 @@ export function CredChip({
         {SETTINGS_COPY.credChipLabel}
       </span>
     </span>
+  )
+
+  if (!showTooltip) return chip
+
+  // The chip itself opens the explainer: a popover on desktop, a sheet on
+  // touch, both reachable by keyboard, which a native title= never was.
+  return (
+    <CCTip
+      tip="cred"
+      triggerLabel={SETTINGS_COPY.credChipTipLabel(cred.toLocaleString())}
+      placement="bottom"
+      align="start"
+    >
+      {chip}
+    </CCTip>
   )
 }

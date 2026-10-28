@@ -42,6 +42,13 @@ export const TIP_CONTENT = {
     title: 'A fan put it there.',
     body: 'Most prices here are submitted by people who actually checked. Box-office prices come from someone who bought a ticket at the window. No API, no guessing.',
   },
+  // Settings profile: what the cred chip counts. Moved here from a native
+  // title= tooltip, which touch and keyboard users never saw (#1455).
+  cred: {
+    label: 'Cred',
+    variant: 'text',
+    body: "Cred is what you earn for every verified price. We're working on what you can spend it on.",
+  },
   // Browse / Venue list header: one tip for the whole list, never per row.
   'watching-on-browse': {
     label: 'Watching',

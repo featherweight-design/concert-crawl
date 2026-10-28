@@ -88,10 +88,14 @@ export const HISTORY_COPY = {
 
   passport: {
     headline: 'Your stamp book.',
+    // No genre, no third segment: HistoryHeader drops its genre tile the same
+    // way, and a bare dash beside real stats reads as a rendering bug.
     summary: (nights: number, venues: number, topGenre: string | null) =>
-      `${nights} ${nights === 1 ? 'night' : 'nights'} · ${venues} ${
-        venues === 1 ? 'venue' : 'venues'
-      } · ${topGenre ?? '—'}`,
+      [
+        `${nights} ${nights === 1 ? 'night' : 'nights'}`,
+        `${venues} ${venues === 1 ? 'venue' : 'venues'}`,
+        ...(topGenre === null ? [] : [topGenre]),
+      ].join(' · '),
     link: 'See your Passport →',
   },
 } as const

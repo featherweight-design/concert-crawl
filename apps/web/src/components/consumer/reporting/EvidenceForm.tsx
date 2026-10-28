@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import { ER_POLICY } from '@concert-crawl/types'
 import { fileEventReport } from '@/lib/events'
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
@@ -206,7 +207,13 @@ export const EvidenceForm = ({
   const [errorMsg, setErrorMsg] = useState('')
 
   const daysUntil = getDaysUntil(eventDate)
-  const isImminent = daysUntil >= 0 && daysUntil < 7
+  // Same window and counts the API applies (event-reports.ts), inclusive of
+  // the threshold day.
+  const isImminent =
+    daysUntil >= 0 && daysUntil <= ER_POLICY.imminentThresholdDays
+  const confirmsNeeded = isImminent
+    ? ER_POLICY.confirmsRequiredImminent
+    : ER_POLICY.confirmsRequired
   const tokens = REPORT_TOKENS[reportType]
 
   const handleSubmit = async () => {
@@ -342,7 +349,7 @@ export const EvidenceForm = ({
               margin: 0,
             }}
           >
-            {copy.promotionNote}
+            {copy.promotionNote(confirmsNeeded)}
           </p>
         </div>
       }
@@ -416,7 +423,11 @@ export const EvidenceForm = ({
                 lineHeight: 1.5,
               }}
             >
-              {copy.imminentWarning(daysUntil)}
+              {copy.imminentWarning(
+                daysUntil,
+                confirmsNeeded,
+                ER_POLICY.confirmsRequired,
+              )}
             </span>
           </div>
         )}

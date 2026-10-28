@@ -68,7 +68,9 @@ export const REPORTING_COPY = {
     // Radiogroup wrapping the evidence options
     methodGroupAriaLabel: 'Evidence method',
     // Footnote explaining what happens after the report is filed
-    promotionNote: 'Live after 2 fan confirms · or admin promotion',
+    // The count is the one the API applies to this show (ER_POLICY).
+    promotionNote: (confirmsNeeded: number) =>
+      `Live after ${confirmsNeeded} fan confirms · or admin promotion`,
     eyebrow: 'Evidence',
     cancelButton: 'Cancel',
     heading: 'How do you know?',
@@ -102,8 +104,12 @@ export const REPORTING_COPY = {
     notesPlaceholder: 'Any other context…',
     charCountSuffix: (current: number, max: number) => `${current} / ${max}`,
 
-    imminentWarning: (daysUntil: number) =>
-      `This show is in ${daysUntil} days, so reports need 3 confirms instead of 2.`,
+    imminentWarning: (
+      daysUntil: number,
+      confirmsNeeded: number,
+      usualConfirms: number,
+    ) =>
+      `This show is in ${daysUntil} days, so reports need ${confirmsNeeded} confirms instead of ${usualConfirms}.`,
 
     submitButton: 'File report',
   },
