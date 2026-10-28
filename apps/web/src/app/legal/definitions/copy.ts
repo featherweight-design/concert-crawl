@@ -157,6 +157,7 @@ export const LEGAL_COPY = {
         'Resend: transactional email delivery',
         'Stripe: payment processing',
         'Spotify: only if you connect a Spotify account, and only to read the artists you follow',
+        "Spotify's player: artist pages embed it, so it loads from Spotify when the page opens",
       ],
       outro:
         'Each provider handles your data under their own privacy policies. We select providers that meet reasonable data protection standards.',
@@ -168,7 +169,7 @@ export const LEGAL_COPY = {
         "We store your theme preference in your browser's localStorage. We use session cookies set by Clerk for authentication. During the private beta, we also set a short-lived cookie (",
       cookieName: 'invite_verified',
       bodySuffix:
-        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. We don't use tracking cookies or third-party analytics scripts.",
+        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. We don't set tracking cookies or run third-party analytics scripts. The Spotify player on artist pages is separate: it is served by Spotify, which may set its own cookies under its own privacy policy.",
     },
 
     retention: {
