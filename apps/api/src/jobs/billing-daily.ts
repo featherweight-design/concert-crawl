@@ -59,6 +59,7 @@ import {
   USER_PLANS,
 } from '@concert-crawl/entitlements'
 import type { PremiumFeature } from '@concert-crawl/entitlements'
+import { isRole, PREMIUM_ROLES } from '@concert-crawl/types'
 import { sendTransactionalEmail } from '../lib/email.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
 import type { PaidEmailTier } from '../emails/types.js'
@@ -198,19 +199,20 @@ export const winbackDedupeKey = (subscriptionId: string): string =>
  * premiumDataExpiresAt via webhook, but we re-check the tier here so a race
  * (re-upgrade landing between the clock read and the purge) never deletes live
  * premium data. `liveTier` is the user's current subscription tier (null when
- * they have no live paid subscription). `hasLiveGift` is a live gifted comp,
- * which grants Premium whatever the subscription says: a user who cancelled
- * while holding one is still entitled to everything, so nothing purges.
+ * they have no live paid subscription). `compedPremium` is a live gifted comp
+ * or a PREMIUM_ROLES role, either of which grants Premium whatever the
+ * subscription says: a user who cancelled while holding one is still entitled
+ * to everything, so nothing purges.
  */
 export const isPurgeEligible = (input: {
   premiumDataExpiresAt: Date | null
   liveTier: string | null
-  hasLiveGift?: boolean
+  compedPremium?: boolean
   now: Date
 }): boolean => {
   if (input.premiumDataExpiresAt === null) return false
   if (input.premiumDataExpiresAt.getTime() >= input.now.getTime()) return false
-  if (input.hasLiveGift === true) return false
+  if (input.compedPremium === true) return false
   // Still-premium (re-upgraded) users are never purged.
   if (input.liveTier !== null && PREMIUM_AND_UP.includes(input.liveTier)) {
     return false
@@ -704,6 +706,33 @@ export const runWinback = async (now: Date): Promise<void> => {
  * future design, #763). Those categories are log-skipped with a count of null
  * so the data_purged event records that they were not applicable this run.
  */
+/**
+ * Whether the user holds a PREMIUM_ROLES role, read from Clerk publicMetadata
+ * (the role's source of truth). Null when it can't be read, so the purge can
+ * defer rather than guess.
+ */
+const loadRoleComped = async (userId: string): Promise<boolean | null> => {
+  const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+  if (!clerkSecretKey) return null
+  try {
+    const { createClerkClient } = await import('@clerk/backend')
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
+    const user = await clerkClient.users.getUser(userId)
+    const metadata: unknown = user.publicMetadata
+    const role =
+      typeof metadata === 'object' && metadata !== null && 'role' in metadata
+        ? metadata.role
+        : undefined
+    return isRole(role) && PREMIUM_ROLES.includes(role)
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId },
+      'billing-daily task5: Clerk role read failed',
+    )
+    return null
+  }
+}
+
 export const runNinetyDayPurge = async (now: Date): Promise<void> => {
   const rows = await db
     .select({
@@ -747,10 +776,23 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         !isPurgeEligible({
           premiumDataExpiresAt: row.premiumDataExpiresAt,
           liveTier,
-          hasLiveGift: isGiftLive(gift ?? null, now),
+          compedPremium: isGiftLive(gift ?? null, now),
           now,
         })
       ) {
+        continue
+      }
+      // A PREMIUM_ROLES role (admin, promoter, beta…) comps everything too,
+      // and roles live in Clerk. If the role can't be read, skip this user
+      // today rather than delete data they might be entitled to.
+      const roleComped = await loadRoleComped(row.userId)
+      if (roleComped !== false) {
+        if (roleComped === null) {
+          apiLogger.warn(
+            { userId: row.userId },
+            'billing-daily task5: role lookup failed — purge deferred to the next run',
+          )
+        }
         continue
       }
 

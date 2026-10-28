@@ -4,11 +4,16 @@
 // because Watching is a Free feature and must never be purged.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
+const { clerkRole } = vi.hoisted(() => ({
+  clerkRole: { current: undefined as string | undefined },
+}))
+
 vi.mock('@clerk/backend', () => ({
   createClerkClient: () => ({
     users: {
       getUser: async () => ({
-        publicMetadata: {},
+        publicMetadata:
+          clerkRole.current === undefined ? {} : { role: clerkRole.current },
         primaryEmailAddressId: null,
         emailAddresses: [],
         externalAccounts: [],
@@ -43,6 +48,9 @@ describe('runNinetyDayPurge — concert history', () => {
   beforeEach(async () => {
     await clearTables()
     await resetBillingTables()
+    // The purge reads roles from Clerk and defers when it can't.
+    process.env['CLERK_SECRET_KEY'] = 'sk_test_purge'
+    clerkRole.current = undefined
   })
 
   afterEach(resetBillingTables)
@@ -139,6 +147,54 @@ describe('runNinetyDayPurge — concert history', () => {
       .where(eq(userEvents.userId, USER_ID))
     expect(rows).toHaveLength(1)
     expect(rows[0]?.attendingAt).not.toBeNull()
+  })
+
+  it('keeps everything for a cancelled user holding a premium role', async () => {
+    const venue = await seedVenue({ name: 'Role Hall', slug: 'role-hall' })
+    const attended = await seedEvent(venue.id, { date: '2026-01-07' })
+    await testDb.insert(userEvents).values({
+      userId: USER_ID,
+      eventId: attended.id,
+      status: null,
+      attendingAt: NOW,
+    })
+    await testDb.insert(userBilling).values({
+      userId: USER_ID,
+      premiumDataExpiresAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+    clerkRole.current = 'promoter'
+
+    await runNinetyDayPurge(NOW)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER_ID))
+    expect(rows).toHaveLength(1)
+  })
+
+  it('defers the purge when roles cannot be read', async () => {
+    const venue = await seedVenue({ name: 'Blind Hall', slug: 'blind-hall' })
+    const attended = await seedEvent(venue.id, { date: '2026-01-08' })
+    await testDb.insert(userEvents).values({
+      userId: USER_ID,
+      eventId: attended.id,
+      status: null,
+      attendingAt: NOW,
+    })
+    await testDb.insert(userBilling).values({
+      userId: USER_ID,
+      premiumDataExpiresAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+    delete process.env['CLERK_SECRET_KEY']
+
+    await runNinetyDayPurge(NOW)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER_ID))
+    expect(rows).toHaveLength(1)
   })
 
   it("deletes legacy status='going' attended rows instead of half-clearing them", async () => {
