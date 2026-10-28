@@ -1,3 +1,11 @@
+## [1.300.5](https://github.com/HartiganHM/concert-crawl/compare/v1.300.4...v1.300.5) (2026-10-28)
+
+
+### Performance Improvements
+
+* **web:** hold the tier picker back until it first opens ([04aed02](https://github.com/HartiganHM/concert-crawl/commit/04aed02f61ba6728e79fa34eaf785368e1deda63))
+* **web:** load the tier picker on demand everywhere ([9739c00](https://github.com/HartiganHM/concert-crawl/commit/9739c00e597f306d3f34793fcce81ee46c5f7a13))
+
 ## [1.300.4](https://github.com/HartiganHM/concert-crawl/compare/v1.300.3...v1.300.4) (2026-10-28)
 
 
