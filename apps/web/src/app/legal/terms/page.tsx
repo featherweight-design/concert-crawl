@@ -41,7 +41,7 @@ export default function TermsPage() {
           {copy.heading}
         </h1>
         <p className="mb-10 text-sm text-fg-muted">
-          {LEGAL_COPY.shared.effectiveDate}
+          {LEGAL_COPY.terms.effectiveDate}
         </p>
 
         <div className="space-y-8 text-[15px] leading-relaxed">

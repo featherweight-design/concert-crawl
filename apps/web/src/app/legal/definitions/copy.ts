@@ -11,15 +11,18 @@ export const LEGAL_COPY = {
     privacyLink: 'Privacy Policy →',
     termsLink: 'Terms of Service →',
     bulletGlyph: '—',
-    // Bumped when the documents were rewritten to describe what the product
-    // actually does (Gate A), and again when the Terms named the operating
-    // LLC and the Privacy Policy disclosed the Spotify player. The original
-    // date was the day private beta opened.
-    effectiveDate: 'Effective date: October 28, 2026',
+    // The beta agreement's date. Bumped when the documents were rewritten to
+    // describe what the product actually does (Gate A); the original date was
+    // the day private beta opened. Terms and Privacy carry their own, so one
+    // document's revision never re-dates the others.
+    effectiveDate: 'Effective date: August 13, 2026',
   },
 
   terms: {
     heading: 'Terms of Service',
+    // Revised to name Featherweight Design, LLC and to state that deleting an
+    // account ends a paid plan at once without a refund.
+    effectiveDate: 'Effective date: October 28, 2026',
 
     acceptance: {
       title: '1. Acceptance',
@@ -120,6 +123,8 @@ export const LEGAL_COPY = {
 
   privacy: {
     heading: 'Privacy Policy',
+    // Revised to disclose the Spotify player on artist pages.
+    effectiveDate: 'Effective date: October 28, 2026',
     collect: {
       title: 'What we collect',
       intro: "We collect only what's necessary to run the Service:",
@@ -157,7 +162,7 @@ export const LEGAL_COPY = {
         'Resend: transactional email delivery',
         'Stripe: payment processing',
         'Spotify: only if you connect a Spotify account, and only to read the artists you follow',
-        "Spotify's player: artist pages embed it, so it loads from Spotify when the page opens",
+        "Spotify's player: an artist page we have matched to Spotify embeds it, and it loads from Spotify as you scroll to it",
       ],
       outro:
         'Each provider handles your data under their own privacy policies. We select providers that meet reasonable data protection standards.',
@@ -169,7 +174,7 @@ export const LEGAL_COPY = {
         "We store your theme preference in your browser's localStorage. We use session cookies set by Clerk for authentication. During the private beta, we also set a short-lived cookie (",
       cookieName: 'invite_verified',
       bodySuffix:
-        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. We don't set tracking cookies or run third-party analytics scripts. The Spotify player on artist pages is separate: it is served by Spotify, which may set its own cookies under its own privacy policy.",
+        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. We don't set tracking cookies or run third-party analytics scripts. The Spotify player on some artist pages is separate: it is served by Spotify, which may set its own cookies under its own privacy policy.",
     },
 
     retention: {
