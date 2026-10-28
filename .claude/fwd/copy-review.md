@@ -54,8 +54,6 @@ load-bearing rather than theoretical. Historical `releases.ts` entries are a fro
 ## Frozen areas — flag drift, never edit
 
 - Already-merged `releases.ts` entries (a historical record).
-- The design-locked price-region strings in `consumer/definitions/copy.ts`, asserted by
-  tests citing the Q1 lock.
 
 ## Adjacency note — email templates
 
@@ -91,3 +89,6 @@ nights.'` is not an attribution and the dash goes.
 - Teaching class includes the why-submit-a-price copy.
 - Copy-in-definitions convention: user-visible strings live in `definitions/copy.ts`;
   hardcoded JSX strings are a finding.
+
+Price-region strings in `consumer/definitions/copy.ts` are not frozen: correct them like any other
+copy, and update the string tests that assert them in the same PR, keeping their behavioural checks.
