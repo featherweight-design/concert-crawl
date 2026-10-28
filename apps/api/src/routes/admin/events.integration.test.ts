@@ -2226,6 +2226,7 @@ describe('PR 10 — bulk endpoints', () => {
     // Mirror of the #814 R2 test: an already-hidden row left in a stale
     // cross-page selection must not bump updatedAt or write an audit entry.
     const venue = await seedVenue()
+    const seededAt = new Date('2026-01-01T00:00:00Z')
     const visibleEvent = await seedEvent(venue.id, {
       title: 'Visible',
       artist: 'A',
@@ -2233,6 +2234,7 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: false,
+      updatedAt: seededAt,
     })
     const hiddenEvent = await seedEvent(venue.id, {
       title: 'Hidden',
@@ -2254,11 +2256,19 @@ describe('PR 10 — bulk endpoints', () => {
       body: JSON.stringify({ ids: [visibleEvent.id, hiddenEvent.id] }),
     })
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      success: boolean
-      data: { count: number }
-    }
-    expect(body.data.count).toBe(1)
+    expect(await res.json()).toEqual({ success: true, data: { count: 1 } })
+
+    const [visibleAfter] = await testDb
+      .select({
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        updatedAt: events.updatedAt,
+      })
+      .from(events)
+      .where(eq(events.id, visibleEvent.id))
+    expect(visibleAfter?.hiddenFromConsumer).toBe(true)
+    expect(visibleAfter?.updatedAt.getTime()).toBeGreaterThan(
+      seededAt.getTime(),
+    )
 
     const hiddenAfter = await testDb
       .select({ updatedAt: events.updatedAt })
