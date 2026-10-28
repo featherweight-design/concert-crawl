@@ -1,0 +1,4 @@
+{
+  "ownApp": true,
+  "uiSweep": "pnpm --filter @concert-crawl/e2e audit:sweep"
+}
