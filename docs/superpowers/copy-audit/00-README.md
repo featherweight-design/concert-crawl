@@ -1,6 +1,6 @@
 # Copy audit — index
 
-A full-codebase copy audit run with the `copy-review` skill (`~/.claude/skills/copy-review/SKILL.md`).
+A full-codebase copy audit run with the `copy-review` skill (`~/.claude/fwd/skills/copy-review/SKILL.md`).
 
 **Mode: propose.** No source file was edited. Every row in every slice is a finding, not a change. This
 document exists so the findings can be triaged into batches rather than actioned as one sweep.

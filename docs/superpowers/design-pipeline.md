@@ -89,7 +89,7 @@ Both tracks converge on the same plan-PR-and-Copilot-review step. Track 2 design
 
 Two rules follow:
 
-1. **Copy changes go to the copy-writer persona** (`~/.claude/skills/copy-review/SKILL.md`), never back to Design. A wrong, stale, or off-voice string never justifies a design round.
+1. **Copy changes go to the copy-writer persona** (`~/.claude/fwd/skills/copy-review/SKILL.md`), never back to Design. A wrong, stale, or off-voice string never justifies a design round.
 2. **Design's copy gets a copy-review pass before it is implemented.** Strings in a handoff are a draft input to copy review, not a locked artifact. Where the review calls for changes, **make them in place with the copy-writer persona** — do not return the handoff to Design for wording.
 
 This narrows the "open questions go back to Design" rule: open *product* questions still do, open *wording* questions do not. Where copy length forces a layout change, the layout question is Design's and the words stay the copy-writer's.
