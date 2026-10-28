@@ -53,7 +53,11 @@ import {
   userBilling,
   userEvents,
 } from '@concert-crawl/db'
-import { canUseFeature, USER_PLANS } from '@concert-crawl/entitlements'
+import {
+  canUseFeature,
+  isGiftLive,
+  USER_PLANS,
+} from '@concert-crawl/entitlements'
 import type { PremiumFeature } from '@concert-crawl/entitlements'
 import { sendTransactionalEmail } from '../lib/email.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
@@ -194,15 +198,19 @@ export const winbackDedupeKey = (subscriptionId: string): string =>
  * premiumDataExpiresAt via webhook, but we re-check the tier here so a race
  * (re-upgrade landing between the clock read and the purge) never deletes live
  * premium data. `liveTier` is the user's current subscription tier (null when
- * they have no live paid subscription).
+ * they have no live paid subscription). `hasLiveGift` is a live gifted comp,
+ * which grants Premium whatever the subscription says: a user who cancelled
+ * while holding one is still entitled to everything, so nothing purges.
  */
 export const isPurgeEligible = (input: {
   premiumDataExpiresAt: Date | null
   liveTier: string | null
+  hasLiveGift?: boolean
   now: Date
 }): boolean => {
   if (input.premiumDataExpiresAt === null) return false
   if (input.premiumDataExpiresAt.getTime() >= input.now.getTime()) return false
+  if (input.hasLiveGift === true) return false
   // Still-premium (re-upgraded) users are never purged.
   if (input.liveTier !== null && PREMIUM_AND_UP.includes(input.liveTier)) {
     return false
@@ -724,11 +732,22 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         ['active', 'trialing', 'past_due'].includes(liveSub.status)
           ? liveSub.tier
           : null
+      // A live gift grants Premium regardless of the subscription (gifted is
+      // derived BEFORE Stripe, #781), so the purge must check it too.
+      const [gift] = await db
+        .select({
+          revokedAt: giftedComps.revokedAt,
+          expiresAt: giftedComps.expiresAt,
+        })
+        .from(giftedComps)
+        .where(eq(giftedComps.userId, row.userId))
+        .limit(1)
 
       if (
         !isPurgeEligible({
           premiumDataExpiresAt: row.premiumDataExpiresAt,
           liveTier,
+          hasLiveGift: isGiftLive(gift ?? null, now),
           now,
         })
       ) {

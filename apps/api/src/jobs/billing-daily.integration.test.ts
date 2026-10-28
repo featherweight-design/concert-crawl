@@ -19,6 +19,7 @@ vi.mock('@clerk/backend', () => ({
 
 import { and, eq } from 'drizzle-orm'
 import {
+  giftedComps,
   subscriptionEvents,
   subscriptions,
   userBilling,
@@ -35,6 +36,7 @@ const resetBillingTables = async (): Promise<void> => {
   await testDb.delete(subscriptionEvents)
   await testDb.delete(subscriptions)
   await testDb.delete(userBilling)
+  await testDb.delete(giftedComps)
 }
 
 describe('runNinetyDayPurge — concert history', () => {
@@ -106,6 +108,37 @@ describe('runNinetyDayPurge — concert history', () => {
         ),
       )
     expect(event?.metadata).toMatchObject({ attendedHistory: 3 })
+  })
+
+  it('keeps everything for a cancelled Supporter who holds a live gift (#1229)', async () => {
+    const venue = await seedVenue({ name: 'Gift Hall', slug: 'gift-hall' })
+    const attended = await seedEvent(venue.id, { date: '2026-01-06' })
+    await testDb.insert(userEvents).values({
+      userId: USER_ID,
+      eventId: attended.id,
+      status: null,
+      attendingAt: NOW,
+    })
+    // Supporter cancelled 90+ days ago, so the clock has elapsed, but a
+    // Premium gift is still live and grants Concerts regardless.
+    await testDb.insert(userBilling).values({
+      userId: USER_ID,
+      premiumDataExpiresAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+    await testDb.insert(giftedComps).values({
+      userId: USER_ID,
+      grantedBy: 'admin_test',
+      expiresAt: new Date('2026-12-31T00:00:00.000Z'),
+    })
+
+    await runNinetyDayPurge(NOW)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER_ID))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.attendingAt).not.toBeNull()
   })
 
   it("deletes legacy status='going' attended rows instead of half-clearing them", async () => {

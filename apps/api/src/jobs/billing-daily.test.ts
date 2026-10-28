@@ -225,6 +225,17 @@ describe('isPurgeEligible (guard re-check at purge time)', () => {
     },
   )
 
+  it('skips a user holding a live gift, whatever the subscription says', () => {
+    expect(
+      isPurgeEligible({
+        premiumDataExpiresAt: daysFromNow(now, -1),
+        liveTier: null,
+        hasLiveGift: true,
+        now,
+      }),
+    ).toBe(false)
+  })
+
   it('is a stable decision across repeated evaluation (idempotent)', () => {
     const input = {
       premiumDataExpiresAt: daysFromNow(now, -5),
