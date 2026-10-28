@@ -1,3 +1,12 @@
+## [1.299.2](https://github.com/HartiganHM/concert-crawl/compare/v1.299.1...v1.299.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **admin:** let browser venues without a selector save other fields ([cb92021](https://github.com/HartiganHM/concert-crawl/commit/cb92021dbb6527206552282510fd46253fb4c991))
+* **admin:** restore the venue Wait until control ([48008e5](https://github.com/HartiganHM/concert-crawl/commit/48008e5cb31755010e4c97ec2b970ce542d8b307))
+* **admin:** say when Wait until is not used ([f35afdb](https://github.com/HartiganHM/concert-crawl/commit/f35afdb38969cc25a768a9a1b9480407426e176f))
+
 ## [1.299.1](https://github.com/HartiganHM/concert-crawl/compare/v1.299.0...v1.299.1) (2026-10-28)
 
 
