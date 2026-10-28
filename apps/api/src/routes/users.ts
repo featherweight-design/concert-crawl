@@ -474,15 +474,23 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
   return true
 }
 
+const StripeSubscriptionStatus = z.object({ status: z.string() })
+
 const isEndedInStripe = async (subscriptionId: string): Promise<boolean> => {
   try {
-    const subscription =
-      await getStripeClient().subscriptions.retrieve(subscriptionId)
-    return (
-      subscription.status === 'canceled' ||
-      subscription.status === 'incomplete_expired'
+    const parsed = StripeSubscriptionStatus.safeParse(
+      await getStripeClient().subscriptions.retrieve(subscriptionId),
     )
-  } catch {
+    if (!parsed.success) return false
+    return (
+      parsed.data.status === 'canceled' ||
+      parsed.data.status === 'incomplete_expired'
+    )
+  } catch (err) {
+    apiLogger.error(
+      { err, subscriptionId },
+      'Stripe status lookup failed at account deletion',
+    )
     return false
   }
 }

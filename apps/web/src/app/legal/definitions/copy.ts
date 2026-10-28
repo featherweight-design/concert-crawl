@@ -12,9 +12,10 @@ export const LEGAL_COPY = {
     termsLink: 'Terms of Service →',
     bulletGlyph: '—',
     // Bumped when the documents were rewritten to describe what the product
-    // actually does (Gate A). The original date was the day private beta
-    // opened.
-    effectiveDate: 'Effective date: August 13, 2026',
+    // actually does (Gate A), and again when the Terms named the operating
+    // LLC and the Privacy Policy disclosed the Spotify player. The original
+    // date was the day private beta opened.
+    effectiveDate: 'Effective date: October 28, 2026',
   },
 
   terms: {
