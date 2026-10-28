@@ -220,7 +220,7 @@ export const ADMIN_COPY = {
         },
         timeout: {
           label: 'Timeout',
-          body: "Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. Set the venue's Wait until to Load on its settings page.",
+          body: 'Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. If it fetches with a browser and has no Wait selector, set its Wait until to Load on its settings page.',
         },
         unknown: {
           label: 'Unclassified failure',
@@ -735,6 +735,10 @@ export const ADMIN_COPY = {
           domcontentloaded:
             'Waits only for the HTML to parse. Fastest; may miss events added by scripts.',
         },
+        ignoredWithSelector:
+          'Not used while a Wait selector is set: the page loads to DOM ready, then waits for the selector.',
+        ignoredHttpOnly:
+          'Not used in HTTP only mode, which never opens a browser.',
       },
       schedule: {
         label: 'Schedule (cron)',

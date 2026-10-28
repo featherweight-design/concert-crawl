@@ -179,4 +179,20 @@ describe('VenueDetailsClient — Wait until control', () => {
     }
     expect(formData.get('crawlWaitUntil')).toBe('load')
   })
+
+  it('says the setting is ignored while a Wait selector is set', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ crawlWaitForSelector: '.event-card' })}
+      />,
+    )
+
+    expect(screen.getByText(WAIT_COPY.ignoredWithSelector)).toBeTruthy()
+  })
+
+  it('says the setting is ignored in HTTP only mode', () => {
+    render(<VenueDetailsClient venue={buildVenue({ crawlMode: 'http' })} />)
+
+    expect(screen.getByText(WAIT_COPY.ignoredHttpOnly)).toBeTruthy()
+  })
 })

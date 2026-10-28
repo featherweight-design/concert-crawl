@@ -1993,9 +1993,17 @@ export function VenueDetailsClient({
                 htmlFor="edit-venue-wait-until"
                 labelAs="group"
                 hint={
-                  ADMIN_COPY.venueDetailsClient.fields.waitUntil.hints[
-                    waitUntilVal
-                  ]
+                  // fetchPage navigates to domcontentloaded whenever a
+                  // selector is set, and HTTP-only never launches Playwright.
+                  waitForSelectorVal.trim()
+                    ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
+                        .ignoredWithSelector
+                    : crawlModeVal === 'http'
+                      ? ADMIN_COPY.venueDetailsClient.fields.waitUntil
+                          .ignoredHttpOnly
+                      : ADMIN_COPY.venueDetailsClient.fields.waitUntil.hints[
+                          waitUntilVal
+                        ]
                 }
               >
                 <div style={{ alignSelf: 'flex-start' }}>
