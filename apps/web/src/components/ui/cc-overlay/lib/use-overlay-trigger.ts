@@ -78,6 +78,19 @@ export const useOverlayTrigger = ({
 
   useEffect(() => clearPending, [clearPending])
 
+  // A shell change (rotating across the mobile breakpoint) closes an open
+  // panel. Responsive routes CSS-hide the old shell rather than unmount it,
+  // so a sheet would otherwise reopen as a popover anchored to a hidden
+  // trigger, which has no close button and no outside-tap dismissal.
+  const shellIsMobile = useRef(isMobile)
+  useEffect(() => {
+    if (shellIsMobile.current === isMobile) return
+    shellIsMobile.current = isMobile
+    clearPending()
+    setOpen(false)
+    setPinned(false)
+  }, [isMobile, clearPending, setPinned])
+
   useEffect(() => {
     if (!open) return
     const onKeyDown = (ev: KeyboardEvent) => {

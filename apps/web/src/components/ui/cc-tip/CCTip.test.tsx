@@ -195,6 +195,14 @@ describe('CCTip on desktop', () => {
   })
 })
 
+describe('CCTip touch target on desktop', () => {
+  it('keeps the 44px hit area for coarse pointers only', () => {
+    renderTip()
+    const hitArea = triggerFor('Days away').querySelector('.h-11.w-11')
+    expect(hitArea).toHaveClass('hidden', 'pointer-coarse:block')
+  })
+})
+
 describe('CCTip on mobile', () => {
   beforeEach(() => {
     setMobile(true)
@@ -208,6 +216,16 @@ describe('CCTip on mobile', () => {
     )
     const hitArea = triggerFor('Days away').querySelector('.h-11.w-11')
     expect(hitArea).not.toBeNull()
+    expect(hitArea).not.toHaveClass('hidden')
+  })
+
+  it('closes an open tip when the viewport crosses into the desktop shell', () => {
+    renderTip(DEFS_TIP)
+    fireEvent.click(triggerFor('Going vs. Watching'))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    act(() => setMobile(false))
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('opens a modal sheet on tap', () => {

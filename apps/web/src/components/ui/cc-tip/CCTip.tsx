@@ -122,15 +122,16 @@ export const CCTip = ({
         style={{ font: 'inherit', ...triggerStyle }}
       >
         {children ?? <InfoDisc open={trigger.open} />}
-        {/* 44px touch target without a 44px visual footprint. Applies to a
-            call site's own trigger too: a small chip passed as children is
-            no easier to hit than the info disc (#1455). */}
-        {isMobile && (
-          <span
-            aria-hidden
-            className="absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2"
-          />
-        )}
+        {/* 44px touch target without a 44px visual footprint, on a narrow
+            viewport or any touch pointer (a tablet gets the desktop layout).
+            Applies to a call site's own trigger too: a small chip passed as
+            children is no easier to hit than the info disc (#1455). */}
+        <span
+          aria-hidden
+          className={`absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2${
+            isMobile ? '' : ' hidden pointer-coarse:block'
+          }`}
+        />
       </button>
 
       {trigger.open &&
