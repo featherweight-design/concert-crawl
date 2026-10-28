@@ -63,6 +63,13 @@ export type RederiveStrategy =
    * source page refuses AI use. Left exactly as it was, as the crawl does.
    */
   | 'ai-use-refused'
+  /**
+   * The row needed the adjudicator, but its venue's adapter reads several
+   * pages (and follows redirects) without recording which ones, so this pass
+   * cannot check every page the row's text came from. Left as it was; the
+   * nightly crawl re-derives it with full provenance.
+   */
+  | 'provenance-unknown'
 
 export interface RederiveChange {
   eventId: string
@@ -135,6 +142,17 @@ const platformPayloadUrl = (venue: {
   return null
 }
 
+// Adapters that read a series of pages (Live Nation's sitemap and calendars,
+// detail-page's listing and each event page), following redirects, record
+// none of them on the row. The crawl checks every page it read; this pass
+// cannot, so it does not adjudicate those rows at all.
+const readsUnrecordedPages = (venue: {
+  platform: string | null
+  apiProvider: string | null
+}): boolean =>
+  venue.apiProvider === null &&
+  (venue.platform === 'livenation' || venue.platform === 'detail-page')
+
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -166,6 +184,7 @@ export async function rederiveEventArtists(
     settled: 0,
     'adjudicator-unavailable': 0,
     'ai-use-refused': 0,
+    'provenance-unknown': 0,
   }
   const sample: RederiveChange[] = []
   let scanned = 0
@@ -242,6 +261,10 @@ export async function rederiveEventArtists(
       }
 
       const willAdjudicate = wouldAdjudicate(input)
+      if (willAdjudicate && readsUnrecordedPages(row)) {
+        strategies['provenance-unknown'] += 1
+        continue
+      }
       if (
         willAdjudicate &&
         !(await mayAdjudicate([

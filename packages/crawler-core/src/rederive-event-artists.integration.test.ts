@@ -320,4 +320,56 @@ describe('rederive-event-artists integration', () => {
     expect(adjudicate).not.toHaveBeenCalled()
     expect(result.strategies['ai-use-refused']).toBe(1)
   })
+
+  // The venue's site allows AI use but the page the row came from does not.
+  it('does not adjudicate a row whose own source page refuses AI use', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      title: 'BASS BINGO NIGHT',
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      canonicalTitle: 'bass bingo night',
+      date: '2026-09-11',
+    })
+    await db
+      .update(events)
+      .set({ sourceUrl: 'https://example.com/no-ai/calendar' })
+      .where(eq(events.id, event.id))
+
+    const adjudicate = stubAdjudicator()
+    const result = await run(
+      adjudicate,
+      false,
+      async (url) => !url.includes('/no-ai/'),
+    )
+
+    expect(adjudicate).not.toHaveBeenCalled()
+    expect(result.strategies['ai-use-refused']).toBe(1)
+    const after = await readEvent(event.id)
+    expect(after.canonicalHeadliners).toBeNull()
+    expect(after.hiddenFromConsumer).toBe(false)
+  })
+
+  // Live Nation rows come from pages the row does not record, so their
+  // provenance cannot be checked here.
+  it('does not adjudicate a Live Nation row at all', async () => {
+    const venue = await seedVenue()
+    await db
+      .update(venues)
+      .set({ platform: 'livenation', platformVenueId: 'KovZpZAEkn6A' })
+      .where(eq(venues.id, venue.id))
+    await seedEvent(venue.id, {
+      title: 'BASS BINGO NIGHT',
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      canonicalTitle: 'bass bingo night',
+      date: '2026-09-12',
+    })
+
+    const adjudicate = stubAdjudicator()
+    const result = await run(adjudicate, false)
+
+    expect(adjudicate).not.toHaveBeenCalled()
+    expect(result.strategies['provenance-unknown']).toBe(1)
+  })
 })
