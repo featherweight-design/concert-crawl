@@ -244,7 +244,11 @@ function VDField({
       )}
       {children}
       {error && (
+        // Announced when it appears (a refused save), and linked to its input:
+        // VDInput points aria-describedby at `${id}-error` while invalid.
         <span
+          id={`${htmlFor}-error`}
+          role="alert"
           style={{
             fontFamily: "'Inter', sans-serif",
             fontSize: 11,
@@ -328,6 +332,7 @@ function VDInput({
       placeholder={placeholder}
       disabled={disabled}
       aria-invalid={hasError || undefined}
+      aria-describedby={hasError ? `${id}-error` : undefined}
       min={min}
       max={max}
       step={step}

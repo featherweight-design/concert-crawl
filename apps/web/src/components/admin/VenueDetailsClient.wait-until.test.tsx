@@ -209,6 +209,9 @@ describe('VenueDetailsClient — Wait until control', () => {
     const input = document.getElementById('edit-venue-wait-for-selector')
     expect(input?.getAttribute('aria-invalid')).toBe('true')
     expect(input?.parentElement?.contains(message)).toBe(true)
+    // Linked for screen readers, and announced when it appears.
+    expect(input?.getAttribute('aria-describedby')).toBe(message.id)
+    expect(message.getAttribute('role')).toBe('alert')
     expect(
       screen.queryByText(ADMIN_COPY.venueDetailsClient.errors.unexpected),
     ).toBeNull()
