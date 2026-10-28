@@ -922,8 +922,9 @@ export const runDunningFallbackSweep = async (
             })
           }
 
-          // Mirror handleSubscriptionDeleted: paid premium/founder tiers start
-          // the 90-day preserve-then-purge clock (#780 §5). Without this the
+          // Mirror handleSubscriptionDeleted: every paid tier, Supporter
+          // included (#1229), starts the 90-day preserve-then-purge clock
+          // (#780 §5). Without this the
           // lost webhook would leave premium_data_expires_at unset and the user
           // would never become eligible for the §5.3 purge (task 5). Idempotent
           // via onConflictDoUpdate, so a re-run does not extend the window.

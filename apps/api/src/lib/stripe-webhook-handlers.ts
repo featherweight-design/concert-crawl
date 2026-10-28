@@ -762,8 +762,8 @@ export const handleSubscriptionDeleted = async (
   }
 
   // Every paid tier starts the 90-day preserve-then-purge clock (#780 §5).
-  // Supporter included since #1229: its Concerts and calendar export purge
-  // like everyone else's.
+  // Supporter included since #1229: its logged Concerts purge like everyone
+  // else's. (Calendar export holds no data of its own; it reads Concerts.)
   if (tier !== null && PURGE_CLOCK_TIERS.includes(tier)) {
     const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS)
     await ctx.dbClient
