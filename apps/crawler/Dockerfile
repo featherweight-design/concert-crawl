@@ -2,16 +2,18 @@
 # Container Registry's anonymous-pull rate limits (200 req/6h per IP)
 # consistently throttle Render's build pool — and as of Jun 2026 also
 # hit GitHub Actions runners and local dev IPs. Replaced with a
-# self-rolled image on top of node:22-bookworm (now pinned, below). Chromium plus its X11,
+# self-rolled image on top of node:24-bookworm (now pinned, below). Chromium plus its X11,
 # font, and audio runtime libs come from `playwright install-deps` and
 # `playwright install`, which pull from playwright.azureedge.net (separate
 # CDN from MCR, separate rate-limit regime).
 #
 # Pinned to an exact patch, not the floating `22-bookworm` tag: a cached
 # base layer can keep serving an older Node after a security release.
-# 22.23.4 is the October 2026 release that fixes the TLS hostname-check
-# bypass and distrusts the compromised eMudhra intermediates.
-FROM node:22.23.4-bookworm
+# Keep it on the same Node release as .node-version (the API and web),
+# so a security release is one version to bump, not two. 24.22.1 is the
+# October 2026 release that fixes the TLS hostname-check bypass and
+# distrusts the compromised eMudhra intermediates.
+FROM node:24.22.1-bookworm
 
 # Install pnpm globally so the non-root user can use it without
 # corepack-permission gymnastics. Matches package.json#packageManager.
