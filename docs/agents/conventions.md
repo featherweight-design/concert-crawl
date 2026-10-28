@@ -223,7 +223,7 @@ Do not build upvoting, threading, status tracking, or public roadmaps. The list 
 
 ## Session budget warnings
 
-The turn-count warnings (20 turns: suggest `/compact`; 35: compact or start fresh) come from the fwd plugin's `session-budget` hook, which runs in every project. This repo's own copy, `.claude/hooks/session-budget-warn.sh`, was unwired by accident in May 2026 and was removed on 2026-10-28 so the two don't warn twice. Compact after each committed task, not only at the warning.
+The session-budget warnings come from the fwd plugin's `session-budget` hook, which runs in every project. From plugin 0.1.1 they measure the session's context size, not its turn count: a warning at 150k tokens and a critical one at the orchestrator's `rotateAt` (300k), also during unattended work. This repo's own copy, `.claude/hooks/session-budget-warn.sh`, was unwired by accident in May 2026 and was removed on 2026-10-28 so the two don't warn twice. Compact after each committed task, not only at the warning.
 
 ## Key documents (full text)
 
