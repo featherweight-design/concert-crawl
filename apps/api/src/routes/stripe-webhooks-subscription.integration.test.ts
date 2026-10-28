@@ -268,7 +268,7 @@ describe('customer.subscription.deleted', () => {
     ])
   })
 
-  it.each(['premium', 'founder'] as const)(
+  it.each(['supporter', 'premium', 'founder'] as const)(
     'starts the 90-day purge clock for a paid %s subscription',
     async (tier) => {
       await seedSubscription({ tier })
@@ -292,20 +292,6 @@ describe('customer.subscription.deleted', () => {
       expect(expiresAt).toBeLessThanOrEqual(Date.now() + ninetyDaysMs + 5000)
     },
   )
-
-  it('does NOT start a purge clock for supporter (no premium data held)', async () => {
-    await seedSubscription({ tier: 'supporter' })
-    await seedPaidHistory()
-    const app = buildWebhookApp(createFakeWebhookStripe())
-
-    const res = await postSignedEvent(
-      app,
-      makeEvent('customer.subscription.deleted', deletedObject()),
-    )
-    expect(res.status).toBe(200)
-    const billingRows = await testDb.select().from(userBilling)
-    expect(billingRows).toHaveLength(0)
-  })
 
   it('restores the seat for a never-paid founder claim', async () => {
     await seedSubscription({ tier: 'founder', status: 'incomplete' })

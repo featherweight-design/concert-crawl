@@ -54,12 +54,12 @@ export const CANCEL_FLOW_COPY = {
   keepUntilLabel: (tierName: string) => `You keep ${tierName} until`,
   periodEndFallback: 'period end',
   // Premium / Founder: 90-day data-safety note. Supporter has no down-sell
-  // nudge (there's no cheaper paid tier to step to) but since the 2026-07-29
-  // amendment it does have unlocks to lose, so it gets its own honest note.
+  // nudge (there's no cheaper paid tier to step to) and loses different
+  // things, so it keeps its own note, with the same 90-day window (#1229).
   bodyPremiumUp: (periodEnd: string | null) =>
     `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free, and your Concerts, follows, and alerts stay safe for 90 days in case you come back.`,
   bodySupporter: (periodEnd: string | null) =>
-    `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free: the badge comes off and Concerts and calendar export switch off. Your logged shows aren't deleted: come back and they're still there. Watching, browsing, and prices were always free and stay put.`,
+    `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free: the badge comes off and Concerts and calendar export switch off. Your logged shows stay safe for 90 days in case you come back. Watching, browsing, and prices were always free and stay put.`,
 
   retention: {
     eyebrow: 'Before you go',

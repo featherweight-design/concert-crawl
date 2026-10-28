@@ -80,11 +80,16 @@ const PROCESSED_EVENT_RETENTION_MS = NINETY_DAYS_MS
 export const CARD_EXPIRY_WINDOWS = [30, 14, 7] as const
 export type CardExpiryWindow = (typeof CARD_EXPIRY_WINDOWS)[number]
 
-// Tiers whose cancellation starts the preserve-then-purge clock (#780 §5).
-// Supporter's unlocks (concert history, calendar export) are retained rather
-// than purged — see cancellationStartsPurgeClock. Free is not a paid tier.
-// Mirrors PREMIUM_AND_UP in stripe-webhook-handlers.ts.
+// Premium-and-up: a live subscription on one of these is never purge-eligible
+// (isPurgeEligible) and counts as an upgrade for the trial reminders. Mirrors
+// PREMIUM_AND_UP in stripe-webhook-handlers.ts.
 const PREMIUM_AND_UP: readonly string[] = ['premium', 'founder']
+
+// Tiers whose cancellation starts the 90-day preserve-then-purge clock (#780
+// §5). Supporter joined in #1229: since the 2026-07-29 amendment it unlocks
+// concert history and calendar export, and Hugh ruled its data purges like
+// the other tiers'. Mirrors PURGE_CLOCK_TIERS in stripe-webhook-handlers.ts.
+const PURGE_CLOCK_TIERS: readonly string[] = ['supporter', 'premium', 'founder']
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Free',
@@ -208,10 +213,11 @@ export const isPurgeEligible = (input: {
 /**
  * Per-category purge guard. `isPurgeEligible` decides whether a user enters the
  * purge at all; this decides which categories are actually deleted once they
- * do. The distinction matters for Supporter: they fall below PREMIUM_AND_UP, so
- * their follows are still purged, but concert history and calendar export are
- * Supporter unlocks (2026-07-29 amendment) and deleting their history would
- * destroy data they are paying for.
+ * do. The distinction matters for a live Supporter (one who re-subscribed with
+ * a clock still running): they fall below PREMIUM_AND_UP, so their follows are
+ * still purged, but concert history and calendar export are Supporter unlocks
+ * (2026-07-29 amendment) and deleting their history would destroy data they
+ * are paying for. A cancelled Supporter has no live tier, so theirs purges.
  *
  * Delegates to the entitlements matrix rather than a second hardcoded tier list
  * so a future matrix edit can never silently desync from the purge.
@@ -253,16 +259,14 @@ export const purgeFollowsWhere = (userId: string): SQL => {
 
 /**
  * Whether a cancellation of `tier` should start the 90-day preserve-then-purge
- * clock. Mirrors the PREMIUM_AND_UP gate in handleSubscriptionDeleted: only
- * premium/founder hold data on the purge path. Since the 2026-07-29 amendment
- * Supporter does unlock concert history and calendar export, but a cancelling
- * Supporter's logged shows are retained indefinitely (just inaccessible on
- * Free) rather than purged — expanding deletion is a product decision, not a
- * consequence of the tier move. Used by the task-6 lost-webhook reconcile so a synthesized
- * cancellation starts the same clock the real webhook would have.
+ * clock. Mirrors the PURGE_CLOCK_TIERS gate in handleSubscriptionDeleted: every
+ * paid tier, Supporter included since #1229 (Hugh, 2026-07-29: "We should purge
+ * Supporter data if we do it with other tiers"). Used by the task-6
+ * lost-webhook reconcile so a synthesized cancellation starts the same clock
+ * the real webhook would have.
  */
 export const cancellationStartsPurgeClock = (tier: string | null): boolean =>
-  tier !== null && PREMIUM_AND_UP.includes(tier)
+  tier !== null && PURGE_CLOCK_TIERS.includes(tier)
 
 // ---------------------------------------------------------------------------
 // Task 1 — Card-expiry warnings

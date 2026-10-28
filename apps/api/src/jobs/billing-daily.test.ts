@@ -269,19 +269,16 @@ describe('shouldPurgeFeature (per-category guard once a user is purge-eligible)'
 })
 
 describe('cancellationStartsPurgeClock (task-6 reconcile mirrors the webhook)', () => {
-  it.each(['premium', 'founder'])(
+  it.each(['supporter', 'premium', 'founder'])(
     'starts the 90-day clock for a %s cancellation',
     (tier) => {
       expect(cancellationStartsPurgeClock(tier)).toBe(true)
     },
   )
 
-  it.each(['supporter', 'free'])(
-    'does not start the clock for %s (never held premium data)',
-    (tier) => {
-      expect(cancellationStartsPurgeClock(tier)).toBe(false)
-    },
-  )
+  it('does not start the clock for free (not a paid tier)', () => {
+    expect(cancellationStartsPurgeClock('free')).toBe(false)
+  })
 
   it('does not start the clock for an unknown/null tier', () => {
     expect(cancellationStartsPurgeClock(null)).toBe(false)

@@ -54,11 +54,16 @@ export type DbSubscriptionTier = 'free' | 'premium' | 'supporter' | 'founder'
 const DAY_MS = 24 * 60 * 60 * 1000
 const NINETY_DAYS_MS = 90 * DAY_MS
 
-// Tiers whose data survives 90 days post-downgrade before purge (#780 §5 —
-// "premium-and-up"). Supporter unlocks concert history + calendar export since
-// the 2026-07-29 amendment, but its data is retained rather than purged — see
-// cancellationStartsPurgeClock in jobs/billing-daily.ts.
+// Premium-and-up (#780 §5): a payment on one of these clears the purge clock.
 const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder']
+
+// Tiers whose cancellation starts the 90-day preserve-then-purge clock.
+// Supporter joined in #1229. Mirrors PURGE_CLOCK_TIERS in jobs/billing-daily.ts.
+const PURGE_CLOCK_TIERS: readonly DbSubscriptionTier[] = [
+  'supporter',
+  'premium',
+  'founder',
+]
 
 const LOOKUP_KEY_TIERS: Record<string, DbSubscriptionTier> = {
   supporter_monthly: 'supporter',
@@ -756,9 +761,10 @@ export const handleSubscriptionDeleted = async (
     return
   }
 
-  // Paid premium-and-up tiers start the 90-day preserve-then-purge clock
-  // (#780 §5). Supporter never held premium data; nothing to preserve.
-  if (tier !== null && PREMIUM_AND_UP.includes(tier)) {
+  // Every paid tier starts the 90-day preserve-then-purge clock (#780 §5).
+  // Supporter included since #1229: its Concerts and calendar export purge
+  // like everyone else's.
+  if (tier !== null && PURGE_CLOCK_TIERS.includes(tier)) {
     const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS)
     await ctx.dbClient
       .insert(userBilling)

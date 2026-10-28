@@ -296,6 +296,8 @@ describe('ManageSubscriptionSheet — cancel flow', () => {
     expect(
       screen.getByText(CANCEL_FLOW_COPY.bodySupporter('Aug 3, 2026')),
     ).toBeTruthy()
+    // Supporter data now purges after 90 days like the other tiers (#1229).
+    expect(CANCEL_FLOW_COPY.bodySupporter('Aug 3, 2026')).toContain('90 days')
   })
 
   it('confirm cancels at period end, refreshes plan state, and closes', async () => {
