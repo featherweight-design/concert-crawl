@@ -218,6 +218,37 @@ describe('admin venue removal', () => {
     expect(await pastShows()).toHaveLength(1)
   })
 
+  it('makes a pipeline write wait out an uncommitted removal', async () => {
+    const venue = await seedVenue({ name: 'Church', slug: 'church' })
+    const event = await seedEvent(venue.id)
+    let written = false
+    let write: Promise<void> | undefined
+
+    await testDb.transaction(async (tx) => {
+      await tx
+        .update(venues)
+        .set({ active: false, crawlPausedAt: new Date() })
+        .where(eq(venues.id, venue.id))
+      // A second connection: the pipeline's own pool.
+      write = updateEventPrice(event.id, {
+        priceMin: 20,
+        priceMax: 30,
+        source: 'structured_data',
+      }).then(() => {
+        written = true
+      })
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      expect(written).toBe(false)
+    })
+    await write
+
+    const [row] = await testDb
+      .select({ min: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, event.id))
+    expect(row?.min).toBeNull()
+  })
+
   it('stops an in-flight price pipeline from refilling a removed venue', async () => {
     setAuth('admin')
     const venue = await seedVenue({ name: 'Church', slug: 'church' })
