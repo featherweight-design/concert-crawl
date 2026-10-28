@@ -110,7 +110,8 @@ export const CrawlPauseControl = ({
               border: '1px solid var(--border)',
               background: 'var(--bg)',
               color: 'var(--fg)',
-              fontSize: 13,
+              // 16px or iOS Safari zooms the page when the field takes focus.
+              fontSize: 16,
             }}
           />
         </>

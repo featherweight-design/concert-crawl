@@ -650,7 +650,10 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
       artist: events.artist,
       date: events.date,
       ticketUrl: events.ticketUrl,
-      venue: { priceUrl: venues.priceUrl },
+      venue: {
+        priceUrl: venues.priceUrl,
+        crawlPausedAt: venues.crawlPausedAt,
+      },
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
@@ -662,6 +665,14 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
     return ctx.json(
       { success: false, error: 'Event has no associated venue' },
       422,
+    )
+
+  // The pipeline fetches the venue's own price page, and a paused venue's
+  // pages are not fetched at all.
+  if (event.venue.crawlPausedAt !== null)
+    return ctx.json(
+      { success: false, error: 'Crawling is paused for this venue' },
+      409,
     )
 
   const narrowedVenueId = event.venueId

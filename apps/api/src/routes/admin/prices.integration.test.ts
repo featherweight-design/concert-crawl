@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { events, notifications, userCred } from '@concert-crawl/db'
+import { events, notifications, userCred, venues } from '@concert-crawl/db'
 
 vi.mock('@sentry/hono/node', async () => {
   const actual =
@@ -187,6 +187,22 @@ describe('POST /v1/admin/prices/pipeline/:eventId', () => {
       data: { eventId: string }
     }
     expect(body.data.eventId).toBe(event.id)
+  })
+
+  it('refuses an event at a venue whose crawling is paused', async () => {
+    await clearTables()
+    const venue = await seedVenue()
+    await testDb
+      .update(venues)
+      .set({ crawlPausedAt: new Date() })
+      .where(eq(venues.id, venue.id))
+    const event = await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/admin/prices/pipeline/${event.id}`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(409)
   })
 
   it('returns 404 for unknown event', async () => {

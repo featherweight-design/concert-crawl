@@ -161,6 +161,18 @@ describe('runDailyCrawl', () => {
     mockSentryLoggerError.mockReset()
   })
 
+  it('leaves paused venues out of the daily venue list', async () => {
+    const { isNull } = await import('drizzle-orm')
+    // No venues means no crawl and no price query, so the only paused-venue
+    // check left to make is the one on the venue list itself.
+    mockDbChain.where.mockResolvedValue([])
+
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt')
+  })
+
   it('calls crawlVenue for each active venue, passing a shared lazy browser provider', async () => {
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
@@ -764,20 +776,15 @@ describe('runTriggeredCrawls', () => {
   // A paused venue's pages are not fetched for prices either. The triggered
   // path runs prices after any run that did not fail, and a pause records a
   // skipped run, so the price query itself has to exclude paused venues.
-  it('excludes paused venues from the price query and the daily venue list', async () => {
+  it('excludes paused venues from the triggered price query', async () => {
     const { isNull } = await import('drizzle-orm')
     mockDbChain.where.mockResolvedValue([])
+    vi.mocked(isNull).mockClear()
 
-    const { runTriggeredCrawls, runDailyCrawl } = await import('./run.js')
+    const { runTriggeredCrawls } = await import('./run.js')
     await runTriggeredCrawls()
-    await runDailyCrawl()
 
     expect(vi.mocked(isNull)).toHaveBeenCalledWith('crawlPausedAt')
-    const pausedChecks = vi
-      .mocked(isNull)
-      .mock.calls.filter(([column]) => Object.is(column, 'crawlPausedAt'))
-    // One per triggered venue's price query, plus the daily venue list.
-    expect(pausedChecks.length).toBeGreaterThanOrEqual(2)
   })
 
   it('does not fail triggered crawl when runPricePipeline throws', async () => {
