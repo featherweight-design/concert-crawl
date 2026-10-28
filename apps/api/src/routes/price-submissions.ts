@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, desc, eq, gt, ne, sql } from 'drizzle-orm'
-import { db, events, priceSubmissions } from '@concert-crawl/db'
+import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
 import {
   SP_POLICY,
   VENDOR_VALUES,
@@ -260,6 +260,12 @@ priceSubmissionsRouter.post(
     const [event] = await db
       .select({ id: events.id })
       .from(events)
+      // An inactive venue's shows are off the site (and a removed venue's
+      // prices are gone), so they take no new prices either.
+      .innerJoin(
+        venues,
+        and(eq(venues.id, events.venueId), eq(venues.active, true)),
+      )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
     if (!event)
@@ -570,6 +576,12 @@ priceSubmissionsRouter.post(
     const [event] = await db
       .select({ id: events.id })
       .from(events)
+      // An inactive venue's shows are off the site (and a removed venue's
+      // prices are gone), so they take no new prices either.
+      .innerJoin(
+        venues,
+        and(eq(venues.id, events.venueId), eq(venues.active, true)),
+      )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
     if (!event)

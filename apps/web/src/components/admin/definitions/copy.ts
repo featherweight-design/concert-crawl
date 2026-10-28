@@ -820,6 +820,27 @@ export const ADMIN_COPY = {
         pauseButton: 'Pause crawling',
         resumeButton: 'Resume crawling',
       },
+      remove: {
+        title: 'Remove venue data',
+        description:
+          "For a venue that asked us to take its data down. Takes its shows off the site, stops crawls and deletes every price for its shows, users' submitted prices included. Shows stay in users' lists.",
+        trigger: 'Remove data',
+        removedNote: 'Off the site, crawling paused.',
+        dialog: {
+          eyebrow: 'Removal request',
+          heading: (venueName: string) => `Remove ${venueName}'s data?`,
+          body: "Its shows leave the site and crawling stops. Every price for its shows is deleted, including users' submitted prices, and cannot be restored. The shows stay in users' Watching and Concerts lists.",
+          reasonLabel: 'Reason (kept in the audit log)',
+          reasonPlaceholder: 'e.g. venue emailed 2026-10-28 asking for removal',
+          typedPrompt: (venueName: string) => `Type ${venueName} to confirm`,
+          typedInputAriaLabel: 'Venue name confirmation',
+          cancel: 'Cancel',
+          confirm: 'Remove data',
+          removing: 'Removing…',
+          failed:
+            'Removal failed. Reload the page to check its status before trying again.',
+        },
+      },
       pause: {
         title: 'Pause venue',
         description:

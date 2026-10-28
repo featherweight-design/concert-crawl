@@ -7,6 +7,7 @@ import {
   events,
   priceSubmissions,
   submissionConfirms,
+  venues,
 } from '@concert-crawl/db'
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
@@ -47,6 +48,12 @@ priceSubmissionConfirmsRouter.post(
     const [eventRow] = await db
       .select({ date: events.date })
       .from(events)
+      // An inactive venue's shows are off the site (and a removed venue's
+      // prices are gone), so they take no new prices either.
+      .innerJoin(
+        venues,
+        and(eq(venues.id, events.venueId), eq(venues.active, true)),
+      )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
       .limit(1)
 

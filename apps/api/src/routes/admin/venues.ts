@@ -9,9 +9,22 @@ import {
   venues,
   events,
   crawlRuns,
+  priceSubmissions,
   venueFaultAcknowledgements,
 } from '@concert-crawl/db'
-import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
+import {
+  and,
+  avg,
+  count,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  ne,
+  not,
+  or,
+} from 'drizzle-orm'
 import {
   dispatch,
   AegSchemaError,
@@ -1137,6 +1150,98 @@ venuesAdminRouter.delete(
     })
 
     return ctx.json({ success: true, data: venue })
+  },
+)
+
+// POST /v1/admin/venues/:id/remove — honour a venue's removal request, the
+// one /bot promises within 30 days. Takes the venue's shows off the site
+// (active = false, which every public query joins on), stops every crawl
+// (crawl_paused_at, which also stops the price pipeline), and deletes every
+// price we hold for its shows: the crawled price on each event and every
+// user-submitted price. The event rows stay, so users' Watching and Concerts
+// entries survive; the prices do not come back if the venue is reactivated.
+venuesAdminRouter.post(
+  '/:id/remove',
+  zValidator('param', crawlPauseParamSchema),
+  zValidator('json', crawlPauseSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { reason } = ctx.req.valid('json')
+
+    const result = await db.transaction(async (tx) => {
+      const [existing] = await tx
+        .select({
+          active: venues.active,
+          crawlPausedAt: venues.crawlPausedAt,
+        })
+        .from(venues)
+        .where(eq(venues.id, id))
+        .for('update')
+      if (!existing) return null
+
+      const [venue] = await tx
+        .update(venues)
+        .set({
+          active: false,
+          crawlPausedAt: existing.crawlPausedAt ?? new Date(),
+        })
+        .where(eq(venues.id, id))
+        .returning()
+
+      const venueEventIds = tx
+        .select({ id: events.id })
+        .from(events)
+        .where(eq(events.venueId, id))
+
+      // One statement, so a price check and the submission it challenges go
+      // together and the self-reference never blocks the delete.
+      const deletedSubmissions = await tx
+        .delete(priceSubmissions)
+        .where(inArray(priceSubmissions.eventId, venueEventIds))
+        .returning({ id: priceSubmissions.id })
+
+      const clearedEvents = await tx
+        .update(events)
+        .set({ ticketPriceMin: null, ticketPriceMax: null, priceSource: null })
+        .where(
+          and(
+            eq(events.venueId, id),
+            or(
+              isNotNull(events.ticketPriceMin),
+              isNotNull(events.ticketPriceMax),
+              isNotNull(events.priceSource),
+            ),
+          ),
+        )
+        .returning({ id: events.id })
+
+      return {
+        existing,
+        venue,
+        submissionsDeleted: deletedSubmissions.length,
+        eventPricesCleared: clearedEvents.length,
+      }
+    })
+    if (!result) {
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+    const { existing, venue, submissionsDeleted, eventPricesCleared } = result
+
+    ctx.set('auditAction', 'venue.remove')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditMeta', {
+      reason,
+      wasActive: existing.active,
+      wasCrawlPaused: existing.crawlPausedAt !== null,
+      submissionsDeleted,
+      eventPricesCleared,
+    })
+
+    return ctx.json({
+      success: true,
+      data: { venue, submissionsDeleted, eventPricesCleared },
+    })
   },
 )
 

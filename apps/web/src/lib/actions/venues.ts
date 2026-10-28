@@ -154,6 +154,31 @@ export async function resumeCrawling(id: string): Promise<void> {
   revalidatePath(`/admin/venues/${id}`)
 }
 
+export interface VenueRemovalResult {
+  submissionsDeleted: number
+  eventPricesCleared: number
+}
+
+// Honours a venue's removal request: shows off the site, crawling stopped,
+// every price for its shows deleted. See POST /v1/admin/venues/:id/remove.
+export async function removeVenue(
+  id: string,
+  reason: string,
+): Promise<VenueRemovalResult> {
+  const token = await getToken()
+  const result = await apiClient.post<VenueRemovalResult & { venue: Venue }>(
+    `/v1/admin/venues/${id}/remove`,
+    token,
+    { reason },
+  )
+  revalidatePath('/admin/venues')
+  revalidatePath(`/admin/venues/${id}`)
+  return {
+    submissionsDeleted: result.submissionsDeleted,
+    eventPricesCleared: result.eventPricesCleared,
+  }
+}
+
 export async function deleteVenue(
   id: string,
 ): Promise<{ eventsDetached: number }> {

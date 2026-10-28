@@ -38,6 +38,7 @@ import {
 } from '@/components/consumer/identity-art/IdentityArt'
 import { DeleteVenueConfirm } from './DeleteVenueConfirm'
 import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl'
+import { RemoveVenueControl } from './remove-venue-control/RemoveVenueControl'
 import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
@@ -2590,6 +2591,20 @@ export function VenueDetailsClient({
             <CrawlPauseControl
               venueId={venue.id}
               crawlPausedAt={venue.crawlPausedAt}
+            />
+
+            <div
+              style={{
+                height: 1,
+                background:
+                  'color-mix(in oklab, var(--danger) 16%, transparent)',
+              }}
+            />
+
+            <RemoveVenueControl
+              venueId={venue.id}
+              venueName={venue.name}
+              removed={!venue.active && venue.crawlPausedAt !== null}
             />
 
             <div
