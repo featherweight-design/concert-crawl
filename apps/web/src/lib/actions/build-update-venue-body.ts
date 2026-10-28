@@ -168,7 +168,10 @@ export function buildUpdateVenueBody(
     slug: formData.get('slug'),
     websiteUrl: formData.get('websiteUrl'),
     city: formData.get('city') || 'Denver',
-    active: formData.get('active') === 'true',
+    // Absent means unchanged: the settings save never sends it.
+    active: formData.has('active')
+      ? formData.get('active') === 'true'
+      : undefined,
     crawlWaitUntil,
     crawlDelayMs,
     crawlWaitForSelector,

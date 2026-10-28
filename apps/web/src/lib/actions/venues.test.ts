@@ -34,6 +34,13 @@ describe('buildUpdateVenueBody — API integration fields', () => {
     }
   })
 
+  it('leaves active out when its key is missing', () => {
+    expect(buildUpdateVenueBody(formDataFrom({})).active).toBeUndefined()
+    expect(buildUpdateVenueBody(formDataFrom({ active: 'false' })).active).toBe(
+      false,
+    )
+  })
+
   it('trims the account ID when a provider is selected', () => {
     const body = buildUpdateVenueBody(
       formDataFrom({ apiProvider: 'venuepilot', apiAccountId: '  1105  ' }),

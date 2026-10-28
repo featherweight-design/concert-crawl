@@ -179,6 +179,9 @@ describe('VenueDetailsClient — Wait until control', () => {
       throw new Error('Expected updateVenue to receive a FormData')
     }
     expect(formData.get('crawlWaitUntil')).toBe('load')
+    // Pause and Activate own `active`; a save from a stale tab must not
+    // resend it.
+    expect(formData.has('active')).toBe(false)
   })
 
   it('says the setting is ignored while a Wait selector is set', () => {

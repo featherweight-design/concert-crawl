@@ -810,7 +810,9 @@ export function VenueDetailsClient({
     formData.set('address', addressVal.trim())
     formData.set('crawlWaitUntil', waitUntilVal)
     formData.set('crawlDelayMs', String(crawlDelayVal))
-    formData.set('active', String(venue.active))
+    // `active` is left out on purpose: Pause and Activate own it. Resending the
+    // value this page loaded with would let a stale tab reactivate a venue
+    // paused or removed since.
     if (ticketVendorVal !== null) {
       formData.set('ticketVendor', ticketVendorVal)
     }
