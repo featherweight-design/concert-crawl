@@ -38,6 +38,7 @@ import {
 } from '@/components/consumer/identity-art/IdentityArt'
 import { DeleteVenueConfirm } from './DeleteVenueConfirm'
 import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl'
+import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   GenerateField,
@@ -414,8 +415,6 @@ interface VDSegToggleProps {
   id?: string
   ariaLabelledBy?: string
 }
-
-const WAIT_UNTIL_VALUES = ['networkidle', 'load', 'domcontentloaded'] as const
 
 function VDSegToggle({
   options,

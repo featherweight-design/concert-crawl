@@ -91,3 +91,10 @@ export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
     kind: 'danger',
   }
 }
+
+// The venue crawlWaitUntil values, in the order the admin toggle shows them.
+export const WAIT_UNTIL_VALUES = [
+  'networkidle',
+  'load',
+  'domcontentloaded',
+] as const
