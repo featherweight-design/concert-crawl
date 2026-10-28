@@ -1,3 +1,18 @@
+# [1.299.0](https://github.com/HartiganHM/concert-crawl/compare/v1.298.6...v1.299.0) (2026-10-28)
+
+
+### Bug Fixes
+
+* **admin:** lock the venue row on crawl resume ([c4c8db8](https://github.com/HartiganHM/concert-crawl/commit/c4c8db8e028c46c0c5e0f3a10cf52b706f223b55))
+* **admin:** refuse a platform probe for a paused venue; lock the row on pause ([9cd7c5b](https://github.com/HartiganHM/concert-crawl/commit/9cd7c5b7c95b5ced85711ca16acd8ad8702e0b71))
+* **admin:** refuse the on-demand price pipeline for a paused venue ([8f6aac6](https://github.com/HartiganHM/concert-crawl/commit/8f6aac6ec92e103060af6a9dc4c9b90ca4bd146c))
+* **crawler:** stop a price batch when its venue is paused part-way through ([f34f3f6](https://github.com/HartiganHM/concert-crawl/commit/f34f3f65aa90d543d60e9a4353f3bfd78b8bdc3f))
+
+
+### Features
+
+* **admin:** pause a venue's crawling without unpublishing it ([6cd16cf](https://github.com/HartiganHM/concert-crawl/commit/6cd16cf8bd361cb2a3c2e375b6a495037f088758))
+
 ## [1.298.6](https://github.com/HartiganHM/concert-crawl/compare/v1.298.5...v1.298.6) (2026-10-28)
 
 
