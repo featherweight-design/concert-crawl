@@ -128,30 +128,44 @@ const sameBill = (stored: string[] | null, next: string[]): boolean =>
   stored.length === next.length &&
   stored.every((name, i) => name === next[i])
 
-// The payload host a platform adapter reads from, when it is not the venue's
-// own site. Live Nation and detail-page venues read from the venue's host,
-// which the website check already covers.
-const platformPayloadUrl = (venue: {
+interface ProvenanceRow {
+  extractionStrategy: string | null
   platform: string | null
   platformVenueId: string | null
   apiProvider: string | null
-}): string | null => {
-  if (venue.apiProvider === 'venuepilot') return VENUEPILOT_ENDPOINT
-  if (venue.platform === 'aeg' && venue.platformVenueId)
-    return aegEndpointUrl(venue.platformVenueId)
-  return null
+}
+
+// Which adapter produced the row. The row's own recorded strategy wins, since
+// a venue can change adapters after its rows were written; a legacy row with
+// none falls back to the venue's current settings.
+const sourceAdapter = (row: ProvenanceRow): string | null => {
+  if (row.extractionStrategy?.startsWith('platform:'))
+    return row.extractionStrategy.slice('platform:'.length)
+  if (row.extractionStrategy !== null) return null
+  if (row.apiProvider === 'venuepilot') return 'venuepilot'
+  return row.platform
 }
 
 // Adapters that read a series of pages (Live Nation's sitemap and calendars,
 // detail-page's listing and each event page), following redirects, record
 // none of them on the row. The crawl checks every page it read; this pass
-// cannot, so it does not adjudicate those rows at all.
-const readsUnrecordedPages = (venue: {
-  platform: string | null
-  apiProvider: string | null
-}): boolean =>
-  venue.apiProvider === null &&
-  (venue.platform === 'livenation' || venue.platform === 'detail-page')
+// cannot, so it does not adjudicate those rows at all. An AEG row whose
+// venue no longer names the shard it came from is in the same position.
+const provenanceUnknown = (row: ProvenanceRow): boolean => {
+  const adapter = sourceAdapter(row)
+  if (adapter === 'livenation' || adapter === 'detail-page') return true
+  return adapter === 'aeg' && !(row.platform === 'aeg' && row.platformVenueId)
+}
+
+// The payload host a platform adapter reads from, when it is not the venue's
+// own site.
+const platformPayloadUrl = (row: ProvenanceRow): string | null => {
+  const adapter = sourceAdapter(row)
+  if (adapter === 'venuepilot') return VENUEPILOT_ENDPOINT
+  if (adapter === 'aeg' && row.platformVenueId)
+    return aegEndpointUrl(row.platformVenueId)
+  return null
+}
 
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -212,6 +226,7 @@ export async function rederiveEventArtists(
         canonicalSupporting: events.canonicalSupporting,
         hiddenFromConsumer: events.hiddenFromConsumer,
         sourceUrl: events.sourceUrl,
+        extractionStrategy: events.extractionStrategy,
         websiteUrl: venues.websiteUrl,
         platform: venues.platform,
         platformVenueId: venues.platformVenueId,
@@ -261,7 +276,7 @@ export async function rederiveEventArtists(
       }
 
       const willAdjudicate = wouldAdjudicate(input)
-      if (willAdjudicate && readsUnrecordedPages(row)) {
+      if (willAdjudicate && provenanceUnknown(row)) {
         strategies['provenance-unknown'] += 1
         continue
       }

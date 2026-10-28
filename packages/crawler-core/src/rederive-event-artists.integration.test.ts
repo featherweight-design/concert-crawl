@@ -372,4 +372,27 @@ describe('rederive-event-artists integration', () => {
     expect(adjudicate).not.toHaveBeenCalled()
     expect(result.strategies['provenance-unknown']).toBe(1)
   })
+
+  // A venue that moved off Live Nation keeps the rows it wrote there. The row's
+  // recorded strategy, not the venue's current setting, decides provenance.
+  it("treats a row by the adapter that wrote it, not the venue's current one", async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      title: 'BASS BINGO NIGHT',
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      canonicalTitle: 'bass bingo night',
+      date: '2026-09-13',
+    })
+    await db
+      .update(events)
+      .set({ extractionStrategy: 'platform:livenation' })
+      .where(eq(events.id, event.id))
+
+    const adjudicate = stubAdjudicator()
+    const result = await run(adjudicate, false)
+
+    expect(adjudicate).not.toHaveBeenCalled()
+    expect(result.strategies['provenance-unknown']).toBe(1)
+  })
 })
