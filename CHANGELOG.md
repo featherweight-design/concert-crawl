@@ -1,3 +1,10 @@
+## [1.300.2](https://github.com/HartiganHM/concert-crawl/compare/v1.300.1...v1.300.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **emails:** plain-text emails keep their footer note and match the HTML ([df34255](https://github.com/HartiganHM/concert-crawl/commit/df342554be579391c5dcd55ccca8d32ca8a5ff32)), closes [#1386](https://github.com/HartiganHM/concert-crawl/issues/1386) [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394) [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394)
+
 ## [1.300.1](https://github.com/HartiganHM/concert-crawl/compare/v1.300.0...v1.300.1) (2026-10-28)
 
 
