@@ -14,6 +14,11 @@ import { getAuthUser } from '../../middleware/auth.js'
 import { awardPriceCred } from '../../lib/award-price-cred.js'
 import { writeContestNotifications } from '../../lib/contest-notifications.js'
 import { narrowLastAdminAction } from '../../lib/last-admin-action.js'
+import {
+  detectPriceDrop,
+  fanoutPriceDrop,
+  type PriceDrop,
+} from '../../lib/price-drop.js'
 import type { AdminVariables } from './index.js'
 
 export const contestsAdminRouter = new Hono<AdminVariables>()
@@ -494,6 +499,7 @@ contestsAdminRouter.post(
           parent: typeof priceSubmissions.$inferSelect
           challenger: typeof priceSubmissions.$inferSelect
           eventPriceUpdated: boolean
+          pricedrop: PriceDrop | undefined
           orphanedCounterIds: string[]
           before: {
             parent: {
@@ -609,11 +615,17 @@ contestsAdminRouter.post(
       // Read the event row inside the transaction to gate the projection
       // update on priceSource — we never overwrite a non-community headline
       // (ticketmaster/axs/etc.) even when a community contest resolves on the
-      // same slot.
+      // same slot. #1107: also read the PRE-update ticketPriceMin under
+      // FOR UPDATE so the watch.pricedrop decision below can't race another
+      // writer (admin corroboration, community confirm) on the same event.
       const [eventRow] = await tx
-        .select({ priceSource: events.priceSource })
+        .select({
+          priceSource: events.priceSource,
+          ticketPriceMin: events.ticketPriceMin,
+        })
         .from(events)
         .where(eq(events.id, parent.eventId))
+        .for('update')
         .limit(1)
       if (!eventRow) {
         // Should be unreachable given the FK from price_submissions.event_id,
@@ -627,6 +639,7 @@ contestsAdminRouter.post(
         eventRow.priceSource === null || eventRow.priceSource === 'community'
 
       let eventPriceUpdated = false
+      let pricedrop: PriceDrop | undefined
 
       if (resolution === 'challenger_wins') {
         // Winner = challenger → corroborated. Loser = parent → archived.
@@ -663,6 +676,11 @@ contestsAdminRouter.post(
             })
             .where(eq(events.id, parent.eventId))
           eventPriceUpdated = true
+          pricedrop = detectPriceDrop(
+            parent.eventId,
+            eventRow.ticketPriceMin,
+            challenger.priceMin,
+          )
         }
         if (challenger.userId !== null) {
           await awardPriceCred(tx, challenger.userId)
@@ -743,6 +761,7 @@ contestsAdminRouter.post(
         parent: parentAfter,
         challenger: challengerAfter,
         eventPriceUpdated,
+        pricedrop,
         orphanedCounterIds,
         before,
       }
@@ -807,6 +826,14 @@ contestsAdminRouter.post(
       resolution,
       reason,
     })
+
+    // #1107: a challenger_wins resolution that projected a strictly lower
+    // price onto the event fans out watch.pricedrop to watchers, after the
+    // commit. parent_wins never sets this (the event already shows the
+    // parent's price). Best-effort; never fails the resolution.
+    if (outcome.pricedrop) {
+      await fanoutPriceDrop(outcome.pricedrop)
+    }
 
     return ctx.json({
       success: true,

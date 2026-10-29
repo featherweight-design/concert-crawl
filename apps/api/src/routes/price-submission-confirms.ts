@@ -12,6 +12,11 @@ import {
 import { SP_POLICY } from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 import { isImminentEvent } from '../lib/time.js'
+import {
+  detectPriceDrop,
+  fanoutPriceDrop,
+  type PriceDrop,
+} from '../lib/price-drop.js'
 
 const confirmBodySchema = z.object({
   method: z.enum(['same-vendor', 'other-vendor', 'box-office']),
@@ -116,10 +121,11 @@ priceSubmissionConfirmsRouter.post(
           status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
         }
       | undefined
+    let pricedrop: PriceDrop | undefined
     let alreadyConfirmed = false
     let uniqueViolation = false
     try {
-      updated = await db.transaction(async (tx) => {
+      const txResult = await db.transaction(async (tx) => {
         const [insertedConfirm] = await tx
           .insert(submissionConfirms)
           .values({ submissionId, userId, method })
@@ -148,8 +154,43 @@ priceSubmissionConfirmsRouter.post(
             status: priceSubmissions.status,
           })
 
-        return updatedRow
+        // Promotion propagates the corroborated community price to the
+        // event, inside the same transaction so a 23505 rollback can't leave
+        // the event row pointing at a price that never got corroborated.
+        // #1107: read the PRE-update price under FOR UPDATE first. A
+        // concurrent confirm that also observes the promoted status waits
+        // here, then reads the new floor and records no drop, so watchers
+        // get exactly one watch.pricedrop.
+        let drop: PriceDrop | undefined
+        if (updatedRow?.status === 'corroborated') {
+          const [preEvent] = await tx
+            .select({ ticketPriceMin: events.ticketPriceMin })
+            .from(events)
+            .where(eq(events.id, eventId))
+            .for('update')
+            .limit(1)
+
+          await tx
+            .update(events)
+            .set({
+              ticketPriceMin: submission.priceMin,
+              ticketPriceMax: submission.priceMax,
+              priceSource: 'community',
+              updatedAt: sql`now()`,
+            })
+            .where(eq(events.id, eventId))
+
+          drop = detectPriceDrop(
+            eventId,
+            preEvent?.ticketPriceMin,
+            submission.priceMin,
+          )
+        }
+
+        return { updatedRow, drop }
       })
+      updated = txResult?.updatedRow
+      pricedrop = txResult?.drop
     } catch (error) {
       // Match by Postgres error code (more reliable than string-matching the
       // wrapped message — `.cause` isn't always populated, but `.code` is).
@@ -194,18 +235,10 @@ priceSubmissionConfirmsRouter.post(
       return ctx.json({ success: false, error: 'Submission not found' }, 404)
     }
 
-    const promoted = updated.status === 'corroborated'
-
-    if (promoted) {
-      await db
-        .update(events)
-        .set({
-          ticketPriceMin: submission.priceMin,
-          ticketPriceMax: submission.priceMax,
-          priceSource: 'community',
-          updatedAt: sql`now()`,
-        })
-        .where(eq(events.id, eventId))
+    // #1107: fan out watch.pricedrop to status='watching' users only after
+    // the promotion commits. Best-effort; never fails the confirm.
+    if (pricedrop) {
+      await fanoutPriceDrop(pricedrop)
     }
 
     // `confirmsCount` in the response is the count of non-submitter confirms

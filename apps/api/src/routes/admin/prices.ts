@@ -6,20 +6,22 @@ import * as Sentry from '@sentry/hono/node'
 import {
   db,
   events,
-  notifications,
   priceRetrievalLog,
   priceSubmissions,
-  userEvents,
   venues,
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
-import { fanoutWatchNotification } from '@concert-crawl/push'
 import { createLogger } from '@concert-crawl/logger'
 import { VENDOR_VALUES, deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { awardPriceCred } from '../../lib/award-price-cred.js'
 import { runBackgroundTask } from '../../lib/background-tasks.js'
+import {
+  detectPriceDrop,
+  fanoutPriceDrop,
+  type PriceDrop,
+} from '../../lib/price-drop.js'
 import type { AdminVariables } from './index.js'
 
 const logger = createLogger('admin:prices')
@@ -433,9 +435,7 @@ pricesAdminRouter.patch(
 
       if (!updated) return { ok: false }
 
-      let pricedropForFanout:
-        | { eventId: string; oldPriceMin: string; newPriceMin: string }
-        | undefined
+      let pricedropForFanout: PriceDrop | undefined
       if (status === 'corroborated' && existing.status !== 'corroborated') {
         // Award cred to the submitter
         if (existing.userId !== null) {
@@ -464,19 +464,12 @@ pricesAdminRouter.patch(
           })
           .where(eq(events.id, existing.eventId))
 
-        // Real price-drop = strictly lower minimum. Equal prices are a
-        // corroboration (same number, different source) and shouldn't fire
-        // a notification. Higher prices are also not a drop.
-        if (
-          preEvent?.ticketPriceMin != null &&
-          isStrictlyLowerNumeric(existing.priceMin, preEvent.ticketPriceMin)
-        ) {
-          pricedropForFanout = {
-            eventId: existing.eventId,
-            oldPriceMin: preEvent.ticketPriceMin,
-            newPriceMin: existing.priceMin,
-          }
-        }
+        // Real price-drop = strictly lower minimum (see lib/price-drop.ts).
+        pricedropForFanout = detectPriceDrop(
+          existing.eventId,
+          preEvent?.ticketPriceMin,
+          existing.priceMin,
+        )
       }
 
       return pricedropForFanout
@@ -522,36 +515,12 @@ pricesAdminRouter.patch(
     // primary user-visible state change; a fan-out failure here can't
     // roll it back and shouldn't fail the admin request.
     if (result.pricedrop) {
-      await fanoutWatchNotification(
-        { db, notifications, userEvents, events, venues },
-        {
-          eventId: result.pricedrop.eventId,
-          category: 'watch.pricedrop',
-          pricedrop: {
-            newPriceMin: result.pricedrop.newPriceMin,
-            oldPriceMin: result.pricedrop.oldPriceMin,
-          },
-        },
-      )
+      await fanoutPriceDrop(result.pricedrop)
     }
 
     return ctx.json({ success: true, data: result.updated })
   },
 )
-
-// Compare two numeric-string prices (from Drizzle's `numeric(10,2)` columns,
-// which come back as string) for a strict drop. When either side isn't
-// parseable as a number, returns false — a "drop" claim we can't verify is
-// better skipped than false-positived into a bogus notification.
-const isStrictlyLowerNumeric = (
-  candidate: string,
-  baseline: string,
-): boolean => {
-  const candidateNum = Number.parseFloat(candidate)
-  const baselineNum = Number.parseFloat(baseline)
-  if (Number.isNaN(candidateNum) || Number.isNaN(baselineNum)) return false
-  return candidateNum < baselineNum
-}
 
 // GET /v1/admin/prices/activity — last 100 price retrieval attempts with event + venue context
 pricesAdminRouter.get('/activity', async (ctx) => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { priceSubmissions } from '@concert-crawl/db'
+import { events, notifications, priceSubmissions } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
 
 const { authState } = vi.hoisted(() => ({
@@ -24,6 +24,7 @@ import {
   seedEvent,
   seedVenue,
   seedPriceSubmission,
+  seedUserEvent,
 } from '../test/helpers/seed.js'
 
 const app = createApp()
@@ -346,5 +347,186 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         expect(body.data.confirmsCount).toBe(confirmsNeeded)
       }
     }
+  })
+})
+
+describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
+  const SUBMITTER = 'user_drop_submitter'
+
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  // The default seedEvent date is in the past, so confirmsRequired = 2 and a
+  // single non-submitter confirm promotes the submission to corroborated.
+  async function confirmAs(
+    userId: string,
+    eventId: string,
+    submissionId: string,
+  ): Promise<Response> {
+    setAuth(userId)
+    return app.request(
+      `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
+        },
+        body: JSON.stringify({ method: 'same-vendor' }),
+      },
+    )
+  }
+
+  async function pricedropRows(): Promise<
+    { userId: string; title: string; body: string | null }[]
+  > {
+    return testDb
+      .select({
+        userId: notifications.userId,
+        title: notifications.title,
+        body: notifications.body,
+      })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.pricedrop'))
+  }
+
+  it('fires one watch.pricedrop per watcher when the promoted price is strictly lower', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    const WATCHER = 'user_confirm_drop_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    await seedUserEvent('user_confirm_drop_going', event.id, {
+      status: 'going',
+    })
+    await seedUserEvent('user_confirm_drop_interested', event.id, {
+      status: 'interested',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '32',
+    })
+
+    const res = await confirmAs('user_confirm_1', event.id, submission.id)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: { submissionStatus: string }
+    }
+    expect(body.data.submissionStatus).toBe('corroborated')
+
+    const [updatedEvent] = await testDb
+      .select({
+        ticketPriceMin: events.ticketPriceMin,
+        priceSource: events.priceSource,
+      })
+      .from(events)
+      .where(eq(events.id, event.id))
+      .limit(1)
+    expect(updatedEvent?.ticketPriceMin).toBe('32.00')
+    expect(updatedEvent?.priceSource).toBe('community')
+
+    const rows = await pricedropRows()
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+    expect(rows[0]?.title).toMatch(/\$32/)
+    expect(rows[0]?.body).toMatch(/\$48/)
+  })
+
+  it('does not fan out again on a further confirm after promotion', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    await seedUserEvent('user_confirm_repeat_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '32',
+    })
+
+    const first = await confirmAs('user_confirm_a', event.id, submission.id)
+    expect(first.status).toBe(200)
+    const second = await confirmAs('user_confirm_b', event.id, submission.id)
+    // Already corroborated, so the confirm is refused before any write.
+    expect(second.status).toBe(400)
+
+    expect(await pricedropRows()).toHaveLength(1)
+  })
+
+  it('does not fire when the promoted price equals the current event price', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '35' })
+    await seedUserEvent('user_confirm_equal_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '35',
+    })
+
+    const res = await confirmAs('user_confirm_eq', event.id, submission.id)
+    expect(res.status).toBe(200)
+    expect(await pricedropRows()).toHaveLength(0)
+  })
+
+  it('does not fire when the promoted price is higher than the current event price', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '30' })
+    await seedUserEvent('user_confirm_higher_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '40',
+    })
+
+    const res = await confirmAs('user_confirm_hi', event.id, submission.id)
+    expect(res.status).toBe(200)
+    expect(await pricedropRows()).toHaveLength(0)
+  })
+
+  it('does not fire when the event had no previous price', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedUserEvent('user_confirm_first_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '25',
+    })
+
+    const res = await confirmAs('user_confirm_first', event.id, submission.id)
+    expect(res.status).toBe(200)
+
+    const [updatedEvent] = await testDb
+      .select({ ticketPriceMin: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, event.id))
+      .limit(1)
+    expect(updatedEvent?.ticketPriceMin).toBe('25.00')
+    expect(await pricedropRows()).toHaveLength(0)
+  })
+
+  it('does not fire while the submission stays pending below threshold', async () => {
+    const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10)
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: imminentDate,
+      ticketPriceMin: '48',
+    })
+    await seedUserEvent('user_confirm_pending_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '32',
+    })
+
+    const res = await confirmAs('user_confirm_p', event.id, submission.id)
+    expect(res.status).toBe(200)
+
+    const [unchanged] = await testDb
+      .select({ ticketPriceMin: events.ticketPriceMin })
+      .from(events)
+      .where(eq(events.id, event.id))
+      .limit(1)
+    expect(unchanged?.ticketPriceMin).toBe('48.00')
+    expect(await pricedropRows()).toHaveLength(0)
   })
 })

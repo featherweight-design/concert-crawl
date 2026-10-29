@@ -32,6 +32,7 @@ import {
   seedPriceSubmission,
   seedUserCred,
   seedUserProfile,
+  seedUserEvent,
   seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js'
@@ -1532,6 +1533,140 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
         ),
       )
     expect(notifs).toHaveLength(1)
+  })
+
+  describe('watch.pricedrop fan-out (#1107)', () => {
+    const resolve = async (
+      contestId: string,
+      resolution: 'parent_wins' | 'challenger_wins',
+    ): Promise<Response> =>
+      app.request(`/v1/admin/contests/prices/${contestId}/resolve`, {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          resolution,
+          reason: 'Verified the face value against the vendor listing.',
+        }),
+      })
+
+    const pricedropRows = async (): Promise<
+      { userId: string; title: string; body: string | null }[]
+    > =>
+      testDb
+        .select({
+          userId: notifications.userId,
+          title: notifications.title,
+          body: notifications.body,
+        })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.pricedrop'))
+
+    it('challenger_wins with a strictly lower price fires one watch.pricedrop per watcher', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      const WATCHER = 'user_contest_drop_watcher'
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+      await seedUserEvent('user_contest_drop_going', event.id, {
+        status: 'going',
+      })
+      await seedUserEvent('user_contest_drop_interested', event.id, {
+        status: 'interested',
+      })
+
+      const res = await resolve(parent.id, 'challenger_wins')
+      expect(res.status).toBe(200)
+
+      const eventAfter = await fetchEvent(event.id)
+      expect(eventAfter.ticketPriceMin).toBe('30.00')
+
+      const rows = await pricedropRows()
+      expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+      expect(rows[0]?.title).toMatch(/\$30/)
+      expect(rows[0]?.body).toMatch(/\$40/)
+    })
+
+    it('challenger_wins with an equal price does not fire', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        counterOverrides: { priceMin: '40', priceMax: '45' },
+      })
+      await seedUserEvent('user_contest_equal_watcher', event.id, {
+        status: 'watching',
+      })
+
+      const res = await resolve(parent.id, 'challenger_wins')
+      expect(res.status).toBe(200)
+      expect(await pricedropRows()).toHaveLength(0)
+    })
+
+    it('challenger_wins with a higher price does not fire', async () => {
+      setAdminAuth()
+      // Default counter is $55 against the event's $40.
+      const { event, parent } = await seedContest()
+      await seedUserEvent('user_contest_higher_watcher', event.id, {
+        status: 'watching',
+      })
+
+      const res = await resolve(parent.id, 'challenger_wins')
+      expect(res.status).toBe(200)
+      expect(await pricedropRows()).toHaveLength(0)
+    })
+
+    it('challenger_wins does not fire when the event had no previous price', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        eventOverrides: {
+          ticketPriceMin: null,
+          ticketPriceMax: null,
+          priceSource: null,
+        },
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      await seedUserEvent('user_contest_first_watcher', event.id, {
+        status: 'watching',
+      })
+
+      const res = await resolve(parent.id, 'challenger_wins')
+      expect(res.status).toBe(200)
+
+      const eventAfter = await fetchEvent(event.id)
+      expect(eventAfter.ticketPriceMin).toBe('30.00')
+      expect(await pricedropRows()).toHaveLength(0)
+    })
+
+    it('parent_wins never fires, even when the counter was lower', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      await seedUserEvent('user_contest_parent_watcher', event.id, {
+        status: 'watching',
+      })
+
+      const res = await resolve(parent.id, 'parent_wins')
+      expect(res.status).toBe(200)
+      expect(await pricedropRows()).toHaveLength(0)
+    })
+
+    it('challenger_wins on a non-community priceSource does not fire', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        eventOverrides: { priceSource: 'ticketmaster' },
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      await seedUserEvent('user_contest_tm_watcher', event.id, {
+        status: 'watching',
+      })
+
+      const res = await resolve(parent.id, 'challenger_wins')
+      expect(res.status).toBe(200)
+
+      const eventAfter = await fetchEvent(event.id)
+      expect(eventAfter.ticketPriceMin).toBe('40.00')
+      expect(await pricedropRows()).toHaveLength(0)
+    })
   })
 })
 
