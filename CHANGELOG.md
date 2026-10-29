@@ -1,3 +1,10 @@
+## [1.300.6](https://github.com/HartiganHM/concert-crawl/compare/v1.300.5...v1.300.6) (2026-10-29)
+
+
+### Bug Fixes
+
+* **web:** link the Private Beta Agreement from the invite-code screen ([4053554](https://github.com/HartiganHM/concert-crawl/commit/40535540613e8394c5a187e0bff5687e94450a92)), closes [#1619](https://github.com/HartiganHM/concert-crawl/issues/1619)
+
 ## [1.300.5](https://github.com/HartiganHM/concert-crawl/compare/v1.300.4...v1.300.5) (2026-10-28)
 
 
