@@ -337,6 +337,10 @@ const invokedUrl = process.argv[1]
   : undefined
 if (invokedUrl && import.meta.url === invokedUrl) {
   const main = async (): Promise<number> => {
+    // The cron runs this file directly, never through index.ts, so Sentry is
+    // only initialised if the entrypoint does it. Loaded here rather than as a
+    // static import so tests importing runMatchArtists never initialise it.
+    await import('../instrument.js')
     let exitCode = 0
     try {
       await runMatchArtists()
@@ -368,6 +372,8 @@ if (invokedUrl && import.meta.url === invokedUrl) {
         },
       })
     }
+    // process.exit drops anything still queued in the Sentry transport.
+    await Sentry.flush(2000)
     return exitCode
   }
   void main().then((code) => process.exit(code))
