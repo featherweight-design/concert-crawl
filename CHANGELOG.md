@@ -1,3 +1,18 @@
+# [1.301.0](https://github.com/HartiganHM/concert-crawl/compare/v1.300.7...v1.301.0) (2026-10-29)
+
+
+### Bug Fixes
+
+* **api:** avoid deadlocks between price writers on the event row ([ba89356](https://github.com/HartiganHM/concert-crawl/commit/ba89356877de28566f5abbe2d42dc9702ea8151b)), closes [#1107](https://github.com/HartiganHM/concert-crawl/issues/1107)
+* **api:** award price cred before locking the event in contest resolution ([9e5e267](https://github.com/HartiganHM/concert-crawl/commit/9e5e267a71018d2074a48d43658f5a171501155d)), closes [#1107](https://github.com/HartiganHM/concert-crawl/issues/1107)
+* **web:** revert the Next 16 upgrade ([#1791](https://github.com/HartiganHM/concert-crawl/issues/1791)) ([#1792](https://github.com/HartiganHM/concert-crawl/issues/1792)) ([2d5e3bd](https://github.com/HartiganHM/concert-crawl/commit/2d5e3bd06be91eb31a8e461663d38217b77f5f19))
+
+
+### Features
+
+* **api:** fan out watch.pricedrop from confirms and price-check resolution ([ce0139f](https://github.com/HartiganHM/concert-crawl/commit/ce0139f6d837d026ef4948988230e07dec8ddadf)), closes [#1107](https://github.com/HartiganHM/concert-crawl/issues/1107)
+* **web:** PostHog usage basics (pageviews, autocapture, release) ([#1790](https://github.com/HartiganHM/concert-crawl/issues/1790)) ([5012cf3](https://github.com/HartiganHM/concert-crawl/commit/5012cf3e4c2c69212964d5f8fe3ec58a05d11fea))
+
 ## [1.300.7](https://github.com/HartiganHM/concert-crawl/compare/v1.300.6...v1.300.7) (2026-10-29)
 
 
