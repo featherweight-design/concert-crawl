@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { events, notifications, userCred, venues } from '@concert-crawl/db'
 
 vi.mock('@sentry/hono/node', async () => {
@@ -47,6 +47,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
+import { observeBlocking, openLockHolder } from '../../test/helpers/locks.js'
 
 const app = createApp()
 
@@ -599,6 +600,35 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         .from(notifications)
         .where(eq(notifications.category, 'watch.pricedrop'))
       expect(rows).toHaveLength(0)
+    })
+
+    it('is not blocked by a foreign-key KEY SHARE lock on the event (deadlock guard)', async () => {
+      // A concurrent dispute insert holds KEY SHARE on the event via its FK
+      // check while waiting on the submission row this request locks. If the
+      // event pre-read used FOR UPDATE it would wait on that KEY SHARE and
+      // deadlock; FOR NO KEY UPDATE does not conflict with it.
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, {
+        date: '2026-09-05',
+        ticketPriceMin: '48',
+      })
+      const submission = await seedPriceSubmission(event.id, 'submitter_ks', {
+        priceMin: '32',
+      })
+      const holder = await openLockHolder([
+        sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
+      ])
+      const { blocked, result } = await observeBlocking(() =>
+        app.request(`/v1/admin/prices/submissions/${submission.id}`, {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        }),
+      )
+      await holder.release()
+      const res = await result
+      expect(blocked).toBe(false)
+      expect(res.status).toBe(200)
     })
 
     it('does not fire when the event had no prior price to compare against', async () => {

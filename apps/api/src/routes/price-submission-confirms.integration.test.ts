@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { events, notifications, priceSubmissions } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
+import { observeBlocking, openLockHolder } from '../test/helpers/locks.js'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -447,6 +448,32 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
     // Already corroborated, so the confirm is refused before any write.
     expect(second.status).toBe(400)
 
+    expect(await pricedropRows()).toHaveLength(1)
+  })
+
+  it('is not blocked by a foreign-key KEY SHARE lock on the event (overlapping dispute deadlock guard)', async () => {
+    // An overlapping dispute (submissions.ts) inserts a counter whose FK
+    // check holds KEY SHARE on the event, then waits on the submission row
+    // this confirm has updated. A FOR UPDATE event pre-read here would wait
+    // on that KEY SHARE: a deadlock. FOR NO KEY UPDATE does not conflict.
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    await seedUserEvent('user_confirm_ks_watcher', event.id, {
+      status: 'watching',
+    })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '32',
+    })
+    const holder = await openLockHolder([
+      sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
+    ])
+    const { blocked, result } = await observeBlocking(() =>
+      confirmAs('user_confirm_ks', event.id, submission.id),
+    )
+    await holder.release()
+    const res = await result
+    expect(blocked).toBe(false)
+    expect(res.status).toBe(200)
     expect(await pricedropRows()).toHaveLength(1)
   })
 

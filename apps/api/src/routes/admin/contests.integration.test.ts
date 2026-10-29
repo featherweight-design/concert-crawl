@@ -27,6 +27,11 @@ import {
 import { createApp } from '../../app.js'
 import { testDb } from '../../test/helpers/db.js'
 import {
+  observeBlocking,
+  openLockHolder,
+  waitForLockWaiter,
+} from '../../test/helpers/locks.js'
+import {
   clearTables,
   seedEvent,
   seedPriceSubmission,
@@ -1648,6 +1653,70 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       const res = await resolve(parent.id, 'parent_wins')
       expect(res.status).toBe(200)
       expect(await pricedropRows()).toHaveLength(0)
+    })
+
+    it('challenger_wins is not blocked by a foreign-key KEY SHARE lock on the event', async () => {
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      const holder = await openLockHolder([
+        sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
+      ])
+      const { blocked, result } = await observeBlocking(() =>
+        resolve(parent.id, 'challenger_wins'),
+      )
+      await holder.release()
+      const res = await result
+      expect(blocked).toBe(false)
+      expect(res.status).toBe(200)
+    })
+
+    it('challenger_wins does not hold the event lock while waiting on the box-office unique index (deadlock guard)', async () => {
+      // A concurrent writer is corroborating another box-office row for the
+      // same event/tier: it holds that unique-index entry uncommitted and
+      // will next lock the event. Resolution must take its submission
+      // updates (which wait on that index entry) BEFORE locking the event,
+      // or the writer's event lock waits on us while we wait on it.
+      setAdminAuth()
+      const { event, parent } = await seedContest({
+        parentOverrides: { sourceCategory: 'boxoffice' },
+        counterOverrides: {
+          sourceCategory: 'boxoffice',
+          priceMin: '30',
+          priceMax: '30',
+        },
+      })
+      const rival = await seedPriceSubmission(event.id, 'user_contest_rival', {
+        tier: 'GA',
+        vendor: 'AXS',
+        sourceCategory: 'boxoffice',
+        priceMin: '35',
+        status: 'pending',
+      })
+      const writer = await openLockHolder([
+        sql`UPDATE price_submissions SET status = 'corroborated' WHERE id = ${rival.id}`,
+      ])
+      const request = resolve(parent.id, 'challenger_wins')
+      // The resolution is now waiting on the rival's index entry.
+      await waitForLockWaiter()
+
+      let writerLockError: unknown
+      try {
+        await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
+        await writer.run(
+          sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
+        )
+      } catch (err) {
+        writerLockError = err
+      }
+      // Roll the rival back so the resolution's promotion can proceed.
+      await writer.release()
+      const res = await request
+
+      expect(writerLockError).toBeUndefined()
+      expect(res.status).toBe(200)
+      expect((await fetchEvent(event.id)).ticketPriceMin).toBe('30.00')
     })
 
     it('challenger_wins on a non-community priceSource does not fire', async () => {

@@ -612,22 +612,18 @@ contestsAdminRouter.post(
         },
       }
 
-      // Read the event row inside the transaction to gate the projection
-      // update on priceSource — we never overwrite a non-community headline
-      // (ticketmaster/axs/etc.) even when a community contest resolves on the
-      // same slot. #1107: also read the PRE-update ticketPriceMin under
-      // FOR UPDATE so the watch.pricedrop decision below can't race another
-      // writer (admin corroboration, community confirm) on the same event.
-      const [eventRow] = await tx
-        .select({
-          priceSource: events.priceSource,
-          ticketPriceMin: events.ticketPriceMin,
-        })
+      // Unlocked existence check for the precondition. The event row is
+      // NOT locked here: a lock taken before the submission updates below
+      // can deadlock against a concurrent confirm/admin approval that holds
+      // the corroborated-price unique-index entry for this event/tier and
+      // is itself waiting on the event row. Every price writer takes
+      // submission rows first and the event row second (#1107).
+      const [eventExists] = await tx
+        .select({ id: events.id })
         .from(events)
         .where(eq(events.id, parent.eventId))
-        .for('update')
         .limit(1)
-      if (!eventRow) {
+      if (!eventExists) {
         // Should be unreachable given the FK from price_submissions.event_id,
         // but treat as precondition_failed rather than a 500 if it ever fires.
         return {
@@ -635,8 +631,6 @@ contestsAdminRouter.post(
           reason: 'Event row missing for parent submission.',
         }
       }
-      const projectionAllowed =
-        eventRow.priceSource === null || eventRow.priceSource === 'community'
 
       let eventPriceUpdated = false
       let pricedrop: PriceDrop | undefined
@@ -665,6 +659,27 @@ contestsAdminRouter.post(
             updatedAt: sql`now()`,
           })
           .where(eq(priceSubmissions.id, parent.id))
+
+        // Only now, after the submission rows, lock and read the event.
+        // priceSource gates the projection: we never overwrite a
+        // non-community headline (ticketmaster/axs/etc.) even when a
+        // community contest resolves on the same slot. #1107: the PRE-update
+        // ticketPriceMin decides watch.pricedrop. FOR NO KEY UPDATE
+        // serializes this against the other price writers without blocking
+        // foreign-key KEY SHARE checks on the event.
+        const [eventRow] = await tx
+          .select({
+            priceSource: events.priceSource,
+            ticketPriceMin: events.ticketPriceMin,
+          })
+          .from(events)
+          .where(eq(events.id, parent.eventId))
+          .for('no key update')
+          .limit(1)
+        const projectionAllowed =
+          eventRow !== undefined &&
+          (eventRow.priceSource === null ||
+            eventRow.priceSource === 'community')
         if (projectionAllowed) {
           await tx
             .update(events)

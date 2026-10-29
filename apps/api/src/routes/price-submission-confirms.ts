@@ -157,17 +157,22 @@ priceSubmissionConfirmsRouter.post(
         // Promotion propagates the corroborated community price to the
         // event, inside the same transaction so a 23505 rollback can't leave
         // the event row pointing at a price that never got corroborated.
-        // #1107: read the PRE-update price under FOR UPDATE first. A
+        // #1107: read the PRE-update price under FOR NO KEY UPDATE first. A
         // concurrent confirm that also observes the promoted status waits
         // here, then reads the new floor and records no drop, so watchers
-        // get exactly one watch.pricedrop.
+        // get exactly one watch.pricedrop. NO KEY UPDATE (not FOR UPDATE)
+        // still serializes price writers but doesn't block the KEY SHARE
+        // lock a concurrent dispute's foreign-key check takes on the event,
+        // which would otherwise deadlock against this tx's submission lock.
+        // Lock order matches every price writer: submission rows first
+        // (the UPDATE above), event row second.
         let drop: PriceDrop | undefined
         if (updatedRow?.status === 'corroborated') {
           const [preEvent] = await tx
             .select({ ticketPriceMin: events.ticketPriceMin })
             .from(events)
             .where(eq(events.id, eventId))
-            .for('update')
+            .for('no key update')
             .limit(1)
 
           await tx

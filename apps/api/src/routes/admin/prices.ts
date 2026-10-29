@@ -443,15 +443,18 @@ pricesAdminRouter.patch(
         }
 
         // #1107: read the event's PRE-update price so we can decide whether
-        // to fan out watch.pricedrop. FOR UPDATE locks the event row so two
-        // admins corroborating different submissions for the same event
-        // can't both observe the same pre-state and both fan out — the
-        // second tx waits, reads the new floor, and skips fan-out.
+        // to fan out watch.pricedrop. FOR NO KEY UPDATE locks the event row
+        // so two admins corroborating different submissions for the same
+        // event can't both observe the same pre-state and both fan out — the
+        // second tx waits, reads the new floor, and skips fan-out. NO KEY
+        // UPDATE leaves foreign-key KEY SHARE checks (e.g. a concurrent
+        // dispute insert) unblocked. Lock order: submission row first (FOR
+        // UPDATE above), event row second, as in every price writer.
         const [preEvent] = await tx
           .select({ ticketPriceMin: events.ticketPriceMin })
           .from(events)
           .where(eq(events.id, existing.eventId))
-          .for('update')
+          .for('no key update')
           .limit(1)
 
         // Propagate the approved community price to the event
