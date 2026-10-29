@@ -148,15 +148,16 @@ describe('fanoutWatchNotification', () => {
     expect(result.watchersNotified).toBe(2)
     expect(result.pushDelivered).toBe(2)
     expect(deps.insertCalls).toHaveLength(1)
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
-    expect(rows).toHaveLength(2)
-    expect(rows[0]).toMatchObject({
-      userId: 'user_a',
-      type: 'user_notification',
-      category: 'watch.cancelled',
-      actionUrl: '/events/evt_1',
-    })
-    expect(rows[0]?.['title']).toContain('cancelled')
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        userId: 'user_a',
+        type: 'user_notification',
+        category: 'watch.cancelled',
+        actionUrl: '/events/evt_1',
+        title: expect.stringContaining('cancelled'),
+      }),
+      expect.objectContaining({ userId: 'user_b' }),
+    ])
     expect(deps.sendPush).toHaveBeenCalledTimes(2)
     expect(deps.sendPush).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -184,8 +185,11 @@ describe('fanoutWatchNotification', () => {
       category: 'watch.postponed',
       transition: 't1',
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
-    expect(rows[0]?.['title']).toBe('Band at The Fillmore moved to Aug 14.')
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        title: 'Band at The Fillmore moved to Aug 14.',
+      }),
+    ])
   })
 
   // A relocation must not reuse the "<artist> at <venue>" template: the
@@ -209,11 +213,12 @@ describe('fanoutWatchNotification', () => {
       transition: 't1',
       relocated: { fromVenueName: 'Larimer Lounge' },
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
-    expect(rows[0]?.['title']).toBe('Band at Larimer Lounge moved.')
-    expect(rows[0]?.['body']).toBe(
-      'Your ticket still works. New room: Globe Hall.',
-    )
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        title: 'Band at Larimer Lounge moved.',
+        body: 'Your ticket still works. New room: Globe Hall.',
+      }),
+    ])
   })
 
   it('promises no refund information it cannot deliver', async () => {
@@ -233,12 +238,13 @@ describe('fanoutWatchNotification', () => {
       category: 'watch.cancelled',
       transition: 't1',
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
     // We hold no refund record and the event page has none, so the body must
     // point at the seller rather than at us.
-    expect(rows[0]?.['body']).toBe(
-      "The show's off. Contact your ticket vendor for refund details.",
-    )
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        body: "The show's off. Contact your ticket vendor for refund details.",
+      }),
+    ])
   })
 
   // An empty restriction means "nobody", not "no filter". Letting it fall
@@ -284,13 +290,14 @@ describe('fanoutWatchNotification', () => {
       transition: 't1',
       relocated: { fromVenueName: null },
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
     // Still the relocation copy: the date template would claim the night
     // changed when only the room did.
-    expect(rows[0]?.['title']).toBe('Band: new venue.')
-    expect(rows[0]?.['body']).toBe(
-      'Your ticket still works. New room: Globe Hall.',
-    )
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        title: 'Band: new venue.',
+        body: 'Your ticket still works. New room: Globe Hall.',
+      }),
+    ])
   })
 
   it('composes a back-on-sale title', async () => {
@@ -310,8 +317,11 @@ describe('fanoutWatchNotification', () => {
       category: 'watch.backonsale',
       transition: 't1',
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
-    expect(rows[0]?.['title']).toContain('back on sale')
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        title: expect.stringContaining('back on sale'),
+      }),
+    ])
   })
 
   it('composes a rich pricedrop title with concrete prices when context is provided', async () => {
@@ -456,17 +466,19 @@ describe('fanoutWatchNotification replay protection (#1311)', () => {
       category: 'watch.cancelled',
       transition: 'report:r1',
     })
-    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
-    expect(rows[0]?.['dedupeKey']).toBe(
+    expect(deps.insertCalls[0]?.rows).toEqual([
+      expect.objectContaining({
+        dedupeKey: 'watch:user_a:evt_1:watch.cancelled:report:r1',
+      }),
+    ])
+    // The exported helper spells the key the same way the writer does.
+    expect(
       watchDedupeKey('user_a', {
         eventId: 'evt_1',
         category: 'watch.cancelled',
         transition: 'report:r1',
       }),
-    )
-    expect(rows[0]?.['dedupeKey']).toBe(
-      'watch:user_a:evt_1:watch.cancelled:report:r1',
-    )
+    ).toBe('watch:user_a:evt_1:watch.cancelled:report:r1')
   })
 
   it('pushes only to the watchers whose row was actually claimed', async () => {
