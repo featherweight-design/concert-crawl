@@ -58,15 +58,40 @@ describe('BottomSheet', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('focuses the container itself if there are no focusable children', () => {
+  // Escape is not a phone gesture and the backdrop above a tall sheet can be a
+  // sliver, so the sheet carries its own visible close (#1358).
+  it('renders a named close button that dismisses the sheet', () => {
+    const onClose = vi.fn()
     render(
-      <BottomSheet open onClose={() => {}} title="test">
+      <BottomSheet open onClose={onClose} title="test">
         <p>no interactives here</p>
       </BottomSheet>,
     )
-    // The container (role=dialog) is tabIndex=-1 so it can accept focus.
-    const dialog = screen.getByRole('dialog')
-    expect(document.activeElement).toBe(dialog)
+    const close = screen.getByRole('button', { name: 'Close' })
+    fireEvent.click(close)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives the close button a 44px tap target', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <p>body</p>
+      </BottomSheet>,
+    )
+    const close = screen.getByRole('button', { name: 'Close' })
+    expect(close.className).toContain('h-11')
+    expect(close.className).toContain('w-11')
+  })
+
+  it('lands initial focus on the close button, first in the sheet', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    )
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close' }),
+    )
   })
 
   it('pulls focus back into the sheet if Tab is pressed while focus is outside', () => {
@@ -84,7 +109,10 @@ describe('BottomSheet', () => {
     outside.focus()
     expect(document.activeElement).toBe(outside)
     fireEvent.keyDown(document, { key: 'Tab' })
-    expect(document.activeElement).toBe(screen.getByTestId('inside-first'))
+    // The sheet's own close button is its first focusable.
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close' }),
+    )
   })
 
   it('closes when the scrim is clicked', () => {

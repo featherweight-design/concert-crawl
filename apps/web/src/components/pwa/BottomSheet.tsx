@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef } from 'react'
+import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy'
 
 interface BottomSheetProps {
   open: boolean
@@ -120,8 +121,42 @@ export const BottomSheet = ({
         <h2 id={titleId} className="sr-only">
           {title}
         </h2>
+        {/* Escape is not a phone gesture, and above a full-height sheet the
+            backdrop can be a sliver, so the sheet carries its own close. It
+            mirrors the 30px bordered close in ModalShell headers, inside a 44px
+            hit area pulled into the padding so the visible box sits in the
+            corner. First in DOM order, so it is also where focus lands. */}
+        <div className="-mr-3 -mt-3 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={OVERLAY_COPY.close}
+            className="inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center bg-transparent text-fg-muted"
+          >
+            <span className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border">
+              <CloseIcon />
+            </span>
+          </button>
+        </div>
         {children}
       </div>
     </div>
   )
 }
+
+const CloseIcon = () => (
+  <svg
+    width="13"
+    height="13"
+    viewBox="0 0 12 12"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="M2 2l8 8M10 2l-8 8"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+)

@@ -178,8 +178,8 @@ export const ShareSheet = ({
   return (
     <BottomSheet open={open} onClose={onClose} title={COPY.sheetTitle}>
       <div className="flex flex-col gap-4">
-        {/* Grabber. Decorative — the sheet is dismissed by Escape or the
-            backdrop, both of which BottomSheet already owns. */}
+        {/* Grabber. Decorative — the sheet is dismissed by its close button,
+            Escape or the backdrop, all of which BottomSheet already owns. */}
         <div
           aria-hidden="true"
           className="mx-auto h-[5px] w-11 rounded-full"
