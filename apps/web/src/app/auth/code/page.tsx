@@ -223,6 +223,37 @@ export default function InviteCodePage() {
           >
             {isPending ? copy.button.pending : copy.button.idle}
           </button>
+
+          <p
+            style={{
+              margin: 0,
+              fontSize: 12,
+              lineHeight: 1.5,
+              color: 'var(--fg-subtle)',
+              textAlign: 'center',
+            }}
+          >
+            {copy.agreement.prefix}
+            {/* New tab, like the checkout panel's legal links: navigating away
+                in place would throw away the code the visitor has typed. */}
+            <Link
+              href={copy.agreement.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-block',
+                padding: '6px 0',
+                color: 'var(--signal)',
+                textDecoration: 'underline',
+                textUnderlineOffset: 2,
+                textDecorationColor:
+                  'color-mix(in oklch, var(--signal) 45%, transparent)',
+              }}
+            >
+              {copy.agreement.link}
+            </Link>
+            .
+          </p>
         </form>
 
         <div

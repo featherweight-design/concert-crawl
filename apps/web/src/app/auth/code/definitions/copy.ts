@@ -18,6 +18,13 @@ export const copy = {
     idle: 'Continue →',
     pending: 'Checking…',
   },
+  // Under the Continue button: "continuing" is that button. Same shape as the
+  // checkout panel's legal line, and the link names the document's own heading.
+  agreement: {
+    prefix: 'By continuing you agree to our ',
+    link: 'Private Beta Agreement',
+    href: '/legal/beta',
+  },
   errors: {
     invalid_format: 'Code format is BETA-XXXX-XXXX. Check for typos.',
     notfound: 'Code not found. Double-check for typos.',

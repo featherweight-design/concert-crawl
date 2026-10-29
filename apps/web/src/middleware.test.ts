@@ -156,6 +156,20 @@ describe('middleware — edge auth gate (#841)', () => {
     expect(result).toBeUndefined()
   })
 
+  // The invite-code screen links here, so it must open before sign-up and
+  // before launch (#1619).
+  it('lets a signed-out visitor read the beta agreement before launch', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+    const { middlewareHandler } = await import('./middleware')
+
+    const auth = makeAuth(null)
+    const req = new NextRequest('http://localhost/legal/beta')
+    const result = await middlewareHandler(auth, req)
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
   // Not merely public-once-launched: the account menu offers "What's new" to
   // signed-out visitors in both launch modes, and the page has no user data.
   it('lets a signed-out visitor read the changelog before launch', async () => {
