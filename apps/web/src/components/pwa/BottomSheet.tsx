@@ -31,16 +31,9 @@ export const BottomSheet = ({
     if (!open) return
 
     previousFocus.current = document.activeElement
-    const first =
-      sheetRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
-    if (first) {
-      first.focus()
-    } else {
-      // No focusable children — focus the dialog container itself so screen
-      // readers and keyboard nav don't stay behind the modal. The container
-      // has tabIndex={-1} so it can accept programmatic focus.
-      sheetRef.current?.focus()
-    }
+    // The close button is always the first focusable, so focus never stays
+    // behind the modal.
+    sheetRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -52,13 +45,6 @@ export const BottomSheet = ({
       const sheet = sheetRef.current
       if (!sheet) return
       const focusables = sheet.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      if (focusables.length === 0) {
-        // No focusables inside → trap Tab on the container itself so keyboard
-        // users can't escape a modal that has no actionable content.
-        event.preventDefault()
-        sheet.focus()
-        return
-      }
       const firstFocusable = focusables[0]
       const lastFocusable = focusables[focusables.length - 1]
       // If focus is anywhere outside the dialog (never entered, or moved
@@ -109,10 +95,6 @@ export const BottomSheet = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        // tabIndex=-1 lets the container accept programmatic focus as the
-        // fallback for the zero-focusable-children case (see focus handling
-        // in the useEffect above).
-        tabIndex={-1}
         // A bottom sheet on mobile, a centered modal from sm up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
         // query rather than a second tree, so the focus trap above is shared.
