@@ -117,7 +117,7 @@ test.describe('smoke: auth protection', () => {
   }) => {
     await page.goto('/admin')
     await page.waitForLoadState('networkidle')
-    // apps/web/src/proxy.ts sends auth-gated routes to `/sign-in` with a
+    // apps/web/src/middleware.ts sends auth-gated routes to `/sign-in` with a
     // relative `redirect_url` (#794 — it was `/` while the whole app was
     // private). The smoke contract follows the middleware: landing anywhere
     // under /admin means the gate failed open.

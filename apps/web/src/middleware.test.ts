@@ -2,7 +2,7 @@ import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest, type NextResponse } from 'next/server'
-import { KNOWN_TOP_LEVEL_SEGMENTS } from './proxy'
+import { KNOWN_TOP_LEVEL_SEGMENTS } from './middleware'
 
 // The launch gate defaults to closed (#794), but every suite below this line
 // describes the launched shape. Beta-mode behaviour has its own suite at the
@@ -80,7 +80,7 @@ const redirectLocation = (result: NextResponse | undefined): string | null =>
 
 describe('middleware — returning-user redirect (#80)', () => {
   it('redirects unauthenticated user with invite cookie from / to /sign-up', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/', {
       headers: { cookie: 'invite_verified=abc123' },
@@ -93,7 +93,7 @@ describe('middleware — returning-user redirect (#80)', () => {
   })
 
   it('does not redirect unauthenticated user without invite cookie from /', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/')
 
@@ -104,7 +104,7 @@ describe('middleware — returning-user redirect (#80)', () => {
   })
 
   it('redirects authenticated user from / to /events (#842)', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/', {
       headers: { cookie: 'invite_verified=abc123' },
@@ -120,7 +120,7 @@ describe('middleware — returning-user redirect (#80)', () => {
   })
 
   it('does not redirect authenticated user on non-/ public routes', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/legal/privacy')
 
@@ -131,9 +131,9 @@ describe('middleware — returning-user redirect (#80)', () => {
   })
 })
 
-describe('proxy — auth gate (#841)', () => {
+describe('middleware — edge auth gate (#841)', () => {
   it('blocks unauthenticated request to a (protected) route via auth.protect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // Retargeted from /events/abc-123 to /me in #794: browse routes are public
     // now, so this test needs a route that is still genuinely private.
@@ -141,14 +141,14 @@ describe('proxy — auth gate (#841)', () => {
     const stub = makeAuth(null)
 
     // auth.protect throws on unauthenticated — middleware lets it bubble. In
-    // production Clerk catches that throw in the proxy and emits a 307 to the
+    // production Clerk catches that throw at the edge and emits a 307 to the
     // configured unauthenticatedUrl. Here we just assert the protection path
     // was exercised (i.e. the request was NOT allowed to fall through).
     await expect(middlewareHandler(stub, req)).rejects.toThrow(/unauthorized/i)
   })
 
   it('lets unauthenticated request to a public route through without protect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/legal/terms')
     const result = await middlewareHandler(makeAuth(null), req)
@@ -160,7 +160,7 @@ describe('proxy — auth gate (#841)', () => {
   // before launch (#1619).
   it('lets a signed-out visitor read the beta agreement before launch', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const auth = makeAuth(null)
     const req = new NextRequest('http://localhost/legal/beta')
@@ -174,7 +174,7 @@ describe('proxy — auth gate (#841)', () => {
   // signed-out visitors in both launch modes, and the page has no user data.
   it('lets a signed-out visitor read the changelog before launch', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const auth = makeAuth(null)
     const result = await middlewareHandler(
@@ -194,7 +194,7 @@ describe('proxy — auth gate (#841)', () => {
     'lets a signed-out visitor read %s before launch',
     async (path) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       const auth = makeAuth(null)
       const result = await middlewareHandler(
@@ -211,7 +211,7 @@ describe('proxy — auth gate (#841)', () => {
   // exact path, so a neighbour that merely starts with it stays protected.
   it('does not make a /bot-prefixed route public', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const auth = makeAuth(null)
 
@@ -240,7 +240,7 @@ describe('proxy — auth gate (#841)', () => {
     'lets an unauthenticated crawler read %s with public browse %s',
     async (path, launched) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', launched)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       const auth = makeAuth(null)
       const result = await middlewareHandler(
@@ -264,7 +264,7 @@ describe('proxy — auth gate (#841)', () => {
     'does not make %s public with public browse %s',
     async (path, launched) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', launched)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       const auth = makeAuth(null)
       auth.protect.mockRejectedValueOnce(new Error('unauthorized'))
@@ -276,7 +276,7 @@ describe('proxy — auth gate (#841)', () => {
   )
 
   it('lets authenticated request to a (protected) route through without redirect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/me')
     const result = await middlewareHandler(makeAuth('user_123'), req)
@@ -285,7 +285,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('lets unauthenticated PWA icon fetches through without protect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // The OS/browser fetches install icons with no session. If middleware
     // gated these, auth.protect would redirect the fetch to the HTML landing
@@ -297,7 +297,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('lets the unauthenticated site social card through without protect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // An unfurl crawler following a bare concertcrawl.app link carries no
     // session. Gated, the card resolves to a redirect and the link unfurls
@@ -309,7 +309,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('does not make paths under /api/og public', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // '/api/og' is listed as an exact path, so a nested route added later is
     // gated by default rather than inheriting the card's openness.
@@ -320,7 +320,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('lets the unauthenticated revalidate POST through without protect', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // The crawler cron carries a token header, never a Clerk session. Gating
     // this 307'd it to /sign-in, so #1442 silently no-opped in prod; the route
@@ -334,7 +334,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('does not make paths under /api/revalidate public', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // The allowlist entry is an exact path. If it ever gains a `(.*)` glob,
     // a future /api/revalidate/* handler would be public by default.
@@ -347,7 +347,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('lets a signed-out visitor reach the offline fallback', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // Serwist precaches /~offline through a plain navigation fetch with no
     // session. Gating it redirects that fetch, the fallback never lands in the
@@ -359,7 +359,7 @@ describe('proxy — auth gate (#841)', () => {
   })
 
   it('does not make a route under /~offline public', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     // Same exact-path guard as /api/revalidate above: a `/~offline(.*)` glob
     // would make a future private sibling public by default. The path has to
@@ -389,7 +389,7 @@ describe('middleware — public browse routes (#794)', () => {
     '/search?q=geese',
     '/watching',
   ])('lets a signed-out visitor through to %s', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq(path))
@@ -408,7 +408,7 @@ describe('middleware — public browse routes (#794)', () => {
     '/admin/venues',
     '/admin/review',
   ])('still protects %s for a signed-out visitor', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
@@ -420,7 +420,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('preserves the attempted path so sign-in can return the visitor', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(
@@ -433,7 +433,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('keeps a query string whose escapes the path validator could not resolve', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     // `%25` decodes to a bare `%`, which the next decode pass throws on. The
@@ -448,7 +448,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('never puts an absolute origin in redirect_url', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, makeReq('/me'))).rejects.toThrow()
@@ -475,7 +475,7 @@ describe('middleware — public browse routes (#794)', () => {
     '/%252F%252Fevil.example',
     '/%25255Cevil.example',
   ])('never builds a redirect_url from %s at all', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq(path))
@@ -485,7 +485,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('still preserves a legitimate path containing an encoded character', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     // Narrowing must not swallow ordinary escaped paths — only off-origin ones.
@@ -500,7 +500,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('no longer bounces a signed-in user off /onboarding', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(
       makeAuth('user_1'),
@@ -513,7 +513,7 @@ describe('middleware — public browse routes (#794)', () => {
   it.each(['/auth/code', '/sign-up', '/'])(
     'still bounces a signed-in user off %s to /events',
     async (path) => {
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       const result = await middlewareHandler(makeAuth('user_1'), makeReq(path))
 
@@ -529,7 +529,7 @@ describe('middleware — public browse routes (#794)', () => {
   // writes as the signed-in user, so a signed-out walk can only end in the
   // error panel. Sign-in, then straight back to it.
   it('sends a signed-out visitor from /onboarding to sign-in once launched', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(
@@ -542,7 +542,7 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   it('lets a signed-out visitor reach /sign-up without an invite code', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq('/sign-up'))
@@ -555,7 +555,7 @@ describe('middleware — public browse routes (#794)', () => {
   // isAlwaysPublic and must stay that way — reorder those blocks and a
   // returning code-holder stops reaching the funnel from the landing page.
   it('still redirects a signed-out visitor with an invite cookie from / to /sign-up', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(
       makeAuth(null),
@@ -580,7 +580,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
     '/search',
     '/watching',
   ])('gates %s from signed-out visitors before launch', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
@@ -591,7 +591,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   // on a cookie-only visitor: the funnel is invite code → sign-up → tour, and
   // `/auth/complete` spends the cookie before the tour is ever reached.
   it('sends a signed-out visitor from /onboarding to sign-in, cookie or not', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     for (const cookies of [undefined, { invite_verified: 'abc123' }]) {
       const auth = makeAuth(null)
@@ -608,7 +608,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   // Inverted from what #794 shipped. Bouncing a signed-in user off the tour
   // would bounce exactly the people the funnel just sent there.
   it('no longer bounces a signed-in user off /onboarding before launch', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(
       makeAuth('user_1'),
@@ -619,7 +619,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   })
 
   it('leaves the landing page and the invite funnel reachable', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     for (const path of ['/', '/auth/code', '/sign-in', '/legal/terms']) {
       const auth = makeAuth(null)
@@ -630,7 +630,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
 
   it('treats an unset flag as closed', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', '')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, makeReq('/events'))).rejects.toThrow()
@@ -638,7 +638,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   })
 
   it('sends a signed-out visitor from /sign-up to /auth/code before launch', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(makeAuth(null), makeReq('/sign-up'))
 
@@ -651,7 +651,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   // only complete if an account costs no invite code.
   it('opens /sign-up to a signed-out visitor after launch', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq('/sign-up'))
@@ -663,7 +663,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   it('still bounces a signed-in user off /sign-up in both modes', async () => {
     for (const flag of ['false', 'true']) {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       const result = await middlewareHandler(
         makeAuth('user_1'),
@@ -677,7 +677,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
 
   it('opens the same routes as soon as the flag flips, with no other change', async () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     for (const path of [
       '/events',
@@ -700,7 +700,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
     '/e/11111111-1111-4111-8111-111111111111',
     '/share/11111111-1111-4111-8111-111111111111/link.png',
   ])('gates %s from signed-out visitors before launch', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
@@ -722,7 +722,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
     '/share/11111111-1111-4111-8111-111111111111/link.png',
   ])('lets a signed-out visitor reach %s after launch', async (path) => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq(path))
@@ -737,7 +737,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
     'keeps /me and /admin private with the flag %s alongside the share routes',
     async (flag) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       for (const path of ['/me', '/me/anything', '/admin', '/admin/venues']) {
         const auth = makeAuth(null)
@@ -748,7 +748,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
   )
 
   it('keeps /me and /admin private in both modes', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
 
     for (const path of ['/me', '/admin']) {
       const auth = makeAuth(null)
@@ -768,7 +768,7 @@ describe('middleware — crew join surface (#1226)', () => {
     'sends a signed-out visitor to sign-in with the link intact, flag %s',
     async (flag) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
       const auth = makeAuth(null)
       const path = '/crew/join/abc'
 
@@ -784,7 +784,7 @@ describe('middleware — crew join surface (#1226)', () => {
     'keeps /crews, /me, and /admin gated alongside it, flag %s',
     async (flag) => {
       vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
 
       for (const path of ['/crews', '/crews/abc', '/me', '/admin']) {
         const auth = makeAuth(null)
@@ -804,7 +804,7 @@ describe('middleware — beta funnel return path (#1226)', () => {
   })
 
   it('prefers the incoming redirect_url over the /sign-up path itself', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(
@@ -821,7 +821,7 @@ describe('middleware — beta funnel return path (#1226)', () => {
   })
 
   it('falls back to the attempted path when no param is present', async () => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq('/sign-up'))
@@ -834,7 +834,7 @@ describe('middleware — beta funnel return path (#1226)', () => {
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com'])(
     'refuses to forward the hostile redirect_url %s',
     async (hostile) => {
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
       const auth = makeAuth(null)
 
       const result = await middlewareHandler(
@@ -855,7 +855,7 @@ describe('middleware — unknown paths 404 rather than redirecting to sign-in', 
     '/phpmyadmin',
     '/definitely-not-a-route',
   ])('lets %s fall through to Next’s 404', async (path) => {
-    const { middlewareHandler } = await import('./proxy')
+    const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
     const result = await middlewareHandler(auth, makeReq(path))
@@ -867,7 +867,7 @@ describe('middleware — unknown paths 404 rather than redirecting to sign-in', 
   it.each(['/me', '/admin', '/me/settings'])(
     'still protects the known private route %s',
     async (path) => {
-      const { middlewareHandler } = await import('./proxy')
+      const { middlewareHandler } = await import('./middleware')
       const auth = makeAuth(null)
 
       await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()

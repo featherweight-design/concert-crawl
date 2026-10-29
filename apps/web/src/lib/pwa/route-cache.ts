@@ -31,7 +31,7 @@ export const isPublicCacheableApi = (url: URL): boolean =>
 // Documents and RSC payloads get the same default-deny treatment, for a second
 // reason on top of privacy: a cached page is served without the middleware ever
 // running, so anything cached here is reachable by a signed-out visitor. These
-// two lists must stay a SUBSET of proxy.ts's `isAlwaysPublic` and
+// two lists must stay a SUBSET of middleware.ts's `isAlwaysPublic` and
 // `isPublicOnceLaunched` — a route may be public there and still be excluded
 // here, but never the reverse.
 //

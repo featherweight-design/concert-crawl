@@ -63,7 +63,7 @@ describe('isPublicCacheableApi', () => {
 // The service worker used to cache the HTML and RSC payload of every page it
 // saw. A gated route cached while signed in was then replayed from disk to a
 // signed-out visitor, showing app content the middleware would have redirected.
-// This allowlist has to stay a subset of what proxy.ts lets through.
+// This allowlist has to stay a subset of what middleware.ts lets through.
 describe('isPublicCacheableDocument', () => {
   it('caches the routes that are public in either launch mode', () => {
     for (const launched of [false, true]) {

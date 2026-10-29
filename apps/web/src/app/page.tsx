@@ -147,7 +147,7 @@ async function fetchWeekCount(): Promise<number | null> {
 
 // ISR window: 5 minutes (#842). The crawler triggers every 10 min, so a 5-min
 // window always catches new events within one cycle. The logged-in redirect to
-// /events lives in proxy.ts — keeping it out of this server component is
+// /events lives in middleware.ts — keeping it out of this server component is
 // what makes the page ISR-eligible (calling auth() / cookies() here would force
 // Next.js to render dynamically on every request). If a future change adds
 // user-personalized rendering, split it into an ISR shell + a Client Component

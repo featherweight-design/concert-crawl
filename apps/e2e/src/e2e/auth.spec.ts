@@ -16,17 +16,15 @@ test.describe('unauthenticated access', () => {
     expect(url).toMatch(/sign-in|clerk\.com|accounts\./i)
   })
 
-  test('protected route returns proxy 307 redirect before rendering the page (#841)', async ({
+  test('protected route returns edge 307 redirect before invoking a server function (#841)', async ({
     request,
   }) => {
     // Hit a private route directly without following redirects so we can
-    // assert the proxy-level 307 — the whole point of the gate is that the
-    // page's own server render never runs. (Next 16's proxy runs on the
-    // Node.js runtime, not the edge, so "never touches a Node function" no
-    // longer holds; the redirect-before-render contract does.)
+    // assert the middleware-level 307 — the whole point of the edge gate is
+    // that this never touches a Node serverless function.
     //
     // Retargeted from `/events/non-existent-id` to `/me` in #794: browse is
-    // public now, so the gate needs a route that is still private.
+    // public now, so the edge gate needs a route that is still private.
     const response = await request.get('/me', { maxRedirects: 0 })
 
     expect(response.status()).toBe(307)
@@ -57,7 +55,7 @@ test.describe('unauthenticated access', () => {
     )
 
     // The inverse of the assertion this test used to make. `/events` joined
-    // `isAlwaysPublic`, so the proxy gate must NOT redirect it — a 307 here
+    // `isAlwaysPublic`, so the edge gate must NOT redirect it — a 307 here
     // means the browse-only shape regressed and signed-out visitors are
     // being bounced off the front door again.
     const response = await request.get('/events', { maxRedirects: 0 })

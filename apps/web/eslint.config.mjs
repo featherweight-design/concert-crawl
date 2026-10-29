@@ -1,27 +1,26 @@
-import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import { FlatCompat } from '@eslint/eslintrc'
+import tsPlugin from '@typescript-eslint/eslint-plugin'
+import tsParser from '@typescript-eslint/parser'
+import { fileURLToPath } from 'url'
+import path from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const compat = new FlatCompat({ baseDirectory: __dirname })
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { ignores: ['.next/**', 'dist/**', 'next-env.d.ts'] },
-  // eslint-config-next 16 ships a native flat config; the FlatCompat bridge
-  // it replaced cannot load it (circular `plugins.react` reference).
-  ...nextCoreWebVitals,
-  {
-    // eslint-config-next 16 moves to eslint-plugin-react-hooks 7, whose
-    // React Compiler rules are new and flag 144 existing sites across 80
-    // files. Clearing them is a refactor of effect and ref code, which an
-    // upgrade that keeps behaviour unchanged must not carry. Held off here
-    // so the bump lints exactly what 15 linted; adopting them is its own PR.
-    rules: {
-      'react-hooks/set-state-in-effect': 'off',
-      'react-hooks/refs': 'off',
-      'react-hooks/purity': 'off',
-      'react-hooks/preserve-manual-memoization': 'off',
-      'react-hooks/immutability': 'off',
-    },
-  },
+  ...compat.extends('next/core-web-vitals'),
   {
     files: ['**/*.ts', '**/*.tsx'],
+    plugins: {
+      '@typescript-eslint': tsPlugin,
+    },
+    languageOptions: {
+      parser: tsParser,
+    },
     rules: {
       'no-unused-vars': 'off',
       'no-undef': 'off',

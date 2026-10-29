@@ -133,7 +133,7 @@ const isPlainInAppPath = (value: string): boolean =>
   /^\/[^/\\]/.test(value) && !hasControlCharacters(value)
 
 /**
- * This module runs in three places — the proxy, server actions, and
+ * This module runs in three places — edge middleware, server actions, and
  * client components like ReturnSeamReplay. A rejection is worth recording on
  * the server, where it is a signal; in the browser it is a console the visitor
  * can fill on demand by editing their own URL, so it is suppressed there.

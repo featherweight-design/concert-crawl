@@ -6,7 +6,7 @@
 // suite walks the two halves that carry it — the code action writes the
 // cookie, and /auth/complete spends it — so the four edits are not plumbing
 // nobody exercises. The middleware's first hop has its own suite in
-// src/proxy.test.ts.
+// src/middleware.test.ts.
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
