@@ -3,6 +3,20 @@
 // price-check resolution). Each writer reads the event's PRE-update
 // ticketPriceMin under FOR UPDATE inside its transaction, decides with
 // `detectPriceDrop`, and calls `fanoutPriceDrop` only AFTER the commit.
+//
+// LOCK ORDER. Every price writer takes its row locks in one global order, or
+// two overlapping writers can each hold what the other wants and Postgres
+// aborts one as a deadlock:
+//   1. price_submissions rows (FOR UPDATE reads, status updates, and the
+//      box-office corroborated unique-index entry those updates claim)
+//   2. user_cred (awardPriceCred's upsert)
+//   3. events (FOR NO KEY UPDATE pre-read, then the price update)
+// FOR NO KEY UPDATE rather than FOR UPDATE on events: it still serializes
+// price writers but does not block the KEY SHARE lock a concurrent
+// foreign-key check (e.g. a dispute inserting a counter) takes on the event.
+// Writers: admin/prices.ts (1, 2, 3), price-submission-confirms.ts (1, 3; no
+// cred award), admin/contests.ts resolve challenger_wins (1, 2, 3) and
+// parent_wins (1 only, no event lock).
 
 import {
   db,

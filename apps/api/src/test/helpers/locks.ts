@@ -34,12 +34,7 @@ export async function openLockHolder(setup: SQL[]): Promise<LockHolder> {
 
   const finished = testDb
     .transaction(async (tx: HolderTx) => {
-      try {
-        for (const statement of setup) await tx.execute(statement)
-      } catch (err) {
-        signalSetupFailed(err)
-        throw err
-      }
+      for (const statement of setup) await tx.execute(statement)
       signalReady()
       for (;;) {
         const next = queue.shift()
@@ -59,7 +54,14 @@ export async function openLockHolder(setup: SQL[]): Promise<LockHolder> {
         })
       }
     })
-    .catch(() => undefined)
+    // Any rejection lands here: a setup statement failing, a connection or
+    // BEGIN failure before the callback ever runs, or the deliberate
+    // rollback on release. Forward it to `ready` so a holder that never
+    // opened rejects instead of hanging; once `ready` has resolved the
+    // reject is a no-op.
+    .catch((err: unknown) => {
+      signalSetupFailed(err)
+    })
 
   await ready
 

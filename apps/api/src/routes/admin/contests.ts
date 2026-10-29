@@ -660,7 +660,13 @@ contestsAdminRouter.post(
           })
           .where(eq(priceSubmissions.id, parent.id))
 
-        // Only now, after the submission rows, lock and read the event.
+        // Cred before the event lock: the global price-writer lock order is
+        // submissions, then user_cred, then events (see lib/price-drop.ts).
+        if (challenger.userId !== null) {
+          await awardPriceCred(tx, challenger.userId)
+        }
+
+        // Only now, after the submission and cred rows, lock and read the event.
         // priceSource gates the projection: we never overwrite a
         // non-community headline (ticketmaster/axs/etc.) even when a
         // community contest resolves on the same slot. #1107: the PRE-update
@@ -696,9 +702,6 @@ contestsAdminRouter.post(
             eventRow.ticketPriceMin,
             challenger.priceMin,
           )
-        }
-        if (challenger.userId !== null) {
-          await awardPriceCred(tx, challenger.userId)
         }
       } else {
         // parent_wins: parent stays canonical → corroborated.

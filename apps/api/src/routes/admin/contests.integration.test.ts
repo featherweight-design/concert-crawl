@@ -1719,6 +1719,39 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       expect((await fetchEvent(event.id)).ticketPriceMin).toBe('30.00')
     })
 
+    it('challenger_wins awards cred before locking the event (deadlock guard)', async () => {
+      // A concurrent admin approval for the same challenger holds their
+      // user_cred row (awardPriceCred) and will next lock the event. If the
+      // resolution locked the event before awarding cred, each would wait on
+      // the other. Global order: submissions, then user_cred, then events.
+      setAdminAuth()
+      const { event, parent, challenger } = await seedContest({
+        counterOverrides: { priceMin: '30', priceMax: '30' },
+      })
+      const writer = await openLockHolder([
+        sql`UPDATE user_cred SET price_cred_score = price_cred_score + 1 WHERE user_id = ${challenger.userId}`,
+      ])
+      const request = resolve(parent.id, 'challenger_wins')
+      // The resolution is now waiting on the challenger's user_cred row.
+      await waitForLockWaiter()
+
+      let writerLockError: unknown
+      try {
+        await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
+        await writer.run(
+          sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
+        )
+      } catch (err) {
+        writerLockError = err
+      }
+      await writer.release()
+      const res = await request
+
+      expect(writerLockError).toBeUndefined()
+      expect(res.status).toBe(200)
+      expect((await fetchEvent(event.id)).ticketPriceMin).toBe('30.00')
+    })
+
     it('challenger_wins on a non-community priceSource does not fire', async () => {
       setAdminAuth()
       const { event, parent } = await seedContest({
