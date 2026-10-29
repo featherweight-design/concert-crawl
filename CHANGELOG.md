@@ -1,3 +1,10 @@
+## [1.300.7](https://github.com/HartiganHM/concert-crawl/compare/v1.300.6...v1.300.7) (2026-10-29)
+
+
+### Bug Fixes
+
+* **web:** give BottomSheet a visible close button ([d0ab0e3](https://github.com/HartiganHM/concert-crawl/commit/d0ab0e37182978c83ba6c5bffbf8975501163292)), closes [#1358](https://github.com/HartiganHM/concert-crawl/issues/1358)
+
 ## [1.300.6](https://github.com/HartiganHM/concert-crawl/compare/v1.300.5...v1.300.6) (2026-10-29)
 
 
