@@ -311,10 +311,13 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
   // let refresh spam through during a Spotify outage. Each actual sync
   // attempt also consumes an in-memory token (feedback.ts pattern; resets on
   // deploy, which lastSyncedAt covers for the success path).
-  const { allowed, retryAfterMs } = checkRateLimit(
+  const { allowed, retryAfterMs } = await checkRateLimit(
     `spotify-sync:${auth.userId}`,
     1,
     SYNC_MIN_INTERVAL_MS,
+    // Fail open: lastSyncedAt above still throttles the success path, and a
+    // rate-limit DB blip should not block a user's own refresh.
+    { onStoreError: 'allow' },
   )
   if (!allowed) {
     ctx.header('Retry-After', String(Math.ceil(retryAfterMs / 1000)))

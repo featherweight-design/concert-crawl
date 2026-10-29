@@ -151,9 +151,9 @@ beforeEach(() => {
 
 // --- helpers ---
 
-// Unique per test: the sync route's attempt limiter is an in-memory
-// module-level store keyed by userId, so a shared id would leak rate-limit
-// state across tests (same pattern as feedback.integration.test.ts).
+// Unique per test: the sync route's attempt limiter is keyed by userId, so a
+// shared id would leak rate-limit state between tests that do not truncate
+// rate_limit_buckets (same pattern as feedback.integration.test.ts).
 let USER = 'user-spotify-1'
 let userSeq = 0
 

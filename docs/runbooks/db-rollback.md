@@ -32,11 +32,13 @@ The migration filename to roll back is in `packages/db/migrations/` — match th
 Drizzle does not generate down migrations automatically. You must write the inverse SQL by hand.
 
 **Example:** if the up migration added a column:
+
 ```sql
 ALTER TABLE events ADD COLUMN foo text;
 ```
 
 The down migration is:
+
 ```sql
 ALTER TABLE events DROP COLUMN IF EXISTS foo;
 ```
@@ -55,6 +57,7 @@ docker run --rm -i postgres:16 psql "$NEON_STAGING_DIRECT" -f path/to/down_migra
 ```
 
 Confirm:
+
 - The table/column/index is gone (or restored, depending on the change)
 - The API starts cleanly against staging
 - E2E smoke tests pass
@@ -87,11 +90,13 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" \
 The schema rollback is useless if the application code still expects the new shape. Deploy the previous release:
 
 **API or crawler crons (Render):**
+
 1. Render dashboard → service → **Builds** tab
 2. Find the last green build before the bad migration
 3. Click **Rollback** → Render redeploys that image without rebuilding from `main`
 
 **Web (Vercel):**
+
 1. Vercel dashboard → `concert-crawl` project → **Deployments**
 2. Find the last green deploy before the bad migration
 3. Click the **⋯** menu → **Promote to Production** — instant cutover, no rebuild
@@ -109,18 +114,17 @@ The schema rollback is useless if the application code still expects the new sha
 
 ## Operational notes
 
-### Rate limits reset on redeploy
+### Rate limits live in the database
 
-API-level rate limits (feedback, invite code validation, waitlist) are **in-memory** and reset on every deploy or service restart. There is no Redis backing them. This means:
+API rate limits (feedback, invite-code validation, waitlist, crew invites, data export, Spotify refresh) are stored in the `rate_limit_buckets` table since #528, so they survive redeploys and hold across instances. What that means during an incident:
 
-- A rollback + redeploy clears all active rate limit windows
-- On multi-instance scale-out (if Render ever runs more than one instance), each instance has its own independent counter
-- See issue #528 for the tracking ticket to replace these with a durable store
-
-During a rollback incident, treat rate limits as non-functional until a Redis-backed implementation ships.
+- A **code** rollback to a build older than migration 0090 falls back to the old process-local limits (reset on every restart, per instance). The table is additive and harmless to leave in place.
+- A **database** restore to a point in time rewinds the counters with everything else; at worst a client gets one window's allowance again.
+- If the table itself is unavailable, each limiter does what its call site chose: the invite-code and crew-invite enumeration guards fail closed (429 with a 60-second Retry-After), every other limit fails open. Both log `rate-limit: store unavailable` and report to Sentry.
+- `TRUNCATE rate_limit_buckets` resets every limit at once, if that is ever needed.
 
 ### Expand/contract is the prevention
 
 The migration strategy (expand/contract only — see `CLAUDE.md`) is specifically designed to make rollbacks safe: new columns are nullable, old columns are not dropped until the new code is proven in prod. A rollback under expand/contract should only require removing the new nullable column or index — never restoring data.
 
-If a migration ever *deletes* a column or *renames* one without an expand phase first, that is a process violation — the post-incident note should capture this and the violation should inform future review criteria.
+If a migration ever _deletes_ a column or _renames_ one without an expand phase first, that is a process violation — the post-incident note should capture this and the violation should inform future review criteria.

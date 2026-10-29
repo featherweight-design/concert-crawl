@@ -49,10 +49,13 @@ feedbackRouter.post('/', async (ctx) => {
   // earlier 1/hour cap blocked everything after the first submission
   // (issue #828). 10/hour still throttles obvious abuse while leaving
   // real beta-feedback flows headroom.
-  const { allowed, retryAfterMs } = checkRateLimit(
+  const { allowed, retryAfterMs } = await checkRateLimit(
     `feedback:${authInfo.userId}`,
     10,
     60 * 60 * 1000,
+    // Fail open: authenticated, low-value to abuse, and a bug report filed
+    // during a DB blip is exactly the one we want to receive.
+    { onStoreError: 'allow' },
   )
   if (!allowed) {
     const retryAfterSec = Math.ceil(retryAfterMs / 1000)

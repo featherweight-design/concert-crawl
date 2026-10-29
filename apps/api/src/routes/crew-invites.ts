@@ -57,11 +57,19 @@ const TOKEN_WINDOW_MS = 10 * 60 * 1000
  * budget would let an attacker spend one and then the other for twice the
  * attempts. Returns the 429 response, or null when the caller may proceed.
  */
-const spendTokenBudget = (ctx: Context, userId: string, event: string) => {
-  const limit = checkRateLimit(
+const spendTokenBudget = async (
+  ctx: Context,
+  userId: string,
+  event: string,
+) => {
+  const limit = await checkRateLimit(
     `crew-invite:${userId}`,
     TOKEN_LIMIT,
     TOKEN_WINDOW_MS,
+    // Fail closed: this budget is the enumeration guard on invite tokens, and
+    // both routes read the same database next, so closing costs no availability
+    // a real outage had not already taken.
+    { onStoreError: 'deny' },
   )
   if (limit.allowed) return null
   // Every other 429 in this API carries Retry-After (feedback.ts, spotify.ts),
@@ -140,7 +148,7 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   const userId = authInfo.userId
 
-  const limited = spendTokenBudget(
+  const limited = await spendTokenBudget(
     ctx,
     userId,
     'crew invite resolution rate limited',
@@ -215,7 +223,7 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   const userId = authInfo.userId
 
-  const limited = spendTokenBudget(ctx, userId, 'crew join rate limited')
+  const limited = await spendTokenBudget(ctx, userId, 'crew join rate limited')
   if (limited) return limited
 
   const parsed = crewInviteTokenSchema.safeParse(ctx.req.param('token'))

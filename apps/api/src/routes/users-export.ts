@@ -26,12 +26,14 @@ usersExportRouter.get('/me/export', async (ctx) => {
   // One query per exported table, so an unthrottled endpoint is a self-service
   // way to hammer the database.
   //
-  // ⚠️ `checkRateLimit` is a process-local Map. With more than one API instance
-  // the effective limit is one-per-hour PER INSTANCE. That is acceptable here:
-  // the ceiling is still low and the endpoint is authenticated. When Gate B's
-  // #528 lands a durable store, this call site inherits it for free — do not
-  // build a bespoke one for this route.
-  const limit = checkRateLimit(`export:${auth.userId}`, 1, EXPORT_WINDOW_MS)
+  // Fail open: the endpoint is authenticated and a user's own data export
+  // should not error because the rate-limit table blipped.
+  const limit = await checkRateLimit(
+    `export:${auth.userId}`,
+    1,
+    EXPORT_WINDOW_MS,
+    { onStoreError: 'allow' },
+  )
   if (!limit.allowed) {
     ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
     return ctx.json(

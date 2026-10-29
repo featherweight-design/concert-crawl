@@ -16,7 +16,14 @@ export const validateCodeRouter = new Hono()
 validateCodeRouter.post('/', zValidator('json', codeSchema), async (ctx) => {
   const ip =
     ctx.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const limit = checkRateLimit(`validate-code:${ip}`, 10, 60 * 60 * 1000)
+  // Fail closed: this is the brute-force guard on invite codes, and the lookup
+  // it protects reads the same database, so closing costs almost nothing.
+  const limit = await checkRateLimit(
+    `validate-code:${ip}`,
+    10,
+    60 * 60 * 1000,
+    { onStoreError: 'deny' },
+  )
   if (!limit.allowed) {
     return ctx.json({ success: false, error: 'ratelimit' }, 429)
   }

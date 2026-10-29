@@ -13,7 +13,11 @@ export const waitlistRouter = new Hono()
 waitlistRouter.post('/', zValidator('json', waitlistSchema), async (ctx) => {
   const ip =
     ctx.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const limit = checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000)
+  // Fail open: the insert below is idempotent per email and the response never
+  // reveals anything, so a brief unthrottled window only risks junk rows.
+  const limit = await checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000, {
+    onStoreError: 'allow',
+  })
   if (!limit.allowed) {
     return ctx.json({ success: false, error: 'Too many requests' }, 429)
   }

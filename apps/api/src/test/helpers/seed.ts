@@ -53,7 +53,9 @@ export async function clearTables(): Promise<void> {
       // reason, and became load-bearing when code redemption started writing
       // one — a leftover lifetime comp grants Premium to whoever runs next. `feature_flags` is there for the same reason —
       // a leftover enabled row silently satisfies a later suite's release gate.
-      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags RESTART IDENTITY CASCADE`,
+      // `rate_limit_buckets` too: limits are durable now (#528), so a bucket
+      // spent in one file would otherwise 429 a later file's first request.
+      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags, rate_limit_buckets RESTART IDENTITY CASCADE`,
     )
   })
   // The loader memoizes for 30s in-process, and integration tests share one

@@ -631,6 +631,13 @@
       "when": 1793232000000,
       "tag": "0089_venue_removed_at",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1793318400000,
+      "tag": "0090_rate_limit_buckets",
+      "breakpoints": true
     }
   ]
 }

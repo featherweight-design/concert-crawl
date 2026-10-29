@@ -515,6 +515,19 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'as crawl_triggers.triggered_by.',
   },
   {
+    tableName: 'rate_limit_buckets',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: [],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Transient abuse counters. Some `key` values embed a Clerk ID ' +
+      '(`feedback:<id>`), but a row lives one limiter window (an hour at ' +
+      'most) and the API prunes it once `reset_at` passes, so it expires on ' +
+      'its own well inside any deletion deadline. Nothing to export.',
+  },
+  {
     tableName: 'processed_stripe_events',
     disposition: 'none',
     userIdColumn: null,

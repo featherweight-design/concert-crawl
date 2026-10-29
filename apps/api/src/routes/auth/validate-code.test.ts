@@ -21,7 +21,7 @@ vi.mock('@concert-crawl/db', () => ({
 }))
 
 vi.mock('../../lib/rate-limit.js', () => ({
-  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, retryAfterMs: 0 }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
 }))
 
 vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
@@ -84,7 +84,7 @@ describe('POST /v1/auth/validate-code', () => {
 
   it('returns 429 when rate limited', async () => {
     const { checkRateLimit } = await import('../../lib/rate-limit.js')
-    vi.mocked(checkRateLimit).mockReturnValueOnce({
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
       allowed: false,
       retryAfterMs: 30000,
     })

@@ -191,7 +191,7 @@ describe('POST /v1/feedback', () => {
   })
 
   it('returns 429 once the per-hour cap is exhausted', async () => {
-    // Use a unique userId per test run to avoid in-memory rate-limit store pollution
+    // Use a unique userId per test run so no earlier rate-limit bucket counts
     const userId = `rate-limit-user-${Date.now()}`
     setAuth(userId)
 
