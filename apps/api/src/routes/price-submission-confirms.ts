@@ -119,6 +119,7 @@ priceSubmissionConfirmsRouter.post(
       | {
           corroborationCount: number
           status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
+          updatedAt: Date
         }
       | undefined
     let pricedrop: PriceDrop | undefined
@@ -152,6 +153,9 @@ priceSubmissionConfirmsRouter.post(
           .returning({
             corroborationCount: priceSubmissions.corroborationCount,
             status: priceSubmissions.status,
+            // #1311: the committed now() of this promotion, the price-drop
+            // fan-out's transition marker.
+            updatedAt: priceSubmissions.updatedAt,
           })
 
         // Promotion propagates the corroborated community price to the
@@ -243,7 +247,13 @@ priceSubmissionConfirmsRouter.post(
     // #1107: fan out watch.pricedrop to status='watching' users only after
     // the promotion commits. Best-effort; never fails the confirm.
     if (pricedrop) {
-      await fanoutPriceDrop(pricedrop)
+      // #1311: the promoted submission plus its committed updated_at. Racing
+      // confirms are serialized by the event lock and only the promoting one
+      // sees a drop; this marker makes a replay of that fan-out a no-op.
+      await fanoutPriceDrop(
+        pricedrop,
+        `submission:${submissionId}:${updated.updatedAt.toISOString()}`,
+      )
     }
 
     // `confirmsCount` in the response is the count of non-submitter confirms

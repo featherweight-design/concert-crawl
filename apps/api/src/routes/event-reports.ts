@@ -390,6 +390,11 @@ eventReportsRouter.post(
           {
             eventId,
             category: WATCH_CATEGORY_FROM_REPORT_STATUS[report.status],
+            // #1311: the promoted report IS the transition. Two confirms
+            // racing past the threshold on one report share this marker, so
+            // the second fan-out writes nothing; a later report (a genuine
+            // re-cancel) carries a new id and notifies again.
+            transition: `report:${reportId}`,
           },
         )
       }

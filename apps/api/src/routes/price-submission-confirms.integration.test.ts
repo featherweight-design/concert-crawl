@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
 import { events, notifications, priceSubmissions } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
+import { fanoutPriceDrop } from '../lib/price-drop.js'
 import { observeBlocking, withLockHolder } from '../test/helpers/locks.js'
 
 const { authState } = vi.hoisted(() => ({
@@ -430,6 +431,42 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
     expect(rows.map((row) => row.userId)).toEqual([WATCHER])
     expect(rows[0]?.title).toMatch(/\$32/)
     expect(rows[0]?.body).toMatch(/\$48/)
+  })
+
+  it('a replayed fan-out of the same drop writes nothing (#1311)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    const WATCHER = 'user_confirm_replay_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    const submission = await seedPriceSubmission(event.id, SUBMITTER, {
+      priceMin: '32',
+    })
+
+    const res = await confirmAs('user_confirm_replay', event.id, submission.id)
+    expect(res.status).toBe(200)
+    expect(await pricedropRows()).toHaveLength(1)
+
+    // Replay the exact fan-out the route ran: same drop, same marker built
+    // from the promotion's committed updated_at.
+    const [promoted] = await testDb
+      .select({ updatedAt: priceSubmissions.updatedAt })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, submission.id))
+      .limit(1)
+    if (!promoted) throw new Error('promoted submission missing')
+    const marker = `submission:${submission.id}:${promoted.updatedAt.toISOString()}`
+    const drop = {
+      eventId: event.id,
+      oldPriceMin: '48.00',
+      newPriceMin: '32.00',
+    }
+    await Promise.all([
+      fanoutPriceDrop(drop, marker),
+      fanoutPriceDrop(drop, marker),
+    ])
+
+    const rows = await pricedropRows()
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
   })
 
   it('does not fan out again on a further confirm after promotion', async () => {

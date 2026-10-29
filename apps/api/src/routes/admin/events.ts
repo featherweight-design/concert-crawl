@@ -303,6 +303,10 @@ eventsAdminRouter.patch(
           {
             eventId: report.eventId,
             category: WATCH_CATEGORY_FROM_REPORT_STATUS[report.status],
+            // #1311: the promoted report IS the transition; the user-confirm
+            // auto-promote path uses the same marker, so a report promoted by
+            // both paths notifies once.
+            transition: `report:${reportId}`,
           },
         )
       }
@@ -850,7 +854,14 @@ eventsAdminRouter.patch(
           events,
           venues,
         },
-        { eventId: id, category: result.category },
+        {
+          eventId: id,
+          category: result.category,
+          // #1311: the committed updated_at of the PATCH that observed the
+          // transition under FOR UPDATE. Set inside that transaction, so it
+          // names this one write: a later genuine flip commits a new value.
+          transition: `patch:${result.updated.updatedAt.toISOString()}`,
+        },
       )
     }
 
@@ -1015,19 +1026,27 @@ eventsAdminRouter.post(
     // the freshly-created path — the idempotent early-return above already
     // covers the "already sold out" case (watchers were notified on the
     // original mark).
-    await fanoutWatchNotification(
-      {
-        db,
-        notifications,
-        userEvents,
-        events,
-        venues,
-      },
-      {
-        eventId: id,
-        category: 'watch.soldout',
-      },
-    )
+    // `created` is always set by a successful INSERT ... RETURNING; the
+    // guard only narrows the type so the marker never names a missing row.
+    if (created) {
+      await fanoutWatchNotification(
+        {
+          db,
+          notifications,
+          userEvents,
+          events,
+          venues,
+        },
+        {
+          eventId: id,
+          category: 'watch.soldout',
+          // #1311: the admin-authored promoted sold-out report IS the
+          // transition. Marking available and then sold out again creates a
+          // new report, so a second genuine sell-out notifies again.
+          transition: `report:${created.id}`,
+        },
+      )
+    }
 
     return ctx.json({ success: true, data: created }, 201)
   },
@@ -1111,6 +1130,13 @@ eventsAdminRouter.post(
         {
           eventId: id,
           category: 'watch.backonsale',
+          // #1311: the sold-out report(s) this call flipped to rejected. A
+          // report is cleared at most once, so a later sell-out and re-clear
+          // names a different report.
+          transition: `cleared:${cleared
+            .map((row) => row.id)
+            .sort()
+            .join(',')}`,
         },
       )
     }
@@ -1531,6 +1557,9 @@ eventsAdminRouter.post(
         {
           eventId: targetId,
           category: 'watch.postponed',
+          // #1311: the source row is deleted by the merge, so it can only be
+          // merged away once; its id names this transition.
+          transition: `merge:${sourceId}`,
           restrictToUserIds: merged.movedWatcherIds,
           // Spread rather than pass `undefined`: exactOptionalPropertyTypes
           // distinguishes an absent key from an explicitly-undefined one.

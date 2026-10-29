@@ -32,14 +32,17 @@ was written by nothing before this PR — only `packages/db/seed.ts` sets it.
 
 ## 2. Fires once
 
-| Writer                | Mechanism                                                                                                                                                                                                                                                                                                                                                                                                | Verdict |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| spotify-fanout        | Genuine exactly-once. `claimAlert` (`index.ts:159-170`) does `insert(spotifyAlertLog).onConflictDoNothing().returning()` against the unique index `spotify_alert_log_user_event_kind_idx` on `(user_id, event_id, kind)` (migration 0053:88-89). The notification insert at `:316` is gated on the claim succeeding. Proven by `'re-running the fan-out sends nothing twice'` (`:316` in the test file). | ✅      |
-| watch-fanout          | **No ledger, no unique constraint.** The only guard is `hasEventStateChanged()` (`event-reports.ts:54-79`), which reads current state and compares — and the fanout call (`:382`) is _outside_ the transaction that commits the state change. Two concurrent confirms both read pre-state and both fan out.                                                                                              | ⚠️      |
-| contest-notifications | **No replay protection at all.** The only dedup is the self-contest check `challengerUserId !== parentUserId` (`contest-notifications.ts:89`), which is about audience, not idempotency. A retried resolve/defer writes a second identical row.                                                                                                                                                          | ⚠️      |
+| Writer                | Mechanism                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Verdict |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| spotify-fanout        | Genuine exactly-once. `claimAlert` (`index.ts:159-170`) does `insert(spotifyAlertLog).onConflictDoNothing().returning()` against the unique index `spotify_alert_log_user_event_kind_idx` on `(user_id, event_id, kind)` (migration 0053:88-89). The notification insert at `:316` is gated on the claim succeeding. Proven by `'re-running the fan-out sends nothing twice'` (`:316` in the test file).                                                                                                                                                                                                                                                | ✅      |
+| watch-fanout          | Fixed by #1311. Each row carries `notifications.dedupe_key` = `watch:{userId}:{eventId}:{category}:{transition}` under the unique index `notifications_dedupe_key_idx` (migration 0091) and is inserted `ON CONFLICT DO NOTHING RETURNING`; push fires only for the returned rows. `transition` is a required argument naming the one committed transition (promoted report id, the PATCH's committed `updated_at`, merged-away source id, corroborated submission id + committed `updated_at`), so replays and concurrent confirms write nothing while a genuine later transition notifies again. Proven by `notification-replay.integration.test.ts`. | ✅      |
+| contest-notifications | Fixed by #1311, same mechanism. Key `contest:{contestId}:{challengerSubmissionId}:{userId}:{action}`, plus the committed `deferredAt` for a defer (defer is repeatable; a parent can be re-contested by a new counter). A retried resolve writes nothing. Proven by `notification-replay.integration.test.ts`.                                                                                                                                                                                                                                                                                                                                          | ✅      |
 
-Both ⚠️ rows are **pre-existing** — they long predate #737 and are not caused by it.
-This epic does not fix them, deliberately: adding an idempotency ledger to two
+**Update (#1311, 2026-10-29):** both rows above were ⚠️ when this audit ran and are
+now fixed; the rest of this section is kept as the original record.
+
+Both rows were **pre-existing** — they long predate #737 and are not caused by it.
+This epic did not fix them, deliberately: adding an idempotency ledger to two
 writers is its own change with its own migration and its own blast radius, and
 bundling it into the read-path epic would make PR-A un-reviewable.
 
@@ -51,7 +54,8 @@ noted and forgotten.
 **The panel must not assume distinct rows.** Each row has a distinct `id`, so
 React keys are safe and marking one read leaves its twin unread — which will look
 like a bug to a user. Recorded here so PR-B does not design around an
-exactly-once assumption that only one of the three writers actually honours.
+exactly-once assumption that only one of the three writers actually honoured at the
+time. Since #1311 all three are exactly-once per committed transition.
 
 ## 3. Fires for exactly the right audience
 

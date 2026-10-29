@@ -65,12 +65,22 @@ export const detectPriceDrop = (
 // write commits. Best-effort: fanoutWatchNotification never throws, and the
 // price update is the primary state change, so a fan-out failure can't (and
 // shouldn't) roll it back or fail the request.
-export const fanoutPriceDrop = async (drop: PriceDrop): Promise<void> => {
+//
+// `transition` (#1311) names the one committed write that lowered the price,
+// so a replayed fan-out of the same drop writes nothing while a later genuine
+// drop notifies again. Pass the id of the row whose write IS the drop plus
+// that write's committed `updatedAt`, read back from the transaction:
+// `submission:${id}:${updatedAt.toISOString()}`. Never `Date.now()`.
+export const fanoutPriceDrop = async (
+  drop: PriceDrop,
+  transition: string,
+): Promise<void> => {
   await fanoutWatchNotification(
     { db, notifications, userEvents, events, venues },
     {
       eventId: drop.eventId,
       category: 'watch.pricedrop',
+      transition,
       pricedrop: {
         newPriceMin: drop.newPriceMin,
         oldPriceMin: drop.oldPriceMin,

@@ -47,6 +47,26 @@ export interface FanoutInput {
   eventId: string
   category: UserNotificationCategory
   /**
+   * Identifies the ONE committed transition this fan-out announces (#1311).
+   * Required, so a new caller cannot forget replay protection.
+   *
+   * Each watcher's row carries the dedupe key
+   * `watch:{userId}:{eventId}:{category}:{transition}` under a unique index,
+   * so the marker must be:
+   *   - identical for every replay of one committed transition (a concurrent
+   *     second confirm, a retried request), so the replay inserts nothing and
+   *     pushes nothing; and
+   *   - different for a later genuine transition, so a show that goes
+   *     cancelled -> upcoming -> cancelled notifies watchers twice (product
+   *     ruling 2026-10-28: dedupe suppresses replays, never new transitions).
+   *
+   * Use the id or committed timestamp of the row whose write IS the
+   * transition: the promoted report's id, the merged-away source id, the
+   * committed `updated_at` of the PATCHed event. Never `Date.now()` taken
+   * outside the committing transaction: two replays would get two markers.
+   */
+  transition: string
+  /**
    * Optional per-category context. When `category === 'watch.pricedrop'`,
    * pass `pricedrop: { newPriceMin, oldPriceMin }` so the copy template
    * can carry the concrete numbers (see the handoff mock in
@@ -236,7 +256,15 @@ export async function fanoutWatchNotification(
   // `user_notification` type so the bell (#737) reads them alongside contest.*
   // rows. `metadata` carries the category so downstream can branch on it
   // without re-parsing the title.
+  //
+  // #1311: each row carries its dedupe key and the insert is ON CONFLICT DO
+  // NOTHING against the unique index, RETURNING the users actually written.
+  // The row is its own claim, so one statement claims and writes atomically
+  // per watcher: a crash cannot leave a claim with no row or the reverse, and
+  // a concurrent replay blocks on the first insert's keys and then skips
+  // them. Push below fires only for the returned users.
   const rows = watchers.map((watcher) => ({
+    dedupeKey: watchDedupeKey(watcher.userId, input),
     userId: watcher.userId,
     type: 'user_notification' as const,
     category: input.category,
@@ -249,8 +277,13 @@ export async function fanoutWatchNotification(
     }),
   }))
 
+  let claimed: { userId: string | null }[]
   try {
-    await deps.db.insert(deps.notifications).values(rows)
+    claimed = await deps.db
+      .insert(deps.notifications)
+      .values(rows)
+      .onConflictDoNothing({ target: deps.notifications.dedupeKey })
+      .returning({ userId: deps.notifications.userId })
   } catch (insertErr) {
     logWarn('watch-fanout: notifications insert failed', {
       eventId: input.eventId,
@@ -267,6 +300,9 @@ export async function fanoutWatchNotification(
   // large watcher list would multiply outbound requests. Chunked send caps
   // the fan-out at PUSH_CONCURRENCY at a time — plenty fast for typical
   // watcher counts, safe against a viral show with hundreds of watchers.
+  const recipients = claimed.flatMap((row) =>
+    row.userId === null ? [] : [{ userId: row.userId }],
+  )
   let delivered = 0
   const sendOne = async (watcher: { userId: string }) => {
     try {
@@ -294,13 +330,23 @@ export async function fanoutWatchNotification(
       })
     }
   }
-  for (let idx = 0; idx < watchers.length; idx += PUSH_CONCURRENCY) {
-    const chunk = watchers.slice(idx, idx + PUSH_CONCURRENCY)
+  for (let idx = 0; idx < recipients.length; idx += PUSH_CONCURRENCY) {
+    const chunk = recipients.slice(idx, idx + PUSH_CONCURRENCY)
     await Promise.all(chunk.map(sendOne))
   }
 
-  return { watchersNotified: watchers.length, pushDelivered: delivered }
+  return { watchersNotified: recipients.length, pushDelivered: delivered }
 }
+
+/**
+ * The per-watcher dedupe key (#1311). Exported so tests and any future
+ * reader of `notifications.dedupe_key` share one spelling.
+ */
+export const watchDedupeKey = (
+  userId: string,
+  input: Pick<FanoutInput, 'eventId' | 'category' | 'transition'>,
+): string =>
+  `watch:${userId}:${input.eventId}:${input.category}:${input.transition}`
 
 // Concurrency cap on per-watcher push sends. sendPushForNotification itself
 // Promise.all-s per subscription, so 10 watchers × 3 subscriptions each with

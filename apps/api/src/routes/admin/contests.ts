@@ -850,7 +850,12 @@ contestsAdminRouter.post(
     // commit. parent_wins never sets this (the event already shows the
     // parent's price). Best-effort; never fails the resolution.
     if (outcome.pricedrop) {
-      await fanoutPriceDrop(outcome.pricedrop)
+      // #1311: the winning challenger, corroborated by this resolution, plus
+      // its committed updated_at (re-read after the update, inside the tx).
+      await fanoutPriceDrop(
+        outcome.pricedrop,
+        `submission:${outcome.challenger.id}:${outcome.challenger.updatedAt.toISOString()}`,
+      )
     }
 
     return ctx.json({
@@ -1071,6 +1076,7 @@ contestsAdminRouter.post(
       challengerUserId: outcome.counter.userId,
       eventId: outcome.parent.eventId,
       action: 'defer',
+      deferredAt: outcome.deferredAt,
       reason,
     })
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   fanoutWatchNotification,
+  watchDedupeKey,
   WATCH_CATEGORY_FROM_REPORT_STATUS,
 } from './watch-fanout.js'
 import type { WatchFanoutDeps } from './watch-fanout.js'
@@ -12,6 +13,7 @@ type QueuedResult = unknown[] | Error
 const buildDbFake = () => {
   const selectQueue: QueuedResult[] = []
   const insertCalls: Array<{ table: unknown; rows: unknown }> = []
+  const claimedKeys = new Set<string>()
   let insertShouldThrow: Error | null = null
 
   const pushSelect = (rows: QueuedResult) => selectQueue.push(rows)
@@ -41,12 +43,20 @@ const buildDbFake = () => {
 
   const db = {
     select: () => chain(),
+    // Mirrors insert().values().onConflictDoNothing().returning(): a row whose
+    // dedupeKey was already claimed is skipped, the rest are returned.
     insert: (table: unknown) => ({
-      values: (rows: unknown) => {
-        insertCalls.push({ table, rows })
-        if (insertShouldThrow) return Promise.reject(insertShouldThrow)
-        return Promise.resolve()
-      },
+      values: (rows: Array<{ userId: string; dedupeKey: string }>) => ({
+        onConflictDoNothing: () => ({
+          returning: () => {
+            insertCalls.push({ table, rows })
+            if (insertShouldThrow) return Promise.reject(insertShouldThrow)
+            const fresh = rows.filter((row) => !claimedKeys.has(row.dedupeKey))
+            for (const row of fresh) claimedKeys.add(row.dedupeKey)
+            return Promise.resolve(fresh.map((row) => ({ userId: row.userId })))
+          },
+        }),
+      }),
     }),
   } as unknown as WatchFanoutDeps['db']
 
@@ -91,6 +101,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_missing',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
     expect(deps.sendPush).not.toHaveBeenCalled()
@@ -110,6 +121,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
     expect(deps.insertCalls).toHaveLength(0)
@@ -131,6 +143,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     expect(result.watchersNotified).toBe(2)
     expect(result.pushDelivered).toBe(2)
@@ -169,6 +182,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.postponed',
+      transition: 't1',
     })
     const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
     expect(rows[0]?.['title']).toBe('Band at The Fillmore moved to Aug 14.')
@@ -192,6 +206,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.postponed',
+      transition: 't1',
       relocated: { fromVenueName: 'Larimer Lounge' },
     })
     const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
@@ -216,6 +231,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
     // We hold no refund record and the event page has none, so the body must
@@ -243,6 +259,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.postponed',
+      transition: 't1',
       restrictToUserIds: [],
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
@@ -264,6 +281,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.postponed',
+      transition: 't1',
       relocated: { fromVenueName: null },
     })
     const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
@@ -290,6 +308,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.backonsale',
+      transition: 't1',
     })
     const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
     expect(rows[0]?.['title']).toContain('back on sale')
@@ -310,6 +329,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.pricedrop',
+      transition: 't1',
       pricedrop: { newPriceMin: '32.00', oldPriceMin: '48.00' },
     })
     expect(deps.insertCalls[0]?.rows).toMatchObject([
@@ -335,6 +355,7 @@ describe('fanoutWatchNotification', () => {
     await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.pricedrop',
+      transition: 't1',
     })
     expect(deps.insertCalls[0]?.rows).toMatchObject([
       {
@@ -358,6 +379,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'artist.new_show',
+      transition: 't1',
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
     expect(deps.insertCalls).toHaveLength(0)
@@ -381,6 +403,7 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     expect(result.watchersNotified).toBe(2)
     expect(result.pushDelivered).toBe(1)
@@ -405,12 +428,69 @@ describe('fanoutWatchNotification', () => {
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
       category: 'watch.cancelled',
+      transition: 't1',
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
     expect(deps.sendPush).not.toHaveBeenCalled()
     expect(deps.logWarn).toHaveBeenCalledWith(
       expect.stringContaining('notifications insert failed'),
       expect.objectContaining({ eventId: 'evt_1' }),
+    )
+  })
+})
+
+describe('fanoutWatchNotification replay protection (#1311)', () => {
+  const ctx = {
+    title: 'The Show',
+    artist: 'Band',
+    venueName: 'The Fillmore',
+    date: '2026-08-14',
+  }
+
+  it('stamps every row with watch:{user}:{event}:{category}:{transition}', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([ctx])
+    deps.pushSelect([{ userId: 'user_a' }])
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.cancelled',
+      transition: 'report:r1',
+    })
+    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
+    expect(rows[0]?.['dedupeKey']).toBe(
+      watchDedupeKey('user_a', {
+        eventId: 'evt_1',
+        category: 'watch.cancelled',
+        transition: 'report:r1',
+      }),
+    )
+    expect(rows[0]?.['dedupeKey']).toBe(
+      'watch:user_a:evt_1:watch.cancelled:report:r1',
+    )
+  })
+
+  it('pushes only to the watchers whose row was actually claimed', async () => {
+    const deps = makeDeps()
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    deps.pushSelect([ctx])
+    deps.pushSelect([{ userId: 'user_a' }])
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.cancelled',
+      transition: 'report:r1',
+    })
+    // Replay: user_a already claimed, user_b is new to the watch list.
+    deps.pushSelect([ctx])
+    deps.pushSelect([{ userId: 'user_a' }, { userId: 'user_b' }])
+    const replay = await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.cancelled',
+      transition: 'report:r1',
+    })
+    expect(replay).toEqual({ watchersNotified: 1, pushDelivered: 1 })
+    expect(deps.sendPush).toHaveBeenCalledTimes(2)
+    expect(deps.sendPush).toHaveBeenLastCalledWith(
+      expect.objectContaining({ userId: 'user_b' }),
     )
   })
 })

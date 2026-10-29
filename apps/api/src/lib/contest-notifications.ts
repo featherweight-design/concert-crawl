@@ -41,6 +41,12 @@ export type ContestNotificationInput =
   | (ContestNotificationInputBase & {
       action: 'defer'
       resolution?: never
+      /**
+       * The committed `last_admin_action_at` of this defer. A contest can be
+       * deferred more than once (each is a new "need more info" request the
+       * submitters should hear about), so the defer's dedupe key carries it.
+       */
+      deferredAt: Date
     })
 
 interface Recipient {
@@ -67,6 +73,8 @@ interface Recipient {
  * `notifications.metadata` is a `text` column (see packages/db schema), so
  * the metadata blob is JSON.stringify'd here. Inserting a raw object would
  * surface a Postgres type error at runtime.
+ *
+ * Idempotent per committed action (#1311): see `dedupeKey` below.
  *
  * Best-effort: any insert failure is logged via apiLogger.warn and swallowed.
  * The helper never throws to the caller — resolve/defer call this AFTER their
@@ -126,7 +134,22 @@ export async function writeContestNotifications(
     })
   }
 
+  // #1311 replay protection. The key names one committed admin action per
+  // recipient: `contest:{contestId}:{userId}:{action}` per the issue, with two
+  // additions. The challenger submission id, because contestId is the PARENT
+  // id and a parent can be contested again by a new counter after a
+  // resolution, which is a genuine new transition. And for defer, its
+  // committed timestamp, because defer is repeatable on one counter. A
+  // replayed call with the same input writes nothing.
+  const dedupeKey = (recipient: Recipient): string => {
+    const base = `contest:${input.contestId}:${input.challengerSubmissionId}:${recipient.userId}:${input.action}`
+    return input.action === 'defer'
+      ? `${base}:${input.deferredAt.toISOString()}`
+      : base
+  }
+
   const rows = recipients.map((recipient) => ({
+    dedupeKey: dedupeKey(recipient),
     userId: recipient.userId,
     type: 'user_notification' as const,
     category,
@@ -137,8 +160,15 @@ export async function writeContestNotifications(
   }))
 
   try {
-    await db.insert(notifications).values(rows)
-    return { written: rows.length }
+    // ON CONFLICT DO NOTHING against notifications_dedupe_key_idx: the row is
+    // its own claim, so claim and write are one atomic statement and a replay
+    // inserts nothing. `written` counts only rows actually inserted.
+    const inserted = await db
+      .insert(notifications)
+      .values(rows)
+      .onConflictDoNothing({ target: notifications.dedupeKey })
+      .returning({ id: notifications.id })
+    return { written: inserted.length }
   } catch (notifyErr) {
     apiLogger.warn(
       { contestId: input.contestId, action: input.action, err: notifyErr },

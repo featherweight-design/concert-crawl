@@ -1351,6 +1351,35 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     expect(rows.map((row) => row.userId)).toEqual([WATCHER])
   })
 
+  it('notifies again on a genuine re-cancel: cancelled -> upcoming -> cancelled (#1311)', async () => {
+    // Product ruling 2026-10-28: dedupe suppresses replays of one transition,
+    // never a later genuine one. Each PATCH commits its own updated_at, which
+    // is the marker, so the second cancel is a new key.
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-05',
+      verified: true,
+      status: 'upcoming',
+    })
+    const WATCHER = 'user_patch_recancel_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+
+    for (const status of ['cancelled', 'upcoming', 'cancelled']) {
+      const res = await app.request(`/v1/admin/events/${event.id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ status }),
+      })
+      expect(res.status).toBe(200)
+    }
+
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.cancelled'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER, WATCHER])
+  })
+
   it('fans out watch.postponed on PATCH status flip to postponed', async () => {
     const venue = await seedVenue()
     const event = await seedEvent(venue.id, {

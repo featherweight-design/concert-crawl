@@ -64,11 +64,14 @@ describe('detectPriceDrop', () => {
 
 describe('fanoutPriceDrop', () => {
   it('fans out watch.pricedrop with the old and new minimums', async () => {
-    await fanoutPriceDrop({
-      eventId: 'evt',
-      oldPriceMin: '48.00',
-      newPriceMin: '32.00',
-    })
+    await fanoutPriceDrop(
+      {
+        eventId: 'evt',
+        oldPriceMin: '48.00',
+        newPriceMin: '32.00',
+      },
+      'submission:sub_1:2026-10-01T00:00:00.000Z',
+    )
     expect(fanoutWatchNotification).toHaveBeenCalledTimes(1)
     expect(fanoutWatchNotification).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -79,6 +82,7 @@ describe('fanoutPriceDrop', () => {
       {
         eventId: 'evt',
         category: 'watch.pricedrop',
+        transition: 'submission:sub_1:2026-10-01T00:00:00.000Z',
         pricedrop: { newPriceMin: '32.00', oldPriceMin: '48.00' },
       },
     )

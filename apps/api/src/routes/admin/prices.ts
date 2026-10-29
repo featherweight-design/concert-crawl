@@ -518,7 +518,14 @@ pricesAdminRouter.patch(
     // primary user-visible state change; a fan-out failure here can't
     // roll it back and shouldn't fail the admin request.
     if (result.pricedrop) {
-      await fanoutPriceDrop(result.pricedrop)
+      // #1311: the corroborated submission plus its committed updated_at
+      // (set to now() in the corroborating transaction). One corroboration
+      // is one transition; a submission un-corroborated and corroborated
+      // again later commits a new timestamp.
+      await fanoutPriceDrop(
+        result.pricedrop,
+        `submission:${result.updated.id}:${result.updated.updatedAt.toISOString()}`,
+      )
     }
 
     return ctx.json({ success: true, data: result.updated })
