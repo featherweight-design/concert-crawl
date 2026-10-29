@@ -30,6 +30,7 @@
 
 import * as Sentry from '@sentry/hono/node'
 import { db as appDb, rateLimitBuckets } from '@concert-crawl/db'
+import type { Database } from '@concert-crawl/db'
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import { and, inArray, lte, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -215,22 +216,27 @@ const defaultLimiter = createRateLimiter({ db: appDb })
  */
 export const checkRateLimit = defaultLimiter.check
 
-/** Upper bound on prune passes per sweep, so a sweep always terminates. */
-const SWEEP_MAX_PASSES = 200
-
 /**
- * Delete every expired bucket, one bounded batch at a time. Run daily by the
+ * Delete every expired bucket in one set-based statement. Run daily by the
  * match-artists cron so retention does not depend on API traffic. Returns the
  * number of rows removed.
+ *
+ * Deliberately not the batched loop the hot-path prune uses. Batching exists
+ * there to keep a request-adjacent statement short; this runs once a day off
+ * the request path, against a table that is one row per recently active key.
+ * A pass cap would only trade that for a sweep that can report success while
+ * leaving expired rows behind, which is the one outcome a retention sweep must
+ * not have. The `reset_at` re-check under the row lock still applies, so a
+ * window a concurrent hit just reopened is never deleted.
  */
-export const sweepExpiredRateLimitBuckets = async (
-  limiter: Pick<RateLimiter, 'pruneExpired'> = defaultLimiter,
+export const sweepExpiredRateLimitBuckets = async <
+  TSchema extends Record<string, unknown>,
+>(
+  db: PostgresJsDatabase<TSchema> | Database = appDb,
 ): Promise<number> => {
-  let total = 0
-  for (let pass = 0; pass < SWEEP_MAX_PASSES; pass++) {
-    const deleted = await limiter.pruneExpired()
-    total += deleted
-    if (deleted < PRUNE_BATCH) break
-  }
-  return total
+  const deleted = await db
+    .delete(rateLimitBuckets)
+    .where(lte(rateLimitBuckets.resetAt, sql`now()`))
+    .returning({ key: rateLimitBuckets.key })
+  return deleted.length
 }

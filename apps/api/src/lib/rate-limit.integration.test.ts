@@ -195,19 +195,19 @@ describe('rate limiter (Postgres-backed)', () => {
       expect(await instanceA.pruneExpired()).toBe(7)
     })
 
-    it('sweeps every expired bucket across batches, keeping live ones', async () => {
-      await testDb.insert(rateLimitBuckets).values(
-        Array.from({ length: PRUNE_BATCH * 2 + 3 }, (_, i) => ({
-          key: `test:sweep-${i}`,
-          count: 1,
-          resetAt: new Date(Date.now() - 60_000),
-        })),
-      )
+    it('sweeps every expired bucket, even a backlog past 100,000 rows', async () => {
+      // 100,001 is one past the 200 x 500 cap the sweep once had, which
+      // returned success with a row left behind. The daily sweep must drain
+      // the whole backlog.
+      const backlog = 100_001
+      await testDb.execute(sql`
+        INSERT INTO rate_limit_buckets (key, count, reset_at)
+        SELECT 'test:sweep-' || g, 1, now() - interval '1 minute'
+        FROM generate_series(1, ${backlog}::integer) AS g
+      `)
       await instanceA.check('test:sweep-live', 5, WINDOW_MS, ALLOW)
 
-      expect(await sweepExpiredRateLimitBuckets(instanceA)).toBe(
-        PRUNE_BATCH * 2 + 3,
-      )
+      expect(await sweepExpiredRateLimitBuckets(testDb)).toBe(backlog)
       const keys = (
         await testDb
           .select({ key: rateLimitBuckets.key })
