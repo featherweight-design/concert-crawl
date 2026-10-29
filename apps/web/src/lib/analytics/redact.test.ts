@@ -30,6 +30,17 @@ describe('redactAnalyticsString', () => {
     ).toBe('https://concertcrawl.app/search')
   })
 
+  it("redacts the Clerk id from the admin's user page", () => {
+    expect(
+      redactAnalyticsString(
+        'https://concertcrawl.app/admin/users/user_2abc?x=1',
+      ),
+    ).toBe('https://concertcrawl.app/admin/users/[redacted]')
+    expect(redactAnalyticsString('/admin/users/user_2abc/edit')).toBe(
+      '/admin/users/[redacted]/edit',
+    )
+  })
+
   it('drops the query string of a root-relative path', () => {
     expect(redactAnalyticsString('/search?q=private-text')).toBe('/search')
   })

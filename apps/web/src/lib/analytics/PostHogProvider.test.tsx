@@ -54,10 +54,23 @@ describe('PostHogProvider', () => {
     expect(identifyUser).not.toHaveBeenCalled()
   })
 
-  it('does nothing with identity until Clerk has loaded', () => {
+  it('starts nothing until Clerk has loaded', () => {
     mockUseUser.mockReturnValue({ isLoaded: false, user: undefined })
     render(<PostHogProvider>child</PostHogProvider>)
+    expect(initAnalytics).not.toHaveBeenCalled()
     expect(identifyUser).not.toHaveBeenCalled()
     expect(resetAnalyticsIdentity).not.toHaveBeenCalled()
+  })
+
+  it('inits once Clerk loads and settles the identity right after', () => {
+    mockUseUser.mockReturnValue({ isLoaded: false, user: undefined })
+    const { rerender } = render(<PostHogProvider>child</PostHogProvider>)
+    mockUseUser.mockReturnValue({ isLoaded: true, user: null })
+    rerender(<PostHogProvider>child</PostHogProvider>)
+    expect(initAnalytics).toHaveBeenCalledTimes(1)
+    expect(resetAnalyticsIdentity).toHaveBeenCalledTimes(1)
+    expect(initAnalytics.mock.invocationCallOrder[0]).toBeLessThan(
+      resetAnalyticsIdentity.mock.invocationCallOrder[0] ?? 0,
+    )
   })
 })

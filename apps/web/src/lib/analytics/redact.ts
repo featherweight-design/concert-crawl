@@ -16,10 +16,13 @@ import { redactInviteTokens } from '@/lib/sentry-redact'
 
 const URL_START = /^(?:https?:\/\/|\/)/i
 
+// The admin's user page is addressed by another reader's Clerk id.
+const ADMIN_USER_PATH = /(\/admin\/users\/)[^/?#]+/g
+
 export const redactAnalyticsString = (value: string): string =>
   redactInviteTokens(
     URL_START.test(value) ? (value.split(/[?#]/, 1)[0] ?? '') : value,
-  )
+  ).replace(ADMIN_USER_PATH, '$1[redacted]')
 
 // A double-quoted chain value, escaped quotes included.
 const CHAIN_VALUE = /"((?:\\"|[^"])*)"/g

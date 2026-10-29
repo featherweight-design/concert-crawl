@@ -48,6 +48,9 @@ export const PRODUCTION_HOSTNAMES: readonly string[] = [
 export const isProductionHostname = (hostname: string): boolean =>
   PRODUCTION_HOSTNAMES.includes(hostname.toLowerCase())
 
+// Any URL on the admin (`/admin` and below), matched against the full href.
+export const ADMIN_URL = /^https?:\/\/[^/]+\/admin(?:[/?#]|$)/i
+
 let initialized = false
 
 // `posthog.reset()` clears super-properties along with the identity, so this
@@ -73,8 +76,10 @@ export const initAnalytics = (hostname?: string): void => {
       // Clicks, submits and changes on interactive elements. posthog-js never
       // records what is typed into an input, whatever the masking options say;
       // the options below only keep element text and attributes, so a
-      // captured button still says what it was.
-      autocapture: true,
+      // captured button still says what it was. Not on /admin: its rows carry
+      // other readers' ids and contact details in text and hrefs. (Pageviews
+      // still run there; ./redact takes the id out of /admin/users/<id>.)
+      autocapture: { url_ignorelist: [ADMIN_URL] },
       mask_all_text: false,
       mask_all_element_attributes: false,
       // Pageviews on load AND on App Router client-side navigations, which

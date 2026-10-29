@@ -212,7 +212,7 @@ describe('web analytics client', () => {
     expect(mockInit).toHaveBeenCalledWith(
       'phc_test',
       expect.objectContaining({
-        autocapture: true,
+        autocapture: { url_ignorelist: [analytics.ADMIN_URL] },
         mask_all_text: false,
         mask_all_element_attributes: false,
         capture_pageview: 'history_change',
@@ -221,6 +221,24 @@ describe('web analytics client', () => {
         advanced_disable_flags: true,
       }),
     )
+  })
+
+  it('keeps autocapture off the admin and on everywhere else', async () => {
+    const { ADMIN_URL } = await loadModule()
+    for (const href of [
+      'https://concertcrawl.app/admin',
+      'https://concertcrawl.app/admin/users/user_2abc',
+      'https://concertcrawl.app/admin?tab=x',
+    ]) {
+      expect(ADMIN_URL.test(href)).toBe(true)
+    }
+    for (const href of [
+      'https://concertcrawl.app/',
+      'https://concertcrawl.app/administrator',
+      'https://concertcrawl.app/events/admin',
+    ]) {
+      expect(ADMIN_URL.test(href)).toBe(false)
+    }
   })
 
   it('registers the short commit SHA and the app version as super-properties', async () => {
