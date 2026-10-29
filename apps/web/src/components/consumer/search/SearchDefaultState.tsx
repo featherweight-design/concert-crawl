@@ -82,6 +82,9 @@ export function SearchDefaultState({
           {recentSearches.map((query) => (
             <button
               key={query}
+              // A recent search is text the reader typed: analytics
+              // autocapture skips this control (posthog-js `ph-no-capture`).
+              className="ph-no-capture"
               onClick={() => onPickQuery(query)}
               style={{
                 all: 'unset',

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs'
 import { initAnalytics, identifyUser, resetAnalyticsIdentity } from './client'
 
 interface PostHogProviderProps {
@@ -9,10 +9,13 @@ interface PostHogProviderProps {
 }
 
 // Initializes posthog-js once on mount (no-op without a key) and keeps the
-// analytics identity in lockstep with the Clerk session: identify on sign-in,
-// reset on sign-out. Renders children unchanged.
+// analytics identity in lockstep with the Clerk session: identify on sign-in
+// (with the display name as the person's `name`, never the email), reset on
+// sign-out. Renders children unchanged.
 export function PostHogProvider({ children }: PostHogProviderProps) {
-  const { isLoaded, userId } = useAuth()
+  const { isLoaded, user } = useUser()
+  const userId = user?.id ?? null
+  const name = user?.fullName ?? user?.username ?? null
 
   useEffect(() => {
     initAnalytics()
@@ -21,11 +24,11 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
   useEffect(() => {
     if (!isLoaded) return
     if (userId) {
-      identifyUser(userId)
+      identifyUser(userId, name)
     } else {
       resetAnalyticsIdentity()
     }
-  }, [isLoaded, userId])
+  }, [isLoaded, userId, name])
 
   return <>{children}</>
 }

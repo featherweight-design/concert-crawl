@@ -177,6 +177,22 @@ describe('SearchDefaultState', () => {
     expect(mockSetQuery).toHaveBeenCalledWith('bluebird')
   })
 
+  // A recent search is text the reader typed; analytics autocapture must not
+  // read it off the button (posthog-js skips a `ph-no-capture` element).
+  it('keeps recent-search rows out of analytics autocapture', () => {
+    render(
+      <SearchDefaultState
+        recentSearches={['bluebird']}
+        popularEvents={[]}
+        onPickQuery={mockSetQuery}
+        onPickEvent={mockNavigateTo}
+      />,
+    )
+    expect(screen.getByText('bluebird').closest('button')?.classList).toContain(
+      'ph-no-capture',
+    )
+  })
+
   // The row hand-rolled its own 40px box and drew IdentityArt directly, so a
   // show with real artwork still got a generated mark, at `hero` density in a
   // 40px box. It goes through the slot now, like every other event row.
