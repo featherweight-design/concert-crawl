@@ -1,3 +1,10 @@
+## [1.302.1](https://github.com/HartiganHM/concert-crawl/compare/v1.302.0...v1.302.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **web:** start analytics once Clerk has loaded; no autocapture on /admin ([#1793](https://github.com/HartiganHM/concert-crawl/issues/1793)) ([1799472](https://github.com/HartiganHM/concert-crawl/commit/17994727791192c9e57b1a368c72ea12d2ef236f))
+
 # [1.302.0](https://github.com/HartiganHM/concert-crawl/compare/v1.301.0...v1.302.0) (2026-10-29)
 
 
