@@ -309,8 +309,8 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
 
   // Failed syncs never advance lastSyncedAt, so the check above alone would
   // let refresh spam through during a Spotify outage. Each actual sync
-  // attempt also consumes an in-memory token (feedback.ts pattern; resets on
-  // deploy, which lastSyncedAt covers for the success path).
+  // attempt also spends a durable rate-limit token (feedback.ts pattern,
+  // shared across instances and kept across deploys since #528).
   const { allowed, retryAfterMs } = await checkRateLimit(
     `spotify-sync:${auth.userId}`,
     1,

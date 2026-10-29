@@ -41,9 +41,9 @@ import { requireFlag } from '../middleware/feature-flag.js'
  * id now that the route is authenticated — a better key than an IP, and it
  * sidesteps the `x-forwarded-for` derivation entirely.
  *
- * Caveat worth carrying: the limiter is in-memory and per-instance, so this is
- * a speed bump rather than a guarantee once the API runs more than one
- * instance. If this endpoint is ever flipped public, the key has to fall back
+ * The budget is held in Postgres (#528), so it is one budget across every API
+ * instance and survives restarts. If this endpoint is ever flipped public, the
+ * key has to fall back
  * to the IP derivation in routes/waitlist.ts
  * (`.split(',')[0]?.trim() ?? 'unknown'`) — do not invent a second convention
  * at that point.
