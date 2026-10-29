@@ -25,6 +25,9 @@ validateCodeRouter.post('/', zValidator('json', codeSchema), async (ctx) => {
     { onStoreError: 'deny' },
   )
   if (!limit.allowed) {
+    // Set on every 429, store-error denials included: a client that cannot
+    // see the window backs off by guessing.
+    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
     return ctx.json({ success: false, error: 'ratelimit' }, 429)
   }
 

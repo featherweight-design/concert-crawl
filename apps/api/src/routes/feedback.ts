@@ -55,7 +55,7 @@ feedbackRouter.post('/', async (ctx) => {
     60 * 60 * 1000,
     // Fail open: authenticated, low-value to abuse, and a bug report filed
     // during a DB blip is exactly the one we want to receive.
-    { onStoreError: 'allow' },
+    { onStoreError: 'allow', userId: authInfo.userId },
   )
   if (!allowed) {
     const retryAfterSec = Math.ceil(retryAfterMs / 1000)

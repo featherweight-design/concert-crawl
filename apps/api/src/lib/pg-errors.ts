@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /**
  * Postgres error code for unique violation.
  *
@@ -38,4 +40,35 @@ export function isPendingCounterUniqueViolation(err: unknown): boolean {
     return matches((err as Error & { cause?: unknown }).cause)
   }
   return false
+}
+
+const errorCodeSchema = z.object({
+  // A SQLSTATE ('42P01') or a socket code ('ECONNREFUSED'). The pattern keeps
+  // anything else, such as a driver that put free text in `code`, out.
+  code: z.string().regex(/^[A-Z0-9_]{1,32}$/),
+})
+
+const causeSchema = z.object({ cause: z.unknown() })
+
+export interface SafeDbErrorDescription {
+  errorClass: string
+  code: string | null
+}
+
+/**
+ * A DB error reduced to what is safe to log or send to Sentry: its class and
+ * its SQLSTATE or socket code. Never the message, which for a Drizzle query
+ * error embeds the SQL and its bound parameters. Checks the error and its
+ * `cause`, where Drizzle puts the postgres-js error.
+ */
+export function describeDbError(err: unknown): SafeDbErrorDescription {
+  const errorClass = err instanceof Error ? err.name : typeof err
+  const ownCode = errorCodeSchema.safeParse(err)
+  if (ownCode.success) return { errorClass, code: ownCode.data.code }
+  const withCause = causeSchema.safeParse(err)
+  if (withCause.success) {
+    const causeCode = errorCodeSchema.safeParse(withCause.data.cause)
+    if (causeCode.success) return { errorClass, code: causeCode.data.code }
+  }
+  return { errorClass, code: null }
 }

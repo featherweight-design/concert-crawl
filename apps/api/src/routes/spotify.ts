@@ -317,7 +317,7 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
     SYNC_MIN_INTERVAL_MS,
     // Fail open: lastSyncedAt above still throttles the success path, and a
     // rate-limit DB blip should not block a user's own refresh.
-    { onStoreError: 'allow' },
+    { onStoreError: 'allow', userId: auth.userId },
   )
   if (!allowed) {
     ctx.header('Retry-After', String(Math.ceil(retryAfterMs / 1000)))

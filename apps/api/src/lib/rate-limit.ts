@@ -17,11 +17,16 @@
 // conflicting upserts on the row lock and each sees the latest committed
 // version, so concurrent hits can never read the same count and both pass.
 //
-// Expiry: a row is dead once `reset_at` passes. There is no cron for it (a new
-// service for a housekeeping DELETE is not worth it). Instead a sampled fraction
-// of hits runs a bounded prune in the background: at most PRUNE_BATCH rows per
-// pass, through the reset_at index. One row per key that has hit in the last
-// window, plus the not-yet-pruned tail, is the steady-state size.
+// Expiry: a row is dead once `reset_at` passes. Two things remove dead rows,
+// neither of them a new service. A sampled fraction of hits runs a bounded
+// prune in the background (at most PRUNE_BATCH rows per pass, through the
+// reset_at index), which keeps the table small under traffic. Sampling alone
+// would let a quiet table keep a bucket forever, so the daily match-artists
+// cron also sweeps every expired row (`sweepExpiredRateLimitBuckets`). A dead
+// bucket therefore lives at most one window plus a day.
+//
+// A user-scoped limiter passes `userId`, which is stored beside the key so
+// account deletion removes that user's buckets (see the user-data registry).
 
 import * as Sentry from '@sentry/hono/node'
 import { db as appDb, rateLimitBuckets } from '@concert-crawl/db'
@@ -30,6 +35,7 @@ import { and, inArray, lte, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { runBackgroundTask } from './background-tasks.js'
 import { apiLogger } from './logger.js'
+import { describeDbError } from './pg-errors.js'
 
 export interface RateLimitResult {
   allowed: boolean
@@ -52,6 +58,11 @@ export type OnStoreError = 'allow' | 'deny'
 
 export interface RateLimitOptions {
   onStoreError: OnStoreError
+  /**
+   * The Clerk ID this limiter is keyed on, when it is keyed on a user. Stored
+   * on the bucket so account deletion can remove it. Omit for IP-keyed limits.
+   */
+  userId?: string
 }
 
 /** Retry-After advertised when a fail-closed limiter could not reach its store. */
@@ -99,12 +110,13 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
     key: string,
     maxRequests: number,
     windowMs: number,
+    userId: string | null,
   ): Promise<RateLimitResult> => {
     const expired = sql`${rateLimitBuckets.resetAt} <= now()`
     const freshResetAt = sql`now() + ${windowMs}::integer * interval '1 millisecond'`
     const rows = await db
       .insert(rateLimitBuckets)
-      .values({ key, count: 1, resetAt: freshResetAt })
+      .values({ key, count: 1, resetAt: freshResetAt, userId })
       .onConflictDoUpdate({
         target: rateLimitBuckets.key,
         set: {
@@ -153,27 +165,36 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
           await pruneExpired()
         } catch (err) {
           // Housekeeping only: the next sampled hit tries again.
-          apiLogger.warn({ err }, 'rate-limit: expired-bucket prune failed')
+          apiLogger.warn(
+            { error: describeDbError(err) },
+            'rate-limit: expired-bucket prune failed',
+          )
         }
       })
     }
 
     try {
-      return await hit(key, maxRequests, windowMs)
+      return await hit(key, maxRequests, windowMs, options.userId ?? null)
     } catch (err) {
       const allowed = options.onStoreError === 'allow'
-      // The key's prefix names the limiter; the rest can be a Clerk ID or an
-      // IP, which stays out of the Sentry event.
+      // Never log or report the raw error: Drizzle puts the bound parameters
+      // in its message, and those include the key, which holds a Clerk ID or
+      // an IP. Only the limiter name (the key's prefix) and the error's class
+      // and code leave this function.
       const limiter = key.split(':')[0] ?? 'unknown'
+      const error = describeDbError(err)
       apiLogger.error(
-        { err, limiter, onStoreError: options.onStoreError },
+        { error, limiter, onStoreError: options.onStoreError },
         'rate-limit: store unavailable',
       )
-      Sentry.captureException(err, {
+      Sentry.captureMessage('rate-limit: store unavailable', {
+        level: 'error',
         tags: {
           area: 'rate-limit',
           limiter,
           onStoreError: options.onStoreError,
+          errorClass: error.errorClass,
+          errorCode: error.code ?? 'none',
         },
       })
       return allowed
@@ -193,3 +214,23 @@ const defaultLimiter = createRateLimiter({ db: appDb })
  * how long until the window closes.
  */
 export const checkRateLimit = defaultLimiter.check
+
+/** Upper bound on prune passes per sweep, so a sweep always terminates. */
+const SWEEP_MAX_PASSES = 200
+
+/**
+ * Delete every expired bucket, one bounded batch at a time. Run daily by the
+ * match-artists cron so retention does not depend on API traffic. Returns the
+ * number of rows removed.
+ */
+export const sweepExpiredRateLimitBuckets = async (
+  limiter: Pick<RateLimiter, 'pruneExpired'> = defaultLimiter,
+): Promise<number> => {
+  let total = 0
+  for (let pass = 0; pass < SWEEP_MAX_PASSES; pass++) {
+    const deleted = await limiter.pruneExpired()
+    total += deleted
+    if (deleted < PRUNE_BATCH) break
+  }
+  return total
+}

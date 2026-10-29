@@ -95,4 +95,24 @@ describe('POST /v1/auth/validate-code', () => {
     })
     expect(res.status).toBe(429)
   })
+
+  it('sends Retry-After on a fail-closed 429 when the rate-limit store is down', async () => {
+    // checkRateLimit answers a store failure with STORE_ERROR_RETRY_MS for this
+    // fail-closed limiter; the route must pass that on, not drop it.
+    const { checkRateLimit } = await import('../../lib/rate-limit.js')
+    vi.mocked(checkRateLimit).mockResolvedValueOnce({
+      allowed: false,
+      retryAfterMs: 60_000,
+    })
+    const res = await app.request('/v1/auth/validate-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
+    })
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    expect(vi.mocked(checkRateLimit).mock.calls[0]?.[3]).toEqual({
+      onStoreError: 'deny',
+    })
+  })
 })

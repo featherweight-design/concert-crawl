@@ -516,16 +516,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
   },
   {
     tableName: 'rate_limit_buckets',
-    disposition: 'none',
-    userIdColumn: null,
+    disposition: 'delete',
+    userIdColumn: 'user_id',
     otherUserIdColumns: [],
     exportKey: null,
     exportColumns: null,
     reason:
-      'Transient abuse counters. Some `key` values embed a Clerk ID ' +
-      '(`feedback:<id>`), but a row lives one limiter window (an hour at ' +
-      'most) and the API prunes it once `reset_at` passes, so it expires on ' +
-      'its own well inside any deletion deadline. Nothing to export.',
+      'Abuse counters. A user-scoped limiter keys its bucket on the Clerk ID ' +
+      '(`feedback:<id>`) and also records it in `user_id`, so deletion ' +
+      'removes the buckets by that column. IP-keyed buckets carry no user ' +
+      'id. Expired rows are pruned by sampled API hits and swept daily by ' +
+      'the match-artists job. Not exported: a count of recent requests is ' +
+      'throttling state, not data the user gave us.',
   },
   {
     tableName: 'processed_stripe_events',

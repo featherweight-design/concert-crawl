@@ -59,5 +59,6 @@ describe('POST /v1/waitlist', () => {
       body: JSON.stringify({ email: 'test@test.com' }),
     })
     expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
   })
 })

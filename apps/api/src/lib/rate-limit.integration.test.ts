@@ -10,8 +10,10 @@ import {
   PRUNE_BATCH,
   STORE_ERROR_RETRY_MS,
   createRateLimiter,
+  sweepExpiredRateLimitBuckets,
   type RateLimitOptions,
 } from './rate-limit.js'
+import { deleteUserData } from './user-data.js'
 
 const WINDOW_MS = 60 * 60 * 1000
 const ALLOW: RateLimitOptions = { onStoreError: 'allow' }
@@ -193,6 +195,27 @@ describe('rate limiter (Postgres-backed)', () => {
       expect(await instanceA.pruneExpired()).toBe(7)
     })
 
+    it('sweeps every expired bucket across batches, keeping live ones', async () => {
+      await testDb.insert(rateLimitBuckets).values(
+        Array.from({ length: PRUNE_BATCH * 2 + 3 }, (_, i) => ({
+          key: `test:sweep-${i}`,
+          count: 1,
+          resetAt: new Date(Date.now() - 60_000),
+        })),
+      )
+      await instanceA.check('test:sweep-live', 5, WINDOW_MS, ALLOW)
+
+      expect(await sweepExpiredRateLimitBuckets(instanceA)).toBe(
+        PRUNE_BATCH * 2 + 3,
+      )
+      const keys = (
+        await testDb
+          .select({ key: rateLimitBuckets.key })
+          .from(rateLimitBuckets)
+      ).map((row) => row.key)
+      expect(keys).toEqual(['test:sweep-live'])
+    })
+
     it('prunes in the background from a sampled hit', async () => {
       const sampled = createRateLimiter({
         db: testDb,
@@ -212,6 +235,35 @@ describe('rate limiter (Postgres-backed)', () => {
           .from(rateLimitBuckets)
       ).map((row) => row.key)
       expect(keys).toEqual(['test:fresh'])
+    })
+  })
+
+  describe('account deletion', () => {
+    it("removes the user's buckets, live ones included, and leaves others", async () => {
+      const userId = `user_test_ratelimit_${Date.now()}`
+      await instanceA.check(`feedback:${userId}`, 10, WINDOW_MS, {
+        onStoreError: 'allow',
+        userId,
+      })
+      await instanceB.check(`export:${userId}`, 1, WINDOW_MS, {
+        onStoreError: 'allow',
+        userId,
+      })
+      await instanceA.check('feedback:user_someone_else', 10, WINDOW_MS, {
+        onStoreError: 'allow',
+        userId: 'user_someone_else',
+      })
+      await instanceA.check('waitlist:203.0.113.9', 5, WINDOW_MS, ALLOW)
+
+      await deleteUserData(userId)
+
+      const remaining = await testDb
+        .select({ key: rateLimitBuckets.key, userId: rateLimitBuckets.userId })
+        .from(rateLimitBuckets)
+      expect(remaining.map((row) => row.key).sort()).toEqual([
+        'feedback:user_someone_else',
+        'waitlist:203.0.113.9',
+      ])
     })
   })
 })

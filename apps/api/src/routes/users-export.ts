@@ -32,7 +32,7 @@ usersExportRouter.get('/me/export', async (ctx) => {
     `export:${auth.userId}`,
     1,
     EXPORT_WINDOW_MS,
-    { onStoreError: 'allow' },
+    { onStoreError: 'allow', userId: auth.userId },
   )
   if (!limit.allowed) {
     ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))

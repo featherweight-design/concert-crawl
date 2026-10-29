@@ -19,6 +19,7 @@ waitlistRouter.post('/', zValidator('json', waitlistSchema), async (ctx) => {
     onStoreError: 'allow',
   })
   if (!limit.allowed) {
+    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
     return ctx.json({ success: false, error: 'Too many requests' }, 429)
   }
 

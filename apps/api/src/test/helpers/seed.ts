@@ -31,6 +31,7 @@ import {
   userNotificationPreferences,
   userProfiles,
   userRoles,
+  rateLimitBuckets,
   userSpotifyConnections,
   venueGuideChips,
   venues,
@@ -497,6 +498,14 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
   await testDb
     .insert(auditLog)
     .values({ actorId: userId, action: 'user.seeded', targetId: event.id })
+
+  // ---- Rate-limit bucket (delete, keyed on user_id) ----
+  await testDb.insert(rateLimitBuckets).values({
+    key: `feedback:${userId}`,
+    count: 1,
+    resetAt: new Date(Date.now() + 3_600_000),
+    userId,
+  })
 
   // ---- Invite codes (anonymize, keyed on used_by) ----
   await testDb.insert(inviteCodes).values({

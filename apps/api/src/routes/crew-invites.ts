@@ -69,7 +69,7 @@ const spendTokenBudget = async (
     // Fail closed: this budget is the enumeration guard on invite tokens, and
     // both routes read the same database next, so closing costs no availability
     // a real outage had not already taken.
-    { onStoreError: 'deny' },
+    { onStoreError: 'deny', userId },
   )
   if (limit.allowed) return null
   // Every other 429 in this API carries Retry-After (feedback.ts, spotify.ts),

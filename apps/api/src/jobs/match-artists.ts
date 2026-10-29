@@ -54,6 +54,8 @@ import { artists, db } from '@concert-crawl/db'
 import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js'
 import { matchArtist } from '../lib/artist-match.js'
 import { apiLogger } from '../lib/logger.js'
+import { describeDbError } from '../lib/pg-errors.js'
+import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js'
 import {
   createSpotifyAppClient,
   type SpotifyAppClient,
@@ -334,13 +336,39 @@ const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
   : undefined
 if (invokedUrl && import.meta.url === invokedUrl) {
-  runMatchArtists()
-    .then(() => {
+  const main = async (): Promise<number> => {
+    let exitCode = 0
+    try {
+      await runMatchArtists()
       apiLogger.info('match-artists: done')
-      process.exit(0)
-    })
-    .catch((err) => {
+    } catch (err) {
       apiLogger.error({ err }, 'match-artists: catastrophic failure')
-      process.exit(1)
-    })
+      exitCode = 1
+    }
+
+    // Rides on this cron because it is the API's only daily job that runs in
+    // every environment (#528): sampled pruning on API hits stops when traffic
+    // does, so this is what bounds how long an expired bucket can linger.
+    // Housekeeping never fails the run; the next night tries again.
+    try {
+      const swept = await sweepExpiredRateLimitBuckets()
+      apiLogger.info(
+        { swept },
+        'match-artists: swept expired rate-limit buckets',
+      )
+    } catch (err) {
+      const error = describeDbError(err)
+      apiLogger.warn({ error }, 'match-artists: rate-limit bucket sweep failed')
+      Sentry.captureMessage('rate-limit bucket sweep failed', {
+        level: 'warning',
+        tags: {
+          job: 'match-artists',
+          errorClass: error.errorClass,
+          errorCode: error.code ?? 'none',
+        },
+      })
+    }
+    return exitCode
+  }
+  void main().then((code) => process.exit(code))
 }
