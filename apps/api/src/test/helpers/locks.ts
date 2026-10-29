@@ -116,13 +116,47 @@ export async function observeBlocking<T>(
   return { blocked: false, result }
 }
 
-/** Resolve once some backend is waiting on a lock (or reject after `maxMs`). */
-export async function waitForLockWaiter(maxMs = 60_000): Promise<void> {
+/**
+ * Open a holder, run `body` with it, and ALWAYS roll the holder back after,
+ * even when `body` throws, so an open holder transaction can never outlive a
+ * failed test and block the next clearTables() TRUNCATE. `body` must not
+ * await work that needs the holder released; return its promise inside an
+ * object instead and await it after this resolves.
+ */
+export async function withLockHolder<T>(
+  setup: SQL[],
+  body: (holder: LockHolder) => Promise<T>,
+): Promise<T> {
+  const holder = await openLockHolder(setup)
+  try {
+    return await body(holder)
+  } finally {
+    await holder.release()
+  }
+}
+
+/**
+ * Resolve true once some backend is waiting on a lock, or false if `pending`
+ * settles first (it never needed to wait) or `maxMs` passes. Never throws, so
+ * a caller's cleanup always runs; assert on the result instead.
+ */
+export async function waitForLockWaiter(
+  pending: Promise<unknown>,
+  maxMs = 60_000,
+): Promise<boolean> {
+  let settled = false
+  void pending.then(
+    () => {
+      settled = true
+    },
+    () => {
+      settled = true
+    },
+  )
   const start = Date.now()
-  while ((await countLockWaiters()) === 0) {
-    if (Date.now() - start > maxMs) {
-      throw new Error('waitForLockWaiter: no backend ever waited on a lock')
-    }
+  while (!settled && Date.now() - start <= maxMs) {
+    if ((await countLockWaiters()) > 0) return true
     await new Promise((resolve) => setTimeout(resolve, 25))
   }
+  return false
 }

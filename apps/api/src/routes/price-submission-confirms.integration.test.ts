@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
 import { events, notifications, priceSubmissions } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
-import { observeBlocking, openLockHolder } from '../test/helpers/locks.js'
+import { observeBlocking, withLockHolder } from '../test/helpers/locks.js'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -464,13 +464,13 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
     })
-    const holder = await openLockHolder([
-      sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
-    ])
-    const { blocked, result } = await observeBlocking(() =>
-      confirmAs('user_confirm_ks', event.id, submission.id),
+    const { blocked, result } = await withLockHolder(
+      [sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`],
+      () =>
+        observeBlocking(() =>
+          confirmAs('user_confirm_ks', event.id, submission.id),
+        ),
     )
-    await holder.release()
     const res = await result
     expect(blocked).toBe(false)
     expect(res.status).toBe(200)

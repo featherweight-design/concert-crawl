@@ -28,8 +28,8 @@ import { createApp } from '../../app.js'
 import { testDb } from '../../test/helpers/db.js'
 import {
   observeBlocking,
-  openLockHolder,
   waitForLockWaiter,
+  withLockHolder,
 } from '../../test/helpers/locks.js'
 import {
   clearTables,
@@ -1660,13 +1660,10 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       const { event, parent } = await seedContest({
         counterOverrides: { priceMin: '30', priceMax: '30' },
       })
-      const holder = await openLockHolder([
-        sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
-      ])
-      const { blocked, result } = await observeBlocking(() =>
-        resolve(parent.id, 'challenger_wins'),
+      const { blocked, result } = await withLockHolder(
+        [sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`],
+        () => observeBlocking(() => resolve(parent.id, 'challenger_wins')),
       )
-      await holder.release()
       const res = await result
       expect(blocked).toBe(false)
       expect(res.status).toBe(200)
@@ -1694,26 +1691,39 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
         priceMin: '35',
         status: 'pending',
       })
-      const writer = await openLockHolder([
-        sql`UPDATE price_submissions SET status = 'corroborated' WHERE id = ${rival.id}`,
-      ])
-      const request = resolve(parent.id, 'challenger_wins')
-      // The resolution is now waiting on the rival's index entry.
-      await waitForLockWaiter()
-
-      let writerLockError: unknown
-      try {
-        await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
-        await writer.run(
-          sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
-        )
-      } catch (err) {
-        writerLockError = err
-      }
-      // Roll the rival back so the resolution's promotion can proceed.
-      await writer.release()
+      const { waited, writerLockError, request } = await withLockHolder(
+        [
+          sql`UPDATE price_submissions SET status = 'corroborated' WHERE id = ${rival.id}`,
+        ],
+        async (writer) => {
+          const pending = resolve(parent.id, 'challenger_wins')
+          // The resolution is now waiting on the rival's index entry.
+          // Races the request, so a resolution that never waits ends the
+          // poll instead of leaving it to time out with the holder open.
+          const didWait = await waitForLockWaiter(pending)
+          let lockError: unknown
+          if (didWait) {
+            try {
+              await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
+              await writer.run(
+                sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
+              )
+            } catch (err) {
+              lockError = err
+            }
+          }
+          // The holder rolls back when this returns, letting the request
+          // finish; await it only after that.
+          return {
+            waited: didWait,
+            writerLockError: lockError,
+            request: pending,
+          }
+        },
+      )
       const res = await request
 
+      expect(waited).toBe(true)
       expect(writerLockError).toBeUndefined()
       expect(res.status).toBe(200)
       expect((await fetchEvent(event.id)).ticketPriceMin).toBe('30.00')
@@ -1728,25 +1738,39 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       const { event, parent, challenger } = await seedContest({
         counterOverrides: { priceMin: '30', priceMax: '30' },
       })
-      const writer = await openLockHolder([
-        sql`UPDATE user_cred SET price_cred_score = price_cred_score + 1 WHERE user_id = ${challenger.userId}`,
-      ])
-      const request = resolve(parent.id, 'challenger_wins')
-      // The resolution is now waiting on the challenger's user_cred row.
-      await waitForLockWaiter()
-
-      let writerLockError: unknown
-      try {
-        await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
-        await writer.run(
-          sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
-        )
-      } catch (err) {
-        writerLockError = err
-      }
-      await writer.release()
+      const { waited, writerLockError, request } = await withLockHolder(
+        [
+          sql`UPDATE user_cred SET price_cred_score = price_cred_score + 1 WHERE user_id = ${challenger.userId}`,
+        ],
+        async (writer) => {
+          const pending = resolve(parent.id, 'challenger_wins')
+          // The resolution is now waiting on the challenger's user_cred row.
+          // Races the request, so a resolution that never waits ends the
+          // poll instead of leaving it to time out with the holder open.
+          const didWait = await waitForLockWaiter(pending)
+          let lockError: unknown
+          if (didWait) {
+            try {
+              await writer.run(sql`SET LOCAL lock_timeout = '30s'`)
+              await writer.run(
+                sql`SELECT id FROM events WHERE id = ${event.id} FOR NO KEY UPDATE`,
+              )
+            } catch (err) {
+              lockError = err
+            }
+          }
+          // The holder rolls back when this returns, letting the request
+          // finish; await it only after that.
+          return {
+            waited: didWait,
+            writerLockError: lockError,
+            request: pending,
+          }
+        },
+      )
       const res = await request
 
+      expect(waited).toBe(true)
       expect(writerLockError).toBeUndefined()
       expect(res.status).toBe(200)
       expect((await fetchEvent(event.id)).ticketPriceMin).toBe('30.00')

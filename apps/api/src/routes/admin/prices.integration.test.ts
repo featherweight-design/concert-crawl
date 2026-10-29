@@ -47,7 +47,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
-import { observeBlocking, openLockHolder } from '../../test/helpers/locks.js'
+import { observeBlocking, withLockHolder } from '../../test/helpers/locks.js'
 
 const app = createApp()
 
@@ -615,17 +615,17 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       const submission = await seedPriceSubmission(event.id, 'submitter_ks', {
         priceMin: '32',
       })
-      const holder = await openLockHolder([
-        sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`,
-      ])
-      const { blocked, result } = await observeBlocking(() =>
-        app.request(`/v1/admin/prices/submissions/${submission.id}`, {
-          method: 'PATCH',
-          headers: ADMIN_HEADERS,
-          body: JSON.stringify({ status: 'corroborated' }),
-        }),
+      const { blocked, result } = await withLockHolder(
+        [sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`],
+        () =>
+          observeBlocking(() =>
+            app.request(`/v1/admin/prices/submissions/${submission.id}`, {
+              method: 'PATCH',
+              headers: ADMIN_HEADERS,
+              body: JSON.stringify({ status: 'corroborated' }),
+            }),
+          ),
       )
-      await holder.release()
       const res = await result
       expect(blocked).toBe(false)
       expect(res.status).toBe(200)
