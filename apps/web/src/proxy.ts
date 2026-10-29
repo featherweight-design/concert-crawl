@@ -12,7 +12,7 @@ import {
  *
  * ⚠️ Adding a pattern here removes ALL auth from every path underneath it.
  * `/me` and `/admin` must never be reachable from this list, directly or as a
- * prefix. Every addition needs a negative case in middleware.test.ts proving
+ * prefix. Every addition needs a negative case in proxy.test.ts proving
  * the private neighbours still redirect. See #794.
  */
 const isAlwaysPublic = createRouteMatcher([
@@ -165,7 +165,7 @@ const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
  * has an extension the matcher does not exclude.
  *
  * ⚠️ A new top-level route MUST be added here or it 404s for everyone.
- * middleware.test.ts walks `app/` and `public/` and fails when this drifts.
+ * proxy.test.ts walks `app/` and `public/` and fails when this drifts.
  */
 export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
   '~offline',
@@ -215,7 +215,7 @@ interface MiddlewareAuth {
 }
 
 /**
- * Exported for middleware.test.ts, which needs a callable signature — the
+ * Exported for proxy.test.ts, which needs a callable signature — the
  * default export's opaque type forced a cast at every one of its call sites.
  */
 export const middlewareHandler = async (
