@@ -1,3 +1,17 @@
+# [1.302.0](https://github.com/HartiganHM/concert-crawl/compare/v1.301.0...v1.302.0) (2026-10-29)
+
+
+### Bug Fixes
+
+* **api:** drain every expired rate-limit bucket in the daily sweep ([b65c78d](https://github.com/HartiganHM/concert-crawl/commit/b65c78d4e7afbf94ae057492a69622f680f6779b))
+* **api:** initialise and flush Sentry in the match-artists cron entrypoint ([8bd57f1](https://github.com/HartiganHM/concert-crawl/commit/8bd57f19f40c5980d51d7275ca03f2c25f37fc12))
+* **api:** sanitize rate-limit store errors, send Retry-After, delete user buckets ([c174eec](https://github.com/HartiganHM/concert-crawl/commit/c174eecd917be3fd20c90a4ce93abafa4c1d9225))
+
+
+### Features
+
+* **api:** back rate limits with Postgres so they hold across instances ([c746ee2](https://github.com/HartiganHM/concert-crawl/commit/c746ee25274e59b8275f2237c073673a1ea39374)), closes [#528](https://github.com/HartiganHM/concert-crawl/issues/528)
+
 # [1.301.0](https://github.com/HartiganHM/concert-crawl/compare/v1.300.7...v1.301.0) (2026-10-29)
 
 
