@@ -6,12 +6,17 @@ const flush = vi.fn()
 const captureException = vi.fn()
 const loggerError = vi.fn()
 const loggerWarn = vi.fn()
+const loggerInfo = vi.fn()
 
 vi.mock('../instrument.js', () => ({}))
 vi.mock('../run.js', () => ({ runTriggeredCrawls, runDailyCrawl }))
 vi.mock('@sentry/node', () => ({ flush, captureException }))
 vi.mock('@concert-crawl/logger', () => ({
-  createLogger: () => ({ error: loggerError, warn: loggerWarn }),
+  createLogger: () => ({
+    error: loggerError,
+    warn: loggerWarn,
+    info: loggerInfo,
+  }),
 }))
 
 // index.ts runs main() at import time, so each case needs a fresh module
@@ -108,5 +113,17 @@ describe('crawler entrypoint exit code', () => {
     expect(exitSpy).toHaveBeenCalledTimes(1)
     expect(exitSpy).toHaveBeenCalledWith(1)
     expect(loggerWarn).toHaveBeenCalledTimes(1)
+  })
+
+  it('still runs the daily crawl in all mode when the trigger drain throws', async () => {
+    process.env['CRAWL_MODE'] = 'all'
+    runTriggeredCrawls.mockRejectedValue(new Error('neon blip'))
+
+    const exitSpy = await importEntrypoint()
+
+    expect(runDailyCrawl).toHaveBeenCalledTimes(1)
+    expect(captureException).toHaveBeenCalledTimes(1)
+    // Reported, and the run still fails so the drain error is not silent.
+    expect(exitSpy).toHaveBeenCalledWith(1)
   })
 })

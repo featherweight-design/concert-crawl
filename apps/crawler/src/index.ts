@@ -16,13 +16,31 @@ async function main(): Promise<{ degraded: boolean }> {
     process.exit(1)
   }
 
-  if (mode === 'triggers' || mode === 'all') {
+  if (mode === 'triggers') {
     const { processed } = await runTriggeredCrawls()
     logger.info({ processed }, 'Triggers run finished')
   }
+  // In 'all' (the daily GitHub Actions run) the trigger drain comes first, to
+  // sweep up any trigger whose dispatch was lost. A failure there must not
+  // cost the day's venue crawl, so it is reported and the crawl runs anyway;
+  // the run still exits 1 so the failure is not silent.
+  let triggersFailed = false
+  if (mode === 'all') {
+    try {
+      const { processed } = await runTriggeredCrawls()
+      logger.info({ processed }, 'Triggers run finished')
+    } catch (triggersErr: unknown) {
+      triggersFailed = true
+      logger.error(
+        { triggersErr },
+        'Trigger drain failed; running the daily crawl anyway',
+      )
+      Sentry.captureException(triggersErr)
+    }
+  }
   if (mode === 'daily' || mode === 'all') {
     const { degraded } = await runDailyCrawl()
-    return { degraded }
+    return { degraded: degraded || triggersFailed }
   }
   // Triggers-only runs are admin-queued and a handful of venues at most; the
   // run-level health check does not apply to them.

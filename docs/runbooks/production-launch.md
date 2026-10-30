@@ -409,6 +409,18 @@ GitHub Actions workflows use a mix of **environment-scoped** secrets (e.g. `depl
 
 GitHub → repository → **Settings** → **Environments**.
 
+### Crawler (`crawler-run.yml`), both environments
+
+The crawler on GitHub Actions reads its own copies, in the `production` and
+`staging` environments: secrets `CRAWLER_DATABASE_URL` (pooled Neon URL),
+`CRAWLER_SENTRY_DSN`, `CRAWLER_RESEND_API_KEY`, `ANTHROPIC_API_KEY`,
+`CLERK_SECRET_KEY`, `VAPID_PRIVATE_KEY`, `REVALIDATE_SECRET`; variables
+`ADMIN_URL`, `VAPID_PUBLIC_KEY`, `VAPID_SUBJECT` (plus the existing
+`SENTRY_ENVIRONMENT`, `LOG_LEVEL` and the repo-level `ADMIN_EMAIL`). The repo
+variable `CRAWLER_GHA_DAILY_ENABLED` arms the daily schedule. **Rotating any of
+these values (a Neon password, the Sentry DSN, an API key) means updating the
+crawler's copy too.** Details: `docs/runbooks/crawler-github-actions.md`.
+
 ### `staging` environment — Secrets
 
 | Secret         | Value                                                                     |

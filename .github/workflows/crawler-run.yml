@@ -1,0 +1,252 @@
+name: Crawler run
+
+# Reusable: one crawler process on a GitHub-hosted runner, in place of the
+# Render crons. crawler-daily.yml and crawler-triggers.yml call it.
+#
+# What code runs. Production runs the commit the production API serves
+# (vercel-api-prod.sh `current`), so promotion and rollback-prod move the
+# crawler with the API and nothing ships to the crawler on merge alone. If that
+# commit cannot be read the job fails rather than running unpinned code.
+# Staging runs main HEAD, which is what staging deploys.
+#
+# How it runs. The image is built from that commit's Dockerfile (Docker layer
+# cache through `type=gha`), checked with verify-image.sh, then run with the
+# crawler's env passed in an env file that is deleted when the job ends. No
+# secret goes into the image or a build arg.
+#
+# Runbook: docs/runbooks/crawler-github-actions.md
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: 'CRAWL_MODE: triggers | daily | all'
+        required: true
+        type: string
+      environment:
+        description: 'GitHub environment holding the crawler env: production | staging'
+        required: true
+        type: string
+      drain_max:
+        description: 'CRAWL_TRIGGER_DRAIN_MAX for the run'
+        required: false
+        default: '50'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    name: Crawl (${{ inputs.mode }}, ${{ inputs.environment }})
+    # Only main's copy of this workflow and its scripts may read the crawler's
+    # secrets: a dispatch from any other branch would run that branch's code
+    # with them. `github.ref` here is the caller's ref.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    # Triggers: 60 min. The image build and verify (~3 min cached, ~10 cold,
+    # twice on a retry) come out of it, so the drain's budget is set to 30 min
+    # below, leaving room for the build and the last trigger in flight.
+    # Daily (CRAWL_MODE=all): 120 min. About 25 min of venue crawls today
+    # (measured on Render), after a drain of any pending triggers, which is
+    # normally empty but can take up to its 30-min budget.
+    timeout-minutes: ${{ inputs.mode == 'triggers' && 60 || 120 }}
+    steps:
+      - name: Check inputs
+        env:
+          MODE: ${{ inputs.mode }}
+          TARGET_ENV: ${{ inputs.environment }}
+          DRAIN_MAX: ${{ inputs.drain_max }}
+        run: |
+          case "$MODE" in triggers|daily|all) ;; *)
+            echo "✗ mode must be triggers, daily or all (got '$MODE')"; exit 1 ;;
+          esac
+          case "$TARGET_ENV" in production|staging) ;; *)
+            echo "✗ environment must be production or staging (got '$TARGET_ENV')"; exit 1 ;;
+          esac
+          if ! [[ "$DRAIN_MAX" =~ ^[1-9][0-9]*$ ]]; then
+            echo "✗ drain_max must be a positive integer (got '$DRAIN_MAX')"; exit 1
+          fi
+
+      # Checked by name, never printed. GitHub masks secret values in logs.
+      - name: Verify crawler configuration
+        env:
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          CRAWLER_SENTRY_DSN: ${{ secrets.CRAWLER_SENTRY_DSN }}
+          CRAWLER_RESEND_API_KEY: ${{ secrets.CRAWLER_RESEND_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+          ADMIN_URL: ${{ vars.ADMIN_URL }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_API: ${{ vars.VERCEL_PROJECT_ID_API }}
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          missing=()
+          # Every value the crawler needs to behave like production. The
+          # optional-in-code ones (Clerk, VAPID, SENTRY_ENVIRONMENT) are
+          # required here: without them push is silently skipped, comped
+          # plans derive wrong, and Sentry files prod events as 'local'.
+          for name in CRAWLER_DATABASE_URL CRAWLER_SENTRY_DSN CRAWLER_RESEND_API_KEY \
+            ANTHROPIC_API_KEY CLERK_SECRET_KEY VAPID_PRIVATE_KEY REVALIDATE_SECRET \
+            VAPID_PUBLIC_KEY VAPID_SUBJECT ADMIN_URL ADMIN_EMAIL SENTRY_ENVIRONMENT; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "$TARGET_ENV" = production ]; then
+            for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID_API PROD_API_URL; do
+              [ -n "${!name}" ] || missing+=("$name")
+            done
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing $TARGET_ENV-environment configuration:"
+            printf '  - %s\n' "${missing[@]}"
+            echo "Set them under Settings → Environments → $TARGET_ENV (see docs/runbooks/crawler-github-actions.md)."
+            exit 1
+          fi
+
+      # The pipeline scripts come from the ref this workflow runs on; the
+      # crawler itself is checked out at the resolved commit below.
+      - name: Checkout pipeline scripts
+        uses: actions/checkout@v7
+        with:
+          path: pipeline
+          sparse-checkout: .github/scripts
+
+      - name: Resolve the commit to run
+        id: sha
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_API: ${{ vars.VERCEL_PROJECT_ID_API }}
+          PROD_API_URL: ${{ vars.PROD_API_URL }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$TARGET_ENV" = production ]; then
+            # Captured first: the script's own error explains a failure, and
+            # `read` on empty input would end the step under `bash -e` before
+            # anything below could.
+            if ! current=$(bash pipeline/.github/scripts/vercel-api-prod.sh \
+              current "$VERCEL_PROJECT_ID_API" "$PROD_API_URL"); then
+              echo "✗ Could not read the commit the production API serves; refusing to run unpinned crawler code."
+              exit 1
+            fi
+            deployment=${current%% *}
+            sha=${current#* }
+            if ! [[ "${sha:-}" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "✗ Production API deployment ${deployment:-?} carries no commit SHA; refusing to run unpinned crawler code."
+              exit 1
+            fi
+            echo "Production API serves ${deployment} at ${sha}"
+          else
+            # The repo is private, so an unauthenticated `git ls-remote`
+            # would fail; the job token can read it.
+            sha=$(gh api "repos/$REPO/commits/main" --jq .sha)
+            if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "✗ Could not read main HEAD"; exit 1
+            fi
+            echo "Staging runs main HEAD ${sha}"
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout crawler at ${{ steps.sha.outputs.sha }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
+          path: src
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # npm or the Playwright CDN can fail a build; one retry covers a blip.
+      - name: Build image
+        id: build
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: src
+          file: src/apps/crawler/Dockerfile
+          tags: cc-crawler:run
+          load: true
+          cache-from: type=gha,scope=crawler
+          cache-to: type=gha,scope=crawler,mode=min
+
+      - name: Build image (retry)
+        if: steps.build.outcome == 'failure'
+        uses: docker/build-push-action@v6
+        with:
+          context: src
+          file: src/apps/crawler/Dockerfile
+          tags: cc-crawler:run
+          load: true
+          cache-from: type=gha,scope=crawler
+
+      - name: Verify image
+        run: src/apps/crawler/scripts/verify-image.sh cc-crawler:run
+
+      - name: Write crawler env file
+        env:
+          CRAWLER_DATABASE_URL: ${{ secrets.CRAWLER_DATABASE_URL }}
+          CRAWLER_SENTRY_DSN: ${{ secrets.CRAWLER_SENTRY_DSN }}
+          CRAWLER_RESEND_API_KEY: ${{ secrets.CRAWLER_RESEND_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
+          ADMIN_URL: ${{ vars.ADMIN_URL }}
+          ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+          SENTRY_ENVIRONMENT: ${{ vars.SENTRY_ENVIRONMENT }}
+          LOG_LEVEL: ${{ vars.LOG_LEVEL }}
+          MODE: ${{ inputs.mode }}
+          DRAIN_MAX: ${{ inputs.drain_max }}
+        run: |
+          umask 077
+          env_file="$RUNNER_TEMP/crawler.env"
+          # `docker run --env-file` takes everything after `=` literally and
+          # cannot carry a newline, so refuse one rather than truncate it.
+          put() {
+            case "$2" in *$'\n'*) echo "✗ $1 contains a newline"; exit 1 ;; esac
+            [ -n "$2" ] && printf '%s=%s\n' "$1" "$2" >> "$env_file"
+            return 0
+          }
+          : > "$env_file"
+          put NODE_ENV production
+          put CRAWL_MODE "$MODE"
+          put CRAWL_TRIGGER_DRAIN_MAX "$DRAIN_MAX"
+          put CRAWL_TRIGGER_BUDGET_MS 1800000
+          put DATABASE_URL "$CRAWLER_DATABASE_URL"
+          put SENTRY_DSN "$CRAWLER_SENTRY_DSN"
+          put RESEND_API_KEY "$CRAWLER_RESEND_API_KEY"
+          put ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+          put CLERK_SECRET_KEY "$CLERK_SECRET_KEY"
+          put VAPID_PRIVATE_KEY "$VAPID_PRIVATE_KEY"
+          put VAPID_PUBLIC_KEY "$VAPID_PUBLIC_KEY"
+          put VAPID_SUBJECT "$VAPID_SUBJECT"
+          put REVALIDATE_SECRET "$REVALIDATE_SECRET"
+          put ADMIN_URL "$ADMIN_URL"
+          put ADMIN_EMAIL "$ADMIN_EMAIL"
+          put SENTRY_ENVIRONMENT "$SENTRY_ENVIRONMENT"
+          put LOG_LEVEL "$LOG_LEVEL"
+          echo "env_file=$env_file" >> "$GITHUB_ENV"
+
+      # --shm-size: Docker's 64 MB /dev/shm default crashes Chromium on heavy
+      # pages. --init reaps Chromium's child processes.
+      - name: Run crawler
+        run: |
+          docker run --rm --init --shm-size=1g \
+            --env-file "$env_file" cc-crawler:run
+
+      - name: Remove env file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/crawler.env"

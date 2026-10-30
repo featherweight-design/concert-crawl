@@ -1,0 +1,37 @@
+name: Crawler triggers
+
+# Crawls the venues an admin queued (crawl_triggers rows), replacing Render's
+# 10-minute concert-crawl-crawler-triggers cron. The API dispatches this
+# workflow after it writes trigger rows; it can also be run by hand.
+#
+# One run drains the queue (up to drain_max triggers, and no new claim after
+# CRAWL_TRIGGER_BUDGET_MS). Runs are serialised per environment without
+# cancelling: a dispatch during a run becomes the one pending run, so there is
+# always a run after the last insert, and extra dispatches collapse into it.
+#
+# Runbook: docs/runbooks/crawler-github-actions.md
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Which environment to drain'
+        required: true
+        default: production
+        type: choice
+        options: [production, staging]
+
+concurrency:
+  group: crawler-triggers-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  triggers:
+    uses: ./.github/workflows/crawler-run.yml
+    with:
+      mode: triggers
+      environment: ${{ inputs.environment }}
+      drain_max: '50'

@@ -1,0 +1,42 @@
+name: Crawler daily
+
+# The daily venue crawl, replacing Render's concert-crawl-crawler-daily cron.
+# CRAWL_MODE=all: it drains any pending admin-queued trigger first, which
+# sweeps up a trigger whose dispatch was lost, then crawls every venue.
+#
+# The schedule does nothing until the repository variable
+# CRAWLER_GHA_DAILY_ENABLED is 'true', so this cannot double Render's run
+# before the cutover. A manual dispatch always runs.
+#
+# Runbook: docs/runbooks/crawler-github-actions.md
+
+on:
+  schedule:
+    # 09:07 UTC (3:07 AM MDT, 2:07 AM MST). Off the hour on purpose: GitHub
+    # delays and sometimes drops scheduled runs at the top of the hour.
+    - cron: '7 9 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Which environment to crawl'
+        required: true
+        default: production
+        type: choice
+        options: [production, staging]
+
+concurrency:
+  group: crawler-daily-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  daily:
+    # The environment's secrets reach crawler-run.yml's job through its
+    # `environment:`; no repository secret is needed, so none is passed.
+    if: github.event_name == 'workflow_dispatch' || vars.CRAWLER_GHA_DAILY_ENABLED == 'true'
+    uses: ./.github/workflows/crawler-run.yml
+    with:
+      mode: all
+      environment: ${{ inputs.environment || 'production' }}
