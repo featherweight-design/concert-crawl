@@ -7,6 +7,7 @@
 // await every in-flight task in afterEach so nothing leaks across boundaries.
 
 import { apiLogger } from './logger.js'
+import { keepAliveUntil } from './wait-until.js'
 
 const pending = new Set<Promise<unknown>>()
 
@@ -31,6 +32,10 @@ export function runBackgroundTask(task: () => void | Promise<void>): void {
       apiLogger.error({ err }, 'Unhandled error in background task')
     })
   pending.add(promise)
+  // On Vercel the instance can be frozen once the response is sent, so the
+  // platform must be told to wait for this task. No-op on the Node server,
+  // where the process outlives the request and today's behavior is unchanged.
+  keepAliveUntil(promise)
   // Attach cleanup after registration so `promise` is fully assigned first. This
   // handler is registered before the drain attaches its own reaction, so it runs
   // first when `promise` settles — the registry is emptied before drain's await

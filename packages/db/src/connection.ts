@@ -64,11 +64,32 @@ const IDLE_TIMEOUT_SECONDS = 60
  */
 const MAX_LIFETIME_SECONDS = 240
 
+/**
+ * Default pool size: postgres.js's own default, so an unset `DB_POOL_MAX`
+ * leaves the long-lived Node server (Render) exactly as it was. A serverless
+ * host runs many small instances at once, each with its own pool, and sets a
+ * lower value so the total stays well inside the Neon pooler's limits.
+ */
+export const DEFAULT_POOL_MAX = 10
+
+/**
+ * Parse `DB_POOL_MAX`. Anything other than a positive integer falls back to
+ * {@link DEFAULT_POOL_MAX}: a typo in a dashboard must not take the API down at
+ * boot, and the default is the size every host ran with before the var existed.
+ */
+export function parsePoolMax(raw: string | undefined): number {
+  if (raw === undefined) return DEFAULT_POOL_MAX
+  const trimmed = raw.trim()
+  if (!/^[1-9]\d*$/.test(trimmed)) return DEFAULT_POOL_MAX
+  return Number(trimmed)
+}
+
 export type PoolOptions = {
   prepare: false
   ssl: 'require' | false
   idle_timeout: number
   max_lifetime: number
+  max: number
 }
 
 /**
@@ -76,7 +97,10 @@ export type PoolOptions = {
  * connection string. Pure and exported so the timeout invariants above are
  * testable — `client.ts` builds its pool at module load, which is not.
  */
-export function poolOptions(connectionString: string): PoolOptions {
+export function poolOptions(
+  connectionString: string,
+  poolMax: string | undefined = process.env['DB_POOL_MAX'],
+): PoolOptions {
   return {
     // Prepared statements are incompatible with serverless connection poolers
     // (Neon's pooler, Render's pgbouncer) in transaction mode.
@@ -84,6 +108,7 @@ export function poolOptions(connectionString: string): PoolOptions {
     ssl: isLocalConnectionString(connectionString) ? false : 'require',
     idle_timeout: IDLE_TIMEOUT_SECONDS,
     max_lifetime: MAX_LIFETIME_SECONDS,
+    max: parsePoolMax(poolMax),
   }
 }
 

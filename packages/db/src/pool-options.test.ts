@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { poolOptions, POOL_TIMEOUT_BOUNDS } from './connection.js'
+import {
+  DEFAULT_POOL_MAX,
+  parsePoolMax,
+  poolOptions,
+  POOL_TIMEOUT_BOUNDS,
+} from './connection.js'
 
 const LOCAL = 'postgresql://postgres:postgres@localhost:5433/concert_crawl_db'
 const NEON =
@@ -58,5 +63,45 @@ describe('poolOptions', () => {
     // carry a prepared statement across the connections they multiplex.
     expect(poolOptions(NEON).prepare).toBe(false)
     expect(poolOptions(LOCAL).prepare).toBe(false)
+  })
+})
+
+describe('poolOptions max (DB_POOL_MAX)', () => {
+  // Unset must keep postgres.js's own default of 10: that is the size the
+  // long-lived Render server has always run with.
+  it('defaults to 10 when DB_POOL_MAX is unset', () => {
+    // Passing `undefined` to poolOptions would fall through to its default
+    // parameter and read the real environment, so unset the var itself.
+    const original = process.env['DB_POOL_MAX']
+    try {
+      delete process.env['DB_POOL_MAX']
+      expect(poolOptions(NEON).max).toBe(DEFAULT_POOL_MAX)
+      expect(parsePoolMax(undefined)).toBe(DEFAULT_POOL_MAX)
+      expect(DEFAULT_POOL_MAX).toBe(10)
+    } finally {
+      if (original !== undefined) process.env['DB_POOL_MAX'] = original
+    }
+  })
+
+  it('uses DB_POOL_MAX when it is a positive integer', () => {
+    expect(poolOptions(NEON, '3').max).toBe(3)
+    expect(poolOptions(LOCAL, ' 25 ').max).toBe(25)
+  })
+
+  it('falls back to the default for a value that is not a positive integer', () => {
+    for (const raw of ['', '0', '-2', '2.5', 'three', '3x']) {
+      expect(parsePoolMax(raw)).toBe(DEFAULT_POOL_MAX)
+    }
+  })
+
+  it('reads DB_POOL_MAX from the environment by default', () => {
+    const original = process.env['DB_POOL_MAX']
+    try {
+      process.env['DB_POOL_MAX'] = '4'
+      expect(poolOptions(NEON).max).toBe(4)
+    } finally {
+      if (original === undefined) delete process.env['DB_POOL_MAX']
+      else process.env['DB_POOL_MAX'] = original
+    }
   })
 })

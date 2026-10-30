@@ -3,7 +3,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mock the posthog-node SDK before importing the module under test.
 const mockCapture = vi.fn()
 const mockShutdown = vi.fn()
+const mockFlush = vi.fn()
 const mockPostHogCtor = vi.fn()
+const { mockWaitUntil } = vi.hoisted(() => ({ mockWaitUntil: vi.fn() }))
+vi.mock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
 vi.mock('posthog-node', () => ({
   PostHog: class {
     constructor(...args: unknown[]) {
@@ -11,6 +14,7 @@ vi.mock('posthog-node', () => ({
     }
     capture = mockCapture
     shutdown = mockShutdown
+    flush = mockFlush
   },
 }))
 
@@ -145,5 +149,46 @@ describe('shutdownAnalytics', () => {
     captureServer('user_1', 'founder_claim_attempted', {})
     await shutdownAnalytics()
     expect(mockShutdown).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('per-capture flush on Vercel', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    __resetAnalyticsForTest()
+    process.env = { ...originalEnv, POSTHOG_KEY: 'phc_test' }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+    __resetAnalyticsForTest()
+  })
+
+  it('flushes after each capture and keeps the invocation alive for it', async () => {
+    process.env['VERCEL'] = '1'
+    mockFlush.mockResolvedValueOnce(undefined)
+    captureServer('user_1', 'founder_claim_attempted', {})
+    expect(mockFlush).toHaveBeenCalledTimes(1)
+    expect(mockWaitUntil).toHaveBeenCalledTimes(1)
+    const [registered] = mockWaitUntil.mock.calls[0] ?? []
+    await expect(registered).resolves.toBeUndefined()
+  })
+
+  it('swallows a flush failure so waitUntil never sees a rejection', async () => {
+    process.env['VERCEL'] = '1'
+    mockFlush.mockRejectedValueOnce(new Error('network'))
+    captureServer('user_1', 'founder_claim_attempted', {})
+    const [registered] = mockWaitUntil.mock.calls[0] ?? []
+    await expect(registered).resolves.toBeUndefined()
+  })
+
+  it('leaves batching to the SDK timer on the Node server', () => {
+    delete process.env['VERCEL']
+    captureServer('user_1', 'founder_claim_attempted', {})
+    expect(mockCapture).toHaveBeenCalledTimes(1)
+    expect(mockFlush).not.toHaveBeenCalled()
+    expect(mockWaitUntil).not.toHaveBeenCalled()
   })
 })

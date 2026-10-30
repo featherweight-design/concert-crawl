@@ -32,6 +32,7 @@ import { createBillingLifecycleRouter } from './billing-lifecycle.js'
 import { createFounderWindowRouter } from './billing-founder-window.js'
 import { createBillingNudgesRouter } from './billing-nudges.js'
 import { createStripeWebhooksRouter } from './stripe-webhooks.js'
+import { createInternalCronRouter } from './internal-cron.js'
 import { getStripeClient } from '../lib/stripe.js'
 
 export function registerRoutes(app: Hono) {
@@ -40,6 +41,9 @@ export function registerRoutes(app: Hono) {
   // (eng infra spec Part 2 §1.5).
   app.route('/v1/webhooks/stripe', createStripeWebhooksRouter(getStripeClient))
   app.route('/v1/health', healthRouter)
+  // Scheduled-job triggers, authed by CRON_SECRET and 404 when it is unset.
+  // No Clerk/audit middleware: the caller is the host's scheduler, not a user.
+  app.route('/v1/internal/cron', createInternalCronRouter())
   app.route('/v1/admin', adminRouter)
   app.route('/v1/events', eventsRouter)
   app.route('/v1/events', priceSubmissionsRouter)

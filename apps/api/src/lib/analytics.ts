@@ -17,6 +17,7 @@ import type {
   MonetizationEventProps,
 } from '@concert-crawl/types'
 import { apiLogger } from './logger.js'
+import { isVercelRuntime, keepAliveUntil } from './wait-until.js'
 
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 
@@ -75,6 +76,21 @@ export const captureServer = <TEvent extends MonetizationEvent>(
     // capture() only enqueues, but guard anyway — an analytics failure must
     // never surface to the caller (a webhook handler mid-transaction).
     apiLogger.warn({ err, event }, 'analytics: capture failed')
+    return
+  }
+  // capture() only enqueues into an in-memory batch. On the Node server the
+  // batch flushes on its own timer and on SIGTERM (index.ts). A serverless
+  // instance gets no SIGTERM and may be frozen once the response is sent, so
+  // on Vercel flush now and keep the invocation alive until it lands.
+  if (isVercelRuntime()) keepAliveUntil(flushAnalytics(client))
+}
+
+// Never rejects: a flush failure is logged and dropped, like a capture failure.
+const flushAnalytics = async (client: PostHog): Promise<void> => {
+  try {
+    await client.flush()
+  } catch (err) {
+    apiLogger.warn({ err }, 'analytics: per-request flush failed')
   }
 }
 

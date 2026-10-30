@@ -27,6 +27,7 @@ import {
   handleSubscriptionUpdated,
 } from '../lib/stripe-webhook-handlers.js'
 import { sendTransactionalEmail } from '../lib/email.js'
+import { runBackgroundTask } from '../lib/background-tasks.js'
 import type { TransactionalEmailParams } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
 
@@ -127,8 +128,11 @@ export const createStripeWebhooksRouter = (
       for (const emailParams of postCommitEmails) {
         // Fire-and-forget: sendTransactionalEmail catches and logs all its
         // own failures and never rejects, so an email failure can never
-        // affect the webhook response.
-        void sendTransactionalEmail(emailParams)
+        // affect the webhook response. Routed through runBackgroundTask so a
+        // serverless host keeps the invocation alive until the send settles.
+        runBackgroundTask(async () => {
+          await sendTransactionalEmail(emailParams)
+        })
       }
       for (const captureFn of postCommitAnalytics) {
         // captureServer already swallows its own errors, but guard the

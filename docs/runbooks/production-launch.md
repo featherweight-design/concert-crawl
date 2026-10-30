@@ -272,6 +272,8 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                               |
 | `POSTHOG_KEY`           | PostHog project API key (`phc_*`) — server-truth monetization funnel analytics. Absent → capture no-ops |
 | `POSTHOG_HOST`          | `https://us.i.posthog.com` (US cloud region)                                                            |
+| `DB_POOL_MAX`           | Optional. Leave unset on Render (default 10, postgres.js's own). Set to `3` on a serverless host        |
+| `CRON_SECRET`           | Leave unset on Render: `/v1/internal/cron/*` then returns 404 and the jobs run as Render crons          |
 
 > **Build commands — Node-version-dependent + differ between prod and staging.** The current `render.yaml` uses two different build commands:
 >
