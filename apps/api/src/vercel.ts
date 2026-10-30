@@ -7,9 +7,8 @@
 // Sentry before the app and its routes are imported.
 //
 // There is no SIGTERM flush here. A serverless instance is frozen rather than
-// signalled, so PostHog is flushed per capture instead (lib/analytics.ts),
-// Sentry per request (lib/sentry-flush.ts), and detached work is kept alive
-// through `waitUntil` (lib/wait-until.ts).
+// signalled, so Sentry is flushed per request (lib/sentry-flush.ts), and
+// detached work is kept alive through `waitUntil` (lib/wait-until.ts).
 
 import './env.js'
 import './instrument.js'

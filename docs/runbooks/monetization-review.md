@@ -130,15 +130,14 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 - [ ] Add these env vars (PR 6.2 reads them; instrumentation **no-ops if the key
       is absent**, so nothing breaks if you defer this):
 
-  | Env var                    | Where        | Value                        |
-  | -------------------------- | ------------ | ---------------------------- |
-  | `NEXT_PUBLIC_POSTHOG_KEY`  | Vercel (web) | the `phc_…` project key      |
-  | `NEXT_PUBLIC_POSTHOG_HOST` | Vercel (web) | `https://us.i.posthog.com`   |
-  | `POSTHOG_KEY`              | Render (api) | the same `phc_…` project key |
-  | `POSTHOG_HOST`             | Render (api) | `https://us.i.posthog.com`   |
+  | Env var                    | Where        | Value                      |
+  | -------------------------- | ------------ | -------------------------- |
+  | `NEXT_PUBLIC_POSTHOG_KEY`  | Vercel (web) | the `phc_…` project key    |
+  | `NEXT_PUBLIC_POSTHOG_HOST` | Vercel (web) | `https://us.i.posthog.com` |
 
-  The web vars are `NEXT_PUBLIC_`-prefixed because the browser SDK reads them;
-  the API vars are server-side only. Both sides use the same project key.
+  The vars are `NEXT_PUBLIC_`-prefixed because the browser SDK reads them. The
+  API no longer sends PostHog anything: billing events were removed when the app
+  moved to a free tier, so there are no Render PostHog vars.
 
   > Exact var names are confirmed when PR 6.2 lands — if they differ, this table
   > is updated on that PR. Nothing to add until 6.2 is merged.

@@ -13,8 +13,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
-import type { PlanState, PickerEntry, PaymentFlow } from '@concert-crawl/types'
-import { track } from '@/lib/analytics'
+import type { PlanState, PickerEntry } from '@concert-crawl/types'
 import { appendPendingTier } from '@/lib/auth/intent'
 import { ModalShell } from '@/components/consumer/modal-shell'
 import { useFounderWindow } from '@/lib/queries/use-founder-window'
@@ -71,8 +70,7 @@ export interface TierPickerSheetProps {
   // Server-resolved SCA-region boolean (spec §1.7) — forwarded to the
   // checkout panel's legal block.
   scaRegion: boolean
-  // Where the picker was opened from — the `entry` dimension on the
-  // monetization_picker_viewed funnel event (spec §8).
+  // Where the picker was opened from; picks the header copy (headerFor).
   entry: PickerEntry
   /**
    * Where the free tier's Sign up CTA goes. Defaults to bare `/sign-up`; a
@@ -113,19 +111,6 @@ const pickerStateFrom = (planState: PlanState): PickerState => {
 
 const isPaidTier = (key: TierKey): key is Exclude<TierKey, 'free'> =>
   key !== 'free'
-
-// Acquisition flow for the payment funnel (spec §8): a live trial converting,
-// an existing paid plan upgrading, or a brand-new subscription.
-const paymentFlowFrom = (planState: PlanState): PaymentFlow => {
-  if (planState.onTrial) return 'trial-conversion'
-  if (
-    planState.plan === 'supporter' ||
-    planState.plan === 'premium' ||
-    planState.plan === 'founder'
-  )
-    return 'upgrade'
-  return 'new'
-}
 
 const MonoRail = ({ text, isMobile }: { text: string; isMobile: boolean }) => (
   <div
@@ -223,17 +208,6 @@ export const TierPickerSheet = ({
   const state = pickerStateFrom(planState)
   const gifted = state === 'gifted'
   const loggedOut = state === 'logged-out'
-
-  // Funnel entry (spec §8): the picker surface became visible. Fires once per
-  // open transition — the ref guard prevents a re-fire (double count) if
-  // `entry` or the plan changes (e.g. a refetch) while the sheet stays open.
-  const wasOpen = useRef(false)
-  useEffect(() => {
-    if (open && !wasOpen.current) {
-      track('monetization_picker_viewed', { entry, plan: planState.plan })
-    }
-    wasOpen.current = open
-  }, [open, entry, planState.plan])
 
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
@@ -357,12 +331,6 @@ export const TierPickerSheet = ({
         return
       }
       if (cta.action === 'checkout' && isPaidTier(tierKey)) {
-        // Funnel step (spec §8): a paid tier's CTA was chosen, before the
-        // checkout session is created.
-        track('monetization_tier_selected', {
-          tier: tierKey,
-          plan: planState.plan,
-        })
         const actionId = (checkoutActionRef.current += 1)
         void (async () => {
           setPendingTier(tierKey)
@@ -392,7 +360,7 @@ export const TierPickerSheet = ({
         })()
       }
     },
-    [getToken, router, abandonSubscription, planState.plan, signUpHref],
+    [getToken, router, abandonSubscription, signUpHref],
   )
 
   // Founder post-claim seat reveal (#781 §3.3) — replaces the sheet after
@@ -529,7 +497,6 @@ export const TierPickerSheet = ({
           tierKey={checkout.tierKey}
           clientSecret={checkout.clientSecret}
           scaRegion={scaRegion}
-          flow={paymentFlowFrom(planState)}
           onBack={backToTiers}
           onSuccess={completeCheckout}
           onSurfaceChange={setCheckoutSurface}

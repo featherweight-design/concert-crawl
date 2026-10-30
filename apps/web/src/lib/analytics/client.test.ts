@@ -83,7 +83,7 @@ describe('web analytics client', () => {
   it('track/identify/reset no-op when disabled', async () => {
     delete process.env['NEXT_PUBLIC_POSTHOG_KEY']
     const analytics = await loadModule()
-    analytics.track('founder_window_view', { state: 'open' })
+    analytics.track('passport_shared', { destination: 'system' })
     analytics.identifyUser('user_1')
     analytics.resetAnalyticsIdentity()
     expect(mockCapture).not.toHaveBeenCalled()
@@ -140,13 +140,13 @@ describe('web analytics client', () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
     const analytics = await loadModule()
     analytics.initAnalytics(PROD)
-    analytics.track('monetization_tier_selected', {
-      tier: 'premium',
-      plan: 'free',
+    analytics.track('share_destination_selected', {
+      eventId: 'evt_1',
+      destination: 'copy-link',
     })
-    expect(mockCapture).toHaveBeenCalledWith('monetization_tier_selected', {
-      tier: 'premium',
-      plan: 'free',
+    expect(mockCapture).toHaveBeenCalledWith('share_destination_selected', {
+      eventId: 'evt_1',
+      destination: 'copy-link',
     })
   })
 

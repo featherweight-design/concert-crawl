@@ -137,9 +137,6 @@ importers:
       hono:
         specifier: ^4.13.8
         version: 4.13.8
-      posthog-node:
-        specifier: 5.47.11
-        version: 5.47.11
       resend:
         specifier: ^6.18.1
         version: 6.18.1
@@ -5612,15 +5609,6 @@ packages:
 
   posthog-js@1.412.1:
     resolution: {integrity: sha512-tOub/uXk9URD2Bx/EfSarKmId50z05ZpKKeJtWXkdv1cGj07uVIKifTeEhLdYR/0viMyhfeRg2/zD0OM7mNV1w==}
-
-  posthog-node@5.47.11:
-    resolution: {integrity: sha512-6p6hc3JynK3Nt5Xm89olcAsZ3Ol+EtFj7mIApL7R4tptBxXalVjRQSbPtVxRl33H1QeDHgQof1TxKgHhefo4lA==}
-    engines: {node: ^20.20.0 || >=22.22.0}
-    peerDependencies:
-      rxjs: ^7.0.0
-    peerDependenciesMeta:
-      rxjs:
-        optional: true
 
   powershell-utils@0.1.0:
     resolution: {integrity: sha512-dM0jVuXJPsDN6DvRpea484tCUaMiXWjuCn++HGTqUWzGDjv5tZkEZldAJ/UMlqRYGFrD/etByo4/xOuC/snX2A==}
@@ -11966,10 +11954,6 @@ snapshots:
       web-vitals-soft-navs: web-vitals@6.0.0
     transitivePeerDependencies:
       - preact-render-to-string
-
-  posthog-node@5.47.11:
-    dependencies:
-      '@posthog/core': 1.46.9
 
   powershell-utils@0.1.0: {}
 

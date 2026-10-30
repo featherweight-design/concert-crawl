@@ -2,8 +2,8 @@
 // the API webhook handler and the web tier-picker failure surfaces.
 export * from './decline-category.js'
 
-// Monetization funnel analytics contract (eng-infra spec Part 2 §8) — shared
-// event names + property shapes for web (posthog-js) and API (posthog-node).
+// Web analytics share-event contract (posthog-js) and the tier picker's entry
+// type.
 export * from './analytics-events.js'
 
 // #764 venue first-timer guide — chip pool, chip-state / publish-state /

@@ -58,7 +58,6 @@ const renderPanel = (overrides: { scaRegion?: boolean } = {}) => {
     <CheckoutPanel
       tierKey="premium"
       clientSecret="cs_test_secret"
-      flow="new"
       scaRegion={overrides.scaRegion ?? false}
       onBack={onBack}
       onSuccess={onSuccess}
@@ -371,7 +370,6 @@ describe('CheckoutPanel — failure surface actions', () => {
       <CheckoutPanel
         tierKey="premium"
         clientSecret="cs_test_secret"
-        flow="new"
         scaRegion={false}
         onBack={vi.fn()}
         onSuccess={onSuccess}

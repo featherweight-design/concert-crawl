@@ -12,7 +12,6 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import { track } from '@/lib/analytics'
 import { CancelFlow } from './CancelFlow'
 import { DowngradeFlow } from './DowngradeFlow'
 import { LifecycleSurface } from './LifecycleSurface'
@@ -91,11 +90,7 @@ export const ManageSubscriptionSheet = ({
 
   const switchToSupporterFromCancel = () => showSurface('downgrade')
 
-  // Funnel step (spec §8): the user confirmed cancellation. daysSubscribed is
-  // null client-side — the browser has no subscription start date; the
-  // server-fired cancel_completed carries the computed duration.
   const confirmCancel = () => {
-    track('cancel_initiated', { tier, daysSubscribed: null })
     cancel(onClose)
   }
 

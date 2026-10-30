@@ -1,10 +1,11 @@
-// Web analytics: usage basics plus the monetization funnel (eng-infra spec
-// Part 2 §8).
+// Web analytics: usage basics plus poster sharing.
 //
 // posthog-js records pageviews (including App Router client-side navigations)
-// and autocaptured clicks for basic usage, and the typed funnel and share
-// events below. Every event is keyed to the Clerk userId (via identifyUser) so
-// it joins the server-fired events into one funnel.
+// and autocaptured clicks for basic usage, and the typed share events below.
+// Every event is keyed to the Clerk userId once the reader is identified.
+// There are no typed billing or plan events (the app is moving to a free
+// tier); autocapture still records a tap on a billing button like any other
+// button, by its label.
 //
 // No-op unless NEXT_PUBLIC_POSTHOG_KEY is set AND the page is served from the
 // production hostname (see PRODUCTION_HOSTNAMES): local dev and preview builds
@@ -13,7 +14,7 @@
 // track/identify are safe to call unconditionally.
 
 import posthog from 'posthog-js'
-import type { AnalyticsEvent, AnalyticsEventProps } from '@concert-crawl/types'
+import type { ShareEvent, ShareEventMap } from '@concert-crawl/types'
 import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties'
 import { redactCapture } from './redact'
 
@@ -115,7 +116,7 @@ export const initAnalytics = (hostname?: string): void => {
 
 export const isAnalyticsEnabled = (): boolean => initialized
 
-// Bind subsequent events to the Clerk userId so client + server events join.
+// Bind subsequent events to the reader's Clerk userId.
 export const identifyUser = (userId: string): void => {
   if (!initialized) return
   try {
@@ -157,13 +158,13 @@ export const resetAnalyticsIdentity = (): void => {
   }
 }
 
-// Typed client-side capture. `event` constrains `properties` to that event's
-// shape via the shared contract — the monetization funnel plus share (#72) —
-// so a wrong property name or type is a compile error. No-ops (never throws)
-// when analytics is disabled.
-export const track = <TEvent extends AnalyticsEvent>(
+// Typed client-side capture. Share events (#72) only: `event` constrains
+// `properties` to that event's shape via the shared contract, so a wrong
+// property name or type, or a billing event, is a compile error. No-ops
+// (never throws) when analytics is disabled.
+export const track = <TEvent extends ShareEvent>(
   event: TEvent,
-  properties: AnalyticsEventProps<TEvent>,
+  properties: ShareEventMap[TEvent],
 ): void => {
   if (!initialized) return
   try {

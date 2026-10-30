@@ -36,7 +36,6 @@ import type {
   StripeSubscriptionCreateResult,
 } from '../lib/stripe.js'
 import { apiLogger } from '../lib/logger.js'
-import { captureServer } from '../lib/analytics.js'
 
 const checkoutBodySchema = z.object({
   tier: z.enum(['supporter', 'premium', 'founder']),
@@ -270,9 +269,6 @@ export const createBillingRouter = (
     // between the gate check and the decrement.
     let founderSeatNumber: number | null = null
     if (tier === 'founder') {
-      // Funnel event (spec §8): a founder seat claim was attempted, before
-      // the atomic decrement decides win/loss.
-      captureServer(userId, 'founder_claim_attempted', {})
       const claimed = await db
         .update(founderWindow)
         .set({ seatsRemaining: sql`${founderWindow.seatsRemaining} - 1` })
@@ -288,8 +284,6 @@ export const createBillingRouter = (
         .returning({ seatsRemaining: founderWindow.seatsRemaining })
       const claimedRow = claimed[0]
       if (!claimedRow) {
-        // Funnel event (spec §8): the seat race was lost — no seat held.
-        captureServer(userId, 'founder_claim_raced_out', {})
         return ctx.json(
           {
             success: false,
@@ -384,14 +378,6 @@ export const createBillingRouter = (
           { err: auditErr, userId, tier },
           'checkout-session: checkout_started audit insert failed',
         )
-      }
-
-      // Funnel event (spec §8): the founder seat is permanently held by the
-      // incomplete subscription now — the claim succeeded.
-      if (founderSeatNumber !== null) {
-        captureServer(userId, 'founder_claim_succeeded', {
-          seatNumber: founderSeatNumber,
-        })
       }
 
       return ctx.json({

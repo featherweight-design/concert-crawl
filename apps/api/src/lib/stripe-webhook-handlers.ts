@@ -27,9 +27,7 @@ import {
   stripeSubscriptionSchema,
   type StripeSubscriptionSnapshot,
 } from './stripe-webhook-schemas.js'
-import { mapDeclineCategory, asCheckoutTier } from '@concert-crawl/types'
-import type { PaymentFlow } from '@concert-crawl/types'
-import { captureServer } from './analytics.js'
+import { mapDeclineCategory } from '@concert-crawl/types'
 import {
   parseFounderSeatNumber,
   restoreFounderSeat,
@@ -258,13 +256,6 @@ interface HandlerContext {
    * the transaction commits (spec §4.4) — never inside it.
    */
   postCommitEmails: TransactionalEmailParams[]
-  /**
-   * Analytics captures queued by handlers; the route runs them AFTER the
-   * transaction commits — a rollback must never emit a funnel event. Each
-   * closure captures its own already-typed captureServer call, so the route
-   * iterates without needing to know the event shapes.
-   */
-  postCommitAnalytics: Array<() => void>
 }
 
 const parseSubscriptionSnapshot = (
@@ -379,23 +370,6 @@ const mirrorSubscription = async (
   })
 }
 
-/**
- * Which acquisition/conversion flow a paid invoice belongs to (spec §8). A
- * prior mirror status of 'trialing' means the trial just converted; a fresh
- * subscription is 'new'; a proration invoice is an 'upgrade'. Recurring
- * renewals ('subscription_cycle' with no trialing predecessor) are NOT a
- * funnel flow and return null so no payment_succeeded fires.
- */
-const derivePaymentFlow = (
-  billingReason: string | null,
-  priorStatus: DbSubscriptionStatus | null,
-): PaymentFlow | null => {
-  if (priorStatus === 'trialing') return 'trial-conversion'
-  if (billingReason === 'subscription_create') return 'new'
-  if (billingReason === 'subscription_update') return 'upgrade'
-  return null
-}
-
 /** invoice.payment_succeeded (spec §1.5 row 2). */
 export const handleInvoicePaymentSucceeded = async (
   rawObject: unknown,
@@ -437,16 +411,6 @@ export const handleInvoicePaymentSucceeded = async (
       'invoice.payment_succeeded: unexpected Stripe status mapped to past_due',
     )
   }
-
-  // Read the mirror's prior status BEFORE mirrorSubscription overwrites it —
-  // a trial conversion is only distinguishable from a renewal by the prior
-  // status being 'trialing' (both carry billing_reason 'subscription_cycle').
-  const [priorMirror] = await ctx.dbClient
-    .select({ status: subscriptions.status })
-    .from(subscriptions)
-    .where(eq(subscriptions.userId, userId))
-    .limit(1)
-  const priorStatus = priorMirror?.status ?? null
 
   await mirrorSubscription(userId, snapshot, status, ctx.dbClient)
 
@@ -501,22 +465,6 @@ export const handleInvoicePaymentSucceeded = async (
       .update(userBilling)
       .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
       .where(eq(userBilling.userId, userId))
-  }
-
-  // Funnel event (spec §8): a paid invoice cleared. Only acquisition/
-  // conversion flows count — renewals return null and are skipped. Fired
-  // post-commit so a rollback never emits it.
-  const amountCents = invoice.amount_paid ?? 0
-  const flow = derivePaymentFlow(invoice.billing_reason ?? null, priorStatus)
-  const checkoutTier = asCheckoutTier(tier)
-  if (amountCents > 0 && flow !== null && checkoutTier !== null) {
-    ctx.postCommitAnalytics.push(() =>
-      captureServer(userId, 'payment_succeeded', {
-        tier: checkoutTier,
-        amountCents,
-        flow,
-      }),
-    )
   }
 }
 
@@ -711,7 +659,7 @@ export const handleSubscriptionDeleted = async (
   }
 
   const [existingRow] = await ctx.dbClient
-    .select({ tier: subscriptions.tier, createdAt: subscriptions.createdAt })
+    .select({ tier: subscriptions.tier })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
     .limit(1)
@@ -725,22 +673,6 @@ export const handleSubscriptionDeleted = async (
     stripeEventId: ctx.stripeEventId,
     metadata: { subscriptionId: snapshot.id, tier },
   })
-
-  // Funnel event (spec §8): server-truth cancellation. daysSubscribed is the
-  // whole days the mirror row has existed — the browser can't compute this, so
-  // this is the authoritative counterpart to the client cancel_initiated.
-  const checkoutTier = asCheckoutTier(tier)
-  if (checkoutTier !== null && existingRow?.createdAt) {
-    const daysSubscribed = Math.floor(
-      (Date.now() - existingRow.createdAt.getTime()) / DAY_MS,
-    )
-    ctx.postCommitAnalytics.push(() =>
-      captureServer(userId, 'cancel_completed', {
-        tier: checkoutTier,
-        daysSubscribed,
-      }),
-    )
-  }
 
   // Never-paid check BEFORE any premium-data clock: a subscription with no
   // subscription_created audit event never produced a paid invoice.
@@ -797,15 +729,13 @@ export const handlePaymentIntentFailed = async (
 
   const customerId = paymentIntent.customer ?? null
   let userId: string | null = null
-  let mirroredTier: DbSubscriptionTier | null = null
   if (customerId !== null) {
     const [byCustomer] = await ctx.dbClient
-      .select({ userId: subscriptions.userId, tier: subscriptions.tier })
+      .select({ userId: subscriptions.userId })
       .from(subscriptions)
       .where(eq(subscriptions.stripeCustomerId, customerId))
       .limit(1)
     userId = byCustomer?.userId ?? null
-    mirroredTier = byCustomer?.tier ?? null
   }
   if (userId === null) {
     apiLogger.warn(
@@ -831,14 +761,4 @@ export const handlePaymentIntentFailed = async (
       declineCode: lastError?.decline_code ?? null,
     },
   })
-
-  // Funnel event (spec §8): server-side decline. tier is nullable here — a
-  // failed first payment may have no mirror row yet, so the tier is unknown.
-  const failedUserId = userId
-  ctx.postCommitAnalytics.push(() =>
-    captureServer(failedUserId, 'payment_failed', {
-      tier: asCheckoutTier(mirroredTier),
-      declineCategory,
-    }),
-  )
 }

@@ -21,12 +21,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js'
-import {
-  mapDeclineCategory,
-  type DeclineCategory,
-  type PaymentFlow,
-} from '@concert-crawl/types'
-import { track } from '@/lib/analytics'
+import { mapDeclineCategory, type DeclineCategory } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import {
   FAILURE_SURFACE_BEHAVIOR,
@@ -56,9 +51,6 @@ interface CheckoutPanelProps {
   // conditional SCA notice row in the legal block and frames the
   // challenge mount as SCA rather than 3DS.
   scaRegion: boolean
-  // Acquisition flow for the payment_surface_opened funnel event (spec §8),
-  // derived from the caller's plan state.
-  flow: PaymentFlow
   onBack: () => void
   onSuccess: () => void
   // Lets the sheet swap its rail header + modal width per surface.
@@ -244,9 +236,6 @@ const CheckoutForm = ({
   const hideElement = isChallenge || (behavior !== null && !behavior.freshCard)
 
   const enterFailure = (category: DeclineCategory) => {
-    // Funnel step (spec §8): a client-side decline. The raw decline code
-    // stays server-side; only the sanitized category is emitted.
-    track('payment_failed', { tier: tierKey, declineCategory: category })
     if (FAILURE_SURFACE_BEHAVIOR[category].freshEmpty)
       setElementKey((key) => key + 1)
     onSurface({ kind: 'failure', category })
@@ -422,7 +411,6 @@ export const CheckoutPanel = ({
   tierKey,
   clientSecret,
   scaRegion,
-  flow,
   onBack,
   onSuccess,
   onSurfaceChange,
@@ -433,15 +421,6 @@ export const CheckoutPanel = ({
   )
   const tier = TIER_DEFINITIONS[tierKey]
   const [surface, setSurface] = useState<CheckoutSurface>(CHECKOUT_SURFACE)
-
-  // Funnel step (spec §8): the payment surface mounted. Fires exactly once
-  // with the tier/flow present at mount — the panel remounts per checkout, so
-  // a mid-life prop change should never emit a second "opened" event. The ref
-  // snapshot keeps the effect dependency-free without a lint suppression.
-  const openedProps = useRef({ tier: tierKey, flow })
-  useEffect(() => {
-    track('payment_surface_opened', openedProps.current)
-  }, [])
 
   useEffect(() => {
     onSurfaceChange?.(surface)

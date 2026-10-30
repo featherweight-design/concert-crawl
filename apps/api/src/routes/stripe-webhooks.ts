@@ -99,9 +99,6 @@ export const createStripeWebhooksRouter = (
       // Handlers queue emails here; fired only after the transaction commits
       // (spec §4.4) — a rollback must never leave a sent email behind.
       const postCommitEmails: TransactionalEmailParams[] = []
-      // Handlers queue funnel captures here; run only after the transaction
-      // commits — a rollback must never emit an analytics event (spec §8).
-      const postCommitAnalytics: Array<() => void> = []
       const outcome = await db.transaction(async (tx) => {
         const inserted = await tx
           .insert(processedStripeEvents)
@@ -109,13 +106,7 @@ export const createStripeWebhooksRouter = (
           .onConflictDoNothing()
           .returning({ eventId: processedStripeEvents.eventId })
         if (inserted.length === 0) return 'duplicate'
-        await dispatchEvent(
-          event,
-          getStripe,
-          tx,
-          postCommitEmails,
-          postCommitAnalytics,
-        )
+        await dispatchEvent(event, getStripe, tx, postCommitEmails)
         return 'handled'
       })
       if (outcome === 'duplicate') {
@@ -133,19 +124,6 @@ export const createStripeWebhooksRouter = (
         runBackgroundTask(async () => {
           await sendTransactionalEmail(emailParams)
         })
-      }
-      for (const captureFn of postCommitAnalytics) {
-        // captureServer already swallows its own errors, but guard the
-        // invocation too so a future capture closure can never turn a
-        // committed webhook into a 500.
-        try {
-          captureFn()
-        } catch (err) {
-          apiLogger.warn(
-            { err, stripeEventId: event.id, type: event.type },
-            'stripe-webhooks: post-commit analytics capture threw',
-          )
-        }
       }
       return ctx.json({ success: true })
     } catch (err) {
@@ -165,14 +143,12 @@ const dispatchEvent = async (
   getStripe: () => BillingStripeClient,
   dbClient: DbExecutor,
   postCommitEmails: TransactionalEmailParams[],
-  postCommitAnalytics: Array<() => void>,
 ): Promise<void> => {
   const handlerContext = {
     stripe: getStripe(),
     stripeEventId: event.id,
     dbClient,
     postCommitEmails,
-    postCommitAnalytics,
   }
   switch (event.type) {
     case 'checkout.session.completed':
