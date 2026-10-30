@@ -1,3 +1,10 @@
+## [1.302.4](https://github.com/HartiganHM/concert-crawl/compare/v1.302.3...v1.302.4) (2026-10-30)
+
+
+### Bug Fixes
+
+* **analytics:** stop sending billing and plan events to PostHog ([#1804](https://github.com/HartiganHM/concert-crawl/issues/1804)) ([eb8ae6b](https://github.com/HartiganHM/concert-crawl/commit/eb8ae6b6cc62098e627b102bea1f8d407bd5d06d))
+
 ## [1.302.3](https://github.com/HartiganHM/concert-crawl/compare/v1.302.2...v1.302.3) (2026-10-30)
 
 
