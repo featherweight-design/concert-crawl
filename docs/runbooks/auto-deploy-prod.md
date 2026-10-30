@@ -281,26 +281,19 @@ The pipeline ships with two kill switches so we can roll out in two stages.
 ### Stage 1 — enable staging-smoke only
 
 Use this for at least a few merges to confirm the smoke suite is stable.
-`staging-smoke` waits for the Render staging API service to report
-`status=live` on the triggering commit's SHA (up to 10 min) before
-running the suite, so a slow Render build won't make the smoke pass
-against the old code.
+`staging-smoke` waits for `deploy-api-staging.yml`'s run for the
+triggering commit's SHA (up to 20 min) before running the suite, so a
+slow staging deploy won't make the smoke pass against the old code.
 
 1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
    - **Name:** `STAGING_API_URL`
-   - **Value:** `https://concert-crawl-api-staging.onrender.com` (confirm in Render dashboard if the hostname has changed)
+   - **Value:** `https://api-staging.concertcrawl.app` (the Vercel staging API since 2026-10-30; it was the onrender host before)
 2. Same screen, add **New repository variable**
-   - **Name:** `RENDER_SERVICE_ID_API_STAGING`
-   - **Value:** the staging API service ID from the Render dashboard URL (`srv-...`)
-3. Same screen, add **New repository variable**
    - **Name:** `STAGING_SMOKE_ENABLED`
    - **Value:** `true`
-4. **Secrets** tab → **New repository secret**
-   - **Name:** `RENDER_API_TOKEN`
-   - **Value:** Render → Account Settings → API Keys → generate a token with deploy + read permissions (same value can be reused in the `production` environment secret)
-5. Trigger a no-op merge to `main` (any tiny PR works) and watch the
+3. Trigger a no-op merge to `main` (any tiny PR works) and watch the
    "Staging Smoke Tests" workflow run end-to-end against staging
-6. Iterate on the smoke suite if any test flakes
+4. Iterate on the smoke suite if any test flakes
 
 ### Stage 2 — close the prod auto-deploy path
 
@@ -437,8 +430,8 @@ prod without deploying, and watch it run install → smoke → green.
 | Variable                        | Required by             | Notes                                                                                                                                                                                                                                                                                  |
 | ------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `STAGING_URL`                   | staging-smoke           | already present — `https://staging.concertcrawl.app`                                                                                                                                                                                                                                   |
-| `STAGING_API_URL`               | staging-smoke           | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                                                                                                                                             |
-| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke           | staging API service ID (e.g. `srv-abc123`). Used by `staging-smoke.yml` via `render-wait-for-live.sh` to wait for Render to deploy the pushed SHA before smoking.                                                                                                                      |
+| `STAGING_API_URL`               | staging-smoke           | `https://api-staging.concertcrawl.app` (Vercel since 2026-10-30)                                                                                                                                                                                                                       |
+| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke           | staging API service ID (e.g. `srv-abc123`). No longer read since 2026-10-30: staging-smoke waits for `deploy-api-staging.yml` with `GITHUB_TOKEN` instead.                                                                                                                             |
 | `PROD_URL`                      | deploy-prod (smoke job) | already present                                                                                                                                                                                                                                                                        |
 | `PROD_API_URL`                  | deploy-prod (smoke job) | already present                                                                                                                                                                                                                                                                        |
 | `STAGING_SMOKE_ENABLED`         | staging-smoke           | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                                                                                                    |
@@ -472,9 +465,9 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses t
 
 ### Repository-level secrets (Settings → Secrets and variables → Actions)
 
-| Secret             | Required by   | Notes                                                                                                                                                                                                                                 |
-| ------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_API_TOKEN` | staging-smoke | **new** — same Render API token as above, but stored at repo level so the staging-smoke workflow (which is not scoped to the `production` environment) can call `render-wait-for-live.sh`. Use the same value as the prod-env secret. |
+| Secret             | Required by   | Notes                                                                                                                                                                                          |
+| ------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RENDER_API_TOKEN` | staging-smoke | same Render API token as above, stored at repo level. staging-smoke stopped reading it on 2026-10-30, when it began waiting for `deploy-api-staging.yml` instead of `render-wait-for-live.sh`. |
 
 `RENDER_API_TOKEN` is the only credential the wait-for-live and rollback
 scripts need. Scope it to deploy + read permissions only — the scripts

@@ -314,8 +314,14 @@ services:
 
   # --- Staging ---
 
+  # Superseded on 2026-10-30: the staging API is served from Vercel
+  # (project concert-crawl-api, `staging` environment) and deployed by
+  # .github/workflows/deploy-api-staging.yml. This service stays up with
+  # auto-deploy OFF as a fallback until its removal is approved. See
+  # docs/runbooks/render-service-config.md.
   - type: web
     name: concert-crawl-api-staging
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/api/**

@@ -1,8 +1,8 @@
 name: Staging Smoke Tests
 
-# Triggered on every push to main. Waits up to 5 min for Render to
-# deploy github.sha to the staging API service, then runs the
-# Playwright smoke suite against staging.
+# Triggered on every push to main. Waits up to 20 min for
+# deploy-api-staging.yml to migrate staging and deploy github.sha to the
+# staging API on Vercel, then runs the Playwright smoke suite against staging.
 #
 # Post-#786 model: staging is a parallel canary, not a pre-prod gate.
 # This workflow alerts on regressions in deployed staging code but does
@@ -30,25 +30,26 @@ on:
 
 # Concurrency group dedicated to staging. cancel-in-progress: false
 # means a queued smoke waits for the running one rather than being
-# replaced — protects against a stale Render build being smoked
+# replaced — protects against a stale staging deploy being smoked
 # against a moving target if two pushes land in quick succession.
 concurrency:
   group: staging-pipeline
   cancel-in-progress: false
 
-# Scope GITHUB_TOKEN to least privilege. This workflow only checks
-# out the repo and reads Render's API + the staging URLs.
+# Scope GITHUB_TOKEN to least privilege. This workflow checks out the
+# repo, reads the deploy-api-staging.yml run for the pushed SHA, and hits
+# the staging URLs.
 permissions:
   contents: read
+  actions: read
 
 jobs:
   smoke:
-    name: Wait for Render staging API, smoke staging
+    name: Wait for staging API deploy, smoke staging
     runs-on: ubuntu-latest
-    # 25 min: 5 min Render wait + ~3 min pnpm/Playwright install
-    # (cold cache) + ~10 min smoke worst case. 25 leaves headroom
-    # for a slow staging Render build.
-    timeout-minutes: 25
+    # 35 min: up to 20 min deploy wait + ~3 min pnpm/Playwright install
+    # (cold cache) + ~10 min smoke worst case.
+    timeout-minutes: 35
     # Kill-switch gate for push-triggered runs, with an explicit
     # workflow_dispatch bypass so manual operator intervention always
     # works — including during a migration window or when the smoke
@@ -76,18 +77,16 @@ jobs:
           exit 1
 
       # Pin checkout to github.sha — the SHA that just landed on main.
-      # The Playwright code we run must match the SHA Render is
-      # building. If main has moved by the time this job starts (rare
-      # but possible during a fast-follow merge), the wait below would
-      # eventually time out because Render is building a newer SHA;
-      # we exit gracefully then.
+      # The Playwright code we run must match the SHA staging is
+      # deploying. If a fast-follow merge supersedes this SHA's deploy,
+      # the wait below reports a benign skip and we exit gracefully.
       - name: Checkout pushed SHA
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
 
       # Preflight on every fail-fast prerequisite for this job:
-      # Render API + staging service ID + smoke URLs + Playwright
+      # smoke URLs + Playwright
       # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
       # consumed by smoke. A missing value surfaces as a clear
       # "Missing X" message rather than as an opaque Playwright
@@ -95,14 +94,11 @@ jobs:
       # minutes into the run.
       - name: Verify required config
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
           E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
           E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
-          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" ] && missing+=("RENDER_SERVICE_ID_API_STAGING (variable)")
           [ -z "${{ vars.STAGING_URL }}" ] && missing+=("STAGING_URL (variable)")
           [ -z "${{ vars.STAGING_API_URL }}" ] && missing+=("STAGING_API_URL (variable)")
           [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
@@ -114,45 +110,49 @@ jobs:
             exit 1
           fi
 
-      # Wait for Render staging API to be live on github.sha. 300s =
-      # 5 min, same as prod-smoke. Staging API typically deploys in
-      # ~2 min on Render (same build profile as prod).
+      # Wait for deploy-api-staging.yml's run for github.sha. 1200s =
+      # 20 min: one deploy (install + migrate + remote Vercel build) is
+      # ~5 min, and a run can queue behind the previous push's deploy.
       #
-      # The script exits 0 on live, 124 on a benign timeout (a fast-follow
-      # merge or `[skip ci]` release commit superseded this deploy on
-      # Render's build queue, or the service's buildFilter excluded this
-      # push so no deploy was ever created), 125 when the timeout is NOT
-      # benign (auto-deploy off, no live deploy at all, the deploy for this
-      # SHA failed or stalled, the live deploy is over an hour old, or the
-      # timeout could not be classified), and 1 on hard error (jq missing,
-      # auth/network failure, malformed service ID). 125 and 1 both fail the
-      # job here, but the distinction still matters in the log: 125 means the
-      # pushed SHA will not go live on its own, while 1 means the check itself
-      # could not run. We branch explicitly on those
-      # codes so a real failure can't silently get bucketed as
-      # benign-skip. `set +e` lets us inspect $? without the runner-
-      # level non-zero handling kicking in.
-      - name: Wait for staging API to be live on pushed SHA
+      # On workflow_dispatch the wait is skipped and the suite runs
+      # against whatever staging serves now, which is how an operator
+      # re-checks staging by hand.
+      #
+      # The script exits 0 when that run succeeded, 124 on a benign skip
+      # (no run for this SHA, because its paths filter skipped a docs- or
+      # web-only push, or the run was superseded by a newer push or a
+      # newer deploy), 125 when it is NOT benign (the deploy failed, was
+      # still running at the timeout, or the deploy workflow is disabled), and 1 on hard error (API failure, bad arguments).
+      # 125 and 1 both fail the job. We branch explicitly on those codes
+      # so a real failure can't silently get bucketed as benign-skip.
+      # `set +e` lets us inspect $? without the runner-level non-zero
+      # handling kicking in.
+      - name: Wait for staging API deploy of pushed SHA
         id: wait_for_live
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch: smoking whatever staging serves now."
+            exit 0
+          fi
           set +e
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+          bash .github/scripts/gha-wait-for-workflow.sh \
+            deploy-api-staging.yml \
             "${{ github.sha }}" \
-            300
+            1200
           exit_code=$?
           set -e
           echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
           if [ "${exit_code}" -eq 0 ]; then
             echo "should_smoke=true" >> "$GITHUB_OUTPUT"
-            echo "✓ Render staging API is live on ${{ github.sha }}; proceeding to smoke."
+            echo "✓ Staging API is deployed on ${{ github.sha }}; proceeding to smoke."
           elif [ "${exit_code}" -eq 124 ]; then
             echo "should_smoke=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Smoke skipped::Render staging API did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
+            echo "::warning title=Smoke skipped::No staging API deploy for ${{ github.sha }}: the push did not touch the API, or a fast-follow merge superseded it. The next API push's smoke run will validate the latest deployable code."
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked. Check Render API status + RENDER_API_TOKEN."
+            echo "::error title=Staging deploy not confirmed::gha-wait-for-workflow.sh exited ${exit_code}. 125 means deploy-api-staging.yml failed or was still running at the timeout (its run URL is in the log above). Any other code is a script or API failure. Failing — nothing was smoked."
             exit "${exit_code}"
           fi
 

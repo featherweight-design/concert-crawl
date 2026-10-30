@@ -33,7 +33,9 @@ jobs:
   e2e:
     name: Playwright E2E (staging)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 40 min: up to 20 min waiting for the staging API deploy (a run can
+    # queue behind the previous push's), then the suite.
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -50,22 +52,25 @@ jobs:
       # dispatch path, and the ref-scoped concurrency group above means such a
       # run can no longer cancel main's.
       #
-      # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
-      # staging API's buildFilter skips docs- and web-only pushes, so this is
-      # common, not exceptional), and anything else on hard error. Branch
-      # explicitly — a bare call would fail the run on every web-only merge,
-      # and bucketing a real failure as benign is the opposite mistake.
+      # Waits for deploy-api-staging.yml's run for this SHA (migrate, deploy
+      # to Vercel staging, health check). The script exits 0 when that run
+      # succeeded, 124 on a benign skip (no run for this SHA because its
+      # paths filter skips docs- and web-only pushes, so this is common, not
+      # exceptional; or a newer push or deploy superseded it), and anything
+      # else on hard error, including a disabled deploy workflow. Branch explicitly — a bare call would fail the run on
+      # every web-only merge, and bucketing a real failure as benign is the
+      # opposite mistake.
       - name: Wait for staging API to be live on pushed SHA
         id: wait_for_live
         if: github.event_name == 'push'
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set +e
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+          bash .github/scripts/gha-wait-for-workflow.sh \
+            deploy-api-staging.yml \
             "${{ github.sha }}" \
-            300
+            1200
           exit_code=$?
           set -e
           if [ "${exit_code}" -eq 0 ]; then
@@ -73,9 +78,9 @@ jobs:
             echo "✓ Staging API is live on ${{ github.sha }}; running E2E."
           elif [ "${exit_code}" -eq 124 ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
+            echo "::warning title=E2E skipped::No staging API deploy for ${{ github.sha }}. Most likely the push did not touch the API (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the timeout was classified as NOT benign: the staging API is suspended, has deploys disabled, its deploy for this SHA failed, its live deploy is over an hour old, or the timeout could not be classified at all (service metadata unreadable, no live deploy, unexpected Render response shape). The script's own log lines above name which — read them, then check the service. Any other code is a script or Render API failure. Failing — nothing was tested."
+            echo "::error title=Wait-for-live failed::gha-wait-for-workflow.sh exited ${exit_code}. 125 means deploy-api-staging.yml for this SHA failed (migration, Vercel build or health check) or was still running at the 20 min timeout; the script's log line above links the run. Any other code is a script or GitHub API failure. Failing — nothing was tested."
             exit "${exit_code}"
           fi
 

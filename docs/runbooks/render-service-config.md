@@ -73,17 +73,18 @@ Revisit if Render documents adoption semantics unambiguously.
 Six services build from `main`. All have `autoDeployTrigger: commit`,
 `rootDir: ""`, region `oregon`, plan `starter`.
 
-`autoDeploy` is **not** uniform. Staging auto-deploys on every eligible push —
-each service's `buildFilter` still decides eligibility, so a docs-only or
-web-only commit deploys nothing. All five prod services are `no`, because prod
-is promoted only by dispatching
+`autoDeploy` is `no` on all six. The staging API used to auto-deploy on every
+eligible push; since 2026-10-30 staging is served from Vercel instead (see
+below), and `concert-crawl-api-staging` stays up with auto-deploy off until
+Hugh OKs its removal. All five prod services are `no`, because prod is promoted
+only by dispatching
 `.github/workflows/deploy-prod.yml`. See
 `docs/runbooks/auto-deploy-prod.md` for the promotion model.
 
 | #   | Service                          | ID                         | Env     | Runtime | `autoDeploy` | Schedule       |
 | --- | -------------------------------- | -------------------------- | ------- | ------- | ------------ | -------------- |
 | 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | `no`         | (web service)  |
-| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `yes`        | (web service)  |
+| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `no`         | (web service)  |
 | 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` |
 | 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    |
 | 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `no`         | `0 16 * * *`   |
@@ -93,6 +94,21 @@ is promoted only by dispatching
 live prod service exists** — only `concert-crawl-billing-jobs-staging`, which is
 suspended. See the `render.yaml` caveat above; nothing promotes it, and the
 promotion workflow does not reference it.
+
+### The staging API moved to Vercel (2026-10-30)
+
+Staging traffic goes to `https://api-staging.concertcrawl.app`, the `staging`
+custom environment of the Vercel project `concert-crawl-api`, deployed by
+`.github/workflows/deploy-api-staging.yml`. That workflow also runs the staging
+migrations, so nothing on this page is in the staging deploy path any more.
+`concert-crawl-api-staging` (#2) is a fallback only: auto-deploy off, not
+suspended, and it serves whatever it last built. Rolling back to it means
+pointing `STAGING_API_URL` and the web staging project's `NEXT_PUBLIC_API_URL`
+back at `https://concert-crawl-api-staging.onrender.com` and redeploying it
+from `main` first. See `docs/runbooks/staging-environment.md`.
+
+The prod API (#1) and the two prod Node crons (#5, #6) stay here until the prod
+cutover.
 
 Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
 MDT; it drifts an hour relative to local time across the DST boundary,
@@ -154,8 +170,11 @@ any of them**, or their first build fails the same way.
 This is the single most important fact on this page, and it constrains
 everything below.
 
-Drizzle migrations are applied by the **API service's build**, not by a
-separate migration step. So:
+Drizzle migrations are applied to **prod** by the **API service's build**, not
+by a separate migration step. (Staging no longer works this way: since
+2026-10-30, `deploy-api-staging.yml` migrates the staging branch over its direct
+URL before each Vercel deploy, with the same paths filter as #2's
+`buildFilter`.) So, for prod:
 
 - If the API service does not build, migrations do not apply. A stalled
   API deploy is a stalled schema.
@@ -211,8 +230,8 @@ compatibility check for the new base.
 | ----------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `healthCheckPath` | 1, 2     | `/v1/health` | With this empty, Render cuts traffic to the old instance before the new one is serving. That is the entire cause of the ~2.5-minute prod outage on 2026-08-31; the deploy itself was fine. |
 | `buildFilter`     | all 6    | see below    | Every service rebuilds on every commit to `main`, so a web-only PR burns six builds.                                                                                                       |
-| `autoDeploy`      | 2        | `yes`        | Staging is the validation surface the promotion decision rests on — it deploys on every push its `buildFilter` matches. `no` here means nothing is ever validated before a promotion.       |
-| `autoDeploy`      | 1, 3–6   | `no`         | This is the production promotion gate. `yes` on any prod service reopens the push-to-prod path and bypasses the dispatch entirely.                                                          |
+| `autoDeploy`      | 2        | `no`         | Staging is served from Vercel since 2026-10-30. `yes` here would rebuild the fallback and run `pnpm db:migrate` against staging on every API push, racing `deploy-api-staging.yml`.        |
+| `autoDeploy`      | 1, 3–6   | `no`         | This is the production promotion gate. `yes` on any prod service reopens the push-to-prod path and bypasses the dispatch entirely.                                                         |
 
 `healthCheckPath` can be set over the API:
 

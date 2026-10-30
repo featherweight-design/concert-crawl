@@ -1,0 +1,151 @@
+name: Deploy API to Staging
+
+# Replaces Render's auto-deploy of `concert-crawl-api-staging`. On every push to
+# main that touches the API (that service's buildFilter in render.yaml, plus
+# packages/crawler-core, which the API imports at runtime), it migrates the staging Neon branch over its direct URL, deploys
+# the API to the `staging` custom environment of the Vercel project
+# `concert-crawl-api`, and checks /v1/health on the staging hostname.
+#
+# The order is the one Render's build had: migrate, then ship code. Migrations
+# are expand/contract only, so the running deployment tolerates the new schema.
+#
+# Staging Smoke and Staging E2E wait for this run (gha-wait-for-workflow.sh) as
+# their proof that staging serves the pushed SHA.
+#
+# Config, all on the `staging` GitHub environment:
+#   secrets  DATABASE_URL_DIRECT  Neon staging branch, direct (non-pooler) URL
+#            VERCEL_TOKEN         token with deploy access to featherweight-design
+#   vars     VERCEL_ORG_ID        the featherweight-design team ID
+#            VERCEL_PROJECT_ID_API  the concert-crawl-api project ID
+# plus the repository variable STAGING_API_URL for the health check.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/api/**
+      - packages/db/**
+      - packages/crawler-core/**
+      - packages/entitlements/**
+      - packages/logger/**
+      - packages/price-pipeline/**
+      - packages/push/**
+      - packages/types/**
+      - packages/config/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - .node-version
+      - .github/workflows/deploy-api-staging.yml
+  workflow_dispatch:
+
+# One deploy at a time, never cancelled mid-flight: a cancelled run can leave a
+# migration applied with the code that needs it undeployed. A newer push queues
+# behind the running one, and GitHub drops an older queued run in its favour.
+# Scoped by ref so a dispatch from another branch, which the first step refuses
+# anyway, can never displace a queued main deploy.
+concurrency:
+  group: deploy-api-staging-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Migrate staging DB, deploy API to Vercel staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+    steps:
+      # Same guard as staging-smoke.yml: a dispatch from a feature branch would
+      # migrate the shared staging DB with that branch's migrations.
+      - name: Refuse workflow_dispatch from non-main ref
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to deploy staging from ref '${{ github.ref }}'."
+          echo "  Dispatch from main."
+          exit 1
+
+      - name: Verify required config
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_API: ${{ vars.VERCEL_PROJECT_ID_API }}
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+        run: |
+          missing=()
+          [ -z "$DATABASE_URL_DIRECT" ] && missing+=("DATABASE_URL_DIRECT (staging-env secret)")
+          [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (staging-env secret)")
+          [ -z "$VERCEL_ORG_ID" ] && missing+=("VERCEL_ORG_ID (staging-env variable)")
+          [ -z "$VERCEL_PROJECT_ID_API" ] && missing+=("VERCEL_PROJECT_ID_API (staging-env variable)")
+          [ -z "$STAGING_API_URL" ] && missing+=("STAGING_API_URL (repository variable)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "✗ Missing required configuration:"
+            printf '  - %s\n' "${missing[@]}"
+            echo "Environment secrets and variables live under Settings → Environments → staging."
+            exit 1
+          fi
+          # Neon's pooler runs PgBouncer in transaction mode; migrations are
+          # meant to go over the direct endpoint, so refuse a -pooler host.
+          if [[ "$DATABASE_URL_DIRECT" == *-pooler.* ]]; then
+            echo "✗ DATABASE_URL_DIRECT points at a -pooler host. Migrations need the direct URL."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrate staging DB
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DIRECT }}
+
+      # Runs from the repository root, as deploy-prod.yml does for the web app:
+      # the project's Root Directory is apps/api, and only a root upload carries
+      # the workspace, the lockfile and packages/. Vercel builds remotely with
+      # apps/api/vercel.json (turbo builds the API and its workspace deps).
+      # `deploy` waits until the deployment is READY and exits non-zero if the
+      # build fails; the staging domain is assigned to it automatically.
+      - name: Deploy API to Vercel staging
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_API }}
+        run: |
+          # Pinned for the same reason as deploy-prod.yml: a token-holding
+          # command should not run whatever `@latest` resolves to.
+          npx --yes vercel@65.8.0 deploy --target=staging --yes \
+            --token "$VERCEL_TOKEN"
+
+      # The domain moves to the new deployment as it goes READY, but give the
+      # edge a few attempts before calling it down.
+      - name: Check staging API health
+        env:
+          STAGING_API_URL: ${{ vars.STAGING_API_URL }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${STAGING_API_URL%/}/v1/health" || true)
+            if [ "$code" = "200" ]; then
+              echo "✓ ${STAGING_API_URL%/}/v1/health returned 200"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: /v1/health returned ${code}; retrying in 10s"
+            sleep 10
+          done
+          echo "✗ ${STAGING_API_URL%/}/v1/health never returned 200"
+          exit 1
