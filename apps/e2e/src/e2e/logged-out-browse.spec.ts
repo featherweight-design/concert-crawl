@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { waitForHydrated } from '../fixtures/hydration'
 import { PUBLIC_BROWSE_ENABLED } from '../helpers/launch-mode'
 
 // Unit tests prove the matcher; only a real browser proves the vertical.
@@ -19,24 +20,25 @@ test.describe('logged-out browse (#794)', () => {
     )
 
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
-    await expect(
-      page.locator('[data-testid="event-row"]').first(),
-    ).toBeVisible()
+    await expect(page.locator('[data-testid="event-row"]').first()).toBeVisible(
+      { timeout: 15_000 },
+    )
 
     await page.goto('/watching')
-    await page.waitForLoadState('networkidle')
     await expect(page).toHaveURL(/\/watching/)
+    // The signed-out teaching state, so the URL check is not passing on a
+    // page that never rendered.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
     // The gated accessible name from PR-F: the honesty lives in the name, not
     // in the pixels, so asserting it here doubles as a regression test.
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
     const gatedEye = page
       .getByRole('button', { name: /sign up to start watching/i })
       .first()
-    await expect(gatedEye).toBeVisible()
+    await expect(gatedEye).toBeVisible({ timeout: 15_000 })
 
+    await waitForHydrated(gatedEye)
     await gatedEye.click()
     await expect(page.getByRole('dialog')).toBeVisible()
   })

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 
+import { waitForHydrated } from '../fixtures/hydration'
 import { isVisibleWithin } from '../fixtures/presence'
 
 test.describe('venue detail page', () => {
@@ -26,12 +27,11 @@ test.describe('venue detail page', () => {
     page,
   }) => {
     await page.goto('/venues/larimer-lounge')
-    await page.waitForLoadState('networkidle')
 
-    await expect(page).not.toHaveTitle(/404|not found/i)
     const heading = page.getByRole('heading', { level: 1 })
     await expect(heading).toBeVisible()
     await expect(heading).toContainText(/larimer/i)
+    await expect(page).not.toHaveTitle(/404|not found/i)
   })
 
   // The returner state needs a signed-in viewer with an attending row at this
@@ -41,7 +41,9 @@ test.describe('venue detail page', () => {
   // never a collapsed card sitting under the expanded section header.
   test('venue guide renders in exactly one viewer mode', async ({ page }) => {
     await page.goto('/venues/larimer-lounge')
-    await page.waitForLoadState('networkidle')
+    // The guide is server-rendered with the page, so once the heading is on
+    // screen the one-shot counts below see the whole page.
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
     const guide = page.locator('[data-testid="venue-guide"]')
     if ((await guide.count()) === 0) {
@@ -60,6 +62,7 @@ test.describe('venue detail page', () => {
       ).toHaveCount(0)
       // Collapsed by default — no chip body is on screen until it is opened.
       await expect(page.locator('[data-testid^="guide-chip-"]')).toHaveCount(0)
+      await waitForHydrated(accordion.getByRole('button'))
       await accordion.getByRole('button').click()
       await expect(
         page.locator('[data-testid^="guide-chip-"]').first(),

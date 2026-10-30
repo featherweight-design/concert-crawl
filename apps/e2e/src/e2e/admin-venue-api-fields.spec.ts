@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 
+import { waitForHydrated } from '../fixtures/hydration'
 import { isVisibleWithin } from '../fixtures/presence'
 
 // Admin venue-edit: API provider + account ID fields (#506).
@@ -19,7 +20,6 @@ test.describe('admin venue edit — API integration fields', () => {
     page,
   }) => {
     await page.goto('/admin/venues')
-    await page.waitForLoadState('networkidle')
 
     if (/sign-in|clerk\.com|accounts\./i.test(page.url())) {
       test.skip(true, 'Authenticated user is not an admin')
@@ -36,13 +36,19 @@ test.describe('admin venue edit — API integration fields', () => {
     }
 
     await firstVenue.click()
-    await page.waitForLoadState('networkidle')
+    // `commit`: the field wait below is the readiness check, not a load state.
+    await page.waitForURL(/\/admin\/venues\/[^/]+/, { waitUntil: 'commit' })
 
+    // 15s rather than 5s: this wait now also covers the detail page loading,
+    // which a `networkidle` wait used to absorb before it.
     const providerSelect = page.locator('#edit-venue-api-provider')
-    if (!(await isVisibleWithin(providerSelect, 5_000))) {
+    if (!(await isVisibleWithin(providerSelect, 15_000))) {
       test.skip(true, 'API provider field not present on this venue')
       return
     }
+    // A select changed before hydration keeps its new value but never tells
+    // React, so the reveal below would never happen.
+    await waitForHydrated(providerSelect)
 
     const accountIdInput = page.locator('#edit-venue-api-account-id')
 

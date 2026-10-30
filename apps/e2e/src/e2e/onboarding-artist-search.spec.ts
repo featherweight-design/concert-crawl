@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import type { Locator } from '@playwright/test'
 
+import { waitForHydrated } from '../fixtures/hydration'
+
 // The close-out walk for the in-tour artist search (onboarding step 7).
 //
 // This exists because component tests cannot accept this feature. jsdom lays
@@ -38,11 +40,16 @@ test.describe('onboarding step 7 — artist search', () => {
         height: viewport.height,
       })
       await page.goto('/onboarding?entry=menu')
-      await page.waitForLoadState('networkidle')
 
       if (/sign-in|clerk\.com|accounts\./i.test(page.url())) {
         test.skip(true, 'No authenticated session — the tour is post-auth')
       }
+
+      // The walk below is a run of clicks on server-rendered buttons; one that
+      // lands before hydration does nothing and the walk stops a step short.
+      await waitForHydrated(
+        visible(page.getByRole('button', { name: /next/i })),
+      )
 
       // Walk to the artists step. `.first()` because both trees are mounted;
       // only one is visible, and Playwright's visibility filter picks it.

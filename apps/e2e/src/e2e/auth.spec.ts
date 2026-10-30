@@ -10,10 +10,8 @@ test.describe('unauthenticated access', () => {
 
   test('admin route redirects to sign-in', async ({ page }) => {
     await page.goto('/admin')
-    await page.waitForLoadState('networkidle')
 
-    const url = page.url()
-    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i)
+    await expect(page).toHaveURL(/sign-in|clerk\.com|accounts\./i)
   })
 
   test('protected route returns edge 307 redirect before invoking a server function (#841)', async ({
@@ -40,7 +38,7 @@ test.describe('unauthenticated access', () => {
     // `/legal/terms` is in the middleware's `isAlwaysPublic` matcher; it
     // should render without any redirect.
     await page.goto('/legal/terms')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 
     expect(page.url()).toMatch(/\/legal\/terms/)
     expect(page.url()).not.toMatch(/sign-in/)
@@ -84,7 +82,12 @@ test.describe('unauthenticated access', () => {
 test.describe('authenticated access', () => {
   test('authenticated user can access events page', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    // The filter bar's venue chip renders on the browse page whatever the
+    // events are (rows, a single hero card, or an empty state), and never on
+    // a sign-in page that also carries the app title.
+    await expect(page.locator('[data-testid="venue-chip"]')).toBeVisible({
+      timeout: 15_000,
+    })
 
     expect(page.url()).not.toMatch(/sign-in/)
     await expect(page).toHaveTitle(/concert crawl/i)

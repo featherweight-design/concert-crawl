@@ -3,7 +3,7 @@ import { chromium, type FullConfig } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
-import { SMOKE_STORAGE_STATE_PATH } from './auth'
+import { SMOKE_STORAGE_STATE_PATH, signInWithClerk } from './auth'
 
 // Writes the storage state Playwright loads via `use.storageState`.
 // When no credentials are supplied (e.g. local dry-runs) we still
@@ -59,27 +59,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
   try {
     await page.goto(`${baseURL}/sign-in`)
-    await page.waitForLoadState('networkidle')
-
-    await page.getByLabel(/email/i).fill(email)
-    // `exact: true` is required because Clerk renders a "Sign in with
-    // Google" OAuth button whose accessible name resolves to "Sign in
-    // with Google Continue" — a substring match on /continue/i hits
-    // both buttons and trips Playwright's strict-mode check.
-    await page.getByRole('button', { name: 'Continue', exact: true }).click()
-    await page.waitForLoadState('networkidle')
-
-    // Target by `name` attribute, not label. `getByLabel(/password/i)`
-    // also matches Clerk's "Show password" toggle button (aria-label
-    // "Show password"), tripping strict mode. Playwright's `fill()`
-    // auto-waits for the input to become enabled — Clerk renders the
-    // field `disabled` for a beat after the email-step transition.
-    await page.locator('input[name="password"]').fill(password)
-    await page.getByRole('button', { name: 'Continue', exact: true }).click()
-
-    await page.waitForURL((url) => !url.pathname.includes('sign-in'), {
-      timeout: 15_000,
-    })
+    await signInWithClerk(page, email, password)
 
     await page.context().storageState({ path: authFile })
     console.log('[smoke] Auth state saved to', authFile)

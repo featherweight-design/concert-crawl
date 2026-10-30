@@ -54,7 +54,6 @@ test.describe('smoke: founder launch (post-launch, read-only)', () => {
     // /me?plan=open auto-opens the tier picker (usePlanOpenParam). Uses the
     // suite-wide signed-in smoke session.
     await page.goto('/me?plan=open')
-    await page.waitForLoadState('networkidle')
 
     // The picker renders the founder tile as a desktop card or a mobile row
     // depending on viewport; accept either so the check is viewport-agnostic.

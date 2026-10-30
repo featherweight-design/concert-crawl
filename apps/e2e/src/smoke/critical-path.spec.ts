@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { healthCheck } from '../helpers/api.js'
+import { waitForHydrated } from '../fixtures/hydration.js'
+
+// No `waitForLoadState('networkidle')` in this file. Next 16 holds a
+// proxy-redirected RSC prefetch open, so the network never idles and every
+// wait on it timed out. Each test waits on the element that means its page is
+// ready, and on hydration before it clicks anything the server rendered.
 
 test.describe('smoke: app availability', () => {
   test('homepage renders with content', async ({ page }) => {
@@ -18,7 +24,6 @@ test.describe('smoke: app availability', () => {
 test.describe('smoke: event data', () => {
   test('browse page loads with at least one event', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
     const eventRows = page.locator('[data-testid="event-row"]')
     await expect(eventRows.first()).toBeVisible({ timeout: 10_000 })
@@ -28,7 +33,6 @@ test.describe('smoke: event data', () => {
 
   test('venue filter chip produces results', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
     // Require the chip to be present. The previous version no-op'd
     // silently when no chip was visible, which masked the auth-redirect
@@ -38,8 +42,11 @@ test.describe('smoke: event data', () => {
     const firstChip = page.locator('[data-testid="venue-chip"]').first()
     await expect(firstChip).toBeVisible({ timeout: 10_000 })
 
+    await waitForHydrated(firstChip)
     await firstChip.click()
-    await page.waitForLoadState('networkidle')
+    // The chip opens its venue popover; that is the concrete result of the
+    // click, and the error check below only means something once it landed.
+    await expect(firstChip).toHaveAttribute('aria-expanded', 'true')
     await expect(page.locator('body')).not.toContainText(
       /error|500|unexpected/i,
     )
@@ -49,7 +56,6 @@ test.describe('smoke: event data', () => {
     page,
   }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
     const firstRow = page.locator('[data-testid="event-row"]').first()
     await expect(firstRow).toBeVisible({ timeout: 10_000 })
@@ -61,18 +67,18 @@ test.describe('smoke: event data', () => {
     }
 
     await page.goto(href)
-    await page.waitForLoadState('networkidle')
-    await expect(page).not.toHaveTitle(/404|not found/i)
     const heading = page.getByRole('heading', { level: 1 })
     await expect(heading).toBeVisible()
+    await expect(page).not.toHaveTitle(/404|not found/i)
   })
 
   test('venues index page lists venues', async ({ page }) => {
     await page.goto('/venues')
-    await page.waitForLoadState('networkidle')
 
-    await expect(page).not.toHaveTitle(/404|not found/i)
     const venueLinks = page.locator('a[href^="/venues/"]')
+    // Wait for a link before counting: `count()` samples once.
+    await expect(venueLinks.first()).toBeVisible({ timeout: 10_000 })
+    await expect(page).not.toHaveTitle(/404|not found/i)
     const count = await venueLinks.count()
     expect(count).toBeGreaterThan(0)
   })
@@ -87,21 +93,21 @@ test.describe('smoke: search', () => {
     page,
   }) => {
     await page.goto('/events?search=concert')
-    await page.waitForLoadState('networkidle')
-
-    await expect(page).not.toHaveTitle(/404|not found/i)
-    await expect(page.locator('body')).not.toContainText(
-      /error|500|unexpected/i,
-    )
 
     // The search rendered SOMETHING meaningful: either at least one
     // event row matched, or the filtered empty-state title ("Crickets.")
     // is shown. Both confirm the search actually executed and the page
     // reached its data-rendering path — a "page didn't crash" check
-    // alone would pass even if the search filter silently broke.
+    // alone would pass even if the search filter silently broke. It runs
+    // first because it is also the readiness wait for the checks below.
     const eventRow = page.locator('[data-testid="event-row"]').first()
     const emptyState = page.getByText(/crickets\./i).first()
     await expect(eventRow.or(emptyState)).toBeVisible({ timeout: 10_000 })
+
+    await expect(page).not.toHaveTitle(/404|not found/i)
+    await expect(page.locator('body')).not.toContainText(
+      /error|500|unexpected/i,
+    )
   })
 })
 
@@ -116,7 +122,7 @@ test.describe('smoke: auth protection', () => {
     page,
   }) => {
     await page.goto('/admin')
-    await page.waitForLoadState('networkidle')
+    await expect(page).toHaveURL(/sign-in/)
     // apps/web/src/middleware.ts sends auth-gated routes to `/sign-in` with a
     // relative `redirect_url` (#794 — it was `/` while the whole app was
     // private). The smoke contract follows the middleware: landing anywhere
@@ -131,9 +137,7 @@ test.describe('smoke: auth protection', () => {
 test.describe('smoke: known venue', () => {
   test('a seeded venue page loads', async ({ page }) => {
     await page.goto('/venues/larimer-lounge')
-    await page.waitForLoadState('networkidle')
 
-    await expect(page).not.toHaveTitle(/404|not found/i)
     // Assert the heading actually contains the venue name. The
     // previous version only checked that an h1 was visible — the
     // homepage also has an h1, so the test passed even when the
@@ -141,5 +145,6 @@ test.describe('smoke: known venue', () => {
     const heading = page.getByRole('heading', { level: 1 })
     await expect(heading).toBeVisible()
     await expect(heading).toContainText(/larimer/i)
+    await expect(page).not.toHaveTitle(/404|not found/i)
   })
 })
