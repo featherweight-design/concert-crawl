@@ -1,3 +1,10 @@
+# [1.304.0](https://github.com/HartiganHM/concert-crawl/compare/v1.303.1...v1.304.0) (2026-10-30)
+
+
+### Features
+
+* **api:** wake the crawler workflow when an admin queues crawls ([#1809](https://github.com/HartiganHM/concert-crawl/issues/1809)) ([73e0ceb](https://github.com/HartiganHM/concert-crawl/commit/73e0cebd29e3aa2f0193503f2725f5dde4006637))
+
 ## [1.303.1](https://github.com/HartiganHM/concert-crawl/compare/v1.303.0...v1.303.1) (2026-10-30)
 
 
