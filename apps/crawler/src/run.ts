@@ -19,14 +19,27 @@ import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { requestLandingRevalidationSafely } from './revalidate.js'
 
 const logger = createLogger('crawler')
+// Triggers are claimed one at a time, so a single process never holds more
+// than one in 'processing'. A run then drains the queue claim by claim, bounded
+// by CRAWL_TRIGGER_DRAIN_MAX and CRAWL_TRIGGER_BUDGET_MS (see
+// triggerDrainLimits). The default of one trigger per run keeps the Render
+// cron's behaviour: its 512Mi process was OOM-killed when one tick crawled
+// unboundedly many venues (#1352, #1353).
 const MAX_CONCURRENT = 1
+const DEFAULT_TRIGGER_DRAIN_MAX = 1
+// Sized for a job timeout of 60 minutes (the planned GitHub Actions triggers
+// job; Render crons have no such limit). The budget only stops new claims, so
+// the 20 minutes left are for the trigger in flight: its crawl (longest
+// observed ~6 min), then its price pipeline and Spotify fan-out.
+const DEFAULT_TRIGGER_BUDGET_MS = 40 * 60 * 1000
 
-// A trigger still 'processing' after this long cannot be alive: the longest
-// legitimate crawl observed in prod is ~3.5 min, and the trigger cron fires
-// every 10 min. Anything past this was killed mid-flight — almost always an
-// OOM, which sends SIGKILL and so can neither be caught in-process nor write a
-// crawl_runs row. Reaping on the next run is the only place that death becomes
-// visible (#1352, #1353).
+// A trigger still 'processing' after this long is assumed dead. Each trigger
+// is claimed immediately before it is worked, so it sits in 'processing' for
+// one venue's crawl, prices and fan-out only (the longest crawl observed in
+// prod is ~6 min), however long the run that claimed it keeps draining. Anything past this was killed
+// mid-flight: an OOM or a job timeout, which can neither be caught in-process
+// nor write a crawl_runs row. Reaping at the start of the next run is the only
+// place that death becomes visible (#1352, #1353).
 const STALE_PROCESSING_MS = 30 * 60 * 1000
 
 // Chromium costs ~150Mi of the cron's 512Mi, and a run of only
@@ -39,16 +52,26 @@ function createLazyBrowser(): {
   let pending: Promise<Browser> | null = null
   return {
     // A rejection is deliberately not cached — a transient launch failure would
-    // otherwise poison the provider for the rest of the run.
+    // otherwise poison the provider for the rest of the run. Nor is a browser
+    // that has died: a drain crawls many venues on one browser, and a crash
+    // part-way would otherwise fail every later browser-mode trigger.
     get: () => {
-      pending ??= chromium
+      if (pending !== null) return pending
+      const launching = chromium
         .launch({ headless: true })
+        .then((browser) => {
+          browser.on('disconnected', () => {
+            if (pending === launching) pending = null
+          })
+          return browser
+        })
         .catch((launchErr: unknown) => {
           logger.error({ launchErr }, 'Chromium launch failed')
           pending = null
           throw launchErr
         })
-      return pending
+      pending = launching
+      return launching
     },
     close: async () => {
       if (pending === null) return
@@ -63,8 +86,8 @@ function createLazyBrowser(): {
 }
 
 // Fail triggers stranded in 'processing' by a process death, and report each
-// one so the kill is not silent. Runs before the claim so a crash is surfaced
-// within one cron tick.
+// one so the kill is not silent. Runs before the first claim so a crash is
+// surfaced by the next run.
 async function reapStaleProcessingTriggers(): Promise<void> {
   const reaped = await db
     .update(crawlTriggers)
@@ -163,14 +186,45 @@ async function runPricesForVenue(venueId: string): Promise<void> {
   }
 }
 
-export async function runTriggeredCrawls(): Promise<{ processed: number }> {
-  await reapStaleProcessingTriggers()
+function parsePositiveInt(name: string, fallback: number): number {
+  const raw = process.env[name]
+  if (raw === undefined || raw.trim() === '') return fallback
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value < 1) {
+    logger.warn({ name, raw, fallback }, 'Ignoring invalid crawler setting')
+    return fallback
+  }
+  return value
+}
 
-  // Claim at most MAX_CONCURRENT triggers per tick. Claiming every pending row
-  // meant one tick could crawl unboundedly many venues in a single 512Mi
-  // process; the remainder simply wait for the next 10-minute tick. Drizzle's
-  // update() has no limit(), so the bound goes in an id subquery.
-  const claimed = await db
+/**
+ * How far one triggers-mode run drains the queue: at most `maxTriggers`
+ * triggers, and no new claim once `budgetMs` has passed since the run began.
+ * Read per call so tests and hosts can set the environment late.
+ */
+export function triggerDrainLimits(): {
+  maxTriggers: number
+  budgetMs: number
+} {
+  return {
+    maxTriggers: parsePositiveInt(
+      'CRAWL_TRIGGER_DRAIN_MAX',
+      DEFAULT_TRIGGER_DRAIN_MAX,
+    ),
+    budgetMs: parsePositiveInt(
+      'CRAWL_TRIGGER_BUDGET_MS',
+      DEFAULT_TRIGGER_BUDGET_MS,
+    ),
+  }
+}
+
+// Claim the oldest pending trigger (MAX_CONCURRENT is 1). Drizzle's update() has no limit(), so
+// the bound goes in an id subquery; `skip locked` hands each row to exactly one
+// claimer when two crawler processes overlap.
+async function claimPendingTriggers(): Promise<
+  { id: string; venueId: string; force: boolean }[]
+> {
+  return db
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
     .where(
@@ -187,117 +241,162 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       venueId: crawlTriggers.venueId,
       force: crawlTriggers.force,
     })
+}
 
-  if (claimed.length === 0) {
-    logger.info('No pending crawl triggers')
-    return { processed: 0 }
+// Crawl one claimed trigger and record its outcome. Never throws: a failure
+// marks this trigger failed and the drain moves on to the next one. Returns the
+// number of new events the crawl inserted.
+async function processTrigger(
+  trigger: { id: string; venueId: string; force: boolean },
+  getBrowser: () => Promise<Browser>,
+  crossVenueCandidates: CrossVenueCandidate[],
+): Promise<number> {
+  let eventsInserted = 0
+  try {
+    const crawlRun = await crawlVenue(
+      trigger.venueId,
+      getBrowser,
+      undefined,
+      crossVenueCandidates,
+      trigger.force,
+    )
+    if (crawlRun.status === 'failed') {
+      const message = crawlRun.errorMessage ?? 'Crawl failed'
+      const grouping = crawlFailureGrouping(message)
+      // Grouped by cause, not by this call site.
+      Sentry.captureException(new Error(message), {
+        fingerprint: grouping.fingerprint,
+        tags: { crawl_error_kind: grouping.errorKind },
+        extra: { venueId: trigger.venueId, triggerId: trigger.id },
+      })
+      Sentry.logger.warn('crawl.failed', {
+        venue_id: trigger.venueId,
+        trigger_id: trigger.id,
+        status: 'failed',
+        error_message: crawlRun.errorMessage ?? null,
+        events_found: crawlRun.eventsFound,
+        duration_ms: crawlRun.durationMs,
+      })
+    } else {
+      Sentry.logger.info('crawl.complete', {
+        venue_id: trigger.venueId,
+        trigger_id: trigger.id,
+        status: 'success',
+        events_found: crawlRun.eventsFound,
+        events_inserted: crawlRun.eventsInserted,
+        events_updated: crawlRun.eventsUpdated ?? 0,
+        duration_ms: crawlRun.durationMs,
+        extraction_strategy: crawlRun.extractionStrategyUsed ?? null,
+        llm_cost_usd: crawlRun.llmCostUsd ?? null,
+      })
+    }
+    try {
+      await tagEventsWithGenres(trigger.venueId, crawlRun.id)
+    } catch (tagErr) {
+      logger.error(
+        { tagErr, venueId: trigger.venueId, triggerId: trigger.id },
+        'Genre tagging failed — crawl data saved, genres skipped',
+      )
+    }
+    if (crawlRun.status !== 'failed') {
+      eventsInserted = crawlRun.eventsInserted ?? 0
+      await runPricesForVenue(trigger.venueId)
+      // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
+      // events. Awaited (not detached) because this process hard-exits
+      // via process.exit(0) — a floating promise would be severed
+      // (#649). Never throws; a fan-out bug cannot fail the trigger.
+      await runArtistFanoutSafely(crawlRun.insertedEventIds)
+    }
+    const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
+    await db
+      .update(crawlTriggers)
+      .set({
+        status: triggerStatus,
+        crawlRunId: crawlRun.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(crawlTriggers.id, trigger.id))
+  } catch (err) {
+    Sentry.captureException(err, {
+      extra: { triggerId: trigger.id, venueId: trigger.venueId },
+    })
+    Sentry.logger.error('crawl.error', {
+      venue_id: trigger.venueId,
+      trigger_id: trigger.id,
+      error: String(err),
+    })
+    logger.error(
+      { err, triggerId: trigger.id, venueId: trigger.venueId },
+      'Triggered crawl threw unexpectedly',
+    )
+    try {
+      await db
+        .update(crawlTriggers)
+        .set({ status: 'failed', updatedAt: new Date() })
+        .where(eq(crawlTriggers.id, trigger.id))
+    } catch (markErr: unknown) {
+      // The reaper fails the row on a later run; the drain carries on.
+      logger.error(
+        { markErr, triggerId: trigger.id },
+        'Could not mark the trigger failed',
+      )
+    }
   }
+  return eventsInserted
+}
 
-  logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
+export async function runTriggeredCrawls(): Promise<{ processed: number }> {
+  await reapStaleProcessingTriggers()
 
-  // #847 — total new events across this tick, used to decide whether the
+  const { maxTriggers, budgetMs } = triggerDrainLimits()
+  const deadline = Date.now() + budgetMs
+
+  let processed = 0
+  // #847 — total new events across this run, used to decide whether the
   // landing page's ISR cache is worth busting proactively.
   let eventsInserted = 0
+  let crossVenueCandidates: CrossVenueCandidate[] | null = null
 
-  const crossVenueCandidates = await loadCrossVenueCandidates()
-
-  // Launch is deferred: a tick of only http-mode venues never starts Chromium.
-  // A launch failure now surfaces per-trigger through the catch below rather
-  // than failing the whole batch up front.
+  // Launch is deferred: a run of only http-mode venues never starts Chromium,
+  // and every trigger in the drain shares the one browser. A launch failure
+  // surfaces per trigger through processTrigger rather than ending the drain.
   const browser = createLazyBrowser()
 
   try {
-    for (const trigger of claimed) {
-      try {
-        const crawlRun = await crawlVenue(
-          trigger.venueId,
-          browser.get,
-          undefined,
-          crossVenueCandidates,
-          trigger.force,
+    while (processed < maxTriggers) {
+      if (processed > 0 && Date.now() >= deadline) {
+        logger.info(
+          { processed, budgetMs },
+          'Trigger drain budget spent; leaving the rest for the next run',
         )
-        if (crawlRun.status === 'failed') {
-          const message = crawlRun.errorMessage ?? 'Crawl failed'
-          const grouping = crawlFailureGrouping(message)
-          // Grouped by cause, not by this call site.
-          Sentry.captureException(new Error(message), {
-            fingerprint: grouping.fingerprint,
-            tags: { crawl_error_kind: grouping.errorKind },
-            extra: { venueId: trigger.venueId, triggerId: trigger.id },
-          })
-          Sentry.logger.warn('crawl.failed', {
-            venue_id: trigger.venueId,
-            trigger_id: trigger.id,
-            status: 'failed',
-            error_message: crawlRun.errorMessage ?? null,
-            events_found: crawlRun.eventsFound,
-            duration_ms: crawlRun.durationMs,
-          })
-        } else {
-          Sentry.logger.info('crawl.complete', {
-            venue_id: trigger.venueId,
-            trigger_id: trigger.id,
-            status: 'success',
-            events_found: crawlRun.eventsFound,
-            events_inserted: crawlRun.eventsInserted,
-            events_updated: crawlRun.eventsUpdated ?? 0,
-            duration_ms: crawlRun.durationMs,
-            extraction_strategy: crawlRun.extractionStrategyUsed ?? null,
-            llm_cost_usd: crawlRun.llmCostUsd ?? null,
-          })
-        }
-        try {
-          await tagEventsWithGenres(trigger.venueId, crawlRun.id)
-        } catch (tagErr) {
-          logger.error(
-            { tagErr, venueId: trigger.venueId, triggerId: trigger.id },
-            'Genre tagging failed — crawl data saved, genres skipped',
-          )
-        }
-        if (crawlRun.status !== 'failed') {
-          eventsInserted += crawlRun.eventsInserted ?? 0
-          await runPricesForVenue(trigger.venueId)
-          // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
-          // events. Awaited (not detached) because this process hard-exits
-          // via process.exit(0) — a floating promise would be severed
-          // (#649). Never throws; a fan-out bug cannot fail the trigger.
-          await runArtistFanoutSafely(crawlRun.insertedEventIds)
-        }
-        const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
-        await db
-          .update(crawlTriggers)
-          .set({
-            status: triggerStatus,
-            crawlRunId: crawlRun.id,
-            updatedAt: new Date(),
-          })
-          .where(eq(crawlTriggers.id, trigger.id))
-      } catch (err) {
-        Sentry.captureException(err, {
-          extra: { triggerId: trigger.id, venueId: trigger.venueId },
-        })
-        Sentry.logger.error('crawl.error', {
-          venue_id: trigger.venueId,
-          trigger_id: trigger.id,
-          error: String(err),
-        })
-        logger.error(
-          { err, triggerId: trigger.id, venueId: trigger.venueId },
-          'Triggered crawl threw unexpectedly',
-        )
-        await db
-          .update(crawlTriggers)
-          .set({ status: 'failed', updatedAt: new Date() })
-          .where(eq(crawlTriggers.id, trigger.id))
+        break
       }
+      const claimed = await claimPendingTriggers()
+      if (claimed.length === 0) break
+
+      crossVenueCandidates ??= await loadCrossVenueCandidates()
+      for (const trigger of claimed) {
+        eventsInserted += await processTrigger(
+          trigger,
+          browser.get,
+          crossVenueCandidates,
+        )
+      }
+      processed += claimed.length
     }
   } finally {
     await browser.close()
   }
 
+  if (processed === 0) {
+    logger.info('No pending crawl triggers')
+    return { processed: 0 }
+  }
+
+  logger.info({ processed }, 'Processed crawl triggers')
   await requestLandingRevalidationSafely(eventsInserted)
 
-  return { processed: claimed.length }
+  return { processed }
 }
 
 export async function runDailyCrawl(): Promise<{

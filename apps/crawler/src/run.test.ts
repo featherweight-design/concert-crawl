@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock Sentry
 const mockSentryCaptureException = vi.fn()
@@ -81,7 +81,10 @@ vi.mock('@concert-crawl/price-pipeline', () => ({
 }))
 
 // Mock Playwright — return a minimal browser-shaped object
-const mockBrowser = { close: vi.fn().mockResolvedValue(undefined) }
+const mockBrowser = {
+  close: vi.fn().mockResolvedValue(undefined),
+  on: vi.fn(),
+}
 vi.mock('playwright', () => ({
   chromium: {
     launch: vi.fn().mockResolvedValue(mockBrowser),
@@ -637,7 +640,7 @@ describe('runTriggeredCrawls', () => {
       )
     })
 
-    it('reaps before claiming so a crash surfaces within one cron tick', async () => {
+    it('reaps before claiming so a crash surfaces on the next run', async () => {
       const { runTriggeredCrawls } = await import('./run.js')
       await runTriggeredCrawls()
       const statuses = mockDbUpdate.set.mock.calls.map(
@@ -720,6 +723,186 @@ describe('runTriggeredCrawls', () => {
     const { runTriggeredCrawls } = await import('./run.js')
     const result = await runTriggeredCrawls()
     expect(result.processed).toBe(2)
+  })
+
+  describe('draining the queue', () => {
+    const queue = [
+      { id: 'trigger-1', venueId: 'venue-a', force: false },
+      { id: 'trigger-2', venueId: 'venue-b', force: false },
+      { id: 'trigger-3', venueId: 'venue-c', force: false },
+    ]
+
+    // returning() order: the reap, then one claim per loop iteration. Each
+    // claim hands back one trigger until the queue is empty.
+    function queueClaims(): void {
+      mockDbUpdate.returning.mockReset()
+      mockDbUpdate.returning.mockResolvedValueOnce([])
+      for (const trigger of queue) {
+        mockDbUpdate.returning.mockResolvedValueOnce([trigger])
+      }
+      mockDbUpdate.returning.mockResolvedValue([])
+    }
+
+    function claimCount(): number {
+      return mockDbUpdate.set.mock.calls.filter(
+        (call) => call[0]?.status === 'processing',
+      ).length
+    }
+
+    afterEach(() => {
+      vi.unstubAllEnvs()
+      // A test that stops before the queue empties leaves claims queued, and
+      // clearAllMocks keeps queued once-values: they would leak into the next
+      // test's reap and claim.
+      mockDbUpdate.returning.mockReset()
+      mockDbUpdate.returning.mockResolvedValue([])
+    })
+
+    it('claims one trigger per run by default, as the Render cron always has', async () => {
+      queueClaims()
+      const { runTriggeredCrawls } = await import('./run.js')
+      const result = await runTriggeredCrawls()
+      expect(result.processed).toBe(1)
+      expect(claimCount()).toBe(1)
+      expect(mockCrawlVenue).toHaveBeenCalledTimes(1)
+    })
+
+    it('drains until the queue is empty', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      queueClaims()
+      const { runTriggeredCrawls } = await import('./run.js')
+      const result = await runTriggeredCrawls()
+      expect(result.processed).toBe(3)
+      // Three claims that found a trigger, then one that found none.
+      expect(claimCount()).toBe(4)
+      expect(mockCrawlVenue.mock.calls.map((call) => call[0])).toEqual([
+        'venue-a',
+        'venue-b',
+        'venue-c',
+      ])
+    })
+
+    it('stops at CRAWL_TRIGGER_DRAIN_MAX and leaves the rest pending', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '2')
+      queueClaims()
+      const { runTriggeredCrawls } = await import('./run.js')
+      const result = await runTriggeredCrawls()
+      expect(result.processed).toBe(2)
+      expect(claimCount()).toBe(2)
+      expect(mockCrawlVenue).toHaveBeenCalledTimes(2)
+    })
+
+    it('stops claiming once the time budget is spent', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      vi.stubEnv('CRAWL_TRIGGER_BUDGET_MS', '1000')
+      queueClaims()
+      const start = Date.now()
+      const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(start)
+      mockCrawlVenue.mockImplementation(async () => {
+        // Each crawl moves the clock past the whole budget.
+        nowSpy.mockReturnValue(Date.now() + 5000)
+        return SUCCESSFUL_CRAWL_RUN
+      })
+      try {
+        const { runTriggeredCrawls } = await import('./run.js')
+        const result = await runTriggeredCrawls()
+        // The first trigger always runs; no further claim after the budget.
+        expect(result.processed).toBe(1)
+        expect(claimCount()).toBe(1)
+      } finally {
+        nowSpy.mockRestore()
+      }
+    })
+
+    it('keeps draining after one trigger fails', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      queueClaims()
+      mockCrawlVenue
+        .mockRejectedValueOnce(new Error('venue down'))
+        .mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
+      const { runTriggeredCrawls } = await import('./run.js')
+      const result = await runTriggeredCrawls()
+      expect(result.processed).toBe(3)
+      const finalStatuses = mockDbUpdate.set.mock.calls
+        .map((call) => call[0]?.status)
+        .filter((status) => status === 'failed' || status === 'done')
+      // The reap's 'failed' write comes first, then one outcome per trigger.
+      expect(finalStatuses).toEqual(['failed', 'failed', 'done', 'done'])
+    })
+
+    it('shares one browser across every trigger in the drain', async () => {
+      const { chromium } = await import('playwright')
+      // An earlier test leaves launch rejecting; clearAllMocks keeps that.
+      vi.mocked(chromium.launch).mockResolvedValue(mockBrowser as never)
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      queueClaims()
+      mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+        await getBrowser()
+        return SUCCESSFUL_CRAWL_RUN
+      })
+      const { runTriggeredCrawls } = await import('./run.js')
+      await runTriggeredCrawls()
+      expect(vi.mocked(chromium.launch)).toHaveBeenCalledTimes(1)
+      expect(mockBrowser.close).toHaveBeenCalledTimes(1)
+    })
+
+    it('relaunches Chromium when the shared browser dies mid-drain', async () => {
+      const { chromium } = await import('playwright')
+      vi.mocked(chromium.launch).mockResolvedValue(mockBrowser as never)
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      queueClaims()
+      let crawls = 0
+      mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+        await getBrowser()
+        crawls += 1
+        if (crawls === 1) {
+          // Chromium crashes after the first venue.
+          const onDisconnected = mockBrowser.on.mock.calls.find(
+            ([event]) => event === 'disconnected',
+          )?.[1] as (() => void) | undefined
+          onDisconnected?.()
+        }
+        return SUCCESSFUL_CRAWL_RUN
+      })
+      const { runTriggeredCrawls } = await import('./run.js')
+      await runTriggeredCrawls()
+      expect(vi.mocked(chromium.launch)).toHaveBeenCalledTimes(2)
+    })
+
+    it('carries on when marking a thrown trigger failed also fails', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', '50')
+      queueClaims()
+      mockCrawlVenue
+        .mockRejectedValueOnce(new Error('venue down'))
+        .mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
+      mockDbUpdate.where.mockImplementation(() => {
+        const status = mockDbUpdate.set.mock.lastCall?.[0]?.status
+        // Only the catch path's 'failed' write after a crawl throws rejects;
+        // the reap's 'failed' write goes through returning().
+        const isCatchWrite =
+          status === 'failed' && mockCrawlVenue.mock.calls.length === 1
+        return isCatchWrite
+          ? Promise.reject(new Error('db down'))
+          : mockDbUpdate
+      })
+      try {
+        const { runTriggeredCrawls } = await import('./run.js')
+        const result = await runTriggeredCrawls()
+        expect(result.processed).toBe(3)
+        expect(mockCrawlVenue).toHaveBeenCalledTimes(3)
+      } finally {
+        mockDbUpdate.where.mockReset()
+        mockDbUpdate.where.mockReturnThis()
+      }
+    })
+
+    it('ignores an invalid drain setting and keeps the default', async () => {
+      vi.stubEnv('CRAWL_TRIGGER_DRAIN_MAX', 'lots')
+      queueClaims()
+      const { runTriggeredCrawls } = await import('./run.js')
+      const result = await runTriggeredCrawls()
+      expect(result.processed).toBe(1)
+    })
   })
 
   it('calls runPricePipeline for unpriced events after each triggered crawl', async () => {

@@ -17,7 +17,8 @@ async function main(): Promise<{ degraded: boolean }> {
   }
 
   if (mode === 'triggers' || mode === 'all') {
-    await runTriggeredCrawls()
+    const { processed } = await runTriggeredCrawls()
+    logger.info({ processed }, 'Triggers run finished')
   }
   if (mode === 'daily' || mode === 'all') {
     const { degraded } = await runDailyCrawl()
