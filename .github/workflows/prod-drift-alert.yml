@@ -64,8 +64,8 @@ jobs:
       # Most merges to main cannot change what the API serves: a web-only or
       # docs-only commit leaves the live SHA behind main correctly and forever.
       # Counting raw commits would therefore trip MAX_COMMITS_BEHIND on a quiet
-      # API week with nothing undeployed — the exact false signal
-      # render-check-deploy-health.sh's header warns about. So only commits
+      # API week with nothing undeployed — a false signal of the kind that
+      # trains people to ignore the alert. So only commits
       # touching the API's paths count. Those are read from the `paths` filter
       # of deploy-api-staging.yml, the list that decides when the API ships to
       # staging, rather than restated here: a second copy of the path list is a

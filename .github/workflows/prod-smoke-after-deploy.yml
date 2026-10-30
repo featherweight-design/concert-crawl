@@ -94,7 +94,7 @@ jobs:
           ref: ${{ github.sha }}
 
       # Preflight on every fail-fast prerequisite for this job:
-      # Vercel + Render config for the rollback, smoke URLs + Playwright
+      # Vercel config for the rollback, smoke URLs + Playwright
       # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
       # consumed by smoke. A missing value surfaces as a clear
       # "Missing X" message rather than as an opaque Playwright
@@ -358,8 +358,8 @@ jobs:
             echo "::warning title=Admin email failed::Resend API call failed. See step log for response body."
             echo "Resend response body:"
             printf '%s\n' "${response}" | sed 's/^/  /'
-            # Don't fail the workflow — the cron-skip annotation +
-            # GHA's workflow-failure email are still primary signals.
+            # Don't fail the workflow — GHA's workflow-failure email is
+            # still the primary signal.
             exit 0
           fi
           # Generic success line — don't echo the address even though

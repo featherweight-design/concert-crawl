@@ -630,10 +630,8 @@ are currently **disabled** on the `concert-crawl-api` project: Vercel counted
 the first staging deploy as production and registered the crons, so they were
 turned off to stop them running against staging. Re-enable them (Vercel →
 `concert-crawl-api` → Settings → Cron Jobs) after the first production deploy,
-in the same sitting as suspending the two Render crons. Between the merge of
-this change and the cutover, `PROD_API_URL` still names the Render host, so the
-API check cannot run and reports a checker failure; that is expected until the
-cutover.
+in the same sitting as suspending the Render crons. (`PROD_API_URL` has named
+`https://api.concertcrawl.app` since the API cutover, so the API check runs.)
 
 It reports only. Every condition it detects needs a human decision, and
 re-triggering a build that failed for want of build minutes would burn the
@@ -652,9 +650,10 @@ prod service is the correct state and the checker treats it as healthy.
 `autoDeploy = "yes"` is now the fault: somebody re-enabled auto-deploy in the
 Render dashboard and merges to `main` are reaching prod without a promotion.
 
-Responder action: confirm in the Render dashboard, set Auto-Deploy back to `No`
-on the named service, then check whether an unpromoted commit already went live.
-Do not "fix" the checker.
+Responder action (when the check still ran): confirm in the Render dashboard,
+set Auto-Deploy back to `No` on the named service, then check whether an
+unpromoted commit already went live. No workflow runs this checker since the
+crawler cutover, so only a resumed Render service needs this.
 
 Any value other than `yes` or `no` exits 1 rather than 2 — that is the Render
 API response shape changing, not a prod problem.
@@ -718,12 +717,12 @@ issue rather than to raise the thresholds. Raising them hides the next real one.
   serving on `api.concertcrawl.app` before it, so a failed health check or smoke
   on that run cannot roll the API back. The fallback is the suspended Render
   services ("Falling back to Render" in `production-launch.md`).
-- **The gate depends on settings this repo cannot fully enforce.** The crawler
-  crons' `Auto-Deploy: no` lives in Render, and `render.yaml` only records it.
-  Git deployments being off on the two prod Vercel projects lives in Vercel.
-  Someone flipping either back reopens a push-to-prod path. `prod-deploy-health`
-  flags the Render setting directly, and a Git-integration build only once it is
-  serving prod; either within two hours.
+- **The gate depends on settings this repo cannot fully enforce.** Git
+  deployments being off on the two prod Vercel projects lives in Vercel.
+  Someone flipping it back reopens a push-to-prod path. `prod-deploy-health`
+  flags a Git-integration build only once it is serving prod, within two hours.
+  (The suspended Render services are no longer checked; resuming one for a
+  fallback means checking its `Auto-Deploy: no` by hand.)
 - **Vercel Cron Jobs are a project-level switch.** If they are off,
   match-artists and spotify-weekly stop with no error anywhere except the
   deploy-health check.

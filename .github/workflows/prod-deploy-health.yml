@@ -6,9 +6,11 @@ name: Prod Deploy Health
 # Since the promotion gate landed (2026-09-01) prod deploys only through a
 # deliberate dispatch of deploy-prod.yml, so "prod is behind main" is the
 # normal state and is NOT what this workflow watches — staleness is
-# prod-drift-alert.yml's job. This one watches the deploy path itself: a
-# suspended service, a re-enabled auto-deploy (the gate leaking), or a
-# newest deploy that failed with nothing live after it.
+# prod-drift-alert.yml's job. This one watches the deploy path itself: the
+# production API serving a Git-integration build (the gate leaking), a newest
+# deploy that failed with nothing live after it, Vercel Cron Jobs switched off,
+# and the daily crawl not having succeeded within 26 hours. Nothing in prod
+# runs on Render any more, so no Render service is checked.
 #
 # That day the Render account ran out of build minutes. Every auto-deploy
 # came back `build_failed` in under 1.5s, prod kept serving the last good

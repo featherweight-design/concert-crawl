@@ -50,7 +50,7 @@ concurrency:
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege. This workflow only checks out
-# the repo and calls the Render and Vercel APIs — it does not need any GitHub
+# the repo and calls the Vercel API — it does not need any GitHub
 # write surface. Especially important here given the workflow uses the
 # `production` environment.
 permissions:

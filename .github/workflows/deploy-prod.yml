@@ -49,8 +49,8 @@ concurrency:
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege. This workflow only reads the
-# main branch HEAD (for the SHA-drift guards) and calls the Render and
-# Vercel APIs — it does not need any GitHub write surface.
+# main branch HEAD (for the SHA-drift guards) and calls the Vercel API — it
+# does not need any GitHub write surface.
 permissions:
   contents: read
 
@@ -134,9 +134,9 @@ jobs:
       # the original drift-detection rationale.
       #
       # SHA-drift guard: refuse to deploy if main has advanced past the
-      # deployable code that staging-smoke validated. With Render-API
-      # commitId pinning the wrong code can't reach prod (we pass the
-      # specific SHA to deploy), but the un-smoked code would still be
+      # deployable code that staging-smoke validated. The API and web deploys
+      # are pinned to the checked-out SHA, so the wrong code can't reach prod,
+      # but the un-smoked code would still be
       # promoted without the validation gate — and that's what we refuse
       # here. The next merge's pipeline will deploy the latest code
       # through its own staging-smoke run.
