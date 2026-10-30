@@ -51,8 +51,10 @@ Values are written to a 0600 env file on the runner, passed with
 `docker run --env-file`, and deleted when the job ends. None goes into the
 image or a build argument. The "Verify crawler configuration" step fails the
 run and lists, by name, any of the values above that are missing (`LOG_LEVEL`
-excepted: it has a default). Only the environment's own secrets reach the
-job; the callers pass no repository secrets.
+excepted: it has a default). The callers pass `secrets: inherit`: a called
+workflow sees no secrets at all, its environment's included, without it. That
+also hands it the repository's secrets, which is why the job runs only from
+`main` and both environments carry a `main`-only branch policy.
 
 To change a value, from a file and never through chat:
 

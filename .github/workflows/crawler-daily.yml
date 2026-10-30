@@ -33,10 +33,13 @@ permissions:
 
 jobs:
   daily:
-    # The environment's secrets reach crawler-run.yml's job through its
-    # `environment:`; no repository secret is needed, so none is passed.
+    # `secrets: inherit` is required even though every value lives in the
+    # environment: a called workflow gets no `secrets` context at all, its
+    # environment's included, unless the caller passes one. The job is gated
+    # to main and the environments to a main-only branch policy.
     if: github.event_name == 'workflow_dispatch' || vars.CRAWLER_GHA_DAILY_ENABLED == 'true'
     uses: ./.github/workflows/crawler-run.yml
     with:
       mode: all
       environment: ${{ inputs.environment || 'production' }}
+    secrets: inherit
