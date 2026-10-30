@@ -162,8 +162,9 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
         <InviteEyebrow tone="signal">
           {member ? COPY.landing.memberEyebrow : COPY.landing.eyebrow}
         </InviteEyebrow>
+        {/* Names the inviter: analytics autocapture skips it. */}
         <h1
-          className="text-[27px] sm:text-[38px]"
+          className="ph-no-capture text-[27px] sm:text-[38px]"
           style={{
             margin: 0,
             fontWeight: 900,

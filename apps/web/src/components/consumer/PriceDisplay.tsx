@@ -384,6 +384,7 @@ function VerifiedStamp({
         {headWord} {copy.priceDisplay.attribution}{' '}
         <a
           href={by.url}
+          className="ph-no-capture"
           style={{
             color: 'inherit',
             textDecoration: 'underline',
@@ -730,6 +731,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
             submitter.url ? (
               <a
                 href={submitter.url}
+                className="ph-no-capture"
                 style={{
                   color: 'inherit',
                   textDecoration: 'underline',
@@ -740,7 +742,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
                 @{submitter.handle}
               </a>
             ) : (
-              `@${submitter.handle}`
+              <span className="ph-no-capture">@{submitter.handle}</span>
             )
           ) : (
             <em>{copy.priceDisplay.anonymousFan}</em>
@@ -765,6 +767,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
       {submitter.url ? (
         <a
           href={submitter.url}
+          className="ph-no-capture"
           style={{
             color: 'inherit',
             textDecoration: 'underline',
@@ -775,7 +778,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
           @{submitter.handle}
         </a>
       ) : (
-        `@${submitter.handle}`
+        <span className="ph-no-capture">@{submitter.handle}</span>
       )}
     </>
   ) : (
@@ -824,6 +827,7 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
       {soldOutBy.url ? (
         <a
           href={soldOutBy.url}
+          className="ph-no-capture"
           style={{
             color: 'inherit',
             textDecoration: 'underline',
@@ -834,7 +838,7 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
           @{soldOutBy.handle}
         </a>
       ) : (
-        `@${soldOutBy.handle}`
+        <span className="ph-no-capture">@{soldOutBy.handle}</span>
       )}
     </>
   ) : (
@@ -1381,6 +1385,7 @@ export function PriceDisplay({
           {priceObj.submitter ? (
             <a
               href={priceObj.submitter.url}
+              className="ph-no-capture"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 9,
@@ -1502,6 +1507,7 @@ export function PriceDisplay({
                   color: 'var(--fg-subtle)',
                   letterSpacing: '0.04em',
                 }}
+                className="ph-no-capture"
               >
                 @{priceObj.submitter.handle}
               </span>

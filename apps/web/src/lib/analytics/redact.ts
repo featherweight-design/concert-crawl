@@ -6,13 +6,16 @@
 // through the same redaction Sentry uses. A string that IS a URL (absolute,
 // or a path starting with `/`) also loses everything from its first `?` or
 // `#`: the query and fragment carry search text a reader typed and one-time
-// auth parameters, neither of which usage analytics needs.
+// auth parameters, neither of which usage analytics needs. Campaign tags, ad
+// click ids and search-engine keywords, which posthog-js copies out of URLs
+// into properties of their own, are dropped by name.
 //
 // `$elements_chain` is one serialized string, `tag:key="value"key="value";…`,
 // in which posthog-js escapes a `"` inside a value as `\"`. Each quoted value
 // is redacted on its own, so a value never runs into the next attribute.
 import type { CaptureResult, Properties } from 'posthog-js'
 import { redactInviteTokens } from '@/lib/sentry-redact'
+import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties'
 
 const URL_START = /^(?:https?:\/\/|\/)/i
 
@@ -44,14 +47,20 @@ const redactValue = (value: unknown): unknown => {
   return value
 }
 
+const DROPPED = new Set(CAMPAIGN_PROPERTIES)
+
+// `property_denylist` covers event properties only; `$set` and `$set_once`
+// reach before_send untouched, so the same names are dropped here as well.
 const redactProperties = (properties: Properties): Properties =>
   Object.fromEntries(
-    Object.entries(properties).map(([key, value]) => [
-      key,
-      key === '$elements_chain' && typeof value === 'string'
-        ? redactElementsChain(value)
-        : redactValue(value),
-    ]),
+    Object.entries(properties)
+      .filter(([key]) => !DROPPED.has(key))
+      .map(([key, value]) => [
+        key,
+        key === '$elements_chain' && typeof value === 'string'
+          ? redactElementsChain(value)
+          : redactValue(value),
+      ]),
   )
 
 export const redactCapture = (

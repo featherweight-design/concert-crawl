@@ -9,6 +9,8 @@ const mockIdentify = vi.fn()
 const mockReset = vi.fn()
 const mockRegister = vi.fn()
 const mockGetProperty = vi.fn()
+const mockSetPersonProperties = vi.fn()
+const mockUnsetPersonProperties = vi.fn()
 vi.mock('posthog-js', () => ({
   default: {
     init: mockInit,
@@ -17,6 +19,8 @@ vi.mock('posthog-js', () => ({
     reset: mockReset,
     register: mockRegister,
     get_property: mockGetProperty,
+    setPersonProperties: mockSetPersonProperties,
+    unsetPersonProperties: mockUnsetPersonProperties,
   },
 }))
 
@@ -186,14 +190,32 @@ describe('web analytics client', () => {
     )
   })
 
-  it('sets the display name as a person property on identify', async () => {
+  it('sets the display name as a person property', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
     const analytics = await loadModule()
     analytics.initAnalytics(PROD)
-    analytics.identifyUser('user_9', 'Ada Lovelace')
-    expect(mockIdentify).toHaveBeenCalledWith('user_9', {
-      name: 'Ada Lovelace',
-    })
+    analytics.setPersonName('adal')
+    expect(mockSetPersonProperties).toHaveBeenCalledWith({ name: 'adal' })
+    expect(mockUnsetPersonProperties).not.toHaveBeenCalled()
+  })
+
+  it('removes the name when the reader has no handle', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
+    const analytics = await loadModule()
+    analytics.initAnalytics(PROD)
+    analytics.setPersonName(null)
+    expect(mockUnsetPersonProperties).toHaveBeenCalledWith('name')
+    expect(mockSetPersonProperties).not.toHaveBeenCalled()
+  })
+
+  it('does not touch the name while analytics is off', async () => {
+    delete process.env['NEXT_PUBLIC_POSTHOG_KEY']
+    const analytics = await loadModule()
+    analytics.initAnalytics(PROD)
+    analytics.setPersonName('adal')
+    analytics.setPersonName(null)
+    expect(mockSetPersonProperties).not.toHaveBeenCalled()
+    expect(mockUnsetPersonProperties).not.toHaveBeenCalled()
   })
 
   it('does not reset an anonymous browser, so a signed-out load keeps its id', async () => {
@@ -221,6 +243,26 @@ describe('web analytics client', () => {
         advanced_disable_flags: true,
       }),
     )
+  })
+
+  it('keeps campaign tags, click ids and search keywords out of events', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
+    const analytics = await loadModule()
+    analytics.initAnalytics(PROD)
+    const config = mockInit.mock.calls[0]?.[1]
+    expect(config).toMatchObject({ save_campaign_params: false })
+    for (const key of [
+      'utm_source',
+      'gclid',
+      'fbclid',
+      'ph_keyword',
+      '$initial_utm_campaign',
+      '$initial_ph_keyword',
+      '$session_entry_utm_term',
+      '$session_entry_msclkid',
+    ]) {
+      expect(config.property_denylist).toContain(key)
+    }
   })
 
   it('keeps autocapture off the admin and on everywhere else', async () => {

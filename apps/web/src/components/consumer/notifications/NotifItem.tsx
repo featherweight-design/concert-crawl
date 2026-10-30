@@ -13,6 +13,7 @@
 // left rail in the category ink, a --surface-1 row fill, a 700-weight title,
 // and a trailing dot. Any one of them can be missed; all four cannot.
 
+import { useId } from 'react'
 import type { ConsumerNotification } from '@/lib/notifications'
 import { CrewPatch } from '@/components/consumer/crew-patch/CrewPatch'
 import { categoryFor } from './definitions/categories'
@@ -20,7 +21,7 @@ import { NMono } from './NMono'
 import { NotifTile } from './NotifTile'
 import { itemLabel, isUnread, relTime } from './lib/format-time'
 import { activateOnKey } from './lib/activate-keys'
-import { crewRowIdentity } from './lib/crew-meta'
+import { CREW_CATEGORY_PREFIX, crewRowIdentity } from './lib/crew-meta'
 
 /** Matches NotifTile's default box, so the row's rhythm is unchanged. */
 const CREW_PATCH_SIZE = 28
@@ -44,6 +45,16 @@ export const NotifItem = ({
   // crew is this" cue there is, and "Crew" three times over is not. A row
   // whose metadata failed the guard keeps the ordinary presentation.
   const crew = crewRowIdentity(item.category, item.metadata)
+  // A crew row's title names another reader ("x is going to …"). Analytics
+  // autocapture records the clicked element's text and every ancestor's
+  // attributes, so a crew row reads its accessible name from a hidden span
+  // autocapture skips (`ph-no-capture`) rather than from an aria-label on the
+  // row, and its title and body are skipped too: a tap on them sends nothing,
+  // a tap elsewhere on the row still records the open, with its category.
+  // Other categories name nobody and keep their aria-label and text.
+  const labelId = useId()
+  const namesSomeone = item.category.startsWith(CREW_CATEGORY_PREFIX)
+  const noCapture = namesSomeone ? 'ph-no-capture' : undefined
 
   const open = (): void => {
     onOpen?.(item)
@@ -67,7 +78,9 @@ export const NotifItem = ({
       : {
           role: 'button',
           tabIndex: 0,
-          'aria-label': itemLabel(item, now),
+          ...(namesSomeone
+            ? { 'aria-labelledby': labelId }
+            : { 'aria-label': itemLabel(item, now) }),
           onClick: open,
           onKeyDown,
         }
@@ -81,6 +94,7 @@ export const NotifItem = ({
       className={onOpen === undefined ? undefined : 'notif-row'}
       {...interactive}
       data-action-url={item.actionUrl ?? undefined}
+      data-ph-capture-attribute-notification-category={item.category}
       style={{
         display: 'flex',
         gap: 10,
@@ -93,6 +107,11 @@ export const NotifItem = ({
         borderBottom: '1px solid var(--border)',
       }}
     >
+      {onOpen !== undefined && namesSomeone && (
+        <span id={labelId} hidden className="ph-no-capture">
+          {itemLabel(item, now)}
+        </span>
+      )}
       {crew === null ? (
         <NotifTile category={item.category} read={!unread} />
       ) : (
@@ -123,6 +142,7 @@ export const NotifItem = ({
         }}
       >
         <span
+          className={noCapture}
           style={{
             fontFamily: 'Inter, system-ui',
             fontSize: 13.5,
@@ -141,6 +161,7 @@ export const NotifItem = ({
         </span>
         {item.body !== '' && (
           <span
+            className={noCapture}
             style={{
               fontFamily: 'Inter, system-ui',
               fontSize: 12.5,

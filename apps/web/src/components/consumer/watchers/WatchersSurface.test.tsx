@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom'
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import type { EventWatchersResponse } from '@concert-crawl/types'
@@ -45,7 +46,7 @@ describe('WatchersSurface', () => {
         expandable={false}
       />,
     )
-    expect(screen.getByRole('group').getAttribute('aria-label')).toBe(
+    expect(screen.getByRole('group')).toHaveAccessibleName(
       `marisol ${copy.one}`,
     )
   })
@@ -110,6 +111,21 @@ describe('WatchersSurface', () => {
         ?.textContent?.replace('+', ''),
     )
     expect(discs + overflow).toBe(9)
+  })
+
+  it("keeps other readers' handles out of analytics", () => {
+    render(
+      <WatchersSurface
+        data={{ total: 1, named: [watcher('marisol')] }}
+        expandable={false}
+      />,
+    )
+    // Autocapture records every ancestor's attributes with a click on the
+    // "see all" button inside this group.
+    expect(screen.getByRole('group')).not.toHaveAttribute('aria-label')
+    for (const node of screen.getAllByText('marisol', { exact: false })) {
+      expect(node).toHaveClass('ph-no-capture')
+    }
   })
 
   it('stays honest when there are watchers but no handles to show', () => {

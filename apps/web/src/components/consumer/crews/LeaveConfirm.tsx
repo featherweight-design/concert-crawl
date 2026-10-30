@@ -172,8 +172,10 @@ export const LeaveConfirm = ({
           </div>
         )}
 
+        {/* "Remove x?" names another reader: analytics skips it. */}
         <h2
           id={titleId}
+          className="ph-no-capture"
           style={{
             margin: 0,
             fontFamily: 'var(--font-ui)',
@@ -207,8 +209,12 @@ export const LeaveConfirm = ({
             {members.map((member) => {
               const named = member.handle !== null && member.handle !== ''
               return (
+                // The handle is skipped by analytics (`ph-no-capture`); a
+                // tap elsewhere on the row still records the pick, named by
+                // the data attribute rather than by who was picked.
                 <label
                   key={member.userId}
+                  data-ph-capture-attribute-crew-action="pick-keeper"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -220,12 +226,12 @@ export const LeaveConfirm = ({
                   <input
                     type="radio"
                     name="crew-new-keeper"
-                    value={member.userId}
                     checked={picked === member.userId}
                     onChange={() => setPicked(member.userId)}
                   />
                   <MemberDot member={member} size={30} />
                   <span
+                    className="ph-no-capture"
                     style={{
                       fontFamily: 'var(--font-ui)',
                       fontSize: 14,

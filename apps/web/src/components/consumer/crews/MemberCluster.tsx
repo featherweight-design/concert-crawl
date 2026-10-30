@@ -22,9 +22,12 @@ export const MemberDot = ({ member, size }: MemberDotProps) => {
   const named = member.handle !== null && member.handle !== ''
   const tone = member.avatarColor ?? 'signal'
 
+  // The initial comes from another reader's handle, and a link around the dot
+  // would hand it to analytics autocapture as nested span text.
   return (
     <span
       aria-hidden="true"
+      className="ph-no-capture"
       style={{
         width: size,
         height: size,

@@ -43,6 +43,7 @@ export const WatchersSurface = ({
   // mouse-through would be an accident every time.
   const trigger = useOverlayTrigger({ isMobile })
   const panelId = useId()
+  const labelId = useId()
 
   if (loading) return <WatchersSkeleton />
   if (!data || data.total === 0) return null
@@ -54,11 +55,24 @@ export const WatchersSurface = ({
   // can. Naming at least one watcher makes `others` the real overflow.
   const canExpand = expandable && (anonOnly ? total > NAMED_CAP : others > 0)
 
+  // Analytics autocapture records every ancestor's attributes with a click,
+  // and the "see all" button sits inside this group, so a sentence that names
+  // other readers is read from a hidden span autocapture skips rather than
+  // from an aria-label. The names on screen are skipped the same way.
+  const namesSomeone = !anonOnly
+
   return (
     <div>
+      {namesSomeone && (
+        <span id={labelId} hidden className="ph-no-capture">
+          {aria}
+        </span>
+      )}
       <div
         role="group"
-        aria-label={aria}
+        {...(namesSomeone
+          ? { 'aria-labelledby': labelId }
+          : { 'aria-label': aria })}
         className="flex flex-wrap items-center gap-2"
         style={{ minHeight: 28 }}
       >
@@ -73,7 +87,7 @@ export const WatchersSurface = ({
         >
           {parts.map((part, index) =>
             part.kind === 'name' ? (
-              <span key={index} className="font-bold text-fg">
+              <span key={index} className="ph-no-capture font-bold text-fg">
                 {part.value}
               </span>
             ) : (

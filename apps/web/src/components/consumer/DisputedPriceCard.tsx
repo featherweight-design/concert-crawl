@@ -205,8 +205,9 @@ export const DisputedPriceCard = ({
               {copy.strip.badgeLabel}
             </span>
 
-            {/* Attribution text */}
+            {/* Attribution text: names the reader, so analytics skips it */}
             <span
+              className="ph-no-capture"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 9.5,
@@ -318,7 +319,9 @@ export const DisputedPriceCard = ({
           >
             <span>{copy.body.submittedByPrefix}</span>
             {submitter !== null ? (
-              <span style={{ fontWeight: 700 }}>@{submitter.handle}</span>
+              <span className="ph-no-capture" style={{ fontWeight: 700 }}>
+                @{submitter.handle}
+              </span>
             ) : (
               <span style={{ fontStyle: 'italic', opacity: 0.85 }}>
                 {copy.strip.anonymousLabel}

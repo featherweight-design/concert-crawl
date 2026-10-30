@@ -130,6 +130,7 @@ const SubmissionDetailCard = ({
     }
     return (
       <span
+        className="ph-no-capture"
         style={{
           fontFamily: 'JetBrains Mono, monospace',
           fontSize: '10px',

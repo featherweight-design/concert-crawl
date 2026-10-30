@@ -14,6 +14,7 @@
 
 import posthog from 'posthog-js'
 import type { AnalyticsEvent, AnalyticsEventProps } from '@concert-crawl/types'
+import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties'
 import { redactCapture } from './redact'
 
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
@@ -90,6 +91,12 @@ export const initAnalytics = (hostname?: string): void => {
       // Only build person profiles for signed-in (identified) users — anonymous
       // browsing does not need a profile.
       person_profiles: 'identified_only',
+      // No campaign tags or ad click ids from the landing URL, and none of
+      // the copies posthog-js keeps of them or of a search engine's keyword
+      // (./redact drops the same names from $set and $set_once, which the
+      // denylist does not reach).
+      save_campaign_params: false,
+      property_denylist: [...CAMPAIGN_PROPERTIES],
       // Invite tokens and query strings never leave the browser (./redact).
       before_send: redactCapture,
       // No /flags request: this app uses no PostHog flags, surveys or remote
@@ -109,17 +116,29 @@ export const initAnalytics = (hostname?: string): void => {
 export const isAnalyticsEnabled = (): boolean => initialized
 
 // Bind subsequent events to the Clerk userId so client + server events join.
-// `name` is the Clerk display name, set as a person property; never an email.
-export const identifyUser = (userId: string, name?: string | null): void => {
+export const identifyUser = (userId: string): void => {
+  if (!initialized) return
+  try {
+    posthog.identify(userId)
+  } catch (err) {
+    console.error('analytics: identify failed', err)
+  }
+}
+
+// The identified reader's `name` person property: their display name (the
+// profile handle, see PostHogProvider), never an email. A reader with no
+// handle has the property removed, so a handle they cleared does not stay
+// behind in PostHog.
+export const setPersonName = (name: string | null): void => {
   if (!initialized) return
   try {
     if (name) {
-      posthog.identify(userId, { name })
+      posthog.setPersonProperties({ name })
     } else {
-      posthog.identify(userId)
+      posthog.unsetPersonProperties('name')
     }
   } catch (err) {
-    console.error('analytics: identify failed', err)
+    console.error('analytics: set name failed', err)
   }
 }
 

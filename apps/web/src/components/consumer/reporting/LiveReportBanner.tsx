@@ -168,7 +168,9 @@ export const LiveReportBanner = ({
         >
           {headline}
         </span>
+        {/* "Reported by @x": analytics autocapture skips it. */}
         <span
+          className="ph-no-capture"
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: '9px',

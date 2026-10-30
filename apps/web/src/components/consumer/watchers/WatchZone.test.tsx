@@ -3,6 +3,7 @@
 // The strip's own job: whether row 2 renders. Row 1's status line lives inside
 // WatchShowButton (which this suite stubs) and is covered there.
 
+import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import type {
@@ -131,7 +132,7 @@ describe('WatchZone crawl visibility', () => {
       isPending: false,
     })
     render(<WatchZone eventId="evt_1" scaRegion={false} />)
-    expect(crawl()?.getAttribute('aria-label')).toBe(
+    expect(crawl()).toHaveAccessibleName(
       `marisol ${CONSUMER_COPY.watchers.one}`,
     )
   })

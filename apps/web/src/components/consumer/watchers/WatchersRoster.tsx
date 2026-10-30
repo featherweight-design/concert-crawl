@@ -44,7 +44,7 @@ export const WatchersRoster = ({
             size={28}
           />
         </div>
-        <span className="text-[13.5px] font-semibold tracking-[-0.005em] text-fg">
+        <span className="ph-no-capture text-[13.5px] font-semibold tracking-[-0.005em] text-fg">
           {watcher.handle}
         </span>
       </li>

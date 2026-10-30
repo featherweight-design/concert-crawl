@@ -484,6 +484,7 @@ export const ConfirmReportSheet = ({
               {token.label}
             </span>
             <span
+              className="ph-no-capture"
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: 9,

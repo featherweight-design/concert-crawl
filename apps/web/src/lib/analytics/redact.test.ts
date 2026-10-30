@@ -140,6 +140,37 @@ describe('redactCapture', () => {
     expect(out?.properties['$elements'][0]['$el_text']).toBe('Join')
   })
 
+  it('drops campaign tags, click ids and search keywords from properties, $set and $set_once', () => {
+    const redacted = redactCapture(
+      event({
+        properties: {
+          utm_source: 'newsletter',
+          gclid: 'abc123',
+          ph_keyword: 'denver shows tonight',
+          $session_entry_utm_campaign: 'fall',
+          $session_entry_ph_keyword: 'denver shows tonight',
+          $search_engine: 'google',
+          $pathname: '/events',
+        },
+        $set: { utm_medium: 'email', name: 'adal' },
+        $set_once: {
+          utm_term: 'jazz',
+          $initial_utm_source: 'newsletter',
+          $initial_fbclid: 'fb1',
+          $initial__kx: 'kx1',
+          $initial_ph_keyword: 'denver shows tonight',
+          $initial_pathname: '/',
+        },
+      }),
+    )
+    expect(redacted?.properties).toEqual({
+      $search_engine: 'google',
+      $pathname: '/events',
+    })
+    expect(redacted?.$set).toEqual({ name: 'adal' })
+    expect(redacted?.$set_once).toEqual({ $initial_pathname: '/' })
+  })
+
   it('keeps non-string values and the event identity', () => {
     const out = redactCapture(
       event({ properties: { count: 3, flag: true, none: null } }),

@@ -4,7 +4,9 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
+import { useQueryClient } from '@tanstack/react-query'
 import { patchMe, checkHandleAvailability } from '@/lib/users'
+import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider'
 import { Avatar } from './Avatar'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
@@ -42,7 +44,8 @@ const MONO_BTN: React.CSSProperties = {
 
 export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
   const router = useRouter()
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
+  const queryClient = useQueryClient()
 
   const [handle, setHandle] = useState(profile.handle ?? '')
   const [city, setCity] = useState(profile.city ?? '')
@@ -108,11 +111,22 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
     try {
       const token = await getToken()
       if (!token) return
+      const savedHandle = handle === '' ? null : handle
       await patchMe(token, {
-        handle: handle === '' ? null : handle,
+        handle: savedHandle,
         city: city === '' ? null : city,
         avatarColor,
       })
+      // The analytics provider outlives router.refresh(), so hand it the new
+      // handle directly: a changed or cleared name reaches PostHog now, not
+      // whenever the cached profile goes stale. A profile read still in
+      // flight was sent before the save; cancel it first, or its late answer
+      // would put the old name back.
+      if (userId) {
+        const key = analyticsHandleQueryKey(userId)
+        await queryClient.cancelQueries({ queryKey: key })
+        queryClient.setQueryData(key, savedHandle)
+      }
       router.refresh()
       if (onClose) {
         onClose()

@@ -300,8 +300,9 @@ export const PendingSoldOutCard = ({
           </div>
         )}
 
-        {/* Reporter attribution */}
+        {/* Reporter attribution: names the reader, so analytics skips it */}
         <div
+          className="ph-no-capture"
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: 9,

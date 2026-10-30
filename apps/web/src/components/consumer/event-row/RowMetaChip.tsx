@@ -90,7 +90,10 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
         }}
       >
         {icon}
-        {srLabel && !hidden ? <span className="sr-only">{srLabel}</span> : null}
+        {/* A crew chip's label names who is going: analytics skips it. */}
+        {srLabel && !hidden ? (
+          <span className="ph-no-capture sr-only">{srLabel}</span>
+        ) : null}
         <span aria-hidden={srLabel ? true : undefined}>{label}</span>
         {secondaryLabel ? (
           <>

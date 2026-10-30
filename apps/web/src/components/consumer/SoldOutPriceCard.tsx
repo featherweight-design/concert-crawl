@@ -135,6 +135,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
             </span>
           </div>
           <div
+            className={reporterHandle ? 'ph-no-capture' : undefined}
             style={{
               marginTop: 8,
               fontFamily: 'var(--font-mono)',
@@ -169,6 +170,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
             }}
           />
           <span
+            className={reporterHandle ? 'ph-no-capture' : undefined}
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 9,

@@ -141,9 +141,27 @@ describe('NotifItem — crew rows', () => {
   it('still names the crew in the accessible name of an actionable row', () => {
     render(<NotifItem item={crewRow()} onOpen={() => {}} now={NOW} />)
     const row = screen.getByRole('button')
-    expect(row.getAttribute('aria-label')).toContain('The Regulars')
-    expect(row.getAttribute('aria-label')).toContain(
+    expect(row).toHaveAccessibleName(/The Regulars/)
+    expect(row).toHaveAccessibleName(
+      /hugh is going to Big Thief at Bluebird Theater\./,
+    )
+  })
+
+  it("keeps the other reader's handle out of analytics", () => {
+    render(<NotifItem item={crewRow()} onOpen={() => {}} now={NOW} />)
+    const row = screen.getByRole('button')
+    // Autocapture records every ancestor's attributes, so the name is never
+    // carried in an aria-label on the row.
+    expect(row).not.toHaveAttribute('aria-label')
+    expect(row).toHaveAttribute(
+      'data-ph-capture-attribute-notification-category',
+      'crew.going',
+    )
+    const title = screen.getByText(
       'hugh is going to Big Thief at Bluebird Theater.',
     )
+    expect(title).toHaveClass('ph-no-capture')
+    const labelId = row.getAttribute('aria-labelledby') ?? ''
+    expect(document.getElementById(labelId)).toHaveClass('ph-no-capture')
   })
 })

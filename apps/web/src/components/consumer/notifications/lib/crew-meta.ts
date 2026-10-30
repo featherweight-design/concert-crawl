@@ -11,7 +11,7 @@
 // label — degraded, never dropped, matching how the panel treats an unknown
 // category and a hostile actionUrl.
 
-const CREW_CATEGORY_PREFIX = 'crew.'
+export const CREW_CATEGORY_PREFIX = 'crew.'
 
 export interface CrewRowIdentity {
   crewId: string

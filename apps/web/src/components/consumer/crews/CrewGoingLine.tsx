@@ -210,8 +210,10 @@ export const CrewGoingLine = ({ going, wide = false }: CrewGoingLineProps) => {
           }}
         />
       )}
+      {/* Crew members' handles: analytics autocapture skips both spans. */}
       <span
         ref={textRef}
+        className="ph-no-capture"
         aria-hidden={srFull === null ? undefined : 'true'}
         style={{
           flex: 1,
@@ -228,7 +230,9 @@ export const CrewGoingLine = ({ going, wide = false }: CrewGoingLineProps) => {
       >
         {text}
       </span>
-      {srFull !== null && <span className="sr-only">{srFull}</span>}
+      {srFull !== null && (
+        <span className="ph-no-capture sr-only">{srFull}</span>
+      )}
       <span
         aria-hidden="true"
         style={{

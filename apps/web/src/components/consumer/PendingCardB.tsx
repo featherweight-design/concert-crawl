@@ -425,6 +425,7 @@ export const PendingCardB = ({
           ) : submitter !== null ? (
             <a
               href={submitter.url}
+              className="ph-no-capture"
               style={{
                 color: 'var(--fg-muted)',
                 textDecoration: 'underline',

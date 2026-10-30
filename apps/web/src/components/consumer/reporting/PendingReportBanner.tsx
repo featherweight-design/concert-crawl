@@ -317,6 +317,7 @@ export const PendingReportBanner = ({
           ) : reporter !== null ? (
             <a
               href={reporter.url ?? '#'}
+              className="ph-no-capture"
               style={{
                 textDecoration: 'underline',
                 textDecorationColor: 'var(--border-strong)',
