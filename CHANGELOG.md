@@ -1,3 +1,10 @@
+## [1.303.1](https://github.com/HartiganHM/concert-crawl/compare/v1.303.0...v1.303.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **ci:** pass secrets to the crawler's reusable workflow ([#1808](https://github.com/HartiganHM/concert-crawl/issues/1808)) ([40b16ff](https://github.com/HartiganHM/concert-crawl/commit/40b16ffe596d0657ff0ee9189c39a48f87206f5d))
+
 # [1.303.0](https://github.com/HartiganHM/concert-crawl/compare/v1.302.4...v1.303.0) (2026-10-30)
 
 
