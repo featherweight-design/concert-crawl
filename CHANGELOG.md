@@ -1,3 +1,10 @@
+# [1.303.0](https://github.com/HartiganHM/concert-crawl/compare/v1.302.4...v1.303.0) (2026-10-30)
+
+
+### Features
+
+* **crawler:** drain the trigger queue in one run, bounded by count and time ([#1806](https://github.com/HartiganHM/concert-crawl/issues/1806)) ([46b4a1b](https://github.com/HartiganHM/concert-crawl/commit/46b4a1b3ab8b002ac8c173558bdd60eee6f961cb))
+
 ## [1.302.4](https://github.com/HartiganHM/concert-crawl/compare/v1.302.3...v1.302.4) (2026-10-30)
 
 
