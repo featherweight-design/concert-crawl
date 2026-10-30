@@ -3,10 +3,10 @@
 The crawler runs on GitHub-hosted runners, in place of Render's two crawler
 crons (Render exit, step 2).
 
-| Workflow               | Replaces                                        | When it runs                                                                                                                                       | Mode                                                                       |
-| ---------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `crawler-daily.yml`    | `concert-crawl-crawler-daily` (`0 9 * * *`)     | `7 9 * * *` UTC, only while the repo variable `CRAWLER_GHA_DAILY_ENABLED` is `true`; or by hand                                                    | `all`: drains pending triggers, then crawls every venue                    |
-| `crawler-triggers.yml` | `concert-crawl-crawler-triggers` (every 10 min) | On demand: the API dispatches it after it writes `crawl_triggers` rows, once `CRAWLER_DISPATCH_TOKEN` is set on the Vercel API project; or by hand | `triggers`: drains the queue, up to 50 triggers, no new claim after 30 min |
+| Workflow               | Replaces                                        | When it runs                                                                                                                                       | Mode                                                                                                    |
+| ---------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `crawler-daily.yml`    | `concert-crawl-crawler-daily` (`0 9 * * *`)     | `7 9 * * *` UTC, only while the repo variable `CRAWLER_GHA_DAILY_ENABLED` is `true`; or by hand                                                    | `all`: drains pending triggers, then crawls every venue                                                 |
+| `crawler-triggers.yml` | `concert-crawl-crawler-triggers` (every 10 min) | On demand: the API dispatches it after it writes `crawl_triggers` rows, once `CRAWLER_DISPATCH_TOKEN` is set on the Vercel API project; or by hand | `triggers`: drains the queue, up to 200 triggers, no new claim after 150 min (enough for a trigger-all) |
 
 Both call `crawler-run.yml`, which does the work. It runs only from `main`:
 a dispatch from another branch skips the job, so no other branch's code ever

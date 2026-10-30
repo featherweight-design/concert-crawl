@@ -45,13 +45,15 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
-    # Triggers: 60 min. The image build and verify (~3 min cached, ~10 cold,
-    # twice on a retry) come out of it, so the drain's budget is set to 30 min
-    # below, leaving room for the build and the last trigger in flight.
+    # Triggers: 180 min. A trigger-all queues every venue (20 today, about a
+    # minute and a half each with prices), and one dispatched run must drain
+    # them all, so the drain's budget is 150 min below. The remaining 30 cover
+    # the image build and verify (~3 min cached, ~10 cold, twice on a retry)
+    # and the last trigger in flight.
     # Daily (CRAWL_MODE=all): 120 min. About 25 min of venue crawls today
     # (measured on Render), after a drain of any pending triggers, which is
-    # normally empty but can take up to its 30-min budget.
-    timeout-minutes: ${{ inputs.mode == 'triggers' && 60 || 120 }}
+    # normally empty but can take up to its 30-min budget in this mode.
+    timeout-minutes: ${{ inputs.mode == 'triggers' && 180 || 120 }}
     steps:
       - name: Check inputs
         env:
@@ -224,7 +226,13 @@ jobs:
           put NODE_ENV production
           put CRAWL_MODE "$MODE"
           put CRAWL_TRIGGER_DRAIN_MAX "$DRAIN_MAX"
-          put CRAWL_TRIGGER_BUDGET_MS 1800000
+          # 150 min for a triggers run, 30 for the drain ahead of a daily
+          # crawl; see the job's timeout-minutes.
+          if [ "$MODE" = triggers ]; then
+            put CRAWL_TRIGGER_BUDGET_MS 9000000
+          else
+            put CRAWL_TRIGGER_BUDGET_MS 1800000
+          fi
           put DATABASE_URL "$CRAWLER_DATABASE_URL"
           put SENTRY_DSN "$CRAWLER_SENTRY_DSN"
           put RESEND_API_KEY "$CRAWLER_RESEND_API_KEY"

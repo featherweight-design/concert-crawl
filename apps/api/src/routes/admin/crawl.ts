@@ -12,6 +12,7 @@ import {
 import type { ActiveCrawlAlert } from '@concert-crawl/types'
 import { createLogger } from '@concert-crawl/logger'
 import { getAuthUser } from '../../middleware/auth.js'
+import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js'
 import type { AdminVariables } from './index.js'
 
 const logger = createLogger('admin:crawl')
@@ -154,6 +155,11 @@ crawlAdminRouter.post('/', async (ctx) => {
   ctx.set('auditAction', 'crawl.trigger_all')
   ctx.set('auditActorId', actor)
 
+  // One dispatch: its run drains the rows one by one (up to the triggers
+  // workflow's cap and time budget). Runs after the response; a failed
+  // dispatch leaves the rows for the next daily run.
+  dispatchCrawlerInBackground()
+
   return ctx.json(
     {
       success: true,
@@ -166,7 +172,7 @@ crawlAdminRouter.post('/', async (ctx) => {
   )
 })
 
-// POST /v1/admin/crawl/:venueId — queue a crawl trigger (handled by crawler service)
+// POST /v1/admin/crawl/:venueId — queue a crawl trigger and wake the crawler
 crawlAdminRouter.post(
   '/:venueId',
   zValidator('param', venueIdSchema),
@@ -203,6 +209,8 @@ crawlAdminRouter.post(
     ctx.set('auditAction', 'crawl.trigger')
     ctx.set('auditTargetId', venueId)
     ctx.set('auditActorId', getAuthUser(ctx).userId)
+
+    dispatchCrawlerInBackground()
 
     return ctx.json({ success: true, data: { triggerId: trigger.id } }, 202)
   },

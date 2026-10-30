@@ -27,10 +27,11 @@ const logger = createLogger('crawler')
 // unboundedly many venues (#1352, #1353).
 const MAX_CONCURRENT = 1
 const DEFAULT_TRIGGER_DRAIN_MAX = 1
-// Sized for a job timeout of 60 minutes (the planned GitHub Actions triggers
-// job; Render crons have no such limit). The budget only stops new claims, so
-// the 20 minutes left are for the trigger in flight: its crawl (longest
-// observed ~6 min), then its price pipeline and Spotify fan-out.
+// The fallback when CRAWL_TRIGGER_BUDGET_MS is unset. The GitHub Actions jobs
+// always set it, sized to their own timeouts (crawler-run.yml). The budget
+// only stops new claims, so a host's timeout must also leave room for the
+// trigger in flight: its crawl (longest observed ~6 min), then its price
+// pipeline and Spotify fan-out.
 const DEFAULT_TRIGGER_BUDGET_MS = 40 * 60 * 1000
 
 // A trigger still 'processing' after this long is assumed dead. Each trigger

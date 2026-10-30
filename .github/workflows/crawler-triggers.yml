@@ -34,6 +34,6 @@ jobs:
     with:
       mode: triggers
       environment: ${{ inputs.environment }}
-      drain_max: '50'
+      drain_max: '200'
     # Required for the environment's secrets to resolve; see crawler-daily.yml.
     secrets: inherit

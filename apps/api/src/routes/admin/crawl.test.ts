@@ -8,6 +8,11 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
 }))
 
+const mockDispatchCrawler = vi.fn()
+vi.mock('../../lib/crawler-dispatch.js', () => ({
+  dispatchCrawlerInBackground: () => mockDispatchCrawler(),
+}))
+
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
@@ -1010,5 +1015,62 @@ describe('GET /v1/admin/crawl/status', () => {
     const body = (await res.json()) as { success: boolean; data: unknown[] }
     expect(body.success).toBe(true)
     expect(Array.isArray(body.data)).toBe(true)
+  })
+})
+
+describe('Admin crawl routes wake the crawler (Render exit step 2)', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+    mockDispatchCrawler.mockReset()
+    adminAuth()
+  })
+
+  it('dispatches once for a trigger-all, however many venues it queued', async () => {
+    const { db } = await import('@concert-crawl/db')
+    const venueIds = ['v1', 'v2', 'v3']
+    vi.mocked(db.select().from().where).mockResolvedValueOnce(
+      venueIds.map((id) => ({ id })),
+    )
+    vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce(
+      venueIds.map((venueId, index) => ({ id: `t${index}`, venueId })),
+    )
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(202)
+    expect(mockDispatchCrawler).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not dispatch when there is no venue to queue', async () => {
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(202)
+    expect(mockDispatchCrawler).not.toHaveBeenCalled()
+  })
+
+  it('dispatches once for a single-venue trigger', async () => {
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
+    vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+      mockTrigger,
+    ])
+    const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+      method: 'POST',
+    })
+    expect(res.status).toBe(202)
+    expect(mockDispatchCrawler).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not dispatch for a venue that cannot be crawled', async () => {
+    const { db } = await import('@concert-crawl/db')
+    vi.mocked(db.select().from().where).mockResolvedValueOnce([])
+    const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+      method: 'POST',
+    })
+    expect(res.status).toBe(404)
+    expect(mockDispatchCrawler).not.toHaveBeenCalled()
   })
 })
