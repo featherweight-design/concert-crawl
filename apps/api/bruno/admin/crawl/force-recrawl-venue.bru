@@ -40,7 +40,7 @@ docs {
   The default venueId is Hi-Dive (a club that lists openers) — a good
   low-cost canary. Change the venueId path param to target another venue.
 
-  Async: this only enqueues a crawl_triggers row. The crawler-triggers cron
-  claims pending triggers every 10 min, so allow up to ~10 min before
-  results land. Poll with "Get Crawl Trigger".
+  Async: this enqueues a crawl_triggers row and dispatches the
+  crawler-triggers workflow, which takes a few minutes to build and start
+  before the crawl itself. Poll with "Get Crawl Trigger".
 }

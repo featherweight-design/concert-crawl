@@ -11,8 +11,13 @@ Two repo configurations gate the pipeline; see the "Enabling the pipeline" secti
 **This page describes prod after the Render exit's prod cutover.** From the
 cutover, the prod API runs on Vercel (project `concert-crawl-api`, production,
 `https://api.concertcrawl.app`), and match-artists and spotify-weekly run as
-Vercel Cron Jobs inside it. Only the two crawler crons are still deployed on
-Render. The PR that changed `deploy-prod.yml` merges before the cutover, so
+Vercel Cron Jobs inside it. **From the crawler cutover (Render exit step 2)
+nothing in prod deploys to Render:** the crawler runs on GitHub Actions
+(`crawler-daily.yml`, `crawler-triggers.yml`) at the commit the production API
+serves, so it ships and rolls back with the API with no step of its own. See
+`docs/runbooks/crawler-github-actions.md`. Passages below that still describe
+the Render crawler crons are the pre-cutover record; the two services are
+suspended, not deleted, for a 7-day watch. The PR that changed `deploy-prod.yml` merges before the cutover, so
 between the two, a dispatch would already deploy to Vercel. Do not dispatch in
 that window except as part of the cutover itself. The prod Render services
 `concert-crawl-api`, `concert-crawl-match-artists` and
@@ -46,9 +51,7 @@ merge to main
                   │    (unless allow_stale_head)
                   ▼
           deploy job
-           ├──► re-check main HEAD, then at once:
-           ├──► Render deploy — concert-crawl-crawler-triggers (crn-*, builds main HEAD)
-           ├──► Render deploy — concert-crawl-crawler-daily    (crn-*, builds main HEAD)
+           ├──► re-check main HEAD
            ├──► record the deployment api.concertcrawl.app serves (rollback target)
            ├──► pnpm db:migrate against DATABASE_URL_DIRECT
            ├──► vercel deploy --prod — API (concert-crawl-api, the checked-out SHA,
@@ -61,9 +64,9 @@ merge to main
                   ▼
           Playwright smoke against prod
                   └──► assertion failure: vercel rollback of the API to the
-                       recorded deployment, render-rollback.sh warnings for
-                       the two crawler crons, Resend admin email. The web
-                       promotion is NOT rolled back automatically.
+                       recorded deployment (the crawler follows it), Resend
+                       admin email. The web promotion is NOT rolled back
+                       automatically.
 ```
 
 match-artists and spotify-weekly are not in the tree because they are part of
@@ -77,7 +80,7 @@ with every API deploy.
 1. A PR merges. CI has already passed as the pre-merge gate.
 2. `deploy-api-staging.yml` migrates staging and deploys the staging API to
    Vercel. Nothing in prod moves: the prod Vercel projects have Git deployments
-   off, and the two prod crawler crons have `Auto-Deploy: no`.
+   off, and the prod crawler runs whatever commit the production API serves.
 3. `staging-smoke.yml` and `staging-e2e.yml` run against staging once that
    deploy has finished.
 4. A human reads those results — plus anything else worth checking on staging —
@@ -85,15 +88,13 @@ with every API deploy.
 5. Actions → **Deploy to Production** → Run workflow, on `main`, with a `reason`.
    The reason is required and lands in the run log, so the audit trail of who
    promoted what and why is preserved.
-6. The workflow re-checks main HEAD and triggers the two Render crawler
-   deploys straight after it (they build branch HEAD, so nothing slow sits
-   between the check and the trigger). It then records the API deployment
+6. The workflow re-checks main HEAD, then records the API deployment
    prod serves now, migrates the prod database, deploys the API to Vercel
    production, checks the hostname serves it and `/v1/health` answers (rolling
    the API back itself if either fails), promotes the Vercel web app, and then
    smokes prod. A smoke
-   assertion failure rolls the API back on Vercel; the crawler crons and the
-   web promotion are manual to reverse (see "Vercel + cron rollback is manual"
+   assertion failure rolls the API back on Vercel, and the crawler with it; the
+   web promotion is manual to reverse (see "Vercel + cron rollback is manual"
    below).
 
 **The emergency hotfix path is the same dispatch.** There is no separate
@@ -115,8 +116,7 @@ the `deploy` job before assuming the API is at fault.
 
 That measurement predates the prod cutover. From the cutover, the Render part
 is replaced by the migration and the API's `vercel deploy --prod`, which waits
-for Vercel's remote build (about 3-5 minutes), and the two crawler triggers,
-which return as soon as Render has queued them. Re-measure on the first
+for Vercel's remote build (about 3-5 minutes). Re-measure on the first
 post-cutover dispatch.
 
 The prod **web** app has git builds disabled (Settings → Build and Deployment →
@@ -130,7 +130,7 @@ reverse order is survivable (expand/contract means the old web app works against
 the new API), which is why the promotion runs last and not first.
 
 Nothing reaches production without a dispatch: Git deployments are off on both
-prod Vercel projects, and the two prod crawler crons have `Auto-Deploy: no`. The
+prod Vercel projects, and the crawler runs the production API's commit. The
 pre-merge gate is still CI on the PR; post-merge, staging is the validation
 surface, and the prod smoke inside `deploy-prod.yml` is the safety net
 (auto-rollback of the API). If we ever scale past solo, GitHub merge queue is
@@ -147,33 +147,22 @@ the upgrade path for a true pre-merge prod gate.
 | Prod Drift Alert             | `.github/workflows/prod-drift-alert.yml`        | daily + workflow_dispatch          | (always on)                                 |
 | Rollback Production (manual) | `.github/workflows/rollback-prod.yml`           | `workflow_dispatch` only           | (always available)                          |
 
-### The two crawler crons cannot be pinned
+### The main-HEAD gate
 
-The Render API accepts a `commitId` when deploying a **web service** (`srv-*`)
-but rejects it for a **cron job** (`crn-*`). The two prod crawler crons,
-`concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily`, always build
-whatever `main` HEAD is at the moment Render starts their build. The API and the
-web app are uploaded from the checked-out SHA, so they are pinned. (Before the
-prod cutover this was four crons; match-artists and spotify-weekly now ship
-inside the API.)
+This gate existed because the Render crawler crons could not be pinned: the
+Render API rejects `commitId` for a cron job (`crn-*`), so they always built
+`main` HEAD while the API and the web app shipped the checked-out SHA. Since the
+crawler cutover the crawler runs the API's own commit on GitHub Actions, so that
+split is gone.
 
-Two consequences, both load-bearing:
-
-- **The gate refuses to promote a SHA that is not `main` HEAD.** The refusal
-  lives in `deploy-prod.yml` itself — the _Refuse promotion of a SHA that is not
-  main HEAD_ step in the `gate` job, repeated as _Re-verify promotion target is
-  still main HEAD_ in the `deploy` job, because `main` can advance while the
-  deploy job waits. Both run each side through
-  `.github/scripts/resolve-deployable-sha.sh` (which only resolves a SHA and
-  always exits 0) before comparing, so a `[skip ci]` release commit does not read
-  as drift. Promoting an older SHA would ship it to the API and the web app
-  while the crawler crons silently built something newer.
-  `allow_stale_head: true` downgrades both refusals to a warning — use it only
-  when you have read the diff between the two SHAs and accept a mixed
-  API/crawler state.
-  It is not a convenience flag.
-- **The crons cannot be auto-rolled-back.** See "Caveat on cron service
-  rollback" below.
+The gate is kept, reworded, until the crawlers have run a week pinned, then
+removed in a follow-up. It refuses to promote a SHA that is not `main` HEAD —
+the _Refuse promotion of a SHA that is not main HEAD_ step in the `gate` job,
+repeated as _Re-verify promotion target is still main HEAD_ in the `deploy` job.
+Both run each side through `.github/scripts/resolve-deployable-sha.sh` (which
+only resolves a SHA and always exits 0) before comparing, so a `[skip ci]`
+release commit does not read as drift. `allow_stale_head: true` downgrades both
+refusals to a warning.
 
 ### Prod migrations run in the deploy job, before the API deploy
 
@@ -189,11 +178,9 @@ migrations on **staging** and nowhere else, so prod's schema legitimately lags
 
 Consequences worth stating plainly:
 
-- **A failed migration stops the API and the web app, not the crawlers.** The
-  two crawler deploys were queued on Render before the migration step and keep
-  building, so the crawlers can go live on the new code against the old
-  schema while the API and the web app stay on the previous release. Check
-  the crawler services after a failed migration. A migration that half-applied
+- **A failed migration stops the API, the web app and the crawler.** The
+  crawler runs the commit the production API serves, so it stays on the
+  previous release with the API. A migration that half-applied
   needs `docs/runbooks/db-rollback.md`, not a code rollback.
 - **A code rollback does not roll the schema back.** `vercel rollback` and
   `rollback-prod.yml` move code only. Expand/contract is what makes that safe.
@@ -225,9 +212,8 @@ It is kept because it is the right tool for **smoke prod right now without
 deploying anything**: after a hosting incident, to validate a semantic-release
 commit explicitly, or to confirm prod is healthy before starting an unrelated
 change. On smoke failure it rolls the API back on Vercel (`vercel rollback` to
-the deployment that served prod before the one the hostname serves), runs
-`render-rollback.sh` for the two crawler crons (which only warns), and emails
-the admin, so it doubles as a manual "check and repair" path.
+the deployment that served prod before the one the hostname serves; the
+crawler follows it) and emails the admin, so it doubles as a manual "check and repair" path.
 
 `PROD_SMOKE_RECONCILER_ENABLED` is vestigial — every dispatch satisfies the
 job's `if:`, and dispatch is the only trigger left. It stays so that re-arming
@@ -236,24 +222,20 @@ needing one invented under pressure.
 
 ### Caveat on cron service rollback
 
-The API is no longer rolled back by `render-rollback.sh`. It is on Vercel, and
-the rollback jobs run `vercel rollback` against it (see "Vercel + cron rollback
-is manual" below). `render-rollback.sh` now runs only for the two crawler crons,
-and it detects the Render service ID prefix:
+Since the crawler cutover no workflow runs `render-rollback.sh`: the API rolls
+back with `vercel rollback`, and the crawler follows the API's commit. The
+script is kept until the Render services are deleted. What it did, for the
+record:
 
 - `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls the service back to the prior `live` deploy. No prod `srv-*` service is rolled back by the workflows any more.
 - `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue.
 
-**Net behavior of "smoke failure → rollback":** only the API is actually rolled
-back automatically, and match-artists and spotify-weekly go back with it because
-they are part of the API deployment. The two crawler crons — crawler triggers
-and crawler daily — require manual rollback: either
-via the Render dashboard's Manual Deploy on a prior commit, or (typically
-preferred) by reverting the offending commit on `main` and promoting the revert
-with a fresh **Deploy to Production** dispatch. Prod no longer auto-deploys, so
-merging the revert alone does not fix production. The Resend admin email
-surfaces this explicitly so the operator knows manual action is needed for the
-crons.
+**Net behavior of "smoke failure → rollback":** the API is rolled back
+automatically, and match-artists, spotify-weekly and the crawler go back with
+it: the first two are part of the API deployment, and the crawler's next run
+uses the commit the API serves. The web app needs a manual rollback, and a
+crawler run already in progress (built from the bad commit) should be
+cancelled in Actions.
 
 ### Semantic-release release commits
 
@@ -267,11 +249,10 @@ deployable SHA and passes either way.
 
 The rollback trigger keys on a job output that the smoke job sets ONLY after Playwright has actually run and returned non-zero. Job-level failures that prevent that step from being reached — timeouts, runner deaths, cancellations, env-var preflight crashes — leave the output unset and the rollback skipped. This prevents infrastructure flakiness from causing destructive prod rollbacks.
 
-**How you're notified the cron action is needed:**
+**How you're notified a rollback fired:**
 
 1. **GHA workflow-failure email** — the smoke workflow ends with `failure` conclusion. GitHub Actions emails you by default when a workflow on `main` fails.
-2. **`::warning::` annotation in the workflow summary** — each skipped cron emits a warning that surfaces on the workflow run's summary card at the top of the page, not buried in step logs.
-3. **Admin email via Resend** — the rollback path's "Notify admin" step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Runs with `if: always()` so the email goes out even if a rollback step earlier in the job failed; the email body says "rollback was triggered" (not "succeeded") and points at the run URL for the actual outcome. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
+2. **Admin email via Resend** — the rollback path's "Notify admin" step calls Resend (`alerts@concertcrawl.app` → `ADMIN_EMAIL`) with a summary and the workflow run URL. Runs with `if: always()` so the email goes out even if a rollback step earlier in the job failed; the email body says "rollback was triggered" (not "succeeded") and points at the run URL for the actual outcome. Requires `RESEND_API_KEY` (secret) + `ADMIN_EMAIL` (variable) in the `production` environment. Missing either falls back to the annotation only — non-fatal.
 
 ### Manual rollback path
 
@@ -289,17 +270,14 @@ What it does:
   way to roll back a deployment that records nothing (the first production
   deploy, or one made outside `deploy-prod.yml`). Running it twice in a row
   with the input empty goes one more step back along that history each time.
-- **Crawler crons:** `render-rollback.sh` for both, which only warns (see the
-  caveat above).
+- **Crawler:** nothing to do. It runs the commit the production API serves, so
+  it follows the API back.
 - **Web app:** not touched. See the next section.
 
 ## Vercel + cron rollback is manual
 
-This pipeline auto-rolls back **only the API**, on Vercel. The two
-prod **crawler crons** require manual rollback because Render's
-`/rollback` endpoint rejects cron services — see the "Caveat on cron
-service rollback" section above for the manual paths. **Vercel web
-prod is NOT auto-rolled back** either, because Vercel already offers
+This pipeline auto-rolls back **only the API**, on Vercel, and the crawler
+follows it. **Vercel web prod is NOT auto-rolled back**, because Vercel already offers
 a one-click Instant Rollback and Vercel deploys are reliable in our
 experience.
 
@@ -313,8 +291,7 @@ the API back to it with `vercel rollback`:
   tries. Vercel has already moved the hostname to the new deployment by then
   (Render kept the old build serving until the new one passed its health
   check; Vercel does not), so the job rolls back in place and stops. The web
-  app has not shipped yet; the crawler crons were triggered first and do not
-  depend on the API's version.
+  app has not shipped yet.
 - The `rollback` job, when prod smoke asserts a failure.
 
 On the first production deploy there is nothing to record, so neither can roll
@@ -398,9 +375,9 @@ This is the configuration that makes the gate real, and most of it lives in the
 Render and Vercel dashboards rather than in this repo.
 
 These steps were written, and run, when all five prod services were on Render.
-They are kept as the record of how the gate was closed. From the prod cutover,
-step 3 matters only for the two crawler crons (the other three prod Render
-services are suspended), and the API's equivalent of step 4 is that the Vercel
+They are kept as the record of how the gate was closed. Step 3 no longer
+matters: every prod Render service is suspended (the API and two crons at the
+prod cutover, the crawler crons at the crawler cutover), and the API's equivalent of step 4 is that the Vercel
 project `concert-crawl-api` has Git deployments off, the same as staging.
 
 **The order matters.** Arming and rehearsing come before either kill switch, so
@@ -499,8 +476,8 @@ Change the dashboard and `render.yaml` in the same session.
 
 **Prerequisites** (verify before flipping the switch — the smoke workflow hard-fails its preflight step if any are missing):
 
-- `production` environment **variables**: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_API`, `RENDER_SERVICE_ID_CRAWLER_TRIGGERS`, `RENDER_SERVICE_ID_CRAWLER_DAILY`. Plus `PROD_URL` + `PROD_API_URL` at repo level. Plus `ADMIN_EMAIL` at repo level (or production env — either resolves under `environment: production`).
-- `production` environment **secrets**: `VERCEL_TOKEN`, `RENDER_API_TOKEN`, `RESEND_API_KEY` (optional — graceful-degrades to a `::warning::` if missing).
+- `production` environment **variables**: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_API`. Plus `PROD_URL` + `PROD_API_URL` at repo level. Plus `ADMIN_EMAIL` at repo level (or production env — either resolves under `environment: production`).
+- `production` environment **secrets**: `VERCEL_TOKEN`, `RESEND_API_KEY` (optional — graceful-degrades to a `::warning::` if missing).
 - Repo-level **secrets**: `E2E_TEST_USER_EMAIL`, `E2E_TEST_USER_PASSWORD`, `SENTRY_DSN_SMOKE`.
 
 All of these are already provisioned if you're past Stage 2 of `production-launch.md`. The smoke workflow's preflight step prints a clean "Missing X" list if any are absent, so an arming attempt without all prerequisites fails fast and visibly.
@@ -516,8 +493,7 @@ prod without deploying, and watch it run install → smoke → green.
 
 - **To stop automated prod deploys:** flip `AUTO_DEPLOY_PROD_ENABLED=false`. The
   promotion workflow's `gate` job then silently skips, so a dispatch looks idle
-  rather than failing. This does not seal prod: a Render dashboard Manual Deploy
-  of a crawler cron, a Vercel Redeploy or `vercel deploy --prod` on either prod
+  rather than failing. This does not seal prod: a Vercel Redeploy or `vercel deploy --prod` on either prod
   project, and `rollback-prod.yml` all still reach production, and
   `rollback-prod.yml` is deliberately **not** gated by it — incident response
   must not be pausable by a feature flag.
@@ -546,8 +522,8 @@ prod without deploying, and watch it run install → smoke → green.
 
 | Variable                             | Required by                                                                               | Notes                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod, rollback-prod, prod-deploy-health                   | prod crawler triggers cron service ID. Used by deploy-prod's Render deploy POST, the rollback steps (auto-skip for crons), and the deploy-health check.                                                                                                                                                                                                    |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod, rollback-prod, prod-deploy-health                   | prod crawler daily cron service ID. Same.                                                                                                                                                                                                                                                                                                                  |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | (unused after the crawler cutover)                                                        | prod crawler triggers cron service ID (`crn-*`). No workflow reads it since the crawler moved to GitHub Actions. Deleted with the suspended service after the 7-day watch and Hugh's OK.                                                                                                                                                                   |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | (unused after the crawler cutover)                                                        | prod crawler daily cron service ID. Same.                                                                                                                                                                                                                                                                                                                  |
 | `VERCEL_ORG_ID`                      | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | The Vercel **Team ID** (`team_*`) of featherweight-design. Vercel renamed Org to Team in the dashboard but the CLI and API still call it `orgId`, so the dashboard offers no field with this name — read the Team ID from Vercel → Settings → General. Shared by the web and API projects.                                                                 |
 | `VERCEL_PROJECT_ID`                  | deploy-prod                                                                               | `prj_*`, from the **production** `concert-crawl` project → Settings → General. Taking it from `concert-crawl-staging` by mistake sends every promotion to the staging project instead: `--prod` aliases whichever project the id names, so the build lands on staging's domains and `concertcrawl.app` is never updated. The run reports green throughout. |
 | `VERCEL_PROJECT_ID_API`              | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | **new at the prod cutover.** `prj_akzBWiGHyaLqECpGOGWSoWr6E7C0`, the `concert-crawl-api` project. One project serves staging (a custom environment) and production, so this is the same id staging uses; `--prod` is what picks production. Not the web project's id.                                                                                      |
@@ -562,7 +538,7 @@ Service and project IDs live in the `production` environment (not at the repo le
 
 | Secret                | Required by                                                                               | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_API_TOKEN`    | prod-smoke-after-deploy, deploy-prod, rollback-prod, prod-deploy-health                   | Render → Account Settings → API Keys → generate a token with deploy + read permissions. From the prod cutover it is used only for the two crawler crons: the deploy POST, `render-rollback.sh`, and the deploy-health check.                                                                                                                                                                                                                                                                          |
+| `RENDER_API_TOKEN`    | (unused after the crawler cutover)                                                        | Render → Account Settings → API Keys. Until the crawler cutover it served the two crawler crons: the deploy POST, `render-rollback.sh`, and the deploy-health check. No prod workflow reads it now; delete it with the Render services.                                                                                                                                                                                                                                                               |
 | `DATABASE_URL_DIRECT` | deploy-prod                                                                               | **new at the prod cutover.** The prod Neon branch's **direct** connection string (no `-pooler` in the host). `deploy-prod.yml` runs `pnpm db:migrate` with it before the API deploy and refuses a `-pooler` host. Not the API's runtime `DATABASE_URL`, which is the pooled URL and lives in the Vercel project.                                                                                                                                                                                      |
 | `RESEND_API_KEY`      | prod-smoke-after-deploy, deploy-prod (manual)                                             | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.                                                                                                                                                                                                                                                                                         |
 | `VERCEL_TOKEN`        | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | Vercel → Account Settings → Tokens. Already there for the web promotion. From the prod cutover it must also reach the `concert-crawl-api` project: it needs access to the **featherweight-design** team, so a token scoped to the `concert-crawl` project alone will fail the API deploy, rollback and the health and drift reads. If the token carries an expiry, record that date here; the daily drift alert will fail its read when it lapses, but a promotion may be the first thing you notice. |
@@ -585,8 +561,7 @@ There are two smoke-then-rollback paths and they are not the same code. A
 promotion's automatic smoke and its automatic rollback live in
 `deploy-prod.yml` (`smoke` job, then `rollback` on an assertion failure).
 `prod-smoke-after-deploy.yml` is the standalone dispatch-only copy, and it
-carries its own rollback steps (`vercel rollback` for the API,
-`render-rollback.sh` for the crawler crons).
+carries its own rollback step (`vercel rollback` for the API).
 
 **⚠️ The failing-smoke test is destructive. It really rolls back production.**
 Making the standalone **Prod smoke** workflow fail against live prod fires
@@ -615,7 +590,7 @@ cheapest way to confirm `environment: production` secret resolution after
 rotating any of the required secrets. There is no wait step to exercise any
 more; the promotion workflow owns that.
 
-**For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. It rolls the API back on Vercel and emits the manual-action warnings for the two crawler crons. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
+**For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. It rolls the API back on Vercel; the crawler follows the API's commit. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
 
 ## "Is prod current?" is a separate question from "is prod up?"
 
@@ -642,8 +617,13 @@ What it checks, from the prod cutover:
   deploy newer than it ended in ERROR; and Cron Jobs are enabled on the
   project, since match-artists and spotify-weekly stop silently when they are
   not.
-- **The two crawler crons on Render** (`render-check-deploy-health.sh`):
-  the same Render checks as before.
+- **The daily crawl** (`crawler-daily.yml`): reported unhealthy when the
+  repository variable `CRAWLER_GHA_DAILY_ENABLED` is not `true`, or when no
+  run on `main` has succeeded in the last 26 hours. That catches a disabled
+  workflow or schedule, a dropped schedule and repeated failures. (A failed
+  run also emails whoever GitHub attributes it to: the last editor of the cron
+  line, or the dispatching account.) The crawler's code ships with the API,
+  so the API check covers its deploy path.
 
 **Expect it to fire on the Cron Jobs check right after the cutover.** Cron Jobs
 are currently **disabled** on the `concert-crawl-api` project: Vercel counted
@@ -661,8 +641,9 @@ few that remain.
 
 ### Troubleshooting: "autoDeploy is 'yes'" is a leak, not a misconfigured check
 
-This applies to the two crawler crons, the only prod services still on Render.
-The API's equivalent is the Git-integration check above.
+This applied to the two crawler crons while they were on Render. No prod
+service is checked on Render now; the API's equivalent is the Git-integration
+check above.
 
 The `autoDeploy` expectation in `render-check-deploy-health.sh` is inverted from
 what it was before the prod promotion gate. Under the gate prod deploys only
@@ -733,8 +714,6 @@ issue rather than to raise the thresholds. Raising them hides the next real one.
 ## Limitations and known gaps
 
 - **Vercel web is not auto-rolled back.** See "Vercel + cron rollback is manual" above.
-- **The crawler crons are not auto-rolled back.** Render cannot roll back a cron
-  job; see "Caveat on cron service rollback".
 - **The first production API deploy has no rollback target.** Nothing is
   serving on `api.concertcrawl.app` before it, so a failed health check or smoke
   on that run cannot roll the API back. The fallback is the suspended Render

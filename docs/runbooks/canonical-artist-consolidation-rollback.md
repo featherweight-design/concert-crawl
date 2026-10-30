@@ -10,7 +10,7 @@
 
 Before touching the DB, reduce inbound pressure:
 
-1. **Suspend the crawler crons** — Render dashboard, pause both `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily`. A crawl mid-rollback could refresh `last_seen_at` on rows that are about to be re-INSERTed, leaving the topology consistent but the timestamps misleading.
+1. **Stop the crawler** — GitHub → Actions → **Crawler daily** and **Crawler triggers** → ⋯ → **Disable workflow**, and cancel any run in progress. A crawl mid-rollback could refresh `last_seen_at` on rows that are about to be re-INSERTed, leaving the topology consistent but the timestamps misleading.
 2. **API stays up.** Unlike a schema rollback, this script only mutates rows — the API doesn't need to come down. Watch state will appear momentarily inconsistent during the restore but resolves once the script completes.
 
 ---
@@ -129,7 +129,7 @@ WHERE ue.user_id = '<USER_ID>'
 ORDER BY e.date;
 ```
 
-Then re-enable the crawler crons in Render.
+Then re-enable both crawler workflows in GitHub Actions.
 
 ---
 

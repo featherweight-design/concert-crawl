@@ -90,8 +90,8 @@ below. The last column says what each service is after the cutover.
 | --- | -------------------------------- | -------------------------- | ------- | ------- | ------------ | -------------- | --------------------------------------------- |
 | 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | `no`         | (web service)  | Suspended fallback; prod API is on Vercel     |
 | 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `no`         | (web service)  | Fallback, not suspended (since 2026-10-30)    |
-| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` | Active, deployed by `deploy-prod.yml`         |
-| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    | Active, deployed by `deploy-prod.yml`         |
+| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` | Suspended fallback; runs on GitHub Actions    |
+| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    | Suspended fallback; runs on GitHub Actions    |
 | 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `no`         | `0 16 * * *`   | Suspended fallback; runs as a Vercel Cron Job |
 | 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `no`         | `30 15 * * 1`  | Suspended fallback; runs as a Vercel Cron Job |
 
@@ -142,8 +142,13 @@ repoint the live Stripe webhook, `NEXT_PUBLIC_API_URL` (then redeploy web) and
 `PROD_API_URL`, and revert the pipeline PR. The full checklist is "Falling back
 to Render" in `docs/runbooks/production-launch.md` (Step 8).
 
-After the cutover, only the two docker crawler crons (#3, #4) are active prod
-services on Render. Moving them is a later step of the Render exit.
+The two docker crawler crons (#3, #4) were the last active prod services on
+Render. At the crawler cutover (Render exit step 2) they moved to GitHub
+Actions (`crawler-daily.yml`, `crawler-triggers.yml`; see
+`docs/runbooks/crawler-github-actions.md`) and were suspended, not deleted,
+for a 7-day watch. To fall back: resume both, set the repo variable
+`CRAWLER_GHA_DAILY_ENABLED` to `false`, and unset `CRAWLER_DISPATCH_TOKEN` on
+the Vercel API project.
 
 Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
 MDT; it drifts an hour relative to local time across the DST boundary,
@@ -164,12 +169,13 @@ an investigation.
 | `concert-crawl-billing-jobs-staging`     | `crn-d9c4556q1p3s73b143m0` | node    |
 
 At the prod cutover, the prod API (#1) and the two prod Node crons (#5, #6)
-join this list as suspended fallbacks (see above).
+joined this list as suspended fallbacks, and the two prod crawler crons (#3,
+#4) at the crawler cutover (see above).
 
 A suspended service is one of the two conditions
-`.github/scripts/render-check-deploy-health.sh` alerts on — which is why
-that checker is pointed at the two active prod crawler crons only, and not at
-everything in the account. The prod API is checked on Vercel instead, by
+`.github/scripts/render-check-deploy-health.sh` alerts on — which is why no
+workflow points that checker at Render any more: every prod service there is
+suspended. The prod API is checked on Vercel instead, by
 `.github/scripts/vercel-api-prod.sh health`.
 
 ## Build and start commands

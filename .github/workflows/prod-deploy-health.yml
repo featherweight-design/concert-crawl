@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # crawler-daily-health.sh lists crawler-daily runs
 
 concurrency:
   group: prod-deploy-health
@@ -52,14 +53,13 @@ jobs:
         uses: actions/checkout@v7
 
       # Secrets are checked here alongside the variables because both failure
-      # modes are silent otherwise: without RENDER_API_TOKEN or VERCEL_TOKEN the
-      # checker cannot ask either host anything, and without a DSN the reporting step
+      # modes are silent otherwise: without VERCEL_TOKEN the checker cannot ask
+      # Vercel anything, and without a DSN the reporting step
       # exits 0 having sent nothing. A detector that quietly reports nowhere
       # is the exact failure this workflow was built to end.
       - name: Verify service IDs and secrets are configured
         id: preflight
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
@@ -67,10 +67,7 @@ jobs:
           [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("vars.VERCEL_ORG_ID")
           [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("vars.VERCEL_PROJECT_ID_API")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("vars.PROD_API_URL")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_DAILY")
           [ -z "${VERCEL_TOKEN}" ] && missing+=("secrets.VERCEL_TOKEN")
-          [ -z "${RENDER_API_TOKEN}" ] && missing+=("secrets.RENDER_API_TOKEN")
           [ -z "${SENTRY_DSN}" ] && missing+=("secrets.SENTRY_DSN_SMOKE")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing production-environment config: ${missing[*]}"
@@ -84,9 +81,11 @@ jobs:
       - name: Check each prod service
         id: check
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DAILY_ENABLED: ${{ vars.CRAWLER_GHA_DAILY_ENABLED }}
         run: |
           # `set +e` is load-bearing, not tidying. The runner invokes this as
           # `bash -e {0}`, so errexit is already on before the first line and
@@ -118,12 +117,10 @@ jobs:
           check "concert-crawl-api" \
             bash .github/scripts/vercel-api-prod.sh health \
             "${{ vars.VERCEL_PROJECT_ID_API }}" "${{ vars.PROD_API_URL }}"
-          check "concert-crawl-crawler-triggers" \
-            bash .github/scripts/render-check-deploy-health.sh \
-            "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
-          check "concert-crawl-crawler-daily" \
-            bash .github/scripts/render-check-deploy-health.sh \
-            "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+          # The crawler left Render for GitHub Actions (Render exit step 2). Its
+          # code ships with the API, so the API check covers its deploy path;
+          # this one checks the daily crawl is actually running.
+          check "crawler-daily" bash .github/scripts/crawler-daily-health.sh
 
           {
             echo "findings<<EOF"

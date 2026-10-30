@@ -97,12 +97,12 @@ export const BOT_COPY = {
     },
     fullPass: {
       label: 'Full pass',
-      value: 'Once a day at 09:00 UTC.',
+      value: 'Once a day, starting around 09:10 UTC.',
     },
     triggers: {
       label: 'Trigger checks',
       value:
-        'Between daily passes, the only thing that re-reads your site is one of us queueing your venue by hand. A job picks that queue up every 10 minutes. Nothing re-reads you automatically.',
+        'Between daily passes, the only thing that re-reads your site is one of us queueing your venue by hand. That crawl usually starts within a few minutes. Nothing re-reads you automatically.',
     },
     weRead: {
       label: 'We read',

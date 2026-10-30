@@ -2,7 +2,7 @@
 
 A concert calendar that crawls Denver venue websites daily into a filterable, searchable event listing. Private beta, heading to public launch with premium tiers and social features. The core value is the data: if crawls fail or get blocked, the product has nothing to show, so crawl resilience is the top engineering concern.
 
-pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps/api` (Hono, REST under `/v1/`), `apps/crawler` (Playwright and Claude Haiku, two Render cron jobs), `apps/e2e` (Playwright against staging), and `packages/` (`db` Drizzle schema and migrations, `crawler-core`, `price-pipeline`, `entitlements`, `logger`, `types`, `config`). Local setup: `docker compose up -d`, `pnpm install`, copy each app's `.env.example` to `.env.local`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm dev` (web :3000, API :3001, Postgres :5433).
+pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps/api` (Hono, REST under `/v1/`), `apps/crawler` (Playwright and Claude Haiku, run by GitHub Actions: daily, and on demand when an admin queues a crawl), `apps/e2e` (Playwright against staging), and `packages/` (`db` Drizzle schema and migrations, `crawler-core`, `price-pipeline`, `entitlements`, `logger`, `types`, `config`). Local setup: `docker compose up -d`, `pnpm install`, copy each app's `.env.example` to `.env.local`, `pnpm db:migrate`, `pnpm db:seed`, `pnpm dev` (web :3000, API :3001, Postgres :5433).
 
 **Background, tables and reasons for everything below: `docs/agents/conventions.md`.**
 

@@ -1477,7 +1477,7 @@ export async function crawlVenue(
       //
       // Non-concerts are excluded, matching what the nightly backfill already
       // does with `hidden_from_consumer` (#1343). Without this the two writers
-      // disagreed, and the every-10-minutes one won — a sports fixture or a
+      // disagreed, and the per-crawl one won — a sports fixture or a
       // tour-package title became an artist row within minutes of being
       // crawled, on a listing the backfill would never have projected.
       //

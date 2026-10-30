@@ -1,12 +1,13 @@
 name: Rollback Production (manual)
 
-# Manual incident-response rollback of the production API and crawlers:
+# Manual incident-response rollback of the production API (and so the
+# crawler):
 #   - the API (Vercel project `concert-crawl-api`) goes back to the
 #     deployment that served prod before the one its hostname serves now
 #     (recorded on each deployment by deploy-prod.yml), or to the deployment
 #     named in the `api_deployment` input;
-#   - the two crawler crons (Render) are cron jobs, which Render's API cannot
-#     roll back, so their steps emit the manual-action warning.
+#   - the crawler (GitHub Actions, crawler-run.yml) runs the commit the
+#     production API serves, so it follows the API back with no step here.
 # match-artists and spotify-weekly run inside the API project as Vercel Cron
 # Jobs, so the API rollback covers them.
 #
@@ -89,7 +90,7 @@ jobs:
         run: echo "All rollback gates satisfied; proceeding to rollback job."
 
   rollback:
-    name: Roll back prod API and crawlers
+    name: Roll back prod API (the crawler follows it)
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -113,8 +114,6 @@ jobs:
           API_DEPLOYMENT: ${{ github.event.inputs.api_deployment }}
         run: |
           missing=()
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
           [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID")
           [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL")
@@ -131,12 +130,6 @@ jobs:
             exit 1
           fi
 
-      # Each rollback step carries `always() && <preflight succeeded>` rather
-      # than inheriting the implicit `success()`. Without a status function a
-      # failed API rollback skips the crawler steps, silently dropping the
-      # `::warning::` annotations that are the operator's only notice that
-      # those crons need manual action.
-      #
       # Invoke via `bash` rather than `./script.sh` so we don't depend on
       # the executable bit surviving git checkout (which depends on
       # core.filemode and platform).
@@ -156,21 +149,10 @@ jobs:
           echo "Rolling the API back to $target"
           npx --yes vercel@65.8.0 rollback "$target" --yes --token "$VERCEL_TOKEN"
 
-      - name: Roll back crawler triggers cron
-        if: always() && steps.verify_config.outcome == 'success'
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-
-      - name: Roll back crawler daily cron
-        if: always() && steps.verify_config.outcome == 'success'
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-
       - name: Log rollback context
         run: |
-          echo "Manual rollback attempted: the API on Vercel; the crawler crons need manual action"
+          echo "Manual rollback attempted: the API on Vercel. The crawler's next run uses the API's commit;"
+          echo "cancel any Crawler triggers / Crawler daily run in progress (built from the bad commit)."
           echo "Operator-supplied reason: ${{ github.event.inputs.reason }}"
           echo ""
           echo "Vercel web prod is NOT automatically rolled back."

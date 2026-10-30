@@ -14,10 +14,10 @@ flowchart TD
         Web["apps/web\nNext.js 15 (App Router)\nVercel"]
     end
 
-    subgraph Render
-        API["apps/api\nHono REST\nRender Web Service"]
-        CrawlerTrigger["apps/crawler (trigger)\nRender Cron Job (*/10 min)"]
-        CrawlerDaily["apps/crawler (daily)\nRender Cron Job (3 AM MT)"]
+    subgraph Hosted
+        API["apps/api\nHono REST\nVercel (concert-crawl-api)"]
+        CrawlerTrigger["apps/crawler (trigger)\nGitHub Actions, on demand"]
+        CrawlerDaily["apps/crawler (daily)\nGitHub Actions (09:07 UTC)"]
     end
 
     subgraph Neon
@@ -67,7 +67,7 @@ flowchart TD
 apps/
   api/        Hono REST API (/v1/...)
   web/        Next.js 15 (App Router) — UI + admin
-  crawler/    Playwright + Claude Haiku extraction (two Render Cron Jobs)
+  crawler/    Playwright + Claude Haiku extraction (GitHub Actions workflows)
 packages/
   config/         Shared ESLint, TypeScript, Tailwind configs
   crawler-core/   Playwright browser + extraction logic
@@ -153,21 +153,22 @@ pnpm db:seed      # Seed local database with Denver venues
 
 ## Tech Stack
 
-| Concern       | Choice                                      |
-| ------------- | ------------------------------------------- |
-| Monorepo      | Turborepo + pnpm workspaces                 |
-| API           | Hono 4                                      |
-| Web           | Next.js 15 (App Router)                     |
-| Auth          | Clerk (separate Production + Staging apps)  |
-| Database      | Neon Postgres 16 + Drizzle ORM              |
-| Crawler       | Playwright + Claude Haiku (LLM fallback)    |
-| Styling       | Tailwind CSS + shadcn/ui                    |
-| Testing       | Vitest (unit/integration), Playwright (E2E) |
-| Observability | Sentry (errors, uptime, crons)              |
-| CI            | GitHub Actions                              |
-| Web hosting   | Vercel (`concertcrawl.app`, preview deploys per PR) |
-| API + crons   | Render (web service + Docker cron jobs)     |
-| DNS           | Cloudflare (DNS only, no proxy)             |
+| Concern       | Choice                                                       |
+| ------------- | ------------------------------------------------------------ |
+| Monorepo      | Turborepo + pnpm workspaces                                  |
+| API           | Hono 4                                                       |
+| Web           | Next.js 15 (App Router)                                      |
+| Auth          | Clerk (separate Production + Staging apps)                   |
+| Database      | Neon Postgres 16 + Drizzle ORM                               |
+| Crawler       | Playwright + Claude Haiku (LLM fallback)                     |
+| Styling       | Tailwind CSS + shadcn/ui                                     |
+| Testing       | Vitest (unit/integration), Playwright (E2E)                  |
+| Observability | Sentry (errors, uptime, crons)                               |
+| CI            | GitHub Actions                                               |
+| Web hosting   | Vercel (`concertcrawl.app`, preview deploys per PR)          |
+| API           | Vercel (`concert-crawl-api`, `api.concertcrawl.app`)         |
+| Crawler runs  | GitHub Actions (`crawler-daily.yml`, `crawler-triggers.yml`) |
+| DNS           | Cloudflare (DNS only, no proxy)                              |
 
 ## API Client (Bruno)
 
@@ -190,7 +191,7 @@ Run `pnpm dev` before sending requests.
 Third-party services this app depends on:
 
 - [Vercel](https://vercel.com): Hosting for `apps/web` (production at `concertcrawl.app`, staging at `staging.concertcrawl.app`)
-- [Render](https://render.com): Hosting for `apps/api` and the two Docker-based crawler cron jobs
+- [GitHub Actions](https://github.com/features/actions): Runs the crawler (daily, and on demand when an admin queues a crawl). Render hosted the API and crawler until the Render exit; those services are suspended there
 - [Neon](https://neon.tech): Managed Postgres — single project with `production` and `staging` branches
 - [Clerk](https://clerk.com): Authentication — two apps (Concert Crawl Production for prod, Concert Crawl Staging for staging) with separate `pk_live_*` / `sk_live_*` keys per environment
 - [Anthropic](https://anthropic.com): Claude Haiku LLM used as fallback for crawl data extraction

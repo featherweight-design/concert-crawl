@@ -204,7 +204,7 @@ describe('crawlVenue — artists projection write-through (#1115)', () => {
   it('skips a listing the classifier ruled not a concert', async () => {
     // The nightly backfill has always filtered these out via
     // `hidden_from_consumer` (#1343); the write-through did not, and running
-    // every 10 minutes it won. A sports fixture or a tour-package title became
+    // after every crawl it won. A sports fixture or a tour-package title became
     // an artist row minutes after the crawl, on a listing the backfill would
     // never have projected.
     const venue = await seedTestVenue()

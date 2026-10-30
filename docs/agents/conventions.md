@@ -9,7 +9,7 @@ Detail moved out of `CLAUDE.md` on 2026-10-28 so it isn't re-read on every turn.
 ├── apps/
 │   ├── web/        # Next.js 14+ (App Router) — UI + admin
 │   ├── api/        # Hono — REST API (/v1/...)
-│   ├── crawler/    # Playwright + Claude Haiku extraction (runs as two Render Cron Jobs: triggers every 10 min, daily at 3 AM MT)
+│   ├── crawler/    # Playwright + Claude Haiku extraction (runs on GitHub Actions: on demand when an admin queues a crawl, daily at 09:07 UTC)
 │   └── e2e/        # Playwright end-to-end tests (runs against staging)
 ├── packages/
 │   ├── config/         # Shared ESLint, TypeScript, Tailwind configs

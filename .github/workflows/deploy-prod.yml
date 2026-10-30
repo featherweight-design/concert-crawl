@@ -1,16 +1,16 @@
 name: Deploy to Production
 
-# The ONLY path to production. Three things ship from one dispatch:
+# The ONLY path to production. Two things ship from one dispatch:
 #   - the API, to the Vercel project `concert-crawl-api` (production), after
 #     this workflow migrates the prod database over its direct URL;
-#   - the two crawler crons, concert-crawl-crawler-triggers and
-#     concert-crawl-crawler-daily, which stay on Render (the Render exit's
-#     step 2 moves them);
 #   - the web app, to the Vercel project `concert-crawl` (production).
-# Render's auto-deploy is off on both crawler crons, and Git deployments are
-# off on both Vercel projects, so prod changes only through a dispatch of this
-# workflow. Staging still deploys from main on every merge; promotion is the
-# deliberate human step that follows a green staging E2E run.
+# The crawler ships with the API without a step here: crawler-run.yml runs
+# the commit the production API serves, so promoting (or rolling back) the
+# API moves the crawler too (docs/runbooks/crawler-github-actions.md).
+# Git deployments are off on both Vercel projects, so prod changes only
+# through a dispatch of this workflow. Staging still deploys from main on
+# every merge; promotion is the deliberate human step that follows a green
+# staging E2E run.
 #
 # match-artists and spotify-weekly no longer deploy from here: they run as
 # Vercel Cron Jobs inside the API project, so they ship with the API. Their
@@ -25,9 +25,6 @@ name: Deploy to Production
 # steps are unreachable under workflow_dispatch — kept so re-enabling
 # workflow_run in the future is a one-line revert.
 #
-# The crawler crons deploy through the Render API, not deploy hooks: Render
-# Cron Jobs expose no Deploy Hook, and one RENDER_API_TOKEN covers both.
-#
 # See docs/runbooks/auto-deploy-prod.md.
 
 on:
@@ -38,7 +35,7 @@ on:
         required: true
         type: string
       allow_stale_head:
-        description: 'Deploy even though main has advanced past this ref (the two crawler crons will build main HEAD regardless)'
+        description: 'Deploy even though main has advanced past this ref'
         required: false
         default: false
         type: boolean
@@ -101,13 +98,12 @@ jobs:
         with:
           fetch-depth: 20
 
-      # The two crawler crons are Render cron jobs, and the Render API rejects
-      # `commitId` for `crn-*` — those deploys always build branch HEAD (see
-      # .github/scripts/render-trigger-deploy.sh:99-119). The API and the web
-      # app deploy the checked-out SHA. So promoting a SHA that is not main
-      # HEAD would ship the requested code to the API and the web app and HEAD
-      # to the crawlers, from one green run. Refuse instead, unless the
-      # operator opts in explicitly.
+      # Refuse to promote a SHA that is not main HEAD unless the operator opts
+      # in. This gate existed because the Render crawler crons could not be
+      # pinned and always built HEAD. The crawler now runs the API's own commit
+      # on GitHub Actions, so the split it guarded against is gone; the gate is
+      # kept, reworded, until the crawlers have run a week pinned, then removed
+      # in a follow-up.
       #
       # Placed after Checkout rather than beside the non-main refusal above
       # because `git fetch` needs a repository to fetch into.
@@ -118,18 +114,17 @@ jobs:
           requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
           head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
           if [ "$requested" = "$head" ]; then
-            echo "Promoting main HEAD ($head); the API, the crawlers and the web app will run the same code."
+            echo "Promoting main HEAD ($head)."
             exit 0
           fi
           echo "Requested deployable: $requested"
           echo "main HEAD deployable: $head"
           if [ "${{ github.event.inputs.allow_stale_head }}" = "true" ]; then
-            echo "::warning::Promoting $requested while main HEAD is $head. concert-crawl-crawler-triggers and concert-crawl-crawler-daily cannot be pinned and WILL build main HEAD. The API and the web app get $requested."
+            echo "::warning::Promoting $requested while main HEAD is $head. The API, the web app and the crawler (which follows the API) get $requested."
             exit 0
           fi
           echo "✗ Refusing: the requested ref is not main HEAD."
-          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
-          echo "  the two crawler crons will build main HEAD while the API and web get the older SHA."
+          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true to promote it anyway."
           exit 1
 
       # Under workflow_dispatch-only (post-#786), this step is
@@ -210,12 +205,11 @@ jobs:
         run: echo "All deploy gates satisfied; proceeding to deploy job."
 
   deploy:
-    name: Migrate prod DB, deploy API, crawlers and web
+    name: Migrate prod DB, deploy API and web
     needs: gate
     runs-on: ubuntu-latest
-    # 35 min: the two Render crawler triggers (each returns on enqueue),
-    # install (~2 min), the migration, the API's `vercel deploy` (blocks for
-    # the remote turbo build, ~3-5 min), and the web app's `vercel deploy`,
+    # 35 min: install (~2 min), the migration, the API's `vercel deploy`
+    # (blocks for the remote turbo build, ~3-5 min), and the web app's `vercel deploy`,
     # which blocks for the whole Next.js + serwist production build. Timing
     # out here is worse than a plain failure: whatever already shipped stays
     # shipped, `smoke` is skipped, and `rollback` never fires because it keys
@@ -246,9 +240,6 @@ jobs:
       # Actions masks secret values in logs.
       - name: Verify deploy configuration
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-          SERVICE_ID_CRAWLER_TRIGGERS: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
-          SERVICE_ID_CRAWLER_DAILY: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
@@ -257,9 +248,6 @@ jobs:
           PROD_API_URL: ${{ vars.PROD_API_URL }}
         run: |
           missing=()
-          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
-          [ -z "$SERVICE_ID_CRAWLER_TRIGGERS" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (production-env var)")
-          [ -z "$SERVICE_ID_CRAWLER_DAILY" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (production-env var)")
           [ -z "$DATABASE_URL_DIRECT" ] && missing+=("DATABASE_URL_DIRECT (production-env secret)")
           [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (production-env secret)")
           [ -z "$VERCEL_ORG_ID" ] && missing+=("VERCEL_ORG_ID (production-env var)")
@@ -288,12 +276,8 @@ jobs:
       #
       # The gate job already refused a non-HEAD promotion, but gate and deploy
       # are separate jobs and `environment: production` can hold this one in an
-      # approval queue while main keeps advancing. The two crawler crons are
-      # `crn-*` services, the Render API rejects `commitId` for those, and so
-      # they always build branch HEAD at trigger time. Drift between gate and
-      # trigger therefore ships the gated SHA to the API and web and a newer
-      # HEAD to the crawlers — the split the gate-job step exists to prevent,
-      # reopened by the wait.
+      # approval queue while main keeps advancing. Kept with the gate-job step
+      # until the follow-up that removes both (see that step's comment).
       #
       # `allow_stale_head` is honoured exactly as the gate step honours it.
       #
@@ -313,18 +297,17 @@ jobs:
           requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
           head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
           if [ "$requested" = "$head" ]; then
-            echo "Still promoting main HEAD ($head); the API, the crawlers and the web app will run the same code."
+            echo "Still promoting main HEAD ($head)."
             exit 0
           fi
           echo "Requested deployable: $requested"
           echo "main HEAD deployable: $head"
           if [ "${{ github.event.inputs.allow_stale_head }}" = "true" ]; then
-            echo "::warning::main advanced to $head while this job waited. Promoting $requested anyway because allow_stale_head=true. concert-crawl-crawler-triggers and concert-crawl-crawler-daily cannot be pinned and WILL build main HEAD. The API and the web app get $requested."
+            echo "::warning::main advanced to $head while this job waited. Promoting $requested anyway because allow_stale_head=true."
             exit 0
           fi
           echo "✗ Refusing to deploy — main advanced between the gate and this job."
-          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
-          echo "  the two crawler crons will build main HEAD while the API and web get the older SHA."
+          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true to promote it anyway."
           exit 1
 
       # Under workflow_dispatch-only (post-#786), this step is
@@ -352,33 +335,6 @@ jobs:
             exit 1
           fi
           echo "Upstream SHA $UPSTREAM_SHA and main HEAD $main_sha resolve to the same deployable ($upstream_deployable); deploying."
-
-      # Kept adjacent to the main-HEAD re-check above, before anything slow.
-      # The crawler crons are `crn-*` services that always build branch HEAD,
-      # so every minute between the re-check and these triggers is a window
-      # for a merge to give them a newer SHA than the API and the web app get.
-      # Install, migration and the API build take several minutes, so they
-      # come after. Each trigger returns as soon as Render queues the build.
-      #
-      # Each delegates to render-trigger-deploy.sh, which centralizes the curl
-      # + commitId-pinning + deploy-id-logging pattern.
-      - name: Trigger Render deploy — crawler triggers cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          bash .github/scripts/render-trigger-deploy.sh \
-            "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" \
-            "${{ github.event.workflow_run.head_sha || github.sha }}" \
-            "Crawler-triggers"
-
-      - name: Trigger Render deploy — crawler daily cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          bash .github/scripts/render-trigger-deploy.sh \
-            "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" \
-            "${{ github.event.workflow_run.head_sha || github.sha }}" \
-            "Crawler-daily"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -422,9 +378,7 @@ jobs:
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
 
       # Migrate, then ship the API: the order Render's build had, now a step
-      # of its own because Vercel builds have no database access. The crawler
-      # builds queued above take several minutes on Render, so they normally
-      # go live after this, as they did when the API's Render build migrated. Expand/contract
+      # of its own because Vercel builds have no database access. Expand/contract
       # migrations mean the API still serving tolerates the new schema, and a
       # rollback of the code below does not need a rollback of this.
       - name: Migrate prod DB
@@ -521,8 +475,7 @@ jobs:
       # succeeded, a failure of either check after it can leave a broken API
       # live, and the job stopping would leave it live: the smoke and rollback
       # jobs only run after a successful deploy job. Roll it back in place.
-      # The web app has not shipped yet; the crawler crons do not depend on
-      # the API's version.
+      # The web app has not shipped yet.
       - name: Roll back the API after a failed post-deploy check
         if: >-
           failure() && steps.deploy_api.outcome == 'success'
@@ -538,7 +491,7 @@ jobs:
             exit 1
           fi
           npx --yes vercel@65.8.0 rollback "$PREV_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
-          echo "::warning title=API rolled back::The new API failed a post-deploy check and was rolled back to $PREV_DEPLOYMENT. The web app was not deployed; the crawler crons were."
+          echo "::warning title=API rolled back::The new API failed a post-deploy check and was rolled back to $PREV_DEPLOYMENT. The web app was not deployed."
 
       # Runs last: a failed API deploy or check above aborts the job before the web
       # app is promoted, so a partial promotion never leaves a new front end
@@ -766,8 +719,6 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           missing=()
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
           [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID")
           [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API")
           [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (secret)")
@@ -777,11 +728,6 @@ jobs:
             exit 1
           fi
 
-      # Each rollback step carries `always() && <preflight succeeded>` rather
-      # than inheriting the implicit `success()`. Without a status function a
-      # failed API rollback skips the crawler steps, silently dropping the
-      # `::warning::` annotations that are the operator's only notice that
-      # those crons need manual action.
       - name: Roll back API (Vercel)
         if: always() && steps.verify_config.outcome == 'success'
         env:
@@ -800,23 +746,9 @@ jobs:
           # unaffected.
           npx --yes vercel@65.8.0 rollback "$PREV_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
 
-      # render-rollback.sh skips `crn-*` services with a `::warning::`:
-      # Render's API rejects cron rollback. Kept so the warning, and the
-      # manual action it asks for, appears on every rollback.
-      - name: Roll back crawler triggers cron
-        if: always() && steps.verify_config.outcome == 'success'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
-
-      - name: Roll back crawler daily cron
-        if: always() && steps.verify_config.outcome == 'success'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
-
       # Email the admin that auto-rollback fired. The operator needs to know
-      # so they can roll back the two crawler crons and the web app by hand.
+      # so they can roll back the web app by hand, and cancel a crawler run
+      # already in flight: the next one runs the API's (rolled-back) commit.
       #
       # Uses the same Resend setup the API + crawler already use —
       # `alerts@concertcrawl.app` is already a verified sender in
@@ -863,11 +795,11 @@ jobs:
           # escaped characters can't break the request. Worded so it never
           # claims the API rollback succeeded: this step runs with
           # `if: always()`, possibly after a failed rollback step.
-          html_body="<p>Production auto-rollback was <strong>triggered</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API rollback was attempted on Vercel (<code>vercel rollback</code> to the deployment that was serving before this run). The two crawler crons (crawler triggers, crawler daily) require <strong>manual rollback</strong> — Render's API does not support cron rollback. The Vercel web app was <strong>not</strong> rolled back — prod is serving the new front end against the rolled-back API until an operator runs <code>vercel rollback</code> on the web project (or uses Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          html_body="<p>Production auto-rollback was <strong>triggered</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API rollback was attempted on Vercel (<code>vercel rollback</code> to the deployment that was serving before this run). The crawler runs the commit the API serves, so its next run uses the rolled-back code; <strong>cancel any Crawler triggers or Crawler daily run in progress</strong> in Actions, since it was built from the bad commit. The Vercel web app was <strong>not</strong> rolled back — prod is serving the new front end against the rolled-back API until an operator runs <code>vercel rollback</code> on the web project (or uses Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code>, section \"Vercel + cron rollback is manual\", for the web app's manual rollback.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \
-            --arg subject "[concert-crawl] Prod auto-rollback fired; manual crawler + web action required" \
+            --arg subject "[concert-crawl] Prod auto-rollback fired; manual web + crawler action required" \
             --arg html "${html_body}" \
             '{from: $from, to: [$to], subject: $subject, html: $html}')
           if ! response=$(curl --fail-with-body --silent --show-error \
@@ -892,7 +824,8 @@ jobs:
       - name: Log rollback context
         if: always()
         run: |
-          echo "Rollback attempted: the API on Vercel; the crawler crons need manual action."
+          echo "Rollback attempted: the API on Vercel. The crawler's next run uses the API's commit;"
+          echo "cancel any Crawler triggers / Crawler daily run in progress (built from the bad commit)."
           echo "Triggered by: failing smoke job in this workflow run."
           echo "Per-service outcome: check the rollback step results above (✓/X)."
           echo ""

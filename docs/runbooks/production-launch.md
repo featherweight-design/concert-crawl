@@ -24,8 +24,8 @@ This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgre
 | API (staging, fallback)    | Render     | web service `concert-crawl-api-staging`, auto-deploy off                                                             |
 | Match artists (prod)       | Vercel     | Cron Job in `concert-crawl-api`, `0 16 * * *` (Render cron `concert-crawl-match-artists` suspended at the cutover)   |
 | Spotify weekly (prod)      | Vercel     | Cron Job in `concert-crawl-api`, `30 15 * * 1` (Render cron `concert-crawl-spotify-weekly` suspended at the cutover) |
-| Crawler triggers (prod)    | Render     | cron job `concert-crawl-crawler-triggers` (`*/10 * * * *`)                                                           |
-| Crawler daily (prod)       | Render     | cron job `concert-crawl-crawler-daily` (`0 9 * * *` = 3 AM MT)                                                       |
+| Crawler triggers (prod)    | GitHub Actions | `crawler-triggers.yml`, dispatched by the API on each admin-queued crawl (Render cron suspended at the crawler cutover) |
+| Crawler daily (prod)       | GitHub Actions | `crawler-daily.yml`, `7 9 * * *` UTC (Render cron suspended at the crawler cutover)                                 |
 | Crawler triggers (staging) | Render     | cron job `concert-crawl-crawler-triggers-staging`                                                                    |
 | Crawler daily (staging)    | Render     | cron job `concert-crawl-crawler-daily-staging`                                                                       |
 | Database                   | Neon       | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon)                             |
@@ -374,6 +374,8 @@ are suspended the same way; their env vars are listed in `render.yaml`.
 
 ### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
 
+> **Suspended since the crawler cutover (Render exit step 2).** The prod crawler runs on GitHub Actions and reads its env from the `production` GitHub environment; see `docs/runbooks/crawler-github-actions.md`. This section is kept for the fallback during the 7-day watch. The API needs `CRAWLER_DISPATCH_TOKEN` (a fine-grained GitHub token with Actions: write on this repo) on the Vercel `concert-crawl-api` project, production and staging.
+
 Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:24.22.1-bookworm` + `playwright install-deps chromium` as root, then `playwright install chromium` as `pwuser` (no MCR dependency — see issue #547 / PR #591 for context). The two halves are split so that root is used only for the apt packages and everything writing into `/app` or the browsers path runs as `pwuser`, which is what lets the image skip a recursive `chown`; `apps/crawler/scripts/verify-image.sh` guards that.
 
 | Variable             | Value                                             |
@@ -458,8 +460,8 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                                                                              |
 | `LOG_LEVEL`                          | `info`                                                                                                                                                                                                                                                                    |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `prod-smoke-after-deploy.yml`, `deploy-prod.yml`, `rollback-prod.yml`, and `prod-deploy-health.yml`.                                                                                                         |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same four callers as above.                                                                                                                                                                                                 |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Unused since the crawler cutover; deleted with the suspended service.                                                                                                                                                     |
+| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same.                                                                                                                                                                                                                       |
 | `VERCEL_ORG_ID`                      | The featherweight-design Team ID (`team_*`). Already present for the web promotion; shared by the web and API projects.                                                                                                                                                   |
 | `VERCEL_PROJECT_ID`                  | The **web** prod project `concert-crawl` (`prj_*`). Already present.                                                                                                                                                                                                      |
 | `VERCEL_PROJECT_ID_API`              | **New at the prod cutover.** `prj_akzBWiGHyaLqECpGOGWSoWr6E7C0`, the `concert-crawl-api` project (the same project staging uses). Consumed by `deploy-prod.yml`, `rollback-prod.yml`, `prod-smoke-after-deploy.yml`, `prod-deploy-health.yml` and `prod-drift-alert.yml`. |
@@ -541,7 +543,7 @@ The manual controls below are for first-time setup, env var changes, and recover
 
 - **Web (Vercel):** git builds are disabled (Ignored Build Step = `exit 0`), so a push deploys nothing. **Deployments tab → Redeploy** with cache off after env var changes.
 - **API (Vercel):** Git deployments are off on `concert-crawl-api`, so use the dispatch, including after an env var change. A dashboard **Redeploy** also works, but that deployment does not record the one it replaced (`meta.prevApiDeployment`), so rolling it back with `rollback-prod.yml` then needs the `api_deployment` input. If the project is in a rollback state, a new production deployment does not take the domain until it is promoted; see `auto-deploy-prod.md`.
-- **Crawler crons (Render):** Same — Builds tab manual deploy. Confirms env vars apply on rebuild. Crons execute on schedule afterward; they do not run on-deploy.
+- **Crawler (GitHub Actions):** nothing to redeploy. Each run builds the image at the commit the production API serves and reads the `production` GitHub environment, so a changed value applies on the next run.
 
 ### Smoke checks
 
@@ -570,8 +572,8 @@ The triggers cron's no-pending-triggers code path doesn't exercise Chromium laun
 
 1. Sign in to `https://concertcrawl.app/admin` as admin
 2. **Trigger a crawl** for a single venue (Bluebird Theater or similar fast one)
-3. Wait <10 min for the next prod triggers cron run
-4. Render dashboard → `concert-crawl-crawler-triggers` → **Logs** → confirm the run shows:
+3. The API dispatches **Crawler triggers**; the run starts within a minute or two and builds for about three
+4. GitHub → Actions → **Crawler triggers** → the newest `production` run → **Run crawler** step → confirm the log shows:
    - `crawl.start` for the queued venue
    - `robots.allowed`
    - `fetch.start` / `fetch.success` (Chromium launched successfully under non-root `pwuser`)
@@ -610,7 +612,7 @@ If a deploy breaks production:
 
 - **Web (Vercel):** Deployments tab → click any previous deploy → **Instant Rollback** (older UIs say **Promote to Production**). No rebuild.
 - **API (Vercel):** dispatch **Rollback Production (manual)** (`rollback-prod.yml`), which runs `vercel rollback` on `concert-crawl-api`, or use Instant Rollback in that project's dashboard. This also rolls back match-artists and spotify-weekly, which run inside the API. After a rollback the project stops giving new production deployments the domain until one is promoted; `deploy-prod.yml` does that promote itself. If Vercel itself is the problem, fall back to the suspended Render services (during the 7-day watch); see "Falling back to Render" in Step 8.
-- **Crawler cron (Render):** Builds tab → previous successful build → **Rollback**. Render redeploys the previous image.
+- **Crawler (GitHub Actions):** follows the API. It runs the commit the production API serves, so rolling the API back rolls the crawler back on its next run.
 - **DB:** see `docs/runbooks/db-rollback.md`.
 
 ---

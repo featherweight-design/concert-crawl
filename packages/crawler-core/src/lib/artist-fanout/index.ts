@@ -68,8 +68,8 @@ const NEW_SHOW_CATEGORY = 'artist.new_show'
 const publicMetadataSchema = z.object({ role: z.string().optional() })
 
 // Role fetch for role-comped plan derivation. Optional by design: the
-// crawler crons only carry CLERK_SECRET_KEY so admin/team accounts derive as
-// comped; without it (or on any Clerk blip) derivation proceeds role-less
+// crawler carries CLERK_SECRET_KEY (from its GitHub environment) only so
+// admin/team accounts derive as comped; without it (or on any Clerk blip) derivation proceeds role-less
 // and DB rows still decide paid plans — same fallback the weekly digest
 // uses.
 const fetchClerkRole = async (userId: string): Promise<string | undefined> => {

@@ -11,11 +11,9 @@ name: Prod drift alert
 
 on:
   schedule:
-    # 17:00 UTC daily. concert-crawl-crawler-triggers runs every 10 minutes, so
-    # no hour avoids overlapping a prod cron entirely. What this hour does avoid
-    # is the three that produce incidents worth reading first: crawler-daily
-    # 09:00, spotify-weekly 15:30 Mon, match-artists 16:00. A drift warning is
-    # never urgent, so it goes last.
+    # 17:00 UTC daily. It avoids the three jobs that produce incidents worth
+    # reading first: the daily crawl 09:07, spotify-weekly 15:30 Mon,
+    # match-artists 16:00. A drift warning is never urgent, so it goes last.
     - cron: '0 17 * * *'
   workflow_dispatch:
 

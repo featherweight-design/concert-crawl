@@ -11,9 +11,8 @@ name: Prod smoke (manual)
 #
 # On smoke failure it rolls the API back on Vercel to the deployment that
 # served prod before the one its hostname serves now (recorded on each
-# deployment by deploy-prod.yml). The two crawler crons are
-# Render cron jobs, which Render's API cannot roll back, so they emit
-# warnings; the web app is rolled back by hand.
+# deployment by deploy-prod.yml). The crawler runs the commit the production
+# API serves, so it follows the API back; the web app is rolled back by hand.
 #
 # PROD_SMOKE_RECONCILER_ENABLED is now vestigial: the job-level `if:` below
 # is satisfied by every dispatch, which is the only trigger left. It is kept
@@ -58,7 +57,7 @@ jobs:
       github.event_name == 'workflow_dispatch'
     # `environment: production` scopes secrets + variables to the
     # production GH Environment (where VERCEL_TOKEN, VERCEL_PROJECT_ID_API,
-    # RENDER_API_TOKEN, RENDER_SERVICE_ID_*, ADMIN_EMAIL, RESEND_API_KEY live
+    # ADMIN_EMAIL, RESEND_API_KEY live
     # in this repo). Same pattern as
     # deploy-prod.yml's deploy + rollback jobs and rollback-prod.yml's
     # rollback job. Without this, the production-env variables and the
@@ -110,19 +109,15 @@ jobs:
       # blocker, which isn't the design intent.
       - name: Verify required config
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
           E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
-          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
           [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (secret)")
           [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID (variable)")
           [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API (variable)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (variable)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (variable)")
           [ -z "${{ vars.PROD_URL }}" ] && missing+=("PROD_URL (variable)")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
           [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
@@ -249,15 +244,8 @@ jobs:
 
       # The API rolls back on Vercel to the deployment that served prod before
       # the current one (vercel-api-prod.sh `previous`, which follows the
-      # `prevApiDeployment` each deploy records). render-rollback.sh skips the
-      # two `crn-*` crawler crons with a `::warning::`, because Render's API
-      # rejects cron rollback; the Resend notify step below says so too.
-      #
-      # Every step carries `always() &&` so the chain does not stop at the
-      # first service that errors. Without a status function the implicit
-      # `success()` applies, and a failed API rollback would skip the crawler
-      # steps — silently dropping the `::warning::` annotations that are the
-      # operator's only notice that those crons need manual action.
+      # `prevApiDeployment` each deploy records). The crawler follows the API's
+      # commit, so it needs no step of its own.
       - name: Roll back API (Vercel)
         if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
@@ -270,22 +258,10 @@ jobs:
           echo "Rolling the API back to $target"
           npx --yes vercel@65.8.0 rollback "$target" --yes --token "$VERCEL_TOKEN"
 
-      - name: Roll back crawler triggers cron (auto-skips — see comment)
-        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
-
-      - name: Roll back crawler daily cron (auto-skips — see comment)
-        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
-
       # Email the admin that auto-rollback fired. The auto-rollback
-      # only covers the API (Render's API rejects cron rollback, and
-      # the web app is not rolled back). The operator needs to know so
-      # they can roll back the two crawler crons and the web app by hand. Under the promotion
+      # covers the API, and the crawler with it; the web app is not rolled
+      # back. The operator needs to know so they can roll back the web app
+      # by hand. Under the promotion
       # gate, reverting on main no longer rolls prod back by itself —
       # prod only moves on a deliberate deploy-prod.yml dispatch.
       #
@@ -354,11 +330,11 @@ jobs:
           else
             smoked="the live prod commit could not be read from Vercel — see the run log"
           fi
-          html_body="<p>Production auto-rollback was <strong>triggered by a manual dispatch of the prod smoke workflow</strong>. No deploy was made by that dispatch: ${smoked}, and the smoke specs came from <code>${SPEC_SHA}</code>.</p><p>The API rollback was attempted on Vercel (<code>vercel rollback</code> to the deployment that served prod before the current one). The two crawler crons (crawler triggers, crawler daily) require <strong>manual rollback</strong> — Render's API does not support cron rollback. The Vercel web app also requires manual rollback (Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          html_body="<p>Production auto-rollback was <strong>triggered by a manual dispatch of the prod smoke workflow</strong>. No deploy was made by that dispatch: ${smoked}, and the smoke specs came from <code>${SPEC_SHA}</code>.</p><p>The API rollback was attempted on Vercel (<code>vercel rollback</code> to the deployment that served prod before the current one). The crawler runs the commit the API serves, so its next run uses the rolled-back code; <strong>cancel any Crawler triggers or Crawler daily run in progress</strong> in Actions, since it was built from the bad commit. The Vercel web app requires manual rollback (Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code>, section \"Vercel + cron rollback is manual\", for the web app's manual rollback.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \
-            --arg subject "[concert-crawl] Prod auto-rollback fired; manual crawler + web action required" \
+            --arg subject "[concert-crawl] Prod auto-rollback fired; manual web + crawler action required" \
             --arg html "${html_body}" \
             '{from: $from, to: [$to], subject: $subject, html: $html}')
           if ! response=$(curl --fail-with-body --silent --show-error \

@@ -59,7 +59,7 @@ export async function projectArtists(
     }
     if (byCanonical.size === 0) return 0
 
-    // Narrowed deliberately: the crawler runs every 10 minutes and `artists`
+    // Narrowed deliberately: this runs after every venue crawl and `artists`
     // grows without bound, so a full-table read here would become a hot path.
     // Two predicates are enough — the canonical names we might insert, and any
     // slug that could collide with one of our base slugs. `resolveSlug` only

@@ -34,6 +34,6 @@ docs {
   single-venue canary ("Force Recrawl Venue") first and confirm results
   before firing this.
 
-  Async: enqueues one crawl_triggers row per venue; the crawler-triggers
-  cron claims them every 10 min.
+  Async: enqueues one crawl_triggers row per venue and dispatches the
+  crawler-triggers workflow, whose one run drains them in turn.
 }

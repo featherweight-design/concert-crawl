@@ -1,14 +1,17 @@
 # Render blueprint — post-migration (Jun 2026)
 #
-# Render hosts the crawler cron jobs (and, until the prod cutover of the
-# Render exit, the API and two Node crons):
+# Nothing in production runs on Render any more. Until the Render exit, it
+# hosted the API, two Node crons and the two crawler crons:
 #   - Web (apps/web) → Vercel (concertcrawl.app)
 #   - API (apps/api) → Vercel project `concert-crawl-api`: staging since
 #     2026-10-30, production from the prod cutover (api.concertcrawl.app).
 #     match-artists and spotify-weekly run there as Vercel Cron Jobs.
+#   - Crawler (apps/crawler) → GitHub Actions since step 2 of the Render exit
+#     (crawler-daily.yml, crawler-triggers.yml; see
+#     docs/runbooks/crawler-github-actions.md).
 #   - Postgres → Neon (staging branch + prod branch)
 #
-# The three prod services marked MOVED below are suspended at the cutover and
+# The prod services marked MOVED below are suspended at their cutover and
 # kept, not deleted, for a 7-day watch. Deleting them needs Hugh's OK.
 #
 # DATABASE_URL is set manually in the Render dashboard for each service
@@ -236,6 +239,9 @@ services:
       - key: LOG_LEVEL
         value: info
 
+  # MOVED to GitHub Actions at the crawler cutover (Render exit step 2):
+  # crawler-triggers.yml, dispatched by the API when an admin queues a crawl.
+  # Suspended on Render, not deleted, for the 7-day watch.
   - type: cron
     name: concert-crawl-crawler-triggers
     autoDeploy: false
@@ -284,6 +290,9 @@ services:
       - key: LOG_LEVEL
         value: info
 
+  # MOVED to GitHub Actions at the crawler cutover (Render exit step 2):
+  # crawler-daily.yml, `7 9 * * *` UTC, CRAWL_MODE=all. Suspended on Render,
+  # not deleted, for the 7-day watch.
   - type: cron
     name: concert-crawl-crawler-daily
     autoDeploy: false

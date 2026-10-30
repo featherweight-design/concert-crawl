@@ -8,7 +8,7 @@
 
 Before touching the database, reduce inbound pressure:
 
-1. **Suspend the crawler crons** — In the Render dashboard, pause both `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily` so no new data is written during rollback.
+1. **Stop the crawler** — GitHub → Actions → **Crawler daily** and **Crawler triggers** → ⋯ → **Disable workflow**, so no new data is written during rollback. Cancel any run in progress.
 2. **Take the API offline (if necessary)** — If the broken schema is actively causing 500s, suspend the `concert-crawl-api` web service on Render. Users will see the Next.js error boundary served from Vercel; that's preferable to corrupt data.
 
 ---
@@ -89,7 +89,9 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" \
 
 The schema rollback is useless if the application code still expects the new shape. Deploy the previous release:
 
-**API or crawler crons (Render):**
+**Crawler:** it runs the commit the production API serves, so rolling the API back covers it.
+
+**Render services (fallback only):**
 
 1. Render dashboard → service → **Builds** tab
 2. Find the last green build before the bad migration
@@ -105,9 +107,9 @@ The schema rollback is useless if the application code still expects the new sha
 
 ## 6 — Restore normal operations
 
-1. Re-enable both crawler cron jobs in Render (`concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`)
+1. Re-enable both crawler workflows (Actions → **Crawler daily**, **Crawler triggers** → **Enable workflow**)
 2. Re-enable the API service if it was suspended (`concert-crawl-api`)
-3. Verify a clean crawl run completes in the Render logs
+3. Verify a clean crawl run completes (Actions → **Crawler triggers**, after queueing one venue from the admin)
 4. File a post-incident note in `docs/runbooks/` capturing what happened and what the permanent fix is
 
 ---
