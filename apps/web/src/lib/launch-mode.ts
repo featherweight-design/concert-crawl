@@ -2,10 +2,10 @@
  * Whether the app is publicly browsable, or still behind the private-beta
  * invite gate.
  *
- * `NEXT_PUBLIC_` is required because middleware and client components both read
- * it, and edge middleware has no `process.env` at request time — Next.js
- * inlines the value at build time instead. **Flipping this therefore requires a
- * redeploy, not just an environment change in the Vercel dashboard.**
+ * `NEXT_PUBLIC_` is required because client components read it, and the proxy
+ * has to agree with them — Next.js inlines the value into both at build time.
+ * **Flipping this therefore requires a redeploy, not just an environment change
+ * in the Vercel dashboard.**
  *
  * Read as a function rather than a module-scope constant so tests can toggle it
  * with `vi.stubEnv` without re-importing every consumer.

@@ -9,7 +9,7 @@ interface DisputePageProps {
   params: Promise<{ id: string; submissionId: string }>
 }
 
-// Auth gating handled by edge middleware (apps/web/src/middleware.ts); this
+// Auth gating handled by the proxy (apps/web/src/proxy.ts); this
 // page only runs for authenticated users (#841). The token-null guard remains
 // because getToken() can transiently return null during session refresh.
 export default async function DisputePage({ params }: DisputePageProps) {

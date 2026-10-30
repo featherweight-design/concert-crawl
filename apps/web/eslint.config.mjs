@@ -1,26 +1,38 @@
-import { FlatCompat } from '@eslint/eslintrc'
-import tsPlugin from '@typescript-eslint/eslint-plugin'
-import tsParser from '@typescript-eslint/parser'
-import { fileURLToPath } from 'url'
-import path from 'path'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-const compat = new FlatCompat({ baseDirectory: __dirname })
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { ignores: ['.next/**', 'dist/**', 'next-env.d.ts'] },
-  ...compat.extends('next/core-web-vitals'),
+  // eslint-config-next 16 ships a native flat config; the FlatCompat bridge
+  // it replaced cannot load it (circular `plugins.react` reference).
+  ...nextCoreWebVitals,
+  {
+    // eslint-config-next 16 moves to eslint-plugin-react-hooks 7, whose
+    // recommended set adds the React Compiler rules. The first five below flag
+    // 144 existing sites across 80 files, and clearing them is a refactor of
+    // effect and ref code, which an upgrade that keeps behaviour unchanged
+    // must not carry. Every compiler rule is held off, not only the five that
+    // fire today, so the bump lints exactly what 15 linted (`rules-of-hooks`
+    // and `exhaustive-deps` stay on); adopting them is its own PR.
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/static-components': 'off',
+      'react-hooks/use-memo': 'off',
+      'react-hooks/globals': 'off',
+      'react-hooks/error-boundaries': 'off',
+      'react-hooks/set-state-in-render': 'off',
+      'react-hooks/config': 'off',
+      'react-hooks/gating': 'off',
+      'react-hooks/incompatible-library': 'off',
+      'react-hooks/unsupported-syntax': 'off',
+    },
+  },
   {
     files: ['**/*.ts', '**/*.tsx'],
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-    },
-    languageOptions: {
-      parser: tsParser,
-    },
     rules: {
       'no-unused-vars': 'off',
       'no-undef': 'off',
