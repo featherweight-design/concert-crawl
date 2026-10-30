@@ -35,10 +35,10 @@
 # something that was serving prod before it.
 #
 # Why the commit is read from two keys: a deployment the Git integration
-# builds carries `meta.githubCommitSha`, while a `vercel deploy` from a git
-# checkout (how deploy-prod.yml ships) carries `meta.gitCommitSha` instead.
-# Checked against the staging deployment of 2026-10-30, which has only the
-# second.
+# builds carries `meta.githubCommitSha`, while a `vercel deploy` (how
+# deploy-prod.yml ships) may carry either: the staging deployment of
+# 2026-10-30 has only `meta.gitCommitSha`, and the CLI production deployment
+# of the same day only `meta.githubCommitSha`.
 
 set -euo pipefail
 
@@ -159,17 +159,28 @@ case "${command_name}" in
     fi
 
     # Production deploys only through deploy-prod.yml (`vercel deploy`).
-    # A Git-integration build has `githubDeployment` in its meta, so prod
-    # serving one means a push reached production without a promotion: the
-    # gate leaked (vercel.json's git.deploymentEnabled was changed, or the
-    # project setting was).
-    if echo "${current_json}" | jq -e '(.meta // {}).githubDeployment == "1"' >/dev/null 2>&1; then
+    # A Git-integration build has `source: "git"`, so prod serving one means
+    # a push reached production without a promotion: the gate leaked
+    # (vercel.json's git.deploymentEnabled was changed, or the project
+    # setting was).
+    #
+    # Classified by `source`, not `meta.githubDeployment`: a `vercel deploy`
+    # run inside GitHub Actions sets that flag too. The CLI production deploy
+    # dpl_6ghWaBNMoRANX8eR4t4fhZTQcGUE (2026-10-30) carries `source: "cli"`
+    # and `githubDeployment: "1"`, and the flag alone read it as a leak.
+    current_source=$(echo "${current_json}" | jq -r '.source // "" | if type == "string" then . else "" end')
+    if [ -z "${current_source}" ]; then
+      echo "✗ Vercel returned no deployment source for ${current_id}, so whether a Git build is serving prod cannot be told." >&2
+      exit 1
+    fi
+    if [ "${current_source}" = "git" ]; then
       unhealthy "production is serving ${current_id}, a Git-integration build. Prod is promotion-gated, so a push reached it without Deploy to Production."
     fi
 
-    # Only CLI deploys count: the Git integration still creates production
-    # deployments for pushes to main and cancels them, which is the gate
-    # working, not a failure. A failed CLI deploy newer than what prod
+    # Only CLI deploys (`source: "cli"`) count: the Git integration still
+    # creates production deployments for pushes to main (`source: "git"`) and
+    # cancels them, which is the gate working, not a failure. A dashboard
+    # redeploy (`source: "redeploy"`) is not a promotion either. A failed CLI deploy newer than what prod
     # serves is the 2026-08-29 shape: promoted code not reaching prod.
     #
     # Production deployments created after the current one are read newest
@@ -189,7 +200,7 @@ case "${command_name}" in
       newest_cli=$(echo "${page}" | jq -c --argjson created "${current_created}" '
         [ .deployments[]
           | select(type == "object")
-          | select((.meta // {}).githubDeployment != "1")
+          | select(.source == "cli")
           | select((.created // 0) > $created) ]
         | sort_by(.created // 0) | reverse | (.[0] // empty)')
       if [ -n "${newest_cli}" ]; then
