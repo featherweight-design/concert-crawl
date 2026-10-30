@@ -81,14 +81,19 @@ only by dispatching
 `.github/workflows/deploy-prod.yml`. See
 `docs/runbooks/auto-deploy-prod.md` for the promotion model.
 
-| #   | Service                          | ID                         | Env     | Runtime | `autoDeploy` | Schedule       |
-| --- | -------------------------------- | -------------------------- | ------- | ------- | ------------ | -------------- |
-| 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | `no`         | (web service)  |
-| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `no`         | (web service)  |
-| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` |
-| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    |
-| 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `no`         | `0 16 * * *`   |
-| 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `no`         | `30 15 * * 1`  |
+From the prod cutover, three of the six (#1, #5, #6) are suspended fallbacks,
+not active services. See
+[The production API and two Node crons move to Vercel](#the-production-api-and-two-node-crons-move-to-vercel)
+below. The last column says what each service is after the cutover.
+
+| #   | Service                          | ID                         | Env     | Runtime | `autoDeploy` | Schedule       | After the prod cutover                        |
+| --- | -------------------------------- | -------------------------- | ------- | ------- | ------------ | -------------- | --------------------------------------------- |
+| 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | `no`         | (web service)  | Suspended fallback; prod API is on Vercel     |
+| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `no`         | (web service)  | Fallback, not suspended (since 2026-10-30)    |
+| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` | Active, deployed by `deploy-prod.yml`         |
+| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    | Active, deployed by `deploy-prod.yml`         |
+| 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `no`         | `0 16 * * *`   | Suspended fallback; runs as a Vercel Cron Job |
+| 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `no`         | `30 15 * * 1`  | Suspended fallback; runs as a Vercel Cron Job |
 
 `concert-crawl-billing-jobs` is declared for prod in `render.yaml` but **no such
 live prod service exists** — only `concert-crawl-billing-jobs-staging`, which is
@@ -107,8 +112,38 @@ pointing `STAGING_API_URL` and the web staging project's `NEXT_PUBLIC_API_URL`
 back at `https://concert-crawl-api-staging.onrender.com` and redeploying it
 from `main` first. See `docs/runbooks/staging-environment.md`.
 
-The prod API (#1) and the two prod Node crons (#5, #6) stay here until the prod
-cutover.
+### The production API and two Node crons move to Vercel
+
+This takes effect at the prod cutover, not when the PR that changes
+`deploy-prod.yml` merges. Until the cutover runs, #1, #5 and #6 serve prod as
+before.
+
+What moves:
+
+- **The prod API (#1)** goes to the production environment of the same Vercel
+  project, `concert-crawl-api` (team featherweight-design). It serves
+  `https://api.concertcrawl.app`. `deploy-prod.yml` deploys it with
+  `vercel deploy --prod` and runs the prod migrations itself, before the
+  deploy.
+- **match-artists (#5) and spotify-weekly (#6)** become Vercel Cron Jobs in
+  that project: `0 16 * * *` calls `GET /v1/internal/cron/match-artists`, and
+  `30 15 * * 1` calls `GET /v1/internal/cron/spotify-weekly`. Same schedules as
+  on Render. They ship with the API, so `deploy-prod.yml` no longer deploys
+  them separately.
+
+At the cutover, #1, #5 and #6 are **suspended, not deleted**, and kept for a
+7-day watch. #5 and #6 are suspended in the same sitting the Vercel crons go
+live, so neither job runs twice. Deleting any of the three needs Hugh's OK; the
+removal PR then also deletes their `RENDER_SERVICE_ID_*` variables.
+
+Rolling the prod API back to Render moves every consumer back in one sitting:
+resume and redeploy #1, resume #5 and #6 while turning off Vercel Cron Jobs,
+repoint the live Stripe webhook, `NEXT_PUBLIC_API_URL` (then redeploy web) and
+`PROD_API_URL`, and revert the pipeline PR. The full checklist is "Falling back
+to Render" in `docs/runbooks/production-launch.md` (Step 8).
+
+After the cutover, only the two docker crawler crons (#3, #4) are active prod
+services on Render. Moving them is a later step of the Render exit.
 
 Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
 MDT; it drifts an hour relative to local time across the DST boundary,
@@ -128,10 +163,14 @@ an investigation.
 | `concert-crawl-spotify-weekly-staging`   | `crn-d9e4173bc2fs73f6qk10` | node    |
 | `concert-crawl-billing-jobs-staging`     | `crn-d9c4556q1p3s73b143m0` | node    |
 
+At the prod cutover, the prod API (#1) and the two prod Node crons (#5, #6)
+join this list as suspended fallbacks (see above).
+
 A suspended service is one of the two conditions
 `.github/scripts/render-check-deploy-health.sh` alerts on — which is why
-that checker is pointed at the five prod services only, and not at
-everything in the account.
+that checker is pointed at the two active prod crawler crons only, and not at
+everything in the account. The prod API is checked on Vercel instead, by
+`.github/scripts/vercel-api-prod.sh health`.
 
 ## Build and start commands
 
@@ -170,11 +209,17 @@ any of them**, or their first build fails the same way.
 This is the single most important fact on this page, and it constrains
 everything below.
 
-Drizzle migrations are applied to **prod** by the **API service's build**, not
-by a separate migration step. (Staging no longer works this way: since
-2026-10-30, `deploy-api-staging.yml` migrates the staging branch over its direct
-URL before each Vercel deploy, with the same paths filter as #2's
-`buildFilter`.) So, for prod:
+**From the prod cutover, this section applies only to the suspended fallback
+services (#1, #2).** Prod migrations then run in `deploy-prod.yml`, as a
+`pnpm db:migrate` step against the prod direct URL (`DATABASE_URL_DIRECT`)
+before the Vercel API deploy. Staging has worked that way since 2026-10-30:
+`deploy-api-staging.yml` migrates the staging branch over its direct URL before
+each Vercel deploy, with the same paths filter as #2's `buildFilter`. If either
+fallback is ever resumed and redeployed, its build migrates again, so the rules
+below still hold for it.
+
+Until the cutover, Drizzle migrations are applied to **prod** by the **API
+service's build**, not by a separate migration step. So, for that build:
 
 - If the API service does not build, migrations do not apply. A stalled
   API deploy is a stalled schema.
@@ -281,7 +326,10 @@ The shape that matters:
 - **API services (1, 2, 5, 6)** — must include `packages/db/**` for the
   migration reason above, plus `apps/api/**`, the shared packages they
   import, and root manifests (`package.json`, `pnpm-lock.yaml`,
-  `pnpm-workspace.yaml`, `turbo.json`).
+  `pnpm-workspace.yaml`, `turbo.json`). From the prod cutover all four are
+  fallbacks, so these filters only matter if one is resumed. Nothing reads
+  them any more: `prod-drift-alert.yml` takes the API's paths from the `paths`
+  filter of `deploy-api-staging.yml`, not from #1's `buildFilter`.
 - **Docker crawler crons (3, 4)** — `apps/crawler/**`,
   `packages/crawler-core/**`, `packages/price-pipeline/**`,
   `packages/db/**`, the other packages in the crawler's dependency graph,

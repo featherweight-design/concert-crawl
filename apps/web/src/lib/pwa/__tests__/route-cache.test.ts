@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { isPublicCacheableApi, isPublicCacheableDocument } from '../route-cache'
+import {
+  isApiOrigin,
+  isPublicCacheableApi,
+  isPublicCacheableDocument,
+} from '../route-cache'
 
 const url = (path: string) => new URL(`https://api.concertcrawl.app${path}`)
 
@@ -138,5 +142,41 @@ describe('isPublicCacheableDocument', () => {
 
   it('defaults unknown routes to network-only', () => {
     expect(isPublicCacheableDocument(page('/something-new'), true)).toBe(false)
+  })
+})
+
+describe('isApiOrigin', () => {
+  it('accepts the origin the build was configured with', () => {
+    expect(
+      isApiOrigin(
+        'https://api-staging.concertcrawl.app',
+        'https://api-staging.concertcrawl.app',
+      ),
+    ).toBe(true)
+    expect(isApiOrigin('http://localhost:3001', 'http://localhost:3001')).toBe(
+      true,
+    )
+  })
+
+  it('accepts both production API origins whichever one the build uses', () => {
+    for (const configured of [
+      'https://api.concertcrawl.app',
+      'https://concert-crawl-api.onrender.com',
+    ]) {
+      expect(isApiOrigin('https://api.concertcrawl.app', configured)).toBe(true)
+      expect(
+        isApiOrigin('https://concert-crawl-api.onrender.com', configured),
+      ).toBe(true)
+    }
+  })
+
+  it('rejects any other origin', () => {
+    const configured = 'https://api.concertcrawl.app'
+    expect(isApiOrigin('https://concertcrawl.app', configured)).toBe(false)
+    expect(isApiOrigin('https://evil.example', configured)).toBe(false)
+    expect(isApiOrigin('http://api.concertcrawl.app', configured)).toBe(false)
+    expect(
+      isApiOrigin('https://api.concertcrawl.app.evil.example', configured),
+    ).toBe(false)
   })
 })

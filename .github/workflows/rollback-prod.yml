@@ -1,8 +1,14 @@
 name: Rollback Production (manual)
 
-# Manual incident-response rollback for the five production Render
-# services (API + 4 crons). Rolls back to the most recent prior
-# successful deploy.
+# Manual incident-response rollback of the production API and crawlers:
+#   - the API (Vercel project `concert-crawl-api`) goes back to the
+#     deployment that served prod before the one its hostname serves now
+#     (recorded on each deployment by deploy-prod.yml), or to the deployment
+#     named in the `api_deployment` input;
+#   - the two crawler crons (Render) are cron jobs, which Render's API cannot
+#     roll back, so their steps emit the manual-action warning.
+# match-artists and spotify-weekly run inside the API project as Vercel Cron
+# Jobs, so the API rollback covers them.
 #
 # Manual-only by design. The AUTO rollback path (triggered when the
 # prod post-deploy smoke fails) is now a job inside `deploy-prod.yml`
@@ -13,9 +19,13 @@ name: Rollback Production (manual)
 # deployed smoke failure — e.g. an issue surfaced via Sentry hours
 # later, or a manual prod deploy went sideways.
 #
-# Vercel web rollback is NOT automated here — it is a one-click promote
-# in the Vercel dashboard. See docs/runbooks/auto-deploy-prod.md for
+# Vercel web rollback is NOT automated here — it is a one-click Instant
+# Rollback in the Vercel dashboard. See docs/runbooks/auto-deploy-prod.md for
 # the manual procedure if the web prod build is the one at fault.
+#
+# A `vercel rollback` turns off automatic domain assignment for new
+# production deployments. deploy-prod.yml promotes its own deployment when it
+# finds the project in that state, so the next promotion needs nothing extra.
 
 on:
   workflow_dispatch:
@@ -23,6 +33,11 @@ on:
       reason:
         description: 'Why are you rolling back?'
         required: true
+        type: string
+      api_deployment:
+        description: 'API deployment to restore (dpl_… id). Empty = the deployment that served prod before the current one.'
+        required: false
+        default: ''
         type: string
 
 # Serialize rollbacks. A rollback running concurrently with anything else
@@ -34,7 +49,7 @@ concurrency:
   cancel-in-progress: false
 
 # Scope GITHUB_TOKEN to least privilege. This workflow only checks out
-# the repo and calls the Render API — it does not need any GitHub
+# the repo and calls the Render and Vercel APIs — it does not need any GitHub
 # write surface. Especially important here given the workflow uses the
 # `production` environment.
 permissions:
@@ -74,7 +89,7 @@ jobs:
         run: echo "All rollback gates satisfied; proceeding to rollback job."
 
   rollback:
-    name: Roll back Render prod services
+    name: Roll back prod API and crawlers
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -88,68 +103,74 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # Preflight check — fail fast with a clear message if any of the
-      # five service IDs is missing. Without this, the rollback script
-      # would exit with a generic bash "service id required" error
-      # that's harder to diagnose during an incident.
-      - name: Verify Render service ID variables are configured
-        id: verify_service_ids
+      # Preflight check — fail fast with a clear message if any value the
+      # rollback needs is missing, rather than a generic script error that's
+      # harder to diagnose during an incident.
+      - name: Verify rollback configuration
+        id: verify_config
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          API_DEPLOYMENT: ${{ github.event.inputs.api_deployment }}
         run: |
           missing=()
-          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
-          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS")
-          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY")
+          [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID")
+          [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API")
+          [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL")
+          [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (secret)")
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "Missing production-env variables: ${missing[*]}"
-            echo "Set them via Settings → Environments → production → Variables."
+            echo "Missing production-env configuration: ${missing[*]}"
+            echo "Set them via Settings → Environments → production."
+            exit 1
+          fi
+          # Checked here rather than handed to the CLI: a typo should fail
+          # before anything is touched, naming the input.
+          if [ -n "$API_DEPLOYMENT" ] && ! [[ "$API_DEPLOYMENT" =~ ^dpl_[A-Za-z0-9]+$ ]]; then
+            echo "✗ api_deployment must be a Vercel deployment id (dpl_…); got '$API_DEPLOYMENT'"
             exit 1
           fi
 
       # Each rollback step carries `always() && <preflight succeeded>` rather
       # than inheriting the implicit `success()`. Without a status function a
-      # failed API rollback skips the four cron steps, silently dropping the
+      # failed API rollback skips the crawler steps, silently dropping the
       # `::warning::` annotations that are the operator's only notice that
-      # those crons need manual action. Gating on the preflight's outcome
-      # keeps a missing service ID from reaching the script regardless.
+      # those crons need manual action.
       #
       # Invoke via `bash` rather than `./script.sh` so we don't depend on
       # the executable bit surviving git checkout (which depends on
       # core.filemode and platform).
-      - name: Roll back API service
-        if: always() && steps.verify_service_ids.outcome == 'success'
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+      - name: Roll back API (Vercel)
+        if: always() && steps.verify_config.outcome == 'success'
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_API }}
+          API_DEPLOYMENT: ${{ github.event.inputs.api_deployment }}
+        run: |
+          target="$API_DEPLOYMENT"
+          if [ -z "$target" ]; then
+            target=$(bash .github/scripts/vercel-api-prod.sh previous \
+              "$VERCEL_PROJECT_ID" "${{ vars.PROD_API_URL }}")
+          fi
+          echo "Rolling the API back to $target"
+          npx --yes vercel@65.8.0 rollback "$target" --yes --token "$VERCEL_TOKEN"
 
       - name: Roll back crawler triggers cron
-        if: always() && steps.verify_service_ids.outcome == 'success'
+        if: always() && steps.verify_config.outcome == 'success'
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       - name: Roll back crawler daily cron
-        if: always() && steps.verify_service_ids.outcome == 'success'
+        if: always() && steps.verify_config.outcome == 'success'
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-
-      - name: Roll back match-artists cron
-        if: always() && steps.verify_service_ids.outcome == 'success'
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-
-      - name: Roll back spotify-weekly cron
-        if: always() && steps.verify_service_ids.outcome == 'success'
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 
       - name: Log rollback context
         run: |
-          echo "Manual rollback complete for prod Render services"
+          echo "Manual rollback attempted: the API on Vercel; the crawler crons need manual action"
           echo "Operator-supplied reason: ${{ github.event.inputs.reason }}"
           echo ""
           echo "Vercel web prod is NOT automatically rolled back."

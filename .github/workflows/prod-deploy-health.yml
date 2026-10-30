@@ -41,33 +41,35 @@ concurrency:
 
 jobs:
   check:
-    name: Check prod Render services accept deploys
+    name: Check prod services accept deploys
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # The service IDs live in the production environment's variables,
-    # alongside the ones rollback-prod.yml already reads.
+    # The service IDs and Vercel IDs live in the production environment's
+    # variables, alongside the ones rollback-prod.yml already reads.
     environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
       # Secrets are checked here alongside the variables because both failure
-      # modes are silent otherwise: without RENDER_API_TOKEN the checker
-      # cannot ask Render anything, and without a DSN the reporting step
+      # modes are silent otherwise: without RENDER_API_TOKEN or VERCEL_TOKEN the
+      # checker cannot ask either host anything, and without a DSN the reporting step
       # exits 0 having sent nothing. A detector that quietly reports nowhere
       # is the exact failure this workflow was built to end.
-      - name: Verify Render service IDs and secrets are configured
+      - name: Verify service IDs and secrets are configured
         id: preflight
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
-          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("vars.RENDER_SERVICE_ID_API")
+          [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("vars.VERCEL_ORG_ID")
+          [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("vars.VERCEL_PROJECT_ID_API")
+          [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("vars.PROD_API_URL")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_DAILY")
-          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("vars.RENDER_SERVICE_ID_MATCH_ARTISTS")
-          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY")
+          [ -z "${VERCEL_TOKEN}" ] && missing+=("secrets.VERCEL_TOKEN")
           [ -z "${RENDER_API_TOKEN}" ] && missing+=("secrets.RENDER_API_TOKEN")
           [ -z "${SENTRY_DSN}" ] && missing+=("secrets.SENTRY_DSN_SMOKE")
           if [ ${#missing[@]} -gt 0 ]; then
@@ -83,6 +85,8 @@ jobs:
         id: check
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
         run: |
           # `set +e` is load-bearing, not tidying. The runner invokes this as
           # `bash -e {0}`, so errexit is already on before the first line and
@@ -95,9 +99,13 @@ jobs:
           findings=""
           check_failed=0
 
+          # `check <name> <command...>`: the two checkers share one exit
+          # contract (0 healthy, 2 unhealthy with an UNHEALTHY| line, other
+          # = could not tell), so one collector serves both hosts.
           check() {
-            local id="$1" name="$2" out status
-            out=$(bash .github/scripts/render-check-deploy-health.sh "$id" "$name" 2>&1)
+            local name="$1" out status
+            shift
+            out=$("$@" 2>&1)
             status=$?
             echo "$out"
             case "$status" in
@@ -107,11 +115,15 @@ jobs:
             esac
           }
 
-          check "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
-          check "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
-          check "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
-          check "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
-          check "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
+          check "concert-crawl-api" \
+            bash .github/scripts/vercel-api-prod.sh health \
+            "${{ vars.VERCEL_PROJECT_ID_API }}" "${{ vars.PROD_API_URL }}"
+          check "concert-crawl-crawler-triggers" \
+            bash .github/scripts/render-check-deploy-health.sh \
+            "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+          check "concert-crawl-crawler-daily" \
+            bash .github/scripts/render-check-deploy-health.sh \
+            "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 
           {
             echo "findings<<EOF"
@@ -139,7 +151,7 @@ jobs:
             ${{ steps.check.outputs.findings }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             Runbook: docs/runbooks/auto-deploy-prod.md
-        run: bash .github/scripts/sentry-capture-message.sh error "Prod Render deploys are not landing"
+        run: bash .github/scripts/sentry-capture-message.sh error "Prod deploys are not landing"
 
       - name: Report checker failure to Sentry
         if: >-

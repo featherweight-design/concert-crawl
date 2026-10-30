@@ -4,6 +4,10 @@ name: Prod drift alert
 # gate prod is deliberately behind main; this bounds how far. Warn only — it
 # never promotes anything, because the whole point of the gate is that a human
 # decides.
+#
+# "Prod" here is the API, read from the Vercel project `concert-crawl-api`:
+# the commit of the deployment the production hostname (PROD_API_URL) serves.
+# It was the Render service's live deploy until the Render exit's prod cutover.
 
 on:
   schedule:
@@ -44,72 +48,74 @@ jobs:
 
       - name: Verify configuration
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
-          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
+          [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (production-env secret)")
           [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API (production-env var)")
+          [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID (production-env var)")
+          [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API (production-env var)")
+          [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
           if [ ${#missing[@]} -gt 0 ]; then
             printf 'Missing configuration:\n'
             printf '  - %s\n' "${missing[@]}"
             exit 1
           fi
 
-      # The API carries a buildFilter, so most merges to main cannot change what
-      # prod serves: a web-only or docs-only commit leaves the live SHA behind
-      # main correctly and forever. Counting raw commits would therefore trip
-      # MAX_COMMITS_BEHIND on a quiet API week with nothing undeployed — the
-      # exact false signal render-check-deploy-health.sh's header warns about.
-      # Read the filter out of render.yaml rather than restating it here: a
-      # second copy of the path list is a class that goes stale silently.
-      - name: Read the API service's build-filter paths
+      # Most merges to main cannot change what the API serves: a web-only or
+      # docs-only commit leaves the live SHA behind main correctly and forever.
+      # Counting raw commits would therefore trip MAX_COMMITS_BEHIND on a quiet
+      # API week with nothing undeployed — the exact false signal
+      # render-check-deploy-health.sh's header warns about. So only commits
+      # touching the API's paths count. Those are read from the `paths` filter
+      # of deploy-api-staging.yml, the list that decides when the API ships to
+      # staging, rather than restated here: a second copy of the path list is a
+      # class that goes stale silently. Its own `.github/` entry is dropped,
+      # since a workflow edit changes nothing the API serves.
+      - name: Read the API's deploy paths
         id: filter
         run: |
           # This step never exits non-zero. Every way it can break — a pip
-          # install that cannot reach the index, a render.yaml that stopped
-          # parsing, a renamed service, a buildFilter that lost its paths —
-          # means prod is unwatched, which is the thing this workflow exists to
-          # report. Failing here would end the run before the step that reports
-          # it to Sentry, so instead an empty `paths` is written and Measure
-          # drift raises measure_failed. Same shape prod-deploy-health.yml uses
-          # for a checker that could not run.
+          # install that cannot reach the index, a workflow file that stopped
+          # parsing, a paths list that went missing — means prod is unwatched,
+          # which is the thing this workflow exists to report. Failing here
+          # would end the run before the step that reports it to Sentry, so
+          # instead an empty `paths` is written and Measure drift raises
+          # measure_failed. Same shape prod-deploy-health.yml uses for a checker
+          # that could not run.
           set +e
 
           # PyYAML happens to be present on today's ubuntu-latest image, but it
           # is not in the Python standard library and runner images change
           # without notice. Install it when it is missing so this monitor cannot
-          # go quiet on an image bump — a drift alert that dies on `import yaml`
-          # reports nothing about drift. Guarded by the import rather than run
-          # unconditionally: every run would otherwise reach PyPI for a package
-          # that is already there, so a slow or unavailable index would become a
-          # new way for this workflow to be flaky.
+          # go quiet on an image bump. Guarded by the import rather than run
+          # unconditionally, so a slow or unavailable index is not a new way for
+          # this workflow to be flaky.
           python3 -c 'import yaml' 2>/dev/null ||
             python3 -m pip install --quiet --disable-pip-version-check pyyaml
 
           paths=$(python3 - <<'PY'
           import yaml
 
-          with open('render.yaml') as handle:
-              blueprint = yaml.safe_load(handle)
+          with open('.github/workflows/deploy-api-staging.yml') as handle:
+              workflow = yaml.safe_load(handle)
 
-          service = next(
-              svc for svc in blueprint['services']
-              if svc['name'] == 'concert-crawl-api'
-          )
+          # YAML 1.1 reads the bare key `on` as the boolean True.
+          triggers = workflow.get('on', workflow.get(True))
           # Strip the `/**` suffix: a git pathspec of `apps/api` already matches
           # everything beneath it, while `apps/api/**` depends on glob magic.
           print(' '.join(
               path[:-3] if path.endswith('/**') else path
-              for path in service['buildFilter']['paths']
+              for path in triggers['push']['paths']
+              if not path.startswith('.github/')
           ))
           PY
           )
           if [ -z "${paths}" ]; then
-            echo "::error::Could not read concert-crawl-api's buildFilter paths from render.yaml; cannot tell a deployable commit from an undeployable one. Measure drift will report the detector as broken."
+            echo "::error::Could not read the API's deploy paths from deploy-api-staging.yml; cannot tell a deployable commit from an undeployable one. Measure drift will report the detector as broken."
           else
-            echo "Build-filter pathspecs: ${paths}"
+            echo "API deploy pathspecs: ${paths}"
           fi
           echo "paths=${paths}" >> "$GITHUB_OUTPUT"
           exit 0
@@ -117,7 +123,8 @@ jobs:
       - name: Measure drift
         id: measure
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           FILTER_PATHS: ${{ steps.filter.outputs.paths }}
         run: |
           # A failed read is reported to Sentry by a later step rather than
@@ -133,17 +140,22 @@ jobs:
           # depends on.
           if [ -z "${FILTER_PATHS}" ]; then
             echo "measure_failed=1" >> "$GITHUB_OUTPUT"
-            echo "::error::The API's build-filter paths could not be read; drift is unmeasured. Counting unfiltered commits would report drift that does not exist."
+            echo "::error::The API's deploy paths could not be read; drift is unmeasured. Counting unfiltered commits would report drift that does not exist."
             exit 0
           fi
 
           set +e
-          live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
+          live=$(bash .github/scripts/vercel-api-prod.sh current \
+            "${{ vars.VERCEL_PROJECT_ID_API }}" "${{ vars.PROD_API_URL }}")
           read_status=$?
           set -e
+          live_sha="${live#* }"
+          [ "${live_sha}" = "${live}" ] && live_sha=""
+          # A deployment with no commit in its meta (a deploy from a directory
+          # that was not a git checkout) is as unmeasurable as a failed read.
           if [ "${read_status}" -ne 0 ] || [ -z "${live_sha}" ]; then
             echo "measure_failed=1" >> "$GITHUB_OUTPUT"
-            echo "::error::Could not read the prod API's live SHA; drift is unmeasured."
+            echo "::error::Could not read the commit of the deployment the prod API serves; drift is unmeasured."
             exit 0
           fi
 
@@ -157,7 +169,7 @@ jobs:
           fi
 
           # Two separate ways for prod to be running something main does not
-          # contain: the SHA is not in this clone at all (a Render build from a
+          # contain: the SHA is not in this clone at all (a build from a
           # deleted branch), or it is present but is not an ancestor of main (a
           # branch tip deployed and never merged). Both are drift of unknown
           # distance, and the ancestor case is the one a commit count reads as
@@ -250,7 +262,8 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           SENTRY_ENVIRONMENT: production
           EXTRA_CONTEXT: |
-            The drift alert could not read the prod API's live deploy SHA, so it
+            The drift alert could not read the commit of the deployment the prod
+            API's hostname serves on Vercel, so it
             reached no verdict. This says nothing about prod's actual state — it
             means prod's currency is unwatched until the read works again.
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

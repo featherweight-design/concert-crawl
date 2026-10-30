@@ -1,4 +1,4 @@
-name: Prod smoke (after Render auto-deploy)
+name: Prod smoke (manual)
 
 # Dispatch-only prod smoke + rollback. It used to run on every push to main,
 # waiting for Render's native auto-deploy; under the promotion gate prod does
@@ -6,11 +6,14 @@ name: Prod smoke (after Render auto-deploy)
 # own smoke + rollback jobs live in deploy-prod.yml.
 #
 # Kept dispatchable because it is the right tool for "smoke prod right now
-# without deploying anything" — after a Render incident, or to validate a
+# without deploying anything" — after a hosting incident, or to validate a
 # semantic-release commit explicitly.
 #
-# On smoke failure it still rolls back via render-rollback.sh (API only —
-# Render's API rejects cron rollback; all four prod crons emit warnings).
+# On smoke failure it rolls the API back on Vercel to the deployment that
+# served prod before the one its hostname serves now (recorded on each
+# deployment by deploy-prod.yml). The two crawler crons are
+# Render cron jobs, which Render's API cannot roll back, so they emit
+# warnings; the web app is rolled back by hand.
 #
 # PROD_SMOKE_RECONCILER_ENABLED is now vestigial: the job-level `if:` below
 # is satisfied by every dispatch, which is the only trigger left. It is kept
@@ -54,10 +57,11 @@ jobs:
       vars.PROD_SMOKE_RECONCILER_ENABLED == 'true' ||
       github.event_name == 'workflow_dispatch'
     # `environment: production` scopes secrets + variables to the
-    # production GH Environment (where RENDER_API_TOKEN, RENDER_SERVICE_ID_*,
-    # ADMIN_EMAIL, RESEND_API_KEY live in this repo). Same pattern as
+    # production GH Environment (where VERCEL_TOKEN, VERCEL_PROJECT_ID_API,
+    # RENDER_API_TOKEN, RENDER_SERVICE_ID_*, ADMIN_EMAIL, RESEND_API_KEY live
+    # in this repo). Same pattern as
     # deploy-prod.yml's deploy + rollback jobs and rollback-prod.yml's
-    # rollback job. Without this, `vars.RENDER_SERVICE_ID_*` and the
+    # rollback job. Without this, the production-env variables and the
     # related secrets would not resolve at runtime.
     environment: production
     steps:
@@ -91,7 +95,7 @@ jobs:
           ref: ${{ github.sha }}
 
       # Preflight on every fail-fast prerequisite for this job:
-      # Render API + service IDs + smoke URLs + Playwright
+      # Vercel + Render config for the rollback, smoke URLs + Playwright
       # globalSetup credentials (E2E_TEST_USER_*) + the Sentry DSN
       # consumed by smoke. A missing value surfaces as a clear
       # "Missing X" message rather than as an opaque Playwright
@@ -107,17 +111,18 @@ jobs:
       - name: Verify required config
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
           E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
           SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
         run: |
           missing=()
           [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API (variable)")
+          [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (secret)")
+          [ -z "${{ vars.VERCEL_ORG_ID }}" ] && missing+=("VERCEL_ORG_ID (variable)")
+          [ -z "${{ vars.VERCEL_PROJECT_ID_API }}" ] && missing+=("VERCEL_PROJECT_ID_API (variable)")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (variable)")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (variable)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS (variable)")
-          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY (variable)")
           [ -z "${{ vars.PROD_URL }}" ] && missing+=("PROD_URL (variable)")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
           [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
@@ -129,54 +134,28 @@ jobs:
             exit 1
           fi
 
-      # No wait. This workflow no longer causes a deploy, so there is no
-      # target SHA to wait for: it smokes whatever prod is live on right
-      # now. Waiting would call render-wait-for-live.sh, which returns 125
-      # (autoDeploy="no") on every run under the promotion gate — turning
-      # "smoke prod right now without deploying anything" into a guaranteed
-      # failure. The promotion path's own wait-for-live lives in
-      # deploy-prod.yml, where a deploy actually was triggered.
+      # No wait. This workflow causes no deploy, so there is no target SHA to
+      # wait for: it smokes whatever prod is live on right now.
       #
-      # The live SHA is recorded for the operator, not depended on: reading
-      # it is a Render API call, and an unreadable Render API is no reason
-      # to refuse to smoke prod. So a lookup failure warns and smoke still
-      # runs, with live_sha left empty.
-      #
-      # Task 10 of docs/superpowers/plans/2026-09-01-prod-promotion-gate.md
-      # adds .github/scripts/render-live-sha.sh with exactly this query. That
-      # script does not exist yet, so the lookup is inlined here per the
-      # plan's stated fallback; fold this block into the script when it lands.
-      # `(.deploy // .)` is not optional politeness — some Render deploy
-      # endpoints wrap the object as `{ "deploy": { ... } }` and some return
-      # it flat, and every existing render-*.sh normalizes the same way.
-      # `select(.status == "live")` deliberately ignores queued, failed and
-      # deactivated deploys: none of those is what prod is serving.
+      # The live API deployment and its commit are recorded for the operator
+      # and the rollback, not depended on for the smoke: an unreadable Vercel
+      # API is no reason to refuse to smoke prod. So a lookup failure warns and
+      # smoke still runs, with live_sha left empty.
       - name: Record the prod live SHA being smoked
         id: wait_for_live
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-          RENDER_SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
         run: |
           set +e
-          # pipefail so lookup_status reflects curl, not only jq. Without it a
-          # curl failure feeds jq empty stdin, jq exits 0, and the step reports
-          # a clean read of "no live deploy" rather than a failed read.
-          set -o pipefail
-          # Timeouts and limit match render-wait-for-live.sh. This workflow is
-          # reached during incident response, so a Render API incident has to
-          # fail the lookup in seconds rather than hang the job for six hours,
-          # and limit=50 keeps the live deploy in the page behind a streak of
-          # failed or deactivated ones.
-          live_sha=$(curl -sS --fail-with-body \
-            --connect-timeout 5 --max-time 15 \
-            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
-            -H 'Accept: application/json' \
-            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys?limit=50" \
-            | jq -r '[.[] | (.deploy // .) | select(type == "object" and .status == "live") | (.commit // {}).id | select(type == "string" and . != "")] | (.[0] // "")')
+          live=$(bash .github/scripts/vercel-api-prod.sh current \
+            "${{ vars.VERCEL_PROJECT_ID_API }}" "${{ vars.PROD_API_URL }}")
           lookup_status=$?
           set -e
+          live_sha="${live#* }"
+          [ "${live_sha}" = "${live}" ] && live_sha=""
           if [ "${lookup_status}" -ne 0 ] || [ -z "${live_sha}" ]; then
-            echo "::warning title=Live SHA unknown::Could not read the prod API service's live deploy from Render. Smoking prod anyway — the smoke asserts against PROD_URL, not against a SHA — but the run will not be able to tell you which commit it exercised."
+            echo "::warning title=Live SHA unknown::Could not read the commit of the prod API's live deployment from Vercel. Smoking prod anyway — the smoke asserts against PROD_URL, not against a SHA — but the run will not be able to tell you which commit it exercised."
             live_sha=""
           else
             echo "Smoking prod as currently live: ${live_sha}"
@@ -268,25 +247,28 @@ jobs:
           path: apps/e2e/test-results/
           retention-days: 14
 
-      # render-rollback.sh detects service ID prefix and behaves
-      # differently per type: srv-* (web service) is rolled back via
-      # Render's /rollback endpoint; crn-* (cron job) emits a
-      # `::warning::` annotation and exits 0 because Render's API
-      # rejects cron rollback (HTTP 400, no API path exists). Net
-      # effect of these five steps: API is rolled back automatically;
-      # the four crons need manual operator action — the Resend notify
-      # step below surfaces this so the operator knows.
+      # The API rolls back on Vercel to the deployment that served prod before
+      # the current one (vercel-api-prod.sh `previous`, which follows the
+      # `prevApiDeployment` each deploy records). render-rollback.sh skips the
+      # two `crn-*` crawler crons with a `::warning::`, because Render's API
+      # rejects cron rollback; the Resend notify step below says so too.
       #
       # Every step carries `always() &&` so the chain does not stop at the
       # first service that errors. Without a status function the implicit
-      # `success()` applies, and a failed API rollback would skip the four
-      # cron steps — silently dropping the `::warning::` annotations that are
-      # the operator's only notice that those crons need manual action.
-      - name: Roll back API service
+      # `success()` applies, and a failed API rollback would skip the crawler
+      # steps — silently dropping the `::warning::` annotations that are the
+      # operator's only notice that those crons need manual action.
+      - name: Roll back API (Vercel)
         if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_API }}
+        run: |
+          target=$(bash .github/scripts/vercel-api-prod.sh previous \
+            "$VERCEL_PROJECT_ID" "${{ vars.PROD_API_URL }}")
+          echo "Rolling the API back to $target"
+          npx --yes vercel@65.8.0 rollback "$target" --yes --token "$VERCEL_TOKEN"
 
       - name: Roll back crawler triggers cron (auto-skips — see comment)
         if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
@@ -300,23 +282,10 @@ jobs:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 
-      - name: Roll back match-artists cron (auto-skips — see comment)
-        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
-
-      - name: Roll back spotify-weekly cron (auto-skips — see comment)
-        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
-
       # Email the admin that auto-rollback fired. The auto-rollback
-      # only covers the API service (Render's API rejects cron
-      # rollback) and never touches Vercel. The operator needs to
-      # know so they can manually roll back all four prod crons +
-      # Vercel via their respective dashboards. Under the promotion
+      # only covers the API (Render's API rejects cron rollback, and
+      # the web app is not rolled back). The operator needs to know so
+      # they can roll back the two crawler crons and the web app by hand. Under the promotion
       # gate, reverting on main no longer rolls prod back by itself —
       # prod only moves on a deliberate deploy-prod.yml dispatch.
       #
@@ -335,7 +304,7 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
           # The commit prod was actually serving when it was smoked — not
-          # the dispatched ref the specs came from. Empty when the Render
+          # the dispatched ref the specs came from. Empty when the Vercel
           # lookup failed, which the body words explicitly rather than
           # printing a blank `<code></code>`.
           LIVE_SHA: ${{ steps.wait_for_live.outputs.live_sha }}
@@ -383,13 +352,13 @@ jobs:
           if [ -n "${LIVE_SHA:-}" ]; then
             smoked="prod was live on commit <code>${LIVE_SHA}</code>"
           else
-            smoked="the live prod commit could not be read from Render — see the run log"
+            smoked="the live prod commit could not be read from Vercel — see the run log"
           fi
-          html_body="<p>Production auto-rollback was <strong>triggered by a manual dispatch of the prod smoke workflow</strong>. No deploy was made by that dispatch: ${smoked}, and the smoke specs came from <code>${SPEC_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. All four prod cron jobs (crawler triggers, crawler daily, match-artists, spotify-weekly) require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          html_body="<p>Production auto-rollback was <strong>triggered by a manual dispatch of the prod smoke workflow</strong>. No deploy was made by that dispatch: ${smoked}, and the smoke specs came from <code>${SPEC_SHA}</code>.</p><p>The API rollback was attempted on Vercel (<code>vercel rollback</code> to the deployment that served prod before the current one). The two crawler crons (crawler triggers, crawler daily) require <strong>manual rollback</strong> — Render's API does not support cron rollback. The Vercel web app also requires manual rollback (Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \
-            --arg subject "[concert-crawl] Prod auto-rollback fired; manual cron + Vercel action required" \
+            --arg subject "[concert-crawl] Prod auto-rollback fired; manual crawler + web action required" \
             --arg html "${html_body}" \
             '{from: $from, to: [$to], subject: $subject, html: $html}')
           if ! response=$(curl --fail-with-body --silent --show-error \

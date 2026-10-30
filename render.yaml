@@ -1,8 +1,15 @@
 # Render blueprint — post-migration (Jun 2026)
 #
-# Render hosts API + crawler cron jobs only:
+# Render hosts the crawler cron jobs (and, until the prod cutover of the
+# Render exit, the API and two Node crons):
 #   - Web (apps/web) → Vercel (concertcrawl.app)
+#   - API (apps/api) → Vercel project `concert-crawl-api`: staging since
+#     2026-10-30, production from the prod cutover (api.concertcrawl.app).
+#     match-artists and spotify-weekly run there as Vercel Cron Jobs.
 #   - Postgres → Neon (staging branch + prod branch)
+#
+# The three prod services marked MOVED below are suspended at the cutover and
+# kept, not deleted, for a 7-day watch. Deleting them needs Hugh's OK.
 #
 # DATABASE_URL is set manually in the Render dashboard for each service
 # (sync: false). Connection strings point at Neon — see Neon project
@@ -21,9 +28,14 @@
 services:
   # --- Production ---
 
+  # MOVED to Vercel at the prod cutover (project `concert-crawl-api`,
+  # production, https://api.concertcrawl.app). deploy-prod.yml no longer
+  # deploys this service; it is suspended at the cutover and kept as the
+  # rollback target until its removal is approved. Its buildFilter paths no
+  # longer feed anything: prod-drift-alert.yml reads deploy-api-staging.yml's.
   - type: web
     name: concert-crawl-api
-    # Prod deploys only through .github/workflows/deploy-prod.yml. This file is
+    # Prod deployed only through .github/workflows/deploy-prod.yml. This file is
     # descriptive, not a Blueprint: editing it deploys nothing and changes no
     # live setting. The live value is set over the Render API — keep both in
     # sync in the same session.
@@ -111,6 +123,10 @@ services:
       - key: LOG_LEVEL
         value: info
 
+  # MOVED to Vercel Cron (`30 15 * * 1`, GET /v1/internal/cron/spotify-weekly
+  # in the `concert-crawl-api` project) at the prod cutover. Suspended in the
+  # same sitting the Vercel crons go live, so it never runs twice; kept for
+  # the 7-day watch. deploy-prod.yml no longer deploys it.
   - type: cron
     name: concert-crawl-spotify-weekly
     autoDeploy: false
@@ -154,7 +170,7 @@ services:
       - key: EMAIL_UNSUBSCRIBE_SECRET
         sync: false # Must match the API service's value — enter manually
       - key: API_PUBLIC_URL
-        sync: false # Public API origin, e.g. https://concert-crawl-api.onrender.com
+        sync: false # Public API origin, https://concert-crawl-api.onrender.com (on Vercel: https://api.concertcrawl.app)
       - key: ALLOWED_ORIGIN
         sync: false # Set to https://concertcrawl.app (digest links point at the web app)
       - key: SPOTIFY_SYNC_DRY_RUN
@@ -168,6 +184,10 @@ services:
       - key: LOG_LEVEL
         value: info
 
+  # MOVED to Vercel Cron (`0 16 * * *`, GET /v1/internal/cron/match-artists
+  # in the `concert-crawl-api` project) at the prod cutover. Suspended in the
+  # same sitting the Vercel crons go live, so it never runs twice; kept for
+  # the 7-day watch. deploy-prod.yml no longer deploys it.
   - type: cron
     name: concert-crawl-match-artists
     autoDeploy: false

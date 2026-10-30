@@ -28,6 +28,26 @@ const PUBLIC_API_PATTERNS: readonly RegExp[] = [
 export const isPublicCacheableApi = (url: URL): boolean =>
   PUBLIC_API_PATTERNS.some((pattern) => pattern.test(url.pathname))
 
+// The production API's origins across the Render exit (2026-10/11). The web
+// app reads the API from NEXT_PUBLIC_API_URL, which is inlined at build time,
+// so the switch from Render to Vercel happens with a web redeploy. An open tab
+// from before it keeps calling the old origin while the new service worker
+// controls it (and the reverse can briefly hold too), so both stay eligible
+// for the public cache until the Render service is deleted. Drop the onrender
+// entry in the PR that removes it.
+export const PRODUCTION_API_ORIGINS: readonly string[] = [
+  'https://api.concertcrawl.app',
+  'https://concert-crawl-api.onrender.com',
+]
+
+// Whether a request goes to the API: the origin this build was configured
+// with, or one of the production API's origins.
+export const isApiOrigin = (
+  origin: string,
+  configuredOrigin: string,
+): boolean =>
+  origin === configuredOrigin || PRODUCTION_API_ORIGINS.includes(origin)
+
 // Documents and RSC payloads get the same default-deny treatment, for a second
 // reason on top of privacy: a cached page is served without the middleware ever
 // running, so anything cached here is reachable by a signed-out visitor. These

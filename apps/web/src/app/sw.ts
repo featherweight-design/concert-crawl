@@ -11,6 +11,7 @@ import {
   StaleWhileRevalidate,
 } from 'serwist'
 import {
+  isApiOrigin,
   isPublicCacheableApi,
   isPublicCacheableDocument,
 } from '@/lib/pwa/route-cache'
@@ -36,10 +37,12 @@ const precacheEntries = self.__SW_MANIFEST
 
 // Only same-origin-as-the-API requests are eligible. Guard the origin explicitly
 // so an unrelated cross-origin URL that happens to share a `/v1/events` path
-// prefix can never enter the public cache. Parse defensively: an empty or
-// malformed NEXT_PUBLIC_API_URL would throw here during SW evaluation, aborting
-// install/activation and breaking offline caching entirely — so fall back to the
-// worker's own origin on any invalid value.
+// prefix can never enter the public cache. The production API's old and new
+// origins are accepted as well (`isApiOrigin`), for the Render-to-Vercel move.
+// Parse defensively: an empty or malformed NEXT_PUBLIC_API_URL would throw here
+// during SW evaluation, aborting install/activation and breaking offline
+// caching entirely — so fall back to the worker's own origin on any invalid
+// value.
 function resolveApiOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL
   if (configured) {
@@ -71,7 +74,7 @@ const publicApiCache = {
   // public cache. Keeping the invariant "only anonymous responses are cached."
   matcher: ({ request, url }: { request: Request; url: URL }) =>
     request.method === 'GET' &&
-    url.origin === apiOrigin &&
+    isApiOrigin(url.origin, apiOrigin) &&
     !request.headers.has('Authorization') &&
     isPublicCacheableApi(url),
   handler: new StaleWhileRevalidate({
