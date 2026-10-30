@@ -1,3 +1,10 @@
+## [1.304.1](https://github.com/HartiganHM/concert-crawl/compare/v1.304.0...v1.304.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **ci:** classify prod API deploys by source, not githubDeployment ([#1805](https://github.com/HartiganHM/concert-crawl/issues/1805)) ([58997fd](https://github.com/HartiganHM/concert-crawl/commit/58997fd653cf1f39916eee5c6364cd2a29a80a55))
+
 # [1.304.0](https://github.com/HartiganHM/concert-crawl/compare/v1.303.1...v1.304.0) (2026-10-30)
 
 
