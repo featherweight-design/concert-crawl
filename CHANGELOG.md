@@ -1,3 +1,10 @@
+## [1.302.3](https://github.com/HartiganHM/concert-crawl/compare/v1.302.2...v1.302.3) (2026-10-30)
+
+
+### Bug Fixes
+
+* **web:** keep campaign params, search keywords and other readers' names out of analytics ([#1800](https://github.com/HartiganHM/concert-crawl/issues/1800)) ([dfe0567](https://github.com/HartiganHM/concert-crawl/commit/dfe05674bc0b0176597f1a3049015d1ff0e17ccd))
+
 ## [1.302.2](https://github.com/HartiganHM/concert-crawl/compare/v1.302.1...v1.302.2) (2026-10-30)
 
 
