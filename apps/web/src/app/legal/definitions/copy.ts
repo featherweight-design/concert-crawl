@@ -123,8 +123,9 @@ export const LEGAL_COPY = {
 
   privacy: {
     heading: 'Privacy Policy',
-    // Revised to disclose the Spotify player on artist pages.
-    effectiveDate: 'Effective date: October 28, 2026',
+    // Revised to disclose PostHog usage analytics. Set to the day the policy
+    // ships, before NEXT_PUBLIC_POSTHOG_KEY goes on in production.
+    effectiveDate: 'Effective date: October 30, 2026',
     collect: {
       title: 'What we collect',
       intro: "We collect only what's necessary to run the Service:",
@@ -139,6 +140,7 @@ export const LEGAL_COPY = {
         'Push notification subscriptions: only if you turn push on',
         'Your Spotify display name and the artists you follow there: only if you connect Spotify',
         'Theme preference: stored in localStorage on your device',
+        'How you use the app: to see what works and what to improve (see PostHog below)',
       ],
     },
 
@@ -146,7 +148,7 @@ export const LEGAL_COPY = {
       title: "What we don't do",
       body1: 'We do not sell your data. We do not use it for advertising.',
       body2:
-        'We do not build behavioral profiles. We do not share your personal information with third parties except the service providers listed below, who are necessary to operate the product.',
+        'We do not build advertising profiles. We do not share your personal information with third parties except the service providers listed below, who are necessary to operate the product.',
     },
 
     providers: {
@@ -161,6 +163,7 @@ export const LEGAL_COPY = {
         'Sentry: error tracking (diagnostic data such as stack traces)',
         'Resend: transactional email delivery',
         'Stripe: payment processing',
+        "PostHog (US Cloud): usage analytics, so we can see how the app is used and improve it. It records the pages you open, how long you stay and how far you scroll, the links and buttons you tap with their labels (never what you type), the steps you take to share, your browser, device and screen size, and the site that sent you. What you search for here and invite codes are removed from web addresses first. When you're signed in, this is tied to your account ID and username, never your email. If your browser sends Do Not Track, nothing goes to PostHog.",
         'Spotify: only if you connect a Spotify account, and only to read the artists you follow',
         "Spotify's player: an artist page we have matched to Spotify embeds it, and it loads from Spotify as you scroll to it",
       ],
@@ -174,12 +177,12 @@ export const LEGAL_COPY = {
         "We store your theme preference in your browser's localStorage. We use session cookies set by Clerk for authentication. During the private beta, we also set a short-lived cookie (",
       cookieName: 'invite_verified',
       bodySuffix:
-        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. We don't set tracking cookies or run third-party analytics scripts. The Spotify player on some artist pages is separate: it is served by Spotify, which may set its own cookies under its own privacy policy.",
+        ") after a valid invite code is entered. It expires after 1 hour and is used only to allow access to the sign-up flow. PostHog, our analytics provider, keeps an ID in a cookie and in localStorage so it can tell one visit from the next: a random one, or your account ID once you're signed in. The cookie lasts a year. The Spotify player on some artist pages is separate: it is served by Spotify, which may set its own cookies under its own privacy policy.",
     },
 
     retention: {
       title: 'Data retention',
-      body: "Your account data is kept as long as your account is active. When you delete your account, we remove your profile, the shows you're watching, the artists you follow, your crew memberships, your notification settings, your push subscriptions, and your Spotify connection. Price submissions and feedback you've sent are anonymized rather than deleted, so the prices other people rely on stay corroborated. If you run a crew, it passes to its longest-standing remaining member; a crew with nobody else in it is deleted with your account. Billing records are kept as long as tax and accounting rules require, and administrative security logs are kept as a record of who changed what.",
+      body: "Your account data is kept as long as your account is active. When you delete your account, we remove your profile, the shows you're watching, the artists you follow, your crew memberships, your notification settings, your push subscriptions, and your Spotify connection. Price submissions and feedback you've sent are anonymized rather than deleted, so the prices other people rely on stay corroborated. If you run a crew, it passes to its longest-standing remaining member; a crew with nobody else in it is deleted with your account. Billing records are kept as long as tax and accounting rules require, and administrative security logs are kept as a record of who changed what. Usage analytics held by PostHog is not removed when you delete your account.",
     },
 
     rights: {
@@ -188,7 +191,7 @@ export const LEGAL_COPY = {
       items: [
         'Edit your profile at any time from Settings',
         'Delete your account from the Settings page',
-        'Download everything we store on you from Settings → Account',
+        'Download everything we store on you from Settings → Account. This does not include usage analytics held by PostHog.',
         'Turn off product email in Settings → Notifications, or with the one-click link in any product email. Receipts and billing notices still come through.',
       ],
     },
