@@ -25,6 +25,8 @@
  */
 
 import type { Page } from '@playwright/test'
+
+import { waitForHydrated } from '../fixtures/hydration.js'
 import { validateManifest } from './manifest-types.js'
 import type { AuditManifest } from './manifest-types.js'
 
@@ -47,14 +49,23 @@ const manifest: AuditManifest = validateManifest([
       {
         // The #72 share sheet is a component on this page, not a route, so it
         // is unreachable by a path-only sweep. The poster preview inside it is
-        // a PNG rendered on demand from `/share/:id/:ratio`; the sweep's own
-        // post-interaction `networkidle` wait is what lets it land before the
-        // screenshot, so no interaction here waits for itself.
+        // a PNG rendered on demand from `/share/:id/:ratio` and takes
+        // seconds, so this waits for the preview image itself: the sheet keeps
+        // it hidden until it has loaded. A failed render never shows it, and
+        // the timeout records that as an interaction error.
         id: 'open-share-sheet',
         description:
           'Open the share sheet from the event hero to capture the poster preview and its destinations',
         run: async (page: Page) => {
-          await page.getByRole('button', { name: /share this show/i }).click()
+          const trigger = page.getByRole('button', { name: /share this show/i })
+          // A click on server HTML before hydration does nothing.
+          await waitForHydrated(trigger)
+          await trigger.click()
+          await page
+            .getByRole('dialog')
+            .locator('img')
+            .first()
+            .waitFor({ state: 'visible', timeout: 30_000 })
         },
       },
     ],
@@ -107,10 +118,11 @@ const manifest: AuditManifest = validateManifest([
         description:
           'Expand the first feedback card to reveal the CONTEXT column (the motivating mobile-layout bug)',
         run: async (page: Page) => {
-          await page
+          const expand = page
             .getByRole('button', { name: /expand feedback/i })
             .first()
-            .click()
+          await waitForHydrated(expand)
+          await expand.click()
         },
       },
     ],
@@ -182,9 +194,10 @@ const manifest: AuditManifest = validateManifest([
           // Short bound: an audit user with no crews is a fixture problem, and
           // the default 30s timeout would hide it behind a slow sweep.
           await link.waitFor({ state: 'visible', timeout: 5000 })
+          await waitForHydrated(link)
           await link.click()
           // The crew home fetches after navigation, so the sweep's own
-          // networkidle wait can still land on the skeleton. Waiting for the
+          // ready-state wait can still land on the skeleton. Waiting for the
           // skeleton to DETACH is a race — it is not mounted yet at the moment
           // the click returns, so the wait passes instantly against nothing.
           // Wait for a resolved-state control to appear instead. Crew options
@@ -206,10 +219,9 @@ const manifest: AuditManifest = validateManifest([
         description:
           "Switch the crew home to the Who's in tab to capture the roster",
         run: async (page: Page) => {
-          await page
-            .getByRole('tab', { name: /who's in/i })
-            .first()
-            .click()
+          const tab = page.getByRole('tab', { name: /who's in/i }).first()
+          await waitForHydrated(tab)
+          await tab.click()
         },
       },
     ],
@@ -276,12 +288,23 @@ const manifest: AuditManifest = validateManifest([
         description:
           'Open the first venue detail page from the admin venues index (UUID-stable coverage of /admin/venues/[id])',
         run: async (page: Page) => {
-          await page
+          const link = page
             .locator(
               'a[href^="/admin/venues/"]:not([href="/admin/venues/robots-audit"]):visible',
             )
             .first()
-            .click()
+          // Unhydrated, the link still navigates, but as a full page load
+          // rather than the client transition the page is built for.
+          await waitForHydrated(link)
+          await link.click()
+          // `commit`: leaving the index is the signal here. The sweep's
+          // ready-state wait then covers the detail page's loading skeleton.
+          await page.waitForURL(
+            (url) =>
+              /^\/admin\/venues\/[^/]+$/.test(url.pathname) &&
+              url.pathname !== '/admin/venues/robots-audit',
+            { waitUntil: 'commit' },
+          )
         },
       },
     ],

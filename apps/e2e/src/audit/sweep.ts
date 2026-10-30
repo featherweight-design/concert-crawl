@@ -6,6 +6,7 @@
  * screenshot (.png) and heuristic JSON (.json) for the default post-load
  * state and for each declared interaction. Auth state is loaded from a
  * pre-existing storage-state file so no login flow runs during the sweep.
+ * Each capture waits on page-ready.ts's ready state, never on `networkidle`.
  *
  * Viewports: 320×568 / 390×844 / 1440×900 (mobile small, mobile standard,
  * desktop). All contexts use reducedMotion:'reduce' to avoid mid-transition
@@ -36,6 +37,7 @@ import { prepareAuditAuth } from './audit-auth.js'
 import { collectHeuristics } from './heuristics.js'
 import manifest from './manifest.js'
 import type { AuditManifest } from './manifest-types.js'
+import { waitForPageReady } from './page-ready.js'
 import { filterManifest, outputPathFor, parseCliTags } from './sweep-helpers.js'
 
 // ---------------------------------------------------------------------------
@@ -193,8 +195,11 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
         })
         const page = await context.newPage()
         try {
-          await page.goto(route.path, { waitUntil: 'networkidle' })
-          await page.evaluate(() => document.fonts.ready)
+          // `domcontentloaded`, then a concrete ready state. Never
+          // `networkidle`: on Next 16 a proxy-redirected RSC prefetch holds a
+          // request open, so it never arrives and every route timed out.
+          await page.goto(route.path, { waitUntil: 'domcontentloaded' })
+          await waitForPageReady(page)
 
           await captureState(runId, route.id, 'default', vp, page)
           captures++
@@ -202,7 +207,7 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
           for (const interaction of route.interactions ?? []) {
             try {
               await interaction.run(page)
-              await page.waitForLoadState('networkidle')
+              await waitForPageReady(page)
               await captureState(runId, route.id, interaction.id, vp, page)
               captures++
             } catch (err) {
