@@ -1,3 +1,10 @@
+## [1.302.2](https://github.com/HartiganHM/concert-crawl/compare/v1.302.1...v1.302.2) (2026-10-30)
+
+
+### Bug Fixes
+
+* **notifications:** replay protection for watch, contest and price-drop writers ([afe62d5](https://github.com/HartiganHM/concert-crawl/commit/afe62d55f663864266edf87615699cf405292907)), closes [#1788](https://github.com/HartiganHM/concert-crawl/issues/1788) [#737](https://github.com/HartiganHM/concert-crawl/issues/737)
+
 ## [1.302.1](https://github.com/HartiganHM/concert-crawl/compare/v1.302.0...v1.302.1) (2026-10-29)
 
 
