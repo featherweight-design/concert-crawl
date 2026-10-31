@@ -2,6 +2,7 @@ name: Dependabot auto-merge
 
 on:
   pull_request_target:
+    branches: [main]
 
 permissions:
   pull-requests: write
@@ -24,15 +25,18 @@ jobs:
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v3
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Patch bumps for npm packages: auto-approve and merge after CI passes
+      # Single-package npm patch bumps: auto-approve and merge after CI passes.
+      # Grouped PRs are skipped even when every bump in them is a patch, so a
+      # human always reviews the weekly batch (see dependabot.yml).
       - name: Auto-approve and merge npm patch updates
         if: |
           steps.metadata.outputs.package-ecosystem == 'npm' &&
-          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          steps.metadata.outputs.dependency-group == ''
         run: |
           gh pr review "$PR_URL" --approve --body "Auto-approving npm patch update."
           gh pr merge "$PR_URL" --auto --rebase
