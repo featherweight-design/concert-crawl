@@ -8,7 +8,8 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 
 ## Key documents
 
-- **Launch bar (authoritative):** `docs/superpowers/launch-bar.md`. **There is no launch date.** An item is launch-gating if and only if it appears there; the `phase: launch` label does not make it so. Never widen the bar without Hugh's sign-off.
+- **Repo:** `featherweight-design/concert-crawl` (canonical, public). Issues still live in the private archive `HartiganHM/concert-crawl` until they are transferred.
+- **Launch bar:** **There is no launch date.** The full bar is kept in the private archive; `docs/superpowers/launch-bar.md` is a stub. An item is launch-gating only if Hugh says so; the `phase: launch` label does not make it so. Never widen the bar without Hugh's sign-off.
 - Original spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`. The beta-to-launch plan (`specs/2026-05-09-beta-to-launch-design.md`) is historical: read it for tier and feature intent, not schedule.
 - Design pipeline: `docs/superpowers/design-pipeline.md`. DB rollback: `docs/runbooks/db-rollback.md`.
 - **Render config:** `render.yaml` plus `docs/runbooks/render-service-config.md`. Neither syncs to Render; the live config is edited in its dashboard. Update both in the same session you change a setting. A lapsed sync caused the 2026-08-31 prod outage.
@@ -64,5 +65,5 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 ## Sessions
 
 - Commit WIP before ending a session; leave a `## Next` in the plan or a memory update. Compact after each committed task. Prettier formats on commit (Husky and lint-staged).
-- At session start, run `gh pr list --state merged --limit 10` and sync `docs/superpowers/progress.md`. A substantive PR adds its ✅ row on its branch; small chores don't.
+- At session start, run `gh pr list --state merged --limit 10` and sync `docs/superpowers/progress.md` (history before 2026-10-31 is in the private archive). A substantive PR adds its ✅ row on its branch; small chores don't.
 - Bug reports come through the Sentry feedback widget and suggestions through the in-app modal. Don't build upvoting, threading, status tracking or roadmaps.

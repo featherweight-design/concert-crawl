@@ -9,7 +9,7 @@ The sweep command is `uiSweep` in `.claude/fwd.json`.
 - Engine lives in `apps/e2e/src/audit/` (shipped in PR #946). Marker file for the preflight
   repo check: `apps/e2e/src/audit/manifest.ts`.
 - Default clone: `REPO_DIR="${REPO_DIR:-$HOME/Projects/concert-crawl}"`. Repo slug:
-  `HartiganHM/concert-crawl`.
+  `featherweight-design/concert-crawl`.
 - **Output directory (`<outDir>`):** `apps/e2e/audit-output/`. Artifacts land in
   `apps/e2e/audit-output/<runId>/`.
 - **Base URL:** `PLAYWRIGHT_AUDIT_BASE_URL`, or default staging.
