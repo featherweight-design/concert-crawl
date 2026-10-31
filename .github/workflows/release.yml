@@ -15,7 +15,12 @@ permissions: read-all
 jobs:
   release:
     name: Release
-    if: github.event.workflow_run.conclusion == 'success'
+    # `branches: [main]` matches a fork PR whose head branch is named main, so
+    # also require a push to this repository's own main.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
