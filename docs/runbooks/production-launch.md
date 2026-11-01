@@ -14,23 +14,23 @@ This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgre
 
 ### Service inventory
 
-| Concern                    | Provider   | Resource                                                                                                             |
-| -------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| Web (prod)                 | Vercel     | project `concert-crawl`, custom domain `concertcrawl.app`                                                            |
-| Web (staging)              | Vercel     | project `concert-crawl-staging`, custom domain `staging.concertcrawl.app`                                            |
-| API (prod)                 | Vercel     | project `concert-crawl-api`, production environment, custom domain `api.concertcrawl.app` (from the prod cutover)    |
-| API (prod, fallback)       | Render     | web service `concert-crawl-api`, suspended at the prod cutover for a 7-day watch                                     |
-| API (staging)              | Vercel     | project `concert-crawl-api`, `staging` custom environment, `api-staging.concertcrawl.app` (since 2026-10-30)         |
-| API (staging, fallback)    | Render     | web service `concert-crawl-api-staging`, auto-deploy off                                                             |
-| Match artists (prod)       | Vercel     | Cron Job in `concert-crawl-api`, `0 16 * * *` (Render cron `concert-crawl-match-artists` suspended at the cutover)   |
-| Spotify weekly (prod)      | Vercel     | Cron Job in `concert-crawl-api`, `30 15 * * 1` (Render cron `concert-crawl-spotify-weekly` suspended at the cutover) |
-| Crawler triggers (prod)    | GitHub Actions | `crawler-triggers.yml`, dispatched by the API on each admin-queued crawl (Render cron suspended at the crawler cutover) |
-| Crawler daily (prod)       | GitHub Actions | `crawler-daily.yml`, `7 9 * * *` UTC (Render cron suspended at the crawler cutover)                                 |
-| Crawler triggers (staging) | Render     | cron job `concert-crawl-crawler-triggers-staging`                                                                    |
-| Crawler daily (staging)    | Render     | cron job `concert-crawl-crawler-daily-staging`                                                                       |
-| Database                   | Neon       | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon)                             |
-| Auth                       | Clerk      | two apps: **Concert Crawl** (prod, Production instance) and **Concert Crawl Staging** (staging, Production instance) |
-| DNS                        | Cloudflare | zone `concertcrawl.app` — DNS only, no proxy                                                                         |
+| Concern                    | Provider       | Resource                                                                                                                                                                     |
+| -------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web (prod)                 | Vercel         | project `concert-crawl`, custom domain `concertcrawl.app`                                                                                                                    |
+| Web (staging)              | Vercel         | project `concert-crawl-staging`, custom domain `staging.concertcrawl.app`                                                                                                    |
+| API (prod)                 | Vercel         | project `concert-crawl-api`, production environment, custom domain `api.concertcrawl.app` (from the prod cutover)                                                            |
+| API (prod, fallback)       | Render         | web service `concert-crawl-api`, suspended at the prod cutover for a 7-day watch                                                                                             |
+| API (staging)              | Vercel         | project `concert-crawl-api`, `staging` custom environment, `api-staging.concertcrawl.app` (since 2026-10-30)                                                                 |
+| API (staging, fallback)    | Render         | web service `concert-crawl-api-staging`, auto-deploy off                                                                                                                     |
+| Match artists (prod)       | Vercel         | Cron Job in `concert-crawl-api`, `0 16 * * *` (Render cron `concert-crawl-match-artists` suspended at the cutover)                                                           |
+| Spotify weekly (prod)      | Vercel         | Cron Job in `concert-crawl-api`, `30 15 * * 1` (Render cron `concert-crawl-spotify-weekly` suspended at the cutover)                                                         |
+| Crawler triggers (prod)    | GitHub Actions | `crawler-triggers.yml`, dispatched by the API on each admin-queued crawl (Render cron suspended at the crawler cutover)                                                      |
+| Crawler daily (prod)       | GitHub Actions | `crawler-daily.yml`, dispatched at 09:07 UTC by the `concert-crawl-api` Cron Job; its own `7 12 * * *` schedule is the backup (Render cron suspended at the crawler cutover) |
+| Crawler triggers (staging) | Render         | cron job `concert-crawl-crawler-triggers-staging`                                                                                                                            |
+| Crawler daily (staging)    | Render         | cron job `concert-crawl-crawler-daily-staging`                                                                                                                               |
+| Database                   | Neon           | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon)                                                                                     |
+| Auth                       | Clerk          | two apps: **Concert Crawl** (prod, Production instance) and **Concert Crawl Staging** (staging, Production instance)                                                         |
+| DNS                        | Cloudflare     | zone `concertcrawl.app` — DNS only, no proxy                                                                                                                                 |
 
 ---
 
@@ -267,37 +267,56 @@ API. The Render-only `NPM_CONFIG_PREFIX` is not needed on Vercel. Change a value
 with `vercel env` or the dashboard, then redeploy: a running deployment keeps the
 values it was built with. Never paste values into chat or this file.
 
-| Variable                   | Value                                                                                                                                                 |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`             | `<NEON_PROD_POOLED>` URL from Step 2 (**pooled**). Migrations do not use it; `deploy-prod.yml` migrates over `DATABASE_URL_DIRECT` (Step 9)           |
-| `DB_POOL_MAX`              | `3`. Caps each serverless instance's connections. (Render left it unset, which means postgres.js's default of 10)                                     |
-| `CLERK_SECRET_KEY`         | prod `sk_live_*` from Step 1 (must match the web project's `CLERK_SECRET_KEY`)                                                                        |
-| `CLERK_PUBLISHABLE_KEY`    | prod `pk_live_*` from Step 1                                                                                                                          |
-| `ALLOWED_ORIGIN`           | `https://concertcrawl.app`                                                                                                                            |
-| `ANTHROPIC_API_KEY`        | From Anthropic console                                                                                                                                |
-| `RESEND_API_KEY`           | From Step 5. Also used by the spotify-weekly digest                                                                                                   |
-| `SENTRY_DSN`               | API project DSN from Step 5                                                                                                                           |
-| `SENTRY_ENVIRONMENT`       | `production`                                                                                                                                          |
-| `LOG_LEVEL`                | `info`                                                                                                                                                |
-| `NODE_ENV`                 | `production`                                                                                                                                          |
-| `INTERNAL_API_SECRET`      | **Same value** as set in the Vercel web prod project (Step 6)                                                                                         |
-| `SPOTIFY_CLIENT_ID`        | Spotify app client ID. Used by the API and the match-artists cron. Unset → the matcher no-ops                                                         |
-| `SPOTIFY_CLIENT_SECRET`    | Spotify app client secret. Same                                                                                                                       |
-| `CRON_SECRET`              | **New**, generated for the Vercel project. Vercel Cron sends it as a bearer token, and it arms `/v1/internal/cron/*`. Unset → those routes return 404 |
-| `EMAIL_UNSUBSCRIBE_SECRET` | **Same value as on Render** (the spotify-weekly service). Unsubscribe links already sent are signed with it, so a new value would break them          |
-| `API_PUBLIC_URL`           | `https://api.concertcrawl.app`. Unsubscribe links in emails point at it                                                                               |
-| `NATIVE_DIGEST_ENABLED`    | Optional, copied from the spotify-weekly service. `1` digests every follower, not just Spotify ones                                                   |
-| `SPOTIFY_SYNC_DRY_RUN`     | Optional, copied from the spotify-weekly service. `1` makes a log-only cycle (no writes, no emails)                                                   |
+| Variable                   | Value                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`             | `<NEON_PROD_POOLED>` URL from Step 2 (**pooled**). Migrations do not use it; `deploy-prod.yml` migrates over `DATABASE_URL_DIRECT` (Step 9)                                                                                                                                                                                                                                            |
+| `DB_POOL_MAX`              | `3`. Caps each serverless instance's connections. (Render left it unset, which means postgres.js's default of 10)                                                                                                                                                                                                                                                                      |
+| `CLERK_SECRET_KEY`         | prod `sk_live_*` from Step 1 (must match the web project's `CLERK_SECRET_KEY`)                                                                                                                                                                                                                                                                                                         |
+| `CLERK_PUBLISHABLE_KEY`    | prod `pk_live_*` from Step 1                                                                                                                                                                                                                                                                                                                                                           |
+| `ALLOWED_ORIGIN`           | `https://concertcrawl.app`                                                                                                                                                                                                                                                                                                                                                             |
+| `ANTHROPIC_API_KEY`        | From Anthropic console                                                                                                                                                                                                                                                                                                                                                                 |
+| `RESEND_API_KEY`           | From Step 5. Also used by the spotify-weekly digest                                                                                                                                                                                                                                                                                                                                    |
+| `SENTRY_DSN`               | API project DSN from Step 5                                                                                                                                                                                                                                                                                                                                                            |
+| `SENTRY_ENVIRONMENT`       | `production`                                                                                                                                                                                                                                                                                                                                                                           |
+| `LOG_LEVEL`                | `info`                                                                                                                                                                                                                                                                                                                                                                                 |
+| `NODE_ENV`                 | `production`                                                                                                                                                                                                                                                                                                                                                                           |
+| `INTERNAL_API_SECRET`      | **Same value** as set in the Vercel web prod project (Step 6)                                                                                                                                                                                                                                                                                                                          |
+| `SPOTIFY_CLIENT_ID`        | Spotify app client ID. Used by the API and the match-artists cron. Unset → the matcher no-ops                                                                                                                                                                                                                                                                                          |
+| `SPOTIFY_CLIENT_SECRET`    | Spotify app client secret. Same                                                                                                                                                                                                                                                                                                                                                        |
+| `CRON_SECRET`              | **Hugh sets it, never through chat** (set on production and staging since 2026-10-30). A random string of 32+ characters (`openssl rand -hex 32` into a file), production and staging. Vercel Cron sends it as a bearer token, and it arms `/v1/internal/cron/*`, the daily crawl's included. Unset → those routes return 404 and the daily crawl waits for the GitHub backup schedule |
+| `CRAWLER_DISPATCH_TOKEN`   | Fine-grained GitHub token, this repository only, **Actions: read and write** (write includes read). It dispatches `crawler-triggers.yml` and `crawler-daily.yml`, and lists `crawler-daily.yml` runs so the daily cron can skip a day that already has one. Unset → admin crawls wait for the next daily run, and the daily cron answers 503                                           |
+| `CRAWLER_DISPATCH_REPO`    | `featherweight-design/concert-crawl`. Unset → the old default, `HartiganHM/concert-crawl`                                                                                                                                                                                                                                                                                              |
+| `EMAIL_UNSUBSCRIBE_SECRET` | **Same value as on Render** (the spotify-weekly service). Unsubscribe links already sent are signed with it, so a new value would break them                                                                                                                                                                                                                                           |
+| `API_PUBLIC_URL`           | `https://api.concertcrawl.app`. Unsubscribe links in emails point at it                                                                                                                                                                                                                                                                                                                |
+| `NATIVE_DIGEST_ENABLED`    | Optional, copied from the spotify-weekly service. `1` digests every follower, not just Spotify ones                                                                                                                                                                                                                                                                                    |
+| `SPOTIFY_SYNC_DRY_RUN`     | Optional, copied from the spotify-weekly service. `1` makes a log-only cycle (no writes, no emails)                                                                                                                                                                                                                                                                                    |
 
-**Cron Jobs.** `vercel.json` in the API project defines two Vercel Cron Jobs:
-`0 16 * * *` → `GET /v1/internal/cron/match-artists` and `30 15 * * 1` →
-`GET /v1/internal/cron/spotify-weekly`. They run only on production deployments.
-Cron Jobs are currently **disabled** on the project, because Vercel counted the
-first staging deploy as production and registered them against it. Re-enable
-them (Vercel → `concert-crawl-api` → Settings → Cron Jobs) after the first prod
-deploy, and suspend the Render crons `concert-crawl-match-artists` and
-`concert-crawl-spotify-weekly` in the same sitting, so neither job runs twice or
-not at all. `prod-deploy-health.yml` alerts while they are disabled.
+**Cron Jobs.** `vercel.json` in the API project defines three Vercel Cron Jobs:
+`0 16 * * *` → `GET /v1/internal/cron/match-artists`, `30 15 * * 1` →
+`GET /v1/internal/cron/spotify-weekly`, and `7 9 * * *` →
+`GET /v1/internal/cron/crawler-daily`. They run only on production deployments.
+The project is on the team's Pro plan, so each fires within its minute (Hobby
+would allow these once-a-day schedules too, but anywhere in the hour). Cron Jobs
+were **disabled** on the project at first, because Vercel counted the first
+staging deploy as production and registered them against it; they were
+re-enabled after the first prod deploy (enabled on 2026-11-01, when this was
+last checked). If they are ever re-enabled after a pause, suspend the Render
+crons `concert-crawl-match-artists` and `concert-crawl-spotify-weekly` in the
+same sitting, so neither job runs twice or not at all. `prod-deploy-health.yml`
+alerts while they are disabled.
+
+The `crawler-daily` route starts the daily venue crawl, because GitHub's own
+schedule drops runs on this repository. It needs `CRON_SECRET`,
+`CRAWLER_DISPATCH_TOKEN` and `CRAWLER_DISPATCH_REPO` above, and acts only on the
+production deployment. It lists the `crawler-daily.yml` runs on `main` created
+since 00:00 UTC, skips when a production run has crawled today (still running,
+or its crawl step ran), and otherwise dispatches one with `skip_if_ran_today`
+set, so the workflow checks again from inside the run. The dispatched run
+crawls only while `CRAWLER_GHA_DAILY_ENABLED` is `true`. A check it cannot make answers 503 and dispatches
+nothing. Every outcome writes an `audit_log` row (`actor_id`
+`system:vercel-cron`, action `crawl.daily_cron`). GitHub's `7 12 * * *`
+schedule is the backup and skips the same way; see
+`docs/runbooks/crawler-github-actions.md`.
 
 **Domain.** `api.concertcrawl.app` is added to the project on the production
 environment, with a Cloudflare `CNAME` record `api` pointing at the target Vercel
@@ -374,7 +393,7 @@ are suspended the same way; their env vars are listed in `render.yaml`.
 
 ### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
 
-> **Suspended since the crawler cutover (Render exit step 2).** The prod crawler runs on GitHub Actions and reads its env from the `production` GitHub environment; see `docs/runbooks/crawler-github-actions.md`. This section is kept for the fallback during the 7-day watch. The API needs `CRAWLER_DISPATCH_TOKEN` (a fine-grained GitHub token with Actions: write on this repo) on the Vercel `concert-crawl-api` project, production and staging.
+> **Suspended since the crawler cutover (Render exit step 2).** The prod crawler runs on GitHub Actions and reads its env from the `production` GitHub environment; see `docs/runbooks/crawler-github-actions.md`. This section is kept for the fallback during the 7-day watch. The API needs `CRAWLER_DISPATCH_TOKEN` (a fine-grained GitHub token with Actions: write on this repo, which includes the read that lists runs) on the Vercel `concert-crawl-api` project, production and staging; it dispatches admin-queued crawls and, from the production Cron Job, the daily crawl.
 
 Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:24.22.1-bookworm` + `playwright install-deps chromium` as root, then `playwright install chromium` as `pwuser` (no MCR dependency — see issue #547 / PR #591 for context). The two halves are split so that root is used only for the apt packages and everything writing into `/app` or the browsers path runs as `pwuser`, which is what lets the image skip a recursive `chown`; `apps/crawler/scripts/verify-image.sh` guards that.
 
@@ -460,7 +479,7 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                                                                              |
 | `LOG_LEVEL`                          | `info`                                                                                                                                                                                                                                                                    |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Unused since the crawler cutover; deleted with the suspended service.                                                                                                                                                     |
+| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Unused since the crawler cutover; deleted with the suspended service.                                                                                                                                                    |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same.                                                                                                                                                                                                                       |
 | `VERCEL_ORG_ID`                      | The featherweight-design Team ID (`team_*`). Already present for the web promotion; shared by the web and API projects.                                                                                                                                                   |
 | `VERCEL_PROJECT_ID`                  | The **web** prod project `concert-crawl` (`prj_*`). Already present.                                                                                                                                                                                                      |

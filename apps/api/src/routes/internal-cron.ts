@@ -11,8 +11,13 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import * as Sentry from '@sentry/hono/node'
+import { auditLog, db } from '@concert-crawl/db'
 import { runMatchArtists } from '../jobs/match-artists.js'
 import { runSpotifyWeekly } from '../jobs/spotify-weekly.js'
+import {
+  startDailyCrawl,
+  type DailyCrawlResult,
+} from '../lib/crawler-dispatch.js'
 import { apiLogger } from '../lib/logger.js'
 import { describeDbError } from '../lib/pg-errors.js'
 import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js'
@@ -21,12 +26,42 @@ export interface InternalCronJobs {
   matchArtists: () => Promise<unknown>
   spotifyWeekly: (now: Date) => Promise<void>
   sweepRateLimitBuckets: () => Promise<number>
+  startDailyCrawl: (now: Date) => Promise<DailyCrawlResult>
+  auditDailyCrawl: (result: DailyCrawlResult) => Promise<void>
+}
+
+// The audit_log actor for an action no person took. Admin rows carry a Clerk
+// user ID; this cannot collide with one.
+const CRON_ACTOR = 'system:vercel-cron'
+
+const auditDailyCrawl = async (result: DailyCrawlResult): Promise<void> => {
+  await db.insert(auditLog).values({
+    actorId: CRON_ACTOR,
+    action: 'crawl.daily_cron',
+    targetId:
+      result.outcome === 'skipped_already_ran' ? String(result.run.id) : null,
+    metadata: result,
+  })
 }
 
 const defaultJobs: InternalCronJobs = {
   matchArtists: () => runMatchArtists(),
   spotifyWeekly: (now) => runSpotifyWeekly(now),
   sweepRateLimitBuckets: () => sweepExpiredRateLimitBuckets(),
+  startDailyCrawl: (now) => startDailyCrawl(now),
+  auditDailyCrawl,
+}
+
+// A skip is a correct outcome. A failure answers 503 so it shows as failed in
+// the Vercel cron log; the GitHub schedule in crawler-daily.yml runs later
+// that morning as the backup, so nothing retries here.
+const DAILY_CRAWL_STATUS: Record<DailyCrawlResult['outcome'], 200 | 503> = {
+  dispatched: 200,
+  skipped_already_ran: 200,
+  skipped_environment: 200,
+  skipped_no_token: 503,
+  check_failed: 503,
+  dispatch_failed: 503,
 }
 
 // Hashing both sides first gives timingSafeEqual equal-length inputs, so the
@@ -94,6 +129,27 @@ export const createInternalCronRouter = (
 
     if (jobError !== null) throw jobError
     return ctx.json({ success: true, summary })
+  })
+
+  // Starts the daily venue crawl (crawler-daily.yml on GitHub Actions). See
+  // startDailyCrawl for the double-crawl checks. Takes no input: the only
+  // thing read from the request is the bearer, checked above.
+  router.get('/crawler-daily', async (ctx) => {
+    const result = await jobs.startDailyCrawl(new Date())
+    apiLogger.info({ result }, `crawler-daily: ${result.outcome}`)
+
+    // An audit row that fails to write never changes what the cron did.
+    try {
+      await jobs.auditDailyCrawl(result)
+    } catch (err) {
+      apiLogger.error(
+        { err: describeDbError(err), result },
+        'crawler-daily: audit log write failed',
+      )
+    }
+
+    const status = DAILY_CRAWL_STATUS[result.outcome]
+    return ctx.json({ success: status === 200, result }, status)
   })
 
   router.get('/spotify-weekly', async (ctx) => {

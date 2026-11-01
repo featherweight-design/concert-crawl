@@ -4,7 +4,8 @@
 # Replaces the Render deploy-health check on concert-crawl-crawler-daily. A
 # daily run that never starts emails nobody: the schedule does nothing while
 # CRAWLER_GHA_DAILY_ENABLED is not 'true', a disabled workflow is silent, and
-# GitHub occasionally drops a scheduled run. So this asks for a success.
+# GitHub occasionally drops a scheduled run. So this asks for a success, and
+# a success that crawled: a run the guard job skipped succeeds too.
 #
 # Usage: crawler-daily-health.sh
 # Env:   GH_TOKEN       token with actions: read on the repository
@@ -29,18 +30,37 @@ if [ "${DAILY_ENABLED:-}" != "true" ]; then
 fi
 
 since=$(date -u -d "${WINDOW_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
-if ! count=$(gh api -X GET "repos/${REPO}/actions/workflows/crawler-daily.yml/runs" \
-  -f branch=main -f status=success -f created=">=${since}" -f per_page=1 \
-  --jq '.total_count'); then
+if ! run_ids=$(gh api -X GET "repos/${REPO}/actions/workflows/crawler-daily.yml/runs" \
+  -f branch=main -f status=success -f created=">=${since}" -f per_page=20 \
+  --jq '.workflow_runs[]
+        | select(.display_title == "Crawler daily: production"
+                 or (.display_title == "Crawler daily" and .event == "schedule"))
+        | .id'); then
   echo "✗ Could not list crawler-daily runs" >&2
   exit 1
 fi
 
-if [ "${count}" -gt 0 ]; then
-  echo "✓ crawler-daily has succeeded on main since ${since}"
-  exit 0
-fi
+# Production runs only: the title carries the environment (run-name in
+# crawler-daily.yml). The bare "Crawler daily" is the title before run-name
+# existed, kept so the first day after the change does not alert; only a
+# scheduled one counts, since only the schedule was always production. Drop
+# it after 2026-11-03.
+#
+# A run whose guard job found an earlier crawl today succeeds without
+# crawling. Only a run in which a job other than `guard` succeeded has
+# crawled. Runs come newest first, so this usually reads one run's jobs.
+for run_id in ${run_ids}; do
+  if ! crawled=$(gh api "repos/${REPO}/actions/runs/${run_id}/jobs" \
+    --jq '[.jobs[] | select(.name != "guard" and .conclusion == "success")] | length'); then
+    echo "✗ Could not list the jobs of crawler-daily run ${run_id}" >&2
+    exit 1
+  fi
+  if [ "${crawled}" -gt 0 ]; then
+    echo "✓ crawler-daily has crawled successfully on main since ${since} (run ${run_id})"
+    exit 0
+  fi
+done
 
 state=$(gh api "repos/${REPO}/actions/workflows/crawler-daily.yml" --jq '.state' 2>/dev/null || echo unknown)
-echo "UNHEALTHY|crawler-daily|no successful crawler-daily run on main in the last ${WINDOW_HOURS} hours (workflow state: ${state})"
+echo "UNHEALTHY|crawler-daily|no crawler-daily run on main crawled successfully in the last ${WINDOW_HOURS} hours (workflow state: ${state})"
 exit 2

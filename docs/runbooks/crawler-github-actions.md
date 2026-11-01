@@ -3,10 +3,10 @@
 The crawler runs on GitHub-hosted runners, in place of Render's two crawler
 crons (Render exit, step 2).
 
-| Workflow               | Replaces                                        | When it runs                                                                                                                                       | Mode                                                                                                    |
-| ---------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `crawler-daily.yml`    | `concert-crawl-crawler-daily` (`0 9 * * *`)     | `7 9 * * *` UTC, only while the repo variable `CRAWLER_GHA_DAILY_ENABLED` is `true`; or by hand                                                    | `all`: drains pending triggers, then crawls every venue                                                 |
-| `crawler-triggers.yml` | `concert-crawl-crawler-triggers` (every 10 min) | On demand: the API dispatches it after it writes `crawl_triggers` rows, once `CRAWLER_DISPATCH_TOKEN` is set on the Vercel API project; or by hand | `triggers`: drains the queue, up to 200 triggers, no new claim after 150 min (enough for a trigger-all) |
+| Workflow               | Replaces                                        | When it runs                                                                                                                                                                                                   | Mode                                                                                                    |
+| ---------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `crawler-daily.yml`    | `concert-crawl-crawler-daily` (`0 9 * * *`)     | 09:07 UTC, dispatched by the production API's Vercel Cron Job; `7 12 * * *` UTC as a backup, only while the repo variable `CRAWLER_GHA_DAILY_ENABLED` is `true`; or by hand. See "What starts the daily crawl" | `all`: drains pending triggers, then crawls every venue                                                 |
+| `crawler-triggers.yml` | `concert-crawl-crawler-triggers` (every 10 min) | On demand: the API dispatches it after it writes `crawl_triggers` rows, once `CRAWLER_DISPATCH_TOKEN` is set on the Vercel API project; or by hand                                                             | `triggers`: drains the queue, up to 200 triggers, no new claim after 150 min (enough for a trigger-all) |
 
 Both call `crawler-run.yml`, which does the work. It runs only from `main`:
 a dispatch from another branch skips the job, so no other branch's code ever
@@ -14,6 +14,51 @@ sees the crawler's secrets.
 
 In `all` mode a failed trigger drain is reported to Sentry and the venue crawl
 still runs; the job then fails so the error is not silent.
+
+## What starts the daily crawl
+
+GitHub throttles and drops schedules on this repository (the 2026-11-01 09:07
+UTC run never fired), so the schedule is the backup, not the trigger.
+
+1. **09:07 UTC, Vercel Cron.** The production deployment of `concert-crawl-api`
+   calls `GET /v1/internal/cron/crawler-daily` with `CRON_SECRET` as its
+   bearer. With `CRAWLER_DISPATCH_TOKEN` it lists the `crawler-daily.yml` runs
+   on `main` created since 00:00 UTC and skips if one of them has crawled
+   today (the rule is below); otherwise it dispatches one with
+   `skip_if_ran_today: true`. It answers 503 and dispatches nothing when it
+   cannot check. Every outcome
+   writes an `audit_log` row (`system:vercel-cron`, `crawl.daily_cron`).
+2. **12:07 UTC, GitHub schedule.** The backup, while
+   `CRAWLER_GHA_DAILY_ENABLED` is `true`.
+
+Every run starts with the `guard` job. For the schedule, or a dispatch with
+`skip_if_ran_today`, it lists the day's runs with the workflow's own
+`GITHUB_TOKEN` and exits cleanly, crawling nothing, when an earlier run of the
+same environment on `main`, created today (UTC), has crawled. Earlier means a
+lower run ID, so if Vercel delivers the cron twice exactly one run crawls. A
+dispatch with `skip_if_ran_today` also does nothing unless
+`CRAWLER_GHA_DAILY_ENABLED` is `true`. A manual run leaves `skip_if_ran_today`
+off and always crawls.
+
+"Has crawled", in the API and the guard alike: the run is still queued or in
+progress (it may be crawling now), or it finished and its `Run crawler` step
+ran, whatever the run's conclusion. A degraded crawl fails the run after
+crawling every venue, so it holds the day. A run that stopped before crawling
+(a skipped or failed guard, a failed configuration check, a cancel while
+queued) does not, so a later trigger still crawls. One gap remains: a run
+still in progress at the check holds the day even if it later fails before
+its crawl step. Dispatch by hand if that happens.
+
+A run's environment is in its title (`run-name`): `Crawler daily: production`
+or `Crawler daily: staging`. Both checks match on it, so keep `run-name` and
+`dailyRunTitle` in `apps/api/src/lib/crawler-dispatch.ts` in step. A run whose
+guard skipped succeeds without crawling, and `crawler-daily-health.sh` does not
+count it as a crawl. Keep the step name `Run crawler` (`crawler-run.yml`),
+`CRAWL_STEP_NAME` in the API, and the guard's `CRAWL_STEP` in step too.
+
+To pause the daily crawl, set `CRAWLER_GHA_DAILY_ENABLED` to `false`: the
+schedule then does nothing, and the guard drops the API's dispatch. The cron
+still calls the API and dispatches a run that ends at its guard.
 
 ## What code runs
 
@@ -65,9 +110,12 @@ gh secret set ANTHROPIC_API_KEY --env production < key.txt
 ## Running it by hand
 
 Actions → **Crawler triggers** or **Crawler daily** → Run workflow → pick the
-environment. A manual daily run always runs, whatever
-`CRAWLER_GHA_DAILY_ENABLED` says, so do not run it on production while Render's
-daily cron is still live: venues would be crawled twice that day.
+environment, and leave `skip_if_ran_today` off. A manual daily run always
+runs, whatever `CRAWLER_GHA_DAILY_ENABLED` says and whatever ran earlier that
+day, so a manual production run on a day the cron already crawled crawls every
+venue twice. Do not run it on production while Render's daily cron is still
+live, for the same reason. A manual run before 09:07 UTC makes that morning's
+cron skip.
 
 ## Switching back to Render
 
@@ -92,7 +140,9 @@ to exactly one claimer), so nothing queued is lost.
 - A trigger whose dispatch was lost is picked up by the next daily run.
 - A run killed mid-crawl leaves its trigger in `processing`; the next run's
   reaper marks it failed and reports it to Sentry.
-- A skipped schedule is silent. Check the Actions tab if a morning has no
+- A skipped schedule is silent, and the Vercel Cron Job is the trigger that
+  matters. Its outcome is in the Vercel cron log (a 503 is a failure) and in
+  `audit_log`. Check both, then the Actions tab, if a morning has no
   `crawl_runs` rows.
 
 ## Actions minutes
