@@ -16,7 +16,7 @@
     "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/types": "workspace:*",
-    "@sentry/nextjs": "^10.69.0",
+    "@sentry/nextjs": "^11.10.0",
     "@serwist/next": "^9.5.12",
     "@stripe/react-stripe-js": "^6.8.0",
     "@stripe/stripe-js": "^9.13.0",
