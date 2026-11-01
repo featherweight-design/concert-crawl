@@ -78,11 +78,11 @@ describe('dispatchCrawler', () => {
   })
 
   it('uses CRAWLER_DISPATCH_REPO when it names a repository', async () => {
-    vi.stubEnv('CRAWLER_DISPATCH_REPO', 'featherweight-design/concert-crawl')
+    vi.stubEnv('CRAWLER_DISPATCH_REPO', 'example-org/other-repo')
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
     await dispatchCrawler()
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      '/repos/featherweight-design/concert-crawl/',
+      '/repos/example-org/other-repo/',
     )
   })
 
