@@ -1,3 +1,10 @@
+## [1.304.2](https://github.com/featherweight-design/concert-crawl/compare/v1.304.1...v1.304.2) (2026-11-01)
+
+
+### Bug Fixes
+
+* **crawler:** start the daily crawl from a Vercel Cron Job ([#25](https://github.com/featherweight-design/concert-crawl/issues/25)) ([081bbbf](https://github.com/featherweight-design/concert-crawl/commit/081bbbffa58deb0055f50babb89439d7c4c7e552))
+
 ## [1.304.1](https://github.com/HartiganHM/concert-crawl/compare/v1.304.0...v1.304.1) (2026-10-30)
 
 
