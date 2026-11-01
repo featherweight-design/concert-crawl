@@ -88,6 +88,10 @@ jobs:
           SKIP_IF_RAN: ${{ inputs.skip_if_ran_today }}
           DAILY_ENABLED: ${{ vars.CRAWLER_GHA_DAILY_ENABLED }}
           TITLE: "Crawler daily: ${{ inputs.environment || 'production' }}"
+          # Runs from before run-name carry the bare title and name their
+          # environment only in the crawl job. Drop after 2026-11-01's runs.
+          LEGACY_TITLE: Crawler daily
+          JOB_SUFFIX: ", ${{ inputs.environment || 'production' }})"
           RUN_ID: ${{ github.run_id }}
           # The crawler-run.yml step that crawls (CRAWL_STEP_NAME in the API).
           CRAWL_STEP: Run crawler
@@ -108,17 +112,26 @@ jobs:
             -f branch=main -f created=">=${since}" -f per_page=100 \
             --jq '[.workflow_runs[]
                    | select(.id < ($ENV.RUN_ID | tonumber)
-                            and .display_title == $ENV.TITLE
+                            and (.display_title == $ENV.TITLE or .display_title == $ENV.LEGACY_TITLE)
                             and .head_branch == "main")]
-                  | sort_by(.id) | .[] | "\(.id) \(.status)"')
-          while read -r run_id status; do
+                  | sort_by(.id) | .[]
+                  | "\(.id) \(.status) \(.display_title == $ENV.LEGACY_TITLE)"')
+          while read -r run_id status legacy; do
             [ -n "${run_id}" ] || continue
+            if [ "${legacy}" = "true" ] || [ "${status}" = "completed" ]; then
+              jobs=$(gh api "repos/${REPO}/actions/runs/${run_id}/jobs?per_page=100")
+            else
+              jobs='{"jobs":[]}'
+            fi
+            if [ "${legacy}" = "true" ]; then
+              same_env=$(jq '[.jobs[] | select(.name | endswith(env.JOB_SUFFIX))] | length' <<< "${jobs}")
+              [ "${same_env}" -gt 0 ] || continue
+            fi
             if [ "${status}" != "completed" ]; then
               held="run ${run_id} is ${status}"
             else
-              crawled=$(gh api "repos/${REPO}/actions/runs/${run_id}/jobs?per_page=100" \
-                --jq '[.jobs[].steps[]? | select(.name == $ENV.CRAWL_STEP
-                        and .conclusion != null and .conclusion != "skipped")] | length')
+              crawled=$(jq '[.jobs[].steps[]? | select(.name == env.CRAWL_STEP
+                        and .conclusion != null and .conclusion != "skipped")] | length' <<< "${jobs}")
               [ "${crawled}" -gt 0 ] || continue
               held="run ${run_id} crawled"
             fi

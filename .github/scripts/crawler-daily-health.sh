@@ -33,7 +33,8 @@ since=$(date -u -d "${WINDOW_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
 if ! run_ids=$(gh api -X GET "repos/${REPO}/actions/workflows/crawler-daily.yml/runs" \
   -f branch=main -f status=success -f created=">=${since}" -f per_page=20 \
   --jq '.workflow_runs[]
-        | select(.display_title == "Crawler daily: production" or .display_title == "Crawler daily")
+        | select(.display_title == "Crawler daily: production"
+                 or (.display_title == "Crawler daily" and .event == "schedule"))
         | .id'); then
   echo "✗ Could not list crawler-daily runs" >&2
   exit 1
@@ -41,8 +42,9 @@ fi
 
 # Production runs only: the title carries the environment (run-name in
 # crawler-daily.yml). The bare "Crawler daily" is the title before run-name
-# existed, kept so the first day after the change does not alert; drop it
-# after 2026-11-03.
+# existed, kept so the first day after the change does not alert; only a
+# scheduled one counts, since only the schedule was always production. Drop
+# it after 2026-11-03.
 #
 # A run whose guard job found an earlier crawl today succeeds without
 # crawling. Only a run in which a job other than `guard` succeeded has

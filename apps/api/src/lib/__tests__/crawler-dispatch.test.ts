@@ -218,7 +218,10 @@ describe('startDailyCrawl', () => {
       }),
       { status: 200 },
     )
-  const jobsResponse = (crawlStep: string | null | undefined) =>
+  const jobsResponse = (
+    crawlStep: string | null | undefined,
+    environment = 'production',
+  ) =>
     new Response(
       JSON.stringify({
         jobs: [
@@ -227,7 +230,7 @@ describe('startDailyCrawl', () => {
             steps: [{ name: 'Skip check', conclusion: 'success' }],
           },
           {
-            name: 'daily / Crawl (all, production)',
+            name: `daily / Crawl (all, ${environment})`,
             steps:
               crawlStep === undefined
                 ? []
@@ -257,11 +260,12 @@ describe('startDailyCrawl', () => {
     expect(listUrl.searchParams.get('created')).toBe('>=2026-11-02T00:00:00Z')
     expect(listUrl.searchParams.get('branch')).toBe('main')
 
-    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
-    expect(url).toBe(
+    const dispatchCall = fetchMock.mock.calls[1]
+    expect(String(dispatchCall?.[0])).toBe(
       'https://api.github.com/repos/HartiganHM/concert-crawl/actions/workflows/crawler-daily.yml/dispatches',
     )
-    expect(JSON.parse(String(init.body))).toEqual({
+    const dispatchInit: RequestInit | undefined = dispatchCall?.[1]
+    expect(JSON.parse(String(dispatchInit?.body))).toEqual({
       ref: 'main',
       inputs: { environment: 'production', skip_if_ran_today: 'true' },
     })
@@ -310,6 +314,25 @@ describe('startDailyCrawl', () => {
       expect(urls()[2]).toContain('/dispatches')
     },
   )
+
+  it('counts a legacy-titled run only when its crawl job names production', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        runsResponse([
+          { id: 5, display_title: 'Crawler daily' },
+          { id: 6, display_title: 'Crawler daily', status: 'in_progress' },
+        ]),
+      )
+      .mockResolvedValueOnce(jobsResponse('success', 'staging'))
+      .mockResolvedValueOnce(jobsResponse(null, 'production'))
+    const result = await startDailyCrawl(NOW)
+    expect(result).toMatchObject({
+      outcome: 'skipped_already_ran',
+      run: { id: 6 },
+    })
+    expect(urls()[1]).toContain('/actions/runs/5/jobs')
+    expect(urls()[2]).toContain('/actions/runs/6/jobs')
+  })
 
   it('ignores staging, other branches and yesterday, without reading jobs', async () => {
     fetchMock

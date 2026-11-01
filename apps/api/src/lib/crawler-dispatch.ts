@@ -207,6 +207,7 @@ const workflowRunsSchema = z.object({
 const runJobsSchema = z.object({
   jobs: z.array(
     z.object({
+      name: z.string(),
       steps: z
         .array(
           z.object({ name: z.string(), conclusion: z.string().nullable() }),
@@ -222,6 +223,18 @@ const runJobsSchema = z.object({
  * with the guard job in crawler-daily.yml.
  */
 export const CRAWL_STEP_NAME = 'Run crawler'
+
+/**
+ * The title of every crawler-daily run from before run-name named the
+ * environment. Such a run says which environment it crawled only through
+ * its crawl job's name, `daily / Crawl (all, <environment>)`. Only runs
+ * created up to the day this shipped (2026-11-01) carry it; drop the
+ * fallback, here and in the guard job, after that.
+ */
+const LEGACY_DAILY_TITLE = 'Crawler daily'
+const PRODUCTION_JOB_SUFFIX = ', production)'
+
+type RunJobs = z.infer<typeof runJobsSchema>['jobs']
 
 export interface DailyRunSummary {
   id: number
@@ -254,12 +267,11 @@ async function getGitHubJson(token: string, url: string): Promise<unknown> {
   return response.json()
 }
 
-/** Whether a finished run got as far as crawling, from its jobs' steps. */
-async function runReachedCrawl(
+async function readRunJobs(
   token: string,
   repo: string,
   runId: number,
-): Promise<boolean> {
+): Promise<RunJobs> {
   const parsed = runJobsSchema.safeParse(
     await getGitHubJson(
       token,
@@ -271,7 +283,12 @@ async function runReachedCrawl(
       `Unexpected jobs response for run ${runId}: ${parsed.error.message}`,
     )
   }
-  return parsed.data.jobs.some((job) =>
+  return parsed.data.jobs
+}
+
+/** Whether a run got as far as crawling, from its jobs' steps. */
+const reachedCrawl = (jobs: RunJobs): boolean =>
+  jobs.some((job) =>
     (job.steps ?? []).some(
       (step) =>
         step.name === CRAWL_STEP_NAME &&
@@ -279,7 +296,6 @@ async function runReachedCrawl(
         step.conclusion !== 'skipped',
     ),
   )
-}
 
 /**
  * The earliest production crawler-daily run on main created since 00:00 UTC
@@ -293,6 +309,8 @@ async function runReachedCrawl(
  *   in the queue) crawled nothing and does not hold the day.
  * - Only main: a dispatch from another branch never crawls (crawler-run.yml
  *   runs from main alone).
+ * - A run from before run-name named the environment (LEGACY_DAILY_TITLE)
+ *   counts only if its crawl job names production.
  *
  * Throws on anything it cannot read, so the caller fails closed: a check that
  * cannot see is not a check that found nothing.
@@ -326,17 +344,27 @@ async function findTodaysDailyRun(
   const todays = parsed.data.workflow_runs
     .filter(
       (run) =>
-        run.display_title === title &&
+        (run.display_title === title ||
+          run.display_title === LEGACY_DAILY_TITLE) &&
         run.head_branch === 'main' &&
         Date.parse(run.created_at) >= sinceMs,
     )
     .sort((left, right) => left.id - right.id)
 
   for (const run of todays) {
+    const legacy = run.display_title === LEGACY_DAILY_TITLE
+    // A finished run, or a legacy one of either kind, needs its jobs read.
+    const jobs =
+      legacy || run.status === 'completed'
+        ? await readRunJobs(token, repo, run.id)
+        : []
     if (
-      run.status !== 'completed' ||
-      (await runReachedCrawl(token, repo, run.id))
+      legacy &&
+      !jobs.some((job) => job.name.endsWith(PRODUCTION_JOB_SUFFIX))
     ) {
+      continue
+    }
+    if (run.status !== 'completed' || reachedCrawl(jobs)) {
       return {
         id: run.id,
         createdAt: run.created_at,
