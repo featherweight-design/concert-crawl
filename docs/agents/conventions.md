@@ -142,7 +142,7 @@ There is no "Saved" concept in this product.
 
 ## Issue tracking
 
-Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a GitHub Projects v2 named **Concert Crawl**.
+Issues live in GitHub Issues (repo: `featherweight-design/concert-crawl`). The board is a GitHub Projects v2 named **Concert Crawl**.
 
 **Label taxonomy:**
 
@@ -191,7 +191,7 @@ surfaces months later as a graveyard. So:
 - **Opening an issue:** only after sign-off — `gh issue create --title "..." --label "type: feature,phase: pre-beta,priority: blocker,source: internal"` (always include one label from each prefix)
 - **Linking a PR to an issue:** include `Closes #N` in the PR body — GitHub auto-closes the issue when the PR merges to `main`
 - **When user says "open an issue for X":** create it with `gh issue create` using the correct labels; do not skip the label step
-- **Closing or commenting on an issue:** `gh issue close` / `gh issue comment` fail here (Projects-classic error). Use `gh api -X PATCH repos/HartiganHM/concert-crawl/issues/N -f state=closed -f state_reason=not_planned` and `gh api -X POST .../issues/N/comments -f body=...`. Post the reasoning _before_ closing — a silent close is indistinguishable from a mistake later.
+- **Closing or commenting on an issue:** `gh issue close` / `gh issue comment` fail here (Projects-classic error). Use `gh api -X PATCH repos/featherweight-design/concert-crawl/issues/N -f state=closed -f state_reason=not_planned` and `gh api -X POST .../issues/N/comments -f body=...`. Post the reasoning _before_ closing — a silent close is indistinguishable from a mistake later.
 
 ## Crawl architecture
 

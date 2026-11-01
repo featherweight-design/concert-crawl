@@ -9,7 +9,7 @@ the skill means Hugh. The quote _"an issue filed is not a problem solved."_ is H
 
 ## Repo
 
-- Repo: `HartiganHM/concert-crawl`.
+- Repo: `featherweight-design/concert-crawl`.
 - Agents file issues under Hugh's `gh` auth, so every issue reports `HartiganHM` as author
   regardless of who wrote it. Never key a rule on authorship.
 - Hugh's checkout runs behind `origin/main`; always `git fetch` and verify on `origin/main`.
@@ -56,8 +56,8 @@ The first audit covered 148 open issues; plan for batching (see Execution at sca
 ## gh quirks in this repo
 
 - `gh issue close` and `gh issue comment` fail here (Projects-classic error). Always use REST:
-  `gh api -X PATCH repos/HartiganHM/concert-crawl/issues/N -f state=closed -f state_reason=not_planned`
-  and `gh api -X POST repos/HartiganHM/concert-crawl/issues/N/comments -f body=...`.
+  `gh api -X PATCH repos/featherweight-design/concert-crawl/issues/N -f state=closed -f state_reason=not_planned`
+  and `gh api -X POST repos/featherweight-design/concert-crawl/issues/N/comments -f body=...`.
 - `gh issue view` needs `--json <fields>` for the same reason.
 
 ## Moved out of the generic skill (public-plugin pass)
