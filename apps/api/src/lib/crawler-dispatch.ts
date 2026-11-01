@@ -196,16 +196,38 @@ const workflowRunsSchema = z.object({
     z.object({
       id: z.number().int(),
       display_title: z.string(),
+      head_branch: z.string().nullable(),
       created_at: z.string(),
       status: z.string().nullable(),
+      conclusion: z.string().nullable(),
     }),
   ),
 })
+
+const runJobsSchema = z.object({
+  jobs: z.array(
+    z.object({
+      steps: z
+        .array(
+          z.object({ name: z.string(), conclusion: z.string().nullable() }),
+        )
+        .optional(),
+    }),
+  ),
+})
+
+/**
+ * The crawler-run.yml step that crawls. A finished run counts as the day's
+ * crawl only if this step ran; keep the name in step with that workflow and
+ * with the guard job in crawler-daily.yml.
+ */
+export const CRAWL_STEP_NAME = 'Run crawler'
 
 export interface DailyRunSummary {
   id: number
   createdAt: string
   status: string | null
+  conclusion: string | null
 }
 
 export type DailyCrawlResult =
@@ -220,11 +242,60 @@ export type DailyCrawlResult =
 export const startOfUtcDay = (now: Date): string =>
   `${now.toISOString().slice(0, 10)}T00:00:00Z`
 
+async function getGitHubJson(token: string, url: string): Promise<unknown> {
+  const response = await fetch(url, {
+    headers: githubHeaders(token),
+    signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
+  })
+  if (!response.ok) {
+    const body = (await response.text().catch(() => '')).slice(0, 300)
+    throw new Error(`GitHub answered ${response.status} for ${url}: ${body}`)
+  }
+  return response.json()
+}
+
+/** Whether a finished run got as far as crawling, from its jobs' steps. */
+async function runReachedCrawl(
+  token: string,
+  repo: string,
+  runId: number,
+): Promise<boolean> {
+  const parsed = runJobsSchema.safeParse(
+    await getGitHubJson(
+      token,
+      `${GITHUB_API}/repos/${repo}/actions/runs/${runId}/jobs?per_page=100`,
+    ),
+  )
+  if (!parsed.success) {
+    throw new Error(
+      `Unexpected jobs response for run ${runId}: ${parsed.error.message}`,
+    )
+  }
+  return parsed.data.jobs.some((job) =>
+    (job.steps ?? []).some(
+      (step) =>
+        step.name === CRAWL_STEP_NAME &&
+        step.conclusion !== null &&
+        step.conclusion !== 'skipped',
+    ),
+  )
+}
+
 /**
- * The earliest production crawler-daily run created since 00:00 UTC today, in
- * any status, or null when there is none. Throws on anything it cannot read,
- * so the caller fails closed: a check that cannot see is not a check that
- * found nothing.
+ * The earliest production crawler-daily run on main created since 00:00 UTC
+ * today that has crawled or may still crawl, or null when there is none.
+ *
+ * - A run still queued or in progress counts: it may be crawling now.
+ * - A finished run counts only if its crawl step ran, whatever the run's
+ *   conclusion: a degraded crawl fails the run after crawling every venue, so
+ *   a second run would be a double crawl. A run that stopped earlier (its
+ *   guard skipped or failed, its configuration check failed, it was cancelled
+ *   in the queue) crawled nothing and does not hold the day.
+ * - Only main: a dispatch from another branch never crawls (crawler-run.yml
+ *   runs from main alone).
+ *
+ * Throws on anything it cannot read, so the caller fails closed: a check that
+ * cannot see is not a check that found nothing.
  */
 async function findTodaysDailyRun(
   token: string,
@@ -233,38 +304,48 @@ async function findTodaysDailyRun(
 ): Promise<DailyRunSummary | null> {
   const since = startOfUtcDay(now)
   const params = new URLSearchParams({
+    branch: 'main',
     created: `>=${since}`,
     per_page: '100',
   })
-  const url = `${GITHUB_API}/repos/${repo}/actions/workflows/${DAILY_WORKFLOW}/runs?${params.toString()}`
-  const response = await fetch(url, {
-    headers: githubHeaders(token),
-    signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
-  })
-  if (!response.ok) {
-    const body = (await response.text().catch(() => '')).slice(0, 300)
-    throw new Error(
-      `GitHub answered ${response.status} listing ${DAILY_WORKFLOW} runs: ${body}`,
-    )
-  }
-  const parsed = workflowRunsSchema.safeParse(await response.json())
+  const parsed = workflowRunsSchema.safeParse(
+    await getGitHubJson(
+      token,
+      `${GITHUB_API}/repos/${repo}/actions/workflows/${DAILY_WORKFLOW}/runs?${params.toString()}`,
+    ),
+  )
   if (!parsed.success) {
     throw new Error(
       `Unexpected ${DAILY_WORKFLOW} runs response: ${parsed.error.message}`,
     )
   }
   const title = dailyRunTitle('production')
+  // Repeats the server's `branch` and `created` filters: GitHub ignores a
+  // query parameter it cannot parse rather than refusing the request.
   const sinceMs = Date.parse(since)
   const todays = parsed.data.workflow_runs
     .filter(
       (run) =>
-        run.display_title === title && Date.parse(run.created_at) >= sinceMs,
+        run.display_title === title &&
+        run.head_branch === 'main' &&
+        Date.parse(run.created_at) >= sinceMs,
     )
     .sort((left, right) => left.id - right.id)
-  const first = todays[0]
-  return first === undefined
-    ? null
-    : { id: first.id, createdAt: first.created_at, status: first.status }
+
+  for (const run of todays) {
+    if (
+      run.status !== 'completed' ||
+      (await runReachedCrawl(token, repo, run.id))
+    ) {
+      return {
+        id: run.id,
+        createdAt: run.created_at,
+        status: run.status,
+        conclusion: run.conclusion,
+      }
+    }
+  }
+  return null
 }
 
 /**
@@ -273,11 +354,14 @@ async function findTodaysDailyRun(
  *
  * - Production only. Vercel runs crons on production deployments alone, and a
  *   staging daily crawl stays a manual dispatch.
- * - Skips when crawler-daily already has a production run created since
- *   00:00 UTC today, whatever its status: a run that failed part-way has
- *   still crawled venues, so a second one is a double crawl.
+ * - Skips when crawler-daily already has a production run today that crawled
+ *   or may still crawl (findTodaysDailyRun has the rule).
  * - Fails closed when the check cannot be made. GitHub's later schedule in
- *   crawler-daily.yml is the backup, and it makes the same check.
+ *   crawler-daily.yml is the backup, and it makes the same check, so a
+ *   check that failed here leaves that run to crawl.
+ * - The workflow's guard job drops the dispatched run unless the repository
+ *   variable CRAWLER_GHA_DAILY_ENABLED is 'true', so that variable pauses the
+ *   daily crawl from either trigger.
  * - The dispatch sends `skip_if_ran_today`, so the workflow checks again from
  *   inside the run. That closes the gap this check cannot: Vercel can deliver
  *   one cron twice, and a run GitHub has accepted takes a few seconds to be

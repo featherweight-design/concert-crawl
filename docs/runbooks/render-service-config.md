@@ -148,9 +148,9 @@ Actions (`crawler-daily.yml`, `crawler-triggers.yml`; see
 `docs/runbooks/crawler-github-actions.md`) and were suspended, not deleted,
 for a 7-day watch. To fall back: resume both, set the repo variable
 `CRAWLER_GHA_DAILY_ENABLED` to `false`, and unset `CRAWLER_DISPATCH_TOKEN` on
-the Vercel API project. Unsetting the token matters twice over: the API's
-`crawler-daily` Vercel Cron Job (`7 9 * * *`) starts the daily crawl by a
-dispatch, which `CRAWLER_GHA_DAILY_ENABLED` does not stop.
+the Vercel API project. The variable also stops the API's `crawler-daily`
+Vercel Cron Job (`7 9 * * *`) from crawling: its dispatch ends at the
+workflow's guard job. Unsetting the token stops the dispatch itself.
 
 The daily crawl on GitHub Actions starts from that Vercel Cron Job, not from
 GitHub's schedule, which GitHub throttles and drops on this repository. The

@@ -32,13 +32,21 @@ fi
 since=$(date -u -d "${WINDOW_HOURS} hours ago" +%Y-%m-%dT%H:%M:%SZ)
 if ! run_ids=$(gh api -X GET "repos/${REPO}/actions/workflows/crawler-daily.yml/runs" \
   -f branch=main -f status=success -f created=">=${since}" -f per_page=20 \
-  --jq '.workflow_runs[].id'); then
+  --jq '.workflow_runs[]
+        | select(.display_title == "Crawler daily: production" or .display_title == "Crawler daily")
+        | .id'); then
   echo "✗ Could not list crawler-daily runs" >&2
   exit 1
 fi
 
-# A run whose guard job found an earlier run today succeeds without crawling.
-# Only a run in which a job other than `guard` succeeded has crawled.
+# Production runs only: the title carries the environment (run-name in
+# crawler-daily.yml). The bare "Crawler daily" is the title before run-name
+# existed, kept so the first day after the change does not alert; drop it
+# after 2026-11-03.
+#
+# A run whose guard job found an earlier crawl today succeeds without
+# crawling. Only a run in which a job other than `guard` succeeded has
+# crawled. Runs come newest first, so this usually reads one run's jobs.
 for run_id in ${run_ids}; do
   if ! crawled=$(gh api "repos/${REPO}/actions/runs/${run_id}/jobs" \
     --jq '[.jobs[] | select(.name != "guard" and .conclusion == "success")] | length'); then

@@ -194,7 +194,12 @@ describe('crawler-daily cron route', () => {
     const jobs = makeJobs()
     const skipped = {
       outcome: 'skipped_already_ran' as const,
-      run: { id: 42, createdAt: '2026-11-02T09:01:00Z', status: 'completed' },
+      run: {
+        id: 42,
+        createdAt: '2026-11-02T09:01:00Z',
+        status: 'completed',
+        conclusion: 'success',
+      },
     }
     jobs.startDailyCrawl.mockResolvedValueOnce(skipped)
     const res = await request(jobs)

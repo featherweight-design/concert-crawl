@@ -22,10 +22,11 @@ UTC run never fired), so the schedule is the backup, not the trigger.
 
 1. **09:07 UTC, Vercel Cron.** The production deployment of `concert-crawl-api`
    calls `GET /v1/internal/cron/crawler-daily` with `CRON_SECRET` as its
-   bearer. The route lists `crawler-daily.yml` runs created since 00:00 UTC
-   with `CRAWLER_DISPATCH_TOKEN`. If a production run exists, in any status,
-   it skips; otherwise it dispatches one with `skip_if_ran_today: true`. It
-   answers 503 and dispatches nothing when it cannot check. Every outcome
+   bearer. With `CRAWLER_DISPATCH_TOKEN` it lists the `crawler-daily.yml` runs
+   on `main` created since 00:00 UTC and skips if one of them has crawled
+   today (the rule is below); otherwise it dispatches one with
+   `skip_if_ran_today: true`. It answers 503 and dispatches nothing when it
+   cannot check. Every outcome
    writes an `audit_log` row (`system:vercel-cron`, `crawl.daily_cron`).
 2. **12:07 UTC, GitHub schedule.** The backup, while
    `CRAWLER_GHA_DAILY_ENABLED` is `true`.
@@ -33,20 +34,31 @@ UTC run never fired), so the schedule is the backup, not the trigger.
 Every run starts with the `guard` job. For the schedule, or a dispatch with
 `skip_if_ran_today`, it lists the day's runs with the workflow's own
 `GITHUB_TOKEN` and exits cleanly, crawling nothing, when an earlier run of the
-same environment was created today (UTC). Earlier means a lower run ID, so if
-Vercel delivers the cron twice exactly one run crawls. A manual run leaves
-`skip_if_ran_today` off and always crawls.
+same environment on `main`, created today (UTC), has crawled. Earlier means a
+lower run ID, so if Vercel delivers the cron twice exactly one run crawls. A
+dispatch with `skip_if_ran_today` also does nothing unless
+`CRAWLER_GHA_DAILY_ENABLED` is `true`. A manual run leaves `skip_if_ran_today`
+off and always crawls.
+
+"Has crawled", in the API and the guard alike: the run is still queued or in
+progress (it may be crawling now), or it finished and its `Run crawler` step
+ran, whatever the run's conclusion. A degraded crawl fails the run after
+crawling every venue, so it holds the day. A run that stopped before crawling
+(a skipped or failed guard, a failed configuration check, a cancel while
+queued) does not, so a later trigger still crawls. One gap remains: a run
+still in progress at the check holds the day even if it later fails before
+its crawl step. Dispatch by hand if that happens.
 
 A run's environment is in its title (`run-name`): `Crawler daily: production`
 or `Crawler daily: staging`. Both checks match on it, so keep `run-name` and
 `dailyRunTitle` in `apps/api/src/lib/crawler-dispatch.ts` in step. A run whose
 guard skipped succeeds without crawling, and `crawler-daily-health.sh` does not
-count it as a crawl.
+count it as a crawl. Keep the step name `Run crawler` (`crawler-run.yml`),
+`CRAWL_STEP_NAME` in the API, and the guard's `CRAWL_STEP` in step too.
 
-To pause the daily crawl: unset `CRAWLER_DISPATCH_TOKEN` on the production API
-(or disable Cron Jobs on `concert-crawl-api`) and set
-`CRAWLER_GHA_DAILY_ENABLED` to `false`. Either one alone leaves the other
-trigger running.
+To pause the daily crawl, set `CRAWLER_GHA_DAILY_ENABLED` to `false`: the
+schedule then does nothing, and the guard drops the API's dispatch. The cron
+still calls the API and dispatches a run that ends at its guard.
 
 ## What code runs
 

@@ -194,29 +194,68 @@ describe('crawlerDispatchEnvironment', () => {
 
 describe('startDailyCrawl', () => {
   const NOW = new Date('2026-11-02T09:07:30Z')
-  const runsResponse = (
-    runs: Array<{ id: number; display_title: string; created_at: string }>,
-  ) =>
+  const PROD = 'Crawler daily: production'
+  interface FakeRun {
+    id: number
+    display_title?: string
+    head_branch?: string
+    created_at?: string
+    status?: string
+    conclusion?: string | null
+  }
+  const runsResponse = (runs: FakeRun[]) =>
     new Response(
       JSON.stringify({
         total_count: runs.length,
-        workflow_runs: runs.map((run) => ({ ...run, status: 'completed' })),
+        workflow_runs: runs.map((run) => ({
+          display_title: PROD,
+          head_branch: 'main',
+          created_at: '2026-11-02T03:00:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          ...run,
+        })),
       }),
       { status: 200 },
     )
+  const jobsResponse = (crawlStep: string | null | undefined) =>
+    new Response(
+      JSON.stringify({
+        jobs: [
+          {
+            name: 'guard',
+            steps: [{ name: 'Skip check', conclusion: 'success' }],
+          },
+          {
+            name: 'daily / Crawl (all, production)',
+            steps:
+              crawlStep === undefined
+                ? []
+                : [
+                    { name: 'Check inputs', conclusion: 'success' },
+                    { name: 'Run crawler', conclusion: crawlStep },
+                  ],
+          },
+        ],
+      }),
+      { status: 200 },
+    )
+  const dispatched = () => new Response(null, { status: 204 })
+  const urls = () => fetchMock.mock.calls.map((call) => String(call[0]))
 
-  it("lists today's runs, then dispatches crawler-daily.yml for production", async () => {
+  it("lists today's main runs, then dispatches crawler-daily.yml for production", async () => {
     fetchMock
       .mockResolvedValueOnce(runsResponse([]))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(dispatched())
     expect(await startDailyCrawl(NOW)).toEqual({ outcome: 'dispatched' })
     expect(fetchMock).toHaveBeenCalledTimes(2)
 
-    const listUrl = new URL(String(fetchMock.mock.calls[0]?.[0]))
+    const listUrl = new URL(urls()[0] ?? '')
     expect(listUrl.pathname).toBe(
       '/repos/HartiganHM/concert-crawl/actions/workflows/crawler-daily.yml/runs',
     )
     expect(listUrl.searchParams.get('created')).toBe('>=2026-11-02T00:00:00Z')
+    expect(listUrl.searchParams.get('branch')).toBe('main')
 
     const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
     expect(url).toBe(
@@ -228,41 +267,62 @@ describe('startDailyCrawl', () => {
     })
   })
 
-  it('skips when a production run was created today, in any status', async () => {
+  it('skips for a run that is still in progress, without reading its jobs', async () => {
     fetchMock.mockResolvedValueOnce(
-      runsResponse([
-        {
-          id: 9,
-          display_title: 'Crawler daily: production',
-          created_at: '2026-11-02T03:00:00Z',
-        },
-      ]),
+      runsResponse([{ id: 9, status: 'in_progress', conclusion: null }]),
     )
     expect(await startDailyCrawl(NOW)).toEqual({
       outcome: 'skipped_already_ran',
-      run: { id: 9, createdAt: '2026-11-02T03:00:00Z', status: 'completed' },
+      run: {
+        id: 9,
+        createdAt: '2026-11-02T03:00:00Z',
+        status: 'in_progress',
+        conclusion: null,
+      },
     })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('ignores a staging run and a run from yesterday', async () => {
+  it.each(['success', 'failure'])(
+    'skips for a finished run whose crawl step ended in %s',
+    async (stepConclusion) => {
+      fetchMock
+        .mockResolvedValueOnce(runsResponse([{ id: 9, conclusion: 'failure' }]))
+        .mockResolvedValueOnce(jobsResponse(stepConclusion))
+      const result = await startDailyCrawl(NOW)
+      expect(result.outcome).toBe('skipped_already_ran')
+      expect(urls()[1]).toContain('/actions/runs/9/jobs')
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    },
+  )
+
+  it.each([
+    ['skipped', 'skipped'],
+    ['never reached', undefined],
+  ] as const)(
+    'dispatches when the only run today crawled nothing (crawl step %s)',
+    async (_label, crawlStep) => {
+      fetchMock
+        .mockResolvedValueOnce(runsResponse([{ id: 9, conclusion: 'failure' }]))
+        .mockResolvedValueOnce(jobsResponse(crawlStep))
+        .mockResolvedValueOnce(dispatched())
+      expect(await startDailyCrawl(NOW)).toEqual({ outcome: 'dispatched' })
+      expect(urls()[2]).toContain('/dispatches')
+    },
+  )
+
+  it('ignores staging, other branches and yesterday, without reading jobs', async () => {
     fetchMock
       .mockResolvedValueOnce(
         runsResponse([
-          {
-            id: 8,
-            display_title: 'Crawler daily: staging',
-            created_at: '2026-11-02T05:00:00Z',
-          },
-          {
-            id: 7,
-            display_title: 'Crawler daily: production',
-            created_at: '2026-11-01T23:59:59Z',
-          },
+          { id: 8, display_title: 'Crawler daily: staging' },
+          { id: 7, head_branch: 'fix/something' },
+          { id: 6, created_at: '2026-11-01T23:59:59Z' },
         ]),
       )
-      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(dispatched())
     expect(await startDailyCrawl(NOW)).toEqual({ outcome: 'dispatched' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('fails closed when the runs cannot be listed', async () => {
@@ -270,6 +330,14 @@ describe('startDailyCrawl', () => {
     expect(await startDailyCrawl(NOW)).toEqual({ outcome: 'check_failed' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(lastReported().message).toContain('could not check')
+  })
+
+  it("fails closed when a run's jobs cannot be read", async () => {
+    fetchMock
+      .mockResolvedValueOnce(runsResponse([{ id: 9 }]))
+      .mockResolvedValueOnce(new Response('nope', { status: 502 }))
+    expect(await startDailyCrawl(NOW)).toEqual({ outcome: 'check_failed' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it('fails closed on a response it cannot parse', async () => {

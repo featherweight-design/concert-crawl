@@ -308,10 +308,11 @@ alerts while they are disabled.
 The `crawler-daily` route starts the daily venue crawl, because GitHub's own
 schedule drops runs on this repository. It needs `CRON_SECRET`,
 `CRAWLER_DISPATCH_TOKEN` and `CRAWLER_DISPATCH_REPO` above, and acts only on the
-production deployment. It lists the `crawler-daily.yml` runs created since
-00:00 UTC, skips when a production run already exists, in any status, and
-otherwise dispatches one with `skip_if_ran_today` set, so the workflow checks
-again from inside the run. A check it cannot make answers 503 and dispatches
+production deployment. It lists the `crawler-daily.yml` runs on `main` created
+since 00:00 UTC, skips when a production run has crawled today (still running,
+or its crawl step ran), and otherwise dispatches one with `skip_if_ran_today`
+set, so the workflow checks again from inside the run. The dispatched run
+crawls only while `CRAWLER_GHA_DAILY_ENABLED` is `true`. A check it cannot make answers 503 and dispatches
 nothing. Every outcome writes an `audit_log` row (`actor_id`
 `system:vercel-cron`, action `crawl.daily_cron`). GitHub's `7 12 * * *`
 schedule is the backup and skips the same way; see
