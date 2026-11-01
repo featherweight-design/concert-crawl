@@ -53,7 +53,7 @@ describe('dispatchCrawler', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(url).toBe(
-      'https://api.github.com/repos/HartiganHM/concert-crawl/actions/workflows/crawler-triggers.yml/dispatches',
+      'https://api.github.com/repos/featherweight-design/concert-crawl/actions/workflows/crawler-triggers.yml/dispatches',
     )
     expect(init.method).toBe('POST')
     expect(new Headers(init.headers).get('Authorization')).toBe(
@@ -78,11 +78,11 @@ describe('dispatchCrawler', () => {
   })
 
   it('uses CRAWLER_DISPATCH_REPO when it names a repository', async () => {
-    vi.stubEnv('CRAWLER_DISPATCH_REPO', 'featherweight-design/concert-crawl')
+    vi.stubEnv('CRAWLER_DISPATCH_REPO', 'example-org/other-repo')
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }))
     await dispatchCrawler()
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      '/repos/featherweight-design/concert-crawl/',
+      '/repos/example-org/other-repo/',
     )
   })
 
@@ -255,14 +255,14 @@ describe('startDailyCrawl', () => {
 
     const listUrl = new URL(urls()[0] ?? '')
     expect(listUrl.pathname).toBe(
-      '/repos/HartiganHM/concert-crawl/actions/workflows/crawler-daily.yml/runs',
+      '/repos/featherweight-design/concert-crawl/actions/workflows/crawler-daily.yml/runs',
     )
     expect(listUrl.searchParams.get('created')).toBe('>=2026-11-02T00:00:00Z')
     expect(listUrl.searchParams.get('branch')).toBe('main')
 
     const dispatchCall = fetchMock.mock.calls[1]
     expect(String(dispatchCall?.[0])).toBe(
-      'https://api.github.com/repos/HartiganHM/concert-crawl/actions/workflows/crawler-daily.yml/dispatches',
+      'https://api.github.com/repos/featherweight-design/concert-crawl/actions/workflows/crawler-daily.yml/dispatches',
     )
     const dispatchInit: RequestInit | undefined = dispatchCall?.[1]
     expect(JSON.parse(String(dispatchInit?.body))).toEqual({

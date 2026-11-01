@@ -24,7 +24,7 @@ const logger = apiLogger.child({ component: 'crawler-dispatch' })
 const TRIGGERS_WORKFLOW = 'crawler-triggers.yml'
 const DAILY_WORKFLOW = 'crawler-daily.yml'
 const GITHUB_API = 'https://api.github.com'
-const DEFAULT_REPO = 'HartiganHM/concert-crawl'
+const DEFAULT_REPO = 'featherweight-design/concert-crawl'
 const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/
 // Off the request path for a trigger dispatch, so this only bounds how long
 // the background task can keep a function instance alive; GitHub usually

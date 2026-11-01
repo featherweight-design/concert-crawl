@@ -8,7 +8,7 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 
 ## Key documents
 
-- **Repo:** `featherweight-design/concert-crawl` (canonical, public). Issues still live in the private archive `HartiganHM/concert-crawl` until they are transferred.
+- **Repo:** `featherweight-design/concert-crawl` (canonical, public). Open issues were transferred here on 2026-10-31 and renumbered; closed issues and PRs from before then stay in the private archive `HartiganHM/concert-crawl`, which is what issue and PR links in older docs point at.
 - **Launch bar:** **There is no launch date.** The full bar is kept in the private archive; `docs/superpowers/launch-bar.md` is a stub. An item is launch-gating only if Hugh says so; the `phase: launch` label does not make it so. Never widen the bar without Hugh's sign-off.
 - Original spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`. The beta-to-launch plan (`specs/2026-05-09-beta-to-launch-design.md`) is historical: read it for tier and feature intent, not schedule.
 - Design pipeline: `docs/superpowers/design-pipeline.md`. DB rollback: `docs/runbooks/db-rollback.md`.

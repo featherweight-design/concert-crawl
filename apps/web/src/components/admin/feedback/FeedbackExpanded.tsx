@@ -17,7 +17,7 @@ import type { FeedbackItem } from './FeedbackRow'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
-const REPO = 'HartiganHM/concert-crawl'
+const REPO = 'featherweight-design/concert-crawl'
 const MT_TIMEZONE = 'America/Denver'
 
 interface FeedbackExpandedProps {
