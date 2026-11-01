@@ -7,6 +7,8 @@ vi.mock('../jobs/spotify-weekly.js', () => ({ runSpotifyWeekly: vi.fn() }))
 vi.mock('../lib/rate-limit.js', () => ({
   sweepExpiredRateLimitBuckets: vi.fn(),
 }))
+vi.mock('../lib/crawler-dispatch.js', () => ({ startDailyCrawl: vi.fn() }))
+vi.mock('@concert-crawl/db', () => ({ db: {}, auditLog: {} }))
 
 import { Hono } from 'hono'
 import {
@@ -25,6 +27,10 @@ const makeJobs = () => ({
   sweepRateLimitBuckets: vi.fn<InternalCronJobs['sweepRateLimitBuckets']>(
     async () => 2,
   ),
+  startDailyCrawl: vi.fn<InternalCronJobs['startDailyCrawl']>(async () => ({
+    outcome: 'dispatched' as const,
+  })),
+  auditDailyCrawl: vi.fn<InternalCronJobs['auditDailyCrawl']>(async () => {}),
 })
 
 const makeApp = (jobs: InternalCronJobs) => {
@@ -36,7 +42,15 @@ const makeApp = (jobs: InternalCronJobs) => {
 const PATHS = [
   '/v1/internal/cron/match-artists',
   '/v1/internal/cron/spotify-weekly',
+  '/v1/internal/cron/crawler-daily',
 ] as const
+
+const expectNothingRan = (jobs: ReturnType<typeof makeJobs>) => {
+  expect(jobs.matchArtists).not.toHaveBeenCalled()
+  expect(jobs.spotifyWeekly).not.toHaveBeenCalled()
+  expect(jobs.startDailyCrawl).not.toHaveBeenCalled()
+  expect(jobs.auditDailyCrawl).not.toHaveBeenCalled()
+}
 
 describe('internal cron routes', () => {
   const original = process.env['CRON_SECRET']
@@ -58,8 +72,7 @@ describe('internal cron routes', () => {
         headers: { authorization: `Bearer ${SECRET}` },
       })
       expect(res.status).toBe(404)
-      expect(jobs.matchArtists).not.toHaveBeenCalled()
-      expect(jobs.spotifyWeekly).not.toHaveBeenCalled()
+      expectNothingRan(jobs)
     })
 
     it('returns 404 when CRON_SECRET is empty, even for "Bearer "', async () => {
@@ -69,16 +82,14 @@ describe('internal cron routes', () => {
         headers: { authorization: 'Bearer ' },
       })
       expect(res.status).toBe(404)
-      expect(jobs.matchArtists).not.toHaveBeenCalled()
-      expect(jobs.spotifyWeekly).not.toHaveBeenCalled()
+      expectNothingRan(jobs)
     })
 
     it('returns 401 with no Authorization header', async () => {
       const jobs = makeJobs()
       const res = await makeApp(jobs).request(path)
       expect(res.status).toBe(401)
-      expect(jobs.matchArtists).not.toHaveBeenCalled()
-      expect(jobs.spotifyWeekly).not.toHaveBeenCalled()
+      expectNothingRan(jobs)
     })
 
     it('returns 401 with the wrong secret', async () => {
@@ -87,8 +98,7 @@ describe('internal cron routes', () => {
         headers: { authorization: 'Bearer not-the-secret' },
       })
       expect(res.status).toBe(401)
-      expect(jobs.matchArtists).not.toHaveBeenCalled()
-      expect(jobs.spotifyWeekly).not.toHaveBeenCalled()
+      expectNothingRan(jobs)
     })
 
     it('returns 401 for the bare secret without the Bearer scheme', async () => {
@@ -97,6 +107,7 @@ describe('internal cron routes', () => {
         headers: { authorization: SECRET },
       })
       expect(res.status).toBe(401)
+      expectNothingRan(jobs)
     })
   })
 
@@ -145,6 +156,68 @@ describe('internal cron routes', () => {
     expect(now).toBeInstanceOf(Date)
     expect(now?.getTime()).toBeGreaterThanOrEqual(before)
     expect(jobs.matchArtists).not.toHaveBeenCalled()
+  })
+})
+
+describe('crawler-daily cron route', () => {
+  const original = process.env['CRON_SECRET']
+  const request = (jobs: InternalCronJobs) =>
+    makeApp(jobs).request(PATHS[2], {
+      headers: { authorization: `Bearer ${SECRET}` },
+    })
+
+  beforeEach(() => {
+    process.env['CRON_SECRET'] = SECRET
+  })
+
+  afterEach(() => {
+    if (original === undefined) delete process.env['CRON_SECRET']
+    else process.env['CRON_SECRET'] = original
+  })
+
+  it('starts the daily crawl with the current time and audits it', async () => {
+    const jobs = makeJobs()
+    const before = Date.now()
+    const res = await request(jobs)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      success: true,
+      result: { outcome: 'dispatched' },
+    })
+    const [now] = jobs.startDailyCrawl.mock.calls[0] ?? []
+    expect(now?.getTime()).toBeGreaterThanOrEqual(before)
+    expect(jobs.auditDailyCrawl).toHaveBeenCalledWith({ outcome: 'dispatched' })
+    expect(jobs.matchArtists).not.toHaveBeenCalled()
+  })
+
+  it('answers 200 and audits a skip when a run already exists today', async () => {
+    const jobs = makeJobs()
+    const skipped = {
+      outcome: 'skipped_already_ran' as const,
+      run: { id: 42, createdAt: '2026-11-02T09:01:00Z', status: 'completed' },
+    }
+    jobs.startDailyCrawl.mockResolvedValueOnce(skipped)
+    const res = await request(jobs)
+    expect(res.status).toBe(200)
+    expect(jobs.auditDailyCrawl).toHaveBeenCalledWith(skipped)
+  })
+
+  it.each(['check_failed', 'dispatch_failed', 'skipped_no_token'] as const)(
+    'answers 503 on %s, so the Vercel cron log shows a failure',
+    async (outcome) => {
+      const jobs = makeJobs()
+      jobs.startDailyCrawl.mockResolvedValueOnce({ outcome })
+      const res = await request(jobs)
+      expect(res.status).toBe(503)
+      expect(jobs.auditDailyCrawl).toHaveBeenCalledWith({ outcome })
+    },
+  )
+
+  it('keeps the outcome when the audit write fails', async () => {
+    const jobs = makeJobs()
+    jobs.auditDailyCrawl.mockRejectedValueOnce(new Error('db down'))
+    const res = await request(jobs)
+    expect(res.status).toBe(200)
   })
 })
 

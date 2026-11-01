@@ -15,6 +15,7 @@
   ],
   "crons": [
     { "path": "/v1/internal/cron/match-artists", "schedule": "0 16 * * *" },
-    { "path": "/v1/internal/cron/spotify-weekly", "schedule": "30 15 * * 1" }
+    { "path": "/v1/internal/cron/spotify-weekly", "schedule": "30 15 * * 1" },
+    { "path": "/v1/internal/cron/crawler-daily", "schedule": "7 9 * * *" }
   ]
 }

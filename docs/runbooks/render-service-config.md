@@ -148,10 +148,20 @@ Actions (`crawler-daily.yml`, `crawler-triggers.yml`; see
 `docs/runbooks/crawler-github-actions.md`) and were suspended, not deleted,
 for a 7-day watch. To fall back: resume both, set the repo variable
 `CRAWLER_GHA_DAILY_ENABLED` to `false`, and unset `CRAWLER_DISPATCH_TOKEN` on
-the Vercel API project.
+the Vercel API project. Unsetting the token matters twice over: the API's
+`crawler-daily` Vercel Cron Job (`7 9 * * *`) starts the daily crawl by a
+dispatch, which `CRAWLER_GHA_DAILY_ENABLED` does not stop.
 
-Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
-MDT; it drifts an hour relative to local time across the DST boundary,
+The daily crawl on GitHub Actions starts from that Vercel Cron Job, not from
+GitHub's schedule, which GitHub throttles and drops on this repository. The
+job needs `CRON_SECRET`, `CRAWLER_DISPATCH_TOKEN` (Actions: read and write) and
+`CRAWLER_DISPATCH_REPO` on the production environment of `concert-crawl-api`;
+`docs/runbooks/production-launch.md` (Step 8) has the table. The workflow's
+own `7 12 * * *` schedule is the backup, and both skip a day that already has
+a production run.
+
+Cron schedules are **UTC**. `0 9 * * *` (now `7 9 * * *` on Vercel) is the
+3 AM MT daily crawl during MDT; it drifts an hour relative to local time across the DST boundary,
 which is accepted.
 
 ### Suspended services

@@ -291,8 +291,9 @@ services:
         value: info
 
   # MOVED to GitHub Actions at the crawler cutover (Render exit step 2):
-  # crawler-daily.yml, `7 9 * * *` UTC, CRAWL_MODE=all. Suspended on Render,
-  # not deleted, for the 7-day watch.
+  # crawler-daily.yml, CRAWL_MODE=all, dispatched at 09:07 UTC by the
+  # concert-crawl-api Vercel Cron Job (`7 12 * * *` GitHub schedule as the
+  # backup). Suspended on Render, not deleted, for the 7-day watch.
   - type: cron
     name: concert-crawl-crawler-daily
     autoDeploy: false

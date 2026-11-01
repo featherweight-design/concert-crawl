@@ -4,17 +4,31 @@ name: Crawler daily
 # CRAWL_MODE=all: it drains any pending admin-queued trigger first, which
 # sweeps up a trigger whose dispatch was lost, then crawls every venue.
 #
+# What starts it. The production API's Vercel Cron (`7 9 * * *`, GET
+# /v1/internal/cron/crawler-daily) dispatches it with skip_if_ran_today. The
+# schedule below is the backup, three hours later, because GitHub throttles
+# and drops schedules on this repository (the 2026-11-01 09:07 run never
+# fired). Both the API and the guard job here skip when a production run was
+# already created today (UTC), so one day gets one crawl.
+#
 # The schedule does nothing until the repository variable
-# CRAWLER_GHA_DAILY_ENABLED is 'true', so this cannot double Render's run
-# before the cutover. A manual dispatch always runs.
+# CRAWLER_GHA_DAILY_ENABLED is 'true'. A manual dispatch always runs: leave
+# skip_if_ran_today off.
+#
+# The run-name is how a run says which environment it crawled: the runs API
+# returns it as display_title, and the API's check (dailyRunTitle in
+# apps/api/src/lib/crawler-dispatch.ts) and the guard below match on it.
 #
 # Runbook: docs/runbooks/crawler-github-actions.md
 
+run-name: "Crawler daily: ${{ inputs.environment || 'production' }}"
+
 on:
   schedule:
-    # 09:07 UTC (3:07 AM MDT, 2:07 AM MST). Off the hour on purpose: GitHub
-    # delays and sometimes drops scheduled runs at the top of the hour.
-    - cron: '7 9 * * *'
+    # 12:07 UTC (5:07 AM MST, 6:07 AM MDT): the backup, after the Vercel Cron
+    # at 09:07. Off the hour on purpose: GitHub delays and sometimes drops
+    # scheduled runs at the top of the hour.
+    - cron: '7 12 * * *'
   workflow_dispatch:
     inputs:
       environment:
@@ -23,6 +37,11 @@ on:
         default: production
         type: choice
         options: [production, staging]
+      skip_if_ran_today:
+        description: 'Skip if this environment already has a daily run today (UTC). The API cron sets it; leave it off to force a run.'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: crawler-daily-${{ inputs.environment || 'production' }}
@@ -32,12 +51,61 @@ permissions:
   contents: read
 
 jobs:
+  guard:
+    # crawler-daily-health.sh ignores a run in which only this job succeeded,
+    # by this name. Rename both together.
+    name: guard
+    if: github.event_name == 'workflow_dispatch' || vars.CRAWLER_GHA_DAILY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read # lists this workflow's runs
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      # Exits 0 with run=false when an earlier run of this environment was
+      # created today (UTC), in any status: a run that failed part-way has
+      # still crawled venues. Earlier means a lower run ID, so of two runs
+      # started together (Vercel can deliver one cron twice) exactly one
+      # crawls, and the concurrency group holds the second until the first
+      # ends. A failed check fails this job, and nothing crawls: the run is
+      # red rather than a possible double crawl.
+      - name: Skip if a daily run already started today
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          SKIP_IF_RAN: ${{ inputs.skip_if_ran_today }}
+          TITLE: "Crawler daily: ${{ inputs.environment || 'production' }}"
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "schedule" ] && [ "$SKIP_IF_RAN" != "true" ]; then
+            echo "Manual dispatch: runs whatever ran earlier today."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          since="$(date -u +%Y-%m-%d)T00:00:00Z"
+          earlier=$(gh api -X GET "repos/${REPO}/actions/workflows/crawler-daily.yml/runs" \
+            -f created=">=${since}" -f per_page=100 \
+            --jq '[.workflow_runs[] | select(.id < ($ENV.RUN_ID | tonumber) and .display_title == $ENV.TITLE)]
+                  | sort_by(.id) | first // empty | "\(.id) created \(.created_at) (\(.status))"')
+          if [ -n "$earlier" ]; then
+            echo "::notice::Skipping: '${TITLE}' already has run ${earlier} today."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No '${TITLE}' run yet today (since ${since}); crawling."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
   daily:
     # `secrets: inherit` is required even though every value lives in the
     # environment: a called workflow gets no `secrets` context at all, its
     # environment's included, unless the caller passes one. The job is gated
     # to main and the environments to a main-only branch policy.
-    if: github.event_name == 'workflow_dispatch' || vars.CRAWLER_GHA_DAILY_ENABLED == 'true'
+    needs: guard
+    if: needs.guard.outputs.run == 'true'
     uses: ./.github/workflows/crawler-run.yml
     with:
       mode: all
