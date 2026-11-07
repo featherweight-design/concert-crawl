@@ -12,8 +12,7 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 - **Launch bar:** **There is no launch date.** The full bar is kept in the private archive; `docs/superpowers/launch-bar.md` is a stub. An item is launch-gating only if Hugh says so; the `phase: launch` label does not make it so. Never widen the bar without Hugh's sign-off.
 - Original spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`. The beta-to-launch plan (`specs/2026-05-09-beta-to-launch-design.md`) is historical: read it for tier and feature intent, not schedule.
 - Design pipeline: `docs/superpowers/design-pipeline.md`. DB rollback: `docs/runbooks/db-rollback.md`.
-- **Render config:** `render.yaml` plus `docs/runbooks/render-service-config.md`. Neither syncs to Render; the live config is edited in its dashboard. Update both in the same session you change a setting. A lapsed sync caused the 2026-08-31 prod outage.
-- Production env vars (Vercel, Render, GitHub Actions): `docs/runbooks/production-launch.md`. Local vars: each app's `.env.example`.
+- Production env vars (Vercel, GitHub Actions): `docs/runbooks/production-launch.md`. Local vars: each app's `.env.example`.
 
 ## Architecture rules
 

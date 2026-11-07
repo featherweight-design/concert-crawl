@@ -39,7 +39,8 @@ is human-owned and has no code. The shipped code is live; most of it stays
   self-skips. Nothing bills a real card until you (a) put Stripe in live mode and
   (b) open the window.
 - **Not yet running:** the daily billing cron. The code (`apps/api/src/jobs/billing-daily.ts`)
-  is merged, but the **Render service doesn't exist yet** — you create it (§3, Render).
+  is merged, but it has **no scheduler** (#23; Render, its original home, was retired
+  on 2026-11-07). See §3, C.
 
 ---
 
@@ -103,21 +104,16 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 - [ ] Read the copy in each once more in your own voice — templates are written,
       but you own the final tone.
 
-### C. Render — daily billing cron
+### C. Daily billing cron
 
-- [ ] Create the **`concert-crawl-billing-jobs`** cron service (prod) — Node runtime,
-      schedule `0 15 * * *`, build command
-      `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api`,
-      env var `NPM_CONFIG_PREFIX=/opt/render/.npm-global` (or the first build fails
-      with EROFS; see `render-service-config.md`),
-      start command `node apps/api/dist/jobs/billing-daily.js` (the build compiles
-      the API to `dist/`, so the cron runs plain `node` — no `tsx` needed at runtime).
-      Render runs cron in UTC: `15:00 UTC` = **9 AM MDT / 8 AM MST**. The schedule
-      is pinned to UTC and intentionally not adjusted for DST (the send hour isn't
-      load-bearing). If 9 AM local ever becomes a hard requirement, use `0 16 * * *`
-      during MST months. The full env-var list is in `render.yaml` (descriptive
-      reference — the file does not auto-create the service; add it by hand).
-- [ ] Optionally create the **`-staging`** twin (test Stripe key) to dry-run it.
+- [ ] Give billing-daily a production scheduler (#23). It was designed as a Render
+      cron; Render was retired on 2026-11-07. Schedule `0 15 * * *` (UTC: **9 AM MDT /
+      8 AM MST**, intentionally not adjusted for DST; if 9 AM local ever becomes a hard
+      requirement, use `0 16 * * *` during MST months). The job is
+      `node apps/api/dist/jobs/billing-daily.js` from the API build, no `tsx` at
+      runtime. Settings and env vars: `monetization-launch.md`, "Deploy and test the
+      billing-jobs cron".
+- [ ] Optionally give it a **staging** scheduler too (test Stripe key) to dry-run it.
 - [ ] The job is **idempotent** — safe to trigger manually once to confirm it runs
       clean before the schedule takes over.
 
@@ -137,7 +133,7 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 
   The vars are `NEXT_PUBLIC_`-prefixed because the browser SDK reads them. The
   API no longer sends PostHog anything: billing events were removed when the app
-  moved to a free tier, so there are no Render PostHog vars.
+  moved to a free tier, so there are no API PostHog vars.
 
   > Exact var names are confirmed when PR 6.2 lands — if they differ, this table
   > is updated on that PR. Nothing to add until 6.2 is merged.
