@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # vercel-api-prod.sh — read the production state of the Vercel API project
-# (`concert-crawl-api`). It replaces the Render reads the prod workflows made
-# for the API before the Render exit (2026-10/11): the live deploy's commit
-# (the deleted render-live-sha.sh), render-check-deploy-health.sh, and
-# render-rollback.sh's choice of rollback target.
+# (`concert-crawl-api`) for the prod workflows: the live deploy's commit, its
+# health, and the rollback target.
 #
 # Usage: vercel-api-prod.sh <command> <project-id> <prod-api-url>
 #
@@ -16,7 +14,7 @@
 #             deploy-prod.yml sets on every API deploy.
 #   health    Exit 0 when production is healthy, 2 (with an `UNHEALTHY|`
 #             line) when it is not, 1 when the check could not run. Same
-#             contract as render-check-deploy-health.sh.
+#             contract as crawler-daily-health.sh.
 #
 #   <prod-api-url> is PROD_API_URL. Its hostname is what is resolved, so the
 #   answer is the deployment users reach, not the newest one: after a
@@ -73,7 +71,7 @@ fi
 API="https://api.vercel.com"
 
 # Wrapped in `if !` so a 401 or 404 prints Vercel's error body instead of
-# aborting under `set -e` with only an exit code (the render-*.sh pattern).
+# aborting under `set -e` with only an exit code.
 vercel_get() {
   local path="$1" body
   if ! body=$(curl -sS --fail-with-body \
@@ -89,8 +87,8 @@ vercel_get() {
 }
 
 # The deployment the production hostname is aliased to. Refuses a host that
-# belongs to another project, which is what PROD_API_URL still pointing at
-# the onrender host (or the web app) looks like from here.
+# belongs to another project, which is what PROD_API_URL pointing at the
+# wrong host (the web app, say) looks like from here.
 read_current() {
   local json
   json=$(vercel_get "/v13/deployments/${host}?teamId=${VERCEL_ORG_ID}") || return 1
@@ -215,15 +213,15 @@ case "${command_name}" in
       unhealthy "the newest production deploy (${failed}) ended in ERROR and ${current_id} is still serving. Promoted code is not reaching prod."
     fi
 
-    # The two jobs that left Render run as Vercel Cron. Cron Jobs are a
-    # project-level switch, and one that is off stops match-artists and
-    # spotify-weekly without any error anywhere.
+    # match-artists, spotify-weekly and the crawler-daily dispatch run as
+    # Vercel Cron. Cron Jobs are a project-level switch, and one that is off
+    # stops all three without any error anywhere.
     project=$(vercel_get "/v9/projects/${project_id}?teamId=${VERCEL_ORG_ID}") || exit 1
     crons_off=$(echo "${project}" | jq -r '
       (.crons // {}) as $c
       | if ($c.disabledAt // 0) > ($c.enabledAt // 0) then "yes" else "no" end')
     if [ "${crons_off}" = "yes" ]; then
-      unhealthy "Cron Jobs are disabled on the project, so match-artists and spotify-weekly are not running. Re-enable them under Settings → Cron Jobs."
+      unhealthy "Cron Jobs are disabled on the project, so match-artists, spotify-weekly and the crawler-daily dispatch are not running. Re-enable them under Settings → Cron Jobs."
     fi
 
     echo "✓ concert-crawl-api: ${host} serves ${current_id} (${current_sha:0:9}), READY; crons enabled"

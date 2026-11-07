@@ -7,8 +7,7 @@
 # migration, the deploy or the post-deploy health check fails. Reading it needs
 # only GITHUB_TOKEN, so the callers hold no Vercel credential.
 #
-# Exit codes are the same contract as render-wait-for-live.sh and
-# vercel-wait-for-ready.sh, because the callers branch on them identically:
+# Exit codes are the same contract as vercel-wait-for-ready.sh, because the callers branch on them identically:
 #   0   — the run for this SHA completed with conclusion `success`
 #   124 — benign: no run for this SHA appeared within the grace period (its
 #         `paths` filter skipped a push that does not touch the API — the

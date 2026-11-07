@@ -1,12 +1,11 @@
 name: Deploy API to Staging
 
-# Replaces Render's auto-deploy of `concert-crawl-api-staging`. On every push to
-# main that touches the API (that service's buildFilter in render.yaml, plus
-# packages/crawler-core, which the API imports at runtime), it migrates the staging Neon branch over its direct URL, deploys
+# On every push to main that touches the API (see the `paths` filter below,
+# which includes packages/crawler-core because the API imports it at runtime), it migrates the staging Neon branch over its direct URL, deploys
 # the API to the `staging` custom environment of the Vercel project
 # `concert-crawl-api`, and checks /v1/health on the staging hostname.
 #
-# The order is the one Render's build had: migrate, then ship code. Migrations
+# The order is migrate, then ship code. Migrations
 # are expand/contract only, so the running deployment tolerates the new schema.
 #
 # Staging Smoke and Staging E2E wait for this run (gha-wait-for-workflow.sh) as

@@ -158,16 +158,19 @@ describe('isApiOrigin', () => {
     )
   })
 
-  it('accepts both production API origins whichever one the build uses', () => {
-    for (const configured of [
-      'https://api.concertcrawl.app',
-      'https://concert-crawl-api.onrender.com',
-    ]) {
-      expect(isApiOrigin('https://api.concertcrawl.app', configured)).toBe(true)
-      expect(
-        isApiOrigin('https://concert-crawl-api.onrender.com', configured),
-      ).toBe(true)
-    }
+  it('accepts the production API origin even when the build names another', () => {
+    expect(
+      isApiOrigin('https://api.concertcrawl.app', 'http://localhost:3001'),
+    ).toBe(true)
+  })
+
+  it('no longer accepts the retired Render origin', () => {
+    expect(
+      isApiOrigin(
+        'https://concert-crawl-api.onrender.com',
+        'https://api.concertcrawl.app',
+      ),
+    ).toBe(false)
   })
 
   it('rejects any other origin', () => {
