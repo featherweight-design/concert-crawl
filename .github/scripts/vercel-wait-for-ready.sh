@@ -160,9 +160,10 @@ while :; do
       # than failing: exiting non-zero here would turn every API-only merge
       # into a red run.
       #
-      # Be clear about what that costs. Nothing else currently watches the
-      # Vercel side over time, so a dropped Vercel webhook reads as a benign skip here and is
-      # not caught elsewhere. The residual risk is bounded by what this caller
+      # Be clear about what that costs. Nothing else watches this project's
+      # Git-integration deploys over time (prod-deploy-health.yml watches the
+      # production API only), so a dropped Vercel webhook reads as a benign skip
+      # here and is not caught elsewhere. The residual risk is bounded by what this caller
       # is for: it gates a test suite, and the suite still runs against the
       # build the app is actually serving. It is not a deploy monitor.
       ;;

@@ -213,15 +213,15 @@ case "${command_name}" in
       unhealthy "the newest production deploy (${failed}) ended in ERROR and ${current_id} is still serving. Promoted code is not reaching prod."
     fi
 
-    # match-artists and spotify-weekly run as Vercel Cron. Cron Jobs are a
-    # project-level switch, and one that is off stops match-artists and
-    # spotify-weekly without any error anywhere.
+    # match-artists, spotify-weekly and the crawler-daily dispatch run as
+    # Vercel Cron. Cron Jobs are a project-level switch, and one that is off
+    # stops all three without any error anywhere.
     project=$(vercel_get "/v9/projects/${project_id}?teamId=${VERCEL_ORG_ID}") || exit 1
     crons_off=$(echo "${project}" | jq -r '
       (.crons // {}) as $c
       | if ($c.disabledAt // 0) > ($c.enabledAt // 0) then "yes" else "no" end')
     if [ "${crons_off}" = "yes" ]; then
-      unhealthy "Cron Jobs are disabled on the project, so match-artists and spotify-weekly are not running. Re-enable them under Settings → Cron Jobs."
+      unhealthy "Cron Jobs are disabled on the project, so match-artists, spotify-weekly and the crawler-daily dispatch are not running. Re-enable them under Settings → Cron Jobs."
     fi
 
     echo "✓ concert-crawl-api: ${host} serves ${current_id} (${current_sha:0:9}), READY; crons enabled"
