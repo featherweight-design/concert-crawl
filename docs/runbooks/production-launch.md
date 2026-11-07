@@ -2,14 +2,14 @@
 
 Steps to bring the production environment fully online. Complete these in order — later steps depend on earlier ones.
 
-This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgres on Neon, API + crawler crons on Render**, updated for the Render exit. The staging API moved to Vercel on 2026-10-30. **From the prod cutover, the prod API is on Vercel too** (project `concert-crawl-api`, production, `https://api.concertcrawl.app`), with match-artists and spotify-weekly as Vercel Cron Jobs inside it. Only the two crawler crons stay on Render. Where a step differs before and after the cutover, it says so. See `docs/superpowers/progress.md` for the migration history.
+This runbook reflects the architecture after the Render exit: **web and API on Vercel, Postgres on Neon, the crawler on GitHub Actions**. The prod API is the Vercel project `concert-crawl-api` (production, `https://api.concertcrawl.app`), with match-artists and spotify-weekly as Vercel Cron Jobs inside it. Render was retired on 2026-11-07, when every Render service was deleted. See `docs/superpowers/progress.md` for the migration history.
 
 ---
 
 ## Prerequisites
 
 - Staging environment is healthy and all pre-beta checklist items are validated there
-- Access to dashboards: Vercel, Neon, Render, Cloudflare, Clerk (both Production and Staging apps), Resend, Sentry, GitHub repository settings. (Stripe is not yet wired — see Step 5.)
+- Access to dashboards: Vercel, Neon, Cloudflare, Clerk (both Production and Staging apps), Resend, Sentry, GitHub repository settings. (Stripe is not yet wired — see Step 5.)
 - Local tools: Docker (for `pg_dump`/`psql` via `postgres:16` image), `pnpm`, `gh` CLI
 
 ### Service inventory
@@ -19,15 +19,13 @@ This runbook reflects the post-2026-06-15 architecture: **web on Vercel, Postgre
 | Web (prod)                 | Vercel         | project `concert-crawl`, custom domain `concertcrawl.app`                                                                                                                    |
 | Web (staging)              | Vercel         | project `concert-crawl-staging`, custom domain `staging.concertcrawl.app`                                                                                                    |
 | API (prod)                 | Vercel         | project `concert-crawl-api`, production environment, custom domain `api.concertcrawl.app` (from the prod cutover)                                                            |
-| API (prod, fallback)       | Render         | web service `concert-crawl-api`, suspended at the prod cutover for a 7-day watch                                                                                             |
 | API (staging)              | Vercel         | project `concert-crawl-api`, `staging` custom environment, `api-staging.concertcrawl.app` (since 2026-10-30)                                                                 |
-| API (staging, fallback)    | Render         | web service `concert-crawl-api-staging`, auto-deploy off                                                                                                                     |
-| Match artists (prod)       | Vercel         | Cron Job in `concert-crawl-api`, `0 16 * * *` (Render cron `concert-crawl-match-artists` suspended at the cutover)                                                           |
-| Spotify weekly (prod)      | Vercel         | Cron Job in `concert-crawl-api`, `30 15 * * 1` (Render cron `concert-crawl-spotify-weekly` suspended at the cutover)                                                         |
-| Crawler triggers (prod)    | GitHub Actions | `crawler-triggers.yml`, dispatched by the API on each admin-queued crawl (Render cron suspended at the crawler cutover)                                                      |
-| Crawler daily (prod)       | GitHub Actions | `crawler-daily.yml`, dispatched at 09:07 UTC by the `concert-crawl-api` Cron Job; its own `7 12 * * *` schedule is the backup (Render cron suspended at the crawler cutover) |
-| Crawler triggers (staging) | Render         | cron job `concert-crawl-crawler-triggers-staging`                                                                                                                            |
-| Crawler daily (staging)    | Render         | cron job `concert-crawl-crawler-daily-staging`                                                                                                                               |
+| Match artists (prod)       | Vercel         | Cron Job in `concert-crawl-api`, `0 16 * * *`                                                           |
+| Spotify weekly (prod)      | Vercel         | Cron Job in `concert-crawl-api`, `30 15 * * 1`                                                         |
+| Crawler triggers (prod)    | GitHub Actions | `crawler-triggers.yml`, dispatched by the API on each admin-queued crawl                                                      |
+| Crawler daily (prod)       | GitHub Actions | `crawler-daily.yml`, dispatched at 09:07 UTC by the `concert-crawl-api` Cron Job; its own `7 12 * * *` schedule is the backup |
+| Crawler triggers (staging) | GitHub Actions | `crawler-triggers.yml` with `environment: staging`                                                                                                                            |
+| Crawler daily (staging)    | GitHub Actions | `crawler-daily.yml` with `environment: staging`                                                                                                                               |
 | Database                   | Neon           | project `concert-crawl`, branches `production` + `staging` (PG 16, AWS us-west-2 Oregon)                                                                                     |
 | Auth                       | Clerk          | two apps: **Concert Crawl** (prod, Production instance) and **Concert Crawl Staging** (staging, Production instance)                                                         |
 | DNS                        | Cloudflare     | zone `concertcrawl.app` — DNS only, no proxy                                                                                                                                 |
@@ -52,7 +50,7 @@ Concert Crawl uses **two separate Clerk apps** for isolation between staging and
    - **Publishable Key** — `pk_live_*` (encodes `clerk.concertcrawl.app`)
    - **Secret Key** — `sk_live_*`
 
-> ⚠️ **Multi-service Clerk key consistency.** The Vercel web project, the Render API service, and any service that validates Clerk JWTs must all use the **same Clerk instance's keys**. Mixing prod and staging keys across services results in 401s on cross-service calls — verify by decoding the `pk` (base64 of bytes after `pk_live_`) to confirm the encoded domain matches. See the operational notes section.
+> ⚠️ **Multi-service Clerk key consistency.** The Vercel web project, the Vercel API project, and any service that validates Clerk JWTs must all use the **same Clerk instance's keys**. Mixing prod and staging keys across services results in 401s on cross-service calls — verify by decoding the `pk` (base64 of bytes after `pk_live_`) to confirm the encoded domain matches. See the operational notes section.
 
 ---
 
@@ -60,8 +58,8 @@ Concert Crawl uses **two separate Clerk apps** for isolation between staging and
 
 1. Sign in to [neon.tech](https://neon.tech) → workspace owner ≥ **Launch** plan (~$19/mo) for production
 2. **Create project** `concert-crawl`:
-   - **Postgres version:** 16 (match Render's default; cross-major dumps are flaky)
-   - **Region:** AWS us-west-2 (Oregon) — co-located with Render's API region for sub-10ms latency
+   - **Postgres version:** 16 (cross-major dumps are flaky)
+   - **Region:** AWS us-west-2 (Oregon)
    - **Enable Neon Auth:** OFF (we use Clerk)
 3. The default branch is `production` (or rename to match if Neon defaults differ)
 4. **Create the staging branch:** sidebar **Branches** → **Create branch** → name `staging`, parent = `production`, "Branch data and schema"
@@ -173,7 +171,7 @@ Create the **prod** Vercel project. (The staging project should already exist as
 The prod project's **Settings → Build and Deployment → Ignored Build Step** is
 set to `exit 0`, so
 a push to `main` does **not** build it. `deploy-prod.yml` promotes the web app
-with `vercel deploy --prod` after the Render API deploy has gone live, which is
+with `vercel deploy --prod` after the API deploy has gone live, which is
 what makes a prod promotion a single gated decision rather than two independent
 races. See `docs/runbooks/auto-deploy-prod.md`.
 
@@ -207,7 +205,7 @@ The staging Vercel project would normally invert this (Production + Preview so p
 | Key                                   | Value                                                                                                                                                                                                                                                                                               | Sensitive |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | `NEXT_PUBLIC_SITE_URL`                | `https://concertcrawl.app` (staging project: `https://staging.concertcrawl.app`) — canonical origin for share links and Open Graph tags. See the note below; leaving it unset is a silent defect, not a default                                                                                     | OFF       |
-| `NEXT_PUBLIC_API_URL`                 | `https://api.concertcrawl.app` from the prod cutover (it was `https://concert-crawl-api.onrender.com`). Inlined at build time, so changing it needs a web redeploy                                                                                                                                  | OFF       |
+| `NEXT_PUBLIC_API_URL`                 | `https://api.concertcrawl.app`. Inlined at build time, so changing it needs a web redeploy                                                                                                                                  | OFF       |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`)                                                                                                                                                                                                                                     | OFF       |
 | `CLERK_SECRET_KEY`                    | prod `sk_live_*` from Step 1                                                                                                                                                                                                                                                                        | ON        |
 | `NEXT_PUBLIC_CLERK_DOMAIN`            | `concertcrawl.app` — **required** to disable Vercel's auto-proxy logic in `@clerk/nextjs` that would otherwise inject a broken `/__clerk` script src                                                                                                                                                | OFF       |
@@ -222,13 +220,13 @@ The staging Vercel project would normally invert this (Production + Preview so p
 | `SENTRY_AUTH_TOKEN`                   | From Step 5                                                                                                                                                                                                                                                                                         | ON        |
 | `INVITE_COOKIE_SECRET`                | Generate fresh: `openssl rand -hex 32`                                                                                                                                                                                                                                                              | ON        |
 | `INTERNAL_API_SECRET`                 | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the API's env vars (Step 8)                                                                                                                                                                                                 | ON        |
-| `REVALIDATE_SECRET`                   | Generate fresh: `openssl rand -hex 32` — **must match** the same key on both crawler cron jobs (Step 8). Unset → `/api/revalidate` fails closed (401) and the landing page relies on its 5-minute ISR window alone (#847)                                                                           | ON        |
+| `REVALIDATE_SECRET`                   | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the crawler's env (Step 8). Unset → `/api/revalidate` fails closed (401) and the landing page relies on its 5-minute ISR window alone (#847)                                                                           | ON        |
 | `NEXT_PUBLIC_POSTHOG_KEY`             | PostHog project API key (`phc_*`) — client-side usage analytics (pageviews, autocapture, no replay) plus share events; no billing events. Turn on the project's "Discard client IP data" first. Absent → no-op; also no-op off `concertcrawl.app`. Set only after Hugh approves the privacy wording | OFF       |
 | `NEXT_PUBLIC_POSTHOG_HOST`            | `https://us.i.posthog.com` (US cloud region)                                                                                                                                                                                                                                                        | OFF       |
 
 > ⚠️ **`NEXT_PUBLIC_SITE_URL` has no safe default and must be set on every project.** `apps/web/src/lib/share/site-origin.ts` resolves `NEXT_PUBLIC_SITE_URL` → `VERCEL_URL` → `http://localhost:3000`. On Vercel, `VERCEL_URL` is the **per-deployment `*.vercel.app` host, never the custom domain**, so with the first unset every absolute URL the app builds points at a deployment hostname that 404s once that deployment ages out. The visible symptom is share-card and Open Graph unfurls (#72) advertising a dead link. It went unset on prod until 2026-09-19 precisely because this table had no row for it. Each project gets its own origin rather than the canonical one — staging and previews are supposed to advertise themselves, which is why the variable exists instead of a hardcoded constant.
 
-`NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. **Current limitation:** the SHA fallback chain only reads `RENDER_GIT_COMMIT`, so on Vercel deploys the version banner reads `vX.Y.Z · dev` instead of `vX.Y.Z · abc1234`. Tracked in #595 (one-line fix to add `VERCEL_GIT_COMMIT_SHA` to the fallback chain).
+`NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. The SHA comes from `VERCEL_GIT_COMMIT_SHA`; without one (local dev) the banner reads `vX.Y.Z · dev`.
 
 ### Add the custom domain
 
@@ -260,17 +258,15 @@ Vercel will show the DNS records needed in Step 7.
 
 From the prod cutover, the prod API's runtime env vars live on the **production**
 environment of the Vercel project `concert-crawl-api` (team featherweight-design).
-They were copied by script from the Render prod `concert-crawl-api` service, plus
-the extra vars of the `concert-crawl-match-artists` and
-`concert-crawl-spotify-weekly` cron services, since those jobs now run inside the
-API. The Render-only `NPM_CONFIG_PREFIX` is not needed on Vercel. Change a value
+They include the vars match-artists and spotify-weekly need, since those jobs
+run inside the API. Change a value
 with `vercel env` or the dashboard, then redeploy: a running deployment keeps the
 values it was built with. Never paste values into chat or this file.
 
 | Variable                   | Value                                                                                                                                                                                                                                                                                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`             | `<NEON_PROD_POOLED>` URL from Step 2 (**pooled**). Migrations do not use it; `deploy-prod.yml` migrates over `DATABASE_URL_DIRECT` (Step 9)                                                                                                                                                                                                                                            |
-| `DB_POOL_MAX`              | `3`. Caps each serverless instance's connections. (Render left it unset, which means postgres.js's default of 10)                                                                                                                                                                                                                                                                      |
+| `DB_POOL_MAX`              | `3`. Caps each serverless instance's connections. (Unset means postgres.js's default of 10)                                                                                                                                                                                                                                                                      |
 | `CLERK_SECRET_KEY`         | prod `sk_live_*` from Step 1 (must match the web project's `CLERK_SECRET_KEY`)                                                                                                                                                                                                                                                                                                         |
 | `CLERK_PUBLISHABLE_KEY`    | prod `pk_live_*` from Step 1                                                                                                                                                                                                                                                                                                                                                           |
 | `ALLOWED_ORIGIN`           | `https://concertcrawl.app`                                                                                                                                                                                                                                                                                                                                                             |
@@ -286,7 +282,7 @@ values it was built with. Never paste values into chat or this file.
 | `CRON_SECRET`              | **Hugh sets it, never through chat** (set on production and staging since 2026-10-30). A random string of 32+ characters (`openssl rand -hex 32` into a file), production and staging. Vercel Cron sends it as a bearer token, and it arms `/v1/internal/cron/*`, the daily crawl's included. Unset → those routes return 404 and the daily crawl waits for the GitHub backup schedule |
 | `CRAWLER_DISPATCH_TOKEN`   | Fine-grained GitHub token, this repository only, **Actions: read and write** (write includes read). It dispatches `crawler-triggers.yml` and `crawler-daily.yml`, and lists `crawler-daily.yml` runs so the daily cron can skip a day that already has one. Unset → admin crawls wait for the next daily run, and the daily cron answers 503                                           |
 | `CRAWLER_DISPATCH_REPO`    | Optional. Unset → the default, `featherweight-design/concert-crawl`. Set it only to dispatch to another repository                                                                                                                                                                                                                                                                     |
-| `EMAIL_UNSUBSCRIBE_SECRET` | **Same value as on Render** (the spotify-weekly service). Unsubscribe links already sent are signed with it, so a new value would break them                                                                                                                                                                                                                                           |
+| `EMAIL_UNSUBSCRIBE_SECRET` | **Never change it casually.** Unsubscribe links already sent are signed with it, so a new value would break them                                                                                                                                                                                                                                           |
 | `API_PUBLIC_URL`           | `https://api.concertcrawl.app`. Unsubscribe links in emails point at it                                                                                                                                                                                                                                                                                                                |
 | `NATIVE_DIGEST_ENABLED`    | Optional, copied from the spotify-weekly service. `1` digests every follower, not just Spotify ones                                                                                                                                                                                                                                                                                    |
 | `SPOTIFY_SYNC_DRY_RUN`     | Optional, copied from the spotify-weekly service. `1` makes a log-only cycle (no writes, no emails)                                                                                                                                                                                                                                                                                    |
@@ -300,9 +296,7 @@ would allow these once-a-day schedules too, but anywhere in the hour). Cron Jobs
 were **disabled** on the project at first, because Vercel counted the first
 staging deploy as production and registered them against it; they were
 re-enabled after the first prod deploy (enabled on 2026-11-01, when this was
-last checked). If they are ever re-enabled after a pause, suspend the Render
-crons `concert-crawl-match-artists` and `concert-crawl-spotify-weekly` in the
-same sitting, so neither job runs twice or not at all. `prod-deploy-health.yml`
+last checked). `prod-deploy-health.yml`
 alerts while they are disabled.
 
 The `crawler-daily` route starts the daily venue crawl, because GitHub's own
@@ -330,72 +324,11 @@ the staging custom-environment domain, it needed no exception.
 rather than creating a new one: editing the URL keeps its signing secret, so
 `STRIPE_WEBHOOK_SECRET` does not change.
 
-### concert-crawl-api (prod) — Render, suspended fallback
+### Crawler (prod) — GitHub Actions
 
-At the prod cutover this service is **suspended, not deleted**, and kept for a
-7-day watch. Deleting it needs Hugh's OK. Its env vars stay as they were, so it
-can be resumed as a rollback target; see "Falling back to Render" below. Its env vars (Render dashboard → **Environment**)
-are the table above, minus `DB_POOL_MAX` (unset, default 10) and `CRON_SECRET`
-(unset, so `/v1/internal/cron/*` returns 404), plus
-`NPM_CONFIG_PREFIX=/opt/render/.npm-global`, without which the build's
-`npm install -g pnpm` fails with EROFS. `API_PUBLIC_URL`,
-`EMAIL_UNSUBSCRIBE_SECRET` and the optional digest flags were on the
-spotify-weekly cron service, not on this one.
+> The prod crawler runs on GitHub Actions and reads its env from the `production` GitHub environment; see `docs/runbooks/crawler-github-actions.md`. The API needs `CRAWLER_DISPATCH_TOKEN` (a fine-grained GitHub token with Actions: write on this repo, which includes the read that lists runs) on the Vercel `concert-crawl-api` project, production and staging; it dispatches admin-queued crawls and, from the production Cron Job, the daily crawl.
 
-#### Falling back to Render
-
-For when Vercel itself is the problem, or the API has no Vercel deployment to
-roll back to (the first production deploy). Only possible while the Render
-services still exist (the 7-day watch). Every consumer of the API moves back,
-in one sitting:
-
-1. **API.** Resume `concert-crawl-api` on Render and redeploy it from `main`
-   (Builds tab → Manual Deploy). Its build runs `pnpm db:migrate`; prod is
-   already migrated, so that is a no-op unless `main` has newer migrations.
-   Wait for `https://concert-crawl-api.onrender.com/v1/health` to return 200.
-2. **Crons.** Resume `concert-crawl-match-artists` and
-   `concert-crawl-spotify-weekly` on Render, and in the same sitting turn off
-   Cron Jobs on the Vercel `concert-crawl-api` project (Settings → Cron Jobs),
-   so neither job runs twice.
-3. **Stripe.** Edit the live webhook endpoint's URL back to
-   `https://concert-crawl-api.onrender.com/v1/webhooks/stripe`. Editing keeps
-   its signing secret, which Render's `STRIPE_WEBHOOK_SECRET` already matches.
-   Send a test event.
-4. **Web.** Set the web prod project's `NEXT_PUBLIC_API_URL` back to
-   `https://concert-crawl-api.onrender.com` and redeploy web from the Vercel
-   dashboard (Redeploy, cache off). Not through Deploy to Production: that
-   workflow now deploys the API to Vercel. The service worker accepts both
-   origins.
-5. **GitHub.** Set the repository variable `PROD_API_URL` back to
-   `https://concert-crawl-api.onrender.com`.
-6. **Pipeline.** Revert the PR that moved `deploy-prod.yml`,
-   `prod-deploy-health.yml`, `prod-drift-alert.yml`, `rollback-prod.yml` and
-   `prod-smoke-after-deploy.yml` to Vercel, which restores the Render
-   versions. Until that merges, do not dispatch Deploy to Production, and
-   expect the deploy-health and drift monitors to report that they could not
-   run.
-
-Emails sent while prod was on Vercel carry unsubscribe links on
-`api.concertcrawl.app`; they work again once the Vercel API is back.
-
-The `concert-crawl-match-artists` and `concert-crawl-spotify-weekly` Render crons
-are suspended the same way; their env vars are listed in `render.yaml`.
-
-> **Render build commands (the suspended fallbacks only).** Both Render API services, prod `concert-crawl-api` and `concert-crawl-api-staging`, build with:
->
-> ```
-> npm install -g pnpm && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api
-> ```
->
-> So resuming and redeploying either one migrates its database. On Vercel there is no migration in the build: `deploy-prod.yml` and `deploy-api-staging.yml` run `pnpm db:migrate` over the direct URL before deploying. (An earlier version of this note said the prod build skipped `pnpm db:migrate`; `render.yaml` and `render-service-config.md` record that it runs it.)
->
-> On some Node versions Render serves Node from a read-only `/usr/lib` that already holds a pnpm, and `npm install -g pnpm` then fails with `EROFS: read-only file system`. Every Node service therefore sets `NPM_CONFIG_PREFIX=/opt/render/.npm-global`, which moves npm's global prefix somewhere writable. Set it when creating any Node service. See `render-service-config.md` → "`NPM_CONFIG_PREFIX` keeps `npm install -g pnpm` working". (An earlier version of this note recommended swapping in `corepack enable`; the live build commands never changed, and on 2026-10-27 the env var was the fix that shipped.)
-
-### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
-
-> **Suspended since the crawler cutover (Render exit step 2).** The prod crawler runs on GitHub Actions and reads its env from the `production` GitHub environment; see `docs/runbooks/crawler-github-actions.md`. This section is kept for the fallback during the 7-day watch. The API needs `CRAWLER_DISPATCH_TOKEN` (a fine-grained GitHub token with Actions: write on this repo, which includes the read that lists runs) on the Vercel `concert-crawl-api` project, production and staging; it dispatches admin-queued crawls and, from the production Cron Job, the daily crawl.
-
-Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:24.22.1-bookworm` + `playwright install-deps chromium` as root, then `playwright install chromium` as `pwuser` (no MCR dependency — see issue #547 / PR #591 for context). The two halves are split so that root is used only for the apt packages and everything writing into `/app` or the browsers path runs as `pwuser`, which is what lets the image skip a recursive `chown`; `apps/crawler/scripts/verify-image.sh` guards that.
+The crawler's env var set is below. The Dockerfile (`apps/crawler/Dockerfile`) is `node:24.22.1-bookworm` + `playwright install-deps chromium` as root, then `playwright install chromium` as `pwuser` (no MCR dependency — see issue #547 / PR #591 for context). The two halves are split so that root is used only for the apt packages and everything writing into `/app` or the browsers path runs as `pwuser`, which is what lets the image skip a recursive `chown`; `apps/crawler/scripts/verify-image.sh` guards that.
 
 | Variable             | Value                                             |
 | -------------------- | ------------------------------------------------- |
@@ -411,11 +344,11 @@ Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/
 | `SENTRY_ENVIRONMENT` | `production`                                      |
 | `LOG_LEVEL`          | `info`                                            |
 
-> **MCR rate-limit gotcha.** The crawler base image was previously `mcr.microsoft.com/playwright`, which Microsoft anonymously rate-limits at 200 req/6h per IP. This regularly throttled Render's build pool and broke all-cron rebuilds. The current Dockerfile sidesteps MCR entirely (PR #591). If a future Playwright bump tempts you back to MCR, don't — chase down a non-MCR mirror first.
+> **MCR rate-limit gotcha.** The crawler base image was previously `mcr.microsoft.com/playwright`, which Microsoft anonymously rate-limits at 200 req/6h per IP. This regularly throttled shared build pools and broke crawler rebuilds. The current Dockerfile sidesteps MCR entirely (PR #591). If a future Playwright bump tempts you back to MCR, don't — chase down a non-MCR mirror first.
 
-### Staging API + crawler crons
+### Staging API + crawler
 
-The staging API runs on Vercel since 2026-10-30; its env vars are described in `docs/runbooks/staging-environment.md`. For the Render fallbacks, use the same variable set on `concert-crawl-api-staging`, `concert-crawl-crawler-triggers-staging`, `concert-crawl-crawler-daily-staging`, but with:
+The staging API runs on Vercel since 2026-10-30; its env vars are described in `docs/runbooks/staging-environment.md`. The staging crawler reads the `staging` GitHub environment, with the same variable set as prod but:
 
 - **Staging Clerk keys** (`pk_live_*` / `sk_live_*` from the Concert Crawl Staging app — different app, different keys)
 - `NEON_STAGING_POOLED` as the `DATABASE_URL`
@@ -449,7 +382,7 @@ crawler's copy too.** Details: `docs/runbooks/crawler-github-actions.md`.
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN`   | Staging Sentry project DSN                                                |
 
-The staging API deploys from `deploy-api-staging.yml` to Vercel on API pushes to `main` (see `docs/runbooks/staging-environment.md`); Render's `concert-crawl-api-staging` is a fallback with auto-deploy off. **Prod does not** auto-deploy — Git deployments are off on both prod Vercel projects, the crawler crons have `Auto-Deploy: no`, and prod is promoted only by dispatching `deploy-prod.yml`; see `docs/runbooks/auto-deploy-prod.md`. `staging-smoke.yml` and `staging-e2e.yml` wait for that workflow's run with `GITHUB_TOKEN` (`gha-wait-for-workflow.sh`) and no longer read the repo-level `RENDER_API_TOKEN`. The same token exists separately in the `production` GH environment for prod workflows (`deploy-prod.yml`, `prod-smoke-after-deploy.yml`, `rollback-prod.yml`, `prod-deploy-health.yml`, `prod-drift-alert.yml`) — see those tables for prod usage. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
+The staging API deploys from `deploy-api-staging.yml` to Vercel on API pushes to `main` (see `docs/runbooks/staging-environment.md`). **Prod does not** auto-deploy — Git deployments are off on both prod Vercel projects, and prod is promoted only by dispatching `deploy-prod.yml`; see `docs/runbooks/auto-deploy-prod.md`. `staging-smoke.yml` and `staging-e2e.yml` wait for that workflow's run with `GITHUB_TOKEN` (`gha-wait-for-workflow.sh`). Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
 
 ### `staging` environment — Variables
 
@@ -464,12 +397,9 @@ The staging API deploys from `deploy-api-staging.yml` to Vercel on API pushes to
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`        | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                                                                                                                                                                         |
 | `SENTRY_DSN`          | Crawler project DSN from Step 5                                                                                                                                                                                                                                                                                                                                        |
-| `RENDER_API_TOKEN`    | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. From the prod cutover it covers only the two crawler crons: `deploy-prod.yml` triggers their deploys with it, and `prod-smoke-after-deploy.yml`, `rollback-prod.yml` and `prod-deploy-health.yml` use it for their crawler steps. `prod-drift-alert.yml` no longer reads it. |
 | `DATABASE_URL_DIRECT` | **New at the prod cutover.** The prod Neon branch's **direct** connection string (no `-pooler` in the host). `deploy-prod.yml` runs `pnpm db:migrate` with it before the API deploy, and refuses a `-pooler` host.                                                                                                                                                     |
 | `VERCEL_TOKEN`        | Vercel → Account Settings → Tokens. Already there for the web promotion. From the prod cutover it also deploys, rolls back and reads the API project, so it must have access to the **featherweight-design** team. Consumed by `deploy-prod.yml`, `rollback-prod.yml`, `prod-smoke-after-deploy.yml`, `prod-deploy-health.yml` and `prod-drift-alert.yml`.             |
 | `RESEND_API_KEY`      | Same Resend API key the API + crawler runtime use. Consumed by `prod-smoke-after-deploy.yml` and `deploy-prod.yml` (Notify-admin step on auto-rollback). Optional — if missing, the workflow gracefully degrades to a `::warning::` annotation; primary failure signal still goes out via the GHA workflow-failure email.                                              |
-
-No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workflow uses the Render API with `RENDER_API_TOKEN` + the service IDs in the variables table below.
 
 `DATABASE_URL` above is not what migrates prod; `DATABASE_URL_DIRECT` is.
 
@@ -479,14 +409,9 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                                                                              |
 | `LOG_LEVEL`                          | `info`                                                                                                                                                                                                                                                                    |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Unused since the crawler cutover; deleted with the suspended service.                                                                                                                                                    |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same.                                                                                                                                                                                                                       |
 | `VERCEL_ORG_ID`                      | The featherweight-design Team ID (`team_*`). Already present for the web promotion; shared by the web and API projects.                                                                                                                                                   |
 | `VERCEL_PROJECT_ID`                  | The **web** prod project `concert-crawl` (`prj_*`). Already present.                                                                                                                                                                                                      |
 | `VERCEL_PROJECT_ID_API`              | **New at the prod cutover.** `prj_akzBWiGHyaLqECpGOGWSoWr6E7C0`, the `concert-crawl-api` project (the same project staging uses). Consumed by `deploy-prod.yml`, `rollback-prod.yml`, `prod-smoke-after-deploy.yml`, `prod-deploy-health.yml` and `prod-drift-alert.yml`. |
-| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID (`srv-...`). **Unused from the prod cutover**: no workflow reads it once the API is on Vercel. Deleted in the removal PR with the suspended service, after the 7-day watch and Hugh's OK.                                       |
-| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | Service ID for `concert-crawl-match-artists`. **Unused from the prod cutover**; deleted with the service, as above.                                                                                                                                                       |
-| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | Service ID for `concert-crawl-spotify-weekly`. **Unused from the prod cutover**; deleted with the service, as above.                                                                                                                                                      |
 
 > Note: `ADMIN_EMAIL` is at the **repo level** in current operational state (see the Repository-level variables table below) and is consumed by `vars.ADMIN_EMAIL` from workflows scoped to `environment: production`. Hugh — if you want to scope it to the `production` environment instead for tighter PII exposure, move the value via Settings → Environments → production → Variables and delete the repo-level entry; all four prod-touching workflows already declare `environment: production` so they'll resolve it from the env scope. Strictly an operator hygiene change; not blocking.
 
@@ -499,7 +424,6 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | `E2E_TEST_USER_EMAIL`    | Email of the test Clerk user (staging instance) for staging E2E runs                                                                                                                                                                            |
 | `E2E_TEST_USER_PASSWORD` | Password of the test Clerk user for staging E2E runs                                                                                                                                                                                            |
 | `ANTHROPIC_API_KEY`      | Pre-provisioned for future crawler GHA jobs                                                                                                                                                                                                     |
-| `RENDER_API_TOKEN`       | Render → Account Settings → **API Keys** → same token as the production-env one (re-stored at repo level for workflows not scoped to the `production` environment; `staging-smoke.yml` and `staging-e2e.yml` stopped reading it on 2026-10-30). |
 
 ### Repository-level variables (Settings → Variables → Actions)
 
@@ -507,13 +431,12 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the deploy pipeline uses separate kill switches.                                                                                                                                                                                         |
 | `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml`. See `docs/runbooks/auto-deploy-prod.md`.                                                                                                                                                                                                                                              |
-| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to arm `deploy-prod.yml`, the **only automated** path to production. While it is `false` no promotion can run; a Render dashboard Manual Deploy, a manual Vercel redeploy, and `rollback-prod.yml` still reach prod by design. Counter-intuitive name, kept for continuity. See `docs/runbooks/auto-deploy-prod.md`. |
+| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to arm `deploy-prod.yml`, the **only automated** path to production. While it is `false` no promotion can run; a manual Vercel redeploy and `rollback-prod.yml` still reach prod by design. Counter-intuitive name, kept for continuity. See `docs/runbooks/auto-deploy-prod.md`. |
 | `PROD_SMOKE_RECONCILER_ENABLED` | Vestigial. `prod-smoke-after-deploy.yml` is `workflow_dispatch`-only and every dispatch satisfies its job `if:`, so this switch gates nothing today. Kept so re-arming the workflow on push or schedule has a switch ready.                                                                                                                            |
 | `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                                                                                                                                                                                                             |
-| `PROD_API_URL`                  | `https://api.concertcrawl.app` from the prod cutover (it was `https://concert-crawl-api.onrender.com`). The Vercel scripts resolve its hostname to find the deployment prod serves, so it must be the custom domain.                                                                                                                                   |
+| `PROD_API_URL`                  | `https://api.concertcrawl.app`. The Vercel scripts resolve its hostname to find the deployment prod serves, so it must be the custom domain.                                                                                                                                   |
 | `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                                                                                                                                                                                     |
 | `STAGING_API_URL`               | `https://api-staging.concertcrawl.app` (Vercel, since 2026-10-30). Consumed by `staging-smoke.yml` and the health check in `deploy-api-staging.yml`.                                                                                                                                                                                                   |
-| `RENDER_SERVICE_ID_API_STAGING` | Render → `concert-crawl-api-staging` → service ID from the dashboard URL (`srv-...`). No longer read by any workflow since the staging API moved to Vercel (2026-10-30); remove it with the Render staging service.                                                                                                                                    |
 | `ADMIN_EMAIL`                   | Pre-provisioned                                                                                                                                                                                                                                                                                                                                        |
 
 ---
@@ -556,7 +479,7 @@ These must be in place before any traffic reaches production.
 
 ### Trigger deploys
 
-Normal path: dispatch **Deploy to Production** (`deploy-prod.yml`) with a reason. It triggers the two Render crawler deploys right after its main-HEAD check, migrates the prod database, deploys the API to Vercel production and checks `/v1/health`, promotes the Vercel web build, then smokes prod. See `docs/runbooks/auto-deploy-prod.md`.
+Normal path: dispatch **Deploy to Production** (`deploy-prod.yml`) with a reason. It migrates the prod database, deploys the API to Vercel production and checks `/v1/health`, promotes the Vercel web build, then smokes prod. See `docs/runbooks/auto-deploy-prod.md`.
 
 The manual controls below are for first-time setup, env var changes, and recovery:
 
@@ -609,7 +532,7 @@ and every mutating route guards itself. The var is inert once that deploy lands
 stale config behind:
 
 1. Confirm the #794 API deploy is live on `concert-crawl-api`
-2. Delete `REQUIRE_BETA_AUTH` wherever it is set: the Vercel `concert-crawl-api` production environment (if the cutover copied it) and the Render `concert-crawl-api` service → **Environment**
+2. Delete `REQUIRE_BETA_AUTH` wherever it is set: the Vercel `concert-crawl-api` production environment (if the cutover copied it)
 3. No redeploy needed — nothing reads the var. Skip the manual deploy.
 4. Verify `/v1/events`, `/v1/venues`, `/v1/search` answer 200 without a Clerk token
 
@@ -630,7 +553,7 @@ Smoke tests run on a schedule but are gated by `SMOKE_ENABLED`. Enable only at p
 If a deploy breaks production:
 
 - **Web (Vercel):** Deployments tab → click any previous deploy → **Instant Rollback** (older UIs say **Promote to Production**). No rebuild.
-- **API (Vercel):** dispatch **Rollback Production (manual)** (`rollback-prod.yml`), which runs `vercel rollback` on `concert-crawl-api`, or use Instant Rollback in that project's dashboard. This also rolls back match-artists and spotify-weekly, which run inside the API. After a rollback the project stops giving new production deployments the domain until one is promoted; `deploy-prod.yml` does that promote itself. If Vercel itself is the problem, fall back to the suspended Render services (during the 7-day watch); see "Falling back to Render" in Step 8.
+- **API (Vercel):** dispatch **Rollback Production (manual)** (`rollback-prod.yml`), which runs `vercel rollback` on `concert-crawl-api`, or use Instant Rollback in that project's dashboard. This also rolls back match-artists and spotify-weekly, which run inside the API. After a rollback the project stops giving new production deployments the domain until one is promoted; `deploy-prod.yml` does that promote itself.
 - **Crawler (GitHub Actions):** follows the API. It runs the commit the production API serves, so rolling the API back rolls the crawler back on its next run.
 - **DB:** see `docs/runbooks/db-rollback.md`.
 
@@ -645,8 +568,8 @@ These are gotchas the 2026-06-15 migration uncovered. Skim before any prod-touch
 When rotating Clerk keys or migrating between Clerk instances, **every service that validates JWTs** must be updated in one sweep:
 
 - Vercel web project (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY`)
-- Render API service (`CLERK_SECRET_KEY` + `CLERK_PUBLISHABLE_KEY`)
-- Crawler crons do NOT validate JWTs (they're backend-only); skip
+- Vercel API project `concert-crawl-api` (`CLERK_SECRET_KEY` + `CLERK_PUBLISHABLE_KEY`)
+- The crawler does NOT validate JWTs (they're backend-only); skip
 - Any future GitHub Actions or other service consuming Clerk tokens
 
 Decode the active `pk` on the prod web to confirm which Clerk instance is in play:
@@ -699,7 +622,7 @@ A 403 on the second call means a persistent action is live again. A firewall den
 
 **Other settings, and why they are where they are:**
 
-- **Bot Protection and Attack Mode stay off.** Both challenge non-browser clients, which would break the Render cron's machine-to-machine `POST /api/revalidate` and threaten the hourly Playwright prod smoke tests.
+- **Bot Protection and Attack Mode stay off.** Both challenge non-browser clients, which would break the crawler's machine-to-machine `POST /api/revalidate` and threaten the hourly Playwright prod smoke tests.
 - **AI Bots is on Allow, deliberately.** Blocking saves little while the site is invite-gated, and being the answer when someone asks an assistant what's on in Denver is the point of the product. If a finer line is ever wanted, `apps/web/src/app/robots.ts` can name specific agents rather than using Vercel's single lump toggle.
 - **OWASP managed rules:** as read from the live config on 2026-09-19, `gen`, `rce`, `xss` and `sqli` are `active: true` with `action: "log"`, so they record and deny nothing; the other seven are inactive. Log mode is clearly available on this plan. Whether promoting one to **Deny** is also available is unverified — the dashboard has previously shown managed rules as a "Contact Sales" item, so check there before planning around it.
 
@@ -775,13 +698,9 @@ If the toggle ever silently re-enables itself, reintroduce a `vercel.json` with 
 
 If you ever need to re-enable previews on one project but not the other (e.g. staging previews back on for QA), use the per-project Branch Tracking toggle — there's nothing to coordinate in the repo.
 
-### Render manual deploy is under the Builds tab
-
-Not Settings, not Events. For services where `autoDeploy: no`, the **Builds tab → Manual Deploy** button is the only UI path. Don't reach for env-var-nudge workarounds.
-
 ### MCR rate limits will return
 
-`mcr.microsoft.com/playwright:*` has anonymous-pull rate limits that throttle Render's build pool. The current crawler Dockerfile (PR #591) avoids MCR entirely. If you find yourself adding `FROM mcr.microsoft.com/...` to any new image, stop and use a non-MCR alternative.
+`mcr.microsoft.com/playwright:*` has anonymous-pull rate limits that throttle shared build pools. The current crawler Dockerfile (PR #591) avoids MCR entirely. If you find yourself adding `FROM mcr.microsoft.com/...` to any new image, stop and use a non-MCR alternative.
 
 ### Pre-existing follow-up issues from the migration
 
@@ -793,6 +712,6 @@ Not Settings, not Events. For services where `autoDeploy: no`, the **Builds tab 
 ## Notes
 
 - Keep all `sk_live_*` keys out of git — dashboards and GitHub secrets only
-- `NEXT_PUBLIC_APP_VERSION` is set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. The version prefix bumps automatically via `semantic-release`. SHA fallback chain is Render-only today — see Step 6's note and issue #595
+- `NEXT_PUBLIC_APP_VERSION` is set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. The version prefix bumps automatically via `semantic-release`. The SHA comes from `VERCEL_GIT_COMMIT_SHA`
 - After a Clerk role change, the user must sign out and back in before the API sees the new role (JWT reissue)
-- The four crawler cron jobs (2 prod + 2 staging) all share the same Dockerfile (`apps/crawler/Dockerfile`); changes apply to all when the image is rebuilt
+- The crawler's prod and staging runs share the same Dockerfile (`apps/crawler/Dockerfile`)

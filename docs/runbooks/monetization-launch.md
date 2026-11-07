@@ -55,7 +55,7 @@ infra)** are human-owned and cannot be done by an agent.
 ### Payments — Stripe LIVE mode
 
 - [ ] **(Hugh / infra)** LIVE Stripe keys placed on the **prod** API service
-      (`concert-crawl-api`, Render): `STRIPE_SECRET_KEY` (`sk_live_*`) and
+      (Vercel project `concert-crawl-api`, production): `STRIPE_SECRET_KEY` (`sk_live_*`) and
       `STRIPE_WEBHOOK_SECRET` (`whsec_*` for the live-mode endpoint). As of the Phase 5
       handoff the prod API had **no** Stripe vars — staging ran the whole epic in sandbox
       (test mode). Placing live keys is the notify-and-proceed cutover.
@@ -82,8 +82,8 @@ infra)** are human-owned and cannot be done by an agent.
       billing email lands in spam or bounces.
 - [ ] **(Hugh)** Cross-client render check passed (Gmail / Apple Mail / Outlook web, via
       Litmus or test inboxes) on all 10 transactional templates.
-- [ ] **(Hugh / infra)** The **`concert-crawl-billing-jobs`** Render cron is deployed on
-      prod **and has been test-run at least once** — see
+- [ ] **(Hugh / infra)** The billing-daily job has a production scheduler (#23) **and has
+      been test-run at least once** — see
       [Deploy and test the billing-jobs cron](#deploy-and-test-the-billing-jobs-cron) for
       the full walkthrough. Schedule `0 15 * * *` (9 AM MDT / 8 AM MST), start command
       `node apps/api/dist/jobs/billing-daily.js`, env `DATABASE_URL` / `STRIPE_SECRET_KEY` /
@@ -148,50 +148,29 @@ harmlessly long before the founder window opens. Its real work only matters once
 subscriptions exist, so the hard requirement is simply "deployed and verified once before
 launch."
 
-> Both services (`concert-crawl-billing-jobs`, `concert-crawl-billing-jobs-staging`) are
-> already declared in `render.yaml`. **But `render.yaml` is not blueprint-synced to live
-> Render** (the live API `buildCommand` has drifted from the file), so the cron must be
-> **created manually** in the Render dashboard/API to match the blueprint — it will not
-> appear on its own.
-
-### Create the service (Render)
-
-Mirror the existing crawler crons. Type **Cron Job**, runtime **Node**, region **Oregon**,
-plan **Starter**, branch `main`. Auto-deploy **off** on the prod service and **on** for
-`-staging`, matching the production promotion gate — prod deploys only through
-`deploy-prod.yml`.
-
-If this cron is created, its service ID has to be added in several places — each prod
-workflow hard-codes the current five services rather than discovering them:
-
-- a `production` environment variable (`RENDER_SERVICE_ID_BILLING_JOBS`, say)
-- `deploy-prod.yml` — so a promotion deploys it
-- `prod-smoke-after-deploy.yml` and `rollback-prod.yml` — so a rollback covers it
-- `prod-deploy-health.yml` and `prod-drift-alert.yml` — so a stale or suspended billing
-  cron is reported
-
-Skipping any of those leaves the cron outside that workflow's coverage silently. See
-`docs/runbooks/auto-deploy-prod.md`.
+> This job was designed to run as the Render cron `concert-crawl-billing-jobs` (plus
+> `-staging`). Render was retired on 2026-11-07, so it has **no scheduler in either
+> environment** until #23 picks one. Whatever runs it needs the settings below. If the
+> scheduler is a new service, add it to the prod workflows (`deploy-prod.yml`,
+> `rollback-prod.yml`, `prod-deploy-health.yml`) so promotion, rollback and health
+> checks cover it; see `docs/runbooks/auto-deploy-prod.md`.
 
 | Setting       | Value                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Schedule      | `0 15 * * *` — 15:00 UTC = 9 AM MDT / 8 AM MST. We deliberately **do not** chase DST; the exact send hour isn't load-bearing. If 9 AM local ever becomes a hard rule, switch to `0 16 * * *` for MST months. |
-| Build command | `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api`                                                                                                      |
 | Start command | `node apps/api/dist/jobs/billing-daily.js` — the **compiled** artifact from the same build as the API. Not `tsx src/…` (no `tsx` at runtime).                                                                |
 
-Env vars (all entered manually — `sync: false`; prod = **live** values, staging =
-**sandbox**):
+Env vars (prod = **live** values, staging = **sandbox**):
 
 | Key                  | Prod value                                                                                                                                         |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NODE_ENV`           | `production`                                                                                                                                       |
-| `NPM_CONFIG_PREFIX`  | `/opt/render/.npm-global` (staging: same). Without it the build's `npm install -g pnpm` fails with EROFS; see `render-service-config.md`          |
 | `DATABASE_URL`       | Neon prod branch direct connection string                                                                                                          |
 | `STRIPE_SECRET_KEY`  | live `sk_live_*` (staging: sandbox key)                                                                                                            |
 | `RESEND_API_KEY`     | Resend key                                                                                                                                         |
 | `CLERK_SECRET_KEY`   | Clerk prod secret (staging: staging secret)                                                                                                        |
 | `SENTRY_DSN`         | API Sentry DSN                                                                                                                                     |
-| `SENTRY_ENVIRONMENT` | `production` (staging: `staging`) — must differ per env so Sentry issues are attributed correctly; don't copy the prod value into the staging cron |
+| `SENTRY_ENVIRONMENT` | `production` (staging: `staging`) — must differ per env so Sentry issues are attributed correctly; don't copy the prod value into staging |
 | `LOG_LEVEL`          | `info`                                                                                                                                             |
 
 ### Test it before go-live
@@ -221,15 +200,14 @@ Each task logs `starting task` → `task complete` (or a per-row error it contin
 On empty staging data it finishes in seconds having sent nothing and exits `0`. Exit `1`
 means a catastrophic (setup) failure — a single failing sub-task never fails the run.
 
-**2 — Render "Trigger Run" (truest test).** Once the staging cron service exists, use the
-Render dashboard's manual **Trigger Run** on `concert-crawl-billing-jobs-staging` and read
-the run logs. This exercises the exact deploy artifact, env, and runtime prod will use —
+**2 — A scheduler-triggered run (truest test).** Once the staging scheduler exists (#23),
+trigger one run through it and read the run logs. This exercises the exact deploy artifact, env, and runtime prod will use —
 the highest-fidelity pre-launch check.
 
 **3 — Seed a positive case (proves a real send path).** To confirm more than the empty
 no-op, seed staging with a subscription whose card expires in ~6 days (triggers
 `card_expiring_soon`, 7-day window) or a gift expiring within 7 days (triggers
-`gifting_ending_notice`), then Trigger Run and confirm: the email lands, a row appears in
+`gifting_ending_notice`), then trigger a run and confirm: the email lands, a row appears in
 `email_send_log`, and a **re-run sends nothing** (dedupe holds). That round-trip validates
 the send pipeline, the dedupe guard, and idempotency in one pass.
 
@@ -384,7 +362,7 @@ RETURNING id, opens_at, seats_remaining, seats_total;
 
 ## Prod DB access
 
-Staging and prod run on **Neon** (not Render Postgres — the Render MCP cannot query them).
+Staging and prod run on **Neon**.
 Use the direct (non-pooled) connection string. On this machine `psql "$NEON_PROD_DIRECT"`
 fails with channel-binding + SNI errors; the fix is to replace
 `channel_binding=require` → `prefer` **and** append

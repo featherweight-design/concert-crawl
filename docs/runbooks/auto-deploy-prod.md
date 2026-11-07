@@ -8,21 +8,14 @@ and for emergency hotfixes alike.
 
 Two repo configurations gate the pipeline; see the "Enabling the pipeline" section below.
 
-**This page describes prod after the Render exit's prod cutover.** From the
-cutover, the prod API runs on Vercel (project `concert-crawl-api`, production,
-`https://api.concertcrawl.app`), and match-artists and spotify-weekly run as
-Vercel Cron Jobs inside it. **From the crawler cutover (Render exit step 2)
-nothing in prod deploys to Render:** the crawler runs on GitHub Actions
-(`crawler-daily.yml`, `crawler-triggers.yml`) at the commit the production API
-serves, so it ships and rolls back with the API with no step of its own. See
-`docs/runbooks/crawler-github-actions.md`. Passages below that still describe
-the Render crawler crons are the pre-cutover record; the two services are
-suspended, not deleted, for a 7-day watch. The PR that changed `deploy-prod.yml` merges before the cutover, so
-between the two, a dispatch would already deploy to Vercel. Do not dispatch in
-that window except as part of the cutover itself. The prod Render services
-`concert-crawl-api`, `concert-crawl-match-artists` and
-`concert-crawl-spotify-weekly` are suspended at the cutover; see
-`docs/runbooks/render-service-config.md`.
+**This page describes prod after the Render exit.** The prod API runs on
+Vercel (project `concert-crawl-api`, production, `https://api.concertcrawl.app`),
+and match-artists and spotify-weekly run as Vercel Cron Jobs inside it. The
+crawler runs on GitHub Actions (`crawler-daily.yml`, `crawler-triggers.yml`) at
+the commit the production API serves, so it ships and rolls back with the API
+with no step of its own. See `docs/runbooks/crawler-github-actions.md`. Render
+was retired on 2026-11-07, when every Render service was deleted; passages below
+that mention Render are the pre-exit record.
 
 ## Pipeline overview
 
@@ -171,8 +164,7 @@ Drizzle migrations run as the `Migrate prod DB` step of `deploy-prod.yml`:
 (non-pooler) URL. The preflight refuses a `-pooler` host. The step runs after
 the rollback target is recorded and before `vercel deploy --prod`, because
 Vercel builds have no database access. (Until the prod cutover they ran inside
-`concert-crawl-api`'s Render `buildCommand`; that build now only runs if the
-suspended Render API is resumed and redeployed.) A merge to `main` runs
+the Render API's build.) A merge to `main` runs
 migrations on **staging** and nowhere else, so prod's schema legitimately lags
 `main` between promotions.
 
@@ -184,10 +176,6 @@ Consequences worth stating plainly:
   needs `docs/runbooks/db-rollback.md`, not a code rollback.
 - **A code rollback does not roll the schema back.** `vercel rollback` and
   `rollback-prod.yml` move code only. Expand/contract is what makes that safe.
-- **Resuming and redeploying the suspended Render API changes the prod
-  schema.** Its build still runs `pnpm db:migrate`, and it is not gated by
-  `AUTO_DEPLOY_PROD_ENABLED`. Treat it as a schema change and read the pending
-  migrations first.
 - **The lag is safe for expand migrations, not for contract ones.** The
   expand/contract policy in `CLAUDE.md` means an additive migration ahead of the
   app is never a broken state. Contract migrations are the other half of the
@@ -222,10 +210,9 @@ needing one invented under pressure.
 
 ### Caveat on cron service rollback
 
-Since the crawler cutover no workflow runs `render-rollback.sh`: the API rolls
-back with `vercel rollback`, and the crawler follows the API's commit. The
-script is kept until the Render services are deleted. What it did, for the
-record:
+The API rolls back with `vercel rollback`, and the crawler follows the API's
+commit. The Render-era `render-rollback.sh` was deleted with Render. What it
+did, for the record:
 
 - `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls the service back to the prior `live` deploy. No prod `srv-*` service is rolled back by the workflows any more.
 - `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue.
@@ -296,9 +283,7 @@ the API back to it with `vercel rollback`:
 
 On the first production deploy there is nothing to record, so neither can roll
 back. The job warns about this and the rollback step fails with a message
-saying so. The fallback then is to fix forward, or to fall back to the
-suspended Render services: the full checklist is "Falling back to Render" in
-`docs/runbooks/production-launch.md` (Step 8).
+saying so. The fallback then is to fix forward.
 
 **After a rollback, the project is in a rollback state.** Vercel stops
 assigning the production domains to new production deployments until one is
@@ -361,7 +346,7 @@ slow staging deploy won't make the smoke pass against the old code.
 
 1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **Variables** tab → **New repository variable**
    - **Name:** `STAGING_API_URL`
-   - **Value:** `https://api-staging.concertcrawl.app` (the Vercel staging API since 2026-10-30; it was the onrender host before)
+   - **Value:** `https://api-staging.concertcrawl.app` (the Vercel staging API since 2026-10-30)
 2. Same screen, add **New repository variable**
    - **Name:** `STAGING_SMOKE_ENABLED`
    - **Value:** `true`
@@ -376,9 +361,9 @@ Render and Vercel dashboards rather than in this repo.
 
 These steps were written, and run, when all five prod services were on Render.
 They are kept as the record of how the gate was closed. Step 3 no longer
-matters: every prod Render service is suspended (the API and two crons at the
-prod cutover, the crawler crons at the crawler cutover), and the API's equivalent of step 4 is that the Vercel
-project `concert-crawl-api` has Git deployments off, the same as staging.
+applies: Render was retired on 2026-11-07. The API's equivalent of step 4 is
+that the Vercel project `concert-crawl-api` has Git deployments off, the same
+as staging.
 
 **The order matters.** Arming and rehearsing come before either kill switch, so
 that the first end-to-end dispatch runs while the old auto-deploy path is still
@@ -389,8 +374,7 @@ leaves no way to reach production except a hand-driven Render deploy.
    down this file, then set `AUTO_DEPLOY_PROD_ENABLED=true` in repo variables.
    Counter-intuitively this is the switch that **arms the promotion workflow** —
    with it `false`, `deploy-prod.yml` silently skips, so no promotion can run.
-   The manual controls below (Render Manual Deploy, Vercel Redeploy,
-   `rollback-prod.yml`) are deliberately not gated by it, so recovery stays
+   The manual controls below (Vercel Redeploy, `rollback-prod.yml`) are deliberately not gated by it, so recovery stays
    possible.
 2. **Rehearse the dispatch while auto-deploy is still on.** ⚠️ This is a real
    promotion, not a dry run — there is no dry-run mode. It triggers all five
@@ -446,8 +430,8 @@ leaves no way to reach production except a hand-driven Render deploy.
    `exit 0`.
 
 5. Confirm the gate holds by merging to `main` — but **the change has to touch
-   `apps/api/**` or one of the packages the staging API's `buildFilter` lists in
-   `render.yaml`.** A docs-only merge cannot verify this step: the filter skips
+   `apps/api/**` or one of the packages in `deploy-api-staging.yml`'s `paths`
+   filter.** A docs-only merge cannot verify this step: the filter skips
    it, so no staging API deploy is created, and `staging-e2e` then exits its
    wait at 124 and skips its suite rather than running it. Both would read as
    "the gate is holding" while having tested nothing. Then check that:
@@ -466,11 +450,7 @@ leaves no way to reach production except a hand-driven Render deploy.
 
    A docs-only merge is still worth watching for the two Vercel signals, which
    do not depend on the filter — it just cannot tell you anything about the
-   Render side or the staging suites.
-
-`render.yaml` records these values (`autoDeploy: false` on the five prod
-services) but does **not** apply them — it is descriptive, not a Blueprint.
-Change the dashboard and `render.yaml` in the same session.
+   staging API or the staging suites.
 
 ### Stage 3 — arm the standalone prod smoke workflow
 
@@ -511,49 +491,30 @@ prod without deploying, and watch it run install → smoke → green.
 | ------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `STAGING_URL`                   | staging-smoke                                                                             | already present — `https://staging.concertcrawl.app`                                                                                                                                                                                                                                   |
 | `STAGING_API_URL`               | staging-smoke                                                                             | `https://api-staging.concertcrawl.app` (Vercel since 2026-10-30)                                                                                                                                                                                                                       |
-| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke                                                                             | staging API service ID (e.g. `srv-abc123`). No longer read since 2026-10-30: staging-smoke waits for `deploy-api-staging.yml` with `GITHUB_TOKEN` instead.                                                                                                                             |
 | `PROD_URL`                      | deploy-prod (smoke job)                                                                   | already present                                                                                                                                                                                                                                                                        |
-| `PROD_API_URL`                  | deploy-prod, prod-deploy-health, prod-drift-alert, rollback-prod, prod-smoke-after-deploy | The prod API origin. Becomes `https://api.concertcrawl.app` at the prod cutover (it was `https://concert-crawl-api.onrender.com`). Its hostname is what the Vercel scripts resolve to find the deployment prod serves, so it must be the custom domain, not a `*.vercel.app` URL.      |
+| `PROD_API_URL`                  | deploy-prod, prod-deploy-health, prod-drift-alert, rollback-prod, prod-smoke-after-deploy | The prod API origin. `https://api.concertcrawl.app`. Its hostname is what the Vercel scripts resolve to find the deployment prod serves, so it must be the custom domain, not a `*.vercel.app` URL.      |
 | `STAGING_SMOKE_ENABLED`         | staging-smoke                                                                             | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                                                                                                    |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod                                                                               | must be `true` — it arms the promotion workflow, the only _automated_ path to prod. With it `false` the `gate` job silently skips, so no promotion can run; a Render dashboard Manual Deploy and `rollback-prod.yml` still reach prod by design. The name predates the promotion gate. |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod                                                                               | must be `true` — it arms the promotion workflow, the only _automated_ path to prod. With it `false` the `gate` job silently skips, so no promotion can run; `rollback-prod.yml` still reaches prod by design. The name predates the promotion gate. |
 | `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy                                                                   | vestigial — that workflow is `workflow_dispatch` only and every dispatch satisfies its `if:` regardless. Kept so re-arming it on a push or schedule trigger has a switch ready.                                                                                                        |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
 | Variable                             | Required by                                                                               | Notes                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------------------------ | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | (unused after the crawler cutover)                                                        | prod crawler triggers cron service ID (`crn-*`). No workflow reads it since the crawler moved to GitHub Actions. Deleted with the suspended service after the 7-day watch and Hugh's OK.                                                                                                                                                                   |
-| `RENDER_SERVICE_ID_CRAWLER_DAILY`    | (unused after the crawler cutover)                                                        | prod crawler daily cron service ID. Same.                                                                                                                                                                                                                                                                                                                  |
 | `VERCEL_ORG_ID`                      | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | The Vercel **Team ID** (`team_*`) of featherweight-design. Vercel renamed Org to Team in the dashboard but the CLI and API still call it `orgId`, so the dashboard offers no field with this name — read the Team ID from Vercel → Settings → General. Shared by the web and API projects.                                                                 |
 | `VERCEL_PROJECT_ID`                  | deploy-prod                                                                               | `prj_*`, from the **production** `concert-crawl` project → Settings → General. Taking it from `concert-crawl-staging` by mistake sends every promotion to the staging project instead: `--prod` aliases whichever project the id names, so the build lands on staging's domains and `concertcrawl.app` is never updated. The run reports green throughout. |
 | `VERCEL_PROJECT_ID_API`              | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | **new at the prod cutover.** `prj_akzBWiGHyaLqECpGOGWSoWr6E7C0`, the `concert-crawl-api` project. One project serves staging (a custom environment) and production, so this is the same id staging uses; `--prod` is what picks production. Not the web project's id.                                                                                      |
-| `RENDER_SERVICE_ID_API`              | (unused after the prod cutover)                                                           | prod API service ID (`srv-*`). No workflow reads it once the API is on Vercel. Deleted in the removal PR, together with the suspended service, after the 7-day watch and Hugh's OK.                                                                                                                                                                        |
-| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | (unused after the prod cutover)                                                           | prod match-artists cron service ID (`crn-*`). Same: unused once the job runs as a Vercel Cron Job, deleted with the service.                                                                                                                                                                                                                               |
-| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | (unused after the prod cutover)                                                           | prod spotify-weekly cron service ID (`crn-*`). Same.                                                                                                                                                                                                                                                                                                       |
 | `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                                             | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option.                                                                                                                      |
 
-Service and project IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*` and `vars.VERCEL_*`.
+Service and project IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.VERCEL_*`.
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
 | Secret                | Required by                                                                               | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | --------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_API_TOKEN`    | (unused after the crawler cutover)                                                        | Render → Account Settings → API Keys. Until the crawler cutover it served the two crawler crons: the deploy POST, `render-rollback.sh`, and the deploy-health check. No prod workflow reads it now; delete it with the Render services.                                                                                                                                                                                                                                                               |
 | `DATABASE_URL_DIRECT` | deploy-prod                                                                               | **new at the prod cutover.** The prod Neon branch's **direct** connection string (no `-pooler` in the host). `deploy-prod.yml` runs `pnpm db:migrate` with it before the API deploy and refuses a `-pooler` host. Not the API's runtime `DATABASE_URL`, which is the pooled URL and lives in the Vercel project.                                                                                                                                                                                      |
 | `RESEND_API_KEY`      | prod-smoke-after-deploy, deploy-prod (manual)                                             | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.                                                                                                                                                                                                                                                                                         |
 | `VERCEL_TOKEN`        | deploy-prod, rollback-prod, prod-smoke-after-deploy, prod-deploy-health, prod-drift-alert | Vercel → Account Settings → Tokens. Already there for the web promotion. From the prod cutover it must also reach the `concert-crawl-api` project: it needs access to the **featherweight-design** team, so a token scoped to the `concert-crawl` project alone will fail the API deploy, rollback and the health and drift reads. If the token carries an expiry, record that date here; the daily drift alert will fail its read when it lapses, but a promotion may be the first thing you notice. |
-
-No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered the crons.
-
-### Repository-level secrets (Settings → Secrets and variables → Actions)
-
-| Secret             | Required by   | Notes                                                                                                                                                                                          |
-| ------------------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_API_TOKEN` | staging-smoke | same Render API token as above, stored at repo level. staging-smoke stopped reading it on 2026-10-30, when it began waiting for `deploy-api-staging.yml` instead of `render-wait-for-live.sh`. |
-
-`RENDER_API_TOKEN` is the only credential the Render scripts need. Scope it to
-deploy + read permissions only — the scripts just trigger deploys, list recent
-deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 
@@ -575,8 +536,7 @@ Do not run it as a routine wiring check.
 
 If you need to verify the rollback wiring, prefer one of these:
 
-- Read the two workflows' rollback steps, `vercel-api-prod.sh` and
-  `render-rollback.sh` directly.
+- Read the two workflows' rollback steps and `vercel-api-prod.sh` directly.
 - Run the equivalent against staging, where a rolled-back API costs nothing.
 - If you genuinely must exercise it on prod, schedule it as a controlled test:
   announce it, expect the API to move to the prior deployment, and plan the
@@ -630,33 +590,12 @@ are currently **disabled** on the `concert-crawl-api` project: Vercel counted
 the first staging deploy as production and registered the crons, so they were
 turned off to stop them running against staging. Re-enable them (Vercel →
 `concert-crawl-api` → Settings → Cron Jobs) after the first production deploy,
-in the same sitting as suspending the Render crons. (`PROD_API_URL` has named
+(`PROD_API_URL` has named
 `https://api.concertcrawl.app` since the API cutover, so the API check runs.)
 
 It reports only. Every condition it detects needs a human decision, and
 re-triggering a build that failed for want of build minutes would burn the
 few that remain.
-
-### Troubleshooting: "autoDeploy is 'yes'" is a leak, not a misconfigured check
-
-This applied to the two crawler crons while they were on Render. No prod
-service is checked on Render now; the API's equivalent is the Git-integration
-check above.
-
-The `autoDeploy` expectation in `render-check-deploy-health.sh` is inverted from
-what it was before the prod promotion gate. Under the gate prod deploys only
-through a deliberate dispatch of `deploy-prod.yml`, so `autoDeploy = "no"` on a
-prod service is the correct state and the checker treats it as healthy.
-`autoDeploy = "yes"` is now the fault: somebody re-enabled auto-deploy in the
-Render dashboard and merges to `main` are reaching prod without a promotion.
-
-Responder action (when the check still ran): confirm in the Render dashboard,
-set Auto-Deploy back to `No` on the named service, then check whether an
-unpromoted commit already went live. No workflow runs this checker since the
-crawler cutover, so only a resumed Render service needs this.
-
-Any value other than `yes` or `no` exits 1 rather than 2 — that is the Render
-API response shape changing, not a prod problem.
 
 Two questions this checker deliberately does **not** answer:
 
@@ -671,8 +610,6 @@ Two questions this checker deliberately does **not** answer:
 
 Full write-up: `docs/incidents/2026-08-29-render-build-minutes.md`.
 The API half: `.github/scripts/vercel-api-prod.sh`.
-Service settings and why they are what they are:
-`docs/runbooks/render-service-config.md`.
 
 ### The drift alert — when promotion is simply forgotten
 
@@ -698,9 +635,8 @@ Two details that matter when reading its output:
 - **Only commits that would change the API count.** The workflow reads the
   `paths` filter of `deploy-api-staging.yml`'s `push` trigger, minus its
   `.github/` entries, and counts commits touching those paths, so a week of
-  web-only work correctly produces no drift. (Before the cutover it read the
-  Render API service's `buildFilter` from `render.yaml`. That filter no longer
-  feeds anything.)
+  web-only work correctly produces no drift. (Before the Render exit it read
+  the Render API service's build filter.)
 - **Drift is measured from the oldest waiting commit.** A fix that has been
   stranded for nine days trips the alert even if newer commits landed this
   morning, because that oldest commit is the one someone is waiting on.
@@ -715,14 +651,11 @@ issue rather than to raise the thresholds. Raising them hides the next real one.
 - **Vercel web is not auto-rolled back.** See "Vercel + cron rollback is manual" above.
 - **The first production API deploy has no rollback target.** Nothing is
   serving on `api.concertcrawl.app` before it, so a failed health check or smoke
-  on that run cannot roll the API back. The fallback is the suspended Render
-  services ("Falling back to Render" in `production-launch.md`).
+  on that run cannot roll the API back. The fallback is to fix forward.
 - **The gate depends on settings this repo cannot fully enforce.** Git
   deployments being off on the two prod Vercel projects lives in Vercel.
   Someone flipping it back reopens a push-to-prod path. `prod-deploy-health`
   flags a Git-integration build only once it is serving prod, within two hours.
-  (The suspended Render services are no longer checked; resuming one for a
-  fallback means checking its `Auto-Deploy: no` by hand.)
 - **Vercel Cron Jobs are a project-level switch.** If they are off,
   match-artists and spotify-weekly stop with no error anywhere except the
   deploy-health check.

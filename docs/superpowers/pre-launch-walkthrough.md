@@ -79,9 +79,9 @@ states, tiers, background systems and edge cases a straight walk will not reach.
   routes, render from genuinely different components per breakpoint — desktop passing tells you
   nothing about mobile.
 - Have the admin Feature Flags page open in a third tab; several sections below ask you to toggle.
-- **Every staging cron is currently suspended**, `concert-crawl-billing-jobs-staging` included, and
-  no prod billing cron exists at all. So the _scheduled_ checks in section 16 will not fire on
-  staging until those are resumed, and no billing mail sends on its own in either environment.
+- **No billing cron exists in either environment** (#23): the staging one ran on Render, which was
+  retired on 2026-11-07. So the _scheduled_ billing checks in section 16 will not fire, and no
+  billing mail sends on its own in either environment.
   Section 17 is unaffected: those 12 samples come from the Admin ▸ Settings test-email picker,
   which sends directly. Verified against the live Render API on 2026-09-19.
 - **Paid account states need staging.** There is no admin control that grants a tier, so supporter,
@@ -327,11 +327,11 @@ Not clickable, but launch depends on them. Verify from admin, logs, or your inbo
 - [ ] `/api/revalidate` fires after a crawl (it had never once fired in prod)
 - [ ] `billing-daily` — one scheduled job; confirm it covers its Stripe reads, card-expiry and
       dunning sub-tasks (`billing-daily-stripe.ts` is a module it imports, not a separate cron).
-      Note `render.yaml` currently defines the billing cron on staging only.
+      It has no scheduler in either environment yet (#23).
 - [ ] `match-artists`
 - [ ] `spotify-weekly` digest
 - [ ] Stripe webhooks: checkout, renewal, cancellation, payment failure
-- [ ] `/v1/health` responds (this is also Render's health check path; there is no `/health`)
+- [ ] `/v1/health` responds (there is no `/health`)
 - [ ] Sentry receives a deliberate test error from each app
 - [ ] The scheduled prod smoke workflow (`.github/workflows/smoke.yml`) is green on its latest run
 

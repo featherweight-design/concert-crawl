@@ -7,7 +7,7 @@ its data, and the one line that must never be crossed.
 
 ## Staging API
 
-Since 2026-10-30 the staging API runs on Vercel, not Render.
+Since 2026-10-30 the staging API runs on Vercel. Render was retired on 2026-11-07.
 
 | What            | Value                                                                    |
 | --------------- | ------------------------------------------------------------------------ |
@@ -18,15 +18,14 @@ Since 2026-10-30 the staging API runs on Vercel, not Render.
 | Deployed by     | `.github/workflows/deploy-api-staging.yml`, on API pushes to `main`      |
 | DNS             | Cloudflare `CNAME api-staging` to Vercel, DNS only (not proxied)         |
 | Neon branch     | `staging`; the API uses its **pooled** host, migrations its direct host  |
-| Render fallback | `concert-crawl-api-staging`, up with auto-deploy off until removal is OK |
 
 **Deploys.** Git deployments are off, by `git.deploymentEnabled: false` in `vercel.json` (the project's own Git setting did not stop branch pushes building previews). `deploy-api-staging.yml`
-runs on every push to `main` that touches the API's paths (Render's `buildFilter` list plus
-`packages/crawler-core/**`, which the API imports at runtime) and on manual dispatch from `main`: it runs `pnpm
+runs on every push to `main` that touches the API's paths (the workflow's `paths` list, which includes
+`packages/crawler-core/**` because the API imports it at runtime) and on manual dispatch from `main`: it runs `pnpm
 db:migrate` against `DATABASE_URL_DIRECT`, then `vercel deploy --target=staging`,
 then checks `/v1/health`. Staging Smoke and Staging E2E wait for that run
 (`.github/scripts/gha-wait-for-workflow.sh`) before testing the pushed SHA; a
-push it skipped reads as a benign skip, as it did on Render.
+push it skipped reads as a benign skip.
 
 Its configuration lives on the `staging` GitHub environment: the secrets
 `DATABASE_URL_DIRECT` and `VERCEL_TOKEN`, and the variables `VERCEL_ORG_ID` and
@@ -53,12 +52,6 @@ custom-environment domains as well as deployment URLs, so
 `api-staging.concertcrawl.app` carries a protection exception to stay public
 (the web app calls it from the browser). Generated `*.vercel.app` URLs stay
 behind Vercel Authentication; reach them with `vercel curl`.
-
-**Rollback to Render.** Redeploy `concert-crawl-api-staging` from `main` in the
-Render dashboard, then point the repository variable `STAGING_API_URL` and the
-web staging project's `NEXT_PUBLIC_API_URL` back at
-`https://concert-crawl-api-staging.onrender.com` and redeploy the web staging
-project.
 
 ---
 

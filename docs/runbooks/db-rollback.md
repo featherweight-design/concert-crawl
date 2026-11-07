@@ -9,7 +9,7 @@
 Before touching the database, reduce inbound pressure:
 
 1. **Stop the crawler** — GitHub → Actions → **Crawler daily** and **Crawler triggers** → ⋯ → **Disable workflow**, so no new data is written during rollback. Cancel any run in progress.
-2. **Take the API offline (if necessary)** — If the broken schema is actively causing 500s, suspend the `concert-crawl-api` web service on Render. Users will see the Next.js error boundary served from Vercel; that's preferable to corrupt data.
+2. **Take the API offline (if necessary)** — If the broken schema is actively causing 500s, roll the Vercel `concert-crawl-api` project back to a deployment from before the migration (Rollback Production, `rollback-prod.yml`). Users will see the Next.js error boundary served from Vercel; that's preferable to corrupt data.
 
 ---
 
@@ -21,7 +21,7 @@ docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db \
   -c "SELECT id, hash FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
 ```
 
-On staging/prod (which run on Neon, not Render Postgres), use the Neon dashboard's SQL editor to run read-only queries for confirmation, or `docker run --rm postgres:16 psql "<neon URL>"` from your laptop using the **direct** (non-pooled) connection string. (Neon's SQL editor can also execute writes and DDL — treat it as a general-purpose console, not a read-only safety harness; stick to `SELECT` while diagnosing.) The Render MCP `query_render_postgres` tool no longer applies — Render Postgres is not the prod/staging DB.
+On staging/prod (which run on Neon), use the Neon dashboard's SQL editor to run read-only queries for confirmation, or `docker run --rm postgres:16 psql "<neon URL>"` from your laptop using the **direct** (non-pooled) connection string. (Neon's SQL editor can also execute writes and DDL — treat it as a general-purpose console, not a read-only safety harness; stick to `SELECT` while diagnosing.)
 
 The migration filename to roll back is in `packages/db/migrations/` — match the hash from the query above to the file on disk.
 
@@ -90,12 +90,6 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" \
 The schema rollback is useless if the application code still expects the new shape. Deploy the previous release:
 
 **Crawler:** it runs the commit the production API serves, so rolling the API back covers it.
-
-**Render services (fallback only):**
-
-1. Render dashboard → service → **Builds** tab
-2. Find the last green build before the bad migration
-3. Click **Rollback** → Render redeploys that image without rebuilding from `main`
 
 **Web (Vercel):**
 
