@@ -487,7 +487,7 @@ jobs:
           PREV_DEPLOYMENT: ${{ steps.prev_api.outputs.deployment_id }}
         run: |
           if [ -z "$PREV_DEPLOYMENT" ]; then
-            echo "::error title=API not rolled back::The new API failed a post-deploy check and there is no earlier production deployment to restore. Fix forward, or fall back to Render (production-launch.md, Falling back to Render)."
+            echo "::error title=API not rolled back::The new API failed a post-deploy check and there is no earlier production deployment to restore. Fix forward."
             exit 1
           fi
           npx --yes vercel@65.8.0 rollback "$PREV_DEPLOYMENT" --yes --token "$VERCEL_TOKEN"
@@ -737,7 +737,7 @@ jobs:
           PREV_DEPLOYMENT: ${{ needs.deploy.outputs.prev_api_deployment }}
         run: |
           if [ -z "$PREV_DEPLOYMENT" ]; then
-            echo "::error title=API not rolled back::The deploy job recorded no earlier production API deployment (the first production deploy has none). Fix forward, or fall back to Render (production-launch.md, Falling back to Render)."
+            echo "::error title=API not rolled back::The deploy job recorded no earlier production API deployment (the first production deploy has none). Fix forward."
             exit 1
           fi
           # Leaves the project in a rollback state: new production deploys stop

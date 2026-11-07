@@ -8,7 +8,7 @@ const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
   env: {
-    NEXT_PUBLIC_APP_VERSION: `v${rootPkg.version} · ${(process.env['RENDER_GIT_COMMIT'] ?? process.env['VERCEL_GIT_COMMIT_SHA'])?.slice(0, 7) ?? 'dev'}`,
+    NEXT_PUBLIC_APP_VERSION: `v${rootPkg.version} · ${process.env['VERCEL_GIT_COMMIT_SHA']?.slice(0, 7) ?? 'dev'}`,
     // Analytics `release` and `app_version` super-properties
     // (src/lib/analytics/client.ts). Vercel only exposes the NEXT_PUBLIC_ twin
     // of a system variable when the project opts in, so it is inlined here from

@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
 # Wait until a Vercel project is serving a READY deployment for a given commit.
 #
-# The web half of what render-wait-for-live.sh does for a Render service. It
-# exists because a workflow that only waits on the API can run its suite
+# It exists because a workflow that only waits on the API can run its suite
 # against the previous web build: the two halves of an environment deploy
 # independently, so "the API is live on this SHA" says nothing about the front
 # end. There is no public surface on the web app that reports its build SHA
 # (`NEXT_PUBLIC_APP_VERSION` is only rendered behind auth), so the Vercel API is
 # the only readable source.
 #
-# Exit codes are the same contract as render-wait-for-live.sh, because the
+# Exit codes are the same contract as gha-wait-for-workflow.sh, because the
 # callers branch on them identically:
 #   0   — a deployment for this SHA reached READY
 #   124 — benign: no deployment for this SHA exists, or one exists and a newer
@@ -34,8 +33,7 @@ timeout_seconds="${3:-300}"
 : "${VERCEL_TOKEN:?VERCEL_TOKEN must be set}"
 : "${VERCEL_ORG_ID:?VERCEL_ORG_ID must be set}"
 
-# Normalized and shape-checked the same way render-trigger-deploy.sh does it,
-# and for a sharper reason: a mismatch here is silent. The jq filter below
+# Normalized and shape-checked because a mismatch here is silent. The jq filter below
 # compares against `meta.githubCommitSha`, which Vercel stores lowercase, so an
 # uppercase or abbreviated SHA simply never matches — the script would poll for
 # the full timeout and exit 124, which the caller reads as a benign skip and
@@ -48,7 +46,7 @@ if ! [[ "${expected_sha}" =~ ^[0-9a-f]{40}$ ]]; then
   exit 1
 fi
 
-# Same check render-wait-for-live.sh makes, for the same reason: a value like
+# A value like
 # "5m" or "300s" aborts inside the arithmetic below under `set -e`, and the
 # caller's catch-all branch would report "a script or API failure" rather than
 # naming the bad argument.
@@ -57,8 +55,7 @@ if ! [[ "${timeout_seconds}" =~ ^[0-9]+$ ]] || [ "${timeout_seconds}" -le 0 ]; t
   exit 1
 fi
 
-# Anchored rather than a glob, for the same reason the render-*.sh helpers
-# check their service IDs: a variable carrying stray whitespace would reach the
+# Anchored rather than a glob: a variable carrying stray whitespace would reach the
 # API and come back as an opaque 404 instead of naming the misconfigured
 # variable. Vercel project IDs are `prj_` followed by alphanumerics.
 if ! [[ "${project_id}" =~ ^prj_[A-Za-z0-9]+$ ]]; then
@@ -68,12 +65,10 @@ if ! [[ "${project_id}" =~ ^prj_[A-Za-z0-9]+$ ]]; then
   exit 1
 fi
 
-# `limit=20` covers a burst of fast-follow merges without paging. Unlike the
-# Render helper's 50, a failed Vercel build does not queue retries, so a run of
-# failures cannot push the deployment being looked for off the page.
+# `limit=20` covers a burst of fast-follow merges without paging. A failed
+# Vercel build does not queue retries, so a run of failures cannot push the deployment being looked for off the page.
 #
-# Wrapped in `if !` rather than assigned bare, the same way the render-*.sh
-# helpers do it: `--fail-with-body` writes the API's error body to stdout, but a
+# Wrapped in `if !` rather than assigned bare: `--fail-with-body` writes the API's error body to stdout, but a
 # bare command substitution aborts under `set -e` before anything can print it,
 # so a 401 or a 403 would reach the log as an exit code with no explanation.
 fetch_deployments() {
@@ -166,8 +161,7 @@ while :; do
       # into a red run.
       #
       # Be clear about what that costs. Nothing else currently watches the
-      # Vercel side over time — prod-deploy-health.yml polls Render service IDs
-      # only — so a dropped Vercel webhook reads as a benign skip here and is
+      # Vercel side over time, so a dropped Vercel webhook reads as a benign skip here and is
       # not caught elsewhere. The residual risk is bounded by what this caller
       # is for: it gates a test suite, and the suite still runs against the
       # build the app is actually serving. It is not a deploy monitor.

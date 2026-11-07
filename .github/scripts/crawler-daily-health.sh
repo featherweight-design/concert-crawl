@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # crawler-daily-health.sh — is the daily crawl on GitHub Actions still running?
 #
-# Replaces the Render deploy-health check on concert-crawl-crawler-daily. A
-# daily run that never starts emails nobody: the schedule does nothing while
+# A daily run that never starts emails nobody: the schedule does nothing while
 # CRAWLER_GHA_DAILY_ENABLED is not 'true', a disabled workflow is silent, and
 # GitHub occasionally drops a scheduled run. So this asks for a success, and
 # a success that crawled: a run the guard job skipped succeeds too.
@@ -12,8 +11,7 @@
 #        REPO           owner/name
 #        DAILY_ENABLED  the value of vars.CRAWLER_GHA_DAILY_ENABLED
 #
-# Exit contract shared with render-check-deploy-health.sh and
-# vercel-api-prod.sh health: 0 healthy, 2 unhealthy (with an
+# Exit contract shared with vercel-api-prod.sh health: 0 healthy, 2 unhealthy (with an
 # `UNHEALTHY|crawler-daily|<reason>` line), anything else = could not tell.
 
 set -uo pipefail
