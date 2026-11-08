@@ -1,1 +1,11 @@
 pnpm-lock.yaml
+
+# Design handoffs belong to the design process and stay byte-stable.
+design/
+
+# Crawler test inputs: reformatting a captured page changes what the test parses.
+packages/crawler-core/src/lib/fetchers/__fixtures__/
+
+# Generated files.
+packages/db/migrations/meta/
+CHANGELOG.md
