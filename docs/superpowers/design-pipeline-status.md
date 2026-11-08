@@ -260,11 +260,11 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 **When NOT to update:**
 
-- Copilot review round churn on any of the above (doesn't change stage)
+- Review churn on any of the above (doesn't change stage)
 - Small ops adjustments (branch renames, worktree cleanup)
 - Anything already covered by `progress.md`'s substantive-only rule
 
-**PR shape for tracker updates:** doc-only, no Copilot review required. Merge on green CI. Copilot rigor is for briefs / handoffs / audits, not for keeping the tracker in sync with reality.
+**PR shape for tracker updates:** doc-only, no review round. Merge on green CI.
 
 **Concurrent-edit hygiene:** new entries in the "Recently shipped" table go at the **top** of the table (newest-first, so the most recent context is at eye level). In-flight tables are edited in place when state changes. Rebase-friendly on merge.
 
