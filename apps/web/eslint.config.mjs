@@ -41,7 +41,10 @@ export default [
         { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/consistent-type-imports': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { disallowTypeAnnotations: true },
+      ],
       'id-length': [
         'error',
         { min: 2, exceptions: ['i', 'j', 'k', 'x', 'y', 'z', '_'] },
