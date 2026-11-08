@@ -35,10 +35,29 @@ export function scrubRequestBody(body: string): string {
   return JSON.stringify(scrubValue(parsed));
 }
 
+// A crew invite token is a capability: whoever holds it can join the crew. It
+// travels as a path segment, so it would otherwise land in the event's request
+// URL and in the transaction name Sentry builds from the raw path.
+const INVITE_TOKEN_PATH = /(\/v1\/crew-invites\/)[^/?#]+/g;
+
+export function redactInviteTokens(value: string): string {
+  return value.replace(INVITE_TOKEN_PATH, `$1${REDACTED}`);
+}
+
 export function scrubEvent(event: ErrorEvent, _hint?: EventHint): ErrorEvent {
-  const data = event.request?.data;
-  if (event.request && typeof data === 'string') {
-    event.request.data = scrubRequestBody(data);
+  // No user on any event: the Clerk user id is personal data, and Sentry 11's
+  // userInfo: false only stops the SDK filling the user in, not a user set by
+  // code or an integration.
+  delete event.user;
+  if (event.request) {
+    const data = event.request.data;
+    if (typeof data === 'string') event.request.data = scrubRequestBody(data);
+    if (event.request.url) {
+      event.request.url = redactInviteTokens(event.request.url);
+    }
+  }
+  if (event.transaction) {
+    event.transaction = redactInviteTokens(event.transaction);
   }
   return event;
 }
