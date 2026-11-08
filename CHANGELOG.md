@@ -1,3 +1,17 @@
+# [1.305.0](https://github.com/featherweight-design/concert-crawl/compare/v1.304.3...v1.305.0) (2026-11-08)
+
+
+### Bug Fixes
+
+* **api:** send no user and no invite token to Sentry ([765ea3d](https://github.com/featherweight-design/concert-crawl/commit/765ea3dfb54b5f3d9c5003f962efd277dd07db7f))
+* **sentry:** enforce nested switches and correct stale comments ([2c70027](https://github.com/featherweight-design/concert-crawl/commit/2c7002796b569e54f46a7271e47c8d3ba43962dc))
+* **sentry:** share one deep-frozen privacy options object ([04a586f](https://github.com/featherweight-design/concert-crawl/commit/04a586ff5d5f0776f0636247763b6d147449097c))
+
+
+### Features
+
+* **sentry:** upgrade to Sentry 11 with every data collection switch off ([844e7a9](https://github.com/featherweight-design/concert-crawl/commit/844e7a97e348a26e7fc9e0d2f1716ca49794576a))
+
 ## [1.304.3](https://github.com/featherweight-design/concert-crawl/compare/v1.304.2...v1.304.3) (2026-11-08)
 
 
