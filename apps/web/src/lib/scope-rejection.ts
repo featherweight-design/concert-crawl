@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api'
+import { ApiError } from '@/lib/api';
 
 // Browse's taste and following scopes are gated server-side, and the API has
 // three ways of declining them:
@@ -14,7 +14,7 @@ import { ApiError } from '@/lib/api'
 // unexpected throws away a page that could simply render unfiltered.
 export const isScopeRejection = (err: unknown): err is ApiError =>
   err instanceof ApiError &&
-  (err.status === 401 || err.status === 403 || err.status === 404)
+  (err.status === 401 || err.status === 403 || err.status === 404);
 
 // Only a refused token is dropped on the retry. Reusing it would earn a second
 // 401 and lose the page; on 403 and 404 the identity is still good and the list
@@ -22,4 +22,4 @@ export const isScopeRejection = (err: unknown): err is ApiError =>
 export const scopeRetryToken = (
   err: ApiError,
   token: string | null,
-): string | null => (err.status === 401 ? null : token)
+): string | null => (err.status === 401 ? null : token);

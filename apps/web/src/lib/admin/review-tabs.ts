@@ -20,14 +20,16 @@ export const REVIEW_TAB_KEYS = [
   'missing',
   'all-events',
   'contests',
-] as const
+] as const;
 
-export type ReviewTabKey = (typeof REVIEW_TAB_KEYS)[number]
+export type ReviewTabKey = (typeof REVIEW_TAB_KEYS)[number];
 
-export const REVIEW_TAB_KEYS_SET: ReadonlySet<string> = new Set(REVIEW_TAB_KEYS)
+export const REVIEW_TAB_KEYS_SET: ReadonlySet<string> = new Set(
+  REVIEW_TAB_KEYS,
+);
 
 export const isReviewTabKey = (value: string | null): value is ReviewTabKey =>
-  value !== null && REVIEW_TAB_KEYS_SET.has(value)
+  value !== null && REVIEW_TAB_KEYS_SET.has(value);
 
 /**
  * `?section=submissions` predates the tab split and used to land on `prices`,
@@ -35,8 +37,8 @@ export const isReviewTabKey = (value: string | null): value is ReviewTabKey =>
  * now its own tab, so the legacy URL resolves straight to it.
  */
 export const resolveReviewTab = (params: URLSearchParams): ReviewTabKey => {
-  const tab = params.get('tab')
-  if (isReviewTabKey(tab)) return tab
-  if (params.get('section') === 'submissions') return 'submissions'
-  return 'event-flags'
-}
+  const tab = params.get('tab');
+  if (isReviewTabKey(tab)) return tab;
+  if (params.get('section') === 'submissions') return 'submissions';
+  return 'event-flags';
+};

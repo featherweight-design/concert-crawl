@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Past-due payment banner (#775, PR 4.3). Two placements per the design
 // property table (docs/superpowers/design-tables/past-due-surfaces.md):
@@ -8,17 +8,17 @@
 // LifecycleNudgesGate today). The Update card CTA is portal-bound — the
 // gate owns the Stripe portal navigation and pending state.
 
-import { useEffect, useState } from 'react'
-import { LIFECYCLE_NUDGES_COPY } from './definitions/copy'
-import { PAST_DUE_BANNER_Z_INDEX } from './definitions/constants'
+import { useEffect, useState } from 'react';
+import { LIFECYCLE_NUDGES_COPY } from './definitions/copy';
+import { PAST_DUE_BANNER_Z_INDEX } from './definitions/constants';
 
-const BANNER_COPY = LIFECYCLE_NUDGES_COPY.pastDueBanner
+const BANNER_COPY = LIFECYCLE_NUDGES_COPY.pastDueBanner;
 
 interface PastDueBannerProps {
-  variant: 'pinned' | 'inline'
-  onDismiss: () => void
-  onUpdateCard: () => void
-  updateCardPending?: boolean
+  variant: 'pinned' | 'inline';
+  onDismiss: () => void;
+  onUpdateCard: () => void;
+  updateCardPending?: boolean;
 }
 
 export const PastDueBanner = ({
@@ -27,7 +27,7 @@ export const PastDueBanner = ({
   onUpdateCard,
   updateCardPending = false,
 }: PastDueBannerProps) => {
-  const inline = variant === 'inline'
+  const inline = variant === 'inline';
 
   // Lazy init from matchMedia so desktop doesn't flash mobile spacing on
   // first paint. Safe: the gate mounts this only after a client-side
@@ -36,14 +36,14 @@ export const PastDueBanner = ({
     () =>
       typeof window !== 'undefined' &&
       window.matchMedia('(min-width: 640px)').matches,
-  )
+  );
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)')
-    setWide(mql.matches)
-    const listener = (ev: MediaQueryListEvent) => setWide(ev.matches)
-    mql.addEventListener('change', listener)
-    return () => mql.removeEventListener('change', listener)
-  }, [])
+    const mql = window.matchMedia('(min-width: 640px)');
+    setWide(mql.matches);
+    const listener = (ev: MediaQueryListEvent) => setWide(ev.matches);
+    mql.addEventListener('change', listener);
+    return () => mql.removeEventListener('change', listener);
+  }, []);
 
   const strip = (
     <div
@@ -199,7 +199,7 @@ export const PastDueBanner = ({
         </svg>
       </button>
     </div>
-  )
+  );
 
   if (!inline) {
     return (
@@ -214,7 +214,7 @@ export const PastDueBanner = ({
       >
         {strip}
       </div>
-    )
+    );
   }
-  return strip
-}
+  return strip;
+};

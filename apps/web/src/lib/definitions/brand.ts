@@ -9,7 +9,7 @@
 // meant to agree, and `brand.test.ts` fails if they stop agreeing.
 
 /** The dark field the product sits on. */
-export const BRAND_PAPER = '#070A1A'
+export const BRAND_PAPER = '#070A1A';
 
 /** Type drawn on `BRAND_PAPER`. */
-export const BRAND_INK = '#FFFFFF'
+export const BRAND_INK = '#FFFFFF';

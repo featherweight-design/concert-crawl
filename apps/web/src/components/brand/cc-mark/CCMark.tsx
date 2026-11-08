@@ -1,5 +1,5 @@
 interface CCMarkProps {
-  size?: number
+  size?: number;
 }
 
 const TRAIL = [
@@ -10,7 +10,7 @@ const TRAIL = [
   { cx: 50, cy: 50, radius: 4 },
   { cx: 58, cy: 42, radius: 5 },
   { cx: 66, cy: 32, radius: 6 },
-]
+];
 
 export function CCMark({ size = 24 }: CCMarkProps) {
   return (
@@ -36,5 +36,5 @@ export function CCMark({ size = 24 }: CCMarkProps) {
         />
       ))}
     </svg>
-  )
+  );
 }

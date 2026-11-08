@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
 interface SPNumberFieldProps {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  hint?: string
-  required?: boolean
-  error?: string | undefined
-  warning?: string | undefined
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  hint?: string;
+  required?: boolean;
+  error?: string | undefined;
+  warning?: string | undefined;
 }
 
 export function SPNumberField({
@@ -27,7 +27,7 @@ export function SPNumberField({
     ? 'border-warning'
     : warning
       ? 'border-warning'
-      : 'border-border-strong'
+      : 'border-border-strong';
 
   return (
     <div className="flex flex-col gap-1">
@@ -106,5 +106,5 @@ export function SPNumberField({
         </span>
       )}
     </div>
-  )
+  );
 }

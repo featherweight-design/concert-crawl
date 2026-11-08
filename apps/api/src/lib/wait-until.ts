@@ -11,10 +11,10 @@
 // `waitUntil` is itself a no-op outside a Vercel request context, but the
 // explicit `VERCEL` gate keeps the Node path free of it entirely.
 
-import { waitUntil } from '@vercel/functions'
+import { waitUntil } from '@vercel/functions';
 
 /** Vercel sets `VERCEL=1` in every build and function runtime. */
-export const isVercelRuntime = (): boolean => process.env['VERCEL'] === '1'
+export const isVercelRuntime = (): boolean => process.env['VERCEL'] === '1';
 
 /**
  * On Vercel, extend the current invocation until `promise` settles. Elsewhere,
@@ -22,6 +22,6 @@ export const isVercelRuntime = (): boolean => process.env['VERCEL'] === '1'
  * instance alive, it does not observe the outcome.
  */
 export const keepAliveUntil = (promise: Promise<unknown>): void => {
-  if (!isVercelRuntime()) return
-  waitUntil(promise)
-}
+  if (!isVercelRuntime()) return;
+  waitUntil(promise);
+};

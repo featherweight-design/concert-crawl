@@ -15,19 +15,19 @@
 // The classification itself lives in lib/triage.ts and defers to the shared
 // classifiers in crawler-core, so the panel and the alert emails can't drift.
 
-import { Hono } from 'hono'
-import { z } from 'zod'
-import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 import {
   db,
   events,
   priceSubmissions,
   venueFaultAcknowledgements,
   venues,
-} from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { matchesAcknowledgement } from '@concert-crawl/crawler-core/triage-conditions'
-import type { AdminVariables } from './index.js'
+} from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { matchesAcknowledgement } from '@concert-crawl/crawler-core/triage-conditions';
+import type { AdminVariables } from './index.js';
 import {
   TRIAGE_HISTORY_RUN_COUNT,
   deriveFaults,
@@ -35,12 +35,12 @@ import {
   faultAcknowledgementKey,
   type TriageFault,
   type TriageRunRow,
-} from './lib/triage.js'
+} from './lib/triage.js';
 
-const logger = createLogger('admin:triage')
+const logger = createLogger('admin:triage');
 
 // How many names the queue breakdown lines name before collapsing to "N more".
-const QUEUE_BREAKDOWN_LIMIT = 3
+const QUEUE_BREAKDOWN_LIMIT = 3;
 
 // ---------------------------------------------------------------------------
 // Response schema
@@ -62,7 +62,7 @@ const faultBaseSchema = z.object({
   days: z.number(),
   dur: z.string(),
   crawlRunId: z.string().uuid().nullable(),
-})
+});
 
 const faultSchema = z.discriminatedUnion('condition', [
   faultBaseSchema.extend({
@@ -116,7 +116,7 @@ const faultSchema = z.discriminatedUnion('condition', [
       wasWhen: z.string().nullable(),
     }),
   }),
-])
+]);
 
 const queueSchema = z.object({
   id: z.string(),
@@ -124,7 +124,7 @@ const queueSchema = z.object({
   count: z.number(),
   breakdown: z.string(),
   action: z.enum(['openReview', 'openSubmissions']),
-})
+});
 
 const sweepSchema = z.object({
   venues: z.number(),
@@ -132,7 +132,7 @@ const sweepSchema = z.object({
   atIso: z.string().nullable(),
   events: z.number(),
   next: z.string(),
-})
+});
 
 // An acknowledged fault is the same fault with its provenance attached. The
 // provenance is nested rather than spread so both arrays stay assignable to the
@@ -146,38 +146,38 @@ const acknowledgementSchema = z.object({
   reason: z.string(),
   acknowledgedBy: z.string(),
   acknowledgedAt: z.string(),
-})
+});
 
 const acknowledgedFaultSchema = z.intersection(
   faultSchema,
   z.object({ acknowledgement: acknowledgementSchema }),
-)
+);
 
 export const triageResponseSchema = z.object({
   faults: z.array(faultSchema),
   acknowledged: z.array(acknowledgedFaultSchema),
   queues: z.array(queueSchema),
   sweep: sweepSchema,
-})
+});
 
-export type TriageResponse = z.infer<typeof triageResponseSchema>
+export type TriageResponse = z.infer<typeof triageResponseSchema>;
 
 export type AcknowledgedFault = TriageFault & {
-  acknowledgement: z.infer<typeof acknowledgementSchema>
-}
+  acknowledgement: z.infer<typeof acknowledgementSchema>;
+};
 
 // evidence_kind is a text column, so the stored value is narrowed at
 // serialization rather than trusted. An unrecognised kind is sent as null so
 // the response still validates. This is a wire-shape guard only — matching and
 // suppression read the stored row, not this value.
-const evidenceKindSchema = acknowledgementSchema.shape.evidenceKind
+const evidenceKindSchema = acknowledgementSchema.shape.evidenceKind;
 
 const parseEvidenceKind = (
   value: string | null,
 ): z.infer<typeof evidenceKindSchema> => {
-  const parsed = evidenceKindSchema.safeParse(value)
-  return parsed.success ? parsed.data : null
-}
+  const parsed = evidenceKindSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+};
 
 // ---------------------------------------------------------------------------
 // Raw row parsing
@@ -200,16 +200,16 @@ const runRowSchema = z.object({
   events_updated: z.number().int(),
   furthest_event_date: z.string().nullable(),
   created_at: z.coerce.date(),
-})
+});
 
 export const parseRunRows = (rows: Iterable<unknown>): TriageRunRow[] => {
-  const parsed: TriageRunRow[] = []
-  let dropped = 0
+  const parsed: TriageRunRow[] = [];
+  let dropped = 0;
   for (const row of rows) {
-    const result = runRowSchema.safeParse(row)
+    const result = runRowSchema.safeParse(row);
     if (!result.success) {
-      dropped += 1
-      continue
+      dropped += 1;
+      continue;
     }
     parsed.push({
       id: result.data.id,
@@ -223,21 +223,21 @@ export const parseRunRows = (rows: Iterable<unknown>): TriageRunRow[] => {
       eventsUpdated: result.data.events_updated,
       furthestEventDate: result.data.furthest_event_date,
       createdAt: result.data.created_at,
-    })
+    });
   }
   if (dropped > 0) {
     logger.warn(
       { dropped },
       'admin triage: crawl_runs rows failed schema validation and were skipped',
-    )
+    );
   }
-  return parsed
-}
+  return parsed;
+};
 
-export const triageAdminRouter = new Hono<AdminVariables>()
+export const triageAdminRouter = new Hono<AdminVariables>();
 
 triageAdminRouter.get('/', async (ctx) => {
-  const now = new Date()
+  const now = new Date();
 
   // Verified venues only — an unverified draft has never been crawled and has
   // nothing to be broken about. Deliberately NOT filtered on `active`: crawl.ts
@@ -253,7 +253,7 @@ triageAdminRouter.get('/', async (ctx) => {
       lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
     })
     .from(venues)
-    .where(eq(venues.verified, true))
+    .where(eq(venues.verified, true));
 
   // One grouped window function for the whole run history. The classifiers
   // need enough depth to walk back to the start of the current streak, so this
@@ -275,7 +275,7 @@ triageAdminRouter.get('/', async (ctx) => {
       JOIN venues vn ON vn.id = cr.venue_id AND vn.verified = true
     ) ranked
     WHERE rn <= ${TRIAGE_HISTORY_RUN_COUNT}
-  `)
+  `);
 
   // Coverage is measured against the stored catalogue, not this run's
   // extraction — the sourceHash gate means a long-broken row never reappears
@@ -299,12 +299,12 @@ triageAdminRouter.get('/', async (ctx) => {
         eq(events.hiddenFromConsumer, false),
       ),
     )
-    .groupBy(events.venueId)
+    .groupBy(events.venueId);
 
   // Queue tiers. Both WHERE clauses stay in lock-step with
   // /v1/admin/review/counts — a pill that says "12 items" over a tab that
   // renders "queue clear" is issues #708/#709/#712 all over again.
-  const denverToday = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
+  const denverToday = sql`(NOW() AT TIME ZONE 'America/Denver')::date`;
 
   const eventFlagRowsPromise = db
     .select({
@@ -323,7 +323,7 @@ triageAdminRouter.get('/', async (ctx) => {
     // name would have their counts merged into one breakdown row.
     .groupBy(venues.id, venues.name)
     .orderBy(desc(sql`count(*)`))
-    .limit(QUEUE_BREAKDOWN_LIMIT)
+    .limit(QUEUE_BREAKDOWN_LIMIT);
 
   const priceRowsPromise = db
     .select({
@@ -341,14 +341,14 @@ triageAdminRouter.get('/', async (ctx) => {
       ),
     )
     .orderBy(desc(priceSubmissions.createdAt))
-    .limit(QUEUE_BREAKDOWN_LIMIT)
+    .limit(QUEUE_BREAKDOWN_LIMIT);
 
   // Every acknowledgement, unfiltered. There are a handful of rows at most, and
   // scoping the read to the venues that happen to be faulting right now would
   // mean re-querying whenever the sweep changed.
   const acknowledgementRowsPromise = db
     .select()
-    .from(venueFaultAcknowledgements)
+    .from(venueFaultAcknowledgements);
 
   const [
     venueRows,
@@ -364,9 +364,9 @@ triageAdminRouter.get('/', async (ctx) => {
     eventFlagRowsPromise,
     priceRowsPromise,
     acknowledgementRowsPromise,
-  ])
+  ]);
 
-  const runs = parseRunRows(rawRuns)
+  const runs = parseRunRows(rawRuns);
 
   const derived = deriveFaults({
     venues: venueRows,
@@ -377,7 +377,7 @@ triageAdminRouter.get('/', async (ctx) => {
       (row): row is typeof row & { venueId: string } => row.venueId !== null,
     ),
     now,
-  })
+  });
 
   // Partitioned from the one derived sweep, never re-derived. Two derivations
   // would let the suppressed half and the visible half disagree about the same
@@ -385,20 +385,20 @@ triageAdminRouter.get('/', async (ctx) => {
   const acknowledgementsByVenue = new Map<
     string,
     (typeof acknowledgementRows)[number][]
-  >()
+  >();
   for (const row of acknowledgementRows) {
-    const bucket = acknowledgementsByVenue.get(row.venueId)
-    if (bucket) bucket.push(row)
-    else acknowledgementsByVenue.set(row.venueId, [row])
+    const bucket = acknowledgementsByVenue.get(row.venueId);
+    if (bucket) bucket.push(row);
+    else acknowledgementsByVenue.set(row.venueId, [row]);
   }
 
-  const faults: TriageFault[] = []
-  const acknowledged: AcknowledgedFault[] = []
+  const faults: TriageFault[] = [];
+  const acknowledged: AcknowledgedFault[] = [];
   for (const fault of derived) {
-    const current = faultAcknowledgementKey(fault)
+    const current = faultAcknowledgementKey(fault);
     const match = acknowledgementsByVenue
       .get(fault.venueId)
-      ?.find((row) => matchesAcknowledgement(current, row))
+      ?.find((row) => matchesAcknowledgement(current, row));
     if (match) {
       acknowledged.push({
         ...fault,
@@ -409,15 +409,15 @@ triageAdminRouter.get('/', async (ctx) => {
           acknowledgedBy: match.acknowledgedBy,
           acknowledgedAt: match.acknowledgedAt.toISOString(),
         },
-      })
+      });
     } else {
-      faults.push(fault)
+      faults.push(fault);
     }
   }
 
-  const queues: z.infer<typeof queueSchema>[] = []
+  const queues: z.infer<typeof queueSchema>[] = [];
 
-  const eventFlagTotal = eventFlagRows[0]?.eventTotal ?? 0
+  const eventFlagTotal = eventFlagRows[0]?.eventTotal ?? 0;
   if (eventFlagTotal > 0) {
     queues.push({
       id: 'q-flags',
@@ -428,10 +428,10 @@ triageAdminRouter.get('/', async (ctx) => {
         (eventFlagRows[0]?.venueTotal ?? 0) - eventFlagRows.length,
       ),
       action: 'openReview',
-    })
+    });
   }
 
-  const priceTotal = priceRows[0]?.total ?? 0
+  const priceTotal = priceRows[0]?.total ?? 0;
   if (priceTotal > 0) {
     queues.push({
       id: 'q-prices',
@@ -442,10 +442,10 @@ triageAdminRouter.get('/', async (ctx) => {
         priceTotal - priceRows.length,
       ),
       action: 'openSubmissions',
-    })
+    });
   }
 
-  const sweep = deriveSweep({ venueCount: venueRows.length, runs, now })
+  const sweep = deriveSweep({ venueCount: venueRows.length, runs, now });
 
   // Parsed rather than returned raw: the panel's reading order and its
   // accessible row sentence both depend on this shape, and a silent contract
@@ -455,21 +455,21 @@ triageAdminRouter.get('/', async (ctx) => {
     acknowledged,
     queues,
     sweep,
-  })
+  });
   if (!parsed.success) {
     logger.error(
       { issues: parsed.error.issues },
       'admin triage: derived payload failed its own response schema',
-    )
-    return ctx.json({ success: false, error: 'Failed to derive triage' }, 500)
+    );
+    return ctx.json({ success: false, error: 'Failed to derive triage' }, 500);
   }
 
-  return ctx.json({ success: true, data: parsed.data })
-})
+  return ctx.json({ success: true, data: parsed.data });
+});
 
 // "Bluebird 5 · Gothic 4 · Ogden 3" — plus "· N more" when the tail is longer
 // than the names shown.
 const joinBreakdown = (parts: string[], remainder: number): string => {
-  const shown = remainder > 0 ? [...parts, `${remainder} more`] : parts
-  return shown.join(' · ')
-}
+  const shown = remainder > 0 ? [...parts, `${remainder} more`] : parts;
+  return shown.join(' · ');
+};

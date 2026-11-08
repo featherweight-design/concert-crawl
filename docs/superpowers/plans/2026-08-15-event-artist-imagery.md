@@ -14,12 +14,12 @@ consumer surface rendering.
 
 PR #1536 landed the first half of Spec A, and the plan below must not re-order it:
 
-| Shipped | Where |
-| --- | --- |
-| `LEFT JOIN artists ON canonical_name = canonical_artist`, `artistPhotoUrl` in all three response shapes | `apps/api/src/routes/events.ts:358, 604, 1229` |
-| `artistPhotoUrl` on `EventWithVenue`, nullable | `packages/types/src/index.ts:672–676` |
-| `EventImage` walks `src → artistPhotoUrl → IdentityArt`, including on load error | `apps/web/src/components/consumer/event-image/EventImage.tsx:36–65` |
-| Integration coverage for the join, unit coverage for the chain | `events.integration.test.ts:1851+`, `EventImage.test.tsx` |
+| Shipped                                                                                                 | Where                                                               |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `LEFT JOIN artists ON canonical_name = canonical_artist`, `artistPhotoUrl` in all three response shapes | `apps/api/src/routes/events.ts:358, 604, 1229`                      |
+| `artistPhotoUrl` on `EventWithVenue`, nullable                                                          | `packages/types/src/index.ts:672–676`                               |
+| `EventImage` walks `src → artistPhotoUrl → IdentityArt`, including on load error                        | `apps/web/src/components/consumer/event-image/EventImage.tsx:36–65` |
+| Integration coverage for the join, unit coverage for the chain                                          | `events.integration.test.ts:1851+`, `EventImage.test.tsx`           |
 
 **The gap nobody has noticed.** The chain is built but only two of seven event
 surfaces feed it. `EventRow.tsx:105` and `SmallEventRow.tsx:53` pass
@@ -48,11 +48,11 @@ That is a prototype convenience, not a design instruction.
 
 The shipped mapping is by rendered size:
 
-| Slot size | `scale` |
-| --- | --- |
-| ≥ 112px (BandCard 112, mobile HeroBand 128, desktop HeroBand 208) | `hero` |
-| 64–111px (shelf card art, FlexArt) | `tile` |
-| < 64px (row tiles 40–56, avatars 40) | `micro` |
+| Slot size                                                         | `scale` |
+| ----------------------------------------------------------------- | ------- |
+| ≥ 112px (BandCard 112, mobile HeroBand 128, desktop HeroBand 208) | `hero`  |
+| 64–111px (shelf card art, FlexArt)                                | `tile`  |
+| < 64px (row tiles 40–56, avatars 40)                              | `micro` |
 
 This also makes "mesh is dropped at hero scale only" literally true in code
 rather than true-by-analogy.
@@ -237,7 +237,7 @@ prove the band reads correctly.
    (line 79) — both existed to make type legible over a wide image, and there is
    no longer an image under the type.
 3. The eyebrow badge slot survives: `HeroFollowingBadge` and the `★ Tonight's
-   pick` badge move into the type column as the eyebrow. Reuse the shipped
+pick` badge move into the type column as the eyebrow. Reuse the shipped
    strings; introduce none.
 4. `WatchShowButton` stays outside the `Link`. Re-place it against the new box.
 

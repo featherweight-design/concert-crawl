@@ -4,12 +4,12 @@
 // paint over the very thing the customer came to look at.
 
 interface CrewNoticeProps {
-  eyebrow: string
-  title: string
-  body: string
+  eyebrow: string;
+  title: string;
+  body: string;
   /** Any theme token name; the dot and the border are tinted from it. */
-  tone?: 'signal' | 'warning'
-  children?: React.ReactNode
+  tone?: 'signal' | 'warning';
+  children?: React.ReactNode;
 }
 
 export const CrewNotice = ({
@@ -19,7 +19,7 @@ export const CrewNotice = ({
   tone = 'signal',
   children,
 }: CrewNoticeProps) => {
-  const accent = `var(--${tone})`
+  const accent = `var(--${tone})`;
 
   return (
     <div
@@ -81,5 +81,5 @@ export const CrewNotice = ({
       </span>
       {children}
     </div>
-  )
-}
+  );
+};

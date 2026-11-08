@@ -1,5 +1,5 @@
-import type { PlanState, SubscriptionStatus } from '@concert-crawl/types'
-import { PREMIUM_ROLES, isRole } from '@concert-crawl/types'
+import type { PlanState, SubscriptionStatus } from '@concert-crawl/types';
+import { PREMIUM_ROLES, isRole } from '@concert-crawl/types';
 
 // Pure plan derivation, moved here from apps/api/src/lib/plan.ts (#763 PR 10)
 // so the crawler's Spotify fan-out can gate pushes on the premium
@@ -11,17 +11,17 @@ import { PREMIUM_ROLES, isRole } from '@concert-crawl/types'
 // the web client imports it). Unknown tiers simply miss the PAID_TIER_PLANS
 // lookup and fall through, identical to the previous behavior.
 export interface PlanDerivationInput {
-  userId: string | null
-  role: string | undefined
-  giftedComp: { revokedAt: Date | null; expiresAt: Date | null } | null
+  userId: string | null;
+  role: string | undefined;
+  giftedComp: { revokedAt: Date | null; expiresAt: Date | null } | null;
   subscription: {
-    tier: string
-    status: SubscriptionStatus
-    cancelAtPeriodEnd: boolean
-    currentPeriodEnd: Date | null
-  } | null
-  billing: { trialEndsAt: Date | null } | null
-  now?: Date
+    tier: string;
+    status: SubscriptionStatus;
+    cancelAtPeriodEnd: boolean;
+    currentPeriodEnd: Date | null;
+  } | null;
+  billing: { trialEndsAt: Date | null } | null;
+  now?: Date;
 }
 
 // Statuses that keep the paid tier live. past_due stays paid through the
@@ -31,13 +31,13 @@ export const LIVE_STATUSES: readonly SubscriptionStatus[] = [
   'active',
   'past_due',
   'trialing',
-]
+];
 
 const PAID_TIER_PLANS: Partial<Record<string, PlanState['plan']>> = {
   founder: 'founder',
   premium: 'premium',
   supporter: 'supporter',
-}
+};
 
 export const isGiftLive = (
   gift: PlanDerivationInput['giftedComp'],
@@ -45,11 +45,11 @@ export const isGiftLive = (
 ): boolean =>
   gift !== null &&
   gift.revokedAt === null &&
-  (gift.expiresAt === null || gift.expiresAt.getTime() > now.getTime())
+  (gift.expiresAt === null || gift.expiresAt.getTime() > now.getTime());
 
 // Derivation order locked by #781's exclusions table: gifted BEFORE Stripe.
 export const derivePlanState = (input: PlanDerivationInput): PlanState => {
-  const now = input.now ?? new Date()
+  const now = input.now ?? new Date();
 
   if (!input.userId) {
     return {
@@ -60,12 +60,12 @@ export const derivePlanState = (input: PlanDerivationInput): PlanState => {
       cancelAtPeriodEnd: false,
       currentPeriodEnd: null,
       roleComped: false,
-    }
+    };
   }
 
-  const roleComped = isRole(input.role) && PREMIUM_ROLES.includes(input.role)
+  const roleComped = isRole(input.role) && PREMIUM_ROLES.includes(input.role);
 
-  const trialEndsAt = input.billing?.trialEndsAt ?? null
+  const trialEndsAt = input.billing?.trialEndsAt ?? null;
 
   const base: Omit<PlanState, 'plan' | 'onTrial'> = {
     trialEndsAt: trialEndsAt?.toISOString() ?? null,
@@ -74,22 +74,22 @@ export const derivePlanState = (input: PlanDerivationInput): PlanState => {
     currentPeriodEnd:
       input.subscription?.currentPeriodEnd?.toISOString() ?? null,
     roleComped,
-  }
+  };
 
   if (isGiftLive(input.giftedComp, now)) {
-    return { ...base, plan: 'gifted', onTrial: false }
+    return { ...base, plan: 'gifted', onTrial: false };
   }
 
   if (input.subscription && LIVE_STATUSES.includes(input.subscription.status)) {
-    const tierPlan = PAID_TIER_PLANS[input.subscription.tier]
+    const tierPlan = PAID_TIER_PLANS[input.subscription.tier];
     if (tierPlan) {
-      return { ...base, plan: tierPlan, onTrial: false }
+      return { ...base, plan: tierPlan, onTrial: false };
     }
   }
 
   if (trialEndsAt && trialEndsAt.getTime() > now.getTime()) {
-    return { ...base, plan: 'premium', onTrial: true }
+    return { ...base, plan: 'premium', onTrial: true };
   }
 
-  return { ...base, plan: 'free', onTrial: false }
-}
+  return { ...base, plan: 'free', onTrial: false };
+};

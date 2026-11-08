@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createApp } from '../../app.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app.js';
 
 const { mockGetAuth, mockDb } = vi.hoisted(() => {
   const mockVenueRow = {
@@ -15,11 +15,11 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     lastCrawledAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-  }
+  };
 
   // Chainable query builder that resolves to `resolveWith` when awaited
   function makeQueryBuilder(resolveWith: unknown[] = []) {
-    const builder: Record<string, unknown> = {}
+    const builder: Record<string, unknown> = {};
     const methods = [
       'select',
       'from',
@@ -30,15 +30,15 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
       'leftJoin',
       'limit',
       'offset',
-    ]
+    ];
     for (const method of methods) {
-      builder[method] = vi.fn().mockReturnValue(builder)
+      builder[method] = vi.fn().mockReturnValue(builder);
     }
     builder.then = (resolve: (val: unknown[]) => void) => {
-      resolve(resolveWith)
-      return Promise.resolve(resolveWith)
-    }
-    return builder
+      resolve(resolveWith);
+      return Promise.resolve(resolveWith);
+    };
+    return builder;
   }
 
   const mockDb = {
@@ -54,16 +54,16 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     returning: vi.fn().mockResolvedValue([mockVenueRow]),
     where: vi.fn().mockReturnThis(),
     execute: vi.fn().mockResolvedValue(undefined),
-  }
+  };
 
-  return { mockGetAuth: vi.fn(), mockDb }
-})
+  return { mockGetAuth: vi.fn(), mockDb };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
@@ -84,7 +84,7 @@ vi.mock('@concert-crawl/db', () => ({
   },
   auditLog: {},
   inviteCodes: {},
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn().mockReturnValue(true),
@@ -96,64 +96,64 @@ vi.mock('drizzle-orm', () => ({
   desc: vi.fn().mockReturnValue(true),
   isNotNull: vi.fn().mockReturnValue(true),
   sql: vi.fn().mockReturnValue(true),
-}))
+}));
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
     sessionClaims: { metadata: { role: 'admin' } },
-  })
+  });
 }
 
 describe('Admin venue routes', () => {
   beforeEach(() => {
-    mockGetAuth.mockReset()
-    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
-    mockDb.selectDistinctOn.mockReturnValue(mockDb._makeQueryBuilder([]))
-  })
+    mockGetAuth.mockReset();
+    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]));
+    mockDb.selectDistinctOn.mockReturnValue(mockDb._makeQueryBuilder([]));
+  });
 
   it('GET /v1/admin/venues returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(401);
+  });
 
   it('GET /v1/admin/venues returns 403 for non-admin users', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: { role: 'user' } },
-    })
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(403);
+  });
 
   it('GET /v1/admin/venues returns 200 and array for admin', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown[] }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    );
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown[] };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('POST /v1/admin/venues returns 400 for missing required fields', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Missing Fields' }), // no slug or websiteUrl
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('POST /v1/admin/venues creates a venue and returns 201', async () => {
-    adminAuth()
+    adminAuth();
     // Slug check: no conflict
-    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
-    mockDb.returning.mockResolvedValue([mockDb._mockVenueRow])
+    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]));
+    mockDb.returning.mockResolvedValue([mockDb._mockVenueRow]);
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -163,16 +163,16 @@ describe('Admin venue routes', () => {
         websiteUrl: 'https://ogdentheatre.com',
         city: 'Denver',
       }),
-    })
-    expect(res.status).toBe(201)
-  })
+    });
+    expect(res.status).toBe(201);
+  });
 
   it('POST /v1/admin/venues sets verified: true so Save & crawl now works', async () => {
-    adminAuth()
-    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
-    const verifiedVenue = { ...mockDb._mockVenueRow, verified: true }
-    mockDb.returning.mockResolvedValue([verifiedVenue])
-    mockDb.values.mockClear()
+    adminAuth();
+    mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]));
+    const verifiedVenue = { ...mockDb._mockVenueRow, verified: true };
+    mockDb.returning.mockResolvedValue([verifiedVenue]);
+    mockDb.values.mockClear();
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -182,62 +182,62 @@ describe('Admin venue routes', () => {
         websiteUrl: 'https://www.bluebirdtheater.net/calendar/',
         city: 'Denver',
       }),
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     // Ensure verified: true was passed to the insert
     expect(mockDb.values).toHaveBeenCalledWith(
       expect.objectContaining({ verified: true }),
-    )
-  })
+    );
+  });
 
   it('PATCH /v1/admin/venues/:id accepts crawlWaitForSelector', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, crawlWaitForSelector: '.event-card' },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlWaitForSelector: '.event-card' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { crawlWaitForSelector: string }
-    }
-    expect(body.data.crawlWaitForSelector).toBe('.event-card')
-  })
+      success: boolean;
+      data: { crawlWaitForSelector: string };
+    };
+    expect(body.data.crawlWaitForSelector).toBe('.event-card');
+  });
 
   it('PATCH /v1/admin/venues/:id accepts null crawlWaitForSelector to clear it', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, crawlWaitForSelector: null },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlWaitForSelector: null }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { crawlWaitForSelector: null }
-    }
-    expect(body.data.crawlWaitForSelector).toBeNull()
-  })
+      success: boolean;
+      data: { crawlWaitForSelector: null };
+    };
+    expect(body.data.crawlWaitForSelector).toBeNull();
+  });
 
   it('PATCH /v1/admin/venues/:id sets verifiedAt when verified: true', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
-    const verifiedAt = new Date()
+    );
+    const verifiedAt = new Date();
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
@@ -245,67 +245,67 @@ describe('Admin venue routes', () => {
         verifiedBy: 'Hugh',
         verifiedAt,
       },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ verified: true, verifiedBy: 'Hugh' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     // verifiedAt is auto-set by the route — must be passed to db.set
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({ verifiedAt: expect.any(Date) }),
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { verified: boolean; verifiedBy: string; verifiedAt: string }
-    }
-    expect(body.data.verified).toBe(true)
-    expect(body.data.verifiedBy).toBe('Hugh')
-    expect(body.data.verifiedAt).toBeTruthy()
-  })
+      success: boolean;
+      data: { verified: boolean; verifiedBy: string; verifiedAt: string };
+    };
+    expect(body.data.verified).toBe(true);
+    expect(body.data.verifiedBy).toBe('Hugh');
+    expect(body.data.verifiedAt).toBeTruthy();
+  });
 
   it('PATCH /v1/admin/venues/:id accepts debugCaptureHtml: true', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, debugCaptureHtml: true },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ debugCaptureHtml: true }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({ debugCaptureHtml: true }),
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { debugCaptureHtml: boolean }
-    }
-    expect(body.data.debugCaptureHtml).toBe(true)
-  })
+      success: boolean;
+      data: { debugCaptureHtml: boolean };
+    };
+    expect(body.data.debugCaptureHtml).toBe(true);
+  });
 
   it('PATCH /v1/admin/venues/:id rejects non-boolean debugCaptureHtml', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ debugCaptureHtml: 'yes' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('PATCH /v1/admin/venues/:id nulls verifiedBy and verifiedAt when verified: false', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -315,7 +315,7 @@ describe('Admin venue routes', () => {
           verifiedAt: new Date(),
         },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
@@ -323,73 +323,73 @@ describe('Admin venue routes', () => {
         verifiedBy: null,
         verifiedAt: null,
       },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ verified: false }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     // Route must explicitly null both fields
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({ verifiedBy: null, verifiedAt: null }),
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { verified: boolean; verifiedBy: null; verifiedAt: null }
-    }
-    expect(body.data.verified).toBe(false)
-    expect(body.data.verifiedBy).toBeNull()
-    expect(body.data.verifiedAt).toBeNull()
-  })
+      success: boolean;
+      data: { verified: boolean; verifiedBy: null; verifiedAt: null };
+    };
+    expect(body.data.verified).toBe(false);
+    expect(body.data.verifiedBy).toBeNull();
+    expect(body.data.verifiedAt).toBeNull();
+  });
 
   it('PATCH /v1/admin/venues/:id accepts apiProvider + apiAccountId', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
         apiProvider: 'venuepilot',
         apiAccountId: '1105',
       },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: 'venuepilot', apiAccountId: '1105' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({
         apiProvider: 'venuepilot',
         apiAccountId: '1105',
       }),
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { apiProvider: string; apiAccountId: string }
-    }
-    expect(body.data.apiProvider).toBe('venuepilot')
-    expect(body.data.apiAccountId).toBe('1105')
-  })
+      success: boolean;
+      data: { apiProvider: string; apiAccountId: string };
+    };
+    expect(body.data.apiProvider).toBe('venuepilot');
+    expect(body.data.apiAccountId).toBe('1105');
+  });
 
   it('PATCH /v1/admin/venues/:id trims apiAccountId whitespace', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
         apiProvider: 'venuepilot',
         apiAccountId: '1105',
       },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -397,41 +397,41 @@ describe('Admin venue routes', () => {
         apiProvider: 'venuepilot',
         apiAccountId: '  1105  ',
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({ apiAccountId: '1105' }),
-    )
-  })
+    );
+  });
 
   it('PATCH /v1/admin/venues/:id rejects apiProvider without apiAccountId', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: 'venuepilot' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('PATCH /v1/admin/venues/:id rejects apiProvider with whitespace-only apiAccountId', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: 'venuepilot', apiAccountId: '   ' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('PATCH /v1/admin/venues/:id nulls apiAccountId when apiProvider set to null', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -440,56 +440,56 @@ describe('Admin venue routes', () => {
           apiAccountId: '1105',
         },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, apiProvider: null, apiAccountId: null },
-    ])
-    mockDb.set.mockClear()
+    ]);
+    mockDb.set.mockClear();
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: null }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     // Route defensively nulls the orphaned account id in the same update.
     expect(mockDb.set).toHaveBeenCalledWith(
       expect.objectContaining({ apiAccountId: null }),
-    )
-  })
+    );
+  });
 
   it('PATCH /v1/admin/venues/:id rejects unknown apiProvider value', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: 'eventbrite', apiAccountId: '1105' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   // #1072: browser-mode venues must have a crawlWaitForSelector, or a slow
   // client-side render is captured as an empty page and returns 0 events.
   it('PATCH /v1/admin/venues/:id rejects browser crawlMode without a selector', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         { ...mockDb._mockVenueRow, crawlWaitForSelector: null, platform: null },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlMode: 'browser' }),
-    })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
-  })
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' });
+  });
 
   it('PATCH /v1/admin/venues/:id rejects clearing the selector on a browser venue', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -500,29 +500,29 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlWaitForSelector: null }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('PATCH /v1/admin/venues/:id accepts browser crawlMode with a selector in the same payload', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         { ...mockDb._mockVenueRow, crawlWaitForSelector: null, platform: null },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
         crawlMode: 'browser',
         crawlWaitForSelector: '.listing',
       },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -530,12 +530,12 @@ describe('Admin venue routes', () => {
         crawlMode: 'browser',
         crawlWaitForSelector: '.listing',
       }),
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   it('PATCH /v1/admin/venues/:id allows browser crawlMode without a selector when a platform fetcher handles the venue', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -546,20 +546,20 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, crawlMode: 'browser', platform: 'aeg' },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlMode: 'browser' }),
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   it('PATCH /v1/admin/venues/:id allows browser crawlMode without a selector when an apiProvider fetcher handles the venue', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -570,24 +570,24 @@ describe('Admin venue routes', () => {
           apiAccountId: '1105',
         },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       {
         ...mockDb._mockVenueRow,
         crawlMode: 'browser',
         apiProvider: 'venuepilot',
       },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlMode: 'browser' }),
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   it('PATCH /v1/admin/venues/:id requires a selector for a browser venue whose platform is set but missing its id', async () => {
-    adminAuth()
+    adminAuth();
     // platform='aeg' with no platformVenueId is NOT handled by any fetcher
     // (dispatch's canHandle requires both), so it still falls through to the
     // HTML cascade and needs the selector. The PATCH does not touch platform
@@ -602,18 +602,18 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlMode: 'browser' }),
-    })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
-  })
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' });
+  });
 
   it('PATCH /v1/admin/venues/:id requires a selector for a browser venue whose platformVenueId is an empty string', async () => {
-    adminAuth()
+    adminAuth();
     // platform='aeg' with an empty-string platformVenueId is NOT handled:
     // canHandle requires platformVenueId.length > 0. An empty/whitespace id
     // still falls through to the HTML cascade, so the selector is required —
@@ -630,18 +630,18 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ crawlMode: 'browser' }),
-    })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
-  })
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' });
+  });
 
   it('PATCH /v1/admin/venues/:id requires a selector when clearing platform on a fetcher-exempt browser venue', async () => {
-    adminAuth()
+    adminAuth();
     // The venue is currently AEG-handled (platform='aeg', id='shard-1') in
     // browser mode with no selector — exempt today. Clearing platform removes
     // the fetcher exemption and drops it into the HTML cascade, so the guard
@@ -657,18 +657,18 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platform: null }),
-    })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
-  })
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' });
+  });
 
   it('PATCH /v1/admin/venues/:id requires a selector when clearing apiProvider on a fetcher-exempt browser venue', async () => {
-    adminAuth()
+    adminAuth();
     // The venue is currently VenuePilot-handled (apiProvider='venuepilot',
     // apiAccountId='1105') in browser mode with no selector — exempt today.
     // Clearing apiProvider removes the exemption and drops it into the HTML
@@ -685,18 +685,18 @@ describe('Admin venue routes', () => {
           apiAccountId: '1105',
         },
       ]),
-    )
+    );
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiProvider: null }),
-    })
-    expect(res.status).toBe(400)
-    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
-  })
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' });
+  });
 
   it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.select.mockReturnValue(
       mockDb._makeQueryBuilder([
         {
@@ -707,15 +707,15 @@ describe('Admin venue routes', () => {
           apiProvider: null,
         },
       ]),
-    )
+    );
     mockDb.returning.mockResolvedValue([
       { ...mockDb._mockVenueRow, crawlMode: 'browser', verified: true },
-    ])
+    ]);
     const res = await createApp().request('/v1/admin/venues/venue-1', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ verified: true }),
-    })
-    expect(res.status).toBe(200)
-  })
-})
+    });
+    expect(res.status).toBe(200);
+  });
+});

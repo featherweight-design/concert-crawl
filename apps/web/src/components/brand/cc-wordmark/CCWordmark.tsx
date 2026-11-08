@@ -1,8 +1,8 @@
-import { BRAND_COPY } from '@/components/brand/definitions/copy'
+import { BRAND_COPY } from '@/components/brand/definitions/copy';
 
 interface CCWordmarkProps {
-  size?: number
-  className?: string
+  size?: number;
+  className?: string;
 }
 
 export function CCWordmark({ size = 28, className }: CCWordmarkProps) {
@@ -23,5 +23,5 @@ export function CCWordmark({ size = 28, className }: CCWordmarkProps) {
         {BRAND_COPY.wordmark.accent}
       </span>
     </span>
-  )
+  );
 }

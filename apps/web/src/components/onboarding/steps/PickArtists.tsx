@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Onboarding step 7 of 8. Presentational: the shell owns the suggestions
 // fetch, the selection and the commit, because both the mobile and the desktop
@@ -7,38 +7,38 @@
 // There is no commit button in here. The shell's CTA rail is the commit, so
 // the step body stays a grid and a sentence.
 
-import { Eyebrow, StepHeading, Lede } from './_primitives'
+import { Eyebrow, StepHeading, Lede } from './_primitives';
 import {
   ArtistPicker,
   PICK_COLUMNS_DESKTOP,
   type PickArtist,
-} from '@/components/consumer/artist-picker'
-import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search'
-import { ONBOARDING_COPY } from '../definitions/copy'
+} from '@/components/consumer/artist-picker';
+import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.pickArtists
+const copy = ONBOARDING_COPY.pickArtists;
 
 interface PickArtistsProps {
-  artists: PickArtist[]
-  selected: ReadonlySet<string>
-  onToggle: (slug: string) => void
-  loading: boolean
+  artists: PickArtist[];
+  selected: ReadonlySet<string>;
+  onToggle: (slug: string) => void;
+  loading: boolean;
   /** The suggestions read failed, which is not the same as it being empty. */
-  errored: boolean
-  onRetry: () => void
-  columns: number
+  errored: boolean;
+  onRetry: () => void;
+  columns: number;
   /**
    * Search state, threaded from the shell rather than held here: both the
    * mobile and the desktop tree render this step at once, and two copies of
    * the mode would let them disagree about what is being searched.
    */
-  searching: boolean
-  searchQuery: string
-  onSearchQueryChange: (next: string) => void
-  onSearchOpen: () => void
-  onSearchClose: () => void
-  searchResults: PickArtist[]
-  searchState: ArtistSearchState
+  searching: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (next: string) => void;
+  onSearchOpen: () => void;
+  onSearchClose: () => void;
+  searchResults: PickArtist[];
+  searchState: ArtistSearchState;
 }
 
 export function PickArtists({
@@ -90,5 +90,5 @@ export function PickArtists({
         searchState={searchState}
       />
     </div>
-  )
+  );
 }

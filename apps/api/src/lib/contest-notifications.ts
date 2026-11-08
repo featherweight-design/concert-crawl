@@ -1,5 +1,5 @@
-import { db, notifications } from '@concert-crawl/db'
-import { apiLogger } from './logger.js'
+import { db, notifications } from '@concert-crawl/db';
+import { apiLogger } from './logger.js';
 
 /**
  * Input for the contest notification fan-out.
@@ -24,35 +24,35 @@ import { apiLogger } from './logger.js'
  * surfaces (issue #737) read the keys as-is.
  */
 interface ContestNotificationInputBase {
-  contestId: string
-  parentSubmissionId: string
-  challengerSubmissionId: string
-  parentUserId: string | null
-  challengerUserId: string | null
-  eventId: string
-  reason: string
+  contestId: string;
+  parentSubmissionId: string;
+  challengerSubmissionId: string;
+  parentUserId: string | null;
+  challengerUserId: string | null;
+  eventId: string;
+  reason: string;
 }
 
 export type ContestNotificationInput =
   | (ContestNotificationInputBase & {
-      action: 'resolve'
-      resolution: 'parent_wins' | 'challenger_wins'
+      action: 'resolve';
+      resolution: 'parent_wins' | 'challenger_wins';
     })
   | (ContestNotificationInputBase & {
-      action: 'defer'
-      resolution?: never
+      action: 'defer';
+      resolution?: never;
       /**
        * The committed `last_admin_action_at` of this defer. A contest can be
        * deferred more than once (each is a new "need more info" request the
        * submitters should hear about), so the defer's dedupe key carries it.
        */
-      deferredAt: Date
-    })
+      deferredAt: Date;
+    });
 
 interface Recipient {
-  userId: string
-  submissionId: string
-  role: 'parent' | 'challenger'
+  userId: string;
+  submissionId: string;
+  role: 'parent' | 'challenger';
 }
 
 /**
@@ -84,13 +84,13 @@ interface Recipient {
 export async function writeContestNotifications(
   input: ContestNotificationInput,
 ): Promise<{ written: number }> {
-  const recipients: Recipient[] = []
+  const recipients: Recipient[] = [];
   if (input.parentUserId !== null) {
     recipients.push({
       userId: input.parentUserId,
       submissionId: input.parentSubmissionId,
       role: 'parent',
-    })
+    });
   }
   if (
     input.challengerUserId !== null &&
@@ -100,17 +100,17 @@ export async function writeContestNotifications(
       userId: input.challengerUserId,
       submissionId: input.challengerSubmissionId,
       role: 'challenger',
-    })
+    });
   }
 
-  if (recipients.length === 0) return { written: 0 }
+  if (recipients.length === 0) return { written: 0 };
 
   const category =
-    input.action === 'resolve' ? 'contest.resolved' : 'contest.needs_info'
+    input.action === 'resolve' ? 'contest.resolved' : 'contest.needs_info';
   const title =
     input.action === 'resolve'
       ? 'Your price submission was reviewed.'
-      : 'More info requested on your price submission.'
+      : 'More info requested on your price submission.';
 
   // Branch metadata shape on action — the two inline blocks emitted different
   // blobs and the integration tests pin each shape's keys. Resolve: minimal
@@ -122,7 +122,7 @@ export async function writeContestNotifications(
         submissionId: recipient.submissionId,
         contestId: input.contestId,
         resolution: input.resolution,
-      })
+      });
     }
     return JSON.stringify({
       submissionId: recipient.submissionId,
@@ -131,8 +131,8 @@ export async function writeContestNotifications(
       role: recipient.role,
       kind: 'defer',
       reason: input.reason,
-    })
-  }
+    });
+  };
 
   // #1311 replay protection. The key names one committed admin action per
   // recipient: `contest:{contestId}:{userId}:{action}` per the issue, with two
@@ -142,11 +142,11 @@ export async function writeContestNotifications(
   // committed timestamp, because defer is repeatable on one counter. A
   // replayed call with the same input writes nothing.
   const dedupeKey = (recipient: Recipient): string => {
-    const base = `contest:${input.contestId}:${input.challengerSubmissionId}:${recipient.userId}:${input.action}`
+    const base = `contest:${input.contestId}:${input.challengerSubmissionId}:${recipient.userId}:${input.action}`;
     return input.action === 'defer'
       ? `${base}:${input.deferredAt.toISOString()}`
-      : base
-  }
+      : base;
+  };
 
   const rows = recipients.map((recipient) => ({
     dedupeKey: dedupeKey(recipient),
@@ -157,7 +157,7 @@ export async function writeContestNotifications(
     body: input.reason,
     actionUrl: `/events/${input.eventId}`,
     metadata: buildMetadata(recipient),
-  }))
+  }));
 
   try {
     // ON CONFLICT DO NOTHING against notifications_dedupe_key_idx: the row is
@@ -167,13 +167,13 @@ export async function writeContestNotifications(
       .insert(notifications)
       .values(rows)
       .onConflictDoNothing({ target: notifications.dedupeKey })
-      .returning({ id: notifications.id })
-    return { written: inserted.length }
+      .returning({ id: notifications.id });
+    return { written: inserted.length };
   } catch (notifyErr) {
     apiLogger.warn(
       { contestId: input.contestId, action: input.action, err: notifyErr },
       'Failed to write contest notifications; admin action itself already committed.',
-    )
-    return { written: 0 }
+    );
+    return { written: 0 };
   }
 }

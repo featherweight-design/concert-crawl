@@ -21,40 +21,41 @@
 ```ts
 describe('crawlVenue — account-wide LLM quota', () => {
   const QUOTA =
-    'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}'
+    'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}';
 
-  const storedVenue = (id: string) => stores.venues.find((row) => row.id === id)
+  const storedVenue = (id: string) =>
+    stores.venues.find((row) => row.id === id);
   const arrangeLlmPath = (venue: { websiteUrl: string }) =>
     mockFetchPage.mockResolvedValue({
       html: HTML_V1,
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
-    })
+    });
 
   it('records the run as failed without touching the three-strikes counter', async () => {
-    const venue = seedVenue({ consecutiveFailures: 2 })
-    arrangeLlmPath(venue)
-    mockExtractWithLlm.mockRejectedValueOnce(new Error(QUOTA))
+    const venue = seedVenue({ consecutiveFailures: 2 });
+    arrangeLlmPath(venue);
+    mockExtractWithLlm.mockRejectedValueOnce(new Error(QUOTA));
 
-    const run = await crawlVenue(venue.id, mockBrowser)
+    const run = await crawlVenue(venue.id, mockBrowser);
 
-    expect(run.status).toBe('failed')
-    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2)
-    expect(storedVenue(venue.id)?.active).toBe(true)
-  })
+    expect(run.status).toBe('failed');
+    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2);
+    expect(storedVenue(venue.id)?.active).toBe(true);
+  });
 
   it('still runs the three-strikes update for an ordinary failure (control)', async () => {
-    const venue = seedVenue({ consecutiveFailures: 2 })
-    arrangeLlmPath(venue)
+    const venue = seedVenue({ consecutiveFailures: 2 });
+    arrangeLlmPath(venue);
     mockExtractWithLlm.mockRejectedValueOnce(
       new Error('TypeError: fetch failed'),
-    )
+    );
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2)
-  })
-})
+    expect(storedVenue(venue.id)?.consecutiveFailures).not.toBe(2);
+  });
+});
 ```
 
 - [x] **Step 2: Run to verify the first fails and the control passes** — `pnpm --filter @concert-crawl/crawler-core test -- crawl.test`.
@@ -72,7 +73,7 @@ describe('crawlVenue — account-wide LLM quota', () => {
 // several venues hit it in the daily run — the run-level alert
 // (lib/run-health.ts). A lone quota failure on a trigger-queued crawl gets
 // the Sentry event only.
-const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota'
+const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota';
 ```
 
 Wrap everything from `const isHttpBlocked` through the end of the `if (newFailureCount >= 3) { … }` block in `if (!isAccountQuota) { … }`. The `const durationMs` line, the `crawl_runs` insert and the final `reportFailure` stay outside it, unconditional.

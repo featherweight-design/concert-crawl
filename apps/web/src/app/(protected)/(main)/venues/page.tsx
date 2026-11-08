@@ -1,29 +1,29 @@
-import { auth } from '@clerk/nextjs/server'
-import type { VenuePublic } from '@concert-crawl/types'
-import { publicApiClient, apiClient } from '@/lib/api'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { VenuesIndexClient } from '@/components/consumer/venues-index'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { auth } from '@clerk/nextjs/server';
+import type { VenuePublic } from '@concert-crawl/types';
+import { publicApiClient, apiClient } from '@/lib/api';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { VenuesIndexClient } from '@/components/consumer/venues-index';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.venuesPage
+const copy = CONSUMER_COPY.venuesPage;
 
-export const metadata = { title: 'Venues — Concert Crawl' }
+export const metadata = { title: 'Venues — Concert Crawl' };
 
 async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
   try {
     if (token) {
-      return await apiClient.get<VenuePublic[]>('/v1/venues', token)
+      return await apiClient.get<VenuePublic[]>('/v1/venues', token);
     }
-    return await publicApiClient.get<VenuePublic[]>('/v1/venues')
+    return await publicApiClient.get<VenuePublic[]>('/v1/venues');
   } catch {
-    return []
+    return [];
   }
 }
 
 export default async function VenuesPage() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  const venues = await fetchVenues(token)
+  const { getToken } = await auth();
+  const token = await getToken();
+  const venues = await fetchVenues(token);
 
   return (
     <div className="mx-auto w-full max-w-[1120px] px-[18px] pb-24 pt-4 sm:px-8 sm:pt-[48px]">
@@ -63,5 +63,5 @@ export default async function VenuesPage() {
         <VenuesIndexClient venues={venues} />
       )}
     </div>
-  )
+  );
 }

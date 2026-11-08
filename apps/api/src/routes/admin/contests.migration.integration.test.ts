@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { priceSubmissions, events, venues } from '@concert-crawl/db'
-import { testDb as db } from '../../test/helpers/db.js'
-import { clearTables } from '../../test/helpers/seed.js'
+import { beforeEach, describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { priceSubmissions, events, venues } from '@concert-crawl/db';
+import { testDb as db } from '../../test/helpers/db.js';
+import { clearTables } from '../../test/helpers/seed.js';
 
 // Migration 0041 — admin contest review. Verifies the schema produced by the
 // migration directly (rather than through an API route) so structural
@@ -14,36 +14,36 @@ describe('migration 0041 — admin contest review', () => {
   // doesn't collide with leftovers from earlier failed runs in the same
   // shared concert_crawl_test database.
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('adds the archived status value to price_submission_status', async () => {
     const rows = await db.execute<{ enumlabel: string }>(sql`
       SELECT enumlabel FROM pg_enum
        WHERE enumtypid = 'price_submission_status'::regtype
        ORDER BY enumsortorder
-    `)
-    const labels = rows.map((row) => row.enumlabel)
-    expect(labels).toContain('archived')
-  })
+    `);
+    const labels = rows.map((row) => row.enumlabel);
+    expect(labels).toContain('archived');
+  });
 
   it('adds archived_reason, last_admin_action_at, last_admin_action_kind columns', async () => {
     const rows = await db.execute<{
-      column_name: string
-      data_type: string
+      column_name: string;
+      data_type: string;
     }>(sql`
       SELECT column_name, data_type FROM information_schema.columns
        WHERE table_name = 'price_submissions'
          AND column_name IN ('archived_reason', 'last_admin_action_at', 'last_admin_action_kind')
        ORDER BY column_name
-    `)
-    const names = rows.map((row) => row.column_name)
+    `);
+    const names = rows.map((row) => row.column_name);
     expect(names).toEqual([
       'archived_reason',
       'last_admin_action_at',
       'last_admin_action_kind',
-    ])
-  })
+    ]);
+  });
 
   it('creates the four contest-queue indexes', async () => {
     const rows = await db.execute<{ indexname: string }>(sql`
@@ -56,15 +56,15 @@ describe('migration 0041 — admin contest review', () => {
            'price_submissions_pending_counter_unique_idx'
          )
        ORDER BY indexname
-    `)
-    const names = rows.map((row) => row.indexname)
+    `);
+    const names = rows.map((row) => row.indexname);
     expect(names).toEqual([
       'price_submissions_disputed_status_idx',
       'price_submissions_pending_counter_unique_idx',
       'price_submissions_pending_counters_by_filed_idx',
       'price_submissions_pending_counters_idx',
-    ])
-  })
+    ]);
+  });
 
   it('unique index rejects a 2nd pending counter against the same parent', async () => {
     // Seed a venue + event + parent submission so we can attach counters.
@@ -79,7 +79,7 @@ describe('migration 0041 — admin contest review', () => {
         slug: 'contest-mig-test',
         websiteUrl: 'https://contest-mig-test.example.com',
       })
-      .returning({ id: venues.id })
+      .returning({ id: venues.id });
     const [event] = await db
       .insert(events)
       .values({
@@ -90,7 +90,7 @@ describe('migration 0041 — admin contest review', () => {
         date: '2027-12-01',
         verified: true,
       })
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     const [parent] = await db
       .insert(priceSubmissions)
       .values({
@@ -103,7 +103,7 @@ describe('migration 0041 — admin contest review', () => {
         sourceCategory: 'standard',
         status: 'corroborated',
       })
-      .returning({ id: priceSubmissions.id })
+      .returning({ id: priceSubmissions.id });
 
     // First pending counter — accepted.
     await db.insert(priceSubmissions).values({
@@ -116,14 +116,14 @@ describe('migration 0041 — admin contest review', () => {
       sourceCategory: 'standard',
       status: 'pending',
       disputedSubmissionId: parent!.id,
-    })
+    });
 
     // Second pending counter against the SAME parent — rejected by unique idx.
     // Drizzle wraps the underlying Postgres error in "Failed query: ..."; the
     // original error (with the constraint name) is on `.cause`. Mirror the
     // pattern in apps/api/src/test/migration-0040.integration.test.ts and
     // assert against `cause.message` so the constraint name is verified.
-    let caught: unknown
+    let caught: unknown;
     try {
       await db.insert(priceSubmissions).values({
         eventId: event!.id,
@@ -135,16 +135,18 @@ describe('migration 0041 — admin contest review', () => {
         sourceCategory: 'standard',
         status: 'pending',
         disputedSubmissionId: parent!.id,
-      })
+      });
     } catch (error) {
-      caught = error
+      caught = error;
     }
 
-    expect(caught).toBeDefined()
+    expect(caught).toBeDefined();
     const causeMessage =
       caught instanceof Error && caught.cause instanceof Error
         ? caught.cause.message
-        : ''
-    expect(causeMessage).toMatch(/price_submissions_pending_counter_unique_idx/)
-  })
-})
+        : '';
+    expect(causeMessage).toMatch(
+      /price_submissions_pending_counter_unique_idx/,
+    );
+  });
+});

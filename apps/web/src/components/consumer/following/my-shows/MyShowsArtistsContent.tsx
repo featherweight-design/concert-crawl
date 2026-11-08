@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // My shows ▸ Artists — the third sub-tab (native following, PR 6).
 //
@@ -13,27 +13,27 @@
 // can still leave. A re-follow that the plan does not cover comes back as a
 // 403 and routes to the tier picker from there.
 
-import { useEffect, useMemo, useState } from 'react'
-import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
-import type { FollowedArtist, PickerEntry } from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo'
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs'
-import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/constants'
-import { ArtistManageRow } from './ArtistManageRow'
-import { AlertsRow } from './AlertsRow'
-import { ArtistsEmpty } from './ArtistsEmpty'
-import { FindArtistsRow } from './FindArtistsRow'
-import { Mono } from './Mono'
-import { GlyphSearch } from './Glyphs'
-import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import { groupFollows, spotifyFollowCount } from './lib/group-follows'
+import { useEffect, useMemo, useState } from 'react';
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
+import type { FollowedArtist, PickerEntry } from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
+import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
+import { SHELF_NARROW_QUERY } from '@/components/consumer/following/definitions/constants';
+import { ArtistManageRow } from './ArtistManageRow';
+import { AlertsRow } from './AlertsRow';
+import { ArtistsEmpty } from './ArtistsEmpty';
+import { FindArtistsRow } from './FindArtistsRow';
+import { Mono } from './Mono';
+import { GlyphSearch } from './Glyphs';
+import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
+import { groupFollows, spotifyFollowCount } from './lib/group-follows';
 
-const COPY = MY_SHOWS_ARTISTS_COPY
+const COPY = MY_SHOWS_ARTISTS_COPY;
 
 interface MyShowsArtistsContentProps {
   /**
@@ -41,41 +41,41 @@ interface MyShowsArtistsContentProps {
    * "nobody on your list" to someone who follows fifty artists is the one
    * mistake this surface must never make.
    */
-  artists: FollowedArtist[] | undefined
-  scaRegion: boolean
+  artists: FollowedArtist[] | undefined;
+  scaRegion: boolean;
 }
 
 export const MyShowsArtistsContent = ({
   artists,
   scaRegion,
 }: MyShowsArtistsContentProps) => {
-  const { surface } = useEntitlement('following')
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [narrow, setNarrow] = useState(false)
+  const { surface } = useEntitlement('following');
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [narrow, setNarrow] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia(SHELF_NARROW_QUERY)
-    const apply = () => setNarrow(media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [])
+    const media = window.matchMedia(SHELF_NARROW_QUERY);
+    const apply = () => setNarrow(media.matches);
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
 
-  const follows = useMemo(() => artists ?? [], [artists])
-  const groups = useMemo(() => groupFollows(follows), [follows])
-  const spotifyCount = useMemo(() => spotifyFollowCount(follows), [follows])
+  const follows = useMemo(() => artists ?? [], [artists]);
+  const groups = useMemo(() => groupFollows(follows), [follows]);
+  const spotifyCount = useMemo(() => spotifyFollowCount(follows), [follows]);
 
   const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   // Fails OPEN while the plan is resolving: the empty state's CTAs write
   // nothing either way, and showing a paying subscriber an upgrade-shaped
   // pitch is the worse of the two wrong answers.
-  const locked = surface !== null && surface !== 'visible-active'
+  const locked = surface !== null && surface !== 'visible-active';
 
-  const onEntitlementRequired = () => setPickerOpen(true)
+  const onEntitlementRequired = () => setPickerOpen(true);
 
   const picker = (
     <TierPickerSheet
@@ -87,7 +87,7 @@ export const MyShowsArtistsContent = ({
       scaRegion={scaRegion}
       entry={pickerEntry}
     />
-  )
+  );
 
   // The fetch failed. Deliberately NOT the empty state: "nobody on your list"
   // is a claim about the account, and we are not in a position to make it.
@@ -102,7 +102,7 @@ export const MyShowsArtistsContent = ({
           {COPY.error}
         </p>
       </main>
-    )
+    );
   }
 
   if (follows.length === 0) {
@@ -117,11 +117,11 @@ export const MyShowsArtistsContent = ({
         </div>
         {picker}
       </main>
-    )
+    );
   }
 
-  const datedHeading = COPY.groups.dated(groups.dated.length)
-  const undatedHeading = COPY.groups.undated(groups.undated.length)
+  const datedHeading = COPY.groups.dated(groups.dated.length);
+  const undatedHeading = COPY.groups.undated(groups.undated.length);
 
   // Desktop promotes this into whichever group heading renders first. It used
   // to live only in the dated row, which stranded it for anyone whose follows
@@ -139,7 +139,7 @@ export const MyShowsArtistsContent = ({
       <GlyphSearch size={13} />
       {COPY.find.title}
     </SearchLink>
-  )
+  );
 
   // Moves with the per-row SourceMark: the footnote's reassurance only makes
   // sense beside rows that say where they came from, so neither is shown
@@ -168,7 +168,7 @@ export const MyShowsArtistsContent = ({
         {COPY.spotifyFootnote(spotifyCount)}
       </p>
     </div>
-  )
+  );
 
   // Both densities carry these ABOVE the list. Trailing it put the surface's
   // only notification affordance below however many follows the viewer had,
@@ -181,7 +181,7 @@ export const MyShowsArtistsContent = ({
       <AlertsRow />
       {spotifyNote}
     </div>
-  )
+  );
 
   return (
     // One landmark, two densities. The responsive wrappers are plain divs
@@ -302,8 +302,8 @@ export const MyShowsArtistsContent = ({
         )}
       </div>
     </main>
-  )
-}
+  );
+};
 
 const denseButton = {
   minHeight: 40,
@@ -313,7 +313,7 @@ const denseButton = {
   fontSize: 13,
   letterSpacing: '-0.01em',
   textDecoration: 'none',
-} as const
+} as const;
 
 const densePrimary = {
   ...denseButton,
@@ -321,4 +321,4 @@ const densePrimary = {
   color: 'var(--fg-on-accent)',
   border: '1px solid var(--signal)',
   fontWeight: 800,
-}
+};

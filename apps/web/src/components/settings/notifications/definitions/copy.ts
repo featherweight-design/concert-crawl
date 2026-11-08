@@ -146,4 +146,4 @@ export const NOTIFICATIONS_COPY = {
     // but a boolean, so there is no rollback to describe, only a retry.
     preference: "Couldn't save that switch. Flip it again in a moment.",
   },
-} as const
+} as const;

@@ -5,9 +5,9 @@
 // reads a sitemap plus a calendar page per rolling month. Worst-case wall time
 // was N × timeoutMs, so a caller asking for a 15s budget could wait minutes.
 
-import { createLogger } from '@concert-crawl/logger'
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('platform-fetch-deadline')
+const logger = createLogger('platform-fetch-deadline');
 
 /**
  * Raised when a platform fetch exhausts its overall wall-clock budget.
@@ -25,8 +25,8 @@ export class PlatformFetchDeadlineError extends Error {
   ) {
     super(
       `Platform fetch exceeded its ${overallTimeoutMs}ms budget after ${elapsedMs}ms (at ${stage})`,
-    )
-    this.name = 'PlatformFetchDeadlineError'
+    );
+    this.name = 'PlatformFetchDeadlineError';
   }
 }
 
@@ -38,7 +38,7 @@ export interface FetchDeadline {
   run<TResult>(
     stage: string,
     request: (timeoutMs: number | undefined) => Promise<TResult>,
-  ): Promise<TResult>
+  ): Promise<TResult>;
 
   /**
    * Sleeps for the inter-request crawl delay, never past the remaining
@@ -47,35 +47,35 @@ export interface FetchDeadline {
    * delay however tightly each request is capped. Returning early is safe:
    * the next `run` sees the spent budget and throws the breach itself.
    */
-  wait(delayMs: number): Promise<void>
+  wait(delayMs: number): Promise<void>;
 
   /**
    * Widens the overall budget. For an adapter that learns, after the budget
    * was set, that the host it fetches asks for a longer Crawl-delay than the
    * one the budget was sized from.
    */
-  extend(extraMs: number): void
+  extend(extraMs: number): void;
 }
 
-const ABORT_ERROR_NAMES = new Set(['TimeoutError', 'AbortError'])
+const ABORT_ERROR_NAMES = new Set(['TimeoutError', 'AbortError']);
 
 export const createDeadline = ({
   perRequestTimeoutMs,
   overallTimeoutMs: initialOverallTimeoutMs,
 }: {
-  perRequestTimeoutMs?: number
-  overallTimeoutMs?: number
+  perRequestTimeoutMs?: number;
+  overallTimeoutMs?: number;
 }): FetchDeadline => {
-  let overallTimeoutMs = initialOverallTimeoutMs
-  const startedAt = Date.now()
-  const elapsed = () => Date.now() - startedAt
+  let overallTimeoutMs = initialOverallTimeoutMs;
+  const startedAt = Date.now();
+  const elapsed = () => Date.now() - startedAt;
 
   const breach = (stage: string): PlatformFetchDeadlineError | undefined => {
-    if (overallTimeoutMs === undefined) return undefined
-    const spent = elapsed()
-    if (spent < overallTimeoutMs) return undefined
-    return new PlatformFetchDeadlineError(overallTimeoutMs, spent, stage)
-  }
+    if (overallTimeoutMs === undefined) return undefined;
+    const spent = elapsed();
+    if (spent < overallTimeoutMs) return undefined;
+    return new PlatformFetchDeadlineError(overallTimeoutMs, spent, stage);
+  };
 
   /**
    * The timeout to hand this request, plus whether the overall budget — rather
@@ -83,49 +83,49 @@ export const createDeadline = ({
    * value to classify an abort without consulting the clock again.
    */
   const nextTimeout = (): {
-    timeoutMs: number | undefined
-    budgetBound: boolean
+    timeoutMs: number | undefined;
+    budgetBound: boolean;
   } => {
     if (overallTimeoutMs === undefined) {
-      return { timeoutMs: perRequestTimeoutMs, budgetBound: false }
+      return { timeoutMs: perRequestTimeoutMs, budgetBound: false };
     }
     // Floored at zero: the caller checked the budget a moment ago, but time
     // moves between that check and this one, and `AbortSignal.timeout()`
     // throws on a negative delay. Zero aborts immediately, which `run` then
     // relabels as the deadline breach it actually is.
-    const remaining = Math.max(0, overallTimeoutMs - elapsed())
+    const remaining = Math.max(0, overallTimeoutMs - elapsed());
     if (perRequestTimeoutMs === undefined) {
-      return { timeoutMs: remaining, budgetBound: true }
+      return { timeoutMs: remaining, budgetBound: true };
     }
     return perRequestTimeoutMs < remaining
       ? { timeoutMs: perRequestTimeoutMs, budgetBound: false }
-      : { timeoutMs: remaining, budgetBound: true }
-  }
+      : { timeoutMs: remaining, budgetBound: true };
+  };
 
   return {
     extend(extraMs) {
       if (overallTimeoutMs !== undefined && extraMs > 0)
-        overallTimeoutMs += extraMs
+        overallTimeoutMs += extraMs;
     },
 
     async wait(delayMs) {
-      if (delayMs <= 0) return
+      if (delayMs <= 0) return;
       const capped =
         overallTimeoutMs === undefined
           ? delayMs
-          : Math.min(delayMs, Math.max(0, overallTimeoutMs - elapsed()))
-      if (capped <= 0) return
-      await new Promise((resolve) => setTimeout(resolve, capped))
+          : Math.min(delayMs, Math.max(0, overallTimeoutMs - elapsed()));
+      if (capped <= 0) return;
+      await new Promise((resolve) => setTimeout(resolve, capped));
     },
 
     async run(stage, request) {
-      const spentBefore = breach(stage)
-      if (spentBefore) throw spentBefore
+      const spentBefore = breach(stage);
+      if (spentBefore) throw spentBefore;
 
-      const { timeoutMs, budgetBound } = nextTimeout()
+      const { timeoutMs, budgetBound } = nextTimeout();
 
       try {
-        return await request(timeoutMs)
+        return await request(timeoutMs);
       } catch (err) {
         // An abort fired by the budget-derived signal surfaces as a generic
         // TimeoutError. Relabel only aborts — a real HTTP failure that lands
@@ -143,7 +143,7 @@ export const createDeadline = ({
           err instanceof Error &&
           ABORT_ERROR_NAMES.has(err.name)
         ) {
-          const spent = elapsed()
+          const spent = elapsed();
           // Relabelling is the one path that discards the original error,
           // so record what it was before swapping it for the breach. The log
           // keeps the raw reading; the error reports at least the budget,
@@ -153,12 +153,12 @@ export const createDeadline = ({
           logger.debug(
             { stage, abortName: err.name, elapsedMs: spent },
             'platform fetch: abort relabelled as a deadline breach',
-          )
+          );
           throw new PlatformFetchDeadlineError(
             overallTimeoutMs,
             Math.max(spent, overallTimeoutMs),
             stage,
-          )
+          );
         }
         logger.debug(
           {
@@ -168,9 +168,9 @@ export const createDeadline = ({
             budgetBound,
           },
           'platform fetch: error rethrown unchanged',
-        )
-        throw err
+        );
+        throw err;
       }
     },
-  }
-}
+  };
+};

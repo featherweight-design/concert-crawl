@@ -50,4 +50,4 @@ export const GOING_COPY = {
     // Names what survived, so a failed commit doesn't read as losing the watch.
     survived: "We couldn't reach the server. Your watch is safe.",
   },
-} as const
+} as const;

@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { MultiSourceMultiTierCard } from './MultiSourceMultiTierCard'
+import React from 'react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import { MultiSourceMultiTierCard } from './MultiSourceMultiTierCard';
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)', () => {
   const baseProps = {
@@ -19,7 +19,7 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
       kind: 'resale' as const,
       price: 35,
     },
-  }
+  };
 
   it('renders headline with "from $20 GA", box-office trust pill, and meta line', () => {
     render(
@@ -34,29 +34,29 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
           },
         ]}
       />,
-    )
+    );
 
     // Eyebrow
-    expect(screen.getByText('Tickets')).toBeDefined()
+    expect(screen.getByText('Tickets')).toBeDefined();
     // Headline parts
-    expect(screen.getByText('from')).toBeDefined()
-    expect(screen.getByText('$20')).toBeDefined()
-    expect(screen.getByText('GA')).toBeDefined()
+    expect(screen.getByText('from')).toBeDefined();
+    expect(screen.getByText('$20')).toBeDefined();
+    expect(screen.getByText('GA')).toBeDefined();
     // Meta template — populated with the headline vendor
     expect(
       screen.getByText('seen on Venue · face value · no fees'),
-    ).toBeDefined()
-  })
+    ).toBeDefined();
+  });
 
   it('renders "Or pay for convenience" eyebrow + cross-source resale row', () => {
-    render(<MultiSourceMultiTierCard {...baseProps} otherTiers={[]} />)
+    render(<MultiSourceMultiTierCard {...baseProps} otherTiers={[]} />);
 
-    expect(screen.getByText('Or pay for convenience')).toBeDefined()
+    expect(screen.getByText('Or pay for convenience')).toBeDefined();
     // AltSourceRow contents
-    expect(screen.getByText('Ticketmaster')).toBeDefined()
-    expect(screen.getByText('resale')).toBeDefined()
-    expect(screen.getByText('$35')).toBeDefined()
-  })
+    expect(screen.getByText('Ticketmaster')).toBeDefined();
+    expect(screen.getByText('resale')).toBeDefined();
+    expect(screen.getByText('$35')).toBeDefined();
+  });
 
   it('renders "Other tiers" section with one VIP boxoffice row when provided', () => {
     render(
@@ -71,17 +71,17 @@ describe('MultiSourceMultiTierCard (state #5 — live multi-tier mixed sources)'
           },
         ]}
       />,
-    )
+    );
 
-    expect(screen.getByText('Other tiers')).toBeDefined()
-    expect(screen.getByText('VIP')).toBeDefined()
-    expect(screen.getByText('Venue')).toBeDefined()
-    expect(screen.getByText('$80')).toBeDefined()
-  })
+    expect(screen.getByText('Other tiers')).toBeDefined();
+    expect(screen.getByText('VIP')).toBeDefined();
+    expect(screen.getByText('Venue')).toBeDefined();
+    expect(screen.getByText('$80')).toBeDefined();
+  });
 
   it('omits the "Other tiers" section when otherTiers is empty', () => {
-    render(<MultiSourceMultiTierCard {...baseProps} otherTiers={[]} />)
+    render(<MultiSourceMultiTierCard {...baseProps} otherTiers={[]} />);
 
-    expect(screen.queryByText('Other tiers')).toBeNull()
-  })
-})
+    expect(screen.queryByText('Other tiers')).toBeNull();
+  });
+});

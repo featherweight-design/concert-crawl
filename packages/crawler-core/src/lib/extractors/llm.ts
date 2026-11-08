@@ -1,20 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { z } from 'zod'
-import { reportFailure } from '@concert-crawl/logger'
-import type { LLMResult } from '../../types.js'
-import { cleanHtml, resolveExtractedUrl } from './clean-html.js'
-import { salvageJsonArrayPrefix } from './salvage-json-array.js'
-import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
-import { stripDescriptionHtml } from '../strip-description-html.js'
-import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js'
+import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
+import { reportFailure } from '@concert-crawl/logger';
+import type { LLMResult } from '../../types.js';
+import { cleanHtml, resolveExtractedUrl } from './clean-html.js';
+import { salvageJsonArrayPrefix } from './salvage-json-array.js';
+import { normalizeSupportingArtists } from '../normalize-supporting-artists.js';
+import { stripDescriptionHtml } from '../strip-description-html.js';
+import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js';
 
 const isoDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD')
   .refine((v) => {
-    const d = new Date(`${v}T00:00:00.000Z`)
-    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
-  }, 'date must be a valid calendar date')
+    const d = new Date(`${v}T00:00:00.000Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  }, 'date must be a valid calendar date');
 
 /**
  * A list of act names as the MODEL emits it, which is not the same thing as a
@@ -53,7 +53,7 @@ const isoDateSchema = z
  * there, null is a meaningful value with its own documented trigger. Inside a
  * list it is only ever noise.
  */
-const NameList = z.array(z.string().nullable())
+const NameList = z.array(z.string().nullable());
 
 /**
  * Drop the nulls and blanks {@link NameList} admits, trim the rest, and keep
@@ -61,14 +61,14 @@ const NameList = z.array(z.string().nullable())
  * dedupe against `artist`, which is not known here.
  */
 function presentNames(names: readonly (string | null)[]): string[] {
-  const present: string[] = []
+  const present: string[] = [];
   for (const raw of names) {
-    if (raw === null) continue
-    const name = raw.trim()
-    if (name === '') continue
-    present.push(name)
+    if (raw === null) continue;
+    const name = raw.trim();
+    if (name === '') continue;
+    present.push(name);
   }
-  return present
+  return present;
 }
 
 export const NormalizedEventSchema = z.object({
@@ -99,7 +99,7 @@ export const NormalizedEventSchema = z.object({
   confidence: z.number().min(0).max(1),
   isConcert: z.boolean().optional(),
   reviewNeeded: z.boolean().optional(),
-})
+});
 
 // Deliberately loose: the array shape is validated here, but each element is
 // checked individually below so one malformed row can't void an otherwise
@@ -114,14 +114,14 @@ export const NormalizedEventSchema = z.object({
 // event on the page.
 const ToolInputSchema = z.object({
   events: z.preprocess((value) => {
-    if (typeof value !== 'string') return value
+    if (typeof value !== 'string') return value;
     try {
-      return JSON.parse(value)
+      return JSON.parse(value);
     } catch (err) {
       // A corrupt tail must not cost us the good head. On 2026-08-17 a
       // malformed value ~79.8K into a 100.8K Cervantes payload discarded every
       // event on the page and the venue went dark for the night.
-      const salvaged = salvageJsonArrayPrefix(value)
+      const salvaged = salvageJsonArrayPrefix(value);
       if (salvaged !== null) {
         reportFailure({
           event: 'llm.stringified_events_partially_salvaged',
@@ -129,8 +129,8 @@ const ToolInputSchema = z.object({
           error: err instanceof Error ? err.message : String(err),
           payloadChars: value.length,
           salvagedEvents: salvaged.length,
-        })
-        return salvaged
+        });
+        return salvaged;
       }
 
       // Report the parse error separately: the Zod failure downstream only
@@ -142,17 +142,17 @@ const ToolInputSchema = z.object({
         severity: 'warn',
         error: err instanceof Error ? err.message : String(err),
         payloadChars: value.length,
-      })
+      });
       // Leave it as-is so the array check below reports the real problem
       // instead of masking a genuinely malformed payload.
-      return value
+      return value;
     }
   }, z.array(z.unknown())),
-})
+});
 
-type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>
+type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>;
 
-const MODEL = 'claude-haiku-4-5-20251001'
+const MODEL = 'claude-haiku-4-5-20251001';
 
 // Output token budget for the save_events tool call. Haiku 4.5 supports
 // up to 64K output. The prior cap of 16384 was hit silently by Red Rocks
@@ -167,7 +167,7 @@ const MODEL = 'claude-haiku-4-5-20251001'
 // 32,000 output tokens, truncating mid-string. The cap is a ceiling, not a
 // reservation: billing is per token produced, so raising it costs nothing on
 // runs that don't need it.
-const MAX_OUTPUT_TOKENS = 64_000
+const MAX_OUTPUT_TOKENS = 64_000;
 
 // Shared canonical rule set for isConcert classification. Used by both
 // the live crawler SYSTEM_PROMPT below and the one-shot non-concert
@@ -193,7 +193,7 @@ isConcert=false: non-performance events at music venues. Includes:
 
 Disambiguation rule: when a title contains the name of a real touring artist/DJ AND a specific billing/event framing phrase ("Kick Off Party", "After Party", "Pre-Party", "Feat.", "Featuring", "Presents", "with"), default to TRUE (concert) — the artist is the headliner. The standalone phrase "Dance Party" does NOT trigger this rule — it's the signature of a recorded-music theme night (e.g. "Olivia Rodrigo Dance Party"). Only treat as FALSE when the artist's name is clearly being used as a theme (their recordings being played back by unnamed DJs), as with "Olivia Rodrigo Dance Party" or "BASS BINGO – Wooli Edition".
 
-"LIVE" rule: "LIVE" inside a recurring DJ-driven brand name does NOT signal live music — it means "in-person experience". "R&B ONLY LIVE - 18+" is NOT a concert. "Wynonna Judd Live" IS a concert. The difference is whether a specific touring artist's name is paired with "Live". When in doubt about a "_____ LIVE" title with no named touring artist, default to FALSE.`
+"LIVE" rule: "LIVE" inside a recurring DJ-driven brand name does NOT signal live music — it means "in-person experience". "R&B ONLY LIVE - 18+" is NOT a concert. "Wynonna Judd Live" IS a concert. The difference is whether a specific touring artist's name is paired with "Live". When in doubt about a "_____ LIVE" title with no named touring artist, default to FALSE.`;
 
 // Optional add-on appended to IS_CONCERT_RULES in contexts that ACCEPT and
 // EMIT reviewNeeded (the live crawler's save_events tool + PR 2's
@@ -208,7 +208,7 @@ export const REVIEW_NEEDED_RULES = `For every classification, ALSO set reviewNee
   - Title contains "LIVE" but the brand context is DJ/recorded-music culture
 - false: the classification is unambiguous in either direction (clear band-tour announcement OR clear bingo/trivia/movie/lip-sync framing)
 
-reviewNeeded is independent of isConcert — emit it whenever you had to choose between two plausible interpretations, regardless of which direction you ended up picking.`
+reviewNeeded is independent of isConcert — emit it whenever you had to choose between two plausible interpretations, regardless of which direction you ended up picking.`;
 
 // The rules that decide WHO is on the bill, separated from the page-scraping
 // rules around them so the single-event adjudicator can reuse them verbatim.
@@ -238,7 +238,7 @@ export const ARTIST_RULES = `- If artist is unclear, derive it from the event ti
   - "Skillet: Comatose 20 Years, Still Screaming Tour" → artist "Skillet", tourName "Comatose 20 Years, Still Screaming Tour", supportingArtists []
 - When you cannot tell whether a comma separates two acts or sits inside one act's name, prefer keeping the name whole rather than fragmenting a real act.
 - Recurring series brands: when a title pairs a venue's recurring event brand with a rotating guest ("BASS BINGO – Wooli Edition", "BPM BINGO! Dombresky Edition", "Film on the Rocks: Sinners", "Emo Night: Fall Out Boy Edition"), artist is the SERIES BRAND alone — "BASS BINGO", "BPM BINGO", "Film on the Rocks", "Emo Night". Never the guest, and never the full compound title. This overrides the null-artist rule above even for bingo, trivia and screening nights: a recurring brand is a real, stable name rather than an invented performer, and it keeps two different series running the same night at the same venue from collapsing into each other. The brand is the one part of the billing that stays identical between crawls, so anything else produces a different artist each night and splits one show into several. Put the guest in supportingArtists only when the guest is a live performing act; for a recorded-music or screening night leave supportingArtists empty.
-- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.`
+- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.`;
 
 const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
 
@@ -263,7 +263,7 @@ Set isConcert on every event using these rules:
 
 ${IS_CONCERT_RULES}
 
-${REVIEW_NEEDED_RULES}`
+${REVIEW_NEEDED_RULES}`;
 
 const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   name: 'save_events',
@@ -357,14 +357,14 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
     },
     required: ['events'],
   },
-}
+};
 
 export async function extractWithLlm(
   html: string,
   sourceUrl: string,
 ): Promise<LLMResult> {
-  const client = new Anthropic()
-  const { text: cleanedHtml, linkUrls } = cleanHtml(html, sourceUrl)
+  const client = new Anthropic();
+  const { text: cleanedHtml, linkUrls } = cleanHtml(html, sourceUrl);
 
   // Use the streaming API. The Anthropic SDK rejects non-streaming
   // requests when `max_tokens` is large enough that the generation
@@ -394,16 +394,16 @@ export async function extractWithLlm(
         content: `Today's date: ${new Date().toISOString().slice(0, 10)}\n\nExtract every upcoming event from this venue page HTML — concerts AND non-concerts (themed parties, bingo, comedy, movies, etc.). Set isConcert on each one.\n\nURL: ${sourceUrl}\n\n${cleanedHtml}`,
       },
     ],
-  })
-  const response = await stream.finalMessage()
+  });
+  const response = await stream.finalMessage();
 
-  const usage = response.usage
+  const usage = response.usage;
   const tokenUsage = {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
-  }
+  };
 
   // Output truncation surfaces as `stop_reason: 'max_tokens'`. The SDK
   // still returns a tool_use block, but its `input` JSON is incomplete,
@@ -422,44 +422,44 @@ export async function extractWithLlm(
       // value with null, which left this report with no numbers at all.
       outputBudget: MAX_OUTPUT_TOKENS,
       outputUsed: tokenUsage.outputTokens,
-    })
+    });
   }
 
-  const toolUseBlock = response.content.find((b) => b.type === 'tool_use')
+  const toolUseBlock = response.content.find((b) => b.type === 'tool_use');
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
     reportFailure({
       event: 'llm.no_tool_use',
       severity: 'warn',
       sourceUrl,
-    })
-    return { events: [], usage: tokenUsage }
+    });
+    return { events: [], usage: tokenUsage };
   }
 
-  const parsed = ToolInputSchema.safeParse(toolUseBlock.input)
+  const parsed = ToolInputSchema.safeParse(toolUseBlock.input);
   if (!parsed.success) {
     reportFailure({
       event: 'llm.invalid_tool_input',
       severity: 'error',
       sourceUrl,
       error: parsed.error.message,
-    })
-    return { events: [], usage: tokenUsage }
+    });
+    return { events: [], usage: tokenUsage };
   }
 
   // Validate row-by-row rather than as one array. Batch-level parsing meant a
   // single unparseable event discarded every event on the page — Red Rocks and
   // Cervantes both went to zero for days because ~10% of their listings came
   // back with a null artist (#1162).
-  const validRows: NormalizedEventRow[] = []
-  const rowErrors: string[] = []
+  const validRows: NormalizedEventRow[] = [];
+  const rowErrors: string[] = [];
   parsed.data.events.forEach((row, index) => {
-    const parsedRow = NormalizedEventSchema.safeParse(row)
+    const parsedRow = NormalizedEventSchema.safeParse(row);
     if (parsedRow.success) {
-      validRows.push(parsedRow.data)
+      validRows.push(parsedRow.data);
     } else {
-      rowErrors.push(`[${index}] ${parsedRow.error.message}`)
+      rowErrors.push(`[${index}] ${parsedRow.error.message}`);
     }
-  })
+  });
 
   // Requires `validRows.length > 0`: a total wipeout is reported once below at
   // error severity, and emitting both would double-report the same failure.
@@ -474,7 +474,7 @@ export async function extractWithLlm(
       // Cap the payload — a wholesale schema drift would otherwise attach one
       // error per event and blow past Sentry's event size limit.
       errors: rowErrors.slice(0, 5).join('\n'),
-    })
+    });
   }
 
   // Every row failing means the response shape drifted, not that one listing
@@ -486,8 +486,8 @@ export async function extractWithLlm(
       severity: 'error',
       sourceUrl,
       error: rowErrors.slice(0, 5).join('\n'),
-    })
-    return { events: [], usage: tokenUsage }
+    });
+    return { events: [], usage: tokenUsage };
   }
 
   const events = validRows.map((evt) => {
@@ -498,7 +498,7 @@ export async function extractWithLlm(
     // extractor boundary keeps the DB free of markup regardless of what
     // the model decides to do.
     const description =
-      evt.description != null ? stripDescriptionHtml(evt.description) : null
+      evt.description != null ? stripDescriptionHtml(evt.description) : null;
     // Defense in depth against the LLM duplicating a trailing word in
     // the cleaned title (#851 — BPM BINGO "...Edition Edition" prod
     // shape). Applied to `title` ONLY. `rawTitle` is intentionally NOT
@@ -507,7 +507,7 @@ export async function extractWithLlm(
     // which is exactly why it's passed as the cross-check (#863): a
     // repeat that also appears verbatim on the page (e.g. the band
     // "Bow Wow Wow") is real and must not be stripped.
-    const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle)
+    const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle);
     // Normalize opener names through the shared helper: trim each, drop
     // blank/whitespace-only entries so they never render as empty opener
     // chips, and drop any opener that repeats the headliner (case-insensitive).
@@ -519,9 +519,9 @@ export async function extractWithLlm(
     // silently defeated the instruction and is where 65 junk artist rows came
     // from. The null is now preserved as an EMPTY observedPerformers list, and
     // the title survives only as the display string.
-    const observed = evt.artist?.trim()
-    const namedSomebody = observed !== undefined && observed !== ''
-    const artist = namedSomebody ? observed : title
+    const observed = evt.artist?.trim();
+    const namedSomebody = observed !== undefined && observed !== '';
+    const artist = namedSomebody ? observed : title;
     // Trim, drop blanks, and drop case-insensitive repeats, then put the
     // resolved artist first — `artist` may itself be a fallback to the cleaned
     // title when the model returned null, in which case the model's own list
@@ -529,14 +529,14 @@ export async function extractWithLlm(
     // to [artist]: a single headliner is never inferred by splitting a string.
     // This is the extractor's best guess only; `deriveArtists()` re-derives
     // `headliners` from `observedPerformers` and may legitimately empty it.
-    const seenHeadliners = new Set<string>([artist.toLowerCase()])
-    const headliners = [artist]
+    const seenHeadliners = new Set<string>([artist.toLowerCase()]);
+    const headliners = [artist];
     // `presentNames` has already trimmed and dropped the nulls and blanks the
     // model emits, so only the dedup against `artist` is left to do here.
     for (const name of presentNames(evt.headliners ?? [])) {
-      if (seenHeadliners.has(name.toLowerCase())) continue
-      seenHeadliners.add(name.toLowerCase())
-      headliners.push(name)
+      if (seenHeadliners.has(name.toLowerCase())) continue;
+      seenHeadliners.add(name.toLowerCase());
+      headliners.push(name);
     }
     // The two lists must stay disjoint. The prompt says so, but a model that
     // reads a co-headline bill both ways would otherwise render the second
@@ -546,20 +546,20 @@ export async function extractWithLlm(
       presentNames(evt.supportingArtists ?? []).filter(
         (name) => !seenHeadliners.has(name.toLowerCase()),
       ),
-    )
+    );
     // The billing the model actually read off the page, kept split. This is the
     // one extractor that reads billing emphasis well enough to report a
     // co-headline bill (#1203), so flattening here would be the only place that
     // information is lost. When the model named nobody both stay EMPTY rather
     // than falling back to the title — that coalesce is where 65 junk artist
     // rows came from.
-    const observedPerformers = namedSomebody ? headliners : []
-    const observedSupportingArtists = namedSomebody ? supportingArtists : []
+    const observedPerformers = namedSomebody ? headliners : [];
+    const observedSupportingArtists = namedSomebody ? supportingArtists : [];
     // Both URLs are checked against the page's own anchor set. The model
     // is told to copy them verbatim out of the "[link: …]" markers, but a
     // guessed slug would otherwise reach the CTA and 404 on the fan.
-    const ticketUrl = resolveExtractedUrl(evt.ticketUrl, linkUrls)
-    const eventUrl = resolveExtractedUrl(evt.eventUrl, linkUrls)
+    const ticketUrl = resolveExtractedUrl(evt.ticketUrl, linkUrls);
+    const eventUrl = resolveExtractedUrl(evt.eventUrl, linkUrls);
     return {
       title,
       rawTitle: evt.rawTitle,
@@ -582,8 +582,8 @@ export async function extractWithLlm(
         evt.tourName.trim() !== '' && { tourName: evt.tourName.trim() }),
       ...(evt.isConcert != null && { isConcert: evt.isConcert }),
       ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
-    }
-  })
+    };
+  });
 
   console.log(
     JSON.stringify({
@@ -592,9 +592,9 @@ export async function extractWithLlm(
       count: events.length,
       tokenUsage,
     }),
-  )
+  );
 
-  return { events, usage: tokenUsage }
+  return { events, usage: tokenUsage };
 }
 
 const ADJUDICATE_TOOL: Anthropic.Tool = {
@@ -624,7 +624,7 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
     },
     required: ['isConcert', 'headliners', 'supportingArtists'],
   },
-}
+};
 
 // Trimmed before the length check, and blanks dropped rather than rejected. A
 // model that emits '   ' for a name is not reporting an outage, so throwing
@@ -640,22 +640,22 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
 // null name here would otherwise fail the whole adjudication, which has no
 // row-by-row salvage to fall back on.
 const AdjudicatedNames = NameList.transform((names) => {
-  const seen = new Set<string>()
-  const unique: string[] = []
+  const seen = new Set<string>();
+  const unique: string[] = [];
   for (const name of presentNames(names)) {
-    const key = name.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    unique.push(name)
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(name);
   }
-  return unique
-})
+  return unique;
+});
 
 const AdjudicationSchema = z.object({
   isConcert: z.boolean(),
   headliners: AdjudicatedNames,
   supportingArtists: AdjudicatedNames,
-})
+});
 
 const ADJUDICATE_PROMPT = `You are reading ONE event listing from a music venue and answering two questions about it: is this a legitimate concert, and if so, who is on the bill. The second answer follows from the first.
 
@@ -673,7 +673,7 @@ Those rules are written for a tool that also emits a separate "artist" field. Th
 
 Set isConcert using these rules:
 
-${IS_CONCERT_RULES}`
+${IS_CONCERT_RULES}`;
 
 /**
  * Single-listing entry point for `deriveArtists()`'s escalation step. Same
@@ -683,10 +683,10 @@ export const adjudicateEvent = async ({
   title,
   description,
 }: {
-  title: string
-  description: string | undefined
+  title: string;
+  description: string | undefined;
 }): Promise<z.infer<typeof AdjudicationSchema>> => {
-  const client = new Anthropic()
+  const client = new Anthropic();
 
   const response = await client.messages.create({
     model: MODEL,
@@ -710,31 +710,31 @@ export const adjudicateEvent = async ({
         }`,
       },
     ],
-  })
+  });
 
   // Matched on name, not just on block type: tool_choice pins the call, but a
   // block from some other tool would otherwise be parsed against this schema
   // and either throw a confusing shape error or, worse, coincidentally parse.
   const toolUseBlock = response.content.find(
     (bl) => bl.type === 'tool_use' && bl.name === ADJUDICATE_TOOL.name,
-  )
+  );
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
     throw new Error(
       `${ADJUDICATE_TOOL.name}: no ${ADJUDICATE_TOOL.name} tool_use block in response`,
-    )
+    );
   }
 
-  const parsed = AdjudicationSchema.safeParse(toolUseBlock.input)
+  const parsed = AdjudicationSchema.safeParse(toolUseBlock.input);
   if (!parsed.success) {
-    throw new Error(`adjudicate_event: ${parsed.error.message}`)
+    throw new Error(`adjudicate_event: ${parsed.error.message}`);
   }
 
   // A verdict naming a headliner while calling the listing a non-concert is
   // self-contradictory, and the caller writes both fields. Trust isConcert —
   // it is the question the whole ladder is gated on — and drop the names.
   if (!parsed.data.isConcert) {
-    return { isConcert: false, headliners: [], supportingArtists: [] }
+    return { isConcert: false, headliners: [], supportingArtists: [] };
   }
 
-  return parsed.data
-}
+  return parsed.data;
+};

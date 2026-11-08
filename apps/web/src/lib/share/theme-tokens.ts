@@ -1,9 +1,9 @@
-import { THEMES, THEME_NAMES, type ThemeName } from '@/theme/themes'
+import { THEMES, THEME_NAMES, type ThemeName } from '@/theme/themes';
 
 /**
  * Fallback for any unrecognised `?theme=` value. Electric is the base theme.
  */
-export const DEFAULT_SHARE_THEME: ThemeName = 'electric'
+export const DEFAULT_SHARE_THEME: ThemeName = 'electric';
 
 /**
  * Closed-set guard over the nine theme names. `apps/web` has no Zod dependency
@@ -14,11 +14,11 @@ export const DEFAULT_SHARE_THEME: ThemeName = 'electric'
  * prototype key) from ever reaching an index-signature read on `THEMES`.
  */
 export const isThemeName = (candidate: string): candidate is ThemeName =>
-  THEME_NAMES.some((name) => name === candidate)
+  THEME_NAMES.some((name) => name === candidate);
 
 export interface ResolvedThemeTokens {
-  theme: ThemeName
-  tokens: Record<string, string>
+  theme: ThemeName;
+  tokens: Record<string, string>;
 }
 
 /**
@@ -32,9 +32,9 @@ export const resolveThemeTokens = (
   raw: string | undefined,
 ): ResolvedThemeTokens => {
   const theme =
-    raw !== undefined && isThemeName(raw) ? raw : DEFAULT_SHARE_THEME
-  return { theme, tokens: THEMES[theme] }
-}
+    raw !== undefined && isThemeName(raw) ? raw : DEFAULT_SHARE_THEME;
+  return { theme, tokens: THEMES[theme] };
+};
 
 /**
  * The tokens the share cards read. Asserted present in every theme by
@@ -52,4 +52,4 @@ export const SHARE_CARD_TOKENS = [
   'scrim',
   'signal',
   'accent',
-] as const
+] as const;

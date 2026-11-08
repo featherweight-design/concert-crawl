@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { PENDING_TIER_PARAM, stripIntentParams } from '@/lib/auth/intent'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { decodePendingTier } from './lib/pending-tier'
-import type { TierKey } from './definitions/types'
-import { TierPickerSheet } from './lazy'
+import { useEffect, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { PENDING_TIER_PARAM, stripIntentParams } from '@/lib/auth/intent';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { decodePendingTier } from './lib/pending-tier';
+import type { TierKey } from './definitions/types';
+import { TierPickerSheet } from './lazy';
 
 /**
  * Reopens the tier picker on the tier a visitor chose before they had an
@@ -20,44 +20,44 @@ import { TierPickerSheet } from './lazy'
  * funnel can land on reopens through the same code path.
  */
 export const PendingTierPicker = () => {
-  const params = useSearchParams()
-  const pathname = usePathname()
-  const router = useRouter()
-  const { data: planState } = usePlanState()
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { data: planState } = usePlanState();
 
-  const raw = params.get(PENDING_TIER_PARAM)
+  const raw = params.get(PENDING_TIER_PARAM);
 
   // Captured rather than read on render: stripping the URL is what stops a
   // refresh reopening the sheet, so the tier has to outlive the param.
-  const [tier, setTier] = useState<TierKey | null>(null)
-  const [open, setOpen] = useState(false)
-  const captured = useRef<string | null>(null)
+  const [tier, setTier] = useState<TierKey | null>(null);
+  const [open, setOpen] = useState(false);
+  const captured = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!raw || captured.current === raw) return
-    captured.current = raw
-    const chosen = decodePendingTier(raw)
+    if (!raw || captured.current === raw) return;
+    captured.current = raw;
+    const chosen = decodePendingTier(raw);
     // Free needs no picker: signing up already delivered it. Only a paid choice
     // has anything left to do.
-    if (!chosen || chosen === 'free') return
-    setTier(chosen)
-    setOpen(true)
-  }, [raw])
+    if (!chosen || chosen === 'free') return;
+    setTier(chosen);
+    setOpen(true);
+  }, [raw]);
 
   useEffect(() => {
-    if (!raw) return
+    if (!raw) return;
     // `stripIntentParams` drops the watch seam's params too, and the seam needs
     // them until its own replay has run. Whichever component still has work
     // pending owns the URL; this one waits and rides along with that strip.
-    if (params.get('intent')) return
+    if (params.get('intent')) return;
     router.replace(stripIntentParams(pathname, params, window.location.hash), {
       scroll: false,
-    })
-  }, [raw, pathname, params, router])
+    });
+  }, [raw, pathname, params, router]);
 
   // The picker needs a real plan to decide which cards and CTAs to show, so a
   // cold cache holds the sheet back rather than rendering it against a guess.
-  if (!open || !planState) return null
+  if (!open || !planState) return null;
 
   return (
     <TierPickerSheet
@@ -72,5 +72,5 @@ export const PendingTierPicker = () => {
       entry="post-signup"
       initialTier={tier}
     />
-  )
-}
+  );
+};

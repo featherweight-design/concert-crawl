@@ -29,6 +29,7 @@ Before starting:
 ## File Map
 
 **New files:**
+
 - `apps/api/src/routes/admin/notifications.ts` — list + mark-as-read endpoints
 - `apps/api/src/routes/admin/notifications.test.ts` — unit tests
 - `apps/api/src/routes/admin/events.ts` — list unverified, verify, delete events
@@ -43,6 +44,7 @@ Before starting:
 - `apps/web/src/components/admin/event-review-table/EventReviewTable.tsx` — approve/reject table
 
 **Modified files:**
+
 - `apps/api/src/routes/admin/index.ts` — register notifications + events routers
 - `apps/api/src/routes/admin/crawl.ts` — fix in-progress list bug; add `GET /status` endpoint
 - `apps/api/src/routes/admin/crawl.test.ts` — add tests for new endpoints
@@ -60,6 +62,7 @@ Before starting:
 ## Task 1: Notifications API
 
 **Files:**
+
 - Create: `apps/api/src/routes/admin/notifications.ts`
 - Create: `apps/api/src/routes/admin/notifications.test.ts`
 - Modify: `apps/api/src/routes/admin/index.ts`
@@ -69,14 +72,15 @@ Before starting:
 Create `apps/api/src/routes/admin/notifications.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createApp } from '../../app.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app.js';
 
-const mockGetAuth = vi.fn()
+const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ col, val, op: 'eq' })),
@@ -84,9 +88,9 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ args, op: 'and' })),
   isNull: vi.fn((col) => ({ col, op: 'isNull' })),
   lt: vi.fn((col, val) => ({ col, val, op: 'lt' })),
-}))
+}));
 
-const NOTIF_ID = '11111111-1111-1111-1111-111111111111'
+const NOTIF_ID = '11111111-1111-1111-1111-111111111111';
 
 const mockNotificationRow = {
   id: NOTIF_ID,
@@ -99,7 +103,7 @@ const mockNotificationRow = {
   readAt: null,
   metadata: null,
   createdAt: new Date('2026-05-07T10:00:00Z'),
-}
+};
 
 const mockDb = {
   select: vi.fn().mockReturnThis(),
@@ -109,130 +113,148 @@ const mockDb = {
   limit: vi.fn().mockResolvedValue([mockNotificationRow]),
   update: vi.fn().mockReturnThis(),
   set: vi.fn().mockReturnThis(),
-  returning: vi.fn().mockResolvedValue([{ ...mockNotificationRow, readAt: new Date() }]),
+  returning: vi
+    .fn()
+    .mockResolvedValue([{ ...mockNotificationRow, readAt: new Date() }]),
   insert: vi.fn().mockReturnThis(),
   values: vi.fn().mockReturnThis(),
-}
+};
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
-  notifications: { id: 'id', type: 'type', readAt: 'readAt', createdAt: 'createdAt' },
+  notifications: {
+    id: 'id',
+    type: 'type',
+    readAt: 'readAt',
+    createdAt: 'createdAt',
+  },
   auditLog: {},
   venues: {},
   inviteCodes: {},
   crawlRuns: {},
   events: {},
-}))
+}));
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
     sessionClaims: { metadata: { role: 'admin' } },
-  })
+  });
 }
 
 describe('GET /v1/admin/notifications', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.select.mockReturnThis()
-    mockDb.from.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.orderBy.mockReturnThis()
-    mockDb.limit.mockResolvedValue([mockNotificationRow])
-  })
+    vi.clearAllMocks();
+    mockDb.select.mockReturnThis();
+    mockDb.from.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.orderBy.mockReturnThis();
+    mockDb.limit.mockResolvedValue([mockNotificationRow]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/notifications')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/notifications');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 with notifications list', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/notifications')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-    expect(body.data[0].id).toBe(NOTIF_ID)
-  })
+    adminAuth();
+    const res = await createApp().request('/v1/admin/notifications');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data[0].id).toBe(NOTIF_ID);
+  });
 
   it('defaults to limit=50', async () => {
-    adminAuth()
-    await createApp().request('/v1/admin/notifications')
-    expect(mockDb.limit).toHaveBeenCalledWith(50)
-  })
+    adminAuth();
+    await createApp().request('/v1/admin/notifications');
+    expect(mockDb.limit).toHaveBeenCalledWith(50);
+  });
 
   it('accepts limit query param', async () => {
-    adminAuth()
-    await createApp().request('/v1/admin/notifications?limit=10')
-    expect(mockDb.limit).toHaveBeenCalledWith(10)
-  })
+    adminAuth();
+    await createApp().request('/v1/admin/notifications?limit=10');
+    expect(mockDb.limit).toHaveBeenCalledWith(10);
+  });
 
   it('rejects limit > 100', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/notifications?limit=200')
-    expect(res.status).toBe(400)
-  })
-})
+    adminAuth();
+    const res = await createApp().request('/v1/admin/notifications?limit=200');
+    expect(res.status).toBe(400);
+  });
+});
 
 describe('PATCH /v1/admin/notifications/:id/read', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.update.mockReturnThis()
-    mockDb.set.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.returning.mockResolvedValue([{ ...mockNotificationRow, readAt: new Date() }])
-  })
+    vi.clearAllMocks();
+    mockDb.update.mockReturnThis();
+    mockDb.set.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.returning.mockResolvedValue([
+      { ...mockNotificationRow, readAt: new Date() },
+    ]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request(
+      '/v1/admin/notifications/${NOTIF_ID}/read',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 and marks notification as read', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data.readAt).not.toBeNull()
-  })
+    adminAuth();
+    const res = await createApp().request(
+      '/v1/admin/notifications/${NOTIF_ID}/read',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.readAt).not.toBeNull();
+  });
 
   it('returns 404 when notification not found', async () => {
-    adminAuth()
-    mockDb.returning.mockResolvedValue([])
-    const res = await createApp().request('/v1/admin/notifications/${NOTIF_ID}/read', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(404)
-  })
-})
+    adminAuth();
+    mockDb.returning.mockResolvedValue([]);
+    const res = await createApp().request(
+      '/v1/admin/notifications/${NOTIF_ID}/read',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(404);
+  });
+});
 
 describe('POST /v1/admin/notifications/read-all', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.update.mockReturnThis()
-    mockDb.set.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.returning.mockResolvedValue([])
-  })
+    vi.clearAllMocks();
+    mockDb.update.mockReturnThis();
+    mockDb.set.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.returning.mockResolvedValue([]);
+  });
 
   it('returns 200 and marks all admin_alert notifications as read', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/notifications/read-all', {
       method: 'POST',
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-  })
-})
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 1.2: Run tests to confirm they fail**
@@ -247,68 +269,73 @@ Expected: FAIL — `notifications` route not found (404s or import errors)
 - [ ] **Step 1.3: Create `apps/api/src/routes/admin/notifications.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { eq, desc, and, isNull } from 'drizzle-orm'
-import { db, notifications } from '@concert-crawl/db'
-import type { AdminVariables } from './index.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { eq, desc, and, isNull } from 'drizzle-orm';
+import { db, notifications } from '@concert-crawl/db';
+import type { AdminVariables } from './index.js';
 
-const notifIdSchema = z.object({ id: z.string().uuid() })
+const notifIdSchema = z.object({ id: z.string().uuid() });
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
-})
+});
 
-export const notificationsAdminRouter = new Hono<AdminVariables>()
+export const notificationsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/notifications — list recent admin alerts
 notificationsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { limit } = ctx.req.valid('query')
+    const { limit } = ctx.req.valid('query');
 
     const rows = await db
       .select()
       .from(notifications)
       .where(eq(notifications.type, 'admin_alert'))
       .orderBy(desc(notifications.createdAt))
-      .limit(limit)
+      .limit(limit);
 
-    return ctx.json({ success: true, data: rows })
+    return ctx.json({ success: true, data: rows });
   },
-)
+);
 
 // PATCH /v1/admin/notifications/:id/read — mark single notification as read
 notificationsAdminRouter.patch(
   '/:id/read',
   zValidator('param', notifIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [updated] = await db
       .update(notifications)
       .set({ readAt: new Date() })
       .where(and(eq(notifications.id, id), isNull(notifications.readAt)))
-      .returning()
+      .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Notification not found or already read' }, 404)
+      return ctx.json(
+        { success: false, error: 'Notification not found or already read' },
+        404,
+      );
     }
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // POST /v1/admin/notifications/read-all — mark all unread admin alerts as read
 notificationsAdminRouter.post('/read-all', async (ctx) => {
   await db
     .update(notifications)
     .set({ readAt: new Date() })
-    .where(and(eq(notifications.type, 'admin_alert'), isNull(notifications.readAt)))
+    .where(
+      and(eq(notifications.type, 'admin_alert'), isNull(notifications.readAt)),
+    );
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});
 ```
 
 - [ ] **Step 1.4: Register the router in `apps/api/src/routes/admin/index.ts`**
@@ -316,13 +343,13 @@ notificationsAdminRouter.post('/read-all', async (ctx) => {
 Add this import after the existing crawl import:
 
 ```typescript
-import { notificationsAdminRouter } from './notifications.js'
+import { notificationsAdminRouter } from './notifications.js';
 ```
 
 Add this route registration after `adminRouter.route('/crawl', crawlAdminRouter)`:
 
 ```typescript
-adminRouter.route('/notifications', notificationsAdminRouter)
+adminRouter.route('/notifications', notificationsAdminRouter);
 ```
 
 - [ ] **Step 1.5: Run tests to confirm they pass**
@@ -347,6 +374,7 @@ git commit -m "feat: add admin notifications API (list, mark-as-read, read-all)"
 ## Task 2: Fix In-Progress Crawl List + Add Crawl Status Endpoint
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/crawl.ts`
 - Modify: `apps/api/src/routes/admin/crawl.test.ts`
 
@@ -363,51 +391,51 @@ describe('GET /v1/admin/crawl/runs — includes in-progress runs', () => {
   // the list endpoint previously never returned in-flight runs.
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.clearAllMocks();
     // Reset db mock to return empty array by default
-    mockDb.select.mockReturnThis()
-    mockDb.from.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.orderBy.mockReturnThis()
-    mockDb.limit.mockResolvedValue([])
-  })
+    mockDb.select.mockReturnThis();
+    mockDb.from.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.orderBy.mockReturnThis();
+    mockDb.limit.mockResolvedValue([]);
+  });
 
   it('returns 400 when venueId is missing', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/crawl/runs')
-    expect(res.status).toBe(400)
-  })
+    adminAuth();
+    const res = await createApp().request('/v1/admin/crawl/runs');
+    expect(res.status).toBe(400);
+  });
 
   it('returns 200 with empty array when no runs exist', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request(
       '/v1/admin/crawl/runs?venueId=00000000-0000-0000-0000-000000000001',
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.data).toEqual([])
-  })
-})
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toEqual([]);
+  });
+});
 
 describe('GET /v1/admin/crawl/status', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.select.mockReturnThis()
-    mockDb.selectDistinctOn = vi.fn().mockReturnThis()
-    mockDb.from.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.orderBy.mockReturnThis()
-    mockDb.limit.mockResolvedValue([])
-  })
+    vi.clearAllMocks();
+    mockDb.select.mockReturnThis();
+    mockDb.selectDistinctOn = vi.fn().mockReturnThis();
+    mockDb.from.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.orderBy.mockReturnThis();
+    mockDb.limit.mockResolvedValue([]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/crawl/status')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/crawl/status');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 with venue crawl status list', async () => {
-    adminAuth()
+    adminAuth();
     mockDb.orderBy.mockResolvedValue([
       {
         id: '00000000-0000-0000-0000-000000000001',
@@ -418,14 +446,14 @@ describe('GET /v1/admin/crawl/status', () => {
         blockedAt: null,
         lastCrawledAt: new Date('2026-05-07T10:00:00Z'),
       },
-    ])
-    const res = await createApp().request('/v1/admin/crawl/status')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
-})
+    ]);
+    const res = await createApp().request('/v1/admin/crawl/status');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2.2: Run tests to confirm the new ones fail**
@@ -446,14 +474,14 @@ crawlAdminRouter.get(
   '/runs',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { venueId, limit } = ctx.req.valid('query')
+    const { venueId, limit } = ctx.req.valid('query');
 
     const dbRuns = await db
       .select()
       .from(crawlRuns)
       .where(and(eq(crawlRuns.venueId, venueId)))
       .orderBy(desc(crawlRuns.createdAt))
-      .limit(limit)
+      .limit(limit);
 
     // Prepend any in-progress run for this venue
     const inProgressForVenue = [...inProgressCrawls.entries()]
@@ -470,11 +498,14 @@ crawlAdminRouter.get(
         errorMessage: null,
         durationMs: null,
         createdAt: v.startedAt,
-      }))
+      }));
 
-    return ctx.json({ success: true, data: [...inProgressForVenue, ...dbRuns] })
+    return ctx.json({
+      success: true,
+      data: [...inProgressForVenue, ...dbRuns],
+    });
   },
-)
+);
 ```
 
 - [ ] **Step 2.4: Add `GET /status` endpoint to `apps/api/src/routes/admin/crawl.ts`**
@@ -482,7 +513,7 @@ crawlAdminRouter.get(
 Add these imports at the top (add to the existing import from `drizzle-orm`):
 
 ```typescript
-import { eq, and, desc, asc, inArray } from 'drizzle-orm'
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 ```
 
 Add the new endpoint after the `GET /runs` handler:
@@ -501,9 +532,9 @@ crawlAdminRouter.get('/status', async (ctx) => {
       lastCrawledAt: venues.lastCrawledAt,
     })
     .from(venues)
-    .orderBy(asc(venues.name))
+    .orderBy(asc(venues.name));
 
-  const venueIds = venueList.map((v) => v.id)
+  const venueIds = venueList.map((v) => v.id);
 
   const latestRuns =
     venueIds.length > 0
@@ -521,16 +552,16 @@ crawlAdminRouter.get('/status', async (ctx) => {
           .from(crawlRuns)
           .where(inArray(crawlRuns.venueId, venueIds))
           .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
-      : []
+      : [];
 
-  const runsByVenueId = new Map(latestRuns.map((r) => [r.venueId, r]))
+  const runsByVenueId = new Map(latestRuns.map((r) => [r.venueId, r]));
 
   const data = venueList.map((venue) => {
-    const lastRun = runsByVenueId.get(venue.id) ?? null
+    const lastRun = runsByVenueId.get(venue.id) ?? null;
     // Also check if there's an in-progress crawl for this venue
     const inProgress = [...inProgressCrawls.entries()].find(
       ([, v]) => v.venueId === venue.id,
-    )
+    );
     const effectiveLastRun = inProgress
       ? {
           id: inProgress[0],
@@ -542,19 +573,19 @@ crawlAdminRouter.get('/status', async (ctx) => {
           errorMessage: null,
           extractionStrategyUsed: null,
         }
-      : lastRun
+      : lastRun;
 
-    return { ...venue, lastRun: effectiveLastRun }
-  })
+    return { ...venue, lastRun: effectiveLastRun };
+  });
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 ```
 
 Also add `venues` to the import from `@concert-crawl/db`:
 
 ```typescript
-import { db, venues, crawlRuns } from '@concert-crawl/db'
+import { db, venues, crawlRuns } from '@concert-crawl/db';
 ```
 
 - [ ] **Step 2.5: Run tests**
@@ -578,6 +609,7 @@ git commit -m "fix: include in-progress runs in crawl list; add GET /admin/crawl
 ## Task 3: Admin Events API
 
 **Files:**
+
 - Create: `apps/api/src/routes/admin/events.ts`
 - Create: `apps/api/src/routes/admin/events.test.ts`
 - Modify: `apps/api/src/routes/admin/index.ts`
@@ -587,14 +619,15 @@ git commit -m "fix: include in-progress runs in crawl list; add GET /admin/crawl
 Create `apps/api/src/routes/admin/events.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createApp } from '../../app.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app.js';
 
-const mockGetAuth = vi.fn()
+const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((col, val) => ({ col, val, op: 'eq' })),
@@ -602,10 +635,10 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn((...args) => ({ args, op: 'and' })),
   asc: vi.fn((col) => ({ col, dir: 'asc' })),
   sql: vi.fn((parts, ...vals) => ({ parts, vals })),
-}))
+}));
 
-const EVENT_ID = '22222222-2222-2222-2222-222222222222'
-const VENUE_ID = '33333333-3333-3333-3333-333333333333'
+const EVENT_ID = '22222222-2222-2222-2222-222222222222';
+const VENUE_ID = '33333333-3333-3333-3333-333333333333';
 
 const mockEventRow = {
   id: EVENT_ID,
@@ -619,7 +652,7 @@ const mockEventRow = {
   status: 'upcoming',
   createdAt: new Date('2026-05-07T10:00:00Z'),
   updatedAt: new Date('2026-05-07T10:00:00Z'),
-}
+};
 
 const mockDb = {
   select: vi.fn().mockReturnThis(),
@@ -634,131 +667,145 @@ const mockDb = {
   delete: vi.fn().mockReturnThis(),
   insert: vi.fn().mockReturnThis(),
   values: vi.fn().mockReturnThis(),
-}
+};
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
-  events: { id: 'id', verified: 'verified', venueId: 'venueId', createdAt: 'createdAt' },
+  events: {
+    id: 'id',
+    verified: 'verified',
+    venueId: 'venueId',
+    createdAt: 'createdAt',
+  },
   auditLog: {},
   venues: {},
   inviteCodes: {},
   crawlRuns: {},
   notifications: {},
-}))
+}));
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
     sessionClaims: { metadata: { role: 'admin' } },
-  })
+  });
 }
 
 describe('GET /v1/admin/events', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.select.mockReturnThis()
-    mockDb.from.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.orderBy.mockReturnThis()
-    mockDb.limit.mockReturnThis()
-    mockDb.offset.mockResolvedValue([mockEventRow])
-  })
+    vi.clearAllMocks();
+    mockDb.select.mockReturnThis();
+    mockDb.from.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.orderBy.mockReturnThis();
+    mockDb.limit.mockReturnThis();
+    mockDb.offset.mockResolvedValue([mockEventRow]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/events')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/events');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 with unverified events list', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/events')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    adminAuth();
+    const res = await createApp().request('/v1/admin/events');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('rejects limit > 100', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/events?limit=200')
-    expect(res.status).toBe(400)
-  })
-})
+    adminAuth();
+    const res = await createApp().request('/v1/admin/events?limit=200');
+    expect(res.status).toBe(400);
+  });
+});
 
 describe('PATCH /v1/admin/events/:id/verify', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.update.mockReturnThis()
-    mockDb.set.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.returning.mockResolvedValue([{ ...mockEventRow, verified: true }])
-  })
+    vi.clearAllMocks();
+    mockDb.update.mockReturnThis();
+    mockDb.set.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.returning.mockResolvedValue([{ ...mockEventRow, verified: true }]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request(
+      '/v1/admin/events/${EVENT_ID}/verify',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 and sets verified=true', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data.verified).toBe(true)
-  })
+    adminAuth();
+    const res = await createApp().request(
+      '/v1/admin/events/${EVENT_ID}/verify',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.verified).toBe(true);
+  });
 
   it('returns 404 when event not found', async () => {
-    adminAuth()
-    mockDb.returning.mockResolvedValue([])
-    const res = await createApp().request('/v1/admin/events/${EVENT_ID}/verify', {
-      method: 'PATCH',
-    })
-    expect(res.status).toBe(404)
-  })
-})
+    adminAuth();
+    mockDb.returning.mockResolvedValue([]);
+    const res = await createApp().request(
+      '/v1/admin/events/${EVENT_ID}/verify',
+      {
+        method: 'PATCH',
+      },
+    );
+    expect(res.status).toBe(404);
+  });
+});
 
 describe('DELETE /v1/admin/events/:id', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDb.delete.mockReturnThis()
-    mockDb.where.mockReturnThis()
-    mockDb.returning.mockResolvedValue([mockEventRow])
-  })
+    vi.clearAllMocks();
+    mockDb.delete.mockReturnThis();
+    mockDb.where.mockReturnThis();
+    mockDb.returning.mockResolvedValue([mockEventRow]);
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
+    mockGetAuth.mockReturnValue(null);
     const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 200 on successful delete', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
 
   it('returns 404 when event not found', async () => {
-    adminAuth()
-    mockDb.returning.mockResolvedValue([])
+    adminAuth();
+    mockDb.returning.mockResolvedValue([]);
     const res = await createApp().request('/v1/admin/events/${EVENT_ID}', {
       method: 'DELETE',
-    })
-    expect(res.status).toBe(404)
-  })
-})
+    });
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 3.2: Run tests to confirm they fail**
@@ -772,15 +819,15 @@ Expected: FAIL — route not found
 - [ ] **Step 3.3: Create `apps/api/src/routes/admin/events.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { eq, desc, and, asc } from 'drizzle-orm'
-import { db, events } from '@concert-crawl/db'
-import { getAuthUser } from '../../middleware/auth.js'
-import type { AdminVariables } from './index.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { eq, desc, and, asc } from 'drizzle-orm';
+import { db, events } from '@concert-crawl/db';
+import { getAuthUser } from '../../middleware/auth.js';
+import type { AdminVariables } from './index.js';
 
-const eventIdSchema = z.object({ id: z.string().uuid() })
+const eventIdSchema = z.object({ id: z.string().uuid() });
 
 const listQuerySchema = z.object({
   verified: z
@@ -789,9 +836,9 @@ const listQuerySchema = z.object({
     .transform((v) => v === 'true'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
-export const eventsAdminRouter = new Hono<AdminVariables>()
+export const eventsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/events?verified=false&limit=50&offset=0
 // Returns events pending review (unverified by default)
@@ -799,7 +846,7 @@ eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { verified, limit, offset } = ctx.req.valid('query')
+    const { verified, limit, offset } = ctx.req.valid('query');
 
     const rows = await db
       .select()
@@ -807,72 +854,74 @@ eventsAdminRouter.get(
       .where(eq(events.verified, verified))
       .orderBy(asc(events.date), desc(events.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
-    return ctx.json({ success: true, data: rows })
+    return ctx.json({ success: true, data: rows });
   },
-)
+);
 
 // PATCH /v1/admin/events/:id/verify — approve an event (set verified=true)
 eventsAdminRouter.patch(
   '/:id/verify',
   zValidator('param', eventIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [updated] = await db
       .update(events)
       .set({ verified: true, updatedAt: new Date() })
       .where(eq(events.id, id))
-      .returning()
+      .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
-    ctx.set('auditAction', 'event.verify')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'event.verify');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // DELETE /v1/admin/events/:id — reject and remove an unverified event
 eventsAdminRouter.delete(
   '/:id',
   zValidator('param', eventIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [deleted] = await db
       .delete(events)
       .where(eq(events.id, id))
-      .returning()
+      .returning();
 
     if (!deleted) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
-    ctx.set('auditAction', 'event.delete')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'event.delete');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
 
-    return ctx.json({ success: true })
+    return ctx.json({ success: true });
   },
-)
+);
 ```
 
 - [ ] **Step 3.4: Register in `apps/api/src/routes/admin/index.ts`**
 
 Add import:
+
 ```typescript
-import { eventsAdminRouter } from './events.js'
+import { eventsAdminRouter } from './events.js';
 ```
 
 Add route:
+
 ```typescript
-adminRouter.route('/events', eventsAdminRouter)
+adminRouter.route('/events', eventsAdminRouter);
 ```
 
 - [ ] **Step 3.5: Run tests**
@@ -897,6 +946,7 @@ git commit -m "feat: add admin events API (list unverified, verify, delete)"
 ## Task 4: Resend Email in Crawler Core
 
 **Files:**
+
 - Modify: `packages/crawler-core/package.json`
 - Create: `packages/crawler-core/src/lib/email.ts`
 - Modify: `packages/crawler-core/src/crawl.ts`
@@ -913,59 +963,59 @@ pnpm --filter @concert-crawl/crawler-core add resend
 Create `packages/crawler-core/src/lib/email.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock the resend SDK before importing the module under test
-const mockSend = vi.fn().mockResolvedValue({ id: 'email-1' })
+const mockSend = vi.fn().mockResolvedValue({ id: 'email-1' });
 vi.mock('resend', () => ({
   Resend: vi.fn().mockImplementation(() => ({
     emails: { send: mockSend },
   })),
-}))
+}));
 
 describe('sendCrawlFailureEmail', () => {
-  const originalEnv = process.env
+  const originalEnv = process.env;
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.clearAllMocks();
     process.env = {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
       ADMIN_EMAIL: 'admin@example.com',
-    }
-  })
+    };
+  });
 
   afterEach(() => {
-    process.env = originalEnv
-  })
+    process.env = originalEnv;
+  });
 
   it('sends an email with venue name and failure count', async () => {
-    const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await sendCrawlFailureEmail('Ogden Theatre', 3);
 
-    expect(mockSend).toHaveBeenCalledOnce()
-    const call = mockSend.mock.calls[0][0]
-    expect(call.to).toBe('admin@example.com')
-    expect(call.subject).toContain('Ogden Theatre')
-    expect(call.html).toContain('3')
-  })
+    expect(mockSend).toHaveBeenCalledOnce();
+    const call = mockSend.mock.calls[0][0];
+    expect(call.to).toBe('admin@example.com');
+    expect(call.subject).toContain('Ogden Theatre');
+    expect(call.html).toContain('3');
+  });
 
   it('skips sending when RESEND_API_KEY is not set', async () => {
-    delete process.env.RESEND_API_KEY
-    const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    delete process.env.RESEND_API_KEY;
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await sendCrawlFailureEmail('Ogden Theatre', 3);
 
-    expect(mockSend).not.toHaveBeenCalled()
-  })
+    expect(mockSend).not.toHaveBeenCalled();
+  });
 
   it('skips sending when ADMIN_EMAIL is not set', async () => {
-    delete process.env.ADMIN_EMAIL
-    const { sendCrawlFailureEmail } = await import('./email.js')
-    await sendCrawlFailureEmail('Ogden Theatre', 3)
+    delete process.env.ADMIN_EMAIL;
+    const { sendCrawlFailureEmail } = await import('./email.js');
+    await sendCrawlFailureEmail('Ogden Theatre', 3);
 
-    expect(mockSend).not.toHaveBeenCalled()
-  })
-})
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+});
 ```
 
 - [ ] **Step 4.3: Run test to confirm it fails**
@@ -979,18 +1029,18 @@ Expected: FAIL — module not found
 - [ ] **Step 4.4: Create `packages/crawler-core/src/lib/email.ts`**
 
 ```typescript
-import { Resend } from 'resend'
+import { Resend } from 'resend';
 
 export async function sendCrawlFailureEmail(
   venueName: string,
   consecutiveFailures: number,
 ): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
-  const adminEmail = process.env.ADMIN_EMAIL
+  const apiKey = process.env.RESEND_API_KEY;
+  const adminEmail = process.env.ADMIN_EMAIL;
 
-  if (!apiKey || !adminEmail) return
+  if (!apiKey || !adminEmail) return;
 
-  const resend = new Resend(apiKey)
+  const resend = new Resend(apiKey);
 
   await resend.emails.send({
     from: 'Concert Crawl Alerts <alerts@concertcrawl.app>',
@@ -1002,7 +1052,7 @@ export async function sendCrawlFailureEmail(
       <a href="${process.env.ADMIN_URL ?? 'https://concertcrawl.app'}/admin/crawl">admin crawl dashboard</a>
       to investigate and take action.</p>
     `,
-  })
+  });
 }
 ```
 
@@ -1019,31 +1069,31 @@ Expected: all tests pass
 Find the import section at the top of `crawl.ts`. Add:
 
 ```typescript
-import { sendCrawlFailureEmail } from './lib/email.js'
+import { sendCrawlFailureEmail } from './lib/email.js';
 ```
 
 Find the block that creates the `crawl.failed` notification (around `if (newFailureCount >= 3)`). After the `db.insert(notifications)` call, add the email send (fire-and-forget, logged on error):
 
 ```typescript
-    if (newFailureCount >= 3) {
-      await db.insert(notifications).values({
-        type: 'admin_alert',
-        category: 'crawl.failed',
-        title: `Crawl failing: ${venue.name}`,
-        body: `${newFailureCount} consecutive failures for ${venue.name}`,
-        metadata: JSON.stringify({ venueId }),
-      })
-      void sendCrawlFailureEmail(venue.name, newFailureCount).catch((err) => {
-        logger.error({ err, venueId }, 'Failed to send crawl failure email')
-      })
-    }
+if (newFailureCount >= 3) {
+  await db.insert(notifications).values({
+    type: 'admin_alert',
+    category: 'crawl.failed',
+    title: `Crawl failing: ${venue.name}`,
+    body: `${newFailureCount} consecutive failures for ${venue.name}`,
+    metadata: JSON.stringify({ venueId }),
+  });
+  void sendCrawlFailureEmail(venue.name, newFailureCount).catch((err) => {
+    logger.error({ err, venueId }, 'Failed to send crawl failure email');
+  });
+}
 ```
 
 Note: `logger` is already available in `crawl.ts` from `@concert-crawl/logger`. Confirm the import exists; add it if not:
 
 ```typescript
-import { createLogger } from '@concert-crawl/logger'
-const logger = createLogger('crawler-core')
+import { createLogger } from '@concert-crawl/logger';
+const logger = createLogger('crawler-core');
 ```
 
 - [ ] **Step 4.7: Update `apps/crawler/.env.example`**
@@ -1082,6 +1132,7 @@ git commit -m "feat: send Resend email alert when venue hits 3 consecutive crawl
 ## Task 5: Crawler Daily Runner
 
 **Files:**
+
 - Modify: `apps/crawler/package.json`
 - Create: `apps/crawler/src/run.ts`
 - Modify: `apps/crawler/src/index.ts`
@@ -1111,7 +1162,7 @@ Add a test script to `apps/crawler/package.json`:
 Create `apps/crawler/src/run.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock DB
 const mockVenues = [
@@ -1119,28 +1170,28 @@ const mockVenues = [
   { id: 'venue-2', name: 'Bluebird Theater' },
   { id: 'venue-3', name: 'Red Rocks' },
   { id: 'venue-4', name: 'Mission Ballroom' },
-]
+];
 
 const mockDbChain = {
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
   where: vi.fn().mockResolvedValue(mockVenues),
-}
+};
 vi.mock('@concert-crawl/db', () => ({
   db: mockDbChain,
   venues: { id: 'id', name: 'name', active: 'active', verified: 'verified' },
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
-}))
+}));
 
 // Mock crawlVenue
-const mockCrawlVenue = vi.fn().mockResolvedValue(undefined)
+const mockCrawlVenue = vi.fn().mockResolvedValue(undefined);
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
-}))
+}));
 
 // Mock logger
 vi.mock('@concert-crawl/logger', () => ({
@@ -1149,68 +1200,68 @@ vi.mock('@concert-crawl/logger', () => ({
     error: vi.fn(),
     warn: vi.fn(),
   }),
-}))
+}));
 
 describe('runDailyCrawl', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    mockDbChain.where.mockResolvedValue(mockVenues)
-    mockCrawlVenue.mockResolvedValue(undefined)
-  })
+    vi.clearAllMocks();
+    mockDbChain.where.mockResolvedValue(mockVenues);
+    mockCrawlVenue.mockResolvedValue(undefined);
+  });
 
   it('calls crawlVenue for each active venue', async () => {
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3')
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4')
-  })
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1');
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2');
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3');
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4');
+  });
 
   it('returns succeeded and failed counts', async () => {
-    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
-    const { runDailyCrawl } = await import('./run.js')
-    const result = await runDailyCrawl()
-    expect(result.succeeded).toBe(3)
-    expect(result.failed).toBe(1)
-  })
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'));
+    const { runDailyCrawl } = await import('./run.js');
+    const result = await runDailyCrawl();
+    expect(result.succeeded).toBe(3);
+    expect(result.failed).toBe(1);
+  });
 
   it('continues processing remaining venues when one fails', async () => {
     mockCrawlVenue
       .mockRejectedValueOnce(new Error('venue-1 blocked'))
-      .mockResolvedValue(undefined)
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
+      .mockResolvedValue(undefined);
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
     // All 4 venues attempted despite first failure
-    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-  })
+    expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+  });
 
   it('processes no more than 3 venues concurrently per batch', async () => {
     // Track concurrent invocations
-    let maxConcurrent = 0
-    let currentConcurrent = 0
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
     mockCrawlVenue.mockImplementation(async () => {
-      currentConcurrent++
-      maxConcurrent = Math.max(maxConcurrent, currentConcurrent)
-      await new Promise((r) => setTimeout(r, 10))
-      currentConcurrent--
-    })
+      currentConcurrent++;
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+      await new Promise((r) => setTimeout(r, 10));
+      currentConcurrent--;
+    });
 
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(maxConcurrent).toBeLessThanOrEqual(3)
-  })
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(maxConcurrent).toBeLessThanOrEqual(3);
+  });
 
   it('returns zero counts when no active venues exist', async () => {
-    mockDbChain.where.mockResolvedValue([])
-    const { runDailyCrawl } = await import('./run.js')
-    const result = await runDailyCrawl()
-    expect(result.succeeded).toBe(0)
-    expect(result.failed).toBe(0)
-    expect(mockCrawlVenue).not.toHaveBeenCalled()
-  })
-})
+    mockDbChain.where.mockResolvedValue([]);
+    const { runDailyCrawl } = await import('./run.js');
+    const result = await runDailyCrawl();
+    expect(result.succeeded).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(mockCrawlVenue).not.toHaveBeenCalled();
+  });
+});
 ```
 
 - [ ] **Step 5.3: Run tests to confirm they fail**
@@ -1224,53 +1275,59 @@ Expected: FAIL — `./run.js` not found
 - [ ] **Step 5.4: Create `apps/crawler/src/run.ts`**
 
 ```typescript
-import { createLogger } from '@concert-crawl/logger'
-import { db, venues } from '@concert-crawl/db'
-import { eq, and } from 'drizzle-orm'
-import { crawlVenue } from '@concert-crawl/crawler-core'
+import { createLogger } from '@concert-crawl/logger';
+import { db, venues } from '@concert-crawl/db';
+import { eq, and } from 'drizzle-orm';
+import { crawlVenue } from '@concert-crawl/crawler-core';
 
-const logger = createLogger('crawler')
-const MAX_CONCURRENT = 3
+const logger = createLogger('crawler');
+const MAX_CONCURRENT = 3;
 
 export async function runDailyCrawl(): Promise<{
-  succeeded: number
-  failed: number
-  total: number
+  succeeded: number;
+  failed: number;
+  total: number;
 }> {
-  logger.info('Starting daily crawl')
+  logger.info('Starting daily crawl');
 
   const activeVenues = await db
     .select({ id: venues.id, name: venues.name })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(and(eq(venues.active, true), eq(venues.verified, true)));
 
-  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
+  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues');
 
-  let succeeded = 0
-  let failed = 0
+  let succeeded = 0;
+  let failed = 0;
 
   for (let i = 0; i < activeVenues.length; i += MAX_CONCURRENT) {
-    const batch = activeVenues.slice(i, i + MAX_CONCURRENT)
+    const batch = activeVenues.slice(i, i + MAX_CONCURRENT);
     const results = await Promise.allSettled(
       batch.map((venue) => crawlVenue(venue.id)),
-    )
+    );
 
     for (const [j, result] of results.entries()) {
       if (result.status === 'fulfilled') {
-        succeeded++
-        logger.info({ venueId: batch[j].id, name: batch[j].name }, 'Crawl succeeded')
+        succeeded++;
+        logger.info(
+          { venueId: batch[j].id, name: batch[j].name },
+          'Crawl succeeded',
+        );
       } else {
-        failed++
+        failed++;
         logger.error(
           { venueId: batch[j].id, name: batch[j].name, err: result.reason },
           'Crawl failed',
-        )
+        );
       }
     }
   }
 
-  logger.info({ succeeded, failed, total: activeVenues.length }, 'Daily crawl complete')
-  return { succeeded, failed, total: activeVenues.length }
+  logger.info(
+    { succeeded, failed, total: activeVenues.length },
+    'Daily crawl complete',
+  );
+  return { succeeded, failed, total: activeVenues.length };
 }
 ```
 
@@ -1285,20 +1342,20 @@ Expected: all 5 tests pass
 - [ ] **Step 5.6: Replace the stub in `apps/crawler/src/index.ts`**
 
 ```typescript
-import './instrument.js'
-import { createLogger } from '@concert-crawl/logger'
-import { runDailyCrawl } from './run.js'
+import './instrument.js';
+import { createLogger } from '@concert-crawl/logger';
+import { runDailyCrawl } from './run.js';
 
-const logger = createLogger('crawler')
+const logger = createLogger('crawler');
 
 runDailyCrawl()
   .then(() => {
-    process.exit(0)
+    process.exit(0);
   })
   .catch((err) => {
-    logger.error({ err }, 'Fatal error in daily crawl')
-    process.exit(1)
-  })
+    logger.error({ err }, 'Fatal error in daily crawl');
+    process.exit(1);
+  });
 ```
 
 - [ ] **Step 5.7: Verify typecheck passes**
@@ -1327,6 +1384,7 @@ git commit -m "feat: implement crawler daily runner — batch all active venues,
 **Decision rationale:** GitHub Actions is free for this workload (~10-min daily job, well within the 2,000 min/month free tier). Render cron services cost ~$7/month each ($14/month for prod + staging). Do NOT switch this to Render — the cost difference is not justified. Pattern follows the existing `smoke.yml` workflow.
 
 **Files:**
+
 - Create: `.github/workflows/crawler.yml`
 - Create: `.github/workflows/crawler-staging.yml`
 
@@ -1464,6 +1522,7 @@ git commit -m "feat: add GitHub Actions cron workflows for daily crawler (prod +
 ## Task 7: Admin Nav Update
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/layout.tsx`
 
 - [ ] **Step 7.1: Add Crawl Status and Event Review to nav**
@@ -1478,7 +1537,7 @@ const navItems = [
   { href: '/admin/events', label: 'Event Review' },
   { href: '/admin/invite-codes', label: 'Invite Codes' },
   { href: '/admin/settings', label: 'Settings' },
-]
+];
 ```
 
 - [ ] **Step 7.2: Verify type check**
@@ -1501,6 +1560,7 @@ git commit -m "feat: add Crawl Status and Event Review to admin nav"
 ## Task 8: Crawl Status Dashboard Page
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/crawl-status-table/CrawlStatusTable.tsx`
 - Create: `apps/web/src/app/(protected)/admin/crawl/page.tsx`
 
@@ -1727,6 +1787,7 @@ git commit -m "feat: add crawl status dashboard page"
 ## Task 9: Notifications Bell
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/notification-bell/NotificationBell.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/layout.tsx`
 
@@ -1888,7 +1949,7 @@ export const NotificationBell = () => {
 In `apps/web/src/app/(protected)/admin/layout.tsx`, add the import:
 
 ```typescript
-import { NotificationBell } from '@/components/admin/notification-bell/NotificationBell'
+import { NotificationBell } from '@/components/admin/notification-bell/NotificationBell';
 ```
 
 In the sidebar, replace the bottom `<div>` containing `<UserButton />`:
@@ -1923,6 +1984,7 @@ git commit -m "feat: add notification bell to admin sidebar"
 ## Task 10: Event Review Page
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/event-review-table/EventReviewTable.tsx`
 - Create: `apps/web/src/app/(protected)/admin/events/page.tsx`
 
@@ -2163,6 +2225,7 @@ pnpm dev
 ```
 
 Visit `http://localhost:3000/admin`:
+
 - [ ] Crawl Status link appears in sidebar → `/admin/crawl` loads without error
 - [ ] Event Review link appears in sidebar → `/admin/events` loads without error
 - [ ] Notification bell appears in sidebar
@@ -2179,6 +2242,7 @@ Open PR with title: `feat: Phase 7 — automation, crawl dashboard, event review
 Use `.github/pull_request_template.md`.
 
 Describe:
+
 - What the PR delivers (all 4 Phase 7 deliverables)
 - **Human action required:** Add `DATABASE_URL`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `SENTRY_DSN` (secrets) and `ADMIN_EMAIL` (variable) in GitHub → Settings → Secrets and Variables → Actions, under both the `production` and `staging` environments, after merge
 - Note: `SMOKE_ENABLED` on prod smoke cron can remain `false` until beta launch
@@ -2189,20 +2253,20 @@ Describe:
 
 ### Spec coverage
 
-| Spec requirement | Task |
-|---|---|
-| Daily crawler for all active venues (spec says Render cron; overridden to GitHub Actions — free vs ~$14/month) | Tasks 5 + 6 |
-| Crawl status dashboard in admin UI | Tasks 2 + 8 |
-| Admin data refinement tools (review low-confidence events) | Tasks 3 + 10 |
-| Email alerts on crawl failure (Resend) | Task 4 |
-| **Milestone:** Fully automated daily crawls, admin visibility into crawl health | All tasks combined |
+| Spec requirement                                                                                               | Task               |
+| -------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Daily crawler for all active venues (spec says Render cron; overridden to GitHub Actions — free vs ~$14/month) | Tasks 5 + 6        |
+| Crawl status dashboard in admin UI                                                                             | Tasks 2 + 8        |
+| Admin data refinement tools (review low-confidence events)                                                     | Tasks 3 + 10       |
+| Email alerts on crawl failure (Resend)                                                                         | Task 4             |
+| **Milestone:** Fully automated daily crawls, admin visibility into crawl health                                | All tasks combined |
 
 ### Additional improvements included
 
-| Item | Task | Reason |
-|---|---|---|
-| Fix in-progress crawl list bug (known betterment) | Task 2 | Referenced in project memory; was a known TODO |
-| Notifications API + bell | Tasks 1 + 9 | Notifications were written to DB but never readable; bell is the UX entry point |
+| Item                                              | Task        | Reason                                                                          |
+| ------------------------------------------------- | ----------- | ------------------------------------------------------------------------------- |
+| Fix in-progress crawl list bug (known betterment) | Task 2      | Referenced in project memory; was a known TODO                                  |
+| Notifications API + bell                          | Tasks 1 + 9 | Notifications were written to DB but never readable; bell is the UX entry point |
 
 ### Gaps / deferred items
 

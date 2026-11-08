@@ -38,6 +38,7 @@ The "we don't have a webhook telling us when Render is done" argument that motiv
 > Add branch protection rules requiring CI + Staging Smoke Tests as passing status checks before merge.
 
 **Reality check:**
+
 - The 6 CI job names (`Install dependencies`, `Lint`, `Test`, `Typecheck`, `Build`, `Security audit`) are **already required** on `main` via Ruleset 15513412.
 - `Staging Smoke Tests` runs on `workflow_run` after `Deploy to Staging`, which itself runs on `workflow_run` after `CI`. **Staging Smoke never reports against PR head SHAs.** Adding it as a required check today would block every PR merge indefinitely.
 
@@ -51,20 +52,24 @@ The "we don't have a webhook telling us when Render is done" argument that motiv
 ## File map (all paths relative to repo root)
 
 **Create:**
+
 - `.github/workflows/prod-smoke-after-deploy.yml` — new push-triggered workflow.
 
 **Modify:**
+
 - `.github/scripts/render-wait-for-live.sh` — add optional 3rd arg for timeout (default 600s, backward-compatible). New workflow passes 300s; staging-smoke's existing call is unchanged.
 - `.github/workflows/deploy-prod.yml` — remove `workflow_run:` trigger; keep every job. Remove the now-unreachable `Verify staging-smoke gate` step. Update header comment to reflect manual-escape-hatch role. Leave the `if: github.event_name == 'workflow_run'` SHA-drift guards in place per issue brief — they're unreachable but kept so re-enabling the trigger is a one-line revert.
 - `docs/runbooks/auto-deploy-prod.md` — rewrite "Pipeline overview" + "Enabling the pipeline" sections; add `PROD_SMOKE_RECONCILER_ENABLED` to the variables table.
 - `docs/runbooks/production-launch.md` — light edits to deploy-pipeline language.
 
 **Render dashboard actions (operator, post-merge of implementation PR):**
+
 - `concert-crawl-api` (srv-d7lngqfavr4c73eme3b0): flip `Auto-Deploy: yes`
 - `concert-crawl-crawler-triggers` (crn-d8o7c10k1i2s7389t3v0): flip `Auto-Deploy: yes`
 - `concert-crawl-crawler-daily` (crn-d8o7egog4nts73d2tni0): flip `Auto-Deploy: yes`
 
 **GH repo configuration (operator, two-step, post-merge):**
+
 1. Create repo variable `PROD_SMOKE_RECONCILER_ENABLED` initially set to `false` (Settings → Variables → Actions). The smoke workflow's job-level `if:` will skip until the variable is `true`, so creating it as `false` keeps the workflow inert during the migration window.
 2. **After** flipping `Auto-Deploy: yes` on the three Render services and verifying one auto-deploy completes cleanly, flip `PROD_SMOKE_RECONCILER_ENABLED` to `true` to arm the smoke + rollback path.
 
@@ -94,9 +99,11 @@ Implementation tasks below execute on a new branch (`feat/render-native-prod-dep
 ## Task 1: Make `render-wait-for-live.sh` timeout configurable
 
 **Files:**
+
 - Modify: `.github/scripts/render-wait-for-live.sh`
 
 **Interfaces:**
+
 - Consumes: same env (`RENDER_API_TOKEN`), same first two args (`<service-id> <expected-sha>`). New optional 3rd arg: `<timeout-seconds>` (default 600).
 - Produces: exit codes — `0` when the service is live on the expected SHA; `124` when the wait times out (GNU `timeout(1)` convention; new in this task — see Step 2 for the change from the previous `exit 1`); `1` for hard errors (jq missing, missing env, curl/auth/network failure, malformed service ID, no live deploy found). The prod-smoke workflow's wait step (Task 2 Step 2) keys off `124` for benign-skip and treats any other non-zero as a hard failure that fails the job. The existing staging-smoke caller is unaffected — it treats every non-zero as failure.
 
@@ -202,9 +209,11 @@ Refs #786"
 ## Task 2: Add `prod-smoke-after-deploy.yml`
 
 **Files:**
+
 - Create: `.github/workflows/prod-smoke-after-deploy.yml`
 
 **Interfaces:**
+
 - Consumes: `vars.RENDER_SERVICE_ID_API`, `vars.RENDER_SERVICE_ID_CRAWLER_*`, `vars.PROD_URL`, `vars.PROD_API_URL`, `vars.ADMIN_EMAIL`, `vars.PROD_SMOKE_RECONCILER_ENABLED` (new kill switch), `secrets.RENDER_API_TOKEN`, `secrets.RESEND_API_KEY`, `secrets.SENTRY_DSN_SMOKE`, `secrets.E2E_TEST_USER_*`.
 - Produces: smoke-test job result + Resend admin email on rollback.
 
@@ -378,111 +387,111 @@ jobs:
 - [ ] **Step 2: Add the Render-wait step (5-min timeout, graceful exit on timeout).**
 
 ```yaml
-      # Wait for Render to be live on github.sha. 300s = 5 min. The
-      # prod API deploys consistently take ~2 min on Render (verified
-      # across 15 recent deploys: 1:50–2:26, median ~2:00), so 5 min
-      # is 2x safety factor.
-      #
-      # The script exits 0 on live, 124 on timeout (benign — likely
-      # a fast-follow merge superseded this deploy), and 1 on hard
-      # error (jq missing, auth/network failure, no live deploy
-      # found, malformed service ID). We branch explicitly on those
-      # codes — NOT on `continue-on-error` + step.outcome — so a real
-      # failure can't silently get bucketed as "benign timeout" and
-      # skip smoke + rollback. `set +e` lets us inspect $? without
-      # the runner-level non-zero handling kicking in.
-      - name: Wait for prod API to be live on pushed SHA
-        id: wait_for_live
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          set +e
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API }}" \
-            "${{ github.sha }}" \
-            300
-          exit_code=$?
-          set -e
-          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
-          if [ "${exit_code}" -eq 0 ]; then
-            echo "should_smoke=true" >> "$GITHUB_OUTPUT"
-            echo "✓ Render is live on ${{ github.sha }}; proceeding to smoke."
-          elif [ "${exit_code}" -eq 124 ]; then
-            echo "should_smoke=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
-          else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked or rolled back. Check Render API status + RENDER_API_TOKEN."
-            exit "${exit_code}"
-          fi
+# Wait for Render to be live on github.sha. 300s = 5 min. The
+# prod API deploys consistently take ~2 min on Render (verified
+# across 15 recent deploys: 1:50–2:26, median ~2:00), so 5 min
+# is 2x safety factor.
+#
+# The script exits 0 on live, 124 on timeout (benign — likely
+# a fast-follow merge superseded this deploy), and 1 on hard
+# error (jq missing, auth/network failure, no live deploy
+# found, malformed service ID). We branch explicitly on those
+# codes — NOT on `continue-on-error` + step.outcome — so a real
+# failure can't silently get bucketed as "benign timeout" and
+# skip smoke + rollback. `set +e` lets us inspect $? without
+# the runner-level non-zero handling kicking in.
+- name: Wait for prod API to be live on pushed SHA
+  id: wait_for_live
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: |
+    set +e
+    bash .github/scripts/render-wait-for-live.sh \
+      "${{ vars.RENDER_SERVICE_ID_API }}" \
+      "${{ github.sha }}" \
+      300
+    exit_code=$?
+    set -e
+    echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+    if [ "${exit_code}" -eq 0 ]; then
+      echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+      echo "✓ Render is live on ${{ github.sha }}; proceeding to smoke."
+    elif [ "${exit_code}" -eq 124 ]; then
+      echo "should_smoke=false" >> "$GITHUB_OUTPUT"
+      echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
+    else
+      echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing the job — nothing was smoked or rolled back. Check Render API status + RENDER_API_TOKEN."
+      exit "${exit_code}"
+    fi
 ```
 
 - [ ] **Step 3: Add the Playwright setup + smoke steps (gated on `wait_for_live.outputs.should_smoke == 'true'`).**
 
 ```yaml
-      - name: Setup pnpm
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        uses: pnpm/action-setup@v6
+- name: Setup pnpm
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  uses: pnpm/action-setup@v6
 
-      - name: Setup Node.js
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: 'pnpm'
+- name: Setup Node.js
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  uses: actions/setup-node@v6
+  with:
+    node-version: 24
+    cache: 'pnpm'
 
-      - name: Install dependencies
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        run: pnpm install --frozen-lockfile
+- name: Install dependencies
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  run: pnpm install --frozen-lockfile
 
-      - name: Cache Playwright browsers
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
-          restore-keys: playwright-${{ runner.os }}-
+- name: Cache Playwright browsers
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  uses: actions/cache@v6
+  with:
+    path: ~/.cache/ms-playwright
+    key: playwright-${{ runner.os }}-${{ hashFiles('apps/e2e/package.json') }}
+    restore-keys: playwright-${{ runner.os }}-
 
-      - name: Install Playwright browsers
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        run: pnpm --filter @concert-crawl/e2e install-browsers
+- name: Install Playwright browsers
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  run: pnpm --filter @concert-crawl/e2e install-browsers
 
-      # continue-on-error so evaluate_smoke can write the assertions_failed
-      # output regardless of Playwright exit code. Mirrors the existing
-      # deploy-prod.yml smoke pattern — distinguishing "Playwright ran
-      # and asserted a failure" (rollback) from "the job died for
-      # another reason" (not rollback-worthy).
-      - name: Run smoke tests against production
-        id: run_smoke
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        continue-on-error: true
-        run: pnpm --filter @concert-crawl/e2e test:smoke
-        env:
-          PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
-          PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
-          E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
-          E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
-          SENTRY_ENVIRONMENT: production
+# continue-on-error so evaluate_smoke can write the assertions_failed
+# output regardless of Playwright exit code. Mirrors the existing
+# deploy-prod.yml smoke pattern — distinguishing "Playwright ran
+# and asserted a failure" (rollback) from "the job died for
+# another reason" (not rollback-worthy).
+- name: Run smoke tests against production
+  id: run_smoke
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  continue-on-error: true
+  run: pnpm --filter @concert-crawl/e2e test:smoke
+  env:
+    PLAYWRIGHT_SMOKE_BASE_URL: ${{ vars.PROD_URL }}
+    PLAYWRIGHT_API_URL: ${{ vars.PROD_API_URL }}
+    E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+    E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+    SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+    SENTRY_ENVIRONMENT: production
 
-      - name: Evaluate smoke outcome
-        id: evaluate_smoke
-        if: steps.wait_for_live.outputs.should_smoke == 'true'
-        run: |
-          if [ "${{ steps.run_smoke.outcome }}" = "failure" ]; then
-            echo "assertions_failed=true" >> "$GITHUB_OUTPUT"
-            echo "Playwright smoke asserted a failure → rollback will fire."
-          else
-            echo "assertions_failed=false" >> "$GITHUB_OUTPUT"
-            echo "Playwright smoke passed."
-          fi
+- name: Evaluate smoke outcome
+  id: evaluate_smoke
+  if: steps.wait_for_live.outputs.should_smoke == 'true'
+  run: |
+    if [ "${{ steps.run_smoke.outcome }}" = "failure" ]; then
+      echo "assertions_failed=true" >> "$GITHUB_OUTPUT"
+      echo "Playwright smoke asserted a failure → rollback will fire."
+    else
+      echo "assertions_failed=false" >> "$GITHUB_OUTPUT"
+      echo "Playwright smoke passed."
+    fi
 
-      - name: Upload failure artifacts
-        if: steps.run_smoke.outcome == 'failure'
-        uses: actions/upload-artifact@v7
-        with:
-          name: prod-smoke-failure-${{ github.run_id }}
-          path: apps/e2e/test-results/
-          retention-days: 14
+- name: Upload failure artifacts
+  if: steps.run_smoke.outcome == 'failure'
+  uses: actions/upload-artifact@v7
+  with:
+    name: prod-smoke-failure-${{ github.run_id }}
+    path: apps/e2e/test-results/
+    retention-days: 14
 ```
 
 - [ ] **Step 4: Add the rollback steps (gated on `assertions_failed == 'true'`).**
@@ -490,32 +499,32 @@ jobs:
 `render-rollback.sh` detects service-ID prefix and behaves differently per type: `srv-*` (web service) is rolled back via Render's `/rollback` endpoint; `crn-*` (cron job) emits a `::warning::` annotation and exits 0 because Render's API rejects cron rollback (HTTP 400, no API path exists). Net effect of these three steps: API is rolled back automatically; the two crons need manual operator action — the Resend notify step below surfaces this so the operator knows.
 
 ```yaml
-      # Rolls back via Render's /rollback API. Only fires when
-      # Playwright actually asserted a failure (not on timeout, not
-      # on runner death) — see evaluate_smoke step above.
-      - name: Roll back API service
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+# Rolls back via Render's /rollback API. Only fires when
+# Playwright actually asserted a failure (not on timeout, not
+# on runner death) — see evaluate_smoke step above.
+- name: Roll back API service
+  if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
 
-      # render-rollback.sh detects the crn-* prefix and SKIPS the
-      # rollback with a `::warning::` annotation — Render's API does
-      # not support cron rollback (HTTP 400 confirmed live). The
-      # step still runs so the warning is loud + audited; the
-      # operator handles cron rollback manually via the Render
-      # dashboard or by reverting the offending commit.
-      - name: Roll back crawler triggers cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+# render-rollback.sh detects the crn-* prefix and SKIPS the
+# rollback with a `::warning::` annotation — Render's API does
+# not support cron rollback (HTTP 400 confirmed live). The
+# step still runs so the warning is loud + audited; the
+# operator handles cron rollback manually via the Render
+# dashboard or by reverting the offending commit.
+- name: Roll back crawler triggers cron (auto-skips — see comment)
+  if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
 
-      - name: Roll back crawler daily cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+- name: Roll back crawler daily cron (auto-skips — see comment)
+  if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 ```
 
 - [ ] **Step 5: Add the Resend admin-notification step.**
@@ -530,11 +539,11 @@ Copy the entire `Notify admin — auto-rollback fired` step from `.github/workfl
 - [ ] **Step 6: Add the final "Surface smoke failure" step so the job exits non-zero when Playwright failed.**
 
 ```yaml
-      - name: Surface smoke failure
-        if: steps.run_smoke.outcome == 'failure'
-        run: |
-          echo "Playwright smoke failed; failing the job after rollback steps completed."
-          exit 1
+- name: Surface smoke failure
+  if: steps.run_smoke.outcome == 'failure'
+  run: |
+    echo "Playwright smoke failed; failing the job after rollback steps completed."
+    exit 1
 ```
 
 - [ ] **Step 7: Lint.**
@@ -584,11 +593,13 @@ Refs #786"
 ## Task 3: Modify `deploy-prod.yml` to drop the `workflow_run` trigger
 
 **Files:**
+
 - Modify: `.github/workflows/deploy-prod.yml`
 
 - [ ] **Step 1: Remove the `workflow_run:` block from the `on:` trigger.**
 
 Before:
+
 ```yaml
 on:
   workflow_run:
@@ -604,6 +615,7 @@ on:
 ```
 
 After:
+
 ```yaml
 on:
   workflow_dispatch:
@@ -619,6 +631,7 @@ on:
 The step's `if: github.event_name == 'workflow_run'` becomes always-false now. Delete the entire step (lines 110–126 in the current file). It's a true delete, not a comment-out — the only reason to keep dead workflow_run-conditional code is for one-line revertability, and this particular step would need re-wiring anyway if the trigger ever returned.
 
 Keep these in place (per issue brief — "leave the gate logic in place as defense-in-depth"):
+
 - `Refuse workflow_dispatch from non-main ref` — still valid for dispatch.
 - `Verify upstream SHA is still main HEAD` (gate job) — unreachable under dispatch-only but kept; comment updated below.
 - `Re-verify upstream SHA is still main HEAD` (deploy job) — same.
@@ -654,11 +667,11 @@ name: Deploy to Production
 Above each `Verify upstream SHA is still main HEAD` / `Re-verify upstream SHA is still main HEAD` step, prepend this comment:
 
 ```yaml
-      # Under workflow_dispatch-only (post-#786), this step is
-      # unreachable — `if: github.event_name == 'workflow_run'` is
-      # always false. Left in place as defense-in-depth so re-enabling
-      # the workflow_run trigger is a one-line change. See #779 for
-      # the original drift-detection rationale.
+# Under workflow_dispatch-only (post-#786), this step is
+# unreachable — `if: github.event_name == 'workflow_run'` is
+# always false. Left in place as defense-in-depth so re-enabling
+# the workflow_run trigger is a one-line change. See #779 for
+# the original drift-detection rationale.
 ```
 
 - [ ] **Step 5: Verify the `github.event.workflow_run.head_sha || github.sha` fallbacks still resolve correctly.**
@@ -700,6 +713,7 @@ Refs #786"
 ## Task 4: Update `docs/runbooks/auto-deploy-prod.md`
 
 **Files:**
+
 - Modify: `docs/runbooks/auto-deploy-prod.md`
 
 - [ ] **Step 1: Rewrite the "Pipeline overview" section.**
@@ -711,23 +725,23 @@ Replace the existing diagram + workflow table (lines 11–35 of the current file
 
 \`\`\`
 push to main
-   │
-   ├──► CI ──► Deploy to Staging ──► Staging Smoke
-   │
-   ├──► Render git auto-deploy
-   │       ├──► concert-crawl-api
-   │       ├──► concert-crawl-crawler-triggers
-   │       └──► concert-crawl-crawler-daily
-   │              │
-   │              ▼
-   │      (Render builds + serves)
-   │
-   └──► Prod smoke (after Render auto-deploy)
-              │  waits up to 5 min for Render to be live on github.sha
-              ▼
-        Playwright smoke against prod
-              ├──► success: workflow ends green
-              └──► failure: render-rollback.sh + Resend admin email
+│
+├──► CI ──► Deploy to Staging ──► Staging Smoke
+│
+├──► Render git auto-deploy
+│ ├──► concert-crawl-api
+│ ├──► concert-crawl-crawler-triggers
+│ └──► concert-crawl-crawler-daily
+│ │
+│ ▼
+│ (Render builds + serves)
+│
+└──► Prod smoke (after Render auto-deploy)
+│ waits up to 5 min for Render to be live on github.sha
+▼
+Playwright smoke against prod
+├──► success: workflow ends green
+└──► failure: render-rollback.sh + Resend admin email
 \`\`\`
 
 Render's git integration handles prod deploys directly — there is no
@@ -735,14 +749,14 @@ GH Actions chain from CI → Deploy-staging → Staging-smoke → Deploy-prod
 anymore. The four-deep `workflow_run` chain that hit GitHub's 3-level
 depth cap is gone.
 
-| Workflow                              | Path                                              | Trigger                          | Kill switch                          |
-| ------------------------------------- | ------------------------------------------------- | -------------------------------- | ------------------------------------ |
-| CI                                    | `.github/workflows/ci.yml`                        | push to `main`, PRs              | (always on)                          |
-| Deploy to Staging                     | `.github/workflows/deploy-staging.yml`            | CI success                       | (always on)                          |
-| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`             | Deploy to Staging success        | `STAGING_SMOKE_ENABLED`              |
-| Prod smoke (after Render auto-deploy) | `.github/workflows/prod-smoke-after-deploy.yml`   | push to `main` + workflow_dispatch | `PROD_SMOKE_RECONCILER_ENABLED`      |
-| Deploy to Production (manual)         | `.github/workflows/deploy-prod.yml`               | `workflow_dispatch` only         | `AUTO_DEPLOY_PROD_ENABLED`           |
-| Rollback Production (manual)          | `.github/workflows/rollback-prod.yml`             | `workflow_dispatch` only         | (always available)                   |
+| Workflow                              | Path                                            | Trigger                            | Kill switch                     |
+| ------------------------------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------- |
+| CI                                    | `.github/workflows/ci.yml`                      | push to `main`, PRs                | (always on)                     |
+| Deploy to Staging                     | `.github/workflows/deploy-staging.yml`          | CI success                         | (always on)                     |
+| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`           | Deploy to Staging success          | `STAGING_SMOKE_ENABLED`         |
+| Prod smoke (after Render auto-deploy) | `.github/workflows/prod-smoke-after-deploy.yml` | push to `main` + workflow_dispatch | `PROD_SMOKE_RECONCILER_ENABLED` |
+| Deploy to Production (manual)         | `.github/workflows/deploy-prod.yml`             | `workflow_dispatch` only           | `AUTO_DEPLOY_PROD_ENABLED`      |
+| Rollback Production (manual)          | `.github/workflows/rollback-prod.yml`           | `workflow_dispatch` only           | (always available)              |
 ```
 
 - [ ] **Step 2: Add a "How the smoke workflow works" section.**
@@ -766,6 +780,7 @@ After the pipeline overview, insert:
 ### Caveat on cron service rollback (preserved from prior runbook)
 
 `render-rollback.sh` detects Render service ID prefix:
+
 - `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls API back to the prior `live` deploy.
 - `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue rolling back the other services.
 
@@ -850,6 +865,7 @@ Refs #786"
 ## Task 5: Light edits to `docs/runbooks/production-launch.md`
 
 **Files:**
+
 - Modify: `docs/runbooks/production-launch.md`
 
 - [ ] **Step 1: Find the deploy-pipeline references.**
@@ -989,15 +1005,15 @@ Min 2 successful (not errored) reviews. Address Crit/High/Medium; apply valid Lo
 
 ## Self-review against the issue's acceptance criteria
 
-| Criterion | Covered by |
-| --------- | ---------- |
-| Branch protection on main requires CI + Staging Smoke Tests | **Partial.** CI already required; Staging Smoke Tests flagged as open question for Hugh to pick option 1 (no-op) or option 2 (out-of-scope follow-up). |
-| Prod Render services have `autoDeploy: yes` | Operator action documented in implementation PR body + runbook stage 2. |
-| `prod-smoke-after-deploy.yml` exists, smokes prod after deploy, triggers rollback on failure | Task 2. |
-| `deploy-prod.yml` no longer triggers on `workflow_run`; manual dispatch path preserved with `reason` input | Task 3. |
-| Runbook updated | Tasks 4 + 5. |
-| Test merge to main reaches prod via Render auto-deploy without manual intervention | Operator actions step 3 + test plan checklist. |
-| Simulated smoke failure triggers auto-rollback | Operator actions step 4 + test plan checklist. |
+| Criterion                                                                                                  | Covered by                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Branch protection on main requires CI + Staging Smoke Tests                                                | **Partial.** CI already required; Staging Smoke Tests flagged as open question for Hugh to pick option 1 (no-op) or option 2 (out-of-scope follow-up). |
+| Prod Render services have `autoDeploy: yes`                                                                | Operator action documented in implementation PR body + runbook stage 2.                                                                                |
+| `prod-smoke-after-deploy.yml` exists, smokes prod after deploy, triggers rollback on failure               | Task 2.                                                                                                                                                |
+| `deploy-prod.yml` no longer triggers on `workflow_run`; manual dispatch path preserved with `reason` input | Task 3.                                                                                                                                                |
+| Runbook updated                                                                                            | Tasks 4 + 5.                                                                                                                                           |
+| Test merge to main reaches prod via Render auto-deploy without manual intervention                         | Operator actions step 3 + test plan checklist.                                                                                                         |
+| Simulated smoke failure triggers auto-rollback                                                             | Operator actions step 4 + test plan checklist.                                                                                                         |
 
 ## Self-review against the user's standing rules
 

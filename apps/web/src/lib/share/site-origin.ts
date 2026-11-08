@@ -21,13 +21,13 @@
  * put dev URLs into shared links.
  */
 
-const LOCAL_ORIGIN = 'http://localhost:3000'
+const LOCAL_ORIGIN = 'http://localhost:3000';
 
 const present = (value: string | undefined): string | null => {
-  if (value === undefined) return null
-  const trimmed = value.trim()
-  return trimmed.length === 0 ? null : trimmed
-}
+  if (value === undefined) return null;
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+};
 
 /**
  * Reduce a configured value to a bare `scheme://host`, or reject it.
@@ -40,36 +40,36 @@ const present = (value: string | undefined): string | null => {
  */
 const toOrigin = (value: string): string | null => {
   try {
-    const url = new URL(value)
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
-    return `${url.protocol}//${url.host}`
+    const url = new URL(value);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+    return `${url.protocol}//${url.host}`;
   } catch (err) {
-    console.error('share: unusable site origin', { value, err })
-    return null
+    console.error('share: unusable site origin', { value, err });
+    return null;
   }
-}
+};
 
 export const siteOrigin = (): string => {
-  const configured = present(process.env['NEXT_PUBLIC_SITE_URL'])
-  const fromConfig = configured === null ? null : toOrigin(configured)
-  if (fromConfig !== null) return fromConfig
+  const configured = present(process.env['NEXT_PUBLIC_SITE_URL']);
+  const fromConfig = configured === null ? null : toOrigin(configured);
+  if (fromConfig !== null) return fromConfig;
 
   // Host-only by contract, so a scheme is prepended before parsing; a value
   // that already carries one still resolves rather than becoming `https://https`.
-  const vercelHost = present(process.env['VERCEL_URL'])
+  const vercelHost = present(process.env['VERCEL_URL']);
   const fromVercel =
     vercelHost === null
       ? null
       : toOrigin(
           vercelHost.includes('://') ? vercelHost : `https://${vercelHost}`,
-        )
-  if (fromVercel !== null) return fromVercel
+        );
+  if (fromVercel !== null) return fromVercel;
 
-  return LOCAL_ORIGIN
-}
+  return LOCAL_ORIGIN;
+};
 
 /** The one origin we want search engines to know about. */
-export const CANONICAL_ORIGIN = 'https://concertcrawl.app'
+export const CANONICAL_ORIGIN = 'https://concertcrawl.app';
 
 /**
  * Whether the request being served was addressed to the production site.
@@ -93,16 +93,16 @@ export const CANONICAL_ORIGIN = 'https://concertcrawl.app'
  * caller who forges the header is already choosing to ignore the answer.
  */
 export const isCanonicalHost = (host: string | null | undefined): boolean => {
-  if (host === null || host === undefined) return false
+  if (host === null || host === undefined) return false;
   // Host names are case-insensitive, and the header is echoed back as the
   // client sent it. An uppercase request would otherwise be read as a foreign
   // domain and answered with the blanket disallow. The default HTTPS port is
   // stripped because a client may send it explicitly and `https://host:443` is
   // the same origin as `https://host`.
-  const normalised = host.trim().toLowerCase().replace(/:443$/, '')
-  return normalised === new URL(CANONICAL_ORIGIN).host
-}
+  const normalised = host.trim().toLowerCase().replace(/:443$/, '');
+  return normalised === new URL(CANONICAL_ORIGIN).host;
+};
 
 /** Resolve an app-relative path against the site origin. */
 export const absoluteUrl = (path: string): string =>
-  `${siteOrigin()}${path.startsWith('/') ? path : `/${path}`}`
+  `${siteOrigin()}${path.startsWith('/') ? path : `/${path}`}`;

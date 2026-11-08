@@ -134,18 +134,19 @@ Inter-row divider (line 162): 1px high, `background: var(--border)`, `margin: 0 
 **Row container:** `display: flex`, `align-items: center`, `gap: 11px`, `padding: 12px 14px`.
 
 **Tier dot/star wrapper (`<span>`):**
-| Property | Value |
-|----------|-------|
-| width | `18px` |
-| height | `18px` |
-| flex-shrink | `0` |
-| border-radius | `5px` |
-| background | `mix(color, ghost ? 10 : 18)` |
-| border (ghost=true) | `1px dashed mix(color, 55)` |
-| border (ghost=false) | `1px solid mix(color, 45)` |
-| display | `inline-flex` |
-| align-items | `center` |
-| justify-content | `center` |
+
+| Property             | Value                         |
+| -------------------- | ----------------------------- |
+| width                | `18px`                        |
+| height               | `18px`                        |
+| flex-shrink          | `0`                           |
+| border-radius        | `5px`                         |
+| background           | `mix(color, ghost ? 10 : 18)` |
+| border (ghost=true)  | `1px dashed mix(color, 55)`   |
+| border (ghost=false) | `1px solid mix(color, 45)`    |
+| display              | `inline-flex`                 |
+| align-items          | `center`                      |
+| justify-content      | `center`                      |
 
 **Inner glyph:**
 
@@ -153,35 +154,38 @@ Inter-row divider (line 162): 1px high, `background: var(--border)`, `margin: 0 
 - `kind='resale'/'community'`: solid dot — width=6px, height=6px, border-radius=50%, background=color
 
 **Label (`<span>`):**
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-weight | `700` |
-| font-size | `13.5px` |
-| color (ghost=true) | `var(--fg-muted)` |
-| color (ghost=false) | `var(--fg)` |
-| letter-spacing | `-0.005em` |
-| (truncation) | white-space: nowrap, overflow: hidden, text-overflow: ellipsis |
+
+| Property            | Value                                                          |
+| ------------------- | -------------------------------------------------------------- |
+| font-family         | `Inter, system-ui`                                             |
+| font-weight         | `700`                                                          |
+| font-size           | `13.5px`                                                       |
+| color (ghost=true)  | `var(--fg-muted)`                                              |
+| color (ghost=false) | `var(--fg)`                                                    |
+| letter-spacing      | `-0.005em`                                                     |
+| (truncation)        | white-space: nowrap, overflow: hidden, text-overflow: ellipsis |
 
 **Sub (`<span>`):**
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-size | `11.5px` |
-| font-weight | `500` |
-| color | `var(--fg-subtle)` |
-| letter-spacing | `-0.005em` |
+
+| Property       | Value              |
+| -------------- | ------------------ |
+| font-family    | `Inter, system-ui` |
+| font-size      | `11.5px`           |
+| font-weight    | `500`              |
+| color          | `var(--fg-subtle)` |
+| letter-spacing | `-0.005em`         |
 
 **Right value (`<div>`):**
-| Property | ghost=true | ghost=false |
-|----------|------------|-------------|
-| font-family | `'JetBrains Mono', monospace` | `Inter, system-ui` |
-| font-weight | `700` | `800` |
-| font-size | `9.5px` | `16px` |
-| letter-spacing | `0.07em` | `-0.015em` |
-| text-transform | `uppercase` | `none` |
-| color | `mix(color, 90, var(--fg-subtle))` | `var(--fg)` |
-| (common) | text-align: right, white-space: nowrap, flex-shrink: 0 | |
+
+| Property       | ghost=true                                             | ghost=false        |
+| -------------- | ------------------------------------------------------ | ------------------ |
+| font-family    | `'JetBrains Mono', monospace`                          | `Inter, system-ui` |
+| font-weight    | `700`                                                  | `800`              |
+| font-size      | `9.5px`                                                | `16px`             |
+| letter-spacing | `0.07em`                                               | `-0.015em`         |
+| text-transform | `uppercase`                                            | `none`             |
+| color          | `mix(color, 90, var(--fg-subtle))`                     | `var(--fg)`        |
+| (common)       | text-align: right, white-space: nowrap, flex-shrink: 0 |                    |
 
 ### CTA wrapper (line 172): `padding: 12px 14px 14px`.
 
@@ -1013,36 +1017,39 @@ Differs from the §4 `kind='boxoffice'` and `kind='community'` variants in three
 #### Inner content (in order)
 
 **1. Coral dot** (line 223):
-| Property | Value |
-|----------|-------|
-| width | `6px` |
-| height | `6px` |
-| border-radius | `50%` |
-| background | `oklch(0.65 0.20 25)` (coral) |
-| flex-shrink | `0` |
+
+| Property      | Value                         |
+| ------------- | ----------------------------- |
+| width         | `6px`                         |
+| height        | `6px`                         |
+| border-radius | `50%`                         |
+| background    | `oklch(0.65 0.20 25)` (coral) |
+| flex-shrink   | `0`                           |
 
 **2. Price label** (lines 224-227):
-| Property | Value |
-|----------|-------|
-| font-family | `Inter, system-ui` |
-| font-weight | `800` |
-| font-size | `14px` |
-| color | `oklch(0.65 0.20 25)` (coral) |
-| letter-spacing | `-0.01em` |
-| white-space | `nowrap` |
+
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| font-family    | `Inter, system-ui`            |
+| font-weight    | `800`                         |
+| font-size      | `14px`                        |
+| color          | `oklch(0.65 0.20 25)` (coral) |
+| letter-spacing | `-0.01em`                     |
+| white-space    | `nowrap`                      |
 
 Format: `from $${price}` (when `from=true`) or `$${price}` (when `from=false`).
 
 **3. `"resale"` tag** (lines 228-231) — **NON-NEGOTIABLE; always present on this variant**:
-| Property | Value |
-|----------|-------|
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `8.5px` |
-| font-weight | `700` |
-| color | `oklch(0.65 0.20 25)` (coral) |
-| letter-spacing | `0.08em` |
-| text-transform | `uppercase` |
-| opacity | `0.95` |
+
+| Property       | Value                         |
+| -------------- | ----------------------------- |
+| font-family    | `'JetBrains Mono', monospace` |
+| font-size      | `8.5px`                       |
+| font-weight    | `700`                         |
+| color          | `oklch(0.65 0.20 25)` (coral) |
+| letter-spacing | `0.08em`                      |
+| text-transform | `uppercase`                   |
+| opacity        | `0.95`                        |
 
 Text: `"resale"`.
 

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // "My artists" browse scope chip (native following, PR 4). Four states:
 //
@@ -18,16 +18,16 @@
 // filtering (#794's identical-pixels rule means the gate is told in the
 // aria-describedby sentence, not in the visible label).
 
-import { useEffect, useState } from 'react'
-import type { PickerEntry } from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import { ChipDivider } from './ChipDivider'
+import { useEffect, useState } from 'react';
+import type { PickerEntry } from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import { ChipDivider } from './ChipDivider';
 
-const GATE_DESCRIPTION_ID = 'follow-scope-chip-gate'
+const GATE_DESCRIPTION_ID = 'follow-scope-chip-gate';
 
 const LockGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -47,11 +47,11 @@ const LockGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 interface FollowFilterChipProps {
-  active: boolean
-  onToggle: (next: boolean) => void
+  active: boolean;
+  onToggle: (next: boolean) => void;
   /**
    * Follows the SERVER counted while rendering the page (Gate 1 D1 requires
    * `absent` be a server decision, so the chip never appears and then vanishes
@@ -61,10 +61,10 @@ interface FollowFilterChipProps {
    * deliberately NOT zero: treating "we couldn't ask" as "you follow nobody"
    * would delete the chip out from under someone who follows fifty artists.
    */
-  followCount: number | null
+  followCount: number | null;
   // Server-resolved SCA-region boolean, forwarded to the tier picker's
   // checkout legal block (monetization spec §1.7).
-  scaRegion: boolean
+  scaRegion: boolean;
 }
 
 export const FollowFilterChip = ({
@@ -73,30 +73,30 @@ export const FollowFilterChip = ({
   followCount,
   scaRegion,
 }: FollowFilterChipProps) => {
-  const { isLoading, surface } = useEntitlement('following')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
+  const { isLoading, surface } = useEntitlement('following');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
 
-  const resolved = !isLoading && surface !== null
-  const usable = resolved && surface === 'visible-active'
+  const resolved = !isLoading && surface !== null;
+  const usable = resolved && surface === 'visible-active';
 
   // Entitlement lapsed (downgrade, session change) with filterFollowing=1 still
   // in the URL: the locked chip can't toggle it off and Clear all excludes
   // scopes, so release the param rather than strand the user on a list the API
   // will answer with a 403.
   useEffect(() => {
-    if (resolved && !usable && active) onToggle(false)
-  }, [resolved, usable, active, onToggle])
+    if (resolved && !usable && active) onToggle(false);
+  }, [resolved, usable, active, onToggle]);
 
   // Hold rendering while the plan resolves — no locked flash.
-  if (!resolved) return null
+  if (!resolved) return null;
 
   if (usable) {
     // `absent`: entitled, nothing followed, nothing to scope to. Guarded on
     // `!active` so a stale filterFollowing=1 URL can still be cleared — hiding
     // the chip mid-scope would strand the viewer on an unclearable empty list.
-    if (followCount === 0 && !active) return null
+    if (followCount === 0 && !active) return null;
 
     // An unknown count drops the number rather than printing zero. `null` means
     // the SSR seed failed, and "My artists · 0" would tell a viewer who follows
@@ -105,7 +105,7 @@ export const FollowFilterChip = ({
     const label =
       active && followCount !== null
         ? FOLLOWING_COPY.chipActive(followCount)
-        : FOLLOWING_COPY.chip
+        : FOLLOWING_COPY.chip;
 
     return (
       <>
@@ -136,7 +136,7 @@ export const FollowFilterChip = ({
         </button>
         <ChipDivider />
       </>
-    )
+    );
   }
 
   const onLockedTap = () => {
@@ -146,9 +146,9 @@ export const FollowFilterChip = ({
     // page's.
     setPickerEntry(
       surface === 'tier-picker-on-tap' ? 'logged-out-paywall' : 'paywall',
-    )
-    setPickerOpen(true)
-  }
+    );
+    setPickerOpen(true);
+  };
 
   return (
     <>
@@ -183,5 +183,5 @@ export const FollowFilterChip = ({
         entry={pickerEntry}
       />
     </>
-  )
-}
+  );
+};

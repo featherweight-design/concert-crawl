@@ -1,25 +1,25 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { EventFlagsSection } from './EventFlagsSection'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { EventFlagsSection } from './EventFlagsSection';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 const buildFlag = (overrides: Partial<EventFlag> = {}): EventFlag => ({
@@ -39,9 +39,9 @@ const buildFlag = (overrides: Partial<EventFlag> = {}): EventFlag => ({
   venueId: 'venue-1',
   venueName: 'Sample Venue',
   ...overrides,
-})
+});
 
-const noop = () => {}
+const noop = () => {};
 
 // A server page of concert flags starting at `start`. The component is
 // parent-controlled, so a "page" is just the slice the parent hands down —
@@ -49,10 +49,10 @@ const noop = () => {}
 const buildPage = (start: number, count: number): EventFlag[] =>
   Array.from({ length: count }).map((_, idx) =>
     buildFlag({ id: `flag-${start + idx}`, title: `Show ${start + idx}` }),
-  )
+  );
 
 const inspectorTitle = (): string =>
-  screen.getByRole('heading', { level: 3 }).textContent ?? ''
+  screen.getByRole('heading', { level: 3 }).textContent ?? '';
 
 describe('EventFlagsSection pagination (#694)', () => {
   it('hides the pager when a single server page holds everything', () => {
@@ -67,14 +67,14 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // total <= pageSize on page 1 → no footer pager renders.
-    expect(screen.queryByRole('button', { name: 'Page 2' })).toBeNull()
-  })
+    expect(screen.queryByRole('button', { name: 'Page 2' })).toBeNull();
+  });
 
   it('renders the pager and delegates page changes to the parent', () => {
-    const onPageChange = vi.fn()
+    const onPageChange = vi.fn();
     render(
       <EventFlagsSection
         events={buildPage(0, 20)}
@@ -86,14 +86,14 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // total > pageSize → the footer pager is mounted with a Page 2 button.
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }));
 
     // The component does not slice locally — it asks the parent to refetch.
-    expect(onPageChange).toHaveBeenCalledWith(2)
-  })
+    expect(onPageChange).toHaveBeenCalledWith(2);
+  });
 
   it('clamps the inspector to the new page first row when the parent swaps pages', () => {
     const { rerender } = render(
@@ -107,10 +107,10 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // Page 1 → inspector on the first row.
-    expect(inspectorTitle()).toBe('Show 0')
+    expect(inspectorTitle()).toBe('Show 0');
 
     // Parent refetches page 2 (rows 20–24) and bumps the page prop.
     rerender(
@@ -124,12 +124,12 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // The stale active row is no longer on the page, so the inspector re-seeds
     // to the new page's first row.
-    expect(inspectorTitle()).toBe('Show 20')
-  })
+    expect(inspectorTitle()).toBe('Show 20');
+  });
 
   it('keeps id-keyed checkbox selection when the parent swaps pages', () => {
     const { rerender } = render(
@@ -143,15 +143,15 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // First checkbox is the panel select-all; the row checkboxes follow.
-    const [, rowCheckbox] = screen.getAllByRole('checkbox')
-    if (!rowCheckbox) throw new Error('expected a row checkbox to render')
-    fireEvent.click(rowCheckbox)
+    const [, rowCheckbox] = screen.getAllByRole('checkbox');
+    if (!rowCheckbox) throw new Error('expected a row checkbox to render');
+    fireEvent.click(rowCheckbox);
 
     // The bulk dock proves a selection exists.
-    expect(screen.getByText('selected')).toBeTruthy()
+    expect(screen.getByText('selected')).toBeTruthy();
 
     // Parent swaps to page 2 — the selected row lives on the previous page and
     // is no longer rendered, but the id-keyed selection must survive.
@@ -166,11 +166,11 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    expect(screen.getByText('selected')).toBeTruthy()
-    expect(screen.getByText('✓ Approve 1')).toBeTruthy()
-  })
+    expect(screen.getByText('selected')).toBeTruthy();
+    expect(screen.getByText('✓ Approve 1')).toBeTruthy();
+  });
 
   it('resets to the first visible row and clears selection on a filter change', () => {
     // Page holds non-concert rows first, then concert rows. Hiding non-concert
@@ -182,10 +182,10 @@ describe('EventFlagsSection pagination (#694)', () => {
         title: `NonConcert ${idx}`,
         genre: ['non-concert'],
       }),
-    )
+    );
     const concert = Array.from({ length: 5 }).map((_, idx) =>
       buildFlag({ id: `c-${idx}`, title: `Concert ${idx}`, genre: ['rock'] }),
-    )
+    );
     render(
       <EventFlagsSection
         events={[...nonConcert, ...concert]}
@@ -197,24 +197,24 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // Select a row so we can prove the filter clears the selection.
-    const [, rowCheckbox] = screen.getAllByRole('checkbox')
-    if (!rowCheckbox) throw new Error('expected a row checkbox to render')
-    fireEvent.click(rowCheckbox)
-    expect(screen.getByText('selected')).toBeTruthy()
+    const [, rowCheckbox] = screen.getAllByRole('checkbox');
+    if (!rowCheckbox) throw new Error('expected a row checkbox to render');
+    fireEvent.click(rowCheckbox);
+    expect(screen.getByText('selected')).toBeTruthy();
 
     // Inspector starts on the first row (a non-concert one).
-    expect(inspectorTitle()).toBe('NonConcert 0')
+    expect(inspectorTitle()).toBe('NonConcert 0');
 
-    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }))
+    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }));
 
     // Only the five concert rows remain; inspector lands on the first.
-    expect(inspectorTitle()).toBe('Concert 0')
+    expect(inspectorTitle()).toBe('Concert 0');
     // Selection is cleared on filter change, so no bulk dock.
-    expect(screen.queryByText('selected')).toBeNull()
-  })
+    expect(screen.queryByText('selected')).toBeNull();
+  });
 
   it('keeps the inspector on a visible row after approving the last row of a page', () => {
     // 21 flags → page 2 holds a single row. Approving that lone row empties the
@@ -231,15 +231,15 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    expect(inspectorTitle()).toBe('Show 20')
+    expect(inspectorTitle()).toBe('Show 20');
 
     // Approve the active (only) row on page 2. Row + inspector both expose an
     // exact "Approve" button; either fires handleApprove.
-    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' })
-    if (!approveBtn) throw new Error('expected an approve button to render')
-    fireEvent.click(approveBtn)
+    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' });
+    if (!approveBtn) throw new Error('expected an approve button to render');
+    fireEvent.click(approveBtn);
 
     // Parent refetches: page 2 is now empty, so it clamps to page 1 (20 rows).
     rerender(
@@ -253,11 +253,11 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    expect(screen.queryByText('Select an event to inspect')).toBeNull()
-    expect(inspectorTitle()).toBe('Show 0')
-  })
+    expect(screen.queryByText('Select an event to inspect')).toBeNull();
+    expect(inspectorTitle()).toBe('Show 0');
+  });
 
   it('shows the full server total in the panel badge, not the page slice', () => {
     render(
@@ -271,16 +271,16 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // The page holds 20 rows but the queue has 25 — the badge must reflect the
     // server total so it agrees with the pager, not the sliced page length.
-    expect(screen.getByText('25 pending')).toBeTruthy()
-    expect(screen.queryByText('20 pending')).toBeNull()
-  })
+    expect(screen.getByText('25 pending')).toBeTruthy();
+    expect(screen.queryByText('20 pending')).toBeNull();
+  });
 
   it('snaps back to page 1 when a filter changes on a deep page', () => {
-    const onPageChange = vi.fn()
+    const onPageChange = vi.fn();
     render(
       <EventFlagsSection
         events={buildPage(20, 5)}
@@ -292,14 +292,14 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }))
+    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }));
 
     // Filtering while on a deep server page could strand the user on a slice
     // that's entirely filtered out — reset to page 1.
-    expect(onPageChange).toHaveBeenCalledWith(1)
-  })
+    expect(onPageChange).toHaveBeenCalledWith(1);
+  });
 
   it('mounts the pager (not the queue-clear state) on an out-of-range page', () => {
     // Out-of-range deep link: the server page is empty but total > 0. The panel
@@ -316,11 +316,11 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    expect(screen.getByRole('button', { name: 'Page 1' })).toBeTruthy()
-    expect(screen.queryByText(/queue.*clear/i)).toBeNull()
-  })
+    expect(screen.getByRole('button', { name: 'Page 1' })).toBeTruthy();
+    expect(screen.queryByText(/queue.*clear/i)).toBeNull();
+  });
 
   it('shows the queue-clear state only when the server total is zero', () => {
     render(
@@ -334,11 +334,11 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
     // total === 0 → genuine empty queue, no pager.
-    expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull()
-  })
+    expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull();
+  });
 
   it('re-seeds the inspector when clamped page rows arrive after an empty interim', () => {
     // placeholderData keeps the previous page visible while the new page
@@ -355,14 +355,14 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    expect(inspectorTitle()).toBe('Show 20')
+    expect(inspectorTitle()).toBe('Show 20');
 
     // Approve the lone row — activeId drops to null.
-    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' })
-    if (!approveBtn) throw new Error('expected an approve button to render')
-    fireEvent.click(approveBtn)
+    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' });
+    if (!approveBtn) throw new Error('expected an approve button to render');
+    fireEvent.click(approveBtn);
 
     // Interim: parent clamps to page 1 but the refetch is still in flight, so
     // the page briefly arrives empty. The inspector shows its empty state and
@@ -378,8 +378,8 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
-    expect(screen.getByText('Select an event to inspect')).toBeTruthy()
+    );
+    expect(screen.getByText('Select an event to inspect')).toBeTruthy();
 
     // Real page-1 rows land — the inspector re-seeds on the first row.
     rerender(
@@ -393,9 +393,9 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
-    expect(inspectorTitle()).toBe('Show 0')
-  })
+    );
+    expect(inspectorTitle()).toBe('Show 0');
+  });
 
   it('shows the inspector empty state when the filtered page has no rows', () => {
     const nonConcert = Array.from({ length: 6 }).map((_, idx) =>
@@ -404,7 +404,7 @@ describe('EventFlagsSection pagination (#694)', () => {
         title: `NonConcert ${idx}`,
         genre: ['non-concert'],
       }),
-    )
+    );
     render(
       <EventFlagsSection
         events={nonConcert}
@@ -416,12 +416,12 @@ describe('EventFlagsSection pagination (#694)', () => {
         onApprove={noop}
         onReject={noop}
       />,
-    )
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }))
+    fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }));
 
     // No visible rows remain, so the inspector falls back to its empty copy.
-    expect(screen.getByText('Select an event to inspect')).toBeTruthy()
-    expect(screen.queryByRole('heading', { level: 3 })).toBeNull()
-  })
-})
+    expect(screen.getByText('Select an event to inspect')).toBeTruthy();
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
+  });
+});

@@ -1,36 +1,36 @@
 // @vitest-environment jsdom
 
-import '@testing-library/jest-dom'
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import '@testing-library/jest-dom';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   fireEvent,
   render,
   screen,
   waitFor,
   within,
-} from '@testing-library/react'
+} from '@testing-library/react';
 
-import { CounterSubmitSheet } from './CounterSubmitSheet'
-import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy'
+import { CounterSubmitSheet } from './CounterSubmitSheet';
+import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy';
 
-const getToken = vi.fn(async () => 'test-token')
-const refresh = vi.fn()
+const getToken = vi.fn(async () => 'test-token');
+const refresh = vi.fn();
 
-const authState = { isLoaded: true, isSignedIn: true }
+const authState = { isLoaded: true, isSignedIn: true };
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken, ...authState }),
-}))
+}));
 
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ entry }: { entry: string }) => (
     <div data-testid="tier-picker" data-entry={entry} />
   ),
-}))
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh }),
-}))
+}));
 
 const renderSheet = () =>
   render(
@@ -42,30 +42,32 @@ const renderSheet = () =>
       currentFloor={40}
       currentVendor="AXS"
     />,
-  )
+  );
 
 // The sheet only POSTs once every field validates, so every submission test
 // has to fill the whole form.
 const fillRequiredFields = () => {
-  fireEvent.change(screen.getByLabelText(/floor/i), { target: { value: '55' } })
-  fireEvent.click(screen.getByRole('button', { name: 'GA' }))
-  fireEvent.click(screen.getByRole('button', { name: /bought it myself/i }))
-}
+  fireEvent.change(screen.getByLabelText(/floor/i), {
+    target: { value: '55' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'GA' }));
+  fireEvent.click(screen.getByRole('button', { name: /bought it myself/i }));
+};
 
 const submit = () =>
-  fireEvent.click(screen.getByRole('button', { name: /submit|update/i }))
+  fireEvent.click(screen.getByRole('button', { name: /submit|update/i }));
 
 const lastPostBody = (): Record<string, unknown> => {
-  const mockFetch = vi.mocked(global.fetch)
-  const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1] ?? []
-  return JSON.parse(String(init?.body))
-}
+  const mockFetch = vi.mocked(global.fetch);
+  const [, init] = mockFetch.mock.calls[mockFetch.mock.calls.length - 1] ?? [];
+  return JSON.parse(String(init?.body));
+};
 
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => new Response(JSON.stringify({ success: true }))),
-  )
+  );
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -75,111 +77,111 @@ beforeEach(() => {
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
     onchange: null,
-  }))
-})
+  }));
+});
 
 afterEach(() => {
-  vi.unstubAllGlobals()
-  vi.clearAllMocks()
-  authState.isLoaded = true
-  authState.isSignedIn = true
-})
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+  authState.isLoaded = true;
+  authState.isSignedIn = true;
+});
 
 describe('CounterSubmitSheet signed-out gate (#1247)', () => {
   it('shows the tier picker instead of the form when there is no session', () => {
-    authState.isSignedIn = false
-    renderSheet()
+    authState.isSignedIn = false;
+    renderSheet();
 
-    expect(screen.queryByLabelText(/floor/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/floor/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('tier-picker')).toHaveAttribute(
       'data-entry',
       'logged-out-price',
-    )
-  })
+    );
+  });
 
   it('renders the form while Clerk is still resolving', () => {
-    authState.isLoaded = false
-    authState.isSignedIn = false
-    renderSheet()
+    authState.isLoaded = false;
+    authState.isSignedIn = false;
+    renderSheet();
 
-    expect(screen.getByLabelText(/floor/i)).toBeInTheDocument()
-  })
-})
+    expect(screen.getByLabelText(/floor/i)).toBeInTheDocument();
+  });
+});
 
 describe('CounterSubmitSheet vendor picker', () => {
   it('renders the shared grouped picker, not a flat vendor chip list', () => {
-    renderSheet()
+    renderSheet();
 
     const group = screen.getByRole('radiogroup', {
       name: VENDOR_PICKER_COPY.label,
-    })
-    expect(within(group).getAllByRole('radio')).toHaveLength(3)
+    });
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
     expect(
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    ).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+  });
 
   it('offers Etix, the vendor the flat six-option list was missing', () => {
-    renderSheet()
+    renderSheet();
 
     fireEvent.click(
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
+    );
 
-    expect(screen.getByRole('option', { name: 'Etix' })).toBeInTheDocument()
-  })
+    expect(screen.getByRole('option', { name: 'Etix' })).toBeInTheDocument();
+  });
 
   it('teaches the resale distinction the flat list never did', () => {
-    renderSheet()
+    renderSheet();
 
     fireEvent.click(
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
+    );
 
     expect(
       screen.getByRole('group', {
         name: `${VENDOR_PICKER_COPY.groups.resale.label}, ${VENDOR_PICKER_COPY.groups.resale.caption}`,
       }),
-    ).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+  });
 
   it('posts a vendor picked from the dropdown', async () => {
-    renderSheet()
+    renderSheet();
 
-    fillRequiredFields()
+    fillRequiredFields();
     fireEvent.click(
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
-    fireEvent.click(screen.getByRole('option', { name: 'Etix' }))
-    submit()
+    );
+    fireEvent.click(screen.getByRole('option', { name: 'Etix' }));
+    submit();
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
-    expect(lastPostBody()['vendor']).toBe('Etix')
-  })
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(lastPostBody()['vendor']).toBe('Etix');
+  });
 
   it('posts the catch-all as Other rather than silently becoming Ticketmaster', async () => {
-    renderSheet()
+    renderSheet();
 
-    fillRequiredFields()
+    fillRequiredFields();
     fireEvent.click(
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
-    )
+    );
     fireEvent.click(
       screen.getByRole('option', { name: VENDOR_PICKER_COPY.vendors.Other }),
-    )
-    submit()
+    );
+    submit();
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
-    expect(lastPostBody()['vendor']).toBe('Other')
-  })
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    expect(lastPostBody()['vendor']).toBe('Other');
+  });
 
   it('blocks submission until a vendor is picked', () => {
-    renderSheet()
+    renderSheet();
 
-    fillRequiredFields()
-    submit()
+    fillRequiredFields();
+    submit();
 
-    expect(global.fetch).not.toHaveBeenCalled()
-    expect(screen.getByText("Pick where it's listed.")).toBeInTheDocument()
-  })
-})
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(screen.getByText("Pick where it's listed.")).toBeInTheDocument();
+  });
+});

@@ -1,11 +1,11 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse, type NextRequest } from 'next/server'
-import { isPublicBrowseEnabled } from '@/lib/launch-mode'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import {
   DEFAULT_RETURN_PATH,
   isSafeReturnPath,
   sanitizeReturnPath,
-} from '@/lib/auth/intent'
+} from '@/lib/auth/intent';
 
 /**
  * Routes any visitor may reach, signed in or out, in either launch mode.
@@ -69,7 +69,7 @@ const isAlwaysPublic = createRouteMatcher([
   // context. Exact path, not a prefix — `/~offline(.*)` would make any future
   // `~offline`-prefixed route public by default.
   '/~offline',
-])
+]);
 
 /**
  * The tour is post-auth in BOTH launch modes, which is why `/onboarding` is in
@@ -116,10 +116,10 @@ const isPublicOnceLaunched = createRouteMatcher([
   // straight back to the event.
   '/e/(.*)',
   '/share/(.*)',
-])
+]);
 
 /** Where a signed-out visitor is returned to when the attempted path is unsafe. */
-const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH
+const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH;
 
 /**
  * Reduces an attempted path to something that can only ever resolve back to
@@ -128,15 +128,15 @@ const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH
  * string is what reaches the `Location` header.
  */
 const toSafeReturnPath = (pathname: string, search: string): string => {
-  const attempted = pathname + search
-  return isSafeReturnPath(attempted) ? attempted : SAFE_RETURN_FALLBACK
-}
+  const attempted = pathname + search;
+  return isSafeReturnPath(attempted) ? attempted : SAFE_RETURN_FALLBACK;
+};
 
 /**
  * Sign-up requires an invite code before launch. After launch it is public —
  * see the `/sign-up` note in isPublicOnceLaunched, which is checked first.
  */
-const isInviteGated = createRouteMatcher(['/sign-up(.*)'])
+const isInviteGated = createRouteMatcher(['/sign-up(.*)']);
 
 /**
  * Signed-in users get bounced off these back to /events.
@@ -146,7 +146,7 @@ const isInviteGated = createRouteMatcher(['/sign-up(.*)'])
  * bouncing a signed-in visitor would bounce the very people the funnel just
  * sent, and would make the account menu's own tour row dead.
  */
-const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
+const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)']);
 
 /**
  * Every first URL segment this app actually serves, including the metadata
@@ -198,20 +198,20 @@ export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
   'sw.js',
   'venues',
   'watching',
-])
+]);
 
 const isKnownRoute = (pathname: string): boolean => {
-  if (pathname === '/') return true
-  return KNOWN_TOP_LEVEL_SEGMENTS.has(pathname.split('/')[1] ?? '')
-}
+  if (pathname === '/') return true;
+  return KNOWN_TOP_LEVEL_SEGMENTS.has(pathname.split('/')[1] ?? '');
+};
 
 /**
  * Only the slice of Clerk's auth helper this middleware actually touches.
  * Clerk's richer object is assignable to it, and tests can pass a small stub.
  */
 interface MiddlewareAuth {
-  (): Promise<{ userId: string | null }>
-  protect(options: { unauthenticatedUrl: string }): Promise<unknown>
+  (): Promise<{ userId: string | null }>;
+  protect(options: { unauthenticatedUrl: string }): Promise<unknown>;
 }
 
 /**
@@ -226,10 +226,10 @@ export const middlewareHandler = async (
   // 307 and no sign-in render, just Next's 404. `clerkMiddleware` has already
   // run `authenticateRequest` by the time this handler is called, so this does
   // not skip Clerk entirely — only the redirect and the page render behind it.
-  if (!isKnownRoute(req.nextUrl.pathname)) return
+  if (!isKnownRoute(req.nextUrl.pathname)) return;
 
-  const { userId } = await auth()
-  const launched = isPublicBrowseEnabled()
+  const { userId } = await auth();
+  const launched = isPublicBrowseEnabled();
 
   // Authenticated users skip directly to the app; no reason to see pre-auth pages
   // or the marketing landing. Redirecting from `/` here (rather than in the page
@@ -237,26 +237,26 @@ export const middlewareHandler = async (
   // inside the page would force dynamic rendering. See #842.
   if (userId) {
     if (isPreAuth(req) || req.nextUrl.pathname === '/') {
-      return NextResponse.redirect(new URL('/events', req.url))
+      return NextResponse.redirect(new URL('/events', req.url));
     }
-    return
+    return;
   }
 
   // Returning users: redeemed code but never completed sign-up.
   // invite_verified cookie is set but no Clerk session → back to sign-up,
   // which is where a redeemed code leads now; the tour comes after it.
   if (req.nextUrl.pathname === '/') {
-    const inviteCookie = req.cookies.get('invite_verified')?.value
+    const inviteCookie = req.cookies.get('invite_verified')?.value;
     if (inviteCookie) {
-      return NextResponse.redirect(new URL('/sign-up', req.url))
+      return NextResponse.redirect(new URL('/sign-up', req.url));
     }
   }
 
-  if (isAlwaysPublic(req)) return
-  if (launched && isPublicOnceLaunched(req)) return
+  if (isAlwaysPublic(req)) return;
+  if (launched && isPublicOnceLaunched(req)) return;
 
   if (isInviteGated(req)) {
-    const cookieValue = req.cookies.get('invite_verified')?.value
+    const cookieValue = req.cookies.get('invite_verified')?.value;
     if (!cookieValue) {
       // Carry the return path into the beta funnel. This branch is reached
       // from `/sign-up(.*)`, a funnel step rather than a destination, so
@@ -268,17 +268,17 @@ export const middlewareHandler = async (
       // present.
       // It arrived from the querystring and is attacker-controllable, hence
       // sanitizeReturnPath before it is reused.
-      const incoming = req.nextUrl.searchParams.get('redirect_url')
-      const codeUrl = new URL('/auth/code', req.url)
+      const incoming = req.nextUrl.searchParams.get('redirect_url');
+      const codeUrl = new URL('/auth/code', req.url);
       codeUrl.searchParams.set(
         'redirect_url',
         incoming
           ? sanitizeReturnPath(incoming)
           : toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
-      )
-      return NextResponse.redirect(codeUrl)
+      );
+      return NextResponse.redirect(codeUrl);
     }
-    return
+    return;
   }
 
   // Everything else requires Clerk auth. Signed-out visitors now have somewhere
@@ -287,19 +287,19 @@ export const middlewareHandler = async (
   // from pathname + search — never `req.url` — and then narrowed to a
   // same-origin shape, so no absolute or protocol-relative target can be
   // smuggled through it.
-  const signInUrl = new URL('/sign-in', req.url)
+  const signInUrl = new URL('/sign-in', req.url);
   signInUrl.searchParams.set(
     'redirect_url',
     toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
-  )
-  await auth.protect({ unauthenticatedUrl: signInUrl.toString() })
-}
+  );
+  await auth.protect({ unauthenticatedUrl: signInUrl.toString() });
+};
 
-export default clerkMiddleware(middlewareHandler)
+export default clerkMiddleware(middlewareHandler);
 
 export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
-}
+};

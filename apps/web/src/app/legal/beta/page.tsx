@@ -1,15 +1,15 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata } from 'next';
+import Link from 'next/link';
 
-import { LEGAL_COPY } from '../definitions/copy'
+import { LEGAL_COPY } from '../definitions/copy';
 
 export const metadata: Metadata = {
   title: 'Private Beta — Concert Crawl',
   robots: { index: false },
-}
+};
 
 export default function BetaAgreementPage() {
-  const copy = LEGAL_COPY.beta
+  const copy = LEGAL_COPY.beta;
 
   return (
     <div className="min-h-screen bg-bg text-fg">
@@ -97,5 +97,5 @@ export default function BetaAgreementPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

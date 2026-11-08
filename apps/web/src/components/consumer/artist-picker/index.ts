@@ -1,6 +1,6 @@
-export { ArtistPicker } from './ArtistPicker'
-export { ArtistPickTile } from './ArtistPickTile'
-export { PickGrid } from './PickGrid'
+export { ArtistPicker } from './ArtistPicker';
+export { ArtistPickTile } from './ArtistPickTile';
+export { PickGrid } from './PickGrid';
 export {
   readPicks,
   writePicks,
@@ -8,7 +8,7 @@ export {
   readStepIndex,
   writeStepIndex,
   STEP_INDEX_KEY,
-} from './lib/selection'
+} from './lib/selection';
 export {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
@@ -17,5 +17,5 @@ export {
   PICK_COLUMNS_DESKTOP,
   PICK_SUGGESTION_LIMIT,
   PICK_SKELETON_COUNT,
-} from './definitions/constants'
-export type { PickArtist } from './definitions/types'
+} from './definitions/constants';
+export type { PickArtist } from './definitions/types';

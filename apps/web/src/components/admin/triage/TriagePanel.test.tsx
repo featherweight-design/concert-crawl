@@ -1,22 +1,22 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
+import { TRIAGE_NO_SWEEP } from '@concert-crawl/types';
 
-import { TriagePanel } from './TriagePanel'
+import { TriagePanel } from './TriagePanel';
 import type {
   AcknowledgedFault,
   TriageData,
   TriageFault,
   TriageQueue,
-} from './definitions/types'
+} from './definitions/types';
 
-const refresh = vi.fn()
+const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh }),
-}))
+}));
 
 const SWEEP = {
   venues: 30,
@@ -24,7 +24,7 @@ const SWEEP = {
   atIso: '2026-07-30T09:04:00.000Z',
   events: 812,
   next: 'tomorrow 3:00 AM',
-}
+};
 
 const base = {
   venueId: '11111111-1111-1111-1111-111111111111',
@@ -33,7 +33,7 @@ const base = {
   days: 6,
   dur: '6d',
   crawlRunId: '22222222-2222-2222-2222-222222222222',
-}
+};
 
 const blocked: TriageFault = {
   ...base,
@@ -41,7 +41,7 @@ const blocked: TriageFault = {
   band: 'hard',
   condition: 'blocked',
   evidence: { status: 403, refusals: 4, lastSuccess: 'Jul 24' },
-}
+};
 
 const failed: TriageFault = {
   ...base,
@@ -49,7 +49,7 @@ const failed: TriageFault = {
   band: 'hard',
   condition: 'failed',
   evidence: { failures: 3, errorClass: 'bot_detection', pauseAt: 3 },
-}
+};
 
 const wentDark: TriageFault = {
   ...base,
@@ -65,7 +65,7 @@ const wentDark: TriageFault = {
     threshold: -70,
     series: [18, 17, 19, 16, 18, 17, 2],
   },
-}
+};
 
 const coverage: TriageFault = {
   ...base,
@@ -73,7 +73,7 @@ const coverage: TriageFault = {
   band: 'loss',
   condition: 'coverage',
   evidence: { matched: 9, expected: 14, uncovered: 5, wasWhen: 'Jul 12' },
-}
+};
 
 const ceilingPinned: TriageFault = {
   ...base,
@@ -91,7 +91,7 @@ const ceilingPinned: TriageFault = {
     shrankDays: null,
     series: [34, 31, 20, 20, 20, 20, 20],
   },
-}
+};
 
 const ceilingHorizon: TriageFault = {
   ...base,
@@ -109,7 +109,7 @@ const ceilingHorizon: TriageFault = {
     shrankDays: 79,
     series: [41, 38, 30, 25],
   },
-}
+};
 
 const flagsQueue: TriageQueue = {
   id: 'q-flags',
@@ -117,7 +117,7 @@ const flagsQueue: TriageQueue = {
   count: 12,
   breakdown: 'Bluebird 5 · Ogden 4 · Marquis 2 · 1 more',
   action: 'openReview',
-}
+};
 
 const pricesQueue: TriageQueue = {
   id: 'q-prices',
@@ -125,13 +125,13 @@ const pricesQueue: TriageQueue = {
   count: 5,
   breakdown: 'Khruangbin @ Ogden · Wednesday @ Larimer · 3 more',
   action: 'openSubmissions',
-}
+};
 
 const data = (
   faults: TriageFault[],
   queues: TriageQueue[] = [],
   acknowledged: AcknowledgedFault[] = [],
-): TriageData => ({ faults, acknowledged, queues, sweep: SWEEP })
+): TriageData => ({ faults, acknowledged, queues, sweep: SWEEP });
 
 const acknowledge = (
   fault: TriageFault,
@@ -146,19 +146,19 @@ const acknowledge = (
     acknowledgedBy: who,
     acknowledgedAt: '2026-08-14T15:00:00.000Z',
   },
-})
+});
 
 // jsdom has no matchMedia. `compact` is a presentation switch — the same rows
 // with the same accessible names either way — so these render at the desktop
 // width, and `setViewport(true)` opts a test into the compact tree.
-let compactViewport = false
+let compactViewport = false;
 const setViewport = (compact: boolean) => {
-  compactViewport = compact
-}
+  compactViewport = compact;
+};
 
 beforeEach(() => {
-  refresh.mockClear()
-  compactViewport = false
+  refresh.mockClear();
+  compactViewport = false;
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -171,37 +171,37 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
 describe('TriagePanel — evidence per condition', () => {
   it('renders a blocked row', () => {
-    render(<TriagePanel data={data([blocked])} />)
-    expect(screen.getByText('HTTP 403')).toBeTruthy()
+    render(<TriagePanel data={data([blocked])} />);
+    expect(screen.getByText('HTTP 403')).toBeTruthy();
     expect(
       screen.getByText('4 refusals in a row · last success Jul 24'),
-    ).toBeTruthy()
-    expect(screen.getByText('Blocked')).toBeTruthy()
-  })
+    ).toBeTruthy();
+    expect(screen.getByText('Blocked')).toBeTruthy();
+  });
 
   it('renders a crawl-failing row with the humanised error class', () => {
-    render(<TriagePanel data={data([failed])} />)
-    expect(screen.getByText('3 failures in a row')).toBeTruthy()
+    render(<TriagePanel data={data([failed])} />);
+    expect(screen.getByText('3 failures in a row')).toBeTruthy();
     // Reads the pause threshold off the payload: 3, not a hardcoded 8.
-    expect(screen.getByText('Bot detection · pauses itself at 3')).toBeTruthy()
-  })
+    expect(screen.getByText('Bot detection · pauses itself at 3')).toBeTruthy();
+  });
 
   it('renders a went-dark row with runs (not days) and the payload threshold', () => {
-    render(<TriagePanel data={data([wentDark])} />)
-    expect(screen.getByText('18 → 2 events')).toBeTruthy()
+    render(<TriagePanel data={data([wentDark])} />);
+    expect(screen.getByText('18 → 2 events')).toBeTruthy();
     expect(
       screen.getByText('-88% against a 7-run average of 17 · flags at -70%'),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('renders a coverage row from the supplied uncovered count', () => {
-    render(<TriagePanel data={data([coverage])} />)
-    expect(screen.getByText('9 of 14 events have a ticket link')).toBeTruthy()
+    render(<TriagePanel data={data([coverage])} />);
+    expect(screen.getByText('9 of 14 events have a ticket link')).toBeTruthy();
     // wasWhen is a genuine last-fully-covered date now (#1266), so the detail
     // names that date rather than hedging to "uncovered since". It carries no
     // count: today's `expected` says nothing about the catalogue on Jul 12.
@@ -209,8 +209,8 @@ describe('TriagePanel — evidence per condition', () => {
       screen.getByText(
         '5 have neither a ticket nor an event link · last fully covered Jul 12',
       ),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('drops the completeness clause when nothing records a covered run', () => {
     render(
@@ -219,30 +219,30 @@ describe('TriagePanel — evidence per condition', () => {
           { ...coverage, evidence: { ...coverage.evidence, wasWhen: null } },
         ])}
       />,
-    )
+    );
     expect(
       screen.getByText('5 have neither a ticket nor an event link'),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('renders the pinned-count ceiling variant', () => {
-    render(<TriagePanel data={data([ceilingPinned])} />)
-    expect(screen.getByText('stuck at 20 events')).toBeTruthy()
+    render(<TriagePanel data={data([ceilingPinned])} />);
+    expect(screen.getByText('stuck at 20 events')).toBeTruthy();
     expect(
       screen.getByText('5 runs at the same count · 31 before Jul 18'),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('renders the horizon-shrank ceiling variant with its own copy', () => {
-    render(<TriagePanel data={data([ceilingHorizon])} />)
-    expect(screen.getByText('furthest show Sep 3')).toBeTruthy()
+    render(<TriagePanel data={data([ceilingHorizon])} />);
+    expect(screen.getByText('furthest show Sep 3')).toBeTruthy();
     expect(
       screen.getByText('horizon pulled back 79 days · reached Nov 21 before'),
-    ).toBeTruthy()
+    ).toBeTruthy();
     // The pinned sentence must not leak into the horizon variant.
-    expect(screen.queryByText(/runs at the same count/)).toBeNull()
-  })
-})
+    expect(screen.queryByText(/runs at the same count/)).toBeNull();
+  });
+});
 
 describe('TriagePanel — nullable evidence fields', () => {
   // Six nullable fields, each of which would otherwise interpolate the string
@@ -290,26 +290,26 @@ describe('TriagePanel — nullable evidence fields', () => {
           series: [30, 25],
         },
       },
-    ]
-    const { container } = render(<TriagePanel data={data(nulls)} />)
-    expect(container.textContent).not.toContain('null')
-    expect(container.textContent).not.toContain('undefined')
-    expect(screen.getByText('Refusing to crawl')).toBeTruthy()
+    ];
+    const { container } = render(<TriagePanel data={data(nulls)} />);
+    expect(container.textContent).not.toContain('null');
+    expect(container.textContent).not.toContain('undefined');
+    expect(screen.getByText('Refusing to crawl')).toBeTruthy();
     expect(
       screen.getByText('2 refusals in a row · no success in recent runs'),
-    ).toBeTruthy()
+    ).toBeTruthy();
     expect(
       screen.getByText('4 have neither a ticket nor an event link'),
-    ).toBeTruthy()
+    ).toBeTruthy();
     // Singular "run", and no dangling "before".
     expect(
       screen.getByText(
         '1 run at the same count · no different count on record',
       ),
-    ).toBeTruthy()
-    expect(screen.getByText('horizon pulled back')).toBeTruthy()
-    expect(screen.getByText('stuck at 25 events')).toBeTruthy()
-  })
+    ).toBeTruthy();
+    expect(screen.getByText('horizon pulled back')).toBeTruthy();
+    expect(screen.getByText('stuck at 25 events')).toBeTruthy();
+  });
 
   it('renders the all-clear body when the sweep has a null atIso', () => {
     render(
@@ -321,10 +321,10 @@ describe('TriagePanel — nullable evidence fields', () => {
           sweep: { ...SWEEP, atIso: null },
         }}
       />,
-    )
-    expect(screen.getByText("Nothing's broken.")).toBeTruthy()
-  })
-})
+    );
+    expect(screen.getByText("Nothing's broken.")).toBeTruthy();
+  });
+});
 
 describe('TriagePanel — micro-chart', () => {
   it('plots a two-entry series and labels it in runs', () => {
@@ -337,13 +337,13 @@ describe('TriagePanel — micro-chart', () => {
           },
         ])}
       />,
-    )
-    const chart = screen.getByRole('img', { name: /Event counts across/ })
+    );
+    const chart = screen.getByRole('img', { name: /Event counts across/ });
     expect(chart.getAttribute('aria-label')).toBe(
       'Event counts across the last 2 runs: 18, 2. Latest 2.',
-    )
-    expect(chart.children).toHaveLength(2)
-  })
+    );
+    expect(chart.children).toHaveLength(2);
+  });
 
   it('handles a single-run series without pluralising', () => {
     render(
@@ -352,16 +352,16 @@ describe('TriagePanel — micro-chart', () => {
           { ...wentDark, evidence: { ...wentDark.evidence, series: [2] } },
         ])}
       />,
-    )
-    const chart = screen.getByRole('img', { name: /Event counts across/ })
-    expect(chart.getAttribute('aria-label')).toContain('the last 1 run:')
-  })
+    );
+    const chart = screen.getByRole('img', { name: /Event counts across/ });
+    expect(chart.getAttribute('aria-label')).toContain('the last 1 run:');
+  });
 
   it('omits the chart for conditions with no series', () => {
-    render(<TriagePanel data={data([blocked, coverage])} />)
-    expect(screen.queryByRole('img')).toBeNull()
-  })
-})
+    render(<TriagePanel data={data([blocked, coverage])} />);
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+});
 
 describe('TriagePanel — rows and links', () => {
   it('renders every fault, never a truncated three', () => {
@@ -369,36 +369,36 @@ describe('TriagePanel — rows and links', () => {
       ...blocked,
       id: `f-${index}`,
       venue: `Venue ${index}`,
-    }))
-    render(<TriagePanel data={data(many)} />)
-    expect(screen.getAllByRole('link')).toHaveLength(5)
-  })
+    }));
+    render(<TriagePanel data={data(many)} />);
+    expect(screen.getAllByRole('link')).toHaveLength(5);
+  });
 
   it('composes the row aria-label and softens it for suspect rows', () => {
-    render(<TriagePanel data={data([blocked, ceilingPinned])} />)
+    render(<TriagePanel data={data([blocked, ceilingPinned])} />);
     expect(
       screen.getByLabelText(
         'Bluebird Theater — blocked by the venue. HTTP 403. Broken for 6d.',
       ),
-    ).toBeTruthy()
+    ).toBeTruthy();
     expect(
       screen.getByLabelText(
         'Bluebird Theater — possibly stuck on page one. stuck at 20 events. Like this for 6d.',
       ),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('deep-links each action to a route that already exists', () => {
-    render(<TriagePanel data={data([blocked, failed, ceilingPinned])} />)
+    render(<TriagePanel data={data([blocked, failed, ceilingPinned])} />);
     const hrefs = screen
       .getAllByRole('link')
-      .map((link) => link.getAttribute('href'))
-    expect(hrefs).toContain(`/admin/venues/${base.venueId}`)
-    expect(hrefs).toContain(`/admin/crawl?venueId=${base.venueId}&tab=history`)
+      .map((link) => link.getAttribute('href'));
+    expect(hrefs).toContain(`/admin/venues/${base.venueId}`);
+    expect(hrefs).toContain(`/admin/crawl?venueId=${base.venueId}&tab=history`);
     expect(hrefs).toContain(
       `/admin/crawl?venueId=${base.venueId}&tab=diagnostics`,
-    )
-  })
+    );
+  });
 
   // The Diagnostics pane only renders for a failed run. A ceiling-suspected
   // venue's latest run succeeded, so pointing it there opens an empty pane —
@@ -409,26 +409,26 @@ describe('TriagePanel — rows and links', () => {
     ['ceiling', ceilingPinned, 'history'],
     ['wentDark', wentDark, 'history'],
   ])('routes a %s row to the %s tab', (_name, fault, tab) => {
-    render(<TriagePanel data={data([fault])} />)
+    render(<TriagePanel data={data([fault])} />);
     expect(screen.getByRole('link').getAttribute('href')).toBe(
       `/admin/crawl?venueId=${base.venueId}&tab=${tab}`,
-    )
-  })
+    );
+  });
 
   it('degrades a run-scoped row to the venue page when crawlRunId is null', () => {
-    render(<TriagePanel data={data([{ ...failed, crawlRunId: null }])} />)
+    render(<TriagePanel data={data([{ ...failed, crawlRunId: null }])} />);
     expect(screen.getByRole('link').getAttribute('href')).toBe(
       `/admin/venues/${base.venueId}`,
-    )
-  })
-})
+    );
+  });
+});
 
 describe('TriagePanel — banding', () => {
   it('shows one "broken now" strip below the dense threshold', () => {
-    render(<TriagePanel data={data([blocked, wentDark, ceilingPinned])} />)
-    expect(screen.getByText('broken now')).toBeTruthy()
-    expect(screen.queryByText('not crawling')).toBeNull()
-  })
+    render(<TriagePanel data={data([blocked, wentDark, ceilingPinned])} />);
+    expect(screen.getByText('broken now')).toBeTruthy();
+    expect(screen.queryByText('not crawling')).toBeNull();
+  });
 
   it('splits into severity bands at seven faults', () => {
     const faults = [
@@ -439,256 +439,256 @@ describe('TriagePanel — banding', () => {
       { ...wentDark, id: 'd-4' },
       { ...ceilingPinned, id: 'd-5' },
       { ...ceilingHorizon, id: 'd-6' },
-    ]
-    render(<TriagePanel data={data(faults)} />)
-    expect(screen.queryByText('broken now')).toBeNull()
-    expect(screen.getByText('not crawling')).toBeTruthy()
-    expect(screen.getByText('losing events')).toBeTruthy()
-    expect(screen.getByText('worth a look')).toBeTruthy()
-    expect(screen.getAllByRole('link')).toHaveLength(7)
-  })
+    ];
+    render(<TriagePanel data={data(faults)} />);
+    expect(screen.queryByText('broken now')).toBeNull();
+    expect(screen.getByText('not crawling')).toBeTruthy();
+    expect(screen.getByText('losing events')).toBeTruthy();
+    expect(screen.getByText('worth a look')).toBeTruthy();
+    expect(screen.getAllByRole('link')).toHaveLength(7);
+  });
 
   it('honours a denseAt override', () => {
-    render(<TriagePanel data={data([blocked, wentDark])} denseAt={2} />)
-    expect(screen.getByText('not crawling')).toBeTruthy()
-  })
-})
+    render(<TriagePanel data={data([blocked, wentDark])} denseAt={2} />);
+    expect(screen.getByText('not crawling')).toBeTruthy();
+  });
+});
 
 describe('TriagePanel — compact viewport', () => {
   // Mobile/desktop parity: the same rows, the same links, the same accessible
   // names. Only the context line drops, and only when the list is also banded.
   it('drops the context line when banded on a phone, but keeps the figure', () => {
-    setViewport(true)
+    setViewport(true);
     const faults = Array.from({ length: 7 }, (_, index) => ({
       ...wentDark,
       id: `c-${index}`,
-    }))
-    render(<TriagePanel data={data(faults)} />)
-    expect(screen.getAllByRole('link')).toHaveLength(7)
-    expect(screen.getAllByText('18 → 2 events')).toHaveLength(7)
-    expect(screen.queryByText(/against a 7-run average/)).toBeNull()
-  })
+    }));
+    render(<TriagePanel data={data(faults)} />);
+    expect(screen.getAllByRole('link')).toHaveLength(7);
+    expect(screen.getAllByText('18 → 2 events')).toHaveLength(7);
+    expect(screen.queryByText(/against a 7-run average/)).toBeNull();
+  });
 
   it('keeps the context line on a phone when the list is short', () => {
-    setViewport(true)
-    render(<TriagePanel data={data([wentDark])} />)
+    setViewport(true);
+    render(<TriagePanel data={data([wentDark])} />);
     expect(
       screen.getByText('-88% against a 7-run average of 17 · flags at -70%'),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('keeps the Refresh button reachable by name when its label is hidden', () => {
-    setViewport(true)
-    render(<TriagePanel data={data([blocked])} />)
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
-  })
-})
+    setViewport(true);
+    render(<TriagePanel data={data([blocked])} />);
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+  });
+});
 
 describe('TriagePanel — queues', () => {
   it('renders both queue kinds, including the "N more" tail', () => {
-    render(<TriagePanel data={data([], [flagsQueue, pricesQueue])} />)
-    expect(screen.getByText('12 events flagged for review')).toBeTruthy()
+    render(<TriagePanel data={data([], [flagsQueue, pricesQueue])} />);
+    expect(screen.getByText('12 events flagged for review')).toBeTruthy();
     expect(
       screen.getByText(
         'Bluebird 5 · Ogden 4 · Marquis 2 · 1 more · below the auto-approve threshold',
       ),
-    ).toBeTruthy()
-    expect(screen.getByText('5 price submissions waiting')).toBeTruthy()
+    ).toBeTruthy();
+    expect(screen.getByText('5 price submissions waiting')).toBeTruthy();
     expect(
       screen.getByText('Khruangbin @ Ogden · Wednesday @ Larimer · 3 more'),
-    ).toBeTruthy()
+    ).toBeTruthy();
     expect(
       screen.getAllByRole('link').map((link) => link.getAttribute('href')),
-    ).toEqual(['/admin/review', '/admin/review?tab=submissions'])
-  })
+    ).toEqual(['/admin/review', '/admin/review?tab=submissions']);
+  });
 
   it('reassures that faults are clear when only queues remain', () => {
-    render(<TriagePanel data={data([], [flagsQueue, pricesQueue])} />)
+    render(<TriagePanel data={data([], [flagsQueue, pricesQueue])} />);
     expect(
       screen.getByText('30 venues crawling clean · last checked 3:04 AM'),
-    ).toBeTruthy()
-    expect(screen.getByText('17 in queue')).toBeTruthy()
-  })
-})
+    ).toBeTruthy();
+    expect(screen.getByText('17 in queue')).toBeTruthy();
+  });
+});
 
 describe('TriagePanel — panel states', () => {
   it('reports the all-clear as a result, with the numbers behind it', () => {
-    render(<TriagePanel data={data([])} />)
-    expect(screen.getByText("Nothing's broken.")).toBeTruthy()
+    render(<TriagePanel data={data([])} />);
+    expect(screen.getByText("Nothing's broken.")).toBeTruthy();
     expect(
       screen.getByText(
         'All 30 venues crawled clean at 3:04 AM. 812 events came in. Both queues are empty.',
       ),
-    ).toBeTruthy()
-    expect(screen.getByText('Next sweep tomorrow 3:00 AM')).toBeTruthy()
+    ).toBeTruthy();
+    expect(screen.getByText('Next sweep tomorrow 3:00 AM')).toBeTruthy();
     // Both the header badge and the empty-state eyebrow read "all clear".
-    expect(screen.getAllByText('all clear')).toHaveLength(2)
-  })
+    expect(screen.getAllByText('all clear')).toHaveLength(2);
+  });
 
   // The API sends the no-sweep sentinel for sweep.at when no crawl run exists
   // at all. Interpolating it claims a clean sweep that never ran.
   it('says no sweep has run rather than "crawled clean at —"', () => {
-    const noSweep = data([])
+    const noSweep = data([]);
     render(
       <TriagePanel
         data={{ ...noSweep, sweep: { ...noSweep.sweep, at: TRIAGE_NO_SWEEP } }}
       />,
-    )
+    );
     expect(
       screen.getByText(
         'No crawl has run yet across 30 venues. Nothing to report.',
       ),
-    ).toBeTruthy()
-    expect(screen.queryByText(/crawled clean at/)).toBeNull()
-    expect(screen.queryByText(/checked —/)).toBeNull()
-  })
+    ).toBeTruthy();
+    expect(screen.queryByText(/crawled clean at/)).toBeNull();
+    expect(screen.queryByText(/checked —/)).toBeNull();
+  });
 
   it('degrades rather than throwing when the fetch failed', () => {
-    const { container } = render(<TriagePanel data={null} />)
-    expect(screen.getByText("Couldn't check venue health.")).toBeTruthy()
+    const { container } = render(<TriagePanel data={null} />);
+    expect(screen.getByText("Couldn't check venue health.")).toBeTruthy();
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Venue health could not be checked.',
-    )
+    );
     // No badge, no rows, but the panel and its Refresh button survive.
-    expect(screen.queryByRole('link')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
-  })
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy();
+  });
 
   it('picks the badge severity from the worst band present', () => {
-    const { rerender } = render(<TriagePanel data={data([blocked])} />)
-    expect(screen.getByText('1 fault')).toBeTruthy()
-    rerender(<TriagePanel data={data([wentDark, ceilingPinned])} />)
-    expect(screen.getByText('2 faults')).toBeTruthy()
-  })
+    const { rerender } = render(<TriagePanel data={data([blocked])} />);
+    expect(screen.getByText('1 fault')).toBeTruthy();
+    rerender(<TriagePanel data={data([wentDark, ceilingPinned])} />);
+    expect(screen.getByText('2 faults')).toBeTruthy();
+  });
 
   it('announces the counts in a polite live region', () => {
     const { container } = render(
       <TriagePanel data={data([blocked], [flagsQueue])} />,
-    )
-    const live = container.querySelector('[aria-live="polite"]')
-    expect(live?.textContent).toBe('1 fault, 12 items in the queues.')
-  })
+    );
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live?.textContent).toBe('1 fault, 12 items in the queues.');
+  });
 
   it('calls router.refresh when Refresh is pressed', () => {
-    render(<TriagePanel data={data([blocked])} />)
-    screen.getByRole('button', { name: 'Refresh' }).click()
-    expect(refresh).toHaveBeenCalledTimes(1)
-  })
+    render(<TriagePanel data={data([blocked])} />);
+    screen.getByRole('button', { name: 'Refresh' }).click();
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
 
   it('keeps one tab stop per row — the action chevron is not focusable', () => {
     const { container } = render(
       <TriagePanel data={data([blocked], [flagsQueue])} />,
-    )
-    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0)
-    const rows = screen.getAllByRole('link')
-    expect(rows).toHaveLength(2)
+    );
+    expect(container.querySelectorAll('[tabindex]')).toHaveLength(0);
+    const rows = screen.getAllByRole('link');
+    expect(rows).toHaveLength(2);
     // The action label lives inside the row, hidden from the accessible name.
-    expect(within(rows[0]!).getByText('Open venue')).toBeTruthy()
-  })
-})
+    expect(within(rows[0]!).getByText('Open venue')).toBeTruthy();
+  });
+});
 
 describe('TriagePanel — acknowledged faults', () => {
   const summitCeiling = acknowledge(
     { ...ceilingPinned, venue: 'Summit' },
     'Live Nation caps the list at 36.',
-  )
+  );
   const redRocks = acknowledge(
     { ...ceilingHorizon, id: 'f-rocks', venue: 'Red Rocks' },
     'Outdoor season ends in October.',
-  )
+  );
 
   it('strips the reassuring all-clear when faults sit acknowledged', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    render(<TriagePanel data={data([], [], [summitCeiling])} />);
     // The big empty state asserts nothing is wrong. Three acknowledged faults
     // is precisely the reassuring-but-wrong summary this panel replaced.
-    expect(screen.queryByText("Nothing's broken.")).toBeNull()
+    expect(screen.queryByText("Nothing's broken.")).toBeNull();
     expect(
       screen.getByText('30 venues crawling clean · last checked 3:04 AM'),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('counts acknowledged faults on a strip of their own', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />)
-    const strip = screen.getByRole('button', { name: /marked expected/i })
-    expect(strip.textContent).toContain('2')
-  })
+    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />);
+    const strip = screen.getByRole('button', { name: /marked expected/i });
+    expect(strip.textContent).toContain('2');
+  });
 
   it('keeps the rows collapsed until the strip is opened', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling])} />)
-    expect(screen.queryByText('Summit')).toBeNull()
+    render(<TriagePanel data={data([], [], [summitCeiling])} />);
+    expect(screen.queryByText('Summit')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: /marked expected/i }))
+    fireEvent.click(screen.getByRole('button', { name: /marked expected/i }));
 
-    expect(screen.getByText('Summit')).toBeTruthy()
-    expect(screen.getByText('Live Nation caps the list at 36.')).toBeTruthy()
-    expect(screen.getByText(/user_admin_1/)).toBeTruthy()
-  })
+    expect(screen.getByText('Summit')).toBeTruthy();
+    expect(screen.getByText('Live Nation caps the list at 36.')).toBeTruthy();
+    expect(screen.getByText(/user_admin_1/)).toBeTruthy();
+  });
 
   it('leaves the badge reading all clear — the strip is what keeps it honest', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />)
-    expect(screen.getByText('all clear')).toBeTruthy()
-    expect(screen.queryByText('2 faults')).toBeNull()
-  })
+    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />);
+    expect(screen.getByText('all clear')).toBeTruthy();
+    expect(screen.queryByText('2 faults')).toBeNull();
+  });
 
   it('names the acknowledged count in the live region', () => {
     const { container } = render(
       <TriagePanel data={data([], [], [summitCeiling, redRocks])} />,
-    )
+    );
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Nothing is broken. Both queues are clear. 2 faults marked expected.',
-    )
-  })
+    );
+  });
 
   it('announces acknowledged faults alongside live ones', () => {
     const { container } = render(
       <TriagePanel data={data([blocked], [], [summitCeiling])} />,
-    )
+    );
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
       '1 fault, 0 items in the queues. 1 fault marked expected.',
-    )
-  })
+    );
+  });
 
   it('exposes the strip as a heading wrapping its toggle', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    render(<TriagePanel data={data([], [], [summitCeiling])} />);
     // A button takes phrasing content only, so the heading has to be the
     // outer element — the WAI-ARIA disclosure pattern, not the reverse.
     const heading = screen.getByRole('heading', {
       level: 3,
       name: /marked expected/i,
-    })
-    const toggle = screen.getByRole('button', { name: /marked expected/i })
-    expect(heading.contains(toggle)).toBe(true)
-  })
+    });
+    const toggle = screen.getByRole('button', { name: /marked expected/i });
+    expect(heading.contains(toggle)).toBe(true);
+  });
 
   it('points the toggle at the region its rows live in, folded or not', () => {
-    render(<TriagePanel data={data([], [], [summitCeiling])} />)
-    const toggle = screen.getByRole('button', { name: /marked expected/i })
+    render(<TriagePanel data={data([], [], [summitCeiling])} />);
+    const toggle = screen.getByRole('button', { name: /marked expected/i });
     // The region has to survive the fold, or aria-controls points at nothing
     // for the whole time the toggle is worth pressing.
     const region = document.getElementById(
       String(toggle.getAttribute('aria-controls')),
-    )
-    expect(region).toBeTruthy()
-    expect(region?.getAttribute('aria-labelledby')).toBe(toggle.id)
-  })
+    );
+    expect(region).toBeTruthy();
+    expect(region?.getAttribute('aria-labelledby')).toBe(toggle.id);
+  });
 
   it('sits below the queues — acknowledged faults are not work', () => {
-    render(<TriagePanel data={data([], [pricesQueue], [summitCeiling])} />)
-    const queues = screen.getByText('work waiting')
-    const expected = screen.getByRole('button', { name: /marked expected/i })
+    render(<TriagePanel data={data([], [pricesQueue], [summitCeiling])} />);
+    const queues = screen.getByText('work waiting');
+    const expected = screen.getByRole('button', { name: /marked expected/i });
     expect(
       queues.compareDocumentPosition(expected) &
         Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('says nothing about acknowledgements when there are none', () => {
-    const { container } = render(<TriagePanel data={data([])} />)
+    const { container } = render(<TriagePanel data={data([])} />);
     expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Nothing is broken. Both queues are clear.',
-    )
+    );
     expect(
       screen.queryByRole('button', { name: /marked expected/i }),
-    ).toBeNull()
-  })
-})
+    ).toBeNull();
+  });
+});

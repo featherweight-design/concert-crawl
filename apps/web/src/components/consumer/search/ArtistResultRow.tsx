@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One artist row in the search results (native following, PR 5). The row is
 // two targets, not one: the name half opens the artist's page, the follow half
@@ -11,30 +11,30 @@
 // off event billing strings, so an artist with no Denver history cannot be in
 // the index at all.
 
-import type { ArtistSearchResult } from '@concert-crawl/types'
-import type { EntitlementCell } from '@concert-crawl/entitlements'
-import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
-import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { AvatarSlot } from '@/components/consumer/image-slot'
+import type { ArtistSearchResult } from '@concert-crawl/types';
+import type { EntitlementCell } from '@concert-crawl/entitlements';
+import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
+import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { AvatarSlot } from '@/components/consumer/image-slot';
 
-const copy = CONSUMER_COPY.search
+const copy = CONSUMER_COPY.search;
 
 interface ArtistResultRowProps {
-  artist: ArtistSearchResult
-  selected: boolean
-  onHover?: () => void
-  onNavigate: () => void
+  artist: ArtistSearchResult;
+  selected: boolean;
+  onHover?: () => void;
+  onNavigate: () => void;
   /** Clerk's answer, `undefined` while it is still resolving. */
-  isSignedIn: boolean | undefined
+  isSignedIn: boolean | undefined;
   /** The `following` entitlement surface. `null` while the plan resolves. */
-  surface: EntitlementCell | null
+  surface: EntitlementCell | null;
   /** A locked tap. The section owns the sheet, so one sheet serves every row. */
-  onLockedTap: () => void
+  onLockedTap: () => void;
   /** The server's settled 403, which is honoured whatever the client believed. */
-  onEntitlementRequired: () => void
-  size: 'row' | 'rowWide'
-  iconOnly: boolean
+  onEntitlementRequired: () => void;
+  size: 'row' | 'rowWide';
+  iconOnly: boolean;
 }
 
 export const ArtistResultRow = ({
@@ -53,7 +53,7 @@ export const ArtistResultRow = ({
     artist.slug,
     artist.following,
     onEntitlementRequired,
-  )
+  );
 
   // This surface fails OPEN while Clerk and the entitlement resolve, matching
   // the artist page (ArtistPageContent.tsx) rather than the browse starter
@@ -79,7 +79,7 @@ export const ArtistResultRow = ({
   // reports `false` for every anonymous request, so a `true` here can only have
   // come from an authenticated one. That is what keeps an already-followed row
   // live through the same window instead of flashing back to "Follow".
-  const signedOut = isSignedIn !== true && !artist.following
+  const signedOut = isSignedIn !== true && !artist.following;
 
   // `&& !follow.following` is the downgrade case, and it is load-bearing:
   // DELETE is deliberately unentitled so a downgraded user can always undo a
@@ -89,7 +89,7 @@ export const ArtistResultRow = ({
     !signedOut &&
     surface !== null &&
     surface !== 'visible-active' &&
-    !follow.following
+    !follow.following;
 
   const meta =
     artist.upcomingShowCount > 0
@@ -98,7 +98,7 @@ export const ArtistResultRow = ({
             ? copy.upcomingShowSingular
             : copy.upcomingShowPlural
         }`
-      : copy.artistPageNoUpcoming
+      : copy.artistPageNoUpcoming;
 
   return (
     <div
@@ -200,5 +200,5 @@ export const ArtistResultRow = ({
         onLockedTap={onLockedTap}
       />
     </div>
-  )
-}
+  );
+};

@@ -1,7 +1,7 @@
-import { Eyebrow, StepHeading } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { Eyebrow, StepHeading } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.youreIn
+const copy = ONBOARDING_COPY.youreIn;
 
 export function YoureIn() {
   return (
@@ -86,5 +86,5 @@ export function YoureIn() {
         </div>
       </div>
     </div>
-  )
+  );
 }

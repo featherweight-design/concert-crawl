@@ -12,7 +12,7 @@
 Staging and prod both auto-deploy from `main` in parallel (decided in #786).
 Three consequences:
 
-1. **Staging is not a gate.** Nothing is ever validated in staging *before*
+1. **Staging is not a gate.** Nothing is ever validated in staging _before_
    reaching prod — the two builds race. The staging environment is paid for and
    functionally unused as a test environment.
 2. **Every merge costs two prod-side builds per service.** August 2026:
@@ -22,10 +22,10 @@ Three consequences:
 3. **A breaking change reaches prod at merge time.** Post-deploy smoke plus
    auto-rollback catches it after the fact; there is no pre-prod human gate.
 
-Hugh's framing (2026-09-01): *"Say we keep the stream of releases going to
+Hugh's framing (2026-09-01): _"Say we keep the stream of releases going to
 stage, but then only promote specific releases to prod... Otherwise, why have a
 staging environment in the first place? We're paying for it, so we should use
-it."*
+it."_
 
 ## Goals
 
@@ -53,14 +53,14 @@ it."*
 **Six active Render services** (`docs/runbooks/render-service-config.md`), all
 `autoDeploy: yes`, `autoDeployTrigger: commit`, branch `main`:
 
-| Service | ID | Env | Wired into deploy-prod.yml? |
-| --- | --- | --- | --- |
-| `concert-crawl-api` | `srv-d7lngqfavr4c73eme3b0` | prod | yes |
-| `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod | yes |
-| `concert-crawl-crawler-daily` | `crn-d8o7egog4nts73d2tni0` | prod | yes |
-| `concert-crawl-match-artists` | `crn-d9nm08e7bikc73c6q39g` | prod | **no** |
-| `concert-crawl-spotify-weekly` | `crn-d9e46ad7vvec73dsn7bg` | prod | **no** |
-| `concert-crawl-api-staging` | `srv-d7lnkdmgvqtc73f8eec0` | staging | n/a |
+| Service                          | ID                         | Env     | Wired into deploy-prod.yml? |
+| -------------------------------- | -------------------------- | ------- | --------------------------- |
+| `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | yes                         |
+| `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | yes                         |
+| `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | yes                         |
+| `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | **no**                      |
+| `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | **no**                      |
+| `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | n/a                         |
 
 `concert-crawl-billing-jobs` is declared in `render.yaml` for prod but has no
 live prod service; only `concert-crawl-billing-jobs-staging` exists, and it is
@@ -162,7 +162,7 @@ stops being nice-to-have and becomes load-bearing.
 Threshold: **7 days or 25 commits behind**, whichever trips first. Warn only —
 never auto-promote.
 
-### D6 — Staging gets prod *content*, never prod *users*
+### D6 — Staging gets prod _content_, never prod _users_
 
 Extend the existing sync to cover `artists` and `venue_guide_chips`, and
 schedule it.
@@ -199,13 +199,13 @@ means a manual click-through, and the promotion decision has no artifact.
 
 ## Scope — five workstreams
 
-| # | Workstream | Independent? |
-| --- | --- | --- |
-| 1 | Revive `staging-e2e.yml`: fix the failing specs, restore the push trigger | yes |
-| 2 | Wire `match-artists` + `spotify-weekly` into the prod deploy/rollback/health workflows | yes |
-| 3 | Flip the gate: Render + Vercel auto-deploy off, `deploy-prod.yml` armed, `prod-smoke-after-deploy.yml` retired from push | needs 2 |
-| 4 | Prod→staging content sync: add `artists` + `venue_guide_chips`, schedule it | yes |
-| 5 | Prod-drift alert | needs 3 |
+| #   | Workstream                                                                                                               | Independent? |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | ------------ |
+| 1   | Revive `staging-e2e.yml`: fix the failing specs, restore the push trigger                                                | yes          |
+| 2   | Wire `match-artists` + `spotify-weekly` into the prod deploy/rollback/health workflows                                   | yes          |
+| 3   | Flip the gate: Render + Vercel auto-deploy off, `deploy-prod.yml` armed, `prod-smoke-after-deploy.yml` retired from push | needs 2      |
+| 4   | Prod→staging content sync: add `artists` + `venue_guide_chips`, schedule it                                              | yes          |
+| 5   | Prod-drift alert                                                                                                         | needs 3      |
 
 Workstreams 1–3 and 5 are one plan (they share the prod pipeline surface and
 must land in order). Workstream 4 is a separate plan — it delivers value
@@ -222,14 +222,14 @@ whether or not the gate ships.
 
 ## Risks
 
-| Risk | Mitigation |
-| --- | --- |
-| Prod rots behind `main`; a promotion becomes 40 commits wide | D5 drift alert at 7 days / 25 commits |
-| Operator believes an old SHA was promoted; crons shipped HEAD | D3 HEAD-only refusal with an explicit, loud override |
-| Prod migration does not run when expected | D4 documented in the runbook; expand/contract makes the lag safe |
-| `prod-smoke-after-deploy.yml` left armed waits for a deploy that never comes and fails every merge | Workstream 3 removes its push trigger in the same PR that flips `autoDeploy` |
-| Content sync writes to prod | Existing `assertWriteHostNotProd()` + `openProdReadonly()`; new tables must route through the same helpers |
-| Staging E2E flakes and nobody trusts the gate | Workstream 1 fixes root causes rather than adding retries |
+| Risk                                                                                               | Mitigation                                                                                                 |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Prod rots behind `main`; a promotion becomes 40 commits wide                                       | D5 drift alert at 7 days / 25 commits                                                                      |
+| Operator believes an old SHA was promoted; crons shipped HEAD                                      | D3 HEAD-only refusal with an explicit, loud override                                                       |
+| Prod migration does not run when expected                                                          | D4 documented in the runbook; expand/contract makes the lag safe                                           |
+| `prod-smoke-after-deploy.yml` left armed waits for a deploy that never comes and fails every merge | Workstream 3 removes its push trigger in the same PR that flips `autoDeploy`                               |
+| Content sync writes to prod                                                                        | Existing `assertWriteHostNotProd()` + `openProdReadonly()`; new tables must route through the same helpers |
+| Staging E2E flakes and nobody trusts the gate                                                      | Workstream 1 fixes root causes rather than adding retries                                                  |
 
 ## Open items needing Hugh
 

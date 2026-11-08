@@ -8,23 +8,23 @@
 // interactives, so it is a real `<button>` — keyboard activation and the
 // focus ring come from the platform rather than a hand-rolled key handler.
 
-import { NMono } from './NMono'
-import { NotifGlyph } from './glyphs'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
+import { NMono } from './NMono';
+import { NotifGlyph } from './glyphs';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
 
 export const MenuNotifRow = ({
   count,
   meta,
   onActivate,
 }: {
-  count: number
+  count: number;
   /** Overrides the default `panelSub(count)` — the zero row passes `markedAll`. */
-  meta?: string
-  onActivate: () => void
+  meta?: string;
+  onActivate: () => void;
 }) => {
-  const hot = count > 0
+  const hot = count > 0;
   const metaText =
-    meta ?? (hot ? NOTIFICATIONS_COPY.panelSub(count) : undefined)
+    meta ?? (hot ? NOTIFICATIONS_COPY.panelSub(count) : undefined);
 
   return (
     <button
@@ -87,5 +87,5 @@ export const MenuNotifRow = ({
         </NMono>
       )}
     </button>
-  )
-}
+  );
+};

@@ -14,8 +14,8 @@
 // The close button is 44×44 already. "Mark all read" is ~31px drawn and keeps
 // that size; `.notif-hit44` gives it the 44px hit area without redrawing it.
 
-import { NOTIFICATIONS_COPY } from './definitions/copy'
-import { NMono } from './NMono'
+import { NOTIFICATIONS_COPY } from './definitions/copy';
+import { NMono } from './NMono';
 
 export const NotifHeader = ({
   count,
@@ -24,17 +24,17 @@ export const NotifHeader = ({
   onClose,
   showClose = false,
 }: {
-  count: number
+  count: number;
   /**
    * Whether the first page has actually landed. "All caught up." while the
    * query is still in flight — or has failed outright — is a guess presented
    * as a fact, and it has been observed sitting directly above "Couldn't reach
    * the crawl." Same rule as InboxStrip's `settled`.
    */
-  settled?: boolean | undefined
-  onMarkAll?: (() => void) | undefined
-  onClose?: (() => void) | undefined
-  showClose?: boolean | undefined
+  settled?: boolean | undefined;
+  onMarkAll?: (() => void) | undefined;
+  onClose?: (() => void) | undefined;
+  showClose?: boolean | undefined;
 }) => (
   <div
     style={{
@@ -144,4 +144,4 @@ export const NotifHeader = ({
       </button>
     )}
   </div>
-)
+);

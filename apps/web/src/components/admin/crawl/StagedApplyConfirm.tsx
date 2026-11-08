@@ -1,36 +1,36 @@
-'use client'
+'use client';
 
-import { useState, useRef } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
-import { StatusBadge } from '@/components/admin/primitives'
-import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useState, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives';
+import { StatusBadge } from '@/components/admin/primitives';
+import { triggerVenueCrawl } from '@/components/admin/crawl-trigger-button/lib/crawl';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface ConfigDiffEntry {
-  path: string
-  before: string
-  after: string
+  path: string;
+  before: string;
+  after: string;
 }
 
 export interface StagedDiff {
-  title: string
-  intent: string
-  diff: readonly ConfigDiffEntry[]
-  risks: readonly string[]
-  rollback: string
-  nextRunIn: string
+  title: string;
+  intent: string;
+  diff: readonly ConfigDiffEntry[];
+  risks: readonly string[];
+  rollback: string;
+  nextRunIn: string;
 }
 
 const STAGED_DIFFS: Record<string, StagedDiff> =
-  ADMIN_COPY.crawl.stagedApply.stagedDiffs
+  ADMIN_COPY.crawl.stagedApply.stagedDiffs;
 
 interface StagedApplyConfirmProps {
-  stagedId: string
-  venueId: string
-  venueName: string
-  onCancel: () => void
-  onApply: () => void
+  stagedId: string;
+  venueId: string;
+  venueName: string;
+  onCancel: () => void;
+  onApply: () => void;
 }
 
 export const StagedApplyConfirm = ({
@@ -40,15 +40,15 @@ export const StagedApplyConfirm = ({
   onCancel,
   onApply,
 }: StagedApplyConfirmProps) => {
-  const { getToken } = useAuth()
-  const [triggerRecrawl, setTriggerRecrawl] = useState(false)
-  const diff = STAGED_DIFFS[stagedId]
+  const { getToken } = useAuth();
+  const [triggerRecrawl, setTriggerRecrawl] = useState(false);
+  const diff = STAGED_DIFFS[stagedId];
 
   // One ref for both panels below: the missing-diff early return and the main
   // confirm are mutually exclusive, so only ever one of them is mounted.
   // Already had Escape; what it lacked was focus containment and restore.
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onCancel)
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onCancel);
 
   const handleApply = async () => {
     // Manual entry changes no stored config: the 403 already set blockedAt,
@@ -56,17 +56,17 @@ export const StagedApplyConfirm = ({
     // re-crawl is the one thing that could undo it, so the checkbox is
     // ignored here.
     if (stagedId === 'opt-manual') {
-      onApply()
-      return
+      onApply();
+      return;
     }
-    onApply()
+    onApply();
     if (triggerRecrawl) {
-      const token = await getToken()
+      const token = await getToken();
       if (token) {
-        void triggerVenueCrawl(venueId, token)
+        void triggerVenueCrawl(venueId, token);
       }
     }
-  }
+  };
 
   if (!diff) {
     return (
@@ -125,7 +125,7 @@ export const StagedApplyConfirm = ({
           </AdminButton>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -475,5 +475,5 @@ export const StagedApplyConfirm = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-export type InspectorTab = 'overview' | 'diagnostics' | 'history'
+export type InspectorTab = 'overview' | 'diagnostics' | 'history';
 
 interface InspectorTabsProps {
-  value: InspectorTab
-  onChange: (tab: InspectorTab) => void
-  hasDiagnostics: boolean
+  value: InspectorTab;
+  onChange: (tab: InspectorTab) => void;
+  hasDiagnostics: boolean;
 }
 
 export const InspectorTabs = ({
@@ -16,10 +16,10 @@ export const InspectorTabs = ({
   hasDiagnostics,
 }: InspectorTabsProps) => {
   const tabs: Array<{
-    key: InspectorTab
-    label: string
-    disabled?: boolean
-    dot?: 'danger' | null
+    key: InspectorTab;
+    label: string;
+    disabled?: boolean;
+    dot?: 'danger' | null;
   }> = [
     { key: 'overview', label: ADMIN_COPY.crawl.inspectorTabs.overview },
     {
@@ -29,7 +29,7 @@ export const InspectorTabs = ({
       dot: hasDiagnostics ? 'danger' : null,
     },
     { key: 'history', label: ADMIN_COPY.crawl.inspectorTabs.history },
-  ]
+  ];
 
   return (
     <div
@@ -43,8 +43,8 @@ export const InspectorTabs = ({
       }}
     >
       {tabs.map((tab) => {
-        const active = value === tab.key
-        const disabled = tab.disabled
+        const active = value === tab.key;
+        const disabled = tab.disabled;
 
         return (
           <button
@@ -89,8 +89,8 @@ export const InspectorTabs = ({
               />
             )}
           </button>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};

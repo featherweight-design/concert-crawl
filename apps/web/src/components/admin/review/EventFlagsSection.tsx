@@ -1,52 +1,52 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { CheckCircle2, Filter } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useRef, useEffect } from 'react';
+import { CheckCircle2, Filter } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Panel,
   AdminButton,
   StatusBadge,
   Pagination,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EventFlagRow } from './EventFlagRow'
-import { EventFlagInspector } from './EventFlagInspector'
-import { BulkActionDock } from './BulkActionDock'
-import { BulkApproveModal } from './BulkApproveModal'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EventFlagRow } from './EventFlagRow';
+import { EventFlagInspector } from './EventFlagInspector';
+import { BulkActionDock } from './BulkActionDock';
+import { BulkApproveModal } from './BulkApproveModal';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 interface EventFlagsSectionProps {
-  events: EventFlag[]
+  events: EventFlag[];
   // Pagination is parent-controlled: `events` is a single server page already
   // sliced to `pageSize`, and `total` is the full server-side flag count. The
   // parent owns page state and re-fetches on page/size change, mirroring the
   // prices/missing/all-events Review tabs.
-  page: number
-  pageSize: number
-  total: number
-  onPageChange: (next: number) => void
-  onPageSizeChange: (next: number) => void
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
-  onEdit?: (id: string) => void
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (next: number) => void;
+  onPageSizeChange: (next: number) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 export const EventFlagsSection = ({
@@ -60,20 +60,22 @@ export const EventFlagsSection = ({
   onReject,
   onEdit,
 }: EventFlagsSectionProps) => {
-  const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [hideNonConcert, setHideNonConcert] = useState(false)
-  const [showBulkModal, setShowBulkModal] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(
+    events[0]?.id ?? null,
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [hideNonConcert, setHideNonConcert] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [pendingApprovalIds, setPendingApprovalIds] = useState<Set<string>>(
     new Set(),
-  )
-  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  );
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
-    }
-  }, [])
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    };
+  }, []);
 
   // Single source of truth for "what's visible on this page": the non-concert
   // narrowing plus the optimistic bulk-approve mask. `shouldHideNonConcert`
@@ -89,12 +91,12 @@ export const EventFlagsSection = ({
             !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
         )
       : list
-    ).filter((ev) => !pendingApprovalIds.has(ev.id))
+    ).filter((ev) => !pendingApprovalIds.has(ev.id));
 
   // `events` is already the server page for the current `page`/`pageSize`, so
   // the only client-side narrowing is the hide-non-concert filter and the
   // optimistic bulk-approve mask. No slicing — the footer pager drives fetches.
-  const visibleEvents = filterVisible(events)
+  const visibleEvents = filterVisible(events);
 
   // The active event can drift off the visible list without being explicitly
   // closed — e.g. a bulk approve masks the still-selected inspector row, or an
@@ -107,18 +109,18 @@ export const EventFlagsSection = ({
       ? null
       : visibleEvents.some((ev) => ev.id === activeId)
         ? activeId
-        : (visibleEvents[0]?.id ?? null)
+        : (visibleEvents[0]?.id ?? null);
 
   // Reconcile the stored selection with what the inspector actually shows so
   // the id-keyed handlers (approve/reject guards) stay in sync after a drift.
   useEffect(() => {
-    if (activeId !== effectiveActiveId) setActiveId(effectiveActiveId)
-  }, [activeId, effectiveActiveId])
+    if (activeId !== effectiveActiveId) setActiveId(effectiveActiveId);
+  }, [activeId, effectiveActiveId]);
 
   // Track the last (page, pageSize) we seeded the inspector for. Initialised to
   // the mount page so the initial `useState(events[0])` already counts as
   // seeded and we don't re-seed on first paint.
-  const seededPageKeyRef = useRef(`${page}:${pageSize}`)
+  const seededPageKeyRef = useRef(`${page}:${pageSize}`);
 
   // When the parent swaps in a new server page (page or pageSize changed), land
   // the inspector on that page's first visible row — but only once rows for the
@@ -132,13 +134,13 @@ export const EventFlagsSection = ({
   // keying on the page signal keeps a same-page approval refetch from yanking
   // the inspector.
   useEffect(() => {
-    const pageKey = `${page}:${pageSize}`
-    if (seededPageKeyRef.current === pageKey) return
-    const firstVisibleId = visibleEvents[0]?.id
-    if (firstVisibleId === undefined) return
-    seededPageKeyRef.current = pageKey
-    setActiveId(firstVisibleId)
-  }, [page, pageSize, visibleEvents])
+    const pageKey = `${page}:${pageSize}`;
+    if (seededPageKeyRef.current === pageKey) return;
+    const firstVisibleId = visibleEvents[0]?.id;
+    if (firstVisibleId === undefined) return;
+    seededPageKeyRef.current = pageKey;
+    setActiveId(firstVisibleId);
+  }, [page, pageSize, visibleEvents]);
 
   // After removing the active row (approve/reject/bulk-approve), anchor the
   // inspector to the row that slides into the first removed slot (or the new
@@ -149,84 +151,84 @@ export const EventFlagsSection = ({
   ): string | null => {
     const firstRemovedIndex = visibleEvents.findIndex((ev) =>
       removedIds.has(ev.id),
-    )
-    const remaining = visibleEvents.filter((ev) => !removedIds.has(ev.id))
-    if (remaining.length === 0) return null
-    const anchor = firstRemovedIndex < 0 ? 0 : firstRemovedIndex
-    const nextIndex = Math.min(anchor, remaining.length - 1)
-    return remaining[nextIndex]?.id ?? null
-  }
+    );
+    const remaining = visibleEvents.filter((ev) => !removedIds.has(ev.id));
+    if (remaining.length === 0) return null;
+    const anchor = firstRemovedIndex < 0 ? 0 : firstRemovedIndex;
+    const nextIndex = Math.min(anchor, remaining.length - 1);
+    return remaining[nextIndex]?.id ?? null;
+  };
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (checked) {
-        next.add(id)
+        next.add(id);
       } else {
-        next.delete(id)
+        next.delete(id);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedIds((prev) => {
-        const next = new Set(prev)
-        for (const ev of visibleEvents) next.add(ev.id)
-        return next
-      })
+        const next = new Set(prev);
+        for (const ev of visibleEvents) next.add(ev.id);
+        return next;
+      });
     } else {
       setSelectedIds((prev) => {
-        const next = new Set(prev)
-        for (const ev of visibleEvents) next.delete(ev.id)
-        return next
-      })
+        const next = new Set(prev);
+        for (const ev of visibleEvents) next.delete(ev.id);
+        return next;
+      });
     }
-  }
+  };
 
   const handleApprove = (id: string) => {
-    onApprove(id)
+    onApprove(id);
     setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     if (activeId === id) {
-      setActiveId(resolveActiveAfterRemoval(new Set([id])))
+      setActiveId(resolveActiveAfterRemoval(new Set([id])));
     }
-  }
+  };
 
   const handleReject = (id: string) => {
-    onReject(id)
+    onReject(id);
     setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     if (activeId === id) {
-      setActiveId(resolveActiveAfterRemoval(new Set([id])))
+      setActiveId(resolveActiveAfterRemoval(new Set([id])));
     }
-  }
+  };
 
   const handleBulkApprove = () => {
-    const ids = Array.from(selectedIds)
-    const approving = new Set(ids)
+    const ids = Array.from(selectedIds);
+    const approving = new Set(ids);
 
-    setShowBulkModal(false)
-    setSelectedIds(new Set())
+    setShowBulkModal(false);
+    setSelectedIds(new Set());
     if (activeId && approving.has(activeId)) {
-      setActiveId(resolveActiveAfterRemoval(approving))
+      setActiveId(resolveActiveAfterRemoval(approving));
     }
-    setPendingApprovalIds(approving)
+    setPendingApprovalIds(approving);
 
-    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
 
     pendingTimerRef.current = setTimeout(() => {
-      void Promise.allSettled(ids.map((id) => onApprove(id)))
-      setPendingApprovalIds(new Set())
-      pendingTimerRef.current = null
-    }, 6000)
+      void Promise.allSettled(ids.map((id) => onApprove(id)));
+      setPendingApprovalIds(new Set());
+      pendingTimerRef.current = null;
+    }, 6000);
 
     toast(ADMIN_COPY.review.bulkToast.approved(ids.length), {
       duration: 6000,
@@ -234,20 +236,20 @@ export const EventFlagsSection = ({
         label: ADMIN_COPY.review.bulkToast.undo,
         onClick: () => {
           if (pendingTimerRef.current) {
-            clearTimeout(pendingTimerRef.current)
-            pendingTimerRef.current = null
+            clearTimeout(pendingTimerRef.current);
+            pendingTimerRef.current = null;
           }
-          setPendingApprovalIds(new Set())
+          setPendingApprovalIds(new Set());
         },
       },
-    })
-  }
+    });
+  };
 
   const handleBulkReject = async () => {
-    await Promise.allSettled(Array.from(selectedIds).map((id) => onReject(id)))
-    setSelectedIds(new Set())
-    setActiveId(null)
-  }
+    await Promise.allSettled(Array.from(selectedIds).map((id) => onReject(id)));
+    setSelectedIds(new Set());
+    setActiveId(null);
+  };
 
   // Page nav is parent-controlled: delegate so the parent re-fetches the new
   // server page. Once fresh `events` arrive the old active row is no longer in
@@ -256,12 +258,12 @@ export const EventFlagsSection = ({
   // `activeId` non-null here precisely so that fallback fires — nulling it
   // would be read as an explicit close and strand the inspector empty.
   const handlePageChange = (nextPage: number) => {
-    onPageChange(nextPage)
-  }
+    onPageChange(nextPage);
+  };
 
   const handlePageSizeChange = (nextSize: number) => {
-    onPageSizeChange(nextSize)
-  }
+    onPageSizeChange(nextSize);
+  };
 
   // A filter change re-narrows the current page: drop the id-keyed checkbox
   // selection (it can't span a re-filtered set) and land the inspector on the
@@ -270,13 +272,13 @@ export const EventFlagsSection = ({
   // entirely filtered out, matching the "reset to first page on filter" UX of
   // the sibling Review tabs.
   const handleToggleHideNonConcert = () => {
-    const next = !hideNonConcert
-    setHideNonConcert(next)
-    setSelectedIds(new Set())
-    if (page > 1) onPageChange(1)
-    const nextVisible = filterVisible(events, next)
-    setActiveId(nextVisible[0]?.id ?? null)
-  }
+    const next = !hideNonConcert;
+    setHideNonConcert(next);
+    setSelectedIds(new Set());
+    if (page > 1) onPageChange(1);
+    const nextVisible = filterVisible(events, next);
+    setActiveId(nextVisible[0]?.id ?? null);
+  };
 
   // Only the genuinely-empty queue (total === 0) gets the "all clear" state.
   // An out-of-range deep link (e.g. ?page=99) yields an empty server page while
@@ -290,7 +292,7 @@ export const EventFlagsSection = ({
           {ADMIN_COPY.review.eventFlags.queueClearBadge}
         </StatusBadge>
       </span>
-    )
+    );
 
     return (
       <Panel title={emptyTitle}>
@@ -341,14 +343,14 @@ export const EventFlagsSection = ({
           </div>
         </div>
       </Panel>
-    )
+    );
   }
 
   // Select-all is scoped to the current page — the checkbox reflects whether
   // every visible row is selected, not the whole (possibly multi-page) set.
   const allSelected =
     visibleEvents.length > 0 &&
-    visibleEvents.every((ev) => selectedIds.has(ev.id))
+    visibleEvents.every((ev) => selectedIds.has(ev.id));
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -370,7 +372,7 @@ export const EventFlagsSection = ({
         {total} pending
       </span>
     </span>
-  )
+  );
 
   const panelAction = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -403,7 +405,7 @@ export const EventFlagsSection = ({
         {ADMIN_COPY.review.eventFlags.hideNonConcert}
       </AdminButton>
     </div>
-  )
+  );
 
   return (
     <Panel title={panelTitle} action={panelAction} padding={0}>
@@ -463,7 +465,7 @@ export const EventFlagsSection = ({
         <BulkActionDock
           count={selectedIds.size}
           onApproveAll={() => {
-            setShowBulkModal(true)
+            setShowBulkModal(true);
           }}
           onRejectAll={() => void handleBulkReject()}
           onClear={() => setSelectedIds(new Set())}
@@ -478,5 +480,5 @@ export const EventFlagsSection = ({
         />
       )}
     </Panel>
-  )
-}
+  );
+};

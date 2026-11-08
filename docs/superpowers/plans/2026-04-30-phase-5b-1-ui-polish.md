@@ -49,7 +49,7 @@ const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600', '700'],
-})
+});
 ```
 
 - [ ] **Verify TypeScript compiles**
@@ -79,7 +79,7 @@ git commit -m "fix: add JetBrains Mono weight 700 for design system labels"
 
 ```tsx
 interface CCMarkProps {
-  size?: number
+  size?: number;
 }
 
 const TRAIL = [
@@ -90,7 +90,7 @@ const TRAIL = [
   { x: 50, y: 50, r: 4 },
   { x: 58, y: 42, r: 5 },
   { x: 66, y: 32, r: 6 },
-]
+];
 
 export function CCMark({ size = 24 }: CCMarkProps) {
   return (
@@ -116,7 +116,7 @@ export function CCMark({ size = 24 }: CCMarkProps) {
         />
       ))}
     </svg>
-  )
+  );
 }
 ```
 
@@ -148,11 +148,11 @@ The mobile header is a slim bar: CCMark + wordmark + circular search button. The
 - [ ] **Replace AppHeader.tsx entirely**
 
 ```tsx
-import Link from 'next/link'
-import { UserButton } from '@clerk/nextjs'
-import { Search } from 'lucide-react'
-import { ThemeToggle } from '../theme-toggle'
-import { CCMark } from '../cc-mark'
+import Link from 'next/link';
+import { UserButton } from '@clerk/nextjs';
+import { Search } from 'lucide-react';
+import { ThemeToggle } from '../theme-toggle';
+import { CCMark } from '../cc-mark';
 
 export function AppHeader() {
   return (
@@ -237,7 +237,7 @@ export function AppHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }
 ```
 
@@ -269,10 +269,10 @@ Mobile-only sticky bottom bar with 4 tabs. Uses `usePathname` — must be a clie
 - [ ] **Create BottomNav.tsx**
 
 ```tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 const TABS = [
   {
@@ -367,10 +367,10 @@ const TABS = [
       </svg>
     ),
   },
-] as const
+] as const;
 
 export function BottomNav() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav
@@ -378,7 +378,7 @@ export function BottomNav() {
       aria-label="Main navigation"
     >
       {TABS.map((tab) => {
-        const isActive = pathname.startsWith(tab.href)
+        const isActive = pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.key}
@@ -397,10 +397,10 @@ export function BottomNav() {
               {tab.label}
             </span>
           </Link>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }
 ```
 
@@ -450,7 +450,7 @@ export function venueShort(name: string): string {
       /\s+(Amphitheatre|Amphitheater|Theatre|Theater|Ballroom|Auditorium|Hall|Arena)$/i,
       '',
     )
-    .trim()
+    .trim();
 }
 
 /**
@@ -458,15 +458,15 @@ export function venueShort(name: string): string {
  * Uses Mountain Time noon anchor to avoid UTC rollover issues.
  */
 export function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /**
  * Returns a Google Maps URL for the given address string.
  */
 export function googleMapsUrl(address: string): string {
-  return `https://maps.google.com/?q=${encodeURIComponent(address)}`
+  return `https://maps.google.com/?q=${encodeURIComponent(address)}`;
 }
 ```
 
@@ -498,28 +498,28 @@ The existing component is a bordered card. The design uses divider-separated row
 - [ ] **Replace EventCard.tsx**
 
 ```tsx
-import Link from 'next/link'
-import type { EventWithVenue } from '@concert-crawl/types'
-import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
-import { EventImage } from '../event-image'
-import { formatShowTime, artistInitial, venueShort } from '../definitions/lib'
-import { copy } from '../definitions/copy'
+import Link from 'next/link';
+import type { EventWithVenue } from '@concert-crawl/types';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { EventImage } from '../event-image';
+import { formatShowTime, artistInitial, venueShort } from '../definitions/lib';
+import { copy } from '../definitions/copy';
 
 interface EventCardProps {
-  event: EventWithVenue
-  className?: string
+  event: EventWithVenue;
+  className?: string;
 }
 
 export function EventCard({ event, className }: EventCardProps) {
-  const showTime = formatShowTime(event.showTime)
-  const isCancelled = event.status === 'cancelled'
-  const isPostponed = event.status === 'postponed'
+  const showTime = formatShowTime(event.showTime);
+  const isCancelled = event.status === 'cancelled';
+  const isPostponed = event.status === 'postponed';
 
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null
+      : null;
 
   return (
     <Link
@@ -601,7 +601,7 @@ export function EventCard({ event, className }: EventCardProps) {
         ) : null}
       </div>
     </Link>
-  )
+  );
 }
 ```
 
@@ -633,26 +633,26 @@ Key changes: fixed 180px image height, content overlaps image by −40px, accent
 - [ ] **Replace HeroEventCard.tsx**
 
 ```tsx
-import Link from 'next/link'
-import type { EventWithVenue } from '@concert-crawl/types'
-import { EventImage } from '../event-image'
-import { formatShowTime, venueShort, artistInitial } from '../definitions/lib'
-import { copy } from '../definitions/copy'
+import Link from 'next/link';
+import type { EventWithVenue } from '@concert-crawl/types';
+import { EventImage } from '../event-image';
+import { formatShowTime, venueShort, artistInitial } from '../definitions/lib';
+import { copy } from '../definitions/copy';
 
 interface HeroEventCardProps {
-  event: EventWithVenue
-  label?: string
+  event: EventWithVenue;
+  label?: string;
 }
 
 export function HeroEventCard({
   event,
   label = copy.heroTonight,
 }: HeroEventCardProps) {
-  const showTime = formatShowTime(event.showTime)
+  const showTime = formatShowTime(event.showTime);
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null
+      : null;
 
   return (
     <Link
@@ -757,7 +757,7 @@ export function HeroEventCard({
         )}
       </div>
     </Link>
-  )
+  );
 }
 ```
 
@@ -789,20 +789,20 @@ Used in "More at venue" on EventDetail and "Upcoming" on VenueProfile.
 - [ ] **Create SmallEventRow.tsx**
 
 ```tsx
-import Link from 'next/link'
-import type { EventWithVenue, Event } from '@concert-crawl/types'
-import { EventImage } from '../event-image'
-import { formatShowTime, artistInitial } from '../definitions/lib'
+import Link from 'next/link';
+import type { EventWithVenue, Event } from '@concert-crawl/types';
+import { EventImage } from '../event-image';
+import { formatShowTime, artistInitial } from '../definitions/lib';
 
 interface SmallEventRowProps {
-  event: EventWithVenue | Event
-  date: string
-  showVenue?: boolean
+  event: EventWithVenue | Event;
+  date: string;
+  showVenue?: boolean;
 }
 
 function getVenueName(event: EventWithVenue | Event): string | null {
-  if ('venue' in event && event.venue) return event.venue.name
-  return null
+  if ('venue' in event && event.venue) return event.venue.name;
+  return null;
 }
 
 export function SmallEventRow({
@@ -810,17 +810,17 @@ export function SmallEventRow({
   date,
   showVenue = true,
 }: SmallEventRowProps) {
-  const showTime = formatShowTime(event.showTime)
-  const venueName = getVenueName(event)
+  const showTime = formatShowTime(event.showTime);
+  const venueName = getVenueName(event);
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null
+      : null;
 
-  const metaParts: string[] = []
-  if (showVenue && venueName) metaParts.push(venueName)
-  metaParts.push(date)
-  if (showTime) metaParts.push(showTime)
+  const metaParts: string[] = [];
+  if (showVenue && venueName) metaParts.push(venueName);
+  metaParts.push(date);
+  if (showTime) metaParts.push(showTime);
 
   return (
     <Link
@@ -874,7 +874,7 @@ export function SmallEventRow({
         )}
       </div>
     </Link>
-  )
+  );
 }
 ```
 
@@ -905,8 +905,8 @@ git commit -m "feat: add SmallEventRow component for related/upcoming event list
 
 ```tsx
 interface SectionHeaderProps {
-  title: string
-  count?: string
+  title: string;
+  count?: string;
 }
 
 export function SectionHeader({ title, count }: SectionHeaderProps) {
@@ -933,7 +933,7 @@ export function SectionHeader({ title, count }: SectionHeaderProps) {
         </span>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -966,7 +966,7 @@ Decorative SVG map — curved grid lines, accent dot, address label.
 
 ```tsx
 interface MapPlaceholderProps {
-  address: string
+  address: string;
 }
 
 export function MapPlaceholder({ address }: MapPlaceholderProps) {
@@ -1009,7 +1009,7 @@ export function MapPlaceholder({ address }: MapPlaceholderProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1041,72 +1041,72 @@ Three changes: (1) new day-group header style, (2) dividers between EventCard ro
 - [ ] **Replace events/page.tsx**
 
 ```tsx
-import { Fragment, Suspense } from 'react'
-import type { EventsListResponse, VenuePublic } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { BottomNav } from '@/components/consumer/bottom-nav'
-import { HeroEventCard } from '@/components/consumer/hero-event-card'
-import { EventCard } from '@/components/consumer/event-card'
-import { FilterBar } from '@/components/consumer/filter-bar'
-import { LoadMoreButton } from '@/components/consumer/load-more'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { dateGroupLabel, isToday } from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
+import { Fragment, Suspense } from 'react';
+import type { EventsListResponse, VenuePublic } from '@concert-crawl/types';
+import { publicApiClient } from '@/lib/api';
+import { AppHeader } from '@/components/consumer/app-header';
+import { BottomNav } from '@/components/consumer/bottom-nav';
+import { HeroEventCard } from '@/components/consumer/hero-event-card';
+import { EventCard } from '@/components/consumer/event-card';
+import { FilterBar } from '@/components/consumer/filter-bar';
+import { LoadMoreButton } from '@/components/consumer/load-more';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { dateGroupLabel, isToday } from '@/components/consumer/definitions/lib';
+import { copy } from '@/components/consumer/definitions/copy';
 
-const PAGE_LIMIT = 20
+const PAGE_LIMIT = 20;
 
 interface BrowsePageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
 ): Promise<EventsListResponse> {
-  const qs = new URLSearchParams()
-  if (typeof params['search'] === 'string') qs.set('search', params['search'])
+  const qs = new URLSearchParams();
+  if (typeof params['search'] === 'string') qs.set('search', params['search']);
   if (typeof params['venueSlug'] === 'string')
-    qs.set('venueSlug', params['venueSlug'])
-  if (typeof params['from'] === 'string') qs.set('from', params['from'])
-  const offsetParam = params['offset']
+    qs.set('venueSlug', params['venueSlug']);
+  if (typeof params['from'] === 'string') qs.set('from', params['from']);
+  const offsetParam = params['offset'];
   if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
-    const parsed = Number(offsetParam)
+    const parsed = Number(offsetParam);
     if (Number.isSafeInteger(parsed) && parsed >= 0)
-      qs.set('offset', String(parsed))
+      qs.set('offset', String(parsed));
   }
-  qs.set('limit', String(PAGE_LIMIT))
-  return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)
+  qs.set('limit', String(PAGE_LIMIT));
+  return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`);
 }
 
 async function fetchVenues(): Promise<VenuePublic[]> {
-  return publicApiClient.get<VenuePublic[]>('/v1/venues')
+  return publicApiClient.get<VenuePublic[]>('/v1/venues');
 }
 
 export default async function BrowsePage({ searchParams }: BrowsePageProps) {
-  const params = await searchParams
+  const params = await searchParams;
 
   const [eventsResult, venues] = await Promise.all([
     fetchEvents(params),
     fetchVenues(),
-  ])
+  ]);
 
-  const { data: events, total, limit } = eventsResult
+  const { data: events, total, limit } = eventsResult;
 
   const firstEventIsToday =
-    events.length > 0 && events[0] !== undefined && isToday(events[0].date)
-  const heroEvent = firstEventIsToday ? events[0] : null
-  const listEvents = heroEvent ? events.slice(1) : events
+    events.length > 0 && events[0] !== undefined && isToday(events[0].date);
+  const heroEvent = firstEventIsToday ? events[0] : null;
+  const listEvents = heroEvent ? events.slice(1) : events;
 
-  const groups = new Map<string, typeof events>()
+  const groups = new Map<string, typeof events>();
   for (const event of listEvents) {
-    const key = event.date
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(event)
+    const key = event.date;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(event);
   }
 
-  const isFiltered = params['search'] ?? params['venueSlug'] ?? params['from']
+  const isFiltered = params['search'] ?? params['venueSlug'] ?? params['from'];
   const currentOffset =
-    typeof params['offset'] === 'string' ? parseInt(params['offset'], 10) : 0
+    typeof params['offset'] === 'string' ? parseInt(params['offset'], 10) : 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -1138,8 +1138,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         {groups.size > 0 && (
           <div className="flex flex-col gap-6">
             {Array.from(groups.entries()).map(([date, dateEvents]) => {
-              const label = dateGroupLabel(date)
-              const isTonight = label.toLowerCase() === 'tonight'
+              const label = dateGroupLabel(date);
+              const isTonight = label.toLowerCase() === 'tonight';
               return (
                 <section key={date} aria-label={label}>
                   {/* Day group header */}
@@ -1182,7 +1182,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
                     ))}
                   </div>
                 </section>
-              )
+              );
             })}
           </div>
         )}
@@ -1202,7 +1202,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
       <BottomNav />
     </div>
-  )
+  );
 }
 ```
 
@@ -1234,33 +1234,33 @@ This is a significant refactor. The hero becomes full-bleed 320px with a bottom 
 - [ ] **Replace events/[id]/page.tsx**
 
 ```tsx
-import { Fragment } from 'react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { EventImage } from '@/components/consumer/event-image'
-import { SmallEventRow } from '@/components/consumer/small-event-row'
-import { SectionHeader } from '@/components/consumer/section-header'
+import { Fragment } from 'react';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
+import { publicApiClient } from '@/lib/api';
+import { AppHeader } from '@/components/consumer/app-header';
+import { EventImage } from '@/components/consumer/event-image';
+import { SmallEventRow } from '@/components/consumer/small-event-row';
+import { SectionHeader } from '@/components/consumer/section-header';
 import {
   formatEventDate,
   formatShowTime,
   formatPrice,
   artistInitial,
   formatShortDate,
-} from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
+} from '@/components/consumer/definitions/lib';
+import { copy } from '@/components/consumer/definitions/copy';
 
 interface EventDetailPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 async function fetchEvent(id: string): Promise<EventWithVenue | null> {
   try {
-    return await publicApiClient.get<EventWithVenue>(`/v1/events/${id}`)
+    return await publicApiClient.get<EventWithVenue>(`/v1/events/${id}`);
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -1271,32 +1271,32 @@ async function fetchRelated(
   try {
     const result = await publicApiClient.get<EventsListResponse>(
       `/v1/events?venueSlug=${encodeURIComponent(venueSlug)}&limit=4&offset=0`,
-    )
-    return result.data.filter((ev) => ev.id !== excludeId).slice(0, 3)
+    );
+    return result.data.filter((ev) => ev.id !== excludeId).slice(0, 3);
   } catch {
-    return []
+    return [];
   }
 }
 
 export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
-  const { id } = await params
-  const event = await fetchEvent(id)
-  if (!event) notFound()
+  const { id } = await params;
+  const event = await fetchEvent(id);
+  if (!event) notFound();
 
-  const related = await fetchRelated(event.venue.slug, event.id)
+  const related = await fetchRelated(event.venue.slug, event.id);
 
-  const showTime = formatShowTime(event.showTime)
-  const doorsTime = formatShowTime(event.doorsTime)
-  const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax)
-  const dateLabel = formatEventDate(event.date, event.venue.timezone)
-  const isCancelled = event.status === 'cancelled'
+  const showTime = formatShowTime(event.showTime);
+  const doorsTime = formatShowTime(event.doorsTime);
+  const price = formatPrice(event.ticketPriceMin, event.ticketPriceMax);
+  const dateLabel = formatEventDate(event.date, event.venue.timezone);
+  const isCancelled = event.status === 'cancelled';
 
   const doorsShow =
     doorsTime && showTime
       ? `${doorsTime} / ${showTime}`
-      : (showTime ?? doorsTime ?? '—')
+      : (showTime ?? doorsTime ?? '—');
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -1537,7 +1537,7 @@ export default async function EventDetailPage({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ── Icon components (16×16, 1.5px stroke, --fg-subtle) ────────────
@@ -1559,7 +1559,7 @@ function IconPin() {
         strokeWidth="1.5"
       />
     </svg>
-  )
+  );
 }
 
 function IconCalendar() {
@@ -1582,7 +1582,7 @@ function IconCalendar() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconClock() {
@@ -1603,7 +1603,7 @@ function IconClock() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconTicket() {
@@ -1623,7 +1623,7 @@ function IconTicket() {
         strokeDasharray="1.5 2"
       />
     </svg>
-  )
+  );
 }
 
 function IconUsers() {
@@ -1656,17 +1656,17 @@ function IconUsers() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 // ── InfoRow ───────────────────────────────────────────────────────
 
 interface InfoRowProps {
-  icon: React.ReactNode
-  label: string
-  value: string
-  signal?: boolean
-  href?: string
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  signal?: boolean;
+  href?: string;
 }
 
 function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
@@ -1710,9 +1710,9 @@ function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
         </svg>
       )}
     </>
-  )
+  );
 
-  const className = 'flex items-center gap-2.5 py-2'
+  const className = 'flex items-center gap-2.5 py-2';
 
   if (href) {
     return (
@@ -1722,9 +1722,9 @@ function InfoRow({ icon, label, value, signal = false, href }: InfoRowProps) {
       >
         {inner}
       </Link>
-    )
+    );
   }
-  return <div className={className}>{inner}</div>
+  return <div className={className}>{inner}</div>;
 }
 ```
 
@@ -1754,59 +1754,59 @@ git commit -m "feat: refactor EventDetail — hero scrim, floating nav, InfoRows
 - [ ] **Replace venues/[slug]/page.tsx**
 
 ```tsx
-import { Fragment } from 'react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import type { VenueWithEvents, Event } from '@concert-crawl/types'
-import { publicApiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { SmallEventRow } from '@/components/consumer/small-event-row'
-import { SectionHeader } from '@/components/consumer/section-header'
-import { MapPlaceholder } from '@/components/consumer/map-placeholder'
-import { EmptyState } from '@/components/consumer/empty-state'
+import { Fragment } from 'react';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import type { VenueWithEvents, Event } from '@concert-crawl/types';
+import { publicApiClient } from '@/lib/api';
+import { AppHeader } from '@/components/consumer/app-header';
+import { SmallEventRow } from '@/components/consumer/small-event-row';
+import { SectionHeader } from '@/components/consumer/section-header';
+import { MapPlaceholder } from '@/components/consumer/map-placeholder';
+import { EmptyState } from '@/components/consumer/empty-state';
 import {
   formatShortDate,
   googleMapsUrl,
-} from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
+} from '@/components/consumer/definitions/lib';
+import { copy } from '@/components/consumer/definitions/copy';
 
 interface VenueProfilePageProps {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }
 
 async function fetchVenueWithEvents(
   slug: string,
 ): Promise<VenueWithEvents | null> {
   try {
-    return await publicApiClient.get<VenueWithEvents>(`/v1/venues/${slug}`)
+    return await publicApiClient.get<VenueWithEvents>(`/v1/venues/${slug}`);
   } catch {
-    return null
+    return null;
   }
 }
 
 export default async function VenueProfilePage({
   params,
 }: VenueProfilePageProps) {
-  const { slug } = await params
-  const result = await fetchVenueWithEvents(slug)
-  if (!result) notFound()
+  const { slug } = await params;
+  const result = await fetchVenueWithEvents(slug);
+  if (!result) notFound();
 
-  const { venue, upcomingEvents } = result
+  const { venue, upcomingEvents } = result;
 
   // Initials from first two words
-  const words = venue.name.split(' ')
+  const words = venue.name.split(' ');
   const initials =
     words.length >= 2
       ? (words[0]?.charAt(0) ?? '') + (words[1]?.charAt(0) ?? '')
-      : venue.name.charAt(0)
+      : venue.name.charAt(0);
 
   // Deterministic gradient hue from venue name
   const hue =
     [30, 160, 260, 80, 320, 200][
       venue.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 6
-    ] ?? 200
+    ] ?? 200;
 
-  const mapsAddress = `${venue.name}, ${venue.city}`
+  const mapsAddress = `${venue.name}, ${venue.city}`;
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -2031,7 +2031,7 @@ export default async function VenueProfilePage({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function StatPill({
@@ -2039,9 +2039,9 @@ function StatPill({
   value,
   signal = false,
 }: {
-  label: string
-  value: string
-  signal?: boolean
+  label: string;
+  value: string;
+  signal?: boolean;
 }) {
   return (
     <div className="flex flex-1 flex-col gap-0.5">
@@ -2062,7 +2062,7 @@ function StatPill({
         {value}
       </span>
     </div>
-  )
+  );
 }
 ```
 

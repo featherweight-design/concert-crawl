@@ -7,28 +7,28 @@
 // #85 has shipped /passport, so the strip is a link. The null branch stays:
 // never a dead href — a link that goes nowhere is worse than no link.
 
-import Link from 'next/link'
-import type { HistoryShow, HistoryStats } from '@concert-crawl/types'
-import { StubStamp } from '@/components/consumer/going/StubStamp'
-import { HISTORY_COPY } from './definitions/copy'
-import { PASSPORT_ROUTE } from './definitions/constants'
+import Link from 'next/link';
+import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
+import { StubStamp } from '@/components/consumer/going/StubStamp';
+import { HISTORY_COPY } from './definitions/copy';
+import { PASSPORT_ROUTE } from './definitions/constants';
 
-const COPY = HISTORY_COPY.passport
+const COPY = HISTORY_COPY.passport;
 
 // Three most-recent artists, padded with deterministic filler names so the strip
 // keeps its shape for a one-night history.
 const stampArtistsFor = (shows: readonly HistoryShow[]): string[] => {
-  const recent = shows.slice(0, 3).map((show) => show.artist)
-  while (recent.length < 3) recent.push(`passport-${recent.length}`)
-  return recent
-}
+  const recent = shows.slice(0, 3).map((show) => show.artist);
+  while (recent.length < 3) recent.push(`passport-${recent.length}`);
+  return recent;
+};
 
 const TeaserBody = ({
   stats,
   shows,
 }: {
-  stats: HistoryStats
-  shows: readonly HistoryShow[]
+  stats: HistoryStats;
+  shows: readonly HistoryShow[];
 }) => (
   <>
     <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -75,30 +75,30 @@ const TeaserBody = ({
       ))}
     </span>
   </>
-)
+);
 
 const SHELL =
-  'flex items-center gap-3.5 overflow-hidden rounded-[14px] px-[18px] py-4 no-underline'
+  'flex items-center gap-3.5 overflow-hidden rounded-[14px] px-[18px] py-4 no-underline';
 
 const SHELL_STYLE = {
   border: '1px solid color-mix(in oklch, var(--accent) 35%, var(--border))',
   background:
     'linear-gradient(135deg, color-mix(in oklch, var(--accent) 14%, var(--surface-1)) 0%, var(--surface-1) 70%)',
-} as const
+} as const;
 
 export const PassportTeaser = ({
   stats,
   shows,
 }: {
-  stats: HistoryStats
-  shows: readonly HistoryShow[]
+  stats: HistoryStats;
+  shows: readonly HistoryShow[];
 }) => {
   if (PASSPORT_ROUTE === null) {
     return (
       <div className={SHELL} style={SHELL_STYLE}>
         <TeaserBody stats={stats} shows={shows} />
       </div>
-    )
+    );
   }
 
   return (
@@ -109,5 +109,5 @@ export const PassportTeaser = ({
     >
       <TeaserBody stats={stats} shows={shows} />
     </Link>
-  )
-}
+  );
+};

@@ -1,1 +1,1 @@
-export { deriveTicketLinks, type TicketLinkVenueContext } from './derive.js'
+export { deriveTicketLinks, type TicketLinkVenueContext } from './derive.js';

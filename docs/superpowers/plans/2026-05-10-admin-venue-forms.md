@@ -36,7 +36,7 @@ Implements two admin screens per the design handoff:
 
 - [ ] **Task 2: API — Slug uniqueness on POST/PATCH**
   - `POST /v1/admin/venues`: check slug not already taken → 409 `{ success: false, error: 'Slug already in use', field: 'slug' }`
-  - `PATCH /v1/admin/venues/:id`: check slug not taken by *another* venue → same 409 response
+  - `PATCH /v1/admin/venues/:id`: check slug not taken by _another_ venue → same 409 response
   - Add integration tests for both 409 paths
 
 - [ ] **Task 3: API — Crawl health stats in GET /:id**
@@ -85,10 +85,10 @@ Implements two admin screens per the design handoff:
   - **Two-column layout**: form (flex-grow) + meta column (360px, right)
   - **Left form**: same fields as Add Venue (Name, Slug, Source URL, City, status toggle), edit-in-place; existing `VenueForm` replaced with new field components matching 8-state design
   - **Right meta column:**
-    - *Health · 7 days*: % + sparkline SVG (7 bars, colored by success/fail) + 4 stat tiles (last crawl, avg duration, events tracked, consecutive fails)
-    - *Verification*: verified badge with `verifiedAt` (if available) or "Unverified" + `Verify` action; `Unverify` ghost-sm button
-    - *Recent runs*: last 3 crawl runs (compact: date, status dot, duration); "View all →" links to `/admin/crawls?venue=<id>`
-    - *Danger zone*: `Pause` outline-sm button (sets active = false via PATCH) + `Delete…` danger-sm button (opens delete dialog)
+    - _Health · 7 days_: % + sparkline SVG (7 bars, colored by success/fail) + 4 stat tiles (last crawl, avg duration, events tracked, consecutive fails)
+    - _Verification_: verified badge with `verifiedAt` (if available) or "Unverified" + `Verify` action; `Unverify` ghost-sm button
+    - _Recent runs_: last 3 crawl runs (compact: date, status dot, duration); "View all →" links to `/admin/crawls?venue=<id>`
+    - _Danger zone_: `Pause` outline-sm button (sets active = false via PATCH) + `Delete…` danger-sm button (opens delete dialog)
   - **Sticky save bar**: fixed at viewport bottom, appears when form is dirty; inverse-color pill with `Discard` / `Save changes`
   - Wire existing `updateVenue` action (updated in Task 8)
 

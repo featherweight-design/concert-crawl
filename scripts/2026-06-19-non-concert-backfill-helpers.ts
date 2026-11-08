@@ -7,46 +7,46 @@
  */
 
 export interface EventForClassification {
-  id: string
-  title: string
-  artist: string
-  description: string | null
-  date: string
-  venueName: string
-  currentHidden: boolean
+  id: string;
+  title: string;
+  artist: string;
+  description: string | null;
+  date: string;
+  venueName: string;
+  currentHidden: boolean;
 }
 
 export interface ClassificationResult {
-  eventId: string
-  title: string
-  artist: string
-  date: string
-  venueName: string
-  currentHidden: boolean
-  llmIsConcert: boolean
-  wouldChange: boolean
+  eventId: string;
+  title: string;
+  artist: string;
+  date: string;
+  venueName: string;
+  currentHidden: boolean;
+  llmIsConcert: boolean;
+  wouldChange: boolean;
 }
 
 export interface BatchClassification {
-  eventId: string
-  isConcert: boolean
+  eventId: string;
+  isConcert: boolean;
 }
 
 export function buildBatches<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = []
+  const batches: T[][] = [];
   for (let idx = 0; idx < items.length; idx += batchSize) {
-    batches.push(items.slice(idx, idx + batchSize))
+    batches.push(items.slice(idx, idx + batchSize));
   }
-  return batches
+  return batches;
 }
 
 export function formatCsvRow(result: ClassificationResult): string {
   const escape = (val: string): string => {
     if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`
+      return `"${val.replace(/"/g, '""')}"`;
     }
-    return val
-  }
+    return val;
+  };
   return (
     [
       result.eventId,
@@ -58,5 +58,5 @@ export function formatCsvRow(result: ClassificationResult): string {
       String(result.llmIsConcert),
       String(result.wouldChange),
     ].join(',') + '\n'
-  )
+  );
 }

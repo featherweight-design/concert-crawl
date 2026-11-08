@@ -91,60 +91,60 @@
 Create `packages/entitlements/src/feature-flags.test.ts`:
 
 ```ts
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_KEYS,
   featureFlagDefaults,
   flagForEntitlement,
-} from './feature-flags.js'
+} from './feature-flags.js';
 
 describe('feature flag registry', () => {
   it('keys every entry by its own key field', () => {
     for (const key of FEATURE_FLAG_KEYS) {
-      expect(FEATURE_FLAGS[key].key).toBe(key)
+      expect(FEATURE_FLAGS[key].key).toBe(key);
     }
-  })
+  });
 
   // Every other case iterates FEATURE_FLAG_KEYS, so a flag added to the record
   // and forgotten here would be silently untested and never rendered.
   it('lists exactly the keys the record holds', () => {
     expect([...FEATURE_FLAG_KEYS].sort()).toEqual(
       Object.keys(FEATURE_FLAGS).sort(),
-    )
-  })
+    );
+  });
 
   it('never maps two flags onto the same entitlement', () => {
-    const seen = new Set<string>()
+    const seen = new Set<string>();
     for (const key of FEATURE_FLAG_KEYS) {
-      const entitlement = FEATURE_FLAGS[key].entitlement
-      if (entitlement === null) continue
-      expect(seen.has(entitlement)).toBe(false)
-      seen.add(entitlement)
+      const entitlement = FEATURE_FLAGS[key].entitlement;
+      if (entitlement === null) continue;
+      expect(seen.has(entitlement)).toBe(false);
+      seen.add(entitlement);
     }
-  })
+  });
 
   it('gives every entry a non-empty label and description', () => {
     for (const key of FEATURE_FLAG_KEYS) {
-      expect(FEATURE_FLAGS[key].label.length).toBeGreaterThan(0)
-      expect(FEATURE_FLAGS[key].description.length).toBeGreaterThan(0)
+      expect(FEATURE_FLAGS[key].label.length).toBeGreaterThan(0);
+      expect(FEATURE_FLAGS[key].description.length).toBeGreaterThan(0);
     }
-  })
+  });
 
   it('defaults spotify-sync and crews off, release-notes on', () => {
     expect(featureFlagDefaults()).toEqual({
       'spotify-sync': false,
       crews: false,
       'release-notes': true,
-    })
-  })
+    });
+  });
 
   it('reverse-looks-up a flag by the entitlement it restricts', () => {
-    expect(flagForEntitlement('crews')).toBe('crews')
-    expect(flagForEntitlement('spotify-sync')).toBe('spotify-sync')
-    expect(flagForEntitlement('watching')).toBeNull()
-  })
-})
+    expect(flagForEntitlement('crews')).toBe('crews');
+    expect(flagForEntitlement('spotify-sync')).toBe('spotify-sync');
+    expect(flagForEntitlement('watching')).toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -157,23 +157,23 @@ Expected: FAIL, cannot resolve `./feature-flags.js`.
 Create `packages/entitlements/src/feature-flags.ts`:
 
 ```ts
-import type { PremiumFeature } from './index.js'
+import type { PremiumFeature } from './index.js';
 
 // Its own namespace, deliberately not an alias of PremiumFeature: a flag must
 // be able to name a feature with no entitlement (release-notes) and a feature
 // that does not exist yet.
-export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes'
+export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes';
 
 export interface FeatureFlagDefinition {
-  key: FeatureFlagKey
+  key: FeatureFlagKey;
   /** Admin UI row title. */
-  label: string
+  label: string;
   /** Admin UI: what disappears for customers when this is off. */
-  description: string
+  description: string;
   /** The entitlement this flag restricts, where one exists. */
-  entitlement: PremiumFeature | null
+  entitlement: PremiumFeature | null;
   /** Value used when the table has no row for this key. */
-  defaultEnabled: boolean
+  defaultEnabled: boolean;
 }
 
 export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
@@ -201,23 +201,23 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     entitlement: null,
     defaultEnabled: true,
   },
-}
+};
 
 export const FEATURE_FLAG_KEYS: readonly FeatureFlagKey[] = [
   'spotify-sync',
   'crews',
   'release-notes',
-]
+];
 
 export const isFeatureFlagKey = (value: string): value is FeatureFlagKey =>
-  Object.prototype.hasOwnProperty.call(FEATURE_FLAGS, value)
+  Object.prototype.hasOwnProperty.call(FEATURE_FLAGS, value);
 
 /** The map every reader starts from before merging stored rows over it. */
 export const featureFlagDefaults = (): Record<FeatureFlagKey, boolean> => ({
   'spotify-sync': FEATURE_FLAGS['spotify-sync'].defaultEnabled,
   crews: FEATURE_FLAGS.crews.defaultEnabled,
   'release-notes': FEATURE_FLAGS['release-notes'].defaultEnabled,
-})
+});
 
 // Well-defined only because the registry test forbids two flags naming the
 // same entitlement. useEntitlement depends on that invariant.
@@ -225,22 +225,22 @@ export const flagForEntitlement = (
   feature: PremiumFeature,
 ): FeatureFlagKey | null => {
   for (const key of FEATURE_FLAG_KEYS) {
-    if (FEATURE_FLAGS[key].entitlement === feature) return key
+    if (FEATURE_FLAGS[key].entitlement === feature) return key;
   }
-  return null
-}
+  return null;
+};
 
 /** What the public endpoint returns. Labels and descriptions are withheld. */
-export type FeatureFlagView = Record<FeatureFlagKey, boolean>
+export type FeatureFlagView = Record<FeatureFlagKey, boolean>;
 
 /** What the admin endpoint returns: the registry prose plus current state. */
 export interface AdminFeatureFlag {
-  key: FeatureFlagKey
-  label: string
-  description: string
-  enabled: boolean
-  updatedAt: string | null
-  updatedBy: string | null
+  key: FeatureFlagKey;
+  label: string;
+  description: string;
+  enabled: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
 }
 ```
 
@@ -259,7 +259,7 @@ export {
   type FeatureFlagDefinition,
   type FeatureFlagKey,
   type FeatureFlagView,
-} from './feature-flags.js'
+} from './feature-flags.js';
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -301,7 +301,7 @@ git commit -m "feat(entitlements): add feature flag registry"
 Create `packages/db/src/schema/feature-flags.ts`:
 
 ```ts
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const featureFlags = pgTable('feature_flags', {
   key: text('key').primaryKey(),
@@ -310,7 +310,7 @@ export const featureFlags = pgTable('feature_flags', {
     .notNull()
     .defaultNow(),
   updatedBy: text('updated_by').notNull(),
-})
+});
 ```
 
 - [ ] **Step 2: Export it from the schema barrel**
@@ -318,7 +318,7 @@ export const featureFlags = pgTable('feature_flags', {
 Append to `packages/db/src/schema/index.ts`, after the existing `export * from './crews.js'` line:
 
 ```ts
-export * from './feature-flags.js'
+export * from './feature-flags.js';
 ```
 
 - [ ] **Step 3: Generate the migration**
@@ -378,90 +378,90 @@ git commit -m "feat(db): add feature_flags table"
 Create `apps/api/src/lib/feature-flags.test.ts`:
 
 ```ts
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const selectRows = vi.fn()
+const selectRows = vi.fn();
 
 vi.mock('@concert-crawl/db', () => ({
   db: {
     select: () => ({ from: () => selectRows() }),
   },
   featureFlags: {},
-}))
+}));
 
 const { clearFeatureFlagCache, isFeatureEnabled, loadFeatureFlags } =
-  await import('./feature-flags.js')
+  await import('./feature-flags.js');
 
 describe('loadFeatureFlags', () => {
   beforeEach(() => {
-    clearFeatureFlagCache()
-    selectRows.mockReset()
-  })
+    clearFeatureFlagCache();
+    selectRows.mockReset();
+  });
 
   it('falls back to registry defaults when the table is empty', async () => {
-    selectRows.mockResolvedValue([])
+    selectRows.mockResolvedValue([]);
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
       'release-notes': true,
-    })
-  })
+    });
+  });
 
   it('lets a stored row override its registry default', async () => {
-    selectRows.mockResolvedValue([{ key: 'crews', enabled: true }])
-    const flags = await loadFeatureFlags()
-    expect(flags.crews).toBe(true)
-    expect(flags['spotify-sync']).toBe(false)
-  })
+    selectRows.mockResolvedValue([{ key: 'crews', enabled: true }]);
+    const flags = await loadFeatureFlags();
+    expect(flags.crews).toBe(true);
+    expect(flags['spotify-sync']).toBe(false);
+  });
 
   it('ignores a stored row whose key left the registry', async () => {
-    selectRows.mockResolvedValue([{ key: 'retired-thing', enabled: true }])
-    const flags = await loadFeatureFlags()
+    selectRows.mockResolvedValue([{ key: 'retired-thing', enabled: true }]);
+    const flags = await loadFeatureFlags();
     expect(Object.keys(flags).sort()).toEqual([
       'crews',
       'release-notes',
       'spotify-sync',
-    ])
-  })
+    ]);
+  });
 
   it('serves the memo rather than re-querying', async () => {
-    selectRows.mockResolvedValue([])
-    await loadFeatureFlags()
-    await loadFeatureFlags()
-    expect(selectRows).toHaveBeenCalledTimes(1)
-  })
+    selectRows.mockResolvedValue([]);
+    await loadFeatureFlags();
+    await loadFeatureFlags();
+    expect(selectRows).toHaveBeenCalledTimes(1);
+  });
 
   it('re-queries after the cache is cleared', async () => {
-    selectRows.mockResolvedValue([])
-    await loadFeatureFlags()
-    clearFeatureFlagCache()
-    await loadFeatureFlags()
-    expect(selectRows).toHaveBeenCalledTimes(2)
-  })
+    selectRows.mockResolvedValue([]);
+    await loadFeatureFlags();
+    clearFeatureFlagCache();
+    await loadFeatureFlags();
+    expect(selectRows).toHaveBeenCalledTimes(2);
+  });
 
   it('falls back to defaults when the query throws', async () => {
-    selectRows.mockRejectedValue(new Error('connection refused'))
+    selectRows.mockRejectedValue(new Error('connection refused'));
     await expect(loadFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
       'release-notes': true,
-    })
-  })
+    });
+  });
 
   // A failed read is cached like any other answer, so a database outage costs
   // one query and one log line per TTL window rather than one per request.
   it('memoizes the defaults it fell back to', async () => {
-    selectRows.mockRejectedValue(new Error('connection refused'))
-    await loadFeatureFlags()
-    await loadFeatureFlags()
-    expect(selectRows).toHaveBeenCalledTimes(1)
-  })
+    selectRows.mockRejectedValue(new Error('connection refused'));
+    await loadFeatureFlags();
+    await loadFeatureFlags();
+    expect(selectRows).toHaveBeenCalledTimes(1);
+  });
 
   it('answers a single key', async () => {
-    selectRows.mockResolvedValue([{ key: 'crews', enabled: true }])
-    await expect(isFeatureEnabled('crews')).resolves.toBe(true)
-  })
-})
+    selectRows.mockResolvedValue([{ key: 'crews', enabled: true }]);
+    await expect(isFeatureEnabled('crews')).resolves.toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -474,40 +474,40 @@ Expected: FAIL, cannot resolve `./feature-flags.js`.
 Create `apps/api/src/lib/feature-flags.ts`:
 
 ```ts
-import { db, featureFlags } from '@concert-crawl/db'
+import { db, featureFlags } from '@concert-crawl/db';
 import {
   featureFlagDefaults,
   isFeatureFlagKey,
   type FeatureFlagKey,
   type FeatureFlagView,
-} from '@concert-crawl/entitlements'
+} from '@concert-crawl/entitlements';
 
-import { apiLogger } from './logger.js'
+import { apiLogger } from './logger.js';
 
-export const FEATURE_FLAG_CACHE_TTL_MS = 30_000
+export const FEATURE_FLAG_CACHE_TTL_MS = 30_000;
 
-let cached: FeatureFlagView | null = null
-let cachedAt = 0
+let cached: FeatureFlagView | null = null;
+let cachedAt = 0;
 
 /** Called after an admin write so the next read reflects it in-process. */
 export const clearFeatureFlagCache = (): void => {
-  cached = null
-  cachedAt = 0
-}
+  cached = null;
+  cachedAt = 0;
+};
 
 export const loadFeatureFlags = async (): Promise<FeatureFlagView> => {
   if (cached && Date.now() - cachedAt < FEATURE_FLAG_CACHE_TTL_MS) {
-    return cached
+    return cached;
   }
 
-  const flags = featureFlagDefaults()
+  const flags = featureFlagDefaults();
 
   try {
-    const rows = await db.select().from(featureFlags)
+    const rows = await db.select().from(featureFlags);
     for (const row of rows) {
       // A key that has left the registry is ignored rather than surfaced, so
       // deleting a flag from the code is safe without a data migration.
-      if (isFeatureFlagKey(row.key)) flags[row.key] = row.enabled
+      if (isFeatureFlagKey(row.key)) flags[row.key] = row.enabled;
     }
   } catch (err) {
     // Fail closed for the flags that default off, which is the safe direction:
@@ -516,20 +516,20 @@ export const loadFeatureFlags = async (): Promise<FeatureFlagView> => {
     // an outage costs one query and one log line per TTL window rather than one
     // per request. Recovery lands on the next expiry, or immediately on the
     // `clearFeatureFlagCache()` that follows an admin write.
-    apiLogger.error({ err }, 'feature flag read failed, using defaults')
+    apiLogger.error({ err }, 'feature flag read failed, using defaults');
   }
 
-  cached = flags
-  cachedAt = Date.now()
-  return flags
-}
+  cached = flags;
+  cachedAt = Date.now();
+  return flags;
+};
 
 export const isFeatureEnabled = async (
   key: FeatureFlagKey,
 ): Promise<boolean> => {
-  const flags = await loadFeatureFlags()
-  return flags[key]
-}
+  const flags = await loadFeatureFlags();
+  return flags[key];
+};
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -565,48 +565,48 @@ git commit -m "feat(api): add memoized feature flag loader"
 Create `apps/api/src/middleware/feature-flag.test.ts`:
 
 ```ts
-import { Hono } from 'hono'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Hono } from 'hono';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const isFeatureEnabled = vi.fn()
-vi.mock('../lib/feature-flags.js', () => ({ isFeatureEnabled }))
+const isFeatureEnabled = vi.fn();
+vi.mock('../lib/feature-flags.js', () => ({ isFeatureEnabled }));
 
-const { requireFlag } = await import('./feature-flag.js')
+const { requireFlag } = await import('./feature-flag.js');
 
 const buildApp = () => {
-  const app = new Hono()
-  app.use('*', requireFlag('crews'))
-  app.get('/thing', (ctx) => ctx.json({ success: true }))
-  return app
-}
+  const app = new Hono();
+  app.use('*', requireFlag('crews'));
+  app.get('/thing', (ctx) => ctx.json({ success: true }));
+  return app;
+};
 
 describe('requireFlag', () => {
-  beforeEach(() => isFeatureEnabled.mockReset())
+  beforeEach(() => isFeatureEnabled.mockReset());
 
   it('passes the request through when the flag is on', async () => {
-    isFeatureEnabled.mockResolvedValue(true)
-    const res = await buildApp().request('/thing')
-    expect(res.status).toBe(200)
-  })
+    isFeatureEnabled.mockResolvedValue(true);
+    const res = await buildApp().request('/thing');
+    expect(res.status).toBe(200);
+  });
 
   it('answers 404 when the flag is off', async () => {
-    isFeatureEnabled.mockResolvedValue(false)
-    const res = await buildApp().request('/thing')
-    expect(res.status).toBe(404)
-  })
+    isFeatureEnabled.mockResolvedValue(false);
+    const res = await buildApp().request('/thing');
+    expect(res.status).toBe(404);
+  });
 
   it('never names the flag in the response body', async () => {
-    isFeatureEnabled.mockResolvedValue(false)
-    const res = await buildApp().request('/thing')
-    expect(JSON.stringify(await res.json())).not.toContain('crews')
-  })
+    isFeatureEnabled.mockResolvedValue(false);
+    const res = await buildApp().request('/thing');
+    expect(JSON.stringify(await res.json())).not.toContain('crews');
+  });
 
   it('answers 404 when the flag lookup throws', async () => {
-    isFeatureEnabled.mockRejectedValue(new Error('boom'))
-    const res = await buildApp().request('/thing')
-    expect(res.status).toBe(404)
-  })
-})
+    isFeatureEnabled.mockRejectedValue(new Error('boom'));
+    const res = await buildApp().request('/thing');
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -619,11 +619,11 @@ Expected: FAIL, cannot resolve `./feature-flag.js`.
 Create `apps/api/src/middleware/feature-flag.ts`:
 
 ```ts
-import type { FeatureFlagKey } from '@concert-crawl/entitlements'
-import type { MiddlewareHandler } from 'hono'
+import type { FeatureFlagKey } from '@concert-crawl/entitlements';
+import type { MiddlewareHandler } from 'hono';
 
-import { isFeatureEnabled } from '../lib/feature-flags.js'
-import { apiLogger } from '../lib/logger.js'
+import { isFeatureEnabled } from '../lib/feature-flags.js';
+import { apiLogger } from '../lib/logger.js';
 
 /**
  * Gates a router on a release flag. Mount this with `router.use('*', ...)` at
@@ -633,21 +633,21 @@ import { apiLogger } from '../lib/logger.js'
  */
 export const requireFlag = (key: FeatureFlagKey): MiddlewareHandler => {
   return async (ctx, next) => {
-    let enabled = false
+    let enabled = false;
     try {
-      enabled = await isFeatureEnabled(key)
+      enabled = await isFeatureEnabled(key);
     } catch (err) {
-      apiLogger.error({ err, key }, 'feature flag gate lookup failed')
+      apiLogger.error({ err, key }, 'feature flag gate lookup failed');
     }
 
     if (!enabled) {
       // Deliberately indistinguishable from an unrouted path. No flag key.
-      return ctx.json({ success: false, error: 'Not found' }, 404)
+      return ctx.json({ success: false, error: 'Not found' }, 404);
     }
 
-    await next()
-  }
-}
+    await next();
+  };
+};
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -685,11 +685,11 @@ git commit -m "feat(api): add requireFlag middleware"
 Create `apps/api/src/routes/feature-flags.integration.test.ts`:
 
 ```ts
-import { db, featureFlags } from '@concert-crawl/db'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { db, featureFlags } from '@concert-crawl/db';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { app } from '../../app.js'
-import { clearFeatureFlagCache } from '../../lib/feature-flags.js'
+import { app } from '../../app.js';
+import { clearFeatureFlagCache } from '../../lib/feature-flags.js';
 
 const setFlag = async (key: string, enabled: boolean) => {
   await db
@@ -698,15 +698,15 @@ const setFlag = async (key: string, enabled: boolean) => {
     .onConflictDoUpdate({
       target: featureFlags.key,
       set: { enabled, updatedAt: new Date(), updatedBy: 'test' },
-    })
-  clearFeatureFlagCache()
-}
+    });
+  clearFeatureFlagCache();
+};
 
 describe('feature flag route gating', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    clearFeatureFlagCache()
-  })
+    await db.delete(featureFlags);
+    clearFeatureFlagCache();
+  });
 
   // Asserted per route, not per router: a router-level mount that silently
   // stopped matching one path is exactly the regression this catches.
@@ -714,43 +714,43 @@ describe('feature flag route gating', () => {
     { method: 'GET', path: '/v1/crews' },
     { method: 'POST', path: '/v1/crews' },
     { method: 'GET', path: '/v1/crews/00000000-0000-0000-0000-000000000000' },
-  ]
+  ];
 
   for (const route of crewRoutes) {
     it(`answers 404 for ${route.method} ${route.path} when crews is off`, async () => {
-      const res = await app.request(route.path, { method: route.method })
-      expect(res.status).toBe(404)
-    })
+      const res = await app.request(route.path, { method: route.method });
+      expect(res.status).toBe(404);
+    });
   }
 
   it('answers 404 for the crew-invites router when crews is off', async () => {
-    const res = await app.request('/v1/crew-invites/sometoken')
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request('/v1/crew-invites/sometoken');
+    expect(res.status).toBe(404);
+  });
 
   it('answers 404 for the spotify router when spotify-sync is off', async () => {
-    const res = await app.request('/v1/spotify/taste-picks')
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request('/v1/spotify/taste-picks');
+    expect(res.status).toBe(404);
+  });
 
   // The ordering guarantee: requireFlag runs before requireFeature, so an
   // unauthenticated request to a flagged-off premium route gets 404 rather
   // than the 401/403 that would confirm the feature exists.
   it('answers 404 rather than 401 or 403 while the flag is off', async () => {
-    const res = await app.request('/v1/crews', { method: 'POST' })
-    expect(res.status).toBe(404)
-    expect(res.status).not.toBe(401)
-    expect(res.status).not.toBe(403)
-  })
+    const res = await app.request('/v1/crews', { method: 'POST' });
+    expect(res.status).toBe(404);
+    expect(res.status).not.toBe(401);
+    expect(res.status).not.toBe(403);
+  });
 
   it('stops answering 404 once the flag is turned on', async () => {
-    await setFlag('crews', true)
-    const res = await app.request('/v1/crews')
+    await setFlag('crews', true);
+    const res = await app.request('/v1/crews');
     // Now reaches auth, which rejects the unauthenticated request. The point
     // is only that the flag gate no longer swallows it.
-    expect(res.status).not.toBe(404)
-  })
-})
+    expect(res.status).not.toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -763,7 +763,7 @@ Expected: FAIL. The crew routes answer 401, not 404.
 In `apps/api/src/routes/crews.ts`, add the import alongside the existing middleware imports:
 
 ```ts
-import { requireFlag } from '../middleware/feature-flag.js'
+import { requireFlag } from '../middleware/feature-flag.js';
 ```
 
 Then, immediately after the `export const crewsRouter = new Hono<...>()` line and **before every other `use` or route registration**, add:
@@ -772,7 +772,7 @@ Then, immediately after the `export const crewsRouter = new Hono<...>()` line an
 // Release gate. Mounted first so a flagged-off crews API answers 404 and never
 // the 403 that requireFeature('crews') would give, which would advertise a
 // feature customers cannot reach.
-crewsRouter.use('*', requireFlag('crews'))
+crewsRouter.use('*', requireFlag('crews'));
 ```
 
 - [ ] **Step 4: Mount the gate on `crew-invites.ts`**
@@ -780,7 +780,7 @@ crewsRouter.use('*', requireFlag('crews'))
 Same import, and immediately after the router construction:
 
 ```ts
-crewInvitesRouter.use('*', requireFlag('crews'))
+crewInvitesRouter.use('*', requireFlag('crews'));
 ```
 
 - [ ] **Step 5: Mount the gate on `spotify.ts`**
@@ -788,7 +788,7 @@ crewInvitesRouter.use('*', requireFlag('crews'))
 Same import, and immediately after the router construction:
 
 ```ts
-spotifyRouter.use('*', requireFlag('spotify-sync'))
+spotifyRouter.use('*', requireFlag('spotify-sync'));
 ```
 
 - [ ] **Step 6: Run the test to verify it passes**
@@ -834,40 +834,40 @@ Append to `apps/api/src/routes/feature-flags.integration.test.ts`, inside a new 
 ```ts
 describe('GET /v1/flags', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    clearFeatureFlagCache()
-  })
+    await db.delete(featureFlags);
+    clearFeatureFlagCache();
+  });
 
   it('returns the merged flag map without authentication', async () => {
-    const res = await app.request('/v1/flags')
-    expect(res.status).toBe(200)
-    const body = await res.json()
+    const res = await app.request('/v1/flags');
+    expect(res.status).toBe(200);
+    const body = await res.json();
     expect(body.data).toEqual({
       'spotify-sync': false,
       crews: false,
       'release-notes': true,
-    })
-  })
+    });
+  });
 
   it('withholds the registry labels and descriptions', async () => {
-    const res = await app.request('/v1/flags')
-    const text = await res.text()
-    expect(text).not.toContain('Spotify sync')
-    expect(text).not.toContain('Browse crew lens')
-  })
+    const res = await app.request('/v1/flags');
+    const text = await res.text();
+    expect(text).not.toContain('Spotify sync');
+    expect(text).not.toContain('Browse crew lens');
+  });
 
   it('sets a cache header matching the loader TTL', async () => {
-    const res = await app.request('/v1/flags')
-    expect(res.headers.get('cache-control')).toBe('public, max-age=30')
-  })
+    const res = await app.request('/v1/flags');
+    expect(res.headers.get('cache-control')).toBe('public, max-age=30');
+  });
 
   it('reflects a stored override', async () => {
-    await setFlag('crews', true)
-    const res = await app.request('/v1/flags')
-    const body = await res.json()
-    expect(body.data.crews).toBe(true)
-  })
-})
+    await setFlag('crews', true);
+    const res = await app.request('/v1/flags');
+    const body = await res.json();
+    expect(body.data.crews).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -880,25 +880,25 @@ Expected: FAIL with 404, the route does not exist.
 Create `apps/api/src/routes/flags.ts`:
 
 ```ts
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 
 import {
   FEATURE_FLAG_CACHE_TTL_MS,
   loadFeatureFlags,
-} from '../lib/feature-flags.js'
+} from '../lib/feature-flags.js';
 
-export const flagsRouter = new Hono()
+export const flagsRouter = new Hono();
 
 // Unauthenticated on purpose: logged-out surfaces need the same answer, and
 // the keys are in the client bundle regardless. Only key and enabled ship.
 flagsRouter.get('/', async (ctx) => {
-  const flags = await loadFeatureFlags()
+  const flags = await loadFeatureFlags();
   ctx.header(
     'Cache-Control',
     `public, max-age=${FEATURE_FLAG_CACHE_TTL_MS / 1000}`,
-  )
-  return ctx.json({ success: true, data: flags })
-})
+  );
+  return ctx.json({ success: true, data: flags });
+});
 ```
 
 - [ ] **Step 4: Mount it**
@@ -906,13 +906,13 @@ flagsRouter.get('/', async (ctx) => {
 In `apps/api/src/routes/index.ts`, add the import beside the other public route imports:
 
 ```ts
-import { flagsRouter } from './flags.js'
+import { flagsRouter } from './flags.js';
 ```
 
 and inside `registerRoutes`, beside the other public mounts (order relative to them does not matter, the path is unique):
 
 ```ts
-app.route('/v1/flags', flagsRouter)
+app.route('/v1/flags', flagsRouter);
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -951,39 +951,39 @@ Append to `apps/api/src/routes/feature-flags.integration.test.ts`. Follow the ex
 ```ts
 describe('admin feature flags', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    await db.delete(auditLog)
-    clearFeatureFlagCache()
-  })
+    await db.delete(featureFlags);
+    await db.delete(auditLog);
+    clearFeatureFlagCache();
+  });
 
   it('lists every registry entry with its current state', async () => {
     const res = await app.request('/v1/admin/feature-flags', {
       headers: adminHeaders(),
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.data).toHaveLength(3)
-    const crews = body.data.find((row) => row.key === 'crews')
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toHaveLength(3);
+    const crews = body.data.find((row) => row.key === 'crews');
     expect(crews).toMatchObject({
       key: 'crews',
       label: 'Crews',
       enabled: false,
       updatedAt: null,
       updatedBy: null,
-    })
-  })
+    });
+  });
 
   it('toggles a flag and returns the new state', async () => {
     const res = await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: true }),
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.data.enabled).toBe(true)
-    expect(body.data.updatedAt).not.toBeNull()
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.enabled).toBe(true);
+    expect(body.data.updatedAt).not.toBeNull();
+  });
 
   it('moves updatedAt forward on a second toggle', async () => {
     const patch = (enabled: boolean) =>
@@ -991,64 +991,64 @@ describe('admin feature flags', () => {
         method: 'PATCH',
         headers: { ...adminHeaders(), 'content-type': 'application/json' },
         body: JSON.stringify({ enabled }),
-      })
-    const first = await (await patch(true)).json()
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    const second = await (await patch(false)).json()
+      });
+    const first = await (await patch(true)).json();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const second = await (await patch(false)).json();
     expect(new Date(second.data.updatedAt).getTime()).toBeGreaterThan(
       new Date(first.data.updatedAt).getTime(),
-    )
-  })
+    );
+  });
 
   it('writes an audit row naming the flag and the new value', async () => {
     await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: true }),
-    })
-    const rows = await db.select().from(auditLog)
-    expect(rows).toHaveLength(1)
+    });
+    const rows = await db.select().from(auditLog);
+    expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       action: 'feature_flag.toggle',
       targetId: 'feature_flag:crews',
-    })
-    expect(rows[0].metadata).toMatchObject({ enabled: true })
-  })
+    });
+    expect(rows[0].metadata).toMatchObject({ enabled: true });
+  });
 
   it('404s on a key that is not in the registry', async () => {
     const res = await app.request('/v1/admin/feature-flags/not-a-flag', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: true }),
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('400s on a non-boolean body', async () => {
     const res = await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: 'yes' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('rejects a non-admin caller', async () => {
-    const res = await app.request('/v1/admin/feature-flags')
-    expect([401, 403]).toContain(res.status)
-  })
+    const res = await app.request('/v1/admin/feature-flags');
+    expect([401, 403]).toContain(res.status);
+  });
 
   it('makes the change visible to the public endpoint immediately', async () => {
     await app.request('/v1/admin/feature-flags/crews', {
       method: 'PATCH',
       headers: { ...adminHeaders(), 'content-type': 'application/json' },
       body: JSON.stringify({ enabled: true }),
-    })
-    const res = await app.request('/v1/flags')
-    const body = await res.json()
-    expect(body.data.crews).toBe(true)
-  })
-})
+    });
+    const res = await app.request('/v1/flags');
+    const body = await res.json();
+    expect(body.data.crews).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -1061,36 +1061,36 @@ Expected: FAIL with 404 on every admin request.
 Create `apps/api/src/routes/admin/feature-flags.ts`:
 
 ```ts
-import { db, featureFlags } from '@concert-crawl/db'
+import { db, featureFlags } from '@concert-crawl/db';
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_KEYS,
   isFeatureFlagKey,
   type AdminFeatureFlag,
-} from '@concert-crawl/entitlements'
-import { getAuth } from '@hono/clerk-auth'
-import { Hono } from 'hono'
-import { z } from 'zod'
+} from '@concert-crawl/entitlements';
+import { getAuth } from '@hono/clerk-auth';
+import { Hono } from 'hono';
+import { z } from 'zod';
 
 import {
   clearFeatureFlagCache,
   loadFeatureFlags,
-} from '../../lib/feature-flags.js'
-import type { AdminVariables } from './index.js'
+} from '../../lib/feature-flags.js';
+import type { AdminVariables } from './index.js';
 
-export const featureFlagsAdminRouter = new Hono<AdminVariables>()
+export const featureFlagsAdminRouter = new Hono<AdminVariables>();
 
-const patchSchema = z.object({ enabled: z.boolean() })
+const patchSchema = z.object({ enabled: z.boolean() });
 
 featureFlagsAdminRouter.get('/', async (ctx) => {
   const [flags, rows] = await Promise.all([
     loadFeatureFlags(),
     db.select().from(featureFlags),
-  ])
-  const stored = new Map(rows.map((row) => [row.key, row]))
+  ]);
+  const stored = new Map(rows.map((row) => [row.key, row]));
 
   const data: AdminFeatureFlag[] = FEATURE_FLAG_KEYS.map((key) => {
-    const row = stored.get(key)
+    const row = stored.get(key);
     return {
       key,
       label: FEATURE_FLAGS[key].label,
@@ -1098,29 +1098,32 @@ featureFlagsAdminRouter.get('/', async (ctx) => {
       enabled: flags[key],
       updatedAt: row?.updatedAt.toISOString() ?? null,
       updatedBy: row?.updatedBy ?? null,
-    }
-  })
+    };
+  });
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 featureFlagsAdminRouter.patch('/:key', async (ctx) => {
-  const key = ctx.req.param('key')
+  const key = ctx.req.param('key');
   if (!isFeatureFlagKey(key)) {
-    return ctx.json({ success: false, error: 'Unknown feature flag' }, 404)
+    return ctx.json({ success: false, error: 'Unknown feature flag' }, 404);
   }
 
-  const parsed = patchSchema.safeParse(await ctx.req.json().catch(() => null))
+  const parsed = patchSchema.safeParse(await ctx.req.json().catch(() => null));
   if (!parsed.success) {
-    return ctx.json({ success: false, error: 'enabled must be a boolean' }, 400)
+    return ctx.json(
+      { success: false, error: 'enabled must be a boolean' },
+      400,
+    );
   }
 
-  const auth = getAuth(ctx)
-  const actorId = auth?.userId ?? 'unknown'
-  const { enabled } = parsed.data
+  const auth = getAuth(ctx);
+  const actorId = auth?.userId ?? 'unknown';
+  const { enabled } = parsed.data;
   // Set explicitly in both branches: DEFAULT now() fires on insert only, so an
   // update that omitted it would freeze the timestamp at the first toggle.
-  const updatedAt = new Date()
+  const updatedAt = new Date();
 
   const [row] = await db
     .insert(featureFlags)
@@ -1129,20 +1132,20 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
       target: featureFlags.key,
       set: { enabled, updatedAt, updatedBy: actorId },
     })
-    .returning()
+    .returning();
 
   if (!row) {
-    return ctx.json({ success: false, error: 'Failed to save flag' }, 500)
+    return ctx.json({ success: false, error: 'Failed to save flag' }, 500);
   }
 
   // In-process only. Other instances converge within the loader's TTL, which
   // is the tolerance the 30s memo already accepts.
-  clearFeatureFlagCache()
+  clearFeatureFlagCache();
 
-  ctx.set('auditAction', 'feature_flag.toggle')
-  ctx.set('auditTargetId', `feature_flag:${key}`)
-  ctx.set('auditActorId', actorId)
-  ctx.set('auditMeta', { enabled })
+  ctx.set('auditAction', 'feature_flag.toggle');
+  ctx.set('auditTargetId', `feature_flag:${key}`);
+  ctx.set('auditActorId', actorId);
+  ctx.set('auditMeta', { enabled });
 
   const data: AdminFeatureFlag = {
     key,
@@ -1151,10 +1154,10 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
     enabled: row.enabled,
     updatedAt: row.updatedAt.toISOString(),
     updatedBy: row.updatedBy,
-  }
+  };
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 ```
 
 - [ ] **Step 4: Mount it**
@@ -1162,13 +1165,13 @@ featureFlagsAdminRouter.patch('/:key', async (ctx) => {
 In `apps/api/src/routes/admin/index.ts`, add the import beside the other admin router imports:
 
 ```ts
-import { featureFlagsAdminRouter } from './feature-flags.js'
+import { featureFlagsAdminRouter } from './feature-flags.js';
 ```
 
 and beside the other `adminRouter.route(...)` calls:
 
 ```ts
-adminRouter.route('/feature-flags', featureFlagsAdminRouter)
+adminRouter.route('/feature-flags', featureFlagsAdminRouter);
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -1208,22 +1211,22 @@ git commit -m "feat(api): add admin feature flag endpoints"
 Create `apps/web/src/lib/queries/use-feature-flags.test.tsx`. Mirror the provider wrapper used by the sibling `use-availability.test.tsx` (`usePlanState` has no test file of its own; its coverage rides in `use-entitlement.test.tsx`):
 
 ```tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
-import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderHook, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
-const get = vi.fn()
-vi.mock('@/lib/api', () => ({ publicApiClient: { get } }))
+const get = vi.fn();
+vi.mock('@/lib/api', () => ({ publicApiClient: { get } }));
 
-const { useFeatureFlag, useFeatureFlags } = await import('./use-feature-flags')
+const { useFeatureFlag, useFeatureFlags } = await import('./use-feature-flags');
 
 const wrapper = ({ children }: { children: ReactNode }) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  })
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
-}
+  });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+};
 
 describe('useFeatureFlags', () => {
   it('returns the flag map from the public endpoint', async () => {
@@ -1231,37 +1234,37 @@ describe('useFeatureFlags', () => {
       'spotify-sync': false,
       crews: true,
       'release-notes': true,
-    })
-    const { result } = renderHook(() => useFeatureFlags(), { wrapper })
-    await waitFor(() => expect(result.current.data?.crews).toBe(true))
-    expect(get).toHaveBeenCalledWith('/v1/flags')
-  })
+    });
+    const { result } = renderHook(() => useFeatureFlags(), { wrapper });
+    await waitFor(() => expect(result.current.data?.crews).toBe(true));
+    expect(get).toHaveBeenCalledWith('/v1/flags');
+  });
 
   it('serves the registry default while the fetch is in flight', async () => {
-    get.mockReturnValue(new Promise(() => {}))
-    const { result } = renderHook(() => useFeatureFlag('crews'), { wrapper })
-    expect(result.current).toEqual({ isLoading: true, enabled: false })
-  })
+    get.mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useFeatureFlag('crews'), { wrapper });
+    expect(result.current).toEqual({ isLoading: true, enabled: false });
+  });
 
   // Same in-flight state, opposite default: a released feature must not blink
   // out between first paint and the flag map landing.
   it('keeps a default-on flag on while the fetch is in flight', async () => {
-    get.mockReturnValue(new Promise(() => {}))
+    get.mockReturnValue(new Promise(() => {}));
     const { result } = renderHook(() => useFeatureFlag('release-notes'), {
       wrapper,
-    })
-    expect(result.current).toEqual({ isLoading: true, enabled: true })
-  })
+    });
+    expect(result.current).toEqual({ isLoading: true, enabled: true });
+  });
 
   it('falls back to registry defaults when the fetch fails', async () => {
-    get.mockRejectedValue(new Error('offline'))
+    get.mockRejectedValue(new Error('offline'));
     const { result } = renderHook(() => useFeatureFlag('release-notes'), {
       wrapper,
-    })
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.enabled).toBe(true)
-  })
-})
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.enabled).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -1274,18 +1277,18 @@ Expected: FAIL, module not found.
 Create `apps/web/src/lib/queries/use-feature-flags.ts`:
 
 ```ts
-'use client'
+'use client';
 
 import {
   featureFlagDefaults,
   type FeatureFlagKey,
   type FeatureFlagView,
-} from '@concert-crawl/entitlements'
-import { useQuery } from '@tanstack/react-query'
+} from '@concert-crawl/entitlements';
+import { useQuery } from '@tanstack/react-query';
 
-import { publicApiClient } from '@/lib/api'
+import { publicApiClient } from '@/lib/api';
 
-export const featureFlagsQueryKey = ['feature-flags'] as const
+export const featureFlagsQueryKey = ['feature-flags'] as const;
 
 // Deliberately not gated on isSignedIn, unlike usePlanState: flags gate
 // logged-out surfaces too, so the query must run for everyone.
@@ -1294,7 +1297,7 @@ export function useFeatureFlags() {
     queryKey: featureFlagsQueryKey,
     queryFn: () => publicApiClient.get<FeatureFlagView>('/v1/flags'),
     staleTime: 30 * 1000,
-  })
+  });
 }
 
 // Element-level gate. `enabled` reads the registry default until the fetch
@@ -1302,14 +1305,14 @@ export function useFeatureFlags() {
 // and an unreleased one is never briefly shown. Callers that would rather hold
 // their render than show the default can read `isLoading`.
 export function useFeatureFlag(key: FeatureFlagKey): {
-  isLoading: boolean
-  enabled: boolean
+  isLoading: boolean;
+  enabled: boolean;
 } {
-  const { data, isPending } = useFeatureFlags()
+  const { data, isPending } = useFeatureFlags();
   return {
     isLoading: isPending,
     enabled: (data ?? featureFlagDefaults())[key],
-  }
+  };
 }
 ```
 
@@ -1325,71 +1328,73 @@ Append to `apps/web/src/lib/queries/use-entitlement.test.tsx`, following that fi
 ```tsx
 describe('useEntitlement flag seam', () => {
   it('forces hidden for a founder when the flag is off', () => {
-    mockSignedIn({ plan: 'founder', roleComped: false })
-    mockFlags({ crews: false })
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
+    mockSignedIn({ plan: 'founder', roleComped: false });
+    mockFlags({ crews: false });
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
     expect(result.current).toEqual({
       isLoading: false,
       active: false,
       surface: 'hidden',
-    })
-  })
+    });
+  });
 
   it('forces hidden for a comped user when the flag is off', () => {
-    mockSignedIn({ plan: 'free', roleComped: true })
-    mockFlags({ crews: false })
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
-    expect(result.current.active).toBe(false)
-    expect(result.current.surface).toBe('hidden')
-  })
+    mockSignedIn({ plan: 'free', roleComped: true });
+    mockFlags({ crews: false });
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
+    expect(result.current.active).toBe(false);
+    expect(result.current.surface).toBe('hidden');
+  });
 
   it('forces hidden for a logged-out visitor when the flag is off', () => {
-    mockSignedOut()
-    mockFlags({ crews: false })
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
-    expect(result.current.surface).toBe('hidden')
-  })
+    mockSignedOut();
+    mockFlags({ crews: false });
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
+    expect(result.current.surface).toBe('hidden');
+  });
 
   it('leaves the matrix answer alone when the flag is on', () => {
-    mockSignedIn({ plan: 'free', roleComped: false })
-    mockFlags({ crews: true })
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
-    expect(result.current.surface).toBe('paywall-on-tap')
-  })
+    mockSignedIn({ plan: 'free', roleComped: false });
+    mockFlags({ crews: true });
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
+    expect(result.current.surface).toBe('paywall-on-tap');
+  });
 
   it('never grants a feature the matrix denies, flag on', () => {
-    mockSignedIn({ plan: 'free', roleComped: false })
-    mockFlags({ crews: true })
-    const { result } = renderHook(() => useEntitlement('alerts'), { wrapper })
-    expect(result.current.active).toBe(false)
-  })
+    mockSignedIn({ plan: 'free', roleComped: false });
+    mockFlags({ crews: true });
+    const { result } = renderHook(() => useEntitlement('alerts'), { wrapper });
+    expect(result.current.active).toBe(false);
+  });
 
   it('holds rendering while the flag map is still loading', () => {
-    mockSignedIn({ plan: 'premium', roleComped: false })
-    mockFlagsLoading()
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
+    mockSignedIn({ plan: 'premium', roleComped: false });
+    mockFlagsLoading();
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
     expect(result.current).toEqual({
       isLoading: true,
       active: false,
       surface: null,
-    })
-  })
+    });
+  });
 
   it('is unaffected for a feature no flag names', () => {
-    mockSignedIn({ plan: 'premium', roleComped: false })
-    mockFlags({ crews: false })
-    const { result } = renderHook(() => useEntitlement('watching'), { wrapper })
-    expect(result.current.active).toBe(true)
-  })
+    mockSignedIn({ plan: 'premium', roleComped: false });
+    mockFlags({ crews: false });
+    const { result } = renderHook(() => useEntitlement('watching'), {
+      wrapper,
+    });
+    expect(result.current.active).toBe(true);
+  });
 
   // The registry default for `crews` is false, so an outage must not reveal it.
   it('falls back to the registry default when the flag fetch errors', () => {
-    mockSignedIn({ plan: 'premium', roleComped: false })
-    mockFlagsError()
-    const { result } = renderHook(() => useEntitlement('crews'), { wrapper })
-    expect(result.current.surface).toBe('hidden')
-  })
-})
+    mockSignedIn({ plan: 'premium', roleComped: false });
+    mockFlagsError();
+    const { result } = renderHook(() => useEntitlement('crews'), { wrapper });
+    expect(result.current.surface).toBe('hidden');
+  });
+});
 ```
 
 `mockFlagsError` puts `useFeatureFlags` in the settled-but-dataless state: `{ data: undefined, isPending: false }`. Mirror however the file already mocks a failed query; if it has no such helper, mock the module's return value directly.
@@ -1407,23 +1412,23 @@ Edit `apps/web/src/lib/queries/use-entitlement.ts`. Add to the imports:
 import {
   featureFlagDefaults,
   flagForEntitlement,
-} from '@concert-crawl/entitlements'
-import { useFeatureFlags } from './use-feature-flags'
+} from '@concert-crawl/entitlements';
+import { useFeatureFlags } from './use-feature-flags';
 ```
 
 Then, inside `useEntitlement`, directly after the `const { data: planState, isPending } = usePlanState()` line:
 
 ```ts
-const flagKey = flagForEntitlement(feature)
-const { data: flags, isPending: flagsPending } = useFeatureFlags()
+const flagKey = flagForEntitlement(feature);
+const { data: flags, isPending: flagsPending } = useFeatureFlags();
 
 // A flag can only restrict, never grant, so this short-circuits the false
 // case and leaves every true case to the matrix below. Hold rendering while
 // the map loads rather than flashing the unflagged treatment.
 if (flagKey !== null) {
-  if (flagsPending) return { isLoading: true, active: false, surface: null }
+  if (flagsPending) return { isLoading: true, active: false, surface: null };
   if (!(flags ?? featureFlagDefaults())[flagKey]) {
-    return { isLoading: false, active: false, surface: 'hidden' }
+    return { isLoading: false, active: false, surface: 'hidden' };
   }
 }
 ```
@@ -1469,39 +1474,39 @@ git commit -m "feat(web): resolve flagged-off features to hidden in useEntitleme
 Create `apps/web/src/lib/feature-flags.test.ts`:
 
 ```ts
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const get = vi.fn()
-vi.mock('@/lib/api', () => ({ publicApiClient: { get } }))
+const get = vi.fn();
+vi.mock('@/lib/api', () => ({ publicApiClient: { get } }));
 
-const { getFeatureFlags, isFeatureEnabled } = await import('./feature-flags')
+const { getFeatureFlags, isFeatureEnabled } = await import('./feature-flags');
 
 describe('server-side getFeatureFlags', () => {
-  beforeEach(() => get.mockReset())
+  beforeEach(() => get.mockReset());
 
   it('returns the map the API gave it', async () => {
     get.mockResolvedValue({
       'spotify-sync': false,
       crews: true,
       'release-notes': true,
-    })
-    await expect(isFeatureEnabled('crews')).resolves.toBe(true)
-  })
+    });
+    await expect(isFeatureEnabled('crews')).resolves.toBe(true);
+  });
 
   it('falls back to registry defaults when the fetch throws', async () => {
-    get.mockRejectedValue(new Error('ECONNREFUSED'))
+    get.mockRejectedValue(new Error('ECONNREFUSED'));
     await expect(getFeatureFlags()).resolves.toEqual({
       'spotify-sync': false,
       crews: false,
       'release-notes': true,
-    })
-  })
+    });
+  });
 
   it('falls back when the API returns a malformed body', async () => {
-    get.mockResolvedValue({ crews: 'yes' })
-    await expect(isFeatureEnabled('crews')).resolves.toBe(false)
-  })
-})
+    get.mockResolvedValue({ crews: 'yes' });
+    await expect(isFeatureEnabled('crews')).resolves.toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -1514,49 +1519,49 @@ Expected: FAIL, module not found.
 Create `apps/web/src/lib/feature-flags.ts`:
 
 ```ts
-import 'server-only'
+import 'server-only';
 
 import {
   featureFlagDefaults,
   FEATURE_FLAG_KEYS,
   type FeatureFlagKey,
   type FeatureFlagView,
-} from '@concert-crawl/entitlements'
-import { z } from 'zod'
+} from '@concert-crawl/entitlements';
+import { z } from 'zod';
 
-import { publicApiClient } from '@/lib/api'
+import { publicApiClient } from '@/lib/api';
 
 const flagsSchema = z.object({
   'spotify-sync': z.boolean(),
   crews: z.boolean(),
   'release-notes': z.boolean(),
-})
+});
 
 export const getFeatureFlags = async (): Promise<FeatureFlagView> => {
   try {
-    const raw = await publicApiClient.get<unknown>('/v1/flags')
-    const parsed = flagsSchema.safeParse(raw)
+    const raw = await publicApiClient.get<unknown>('/v1/flags');
+    const parsed = flagsSchema.safeParse(raw);
     if (!parsed.success) {
-      console.error('feature flags: unexpected payload', parsed.error.issues)
-      return featureFlagDefaults()
+      console.error('feature flags: unexpected payload', parsed.error.issues);
+      return featureFlagDefaults();
     }
-    return parsed.data
+    return parsed.data;
   } catch (err) {
     // Fail open to the registry, which defaults the unreleased features off.
     // An unreachable API must never reveal something we have not shipped.
-    console.error('feature flags: fetch failed, using defaults', err)
-    return featureFlagDefaults()
+    console.error('feature flags: fetch failed, using defaults', err);
+    return featureFlagDefaults();
   }
-}
+};
 
 export const isFeatureEnabled = async (
   key: FeatureFlagKey,
 ): Promise<boolean> => {
-  const flags = await getFeatureFlags()
-  return flags[key]
-}
+  const flags = await getFeatureFlags();
+  return flags[key];
+};
 
-export { FEATURE_FLAG_KEYS }
+export { FEATURE_FLAG_KEYS };
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -1569,15 +1574,15 @@ Expected: PASS, 3 tests.
 In each of the four page files, add the imports:
 
 ```ts
-import { notFound } from 'next/navigation'
+import { notFound } from 'next/navigation';
 
-import { isFeatureEnabled } from '@/lib/feature-flags'
+import { isFeatureEnabled } from '@/lib/feature-flags';
 ```
 
 and make the **first statement** of the exported default async component:
 
 ```ts
-if (!(await isFeatureEnabled('crews'))) notFound()
+if (!(await isFeatureEnabled('crews'))) notFound();
 ```
 
 using `'crews'` for `crews/page.tsx`, `crews/[crewId]/page.tsx` and `crew/join/[token]/page.tsx`, and `'release-notes'` for `changelog/page.tsx`.
@@ -1641,51 +1646,51 @@ Add to `apps/web/src/components/consumer/bottom-nav/BottomNav.test.tsx`:
 
 ```tsx
 it('drops the crews tab when the flag is off', () => {
-  mockFeatureFlag('crews', false)
-  render(<BottomNav />)
-  expect(screen.queryByRole('link', { name: /crews/i })).toBeNull()
-})
+  mockFeatureFlag('crews', false);
+  render(<BottomNav />);
+  expect(screen.queryByRole('link', { name: /crews/i })).toBeNull();
+});
 
 it('renders the crews tab when the flag is on', () => {
-  mockFeatureFlag('crews', true)
-  render(<BottomNav />)
-  expect(screen.getByRole('link', { name: /crews/i })).toBeVisible()
-})
+  mockFeatureFlag('crews', true);
+  render(<BottomNav />);
+  expect(screen.getByRole('link', { name: /crews/i })).toBeVisible();
+});
 
 it('keeps the other three tabs when crews is off', () => {
-  mockFeatureFlag('crews', false)
-  render(<BottomNav />)
-  expect(screen.getAllByRole('link')).toHaveLength(3)
-})
+  mockFeatureFlag('crews', false);
+  render(<BottomNav />);
+  expect(screen.getAllByRole('link')).toHaveLength(3);
+});
 ```
 
 Add to `apps/web/src/components/consumer/app-header/AppHeader.test.tsx`:
 
 ```tsx
 it('drops the crews link when the flag is off', () => {
-  mockFeatureFlag('crews', false)
-  render(<AppHeader />)
-  expect(screen.queryByRole('link', { name: 'Crews' })).toBeNull()
-})
+  mockFeatureFlag('crews', false);
+  render(<AppHeader />);
+  expect(screen.queryByRole('link', { name: 'Crews' })).toBeNull();
+});
 
 it('renders the crews link when the flag is on', () => {
-  mockFeatureFlag('crews', true)
-  render(<AppHeader />)
-  expect(screen.getByRole('link', { name: 'Crews' })).toBeVisible()
-})
+  mockFeatureFlag('crews', true);
+  render(<AppHeader />);
+  expect(screen.getByRole('link', { name: 'Crews' })).toBeVisible();
+});
 ```
 
 Define `mockFeatureFlag` in each file with the same shape the sibling tests use for their hook mocks:
 
 ```tsx
-const useFeatureFlag = vi.fn()
-vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+const useFeatureFlag = vi.fn();
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }));
 
 const mockFeatureFlag = (key: string, enabled: boolean) =>
   useFeatureFlag.mockImplementation((requested: string) => ({
     isLoading: false,
     enabled: requested === key ? enabled : true,
-  }))
+  }));
 ```
 
 - [ ] **Step 3: Run them to verify they fail**
@@ -1698,14 +1703,14 @@ Expected: FAIL, the crews tab renders regardless.
 Add the import:
 
 ```tsx
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
 ```
 
 Inside the component, before the tab map:
 
 ```tsx
-const { enabled: crewsEnabled } = useFeatureFlag('crews')
-const tabs = STATIC_TABS.filter((tab) => crewsEnabled || tab.key !== 'crews')
+const { enabled: crewsEnabled } = useFeatureFlag('crews');
+const tabs = STATIC_TABS.filter((tab) => crewsEnabled || tab.key !== 'crews');
 ```
 
 Then map over `tabs` at the existing `:256` render site instead of `STATIC_TABS`.
@@ -1715,12 +1720,12 @@ Then map over `tabs` at the existing `:256` render site instead of `STATIC_TABS`
 Same import. Inside the component, before the `copy.nav.tabs.map(...)` at `:80`:
 
 ```tsx
-const { enabled: crewsEnabled } = useFeatureFlag('crews')
+const { enabled: crewsEnabled } = useFeatureFlag('crews');
 const tabs = copy.nav.tabs.filter(
   // These entries carry no `key` field, unlike the bottom nav's, so the
   // href is the only stable discriminator.
   (tab) => crewsEnabled || tab.href !== '/crews',
-)
+);
 ```
 
 Then map over `tabs`.
@@ -1730,7 +1735,7 @@ Then map over `tabs`.
 In `apps/web/src/components/consumer/filter-bar/FilterBar.tsx`, the render is already guarded by `{crews.length > 0 && (` at `:257`. Add the flag to that condition rather than a second wrapper:
 
 ```tsx
-const { enabled: crewsEnabled } = useFeatureFlag('crews')
+const { enabled: crewsEnabled } = useFeatureFlag('crews');
 ```
 
 and change the guard to `{crewsEnabled && crews.length > 0 && (`.
@@ -1740,8 +1745,8 @@ Do the same for the `CrewLensRail` render at `:331`.
 In `apps/web/src/components/consumer/crews/CrewLensList.tsx`, return `null` at the top when the flag is off:
 
 ```tsx
-const { enabled: crewsEnabled } = useFeatureFlag('crews')
-if (!crewsEnabled) return null
+const { enabled: crewsEnabled } = useFeatureFlag('crews');
+if (!crewsEnabled) return null;
 ```
 
 - [ ] **Step 7: Gate the event-detail crew presence line**
@@ -1753,8 +1758,8 @@ In `apps/web/src/components/consumer/crews/CrewGoingLine.tsx`, add the same two 
 In `apps/web/src/components/settings/connections/ConnectionsPanel.tsx` and `apps/web/src/components/consumer/spotify/OAuthHandoffSheet.tsx`, first check whether either already calls `useEntitlement('spotify-sync')`. If it does, leave it alone. If it does not, add:
 
 ```tsx
-const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
-if (!spotifyEnabled) return null
+const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
+if (!spotifyEnabled) return null;
 ```
 
 For `ConnectionsPanel`, gate only the Spotify block, not the whole panel — the panel may hold other connections, and hiding all of them would remove behaviour the flag does not cover.
@@ -1764,8 +1769,8 @@ For `ConnectionsPanel`, gate only the Spotify block, not the whole panel — the
 In `apps/web/src/components/consumer/release-notes/FeatureDropPillGate.tsx` and `UserMenuVersionFooter.tsx`, add at the top of each component body:
 
 ```tsx
-const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes')
-if (!releaseNotesEnabled) return null
+const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes');
+if (!releaseNotesEnabled) return null;
 ```
 
 - [ ] **Step 10: Write the remaining tests**
@@ -1812,32 +1817,32 @@ Add to `apps/api/src/jobs/spotify-weekly.integration.test.ts`:
 ```ts
 describe('spotify-sync flag', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    clearFeatureFlagCache()
-    delete process.env['NATIVE_DIGEST_ENABLED']
-  })
+    await db.delete(featureFlags);
+    clearFeatureFlagCache();
+    delete process.env['NATIVE_DIGEST_ENABLED'];
+  });
 
   it('sends no Spotify digest when the flag is off', async () => {
-    await seedSpotifyDigestRecipient()
-    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'))
-    expect(sentEmails).toHaveLength(0)
-  })
+    await seedSpotifyDigestRecipient();
+    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'));
+    expect(sentEmails).toHaveLength(0);
+  });
 
   it('sends the Spotify digest once the flag is on', async () => {
-    await setFlag('spotify-sync', true)
-    await seedSpotifyDigestRecipient()
-    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'))
-    expect(sentEmails.length).toBeGreaterThan(0)
-  })
+    await setFlag('spotify-sync', true);
+    await seedSpotifyDigestRecipient();
+    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'));
+    expect(sentEmails.length).toBeGreaterThan(0);
+  });
 
   // The locked decision: native following is not coupled to Spotify.
   it('still sends the native digest when spotify-sync is off', async () => {
-    process.env['NATIVE_DIGEST_ENABLED'] = '1'
-    await seedNativeDigestRecipient()
-    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'))
-    expect(sentEmails.length).toBeGreaterThan(0)
-  })
-})
+    process.env['NATIVE_DIGEST_ENABLED'] = '1';
+    await seedNativeDigestRecipient();
+    await runSpotifyWeekly(new Date('2026-09-07T12:00:00Z'));
+    expect(sentEmails.length).toBeGreaterThan(0);
+  });
+});
 ```
 
 Reuse the suite's existing seed helpers; if it has no `seedNativeDigestRecipient`, write one that inserts a `userArtistFollows` row with `source: 'manual'` plus a matching event in the window, mirroring the existing Spotify seed helper.
@@ -1852,7 +1857,7 @@ Expected: FAIL. The first case sends an email.
 In `apps/api/src/jobs/spotify-weekly.ts`, add the import:
 
 ```ts
-import { isFeatureEnabled } from '../lib/feature-flags.js'
+import { isFeatureEnabled } from '../lib/feature-flags.js';
 ```
 
 Add `digestSkippedFlag: boolean` to the `WeeklySummary` interface, and `digestSkippedFlag: false` to the summary literal in `runSpotifyWeekly`.
@@ -1972,20 +1977,20 @@ The existing `nav.test.ts` asserts that every `operations` item precedes every `
 Create `apps/web/src/components/admin/feature-flags/FeatureFlagControl.test.tsx`:
 
 ```tsx
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
-const patch = vi.fn()
+const patch = vi.fn();
 vi.mock('@/lib/api', () => ({
   apiClient: { patch },
   ApiError: class ApiError extends Error {},
-}))
+}));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => 'tok' }),
-}))
+}));
 
-import { FeatureFlagControl } from './FeatureFlagControl'
+import { FeatureFlagControl } from './FeatureFlagControl';
 
 const flags = [
   {
@@ -1996,21 +2001,21 @@ const flags = [
     updatedAt: null,
     updatedBy: null,
   },
-]
+];
 
 describe('FeatureFlagControl', () => {
   it('renders a row per flag with its current state', () => {
-    render(<FeatureFlagControl initial={flags} />)
-    expect(screen.getByText('Crews')).toBeVisible()
-    expect(screen.getByText('Off')).toBeVisible()
-  })
+    render(<FeatureFlagControl initial={flags} />);
+    expect(screen.getByText('Crews')).toBeVisible();
+    expect(screen.getByText('Off')).toBeVisible();
+  });
 
   it('asks for confirmation before saving', async () => {
-    render(<FeatureFlagControl initial={flags} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }))
-    expect(screen.getByText('Turn this on?')).toBeVisible()
-    expect(patch).not.toHaveBeenCalled()
-  })
+    render(<FeatureFlagControl initial={flags} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+    expect(screen.getByText('Turn this on?')).toBeVisible();
+    expect(patch).not.toHaveBeenCalled();
+  });
 
   it('saves and reflects the new state on confirm', async () => {
     patch.mockResolvedValue({
@@ -2018,35 +2023,35 @@ describe('FeatureFlagControl', () => {
       enabled: true,
       updatedAt: '2026-09-07T00:00:00.000Z',
       updatedBy: 'admin',
-    })
-    render(<FeatureFlagControl initial={flags} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(screen.getByText('On')).toBeVisible())
+    });
+    render(<FeatureFlagControl initial={flags} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.getByText('On')).toBeVisible());
     expect(patch).toHaveBeenCalledWith('/v1/admin/feature-flags/crews', 'tok', {
       enabled: true,
-    })
-  })
+    });
+  });
 
   it('saves nothing on cancel', async () => {
-    render(<FeatureFlagControl initial={flags} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(patch).not.toHaveBeenCalled()
-    expect(screen.getByText('Off')).toBeVisible()
-  })
+    render(<FeatureFlagControl initial={flags} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(patch).not.toHaveBeenCalled();
+    expect(screen.getByText('Off')).toBeVisible();
+  });
 
   it('surfaces an error and leaves the state unchanged when the save fails', async () => {
-    patch.mockRejectedValue(new Error('boom'))
-    render(<FeatureFlagControl initial={flags} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    patch.mockRejectedValue(new Error('boom'));
+    render(<FeatureFlagControl initial={flags} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Turn on' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() =>
       expect(screen.getByText(/Could not save the flag/)).toBeVisible(),
-    )
-    expect(screen.getByText('Off')).toBeVisible()
-  })
-})
+    );
+    expect(screen.getByText('Off')).toBeVisible();
+  });
+});
 ```
 
 - [ ] **Step 4: Run it to verify it fails**
@@ -2070,26 +2075,26 @@ Render, per row: the label, the description, a `RelTime` for `updatedAt` (or the
 Create `apps/web/src/app/(protected)/admin/feature-flags/page.tsx`:
 
 ```tsx
-import type { AdminFeatureFlag } from '@concert-crawl/entitlements'
+import type { AdminFeatureFlag } from '@concert-crawl/entitlements';
 
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import { SectionHead } from '@/components/admin/primitives'
-import { FeatureFlagControl } from '@/components/admin/feature-flags/FeatureFlagControl'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import { SectionHead } from '@/components/admin/primitives';
+import { FeatureFlagControl } from '@/components/admin/feature-flags/FeatureFlagControl';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const COPY = ADMIN_COPY.featureFlags
+const COPY = ADMIN_COPY.featureFlags;
 
 export default async function AdminFeatureFlagsPage() {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
   const flags = await apiClient.get<AdminFeatureFlag[]>(
     '/v1/admin/feature-flags',
     token,
-  )
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -2100,7 +2105,7 @@ export default async function AdminFeatureFlagsPage() {
       />
       <FeatureFlagControl initial={flags} />
     </div>
-  )
+  );
 }
 ```
 

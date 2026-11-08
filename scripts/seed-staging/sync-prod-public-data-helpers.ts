@@ -17,7 +17,7 @@
 export function parseArgs(argv: string[]): { dryRun: boolean } {
   return {
     dryRun: argv.includes('--dry-run'),
-  }
+  };
 }
 
 /**
@@ -30,7 +30,7 @@ export function parseArgs(argv: string[]): { dryRun: boolean } {
  * branch collapse to the same value.
  */
 function neonBranchHost(hostname: string): string {
-  return hostname.replace(/-pooler(?=\.|$)/, '')
+  return hostname.replace(/-pooler(?=\.|$)/, '');
 }
 
 /**
@@ -49,30 +49,30 @@ export function assertWriteHostNotProd(
   prodUrl: string,
   stagingUrl: string,
 ): void {
-  let prodHost: string
-  let stagingHost: string
+  let prodHost: string;
+  let stagingHost: string;
 
   try {
-    prodHost = new URL(prodUrl).hostname
+    prodHost = new URL(prodUrl).hostname;
   } catch (err) {
     throw new Error(
       `NEON_PROD_DIRECT is not a valid URL (missing scheme?). Fix the env var and retry.`,
       { cause: err },
-    )
+    );
   }
 
   try {
-    stagingHost = new URL(stagingUrl).hostname
+    stagingHost = new URL(stagingUrl).hostname;
   } catch (err) {
     throw new Error(
       `NEON_STAGING_DIRECT is not a valid URL (missing scheme?). Fix the env var and retry.`,
       { cause: err },
-    )
+    );
   }
 
   if (neonBranchHost(prodHost) === neonBranchHost(stagingHost)) {
     throw new Error(
       `Refusing to write to prod: NEON_STAGING_DIRECT hostname (${stagingHost}) addresses the same Neon branch as NEON_PROD_DIRECT hostname (${prodHost}). Set NEON_STAGING_DIRECT to your staging connection string.`,
-    )
+    );
   }
 }

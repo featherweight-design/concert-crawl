@@ -67,4 +67,4 @@ export const MY_SHOWS_ARTISTS_COPY = {
     primaryLocked: "See who's playing Denver",
     secondary: "Follow from a show you're watching",
   },
-} as const
+} as const;

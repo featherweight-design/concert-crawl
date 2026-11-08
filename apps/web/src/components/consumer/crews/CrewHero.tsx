@@ -1,18 +1,18 @@
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { CREWS_COPY } from './definitions/copy'
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface CrewHeroProps {
-  crewId: string
-  name: string
-  patchSalt: number
-  memberCount: number
-  isKeeper: boolean
-  muted: boolean
-  wide: boolean
+  crewId: string;
+  name: string;
+  patchSalt: number;
+  memberCount: number;
+  isKeeper: boolean;
+  muted: boolean;
+  wide: boolean;
   /** The invite and options controls, mounted by the home. */
-  actions?: React.ReactNode
+  actions?: React.ReactNode;
 }
 
 const Dot = () => (
@@ -26,7 +26,7 @@ const Dot = () => (
       flexShrink: 0,
     }}
   />
-)
+);
 
 /**
  * The crew's identity. The keeper line reads off `isKeeper` alone — there is
@@ -103,4 +103,4 @@ export const CrewHero = ({
       <div className="flex flex-wrap items-center gap-2">{actions}</div>
     )}
   </header>
-)
+);

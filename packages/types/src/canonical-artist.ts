@@ -45,7 +45,7 @@
 import {
   LATIN_EXTENDED_MAP,
   LATIN_EXTENDED_REGEX,
-} from './latin-extended-map.js'
+} from './latin-extended-map.js';
 
 const SEPARATORS = [
   ' & ',
@@ -58,7 +58,7 @@ const SEPARATORS = [
   ' x ',
   ' — ', // em-dash with spaces
   ' - ', // hyphen with spaces — does NOT match "blink-182" (no spaces)
-] as const
+] as const;
 
 /**
  * Rules 1–4 only: fold case, diacritics, and whitespace, but keep the whole
@@ -82,12 +82,12 @@ const SEPARATORS = [
  */
 export function normalizeArtistName(artist: string): string {
   if (typeof artist !== 'string' || artist.length === 0) {
-    return ''
+    return '';
   }
 
   // NFD normalize + strip combining marks (Unicode property: M = Mark).
   // Handles diacritics that are stored as base + combining mark.
-  const decomposed = artist.normalize('NFD').replace(/\p{M}/gu, '')
+  const decomposed = artist.normalize('NFD').replace(/\p{M}/gu, '');
 
   // Handle the Latin Extended characters that don't decompose via NFD.
   // Map + regex live in latin-extended-map.ts so canonicalizeArtist and
@@ -95,31 +95,31 @@ export function normalizeArtistName(artist: string): string {
   const stripped = decomposed.replace(
     LATIN_EXTENDED_REGEX,
     (char) => LATIN_EXTENDED_MAP[char] ?? char,
-  )
+  );
 
   // Lowercase + collapse whitespace.
-  return stripped.toLowerCase().replace(/\s+/g, ' ')
+  return stripped.toLowerCase().replace(/\s+/g, ' ');
 }
 
 export function canonicalizeArtist(artist: string): string {
-  const compact = normalizeArtistName(artist)
+  const compact = normalizeArtistName(artist);
   if (compact === '') {
-    return ''
+    return '';
   }
 
   // Find the earliest separator occurrence and split there.
-  let firstSeparatorIdx = -1
+  let firstSeparatorIdx = -1;
   for (const separator of SEPARATORS) {
-    const idx = compact.indexOf(separator)
+    const idx = compact.indexOf(separator);
     if (idx !== -1 && (firstSeparatorIdx === -1 || idx < firstSeparatorIdx)) {
-      firstSeparatorIdx = idx
+      firstSeparatorIdx = idx;
     }
   }
 
   const firstSegment =
-    firstSeparatorIdx === -1 ? compact : compact.slice(0, firstSeparatorIdx)
+    firstSeparatorIdx === -1 ? compact : compact.slice(0, firstSeparatorIdx);
 
-  return firstSegment.trim()
+  return firstSegment.trim();
 }
 
 /**
@@ -132,12 +132,12 @@ export function canonicalizeArtist(artist: string): string {
  * a re-crawl that only reorders supporting artists causes no DB churn.
  */
 export function canonicalizeSupporting(artists: string[]): string[] {
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   for (const artist of artists) {
-    const canonical = canonicalizeArtist(artist)
+    const canonical = canonicalizeArtist(artist);
     if (canonical !== '') {
-      seen.add(canonical)
+      seen.add(canonical);
     }
   }
-  return [...seen].sort()
+  return [...seen].sort();
 }

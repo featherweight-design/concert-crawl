@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockDb } = vi.hoisted(() => {
   const mockDb = {
@@ -9,15 +9,15 @@ const { mockDb } = vi.hoisted(() => {
     orderBy: vi.fn(),
     groupBy: vi.fn(),
     limit: vi.fn(),
-  }
-  return { mockDb }
-})
+  };
+  return { mockDb };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_a, _b) => ({ type: 'eq' })),
@@ -33,7 +33,7 @@ vi.mock('drizzle-orm', () => ({
     vi.fn((..._args: unknown[]) => ({ type: 'sql' })),
     { raw: vi.fn((str: string) => ({ type: 'sql.raw', str })) },
   ),
-}))
+}));
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
@@ -86,9 +86,9 @@ vi.mock('@concert-crawl/db', () => ({
   },
   auditLog: {},
   inviteCodes: {},
-}))
+}));
 
-import { createApp } from '../app.js'
+import { createApp } from '../app.js';
 
 const mockVenue = {
   id: 'venue-1',
@@ -101,7 +101,7 @@ const mockVenue = {
   verified: true,
   insiderTip: null,
   guidePublishedAt: null,
-}
+};
 
 const mockEvent = {
   id: 'event-1',
@@ -125,112 +125,112 @@ const mockEvent = {
   sourceUrl: null,
   createdAt: new Date(),
   updatedAt: new Date(),
-}
+};
 
 function resetChain() {
-  mockDb.select.mockReturnValue(mockDb)
-  mockDb.from.mockReturnValue(mockDb)
-  mockDb.leftJoin.mockReturnValue(mockDb)
-  mockDb.where.mockReturnValue(mockDb)
-  mockDb.orderBy.mockReturnValue(mockDb)
-  mockDb.groupBy.mockResolvedValue([])
-  mockDb.limit.mockResolvedValue([])
+  mockDb.select.mockReturnValue(mockDb);
+  mockDb.from.mockReturnValue(mockDb);
+  mockDb.leftJoin.mockReturnValue(mockDb);
+  mockDb.where.mockReturnValue(mockDb);
+  mockDb.orderBy.mockReturnValue(mockDb);
+  mockDb.groupBy.mockResolvedValue([]);
+  mockDb.limit.mockResolvedValue([]);
 }
 
 describe('GET /v1/venues', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    resetChain()
-  })
+    vi.clearAllMocks();
+    resetChain();
+  });
 
   it('returns 200 with an array of venues', async () => {
     // GET /: select().from().where().orderBy() → terminal
-    mockDb.orderBy.mockResolvedValueOnce([mockVenue])
+    mockDb.orderBy.mockResolvedValueOnce([mockVenue]);
 
-    const res = await createApp().request('/v1/venues')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown[] }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    const res = await createApp().request('/v1/venues');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown[] };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('orders venues by name (orderBy is called)', async () => {
-    mockDb.orderBy.mockResolvedValueOnce([mockVenue])
-    await createApp().request('/v1/venues')
-    expect(mockDb.orderBy).toHaveBeenCalled()
-  })
+    mockDb.orderBy.mockResolvedValueOnce([mockVenue]);
+    await createApp().request('/v1/venues');
+    expect(mockDb.orderBy).toHaveBeenCalled();
+  });
 
   it('includes timezone in each venue object', async () => {
-    mockDb.orderBy.mockResolvedValueOnce([mockVenue])
+    mockDb.orderBy.mockResolvedValueOnce([mockVenue]);
 
-    const res = await createApp().request('/v1/venues')
-    expect(res.status).toBe(200)
+    const res = await createApp().request('/v1/venues');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { timezone: string }[]
-    }
-    expect(body.data[0]?.timezone).toBe('America/Denver')
-  })
-})
+      success: boolean;
+      data: { timezone: string }[];
+    };
+    expect(body.data[0]?.timezone).toBe('America/Denver');
+  });
+});
 
 describe('GET /v1/venues/:slug', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    resetChain()
-  })
+    vi.clearAllMocks();
+    resetChain();
+  });
 
   it('returns 404 for an unknown slug', async () => {
     // GET /:slug venue lookup: select().from().where() → terminal, empty
-    mockDb.where.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([]);
 
-    const res = await createApp().request('/v1/venues/does-not-exist')
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Venue not found')
-  })
+    const res = await createApp().request('/v1/venues/does-not-exist');
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Venue not found');
+  });
 
   it('returns 200 with venue and upcomingEvents for a known slug', async () => {
     // venue lookup: select().from().where() → [mockVenue]
-    mockDb.where.mockResolvedValueOnce([mockVenue])
+    mockDb.where.mockResolvedValueOnce([mockVenue]);
     // count query: select().from().where() → [{total: 1}]
-    mockDb.where.mockResolvedValueOnce([{ total: 1 }])
+    mockDb.where.mockResolvedValueOnce([{ total: 1 }]);
     // events: select().from().where().orderBy().limit() → [mockEvent]
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.limit.mockResolvedValueOnce([mockEvent])
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.limit.mockResolvedValueOnce([mockEvent]);
     // priceByTier batch: select().from().where() → no corroborated rows
-    mockDb.where.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([]);
 
-    const res = await createApp().request('/v1/venues/test-venue')
-    expect(res.status).toBe(200)
+    const res = await createApp().request('/v1/venues/test-venue');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { venue: unknown; upcomingEvents: unknown[] }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.venue).toBeTruthy()
-    expect(Array.isArray(body.data.upcomingEvents)).toBe(true)
-  })
+      success: boolean;
+      data: { venue: unknown; upcomingEvents: unknown[] };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.venue).toBeTruthy();
+    expect(Array.isArray(body.data.upcomingEvents)).toBe(true);
+  });
 
   it('populates priceByTier so the venue card mirrors the browse "from" price (cheapest tier wins over a later-confirmed pricier tier)', async () => {
-    mockDb.where.mockResolvedValueOnce([mockVenue])
-    mockDb.where.mockResolvedValueOnce([{ total: 1 }])
+    mockDb.where.mockResolvedValueOnce([mockVenue]);
+    mockDb.where.mockResolvedValueOnce([{ total: 1 }]);
     // events: select().from().where().orderBy().limit()
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.orderBy.mockReturnValueOnce(mockDb)
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.orderBy.mockReturnValueOnce(mockDb);
     // ticketPriceMin is $439 here — the flat scalar was clobbered by the
     // most-recently-confirmed VIP tier. The batch must override it via the
     // cheapest-tier headline.
     mockDb.limit.mockResolvedValueOnce([
       { ...mockEvent, ticketPriceMin: '439', priceSource: 'community' },
-    ])
+    ]);
     // vendor lookup (community events): select().from().where().orderBy() → []
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.orderBy.mockResolvedValueOnce([])
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.orderBy.mockResolvedValueOnce([]);
     // priceByTier batch: two corroborated tiers for this event. GA $94 is the
     // cheapest; VIP $439 was confirmed later. compareBlocks sorts cheapest
     // headline first, so priceByTier[0] must be the $94 GA block.
-    const now = new Date('2026-07-10T00:00:00Z')
+    const now = new Date('2026-07-10T00:00:00Z');
     mockDb.where.mockResolvedValueOnce([
       {
         id: 'sub-ga',
@@ -262,43 +262,43 @@ describe('GET /v1/venues/:slug', () => {
         lastSeenAt: null,
         corroborationCount: 3,
       },
-    ])
+    ]);
 
-    const res = await createApp().request('/v1/venues/test-venue')
-    expect(res.status).toBe(200)
+    const res = await createApp().request('/v1/venues/test-venue');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         upcomingEvents: Array<{
           priceByTier: Array<{
-            tier: string
-            headline: { priceMin: string } | null
-          }> | null
-        }>
-      }
-    }
-    const [event] = body.data.upcomingEvents
-    expect(event?.priceByTier).not.toBeNull()
-    expect(event?.priceByTier).toHaveLength(2)
+            tier: string;
+            headline: { priceMin: string } | null;
+          }> | null;
+        }>;
+      };
+    };
+    const [event] = body.data.upcomingEvents;
+    expect(event?.priceByTier).not.toBeNull();
+    expect(event?.priceByTier).toHaveLength(2);
     // Cheapest tier leads — the venue card renders "from $94", not $439.
-    expect(event?.priceByTier?.[0]?.tier).toBe('GA')
-    expect(event?.priceByTier?.[0]?.headline?.priceMin).toBe('94')
-  })
+    expect(event?.priceByTier?.[0]?.tier).toBe('GA');
+    expect(event?.priceByTier?.[0]?.headline?.priceMin).toBe('94');
+  });
 
   it('filters upcoming events using a YYYY-MM-DD date string', async () => {
     mockDb.where.mockResolvedValueOnce([
       { ...mockVenue, timezone: 'America/Chicago' },
-    ])
+    ]);
     // count query
-    mockDb.where.mockResolvedValueOnce([{ total: 0 }])
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.limit.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }]);
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.limit.mockResolvedValueOnce([]);
 
-    await createApp().request('/v1/venues/test-venue')
+    await createApp().request('/v1/venues/test-venue');
 
-    const { gte } = await import('drizzle-orm')
-    const calls = vi.mocked(gte).mock.calls
-    const dateArg = calls[calls.length - 1]?.[1]
-    expect(typeof dateArg).toBe('string')
-    expect(/^\d{4}-\d{2}-\d{2}$/.test(dateArg as string)).toBe(true)
-  })
-})
+    const { gte } = await import('drizzle-orm');
+    const calls = vi.mocked(gte).mock.calls;
+    const dateArg = calls[calls.length - 1]?.[1];
+    expect(typeof dateArg).toBe('string');
+    expect(/^\d{4}-\d{2}-\d{2}$/.test(dateArg as string)).toBe(true);
+  });
+});

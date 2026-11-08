@@ -1,38 +1,38 @@
-'use client'
+'use client';
 
 import {
   StatusBadge,
   ConfidenceBar,
   AdminButton,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 interface EventFlagRowProps {
-  event: EventFlag
-  isActive: boolean
-  isSelected: boolean
-  onSelect: (id: string, checked: boolean) => void
-  onActivate: (id: string) => void
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  event: EventFlag;
+  isActive: boolean;
+  isSelected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
+  onActivate: (id: string) => void;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
 }
 
 export const EventFlagRow = ({
@@ -44,17 +44,17 @@ export const EventFlagRow = ({
   onApprove,
   onReject,
 }: EventFlagRowProps) => {
-  const isLlm = event.extractionStrategy === 'llm'
+  const isLlm = event.extractionStrategy === 'llm';
 
   const rowBackground = isActive
     ? 'var(--surface-2)'
     : isSelected
       ? 'color-mix(in oklab, var(--signal) 6%, transparent)'
-      : undefined
+      : undefined;
 
   const borderLeft = isActive
     ? '2px solid var(--signal)'
-    : '2px solid transparent'
+    : '2px solid transparent';
 
   return (
     <div
@@ -63,8 +63,8 @@ export const EventFlagRow = ({
       onClick={() => onActivate(event.id)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault()
-          onActivate(event.id)
+          evt.preventDefault();
+          onActivate(event.id);
         }
       }}
       style={{
@@ -80,12 +80,12 @@ export const EventFlagRow = ({
       }}
       onMouseEnter={(ev) => {
         if (!isActive && !isSelected) {
-          ev.currentTarget.style.background = 'var(--overlay-hover)'
+          ev.currentTarget.style.background = 'var(--overlay-hover)';
         }
       }}
       onMouseLeave={(ev) => {
         if (!isActive && !isSelected) {
-          ev.currentTarget.style.background = ''
+          ev.currentTarget.style.background = '';
         }
       }}
     >
@@ -174,5 +174,5 @@ export const EventFlagRow = ({
         </AdminButton>
       </div>
     </div>
-  )
-}
+  );
+};

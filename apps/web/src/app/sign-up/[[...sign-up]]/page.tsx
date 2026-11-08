@@ -1,9 +1,9 @@
-import { SignUp } from '@clerk/nextjs'
-import { isSafeReturnPath, PENDING_TIER_PARAM } from '@/lib/auth/intent'
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
+import { SignUp } from '@clerk/nextjs';
+import { isSafeReturnPath, PENDING_TIER_PARAM } from '@/lib/auth/intent';
+import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
 
 interface SignUpPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
@@ -13,15 +13,15 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   // bounced through /auth/code, and the beta funnel stashed the destination in
   // a signed cookie. Once /sign-up opens, nothing writes that cookie and every
   // caller's destination was being dropped on the floor.
-  const params = await searchParams
-  const raw = params['redirect_url']
-  const requested = typeof raw === 'string' ? raw : null
+  const params = await searchParams;
+  const raw = params['redirect_url'];
+  const requested = typeof raw === 'string' ? raw : null;
 
   // Sanitised here as well as on read: it arrives from the querystring, so it
   // is attacker-controllable, and /auth/complete is a redirect.
-  const forwarded = new URLSearchParams()
+  const forwarded = new URLSearchParams();
   if (isSafeReturnPath(requested) && requested)
-    forwarded.set('return', requested)
+    forwarded.set('return', requested);
 
   // The tier the picker's Sign up CTA was tapped on (#1284), forwarded for the
   // same reason as the destination: Clerk drops everything it does not own.
@@ -29,11 +29,11 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     typeof params[PENDING_TIER_PARAM] === 'string'
       ? params[PENDING_TIER_PARAM]
       : null,
-  )
-  if (tier) forwarded.set(PENDING_TIER_PARAM, tier)
+  );
+  if (tier) forwarded.set(PENDING_TIER_PARAM, tier);
 
-  const query = forwarded.toString()
-  const target = query ? `/auth/complete?${query}` : '/auth/complete'
+  const query = forwarded.toString();
+  const target = query ? `/auth/complete?${query}` : '/auth/complete';
 
   return (
     <main className="flex min-h-screen items-center justify-center">
@@ -44,5 +44,5 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
           issued invite stays in `used_by IS NULL` state (#1113). */}
       <SignUp forceRedirectUrl={target} />
     </main>
-  )
+  );
 }

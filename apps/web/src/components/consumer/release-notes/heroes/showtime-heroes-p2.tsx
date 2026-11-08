@@ -1,14 +1,14 @@
-'use client'
-import React from 'react'
+'use client';
+import React from 'react';
 import {
   ShowtimeBackdrop,
   ShowtimeEyebrow,
   ShowtimeSparkles,
   StubGlyph,
-} from './showtime-base'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './showtime-base';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 // ════════════════════════════════════════════════════════════════
 // 8 · ARTIST FOLLOWING · Showtime
@@ -97,12 +97,12 @@ export function FollowingShowtime(): React.ReactElement {
           style={{ position: 'absolute', inset: 0, mixBlendMode: 'screen' }}
         >
           {Array.from({ length: 24 }).map((_, dotIdx) => {
-            const col = dotIdx % 6
-            const row = Math.floor(dotIdx / 6)
-            const xPos = col * 16 + 10
-            const yPos = row * 22 + 8
-            const dist = Math.sqrt((5 - col) ** 2 + (3 - row) ** 2)
-            const radius = Math.max(0.7, 3.4 - dist * 0.45)
+            const col = dotIdx % 6;
+            const row = Math.floor(dotIdx / 6);
+            const xPos = col * 16 + 10;
+            const yPos = row * 22 + 8;
+            const dist = Math.sqrt((5 - col) ** 2 + (3 - row) ** 2);
+            const radius = Math.max(0.7, 3.4 - dist * 0.45);
             return (
               <circle
                 key={dotIdx}
@@ -112,7 +112,7 @@ export function FollowingShowtime(): React.ReactElement {
                 fill="#FFE36B"
                 opacity="0.85"
               />
-            )
+            );
           })}
         </svg>
         {/* artist name */}
@@ -287,7 +287,7 @@ export function FollowingShowtime(): React.ReactElement {
         {COPY.heroes.following.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -565,17 +565,17 @@ export function PriceDropShowtime(): React.ReactElement {
         {COPY.heroes.priceDrop.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
 // 10 · SETLIST PREVIEW · Showtime
 // ════════════════════════════════════════════════════════════════
 interface TrackRow {
-  num: string
-  name: string
-  dur: string
-  debut: boolean
+  num: string;
+  name: string;
+  dur: string;
+  debut: boolean;
 }
 
 export function SetlistShowtime(): React.ReactElement {
@@ -585,7 +585,7 @@ export function SetlistShowtime(): React.ReactElement {
     { num: '03', name: 'LET IT HAPPEN', dur: '5:21', debut: false },
     { num: '04', name: 'THE LESS I KNOW THE BETTER', dur: '6:04', debut: true },
     { num: '05', name: 'EVENTUALLY', dur: '7:18', debut: false },
-  ]
+  ];
 
   return (
     <div
@@ -794,30 +794,30 @@ export function SetlistShowtime(): React.ReactElement {
         {COPY.heroes.setlist.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
 // 11 · VENUE FIRST-TIMER GUIDE · Showtime
 // ════════════════════════════════════════════════════════════════
 interface ChipDef {
-  accent: string
-  label: string
-  fx: string
-  fy: string
-  delay: number
+  accent: string;
+  label: string;
+  fx: string;
+  fy: string;
+  delay: number;
 }
 
 interface FirstTimerChipProps {
-  chip: ChipDef
-  side: 'left' | 'right'
+  chip: ChipDef;
+  side: 'left' | 'right';
 }
 
 function FirstTimerChip({
   chip,
   side,
 }: FirstTimerChipProps): React.ReactElement {
-  const borderSideKey = side === 'left' ? 'borderLeft' : 'borderRight'
+  const borderSideKey = side === 'left' ? 'borderLeft' : 'borderRight';
   return (
     <div
       style={
@@ -844,7 +844,7 @@ function FirstTimerChip({
     >
       {chip.label}
     </div>
-  )
+  );
 }
 
 export function FirstTimerShowtime(): React.ReactElement {
@@ -870,7 +870,7 @@ export function FirstTimerShowtime(): React.ReactElement {
       fy: '-20px',
       delay: 0.7,
     },
-  ]
+  ];
   const rightChips: ChipDef[] = [
     {
       accent: '#7AE6FF',
@@ -893,7 +893,7 @@ export function FirstTimerShowtime(): React.ReactElement {
       fy: '-20px',
       delay: 1.15,
     },
-  ]
+  ];
 
   return (
     <div
@@ -1082,16 +1082,16 @@ export function FirstTimerShowtime(): React.ReactElement {
         {COPY.heroes.firstTimer.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
 // 12 · LAST TIME IN DENVER · Showtime
 // ════════════════════════════════════════════════════════════════
 interface VisitDot {
-  date: string
-  venue: string
-  current?: boolean
+  date: string;
+  venue: string;
+  current?: boolean;
 }
 
 export function LastTimeShowtime(): React.ReactElement {
@@ -1099,7 +1099,7 @@ export function LastTimeShowtime(): React.ReactElement {
     { date: "MAR '24", venue: 'GOTHIC' },
     { date: "NOV '24", venue: 'MISSION' },
     { date: 'TONIGHT', venue: 'OGDEN', current: true },
-  ]
+  ];
 
   return (
     <div
@@ -1465,25 +1465,25 @@ export function LastTimeShowtime(): React.ReactElement {
         {COPY.heroes.lastTime.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
 // 13 · SUPPORT ACT SPOTLIGHT · Showtime
 // ════════════════════════════════════════════════════════════════
 interface PosterPalette {
-  bg: string
-  primary: string
-  secondary: string
+  bg: string;
+  primary: string;
+  secondary: string;
 }
 
 interface ArtistPosterCardProps {
-  band: string
-  role: string
-  palette: PosterPalette
-  artStyle: 'stripes' | 'rings'
-  size: 'small' | 'large'
-  highlight?: boolean
+  band: string;
+  role: string;
+  palette: PosterPalette;
+  artStyle: 'stripes' | 'rings';
+  size: 'small' | 'large';
+  highlight?: boolean;
 }
 
 function ArtistPosterCard({
@@ -1494,8 +1494,8 @@ function ArtistPosterCard({
   size,
   highlight = false,
 }: ArtistPosterCardProps): React.ReactElement {
-  const cardWidth = size === 'large' ? 160 : 120
-  const cardHeight = size === 'large' ? 220 : 170
+  const cardWidth = size === 'large' ? 160 : 120;
+  const cardHeight = size === 'large' ? 220 : 170;
   return (
     <div
       style={{
@@ -1612,7 +1612,7 @@ function ArtistPosterCard({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export function SupportActShowtime(): React.ReactElement {
@@ -1728,17 +1728,17 @@ export function SupportActShowtime(): React.ReactElement {
         {COPY.heroes.supportAct.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
 // 15 · VENUE PASSPORT CARD · Showtime (paired with #14 Concert Passport)
 // ════════════════════════════════════════════════════════════════
 interface MiniStamp {
-  accent: string
-  glyph: string
-  delay: number
-  mrot: number
+  accent: string;
+  glyph: string;
+  delay: number;
+  mrot: number;
 }
 
 export function VenuePassportShowtime(): React.ReactElement {
@@ -1750,15 +1750,15 @@ export function VenuePassportShowtime(): React.ReactElement {
     '#C9F26E',
     '#FFB838',
     '#5DD4D6',
-  ]
-  const glyphs = ['★', '○', '△', '◆', '+', '✦', '⭡']
+  ];
+  const glyphs = ['★', '○', '△', '◆', '+', '✦', '⭡'];
 
   const stamps: MiniStamp[] = Array.from({ length: 10 }).map((_, stampIdx) => ({
     accent: accents[stampIdx % accents.length] ?? '#7AE6FF',
     glyph: glyphs[stampIdx % glyphs.length] ?? '★',
     delay: 0.85 + stampIdx * 0.13,
     mrot: ((stampIdx * 41) % 11) - 5,
-  }))
+  }));
 
   return (
     <div
@@ -2030,8 +2030,8 @@ export function VenuePassportShowtime(): React.ReactElement {
         {COPY.heroes.venuePassport.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // Re-export ShowtimeSparkles so consumers of this barrel don't need a separate import
-export { ShowtimeSparkles }
+export { ShowtimeSparkles };

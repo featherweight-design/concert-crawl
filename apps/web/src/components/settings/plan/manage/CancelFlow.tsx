@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 cancel confirmation surface (design table lifecycle-flows.md).
 // Tier-gated shape (README decision #6): Premium/Founder get the full flow
@@ -10,10 +10,10 @@
 // primary confirm (danger accent, no glow); "Never mind" is the ghost
 // back-out. Retention lives in the nudge card, never in button burying.
 
-import { TierBadge } from '@/components/consumer/tier-picker'
-import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants'
-import { CANCEL_FLOW_COPY } from './definitions/copy'
-import type { PaidTier } from './definitions/types'
+import { TierBadge } from '@/components/consumer/tier-picker';
+import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants';
+import { CANCEL_FLOW_COPY } from './definitions/copy';
+import type { PaidTier } from './definitions/types';
 import {
   ErrorLine,
   FinePrint,
@@ -22,18 +22,18 @@ import {
   MathRow,
   MonoEyebrow,
   RailHeader,
-} from './primitives'
+} from './primitives';
 
 interface CancelFlowProps {
-  tier: PaidTier
-  periodEnd: string | null
+  tier: PaidTier;
+  periodEnd: string | null;
   /** Desktop modal layout — larger headline/subhead sizes. */
-  wide: boolean
-  pending: boolean
-  errorText: string | null
-  onConfirm: () => void
-  onSwitchToSupporter: () => void
-  onKeep: () => void
+  wide: boolean;
+  pending: boolean;
+  errorText: string | null;
+  onConfirm: () => void;
+  onSwitchToSupporter: () => void;
+  onKeep: () => void;
 }
 
 export const CancelFlow = ({
@@ -46,9 +46,9 @@ export const CancelFlow = ({
   onSwitchToSupporter,
   onKeep,
 }: CancelFlowProps) => {
-  const copy = CANCEL_FLOW_COPY
-  const tierDef = TIER_DEFINITIONS[tier]
-  const isPremiumUp = tier === 'premium' || tier === 'founder'
+  const copy = CANCEL_FLOW_COPY;
+  const tierDef = TIER_DEFINITIONS[tier];
+  const isPremiumUp = tier === 'premium' || tier === 'founder';
 
   return (
     <div
@@ -220,5 +220,5 @@ export const CancelFlow = ({
       </div>
       <FinePrint>{copy.finePrint(periodEnd)}</FinePrint>
     </div>
-  )
-}
+  );
+};

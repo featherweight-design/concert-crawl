@@ -1,5 +1,5 @@
-import type { HistoryShow } from '@concert-crawl/types'
-import type { AttendedShow } from '@/lib/passport/stats'
+import type { HistoryShow } from '@concert-crawl/types';
+import type { AttendedShow } from '@/lib/passport/stats';
 
 /**
  * Concert History rows → the shape the Passport draws.
@@ -18,4 +18,4 @@ export const toAttendedShows = (rows: HistoryShow[]): AttendedShow[] =>
     genre: row.genre,
     date: row.date,
     priceFinal: row.priceFinal,
-  }))
+  }));

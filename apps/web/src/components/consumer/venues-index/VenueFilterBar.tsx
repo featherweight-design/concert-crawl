@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useRef, useState } from 'react'
-import { FilterPopover } from '../filter-bar/FilterPopover'
-import { FilterSheet } from '../filter-bar/FilterSheet'
+import { useRef, useState } from 'react';
+import { FilterPopover } from '../filter-bar/FilterPopover';
+import { FilterSheet } from '../filter-bar/FilterSheet';
 import {
   VENUE_FILTER_DEFS,
   VENUE_FILTER_ORDER,
   venueChipLabel,
   type VenueFilterKey,
   type VenueFilterState,
-} from './venue-filter-defs'
-import { cn } from '@/lib/utils'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './venue-filter-defs';
+import { cn } from '@/lib/utils';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex
+const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
 
 interface VenueFilterBarProps {
-  state: VenueFilterState
-  onChange: (next: VenueFilterState) => void
+  state: VenueFilterState;
+  onChange: (next: VenueFilterState) => void;
 }
 
 function IconChevDown({ size = 11 }: { size?: number }) {
@@ -38,38 +38,38 @@ function IconChevDown({ size = 11 }: { size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
-  const [openKey, setOpenKey] = useState<VenueFilterKey | null>(null)
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
+  const [openKey, setOpenKey] = useState<VenueFilterKey | null>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const chipRefs = useRef<
     Partial<Record<VenueFilterKey, HTMLButtonElement | null>>
-  >({})
+  >({});
 
   const clearable = VENUE_FILTER_ORDER.filter(
     (key) => !VENUE_FILTER_DEFS[key].alwaysOn,
-  )
-  const anyActive = clearable.some((key) => state[key])
+  );
+  const anyActive = clearable.some((key) => state[key]);
 
   function openFilter(key: VenueFilterKey) {
-    const rect = chipRefs.current[key]?.getBoundingClientRect() ?? null
-    setAnchorRect(rect)
-    setOpenKey(key)
+    const rect = chipRefs.current[key]?.getBoundingClientRect() ?? null;
+    setAnchorRect(rect);
+    setOpenKey(key);
   }
 
   function handleSelect(value: string) {
-    if (!openKey) return
-    const def = VENUE_FILTER_DEFS[openKey]
-    const current = state[openKey]
-    const next = !def.alwaysOn && current === value ? null : value
-    onChange({ ...state, [openKey]: next })
-    setOpenKey(null)
+    if (!openKey) return;
+    const def = VENUE_FILTER_DEFS[openKey];
+    const current = state[openKey];
+    const next = !def.alwaysOn && current === value ? null : value;
+    onChange({ ...state, [openKey]: next });
+    setOpenKey(null);
   }
 
   function clearFilters() {
-    onChange({ ...state, capacity: null, distance: null })
+    onChange({ ...state, capacity: null, distance: null });
   }
 
   return (
@@ -80,12 +80,12 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
         style={{ padding: '8px 16px 14px', scrollbarWidth: 'none' }}
       >
         {VENUE_FILTER_ORDER.map((key) => {
-          const def = VENUE_FILTER_DEFS[key]
-          const value = state[key]
+          const def = VENUE_FILTER_DEFS[key];
+          const value = state[key];
           const active = def.alwaysOn
             ? !!value && value !== def.options[0]?.value
-            : !!value
-          const label = venueChipLabel(key, value)
+            : !!value;
+          const label = venueChipLabel(key, value);
 
           return (
             <button
@@ -117,7 +117,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
               <span className="whitespace-nowrap">{label}</span>
               <IconChevDown size={9} />
             </button>
-          )
+          );
         })}
 
         {anyActive && (
@@ -134,18 +134,18 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
       {/* Desktop: wrapping chip row */}
       <div className="hidden sm:flex flex-wrap items-center gap-2">
         {VENUE_FILTER_ORDER.map((key) => {
-          const def = VENUE_FILTER_DEFS[key]
-          const value = state[key]
+          const def = VENUE_FILTER_DEFS[key];
+          const value = state[key];
           const active = def.alwaysOn
             ? !!value && value !== def.options[0]?.value
-            : !!value
-          const label = venueChipLabel(key, value)
+            : !!value;
+          const label = venueChipLabel(key, value);
 
           return (
             <button
               key={key}
               ref={(el) => {
-                chipRefs.current[key] = el
+                chipRefs.current[key] = el;
               }}
               type="button"
               onClick={() => openFilter(key)}
@@ -174,7 +174,7 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
               <span className="whitespace-nowrap">{label}</span>
               <IconChevDown />
             </button>
-          )
+          );
         })}
 
         {anyActive && (
@@ -217,5 +217,5 @@ export function VenueFilterBar({ state, onChange }: VenueFilterBarProps) {
         />
       )}
     </>
-  )
+  );
 }

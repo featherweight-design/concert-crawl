@@ -1,15 +1,15 @@
-import React from 'react'
-import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes'
+import React from 'react';
+import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes';
 
 export interface PassportStatProps {
-  value: string | number
-  label: string
-  cfg: PassportModeConfig
-  fg: string
-  fgMuted: string
+  value: string | number;
+  label: string;
+  cfg: PassportModeConfig;
+  fg: string;
+  fgMuted: string;
   /** Draws the value in the theme's signal colour. */
-  accent?: boolean
-  signal: string
+  accent?: boolean;
+  signal: string;
 }
 
 /**
@@ -60,4 +60,4 @@ export const PassportStat = ({
       {label.toUpperCase()}
     </span>
   </div>
-)
+);

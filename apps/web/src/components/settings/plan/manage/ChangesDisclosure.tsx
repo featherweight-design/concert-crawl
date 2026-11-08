@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 collapsed "what moves" disclosure, rendered by DowngradeFlow between
 // the proration card and the button stack (design table lifecycle-flows.md).
@@ -7,9 +7,9 @@
 // the 2026-07-29 Supporter-unlocks amendment. DowngradeFlow is Premium →
 // Supporter only, so the lists describe that one transition.
 
-import { useState } from 'react'
-import { CHANGES_DISCLOSURE_COPY } from './definitions/copy'
-import { MonoEyebrow } from './primitives'
+import { useState } from 'react';
+import { CHANGES_DISCLOSURE_COPY } from './definitions/copy';
+import { MonoEyebrow } from './primitives';
 
 const InfoIcon = () => (
   <svg
@@ -34,7 +34,7 @@ const InfoIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const StaysCheck = () => (
   <svg
@@ -53,7 +53,7 @@ const StaysCheck = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const OffCross = () => (
   <svg
@@ -71,11 +71,11 @@ const OffCross = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 export const ChangesDisclosure = () => {
-  const [open, setOpen] = useState(false)
-  const copy = CHANGES_DISCLOSURE_COPY
+  const [open, setOpen] = useState(false);
+  const copy = CHANGES_DISCLOSURE_COPY;
 
   return (
     <div
@@ -213,5 +213,5 @@ export const ChangesDisclosure = () => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};

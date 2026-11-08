@@ -12,7 +12,7 @@ export type DeclineCategory =
   | 'expired_or_incorrect_card'
   | 'issuer_declined'
   | 'fraud_block'
-  | 'network_timeout'
+  | 'network_timeout';
 
 const EXPIRED_OR_INCORRECT_CODES = new Set([
   'expired_card',
@@ -20,7 +20,7 @@ const EXPIRED_OR_INCORRECT_CODES = new Set([
   'incorrect_number',
   'invalid_expiry_month',
   'invalid_expiry_year',
-])
+]);
 
 const FRAUD_BLOCK_CODES = new Set([
   'fraudulent',
@@ -28,45 +28,45 @@ const FRAUD_BLOCK_CODES = new Set([
   'lost_card',
   'pickup_card',
   'restricted_card',
-])
+]);
 
 // Stripe error types that mean "the request never got a card decision" —
 // only relevant when no decline_code exists (spec §1.6 network_timeout row).
-const NETWORK_ERROR_TYPES = new Set(['api_error', 'api_connection_error'])
+const NETWORK_ERROR_TYPES = new Set(['api_error', 'api_connection_error']);
 
 export interface DeclineSignal {
   /** Stripe `last_payment_error.decline_code` (card-issuer verdict). */
-  declineCode?: string | null
+  declineCode?: string | null;
   /** Stripe error `code` — validation errors reuse the card-code names. */
-  errorCode?: string | null
+  errorCode?: string | null;
   /** Stripe error `type` (e.g. card_error, api_error). */
-  errorType?: string | null
+  errorType?: string | null;
 }
 
 export const mapDeclineCategory = (signal: DeclineSignal): DeclineCategory => {
-  const declineCode = signal.declineCode ?? null
+  const declineCode = signal.declineCode ?? null;
   if (declineCode !== null) {
-    if (declineCode === 'insufficient_funds') return 'insufficient_funds'
+    if (declineCode === 'insufficient_funds') return 'insufficient_funds';
     if (EXPIRED_OR_INCORRECT_CODES.has(declineCode)) {
-      return 'expired_or_incorrect_card'
+      return 'expired_or_incorrect_card';
     }
-    if (FRAUD_BLOCK_CODES.has(declineCode)) return 'fraud_block'
+    if (FRAUD_BLOCK_CODES.has(declineCode)) return 'fraud_block';
     // Default for every other decline_code (do_not_honor, generic_decline,
     // card_velocity_exceeded, …) — catch-all per #782.
-    return 'issuer_declined'
+    return 'issuer_declined';
   }
 
   // No issuer verdict: validation-error codes reuse the card-code names.
-  const errorCode = signal.errorCode ?? null
+  const errorCode = signal.errorCode ?? null;
   if (errorCode !== null && EXPIRED_OR_INCORRECT_CODES.has(errorCode)) {
-    return 'expired_or_incorrect_card'
+    return 'expired_or_incorrect_card';
   }
 
   // No decline_code + transport/API failure ⇒ the card was never decided.
-  const errorType = signal.errorType ?? null
+  const errorType = signal.errorType ?? null;
   if (errorType !== null && NETWORK_ERROR_TYPES.has(errorType)) {
-    return 'network_timeout'
+    return 'network_timeout';
   }
 
-  return 'issuer_declined'
-}
+  return 'issuer_declined';
+};

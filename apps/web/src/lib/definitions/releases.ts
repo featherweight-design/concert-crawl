@@ -1,27 +1,27 @@
 export interface ReleaseItem {
-  kind: 'added' | 'fixed' | 'changed' | 'removed'
-  text: string
+  kind: 'added' | 'fixed' | 'changed' | 'removed';
+  text: string;
 }
 
 export interface ReleaseSpotlight {
-  title: string
-  tagline: string
+  title: string;
+  tagline: string;
   /** Which animated hero to render inside SpotlightHero. Only 'map' exists today. */
-  hero: string
-  cta?: string
-  ctaHref?: string
-  steps: Array<{ caption: string }>
-  founderNote?: string | [string] | [string, string] | [string, string, string]
-  founderEyebrow?: string
-  founderSign?: string
+  hero: string;
+  cta?: string;
+  ctaHref?: string;
+  steps: Array<{ caption: string }>;
+  founderNote?: string | [string] | [string, string] | [string, string, string];
+  founderEyebrow?: string;
+  founderSign?: string;
 }
 
 export interface Release {
-  version: string
-  date: string
-  headline?: string | null
-  items: ReleaseItem[]
-  spotlight?: ReleaseSpotlight
+  version: string;
+  date: string;
+  headline?: string | null;
+  items: ReleaseItem[];
+  spotlight?: ReleaseSpotlight;
 }
 
 // The v0.20.0-beta entry announcing public browse was pulled when that vertical
@@ -1107,4 +1107,4 @@ export const RELEASES: Release[] = [
       { kind: 'added', text: 'Search across events and venues.' },
     ],
   },
-]
+];

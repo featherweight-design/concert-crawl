@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { db } from '@concert-crawl/db'
-import { latinExtendedSql } from '@concert-crawl/types'
-import { canonicalizeArtist } from './canonical-artist.js'
+import { describe, it, expect } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { db } from '@concert-crawl/db';
+import { latinExtendedSql } from '@concert-crawl/types';
+import { canonicalizeArtist } from './canonical-artist.js';
 
 /**
  * Parity test for canonical_artist's Latin Extended handling (#648).
@@ -26,7 +26,8 @@ import { canonicalizeArtist } from './canonical-artist.js'
  * user data, but doubling embedded quotes keeps the helper honest if someone
  * adds an apostrophe-bearing case later.
  */
-const sqlLiteral = (value: string): string => `'${value.replaceAll("'", "''")}'`
+const sqlLiteral = (value: string): string =>
+  `'${value.replaceAll("'", "''")}'`;
 
 const PARITY_INPUTS: { label: string; input: string }[] = [
   { label: 'plain ASCII baseline', input: 'Earl Sweatshirt' },
@@ -61,7 +62,7 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
 
   // Whitespace handling around the mapped chars.
   { label: 'collapsed whitespace', input: '  Þeyr   og   Æther  ' },
-]
+];
 
 describe('canonical_artist — Latin Extended SQL / JS parity', () => {
   it.each(PARITY_INPUTS)('matches on: $label', async ({ input }) => {
@@ -71,7 +72,7 @@ describe('canonical_artist — Latin Extended SQL / JS parity', () => {
     // ships.
     const latin = latinExtendedSql(
       `regexp_replace(normalize(${sqlLiteral(input)}, NFD), '[̀-ͯ]', '', 'g')`,
-    )
+    );
 
     const rows = await db.execute<{ canonical: string }>(
       sql.raw(`
@@ -79,8 +80,8 @@ describe('canonical_artist — Latin Extended SQL / JS parity', () => {
           regexp_replace(lower(${latin}), '\\s+', ' ', 'g')
         ) AS canonical
       `),
-    )
+    );
 
-    expect(rows[0]?.canonical).toBe(canonicalizeArtist(input))
-  })
-})
+    expect(rows[0]?.canonical).toBe(canonicalizeArtist(input));
+  });
+});

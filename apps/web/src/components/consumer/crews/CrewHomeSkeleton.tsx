@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
-import { Shimmer, ShimmerKeyframes } from './CrewRowSkeleton'
-import { CREWS_COPY } from './definitions/copy'
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
+import { Shimmer, ShimmerKeyframes } from './CrewRowSkeleton';
+import { CREWS_COPY } from './definitions/copy';
 
 /**
  * Shape only. It renders neither the crew's name nor its patch, because both
  * would be guesses and a wrong patch flashes a wrong identity for a frame.
  */
 export const CrewHomeSkeleton = () => {
-  const wide = !useIsMobileViewport()
-  const size = wide ? 92 : 72
+  const wide = !useIsMobileViewport();
+  const size = wide ? 92 : 72;
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
@@ -61,5 +61,5 @@ export const CrewHomeSkeleton = () => {
         ))}
       </div>
     </div>
-  )
-}
+  );
+};

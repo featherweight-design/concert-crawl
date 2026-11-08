@@ -1,4 +1,4 @@
-export { CrewPatch, type CrewPatchScale } from './CrewPatch'
+export { CrewPatch, type CrewPatchScale } from './CrewPatch';
 export {
   crewHash,
   crewIdentity,
@@ -9,4 +9,4 @@ export {
   CREW_GROUNDS,
   CREW_CHORD_TOKENS,
   type CrewIdentity,
-} from './lib/crew-identity'
+} from './lib/crew-identity';

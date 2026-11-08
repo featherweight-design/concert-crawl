@@ -22,32 +22,32 @@ import {
   Tag,
   TrendingDown,
   type LucideIcon,
-} from 'lucide-react'
+} from 'lucide-react';
 
-import type { TriageAction, TriageBand, TriageCondition } from './types'
+import type { TriageAction, TriageBand, TriageCondition } from './types';
 
 export const SEVERITY: Record<TriageBand, { rank: number; ink: string }> = {
   hard: { rank: 0, ink: 'var(--danger)' },
   loss: { rank: 1, ink: 'var(--warning)' },
   suspect: { rank: 2, ink: 'var(--accent-2, var(--accent))' },
-}
+};
 
-export const BAND_KEYS: TriageBand[] = ['hard', 'loss', 'suspect']
+export const BAND_KEYS: TriageBand[] = ['hard', 'loss', 'suspect'];
 
 export interface SeverityTint {
-  ink: string
-  fill: string
-  edge: string
+  ink: string;
+  fill: string;
+  edge: string;
 }
 
 export const sevTint = (band: TriageBand): SeverityTint => {
-  const { ink } = SEVERITY[band]
+  const { ink } = SEVERITY[band];
   return {
     ink,
     fill: `color-mix(in oklab, ${ink} 14%, transparent)`,
     edge: `color-mix(in oklab, ${ink} 34%, transparent)`,
-  }
-}
+  };
+};
 
 export type TriageGlyph =
   | 'blocked'
@@ -58,7 +58,7 @@ export type TriageGlyph =
   | 'flags'
   | 'prices'
   | 'check'
-  | 'chevR'
+  | 'chevR';
 
 export const CONDITION_META: Record<
   TriageCondition,
@@ -74,16 +74,16 @@ export const CONDITION_META: Record<
   wentDark: { band: 'loss', glyph: 'wentDark', action: 'openRun' },
   coverage: { band: 'loss', glyph: 'coverage', action: 'openVenue' },
   ceiling: { band: 'suspect', glyph: 'ceiling', action: 'openRun' },
-}
+};
 
-export type TriageQueueKind = 'eventFlags' | 'priceSubmissions'
+export type TriageQueueKind = 'eventFlags' | 'priceSubmissions';
 
 // The queue rows carry no `glyph` on the wire (queueSchema has no such field),
 // so the mapping lives here rather than being read off the payload.
 export const QUEUE_GLYPH: Record<TriageQueueKind, TriageGlyph> = {
   eventFlags: 'flags',
   priceSubmissions: 'prices',
-}
+};
 
 // The handoff traced these nine glyphs by hand so the mock could stand alone;
 // the header comment in `triage-icons.jsx` says production imports them from
@@ -99,11 +99,11 @@ export const GLYPH_ICONS: Record<TriageGlyph, LucideIcon> = {
   prices: Tag,
   check: Check,
   chevR: ChevronRight,
-}
+};
 
 // Faults beyond this many switch the tier to banded presentation. A prop on
 // the panel so it can be moved without a code change here.
-export const DENSE_AT = 7
+export const DENSE_AT = 7;
 
 // Tailwind `sm:` breakpoint — the panel's compact/desktop split.
-export const TRIAGE_COMPACT_QUERY = '(max-width: 639px)'
+export const TRIAGE_COMPACT_QUERY = '(max-width: 639px)';

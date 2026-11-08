@@ -40,5 +40,5 @@ export default function AdminArtistsLoading() {
         ))}
       </div>
     </div>
-  )
+  );
 }

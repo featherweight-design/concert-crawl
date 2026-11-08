@@ -1,35 +1,35 @@
-'use client'
+'use client';
 
 // Post-connect success screen (#763 PR 5, connect-flow.jsx mock) — "here's
 // what you told Spotify you love": check disc, artist/Denver counts, a strip
 // of recognized-artist chips and the "See my Denver shows" CTA.
 
-import { useState } from 'react'
-import type { SpotifyConnectionView } from '@concert-crawl/types'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { SignalButton } from './SpotifyButtons'
+import { useState } from 'react';
+import type { SpotifyConnectionView } from '@concert-crawl/types';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { SignalButton } from './SpotifyButtons';
 
-const COPY = SPOTIFY_COPY.connectSuccess
+const COPY = SPOTIFY_COPY.connectSuccess;
 
-const CHIPS_SHOWN = 6
+const CHIPS_SHOWN = 6;
 
 // Deterministic hue per artist name for the chip avatar gradient (the mock
 // hand-assigns hues; real data only has names).
 const chipHue = (name: string) => {
-  let hash = 0
-  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) % 360
-  return hash
-}
+  let hash = 0;
+  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  return hash;
+};
 
 const SyncStat = ({
   value,
   label,
   tone = 'default',
 }: {
-  value: string
-  label: string
-  tone?: 'default' | 'signal'
+  value: string;
+  label: string;
+  tone?: 'default' | 'signal';
 }) => (
   <div className="flex flex-1 flex-col items-center gap-1">
     <span
@@ -45,10 +45,10 @@ const SyncStat = ({
       {label}
     </span>
   </div>
-)
+);
 
 const ArtistChip = ({ name }: { name: string }) => {
-  const hue = chipHue(name)
+  const hue = chipHue(name);
   return (
     <span className="inline-flex items-center gap-[7px] rounded-full border border-border bg-surface-2 py-[5px] pl-[6px] pr-3">
       <span
@@ -60,8 +60,8 @@ const ArtistChip = ({ name }: { name: string }) => {
       />
       <span className="text-[12px] font-semibold text-fg">{name}</span>
     </span>
-  )
-}
+  );
+};
 
 const CheckDisc = () => (
   <div
@@ -82,13 +82,13 @@ const CheckDisc = () => (
       />
     </svg>
   </div>
-)
+);
 
 interface ConnectSuccessModalProps {
-  open: boolean
-  connection: SpotifyConnectionView
-  onContinue: () => void
-  onClose: () => void
+  open: boolean;
+  connection: SpotifyConnectionView;
+  onContinue: () => void;
+  onClose: () => void;
 }
 
 export const ConnectSuccessModal = ({
@@ -97,11 +97,11 @@ export const ConnectSuccessModal = ({
   onContinue,
   onClose,
 }: ConnectSuccessModalProps) => {
-  const [chipsExpanded, setChipsExpanded] = useState(false)
+  const [chipsExpanded, setChipsExpanded] = useState(false);
   const chips = chipsExpanded
     ? connection.matchedArtists
-    : connection.matchedArtists.slice(0, CHIPS_SHOWN)
-  const moreCount = connection.matchedArtists.length - chips.length
+    : connection.matchedArtists.slice(0, CHIPS_SHOWN);
+  const moreCount = connection.matchedArtists.length - chips.length;
 
   return (
     <ModalShell
@@ -188,5 +188,5 @@ export const ConnectSuccessModal = ({
         )}
       </div>
     </ModalShell>
-  )
-}
+  );
+};

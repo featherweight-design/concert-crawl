@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import Link from 'next/link';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import type {
   AdminUserDetail,
   AdminUserEventStatus,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   Panel,
   SectionHead,
@@ -17,25 +17,25 @@ import {
   TH,
   TD,
   RelTime,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-const COPY = ADMIN_COPY.users.detail
+const COPY = ADMIN_COPY.users.detail;
 
 const TRACKED_EVENT_STATUS_KIND: Record<AdminUserEventStatus, StatusKind> = {
   going: 'success',
   interested: 'signal',
   watching: 'neutral',
-}
+};
 
 interface UserDetailClientProps {
   // A deleted/missing user is a 404 (route calls notFound()); null here means a
   // non-404 load failure — missing token or API error — so the route renders a
   // recoverable banner rather than a blank page or 404 shell.
-  user: AdminUserDetail | null
+  user: AdminUserDetail | null;
 }
 
 export const UserDetailClient = ({ user }: UserDetailClientProps) => {
@@ -56,7 +56,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
       <ArrowLeft size={14} />
       {COPY.backButton}
     </Link>
-  )
+  );
 
   if (!user) {
     return (
@@ -78,12 +78,12 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
           {COPY.loadError}
         </div>
       </div>
-    )
+    );
   }
 
   const displayName = user.handle
     ? `@${user.handle}`
-    : (user.email ?? COPY.identity.noHandle)
+    : (user.email ?? COPY.identity.noHandle);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -335,5 +335,5 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
         )}
       </Panel>
     </div>
-  )
-}
+  );
+};

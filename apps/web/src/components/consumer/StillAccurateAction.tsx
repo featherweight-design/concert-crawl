@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { isPriceStale } from '@/components/consumer/lib/staleness'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { isPriceStale } from '@/components/consumer/lib/staleness';
 
-const copy = CONSUMER_COPY.priceStaleness
+const copy = CONSUMER_COPY.priceStaleness;
 
 // Without the fallback an unset var interpolates as the literal `undefined`,
 // which resolves relative and 404s rather than failing loudly.
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
 interface StillAccurateActionProps {
-  eventId: string
-  submissionId: string | null | undefined
-  observedAt: string | null | undefined
+  eventId: string;
+  submissionId: string | null | undefined;
+  observedAt: string | null | undefined;
   // The one stamp site whose timestamp lives in client state rather than in a
   // server prop needs to drop its row itself; `router.refresh()` cannot reach
   // a `useState` initializer. See EventDetailClient's confirmedSub branch.
-  onSighted?: () => void
+  onSighted?: () => void;
 }
 
 /**
@@ -38,10 +38,10 @@ export const StillAccurateAction = ({
   observedAt,
   onSighted,
 }: StillAccurateActionProps) => {
-  const router = useRouter()
-  const { isLoaded, isSignedIn, getToken } = useAuth()
-  const [saving, setSaving] = useState(false)
-  const [gateOpen, setGateOpen] = useState(false)
+  const router = useRouter();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
 
   const eligible =
     submissionId != null &&
@@ -50,20 +50,20 @@ export const StillAccurateAction = ({
     // Reading auth before Clerk resolves renders the action to anonymous
     // readers, who then get a 401 on click. This codebase has shipped that bug.
     isLoaded &&
-    isSignedIn
+    isSignedIn;
 
   const onClick = async (): Promise<void> => {
-    if (saving) return
-    setSaving(true)
+    if (saving) return;
+    setSaving(true);
     try {
-      const token = await getToken()
+      const token = await getToken();
       const res = await fetch(
         `${API_URL}/v1/events/${eventId}/price-submissions/${submissionId}/still-accurate`,
         {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         },
-      )
+      );
 
       // 401 is the only response a refresh cannot answer, because the problem
       // is a missing identity rather than a stale view. Every other outcome —
@@ -71,21 +71,21 @@ export const StillAccurateAction = ({
       // the event went away — means the reader is looking at something out of
       // date, so hand the page back to the server and let it re-derive.
       if (res.status === 401) {
-        setGateOpen(true)
-        return
+        setGateOpen(true);
+        return;
       }
 
-      if (res.ok || res.status === 409) onSighted?.()
-      router.refresh()
+      if (res.ok || res.status === 409) onSighted?.();
+      router.refresh();
     } catch (err) {
       // A network failure leaves the badge where it is, which is the honest
       // state. Refresh anyway so the reader is not looking at a frozen view.
-      console.error('still-accurate request failed', err)
-      router.refresh()
+      console.error('still-accurate request failed', err);
+      router.refresh();
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   if (gateOpen) {
     return (
@@ -98,10 +98,10 @@ export const StillAccurateAction = ({
         scaRegion
         entry="logged-out-price"
       />
-    )
+    );
   }
 
-  if (!eligible) return null
+  if (!eligible) return null;
 
   return (
     <button
@@ -127,5 +127,5 @@ export const StillAccurateAction = ({
     >
       {saving ? copy.stillAccuratePending : copy.stillAccurateAction}
     </button>
-  )
-}
+  );
+};

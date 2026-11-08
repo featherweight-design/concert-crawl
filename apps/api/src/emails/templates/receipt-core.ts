@@ -21,26 +21,26 @@ import {
   pricePromiseText,
   row,
   tierBadge,
-} from '../atoms.js'
-import type { DataRow } from '../atoms.js'
+} from '../atoms.js';
+import type { DataRow } from '../atoms.js';
 import {
   EMAIL_MONO,
   ME,
   escapeHtml,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import { TIER_META } from '../palette.js'
-import type { EmailTemplateVars, RenderedEmail } from '../types.js'
-import { formatEmailDate, formatMonthName, formatShortDate } from './format.js'
+} from '../layout.js';
+import { TIER_META } from '../palette.js';
+import type { EmailTemplateVars, RenderedEmail } from '../types.js';
+import { formatEmailDate, formatMonthName, formatShortDate } from './format.js';
 
-type ReceiptPeriod = 'monthly' | 'annual'
+type ReceiptPeriod = 'monthly' | 'annual';
 
 const FOOTER_NOTE =
-  'Questions about a charge? Reply to this email. A human reads it.'
-const AMOUNT_FALLBACK = 'See receipt'
+  'Questions about a charge? Reply to this email. A human reads it.';
+const AMOUNT_FALLBACK = 'See receipt';
 
-const CONTENT_PAD = '18px 26px 0'
+const CONTENT_PAD = '18px 26px 0';
 
 export const renderReceipt = (
   period: ReceiptPeriod,
@@ -56,46 +56,46 @@ export const renderReceipt = (
     customerId,
     stripeReceiptUrl,
     tier,
-  } = vars
-  const isFounder = tier === 'founder'
-  const badgeTier = tier ?? 'premium'
-  const periodWord = period === 'annual' ? 'annual' : 'monthly'
-  const periodTitleWord = period === 'annual' ? 'Annual' : 'Monthly'
+  } = vars;
+  const isFounder = tier === 'founder';
+  const badgeTier = tier ?? 'premium';
+  const periodWord = period === 'annual' ? 'annual' : 'monthly';
+  const periodTitleWord = period === 'annual' ? 'Annual' : 'Monthly';
 
-  const amountLabel = amount ?? AMOUNT_FALLBACK
-  const chargedLong = formatEmailDate(chargeDate) ?? chargeDate
-  const chargedShort = formatShortDate(chargeDate) ?? chargeDate
-  const renewalLong = formatEmailDate(periodEnd)
-  const renewalShort = formatShortDate(periodEnd)
-  const planLabel = tierName ?? TIER_META[badgeTier].label
+  const amountLabel = amount ?? AMOUNT_FALLBACK;
+  const chargedLong = formatEmailDate(chargeDate) ?? chargeDate;
+  const chargedShort = formatShortDate(chargeDate) ?? chargeDate;
+  const renewalLong = formatEmailDate(periodEnd);
+  const renewalShort = formatShortDate(periodEnd);
+  const planLabel = tierName ?? TIER_META[badgeTier].label;
 
   const title =
     period === 'annual'
       ? 'Another year of Premium. Locked in.'
       : isFounder
         ? "Founder's paid up. Same $3."
-        : `${planLabel}'s paid up.`
+        : `${planLabel}'s paid up.`;
 
   const sub =
     period === 'annual'
       ? "Your annual plan renewed. Keep this for your records: it's your receipt for the next twelve months."
-      : 'Your subscription renewed on schedule. Keep this one for your records.'
+      : 'Your subscription renewed on schedule. Keep this one for your records.';
 
   const subject =
     period === 'annual'
       ? 'Another year of Premium. Receipt inside.'
       : isFounder
         ? "Founder's paid up. $3, same as always."
-        : `${planLabel}'s paid up for ${formatMonthName(chargeDate) ?? 'this month'}.`
+        : `${planLabel}'s paid up for ${formatMonthName(chargeDate) ?? 'this month'}.`;
 
   const preheader =
     period === 'annual'
       ? `${amountLabel} on ${chargedShort}. Renews ${renewalLong ?? 'next year'}. Two months on the house.`
       : isFounder
         ? `${amountLabel} on ${chargedShort}. Next renewal ${renewalShort ?? 'soon'}. Locked forever.`
-        : `${amountLabel} on ${chargedShort}. Next renewal ${renewalShort ?? 'soon'}. Receipt inside.`
+        : `${amountLabel} on ${chargedShort}. Next renewal ${renewalShort ?? 'soon'}. Receipt inside.`;
 
-  const heroSubline = `Paid · ${chargedLong} · ${periodTitleWord}`
+  const heroSubline = `Paid · ${chargedLong} · ${periodTitleWord}`;
 
   const dataRows: DataRow[] = [
     { label: 'Plan', value: `${planLabel} · ${periodWord}`, strong: true },
@@ -114,12 +114,12 @@ export const renderReceipt = (
             href: stripeReceiptUrl,
           },
         ]),
-  ]
+  ];
 
   const annualNote =
     amount === null
       ? 'Two months on the house versus paying monthly.'
-      : `Annual runs ${amount}. Two months on the house versus paying monthly.`
+      : `Annual runs ${amount}. Two months on the house versus paying monthly.`;
 
   const annualNoteRow =
     period === 'annual'
@@ -127,12 +127,12 @@ export const renderReceipt = (
           '14px 26px 0',
           `<div style="font-family: ${EMAIL_MONO}; font-size: 10px; letter-spacing: 0.04em; color: ${ME.subtle}; line-height: 1.5;">${escapeHtml(annualNote)}</div>`,
         )
-      : ''
+      : '';
 
   const founderPromiseRow =
     isFounder && period === 'monthly'
       ? row(CONTENT_PAD, pricePromise({ tier: 'founder', subtle: true }))
-      : ''
+      : '';
 
   const ctaRow =
     stripeReceiptUrl === null
@@ -144,7 +144,7 @@ export const renderReceipt = (
             tone: 'ghost',
             href: stripeReceiptUrl,
           }),
-        )
+        );
 
   const bodyRows = [
     headerRow('Receipt'),
@@ -166,7 +166,7 @@ export const renderReceipt = (
     footerRow({ family: 'billing', showManage: true, note: FOOTER_NOTE }),
   ]
     .filter((rowStr) => rowStr !== '')
-    .join('\n')
+    .join('\n');
 
   const textLines = [
     title,
@@ -186,7 +186,7 @@ export const renderReceipt = (
     ...(isFounder && period === 'monthly'
       ? ['', pricePromiseText('founder')]
       : []),
-  ]
+  ];
 
   return {
     subject,
@@ -198,5 +198,5 @@ export const renderReceipt = (
       showManage: true,
       note: FOOTER_NOTE,
     }),
-  }
-}
+  };
+};

@@ -76,4 +76,4 @@ export const ARTIST_PICKER_COPY = {
   searchOpened: 'Searching artists. Your picks are kept.',
   /** The strip above the rail while the grid is off screen. */
   pickedCount: (count: number) => `Picked · ${count}`,
-} as const
+} as const;

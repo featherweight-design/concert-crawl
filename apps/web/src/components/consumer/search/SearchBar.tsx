@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, X, ArrowLeft } from 'lucide-react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, X, ArrowLeft } from 'lucide-react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   SEARCH_FIELD_BOX,
   SEARCH_FIELD_FONT_SIZE,
-} from './definitions/constants'
+} from './definitions/constants';
 
-const copy = CONSUMER_COPY.search
+const copy = CONSUMER_COPY.search;
 
 interface SearchBarProps {
-  value: string
-  onChange: (val: string) => void
-  onClear: () => void
-  showBack?: boolean
-  autoFocus?: boolean
+  value: string;
+  onChange: (val: string) => void;
+  onClear: () => void;
+  showBack?: boolean;
+  autoFocus?: boolean;
 }
 
 export function SearchBar({
@@ -26,12 +26,12 @@ export function SearchBar({
   showBack = false,
   autoFocus = false,
 }: SearchBarProps) {
-  const router = useRouter()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus()
-  }, [autoFocus])
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   return (
     <div
@@ -113,5 +113,5 @@ export function SearchBar({
         )}
       </div>
     </div>
-  )
+  );
 }

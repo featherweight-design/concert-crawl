@@ -2,8 +2,8 @@ export function Eyebrow({
   children,
   tone = 'signal',
 }: {
-  children: React.ReactNode
-  tone?: 'signal' | 'accent'
+  children: React.ReactNode;
+  tone?: 'signal' | 'accent';
 }) {
   return (
     <div
@@ -18,7 +18,7 @@ export function Eyebrow({
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function StepHeading({ children }: { children: React.ReactNode }) {
@@ -37,7 +37,7 @@ export function StepHeading({ children }: { children: React.ReactNode }) {
     >
       {children}
     </h1>
-  )
+  );
 }
 
 export function Lede({ children }: { children: React.ReactNode }) {
@@ -55,5 +55,5 @@ export function Lede({ children }: { children: React.ReactNode }) {
     >
       {children}
     </p>
-  )
+  );
 }

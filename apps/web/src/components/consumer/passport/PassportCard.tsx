@@ -1,18 +1,18 @@
-import React from 'react'
+import React from 'react';
 import {
   PP_MODES,
   scalePassportMode,
   type PassportMode,
-} from '@/components/consumer/passport/definitions/modes'
-import { PassportMoreTile } from '@/components/consumer/passport/PassportMoreTile'
-import { PassportPill } from '@/components/consumer/passport/PassportPill'
-import { PassportStamp } from '@/components/consumer/passport/PassportStamp'
-import { PassportStat } from '@/components/consumer/passport/PassportStat'
-import { ShareWordmark } from '@/components/consumer/share/ShareWordmark'
-import { DENVER_TIME_ZONE } from '@/lib/time'
-import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy'
-import { passportHandle } from '@/lib/passport/stamp'
-import { passportStats, type AttendedShow } from '@/lib/passport/stats'
+} from '@/components/consumer/passport/definitions/modes';
+import { PassportMoreTile } from '@/components/consumer/passport/PassportMoreTile';
+import { PassportPill } from '@/components/consumer/passport/PassportPill';
+import { PassportStamp } from '@/components/consumer/passport/PassportStamp';
+import { PassportStat } from '@/components/consumer/passport/PassportStat';
+import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
+import { DENVER_TIME_ZONE } from '@/lib/time';
+import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
+import { passportHandle } from '@/lib/passport/stamp';
+import { passportStats, type AttendedShow } from '@/lib/passport/stats';
 
 // ── Why this file looks the way it does ────────────────────────────
 // The `share` mode renders inside satori, not a browser: no `mixBlendMode`, no
@@ -22,30 +22,30 @@ import { passportStats, type AttendedShow } from '@/lib/passport/stats'
 // the in-app preview starts advertising a card the PNG does not match.
 
 export interface PassportCardProps {
-  mode?: PassportMode
+  mode?: PassportMode;
   /** Attended shows, most recent first. */
-  shows: AttendedShow[]
+  shows: AttendedShow[];
   /** Resolved theme tokens from `lib/share/theme-tokens.ts`. */
-  tokens: Record<string, string>
+  tokens: Record<string, string>;
   /** The account's handle. Nullable — `user_profiles.handle` is. */
-  handle: string | null
-  year: number
+  handle: string | null;
+  year: number;
   /** Device-pixel multiplier. See `PASSPORT_PRINT_SCALE`. */
-  scale?: number
+  scale?: number;
 }
 
 const SINCE_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: DENVER_TIME_ZONE,
   month: 'short',
   year: 'numeric',
-})
+});
 
 // UTC-noon anchored for the same reason as the stamp punch (#596).
 const sinceLabel = (date: string | undefined): string | null => {
-  if (date === undefined) return null
-  const at = new Date(`${date}T12:00:00Z`)
-  return Number.isNaN(at.getTime()) ? null : SINCE_FORMAT.format(at)
-}
+  if (date === undefined) return null;
+  const at = new Date(`${date}T12:00:00Z`);
+  return Number.isNaN(at.getTime()) ? null : SINCE_FORMAT.format(at);
+};
 
 /**
  * The Concert Passport — a stamp book of nights you were there.
@@ -63,38 +63,38 @@ export const PassportCard = ({
   scale = 1,
 }: PassportCardProps) => {
   const cfg =
-    scale === 1 ? PP_MODES[mode] : scalePassportMode(PP_MODES[mode], scale)
-  const print = mode === 'share'
-  const stats = passportStats(shows)
-  const who = passportHandle(handle)
+    scale === 1 ? PP_MODES[mode] : scalePassportMode(PP_MODES[mode], scale);
+  const print = mode === 'share';
+  const stats = passportStats(shows);
+  const who = passportHandle(handle);
 
-  const capacity = cfg.cols * cfg.rows
+  const capacity = cfg.cols * cfg.rows;
   // An overflowing wall spends its final slot on the `+N more` tile, so only
   // `capacity - 1` shows are surfaced — and the tile therefore has to count the
   // show that slot displaced too, not just the ones past capacity.
   const surfaced = shows.slice(
     0,
     shows.length > capacity ? capacity - 1 : capacity,
-  )
-  const overflow = shows.length - surfaced.length
+  );
+  const overflow = shows.length - surfaced.length;
 
-  const since = sinceLabel(stats.first?.date)
+  const since = sinceLabel(stats.first?.date);
 
   // Satori has no grid and no percentage sizing, so the wall is laid out as
   // wrapping rows of explicitly-sized tiles. The same arithmetic drives both
   // modes, which is what keeps the preview and the PNG in proportion.
-  const wallWidth = cfg.width - cfg.pad * 2
-  const wallHeight = cfg.height - cfg.padTop - (cfg.padBottom - cfg.gap)
-  const tileWidth = (wallWidth - cfg.gap * (cfg.cols - 1)) / cfg.cols
-  const tileHeight = (wallHeight - cfg.gap * (cfg.rows - 1)) / cfg.rows
+  const wallWidth = cfg.width - cfg.pad * 2;
+  const wallHeight = cfg.height - cfg.padTop - (cfg.padBottom - cfg.gap);
+  const tileWidth = (wallWidth - cfg.gap * (cfg.cols - 1)) / cfg.cols;
+  const tileHeight = (wallHeight - cfg.gap * (cfg.rows - 1)) / cfg.rows;
 
-  const bg = tokens['bg'] ?? '#06070F'
-  const fg = tokens['fg'] ?? '#FFFFFF'
-  const fgMuted = tokens['fg-muted'] ?? '#9AA8C7'
-  const signal = tokens['signal'] ?? '#22D3EE'
-  const scrim = tokens['scrim'] ?? 'rgba(6,7,15,0.62)'
-  const surface = tokens['surface-1'] ?? '#12131F'
-  const borderStrong = tokens['border-strong'] ?? 'rgba(255,255,255,0.22)'
+  const bg = tokens['bg'] ?? '#06070F';
+  const fg = tokens['fg'] ?? '#FFFFFF';
+  const fgMuted = tokens['fg-muted'] ?? '#9AA8C7';
+  const signal = tokens['signal'] ?? '#22D3EE';
+  const scrim = tokens['scrim'] ?? 'rgba(6,7,15,0.62)';
+  const surface = tokens['surface-1'] ?? '#12131F';
+  const borderStrong = tokens['border-strong'] ?? 'rgba(255,255,255,0.22)';
 
   return (
     <div
@@ -293,5 +293,5 @@ export const PassportCard = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

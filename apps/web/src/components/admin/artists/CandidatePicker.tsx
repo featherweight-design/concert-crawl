@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The pick-one list for the Spotify match queue (#1345). Exempt from the
 // design pipeline, like the rest of admin.
@@ -12,47 +12,47 @@
 // the common case costs no Spotify search. Typing a term or hitting refresh is
 // the explicit opt-in to spend one.
 
-import { useCallback, useEffect, useState } from 'react'
-import { AdminButton, StatusBadge } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+import { useCallback, useEffect, useState } from 'react';
+import { AdminButton, StatusBadge } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
-const COPY = ADMIN_COPY.artists
+const COPY = ADMIN_COPY.artists;
 
 export interface SpotifyCandidate {
-  id: string
-  name: string
-  imageUrl: string | null
+  id: string;
+  name: string;
+  imageUrl: string | null;
   /** `null` means Spotify was never asked, `[]` means it lists none. */
-  genres: string[] | null
-  spotifyUrl: string | null
-  isExactMatch: boolean
+  genres: string[] | null;
+  spotifyUrl: string | null;
+  isExactMatch: boolean;
 }
 
 interface CandidatePickerProps {
-  artistId: string
-  canonicalName: string
-  apiBase: string
-  getToken: () => Promise<string | null>
-  onPick: (spotifyArtistId: string, photoUrl: string | null) => void
+  artistId: string;
+  canonicalName: string;
+  apiBase: string;
+  getToken: () => Promise<string | null>;
+  onPick: (spotifyArtistId: string, photoUrl: string | null) => void;
 }
 
 interface CandidatesResponse {
-  success: boolean
-  data?: SpotifyCandidate[]
+  success: boolean;
+  data?: SpotifyCandidate[];
   /**
    * When the row's snapshot was last fetched from Spotify. A cache read, a
    * canonical search and a refresh all carry it; genre hydration does not
    * move it, since it fills in a snapshot rather than taking a new one. Null
    * only for a hand-typed query, which is never cached.
    */
-  cachedAt?: string | null
+  cachedAt?: string | null;
 }
 
 interface LoadOptions {
   /** Overrides the search term. Null reads the row's snapshot. */
-  query?: string | null
-  refresh?: boolean
+  query?: string | null;
+  refresh?: boolean;
 }
 
 export const CandidatePicker = ({
@@ -62,83 +62,83 @@ export const CandidatePicker = ({
   getToken,
   onPick,
 }: CandidatePickerProps) => {
-  const [candidates, setCandidates] = useState<SpotifyCandidate[]>([])
-  const [term, setTerm] = useState(canonicalName)
-  const [pastedId, setPastedId] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [cachedAt, setCachedAt] = useState<string | null>(null)
+  const [candidates, setCandidates] = useState<SpotifyCandidate[]>([]);
+  const [term, setTerm] = useState(canonicalName);
+  const [pastedId, setPastedId] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
   const load = useCallback(
     async ({ query = null, refresh = false }: LoadOptions = {}) => {
-      setIsLoading(true)
-      setError(null)
+      setIsLoading(true);
+      setError(null);
       // Results from the previous term stay clickable otherwise, so an admin
       // can pick a candidate that does not belong to the search they are
       // looking at — the exact wrong-identity mistake this queue exists to
       // prevent.
-      setCandidates([])
-      setCachedAt(null)
+      setCandidates([]);
+      setCachedAt(null);
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (!token) {
-          setError(COPY.candidatesError)
-          return
+          setError(COPY.candidatesError);
+          return;
         }
-        const params = new URLSearchParams()
-        if (query !== null) params.set('query', query)
-        if (refresh) params.set('refresh', 'true')
-        const search = params.toString()
+        const params = new URLSearchParams();
+        if (query !== null) params.set('query', query);
+        if (refresh) params.set('refresh', 'true');
+        const search = params.toString();
         const resp = await fetch(
           `${apiBase}/v1/admin/artists/${artistId}/candidates${search === '' ? '' : `?${search}`}`,
           { headers: { Authorization: `Bearer ${token}` } },
-        )
+        );
         if (!resp.ok) {
           // Every state an admin can act on gets its own message: wait,
           // provision credentials, or fix the credentials that exist. A shared
           // "could not search" would send them looking for the wrong problem.
-          if (resp.status === 503) setError(COPY.candidatesDormant)
-          else if (resp.status === 429) setError(COPY.candidatesRateLimited)
+          if (resp.status === 503) setError(COPY.candidatesDormant);
+          else if (resp.status === 429) setError(COPY.candidatesRateLimited);
           else if (resp.status === 502)
-            setError(COPY.candidatesCredentialsRejected)
-          else setError(COPY.candidatesError)
-          setCandidates([])
-          return
+            setError(COPY.candidatesCredentialsRejected);
+          else setError(COPY.candidatesError);
+          setCandidates([]);
+          return;
         }
-        const body: CandidatesResponse = await resp.json()
-        setCandidates(body.data ?? [])
-        setCachedAt(body.cachedAt ?? null)
+        const body: CandidatesResponse = await resp.json();
+        setCandidates(body.data ?? []);
+        setCachedAt(body.cachedAt ?? null);
       } catch (err) {
-        console.error('[admin artists] candidate search failed', err)
-        setError(COPY.candidatesError)
-        setCandidates([])
+        console.error('[admin artists] candidate search failed', err);
+        setError(COPY.candidatesError);
+        setCandidates([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     [apiBase, artistId, getToken],
-  )
+  );
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void load();
+  }, [load]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <form
         style={{ display: 'flex', gap: 8, alignItems: 'center' }}
         onSubmit={(ev) => {
-          ev.preventDefault()
+          ev.preventDefault();
           // Enter submits past the disabled button, and an empty term would
           // spend a Spotify search re-running the canonical one.
-          const trimmed = term.trim()
-          if (trimmed.length === 0) return
+          const trimmed = term.trim();
+          if (trimmed.length === 0) return;
           // The box starts on the canonical name, so submitting it untouched
           // is a refresh. Sending it as an override would spend the same
           // search and throw the result away instead of caching it.
           void load(
             trimmed === canonicalName ? { refresh: true } : { query: trimmed },
-          )
+          );
         }}
       >
         <label
@@ -324,7 +324,7 @@ export const CandidatePicker = ({
                 </AdminButton>
               </div>
             </li>
-          )
+          );
         })}
       </ul>
 
@@ -335,11 +335,11 @@ export const CandidatePicker = ({
       <form
         style={{ display: 'flex', gap: 8, alignItems: 'center' }}
         onSubmit={(ev) => {
-          ev.preventDefault()
-          if (pastedId.trim().length === 0) return
+          ev.preventDefault();
+          if (pastedId.trim().length === 0) return;
           // No photo: an id typed by hand has no image in hand, so the plate
           // fills in on the next match-job cycle.
-          onPick(pastedId.trim(), null)
+          onPick(pastedId.trim(), null);
         }}
       >
         <label htmlFor={`paste-id-${artistId}`} style={{ fontSize: 12 }}>
@@ -372,5 +372,5 @@ export const CandidatePicker = ({
         </AdminButton>
       </form>
     </div>
-  )
-}
+  );
+};

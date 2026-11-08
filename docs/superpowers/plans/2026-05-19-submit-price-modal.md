@@ -15,6 +15,7 @@
 ## File Map
 
 **Create:**
+
 - `apps/web/src/components/consumer/modal-shell/ModalShell.tsx`
 - `apps/web/src/components/consumer/modal-shell/index.ts`
 - `apps/web/src/components/consumer/modal-shell/ModalShell.test.tsx`
@@ -24,12 +25,14 @@
 - `apps/web/src/components/consumer/feedback/FeedbackModal.test.tsx`
 
 **Modify:**
+
 - `apps/web/src/components/consumer/feedback/FeedbackModal.tsx`
 - `apps/web/src/components/consumer/SubmitPriceCardCta.tsx`
 - `apps/web/src/components/consumer/PriceDisplay.tsx`
 - `apps/web/src/app/(protected)/events/[id]/page.tsx`
 
 **Delete:**
+
 - `apps/web/src/app/(protected)/events/[id]/submit-price/page.tsx`
 - `apps/web/src/components/consumer/SubmitForm.tsx`
 - `apps/web/src/components/consumer/PriceSubmissionForm.tsx`
@@ -39,6 +42,7 @@
 ## Task 1: ModalShell primitive
 
 **Files:**
+
 - Create: `apps/web/src/components/consumer/modal-shell/ModalShell.tsx`
 - Create: `apps/web/src/components/consumer/modal-shell/index.ts`
 - Create: `apps/web/src/components/consumer/modal-shell/ModalShell.test.tsx`
@@ -50,10 +54,10 @@ Create `apps/web/src/components/consumer/modal-shell/ModalShell.test.tsx`:
 ```tsx
 // @vitest-environment jsdom
 
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ModalShell } from './ModalShell'
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ModalShell } from './ModalShell';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -68,53 +72,73 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
-const Header = () => <div>Modal Header</div>
+const Header = () => <div>Modal Header</div>;
 
 describe('ModalShell', () => {
   it('renders nothing when closed', () => {
     render(
-      <ModalShell open={false} onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+      <ModalShell
+        open={false}
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        header={<Header />}
+      >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
   it('renders dialog with header and children when open', () => {
     render(
-      <ModalShell open={true} onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+      <ModalShell
+        open={true}
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        header={<Header />}
+      >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByText('Content')).toBeTruthy()
-    expect(screen.getByText('Modal Header')).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Content')).toBeTruthy();
+    expect(screen.getByText('Modal Header')).toBeTruthy();
+  });
 
   it('calls onClose when Escape key is pressed', () => {
-    const onClose = vi.fn()
+    const onClose = vi.fn();
     render(
-      <ModalShell open={true} onClose={onClose} ariaLabel="Test" header={<Header />}>
+      <ModalShell
+        open={true}
+        onClose={onClose}
+        ariaLabel="Test"
+        header={<Header />}
+      >
         <div>Content</div>
       </ModalShell>,
-    )
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('calls onClose when scrim is clicked', () => {
-    const onClose = vi.fn()
+    const onClose = vi.fn();
     render(
-      <ModalShell open={true} onClose={onClose} ariaLabel="Test" header={<Header />}>
+      <ModalShell
+        open={true}
+        onClose={onClose}
+        ariaLabel="Test"
+        header={<Header />}
+      >
         <div>Content</div>
       </ModalShell>,
-    )
-    fireEvent.click(screen.getByTestId('modal-scrim'))
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
+    );
+    fireEvent.click(screen.getByTestId('modal-scrim'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('renders footer when provided', () => {
     render(
@@ -127,19 +151,24 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy();
+  });
 
   it('renders no footer section when footer prop is omitted', () => {
     render(
-      <ModalShell open={true} onClose={vi.fn()} ariaLabel="Test" header={<Header />}>
+      <ModalShell
+        open={true}
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        header={<Header />}
+      >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.queryByRole('button')).toBeNull()
-  })
-})
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 1.2: Run tests to confirm they fail**
@@ -155,18 +184,18 @@ Expected: FAIL — `Cannot find module './ModalShell'`
 Create `apps/web/src/components/consumer/modal-shell/ModalShell.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react';
 
 interface ModalShellProps {
-  open: boolean
-  onClose: () => void
-  ariaLabel: string
-  header: React.ReactNode
-  footer?: React.ReactNode
-  children: React.ReactNode
-  sheetHeight?: 'tall' | 'short'
+  open: boolean;
+  onClose: () => void;
+  ariaLabel: string;
+  header: React.ReactNode;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+  sheetHeight?: 'tall' | 'short';
 }
 
 export function ModalShell({
@@ -178,32 +207,32 @@ export function ModalShell({
   children,
   sheetHeight = 'tall',
 }: ModalShellProps) {
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const handleKeyDown = useCallback(
     (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onClose()
+      if (ev.key === 'Escape') onClose();
     },
     [onClose],
-  )
+  );
 
   useEffect(() => {
-    if (!open) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, handleKeyDown])
+    if (!open) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, handleKeyDown]);
 
-  if (!open) return null
+  if (!open) return null;
 
-  const heightValue = sheetHeight === 'tall' ? '85%' : '62%'
+  const heightValue = sheetHeight === 'tall' ? '85%' : '62%';
 
   return (
     <>
@@ -341,7 +370,7 @@ export function ModalShell({
         </div>
       )}
     </>
-  )
+  );
 }
 ```
 
@@ -350,7 +379,7 @@ export function ModalShell({
 Create `apps/web/src/components/consumer/modal-shell/index.ts`:
 
 ```ts
-export { ModalShell } from './ModalShell'
+export { ModalShell } from './ModalShell';
 ```
 
 - [ ] **Step 1.5: Run tests to confirm they pass**
@@ -381,6 +410,7 @@ git commit -m "feat(modal-shell): extract shared ModalShell primitive (#448)"
 ## Task 2: Refactor FeedbackModal to use ModalShell
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/feedback/FeedbackModal.tsx`
 - Create: `apps/web/src/components/consumer/feedback/FeedbackModal.test.tsx`
 
@@ -391,9 +421,9 @@ Create `apps/web/src/components/consumer/feedback/FeedbackModal.test.tsx`:
 ```tsx
 // @vitest-environment jsdom
 
-import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -408,37 +438,37 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: vi.fn().mockResolvedValue('tok') }),
   useUser: () => ({ user: null }),
-}))
+}));
 vi.mock('next/navigation', () => ({
   usePathname: () => '/browse',
-}))
+}));
 vi.mock('@/theme/ThemeProvider', () => ({
   useTheme: () => ({ theme: 'electric' }),
-}))
+}));
 vi.mock('@/components/brand/cc-mark', () => ({
   CCMark: () => <div data-testid="cc-mark" />,
-}))
+}));
 
-import { FeedbackModal } from './FeedbackModal'
+import { FeedbackModal } from './FeedbackModal';
 
 describe('FeedbackModal', () => {
   it('renders the dialog with form content when open', () => {
-    render(<FeedbackModal open={true} onClose={vi.fn()} />)
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByText('Holler at us.')).toBeTruthy()
-  })
+    render(<FeedbackModal open={true} onClose={vi.fn()} />);
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Holler at us.')).toBeTruthy();
+  });
 
   it('renders nothing when closed', () => {
-    render(<FeedbackModal open={false} onClose={vi.fn()} />)
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
-})
+    render(<FeedbackModal open={false} onClose={vi.fn()} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 2.2: Run test to confirm it passes against the current FeedbackModal**
@@ -456,14 +486,14 @@ Replace the contents of `apps/web/src/components/consumer/feedback/FeedbackModal
 The refactored `FeedbackModal` function and `HeaderRail` become:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
-import { useAuth, useUser } from '@clerk/nextjs'
-import { useTheme } from '@/theme/ThemeProvider'
-import { CCMark } from '@/components/brand/cc-mark'
-import { ModalShell } from '@/components/consumer/modal-shell'
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { useTheme } from '@/theme/ThemeProvider';
+import { CCMark } from '@/components/brand/cc-mark';
+import { ModalShell } from '@/components/consumer/modal-shell';
 
 // ... (keep all existing type definitions: FeedbackCategory, ModalState, CATEGORIES, API_URL, APP_VERSION)
 // ... (keep all existing interfaces: FeedbackModalProps, CtxData, ScreenshotValue, FormProps)
@@ -471,65 +501,65 @@ import { ModalShell } from '@/components/consumer/modal-shell'
 //      Eyebrow, HelpText, StatusRail, SubmitButton, SecondaryButton, Spinner, CloseIcon unchanged)
 
 export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
-  const pathname = usePathname()
-  const { theme } = useTheme()
-  const { getToken } = useAuth()
-  const { user } = useUser()
-  const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous'
-  const [state, setState] = useState<ModalState>('form')
-  const [category, setCategory] = useState<FeedbackCategory | null>(null)
-  const [message, setMessage] = useState('')
-  const [catError, setCatError] = useState(false)
-  const [msgError, setMsgError] = useState(false)
+  const pathname = usePathname();
+  const { theme } = useTheme();
+  const { getToken } = useAuth();
+  const { user } = useUser();
+  const userEmail = user?.emailAddresses[0]?.emailAddress ?? 'anonymous';
+  const [state, setState] = useState<ModalState>('form');
+  const [category, setCategory] = useState<FeedbackCategory | null>(null);
+  const [message, setMessage] = useState('');
+  const [catError, setCatError] = useState(false);
+  const [msgError, setMsgError] = useState(false);
   const [screenshot, setScreenshot] = useState<{
-    name: string
-    dataUrl: string
-  } | null>(null)
+    name: string;
+    dataUrl: string;
+  } | null>(null);
 
   const handleScreenshotChange = useCallback((file: File | null) => {
     if (!file) {
-      setScreenshot(null)
-      return
+      setScreenshot(null);
+      return;
     }
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = () => {
-      setScreenshot({ name: file.name, dataUrl: reader.result as string })
-    }
-    reader.readAsDataURL(file)
-  }, [])
+      setScreenshot({ name: file.name, dataUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  }, []);
 
   const reset = useCallback(() => {
-    setState('form')
-    setCategory(null)
-    setMessage('')
-    setCatError(false)
-    setMsgError(false)
-    setScreenshot(null)
-  }, [])
+    setState('form');
+    setCategory(null);
+    setMessage('');
+    setCatError(false);
+    setMsgError(false);
+    setScreenshot(null);
+  }, []);
 
   const handleClose = useCallback(() => {
-    onClose()
-    setTimeout(reset, 300)
-  }, [onClose, reset])
+    onClose();
+    setTimeout(reset, 300);
+  }, [onClose, reset]);
 
   const handleSubmit = useCallback(async () => {
-    const catInvalid = !category
-    const msgInvalid = !message.trim()
+    const catInvalid = !category;
+    const msgInvalid = !message.trim();
     if (catInvalid || msgInvalid) {
-      setCatError(catInvalid)
-      setMsgError(msgInvalid)
-      return
+      setCatError(catInvalid);
+      setMsgError(msgInvalid);
+      return;
     }
-    setState('loading')
-    const token = await getToken()
+    setState('loading');
+    const token = await getToken();
     if (!token) {
-      setState('error')
-      return
+      setState('error');
+      return;
     }
     const device =
       typeof navigator !== 'undefined'
         ? navigator.userAgent.slice(0, 120)
-        : 'unknown'
+        : 'unknown';
     try {
       const res = await fetch(`${API_URL}/v1/feedback`, {
         method: 'POST',
@@ -548,26 +578,26 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             screenshot: screenshot?.dataUrl ?? null,
           },
         }),
-      })
-      if (!res.ok) throw new Error(`${res.status}`)
-      setState('success')
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setState('success');
     } catch (err) {
-      console.error('Feedback submission failed', err)
-      setState('error')
+      console.error('Feedback submission failed', err);
+      setState('error');
     }
-  }, [category, getToken, message, pathname, screenshot, theme])
+  }, [category, getToken, message, pathname, screenshot, theme]);
 
   const handleCategoryChange = useCallback((cat: FeedbackCategory) => {
-    setCategory(cat)
-    setCatError(false)
-  }, [])
+    setCategory(cat);
+    setCatError(false);
+  }, []);
 
   const handleMessageChange = useCallback((msg: string) => {
-    setMessage(msg)
-    setMsgError(false)
-  }, [])
+    setMessage(msg);
+    setMsgError(false);
+  }, []);
 
-  const showForm = state === 'form' || state === 'loading'
+  const showForm = state === 'form' || state === 'loading';
   const ctxData: CtxData = {
     route: pathname,
     theme,
@@ -577,7 +607,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         ? navigator.userAgent.slice(0, 120)
         : 'unknown',
     user: userEmail,
-  }
+  };
 
   const header = (
     <div
@@ -611,7 +641,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         <CloseIcon />
       </button>
     </div>
-  )
+  );
 
   const footer = showForm ? (
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -624,7 +654,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         </SubmitButton>
       </div>
     </div>
-  ) : undefined
+  ) : undefined;
 
   return (
     <ModalShell
@@ -663,7 +693,7 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
         )}
       </div>
     </ModalShell>
-  )
+  );
 }
 ```
 
@@ -700,6 +730,7 @@ git commit -m "refactor(feedback): use ModalShell primitive (#448)"
 ## Task 3: SubmitPriceModal — form view + shield icon (#399)
 
 **Files:**
+
 - Create: `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx`
 - Create: `apps/web/src/components/consumer/submit-price/index.ts`
 - Create: `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.tsx`
@@ -711,9 +742,9 @@ Create `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.tsx`
 ```tsx
 // @vitest-environment jsdom
 
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -728,34 +759,34 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-  vi.clearAllMocks()
-})
+  });
+  vi.clearAllMocks();
+});
 
-const mockGetToken = vi.fn().mockResolvedValue('test-token')
+const mockGetToken = vi.fn().mockResolvedValue('test-token');
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken }),
-}))
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
-}))
+}));
 vi.mock('@/components/brand/cc-mark', () => ({
   CCMark: () => <div data-testid="cc-mark" />,
-}))
+}));
 vi.mock('lucide-react', () => ({
   ShieldCheck: () => <svg data-testid="shield-check-icon" />,
-}))
+}));
 vi.mock('@/lib/sp-policy', () => ({
   validateSubmission: () => ({ valid: true, errors: {}, warnings: {} }),
-}))
+}));
 
 // Default: no existing submission
 global.fetch = vi.fn().mockResolvedValue({
   ok: true,
   json: async () => ({ alreadySubmitted: false, userSubmission: null }),
-})
+});
 
-import { SubmitPriceModal } from './SubmitPriceModal'
+import { SubmitPriceModal } from './SubmitPriceModal';
 
 const defaultProps = {
   open: true,
@@ -764,32 +795,34 @@ const defaultProps = {
   artist: 'Radiohead',
   venueName: 'Red Rocks',
   date: '2099-07-15T19:00:00.000Z',
-}
+};
 
 describe('SubmitPriceModal — form view', () => {
   it('renders nothing when closed', () => {
-    render(<SubmitPriceModal {...defaultProps} open={false} />)
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
+    render(<SubmitPriceModal {...defaultProps} open={false} />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
   it('shows the form after checking for existing submission', async () => {
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
-    expect(screen.getByText('Radiohead')).toBeTruthy()
-    expect(screen.getByText('Red Rocks')).toBeTruthy()
-  })
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    expect(screen.getByText('Radiohead')).toBeTruthy();
+    expect(screen.getByText('Red Rocks')).toBeTruthy();
+  });
 
   it('renders the ShieldCheck icon in the anti-abuse banner', async () => {
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByTestId('shield-check-icon')).toBeTruthy())
-  })
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('shield-check-icon')).toBeTruthy(),
+    );
+  });
 
   it('renders tier chip options', async () => {
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('GA')).toBeTruthy())
-    expect(screen.getByText('VIP')).toBeTruthy()
-  })
-})
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('GA')).toBeTruthy());
+    expect(screen.getByText('VIP')).toBeTruthy();
+  });
+});
 ```
 
 - [ ] **Step 3.2: Run tests to confirm they fail**
@@ -805,18 +838,23 @@ Expected: FAIL — `Cannot find module './SubmitPriceModal'`
 Create `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useCallback, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { ShieldCheck } from 'lucide-react'
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CCMark } from '@/components/brand/cc-mark'
-import { SPNumberField } from '../SPNumberField'
-import { ChipGroup } from '../ChipGroup'
-import { validateSubmission, type SubmissionInput } from '@/lib/sp-policy'
-import type { Tier, Vendor, HowFound, SubmissionWithMeta } from '@concert-crawl/types'
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { ShieldCheck } from 'lucide-react';
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CCMark } from '@/components/brand/cc-mark';
+import { SPNumberField } from '../SPNumberField';
+import { ChipGroup } from '../ChipGroup';
+import { validateSubmission, type SubmissionInput } from '@/lib/sp-policy';
+import type {
+  Tier,
+  Vendor,
+  HowFound,
+  SubmissionWithMeta,
+} from '@concert-crawl/types';
 
 type ModalState =
   | 'loading-check'
@@ -824,15 +862,15 @@ type ModalState =
   | 'submitting'
   | 'success'
   | 'error'
-  | 'alreadySubmitted'
+  | 'alreadySubmitted';
 
 interface SubmitPriceModalProps {
-  open: boolean
-  onClose: () => void
-  eventId: string
-  artist: string
-  venueName: string
-  date: string
+  open: boolean;
+  onClose: () => void;
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string;
 }
 
 const TIER_OPTIONS = [
@@ -841,7 +879,7 @@ const TIER_OPTIONS = [
   { value: 'VIP', label: 'VIP' },
   { value: 'Pit', label: 'Pit' },
   { value: 'Lawn', label: 'Lawn' },
-]
+];
 
 const VENDOR_OPTIONS = [
   { value: 'AXS', label: 'AXS' },
@@ -850,15 +888,15 @@ const VENDOR_OPTIONS = [
   { value: 'DICE', label: 'DICE' },
   { value: 'Eventbrite', label: 'Eventbrite' },
   { value: 'VenueBoxOffice', label: 'Venue box office' },
-]
+];
 
 const HOW_FOUND_OPTIONS = [
   { value: 'bought_myself', label: 'Bought it myself' },
   { value: 'saw_listing', label: 'Saw the listing' },
   { value: 'at_the_venue', label: 'At the venue' },
-]
+];
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
 export function SubmitPriceModal({
   open,
@@ -868,71 +906,75 @@ export function SubmitPriceModal({
   venueName,
   date,
 }: SubmitPriceModalProps) {
-  const router = useRouter()
-  const { getToken } = useAuth()
+  const router = useRouter();
+  const { getToken } = useAuth();
 
-  const [modalState, setModalState] = useState<ModalState>('loading-check')
+  const [modalState, setModalState] = useState<ModalState>('loading-check');
   const [formState, setFormState] = useState<SubmissionInput>({
     floor: '',
     ceiling: '',
     tier: null,
     vendor: null,
     howFound: null,
-  })
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({})
-  const [fieldWarnings, setFieldWarnings] = useState<Partial<Record<string, string>>>({})
+  });
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<string, string>>
+  >({});
+  const [fieldWarnings, setFieldWarnings] = useState<
+    Partial<Record<string, string>>
+  >({});
   const [existingSubmission, setExistingSubmission] =
-    useState<SubmissionWithMeta | null>(null)
+    useState<SubmissionWithMeta | null>(null);
 
   useEffect(() => {
-    if (!open) return
-    setModalState('loading-check')
-    setFieldErrors({})
-    setFieldWarnings({})
+    if (!open) return;
+    setModalState('loading-check');
+    setFieldErrors({});
+    setFieldWarnings({});
 
     const checkExisting = async () => {
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (!token) {
-          setModalState('form')
-          return
+          setModalState('form');
+          return;
         }
         const res = await fetch(
           `${API_URL}/v1/events/${eventId}/price-submissions`,
           { headers: { Authorization: `Bearer ${token}` } },
-        )
+        );
         if (res.ok) {
           const data = (await res.json()) as {
-            alreadySubmitted: boolean
-            userSubmission: SubmissionWithMeta | null
-          }
+            alreadySubmitted: boolean;
+            userSubmission: SubmissionWithMeta | null;
+          };
           if (data.alreadySubmitted && data.userSubmission) {
-            setExistingSubmission(data.userSubmission)
-            setModalState('alreadySubmitted')
-            return
+            setExistingSubmission(data.userSubmission);
+            setModalState('alreadySubmitted');
+            return;
           }
         }
       } catch (err) {
-        console.error('Failed to check existing submission', err)
+        console.error('Failed to check existing submission', err);
       }
-      setModalState('form')
-    }
-    void checkExisting()
-  }, [open, eventId, getToken])
+      setModalState('form');
+    };
+    void checkExisting();
+  }, [open, eventId, getToken]);
 
   const handleSubmit = useCallback(async () => {
-    const validation = validateSubmission(formState)
-    setFieldErrors(validation.errors)
-    setFieldWarnings(validation.warnings)
-    if (!validation.valid) return
+    const validation = validateSubmission(formState);
+    setFieldErrors(validation.errors);
+    setFieldWarnings(validation.warnings);
+    if (!validation.valid) return;
 
-    setModalState('submitting')
+    setModalState('submitting');
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setErrorMsg('You must be signed in to submit a price.')
-        setModalState('error')
-        return
+        setErrorMsg('You must be signed in to submit a price.');
+        setModalState('error');
+        return;
       }
       const res = await fetch(
         `${API_URL}/v1/events/${eventId}/price-submissions`,
@@ -950,50 +992,50 @@ export function SubmitPriceModal({
             howFound: formState.howFound as HowFound,
           }),
         },
-      )
-      const data = (await res.json()) as { error?: string }
+      );
+      const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         if (res.status === 409) {
-          setModalState('alreadySubmitted')
-          router.refresh()
-          return
+          setModalState('alreadySubmitted');
+          router.refresh();
+          return;
         }
-        throw new Error(data.error ?? 'Submission failed')
+        throw new Error(data.error ?? 'Submission failed');
       }
-      setModalState('success')
+      setModalState('success');
     } catch (err) {
-      console.error('Price submission failed', err)
-      setModalState('error')
+      console.error('Price submission failed', err);
+      setModalState('error');
     }
-  }, [formState, getToken, eventId, router])
+  }, [formState, getToken, eventId, router]);
 
   const handleWithdraw = useCallback(async () => {
-    if (!existingSubmission) return
+    if (!existingSubmission) return;
     try {
-      const token = await getToken()
+      const token = await getToken();
       await fetch(`${API_URL}/v1/submissions/${existingSubmission.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token ?? ''}` },
-      })
-      router.refresh()
-      onClose()
+      });
+      router.refresh();
+      onClose();
     } catch (err) {
-      console.error('Withdraw failed', err)
+      console.error('Withdraw failed', err);
     }
-  }, [existingSubmission, getToken, router, onClose])
+  }, [existingSubmission, getToken, router, onClose]);
 
   const dateStr = new Date(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 
-  const showForm = modalState === 'form' || modalState === 'submitting'
+  const showForm = modalState === 'form' || modalState === 'submitting';
   const isShort =
     modalState === 'success' ||
     modalState === 'error' ||
-    modalState === 'alreadySubmitted'
+    modalState === 'alreadySubmitted';
 
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1021,16 +1063,13 @@ export function SubmitPriceModal({
         <CloseIcon />
       </button>
     </div>
-  )
+  );
 
   const footer = showForm ? (
-    <SubmitButton
-      loading={modalState === 'submitting'}
-      onClick={handleSubmit}
-    >
+    <SubmitButton loading={modalState === 'submitting'} onClick={handleSubmit}>
       Submit price
     </SubmitButton>
-  ) : undefined
+  ) : undefined;
 
   return (
     <ModalShell
@@ -1062,19 +1101,22 @@ export function SubmitPriceModal({
         <SuccessState
           onClose={onClose}
           onReset={() => {
-            setFormState({ floor: '', ceiling: '', tier: null, vendor: null, howFound: null })
-            setFieldErrors({})
-            setFieldWarnings({})
-            setModalState('form')
+            setFormState({
+              floor: '',
+              ceiling: '',
+              tier: null,
+              vendor: null,
+              howFound: null,
+            });
+            setFieldErrors({});
+            setFieldWarnings({});
+            setModalState('form');
           }}
         />
       )}
 
       {modalState === 'error' && (
-        <ErrorState
-          onReset={() => setModalState('form')}
-          onClose={onClose}
-        />
+        <ErrorState onReset={() => setModalState('form')} onClose={onClose} />
       )}
 
       {modalState === 'alreadySubmitted' && existingSubmission && (
@@ -1165,11 +1207,15 @@ export function SubmitPriceModal({
           </div>
 
           {/* Floor + Ceiling */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}
+          >
             <SPNumberField
               label="Floor"
               value={formState.floor}
-              onChange={(val) => setFormState((prev) => ({ ...prev, floor: val }))}
+              onChange={(val) =>
+                setFormState((prev) => ({ ...prev, floor: val }))
+              }
               placeholder="35"
               required
               error={fieldErrors['floor']}
@@ -1178,7 +1224,9 @@ export function SubmitPriceModal({
             <SPNumberField
               label="Ceiling"
               value={formState.ceiling}
-              onChange={(val) => setFormState((prev) => ({ ...prev, ceiling: val }))}
+              onChange={(val) =>
+                setFormState((prev) => ({ ...prev, ceiling: val }))
+              }
               placeholder="75"
               error={fieldErrors['ceiling']}
             />
@@ -1196,7 +1244,9 @@ export function SubmitPriceModal({
             label="Where it's listed *"
             options={VENDOR_OPTIONS}
             value={formState.vendor}
-            onChange={(val) => setFormState((prev) => ({ ...prev, vendor: val }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, vendor: val }))
+            }
             error={fieldErrors['vendor']}
           />
 
@@ -1204,7 +1254,9 @@ export function SubmitPriceModal({
             label="How you found out *"
             options={HOW_FOUND_OPTIONS}
             value={formState.howFound}
-            onChange={(val) => setFormState((prev) => ({ ...prev, howFound: val }))}
+            onChange={(val) =>
+              setFormState((prev) => ({ ...prev, howFound: val }))
+            }
             error={fieldErrors['howFound']}
           />
 
@@ -1223,7 +1275,7 @@ export function SubmitPriceModal({
         </div>
       )}
     </ModalShell>
-  )
+  );
 }
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
@@ -1232,11 +1284,18 @@ function SuccessState({
   onClose,
   onReset,
 }: {
-  onClose: () => void
-  onReset: () => void
+  onClose: () => void;
+  onReset: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        padding: '8px 0',
+      }}
+    >
       <div
         style={{
           fontSize: 30,
@@ -1259,23 +1318,37 @@ function SuccessState({
         Your price is pending — two more fans confirming it moves it out of
         pending.
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          marginTop: 4,
+        }}
+      >
         <PrimaryButton onClick={onClose}>Back to show</PrimaryButton>
         <GhostButton onClick={onReset}>Submit another</GhostButton>
       </div>
     </div>
-  )
+  );
 }
 
 function ErrorState({
   onReset,
   onClose,
 }: {
-  onReset: () => void
-  onClose: () => void
+  onReset: () => void;
+  onClose: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        padding: '8px 0',
+      }}
+    >
       <StatusRail tone="error" />
       <div
         style={{
@@ -1299,12 +1372,19 @@ function ErrorState({
         Couldn&apos;t reach the server — your inputs are still here. Try again
         or come back later.
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          marginTop: 4,
+        }}
+      >
         <PrimaryButton onClick={onReset}>Try again</PrimaryButton>
         <GhostButton onClick={onClose}>Close</GhostButton>
       </div>
     </div>
-  )
+  );
 }
 
 function AlreadySubmittedState({
@@ -1312,12 +1392,19 @@ function AlreadySubmittedState({
   onEdit,
   onWithdraw,
 }: {
-  submission: SubmissionWithMeta
-  onEdit: () => void
-  onWithdraw: () => void
+  submission: SubmissionWithMeta;
+  onEdit: () => void;
+  onWithdraw: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '8px 0' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 14,
+        padding: '8px 0',
+      }}
+    >
       <div
         style={{
           fontSize: 30,
@@ -1351,37 +1438,47 @@ function AlreadySubmittedState({
       >
         You can submit one price per show every 24h.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          marginTop: 4,
+        }}
+      >
         <PrimaryButton onClick={onEdit}>Edit submission</PrimaryButton>
         <GhostButton onClick={onWithdraw}>Withdraw</GhostButton>
       </div>
     </div>
-  )
+  );
 }
 
 // ── Primitive atoms ───────────────────────────────────────────────────────────
 
 function PriceHeaderRail({ state }: { state: ModalState }) {
-  const isError = state === 'error'
-  const isSuccess = state === 'success'
-  const isDone = state === 'alreadySubmitted'
+  const isError = state === 'error';
+  const isSuccess = state === 'success';
+  const isDone = state === 'alreadySubmitted';
   const accent = isError
     ? 'var(--warning)'
     : isSuccess
       ? 'var(--signal)'
-      : 'var(--accent)'
+      : 'var(--accent)';
   const eyebrow = isError
     ? 'Hmm · stalled'
     : isSuccess
       ? 'Got it · submitted'
       : isDone
         ? 'Already submitted'
-        : 'Community prices · open'
-  const code = isError ? 'ERR' : isSuccess ? 'SENT' : isDone ? 'DONE' : 'OPEN'
-  const pulse = state === 'form' || state === 'submitting' || state === 'loading-check'
+        : 'Community prices · open';
+  const code = isError ? 'ERR' : isSuccess ? 'SENT' : isDone ? 'DONE' : 'OPEN';
+  const pulse =
+    state === 'form' || state === 'submitting' || state === 'loading-check';
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+    >
       <span
         style={{
           width: 6,
@@ -1420,13 +1517,15 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
         {code}
       </span>
     </div>
-  )
+  );
 }
 
 function StatusRail({ tone }: { tone: 'error' }) {
-  const accent = 'var(--warning)'
+  const accent = 'var(--warning)';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}>
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
+    >
       <span
         style={{
           width: 6,
@@ -1463,7 +1562,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
         ERR · 503
       </span>
     </div>
-  )
+  );
 }
 
 function PrimaryButton({
@@ -1471,9 +1570,9 @@ function PrimaryButton({
   onClick,
   loading = false,
 }: {
-  children: React.ReactNode
-  onClick: () => void
-  loading?: boolean
+  children: React.ReactNode;
+  onClick: () => void;
+  loading?: boolean;
 }) {
   return (
     <button
@@ -1503,18 +1602,18 @@ function PrimaryButton({
     >
       {children}
     </button>
-  )
+  );
 }
 
 // Alias so the footer slot can use the same component name as FeedbackModal
-const SubmitButton = PrimaryButton
+const SubmitButton = PrimaryButton;
 
 function GhostButton({
   children,
   onClick,
 }: {
-  children: React.ReactNode
-  onClick: () => void
+  children: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
     <button
@@ -1540,7 +1639,7 @@ function GhostButton({
     >
       {children}
     </button>
-  )
+  );
 }
 
 function CloseIcon() {
@@ -1553,7 +1652,7 @@ function CloseIcon() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 ```
 
@@ -1562,7 +1661,7 @@ function CloseIcon() {
 Create `apps/web/src/components/consumer/submit-price/index.ts`:
 
 ```ts
-export { SubmitPriceModal } from './SubmitPriceModal'
+export { SubmitPriceModal } from './SubmitPriceModal';
 ```
 
 - [ ] **Step 3.5: Run form view tests**
@@ -1593,6 +1692,7 @@ git commit -m "feat(submit-price): SubmitPriceModal form view + ShieldCheck icon
 ## Task 4: SubmitPriceModal — state transitions (#398)
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.tsx`
 
 The implementation code was written in Task 3. This task adds the tests for the remaining state transitions to verify correctness.
@@ -1605,85 +1705,89 @@ Append to `apps/web/src/components/consumer/submit-price/SubmitPriceModal.test.t
 describe('SubmitPriceModal — success state', () => {
   it('shows success view after successful submission', async () => {
     // First call: check existing (none). Second call: submit (success).
-    let callCount = 0
+    let callCount = 0;
     global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
+      callCount++;
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ alreadySubmitted: false, userSubmission: null }),
-        })
+        });
       }
       return Promise.resolve({
         ok: true,
         json: async () => ({}),
-      })
-    })
+      });
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
 
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
-    expect(screen.getByText('Back to show')).toBeTruthy()
-    expect(screen.getByText('Submit another')).toBeTruthy()
-  })
-})
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy());
+    expect(screen.getByText('Back to show')).toBeTruthy();
+    expect(screen.getByText('Submit another')).toBeTruthy();
+  });
+});
 
 describe('SubmitPriceModal — error state (#398)', () => {
   it('shows full error view (not inline text) when submission fails', async () => {
-    let callCount = 0
+    let callCount = 0;
     global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
+      callCount++;
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ alreadySubmitted: false, userSubmission: null }),
-        })
+        });
       }
       return Promise.resolve({
         ok: false,
         status: 500,
         json: async () => ({ error: 'Server error' }),
-      })
-    })
+      });
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
 
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() => expect(screen.getByText("Didn't go through.")).toBeTruthy())
-    expect(screen.getByText('Try again')).toBeTruthy()
-    expect(screen.getByText('Close')).toBeTruthy()
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() =>
+      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+    );
+    expect(screen.getByText('Try again')).toBeTruthy();
+    expect(screen.getByText('Close')).toBeTruthy();
     // Must NOT use the old inline error text pattern
-    expect(screen.queryByText('Something went wrong.')).toBeNull()
-  })
+    expect(screen.queryByText('Something went wrong.')).toBeNull();
+  });
 
   it('returns to form with "Try again"', async () => {
-    let callCount = 0
+    let callCount = 0;
     global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
+      callCount++;
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ alreadySubmitted: false, userSubmission: null }),
-        })
+        });
       }
       return Promise.resolve({
         ok: false,
         status: 500,
         json: async () => ({ error: 'Server error' }),
-      })
-    })
+      });
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() => expect(screen.getByText("Didn't go through.")).toBeTruthy())
-    fireEvent.click(screen.getByText('Try again'))
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
-  })
-})
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() =>
+      expect(screen.getByText("Didn't go through.")).toBeTruthy(),
+    );
+    fireEvent.click(screen.getByText('Try again'));
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+  });
+});
 
 describe('SubmitPriceModal — alreadySubmitted state', () => {
   it('starts in alreadySubmitted when existing submission is found', async () => {
@@ -1699,38 +1803,38 @@ describe('SubmitPriceModal — alreadySubmitted state', () => {
           vendor: 'AXS',
         },
       }),
-    })
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
-    expect(screen.getByText(/\$45/)).toBeTruthy()
-    expect(screen.getByText('Edit submission')).toBeTruthy()
-    expect(screen.getByText('Withdraw')).toBeTruthy()
-  })
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
+    expect(screen.getByText(/\$45/)).toBeTruthy();
+    expect(screen.getByText('Edit submission')).toBeTruthy();
+    expect(screen.getByText('Withdraw')).toBeTruthy();
+  });
 
   it('transitions to alreadySubmitted on 409 from POST', async () => {
-    let callCount = 0
+    let callCount = 0;
     global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
+      callCount++;
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
           json: async () => ({ alreadySubmitted: false, userSubmission: null }),
-        })
+        });
       }
       return Promise.resolve({
         ok: false,
         status: 409,
         json: async () => ({}),
-      })
-    })
+      });
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
-    fireEvent.click(screen.getByText('Submit price'))
-    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy())
-  })
-})
+    render(<SubmitPriceModal {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy());
+    fireEvent.click(screen.getByText('Submit price'));
+    await waitFor(() => expect(screen.getByText('Already in.')).toBeTruthy());
+  });
+});
 ```
 
 - [ ] **Step 4.2: Run all SubmitPriceModal tests**
@@ -1753,6 +1857,7 @@ git commit -m "test(submit-price): state transition tests for success, error, al
 ## Task 5: Wire up SubmitPriceCardCta as modal trigger
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/SubmitPriceCardCta.tsx`
 - Modify: `apps/web/src/app/(protected)/events/[id]/page.tsx`
 
@@ -1761,16 +1866,16 @@ git commit -m "test(submit-price): state transition tests for success, error, al
 Replace the full contents of `apps/web/src/components/consumer/SubmitPriceCardCta.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { SubmitPriceModal } from '@/components/consumer/submit-price'
+import { useState } from 'react';
+import { SubmitPriceModal } from '@/components/consumer/submit-price';
 
 interface SubmitPriceCardCtaProps {
-  eventId: string
-  artist: string
-  venueName: string
-  date: string
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string;
 }
 
 export function SubmitPriceCardCta({
@@ -1779,7 +1884,7 @@ export function SubmitPriceCardCta({
   venueName,
   date,
 }: SubmitPriceCardCtaProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
@@ -1859,7 +1964,7 @@ export function SubmitPriceCardCta({
         date={date}
       />
     </>
-  )
+  );
 }
 ```
 
@@ -1901,6 +2006,7 @@ git commit -m "feat(submit-price): convert SubmitPriceCardCta to modal trigger (
 ## Task 6: Convert PriceDisplay submit link to modal trigger
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/PriceDisplay.tsx`
 
 - [ ] **Step 6.1: Add artist and date props to PriceDisplayProps, convert Link to button**
@@ -1912,34 +2018,34 @@ In `apps/web/src/components/consumer/PriceDisplay.tsx`, make three changes:
 ```tsx
 // Before:
 interface PriceDisplayProps {
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: PriceSource | null
-  venueName: string
-  ticketUrl: string | null
-  eventId: string
-  observedAt?: string | null
-  range14d?: number[] | null
-  priceStatus?: 'live' | 'soldout' | null
-  ticketPriceOpenedAt?: number | null
-  ticketFees?: number | null
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: PriceSource | null;
+  venueName: string;
+  ticketUrl: string | null;
+  eventId: string;
+  observedAt?: string | null;
+  range14d?: number[] | null;
+  priceStatus?: 'live' | 'soldout' | null;
+  ticketPriceOpenedAt?: number | null;
+  ticketFees?: number | null;
 }
 
 // After:
 interface PriceDisplayProps {
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: PriceSource | null
-  venueName: string
-  ticketUrl: string | null
-  eventId: string
-  artist: string
-  date: string
-  observedAt?: string | null
-  range14d?: number[] | null
-  priceStatus?: 'live' | 'soldout' | null
-  ticketPriceOpenedAt?: number | null
-  ticketFees?: number | null
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: PriceSource | null;
+  venueName: string;
+  ticketUrl: string | null;
+  eventId: string;
+  artist: string;
+  date: string;
+  observedAt?: string | null;
+  range14d?: number[] | null;
+  priceStatus?: 'live' | 'soldout' | null;
+  ticketPriceOpenedAt?: number | null;
+  ticketFees?: number | null;
 }
 ```
 
@@ -1948,11 +2054,13 @@ interface PriceDisplayProps {
 **3.** Add `isSubmitOpen` state and replace the `<Link href={...}>` CTA (around line 911) with a button that opens `SubmitPriceModal`:
 
 Add at the top of the component function body (near other `useState` calls):
+
 ```tsx
-const [isSubmitOpen, setIsSubmitOpen] = useState(false)
+const [isSubmitOpen, setIsSubmitOpen] = useState(false);
 ```
 
 Replace the `<Link href={`/events/${eventId}/submit-price`}>` block and its closing `</Link>` with:
+
 ```tsx
 <>
   <button
@@ -1993,8 +2101,9 @@ Replace the `<Link href={`/events/${eventId}/submit-price`}>` block and its clos
 ```
 
 Add the import at the top of `PriceDisplay.tsx`:
+
 ```tsx
-import { SubmitPriceModal } from '@/components/consumer/submit-price'
+import { SubmitPriceModal } from '@/components/consumer/submit-price';
 ```
 
 Also remove the `import Link from 'next/link'` if it is no longer used elsewhere in the file (search for other `<Link` usages first).
@@ -2040,6 +2149,7 @@ git commit -m "feat(submit-price): convert PriceDisplay submit link to modal tri
 ## Task 7: Delete dead routes and components
 
 **Files to delete:**
+
 - `apps/web/src/app/(protected)/events/[id]/submit-price/page.tsx`
 - `apps/web/src/components/consumer/SubmitForm.tsx`
 - `apps/web/src/components/consumer/PriceSubmissionForm.tsx`

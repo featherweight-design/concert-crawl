@@ -1,32 +1,32 @@
-import { Hono } from 'hono'
-import { and, asc, count, desc, eq, gte, isNull, max, sql } from 'drizzle-orm'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import * as Sentry from '@sentry/hono/node'
+import { Hono } from 'hono';
+import { and, asc, count, desc, eq, gte, isNull, max, sql } from 'drizzle-orm';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import * as Sentry from '@sentry/hono/node';
 import {
   db,
   events,
   priceRetrievalLog,
   priceSubmissions,
   venues,
-} from '@concert-crawl/db'
-import { runPricePipeline } from '@concert-crawl/price-pipeline'
-import { createLogger } from '@concert-crawl/logger'
-import { VENDOR_VALUES, deriveSourceCategory } from '@concert-crawl/types'
-import { getAuthUser } from '../../middleware/auth.js'
-import { apiLogger } from '../../lib/logger.js'
-import { awardPriceCred } from '../../lib/award-price-cred.js'
-import { runBackgroundTask } from '../../lib/background-tasks.js'
+} from '@concert-crawl/db';
+import { runPricePipeline } from '@concert-crawl/price-pipeline';
+import { createLogger } from '@concert-crawl/logger';
+import { VENDOR_VALUES, deriveSourceCategory } from '@concert-crawl/types';
+import { getAuthUser } from '../../middleware/auth.js';
+import { apiLogger } from '../../lib/logger.js';
+import { awardPriceCred } from '../../lib/award-price-cred.js';
+import { runBackgroundTask } from '../../lib/background-tasks.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
   type PriceDrop,
-} from '../../lib/price-drop.js'
-import type { AdminVariables } from './index.js'
+} from '../../lib/price-drop.js';
+import type { AdminVariables } from './index.js';
 
-const logger = createLogger('admin:prices')
+const logger = createLogger('admin:prices');
 
-export const pricesAdminRouter = new Hono<AdminVariables>()
+export const pricesAdminRouter = new Hono<AdminVariables>();
 
 const eventsQuerySchema = z.object({
   missingOnly: z
@@ -41,21 +41,21 @@ const eventsQuerySchema = z.object({
     .transform((val) => val === 'true'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
 // GET /v1/admin/prices/events — upcoming events with current price data + last retrieval info
 pricesAdminRouter.get(
   '/events',
   zValidator('query', eventsQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
     }
   }),
   async (ctx) => {
-    const { missingOnly, count, limit, offset } = ctx.req.valid('query')
+    const { missingOnly, count, limit, offset } = ctx.req.valid('query');
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
 
     // Exclude admin-hidden non-concerts (#732, same pattern as #712 on the
     // Missing tab). Events flagged hidden_from_consumer=true have already
@@ -66,8 +66,8 @@ pricesAdminRouter.get(
       gte(events.date, today),
       eq(events.hiddenFromConsumer, false),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
-    ]
-    const whereClause = and(...conditions)
+    ];
+    const whereClause = and(...conditions);
 
     // Use a single aggregating join instead of two correlated subqueries per row.
     // The subquery groups price_retrieval_log by event_id once, then LEFT JOINs in.
@@ -83,7 +83,7 @@ pricesAdminRouter.get(
       })
       .from(priceRetrievalLog)
       .groupBy(priceRetrievalLog.eventId)
-      .as('latest_log')
+      .as('latest_log');
 
     const rowsPromise = db
       .select({
@@ -105,22 +105,22 @@ pricesAdminRouter.get(
       .where(whereClause)
       .orderBy(asc(events.date), asc(events.id))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     if (!count) {
-      const rows = await rowsPromise
-      return ctx.json({ success: true, data: rows } as const)
+      const rows = await rowsPromise;
+      return ctx.json({ success: true, data: rows } as const);
     }
 
     const countQuery = db
       .select({ total: sql<number>`count(*)::int` })
       .from(events)
-      .where(whereClause)
-    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
-    const total = countResult[0]?.total ?? 0
-    return ctx.json({ success: true, data: { rows, total } } as const)
+      .where(whereClause);
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery]);
+    const total = countResult[0]?.total ?? 0;
+    return ctx.json({ success: true, data: { rows, total } } as const);
   },
-)
+);
 
 // GET /v1/admin/prices/health — per-source × per-venue success rates
 pricesAdminRouter.get('/health', async (ctx) => {
@@ -135,19 +135,19 @@ pricesAdminRouter.get('/health', async (ctx) => {
       lastAttemptedAt: max(priceRetrievalLog.attemptedAt),
     })
     .from(priceRetrievalLog)
-    .groupBy(priceRetrievalLog.venueId, priceRetrievalLog.source)
+    .groupBy(priceRetrievalLog.venueId, priceRetrievalLog.source);
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   // "0 hits in 30 days": tried recently but never succeeded
   const autoFlagged = stats.filter(
     (stat) =>
       Number(stat.hitCount) === 0 &&
       stat.lastAttemptedAt != null &&
       new Date(stat.lastAttemptedAt) >= thirtyDaysAgo,
-  )
+  );
 
-  return ctx.json({ success: true, data: { stats, autoFlagged } })
-})
+  return ctx.json({ success: true, data: { stats, autoFlagged } });
+});
 
 // GET /v1/admin/prices/log — last 100 retrieval attempts
 pricesAdminRouter.get('/log', async (ctx) => {
@@ -155,10 +155,10 @@ pricesAdminRouter.get('/log', async (ctx) => {
     .select()
     .from(priceRetrievalLog)
     .orderBy(desc(priceRetrievalLog.attemptedAt))
-    .limit(100)
+    .limit(100);
 
-  return ctx.json({ success: true, data: rows })
-})
+  return ctx.json({ success: true, data: rows });
+});
 
 // GET /v1/admin/prices/coverage — % of upcoming events with price data
 //
@@ -177,33 +177,33 @@ pricesAdminRouter.get('/log', async (ctx) => {
 pricesAdminRouter.get('/coverage', async (ctx) => {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/Denver',
-  })
+  });
 
   const baseConditions = and(
     eq(events.status, 'upcoming'),
     gte(events.date, today),
     eq(events.hiddenFromConsumer, false),
-  )
+  );
 
   const [total] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(events)
-    .where(baseConditions)
+    .where(baseConditions);
 
   const [withPrice] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(events)
-    .where(and(baseConditions, sql`${events.ticketPriceMin} IS NOT NULL`))
+    .where(and(baseConditions, sql`${events.ticketPriceMin} IS NOT NULL`));
 
-  const totalCount = total?.count ?? 0
-  const pricedCount = withPrice?.count ?? 0
-  const pct = totalCount > 0 ? Math.round((pricedCount / totalCount) * 100) : 0
+  const totalCount = total?.count ?? 0;
+  const pricedCount = withPrice?.count ?? 0;
+  const pct = totalCount > 0 ? Math.round((pricedCount / totalCount) * 100) : 0;
 
   return ctx.json({
     success: true,
     data: { total: totalCount, withPrice: pricedCount, pct },
-  })
-})
+  });
+});
 
 // GET /v1/admin/prices/submissions — community submission queue
 // `count=true` switches to `{ rows, total }` for the new pagination component.
@@ -233,17 +233,17 @@ const submissionsQuerySchema = z.object({
   status: z.enum(['pending', 'all']).optional().default('pending'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
 pricesAdminRouter.get(
   '/submissions',
   zValidator('query', submissionsQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
     }
   }),
   async (ctx) => {
-    const { count, status, limit, offset } = ctx.req.valid('query')
+    const { count, status, limit, offset } = ctx.req.valid('query');
 
     // Exclude contest counter rows (`disputed_submission_id IS NOT NULL`)
     // from the legacy submissions queue. Counters are adjudicated through
@@ -253,11 +253,11 @@ pricesAdminRouter.get(
     // pill (matched in /v1/admin/review/counts → `prices`). The list
     // endpoint and the counts query stay in lock-step with this filter.
     const statusClause =
-      status === 'pending' ? eq(priceSubmissions.status, 'pending') : undefined
+      status === 'pending' ? eq(priceSubmissions.status, 'pending') : undefined;
     const whereClause = and(
       statusClause,
       isNull(priceSubmissions.disputedSubmissionId),
-    )
+    );
 
     const rowsPromise = db
       .select({
@@ -288,22 +288,22 @@ pricesAdminRouter.get(
       .where(whereClause)
       .orderBy(desc(priceSubmissions.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     if (!count) {
-      const rows = await rowsPromise
-      return ctx.json({ success: true, data: rows })
+      const rows = await rowsPromise;
+      return ctx.json({ success: true, data: rows });
     }
 
     const countQuery = db
       .select({ total: sql<number>`count(*)::int` })
       .from(priceSubmissions)
-      .where(whereClause)
-    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
-    const total = countResult[0]?.total ?? 0
-    return ctx.json({ success: true, data: { rows, total } })
+      .where(whereClause);
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery]);
+    const total = countResult[0]?.total ?? 0;
+    return ctx.json({ success: true, data: { rows, total } });
   },
-)
+);
 
 // GET /v1/admin/prices/submissions/count — pending submissions count for dashboard
 //
@@ -322,43 +322,43 @@ pricesAdminRouter.get('/submissions/count', async (ctx) => {
         eq(priceSubmissions.status, 'pending'),
         isNull(priceSubmissions.disputedSubmissionId),
       ),
-    )
-  return ctx.json({ success: true, data: { pending: result?.pending ?? 0 } })
-})
+    );
+  return ctx.json({ success: true, data: { pending: result?.pending ?? 0 } });
+});
 
 const patchSubmissionSchema = z.object({
   status: z.enum(['corroborated', 'disputed', 'stale']),
-})
+});
 
 // PATCH /v1/admin/prices/submissions/:id — approve (corroborated), dispute, or stale
 pricesAdminRouter.patch(
   '/submissions/:id',
   zValidator('json', patchSubmissionSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid status' }, 422)
+      return ctx.json({ success: false, error: 'Invalid status' }, 422);
     }
   }),
   async (ctx) => {
-    const { id } = ctx.req.param()
-    const { status } = ctx.req.valid('json')
+    const { id } = ctx.req.param();
+    const { status } = ctx.req.valid('json');
 
     type TxResult =
       | {
-          ok: true
-          updated: typeof priceSubmissions.$inferSelect
+          ok: true;
+          updated: typeof priceSubmissions.$inferSelect;
           // #1107: on a promote-to-corroborated where the new price is
           // strictly below the previous event.ticketPriceMin, carry the
           // pre/post prices out of the transaction so the fan-out runs
           // AFTER commit — the fan-out writes its own bell rows outside
           // the tx boundary and shouldn't block the corroboration.
           pricedrop?: {
-            eventId: string
-            oldPriceMin: string
-            newPriceMin: string
-          }
+            eventId: string;
+            oldPriceMin: string;
+            newPriceMin: string;
+          };
         }
       | { ok: false }
-      | { ok: 'contest_lockout' }
+      | { ok: 'contest_lockout' };
 
     const result: TxResult = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -373,9 +373,9 @@ pricesAdminRouter.patch(
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, id))
         .limit(1)
-        .for('update')
+        .for('update');
 
-      if (!existing) return { ok: false }
+      if (!existing) return { ok: false };
 
       // Defensive lockout: contests must resolve through the dedicated
       // /v1/admin/contests/prices/:contestId endpoint so the parent + counter
@@ -392,7 +392,7 @@ pricesAdminRouter.patch(
       // would surface a misleading "part of a contest" 409. The pending-
       // counter check below catches the actual active-contest parent case.
       if (existing.disputedSubmissionId !== null) {
-        return { ok: 'contest_lockout' as const }
+        return { ok: 'contest_lockout' as const };
       }
 
       // R2-2 — active-contest parent lockout. Both counter-creation routes
@@ -422,24 +422,24 @@ pricesAdminRouter.patch(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
-        .limit(1)
+        .limit(1);
       if (pendingCounter.length > 0) {
-        return { ok: 'contest_lockout' as const }
+        return { ok: 'contest_lockout' as const };
       }
 
       const [updated] = await tx
         .update(priceSubmissions)
         .set({ status, updatedAt: sql`now()` })
         .where(eq(priceSubmissions.id, id))
-        .returning()
+        .returning();
 
-      if (!updated) return { ok: false }
+      if (!updated) return { ok: false };
 
-      let pricedropForFanout: PriceDrop | undefined
+      let pricedropForFanout: PriceDrop | undefined;
       if (status === 'corroborated' && existing.status !== 'corroborated') {
         // Award cred to the submitter
         if (existing.userId !== null) {
-          await awardPriceCred(tx, existing.userId)
+          await awardPriceCred(tx, existing.userId);
         }
 
         // #1107: read the event's PRE-update price so we can decide whether
@@ -455,7 +455,7 @@ pricesAdminRouter.patch(
           .from(events)
           .where(eq(events.id, existing.eventId))
           .for('no key update')
-          .limit(1)
+          .limit(1);
 
         // Propagate the approved community price to the event
         await tx
@@ -465,26 +465,26 @@ pricesAdminRouter.patch(
             ticketPriceMax: existing.priceMax ?? null,
             priceSource: 'community',
           })
-          .where(eq(events.id, existing.eventId))
+          .where(eq(events.id, existing.eventId));
 
         // Real price-drop = strictly lower minimum (see lib/price-drop.ts).
         pricedropForFanout = detectPriceDrop(
           existing.eventId,
           preEvent?.ticketPriceMin,
           existing.priceMin,
-        )
+        );
       }
 
       return pricedropForFanout
         ? { ok: true as const, updated, pricedrop: pricedropForFanout }
-        : { ok: true as const, updated }
-    })
+        : { ok: true as const, updated };
+    });
 
     if (result.ok === 'contest_lockout') {
       apiLogger.warn(
         { submissionId: id },
         'PATCH lockout: contest row reached the non-contest endpoint',
-      )
+      );
       // `endpoint_lockout: contest_row` is the alert tag (spec §11.3). Baseline
       // volume should be near zero — any firing is real signal that the new
       // contest UI is being bypassed.
@@ -495,7 +495,7 @@ pricesAdminRouter.patch(
           tags: { endpoint_lockout: 'contest_row' },
           extra: { submissionId: id },
         },
-      )
+      );
       return ctx.json(
         {
           success: false,
@@ -503,15 +503,15 @@ pricesAdminRouter.patch(
             'This submission is part of a contest. Resolve via /v1/admin/contests/prices/:contestId instead.',
         },
         409,
-      )
+      );
     }
 
     if (!result.ok)
-      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
 
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
-    ctx.set('auditAction', 'price.submission.update')
-    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    ctx.set('auditAction', 'price.submission.update');
+    ctx.set('auditTargetId', id);
 
     // #1107: fan out watch.pricedrop to status='watching' users AFTER the
     // corroboration commits. Best-effort — the price update is the
@@ -525,12 +525,12 @@ pricesAdminRouter.patch(
       await fanoutPriceDrop(
         result.pricedrop,
         `submission:${result.updated.id}:${result.updated.updatedAt.toISOString()}`,
-      )
+      );
     }
 
-    return ctx.json({ success: true, data: result.updated })
+    return ctx.json({ success: true, data: result.updated });
   },
-)
+);
 
 // GET /v1/admin/prices/activity — last 100 price retrieval attempts with event + venue context
 pricesAdminRouter.get('/activity', async (ctx) => {
@@ -549,10 +549,10 @@ pricesAdminRouter.get('/activity', async (ctx) => {
     .leftJoin(events, eq(priceRetrievalLog.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
     .orderBy(asc(events.date), desc(priceRetrievalLog.attemptedAt))
-    .limit(100)
+    .limit(100);
 
-  return ctx.json({ success: true, data: rows })
-})
+  return ctx.json({ success: true, data: rows });
+});
 
 const postAdminSubmissionSchema = z.object({
   eventId: z.string().uuid(),
@@ -560,29 +560,32 @@ const postAdminSubmissionSchema = z.object({
   priceMax: z.string().optional(),
   vendor: z.enum(VENDOR_VALUES),
   howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
-})
+});
 
 // POST /v1/admin/prices/submissions — admin manually enters a price (corroborated, tier GA)
 pricesAdminRouter.post(
   '/submissions',
   zValidator('json', postAdminSubmissionSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid submission data' }, 422)
+      return ctx.json(
+        { success: false, error: 'Invalid submission data' },
+        422,
+      );
     }
   }),
   async (ctx) => {
     const { eventId, priceMin, priceMax, vendor, howFound } =
-      ctx.req.valid('json')
-    const adminUser = getAuthUser(ctx)
+      ctx.req.valid('json');
+    const adminUser = getAuthUser(ctx);
 
     const [event] = await db
       .select({ id: events.id })
       .from(events)
       .where(eq(events.id, eventId))
-      .limit(1)
+      .limit(1);
 
     if (!event)
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
 
     await db.transaction(async (tx) => {
       await tx.insert(priceSubmissions).values({
@@ -598,7 +601,7 @@ pricesAdminRouter.post(
         priceMin,
         priceMax: priceMax ?? null,
         status: 'corroborated',
-      })
+      });
 
       await tx
         .update(events)
@@ -607,20 +610,20 @@ pricesAdminRouter.post(
           ticketPriceMax: priceMax ?? null,
           priceSource: 'community',
         })
-        .where(eq(events.id, eventId))
-    })
+        .where(eq(events.id, eventId));
+    });
 
-    ctx.set('auditActorId', adminUser.userId)
-    ctx.set('auditAction', 'price.submission.admin_add')
-    ctx.set('auditTargetId', eventId)
+    ctx.set('auditActorId', adminUser.userId);
+    ctx.set('auditAction', 'price.submission.admin_add');
+    ctx.set('auditTargetId', eventId);
 
-    return ctx.json({ success: true }, 201)
+    return ctx.json({ success: true }, 201);
   },
-)
+);
 
 // POST /v1/admin/prices/pipeline/:eventId — on-demand price pipeline run
 pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
-  const { eventId } = ctx.req.param()
+  const { eventId } = ctx.req.param();
 
   const [event] = await db
     .select({
@@ -637,14 +640,15 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
     .where(eq(events.id, eventId))
-    .limit(1)
+    .limit(1);
 
-  if (!event) return ctx.json({ success: false, error: 'Event not found' }, 404)
+  if (!event)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
   if (!event.venueId)
     return ctx.json(
       { success: false, error: 'Event has no associated venue' },
       422,
-    )
+    );
 
   // The pipeline fetches the venue's own price page, and a paused venue's
   // pages are not fetched at all.
@@ -652,9 +656,9 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
     return ctx.json(
       { success: false, error: 'Crawling is paused for this venue' },
       409,
-    )
+    );
 
-  const narrowedVenueId = event.venueId
+  const narrowedVenueId = event.venueId;
 
   runBackgroundTask(async () => {
     try {
@@ -665,18 +669,18 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
         date: event.date,
         priceUrl: event.venue.priceUrl,
         ticketUrl: event.ticketUrl,
-      })
+      });
     } catch (err) {
-      logger.error({ err, eventId }, 'on-demand price pipeline failed')
+      logger.error({ err, eventId }, 'on-demand price pipeline failed');
     }
-  })
+  });
 
-  ctx.set('auditActorId', getAuthUser(ctx).userId)
-  ctx.set('auditAction', 'price.pipeline.run')
-  ctx.set('auditTargetId', eventId)
+  ctx.set('auditActorId', getAuthUser(ctx).userId);
+  ctx.set('auditAction', 'price.pipeline.run');
+  ctx.set('auditTargetId', eventId);
 
   return ctx.json(
     { success: true, data: { eventId, message: 'Pipeline started' } },
     202,
-  )
-})
+  );
+});

@@ -1,50 +1,50 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
-import { AlertCircle, ChevronRight } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useRouter } from 'next/navigation';
+import { AlertCircle, ChevronRight } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface IssueVenue {
-  venueId: string
-  venueName: string
-  status: string
-  consecutiveFailures: number
-  blockedAt: string | null
+  venueId: string;
+  venueName: string;
+  status: string;
+  consecutiveFailures: number;
+  blockedAt: string | null;
 }
 
 interface Props {
-  blockedVenues: IssueVenue[]
+  blockedVenues: IssueVenue[];
 }
 
 export function IssuesBanner({ blockedVenues }: Props) {
-  const router = useRouter()
+  const router = useRouter();
 
-  if (blockedVenues.length === 0) return null
+  if (blockedVenues.length === 0) return null;
 
-  const blocked = blockedVenues.filter((row) => row.status === 'blocked')
-  const failed = blockedVenues.filter((row) => row.status === 'failed')
-  const paused = blockedVenues.filter((row) => row.status === 'paused')
+  const blocked = blockedVenues.filter((row) => row.status === 'blocked');
+  const failed = blockedVenues.filter((row) => row.status === 'failed');
+  const paused = blockedVenues.filter((row) => row.status === 'paused');
 
-  const parts: string[] = []
+  const parts: string[] = [];
   if (blocked.length > 0)
     parts.push(
       `${blocked.length} venue${blocked.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusBlocked}`,
-    )
+    );
   if (failed.length > 0)
     parts.push(
       `${failed.length} venue${failed.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusFailed}`,
-    )
+    );
   if (paused.length > 0)
     parts.push(
       `${paused.length} venue${paused.length > 1 ? 's' : ''} ${ADMIN_COPY.crawl.issuesBanner.statusPaused}`,
-    )
+    );
 
-  const headline = parts.join(' · ')
+  const headline = parts.join(' · ');
 
   function jumpToIssues() {
-    const firstVenue = blockedVenues[0]
-    if (!firstVenue) return
-    router.push(`?venueId=${firstVenue.venueId}`)
+    const firstVenue = blockedVenues[0];
+    if (!firstVenue) return;
+    router.push(`?venueId=${firstVenue.venueId}`);
   }
 
   const venueDescriptions = blockedVenues.map((venue) => {
@@ -55,9 +55,9 @@ export function IssuesBanner({ blockedVenues }: Props) {
           ? ADMIN_COPY.crawl.issuesBanner.statusDetail.disallowed
           : venue.consecutiveFailures > 0
             ? `${venue.consecutiveFailures}×`
-            : null
-    return detail ? `${venue.venueName} (${detail})` : venue.venueName
-  })
+            : null;
+    return detail ? `${venue.venueName} (${detail})` : venue.venueName;
+  });
 
   return (
     <div
@@ -139,5 +139,5 @@ export function IssuesBanner({ blockedVenues }: Props) {
         <ChevronRight size={13} />
       </button>
     </div>
-  )
+  );
 }

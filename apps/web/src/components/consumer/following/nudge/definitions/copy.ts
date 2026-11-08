@@ -34,4 +34,4 @@ export const FOLLOW_NUDGE_COPY = {
   close: 'Done',
   dismissAria: 'Dismiss the follow suggestion',
   ariaLabel: 'Follow suggestion',
-} as const
+} as const;

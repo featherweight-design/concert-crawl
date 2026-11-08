@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   Panel,
   Pagination,
@@ -11,67 +11,72 @@ import {
   TH,
   TR,
   TD,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
 interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 type SubmissionVendor =
-  'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
-type SubmissionHowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+  | 'AXS'
+  | 'Ticketmaster'
+  | 'SeatGeek'
+  | 'DICE'
+  | 'Eventbrite'
+  | 'VenueBoxOffice';
+type SubmissionHowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue';
 
 interface PriceCoverageTableProps {
-  events: PriceEvent[]
-  loading?: boolean
-  missingOnly: boolean
+  events: PriceEvent[];
+  loading?: boolean;
+  missingOnly: boolean;
   // True pagination — the parent owns page/pageSize/total and feeds them in;
   // the Pagination component handles the rest.
-  page: number
-  pageSize: number
-  total: number
-  onPageChange: (next: number) => void
-  onPageSizeChange: (next: number) => void
-  onToggleFilter: () => void
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (next: number) => void;
+  onPageSizeChange: (next: number) => void;
+  onToggleFilter: () => void;
   onAddPrice?: (
     eventId: string,
     priceMin: string,
     priceMax: string | null,
     vendor: SubmissionVendor,
     howFound: SubmissionHowFound,
-  ) => Promise<void>
+  ) => Promise<void>;
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 }
 
 function formatEventDate(iso: string): string {
   try {
-    const [year, month, day] = iso.split('-').map(Number)
+    const [year, month, day] = iso.split('-').map(Number);
     return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(
       'en-US',
       { month: 'short', day: 'numeric' },
-    )
+    );
   } catch {
-    return iso
+    return iso;
   }
 }
 
@@ -87,7 +92,7 @@ const inputStyle: React.CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
   fontWeight: 600,
   outline: 'none',
-}
+};
 
 export const PriceCoverageTable = ({
   events,
@@ -101,24 +106,24 @@ export const PriceCoverageTable = ({
   onToggleFilter,
   onAddPrice,
 }: PriceCoverageTableProps) => {
-  const [addingForEventId, setAddingForEventId] = useState<string | null>(null)
-  const [priceMin, setPriceMin] = useState('')
-  const [priceMax, setPriceMax] = useState('')
-  const [vendor, setVendor] = useState<SubmissionVendor>('Ticketmaster')
-  const [howFound, setHowFound] = useState<SubmissionHowFound>('saw_listing')
-  const [isSaving, setIsSaving] = useState(false)
+  const [addingForEventId, setAddingForEventId] = useState<string | null>(null);
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [vendor, setVendor] = useState<SubmissionVendor>('Ticketmaster');
+  const [howFound, setHowFound] = useState<SubmissionHowFound>('saw_listing');
+  const [isSaving, setIsSaving] = useState(false);
 
   const resetAddForm = () => {
-    setAddingForEventId(null)
-    setPriceMin('')
-    setPriceMax('')
-    setVendor('Ticketmaster')
-    setHowFound('saw_listing')
-  }
+    setAddingForEventId(null);
+    setPriceMin('');
+    setPriceMax('');
+    setVendor('Ticketmaster');
+    setHowFound('saw_listing');
+  };
 
   const handleSavePrice = async (eventId: string) => {
-    if (!priceMin.trim() || !onAddPrice) return
-    setIsSaving(true)
+    if (!priceMin.trim() || !onAddPrice) return;
+    setIsSaving(true);
     try {
       await onAddPrice(
         eventId,
@@ -126,12 +131,12 @@ export const PriceCoverageTable = ({
         priceMax.trim() || null,
         vendor,
         howFound,
-      )
-      resetAddForm()
+      );
+      resetAddForm();
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   // Badge reflects the server-side total of missing-price events (#710).
   // Counting `events.length` only sees the current paginated page, which
@@ -157,14 +162,14 @@ export const PriceCoverageTable = ({
       >
         {total} missing
       </span>
-    ) : null
+    ) : null;
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
       {ADMIN_COPY.review.priceCoverage.panelTitle}
       {missingBadge}
     </span>
-  )
+  );
 
   const panelAction = !loading ? (
     <AdminButton
@@ -174,7 +179,7 @@ export const PriceCoverageTable = ({
     >
       {ADMIN_COPY.review.priceCoverage.missingOnly}
     </AdminButton>
-  ) : null
+  ) : null;
 
   return (
     <Panel title={panelTitle} action={panelAction} padding={0}>
@@ -241,9 +246,9 @@ export const PriceCoverageTable = ({
                     {events.map((ev) => {
                       const priceDisplay = ev.priceMin
                         ? `$${ev.priceMin}${ev.priceMax ? ` – $${ev.priceMax}` : ''}`
-                        : null
-                      const isMissingPrice = ev.priceMin === null
-                      const isAddingHere = addingForEventId === ev.eventId
+                        : null;
+                      const isMissingPrice = ev.priceMin === null;
+                      const isAddingHere = addingForEventId === ev.eventId;
 
                       return (
                         <React.Fragment key={ev.eventId}>
@@ -343,11 +348,11 @@ export const PriceCoverageTable = ({
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => {
-                                        setPriceMin('')
-                                        setPriceMax('')
-                                        setVendor('Ticketmaster')
-                                        setHowFound('saw_listing')
-                                        setAddingForEventId(ev.eventId)
+                                        setPriceMin('');
+                                        setPriceMax('');
+                                        setVendor('Ticketmaster');
+                                        setHowFound('saw_listing');
+                                        setAddingForEventId(ev.eventId);
                                       }}
                                     >
                                       {ADMIN_COPY.review.priceCoverage.addPrice}
@@ -842,7 +847,7 @@ export const PriceCoverageTable = ({
                             </tr>
                           )}
                         </React.Fragment>
-                      )
+                      );
                     })}
                   </tbody>
                 </AdminTable>
@@ -870,5 +875,5 @@ export const PriceCoverageTable = ({
         </div>
       )}
     </Panel>
-  )
-}
+  );
+};

@@ -10,11 +10,11 @@ import type {
   BulkFollowResponse,
   FollowedArtist,
   FollowedArtistNextShow,
-} from '@concert-crawl/types'
-import { formatShortDate } from '@/components/consumer/definitions/lib'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import type { ShelfArtist } from '@/components/consumer/following/definitions/types'
-import { apiClient, publicApiClient, ApiError } from './api'
+} from '@concert-crawl/types';
+import { formatShortDate } from '@/components/consumer/definitions/lib';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import type { ShelfArtist } from '@/components/consumer/following/definitions/types';
+import { apiClient, publicApiClient, ApiError } from './api';
 
 /**
  * The viewer's follows, newest first. The endpoint is deliberately UNGATED —
@@ -24,7 +24,7 @@ import { apiClient, publicApiClient, ApiError } from './api'
 export async function fetchFollowedArtists(
   token: string,
 ): Promise<FollowedArtist[]> {
-  return apiClient.get<FollowedArtist[]>('/v1/me/artist-follows', token)
+  return apiClient.get<FollowedArtist[]>('/v1/me/artist-follows', token);
 }
 
 /**
@@ -51,7 +51,7 @@ export async function followArtistsBulk(
     {
       slugs,
     },
-  )
+  );
 }
 
 /**
@@ -73,16 +73,16 @@ export async function fetchArtistSuggestions(
   genres?: readonly string[],
   token?: string | null,
 ): Promise<ArtistSuggestion[]> {
-  const params = new URLSearchParams()
-  if (limit !== undefined) params.set('limit', String(limit))
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.set('limit', String(limit));
   if (genres !== undefined && genres.length > 0) {
-    params.set('genres', genres.join(','))
+    params.set('genres', genres.join(','));
   }
-  const qs = params.size === 0 ? '' : `?${params.toString()}`
-  const path = `/v1/artists/suggestions${qs}`
+  const qs = params.size === 0 ? '' : `?${params.toString()}`;
+  const path = `/v1/artists/suggestions${qs}`;
   return token
     ? apiClient.get<ArtistSuggestion[]>(path, token)
-    : publicApiClient.get<ArtistSuggestion[]>(path)
+    : publicApiClient.get<ArtistSuggestion[]>(path);
 }
 
 /**
@@ -96,20 +96,20 @@ export async function fetchArtistSuggestions(
 export async function seedFollowedArtists(
   token: string | null,
 ): Promise<FollowedArtist[] | undefined> {
-  if (!token) return undefined
+  if (!token) return undefined;
   try {
-    return await fetchFollowedArtists(token)
+    return await fetchFollowedArtists(token);
   } catch (err: unknown) {
     // 401 is the expected shape when the token has aged out between the Clerk
     // read and this call, so it drops to warn rather than going unlogged: an
     // unlogged catch is indistinguishable from a shelf that silently stopped
     // rendering. Anything else is a real failure.
     if (err instanceof ApiError && err.status === 401) {
-      console.warn('followed artists SSR prefetch unauthenticated')
+      console.warn('followed artists SSR prefetch unauthenticated');
     } else {
-      console.error('followed artists SSR prefetch failed', err)
+      console.error('followed artists SSR prefetch failed', err);
     }
-    return undefined
+    return undefined;
   }
 }
 
@@ -118,10 +118,10 @@ export async function seedArtistSuggestions(
   limit?: number,
 ): Promise<ArtistSuggestion[] | undefined> {
   try {
-    return await fetchArtistSuggestions(limit)
+    return await fetchArtistSuggestions(limit);
   } catch (err: unknown) {
-    console.error('artist suggestions SSR prefetch failed', err)
-    return undefined
+    console.error('artist suggestions SSR prefetch failed', err);
+    return undefined;
   }
 }
 
@@ -139,7 +139,7 @@ export const datedFollows = (follows: FollowedArtist[]): FollowedArtist[] =>
       // you can still buy a ticket to. `iso` is `YYYY-MM-DD`, so a string
       // compare IS the date compare.
       (left.nextShow?.iso ?? '').localeCompare(right.nextShow?.iso ?? ''),
-    )
+    );
 
 /**
  * "Venue · Sep 12", or null when nothing is on the books. Built server-side so
@@ -150,7 +150,7 @@ export const followDateLine = (
 ): string | null =>
   next === null
     ? null
-    : `${next.venue}${FOLLOWING_COPY.cardDateSeparator}${formatShortDate(next.iso)}`
+    : `${next.venue}${FOLLOWING_COPY.cardDateSeparator}${formatShortDate(next.iso)}`;
 
 /** Followed artists as shelf rows. Every row is, by definition, followed. */
 export const followsToShelfArtists = (
@@ -165,7 +165,7 @@ export const followsToShelfArtists = (
     dateLine: followDateLine(follow.nextShow),
     price: follow.nextShow?.price ?? null,
     following: true,
-  }))
+  }));
 
 /**
  * Suggestions as shelf rows. `following` is `null` for an anonymous request,
@@ -183,4 +183,4 @@ export const suggestionsToShelfArtists = (
     dateLine: followDateLine(suggestion.nextShow),
     price: suggestion.nextShow?.price ?? null,
     following: suggestion.following === true,
-  }))
+  }));

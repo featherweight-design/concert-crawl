@@ -1,76 +1,76 @@
-'use client'
+'use client';
 
-import { useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import type {
   AdminFeatureFlag,
   FeatureFlagKey,
-} from '@concert-crawl/entitlements'
-import { apiClient, ApiError } from '@/lib/api'
+} from '@concert-crawl/entitlements';
+import { apiClient, ApiError } from '@/lib/api';
 import {
   Panel,
   AdminButton,
   RelTime,
   StatusBadge,
   useDialogKeyboard,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const COPY = ADMIN_COPY.featureFlags
+const COPY = ADMIN_COPY.featureFlags;
 
 const stateKind = (enabled: boolean): StatusKind =>
-  enabled ? 'success' : 'neutral'
+  enabled ? 'success' : 'neutral';
 
 interface FeatureFlagControlProps {
-  initial: AdminFeatureFlag[]
+  initial: AdminFeatureFlag[];
 }
 
 export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
-  const { getToken } = useAuth()
-  const [flags, setFlags] = useState<AdminFeatureFlag[]>(initial)
-  const [pending, setPending] = useState<FeatureFlagKey | null>(null)
-  const [confirming, setConfirming] = useState<AdminFeatureFlag | null>(null)
+  const { getToken } = useAuth();
+  const [flags, setFlags] = useState<AdminFeatureFlag[]>(initial);
+  const [pending, setPending] = useState<FeatureFlagKey | null>(null);
+  const [confirming, setConfirming] = useState<AdminFeatureFlag | null>(null);
   const [error, setError] = useState<{
-    key: FeatureFlagKey
-    message: string
-  } | null>(null)
+    key: FeatureFlagKey;
+    message: string;
+  } | null>(null);
 
   const saveFlag = async (flag: AdminFeatureFlag) => {
-    const next = !flag.enabled
-    setPending(flag.key)
-    setError(null)
+    const next = !flag.enabled;
+    setPending(flag.key);
+    setError(null);
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
         // The dialog has to close on this branch too: the error renders in the
         // row underneath the overlay, so leaving it open hides the only
         // explanation the admin gets.
-        setError({ key: flag.key, message: COPY.saveError })
-        setConfirming(null)
-        return
+        setError({ key: flag.key, message: COPY.saveError });
+        setConfirming(null);
+        return;
       }
       const updated = await apiClient.patch<AdminFeatureFlag>(
         `/v1/admin/feature-flags/${flag.key}`,
         token,
         { enabled: next },
-      )
+      );
       setFlags((prev) =>
         prev.map((row) => (row.key === updated.key ? updated : row)),
-      )
-      setConfirming(null)
+      );
+      setConfirming(null);
     } catch (err) {
-      console.error('[admin] feature flag save failed', flag.key, err)
+      console.error('[admin] feature flag save failed', flag.key, err);
       const message =
         err instanceof ApiError
           ? `${COPY.saveError} ${err.message}`
-          : COPY.saveError
-      setError({ key: flag.key, message })
-      setConfirming(null)
+          : COPY.saveError;
+      setError({ key: flag.key, message });
+      setConfirming(null);
     } finally {
-      setPending(null)
+      setPending(null);
     }
-  }
+  };
 
   return (
     <Panel padding={0}>
@@ -156,21 +156,21 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
           flag={confirming}
           pending={pending === confirming.key}
           onCancel={() => {
-            if (pending !== null) return
-            setConfirming(null)
+            if (pending !== null) return;
+            setConfirming(null);
           }}
           onConfirm={() => void saveFlag(confirming)}
         />
       )}
     </Panel>
-  )
-}
+  );
+};
 
 interface FeatureFlagConfirmProps {
-  flag: AdminFeatureFlag
-  pending: boolean
-  onCancel: () => void
-  onConfirm: () => void
+  flag: AdminFeatureFlag;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
 }
 
 const FeatureFlagConfirm = ({
@@ -179,11 +179,11 @@ const FeatureFlagConfirm = ({
   onCancel,
   onConfirm,
 }: FeatureFlagConfirmProps) => {
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
-  const turningOn = !flag.enabled
-  const heading = turningOn ? COPY.confirmTitleOn : COPY.confirmTitleOff
-  const body = turningOn ? COPY.confirmBodyOn : COPY.confirmBodyOff
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending });
+  const turningOn = !flag.enabled;
+  const heading = turningOn ? COPY.confirmTitleOn : COPY.confirmTitleOff;
+  const body = turningOn ? COPY.confirmBodyOn : COPY.confirmBodyOff;
 
   return (
     <div
@@ -202,8 +202,8 @@ const FeatureFlagConfirm = ({
         padding: 24,
       }}
       onClick={(evt) => {
-        if (pending) return
-        if (evt.target === evt.currentTarget) onCancel()
+        if (pending) return;
+        if (evt.target === evt.currentTarget) onCancel();
       }}
     >
       <div
@@ -260,5 +260,5 @@ const FeatureFlagConfirm = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

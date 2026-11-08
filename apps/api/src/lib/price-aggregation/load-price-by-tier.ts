@@ -1,7 +1,7 @@
-import { db, priceSubmissions } from '@concert-crawl/db'
-import { and, eq, inArray } from 'drizzle-orm'
-import type { TierPriceBlock } from '@concert-crawl/types'
-import { buildPriceByTierMap } from './build-price-by-tier.js'
+import { db, priceSubmissions } from '@concert-crawl/db';
+import { and, eq, inArray } from 'drizzle-orm';
+import type { TierPriceBlock } from '@concert-crawl/types';
+import { buildPriceByTierMap } from './build-price-by-tier.js';
 
 /**
  * The single query behind every list surface that shows a price.
@@ -13,7 +13,7 @@ import { buildPriceByTierMap } from './build-price-by-tier.js'
 export async function loadPriceByTierByEventId(
   eventIds: string[],
 ): Promise<Map<string, TierPriceBlock[]>> {
-  if (eventIds.length === 0) return new Map()
+  if (eventIds.length === 0) return new Map();
 
   const rows = await db
     .select({
@@ -37,7 +37,7 @@ export async function loadPriceByTierByEventId(
         inArray(priceSubmissions.eventId, eventIds),
         eq(priceSubmissions.status, 'corroborated'),
       ),
-    )
+    );
 
-  return buildPriceByTierMap(rows)
+  return buildPriceByTierMap(rows);
 }

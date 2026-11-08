@@ -158,15 +158,15 @@ merge. Search for the quoted expression rather than jumping to the line.
 Create `packages/crawler-core/src/lib/extractors/json-ld.observed.test.ts`:
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { extractFromJsonLd } from './json-ld.js'
+import { describe, expect, it } from 'vitest';
+import { extractFromJsonLd } from './json-ld.js';
 
 const page = (event: Record<string, unknown>) =>
   `<script type="application/ld+json">${JSON.stringify({
     '@type': 'Event',
     startDate: '2026-09-12T20:00:00-06:00',
     ...event,
-  })}</script>`
+  })}</script>`;
 
 describe('json-ld observedPerformers', () => {
   it('reports the named performers in billing order', () => {
@@ -177,25 +177,25 @@ describe('json-ld observedPerformers', () => {
       }),
       'https://example.com/events',
       'America/Denver',
-    )
+    );
 
     expect(events[0]?.observedPerformers).toEqual([
       'Thee Sacred Souls',
       'LA LOM',
-    ])
-  })
+    ]);
+  });
 
   it('reports an EMPTY list when the listing names no performer, and never copies the title', () => {
     const events = extractFromJsonLd(
       page({ name: 'HUMP! Film Festival' }),
       'https://example.com/events',
       'America/Denver',
-    )
+    );
 
-    expect(events[0]?.observedPerformers).toEqual([])
-    expect(events[0]?.artist).toBe('HUMP! Film Festival')
-  })
-})
+    expect(events[0]?.observedPerformers).toEqual([]);
+    expect(events[0]?.artist).toBe('HUMP! Film Festival');
+  });
+});
 ```
 
 - [ ] **Step 2: Run it to confirm it fails**
@@ -208,19 +208,19 @@ Expected: FAIL — `observedPerformers` is `undefined`.
 In `json-ld.ts`, replace:
 
 ```ts
-const performerNames = getPerformerNames(obj['performer'])
-const artist = performerNames[0] ?? name
+const performerNames = getPerformerNames(obj['performer']);
+const artist = performerNames[0] ?? name;
 ```
 
 with:
 
 ```ts
-const observedPerformers = getPerformerNames(obj['performer'])
+const observedPerformers = getPerformerNames(obj['performer']);
 // `artist` is the DISPLAY string, so the title is the right value when the
 // listing named nobody. What must never happen is that title reaching the
 // artists projection — `deriveArtists()` owns that, keyed on the empty
 // `observedPerformers` below.
-const artist = observedPerformers[0] ?? name
+const artist = observedPerformers[0] ?? name;
 ```
 
 and add `observedPerformers,` to the returned object literal. `supportingArtists`
@@ -236,7 +236,7 @@ Expected: PASS
 In `llm.ts:441`, replace:
 
 ```ts
-const artist = evt.artist?.trim() || title
+const artist = evt.artist?.trim() || title;
 ```
 
 with:
@@ -246,10 +246,10 @@ with:
 // no performer. This used to coalesce that null back into the title, which
 // silently defeated the instruction and is where 65 junk artist rows came
 // from. The null is now preserved as an EMPTY observedPerformers list.
-const observed = evt.artist?.trim()
+const observed = evt.artist?.trim();
 const observedPerformers =
-  observed === undefined || observed === '' ? [] : [observed]
-const artist = observed === undefined || observed === '' ? title : observed
+  observed === undefined || observed === '' ? [] : [observed];
+const artist = observed === undefined || observed === '' ? title : observed;
 ```
 
 and add `observedPerformers,` to the returned object literal.
@@ -264,7 +264,7 @@ value differs per path.
 lists the headliner first. Replace:
 
 ```ts
-const artist = artistNames[0] ?? event.name
+const artist = artistNames[0] ?? event.name;
 ```
 
 with:
@@ -273,8 +273,8 @@ with:
 // The listing name is still the display string when the record carries no
 // artist breakdown (festival passes, multi-bill packages), but that name is
 // NOT an observation of a performer, so it does not enter observedPerformers.
-const observedPerformers = artistNames
-const artist = observedPerformers[0] ?? event.name
+const observedPerformers = artistNames;
+const artist = observedPerformers[0] ?? event.name;
 ```
 
 and add `observedPerformers,` to its literal. Note it passes the WHOLE list, not
@@ -285,8 +285,8 @@ needs the full billing to spot co-headliners (#1203).
 and the path has its own title fallback. Replace:
 
 ```ts
-const headliner = event.announceArtists?.[0]?.name?.trim()
-const artist = headliner && headliner.length > 0 ? headliner : title
+const headliner = event.announceArtists?.[0]?.name?.trim();
+const artist = headliner && headliner.length > 0 ? headliner : title;
 ```
 
 with:
@@ -294,8 +294,8 @@ with:
 ```ts
 const observedPerformers = (event.announceArtists ?? [])
   .map((entry) => entry.name.trim())
-  .filter((name) => name.length > 0)
-const artist = observedPerformers[0] ?? title
+  .filter((name) => name.length > 0);
+const artist = observedPerformers[0] ?? title;
 ```
 
 and add `observedPerformers,` to its literal.
@@ -358,26 +358,26 @@ git commit -m "refactor(crawler): every extractor reports observedPerformers ins
 
 ```ts
 export interface DerivedArtists {
-  headliners: string[]
-  supportingArtists: string[]
-  isConcert: boolean
+  headliners: string[];
+  supportingArtists: string[];
+  isConcert: boolean;
   /** True when an LLM call was made — the caller records cost against this. */
-  adjudicated: boolean
+  adjudicated: boolean;
 }
 
 export type Adjudicator = (input: {
-  title: string
-  description: string | undefined
+  title: string;
+  description: string | undefined;
 }) => Promise<{
-  isConcert: boolean
-  headliners: string[]
-  supportingArtists: string[]
-}>
+  isConcert: boolean;
+  headliners: string[];
+  supportingArtists: string[];
+}>;
 
 export function isSuspiciousObservation(
   observed: string,
   title: string,
-): boolean
+): boolean;
 
 export async function deriveArtists(
   event: Pick<
@@ -385,7 +385,7 @@ export async function deriveArtists(
     'title' | 'rawTitle' | 'description' | 'observedPerformers'
   >,
   adjudicate: Adjudicator,
-): Promise<DerivedArtists>
+): Promise<DerivedArtists>;
 ```
 
 - [ ] **Step 1: Write the failing ladder tests**
@@ -393,14 +393,14 @@ export async function deriveArtists(
 Create `packages/crawler-core/src/lib/derive-artists.test.ts`:
 
 ```ts
-import { describe, expect, it, vi } from 'vitest'
-import { deriveArtists, isSuspiciousObservation } from './derive-artists.js'
+import { describe, expect, it, vi } from 'vitest';
+import { deriveArtists, isSuspiciousObservation } from './derive-artists.js';
 
 const neverCalled = vi.fn(() => {
-  throw new Error('adjudicator must not be called')
-})
+  throw new Error('adjudicator must not be called');
+});
 
-const base = { rawTitle: '', description: undefined }
+const base = { rawTitle: '', description: undefined };
 
 describe('ladder step 1 — observed performers win', () => {
   it('takes the headliner and supporting acts without an LLM call', async () => {
@@ -411,16 +411,16 @@ describe('ladder step 1 — observed performers win', () => {
         observedPerformers: ['Thee Sacred Souls', 'LA LOM'],
       },
       neverCalled,
-    )
+    );
 
     expect(result).toEqual({
       headliners: ['Thee Sacred Souls'],
       supportingArtists: ['LA LOM'],
       isConcert: true,
       adjudicated: false,
-    })
-  })
-})
+    });
+  });
+});
 
 describe('ladder step 2 — escalation', () => {
   it('escalates when nobody was named', async () => {
@@ -428,7 +428,7 @@ describe('ladder step 2 — escalation', () => {
       isConcert: true,
       headliners: ['Daedelus'],
       supportingArtists: [],
-    })
+    });
 
     const result = await deriveArtists(
       {
@@ -437,19 +437,19 @@ describe('ladder step 2 — escalation', () => {
         observedPerformers: [],
       },
       adjudicate,
-    )
+    );
 
-    expect(adjudicate).toHaveBeenCalledOnce()
-    expect(result.headliners).toEqual(['Daedelus'])
-    expect(result.adjudicated).toBe(true)
-  })
+    expect(adjudicate).toHaveBeenCalledOnce();
+    expect(result.headliners).toEqual(['Daedelus']);
+    expect(result.adjudicated).toBe(true);
+  });
 
   it('escalates when the observed performer is just the title', async () => {
     const adjudicate = vi.fn().mockResolvedValue({
       isConcert: true,
       headliners: ['Daedelus'],
       supportingArtists: [],
-    })
+    });
 
     await deriveArtists(
       {
@@ -458,11 +458,11 @@ describe('ladder step 2 — escalation', () => {
         observedPerformers: ['@adsfradio presents: Daedelus'],
       },
       adjudicate,
-    )
+    );
 
-    expect(adjudicate).toHaveBeenCalledOnce()
-  })
-})
+    expect(adjudicate).toHaveBeenCalledOnce();
+  });
+});
 
 describe('ladder step 3 — no performer is a real answer', () => {
   it('resolves to an empty headliner list and a non-concert', async () => {
@@ -470,52 +470,52 @@ describe('ladder step 3 — no performer is a real answer', () => {
       isConcert: false,
       headliners: [],
       supportingArtists: [],
-    })
+    });
 
     const result = await deriveArtists(
       { ...base, title: 'HUMP! Film Festival', observedPerformers: [] },
       adjudicate,
-    )
+    );
 
     expect(result).toEqual({
       headliners: [],
       supportingArtists: [],
       isConcert: false,
       adjudicated: true,
-    })
-  })
+    });
+  });
 
   it('never falls back to the title when the adjudicator returns nothing', async () => {
     const adjudicate = vi.fn().mockResolvedValue({
       isConcert: true,
       headliners: [],
       supportingArtists: [],
-    })
+    });
 
     const result = await deriveArtists(
       { ...base, title: 'Bass Package', observedPerformers: [] },
       adjudicate,
-    )
+    );
 
-    expect(result.headliners).toEqual([])
-  })
+    expect(result.headliners).toEqual([]);
+  });
 
   it('treats an adjudicator failure as unresolved rather than as the title', async () => {
-    const adjudicate = vi.fn().mockRejectedValue(new Error('haiku 529'))
+    const adjudicate = vi.fn().mockRejectedValue(new Error('haiku 529'));
 
     const result = await deriveArtists(
       { ...base, title: '80s Bash', observedPerformers: [] },
       adjudicate,
-    )
+    );
 
     expect(result).toEqual({
       headliners: [],
       supportingArtists: [],
       isConcert: true,
       adjudicated: false,
-    })
-  })
-})
+    });
+  });
+});
 
 describe('isSuspiciousObservation', () => {
   const suspicious: [string, string][] = [
@@ -523,10 +523,10 @@ describe('isSuspiciousObservation', () => {
     ['@adsfradio presents: Daedelus', '@adsfradio presents: Daedelus'],
     ['303 Boards Benefit Show', '303 Boards Benefit Show'],
     ['A Great Night in Hip Hop', 'A Great Night in Hip Hop'],
-  ]
+  ];
   it.each(suspicious)('flags %s', (observed, title) => {
-    expect(isSuspiciousObservation(observed, title)).toBe(true)
-  })
+    expect(isSuspiciousObservation(observed, title)).toBe(true);
+  });
 
   // Real band names that must NOT be escalated — escalating them would spend
   // an LLM call and risk the model second-guessing correct venue data.
@@ -537,11 +537,11 @@ describe('isSuspiciousObservation', () => {
     ['Earth, Wind & Fire', 'Earth, Wind & Fire at Red Rocks'],
     ['blink-182', 'blink-182 at Ball Arena'],
     ['311', '311 at Red Rocks'],
-  ]
+  ];
   it.each(clean)('does not flag %s', (observed, title) => {
-    expect(isSuspiciousObservation(observed, title)).toBe(false)
-  })
-})
+    expect(isSuspiciousObservation(observed, title)).toBe(false);
+  });
+});
 ```
 
 Note the `Crosby, Stills & Nash` case: it is flagged clean because the observed
@@ -560,24 +560,24 @@ Expected: FAIL — module not found.
 Create `packages/crawler-core/src/lib/derive-artists.ts`:
 
 ```ts
-import type { NormalizedEvent } from '../types.js'
-import { reportFailure } from './report-failure.js'
+import type { NormalizedEvent } from '../types.js';
+import { reportFailure } from './report-failure.js';
 
 export interface DerivedArtists {
-  headliners: string[]
-  supportingArtists: string[]
-  isConcert: boolean
-  adjudicated: boolean
+  headliners: string[];
+  supportingArtists: string[];
+  isConcert: boolean;
+  adjudicated: boolean;
 }
 
 export type Adjudicator = (input: {
-  title: string
-  description: string | undefined
+  title: string;
+  description: string | undefined;
 }) => Promise<{
-  isConcert: boolean
-  headliners: string[]
-  supportingArtists: string[]
-}>
+  isConcert: boolean;
+  headliners: string[];
+  supportingArtists: string[];
+}>;
 
 // Words that mark a title as describing the EVENT rather than naming an act.
 // Deliberately conservative: a false positive here costs one LLM call, but a
@@ -598,7 +598,7 @@ const EVENT_WORDS = [
   'dj set',
   'brunch',
   'market',
-]
+];
 
 export function isSuspiciousObservation(
   observed: string,
@@ -606,12 +606,13 @@ export function isSuspiciousObservation(
 ): boolean {
   // A performer field that merely echoes the title carries no information —
   // it is the shape every title-as-artist bug takes.
-  if (observed.trim().toLowerCase() !== title.trim().toLowerCase()) return false
+  if (observed.trim().toLowerCase() !== title.trim().toLowerCase())
+    return false;
 
-  const lowered = observed.toLowerCase()
-  if (observed.includes(':')) return true
-  if (EVENT_WORDS.some((word) => lowered.includes(word))) return true
-  return false
+  const lowered = observed.toLowerCase();
+  if (observed.includes(':')) return true;
+  if (EVENT_WORDS.some((word) => lowered.includes(word))) return true;
+  return false;
 }
 
 export async function deriveArtists(
@@ -623,8 +624,8 @@ export async function deriveArtists(
 ): Promise<DerivedArtists> {
   const observed = event.observedPerformers.filter(
     (name) => name.trim().length > 0,
-  )
-  const headliner = observed[0]
+  );
+  const headliner = observed[0];
 
   // Step 1 — the source named somebody, and it does not merely echo the title.
   // This is the venue's own structured field; an LLM re-reading the page title
@@ -638,7 +639,7 @@ export async function deriveArtists(
       supportingArtists: observed.slice(1),
       isConcert: true,
       adjudicated: false,
-    }
+    };
   }
 
   // Step 2 — no signal, or the signal is the title wearing a performer's hat.
@@ -646,13 +647,13 @@ export async function deriveArtists(
     const verdict = await adjudicate({
       title: event.title,
       description: event.description,
-    })
+    });
     return {
       headliners: verdict.headliners,
       supportingArtists: verdict.supportingArtists,
       isConcert: verdict.isConcert,
       adjudicated: true,
-    }
+    };
   } catch (err) {
     // Step 3 — an adjudicator outage must not become a wrong answer. Leave the
     // headliners empty (the backfill simply does not project this event) and
@@ -663,13 +664,13 @@ export async function deriveArtists(
       severity: 'warn',
       title: event.title,
       error: err instanceof Error ? err.message : String(err),
-    })
+    });
     return {
       headliners: [],
       supportingArtists: [],
       isConcert: true,
       adjudicated: false,
-    }
+    };
   }
 }
 ```
@@ -736,7 +737,7 @@ it('stores no headliners and projects no artist for a listing that names nobody'
   // adjudicator returns { isConcert: false, headliners: [], supportingArtists: [] }
   // Assert: events.canonical_headliners is empty, hidden_from_consumer is true,
   // and the artists table gained no row for the title.
-})
+});
 ```
 
 Fill this in against the file's existing harness — it already builds
@@ -1090,17 +1091,17 @@ Three cases, one per precedence branch:
 it('links to the event when a next show is known', () => {
   // eventId: 'evt-1', slug: 'thee-sacred-souls'
   // expect the anchor href to be '/events/evt-1'
-})
+});
 
 it('falls back to the artist page when there is no next show', () => {
   // eventId: null, slug: 'thee-sacred-souls'
   // expect '/artists/thee-sacred-souls'
-})
+});
 
 it('renders inert when neither is known', () => {
   // eventId: null, slug: null
   // expect no anchor
-})
+});
 ```
 
 - [ ] **Step 2: Run to confirm failure**
@@ -1116,7 +1117,7 @@ Expected: FAIL — the first case renders `/artists/...`.
  * night the viewer can buy tickets to should open that night, not a profile.
  * Null when nothing is on the books, which is also when `dateLine` is null.
  */
-eventId: string | null
+eventId: string | null;
 ```
 
 - [ ] **Step 4: Thread it through the flattener**

@@ -1,17 +1,17 @@
 // Sub-$1 values show 4 decimals — per-run LLM costs are fractions of a
 // cent, and "$0.00" hides real spend (mock: admin-primitives.jsx CostText).
 export const formatCost = (value: number): string =>
-  value === 0 ? '$0.00' : `$${value.toFixed(value < 1 ? 4 : 2)}`
+  value === 0 ? '$0.00' : `$${value.toFixed(value < 1 ? 4 : 2)}`;
 
 export type StatusKind =
-  'success' | 'warning' | 'danger' | 'signal' | 'accent' | 'neutral'
+  'success' | 'warning' | 'danger' | 'signal' | 'accent' | 'neutral';
 
 export const confidenceColor = (score: number): StatusKind => {
-  if (score >= 0.8) return 'success'
-  if (score >= 0.7) return 'signal'
-  if (score >= 0.6) return 'warning'
-  return 'danger'
-}
+  if (score >= 0.8) return 'success';
+  if (score >= 0.7) return 'signal';
+  if (score >= 0.6) return 'warning';
+  return 'danger';
+};
 
 export const KIND_COLORS: Record<
   StatusKind,
@@ -47,4 +47,4 @@ export const KIND_COLORS: Record<
     fg: 'var(--fg-muted)',
     border: 'var(--border)',
   },
-}
+};

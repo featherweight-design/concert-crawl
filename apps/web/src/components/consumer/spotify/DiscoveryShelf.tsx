@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // "Based on your taste" shelf pinned atop Browse (#763 PR 8, from the
 // discovery-surface.jsx mock). Premium + connected only — the shelf is a
@@ -10,42 +10,42 @@
 //   failure — TASTE ON PAUSE (connection status error/revoked) with a
 //             Reconnect action that opens the honesty-rail handoff sheet
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
 import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
   SpotifyTastePicksResponse,
-} from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
-import { useTastePicks } from '@/lib/queries/use-taste-picks'
-import { writeShelfHint } from '@/lib/shelf-hint'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
-import { FlexArt } from '@/components/consumer/image-slot'
+} from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
+import { useTastePicks } from '@/lib/queries/use-taste-picks';
+import { writeShelfHint } from '@/lib/shelf-hint';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf';
+import { FlexArt } from '@/components/consumer/image-slot';
 import {
   SHELF_CARD_HEIGHT,
   SHELF_CARD_WIDTH,
-} from '@/components/consumer/definitions/constants'
+} from '@/components/consumer/definitions/constants';
 import {
   formatPrice,
   formatShortDate,
-} from '@/components/consumer/definitions/lib'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { StateBody, StateGlyphDisc } from './StateBody'
-import { SignalButton } from './SpotifyButtons'
-import { OAuthHandoffSheet } from './OAuthHandoffSheet'
+} from '@/components/consumer/definitions/lib';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { StateBody, StateGlyphDisc } from './StateBody';
+import { SignalButton } from './SpotifyButtons';
+import { OAuthHandoffSheet } from './OAuthHandoffSheet';
 
-const COPY = SPOTIFY_COPY.discovery
+const COPY = SPOTIFY_COPY.discovery;
 
 // Rank 1–5 reads as "top 5"; a deeper top-artist match reads as heavy
 // rotation; a follow-only match reads as "Following".
 const reasonLabel = (reason: SpotifyTastePickReason): string => {
-  if (reason.kind === 'followed') return COPY.reasonFollowed
-  return reason.rank <= 5 ? COPY.reasonTopFive : COPY.reasonTop
-}
+  if (reason.kind === 'followed') return COPY.reasonFollowed;
+  return reason.rank <= 5 ? COPY.reasonTopFive : COPY.reasonTop;
+};
 
 const ReasonChip = ({ reason }: { reason: SpotifyTastePickReason }) => (
   <span
@@ -63,10 +63,10 @@ const ReasonChip = ({ reason }: { reason: SpotifyTastePickReason }) => (
     <span className="sr-only">{COPY.reasonAriaPrefix}</span>
     {reasonLabel(reason)}
   </span>
-)
+);
 
 const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
-  const price = formatPrice(pick.ticketPriceMin, null)
+  const price = formatPrice(pick.ticketPriceMin, null);
   return (
     <li
       className="flex shrink-0"
@@ -142,8 +142,8 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
         </span>
       </Link>
     </li>
-  )
-}
+  );
+};
 
 const ShelfHeader = ({ eyebrow }: { eyebrow?: string }) => (
   <div className="mb-2.5 flex items-center gap-[9px]">
@@ -174,7 +174,7 @@ const ShelfHeader = ({ eyebrow }: { eyebrow?: string }) => (
       )}
     </div>
   </div>
-)
+);
 
 // Magnifier glyph for the quiet-month state (discovery-surface.jsx mock).
 const QuietMonthGlyph = () => (
@@ -187,7 +187,7 @@ const QuietMonthGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 // Spotify mark with a warning badge (mock's failure glyph — mirrors the
 // SpotifyStatusBanner badge treatment at state scale).
@@ -207,7 +207,7 @@ const PausedSpotifyGlyph = () => (
       !
     </span>
   </span>
-)
+);
 
 const DiscoveryEmpty = () => (
   <div className="flex flex-col py-4">
@@ -236,10 +236,10 @@ const DiscoveryEmpty = () => (
       </Link>
     </StateBody>
   </div>
-)
+);
 
 const DiscoveryFailure = () => {
-  const [handoffOpen, setHandoffOpen] = useState(false)
+  const [handoffOpen, setHandoffOpen] = useState(false);
   return (
     <div className="flex flex-col py-4">
       <StateBody
@@ -265,8 +265,8 @@ const DiscoveryFailure = () => {
         onClose={() => setHandoffOpen(false)}
       />
     </div>
-  )
-}
+  );
+};
 
 export const DiscoveryShelf = ({
   initialPicks,
@@ -274,12 +274,12 @@ export const DiscoveryShelf = ({
   // SSR seed from the events page — the gated endpoint already enforced the
   // spotify-sync entitlement server-side, so seeded data renders immediately
   // without waiting on the client plan-state round-trip (no pop-in).
-  initialPicks?: SpotifyTastePicksResponse
+  initialPicks?: SpotifyTastePicksResponse;
 }) => {
-  const { userId } = useAuth()
-  const entitlement = useEntitlement('spotify-sync')
-  const connection = useSpotifyConnection()
-  const picksQuery = useTastePicks(entitlement.active, initialPicks)
+  const { userId } = useAuth();
+  const entitlement = useEntitlement('spotify-sync');
+  const connection = useSpotifyConnection();
+  const picksQuery = useTastePicks(entitlement.active, initialPicks);
 
   // Record whether this viewer gets a shelf, so the Browse route's loading
   // fallback can reserve its footprint next time (see lib/shelf-hint).
@@ -295,16 +295,16 @@ export const DiscoveryShelf = ({
       ? false
       : connection.data === undefined
         ? null
-        : connection.data.status !== 'disconnected'
+        : connection.data.status !== 'disconnected';
   useEffect(() => {
-    if (shelfHint !== null && userId) writeShelfHint(userId, shelfHint)
-  }, [shelfHint, userId])
+    if (shelfHint !== null && userId) writeShelfHint(userId, shelfHint);
+  }, [shelfHint, userId]);
 
   // Hidden-style surface (spec §7): nothing once the entitlement resolves
   // inactive, and nothing without data. While the client entitlement is
   // still resolving, seeded/cached data renders immediately (the gated
   // endpoint already proved entitlement) instead of popping in later.
-  if (!entitlement.isLoading && !entitlement.active) return null
+  if (!entitlement.isLoading && !entitlement.active) return null;
 
   // Connection override — corrects for useTastePicks' 5-min staleTime,
   // which otherwise lets a stale 'connected' picks cache paint after the
@@ -320,21 +320,21 @@ export const DiscoveryShelf = ({
   // aren't entitled to). SSR-seeded initialPicks also proves entitlement
   // (the gated endpoint enforced it server-side), so it's a valid
   // eligibility signal even while the client entitlement is loading.
-  const isEligibleForShelf = entitlement.active || initialPicks !== undefined
+  const isEligibleForShelf = entitlement.active || initialPicks !== undefined;
   if (isEligibleForShelf) {
-    const connectionStatus = connection.data?.status
-    if (connectionStatus === 'disconnected') return null
+    const connectionStatus = connection.data?.status;
+    if (connectionStatus === 'disconnected') return null;
     if (connectionStatus === 'error' || connectionStatus === 'revoked') {
       return (
         <section aria-label={COPY.title} className="mb-5 pt-1.5">
           <ShelfHeader />
           <DiscoveryFailure />
         </section>
-      )
+      );
     }
   }
 
-  const { data, isError, isPending } = picksQuery
+  const { data, isError, isPending } = picksQuery;
 
   // Loading shelf reserves the shelf footprint (zero layout shift) when we
   // KNOW the user is Spotify-connected but picks haven't returned — the
@@ -347,11 +347,11 @@ export const DiscoveryShelf = ({
     entitlement.active &&
     connection.data?.status === 'connected'
   ) {
-    return <DiscoveryLoadingShelf onRetry={() => void picksQuery.refetch()} />
+    return <DiscoveryLoadingShelf onRetry={() => void picksQuery.refetch()} />;
   }
 
   if (isPending || isError || !data || data.status === 'disconnected') {
-    return null
+    return null;
   }
 
   return (
@@ -428,5 +428,5 @@ export const DiscoveryShelf = ({
         </>
       )}
     </section>
-  )
-}
+  );
+};

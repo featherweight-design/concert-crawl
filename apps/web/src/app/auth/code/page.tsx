@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import Link from 'next/link'
-import { validateAndSetInviteCode } from './actions'
-import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
-import { copy } from './definitions/copy'
+import { useState, useTransition } from 'react';
+import Link from 'next/link';
+import { validateAndSetInviteCode } from './actions';
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
+import { copy } from './definitions/copy';
 
 type ErrorKind =
   | 'invalid_format'
@@ -13,47 +13,47 @@ type ErrorKind =
   | 'expired'
   | 'ratelimit'
   | 'server_error'
-  | null
+  | null;
 
 function formatCodeInput(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '')
+  const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
   if (!clean.startsWith('BETA-')) {
-    if ('BETA-'.startsWith(clean)) return clean
-    if (clean.startsWith('BETA')) return `BETA-${clean.slice(4)}`
-    return clean
+    if ('BETA-'.startsWith(clean)) return clean;
+    if (clean.startsWith('BETA')) return `BETA-${clean.slice(4)}`;
+    return clean;
   }
-  const rest = clean.slice(5).replace(/-/g, '')
-  if (rest.length <= 4) return `BETA-${rest}`
-  return `BETA-${rest.slice(0, 4)}-${rest.slice(4, 8)}`
+  const rest = clean.slice(5).replace(/-/g, '');
+  if (rest.length <= 4) return `BETA-${rest}`;
+  return `BETA-${rest.slice(0, 4)}-${rest.slice(4, 8)}`;
 }
 
 export default function InviteCodePage() {
-  const [code, setCode] = useState('')
-  const [errorKind, setErrorKind] = useState<ErrorKind>(null)
-  const [isPending, startTransition] = useTransition()
-  const [waitlistOpen, setWaitlistOpen] = useState(false)
+  const [code, setCode] = useState('');
+  const [errorKind, setErrorKind] = useState<ErrorKind>(null);
+  const [isPending, startTransition] = useTransition();
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
-  const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)
+  const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
 
   function handleChange(ev: React.ChangeEvent<HTMLInputElement>) {
-    setErrorKind(null)
-    setCode(formatCodeInput(ev.target.value))
+    setErrorKind(null);
+    setCode(formatCodeInput(ev.target.value));
   }
 
   function handleSubmit(ev: React.FormEvent) {
-    ev.preventDefault()
-    if (!isComplete || isPending) return
+    ev.preventDefault();
+    if (!isComplete || isPending) return;
     // Read at submit time rather than through `useSearchParams`, which would
     // force this page behind a Suspense boundary for a value only the click
     // needs. The middleware attaches `redirect_url` when it bounces an
     // invite-gated route here; the action sanitises it.
     const returnPath = new URLSearchParams(window.location.search).get(
       'redirect_url',
-    )
+    );
     startTransition(async () => {
-      const result = await validateAndSetInviteCode(code, returnPath)
-      if (!result.ok) setErrorKind(result.error)
-    })
+      const result = await validateAndSetInviteCode(code, returnPath);
+      if (!result.ok) setErrorKind(result.error);
+    });
   }
 
   return (
@@ -295,5 +295,5 @@ export default function InviteCodePage() {
         onClose={() => setWaitlistOpen(false)}
       />
     </div>
-  )
+  );
 }

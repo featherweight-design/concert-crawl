@@ -18,47 +18,47 @@
 
 ## File Map
 
-| File                                                               | Action         | Purpose                                                                                                      |
+| File | Action | Purpose |
 | ------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------ | ---------------- |
-| `apps/web/src/components/admin/shell/nav.ts`                       | Modify         | NAV_V2: review replaces events+prices, add feedback (signal badge), fix sections                             |
-| `apps/web/src/components/admin/shell/AdminSidebar.tsx`             | Modify         | SidebarV2 bg, remove back-to-app, update badge keys, active indicator, new badge shapes                      |
-| `apps/web/src/components/admin/shell/AppSwitcher.tsx`              | Create         | Segmented pill "User app                                                                                     | Admin" in topbar |
-| `apps/web/src/components/admin/shell/AdminTopbar.tsx`              | Modify         | Height 56, add AppSwitcher + separator, hamburger slot on mobile                                             |
-| `apps/web/src/components/admin/shell/MobileDrawer.tsx`             | Create         | Hamburger-controlled full-height drawer (78%, max 320px) with NAV_V2                                         |
-| `apps/web/src/components/admin/shell/MobileBottomBar.tsx`          | Create         | Fixed 64px bottom bar, 5 tabs (Dashboard/Venues/Crawl/Review/Feedback), badges                               |
-| `apps/web/src/components/admin/shell/AdminShellClient.tsx`         | Create         | Client wrapper owning hamburger state, renders topbar+drawer+bottom bar                                      |
-| `apps/web/src/app/(protected)/admin/layout.tsx`                    | Modify         | Fetch review badge (flags+subs), feedback badge (unread), wire AdminShellClient                              |
-| `apps/web/src/app/(protected)/admin/page.tsx`                      | Modify         | Remove RunAllVenuesButton + Add Venue CTA, replace ActivityFeed with AttentionFeed                           |
-| `apps/web/src/components/admin/dashboard/AttentionFeed.tsx`        | Create         | Exceptions-only feed (failures, flags, pending subs); digest row for successes                               |
-| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx`         | Delete/replace | Replaced by AttentionFeed                                                                                    |
-| `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`           | Modify         | Add InspectorTabs (Overview/Diagnostics), Diagnostics tab (only if failed/blocked), StagedApplyConfirm modal |
-| `apps/web/src/components/admin/crawl/InspectorTabs.tsx`            | Create         | Tab bar with active underline, Diagnostics dot                                                               |
-| `apps/web/src/components/admin/crawl/DiagnosticsPanel.tsx`         | Create         | Rule-based diagnostics, OptionsSection with staged actions, StagedApplyConfirm                               |
-| `apps/web/src/components/admin/crawl/StagedApplyConfirm.tsx`       | Create         | Modal: config diff (before/after), re-crawl checkbox, Cancel/Apply                                           |
-| `apps/web/src/components/admin/venue-table.tsx`                    | Modify         | Add accordion expansion — chevron rotates, expanded row renders VenueQuickView                               |
-| `apps/web/src/components/admin/VenueQuickView.tsx`                 | Create         | Info grid, last-error strip, action shelf                                                                    |
-| `apps/web/src/components/admin/generate-field/GenerateField.tsx`   | Create         | 5-state GenerateField (idle/loading/review/accepted/error)                                                   |
-| `apps/web/src/components/admin/VenueDetailsClient.tsx`             | Modify         | VDSection cards, VDField/VDInput/VDSelect/VDSegToggle, sticky save bar, DeleteVenueConfirm                   |
-| `apps/web/src/components/admin/DeleteVenueConfirm.tsx`             | Create         | Modal with typed DELETE gate, staged danger UX                                                               |
-| `apps/web/src/app/(protected)/admin/review/page.tsx`               | Create         | New page: EventFlagsSection + PendingSubmissionsPanel + PriceCoverageTable                                   |
-| `apps/web/src/components/admin/review/EventFlagsSection.tsx`       | Create         | Flag list + inspector split layout, bulk select, BulkActionDock                                              |
-| `apps/web/src/components/admin/review/EventFlagRow.tsx`            | Create         | Row: checkbox, title, venue/date, reason chips, confidence bar, approve/reject                               |
-| `apps/web/src/components/admin/review/EventFlagInspector.tsx`      | Create         | Detail panel: LLM reasoning, raw source, run/cost strip, action shelf                                        |
-| `apps/web/src/components/admin/review/ConfidenceBar.tsx`           | Create         | 4px track, color-coded fill, mono label                                                                      |
-| `apps/web/src/components/admin/review/PriceCoverageTable.tsx`      | Create         | Events × price source table, inline Add form, overflow menu                                                  |
-| `apps/web/src/components/admin/review/PendingSubmissionsPanel.tsx` | Create         | Community submission queue — approve/deny                                                                    |
-| `apps/web/src/components/admin/review/BulkActionDock.tsx`          | Create         | Sticky dock on var(--ink) bg, count chip, Re-tag / Reject all / Approve N                                    |
-| `apps/web/src/components/admin/review/BulkApproveConfirm.tsx`      | Create         | Modal: preview list, warning strip, Approve/Cancel                                                           |
-| `apps/web/src/app/(protected)/admin/feedback/page.tsx`             | Create         | New page: FeedbackFilterRail + FeedbackRow list                                                              |
-| `apps/web/src/components/admin/feedback/FeedbackFilterRail.tsx`    | Create         | Vertical 200px rail: status filters + source checkboxes                                                      |
-| `apps/web/src/components/admin/feedback/FeedbackRow.tsx`           | Create         | Collapsed row: unread dot, handle, badges, body first line                                                   |
-| `apps/web/src/components/admin/feedback/FeedbackExpanded.tsx`      | Create         | Expanded: body, screenshot slot, admin notes, context block, GH issue, action shelf                          |
-| `apps/web/src/app/(protected)/admin/events/page.tsx`               | Modify         | Redirect to /admin/review                                                                                    |
-| `apps/web/src/app/(protected)/admin/prices/page.tsx`               | Modify         | Redirect to /admin/review                                                                                    |
-| `packages/db/src/schema/social.ts`                                 | Modify         | Add status enum + adminNotes + issueUrl to feedback table                                                    |
-| `packages/db/src/migrations/`                                      | Create         | Migration 0013_feedback_triage_fields.sql                                                                    |
-| `apps/api/src/routes/admin/feedback.ts`                            | Create         | GET /v1/admin/feedback, PATCH /v1/admin/feedback/:id                                                         |
-| `apps/api/src/routes/admin/index.ts`                               | Modify         | Mount feedback router                                                                                        |
+| `apps/web/src/components/admin/shell/nav.ts` | Modify | NAV_V2: review replaces events+prices, add feedback (signal badge), fix sections |
+| `apps/web/src/components/admin/shell/AdminSidebar.tsx` | Modify | SidebarV2 bg, remove back-to-app, update badge keys, active indicator, new badge shapes |
+| `apps/web/src/components/admin/shell/AppSwitcher.tsx` | Create | Segmented pill "User app | Admin" in topbar |
+| `apps/web/src/components/admin/shell/AdminTopbar.tsx` | Modify | Height 56, add AppSwitcher + separator, hamburger slot on mobile |
+| `apps/web/src/components/admin/shell/MobileDrawer.tsx` | Create | Hamburger-controlled full-height drawer (78%, max 320px) with NAV_V2 |
+| `apps/web/src/components/admin/shell/MobileBottomBar.tsx` | Create | Fixed 64px bottom bar, 5 tabs (Dashboard/Venues/Crawl/Review/Feedback), badges |
+| `apps/web/src/components/admin/shell/AdminShellClient.tsx` | Create | Client wrapper owning hamburger state, renders topbar+drawer+bottom bar |
+| `apps/web/src/app/(protected)/admin/layout.tsx` | Modify | Fetch review badge (flags+subs), feedback badge (unread), wire AdminShellClient |
+| `apps/web/src/app/(protected)/admin/page.tsx` | Modify | Remove RunAllVenuesButton + Add Venue CTA, replace ActivityFeed with AttentionFeed |
+| `apps/web/src/components/admin/dashboard/AttentionFeed.tsx` | Create | Exceptions-only feed (failures, flags, pending subs); digest row for successes |
+| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx` | Delete/replace | Replaced by AttentionFeed |
+| `apps/web/src/components/admin/crawl/CrawlSplitView.tsx` | Modify | Add InspectorTabs (Overview/Diagnostics), Diagnostics tab (only if failed/blocked), StagedApplyConfirm modal |
+| `apps/web/src/components/admin/crawl/InspectorTabs.tsx` | Create | Tab bar with active underline, Diagnostics dot |
+| `apps/web/src/components/admin/crawl/DiagnosticsPanel.tsx` | Create | Rule-based diagnostics, OptionsSection with staged actions, StagedApplyConfirm |
+| `apps/web/src/components/admin/crawl/StagedApplyConfirm.tsx` | Create | Modal: config diff (before/after), re-crawl checkbox, Cancel/Apply |
+| `apps/web/src/components/admin/venue-table.tsx` | Modify | Add accordion expansion — chevron rotates, expanded row renders VenueQuickView |
+| `apps/web/src/components/admin/VenueQuickView.tsx` | Create | Info grid, last-error strip, action shelf |
+| `apps/web/src/components/admin/generate-field/GenerateField.tsx` | Create | 5-state GenerateField (idle/loading/review/accepted/error) |
+| `apps/web/src/components/admin/VenueDetailsClient.tsx` | Modify | VDSection cards, VDField/VDInput/VDSelect/VDSegToggle, sticky save bar, DeleteVenueConfirm |
+| `apps/web/src/components/admin/DeleteVenueConfirm.tsx` | Create | Modal with typed DELETE gate, staged danger UX |
+| `apps/web/src/app/(protected)/admin/review/page.tsx` | Create | New page: EventFlagsSection + PendingSubmissionsPanel + PriceCoverageTable |
+| `apps/web/src/components/admin/review/EventFlagsSection.tsx` | Create | Flag list + inspector split layout, bulk select, BulkActionDock |
+| `apps/web/src/components/admin/review/EventFlagRow.tsx` | Create | Row: checkbox, title, venue/date, reason chips, confidence bar, approve/reject |
+| `apps/web/src/components/admin/review/EventFlagInspector.tsx` | Create | Detail panel: LLM reasoning, raw source, run/cost strip, action shelf |
+| `apps/web/src/components/admin/review/ConfidenceBar.tsx` | Create | 4px track, color-coded fill, mono label |
+| `apps/web/src/components/admin/review/PriceCoverageTable.tsx` | Create | Events × price source table, inline Add form, overflow menu |
+| `apps/web/src/components/admin/review/PendingSubmissionsPanel.tsx` | Create | Community submission queue — approve/deny |
+| `apps/web/src/components/admin/review/BulkActionDock.tsx` | Create | Sticky dock on var(--ink) bg, count chip, Re-tag / Reject all / Approve N |
+| `apps/web/src/components/admin/review/BulkApproveConfirm.tsx` | Create | Modal: preview list, warning strip, Approve/Cancel |
+| `apps/web/src/app/(protected)/admin/feedback/page.tsx` | Create | New page: FeedbackFilterRail + FeedbackRow list |
+| `apps/web/src/components/admin/feedback/FeedbackFilterRail.tsx` | Create | Vertical 200px rail: status filters + source checkboxes |
+| `apps/web/src/components/admin/feedback/FeedbackRow.tsx` | Create | Collapsed row: unread dot, handle, badges, body first line |
+| `apps/web/src/components/admin/feedback/FeedbackExpanded.tsx` | Create | Expanded: body, screenshot slot, admin notes, context block, GH issue, action shelf |
+| `apps/web/src/app/(protected)/admin/events/page.tsx` | Modify | Redirect to /admin/review |
+| `apps/web/src/app/(protected)/admin/prices/page.tsx` | Modify | Redirect to /admin/review |
+| `packages/db/src/schema/social.ts` | Modify | Add status enum + adminNotes + issueUrl to feedback table |
+| `packages/db/src/migrations/` | Create | Migration 0013_feedback_triage_fields.sql |
+| `apps/api/src/routes/admin/feedback.ts` | Create | GET /v1/admin/feedback, PATCH /v1/admin/feedback/:id |
+| `apps/api/src/routes/admin/index.ts` | Modify | Mount feedback router |
 
 ---
 
@@ -75,35 +75,35 @@
 
 ```typescript
 // nav.test.ts
-import { describe, it, expect } from 'vitest'
-import { NAV } from './nav'
+import { describe, it, expect } from 'vitest';
+import { NAV } from './nav';
 
 describe('NAV_V2', () => {
   it('contains review and feedback, not events or prices', () => {
-    const keys = NAV.map((item) => item.key)
-    expect(keys).toContain('review')
-    expect(keys).toContain('feedback')
-    expect(keys).not.toContain('events')
-    expect(keys).not.toContain('prices')
-  })
+    const keys = NAV.map((item) => item.key);
+    expect(keys).toContain('review');
+    expect(keys).toContain('feedback');
+    expect(keys).not.toContain('events');
+    expect(keys).not.toContain('prices');
+  });
 
   it('invite-codes and settings are in account section', () => {
-    const inviteCodes = NAV.find((item) => item.key === 'invite-codes')
-    const settings = NAV.find((item) => item.key === 'settings')
-    expect(inviteCodes?.section).toBe('account')
-    expect(settings?.section).toBe('account')
-  })
+    const inviteCodes = NAV.find((item) => item.key === 'invite-codes');
+    const settings = NAV.find((item) => item.key === 'settings');
+    expect(inviteCodes?.section).toBe('account');
+    expect(settings?.section).toBe('account');
+  });
 
   it('review badge kind is warning', () => {
-    const review = NAV.find((item) => item.key === 'review')
-    expect(review?.badge?.kind).toBe('warning')
-  })
+    const review = NAV.find((item) => item.key === 'review');
+    expect(review?.badge?.kind).toBe('warning');
+  });
 
   it('feedback badge kind is signal', () => {
-    const feedback = NAV.find((item) => item.key === 'feedback')
-    expect(feedback?.badge?.kind).toBe('signal')
-  })
-})
+    const feedback = NAV.find((item) => item.key === 'feedback');
+    expect(feedback?.badge?.kind).toBe('signal');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to see it fail**
@@ -115,18 +115,18 @@ Expected: FAIL
 
 ```typescript
 // apps/web/src/components/admin/shell/nav.ts
-export type NavKind = 'danger' | 'warning' | 'signal'
+export type NavKind = 'danger' | 'warning' | 'signal';
 
 export interface NavItem {
-  key: string
-  label: string
-  href: string
-  iconName: string
+  key: string;
+  label: string;
+  href: string;
+  iconName: string;
   badge?: {
-    count: number
-    kind: NavKind
-  }
-  section: 'operations' | 'account'
+    count: number;
+    kind: NavKind;
+  };
+  section: 'operations' | 'account';
 }
 
 export const NAV: NavItem[] = [
@@ -182,7 +182,7 @@ export const NAV: NavItem[] = [
     iconName: 'Settings',
     section: 'account',
   },
-]
+];
 ```
 
 - [ ] **Step 4: Run tests to confirm pass**
@@ -209,19 +209,19 @@ git commit -m "feat(admin-shell): NAV_V2 — review + feedback replace events + 
 
 ```tsx
 // apps/web/src/components/admin/shell/AppSwitcher.tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export const AppSwitcher = () => {
-  const pathname = usePathname()
-  const isAdmin = pathname.startsWith('/admin')
+  const pathname = usePathname();
+  const isAdmin = pathname.startsWith('/admin');
 
   const tabs = [
     { label: 'User app', href: '/' },
     { label: 'Admin', href: '/admin' },
-  ]
+  ];
 
   return (
     <div
@@ -235,7 +235,7 @@ export const AppSwitcher = () => {
       }}
     >
       {tabs.map((tab) => {
-        const active = tab.label === 'Admin' ? isAdmin : !isAdmin
+        const active = tab.label === 'Admin' ? isAdmin : !isAdmin;
         return (
           <Link
             key={tab.label}
@@ -261,11 +261,11 @@ export const AppSwitcher = () => {
           >
             {tab.label}
           </Link>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Commit**
@@ -290,35 +290,35 @@ The topbar needs: height 56, AppSwitcher + separator + breadcrumb, hamburger but
 Replace the entire file with:
 
 ```tsx
-'use client'
+'use client';
 
-import { usePathname } from 'next/navigation'
-import { NAV } from './nav'
-import { buildBreadcrumbs } from './breadcrumbs'
-import { usePageTitle } from './PageTitleContext'
-import { AppSwitcher } from './AppSwitcher'
-import { Menu } from 'lucide-react'
+import { usePathname } from 'next/navigation';
+import { NAV } from './nav';
+import { buildBreadcrumbs } from './breadcrumbs';
+import { usePageTitle } from './PageTitleContext';
+import { AppSwitcher } from './AppSwitcher';
+import { Menu } from 'lucide-react';
 
 const useBreadcrumbs = (pageTitle: string | null) => {
-  const pathname = usePathname()
-  const crumbs = buildBreadcrumbs(pathname, NAV)
+  const pathname = usePathname();
+  const crumbs = buildBreadcrumbs(pathname, NAV);
   if (pageTitle && crumbs.length > 0) {
-    return [...crumbs.slice(0, -1), { label: pageTitle }]
+    return [...crumbs.slice(0, -1), { label: pageTitle }];
   }
-  return crumbs
-}
+  return crumbs;
+};
 
 interface AdminTopbarProps {
-  onMenuOpen?: () => void
-  showHamburger?: boolean
+  onMenuOpen?: () => void;
+  showHamburger?: boolean;
 }
 
 export const AdminTopbar = ({
   onMenuOpen,
   showHamburger,
 }: AdminTopbarProps) => {
-  const { pageTitle } = usePageTitle()
-  const crumbs = useBreadcrumbs(pageTitle)
+  const { pageTitle } = usePageTitle();
+  const crumbs = useBreadcrumbs(pageTitle);
 
   return (
     <header
@@ -410,8 +410,8 @@ export const AdminTopbar = ({
         ))}
       </nav>
     </header>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Commit**
@@ -463,8 +463,8 @@ Replace the entire component. Key structural changes:
 ```tsx
 // Interface change:
 interface AdminSidebarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
+  badgeCounts?: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
 }
 ```
 
@@ -489,11 +489,11 @@ git commit -m "feat(admin-shell): sidebar v2 — surface-1 bg, NAV_V2 badges, up
 
 ```tsx
 // apps/web/src/components/admin/shell/MobileBottomBar.tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import * as LucideIcons from 'lucide-react'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import * as LucideIcons from 'lucide-react';
 
 const BOTTOM_TABS = [
   {
@@ -516,7 +516,7 @@ const BOTTOM_TABS = [
     href: '/admin/feedback',
     iconName: 'MessageSquare',
   },
-]
+];
 
 const TabIcon = ({ name, size }: { name: string; size: number }) => {
   const Icon = (
@@ -524,16 +524,16 @@ const TabIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 interface MobileBottomBarProps {
-  badgeCounts?: { crawl?: number; review?: number; feedback?: number }
+  badgeCounts?: { crawl?: number; review?: number; feedback?: number };
 }
 
 export const MobileBottomBar = ({ badgeCounts = {} }: MobileBottomBarProps) => {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav
@@ -556,8 +556,8 @@ export const MobileBottomBar = ({ badgeCounts = {} }: MobileBottomBarProps) => {
         const active =
           tab.href === '/admin'
             ? pathname === '/admin'
-            : pathname.startsWith(tab.href)
-        const count = badgeCounts[tab.key as keyof typeof badgeCounts] ?? 0
+            : pathname.startsWith(tab.href);
+        const count = badgeCounts[tab.key as keyof typeof badgeCounts] ?? 0;
         return (
           <Link
             key={tab.key}
@@ -610,11 +610,11 @@ export const MobileBottomBar = ({ badgeCounts = {} }: MobileBottomBarProps) => {
               </span>
             )}
           </Link>
-        )
+        );
       })}
     </nav>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Commit**
@@ -636,13 +636,13 @@ git commit -m "feat(admin-shell): add MobileBottomBar — 5-tab fixed bottom bar
 
 ```tsx
 // apps/web/src/components/admin/shell/MobileDrawer.tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { X } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
-import { NAV, type NavItem } from './nav'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { X } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { NAV, type NavItem } from './nav';
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
   const Icon = (
@@ -650,44 +650,44 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 interface MobileDrawerProps {
-  open: boolean
-  onClose: () => void
-  badgeCounts?: { crawl?: number; review?: number; feedback?: number }
+  open: boolean;
+  onClose: () => void;
+  badgeCounts?: { crawl?: number; review?: number; feedback?: number };
 }
 
 const BADGE_KIND_BG: Record<string, string> = {
   danger: 'var(--danger)',
   warning: 'var(--warning)',
   signal: 'var(--signal)',
-}
+};
 const BADGE_KIND_FG: Record<string, string> = {
   danger: 'var(--fg-on-accent)',
   warning: 'var(--bg)',
   signal: 'var(--fg-on-accent)',
-}
+};
 
 export const MobileDrawer = ({
   open,
   onClose,
   badgeCounts = {},
 }: MobileDrawerProps) => {
-  const pathname = usePathname()
-  const ops = NAV.filter((it) => it.section === 'operations')
-  const acct = NAV.filter((it) => it.section === 'account')
+  const pathname = usePathname();
+  const ops = NAV.filter((it) => it.section === 'operations');
+  const acct = NAV.filter((it) => it.section === 'account');
 
   const renderItem = (item: NavItem) => {
     const active =
       item.href === '/admin'
         ? pathname === '/admin'
-        : pathname.startsWith(item.href)
+        : pathname.startsWith(item.href);
     const count = item.badge
       ? (badgeCounts[item.key as keyof typeof badgeCounts] ?? 0)
-      : 0
+      : 0;
     return (
       <Link
         key={item.key}
@@ -744,8 +744,8 @@ export const MobileDrawer = ({
           </span>
         )}
       </Link>
-    )
-  }
+    );
+  };
 
   return (
     <>
@@ -826,8 +826,8 @@ export const MobileDrawer = ({
         </nav>
       </div>
     </>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Commit**
@@ -854,18 +854,18 @@ git commit -m "feat(admin-shell): add MobileDrawer — slide-in sheet with scrim
 
 ```tsx
 // apps/web/src/components/admin/shell/AdminShellClient.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { AdminSidebar } from './AdminSidebar'
-import { AdminTopbar } from './AdminTopbar'
-import { MobileDrawer } from './MobileDrawer'
-import { MobileBottomBar } from './MobileBottomBar'
+import { useState } from 'react';
+import { AdminSidebar } from './AdminSidebar';
+import { AdminTopbar } from './AdminTopbar';
+import { MobileDrawer } from './MobileDrawer';
+import { MobileBottomBar } from './MobileBottomBar';
 
 interface AdminShellClientProps {
-  children: React.ReactNode
-  user: { firstName: string | null; email: string }
-  badgeCounts: { crawl: number; review: number; feedback: number }
+  children: React.ReactNode;
+  user: { firstName: string | null; email: string };
+  badgeCounts: { crawl: number; review: number; feedback: number };
 }
 
 export const AdminShellClient = ({
@@ -873,7 +873,7 @@ export const AdminShellClient = ({
   user,
   badgeCounts,
 }: AdminShellClientProps) => {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <div
@@ -931,8 +931,8 @@ export const AdminShellClient = ({
         <MobileBottomBar badgeCounts={badgeCounts} />
       </div>
     </div>
-  )
-}
+  );
+};
 ```
 
 Add to `apps/web/src/app/(protected)/admin/admin.css`:
@@ -975,7 +975,7 @@ const [statusRes, reviewRes, submissionsRes, feedbackRes] =
       '/v1/admin/feedback?status=unread&limit=100',
       token,
     ),
-  ])
+  ]);
 
 // blockedCrawls: same as before
 // reviewBadge: pendingEvents + pending submissions count
@@ -1018,7 +1018,7 @@ export default function AdminReviewPage() {
         Event flags and price coverage — full implementation in Surface 6.
       </p>
     </div>
-  )
+  );
 }
 ```
 
@@ -1043,7 +1043,7 @@ export default function AdminFeedbackPage() {
         Feedback triage — full implementation in Surface 7.
       </p>
     </div>
-  )
+  );
 }
 ```
 
@@ -1051,15 +1051,15 @@ export default function AdminFeedbackPage() {
 
 ```tsx
 // apps/web/src/app/(protected)/admin/events/page.tsx
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
 export default function AdminEventsPage() {
-  redirect('/admin/review')
+  redirect('/admin/review');
 }
 
 // apps/web/src/app/(protected)/admin/prices/page.tsx
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
 export default function AdminPricesPage() {
-  redirect('/admin/review')
+  redirect('/admin/review');
 }
 ```
 
@@ -1174,12 +1174,12 @@ git commit -m "feat(admin-dashboard): replace ActivityFeed with AttentionFeed, r
 
 ```tsx
 // apps/web/src/components/admin/crawl/InspectorTabs.tsx
-'use client'
-type Tab = 'overview' | 'diagnostics'
+'use client';
+type Tab = 'overview' | 'diagnostics';
 interface InspectorTabsProps {
-  active: Tab
-  onChange: (tab: Tab) => void
-  showDiagnosticsDot?: boolean
+  active: Tab;
+  onChange: (tab: Tab) => void;
+  showDiagnosticsDot?: boolean;
 }
 export const InspectorTabs = ({
   active,
@@ -1196,8 +1196,8 @@ export const InspectorTabs = ({
     }}
   >
     {(['overview', 'diagnostics'] as Tab[]).map((tab) => {
-      const isActive = active === tab
-      const isDiag = tab === 'diagnostics'
+      const isActive = active === tab;
+      const isDiag = tab === 'diagnostics';
       return (
         <button
           key={tab}
@@ -1232,10 +1232,10 @@ export const InspectorTabs = ({
             />
           )}
         </button>
-      )
+      );
     })}
   </div>
-)
+);
 ```
 
 - [ ] **Step 2: Add tab state to CrawlSplitView**
@@ -1416,7 +1416,7 @@ git commit -m "feat(admin-venue-detail): VDSection redesign, GenerateField 5-sta
 
 ```typescript
 // apps/api/src/routes/admin/feedback.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ... test that GET /v1/admin/feedback returns { success: true, data: [...] }
 // ... test that PATCH /v1/admin/feedback/:id updates status
 ```
@@ -1467,8 +1467,8 @@ Update `packages/db/src/migrations/meta/_journal.json` with the new entry (when 
 
 ```typescript
 // apps/api/src/routes/admin/index.ts
-import { feedbackAdminRouter } from './feedback.js'
-adminRouter.route('/feedback', feedbackAdminRouter)
+import { feedbackAdminRouter } from './feedback.js';
+adminRouter.route('/feedback', feedbackAdminRouter);
 ```
 
 - [ ] **Step 6: Run migration locally**

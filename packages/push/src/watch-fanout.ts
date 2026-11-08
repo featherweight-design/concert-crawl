@@ -10,7 +10,7 @@
 // respects the user's per-category preferences before firing web push.
 // Categories not push-eligible still get bell rows.
 
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm';
 // `import type` + `typeof X` in a type position is legal TS — the compiler
 // resolves the reference at compile time only, no runtime emit. This
 // pattern also keeps ESLint's `consistent-type-imports` happy (the imports
@@ -23,29 +23,29 @@ import type {
   userEvents as UserEventsTable,
   venues as VenuesTable,
   db,
-} from '@concert-crawl/db'
-import type { UserNotificationCategory } from './notification-categories.js'
-import { sendPushForNotification, type SendPushInput } from './send-push.js'
-import { watchNotificationCopy } from './definitions/copy.js'
+} from '@concert-crawl/db';
+import type { UserNotificationCategory } from './notification-categories.js';
+import { sendPushForNotification, type SendPushInput } from './send-push.js';
+import { watchNotificationCopy } from './definitions/copy.js';
 
 // Inject the DB + schema references so the same helper is reusable from the
 // API and from crawler-side callers without importing @concert-crawl/db
 // twice (bundle-size + circular-dep guard).
 export interface WatchFanoutDeps {
-  db: typeof db
-  notifications: typeof NotificationsTable
-  userEvents: typeof UserEventsTable
-  events: typeof EventsTable
-  venues: typeof VenuesTable
+  db: typeof db;
+  notifications: typeof NotificationsTable;
+  userEvents: typeof UserEventsTable;
+  events: typeof EventsTable;
+  venues: typeof VenuesTable;
   /** Injectable for tests. Defaults to send-push. */
-  sendPush?: (input: SendPushInput) => Promise<unknown>
+  sendPush?: (input: SendPushInput) => Promise<unknown>;
   /** Injectable for tests. Defaults to console.warn. */
-  logWarn?: (message: string, meta?: unknown) => void
+  logWarn?: (message: string, meta?: unknown) => void;
 }
 
 export interface FanoutInput {
-  eventId: string
-  category: UserNotificationCategory
+  eventId: string;
+  category: UserNotificationCategory;
   /**
    * Identifies the ONE committed transition this fan-out announces (#1311).
    * Required, so a new caller cannot forget replay protection.
@@ -65,7 +65,7 @@ export interface FanoutInput {
    * committed `updated_at` of the PATCHed event. Never `Date.now()` taken
    * outside the committing transaction: two replays would get two markers.
    */
-  transition: string
+  transition: string;
   /**
    * Optional per-category context. When `category === 'watch.pricedrop'`,
    * pass `pricedrop: { newPriceMin, oldPriceMin }` so the copy template
@@ -73,14 +73,14 @@ export interface FanoutInput {
    * design/design_handoff_pwa_cluster/pwa-data.jsx). If omitted for a
    * price-drop, the copy falls back to a generic "just dropped" line.
    */
-  pricedrop?: { newPriceMin: string; oldPriceMin: string }
+  pricedrop?: { newPriceMin: string; oldPriceMin: string };
   /**
    * Set when `category === 'watch.postponed'` and the show changed ROOM
    * rather than night. Carries the venue the watcher knew it under, which
    * the event context cannot supply: the fan-out fires on the target event,
    * whose venue is already the new one.
    */
-  relocated?: { fromVenueName: string | null }
+  relocated?: { fromVenueName: string | null };
   /**
    * Limit the fan-out to these users. Without it the helper notifies every
    * watcher of `eventId`, which is wrong after a merge: the watch rows have
@@ -90,14 +90,14 @@ export interface FanoutInput {
    *
    * An empty array means nobody, and is honoured as such.
    */
-  restrictToUserIds?: readonly string[]
+  restrictToUserIds?: readonly string[];
 }
 
 interface EventContext {
-  title: string
-  artist: string
-  venueName: string
-  date: string
+  title: string;
+  artist: string;
+  venueName: string;
+  date: string;
 }
 
 const loadEventContext = async (
@@ -114,29 +114,29 @@ const loadEventContext = async (
     .from(deps.events)
     .leftJoin(deps.venues, eq(deps.events.venueId, deps.venues.id))
     .where(eq(deps.events.id, eventId))
-    .limit(1)
+    .limit(1);
 
-  if (!row) return null
+  if (!row) return null;
   return {
     title: row.title,
     artist: row.artist,
     venueName: row.venueName ?? row.title,
     date: row.date,
-  }
-}
+  };
+};
 
 // Format YYYY-MM-DD into a short "Aug 14" — anchored at midday local so the
 // UTC-midnight parse doesn't render the previous day in Mountain time. Same
 // idiom used elsewhere in the codebase.
 const shortDate = (raw: string): string => {
-  const iso = raw.includes('T') ? raw : `${raw}T12:00:00`
-  const parsed = new Date(iso)
-  if (Number.isNaN(parsed.getTime())) return raw
+  const iso = raw.includes('T') ? raw : `${raw}T12:00:00`;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return raw;
   return parsed.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 
 // Compose the notification title + body for a given category. Copy templates
 // live in ./definitions/copy.ts (centralized per convention — see
@@ -147,10 +147,10 @@ const composeMessage = (
   input: FanoutInput,
   ctx: EventContext,
 ): { title: string; body: string } => {
-  const artistAtVenue = `${ctx.artist} at ${ctx.venueName}`
+  const artistAtVenue = `${ctx.artist} at ${ctx.venueName}`;
   switch (input.category) {
     case 'watch.cancelled':
-      return watchNotificationCopy.cancelled(artistAtVenue)
+      return watchNotificationCopy.cancelled(artistAtVenue);
     case 'watch.postponed':
       return input.relocated
         ? watchNotificationCopy.relocated(
@@ -158,13 +158,13 @@ const composeMessage = (
             input.relocated.fromVenueName,
             ctx.venueName,
           )
-        : watchNotificationCopy.postponed(artistAtVenue, shortDate(ctx.date))
+        : watchNotificationCopy.postponed(artistAtVenue, shortDate(ctx.date));
     case 'watch.soldout':
-      return watchNotificationCopy.soldout(artistAtVenue)
+      return watchNotificationCopy.soldout(artistAtVenue);
     case 'watch.backonsale':
-      return watchNotificationCopy.backonsale(artistAtVenue)
+      return watchNotificationCopy.backonsale(artistAtVenue);
     case 'watch.pricedrop':
-      return watchNotificationCopy.pricedrop(artistAtVenue, input.pricedrop)
+      return watchNotificationCopy.pricedrop(artistAtVenue, input.pricedrop);
     case 'contest.resolved':
     case 'contest.needs_info':
     case 'artist.new_show':
@@ -174,15 +174,15 @@ const composeMessage = (
       // Not fanned out here — contest.* handled by contest-notifications;
       // artist.new_show handled by the crawler artist fan-out helper;
       // crew.* handled by crew-notifications (#1226 PR-7), bell-only.
-      return { title: '', body: '' }
+      return { title: '', body: '' };
     default: {
       // Exhaustiveness assertion — a new category added to the union forces
       // a compile error here.
-      const exhaustive: never = input.category
-      return exhaustive
+      const exhaustive: never = input.category;
+      return exhaustive;
     }
   }
-}
+};
 
 /**
  * Fan out a state transition to every user watching the given event.
@@ -196,25 +196,25 @@ export async function fanoutWatchNotification(
   const logWarn =
     deps.logWarn ??
     ((msg: string, meta?: unknown) => {
-      console.warn(msg, meta)
-    })
-  const sendPush = deps.sendPush ?? sendPushForNotification
+      console.warn(msg, meta);
+    });
+  const sendPush = deps.sendPush ?? sendPushForNotification;
 
   const context = await loadEventContext(deps, input.eventId).catch(
     (loadErr) => {
       logWarn('watch-fanout: failed to load event context', {
         eventId: input.eventId,
         err: loadErr,
-      })
-      return null
+      });
+      return null;
     },
-  )
-  if (!context) return { watchersNotified: 0, pushDelivered: 0 }
+  );
+  if (!context) return { watchersNotified: 0, pushDelivered: 0 };
 
-  const message = composeMessage(input, context)
+  const message = composeMessage(input, context);
   if (!message.title) {
     // Category doesn't apply to fan-out (contest.* etc.). Nothing to write.
-    return { watchersNotified: 0, pushDelivered: 0 }
+    return { watchersNotified: 0, pushDelivered: 0 };
   }
 
   // Only fan out to users who explicitly opted in with status='watching'.
@@ -223,11 +223,11 @@ export async function fanoutWatchNotification(
   // future FYI channel). Watch-update notifications are the express
   // opt-in for "tell me if this show changes", same filter used by
   // apps/api/src/routes/watching.ts and search.ts.
-  const restrict = input.restrictToUserIds
+  const restrict = input.restrictToUserIds;
   if (restrict && restrict.length === 0) {
     // Explicitly nobody. Short-circuit rather than letting an empty inArray
     // degenerate into "no filter" and notify the whole watcher set.
-    return { watchersNotified: 0, pushDelivered: 0 }
+    return { watchersNotified: 0, pushDelivered: 0 };
   }
 
   const watchers = await deps.db
@@ -244,13 +244,13 @@ export async function fanoutWatchNotification(
       logWarn('watch-fanout: failed to read watchers', {
         eventId: input.eventId,
         err: watchersErr,
-      })
-      return []
-    })
+      });
+      return [];
+    });
 
-  if (watchers.length === 0) return { watchersNotified: 0, pushDelivered: 0 }
+  if (watchers.length === 0) return { watchersNotified: 0, pushDelivered: 0 };
 
-  const actionUrl = `/events/${input.eventId}`
+  const actionUrl = `/events/${input.eventId}`;
 
   // Bell rows: write one `notifications` row per watcher. Uses the shared
   // `user_notification` type so the bell (#737) reads them alongside contest.*
@@ -275,22 +275,22 @@ export async function fanoutWatchNotification(
       eventId: input.eventId,
       category: input.category,
     }),
-  }))
+  }));
 
-  let claimed: { userId: string | null }[]
+  let claimed: { userId: string | null }[];
   try {
     claimed = await deps.db
       .insert(deps.notifications)
       .values(rows)
       .onConflictDoNothing({ target: deps.notifications.dedupeKey })
-      .returning({ userId: deps.notifications.userId })
+      .returning({ userId: deps.notifications.userId });
   } catch (insertErr) {
     logWarn('watch-fanout: notifications insert failed', {
       eventId: input.eventId,
       category: input.category,
       err: insertErr,
-    })
-    return { watchersNotified: 0, pushDelivered: 0 }
+    });
+    return { watchersNotified: 0, pushDelivered: 0 };
   }
 
   // Best-effort push per watcher. Failures are logged inside send-push and
@@ -302,8 +302,8 @@ export async function fanoutWatchNotification(
   // watcher counts, safe against a viral show with hundreds of watchers.
   const recipients = claimed.flatMap((row) =>
     row.userId === null ? [] : [{ userId: row.userId }],
-  )
-  let delivered = 0
+  );
+  let delivered = 0;
   const sendOne = async (watcher: { userId: string }) => {
     try {
       const result = await sendPush({
@@ -313,29 +313,29 @@ export async function fanoutWatchNotification(
         body: message.body,
         actionUrl,
         tag: `watch-${input.eventId}-${input.category}`,
-      })
+      });
       if (
         typeof result === 'object' &&
         result !== null &&
         'delivered' in result &&
         typeof result.delivered === 'number'
       ) {
-        delivered += result.delivered
+        delivered += result.delivered;
       }
     } catch (pushErr) {
       logWarn('watch-fanout: push send failed', {
         userId: watcher.userId,
         category: input.category,
         err: pushErr,
-      })
+      });
     }
-  }
+  };
   for (let idx = 0; idx < recipients.length; idx += PUSH_CONCURRENCY) {
-    const chunk = recipients.slice(idx, idx + PUSH_CONCURRENCY)
-    await Promise.all(chunk.map(sendOne))
+    const chunk = recipients.slice(idx, idx + PUSH_CONCURRENCY);
+    await Promise.all(chunk.map(sendOne));
   }
 
-  return { watchersNotified: recipients.length, pushDelivered: delivered }
+  return { watchersNotified: recipients.length, pushDelivered: delivered };
 }
 
 /**
@@ -346,14 +346,14 @@ export const watchDedupeKey = (
   userId: string,
   input: Pick<FanoutInput, 'eventId' | 'category' | 'transition'>,
 ): string =>
-  `watch:${userId}:${input.eventId}:${input.category}:${input.transition}`
+  `watch:${userId}:${input.eventId}:${input.category}:${input.transition}`;
 
 // Concurrency cap on per-watcher push sends. sendPushForNotification itself
 // Promise.all-s per subscription, so 10 watchers × 3 subscriptions each with
 // a flat fan-out would hit 30 outbound requests at once. A cap of 10 keeps
 // worst-case in-flight at 10 × subscriptions-per-user — modest under any
 // realistic watchlist and safe for the free-tier web-push queue.
-const PUSH_CONCURRENCY = 10
+const PUSH_CONCURRENCY = 10;
 
 // Utility for callers that want a "cross" of admin actions where the resolved
 // event_report status maps to a watch category. Keeps the mapping in one
@@ -364,4 +364,4 @@ export const WATCH_CATEGORY_FROM_REPORT_STATUS: Readonly<
   cancelled: 'watch.cancelled',
   postponed: 'watch.postponed',
   'sold-out': 'watch.soldout',
-}
+};

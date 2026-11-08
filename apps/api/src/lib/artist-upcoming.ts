@@ -4,12 +4,12 @@
 // Denver date has passed. Resolving one of those changes nothing anybody will
 // look at, so the queue defaults to hiding them.
 
-import { sql, type SQL } from 'drizzle-orm'
-import { artists, events, venues } from '@concert-crawl/db'
-import { billsCanonicalName } from './event-billing.js'
-import { todayInTimezone } from './time.js'
+import { sql, type SQL } from 'drizzle-orm';
+import { artists, events, venues } from '@concert-crawl/db';
+import { billsCanonicalName } from './event-billing.js';
+import { todayInTimezone } from './time.js';
 
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 /**
  * Correlated EXISTS against the `artists` row in the enclosing query.
@@ -43,5 +43,5 @@ export const hasUpcomingShowExpr = (): SQL<boolean> => {
       AND ${events.firstMissingAt} IS NULL
       AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
       AND ${events.date} >= ${todayInTimezone(MT_TIME_ZONE)}
-  )`
-}
+  )`;
+};

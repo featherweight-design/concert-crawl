@@ -1,6 +1,6 @@
-import type { InviteCode } from '@concert-crawl/types'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import type { InviteCode } from '@concert-crawl/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -8,18 +8,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { revokeInviteCode } from '@/lib/actions/invite-codes'
+} from '@/components/ui/table';
+import { revokeInviteCode } from '@/lib/actions/invite-codes';
 
 function codeStatus(code: InviteCode): {
-  label: string
-  variant: 'default' | 'secondary' | 'destructive' | 'outline'
+  label: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
 } {
-  if (code.revokedAt) return { label: 'Revoked', variant: 'destructive' }
-  if (code.usedAt) return { label: 'Used', variant: 'secondary' }
+  if (code.revokedAt) return { label: 'Revoked', variant: 'destructive' };
+  if (code.usedAt) return { label: 'Used', variant: 'secondary' };
   if (code.expiresAt && new Date(code.expiresAt) < new Date())
-    return { label: 'Expired', variant: 'outline' }
-  return { label: 'Active', variant: 'default' }
+    return { label: 'Expired', variant: 'outline' };
+  return { label: 'Active', variant: 'default' };
 }
 
 export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
@@ -37,7 +37,7 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
       </TableHeader>
       <TableBody>
         {codes.map((code) => {
-          const status = codeStatus(code)
+          const status = codeStatus(code);
           return (
             <TableRow key={code.id}>
               <TableCell className="font-mono text-sm">{code.code}</TableCell>
@@ -65,7 +65,7 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
                 )}
               </TableCell>
             </TableRow>
-          )
+          );
         })}
         {codes.length === 0 && (
           <TableRow>
@@ -76,5 +76,5 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
         )}
       </TableBody>
     </Table>
-  )
+  );
 }

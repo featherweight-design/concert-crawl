@@ -2,21 +2,21 @@ import {
   IdentityArt,
   identityFor,
   ia_isDark,
-} from '@/components/consumer/identity-art/IdentityArt'
+} from '@/components/consumer/identity-art/IdentityArt';
 
 export interface LandingShow {
-  id: string
-  artist: string
-  venue: string
-  city: string
-  date: string
-  dateShort: string
-  showTime: string
-  opener: string | null
-  state: 'tonight' | 'soldout' | null
+  id: string;
+  artist: string;
+  venue: string;
+  city: string;
+  date: string;
+  dateShort: string;
+  showTime: string;
+  opener: string | null;
+  state: 'tonight' | 'soldout' | null;
   // Event detail path, or absent for the canned fallback posters that have no
   // real event behind them. Unset means the poster renders unlinked.
-  href?: string | null
+  href?: string | null;
 }
 
 const LP_STATE_PILLS = {
@@ -24,17 +24,17 @@ const LP_STATE_PILLS = {
   going: { label: 'GOING', tone: 'live' as const },
   soldout: { label: 'SOLD OUT', tone: 'warn' as const },
   drop: { label: 'PRICE DROP', tone: 'good' as const },
-} as const
+} as const;
 
-type PillState = keyof typeof LP_STATE_PILLS
+type PillState = keyof typeof LP_STATE_PILLS;
 
 function lpSmartBreak(name: string, maxLines = 3): string[] {
   const words = String(name || '')
     .trim()
     .split(/\s+/)
-    .filter(Boolean)
-  if (words.length === 0) return []
-  if (words.length === 1) return [words[0]!]
+    .filter(Boolean);
+  if (words.length === 0) return [];
+  if (words.length === 1) return [words[0]!];
   const connectors = new Set([
     'THE',
     'AND',
@@ -46,39 +46,39 @@ function lpSmartBreak(name: string, maxLines = 3): string[] {
     'FT.',
     'FEAT',
     'FEAT.',
-  ])
+  ]);
   if (words.length === 2) {
-    const joined = words.join(' ')
-    const longest = Math.max(words[0]!.length, words[1]!.length)
-    if (joined.length <= 9 && longest <= 6) return [joined]
-    return [words[0]!, words[1]!]
+    const joined = words.join(' ');
+    const longest = Math.max(words[0]!.length, words[1]!.length);
+    if (joined.length <= 9 && longest <= 6) return [joined];
+    return [words[0]!, words[1]!];
   }
-  const groups: string[] = []
-  let idx = 0
+  const groups: string[] = [];
+  let idx = 0;
   while (idx < words.length) {
-    const ww = words[idx]!.toUpperCase()
+    const ww = words[idx]!.toUpperCase();
     if (connectors.has(ww) && idx < words.length - 1) {
-      groups.push(`${words[idx]!} ${words[idx + 1]!}`)
-      idx += 2
+      groups.push(`${words[idx]!} ${words[idx + 1]!}`);
+      idx += 2;
     } else {
-      groups.push(words[idx]!)
-      idx += 1
+      groups.push(words[idx]!);
+      idx += 1;
     }
   }
-  if (groups.length <= maxLines) return groups
+  if (groups.length <= maxLines) return groups;
   while (groups.length > maxLines) {
-    let bestI = 0
-    let bestLen = Infinity
+    let bestI = 0;
+    let bestLen = Infinity;
     for (let ii = 0; ii < groups.length - 1; ii++) {
-      const len = groups[ii]!.length + groups[ii + 1]!.length + 1
+      const len = groups[ii]!.length + groups[ii + 1]!.length + 1;
       if (len < bestLen) {
-        bestLen = len
-        bestI = ii
+        bestLen = len;
+        bestI = ii;
       }
     }
-    groups.splice(bestI, 2, `${groups[bestI]!} ${groups[bestI + 1]!}`)
+    groups.splice(bestI, 2, `${groups[bestI]!} ${groups[bestI + 1]!}`);
   }
-  return groups
+  return groups;
 }
 
 function lpAutoFit(
@@ -87,41 +87,41 @@ function lpAutoFit(
   max: number,
   min: number,
 ): number {
-  const longest = lines.reduce((mm, ll) => Math.max(mm, ll.length), 0)
-  if (!longest) return min
-  const fitted = (innerWidth * 0.96) / longest / 0.6
-  return Math.max(min, Math.min(max, Math.floor(fitted)))
+  const longest = lines.reduce((mm, ll) => Math.max(mm, ll.length), 0);
+  if (!longest) return min;
+  const fitted = (innerWidth * 0.96) / longest / 0.6;
+  return Math.max(min, Math.min(max, Math.floor(fitted)));
 }
 
 function isTonightInDenver(date: string): boolean {
   const today = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Denver',
-  }).format(new Date())
-  return date === today
+  }).format(new Date());
+  return date === today;
 }
 
 function lpPaperRgb(hex: string, alpha: number): string {
-  const match = String(hex).match(/^#([0-9a-f]{6})$/i)
-  if (!match) return `rgba(0,0,0,${alpha})`
-  const num = parseInt(match[1]!, 16)
-  return `rgba(${(num >> 16) & 255},${(num >> 8) & 255},${num & 255},${alpha})`
+  const match = String(hex).match(/^#([0-9a-f]{6})$/i);
+  if (!match) return `rgba(0,0,0,${alpha})`;
+  const num = parseInt(match[1]!, 16);
+  return `rgba(${(num >> 16) & 255},${(num >> 8) & 255},${num & 255},${alpha})`;
 }
 
 interface StatePillProps {
-  state: PillState | null | undefined
-  ink: string
-  paper: string
-  ww: number
+  state: PillState | null | undefined;
+  ink: string;
+  paper: string;
+  ww: number;
 }
 
 function LPStatePill({ state, ink, paper, ww }: StatePillProps) {
-  if (!state || !(state in LP_STATE_PILLS)) return null
-  const meta = LP_STATE_PILLS[state as PillState]
-  const isHot = meta.tone === 'hot'
-  const px = Math.round(ww * 0.035)
-  const py = Math.round(ww * 0.018)
-  const dotSize = Math.max(4, Math.round(ww * 0.018))
-  const borderWidth = Math.max(1, Math.round(ww * 0.005))
+  if (!state || !(state in LP_STATE_PILLS)) return null;
+  const meta = LP_STATE_PILLS[state as PillState];
+  const isHot = meta.tone === 'hot';
+  const px = Math.round(ww * 0.035);
+  const py = Math.round(ww * 0.018);
+  const dotSize = Math.max(4, Math.round(ww * 0.018));
+  const borderWidth = Math.max(1, Math.round(ww * 0.005));
 
   return (
     <span
@@ -155,14 +155,14 @@ function LPStatePill({ state, ink, paper, ww }: StatePillProps) {
       />
       {meta.label}
     </span>
-  )
+  );
 }
 
 interface LandingPosterProps {
-  show: LandingShow
-  width?: number
-  height?: number
-  grain?: number
+  show: LandingShow;
+  width?: number;
+  height?: number;
+  grain?: number;
 }
 
 export function LandingPoster({
@@ -171,42 +171,42 @@ export function LandingPoster({
   height,
   grain = 0.1,
 }: LandingPosterProps) {
-  const ww = width
-  const hh = height ?? Math.round(width * 1.38)
+  const ww = width;
+  const hh = height ?? Math.round(width * 1.38);
 
   const effectiveState =
-    show.state ?? (isTonightInDenver(show.date) ? 'tonight' : null)
+    show.state ?? (isTonightInDenver(show.date) ? 'tonight' : null);
 
-  const resolved = identityFor(show.artist, 'artist')
-  const pal = resolved.palette
-  const dark = ia_isDark(pal.bg)
-  const ink = pal.ink
-  const paper = pal.bg
-  const ghost = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)'
+  const resolved = identityFor(show.artist, 'artist');
+  const pal = resolved.palette;
+  const dark = ia_isDark(pal.bg);
+  const ink = pal.ink;
+  const paper = pal.bg;
+  const ghost = dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)';
 
-  const padX = Math.round(ww * 0.075)
-  const padY = Math.round(ww * 0.075)
-  const innerW = ww - padX * 2
-  const artBottom = Math.round(hh * 0.44)
-  const ghostOffset = Math.max(2, Math.round(ww * 0.012))
+  const padX = Math.round(ww * 0.075);
+  const padY = Math.round(ww * 0.075);
+  const innerW = ww - padX * 2;
+  const artBottom = Math.round(hh * 0.44);
+  const ghostOffset = Math.max(2, Math.round(ww * 0.012));
 
   const scrimGradient = `linear-gradient(180deg,
     ${lpPaperRgb(paper, 0)} 0%,
     ${lpPaperRgb(paper, 0)} ${Math.round(((artBottom - padY * 1.5) / hh) * 100)}%,
     ${lpPaperRgb(paper, 0.85)} ${Math.round((artBottom / hh) * 100)}%,
     ${lpPaperRgb(paper, 1)} ${Math.min(96, Math.round(((artBottom + padY) / hh) * 100))}%,
-    ${lpPaperRgb(paper, 1)} 100%)`
+    ${lpPaperRgb(paper, 1)} 100%)`;
 
-  const lines = lpSmartBreak(show.artist || '', 3)
-  const titleMax = Math.round(ww * 0.22)
-  const titleMin = Math.max(16, Math.round(ww * 0.085))
-  const titleSize = lpAutoFit(lines, innerW, titleMax, titleMin)
+  const lines = lpSmartBreak(show.artist || '', 3);
+  const titleMax = Math.round(ww * 0.22);
+  const titleMin = Math.max(16, Math.round(ww * 0.085));
+  const titleSize = lpAutoFit(lines, innerW, titleMax, titleMin);
 
-  const venueSize = Math.max(10, Math.round(ww * 0.052))
-  const eyebrowSize = Math.max(8, Math.round(ww * 0.032))
-  const dateRowSize = Math.max(9, Math.round(ww * 0.038))
+  const venueSize = Math.max(10, Math.round(ww * 0.052));
+  const eyebrowSize = Math.max(8, Math.round(ww * 0.032));
+  const dateRowSize = Math.max(9, Math.round(ww * 0.038));
 
-  const cityDisplay = (show.city || '').split(',')[0] || 'Denver'
+  const cityDisplay = (show.city || '').split(',')[0] || 'Denver';
 
   return (
     <div
@@ -417,5 +417,5 @@ export function LandingPoster({
         }
       `}</style>
     </div>
-  )
+  );
 }

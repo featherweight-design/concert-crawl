@@ -1,33 +1,33 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { CREW_MEMBER_CAP, type CrewInvite } from '@concert-crawl/types'
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { CREW_MEMBER_CAP, type CrewInvite } from '@concert-crawl/types';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { fetchCurrentInvite, mintInvite, revokeInvite } from '@/lib/crews'
-import { CrewNotice } from './CrewNotice'
-import { daysUntil } from './lib/format'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { fetchCurrentInvite, mintInvite, revokeInvite } from '@/lib/crews';
+import { CrewNotice } from './CrewNotice';
+import { daysUntil } from './lib/format';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface InviteSheetProps {
-  open: boolean
-  onClose: () => void
-  crewId: string
-  crewName: string
-  patchSalt: number
-  memberCount: number
+  open: boolean;
+  onClose: () => void;
+  crewId: string;
+  crewName: string;
+  patchSalt: number;
+  memberCount: number;
 }
 
 const inviteUrl = (token: string): string => {
   // The origin the customer is actually on, so a staging link never says
   // production. `window` is always defined here: the sheet is client-only.
-  const origin = typeof window === 'undefined' ? '' : window.location.origin
-  return `${origin}/crew/join/${token}`
-}
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  return `${origin}/crew/join/${token}`;
+};
 
 const ghost: React.CSSProperties = {
   minHeight: 44,
@@ -39,7 +39,7 @@ const ghost: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
   fontSize: 13,
   fontWeight: 700,
-}
+};
 
 export const InviteSheet = ({
   open,
@@ -49,17 +49,17 @@ export const InviteSheet = ({
   patchSalt,
   memberCount,
 }: InviteSheetProps) => {
-  const { getToken } = useAuth()
-  const [invite, setInvite] = useState<CrewInvite | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [revoked, setRevoked] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const { getToken } = useAuth();
+  const [invite, setInvite] = useState<CrewInvite | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [revoked, setRevoked] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
   // The clipboard write resolves on its own schedule, which can be after the
   // sheet is gone. A ref rather than the `open` prop because the handler's
   // closure still holds the value it was clicked with.
-  const openRef = useRef(open)
-  openRef.current = open
+  const openRef = useRef(open);
+  openRef.current = open;
 
   // The link is fetched (and minted if there isn't one) on open, so by the
   // time the copy button can be tapped the token is already in hand. Awaiting
@@ -67,107 +67,107 @@ export const InviteSheet = ({
   // `writeText` silently fails in Safari — the #72 lesson.
   useEffect(() => {
     if (!open) {
-      setInvite(null)
-      setCopied(false)
-      setRevoked(false)
-      setFailed(false)
+      setInvite(null);
+      setCopied(false);
+      setRevoked(false);
+      setFailed(false);
       // Including `busy`: dismissing the sheet mid-revoke otherwise leaves the
       // next open with every button disabled and nothing in flight to re-enable
       // them.
-      setBusy(false)
-      return
+      setBusy(false);
+      return;
     }
-    let live = true
+    let live = true;
     const load = async () => {
       try {
-        const token = await getToken()
-        if (token === null) throw new Error('Not signed in')
-        const existing = await fetchCurrentInvite(token, crewId)
-        const link = existing ?? (await mintInvite(token, crewId))
-        if (live) setInvite(link)
+        const token = await getToken();
+        if (token === null) throw new Error('Not signed in');
+        const existing = await fetchCurrentInvite(token, crewId);
+        const link = existing ?? (await mintInvite(token, crewId));
+        if (live) setInvite(link);
       } catch (err) {
-        console.error('InviteSheet: could not load the invite link', err)
-        if (live) setFailed(true)
+        console.error('InviteSheet: could not load the invite link', err);
+        if (live) setFailed(true);
       }
-    }
-    void load()
+    };
+    void load();
     return () => {
-      live = false
-    }
-  }, [open, crewId, getToken])
+      live = false;
+    };
+  }, [open, crewId, getToken]);
 
   const onCopy = () => {
     // Copying mid-revoke would hand out a link already on its way out.
-    if (invite === null || busy) return
+    if (invite === null || busy) return;
     // Every action entry point clears the last failure first, so the notice
     // describes this attempt rather than the previous one.
-    setFailed(false)
+    setFailed(false);
     // `navigator.clipboard` is undefined on insecure origins and older Safari,
     // and `writeText` throws rather than rejecting there, so the rejection
     // handler alone would not catch it.
-    const { clipboard } = navigator
+    const { clipboard } = navigator;
     if (clipboard === undefined) {
-      setFailed(true)
-      return
+      setFailed(true);
+      return;
     }
     try {
       // Synchronous, deliberately. No await above this line.
       clipboard.writeText(inviteUrl(invite.token)).then(
         () => {
-          if (!openRef.current) return
-          setCopied(true)
-          window.setTimeout(() => setCopied(false), 2400)
+          if (!openRef.current) return;
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 2400);
         },
         (err: unknown) => {
-          console.error('InviteSheet: clipboard write failed', err)
-          if (openRef.current) setFailed(true)
+          console.error('InviteSheet: clipboard write failed', err);
+          if (openRef.current) setFailed(true);
         },
-      )
+      );
     } catch (err) {
-      console.error('InviteSheet: clipboard unavailable', err)
-      setFailed(true)
+      console.error('InviteSheet: clipboard unavailable', err);
+      setFailed(true);
     }
-  }
+  };
 
   const onRevoke = async () => {
-    if (invite === null || busy) return
-    setBusy(true)
-    setFailed(false)
+    if (invite === null || busy) return;
+    setBusy(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      await revokeInvite(token, crewId, invite.id)
-      setRevoked(true)
-      setCopied(false)
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      await revokeInvite(token, crewId, invite.id);
+      setRevoked(true);
+      setCopied(false);
     } catch (err) {
-      console.error('InviteSheet: could not retire the link', err)
-      setFailed(true)
+      console.error('InviteSheet: could not retire the link', err);
+      setFailed(true);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
   const onNewLink = async () => {
-    if (busy) return
-    setBusy(true)
-    setFailed(false)
+    if (busy) return;
+    setBusy(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      const link = await mintInvite(token, crewId)
-      setInvite(link)
-      setRevoked(false)
-      setCopied(false)
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      const link = await mintInvite(token, crewId);
+      setInvite(link);
+      setRevoked(false);
+      setCopied(false);
     } catch (err) {
-      console.error('InviteSheet: could not mint a new link', err)
-      setFailed(true)
+      console.error('InviteSheet: could not mint a new link', err);
+      setFailed(true);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
-  const left = CREW_MEMBER_CAP - memberCount
-  const atCap = left <= 0
+  const left = CREW_MEMBER_CAP - memberCount;
+  const atCap = left <= 0;
 
   return (
     <ModalShell
@@ -390,5 +390,5 @@ export const InviteSheet = ({
         )}
       </div>
     </ModalShell>
-  )
-}
+  );
+};

@@ -2,14 +2,14 @@
 // string straight from `events.date`, so a stub reading "AUG 14" for a show on
 // the 15th is the visible half of the #596 drift.
 
-import { stampDateParts } from '@/lib/passport/stamp'
+import { stampDateParts } from '@/lib/passport/stamp';
 
-import { CREWS_COPY } from '../definitions/copy'
+import { CREWS_COPY } from '../definitions/copy';
 
 export interface StubDate {
-  month: string
-  day: string
-  year: string
+  month: string;
+  day: string;
+  year: string;
 }
 
 /**
@@ -19,18 +19,18 @@ export interface StubDate {
  * leading zero: the stub sets it at 19px, where "05" reads as a typo.
  */
 export const stubDate = (iso: string): StubDate => {
-  const [year = ''] = iso.split('-')
-  const punch = stampDateParts(iso)
+  const [year = ''] = iso.split('-');
+  const punch = stampDateParts(iso);
   return {
     month: punch?.month ?? '',
     day: punch === null ? '' : String(Number(punch.day) || ''),
     year,
-  }
-}
+  };
+};
 
 export interface DateGroup<T> {
-  key: string
-  items: T[]
+  key: string;
+  items: T[];
 }
 
 /**
@@ -42,20 +42,20 @@ export const groupInOrder = <T>(
   items: T[],
   keyOf: (item: T) => string,
 ): DateGroup<T>[] => {
-  const groups: DateGroup<T>[] = []
+  const groups: DateGroup<T>[] = [];
   for (const item of items) {
-    const key = keyOf(item)
-    const last = groups[groups.length - 1]
-    if (last !== undefined && last.key === key) last.items.push(item)
-    else groups.push({ key, items: [item] })
+    const key = keyOf(item);
+    const last = groups[groups.length - 1];
+    if (last !== undefined && last.key === key) last.items.push(item);
+    else groups.push({ key, items: [item] });
   }
-  return groups
-}
+  return groups;
+};
 
 /** The year a `YYYY-MM-DD` falls in, for the Been there headers. */
-export const isoYear = (iso: string): string => iso.slice(0, 4)
+export const isoYear = (iso: string): string => iso.slice(0, 4);
 
-const DAY_MS = 86_400_000
+const DAY_MS = 86_400_000;
 
 /**
  * A joined date, relative while that is still the more useful reading and
@@ -69,25 +69,25 @@ export const joinedLabel = (
   joinedAt: string,
   now: Date = new Date(),
 ): string => {
-  const then = new Date(joinedAt)
-  if (Number.isNaN(then.getTime())) return ''
-  const days = Math.floor((now.getTime() - then.getTime()) / DAY_MS)
-  if (days <= 0) return CREWS_COPY.roster.joinedToday
-  if (days === 1) return CREWS_COPY.roster.joinedYesterday
-  if (days < 30) return CREWS_COPY.roster.joinedDaysAgo(days)
+  const then = new Date(joinedAt);
+  if (Number.isNaN(then.getTime())) return '';
+  const days = Math.floor((now.getTime() - then.getTime()) / DAY_MS);
+  if (days <= 0) return CREWS_COPY.roster.joinedToday;
+  if (days === 1) return CREWS_COPY.roster.joinedYesterday;
+  if (days < 30) return CREWS_COPY.roster.joinedDaysAgo(days);
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     year: 'numeric',
     timeZone: 'America/Denver',
-  }).format(then)
-}
+  }).format(then);
+};
 
 /** Whole days until an invite expires, floored at zero. */
 export const daysUntil = (
   expiresAt: string,
   now: Date = new Date(),
 ): number => {
-  const end = new Date(expiresAt)
-  if (Number.isNaN(end.getTime())) return 0
-  return Math.max(0, Math.ceil((end.getTime() - now.getTime()) / DAY_MS))
-}
+  const end = new Date(expiresAt);
+  if (Number.isNaN(end.getTime())) return 0;
+  return Math.max(0, Math.ceil((end.getTime() - now.getTime()) / DAY_MS));
+};

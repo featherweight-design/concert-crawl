@@ -21,27 +21,27 @@
  *                              overflow that the viewport-anchored checks (1 & 2) miss
  */
 
-import type { Page } from '@playwright/test'
+import type { Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type HeuristicSnapshot = {
-  hasHorizontalScroll: boolean
-  offscreenElements: { selector: string; rightEdgePx: number }[]
-  smallTapTargets: { selector: string; widthPx: number; heightPx: number }[]
-  brokenImages: { src: string }[]
+  hasHorizontalScroll: boolean;
+  offscreenElements: { selector: string; rightEdgePx: number }[];
+  smallTapTargets: { selector: string; widthPx: number; heightPx: number }[];
+  brokenImages: { src: string }[];
   overflowingContainers: {
-    selector: string
-    scrollWidthPx: number
-    clientWidthPx: number
-  }[]
+    selector: string;
+    scrollWidthPx: number;
+    clientWidthPx: number;
+  }[];
   contentDensity: {
-    mainChildren: number
-    bodyElements: number
-  }
-}
+    mainChildren: number;
+    bodyElements: number;
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Stringified heuristic script (runs inside page context)
@@ -181,7 +181,7 @@ export const collectHeuristicsScript = `(vw) => {
   var bodyElements = bodyEl ? bodyEl.querySelectorAll('*').length : 0
 
   return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, overflowingContainers: overflowingContainers, contentDensity: { mainChildren: mainChildren, bodyElements: bodyElements } }
-}`
+}`;
 
 // ---------------------------------------------------------------------------
 // Caller-facing async wrapper
@@ -200,6 +200,6 @@ export async function collectHeuristics(
   // function and call it immediately so the page receives a complete IIFE.
   const result: HeuristicSnapshot = await page.evaluate(
     `(${collectHeuristicsScript})(${viewportWidthPx})`,
-  )
-  return result
+  );
+  return result;
 }

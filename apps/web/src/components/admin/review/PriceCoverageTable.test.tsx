@@ -1,21 +1,21 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { PriceCoverageTable } from './PriceCoverageTable'
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { PriceCoverageTable } from './PriceCoverageTable';
 
 interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 const buildEvent = (overrides: Partial<PriceEvent> = {}): PriceEvent => ({
@@ -31,9 +31,9 @@ const buildEvent = (overrides: Partial<PriceEvent> = {}): PriceEvent => ({
   lastRetrievedAt: null,
   lastOutcome: null,
   ...overrides,
-})
+});
 
-const noop = () => {}
+const noop = () => {};
 
 describe('PriceCoverageTable header badge (#710)', () => {
   // Regression for #710 — when paginating, the badge was reading the
@@ -43,7 +43,7 @@ describe('PriceCoverageTable header badge (#710)', () => {
   it('shows the server total in the missing badge when missingOnly=true', () => {
     const events = Array.from({ length: 20 }).map((_, idx) =>
       buildEvent({ eventId: `evt-${idx}` }),
-    )
+    );
 
     render(
       <PriceCoverageTable
@@ -57,11 +57,11 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
-    expect(screen.getByText('963 missing')).toBeTruthy()
-    expect(screen.queryByText('20 missing')).toBeNull()
-  })
+    expect(screen.getByText('963 missing')).toBeTruthy();
+    expect(screen.queryByText('20 missing')).toBeNull();
+  });
 
   // The badge label "missing" only makes semantic sense for the
   // missingOnly=true view. When the user toggles to "show all", `total`
@@ -72,7 +72,7 @@ describe('PriceCoverageTable header badge (#710)', () => {
   // word — the page also renders a "Missing only" filter toggle that would
   // false-match a broad regex.
   it('hides the missing badge when missingOnly=false', () => {
-    const events = [buildEvent({ priceMin: null })]
+    const events = [buildEvent({ priceMin: null })];
 
     render(
       <PriceCoverageTable
@@ -86,10 +86,10 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
-    expect(screen.queryByText(/^\d+ missing$/)).toBeNull()
-  })
+    expect(screen.queryByText(/^\d+ missing$/)).toBeNull();
+  });
 
   it('hides the missing badge while loading', () => {
     render(
@@ -104,10 +104,10 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
-    expect(screen.queryByText(/^\d+ missing$/)).toBeNull()
-  })
+    expect(screen.queryByText(/^\d+ missing$/)).toBeNull();
+  });
 
   // Copilot follow-up on #710: when paging clamps invalid deep-links, the
   // parent query briefly returns events=[] while total>0. Showing "All
@@ -127,13 +127,13 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
-    expect(screen.getByText('963 missing')).toBeTruthy()
+    expect(screen.getByText('963 missing')).toBeTruthy();
     // Empty-state copy strings should not render.
-    expect(screen.queryByText(/All events have prices/i)).toBeNull()
-    expect(screen.queryByText(/No upcoming events/i)).toBeNull()
-  })
+    expect(screen.queryByText(/All events have prices/i)).toBeNull();
+    expect(screen.queryByText(/No upcoming events/i)).toBeNull();
+  });
 
   it('shows empty-state copy when total === 0 (truly nothing missing)', () => {
     render(
@@ -148,10 +148,10 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
-    expect(screen.getByText(/All events have prices/i)).toBeTruthy()
-  })
+    expect(screen.getByText(/All events have prices/i)).toBeTruthy();
+  });
 
   // Copilot follow-up on #710 pass 4: when the current page is empty but
   // total > 0 (out-of-range deep-link), the Pagination component MUST
@@ -171,12 +171,12 @@ describe('PriceCoverageTable header badge (#710)', () => {
         onPageSizeChange={noop}
         onToggleFilter={noop}
       />,
-    )
+    );
 
     // Assert on the Pagination <nav> itself — the panel action toggle is
     // also a <button>, so `queryAllByRole('button')` would pass even if
     // the Pagination component didn't mount (false positive). The nav's
     // accessible name is owned by the Pagination primitive.
-    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeTruthy()
-  })
-})
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeTruthy();
+  });
+});

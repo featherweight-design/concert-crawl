@@ -1,51 +1,51 @@
-import { Fragment } from 'react'
-import type { Metadata } from 'next'
-import { headers } from 'next/headers'
-import { notFound } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { Fragment } from 'react';
+import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import type {
   EventDetailResponse,
   EventReport,
   EventsRelatedResponse,
   RelatedEvent,
-} from '@concert-crawl/types'
-import { resolveGuideViewerMode } from '@concert-crawl/types'
-import { EventFirstTimerChip } from '@/components/consumer/venue-guide'
-import { publicApiClient, apiClient } from '@/lib/api'
-import { seedFollowedArtists } from '@/lib/following'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
-import { isScaRegion } from '@/lib/sca-region'
+} from '@concert-crawl/types';
+import { resolveGuideViewerMode } from '@concert-crawl/types';
+import { EventFirstTimerChip } from '@/components/consumer/venue-guide';
+import { publicApiClient, apiClient } from '@/lib/api';
+import { seedFollowedArtists } from '@/lib/following';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { isScaRegion } from '@/lib/sca-region';
 import {
   eventCanonicalPath,
   eventShareMetadata,
-} from '@/lib/share/event-metadata'
-import { fetchEventReports } from '@/lib/events'
-import { HeroBand } from '@/components/consumer/image-slot'
-import { BackChip } from '@/components/consumer/back-chip/BackChip'
-import { ShareButton } from '@/components/consumer/event-detail/ShareButton'
-import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
-import { SectionHeader } from '@/components/consumer/section-header'
-import { WatchZone } from '@/components/consumer/watchers'
-import { EventDetailCtaBlock } from '@/components/consumer/going'
-import { CrewGoingZone } from '@/components/consumer/crews'
-import { GenreChips } from '@/components/consumer/GenreChips'
+} from '@/lib/share/event-metadata';
+import { fetchEventReports } from '@/lib/events';
+import { HeroBand } from '@/components/consumer/image-slot';
+import { BackChip } from '@/components/consumer/back-chip/BackChip';
+import { ShareButton } from '@/components/consumer/event-detail/ShareButton';
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
+import { SectionHeader } from '@/components/consumer/section-header';
+import { WatchZone } from '@/components/consumer/watchers';
+import { EventDetailCtaBlock } from '@/components/consumer/going';
+import { CrewGoingZone } from '@/components/consumer/crews';
+import { GenreChips } from '@/components/consumer/GenreChips';
 import {
   EventDetailBanners,
   EventDetailPriceBlock,
   EventDetailFooter,
-} from '@/components/consumer/EventDetailClient'
+} from '@/components/consumer/EventDetailClient';
 import {
   formatEventDate,
   formatShowTime,
-} from '@/components/consumer/definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { EventTitleBlock } from '@/components/consumer/event-title-block'
-import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight'
+} from '@/components/consumer/definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { EventTitleBlock } from '@/components/consumer/event-title-block';
+import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight';
 import {
   BillFollowBlock,
   billArtists,
   followedSlugSet,
-} from '@/components/consumer/following/bill'
+} from '@/components/consumer/following/bill';
 import {
   InfoRow,
   IconPin,
@@ -53,12 +53,12 @@ import {
   IconClock,
   IconUsers,
   EventTicketCta,
-} from '@/components/consumer/event-detail'
+} from '@/components/consumer/event-detail';
 
-const copy = CONSUMER_COPY.eventDetail
+const copy = CONSUMER_COPY.eventDetail;
 
 interface EventDetailPageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 async function fetchEvent(
@@ -67,12 +67,15 @@ async function fetchEvent(
 ): Promise<EventDetailResponse | null> {
   try {
     if (token) {
-      return await apiClient.get<EventDetailResponse>(`/v1/events/${id}`, token)
+      return await apiClient.get<EventDetailResponse>(
+        `/v1/events/${id}`,
+        token,
+      );
     }
-    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`)
+    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`);
   } catch (err) {
-    console.error('[event detail] event fetch failed', { id, err })
-    return null
+    console.error('[event detail] event fetch failed', { id, err });
+    return null;
   }
 }
 
@@ -89,22 +92,22 @@ async function fetchEvent(
 export const generateMetadata = async ({
   params,
 }: EventDetailPageProps): Promise<Metadata> => {
-  const { id } = await params
-  const event = await fetchEvent(id, null)
-  if (event === null) return {}
+  const { id } = await params;
+  const event = await fetchEvent(id, null);
+  if (event === null) return {};
 
-  return eventShareMetadata(event, eventCanonicalPath(id))
-}
+  return eventShareMetadata(event, eventCanonicalPath(id));
+};
 
 async function fetchReports(
   eventId: string,
   token: string | null,
 ): Promise<EventReport[]> {
   try {
-    return await fetchEventReports(eventId, token ?? undefined)
+    return await fetchEventReports(eventId, token ?? undefined);
   } catch (err) {
-    console.error('[event detail] reports fetch failed', { eventId, err })
-    return []
+    console.error('[event detail] reports fetch failed', { eventId, err });
+    return [];
   }
 }
 
@@ -126,30 +129,30 @@ async function fetchRelatedById(
         )
       : await publicApiClient.get<EventsRelatedResponse>(
           `/v1/events/${eventId}/related`,
-        )
-    return result.data
+        );
+    return result.data;
   } catch (err) {
-    console.error('[event detail] related fetch failed', { eventId, err })
-    return []
+    console.error('[event detail] related fetch failed', { eventId, err });
+    return [];
   }
 }
 
 export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
-  const { id } = await params
-  const { getToken, userId, sessionClaims } = await auth()
-  const token = await getToken()
+  const { id } = await params;
+  const { getToken, userId, sessionClaims } = await auth();
+  const token = await getToken();
 
   // The `@handle` signed onto a shared poster. Clerk's username is the only
   // public-facing name this product has — there is no handle column of our own
   // — and it is optional, so most posters go out unsigned, which the card
   // handles by drawing no signature line at all.
-  const claimUsername = sessionClaims?.['username']
+  const claimUsername = sessionClaims?.['username'];
   const shareHandle =
     typeof claimUsername === 'string' && claimUsername !== ''
       ? claimUsername
-      : null
+      : null;
 
   // Parallel fetch — closes #833. Previously fetchRelated ran serially after
   // fetchEvent because it needed event.venue.slug to query the list endpoint.
@@ -168,20 +171,20 @@ export default async function EventDetailPage({
     // transient prefetch failure would cost more than the wrong glyph does.
     seedFollowedArtists(token),
     headers(),
-  ])
-  if (!event) notFound()
+  ]);
+  if (!event) notFound();
 
   // Monetization spec §1.7: SCA notice gating for the tier picker a locked
   // "I'm going!" tap can open. Unknown (local dev, header absent) fails safe.
-  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
+  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'));
 
-  const showTime = formatShowTime(event.showTime)
-  const doorsTime = formatShowTime(event.doorsTime)
-  const dateLabel = formatEventDate(event.date, event.venue.timezone)
+  const showTime = formatShowTime(event.showTime);
+  const doorsTime = formatShowTime(event.doorsTime);
+  const dateLabel = formatEventDate(event.date, event.venue.timezone);
   const doorsShow =
     doorsTime && showTime
       ? `${doorsTime} / ${showTime}`
-      : (showTime ?? doorsTime ?? '—')
+      : (showTime ?? doorsTime ?? '—');
   // ticketUrl/eventUrl are crawler-derived and untrusted — filter the CTA
   // target to http(s) so a compromised venue page can't inject a
   // javascript:/data: href into the rendered link (#1152).
@@ -190,18 +193,18 @@ export default async function EventDetailPage({
   const guideViewerMode = resolveGuideViewerMode({
     isSignedIn: token !== null,
     hasAttendedVenue: null,
-  })
+  });
 
   // Headliner plus billed support, minus any name the artists projection has
   // no row for. Empty for a legacy row with no slugs, which renders no block.
-  const bill = billArtists(event, followedSlugSet(follows))
+  const bill = billArtists(event, followedSlugSet(follows));
 
-  const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null
-  const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null
+  const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null;
+  const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null;
   const ctaHref =
     safeTicketUrl ??
     safeEventUrl ??
-    (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null)
+    (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null);
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
@@ -404,5 +407,5 @@ export default async function EventDetailPage({
         </div>
       </div>
     </div>
-  )
+  );
 }

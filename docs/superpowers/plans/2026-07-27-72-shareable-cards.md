@@ -2,7 +2,7 @@
 
 **Ticket:** #72 Shareable cards (IdentityArt) — primary · #85 Concert passport (visual shareable grid) — Passport half.
 **Design handoff:** `design/design_handoff_shareable_cards/` — README.md (spec), READINESS.md (🟢 Green, post-addendum 2026-07-14, PR #948).
-**Adjacent:** #70 Concert History (Passport moved *from* it per PR #916; #70 ships only the teaser link) · #794 Logged-out app UX (**file collision — see Sequencing lock**).
+**Adjacent:** #70 Concert History (Passport moved _from_ it per PR #916; #70 ships only the teaser link) · #794 Logged-out app UX (**file collision — see Sequencing lock**).
 
 ---
 
@@ -23,13 +23,13 @@ Plus the infrastructure both need: a **public `/e/:eventId` mirror route** so an
 
 Three candidates were evaluated against the real code:
 
-| Option | Verdict |
-| --- | --- |
-| **`next/og` `ImageResponse` (satori)** | ✅ **Chosen.** Already in production in this repo — `apps/web/src/app/api/pwa/icon-512/route.tsx` renders a 512×512 PNG with `export const runtime = 'edge'`. Zero new dependencies, zero new infrastructure, runs on Vercel where the web app already lives, and works for an unauthenticated caller because the route is a plain GET. |
-| **Headless Chromium (the handoff's suggestion, README §5)** | ❌ Rejected. Playwright/Chromium exists in this monorepo only inside `packages/crawler-core` (a devDependency of `apps/api`, deployed on Render). It cannot run in a Vercel serverless/edge function, so choosing it means standing up a *new* Render render-service, a new deploy target, a new secret, and a cross-origin hop from web → Render for every OG crawl. Enormous infra cost for pixel fidelity nobody is comparing against a reference. |
-| **Client-side canvas / `html-to-image`** | ❌ Rejected as the primary path. It cannot serve `og:image` — Slack/iMessage/Twitter crawlers never execute JS, and the whole point of the link ratio is the unfurl. It also can't produce a card for a logged-out visitor arriving from a preview. (`design/design_handoff_concert_history/READINESS.md:141` suggests `html-to-image`; that recommendation predates the OG requirement and is superseded here.) |
+| Option                                                      | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`next/og` `ImageResponse` (satori)**                      | ✅ **Chosen.** Already in production in this repo — `apps/web/src/app/api/pwa/icon-512/route.tsx` renders a 512×512 PNG with `export const runtime = 'edge'`. Zero new dependencies, zero new infrastructure, runs on Vercel where the web app already lives, and works for an unauthenticated caller because the route is a plain GET.                                                                                                               |
+| **Headless Chromium (the handoff's suggestion, README §5)** | ❌ Rejected. Playwright/Chromium exists in this monorepo only inside `packages/crawler-core` (a devDependency of `apps/api`, deployed on Render). It cannot run in a Vercel serverless/edge function, so choosing it means standing up a _new_ Render render-service, a new deploy target, a new secret, and a cross-origin hop from web → Render for every OG crawl. Enormous infra cost for pixel fidelity nobody is comparing against a reference. |
+| **Client-side canvas / `html-to-image`**                    | ❌ Rejected as the primary path. It cannot serve `og:image` — Slack/iMessage/Twitter crawlers never execute JS, and the whole point of the link ratio is the unfurl. It also can't produce a card for a logged-out visitor arriving from a preview. (`design/design_handoff_concert_history/READINESS.md:141` suggests `html-to-image`; that recommendation predates the OG requirement and is superseded here.)                                      |
 
-**The cost of choosing satori** is that satori is not a browser. It supports a flexbox subset of CSS and *does not* support: `mixBlendMode`, `backdropFilter`, `mask-image`/`WebkitMaskImage`, SVG `<filter>` (so no `feTurbulence`), or `preserveAspectRatio="slice"` behaviour on nested SVG. `IdentityArt.tsx` uses **all** of those:
+**The cost of choosing satori** is that satori is not a browser. It supports a flexbox subset of CSS and _does not_ support: `mixBlendMode`, `backdropFilter`, `mask-image`/`WebkitMaskImage`, SVG `<filter>` (so no `feTurbulence`), or `preserveAspectRatio="slice"` behaviour on nested SVG. `IdentityArt.tsx` uses **all** of those:
 
 - `IA_TEMPLATES` (`apps/web/src/components/consumer/identity-art/IdentityArt.tsx:513`) wrap layers in `<g style={{ mixBlendMode: 'screen' | 'multiply' }}>`
 - the grain overlay is a data-URI `feTurbulence` SVG composited with `mixBlendMode`
@@ -37,13 +37,13 @@ Three candidates were evaluated against the real code:
 - `PassportPill` (`passport-card.jsx:148`) uses `var(--scrim)` + `backdropFilter: blur(10px)`
 - `PassportCard`'s bottom panel (`passport-card.jsx:192`) uses `backdropFilter: blur(9px)` + `WebkitMaskImage`/`maskImage` gradients
 
-So PR-1 builds **`IdentityArtPrint`** — a satori-safe sibling that consumes the *same* `identityFor()` output (same hash, same palette, same template id, same rotation) but emits flattened geometry: blend modes pre-resolved to explicit rgba fills, grain baked as a static tiled data-URI PNG (or omitted at `link` ratio where it's invisible), no backdrop-filter (opaque scrim colour computed from the palette instead), and mask gradients replaced with a stacked `linear-gradient`. **The determinism contract is preserved** — `IdentityArtPrint` and `IdentityArt` render the same hash to the same template/palette/rotation, which is what makes the on-screen preview trustworthy.
+So PR-1 builds **`IdentityArtPrint`** — a satori-safe sibling that consumes the _same_ `identityFor()` output (same hash, same palette, same template id, same rotation) but emits flattened geometry: blend modes pre-resolved to explicit rgba fills, grain baked as a static tiled data-URI PNG (or omitted at `link` ratio where it's invisible), no backdrop-filter (opaque scrim colour computed from the palette instead), and mask gradients replaced with a stacked `linear-gradient`. **The determinism contract is preserved** — `IdentityArtPrint` and `IdentityArt` render the same hash to the same template/palette/rotation, which is what makes the on-screen preview trustworthy.
 
 ### Nine themes, server-side
 
 `apps/web/src/theme/themes.ts` exports `THEMES: Record<ThemeName, Record<string,string>>` where every token is a plain hex/oklch **string** — no CSS variable resolution needed. A server route can look up the full token set for any of the nine themes synchronously. That's what makes satori 9-theme support viable at all.
 
-The theme *value* cannot be read server-side from the viewer: persistence to `localStorage['cc-theme']` lives in `apps/web/src/theme/ThemeProvider.tsx`, and the inline no-flash script that reads it and sets `data-theme` is in `apps/web/src/app/layout.tsx` (`apply-theme.ts` only applies tokens to the DOM — it does not persist); **there is no theme cookie**. So the render routes take a `?theme=` query param, validated with a Zod enum built from `THEME_NAMES`, defaulting to `electric`. For signed-in users the trigger UI supplies the current theme; `user_profiles.theme` (`packages/db/src/schema/user-profiles.ts`, `userThemeEnum`, default `'electric'`) is the server-side fallback.
+The theme _value_ cannot be read server-side from the viewer: persistence to `localStorage['cc-theme']` lives in `apps/web/src/theme/ThemeProvider.tsx`, and the inline no-flash script that reads it and sets `data-theme` is in `apps/web/src/app/layout.tsx` (`apply-theme.ts` only applies tokens to the DOM — it does not persist); **there is no theme cookie**. So the render routes take a `?theme=` query param, validated with a Zod enum built from `THEME_NAMES`, defaulting to `electric`. For signed-in users the trigger UI supplies the current theme; `user_profiles.theme` (`packages/db/src/schema/user-profiles.ts`, `userThemeEnum`, default `'electric'`) is the server-side fallback.
 
 ### IdentityArt namespace — no invention
 
@@ -56,11 +56,11 @@ Also: `IdentityArtProps.width?: number` / `height?: number` (`IdentityArt.tsx:35
 ## Global Constraints
 
 - **Watching is the only tracking concept** — never "Saved", "Favorites", "Following". Its glyph is the lucide **`Eye`**. No cardiac glyph exists anywhere in this product; `share-trigger.jsx:32` contains one and it is deleted, not ported.
-- **All customer-facing strings this feature ships** (share sheet, public mirror, passport) go in `apps/web/src/components/consumer/definitions/copy.ts` under `CONSUMER_COPY`. This is a rule about *this feature's* strings, not a claim that the file is the app's only copy home — the codebase deliberately splits copy per feature (`tier-picker/definitions/copy.ts`, `spotify/definitions/copy.ts`, shared `lib/definitions/copy.ts`), and a feature-local file remains the right call for future work. `POSTER_TAGLINES` moves there verbatim — **do not rewrite the taglines**, they are shipped copy signed off in READINESS.
+- **All customer-facing strings this feature ships** (share sheet, public mirror, passport) go in `apps/web/src/components/consumer/definitions/copy.ts` under `CONSUMER_COPY`. This is a rule about _this feature's_ strings, not a claim that the file is the app's only copy home — the codebase deliberately splits copy per feature (`tier-picker/definitions/copy.ts`, `spotify/definitions/copy.ts`, shared `lib/definitions/copy.ts`), and a feature-local file remains the right call for future work. `POSTER_TAGLINES` moves there verbatim — **do not rewrite the taglines**, they are shipped copy signed off in READINESS.
 - **No `as` casts.** Zod `safeParse` at every boundary (query params, API responses), type guards for union narrowing, declaration merging for library types.
 - **Zod at every Hono endpoint**; all API routes under `/v1/`.
 - **Drizzle only**; expand/contract migrations only.
-- **`var(--token)` only** in on-screen components — no hardcoded hex, no Tailwind `dark:` variants, all nine themes must render. (The *print* components are the sole exception: satori needs literal colour strings, which they get by reading `THEMES[theme]` — still no hardcoded hex, just resolved from the same source of truth.)
+- **`var(--token)` only** in on-screen components — no hardcoded hex, no Tailwind `dark:` variants, all nine themes must render. (The _print_ components are the sole exception: satori needs literal colour strings, which they get by reading `THEMES[theme]` — still no hardcoded hex, just resolved from the same source of truth.)
 - **Mobile/desktop parity in the same PR.** The share trigger must work on both; desktop placement is a build-time item flagged in READINESS:55–65.
 - **a11y in the same PR** — 44px minimum tap targets, `role="dialog"` + focus trap + `aria-modal` on the share sheet, keyboard-reachable destinations, `alt` text on every rendered PNG.
 - **Release notes** — an entry in `apps/web/src/lib/definitions/releases.ts` on the same branch as the first user-visible PR (PR-2). Newest-first — prepend to the array rather than anchoring to a version string, which will be stale by the time this PR is written.
@@ -71,18 +71,18 @@ Also: `IdentityArtProps.width?: number` / `height?: number` (`IdentityArt.tsx:35
 
 ## Sequencing lock
 
-| PR | Ticket | Scope | Depends on |
-| --- | --- | --- | --- |
-| **PR-0** | #72 | Public `/e/:eventId` mirror route + `middleware.ts` matcher | — |
-| **PR-1** | #72 | Print-safe render kit: `IdentityArtPrint`, `resolveThemeTokens`, mint contract, `POSTER_TAGLINES` → copy.ts | — (parallel with PR-0) |
-| **PR-2** | #72 | `<PosterCard>` renderer + `/share/[eventId]/[ratio]` PNG route + Event Detail share pill + share sheet | PR-0, PR-1 |
-| **PR-3** | #72 | OG meta on `/e/:eventId`, `og:image:alt`, analytics events, a11y hardening | PR-2 |
-| **PR-4** | #85 | `<PassportCard>` compact + share, `/passport/[ratio]` PNG route | PR-1 |
-| **PR-5** | #85 / #70 | Wire `<PassportTeaser>` on the Concert History page + entitlement gate | PR-4, **#70 merged** |
+| PR       | Ticket    | Scope                                                                                                       | Depends on             |
+| -------- | --------- | ----------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **PR-0** | #72       | Public `/e/:eventId` mirror route + `middleware.ts` matcher                                                 | —                      |
+| **PR-1** | #72       | Print-safe render kit: `IdentityArtPrint`, `resolveThemeTokens`, mint contract, `POSTER_TAGLINES` → copy.ts | — (parallel with PR-0) |
+| **PR-2** | #72       | `<PosterCard>` renderer + `/share/[eventId]/[ratio]` PNG route + Event Detail share pill + share sheet      | PR-0, PR-1             |
+| **PR-3** | #72       | OG meta on `/e/:eventId`, `og:image:alt`, analytics events, a11y hardening                                  | PR-2                   |
+| **PR-4** | #85       | `<PassportCard>` compact + share, `/passport/[ratio]` PNG route                                             | PR-1                   |
+| **PR-5** | #85 / #70 | Wire `<PassportTeaser>` on the Concert History page + entitlement gate                                      | PR-4, **#70 merged**   |
 
 ### ⚠️ File collision with #794 — `apps/web/src/middleware.ts`
 
-**PR-0 edits the exact file #794 rewrites.** `apps/web/src/middleware.ts:8–14` defines `isAlwaysPublic = createRouteMatcher([...])`. #72 adds two entries (`/e/(.*)`, `/share/(.*)`); **#794 "Logged-out app UX — navigation, header, browse-only shape"** broadens the same matcher across *every* consumer surface (browse, event detail, venue detail, artist detail, header/nav) for the ~Aug 18–22 public launch.
+**PR-0 edits the exact file #794 rewrites.** `apps/web/src/middleware.ts:8–14` defines `isAlwaysPublic = createRouteMatcher([...])`. #72 adds two entries (`/e/(.*)`, `/share/(.*)`); **#794 "Logged-out app UX — navigation, header, browse-only shape"** broadens the same matcher across _every_ consumer surface (browse, event detail, venue detail, artist detail, header/nav) for the ~Aug 18–22 public launch.
 
 Mitigation, in order of preference:
 
@@ -90,11 +90,11 @@ Mitigation, in order of preference:
 2. If #794 is already in flight, **PR-0 must rebase onto #794's branch**, not `main` — the conflict is a single array literal and is trivial to resolve, but only if resolved deliberately. Do not let two agents merge competing versions of `isAlwaysPublic`.
 3. **Do not run PR-0 and #794's middleware PR in parallel worktrees.** Assign both to the same session or serialise them.
 
-Second seam in the same file: the signed-in branch returns early at `middleware.ts:38`, so an authenticated user who clicks a shared link lands on the *public mirror* of an event they could see in full. PR-0 resolves this by redirecting signed-in users from `/e/:id` → `/events/:id` (Task 2).
+Second seam in the same file: the signed-in branch returns early at `middleware.ts:38`, so an authenticated user who clicks a shared link lands on the _public mirror_ of an event they could see in full. PR-0 resolves this by redirecting signed-in users from `/e/:id` → `/events/:id` (Task 2).
 
 ### ⚠️ Hard dependency on #70 — `attending_at`
 
-`packages/db/src/schema/social.ts` has `userEventStatusEnum = pgEnum('user_event_status', ['going','interested','watching'])` and a `userEvents` table with `{ userId, eventId, status, savedPrice, createdAt }`. **There is no `attending_at` / `goingMarkedAt` column.** The Passport's "nights / venues / top genre / since ‹month year›" stats need the moment a user marked *I'm going*, which is exactly the migration `design/design_handoff_concert_history/READINESS.md:31` assigns to **#70**. PR-4 therefore builds the Passport against a typed selector interface and its own fixtures; PR-5 (wiring to real data + the History page) is blocked until #70 merges.
+`packages/db/src/schema/social.ts` has `userEventStatusEnum = pgEnum('user_event_status', ['going','interested','watching'])` and a `userEvents` table with `{ userId, eventId, status, savedPrice, createdAt }`. **There is no `attending_at` / `goingMarkedAt` column.** The Passport's "nights / venues / top genre / since ‹month year›" stats need the moment a user marked _I'm going_, which is exactly the migration `design/design_handoff_concert_history/READINESS.md:31` assigns to **#70**. PR-4 therefore builds the Passport against a typed selector interface and its own fixtures; PR-5 (wiring to real data + the History page) is blocked until #70 merges.
 
 ### ⚠️ Entitlement drift to resolve before PR-5
 
@@ -111,27 +111,29 @@ Goal: an unauthenticated visitor who taps a shared link sees a real event page.
 ### Task 1: Add `/e/(.*)` and `/share/(.*)` to the public matcher
 
 **Files:**
+
 - modify `apps/web/src/middleware.ts`
 
 **Interfaces:** produces — public reachability for the mirror route and the PNG route. Consumes — nothing.
 
 - [ ] **Step 1: Failing middleware test.** Add `apps/web/src/__tests__/middleware.public-share.test.ts` asserting that an unauthenticated request to `/e/<uuid>` and to `/share/<uuid>/link.png` is **not** redirected to `/`.
-  `Run: pnpm --filter web test middleware.public-share`
-  `Expected: FAIL — auth.protect() redirects to '/'`
+      `Run: pnpm --filter web test middleware.public-share`
+      `Expected: FAIL — auth.protect() redirects to '/'`
 - [ ] **Step 2: Extend `isAlwaysPublic`.** Add `'/e/(.*)'` and `'/share/(.*)'` to the array at `middleware.ts:8`. Leave the matcher `config` at the bottom untouched — the existing pattern already covers both paths.
-  `Expected: PASS`
+      `Expected: PASS`
 - [ ] **Step 3:** Add a comment above the array pointing at #794, so whoever generalises it knows these two entries are load-bearing for the share loop.
 
 ### Task 2: Build the mirror route
 
 **Files:**
+
 - create `apps/web/src/app/e/[id]/page.tsx`
 - create `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx`
 - modify `apps/web/src/components/consumer/definitions/copy.ts` (public-mirror CTA strings)
 
 **Interfaces:** produces — `/e/:eventId` rendering event data for anonymous callers. Consumes — `publicApiClient` from `apps/web/src/lib/api.ts`; `GET /v1/events/:id` (`apps/api/src/routes/events.ts:568`, already unauthenticated-tolerant) and `/v1/events/:id/related` (`:1129`, no auth).
 
-- [ ] **Step 1: Redirect signed-in users.** In `page.tsx`, `const { userId } = await auth()`; if `userId`, `redirect(\`/events/${id}\`)`. Test: `apps/web/src/app/e/[id]/__tests__/page.test.tsx` asserts the redirect fires for an authed session and does not for an anon one.
+- [ ] **Step 1: Redirect signed-in users.** In `page.tsx`, `const { userId } = await auth()`; if `userId`, `redirect(\`/events/${id}\`)`. Test: `apps/web/src/app/e/[id]/**tests**/page.test.tsx` asserts the redirect fires for an authed session and does not for an anon one.
 - [ ] **Step 2: Fetch with `publicApiClient`.** Mirror the `Promise.all` shape from `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx` but drop the reports fetch (auth-only). Validate the id with the same `uuidSchema.safeParse` pattern; `notFound()` on failure — never cast.
 - [ ] **Step 3: Render the read-only mirror.** `PublicEventDetail` reuses `EventImage`, `GenreChips`, `EventTitleBlock`, the InfoRow block, `EventDetailPriceBlock`, `SetlistPreview`, and the CTA (`isSafeHttpUrl`-filtered, sold-out disabled state) from the protected page. It renders the same `max-w-[880px]` inside `overflow-x-clip` container (#973).
 - [ ] **Step 4: Gate the secondary actions.** `WatchShowButton`, `DetailFollowStrip`, price submission, and reports are **not** rendered. In their place, a single sign-in CTA. Copy lands in `CONSUMER_COPY.publicEvent`. The Watching affordance on the authed page is the lucide `Eye` — the mirror simply omits it; do not substitute another glyph.
@@ -146,20 +148,22 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 3: `resolveThemeTokens` — server-side theme resolution
 
 **Files:**
+
 - create `apps/web/src/lib/share/theme-tokens.ts`
 - create `apps/web/src/lib/share/__tests__/theme-tokens.test.ts`
 
 **Interfaces:** produces `themeParamSchema: z.ZodEnum` and `resolveThemeTokens(raw: string | undefined): { theme: ThemeName; tokens: Record<string,string> }`. Consumes `THEMES`, `THEME_NAMES`, `ThemeName` from `apps/web/src/theme/themes.ts`.
 
 - [ ] **Step 1: Failing test.** All nine names in `THEME_NAMES` resolve; `undefined`, `''`, `'nope'`, and `'__proto__'` all resolve to `electric`; the returned token record is the exact `THEMES[name]` object.
-  `Run: pnpm --filter web test theme-tokens`
-  `Expected: FAIL — module not found`
+      `Run: pnpm --filter web test theme-tokens`
+      `Expected: FAIL — module not found`
 - [ ] **Step 2: Implement** with `z.enum(THEME_NAMES)` + `safeParse`. No `as`, no index-signature lookup on an unvalidated string.
 - [ ] **Step 3:** Assert every one of the nine themes defines the tokens the cards read — `bg`, `fg`, `surface-1`, `border-strong`, `scrim`, `signal`, `accent`. A missing token in one theme is the classic 9-theme regression; this test catches it at build time.
 
 ### Task 4: `IdentityArtPrint` — satori-safe generative art
 
 **Files:**
+
 - create `apps/web/src/components/consumer/identity-art/IdentityArtPrint.tsx`
 - create `apps/web/src/components/consumer/identity-art/__tests__/IdentityArtPrint.test.tsx`
 - modify `apps/web/src/components/consumer/identity-art/IdentityArt.tsx` (widen `width`/`height` to `number | string`)
@@ -167,7 +171,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 **Interfaces:** produces `<IdentityArtPrint name kind={'artist'|'venue'} width height grain? />`. Consumes `identityFor()` (`IdentityArt.tsx:545`), `IA_PALETTES` (`:85`), `ia_isDark()` (`:70`), `IA_TEMPLATES` (`:513`).
 
 - [ ] **Step 1: Determinism test (write first).** For twenty artist names, `identityFor(name,'artist')` and the props `IdentityArtPrint` derives must agree on `hash`, `template`, `palette.id`, and `rotate` with what `IdentityArt` derives. This is the contract that makes the in-app preview honest.
-  `Expected: FAIL — module not found`
+      `Expected: FAIL — module not found`
 - [ ] **Step 2: Flatten blend modes.** For each of the five templates (mesh, stripes, concentric, halftone artist-only, blueprint venue-only), replace `mixBlendMode: 'screen'|'multiply'` with a pre-computed rgba fill derived from `palette.primary`/`palette.secondary` over `palette.bg`. Add a snapshot test per template per kind.
 - [ ] **Step 3: Bake the grain.** Replace the `feTurbulence` data-URI overlay with a static tiled PNG data-URI at the same visual weight (`grain` prop, default `0.1`). Omit entirely when `grain === 0`.
 - [ ] **Step 4: Drop `backdropFilter`.** The initials chip renders on an opaque colour computed from `palette.bg` + `ia_isDark()`. `showInitials={false}` (the Passport stamp case, `passport-card.jsx:67`) skips the chip entirely.
@@ -177,6 +181,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 5: Mint contract
 
 **Files:**
+
 - create `apps/web/src/lib/share/mint.ts`
 - create `apps/web/src/lib/share/__tests__/mint.test.ts`
 
@@ -189,6 +194,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 6: Share copy → `definitions/copy.ts`
 
 **Files:**
+
 - modify `apps/web/src/components/consumer/definitions/copy.ts`
 - create `apps/web/src/lib/share/taglines.ts`
 
@@ -198,7 +204,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
   - `going`: `"found this one on Concert Crawl. see you in the pit."`
   - `soldout`: `"sold out. now we're all refreshing stubhub at 2am together."`
   - `drop`: `"price dropped. so did my dignity, but that's unrelated."`
-  **Do not edit these strings.** They are the output of the Sour Patch voice pass (#782) and are signed off in the handoff README's voice table.
+    **Do not edit these strings.** They are the output of the Sour Patch voice pass (#782) and are signed off in the handoff README's voice table.
 - [ ] **Step 2:** Add `CONSUMER_COPY.share.stateLabels` — `going: "I'm going"`, `soldout: "Sold out"`, `drop: "Price drop"` (from `share-cards.jsx:173`). Add sheet copy: eyebrow `"Share"`, destination labels `Story / Feed / X / Messages / Save image / Copy link`, and the alt-text template.
 - [ ] **Step 3: `posterTagline`** is a total function over a `PosterState = 'going' | 'soldout' | 'drop'` union, falling back to `going`. Test the fallback with an unknown value narrowed via a type guard, not a cast.
 - [ ] **Step 4:** Lint rule check — grep the new components for string literals; every user-visible string must come from `CONSUMER_COPY`.
@@ -210,6 +216,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 7: `<PosterCard>` renderer
 
 **Files:**
+
 - create `apps/web/src/components/consumer/share/PosterCard.tsx`
 - create `apps/web/src/components/consumer/share/StatePill.tsx`
 - create `apps/web/src/components/consumer/share/ShareWordmark.tsx`
@@ -232,6 +239,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 8: The PNG route
 
 **Files:**
+
 - create `apps/web/src/app/share/[eventId]/[ratio]/route.tsx`
 - create `apps/web/src/app/share/[eventId]/[ratio]/__tests__/route.test.ts`
 
@@ -247,6 +255,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 9: Event Detail share pill
 
 **Files:**
+
 - create `apps/web/src/components/consumer/event-detail/ShareButton.tsx`
 - modify `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx`
 - modify `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx`
@@ -261,6 +270,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 10: Share sheet + destinations
 
 **Files:**
+
 - create `apps/web/src/components/consumer/share/ShareSheet.tsx`
 - create `apps/web/src/lib/share/destinations.ts`
 - create `apps/web/src/components/consumer/share/__tests__/ShareSheet.test.tsx`
@@ -281,6 +291,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 11: OG metadata on the public mirror
 
 **Files:**
+
 - modify `apps/web/src/app/e/[id]/page.tsx`
 - create `apps/web/src/app/e/[id]/__tests__/metadata.test.ts`
 
@@ -292,6 +303,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 12: Analytics
 
 **Files:**
+
 - modify `apps/web/src/lib/analytics/*` (follow the existing event-emitter pattern)
 
 - [ ] **Step 1:** `share_sheet_opened { eventId, surface: 'event-detail', authed }`, `share_destination_selected { eventId, destination }`, `share_card_rendered { ratio, theme, cacheHit }`, `public_event_viewed { eventId, referrer }`. READINESS lists the analytics spec as a build-time item.
@@ -304,6 +316,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 13: `PP_MODES` + stamp primitives
 
 **Files:**
+
 - create `apps/web/src/components/consumer/passport/definitions/modes.ts`
 - create `apps/web/src/components/consumer/passport/PassportStamp.tsx`
 - create `apps/web/src/components/consumer/passport/PassportMoreTile.tsx`
@@ -323,6 +336,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 14: `<PassportCard>`
 
 **Files:**
+
 - create `apps/web/src/components/consumer/passport/PassportCard.tsx`
 - create `apps/web/src/lib/passport/stats.ts`
 - create `apps/web/src/components/consumer/passport/__tests__/PassportCard.test.tsx`
@@ -339,11 +353,12 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 15: Passport PNG route
 
 **Files:**
+
 - create `apps/web/src/app/passport/[ratio]/route.tsx`
 
 **Interfaces:** produces `GET /passport/:ratio?theme=` → `image/png`, 1080×1080 only for now.
 
-- [ ] **Step 1:** **Authenticated route** — unlike the poster, the passport is personal data. Resolve the user from the session; 401 if absent. It is deliberately *not* added to `isAlwaysPublic`.
+- [ ] **Step 1:** **Authenticated route** — unlike the poster, the passport is personal data. Resolve the user from the session; 401 if absent. It is deliberately _not_ added to `isAlwaysPublic`.
 - [ ] **Step 2:** `ratioSchema` restricted to `square`; anything else 400.
 - [ ] **Step 3:** Theme resolves from `user_profiles.theme` (server-readable for a signed-in user) with `?theme=` override.
 - [ ] **Step 4:** `Cache-Control: private, max-age=300` — never a shared CDN cache for a personal card. Test the header explicitly; a `public` cache header here would be a data leak.
@@ -357,15 +372,17 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ### Task 16: Real attendance data
 
 **Files:**
+
 - modify `apps/api/src/routes/*` (History/attended endpoint added by #70)
 - create `apps/web/src/lib/passport/select-shows.ts`
 
-- [ ] **Step 1:** Select attended shows — `user_events.status = 'going'` AND the event date has passed, ordered by date desc, limited to the wall size. A show enters History only via an explicit *I'm going*; **Watching is not a proxy for attendance** (`history-data.jsx` header comment).
+- [ ] **Step 1:** Select attended shows — `user_events.status = 'going'` AND the event date has passed, ordered by date desc, limited to the wall size. A show enters History only via an explicit _I'm going_; **Watching is not a proxy for attendance** (`history-data.jsx` header comment).
 - [ ] **Step 2:** Map the API row to the `AttendedShow` interface Task 14 defined. Zod-parse the response; no casts.
 
 ### Task 17: Teaser + entitlement gate
 
 **Files:**
+
 - modify the Concert History page (created by #70)
 - modify `apps/web/src/components/consumer/definitions/copy.ts`
 
@@ -379,6 +396,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 ## Files
 
 **Created**
+
 - `apps/web/src/app/e/[id]/page.tsx`
 - `apps/web/src/app/share/[eventId]/[ratio]/route.tsx`
 - `apps/web/src/app/passport/[ratio]/route.tsx`
@@ -393,6 +411,7 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 - `apps/web/src/lib/passport/{stats,select-shows}.ts`
 
 **Modified**
+
 - `apps/web/src/middleware.ts` — ⚠️ collides with #794
 - `apps/web/src/components/consumer/identity-art/IdentityArt.tsx` — widen `width`/`height` to `number | string`
 - `apps/web/src/components/consumer/definitions/copy.ts` — `CONSUMER_COPY.share`, `.publicEvent`, `.passport`
@@ -406,14 +425,14 @@ Goal: everything both cards need, with no card built yet. Pure functions and pur
 
 ## Tests
 
-| Layer | Coverage |
-| --- | --- |
-| Unit (Vitest) | `resolveThemeTokens` 9-theme + injection cases · `mintMeta` determinism · `posterTagline` totality · `passportStats` edge cases · `pp_dateParts` timezone regression · `PassportCard` null-handle regression |
-| Component | `IdentityArtPrint` ↔ `IdentityArt` determinism parity · per-template snapshots · `PosterCard` 3 ratios × 3 states · `PassportCard` 2 modes · `ShareSheet` a11y (role/focus-trap/Escape/return-focus) · destination fallback branches |
-| Render-through | Every card fed to `ImageResponse` returns a non-empty PNG — 3 ratios × 9 themes × 3 states (poster), 2 modes × 9 themes (passport). Catches silent satori layer drops. |
-| Route | `/share/...` input rejection (bad uuid / bad ratio / bad theme), determinism, cache headers, 404 · `/passport/...` 401 when anon, `private` cache header · middleware public-matcher test |
-| Integration | `/e/:id` anon fetch through `publicApiClient`; signed-in redirect to `/events/:id` |
-| E2E (staging) | Anon visit to `/e/<id>` renders the event and the sign-in CTA · authed user opens the share sheet, preview image loads, Copy link writes the `/e/` URL |
+| Layer          | Coverage                                                                                                                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Unit (Vitest)  | `resolveThemeTokens` 9-theme + injection cases · `mintMeta` determinism · `posterTagline` totality · `passportStats` edge cases · `pp_dateParts` timezone regression · `PassportCard` null-handle regression                         |
+| Component      | `IdentityArtPrint` ↔ `IdentityArt` determinism parity · per-template snapshots · `PosterCard` 3 ratios × 3 states · `PassportCard` 2 modes · `ShareSheet` a11y (role/focus-trap/Escape/return-focus) · destination fallback branches |
+| Render-through | Every card fed to `ImageResponse` returns a non-empty PNG — 3 ratios × 9 themes × 3 states (poster), 2 modes × 9 themes (passport). Catches silent satori layer drops.                                                               |
+| Route          | `/share/...` input rejection (bad uuid / bad ratio / bad theme), determinism, cache headers, 404 · `/passport/...` 401 when anon, `private` cache header · middleware public-matcher test                                            |
+| Integration    | `/e/:id` anon fetch through `publicApiClient`; signed-in redirect to `/events/:id`                                                                                                                                                   |
+| E2E (staging)  | Anon visit to `/e/<id>` renders the event and the sign-in CTA · authed user opens the share sheet, preview image loads, Copy link writes the `/e/` URL                                                                               |
 
 ---
 

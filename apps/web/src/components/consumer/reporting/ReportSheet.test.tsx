@@ -1,24 +1,24 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { ReportSheet } from './ReportSheet'
-import { REPORTING_COPY } from './definitions/copy'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { ReportSheet } from './ReportSheet';
+import { REPORTING_COPY } from './definitions/copy';
 
-const copy = REPORTING_COPY.reportSheet
+const copy = REPORTING_COPY.reportSheet;
 
-let isSignedIn = true
-let isLoaded = true
+let isSignedIn = true;
+let isLoaded = true;
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ isLoaded, isSignedIn }),
-}))
+}));
 
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: ({ entry }: { entry: string }) => (
     <div data-testid="tier-picker" data-entry={entry} />
   ),
-}))
+}));
 
 const renderSheet = () =>
   render(
@@ -29,11 +29,11 @@ const renderSheet = () =>
       eventDate="2026-09-01T02:00:00.000Z"
       onSelect={vi.fn()}
     />,
-  )
+  );
 
 beforeEach(() => {
-  isSignedIn = true
-  isLoaded = true
+  isSignedIn = true;
+  isLoaded = true;
 
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -47,53 +47,53 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
 describe('ReportSheet', () => {
-  afterEach(cleanup)
+  afterEach(cleanup);
 
   it('says why Continue is disabled before a type is picked', () => {
-    renderSheet()
+    renderSheet();
 
     const continueButton = screen.getByRole('button', {
       name: copy.continueButton,
-    })
-    expect(continueButton.hasAttribute('disabled')).toBe(true)
+    });
+    expect(continueButton.hasAttribute('disabled')).toBe(true);
 
-    const hint = screen.getByText(copy.continueHint)
-    expect(continueButton.getAttribute('aria-describedby')).toBe(hint.id)
-  })
+    const hint = screen.getByText(copy.continueHint);
+    expect(continueButton.getAttribute('aria-describedby')).toBe(hint.id);
+  });
 
   it('drops the hint and enables Continue once a type is picked', () => {
-    renderSheet()
+    renderSheet();
 
-    fireEvent.click(screen.getByText(copy.options.cancelled.title))
+    fireEvent.click(screen.getByText(copy.options.cancelled.title));
 
     const continueButton = screen.getByRole('button', {
       name: copy.continueButton,
-    })
-    expect(continueButton.hasAttribute('disabled')).toBe(false)
-    expect(continueButton.getAttribute('aria-describedby')).toBe(null)
-    expect(screen.queryByText(copy.continueHint)).toBe(null)
-  })
+    });
+    expect(continueButton.hasAttribute('disabled')).toBe(false);
+    expect(continueButton.getAttribute('aria-describedby')).toBe(null);
+    expect(screen.queryByText(copy.continueHint)).toBe(null);
+  });
 
   it('sends a signed-out visitor to the tier picker instead of the form', () => {
-    isSignedIn = false
-    renderSheet()
+    isSignedIn = false;
+    renderSheet();
 
     expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
       'logged-out-report',
-    )
-    expect(screen.queryByText(copy.options.cancelled.title)).toBe(null)
-  })
+    );
+    expect(screen.queryByText(copy.options.cancelled.title)).toBe(null);
+  });
 
   it('does not flash the picker while Clerk is still loading', () => {
-    isLoaded = false
-    isSignedIn = false
-    renderSheet()
+    isLoaded = false;
+    isSignedIn = false;
+    renderSheet();
 
-    expect(screen.queryByTestId('tier-picker')).toBe(null)
-    expect(screen.getByText(copy.options.cancelled.title)).toBeTruthy()
-  })
-})
+    expect(screen.queryByTestId('tier-picker')).toBe(null);
+    expect(screen.getByText(copy.options.cancelled.title)).toBeTruthy();
+  });
+});

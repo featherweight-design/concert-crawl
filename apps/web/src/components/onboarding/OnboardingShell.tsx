@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { ProgressDots } from './ProgressDots'
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
-import { FounderNote } from './steps/FounderNote'
-import { HowItWorks } from './steps/HowItWorks'
-import { WhatItDoesToday } from './steps/WhatItDoesToday'
-import { WhatItDoesntYet } from './steps/WhatItDoesntYet'
-import { MakeItYours } from './steps/MakeItYours'
-import { PickGenres } from './steps/PickGenres'
-import { PickArtists } from './steps/PickArtists'
-import { YoureIn } from './steps/YoureIn'
-import { ONBOARDING_COPY } from './definitions/copy'
-import { SkipRail, type SkipMode } from './SkipRail'
-import { useOnboardingSuggestions } from './lib/use-pick-suggestions'
-import { useArtistSearch } from '@/components/consumer/artist-picker/lib/use-artist-search'
-import { useArtistPicksCommit } from './lib/use-artist-picks-commit'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search'
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { ProgressDots } from './ProgressDots';
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
+import { FounderNote } from './steps/FounderNote';
+import { HowItWorks } from './steps/HowItWorks';
+import { WhatItDoesToday } from './steps/WhatItDoesToday';
+import { WhatItDoesntYet } from './steps/WhatItDoesntYet';
+import { MakeItYours } from './steps/MakeItYours';
+import { PickGenres } from './steps/PickGenres';
+import { PickArtists } from './steps/PickArtists';
+import { YoureIn } from './steps/YoureIn';
+import { ONBOARDING_COPY } from './definitions/copy';
+import { SkipRail, type SkipMode } from './SkipRail';
+import { useOnboardingSuggestions } from './lib/use-pick-suggestions';
+import { useArtistSearch } from '@/components/consumer/artist-picker/lib/use-artist-search';
+import { useArtistPicksCommit } from './lib/use-artist-picks-commit';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search';
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
@@ -35,15 +35,15 @@ import {
   clearPicks,
   STEP_INDEX_KEY,
   type PickArtist,
-} from '@/components/consumer/artist-picker'
+} from '@/components/consumer/artist-picker';
 import {
   appendPendingTier,
   buildReturnUrl,
   sanitizeReturnPath,
-} from '@/lib/auth/intent'
+} from '@/lib/auth/intent';
 
-const nav = ONBOARDING_COPY.nav
-const pickCopy = ONBOARDING_COPY.pickArtists
+const nav = ONBOARDING_COPY.nav;
+const pickCopy = ONBOARDING_COPY.pickArtists;
 
 // `theme` sits before `notyet` so the tour ends on what the product *will* do
 // rather than on its gaps. `genres` and `artists` slot in after that pair and
@@ -61,8 +61,8 @@ const FLOW = [
   'genres',
   'artists',
   'done',
-] as const
-type StepKey = (typeof FLOW)[number]
+] as const;
+type StepKey = (typeof FLOW)[number];
 
 /**
  * Every other step centres its body in the card: a short step floating
@@ -79,37 +79,37 @@ type StepKey = (typeof FLOW)[number]
  * hitting.
  */
 const bodyJustifyFor = (stepKey: StepKey): string =>
-  stepKey === 'artists' ? 'flex-start' : 'safe center'
+  stepKey === 'artists' ? 'flex-start' : 'safe center';
 
-const DESKTOP_CARD_WIDTH = 620
+const DESKTOP_CARD_WIDTH = 620;
 // The artists step needs a wider card for its 5-column grid (OB-12).
-const DESKTOP_PICKER_CARD_WIDTH = 760
+const DESKTOP_PICKER_CARD_WIDTH = 760;
 
 interface StepContentProps {
-  stepKey: StepKey
+  stepKey: StepKey;
   /** 2 in the mobile tree, 5 in the desktop one — both are mounted at once. */
-  columns: number
-  genres: string[]
-  pickedGenres: ReadonlySet<string>
-  onToggleGenre: (genre: string) => void
-  suggestions: PickArtist[]
-  suggestionsLoading: boolean
-  suggestionsErrored: boolean
-  onSuggestionsRetry: () => void
-  pickedArtists: ReadonlySet<string>
-  onToggleArtist: (slug: string) => void
+  columns: number;
+  genres: string[];
+  pickedGenres: ReadonlySet<string>;
+  onToggleGenre: (genre: string) => void;
+  suggestions: PickArtist[];
+  suggestionsLoading: boolean;
+  suggestionsErrored: boolean;
+  onSuggestionsRetry: () => void;
+  pickedArtists: ReadonlySet<string>;
+  onToggleArtist: (slug: string) => void;
   /**
    * The artists step's search mode. Held by the shell for the same reason the
    * suggestions fetch is: both trees render at once, and a mode held in the
    * step would let the visible one and the hidden one disagree.
    */
-  searching: boolean
-  searchQuery: string
-  onSearchQueryChange: (next: string) => void
-  onSearchOpen: () => void
-  onSearchClose: () => void
-  searchResults: PickArtist[]
-  searchState: ArtistSearchState
+  searching: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (next: string) => void;
+  onSearchOpen: () => void;
+  onSearchClose: () => void;
+  searchResults: PickArtist[];
+  searchState: ArtistSearchState;
 }
 
 function StepContent({
@@ -132,11 +132,11 @@ function StepContent({
   searchResults,
   searchState,
 }: StepContentProps) {
-  if (stepKey === 'welcome') return <FounderNote />
-  if (stepKey === 'how') return <HowItWorks />
-  if (stepKey === 'today') return <WhatItDoesToday />
-  if (stepKey === 'notyet') return <WhatItDoesntYet />
-  if (stepKey === 'theme') return <MakeItYours />
+  if (stepKey === 'welcome') return <FounderNote />;
+  if (stepKey === 'how') return <HowItWorks />;
+  if (stepKey === 'today') return <WhatItDoesToday />;
+  if (stepKey === 'notyet') return <WhatItDoesntYet />;
+  if (stepKey === 'theme') return <MakeItYours />;
   if (stepKey === 'genres') {
     return (
       <PickGenres
@@ -144,7 +144,7 @@ function StepContent({
         selected={pickedGenres}
         onToggle={onToggleGenre}
       />
-    )
+    );
   }
   if (stepKey === 'artists') {
     return (
@@ -164,10 +164,10 @@ function StepContent({
         searchResults={searchResults}
         searchState={searchState}
       />
-    )
+    );
   }
-  if (stepKey === 'done') return <YoureIn />
-  return null
+  if (stepKey === 'done') return <YoureIn />;
+  return null;
 }
 
 /** Toggles a member of a selection set without mutating the previous one. */
@@ -175,29 +175,29 @@ const toggleIn = (
   previous: ReadonlySet<string>,
   value: string,
 ): Set<string> => {
-  const next = new Set(previous)
-  if (!next.delete(value)) next.add(value)
-  return next
-}
+  const next = new Set(previous);
+  if (!next.delete(value)) next.add(value);
+  return next;
+};
 
 export interface OnboardingShellProps {
   /** Encoded pending action, already validated by the route. */
-  intent?: string | null | undefined
-  returnPath?: string | null | undefined
+  intent?: string | null | undefined;
+  returnPath?: string | null | undefined;
   /** Artist name for the mid-intent copy — null when there is no pending action. */
-  destinationLabel?: string | null | undefined
+  destinationLabel?: string | null | undefined;
   /** `menu` when opened from the account menu, so the rail reads "Close". */
-  entry?: 'default' | 'menu' | undefined
+  entry?: 'default' | 'menu' | undefined;
   /** Tier chosen before sign-up, handed on to the destination (#1284). */
-  pendingTier?: string | null | undefined
+  pendingTier?: string | null | undefined;
   /** Genre bucket labels, SSR-fetched. Empty is survivable: the step says so. */
-  genres?: string[] | undefined
+  genres?: string[] | undefined;
   /**
    * Server-derived from `x-vercel-ip-country`. Threaded because this shell can
    * open `TierPickerSheet`, and a missing value is invisible until a European
    * card reaches 3D Secure.
    */
-  scaRegion?: boolean | undefined
+  scaRegion?: boolean | undefined;
 }
 
 export function OnboardingShell({
@@ -209,17 +209,17 @@ export function OnboardingShell({
   genres = [],
   scaRegion = false,
 }: OnboardingShellProps = {}) {
-  const [index, setIndex] = useState(0)
-  const router = useRouter()
-  const mobileScrollRef = useRef<HTMLDivElement>(null)
-  const total = FLOW.length
-  const isFirst = index === 0
-  const isLast = index === total - 1
-  const stepKey = FLOW[index]!
+  const [index, setIndex] = useState(0);
+  const router = useRouter();
+  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const total = FLOW.length;
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
+  const stepKey = FLOW[index]!;
 
-  const destination = sanitizeReturnPath(returnPath)
-  const hasPendingReturn = !!intent && !!destinationLabel
-  const finishLabel = hasPendingReturn ? destinationLabel : null
+  const destination = sanitizeReturnPath(returnPath);
+  const hasPendingReturn = !!intent && !!destinationLabel;
+  const finishLabel = hasPendingReturn ? destinationLabel : null;
   // The tour is a stop on the way, not the destination, so a tier picked before
   // sign-up has to survive it — otherwise the picker never reopens (#1284).
   // No intent to replay still leaves somewhere to be: `/auth/complete` hands
@@ -236,7 +236,7 @@ export function OnboardingShell({
         })
       : destination,
     pendingTier,
-  )
+  );
   // Mid-intent needs both halves: a label with no intent has nothing to replay,
   // and an intent with no label cannot be named in the copy. Skipping goes to
   // the same URL as finishing — leaving early is a choice about the tour, not an
@@ -245,12 +245,12 @@ export function OnboardingShell({
     ? { kind: 'mid-intent', destinationLabel, href: finishHref }
     : entry === 'menu'
       ? { kind: 'menu' }
-      : { kind: 'default', href: finishHref }
+      : { kind: 'default', href: finishHref };
 
   const advance = useCallback(() => {
-    mobileScrollRef.current?.scrollTo({ top: 0 })
-    setIndex((ii) => Math.min(ii + 1, FLOW.length - 1))
-  }, [])
+    mobileScrollRef.current?.scrollTo({ top: 0 });
+    setIndex((ii) => Math.min(ii + 1, FLOW.length - 1));
+  }, []);
 
   // ── Picker state ──────────────────────────────────────────────────────
   // Restored from the sessionStorage mirror so an upgrade that unmounted this
@@ -263,57 +263,57 @@ export function OnboardingShell({
   // for. Hydrating one frame later costs nothing; a mismatch costs the tree.
   const [pickedGenres, setPickedGenres] = useState<ReadonlySet<string>>(
     () => new Set(),
-  )
+  );
   const [pickedArtists, setPickedArtists] = useState<ReadonlySet<string>>(
     () => new Set(),
-  )
+  );
   // The subset of those that came from search. See SEARCH_PICKS_KEY: the
   // prune below keeps the selection to what the grid shows, and a search pick
   // has no tile in it by definition.
   const [searchPicks, setSearchPicks] = useState<ReadonlySet<string>>(
     () => new Set(),
-  )
-  const [picksHydrated, setPicksHydrated] = useState(false)
+  );
+  const [picksHydrated, setPicksHydrated] = useState(false);
   useEffect(() => {
-    setPickedGenres(new Set(readPicks(GENRE_PICKS_KEY)))
-    setPickedArtists(new Set(readPicks(ARTIST_PICKS_KEY)))
-    setSearchPicks(new Set(readPicks(SEARCH_PICKS_KEY)))
+    setPickedGenres(new Set(readPicks(GENRE_PICKS_KEY)));
+    setPickedArtists(new Set(readPicks(ARTIST_PICKS_KEY)));
+    setSearchPicks(new Set(readPicks(SEARCH_PICKS_KEY)));
     // The step comes back with the picks, and for the same reason: a
     // redirect-based payment method returns to /onboarding, and restoring the
     // selection onto step 1 of 8 puts a visitor who has just paid six presses
     // from the rail they were firing.
-    setIndex(readStepIndex(FLOW.length))
-    setPicksHydrated(true)
-  }, [])
+    setIndex(readStepIndex(FLOW.length));
+    setPicksHydrated(true);
+  }, []);
 
   // Held until the restore has run. These fire on mount too, so writing before
   // the read would flush the empty initial state over the mirror and lose the
   // very selection the effect above is on its way to collect.
   useEffect(() => {
-    if (!picksHydrated) return
-    writePicks(GENRE_PICKS_KEY, Array.from(pickedGenres))
-  }, [picksHydrated, pickedGenres])
+    if (!picksHydrated) return;
+    writePicks(GENRE_PICKS_KEY, Array.from(pickedGenres));
+  }, [picksHydrated, pickedGenres]);
   useEffect(() => {
-    if (!picksHydrated) return
-    writePicks(ARTIST_PICKS_KEY, Array.from(pickedArtists))
-  }, [picksHydrated, pickedArtists])
+    if (!picksHydrated) return;
+    writePicks(ARTIST_PICKS_KEY, Array.from(pickedArtists));
+  }, [picksHydrated, pickedArtists]);
   useEffect(() => {
-    if (!picksHydrated) return
-    writeStepIndex(index)
-  }, [picksHydrated, index])
+    if (!picksHydrated) return;
+    writeStepIndex(index);
+  }, [picksHydrated, index]);
   useEffect(() => {
-    if (!picksHydrated) return
-    writePicks(SEARCH_PICKS_KEY, Array.from(searchPicks))
-  }, [picksHydrated, searchPicks])
+    if (!picksHydrated) return;
+    writePicks(SEARCH_PICKS_KEY, Array.from(searchPicks));
+  }, [picksHydrated, searchPicks]);
 
   const toggleGenre = useCallback((genre: string) => {
-    setPickedGenres((previous) => toggleIn(previous, genre))
-  }, [])
+    setPickedGenres((previous) => toggleIn(previous, genre));
+  }, []);
   // Read through a ref rather than closed over: this callback is declared
   // above the mode state, and a dependency on it would rebuild the handler
   // every time the mode flips for no gain.
-  const pickedRef = useRef<ReadonlySet<string>>(pickedArtists)
-  const suggestedRef = useRef<ReadonlySet<string>>(new Set())
+  const pickedRef = useRef<ReadonlySet<string>>(pickedArtists);
+  const suggestedRef = useRef<ReadonlySet<string>>(new Set());
   const toggleArtist = useCallback((slug: string) => {
     // The marker follows the TRANSITION, not the mode. Toggling it on the mode
     // alone marks a grid pick as a search pick when it is unticked with the
@@ -330,49 +330,49 @@ export function OnboardingShell({
     // So: mark when a SELECT lands on a slug the suggestions do not hold, and
     // clear the mark on every unselect and on every pick of a suggested one,
     // because either one means the slug is no longer a pick to protect.
-    const selecting = !pickedRef.current.has(slug)
-    setPickedArtists((previous) => toggleIn(previous, slug))
+    const selecting = !pickedRef.current.has(slug);
+    setPickedArtists((previous) => toggleIn(previous, slug));
     setSearchPicks((previous) => {
       if (selecting && !suggestedRef.current.has(slug)) {
-        return previous.has(slug) ? previous : new Set(previous).add(slug)
+        return previous.has(slug) ? previous : new Set(previous).add(slug);
       }
-      if (!previous.has(slug)) return previous
-      const next = new Set(previous)
-      next.delete(slug)
-      return next
-    })
-  }, [])
+      if (!previous.has(slug)) return previous;
+      const next = new Set(previous);
+      next.delete(slug);
+      return next;
+    });
+  }, []);
 
-  const onArtistsStep = stepKey === 'artists'
+  const onArtistsStep = stepKey === 'artists';
   const {
     artists: suggestions,
     loading: suggestionsLoading,
     loaded: suggestionsLoaded,
     errored: suggestionsErrored,
     retry: retrySuggestions,
-  } = useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep)
+  } = useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep);
 
   // The artists step's search mode. Here rather than in the step because both
   // trees render at once — see StepContentProps.
-  const [searching, setSearching] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   // Hoisted beside the suggestions read, and for the same reason: both trees
   // are mounted, so a fetch inside the step runs twice per keystroke.
   const { results: searchResults, state: searchState } = useArtistSearch(
     searching ? searchQuery : '',
-  )
-  pickedRef.current = pickedArtists
-  const openSearch = useCallback(() => setSearching(true), [])
+  );
+  pickedRef.current = pickedArtists;
+  const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => {
-    setSearching(false)
-    setSearchQuery('')
-  }, [])
+    setSearching(false);
+    setSearchQuery('');
+  }, []);
   // Leaving the step closes the mode. Without this, stepping back to the
   // genres and forward again returns to a search field over a grid the
   // visitor has just changed the inputs to.
   useEffect(() => {
-    if (!onArtistsStep) closeSearch()
-  }, [onArtistsStep, closeSearch])
+    if (!onArtistsStep) closeSearch();
+  }, [onArtistsStep, closeSearch]);
 
   // Going back to change genres refetches the grid, and a pick that is no
   // longer in it has no tile left to untick. Left alone it would keep inflating
@@ -383,13 +383,13 @@ export function OnboardingShell({
   // loading and also reports an empty list, and pruning against that would wipe
   // a selection the upgrade round-trip had just restored.
   useEffect(() => {
-    if (!onArtistsStep || !suggestionsLoaded) return
-    const visible = new Set(suggestions.map((artist) => artist.slug))
+    if (!onArtistsStep || !suggestionsLoaded) return;
+    const visible = new Set(suggestions.map((artist) => artist.slug));
     // Read by `toggleArtist`, which is declared above the suggestions and
     // must not be rebuilt on every refetch. Kept in step with the same list
     // the prune runs against, so the two can never disagree about what the
     // grid holds.
-    suggestedRef.current = visible
+    suggestedRef.current = visible;
     setPickedArtists((previous) => {
       // A search pick is exempt: it never had a tile here, so "no longer in
       // the grid" says nothing about it. Without this it vanished the moment
@@ -397,19 +397,19 @@ export function OnboardingShell({
       // genres changed — and the rail's count fell with it.
       const kept = Array.from(previous).filter(
         (slug) => visible.has(slug) || searchPicks.has(slug),
-      )
-      return kept.length === previous.size ? previous : new Set(kept)
-    })
-  }, [onArtistsStep, suggestionsLoaded, suggestions, searchPicks])
+      );
+      return kept.length === previous.size ? previous : new Set(kept);
+    });
+  }, [onArtistsStep, suggestionsLoaded, suggestions, searchPicks]);
 
-  const { data: planState } = usePlanState()
-  const following = useEntitlement('following')
+  const { data: planState } = usePlanState();
+  const following = useEntitlement('following');
   // Never render locked while the plan is still resolving — an entitled user
   // would watch their own CTA change wording under them.
-  const followLocked = !following.isLoading && !following.active
-  const picksCommit = useArtistPicksCommit(advance)
+  const followLocked = !following.isLoading && !following.active;
+  const picksCommit = useArtistPicksCommit(advance);
 
-  const pickCount = pickedArtists.size
+  const pickCount = pickedArtists.size;
   const primaryLabel = onArtistsStep
     ? pickCount === 0
       ? pickCopy.skip
@@ -418,7 +418,7 @@ export function OnboardingShell({
         : pickCopy.commit(pickCount)
     : isLast
       ? nav.finishButton(finishLabel)
-      : nav.nextButton
+      : nav.nextButton;
   const primaryNote = onArtistsStep
     ? pickCount === 0
       ? pickCopy.subNone
@@ -427,7 +427,7 @@ export function OnboardingShell({
         : pickCopy.subSelected
     : isLast
       ? nav.finishFootnote(finishLabel)
-      : null
+      : null;
 
   function goNext() {
     if (isLast) {
@@ -435,18 +435,18 @@ export function OnboardingShell({
       // advancing, so the effect above immediately stores the `done` index —
       // leaving it behind reopens the tour on its own send-off screen for
       // anyone who comes back from the account menu in the same session.
-      clearPicks(SEARCH_PICKS_KEY)
-      clearPicks(STEP_INDEX_KEY)
-      router.push(finishHref)
-      return
+      clearPicks(SEARCH_PICKS_KEY);
+      clearPicks(STEP_INDEX_KEY);
+      router.push(finishHref);
+      return;
     }
     // The only step whose CTA writes anything. `commit` advances itself once
     // the write settles, or holds the step and opens the picker on a 403.
     if (onArtistsStep) {
-      picksCommit.commit(Array.from(pickedArtists))
-      return
+      picksCommit.commit(Array.from(pickedArtists));
+      return;
     }
-    advance()
+    advance();
   }
 
   const stepProps = {
@@ -467,19 +467,19 @@ export function OnboardingShell({
     onSearchClose: closeSearch,
     searchResults,
     searchState,
-  }
+  };
 
   // Back is held shut while the follow write is in flight. `advance()` steps
   // relative to wherever the tour is when the request settles, so a Back press
   // during the write would land the visitor back on the artists step they had
   // just committed. Locked rather than merely ignored, so the control looks as
   // inert as it is.
-  const backLocked = isFirst || picksCommit.pending
+  const backLocked = isFirst || picksCommit.pending;
 
   function goBack() {
-    if (backLocked) return
-    mobileScrollRef.current?.scrollTo({ top: 0 })
-    setIndex((ii) => ii - 1)
+    if (backLocked) return;
+    mobileScrollRef.current?.scrollTo({ top: 0 });
+    setIndex((ii) => ii - 1);
   }
 
   return (
@@ -702,21 +702,21 @@ export function OnboardingShell({
         />
       )}
     </>
-  )
+  );
 }
 
 interface DesktopProps {
-  index: number
-  total: number
-  isFirst: boolean
-  stepKey: StepKey
-  onNext: () => void
-  onBack: () => void
-  skipMode: SkipMode
-  primaryLabel: string
-  primaryNote: string | null
-  pending: boolean
-  stepProps: Omit<StepContentProps, 'columns'>
+  index: number;
+  total: number;
+  isFirst: boolean;
+  stepKey: StepKey;
+  onNext: () => void;
+  onBack: () => void;
+  skipMode: SkipMode;
+  primaryLabel: string;
+  primaryNote: string | null;
+  pending: boolean;
+  stepProps: Omit<StepContentProps, 'columns'>;
 }
 
 function OnboardingDesktop({
@@ -732,16 +732,16 @@ function OnboardingDesktop({
   pending,
   stepProps,
 }: DesktopProps) {
-  const cardBodyRef = useRef<HTMLDivElement>(null)
+  const cardBodyRef = useRef<HTMLDivElement>(null);
   const cardWidth =
-    stepKey === 'artists' ? DESKTOP_PICKER_CARD_WIDTH : DESKTOP_CARD_WIDTH
+    stepKey === 'artists' ? DESKTOP_PICKER_CARD_WIDTH : DESKTOP_CARD_WIDTH;
   // Same reason as the mobile tree: a Back press mid-write would undo a step
   // the settle is about to re-advance past.
-  const backLocked = isFirst || pending
+  const backLocked = isFirst || pending;
 
   useEffect(() => {
-    cardBodyRef.current?.scrollTo({ top: 0 })
-  }, [index])
+    cardBodyRef.current?.scrollTo({ top: 0 });
+  }, [index]);
 
   return (
     <div
@@ -976,5 +976,5 @@ function OnboardingDesktop({
         </div>
       </div>
     </div>
-  )
+  );
 }

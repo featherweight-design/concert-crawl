@@ -1,12 +1,12 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata } from 'next';
+import Link from 'next/link';
 
-import { CCMark } from '@/components/brand/cc-mark'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CCMark } from '@/components/brand/cc-mark';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-import { CopyBlock } from './CopyBlock'
-import { BOT_COPY, BOT_ROBOTS, BOT_UA } from './definitions/copy'
-import { LIGHT_THEME_STYLE } from './definitions/light-theme-style'
+import { CopyBlock } from './CopyBlock';
+import { BOT_COPY, BOT_ROBOTS, BOT_UA } from './definitions/copy';
+import { LIGHT_THEME_STYLE } from './definitions/light-theme-style';
 
 /**
  * Deliberately no `robots: { index: false }`. The three /legal pages each set it
@@ -19,16 +19,16 @@ export const metadata: Metadata = {
   title: 'Our crawler — Concert Crawl',
   description:
     'What ConcertCrawl/1.0 reads, how often, and how to make it stop.',
-}
+};
 
-const brand = CONSUMER_COPY.appHeader.brand
+const brand = CONSUMER_COPY.appHeader.brand;
 
 function MonoTag({
   children,
   className = 'text-fg-muted',
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <span
@@ -36,7 +36,7 @@ function MonoTag({
     >
       {children}
     </span>
-  )
+  );
 }
 
 /**
@@ -48,9 +48,9 @@ function BotSectionHead({
   title,
   note,
 }: {
-  index: string
-  title: string
-  note?: string
+  index: string;
+  title: string;
+  note?: string;
 }) {
   return (
     <div className="mb-3 flex flex-col gap-[7px]">
@@ -67,7 +67,7 @@ function BotSectionHead({
         </p>
       ) : null}
     </div>
-  )
+  );
 }
 
 function FactGroup({ children }: { children: React.ReactNode }) {
@@ -75,7 +75,7 @@ function FactGroup({ children }: { children: React.ReactNode }) {
     <div className="overflow-hidden rounded-xl border border-border bg-bg-elevated">
       {children}
     </div>
-  )
+  );
 }
 
 /**
@@ -89,9 +89,9 @@ function FactRow({
   first,
   children,
 }: {
-  label: string
-  first?: boolean
-  children: React.ReactNode
+  label: string;
+  first?: boolean;
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -106,7 +106,7 @@ function FactRow({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -117,8 +117,8 @@ function ContactCard({
   email,
   children,
 }: {
-  email: string
-  children: React.ReactNode
+  email: string;
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -139,11 +139,11 @@ function ContactCard({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 export default function BotPage() {
-  const { facts, sections, stop, footer } = BOT_COPY
+  const { facts, sections, stop, footer } = BOT_COPY;
 
   return (
     <div
@@ -338,5 +338,5 @@ export default function BotPage() {
         </footer>
       </div>
     </div>
-  )
+  );
 }

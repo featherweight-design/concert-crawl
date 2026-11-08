@@ -126,17 +126,17 @@ validates, so neither is optional, and one row does not cover the other.
 **Not applicable — no PR in either plan makes anything newly reachable to an end
 user.** Stated explicitly rather than deleted, per the template.
 
-The states this epic creates belong to an *operator*, not a customer, and they
+The states this epic creates belong to an _operator_, not a customer, and they
 are enumerated because the same "where does this live" question applies:
 
-| New state | Where it lives | How the operator reaches it | Reversible? |
-|---|---|---|---|
-| Prod is behind `main` by < threshold | Normal, unreported | `render-live-sha.sh` on demand | n/a — resolved by promoting |
-| Prod is behind by ≥ 7 days or 25 commits | Sentry warning, `prod-drift-alert.yml` run log | Sentry issue; the workflow's summary | Yes — promote, or record why not |
-| Promotion refused: requested ref is not `main` HEAD | `deploy-prod.yml` gate job failure | Actions run log | Yes — re-dispatch from HEAD, or use the override input |
-| Promotion partially applied: Render live, Vercel failed | Actions run log; prod serves new API + old web | Re-dispatch, or roll Render back | Yes — expand/contract makes this state safe |
+| New state                                               | Where it lives                                                         | How the operator reaches it                                                       | Reversible?                                                              |
+| ------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Prod is behind `main` by < threshold                    | Normal, unreported                                                     | `render-live-sha.sh` on demand                                                    | n/a — resolved by promoting                                              |
+| Prod is behind by ≥ 7 days or 25 commits                | Sentry warning, `prod-drift-alert.yml` run log                         | Sentry issue; the workflow's summary                                              | Yes — promote, or record why not                                         |
+| Promotion refused: requested ref is not `main` HEAD     | `deploy-prod.yml` gate job failure                                     | Actions run log                                                                   | Yes — re-dispatch from HEAD, or use the override input                   |
+| Promotion partially applied: Render live, Vercel failed | Actions run log; prod serves new API + old web                         | Re-dispatch, or roll Render back                                                  | Yes — expand/contract makes this state safe                              |
 | Rollback fired: **API old, four crons new, Vercel new** | The auto-rollback admin notification, which must name all six services | `vercel rollback` by hand, plus a manual re-deploy of each `crn-*` at the old SHA | Yes, but four fifths of it is manual — the runbook carries the procedure |
-| `autoDeploy` re-enabled on a gated prod service | `prod-deploy-health.yml` unhealthy (Task 12 inverts the check) | Sentry / workflow failure | Yes — PATCH it back to `no` |
+| `autoDeploy` re-enabled on a gated prod service         | `prod-deploy-health.yml` unhealthy (Task 12 inverts the check)         | Sentry / workflow failure                                                         | Yes — PATCH it back to `no`                                              |
 
 Every row is reversible and every row has a surface that reports it. That is the
 property Task 12 exists to preserve.
@@ -216,41 +216,42 @@ then the scheduled workflow.
    the window are deliberately absent — their absence is a pass, not a gap.
    `artists` is the exception and syncs in full: an artist row has no date to
    window on.
-3. Snapshot row counts and max ids for every protected table *before* the run,
+3. Snapshot row counts and max ids for every protected table _before_ the run,
    then diff after. Expected: **zero delta on all of them.** An empty-table
    assertion is the wrong check — staging legitimately holds synthetic seed users
    and the operator's audit accounts, so existing rows prove nothing either way.
 
-   Four of D6's thirteen names are *categories*, not tables, and there is no
+   Four of D6's thirteen names are _categories_, not tables, and there is no
    `users` table at all (Clerk owns identity). The executable list is:
 
-   | D6 name | Physical tables to snapshot |
-   |---|---|
-   | `price_submissions` | `price_submissions` |
-   | `submission_confirms` | `submission_confirms` |
-   | `event_reports` | `event_reports` |
-   | `event_report_confirms` | `event_report_confirms` |
-   | `crews` | `crews`, `crew_members`, `crew_invites`, `crew_mutes` |
-   | `social` | `user_events`, `user_artist_follows` |
-   | `notifications` | `notifications`, `push_subscriptions` |
-   | `user_profiles` | `user_profiles` |
-   | `user_notification_preferences` | `user_notification_preferences` |
-   | `users` | no such table — snapshot `user_roles` and `user_cred` instead |
-   | `commerce` | `subscriptions`, `subscription_events`, `user_billing`, `gifted_comps`, `processed_stripe_events`, `founder_window`, `email_send_log` |
-   | `spotify` | `user_spotify_connections`, `spotify_alert_log` |
-   | `venue_fault_acknowledgements` | `venue_fault_acknowledgements` |
+   | D6 name                         | Physical tables to snapshot                                                                                                           |
+   | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+   | `price_submissions`             | `price_submissions`                                                                                                                   |
+   | `submission_confirms`           | `submission_confirms`                                                                                                                 |
+   | `event_reports`                 | `event_reports`                                                                                                                       |
+   | `event_report_confirms`         | `event_report_confirms`                                                                                                               |
+   | `crews`                         | `crews`, `crew_members`, `crew_invites`, `crew_mutes`                                                                                 |
+   | `social`                        | `user_events`, `user_artist_follows`                                                                                                  |
+   | `notifications`                 | `notifications`, `push_subscriptions`                                                                                                 |
+   | `user_profiles`                 | `user_profiles`                                                                                                                       |
+   | `user_notification_preferences` | `user_notification_preferences`                                                                                                       |
+   | `users`                         | no such table — snapshot `user_roles` and `user_cred` instead                                                                         |
+   | `commerce`                      | `subscriptions`, `subscription_events`, `user_billing`, `gifted_comps`, `processed_stripe_events`, `founder_window`, `email_send_log` |
+   | `spotify`                       | `user_spotify_connections`, `spotify_alert_log`                                                                                       |
+   | `venue_fault_acknowledgements`  | `venue_fault_acknowledgements`                                                                                                        |
 
    Twenty-three physical tables, not a subset. **This is the check that matters
    most**: D6's hard line exists because the staging transactional-email gate
    fails open.
+
 4. Confirm the scheduled workflow runs on its cron and reports its counts.
 
 **Reverse:** there is no undo, and that is deliberate — staging is disposable.
-The reverse pass instead proves the *guard*: point `NEON_STAGING_DIRECT` at the
+The reverse pass instead proves the _guard_: point `NEON_STAGING_DIRECT` at the
 prod host and confirm `assertWriteHostNotProd()` refuses to run.
 
 **Repeat:** run twice in a row. Expected: identical final row counts per table
-and zero duplicates. Assert on the *final state*, not on the reported counts —
+and zero duplicates. Assert on the _final state_, not on the reported counts —
 the steps do not all upsert, so the second run's own numbers legitimately
 differ. `price_retrieval_log` queries for an existing row and skips it, and
 cancelled/postponed events are select-then-insert, so a second run reports

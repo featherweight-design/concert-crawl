@@ -1,5 +1,5 @@
-import { requireAdminUser } from '@/lib/auth'
-import { AdminDisputePanel } from '@/components/admin/review/AdminDisputePanel'
+import { requireAdminUser } from '@/lib/auth';
+import { AdminDisputePanel } from '@/components/admin/review/AdminDisputePanel';
 
 // /admin/review/contests/:contestId — the per-contest adjudication page.
 // Server component; awaits Next 15's async `params` then mounts the
@@ -23,16 +23,16 @@ interface PageProps {
   // must be awaited before destructuring. The async signature is part
   // of the framework's typed-routes contract; sync access throws at
   // build time.
-  params: Promise<{ contestId: string }>
+  params: Promise<{ contestId: string }>;
 }
 
 export default async function ContestReviewPage({ params }: PageProps) {
-  await requireAdminUser()
-  const { contestId } = await params
+  await requireAdminUser();
+  const { contestId } = await params;
 
   return (
     <div style={{ padding: '24px 28px' }}>
       <AdminDisputePanel contestId={contestId} />
     </div>
-  )
+  );
 }

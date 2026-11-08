@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The first-watch follow nudge card (native following, PR 10).
 //
@@ -20,21 +20,21 @@
 // withholding it from the tier being pitched to would be backwards. That is
 // also why the locked branch is `locked` on FollowButton and never `hidden`.
 
-import { useId, useState } from 'react'
-import type { PickerEntry } from '@concert-crawl/types'
+import { useId, useState } from 'react';
+import type { PickerEntry } from '@concert-crawl/types';
 
-import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
-import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
-import { Panel } from '@/components/consumer/image-slot'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
+import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
+import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
+import { Panel } from '@/components/consumer/image-slot';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
 
-import { FOLLOW_NUDGE_COPY } from './definitions/copy'
-import type { FollowNudgeTarget } from './lib/use-first-watch-nudge'
+import { FOLLOW_NUDGE_COPY } from './definitions/copy';
+import type { FollowNudgeTarget } from './lib/use-first-watch-nudge';
 
-const COPY = FOLLOW_NUDGE_COPY
+const COPY = FOLLOW_NUDGE_COPY;
 
 const EyeGlyph = () => (
   <svg
@@ -51,19 +51,19 @@ const EyeGlyph = () => (
     <path d="M1.6 10S4.9 4.4 10 4.4 18.4 10 18.4 10 15.1 15.6 10 15.6 1.6 10 1.6 10Z" />
     <circle cx="10" cy="10" r="2.6" />
   </svg>
-)
+);
 
 export interface FollowNudgeCardProps {
-  target: FollowNudgeTarget
+  target: FollowNudgeTarget;
   /** Where it stands. `inline` replaces the Watch strip; `floating` is fixed. */
-  variant: 'inline' | 'floating'
+  variant: 'inline' | 'floating';
   /** Server-resolved, forwarded to the picker's checkout legal block. */
-  scaRegion: boolean
+  scaRegion: boolean;
   /**
    * Close it, however it was answered. Dismissing and closing after a follow
    * are the same outcome to the caller: the introduction has been made.
    */
-  onAnswer: () => void
+  onAnswer: () => void;
 }
 
 export const FollowNudgeCard = ({
@@ -72,28 +72,28 @@ export const FollowNudgeCard = ({
   scaRegion,
   onAnswer,
 }: FollowNudgeCardProps) => {
-  const { surface } = useEntitlement('following')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const { surface } = useEntitlement('following');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const labelId = `nf-nudge-title-${useId().replace(/:/g, '')}`
+  const labelId = `nf-nudge-title-${useId().replace(/:/g, '')}`;
 
-  const onEntitlementRequired = () => setPickerOpen(true)
+  const onEntitlementRequired = () => setPickerOpen(true);
   // The nudge only fires for a signed-in viewer who just watched, so there is
   // no signed-out branch here; `false` is the settled answer, not a default.
   const follow = useArtistFollow(
     target.artistSlug,
     false,
     onEntitlementRequired,
-  )
+  );
 
   // Fails OPEN while the plan is still resolving, matching BillFollowBlock:
   // showing a paying subscriber an upgrade-shaped CTA is the worse of the two
   // wrong answers, and the API enforces regardless.
-  const locked = surface !== null && surface !== 'visible-active'
+  const locked = surface !== null && surface !== 'visible-active';
 
   const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   const body = (
     <>
@@ -207,7 +207,7 @@ export const FollowNudgeCard = ({
         {follow.following ? COPY.close : COPY.dismiss}
       </button>
     </>
-  )
+  );
 
   const card = (
     <section
@@ -249,9 +249,9 @@ export const FollowNudgeCard = ({
         entry={pickerEntry}
       />
     </section>
-  )
+  );
 
-  if (variant === 'inline') return card
+  if (variant === 'inline') return card;
 
   // `status`, not `complementary` (handoff §6 a11y). The wrapper only mounts
   // when a target exists, so the live region announces the card exactly once
@@ -265,5 +265,5 @@ export const FollowNudgeCard = ({
     >
       {card}
     </div>
-  )
-}
+  );
+};

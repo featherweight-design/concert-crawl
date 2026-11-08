@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // "Alerts for these artists" — a deep link into Settings ▸ Notifications, NOT
 // a second control. There is one place notification preferences are set, and
@@ -11,16 +11,16 @@
 // Carries no outer margin: it sits in a full-bleed mobile list and a padded
 // desktop column, so the gutter is the caller's to own.
 
-import Link from 'next/link'
-import { useNotificationPreferences } from '@/lib/queries/use-notification-preferences'
-import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import { ALERTS_HREF } from './definitions/constants'
-import { GlyphBell, GlyphChevron } from './Glyphs'
+import Link from 'next/link';
+import { useNotificationPreferences } from '@/lib/queries/use-notification-preferences';
+import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
+import { ALERTS_HREF } from './definitions/constants';
+import { GlyphBell, GlyphChevron } from './Glyphs';
 
-const COPY = MY_SHOWS_ARTISTS_COPY.alerts
+const COPY = MY_SHOWS_ARTISTS_COPY.alerts;
 
 export const AlertsRow = () => {
-  const { data: prefs } = useNotificationPreferences()
+  const { data: prefs } = useNotificationPreferences();
 
   // Push alerts for artists need BOTH the master switch and the artist flag —
   // either one off means nothing arrives, so "on" would be a lie.
@@ -30,7 +30,7 @@ export const AlertsRow = () => {
       : COPY.state(
           prefs.masterEnabled && prefs.artistAlertsEnabled,
           prefs.weeklyDigestEnabled,
-        )
+        );
 
   return (
     <Link
@@ -79,5 +79,5 @@ export const AlertsRow = () => {
         <GlyphChevron size={15} />
       </span>
     </Link>
-  )
-}
+  );
+};

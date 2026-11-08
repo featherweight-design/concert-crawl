@@ -1,17 +1,17 @@
 // Starts the Clerk-managed Spotify OAuth handoff (#763 PR 5).
-import { isReverificationCancelledError } from '@clerk/nextjs/errors'
+import { isReverificationCancelledError } from '@clerk/nextjs/errors';
 
 export interface SpotifyExternalAccountParams {
-  strategy: 'oauth_spotify'
-  redirectUrl?: string
+  strategy: 'oauth_spotify';
+  redirectUrl?: string;
 }
 
 // Structural view of Clerk's createExternalAccount result — just the field
 // this flow needs, so we don't import transitive @clerk/types directly.
 export interface SpotifyExternalAccountResult {
   verification: {
-    externalVerificationRedirectURL: URL | null
-  } | null
+    externalVerificationRedirectURL: URL | null;
+  } | null;
 }
 
 // Callers pass the reverification-enhanced fetcher from useReverification —
@@ -21,12 +21,12 @@ export interface SpotifyExternalAccountResult {
 // user.createExternalAccount is also assignable for non-hook contexts.
 export type CreateSpotifyExternalAccount = (
   params: SpotifyExternalAccountParams,
-) => Promise<SpotifyExternalAccountResult>
+) => Promise<SpotifyExternalAccountResult>;
 
 // Where Spotify sends the user back after the OAuth dance. The `spotify=return`
 // flag is what the return handler on /me watches for; every connect entry
 // point shares this path so the handler mounts in exactly one place.
-export const SPOTIFY_RETURN_PATH = '/me?section=connections&spotify=return'
+export const SPOTIFY_RETURN_PATH = '/me?section=connections&spotify=return';
 
 // Resume intent for the connect flow. Clerk's reverification can reload the
 // page after the user completes an email/OTP factor (#763 staging feedback),
@@ -35,50 +35,50 @@ export const SPOTIFY_RETURN_PATH = '/me?section=connections&spotify=return'
 // before the reverification-capable call and resumes on remount; the TTL
 // mirrors Clerk's 10-minute reverification window so a stale mark never
 // fires a surprise connect on a later visit.
-const RESUME_KEY = 'cc-spotify-connect-resume'
-const RESUME_TTL_MS = 10 * 60 * 1000
+const RESUME_KEY = 'cc-spotify-connect-resume';
+const RESUME_TTL_MS = 10 * 60 * 1000;
 
 export function markSpotifyConnectPending(): void {
   try {
-    sessionStorage.setItem(RESUME_KEY, String(Date.now()))
+    sessionStorage.setItem(RESUME_KEY, String(Date.now()));
   } catch (err) {
     // Storage unavailable (private mode, blocked, or disabled) — resume is a
     // best-effort nicety.
-    console.warn('spotify connect: could not mark resume intent', err)
+    console.warn('spotify connect: could not mark resume intent', err);
   }
 }
 
 export function clearSpotifyConnectPending(): void {
   try {
-    sessionStorage.removeItem(RESUME_KEY)
+    sessionStorage.removeItem(RESUME_KEY);
   } catch (err) {
     // Storage unavailable — nothing was marked, nothing to clear.
-    console.warn('spotify connect: could not clear resume intent', err)
+    console.warn('spotify connect: could not clear resume intent', err);
   }
 }
 
 // Clear-on-read so at most one mounted sheet resumes after a reload.
 export function consumeSpotifyConnectPending(): boolean {
   try {
-    const raw = sessionStorage.getItem(RESUME_KEY)
-    if (!raw) return false
-    sessionStorage.removeItem(RESUME_KEY)
-    const markedAt = Number(raw)
-    if (!Number.isFinite(markedAt)) return false
-    const age = Date.now() - markedAt
+    const raw = sessionStorage.getItem(RESUME_KEY);
+    if (!raw) return false;
+    sessionStorage.removeItem(RESUME_KEY);
+    const markedAt = Number(raw);
+    if (!Number.isFinite(markedAt)) return false;
+    const age = Date.now() - markedAt;
     // A negative age means a future-dated mark (clock changed between marking
     // and consuming) — treat it as stale rather than resuming unexpectedly.
-    return age >= 0 && age <= RESUME_TTL_MS
+    return age >= 0 && age <= RESUME_TTL_MS;
   } catch (err) {
-    console.warn('spotify connect: could not read resume intent', err)
-    return false
+    console.warn('spotify connect: could not read resume intent', err);
+    return false;
   }
 }
 
 export type SpotifyConnectStart =
   | { status: 'redirect'; url: string }
   | { status: 'cancelled' }
-  | { status: 'error' }
+  | { status: 'error' };
 
 // Kicks off the OAuth dance: Clerk creates the pending external account and
 // hands back Spotify's authorize URL; the caller navigates there. Backing out
@@ -94,13 +94,13 @@ export async function startSpotifyConnect(
     const account = await createExternalAccount({
       strategy: 'oauth_spotify',
       redirectUrl,
-    })
-    const url = account.verification?.externalVerificationRedirectURL?.href
-    if (!url) return { status: 'error' }
-    return { status: 'redirect', url }
+    });
+    const url = account.verification?.externalVerificationRedirectURL?.href;
+    if (!url) return { status: 'error' };
+    return { status: 'redirect', url };
   } catch (err) {
-    if (isReverificationCancelledError(err)) return { status: 'cancelled' }
-    console.error('spotify connect: createExternalAccount failed', err)
-    return { status: 'error' }
+    if (isReverificationCancelledError(err)) return { status: 'cancelled' };
+    console.error('spotify connect: createExternalAccount failed', err);
+    return { status: 'error' };
   }
 }

@@ -1,6 +1,6 @@
-import type { AvatarColor } from '@concert-crawl/types'
+import type { AvatarColor } from '@concert-crawl/types';
 
-export const HANDLE_REGEX = /^[a-z0-9_]+$/
+export const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
 export const RESERVED_HANDLES = new Set([
   'admin',
@@ -37,13 +37,13 @@ export const RESERVED_HANDLES = new Set([
   'moderator',
   'system',
   'bot',
-])
+]);
 
 export const AVATAR_COLORS: AvatarColor[] = [
   'signal',
   'accent',
   'success',
   'warning',
-]
+];
 
-export const SUBMISSION_CAP_MOBILE = 3
+export const SUBMISSION_CAP_MOBILE = 3;

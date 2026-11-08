@@ -40,12 +40,12 @@ apps/web/src/theme/
 Single source of truth: `themes.ts` exports `THEMES` and `ThemeName`.
 
 ```ts
-export type ThemeName = 'electric' | 'jade' | 'light'
+export type ThemeName = 'electric' | 'jade' | 'light';
 export const THEMES: Record<ThemeName, Record<string, string>> = {
   electric,
   jade,
   light,
-}
+};
 ```
 
 **Token groups and names:**
@@ -64,15 +64,15 @@ export const THEMES: Record<ThemeName, Record<string, string>> = {
 **`apply-theme.ts`:**
 
 ```ts
-import { THEMES, type ThemeName } from './themes'
+import { THEMES, type ThemeName } from './themes';
 
 export function applyTheme(name: ThemeName) {
-  const tokens = THEMES[name]
-  const root = document.documentElement
+  const tokens = THEMES[name];
+  const root = document.documentElement;
   for (const [k, v] of Object.entries(tokens)) {
-    root.style.setProperty(`--${k}`, v)
+    root.style.setProperty(`--${k}`, v);
   }
-  root.setAttribute('data-theme', name)
+  root.setAttribute('data-theme', name);
 }
 ```
 
@@ -93,7 +93,7 @@ export function applyTheme(name: ThemeName) {
 **`layout.tsx` inline script** (Server Component, injected into `<head>`):
 
 ```ts
-import { THEMES } from '@/theme/themes'
+import { THEMES } from '@/theme/themes';
 
 const themeScript = `
   (function() {
@@ -106,7 +106,7 @@ const themeScript = `
     Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
     root.setAttribute('data-theme', theme);
   })();
-`
+`;
 // Inject as: <script dangerouslySetInnerHTML={{ __html: themeScript }} />
 ```
 
@@ -151,19 +151,19 @@ const themeScript = `
 **Add** via `next/font/google`:
 
 ```ts
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { Inter, JetBrains_Mono } from 'next/font/google';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-ui',
   weight: ['400', '500', '600', '700', '800', '900'],
-})
+});
 
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600'],
-})
+});
 
 // layout.tsx <html> className: `${inter.variable} ${mono.variable}`
 ```

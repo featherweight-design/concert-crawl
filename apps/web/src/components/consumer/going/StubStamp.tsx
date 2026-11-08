@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Miniature ticket-stub mark for a night a user attended (#70).
 // Two halves split by a dashed perforation with a centred glyph in the show's
@@ -6,17 +6,17 @@
 // Decoration everywhere it appears — the surrounding text carries the meaning,
 // so it is aria-hidden unless a caller supplies a label.
 
-import type { StampGlyph } from './lib/stamp'
-import { stampAccentFor, stampGlyphFor } from './lib/stamp'
+import type { StampGlyph } from './lib/stamp';
+import { stampAccentFor, stampGlyphFor } from './lib/stamp';
 
 type StubStampProps = {
-  artist: string
-  size?: number
-  accent?: string
-  glyph?: StampGlyph
-  className?: string
-  'aria-label'?: string
-}
+  artist: string;
+  size?: number;
+  accent?: string;
+  glyph?: StampGlyph;
+  className?: string;
+  'aria-label'?: string;
+};
 
 export const StubStamp = ({
   artist,
@@ -26,9 +26,9 @@ export const StubStamp = ({
   className,
   'aria-label': ariaLabel,
 }: StubStampProps) => {
-  const color = accent ?? stampAccentFor(artist)
-  const kind = glyph ?? stampGlyphFor(artist)
-  const stroke = `color-mix(in oklch, ${color} 60%, transparent)`
+  const color = accent ?? stampAccentFor(artist);
+  const kind = glyph ?? stampGlyphFor(artist);
+  const stroke = `color-mix(in oklch, ${color} 60%, transparent)`;
 
   return (
     <svg
@@ -96,5 +96,5 @@ export const StubStamp = ({
         />
       )}
     </svg>
-  )
-}
+  );
+};

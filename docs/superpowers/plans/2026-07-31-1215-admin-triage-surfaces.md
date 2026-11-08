@@ -2,7 +2,7 @@
 
 **Brief:** `docs/superpowers/specs/2026-07-29-admin-triage-surfaces-design.md` (PR #1232)
 **Handoff:** `design/design_handoff_admin_triage/` — audited 🟢 Green (PR #1252)
-**Shape:** 4 PRs. Mostly a red diff for a ticket about *adding* visibility.
+**Shape:** 4 PRs. Mostly a red diff for a ticket about _adding_ visibility.
 
 ---
 
@@ -24,21 +24,21 @@ transaction and is the durable audit record. It simply stops being a UI source.
 All five conditions are **derivable live**. Nothing has to be read back out of
 `notifications` to render the panel:
 
-| Condition | Derived from | Cost |
-|---|---|---|
-| Blocked | `venues.blocked_at` | boolean state, no history |
-| Crawl failing | latest `crawl_runs.status = 'failed'` + `venues.consecutive_failures` | one row per venue |
-| Went dark | last 7 successful `crawl_runs.events_usable` | 7 rows per venue |
-| Ceiling suspected | last 7 `crawl_runs.{events_found, furthest_event_date}` | 7 rows per venue |
-| Coverage gap | live aggregate over `events` | one grouped count |
+| Condition         | Derived from                                                          | Cost                      |
+| ----------------- | --------------------------------------------------------------------- | ------------------------- |
+| Blocked           | `venues.blocked_at`                                                   | boolean state, no history |
+| Crawl failing     | latest `crawl_runs.status = 'failed'` + `venues.consecutive_failures` | one row per venue         |
+| Went dark         | last 7 successful `crawl_runs.events_usable`                          | 7 rows per venue          |
+| Ceiling suspected | last 7 `crawl_runs.{events_found, furthest_event_date}`               | 7 rows per venue          |
+| Coverage gap      | live aggregate over `events`                                          | one grouped count         |
 
 `crawl_runs` is an immutable, unpruned audit log, so the baselines the crawler computes at
 write time can be recomputed identically at read time.
 
 ### The architectural consequence
 
-Locked decision §3.6 says recovery is derived so *"the panel and the alerting logic can't
-drift apart."* That is only structurally true if both call the **same** classifier. Today
+Locked decision §3.6 says recovery is derived so _"the panel and the alerting logic can't
+drift apart."_ That is only structurally true if both call the **same** classifier. Today
 the classification logic exists but is private and welded to its side effects:
 
 - `classifyDrop` — `packages/crawler-core/src/lib/event-count-alert.ts:290`
@@ -53,8 +53,8 @@ re-implement the thresholds in a query, the panel and the emails will disagree t
 time anyone tunes `SOFT_DROP_RATIO`, and a venue will show as broken in one place and
 healthy in the other. That is the exact class of bug this ticket exists to close.
 
-**Cooldowns do not apply to the read path.** `last_*_alert_at` exists to stop a *daily
-email* re-firing for seven days. The panel answers "what is wrong right now" — a venue
+**Cooldowns do not apply to the read path.** `last_*_alert_at` exists to stop a _daily
+email_ re-firing for seven days. The panel answers "what is wrong right now" — a venue
 inside its cooldown window is still broken and must still show a row. Only the write path
 consults cooldowns.
 
@@ -65,19 +65,19 @@ consults cooldowns.
 The handoff's evidence copy was written against the brief's description of detection, not
 against the shipped constants. Four mismatches, all in the copy layer:
 
-1. **Went-dark threshold.** Handoff says *"flags at −60%"*. `SOFT_DROP_RATIO = 0.3` means it
+1. **Went-dark threshold.** Handoff says _"flags at −60%"_. `SOFT_DROP_RATIO = 0.3` means it
    actually flags at **−70%**. Use the constant, don't hardcode the number — the string
    should interpolate from the same export the classifier uses.
-2. **Baseline window.** Handoff says *"7-day average"*. It is the last **7 successful runs**,
+2. **Baseline window.** Handoff says _"7-day average"_. It is the last **7 successful runs**,
    which is not the same thing for a venue that failed for three days. Copy becomes
    "7-run average".
-3. **Coverage gap.** Handoff frames it as *"9 of 14 source URLs stopped matching"*. Actual
+3. **Coverage gap.** Handoff frames it as _"9 of 14 source URLs stopped matching"_. Actual
    detection counts **upcoming events with neither `ticket_url` nor `event_url`**, flagging
    at ≥30% of a catalogue of ≥10. The evidence line becomes "9 of 14 events have a ticket
    link" — same shape, true statement.
 
    ⚠️ **The copy is the complement of what detection counts, and the inversion is
-   deliberate.** Detection produces `uncoveredCount` (events *missing* links) against
+   deliberate.** Detection produces `uncoveredCount` (events _missing_ links) against
    `upcomingCount`. The row states the covered figure, because the panel's evidence line is
    consistently "how much is working" — `9 of 14` means 14 upcoming events, 5 uncovered,
    9 covered. Wire it as `upcomingCount - uncoveredCount` of `upcomingCount`; do **not**
@@ -101,7 +101,7 @@ No return trip to Design.
 Sequenced so nothing is unavailable mid-flight: the new surface is built and live before
 the old ones are removed.
 
-### PR 1 — Extract pure condition classifiers *(no behaviour change)*
+### PR 1 — Extract pure condition classifiers _(no behaviour change)_
 
 New `packages/crawler-core/src/lib/triage-conditions.ts`. Move `classifyDrop`,
 `detectHorizonShrink`, `detectPinnedCount` and the coverage ratio into exported,
@@ -162,7 +162,7 @@ of it, with the four reconciliations above applied).
 - Bruno collections under `apps/api/bruno/admin/notifications/`
 - Migration dropping `inbox_reads` + `inbox_read_watermarks`
 
-**Expand/contract:** the table drop ships in a *later* deploy than the code that stopped
+**Expand/contract:** the table drop ships in a _later_ deploy than the code that stopped
 reading them, per the standing migration rule. PR 4 removes the readers; the drop migration
 follows once that's live. Do not bundle them.
 

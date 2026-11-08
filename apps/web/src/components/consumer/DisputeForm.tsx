@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { SPNumberField } from './SPNumberField'
-import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
-import type { PriceSubmission } from '@concert-crawl/types'
-import { SP_POLICY } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { SPNumberField } from './SPNumberField';
+import { apiErrorMessage } from '@/components/consumer/lib/api-error-message';
+import type { PriceSubmission } from '@concert-crawl/types';
+import { SP_POLICY } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface DisputeFormProps {
-  submission: PriceSubmission
-  eventId: string
+  submission: PriceSubmission;
+  eventId: string;
 }
 
 export function DisputeForm({ submission, eventId }: DisputeFormProps) {
-  const router = useRouter()
-  const { getToken } = useAuth()
-  const [floor, setFloor] = useState('')
-  const [ceiling, setCeiling] = useState('')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [submitting, setSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
+  const router = useRouter();
+  const { getToken } = useAuth();
+  const [floor, setFloor] = useState('');
+  const [ceiling, setCeiling] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (success) {
     return (
@@ -42,35 +42,35 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
           {copy.disputeForm.successCta}
         </button>
       </div>
-    )
+    );
   }
 
   async function handleSubmit() {
-    const newErrors: Record<string, string> = {}
-    const floorNum = Number(floor)
+    const newErrors: Record<string, string> = {};
+    const floorNum = Number(floor);
     if (!floor || isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
-      newErrors['floor'] = copy.disputeForm.floorErrorMin
+      newErrors['floor'] = copy.disputeForm.floorErrorMin;
     } else if (floorNum > SP_POLICY.floorMax) {
-      newErrors['floor'] = copy.disputeForm.floorErrorMax
+      newErrors['floor'] = copy.disputeForm.floorErrorMax;
     }
     if (ceiling) {
-      const ceilNum = Number(ceiling)
+      const ceilNum = Number(ceiling);
       if (ceilNum > SP_POLICY.ceilingMax) {
-        newErrors['ceiling'] = copy.disputeForm.ceilingErrorMax
+        newErrors['ceiling'] = copy.disputeForm.ceilingErrorMax;
       } else if (!newErrors['floor'] && ceilNum < floorNum) {
-        newErrors['ceiling'] = copy.disputeForm.ceilingErrorBelowFloor
+        newErrors['ceiling'] = copy.disputeForm.ceilingErrorBelowFloor;
       }
     }
-    setErrors(newErrors)
-    if (Object.keys(newErrors).length > 0) return
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
-    setSubmitting(true)
+    setSubmitting(true);
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setErrorMsg(copy.disputeForm.authError)
-        setSubmitting(false)
-        return
+        setErrorMsg(copy.disputeForm.authError);
+        setSubmitting(false);
+        return;
       }
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/submissions/${submission.id}/dispute`,
@@ -87,21 +87,21 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
             ceiling: ceiling ? Number(ceiling) : undefined,
           }),
         },
-      )
+      );
       if (!res.ok) {
         throw new Error(
           apiErrorMessage(await res.json().catch(() => null)) ??
             copy.disputeForm.genericError,
-        )
+        );
       }
-      setSuccess(true)
+      setSuccess(true);
     } catch (err) {
-      console.error('DisputeForm: price update failed', err)
+      console.error('DisputeForm: price update failed', err);
       setErrorMsg(
         err instanceof Error ? err.message : copy.disputeForm.genericError,
-      )
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
 
@@ -156,5 +156,5 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
         </button>
       </div>
     </div>
-  )
+  );
 }

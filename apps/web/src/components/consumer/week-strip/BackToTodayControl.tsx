@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useEffect, useState, type CSSProperties } from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { RotateCcwGlyph } from '@/components/consumer/jump-picker'
+import { useEffect, useState, type CSSProperties } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { RotateCcwGlyph } from '@/components/consumer/jump-picker';
 
 interface BackToTodayControlProps {
-  todaySpoken: string
-  onClick: () => void
+  todaySpoken: string;
+  onClick: () => void;
 }
 
-const STYLE_ID = 'b2t-styles'
+const STYLE_ID = 'b2t-styles';
 const STYLE_CONTENT = [
   // Fade + slide-in from the right as it emerges in the nav cluster.
   '.b2t{transition:opacity .17s ease,transform .17s cubic-bezier(.2,.7,.3,1)}',
@@ -27,16 +27,16 @@ const STYLE_CONTENT = [
   '@media (max-width:360px){.b2t-pill{width:34px!important;padding:0!important;gap:0!important}.b2t-label{display:none}}',
   '@media (prefers-reduced-motion:reduce){.b2t{transition:none!important;transform:none!important;opacity:1!important}}',
   '@media print{.b2t{transition:none!important;transform:none!important;opacity:1!important}}',
-].join('\n')
+].join('\n');
 
 const ensureStyles = (): void => {
-  if (typeof document === 'undefined') return
-  if (document.getElementById(STYLE_ID)) return
-  const styleEl = document.createElement('style')
-  styleEl.id = STYLE_ID
-  styleEl.textContent = STYLE_CONTENT
-  document.head.appendChild(styleEl)
-}
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = STYLE_ID;
+  styleEl.textContent = STYLE_CONTENT;
+  document.head.appendChild(styleEl);
+};
 
 // Transparent ≥44px touch target; the visible pill sits inside at 34px so it
 // lines up with the 34px week chevrons beside it.
@@ -49,7 +49,7 @@ const hitStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-}
+};
 
 const pillStyle: CSSProperties = {
   display: 'inline-flex',
@@ -69,19 +69,19 @@ const pillStyle: CSSProperties = {
   letterSpacing: '0.09em',
   textTransform: 'uppercase',
   whiteSpace: 'nowrap',
-}
+};
 
 export const BackToTodayControl = ({
   todaySpoken,
   onClick,
 }: BackToTodayControlProps) => {
-  const [entered, setEntered] = useState(false)
+  const [entered, setEntered] = useState(false);
 
-  useEffect(ensureStyles, [])
+  useEffect(ensureStyles, []);
   useEffect(() => {
-    const raf = requestAnimationFrame(() => setEntered(true))
-    return () => cancelAnimationFrame(raf)
-  }, [])
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   return (
     <button
@@ -96,5 +96,5 @@ export const BackToTodayControl = ({
         <span className="b2t-label">{CONSUMER_COPY.backToTodayLabel}</span>
       </span>
     </button>
-  )
-}
+  );
+};

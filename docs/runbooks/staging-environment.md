@@ -9,15 +9,15 @@ its data, and the one line that must never be crossed.
 
 Since 2026-10-30 the staging API runs on Vercel. Render was retired on 2026-11-07.
 
-| What            | Value                                                                    |
-| --------------- | ------------------------------------------------------------------------ |
-| URL             | `https://api-staging.concertcrawl.app`                                   |
-| Vercel project  | `concert-crawl-api` (featherweight-design), Root Directory `apps/api`    |
-| Environment     | the `staging` custom environment of that project                         |
-| Config          | `apps/api/vercel.json`; the functions are `apps/api/api/*.js`            |
-| Deployed by     | `.github/workflows/deploy-api-staging.yml`, on API pushes to `main`      |
-| DNS             | Cloudflare `CNAME api-staging` to Vercel, DNS only (not proxied)         |
-| Neon branch     | `staging`; the API uses its **pooled** host, migrations its direct host  |
+| What           | Value                                                                   |
+| -------------- | ----------------------------------------------------------------------- |
+| URL            | `https://api-staging.concertcrawl.app`                                  |
+| Vercel project | `concert-crawl-api` (featherweight-design), Root Directory `apps/api`   |
+| Environment    | the `staging` custom environment of that project                        |
+| Config         | `apps/api/vercel.json`; the functions are `apps/api/api/*.js`           |
+| Deployed by    | `.github/workflows/deploy-api-staging.yml`, on API pushes to `main`     |
+| DNS            | Cloudflare `CNAME api-staging` to Vercel, DNS only (not proxied)        |
+| Neon branch    | `staging`; the API uses its **pooled** host, migrations its direct host |
 
 **Deploys.** Git deployments are off, by `git.deploymentEnabled: false` in `vercel.json` (the project's own Git setting did not stop branch pushes building previews). `deploy-api-staging.yml`
 runs on every push to `main` that touches the API's paths (the workflow's `paths` list, which includes

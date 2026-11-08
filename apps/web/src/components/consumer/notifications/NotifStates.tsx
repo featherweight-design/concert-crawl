@@ -16,22 +16,22 @@
 // transparent pseudo-element in globals.css. Both requirements are satisfied:
 // the design table's "deliberately not raised" refers to the visual box.
 
-import { NOTIFICATIONS_COPY } from './definitions/copy'
-import { NotifGlyph } from './glyphs'
+import { NOTIFICATIONS_COPY } from './definitions/copy';
+import { NotifGlyph } from './glyphs';
 
 const SHIMMER = {
   background:
     'linear-gradient(90deg,var(--surface-1) 0%,var(--surface-2) 45%,var(--surface-1) 90%)',
   backgroundSize: '220% 100%',
   animation: 'notifSweep 1.5s linear infinite',
-}
+};
 
 const Bar = ({
   width,
   height = 9,
 }: {
-  width: number | string
-  height?: number
+  width: number | string;
+  height?: number;
 }) => (
   <span
     className="notif-shimmer"
@@ -43,7 +43,7 @@ const Bar = ({
       ...SHIMMER,
     }}
   />
-)
+);
 
 export const NotifSkeletonRow = () => (
   <div
@@ -87,7 +87,7 @@ export const NotifSkeletonRow = () => (
       </div>
     </div>
   </div>
-)
+);
 
 export const NotifLoading = ({ rows = 3 }: { rows?: number | undefined }) => (
   <div role="status" aria-busy="true" aria-live="polite">
@@ -106,12 +106,12 @@ export const NotifLoading = ({ rows = 3 }: { rows?: number | undefined }) => (
       <NotifSkeletonRow key={i} />
     ))}
   </div>
-)
+);
 
 export const NotifEmpty = ({
   onAction,
 }: {
-  onAction?: (() => void) | undefined
+  onAction?: (() => void) | undefined;
 }) => (
   <div
     style={{
@@ -196,12 +196,12 @@ export const NotifEmpty = ({
       </button>
     )}
   </div>
-)
+);
 
 export const NotifError = ({
   onRetry,
 }: {
-  onRetry?: (() => void) | undefined
+  onRetry?: (() => void) | undefined;
 }) => (
   <div
     role="alert"
@@ -265,4 +265,4 @@ export const NotifError = ({
       </button>
     )}
   </div>
-)
+);

@@ -131,5 +131,5 @@ export default function AdminDashboardLoading() {
         ))}
       </div>
     </div>
-  )
+  );
 }

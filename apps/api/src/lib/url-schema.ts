@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 // z.string().url() delegates to `new URL()`, which accepts any scheme —
 // javascript: and data: URLs pass it. Those values are stored and later rendered
@@ -13,11 +13,11 @@ export const httpUrl = (maxLength?: number) =>
   ).refine(
     (value) => {
       try {
-        const { protocol } = new URL(value)
-        return protocol === 'http:' || protocol === 'https:'
+        const { protocol } = new URL(value);
+        return protocol === 'http:' || protocol === 'https:';
       } catch {
-        return false
+        return false;
       }
     },
     { message: 'URL must use http or https' },
-  )
+  );

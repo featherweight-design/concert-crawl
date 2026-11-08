@@ -1,16 +1,16 @@
 import type {
   ActiveCrawlAlert,
   AdminFeedbackStatus,
-} from '@concert-crawl/types'
-import type { StatusKind } from '@/components/admin/primitives/utils'
-import { ADMIN_COPY } from './copy'
+} from '@concert-crawl/types';
+import type { StatusKind } from '@/components/admin/primitives/utils';
+import { ADMIN_COPY } from './copy';
 
 // Keyed to the Tailwind `sm:` breakpoint (min-width: 640px), so mobile ends at
 // 639px — matching TRIAGE_COMPACT_QUERY and the consumer tree. Shared by the
 // venues page's table and its Add-venue trigger, which switch layouts together:
 // a one-pixel disagreement would card-stack the table while the header still
 // showed the desktop button.
-export const ADMIN_MOBILE_VIEWPORT_QUERY = '(max-width: 639px)'
+export const ADMIN_MOBILE_VIEWPORT_QUERY = '(max-width: 639px)';
 
 // Single source of truth for the feedback status → badge-kind mapping, shared
 // by the inbox row (FeedbackRow) and the user-detail feedback history so the
@@ -23,7 +23,7 @@ export const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
   issue_opened: 'danger',
   resolved: 'success',
   archived: 'neutral',
-}
+};
 
 // Additive alert pill rendered alongside the status pill in the existing
 // CrawlRunHistoryTable (apps/web/src/components/admin/crawl/CrawlSplitView.tsx)
@@ -50,20 +50,20 @@ export const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
 // consumer renders via the admin StatusBadge primitive (matches the visual
 // language of the other badges in that table).
 export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
-  label: string
-  kind: StatusKind
+  label: string;
+  kind: StatusKind;
 } {
   if (alert.category === 'crawl.failed') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelFailing,
       kind: 'danger',
-    }
+    };
   }
   if (alert.category === 'crawl.event_ceiling_suspected') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelCeilingSuspected,
       kind: 'warning',
-    }
+    };
   }
   if (alert.category === 'crawl.url_coverage_gap') {
     return {
@@ -72,24 +72,24 @@ export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
           ? ADMIN_COPY.crawlHistoryTable.alertBadgeLabelLinksIncomplete
           : ADMIN_COPY.crawlHistoryTable.alertBadgeLabelLinksMissing,
       kind: 'warning',
-    }
+    };
   }
   if (alert.severity === 'went_dark') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelWentDark,
       kind: 'danger',
-    }
+    };
   }
   if (alert.severity === 'dropped_sharply') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelDroppedSharply,
       kind: 'danger',
-    }
+    };
   }
   return {
     label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelEventDrop,
     kind: 'danger',
-  }
+  };
 }
 
 // The venue crawlWaitUntil values, in the order the admin toggle shows them.
@@ -97,4 +97,4 @@ export const WAIT_UNTIL_VALUES = [
   'networkidle',
   'load',
   'domcontentloaded',
-] as const
+] as const;

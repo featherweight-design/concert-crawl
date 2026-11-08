@@ -6,7 +6,7 @@
 // is a signal arc, never the Spotify logo, and contest.resolved is a balance
 // scale rather than a ticket (two numbers were weighed, nobody won a prize).
 
-import type { JSX } from 'react'
+import type { JSX } from 'react';
 
 export type GlyphName =
   | 'pricedrop'
@@ -18,7 +18,7 @@ export type GlyphName =
   | 'needsinfo'
   | 'newshow'
   | 'crew'
-  | 'bell'
+  | 'bell';
 
 export const GLYPH: Record<GlyphName, JSX.Element> = {
   pricedrop: (
@@ -180,14 +180,14 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
     </>
   ),
-}
+};
 
 export const NotifGlyph = ({
   name,
   size = 16,
 }: {
-  name: GlyphName
-  size?: number
+  name: GlyphName;
+  size?: number;
 }) => (
   <svg
     width={size}
@@ -198,4 +198,4 @@ export const NotifGlyph = ({
   >
     {GLYPH[name]}
   </svg>
-)
+);

@@ -22,12 +22,12 @@
  * needed to decide what to keep, what to delete, and what to redirect.
  */
 export interface UserEventRow {
-  id: string
-  userId: string
-  eventId: string
+  id: string;
+  userId: string;
+  eventId: string;
   /** Used as the deterministic tiebreak when multiple loser rows exist
    * for the same user and the winner isn't already watching. */
-  createdAt: Date
+  createdAt: Date;
 }
 
 /**
@@ -43,8 +43,8 @@ export interface UserEventRow {
  *   under the unique index.
  */
 export interface UserEventDedupPlan {
-  rowIdsToDelete: string[]
-  rowIdsToRedirect: string[]
+  rowIdsToDelete: string[];
+  rowIdsToRedirect: string[];
 }
 
 /**
@@ -69,47 +69,47 @@ export function planUserEventDedup(
   rows: UserEventRow[],
   winnerEventId: string,
 ): UserEventDedupPlan {
-  const rowsByUser = new Map<string, UserEventRow[]>()
+  const rowsByUser = new Map<string, UserEventRow[]>();
   for (const row of rows) {
-    const bucket = rowsByUser.get(row.userId) ?? []
-    bucket.push(row)
-    rowsByUser.set(row.userId, bucket)
+    const bucket = rowsByUser.get(row.userId) ?? [];
+    bucket.push(row);
+    rowsByUser.set(row.userId, bucket);
   }
 
-  const rowIdsToDelete: string[] = []
-  const rowIdsToRedirect: string[] = []
+  const rowIdsToDelete: string[] = [];
+  const rowIdsToRedirect: string[] = [];
 
   for (const userRows of rowsByUser.values()) {
     // Already-on-winner row (if any) is the natural keeper — no UPDATE
     // needed since it's already pointing at the right event.
-    const onWinner = userRows.filter((row) => row.eventId === winnerEventId)
-    const onLosers = userRows.filter((row) => row.eventId !== winnerEventId)
+    const onWinner = userRows.filter((row) => row.eventId === winnerEventId);
+    const onLosers = userRows.filter((row) => row.eventId !== winnerEventId);
 
     if (onWinner.length > 0) {
       // Keep one winner-side row (the earliest by createdAt, then id);
       // delete every other row this user has across the cluster, both
       // surplus winner rows and any loser rows.
-      const keeper = pickKeeper(onWinner)
+      const keeper = pickKeeper(onWinner);
       for (const row of userRows) {
-        if (row.id === keeper.id) continue
-        rowIdsToDelete.push(row.id)
+        if (row.id === keeper.id) continue;
+        rowIdsToDelete.push(row.id);
       }
-      continue
+      continue;
     }
 
     // No winner row for this user — promote one loser row via redirect,
     // delete the rest. Same deterministic tiebreak so re-runs match.
-    const keeper = pickKeeper(onLosers)
+    const keeper = pickKeeper(onLosers);
     for (const row of onLosers) {
       if (row.id === keeper.id) {
-        rowIdsToRedirect.push(row.id)
+        rowIdsToRedirect.push(row.id);
       } else {
-        rowIdsToDelete.push(row.id)
+        rowIdsToDelete.push(row.id);
       }
     }
   }
 
-  return { rowIdsToDelete, rowIdsToRedirect }
+  return { rowIdsToDelete, rowIdsToRedirect };
 }
 
 /**
@@ -119,11 +119,11 @@ export function planUserEventDedup(
  */
 function pickKeeper(rows: UserEventRow[]): UserEventRow {
   return [...rows].sort((left, right) => {
-    const leftCreated = left.createdAt.getTime()
-    const rightCreated = right.createdAt.getTime()
-    if (leftCreated !== rightCreated) return leftCreated - rightCreated
-    return left.id.localeCompare(right.id)
-  })[0]!
+    const leftCreated = left.createdAt.getTime();
+    const rightCreated = right.createdAt.getTime();
+    if (leftCreated !== rightCreated) return leftCreated - rightCreated;
+    return left.id.localeCompare(right.id);
+  })[0]!;
 }
 
 /**
@@ -136,13 +136,13 @@ function pickKeeper(rows: UserEventRow[]): UserEventRow {
  */
 export function chunk<T>(items: T[], size: number): T[][] {
   if (size <= 0) {
-    throw new Error(`chunk size must be > 0, got ${size}`)
+    throw new Error(`chunk size must be > 0, got ${size}`);
   }
-  const out: T[][] = []
+  const out: T[][] = [];
   for (let offset = 0; offset < items.length; offset += size) {
-    out.push(items.slice(offset, offset + size))
+    out.push(items.slice(offset, offset + size));
   }
-  return out
+  return out;
 }
 
 /**
@@ -152,8 +152,8 @@ export function chunk<T>(items: T[], size: number): T[][] {
  * confidence_score, etc.) flows in without an explicit cast.
  */
 export interface CanonicalChangeRow {
-  storedCanonical: string
-  computedCanonical: string
+  storedCanonical: string;
+  computedCanonical: string;
 }
 
 /**
@@ -162,9 +162,9 @@ export interface CanonicalChangeRow {
  * the script's richer row type flows in without a cast.
  */
 export interface WinnerPriorityRow {
-  id: string
-  confidenceScore: string | null
-  createdAt: Date
+  id: string;
+  confidenceScore: string | null;
+  createdAt: Date;
 }
 
 /**
@@ -189,17 +189,19 @@ export function sortBucketByWinnerPriority<TRow extends WinnerPriorityRow>(
   return [...rows].sort((left, right) => {
     // confidence_score: NULL sorts last (worst), otherwise higher wins.
     const leftScore =
-      left.confidenceScore === null ? -Infinity : Number(left.confidenceScore)
+      left.confidenceScore === null ? -Infinity : Number(left.confidenceScore);
     const rightScore =
-      right.confidenceScore === null ? -Infinity : Number(right.confidenceScore)
-    if (leftScore !== rightScore) return rightScore - leftScore
+      right.confidenceScore === null
+        ? -Infinity
+        : Number(right.confidenceScore);
+    if (leftScore !== rightScore) return rightScore - leftScore;
     // created_at ASC: earlier row wins.
-    const leftCreated = left.createdAt.getTime()
-    const rightCreated = right.createdAt.getTime()
-    if (leftCreated !== rightCreated) return leftCreated - rightCreated
+    const leftCreated = left.createdAt.getTime();
+    const rightCreated = right.createdAt.getTime();
+    if (leftCreated !== rightCreated) return leftCreated - rightCreated;
     // id ASC stable final tiebreak.
-    return left.id.localeCompare(right.id)
-  })
+    return left.id.localeCompare(right.id);
+  });
 }
 
 /**
@@ -229,14 +231,14 @@ export function sortBucketByWinnerPriority<TRow extends WinnerPriorityRow>(
 export function selectCollapseClusters<TRow extends CanonicalChangeRow>(
   bucketsByKey: Map<string, TRow[]>,
 ): Map<string, TRow[]> {
-  const out = new Map<string, TRow[]>()
+  const out = new Map<string, TRow[]>();
   for (const [key, bucket] of bucketsByKey) {
-    if (bucket.length < 2) continue
+    if (bucket.length < 2) continue;
     const hasNormalizerChange = bucket.some(
       (row) => row.computedCanonical !== row.storedCanonical,
-    )
-    if (!hasNormalizerChange) continue
-    out.set(key, bucket)
+    );
+    if (!hasNormalizerChange) continue;
+    out.set(key, bucket);
   }
-  return out
+  return out;
 }

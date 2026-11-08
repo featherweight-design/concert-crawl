@@ -60,7 +60,7 @@
  * that use bold for the headline rather than an annotation.
  */
 
-import { LATIN_EXTENDED_MAP, LATIN_EXTENDED_REGEX } from '@concert-crawl/types'
+import { LATIN_EXTENDED_MAP, LATIN_EXTENDED_REGEX } from '@concert-crawl/types';
 
 // Markdown emphasis: bold (`**...**`, `__...__`) and italic (`*...*`,
 // `_..._`). Two-character markers run first so the single-character pass
@@ -69,19 +69,19 @@ import { LATIN_EXTENDED_MAP, LATIN_EXTENDED_REGEX } from '@concert-crawl/types'
 // newline still matches; `+?` (lazy, one-or-more) prevents collapsing
 // `**foo** bar **baz**` into one giant match while still requiring
 // non-empty inner content.
-const MARKDOWN_BOLD_DOUBLE_STAR = /\*\*([\s\S]+?)\*\*/g
-const MARKDOWN_BOLD_DOUBLE_UNDERSCORE = /__([\s\S]+?)__/g
-const MARKDOWN_ITALIC_SINGLE_STAR = /\*([\s\S]+?)\*/g
-const MARKDOWN_ITALIC_SINGLE_UNDERSCORE = /_([\s\S]+?)_/g
+const MARKDOWN_BOLD_DOUBLE_STAR = /\*\*([\s\S]+?)\*\*/g;
+const MARKDOWN_BOLD_DOUBLE_UNDERSCORE = /__([\s\S]+?)__/g;
+const MARKDOWN_ITALIC_SINGLE_STAR = /\*([\s\S]+?)\*/g;
+const MARKDOWN_ITALIC_SINGLE_UNDERSCORE = /_([\s\S]+?)_/g;
 
 // Apostrophe variants seen in the wild — U+2018 LEFT, U+2019 RIGHT,
 // U+201B SINGLE HIGH-REVERSED-9, U+0027 straight ASCII. All collapse to
 // nothing (stripped) so "Zed's" and "Zeds" map to the same canonical.
-const APOSTROPHE_VARIANTS = /['‘’‛]/g
+const APOSTROPHE_VARIANTS = /['‘’‛]/g;
 
 export function canonicalizeTitle(title: string): string {
   if (typeof title !== 'string' || title.length === 0) {
-    return ''
+    return '';
   }
 
   // Strip Markdown emphasis markers but preserve inner text. Bold pairs
@@ -90,10 +90,10 @@ export function canonicalizeTitle(title: string): string {
     .replace(MARKDOWN_BOLD_DOUBLE_STAR, '$1')
     .replace(MARKDOWN_BOLD_DOUBLE_UNDERSCORE, '$1')
     .replace(MARKDOWN_ITALIC_SINGLE_STAR, '$1')
-    .replace(MARKDOWN_ITALIC_SINGLE_UNDERSCORE, '$1')
+    .replace(MARKDOWN_ITALIC_SINGLE_UNDERSCORE, '$1');
 
   // NFD normalize + strip combining marks (Unicode property: M = Mark).
-  const decomposed = unstyled.normalize('NFD').replace(/\p{M}/gu, '')
+  const decomposed = unstyled.normalize('NFD').replace(/\p{M}/gu, '');
 
   // Handle the Latin Extended characters that don't decompose via NFD.
   // Map + regex live in latin-extended-map.ts so canonicalizeArtist and
@@ -101,11 +101,11 @@ export function canonicalizeTitle(title: string): string {
   const stripped = decomposed.replace(
     LATIN_EXTENDED_REGEX,
     (char) => LATIN_EXTENDED_MAP[char] ?? char,
-  )
+  );
 
   // Strip apostrophes (curly + straight). See APOSTROPHE_VARIANTS comment.
-  const apostropheStripped = stripped.replace(APOSTROPHE_VARIANTS, '')
+  const apostropheStripped = stripped.replace(APOSTROPHE_VARIANTS, '');
 
   // Lowercase + collapse whitespace + trim.
-  return apostropheStripped.toLowerCase().replace(/\s+/g, ' ').trim()
+  return apostropheStripped.toLowerCase().replace(/\s+/g, ' ').trim();
 }

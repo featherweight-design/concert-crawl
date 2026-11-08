@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useQuery } from '@tanstack/react-query'
-import type { CrawlRun } from '@concert-crawl/types'
+import { useQuery } from '@tanstack/react-query';
+import type { CrawlRun } from '@concert-crawl/types';
 
-const VENUE_RUNS_LIMIT = 25
-const STALE_2_MIN = 2 * 60 * 1000
+const VENUE_RUNS_LIMIT = 25;
+const STALE_2_MIN = 2 * 60 * 1000;
 
 // queryKey includes hasAlert so toggling the page-level filter
 // invalidates the cache for this venue and triggers a refetch with the
@@ -15,11 +15,11 @@ const STALE_2_MIN = 2 * 60 * 1000
 // hasAlert=false variants for that venue.
 export function adminVenueRunsQueryKey(
   venueId: string | null,
-): readonly ['admin', 'venue-runs', string | null]
+): readonly ['admin', 'venue-runs', string | null];
 export function adminVenueRunsQueryKey(
   venueId: string | null,
   hasAlert: boolean,
-): readonly ['admin', 'venue-runs', string | null, boolean]
+): readonly ['admin', 'venue-runs', string | null, boolean];
 export function adminVenueRunsQueryKey(
   venueId: string | null,
   hasAlert?: boolean,
@@ -28,7 +28,7 @@ export function adminVenueRunsQueryKey(
   | readonly ['admin', 'venue-runs', string | null, boolean] {
   return hasAlert === undefined
     ? (['admin', 'venue-runs', venueId] as const)
-    : (['admin', 'venue-runs', venueId, hasAlert] as const)
+    : (['admin', 'venue-runs', venueId, hasAlert] as const);
 }
 
 export function useAdminVenueRuns(
@@ -41,14 +41,14 @@ export function useAdminVenueRuns(
       const params = new URLSearchParams({
         venueId: venueId ?? '',
         limit: String(VENUE_RUNS_LIMIT),
-      })
-      if (hasAlert) params.set('hasAlert', 'true')
-      const res = await fetch(`/api/admin/crawl/runs?${params}`)
-      const body = (await res.json()) as { success: boolean; data: CrawlRun[] }
-      return body.success ? body.data : []
+      });
+      if (hasAlert) params.set('hasAlert', 'true');
+      const res = await fetch(`/api/admin/crawl/runs?${params}`);
+      const body = (await res.json()) as { success: boolean; data: CrawlRun[] };
+      return body.success ? body.data : [];
     },
     enabled: !!venueId,
     staleTime: STALE_2_MIN,
     refetchOnWindowFocus: true,
-  })
+  });
 }

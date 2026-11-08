@@ -73,7 +73,7 @@ export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'idea',
   'praise',
   'other',
-])
+]);
 ```
 
 Add `jsonb` to imports:
@@ -88,7 +88,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 ```
 
 Update the `feedback` table definition to add `metadata`:
@@ -104,7 +104,7 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 - [ ] **Step 2: Write the migration SQL manually**
@@ -166,12 +166,12 @@ Skip for now — write the route, then tests in Task 3.
 
 ```typescript
 // apps/api/src/routes/feedback.ts
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { z } from 'zod'
-import { db, feedback } from '@concert-crawl/db'
-import { checkRateLimit } from '../lib/rate-limit.js'
-import { apiLogger } from '../lib/logger.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { z } from 'zod';
+import { db, feedback } from '@concert-crawl/db';
+import { checkRateLimit } from '../lib/rate-limit.js';
+import { apiLogger } from '../lib/logger.js';
 
 const feedbackSchema = z.object({
   category: z.enum(['bug', 'idea', 'praise', 'other']),
@@ -184,42 +184,42 @@ const feedbackSchema = z.object({
       device: z.string().optional(),
     })
     .optional(),
-})
+});
 
-export const feedbackRouter = new Hono()
+export const feedbackRouter = new Hono();
 
-feedbackRouter.use('*', clerkMiddleware())
+feedbackRouter.use('*', clerkMiddleware());
 
 feedbackRouter.post('/', async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId) {
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   }
 
   const { allowed, retryAfterMs } = checkRateLimit(
     `feedback:${authInfo.userId}`,
     1,
     60 * 60 * 1000, // 1 per hour
-  )
+  );
   if (!allowed) {
-    const retryAfterSec = Math.ceil(retryAfterMs / 1000)
-    ctx.header('Retry-After', String(retryAfterSec))
+    const retryAfterSec = Math.ceil(retryAfterMs / 1000);
+    ctx.header('Retry-After', String(retryAfterSec));
     return ctx.json(
       { success: false, error: 'Rate limit exceeded. Try again later.' },
       429,
-    )
+    );
   }
 
-  const body = await ctx.req.json().catch(() => null)
-  const parsed = feedbackSchema.safeParse(body)
+  const body = await ctx.req.json().catch(() => null);
+  const parsed = feedbackSchema.safeParse(body);
   if (!parsed.success) {
     return ctx.json(
       { success: false, error: parsed.error.flatten().fieldErrors },
       422,
-    )
+    );
   }
 
-  const { category, message, pageUrl, metadata } = parsed.data
+  const { category, message, pageUrl, metadata } = parsed.data;
 
   await db.insert(feedback).values({
     userId: authInfo.userId,
@@ -227,15 +227,15 @@ feedbackRouter.post('/', async (ctx) => {
     category,
     message,
     metadata: metadata ?? null,
-  })
+  });
 
   apiLogger.info(
     { userId: authInfo.userId, category, pageUrl },
     'feedback submitted',
-  )
+  );
 
-  return ctx.json({ success: true }, 201)
-})
+  return ctx.json({ success: true }, 201);
+});
 ```
 
 - [ ] **Step 3: Register the route**
@@ -243,13 +243,13 @@ feedbackRouter.post('/', async (ctx) => {
 In `apps/api/src/routes/index.ts`, add:
 
 ```typescript
-import { feedbackRouter } from './feedback.js'
+import { feedbackRouter } from './feedback.js';
 ```
 
 And inside `registerRoutes`:
 
 ```typescript
-app.route('/v1/feedback', feedbackRouter)
+app.route('/v1/feedback', feedbackRouter);
 ```
 
 - [ ] **Step 4: Start the API and smoke-test**
@@ -290,14 +290,14 @@ Follow the existing test pattern in `apps/api/src/routes/__tests__/`. Tests hit 
 
 ```typescript
 // apps/api/src/routes/__tests__/feedback.test.ts
-import { describe, it, expect, beforeEach } from 'vitest'
-import { testApp, mockAuth, clearTable } from '../test-helpers.js'
-import { db } from '@concert-crawl/db'
-import { sql } from 'drizzle-orm'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { testApp, mockAuth, clearTable } from '../test-helpers.js';
+import { db } from '@concert-crawl/db';
+import { sql } from 'drizzle-orm';
 
 beforeEach(async () => {
-  await clearTable('feedback')
-})
+  await clearTable('feedback');
+});
 
 describe('POST /v1/feedback', () => {
   it('returns 401 when unauthenticated', async () => {
@@ -309,9 +309,9 @@ describe('POST /v1/feedback', () => {
         message: 'test',
         pageUrl: '/events',
       }),
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 422 when category is missing', async () => {
     const res = await testApp.request('/v1/feedback', {
@@ -321,9 +321,9 @@ describe('POST /v1/feedback', () => {
         Authorization: `Bearer ${mockAuth('user-1')}`,
       },
       body: JSON.stringify({ message: 'test', pageUrl: '/events' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('returns 422 when message is empty', async () => {
     const res = await testApp.request('/v1/feedback', {
@@ -337,9 +337,9 @@ describe('POST /v1/feedback', () => {
         message: '',
         pageUrl: '/events',
       }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('inserts feedback and returns 201', async () => {
     const res = await testApp.request('/v1/feedback', {
@@ -354,46 +354,46 @@ describe('POST /v1/feedback', () => {
         pageUrl: '/events',
         metadata: { theme: 'electric', build: 'dev', device: 'Mac' },
       }),
-    })
-    expect(res.status).toBe(201)
-    const data = await res.json()
-    expect(data).toEqual({ success: true })
+    });
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data).toEqual({ success: true });
 
     const rows = await db.execute(
       sql`SELECT * FROM feedback WHERE user_id = 'user-abc'`,
-    )
-    expect(rows.rows).toHaveLength(1)
-    expect(rows.rows[0]?.category).toBe('idea')
-    expect(rows.rows[0]?.message).toBe('Love this app.')
-  })
+    );
+    expect(rows.rows).toHaveLength(1);
+    expect(rows.rows[0]?.category).toBe('idea');
+    expect(rows.rows[0]?.message).toBe('Love this app.');
+  });
 
   it('returns 429 on second submission within the hour', async () => {
     const payload = {
       category: 'bug',
       message: 'First report',
       pageUrl: '/events',
-    }
+    };
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${mockAuth('rate-limit-user')}`,
-    }
+    };
 
     const first = await testApp.request('/v1/feedback', {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
-    })
-    expect(first.status).toBe(201)
+    });
+    expect(first.status).toBe(201);
 
     const second = await testApp.request('/v1/feedback', {
       method: 'POST',
       headers,
       body: JSON.stringify({ ...payload, message: 'Second report' }),
-    })
-    expect(second.status).toBe(429)
-    expect(second.headers.get('Retry-After')).toBeTruthy()
-  })
-})
+    });
+    expect(second.status).toBe(429);
+    expect(second.headers.get('Retry-After')).toBeTruthy();
+  });
+});
 ```
 
 > **Note:** If `testApp`, `mockAuth`, or `clearTable` don't exist in a `test-helpers.ts` file, look at how other tests in `apps/api/src/routes/__tests__/` set up their test app and replicate the pattern. The key is that `clearTable('feedback')` runs a `TRUNCATE feedback CASCADE` before each test, and `mockAuth` returns a token that makes `clerkMiddleware()` resolve to the given userId.
@@ -431,8 +431,8 @@ The modal manages its own form state. It receives `open` and `onClose` props. Th
 `apps/web/src/components/consumer/feedback/index.ts`:
 
 ```typescript
-export { FeedbackModal } from './FeedbackModal'
-export { FeedbackPill } from './FeedbackPill'
+export { FeedbackModal } from './FeedbackModal';
+export { FeedbackPill } from './FeedbackPill';
 ```
 
 - [ ] **Step 2: Create `FeedbackModal.tsx`**
@@ -1484,7 +1484,7 @@ The menu renders as a popover (desktop) or bottom sheet (mobile) — same respon
 `apps/web/src/components/consumer/user-menu/index.ts`:
 
 ```typescript
-export { UserMenu } from './UserMenu'
+export { UserMenu } from './UserMenu';
 ```
 
 - [ ] **Step 2: Create `UserMenu.tsx`**

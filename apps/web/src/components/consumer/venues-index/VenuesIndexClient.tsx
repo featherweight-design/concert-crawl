@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import type { VenuePublic } from '@concert-crawl/types'
-import { VenueFeatureCard } from './VenueFeatureCard'
-import { VenueFilterBar } from './VenueFilterBar'
-import { VenueRow } from './VenueRow'
+import { useEffect, useState } from 'react';
+import type { VenuePublic } from '@concert-crawl/types';
+import { VenueFeatureCard } from './VenueFeatureCard';
+import { VenueFilterBar } from './VenueFilterBar';
+import { VenueRow } from './VenueRow';
 import {
   LODO_LAT,
   LODO_LNG,
@@ -13,35 +13,35 @@ import {
   haversineDistance,
   type VenueFilterState,
   type VenueWithDistance,
-} from './venue-filter-defs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './venue-filter-defs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex
+const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
 
 interface VenuesIndexClientProps {
-  venues: VenuePublic[]
+  venues: VenuePublic[];
 }
 
 export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
   const [filterState, setFilterState] =
-    useState<VenueFilterState>(VENUE_FILTER_DEFAULT)
-  const [userLat, setUserLat] = useState<number>(LODO_LAT)
-  const [userLng, setUserLng] = useState<number>(LODO_LNG)
+    useState<VenueFilterState>(VENUE_FILTER_DEFAULT);
+  const [userLat, setUserLat] = useState<number>(LODO_LAT);
+  const [userLng, setUserLng] = useState<number>(LODO_LNG);
 
   // Request geolocation once on mount; fall back silently to LoDo centroid
   useEffect(() => {
-    if (!navigator.geolocation) return
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLat(pos.coords.latitude)
-        setUserLng(pos.coords.longitude)
+        setUserLat(pos.coords.latitude);
+        setUserLng(pos.coords.longitude);
       },
       () => {
         /* permission denied or unavailable — keep LoDo centroid */
       },
       { timeout: 5000, maximumAge: 5 * 60 * 1000 },
-    )
-  }, [])
+    );
+  }, []);
 
   const venuesWithDistance: VenueWithDistance[] = venues.map((venue) => ({
     ...venue,
@@ -49,16 +49,16 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       venue.lat != null && venue.lng != null
         ? haversineDistance(userLat, userLng, venue.lat, venue.lng)
         : haversineDistance(userLat, userLng, LODO_LAT, LODO_LNG),
-  }))
+  }));
 
-  const filtersActive = !!filterState.capacity || !!filterState.distance
-  const filtered = applyVenueFilters(venuesWithDistance, filterState)
+  const filtersActive = !!filterState.capacity || !!filterState.distance;
+  const filtered = applyVenueFilters(venuesWithDistance, filterState);
   const featured = filtersActive
     ? null
-    : (filtered.find((venue) => venue.featured) ?? null)
+    : (filtered.find((venue) => venue.featured) ?? null);
   const listVenues = featured
     ? filtered.filter((venue) => venue !== featured)
-    : filtered
+    : filtered;
 
   return (
     <>
@@ -156,5 +156,5 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
         </div>
       ) : null}
     </>
-  )
+  );
 }

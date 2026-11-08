@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Settings ▸ Connections — connected Spotify card (#763 PR 5): account,
 // artist counts, last-synced, on-demand refresh and disconnect (with confirm
@@ -9,28 +9,28 @@
 // never connected Spotify can reach them; leaving duplicates here would give
 // the same preference two homes and one of them a legacy write path.
 
-import { useState } from 'react'
-import type { SpotifyConnectionView } from '@concert-crawl/types'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { useState } from 'react';
+import type { SpotifyConnectionView } from '@concert-crawl/types';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import {
   useSpotifyDisconnect,
   useSpotifySync,
-} from '@/lib/queries/use-spotify-connection'
-import { ApiError } from '@/lib/api'
-import { formatRelativeTime } from '@/lib/relative-time'
-import { DisconnectConfirmSheet } from './DisconnectConfirmSheet'
+} from '@/lib/queries/use-spotify-connection';
+import { ApiError } from '@/lib/api';
+import { formatRelativeTime } from '@/lib/relative-time';
+import { DisconnectConfirmSheet } from './DisconnectConfirmSheet';
 
-const COPY = SPOTIFY_COPY.connectedCard
+const COPY = SPOTIFY_COPY.connectedCard;
 
 const CardRow = ({
   label,
   first = false,
   children,
 }: {
-  label: string
-  first?: boolean
-  children: React.ReactNode
+  label: string;
+  first?: boolean;
+  children: React.ReactNode;
 }) => (
   <div
     className="flex items-center justify-between gap-3 py-[13px]"
@@ -39,7 +39,7 @@ const CardRow = ({
     <span className="text-[13.5px] font-medium text-fg-muted">{label}</span>
     {children}
   </div>
-)
+);
 
 const RefreshIcon = () => (
   <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden>
@@ -51,24 +51,24 @@ const RefreshIcon = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 export const ConnectedCard = ({
   connection,
 }: {
-  connection: SpotifyConnectionView
+  connection: SpotifyConnectionView;
 }) => {
-  const sync = useSpotifySync()
-  const disconnect = useSpotifyDisconnect()
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const sync = useSpotifySync();
+  const disconnect = useSpotifyDisconnect();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const refreshing = sync.isPending
+  const refreshing = sync.isPending;
   const rateLimited =
-    sync.error instanceof ApiError && sync.error.status === 429
+    sync.error instanceof ApiError && sync.error.status === 429;
 
   const account = connection.displayName
     ? `${connection.displayName}${COPY.accountSuffix}`
-    : COPY.accountFallback
+    : COPY.accountFallback;
 
   return (
     <div className="flex flex-col">
@@ -205,10 +205,10 @@ export const ConnectedCard = ({
         onConfirm={() => {
           disconnect.mutate(undefined, {
             onSuccess: () => setConfirmOpen(false),
-          })
+          });
         }}
         busy={disconnect.isPending}
       />
     </div>
-  )
-}
+  );
+};

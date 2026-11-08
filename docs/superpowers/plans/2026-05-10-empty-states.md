@@ -47,32 +47,32 @@ Accent color and rail-right code are driven by `state`:
 Replace `apps/web/src/components/consumer/empty-state/EmptyState.tsx` with:
 
 ```tsx
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateCta {
-  label: string
-  href?: string
-  onClick?: () => void
+  label: string;
+  href?: string;
+  onClick?: () => void;
 }
 
 export interface EmptyStateProps {
-  state?: 'no-data' | 'filtered' | 'error'
-  density?: 'default' | 'dense'
-  eyebrow: string
-  title: string
-  body: string
-  primaryCta?: EmptyStateCta
-  secondaryCta?: EmptyStateCta
-  className?: string
+  state?: 'no-data' | 'filtered' | 'error';
+  density?: 'default' | 'dense';
+  eyebrow: string;
+  title: string;
+  body: string;
+  primaryCta?: EmptyStateCta;
+  secondaryCta?: EmptyStateCta;
+  className?: string;
 }
 
 function EmptyStatePrimary({
   cta,
   dense,
 }: {
-  cta: EmptyStateCta
-  dense: boolean
+  cta: EmptyStateCta;
+  dense: boolean;
 }) {
   const style: React.CSSProperties = {
     display: 'inline-flex',
@@ -88,27 +88,27 @@ function EmptyStatePrimary({
     textDecoration: 'none',
     cursor: 'pointer',
     border: 'none',
-  }
+  };
   if (cta.href) {
     return (
       <Link href={cta.href} style={style}>
         {cta.label}
       </Link>
-    )
+    );
   }
   return (
     <button type="button" onClick={cta.onClick} style={style}>
       {cta.label}
     </button>
-  )
+  );
 }
 
 function EmptyStateSecondary({
   cta,
   dense,
 }: {
-  cta: EmptyStateCta
-  dense: boolean
+  cta: EmptyStateCta;
+  dense: boolean;
 }) {
   const style: React.CSSProperties = {
     display: 'inline-flex',
@@ -125,19 +125,19 @@ function EmptyStateSecondary({
     border: 'none',
     borderBottom: '1px dashed var(--border-strong)',
     borderRadius: 0,
-  }
+  };
   if (cta.href) {
     return (
       <Link href={cta.href} style={style}>
         {cta.label}
       </Link>
-    )
+    );
   }
   return (
     <button type="button" onClick={cta.onClick} style={style}>
       {cta.label}
     </button>
-  )
+  );
 }
 
 export function EmptyState({
@@ -150,15 +150,15 @@ export function EmptyState({
   secondaryCta,
   className,
 }: EmptyStateProps) {
-  const dense = density === 'dense'
+  const dense = density === 'dense';
   const accent =
     state === 'error'
       ? 'var(--warning)'
       : state === 'filtered'
         ? 'var(--signal)'
-        : 'var(--accent)'
+        : 'var(--accent)';
   const railRight =
-    state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0'
+    state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0';
 
   return (
     <div
@@ -267,7 +267,7 @@ export function EmptyState({
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -292,9 +292,9 @@ Expected: no errors on this file. (There will be errors in callers — those get
 Create `apps/web/src/components/consumer/empty-state/EmptyState.test.tsx`:
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { EmptyState } from './EmptyState'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { EmptyState } from './EmptyState';
 
 // Next.js Link renders as <a> in tests
 vi.mock('next/link', () => ({
@@ -303,15 +303,15 @@ vi.mock('next/link', () => ({
     children,
     style,
   }: {
-    href: string
-    children: React.ReactNode
-    style?: React.CSSProperties
+    href: string;
+    children: React.ReactNode;
+    style?: React.CSSProperties;
   }) => (
     <a href={href} style={style}>
       {children}
     </a>
   ),
-}))
+}));
 
 describe('EmptyState', () => {
   it('renders eyebrow, title, and body', () => {
@@ -321,11 +321,11 @@ describe('EmptyState', () => {
         title="No shows tonight, grandpa."
         body="Slow night on the calendar."
       />,
-    )
-    expect(screen.getByText('Tonight')).toBeTruthy()
-    expect(screen.getByText('No shows tonight, grandpa.')).toBeTruthy()
-    expect(screen.getByText('Slow night on the calendar.')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Tonight')).toBeTruthy();
+    expect(screen.getByText('No shows tonight, grandpa.')).toBeTruthy();
+    expect(screen.getByText('Slow night on the calendar.')).toBeTruthy();
+  });
 
   it('renders rail-right as "0 / 0" for no-data state', () => {
     render(
@@ -335,9 +335,9 @@ describe('EmptyState', () => {
         title="No shows"
         body="Nothing here."
       />,
-    )
-    expect(screen.getByText('0 / 0')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('0 / 0')).toBeTruthy();
+  });
 
   it('renders rail-right as "0 hits" for filtered state', () => {
     render(
@@ -347,9 +347,9 @@ describe('EmptyState', () => {
         title="Crickets."
         body="Try widening your filters."
       />,
-    )
-    expect(screen.getByText('0 hits')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('0 hits')).toBeTruthy();
+  });
 
   it('renders rail-right as "err" for error state', () => {
     render(
@@ -359,9 +359,9 @@ describe('EmptyState', () => {
         title="Signal lost."
         body="Try again."
       />,
-    )
-    expect(screen.getByText('err')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('err')).toBeTruthy();
+  });
 
   it('renders primaryCta as Link when href is provided', () => {
     render(
@@ -371,13 +371,13 @@ describe('EmptyState', () => {
         body="Nothing saved."
         primaryCta={{ label: 'Browse tonight', href: '/events' }}
       />,
-    )
-    const link = screen.getByRole('link', { name: 'Browse tonight' })
-    expect(link.getAttribute('href')).toBe('/events')
-  })
+    );
+    const link = screen.getByRole('link', { name: 'Browse tonight' });
+    expect(link.getAttribute('href')).toBe('/events');
+  });
 
   it('renders primaryCta as button when onClick is provided', () => {
-    const handleClick = vi.fn()
+    const handleClick = vi.fn();
     render(
       <EmptyState
         eyebrow="Filtered"
@@ -385,9 +385,9 @@ describe('EmptyState', () => {
         body="Try widening."
         primaryCta={{ label: 'Clear filters', onClick: handleClick }}
       />,
-    )
-    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeTruthy();
+  });
 
   it('renders secondaryCta as Link when href is provided', () => {
     render(
@@ -397,10 +397,10 @@ describe('EmptyState', () => {
         body="Try widening."
         secondaryCta={{ label: 'Clear filters', href: '/events' }}
       />,
-    )
-    const link = screen.getByRole('link', { name: 'Clear filters' })
-    expect(link.getAttribute('href')).toBe('/events')
-  })
+    );
+    const link = screen.getByRole('link', { name: 'Clear filters' });
+    expect(link.getAttribute('href')).toBe('/events');
+  });
 
   it('renders no CTA section when neither primaryCta nor secondaryCta is given', () => {
     render(
@@ -409,10 +409,10 @@ describe('EmptyState', () => {
         title="Type something."
         body="Artist or venue."
       />,
-    )
-    expect(screen.queryByRole('link')).toBeNull()
-    expect(screen.queryByRole('button')).toBeNull()
-  })
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
 
   it('applies className to wrapper', () => {
     const { container } = render(
@@ -422,13 +422,13 @@ describe('EmptyState', () => {
         body="Test"
         className="test-class"
       />,
-    )
-    expect(container.firstChild).toBeTruthy()
+    );
+    expect(container.firstChild).toBeTruthy();
     expect(
       (container.firstChild as HTMLElement).classList.contains('test-class'),
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they pass**
@@ -502,7 +502,7 @@ export const copy = {
   venueUpcoming: 'Upcoming shows',
   heroTonight: 'Tonight',
   heroCommunityPick: 'Community Pick',
-} as const
+} as const;
 ```
 
 - [ ] **Step 2: Run typecheck to catch any removed keys still referenced**
@@ -543,7 +543,7 @@ In `apps/web/src/app/(protected)/events/page.tsx`, find:
         ? { action: { label: copy.emptyFilteredCta, href: '/events' } }
         : {})}
     />
-  )
+  );
 }
 ```
 
@@ -568,7 +568,7 @@ Replace with:
           }
         : {})}
     />
-  )
+  );
 }
 ```
 
@@ -582,7 +582,7 @@ Find:
     <p className="py-12 text-center text-sm text-fg-muted">
       No shows on this day.
     </p>
-  )
+  );
 }
 ```
 
@@ -598,7 +598,7 @@ Replace with:
       title={copy.emptyCalTitle}
       body={copy.emptyCalBody}
     />
-  )
+  );
 }
 ```
 
@@ -673,8 +673,8 @@ git commit -m "feat(empty-state): wire venue page empty state"
 - [ ] **Step 1: Replace WatchingEmpty.tsx**
 
 ```tsx
-import { EmptyState } from '@/components/consumer/empty-state'
-import { copy } from '@/components/consumer/definitions/copy'
+import { EmptyState } from '@/components/consumer/empty-state';
+import { copy } from '@/components/consumer/definitions/copy';
 
 export function WatchingEmpty() {
   return (
@@ -685,7 +685,7 @@ export function WatchingEmpty() {
       body={copy.watchingEmptyBody}
       primaryCta={{ label: copy.watchingEmptyCta, href: '/events' }}
     />
-  )
+  );
 }
 ```
 

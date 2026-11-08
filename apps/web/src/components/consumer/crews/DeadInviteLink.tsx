@@ -5,12 +5,12 @@ import {
   InviteEyebrow,
   InviteShell,
   InviteTitle,
-} from './InviteShell'
-import { CREWS_COPY } from './definitions/copy'
+} from './InviteShell';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
-export type DeadInviteKind = 'expired' | 'revoked'
+export type DeadInviteKind = 'expired' | 'revoked';
 
 /**
  * A dead link, with no crew identity anywhere on it — no name, no patch, no
@@ -39,4 +39,4 @@ export const DeadInviteLink = ({ kind }: { kind: DeadInviteKind }) => (
     </div>
     <BrowseInstead />
   </InviteShell>
-)
+);

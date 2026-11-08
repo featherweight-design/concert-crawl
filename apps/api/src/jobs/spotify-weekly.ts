@@ -46,9 +46,9 @@
 // native follower while the run still reported success (#1515). Default off;
 // the summary carries nativeDigest so a prod log says which shape ran.
 
-import { pathToFileURL } from 'node:url'
-import * as Sentry from '@sentry/hono/node'
-import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm'
+import { pathToFileURL } from 'node:url';
+import * as Sentry from '@sentry/hono/node';
+import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm';
 import {
   costTracking,
   db,
@@ -57,33 +57,33 @@ import {
   userNotificationPreferences,
   userSpotifyConnections,
   venues,
-} from '@concert-crawl/db'
-import { canUseFeature } from '@concert-crawl/entitlements'
-import { appUrl } from '../emails/layout.js'
-import type { DigestEmailShow } from '../emails/types.js'
-import { sendTransactionalEmail } from '../lib/email.js'
+} from '@concert-crawl/db';
+import { canUseFeature } from '@concert-crawl/entitlements';
+import { appUrl } from '../emails/layout.js';
+import type { DigestEmailShow } from '../emails/types.js';
+import { sendTransactionalEmail } from '../lib/email.js';
 import {
   billsAnyCanonicalName,
   displayHeadliner,
-} from '../lib/event-billing.js'
-import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
-import { isFeatureEnabled } from '../lib/feature-flags.js'
-import { apiLogger } from '../lib/logger.js'
-import { loadPlanState } from '../lib/plan.js'
+} from '../lib/event-billing.js';
+import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js';
+import { isFeatureEnabled } from '../lib/feature-flags.js';
+import { apiLogger } from '../lib/logger.js';
+import { loadPlanState } from '../lib/plan.js';
 import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
-} from '../lib/price-aggregation/index.js'
+} from '../lib/price-aggregation/index.js';
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const DIGEST_WINDOW_DAYS = 7
-const TASTE_PICK_COUNT = 2
-const DENVER_TZ = 'America/Denver'
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DIGEST_WINDOW_DAYS = 7;
+const TASTE_PICK_COUNT = 2;
+const DENVER_TZ = 'America/Denver';
 
-const isDryRun = (): boolean => process.env['SPOTIFY_SYNC_DRY_RUN'] === '1'
+const isDryRun = (): boolean => process.env['SPOTIFY_SYNC_DRY_RUN'] === '1';
 
 const isNativeDigest = (): boolean =>
-  process.env['NATIVE_DIGEST_ENABLED'] === '1'
+  process.env['NATIVE_DIGEST_ENABLED'] === '1';
 
 // ---------------------------------------------------------------------------
 // Date helpers — events.date is a Denver-local calendar date (YYYY-MM-DD), so
@@ -99,72 +99,72 @@ const denverDayUtcMs = (at: Date): number => {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(at)
+  }).formatToParts(at);
   const part = (type: string): string | undefined =>
-    parts.find((entry) => entry.type === type)?.value
-  const year = Number(part('year'))
-  const month = Number(part('month'))
-  const day = Number(part('day'))
+    parts.find((entry) => entry.type === type)?.value;
+  const year = Number(part('year'));
+  const month = Number(part('month'));
+  const day = Number(part('day'));
   if (
     !Number.isFinite(year) ||
     !Number.isFinite(month) ||
     !Number.isFinite(day)
   ) {
-    throw new Error('Unable to derive Denver-local date for digest window')
+    throw new Error('Unable to derive Denver-local date for digest window');
   }
-  return Date.UTC(year, month - 1, day)
-}
+  return Date.UTC(year, month - 1, day);
+};
 
 const toDateString = (utcMs: number): string =>
-  new Date(utcMs).toISOString().slice(0, 10)
+  new Date(utcMs).toISOString().slice(0, 10);
 
 // ISO-8601 week key (e.g. '2026-W30') of the Denver-local run date — the
 // per-user dedupe suffix (§8.2), stable across a same-week cron retry.
 const isoWeekKey = (dayUtcMs: number): string => {
-  const date = new Date(dayUtcMs)
-  const weekday = date.getUTCDay() === 0 ? 7 : date.getUTCDay()
+  const date = new Date(dayUtcMs);
+  const weekday = date.getUTCDay() === 0 ? 7 : date.getUTCDay();
   // Shift to the Thursday of this ISO week; its year owns the week.
-  date.setUTCDate(date.getUTCDate() + 4 - weekday)
-  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1)
-  const week = Math.ceil(((date.getTime() - yearStart) / DAY_MS + 1) / 7)
-  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
-}
+  date.setUTCDate(date.getUTCDate() + 4 - weekday);
+  const yearStart = Date.UTC(date.getUTCFullYear(), 0, 1);
+  const week = Math.ceil(((date.getTime() - yearStart) / DAY_MS + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+};
 
 const DATE_LABEL_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
   weekday: 'short',
   month: 'short',
   day: 'numeric',
-})
+});
 
 // '2026-07-17' → 'Fri · Jul 17' (mock format). The date string is already
 // Denver-local, so it is formatted as a plain calendar date in UTC.
 const dateLabel = (dateStr: string): string => {
-  const parsed = Date.parse(`${dateStr}T00:00:00Z`)
-  if (Number.isNaN(parsed)) return dateStr
-  const parts = DATE_LABEL_FORMAT.formatToParts(new Date(parsed))
+  const parsed = Date.parse(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(parsed)) return dateStr;
+  const parts = DATE_LABEL_FORMAT.formatToParts(new Date(parsed));
   const part = (type: string): string =>
-    parts.find((entry) => entry.type === type)?.value ?? ''
-  return `${part('weekday')} · ${part('month')} ${part('day')}`
-}
+    parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('weekday')} · ${part('month')} ${part('day')}`;
+};
 
 const priceLabel = (min: string | null): string | null => {
-  if (min === null) return null
-  const value = Number(min)
-  if (!Number.isFinite(value) || value <= 0) return null
-  return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`
-}
+  if (min === null) return null;
+  const value = Number(min);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Number.isInteger(value) ? `$${value}` : `$${value.toFixed(2)}`;
+};
 
 // ---------------------------------------------------------------------------
 // Digest queries (§9.1)
 // ---------------------------------------------------------------------------
 
 interface MatchedEventRow {
-  id: string
-  artist: string
-  date: string
-  ticketPriceMin: string | null
-  venueName: string
+  id: string;
+  artist: string;
+  date: string;
+  ticketPriceMin: string | null;
+  venueName: string;
 }
 
 // A factory, not a constant: `displayHeadliner()` builds a drizzle `sql`
@@ -176,7 +176,7 @@ const eventSelection = () => ({
   date: events.date,
   ticketPriceMin: events.ticketPriceMin,
   venueName: venues.name,
-})
+});
 
 const windowFilter = (windowStart: string, windowEnd: string) =>
   and(
@@ -184,7 +184,7 @@ const windowFilter = (windowStart: string, windowEnd: string) =>
     lte(events.date, windowEnd),
     eq(events.status, 'upcoming'),
     eq(events.hiddenFromConsumer, false),
-  )
+  );
 
 // Rewrites each row's price to the cheapest tier. events.ticketPriceMin holds
 // whatever price was written last, which is not necessarily the floor, so a
@@ -194,15 +194,15 @@ const withDisplayPrices = async (
 ): Promise<MatchedEventRow[]> => {
   const priceByTierByEventId = await loadPriceByTierByEventId(
     rows.map((row) => row.id),
-  )
+  );
   return rows.map((row) => ({
     ...row,
     ticketPriceMin: resolveDisplayPrice(
       priceByTierByEventId.get(row.id) ?? [],
       row.ticketPriceMin,
     ),
-  }))
-}
+  }));
+};
 
 // §9.1 match: the event bills one of the user's followed acts, per
 // `billsAnyCanonicalName` (lib/event-billing.ts).
@@ -211,7 +211,7 @@ const matchedShows = async (
   windowStart: string,
   windowEnd: string,
 ): Promise<MatchedEventRow[]> => {
-  if (canonicalNames.length === 0) return []
+  if (canonicalNames.length === 0) return [];
   const rows = await db
     .select(eventSelection())
     .from(events)
@@ -222,9 +222,9 @@ const matchedShows = async (
         billsAnyCanonicalName(canonicalNames),
       ),
     )
-    .orderBy(events.date, displayHeadliner())
-  return withDisplayPrices(rows)
-}
+    .orderBy(events.date, displayHeadliner());
+  return withDisplayPrices(rows);
+};
 
 // Zero-week fallback (design lock): the 2 soonest visible shows in the same
 // window, so the light variant still earns its open.
@@ -239,7 +239,7 @@ const tastePicks = async (
     .where(windowFilter(windowStart, windowEnd))
     .orderBy(events.date, displayHeadliner())
     .limit(TASTE_PICK_COUNT)
-    .then(withDisplayPrices)
+    .then(withDisplayPrices);
 
 // The picks are identical for every zero-match user in a run, so the query
 // executes at most once per run instead of once per user.
@@ -247,12 +247,12 @@ const lazyTastePicks = (
   windowStart: string,
   windowEnd: string,
 ): (() => Promise<MatchedEventRow[]>) => {
-  let cached: Promise<MatchedEventRow[]> | null = null
+  let cached: Promise<MatchedEventRow[]> | null = null;
   return () => {
-    cached ??= tastePicks(windowStart, windowEnd)
-    return cached
-  }
-}
+    cached ??= tastePicks(windowStart, windowEnd);
+    return cached;
+  };
+};
 
 // tourName stays null — events carry no tour metadata yet; the template
 // collapses the line when absent.
@@ -263,34 +263,34 @@ const toDigestShow = (row: MatchedEventRow): DigestEmailShow => ({
   dateLabel: dateLabel(row.date),
   priceLabel: priceLabel(row.ticketPriceMin),
   url: `${appUrl()}/events/${row.id}`,
-})
+});
 
 // ---------------------------------------------------------------------------
 // Run summary (phase 3 observability payload)
 // ---------------------------------------------------------------------------
 
 interface WeeklySummary {
-  job: 'spotify-weekly'
-  dryRun: boolean
+  job: 'spotify-weekly';
+  dryRun: boolean;
   // Which digest shape ran — the only way a prod summary row distinguishes a
   // legitimately small Spotify-only audience from the flag being off.
-  nativeDigest: boolean
-  isoWeek: string
-  windowStart: string
-  windowEnd: string
-  digestCandidates: number
-  digestSkippedEntitlement: number
-  digestPrepared: number
-  digestSent: number
-  digestZeroWeek: number
-  digestSkippedEmpty: number
-  digestFailures: number
+  nativeDigest: boolean;
+  isoWeek: string;
+  windowStart: string;
+  windowEnd: string;
+  digestCandidates: number;
+  digestSkippedEntitlement: number;
+  digestPrepared: number;
+  digestSent: number;
+  digestZeroWeek: number;
+  digestSkippedEmpty: number;
+  digestFailures: number;
   // Separates "the flag hid the Spotify shape" from a run that reached zero
   // eligible recipients on its own.
-  digestSkippedFlag: boolean
+  digestSkippedFlag: boolean;
 }
 
-type DigestOutcome = 'sent' | 'skipped-entitlement' | 'skipped-empty'
+type DigestOutcome = 'sent' | 'skipped-entitlement' | 'skipped-empty';
 
 const digestForUser = async (
   userId: string,
@@ -300,17 +300,17 @@ const digestForUser = async (
 ): Promise<DigestOutcome> => {
   // Clerk publicMetadata feeds role-comped derivation; a Clerk blip falls
   // back to metadata-free derivation (DB rows still decide paid plans).
-  let publicMetadata: unknown
+  let publicMetadata: unknown;
   try {
-    publicMetadata = (await clerkUsers.getUser(userId)).publicMetadata
+    publicMetadata = (await clerkUsers.getUser(userId)).publicMetadata;
   } catch (err) {
     apiLogger.warn(
       { err, userId },
       'spotify-weekly: Clerk metadata fetch failed — deriving plan without it',
-    )
-    publicMetadata = undefined
+    );
+    publicMetadata = undefined;
   }
-  const planState = await loadPlanState(userId, publicMetadata)
+  const planState = await loadPlanState(userId, publicMetadata);
   // The generalized digest is a following feature, so it rides the following
   // entitlement; the Spotify-only shape stays on 'spotify-sync'.
   if (
@@ -319,7 +319,7 @@ const digestForUser = async (
       summary.nativeDigest ? 'following' : 'spotify-sync',
     )
   ) {
-    return 'skipped-entitlement'
+    return 'skipped-entitlement';
   }
 
   const followRows = await db
@@ -339,31 +339,31 @@ const digestForUser = async (
             ]),
         ne(userArtistFollows.canonicalName, ''),
       ),
-    )
-  const canonicalNames = followRows.map((row) => row.canonicalName)
+    );
+  const canonicalNames = followRows.map((row) => row.canonicalName);
 
   const matched = await matchedShows(
     canonicalNames,
     summary.windowStart,
     summary.windowEnd,
-  )
-  const zero = matched.length === 0
-  const picks = zero ? await getTastePicks() : []
+  );
+  const zero = matched.length === 0;
+  const picks = zero ? await getTastePicks() : [];
   if (zero && picks.length === 0) {
     // Nothing to say at all — better no email than an empty one.
-    return 'skipped-empty'
+    return 'skipped-empty';
   }
 
-  if (zero) summary.digestZeroWeek += 1
-  summary.digestPrepared += 1
+  if (zero) summary.digestZeroWeek += 1;
+  summary.digestPrepared += 1;
 
-  const dedupeKey = `${userId}:${summary.isoWeek}`
+  const dedupeKey = `${userId}:${summary.isoWeek}`;
   if (summary.dryRun) {
     apiLogger.info(
       { userId, dedupeKey, matchedCount: matched.length, zeroWeek: zero },
       'spotify-weekly: dry run — digest prepared but not sent',
-    )
-    return 'sent'
+    );
+    return 'sent';
   }
 
   const sendOutcome = await sendTransactionalEmail({
@@ -375,15 +375,15 @@ const digestForUser = async (
       tastePicks: picks.map(toDigestShow),
       unsubscribeUrl: buildUnsubscribeUrl(userId, 'digest') ?? null,
     },
-  })
+  });
   // Only a real Resend delivery counts toward digestSent — the pipeline can
   // no-op (dedupe on cron retry, kill switch, missing env) without throwing.
   // A 'failed' outcome is a real delivery failure and must show up in the
   // summary; deduped/suppressed no-ops are neither sent nor failed.
-  if (sendOutcome === 'sent') summary.digestSent += 1
-  if (sendOutcome === 'failed') summary.digestFailures += 1
-  return 'sent'
-}
+  if (sendOutcome === 'sent') summary.digestSent += 1;
+  if (sendOutcome === 'failed') summary.digestFailures += 1;
+  return 'sent';
+};
 
 // ---------------------------------------------------------------------------
 // Orchestrator
@@ -392,7 +392,7 @@ const digestForUser = async (
 export const runSpotifyWeekly = async (
   now: Date = new Date(),
 ): Promise<void> => {
-  const dayUtcMs = denverDayUtcMs(now)
+  const dayUtcMs = denverDayUtcMs(now);
   const summary: WeeklySummary = {
     job: 'spotify-weekly',
     dryRun: isDryRun(),
@@ -408,11 +408,11 @@ export const runSpotifyWeekly = async (
     digestSkippedEmpty: 0,
     digestFailures: 0,
     digestSkippedFlag: false,
-  }
+  };
   apiLogger.info(
     { isoWeek: summary.isoWeek, dryRun: summary.dryRun },
     'spotify-weekly: starting run',
-  )
+  );
 
   // The native shape rides the `following` entitlement and reads every follow
   // source, so it is deliberately outside this flag: hiding Spotify must not
@@ -420,13 +420,13 @@ export const runSpotifyWeekly = async (
   // try/catch because that catch pages Sentry, and a deliberate skip must not
   // page anyone — hoisting also means a flagged-off run does no Clerk work.
   const digestEnabled =
-    summary.nativeDigest || (await isFeatureEnabled('spotify-sync'))
+    summary.nativeDigest || (await isFeatureEnabled('spotify-sync'));
   if (!digestEnabled) {
-    summary.digestSkippedFlag = true
+    summary.digestSkippedFlag = true;
     apiLogger.info(
       { isoWeek: summary.isoWeek },
       'spotify-weekly: spotify-sync flag off, skipping digest phase',
-    )
+    );
   }
 
   // Phase 1 — digests. Clerk is loaded lazily so a missing @clerk/backend
@@ -434,12 +434,12 @@ export const runSpotifyWeekly = async (
   if (digestEnabled) {
     try {
       // Fail fast once (billing-daily pattern) instead of erroring per-user.
-      const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+      const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
       if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
-        throw new Error('CLERK_SECRET_KEY not set — digest phase skipped')
+        throw new Error('CLERK_SECRET_KEY not set — digest phase skipped');
       }
-      const { createClerkClient } = await import('@clerk/backend')
-      const clerk = createClerkClient({ secretKey: clerkSecretKey })
+      const { createClerkClient } = await import('@clerk/backend');
+      const clerk = createClerkClient({ secretKey: clerkSecretKey });
       const recipients = summary.nativeDigest
         ? await db
             .selectDistinct({ userId: userArtistFollows.userId })
@@ -462,12 +462,12 @@ export const runSpotifyWeekly = async (
                 ne(userSpotifyConnections.status, 'revoked'),
                 eq(userSpotifyConnections.digestEnabled, true),
               ),
-            )
-      summary.digestCandidates = recipients.length
+            );
+      summary.digestCandidates = recipients.length;
       const getTastePicks = lazyTastePicks(
         summary.windowStart,
         summary.windowEnd,
-      )
+      );
       for (const { userId } of recipients) {
         try {
           const outcome = await digestForUser(
@@ -475,25 +475,25 @@ export const runSpotifyWeekly = async (
             clerk.users,
             summary,
             getTastePicks,
-          )
+          );
           if (outcome === 'skipped-entitlement') {
-            summary.digestSkippedEntitlement += 1
+            summary.digestSkippedEntitlement += 1;
           }
-          if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1
+          if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1;
         } catch (err) {
-          summary.digestFailures += 1
-          apiLogger.error({ err, userId }, 'spotify-weekly: digest failed')
+          summary.digestFailures += 1;
+          apiLogger.error({ err, userId }, 'spotify-weekly: digest failed');
           Sentry.captureException(err, {
             tags: { job: 'spotify-weekly', phase: 'digest' },
             extra: { userId },
-          })
+          });
         }
       }
     } catch (err) {
-      apiLogger.error({ err }, 'spotify-weekly: digest phase failed')
+      apiLogger.error({ err }, 'spotify-weekly: digest phase failed');
       Sentry.captureException(err, {
         tags: { job: 'spotify-weekly', phase: 'digest' },
-      })
+      });
     }
   }
 
@@ -503,12 +503,12 @@ export const runSpotifyWeekly = async (
       service: 'spotify',
       costUsd: '0',
       metadata: JSON.stringify(summary),
-    })
+    });
   } catch (err) {
-    apiLogger.error({ err }, 'spotify-weekly: cost_tracking insert failed')
+    apiLogger.error({ err }, 'spotify-weekly: cost_tracking insert failed');
   }
-  apiLogger.info({ summary }, 'spotify-weekly: run complete')
-}
+  apiLogger.info({ summary }, 'spotify-weekly: run complete');
+};
 
 // CLI entry guard — same shape as billing-daily.ts. Runs only when executed
 // directly, so tests import runSpotifyWeekly without auto-running. Exits
@@ -516,15 +516,15 @@ export const runSpotifyWeekly = async (
 // per-user failures are swallowed and logged inside).
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
   runSpotifyWeekly()
     .then(() => {
-      apiLogger.info('spotify-weekly: done')
-      process.exit(0)
+      apiLogger.info('spotify-weekly: done');
+      process.exit(0);
     })
     .catch((err) => {
-      apiLogger.error({ err }, 'spotify-weekly: catastrophic failure')
-      process.exit(1)
-    })
+      apiLogger.error({ err }, 'spotify-weekly: catastrophic failure');
+      process.exit(1);
+    });
 }

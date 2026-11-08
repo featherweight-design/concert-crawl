@@ -1,7 +1,7 @@
-import type { SubmissionDisplayStatus } from '@concert-crawl/types'
+import type { SubmissionDisplayStatus } from '@concert-crawl/types';
 
 interface StatusPillProps {
-  status: SubmissionDisplayStatus
+  status: SubmissionDisplayStatus;
 }
 
 const STATUS_STYLE: Record<
@@ -11,12 +11,12 @@ const STATUS_STYLE: Record<
   confirmed: { label: 'confirmed', color: 'var(--success)' },
   pending: { label: 'pending', color: 'var(--warning)' },
   disputed: { label: 'disputed', color: 'var(--danger)' },
-}
+};
 
-const FALLBACK_STYLE = { label: 'pending', color: 'var(--warning)' }
+const FALLBACK_STYLE = { label: 'pending', color: 'var(--warning)' };
 
 export function StatusPill({ status }: StatusPillProps) {
-  const { label, color } = STATUS_STYLE[status] ?? FALLBACK_STYLE
+  const { label, color } = STATUS_STYLE[status] ?? FALLBACK_STYLE;
   return (
     <span
       style={{
@@ -36,5 +36,5 @@ export function StatusPill({ status }: StatusPillProps) {
     >
       {label}
     </span>
-  )
+  );
 }

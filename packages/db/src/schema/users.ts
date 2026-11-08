@@ -7,9 +7,9 @@ import {
   timestamp,
   uuid,
   varchar,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
-export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user'])
+export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user']);
 
 export const userRoles = pgTable('user_roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -21,7 +21,7 @@ export const userRoles = pgTable('user_roles', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 // Per-user price-cred score. Keyed by Clerk user ID with a UNIQUE constraint so
 // awards upsert (every fan gets a row on their first confirmed submission),
@@ -39,7 +39,7 @@ export const userCred = pgTable('user_cred', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const inviteCodes = pgTable('invite_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -53,7 +53,7 @@ export const inviteCodes = pgTable('invite_codes', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -64,7 +64,7 @@ export const auditLog = pgTable('audit_log', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const waitlistEntries = pgTable('waitlist_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -73,11 +73,11 @@ export const waitlistEntries = pgTable('waitlist_entries', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type UserRole = typeof userRoles.$inferSelect
-export type UserCred = typeof userCred.$inferSelect
-export type NewUserCred = typeof userCred.$inferInsert
-export type InviteCode = typeof inviteCodes.$inferSelect
-export type AuditLogEntry = typeof auditLog.$inferSelect
-export type WaitlistEntry = typeof waitlistEntries.$inferSelect
+export type UserRole = typeof userRoles.$inferSelect;
+export type UserCred = typeof userCred.$inferSelect;
+export type NewUserCred = typeof userCred.$inferInsert;
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+export type WaitlistEntry = typeof waitlistEntries.$inferSelect;

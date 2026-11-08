@@ -3,6 +3,7 @@
 > **Status:** Approved by Hugh 2026-06-23. All §15 sign-offs and §16 open questions resolved (see §18 Resolution log). Plan drafted at `docs/superpowers/plans/2026-06-22-admin-contest-review.md` and shipping for review alongside this spec. Closes a gap surfaced during the price-source discoverability cycle: contests can be filed and corroborated by fans, but admins have no UI to triage stalled contests — and resolving one today silently overturns a confirmed price with no audit trail tying the parent and challenger together.
 >
 > **Sources:**
+>
 > - Design property table: `docs/superpowers/design-tables/admin-contest-review.md`
 > - Code recon: `docs/superpowers/recon-admin-contest-review.md`
 > - Design handoff: `design/design_handoff_phase8_5_corroboration/` (admin-queues.jsx, dispute-surfaces.jsx, README.md)
@@ -69,6 +70,7 @@ Split rationale: backend semantics are different (events vs price submissions), 
 ### 4.1 Route + integration
 
 **Locked: extend `/admin/review` with a new tab.** Reasons:
+
 - The existing review page already surfaces "stuff admin needs to triage" — pending submissions, event flags, missing events
 - Adding a separate `/admin/contests` route would split the mental model and require its own nav badge plumbing
 - Existing `useReviewCounts()` extends cleanly to add a `contests` field
@@ -78,6 +80,7 @@ The review page already has a tabs pattern; adding `Contests · {count}` as a si
 ### 4.2 Backend ownership
 
 The contest endpoints live under `apps/api/src/routes/admin/contests.ts` (new file) and mount on `adminRouter` alongside `admin/prices.ts`. Reasons:
+
 - Distinct from the single-row PATCH flow in `prices.ts` — different transaction shape, different audit metadata
 - Keeps the contest resolution semantics in one file for review
 
@@ -170,7 +173,7 @@ The consumer-side notification UI gap (no bell, no panel, no consumer endpoint t
    - `lastAdminActionAt: string | null` — ISO timestamp of the most recent admin action on the contest
    - `lastAdminActionKind: 'defer' | null` — set on defer, cleared on resolve (resolution closes the contest, so no need to surface)
 
-   The Consumer UI shows a quiet pill on the counter card when `lastAdminActionKind === 'defer'`: *"Admin requested more info"*. Anyone visiting the event page sees the engagement signal — no notification system needed.
+   The Consumer UI shows a quiet pill on the counter card when `lastAdminActionKind === 'defer'`: _"Admin requested more info"_. Anyone visiting the event page sees the engagement signal — no notification system needed.
 
 3. **No bell, no panel, no push** in this PR. The submitters don't get a push-style alert; they find out by revisiting the event page. Acceptable trade-off because:
    - Submitters are already engaged with the event (they filed a submission for it)
@@ -194,6 +197,7 @@ CREATE UNIQUE INDEX price_submissions_pending_counter_unique_idx
 The DB makes it impossible to have two pending counters against the same parent. Application code returning 409 is now belt-and-braces, not the primary defense. The orphaned-counter auto-archive logic in §4.3 becomes dead-by-construction (a graceful cleanup path that never fires in steady state, but is kept to handle migration-window in-flight rows).
 
 Rationale:
+
 - The system is naturally 1-to-1 (one dispute at a time per slot). 1-to-many adds complexity without product value.
 - Eliminates the design's ambiguity around 1-vs-N adjudication (A5)
 - Keeps `AdminDisputePanel` literally one-vs-one as designed
@@ -201,21 +205,31 @@ Rationale:
 - If consumer feedback later asks for parallel dispute support, that's a separate, opinionated PR
 
 **Server-side defense — both counter-creation routes get the same treatment:** counters today can be inserted from TWO places (see recon §gap-5):
+
 - `POST /v1/submissions/:id/dispute` (`apps/api/src/routes/submissions.ts`) — initial dispute from DisputeForm
 - `POST /v1/events/:eventId/price-submissions` (`apps/api/src/routes/price-submissions.ts`) — CounterSubmitSheet path; allowed when the body includes `disputedSubmissionId` (server validates the referenced parent has `status='corroborated'`)
 
 The DB partial unique index is the source of truth and catches duplicates in either route. Both handlers add the same pre-insert check + DB unique-violation (Postgres SQLSTATE `23505`) translation so consumers see a clean 409 instead of a 500:
 
 ```ts
-const existingCounter = await db.select({ id: priceSubmissions.id })
+const existingCounter = await db
+  .select({ id: priceSubmissions.id })
   .from(priceSubmissions)
-  .where(and(
-    eq(priceSubmissions.disputedSubmissionId, parentId),
-    eq(priceSubmissions.status, 'pending'),
-  ))
-  .limit(1)
+  .where(
+    and(
+      eq(priceSubmissions.disputedSubmissionId, parentId),
+      eq(priceSubmissions.status, 'pending'),
+    ),
+  )
+  .limit(1);
 if (existingCounter.length > 0) {
-  return ctx.json({ success: false, error: 'Another challenge is already pending against this submission.' }, 409)
+  return ctx.json(
+    {
+      success: false,
+      error: 'Another challenge is already pending against this submission.',
+    },
+    409,
+  );
 }
 
 // Plus, wrap the insert in a try/catch and translate SQLSTATE 23505 on
@@ -235,21 +249,35 @@ The current `PATCH /v1/admin/prices/submissions/:id` lets an admin set status to
 
 ```ts
 // In PATCH /v1/admin/prices/submissions/:id handler, after fetching the submission:
-if (submission.disputedSubmissionId !== null || submission.status === 'disputed') {
+if (
+  submission.disputedSubmissionId !== null ||
+  submission.status === 'disputed'
+) {
   apiLogger.warn(
-    { submissionId: id, status: submission.status, disputedSubmissionId: submission.disputedSubmissionId },
+    {
+      submissionId: id,
+      status: submission.status,
+      disputedSubmissionId: submission.disputedSubmissionId,
+    },
     'PATCH lockout: contest row reached the non-contest endpoint',
-  )
+  );
   // Sentry tag for triage — see §11.3
-  Sentry.captureMessage('Contest row hit PATCH /v1/admin/prices/submissions/:id', {
-    level: 'warning',
-    tags: { endpoint_lockout: 'contest_row' },
-    extra: { submissionId: id, status: submission.status },
-  })
-  return ctx.json({
-    success: false,
-    error: 'This submission is part of a contest. Resolve via /v1/admin/contests/prices/:contestId instead.',
-  }, 409)
+  Sentry.captureMessage(
+    'Contest row hit PATCH /v1/admin/prices/submissions/:id',
+    {
+      level: 'warning',
+      tags: { endpoint_lockout: 'contest_row' },
+      extra: { submissionId: id, status: submission.status },
+    },
+  );
+  return ctx.json(
+    {
+      success: false,
+      error:
+        'This submission is part of a contest. Resolve via /v1/admin/contests/prices/:contestId instead.',
+    },
+    409,
+  );
 }
 ```
 
@@ -264,11 +292,13 @@ This closes the foot-gun even if the new contest UI is bypassed (e.g. an admin s
 ### 5.1 `price_submission_status` enum gets `archived`
 
 Migration adds an enum value:
+
 ```sql
 ALTER TYPE price_submission_status ADD VALUE 'archived';
 ```
 
 **Semantics distinct from `stale`:**
+
 - `stale`: admin marked as outdated/no-longer-valid (existing usage — e.g., event passed without resolution)
 - `archived`: lost a contest; the row is preserved for audit and reputation but never returned by consumer queries
 
@@ -277,6 +307,7 @@ Both archived AND stale rows are excluded from the corroborated/pending consumer
 ### 5.2 New `archived_reason` column
 
 Migration adds:
+
 ```sql
 ALTER TABLE price_submissions
   ADD COLUMN archived_reason text;
@@ -294,6 +325,7 @@ Why not reuse `note`: `note` is the submitter's free-text. Stomping it with admi
 ### 5.3 Partial indexes for queue performance
 
 Migration adds:
+
 ```sql
 CREATE INDEX price_submissions_disputed_status_idx
   ON price_submissions (created_at)
@@ -313,10 +345,10 @@ These power the contest-queue query and the counter-lookup join. **The queue que
 ```ts
 export interface PriceSubmission {
   // ... existing fields
-  note: string | null              // was missing from shared type — added
-  archivedReason: string | null    // NEW — admin's archive reason
-  lastAdminActionAt: string | null // NEW — ISO timestamp of most recent admin action
-  lastAdminActionKind: 'defer' | null  // NEW — drives the "Admin requested more info" pill on consumer event detail
+  note: string | null; // was missing from shared type — added
+  archivedReason: string | null; // NEW — admin's archive reason
+  lastAdminActionAt: string | null; // NEW — ISO timestamp of most recent admin action
+  lastAdminActionKind: 'defer' | null; // NEW — drives the "Admin requested more info" pill on consumer event detail
 }
 ```
 
@@ -335,6 +367,7 @@ Also: the `status` union literal must include the new `'archived'` value. Update
 **Query params:** `limit` (default 20, max 100), `offset` (default 0). Sort is locked to `filedAt asc` (counter.createdAt ascending — oldest contest first) per §7.8; no `sort` param in v1. Configurable sort is deferred to a follow-up alongside the "All disputes" full-list view.
 
 **Response shape:**
+
 ```ts
 {
   success: true,
@@ -403,6 +436,7 @@ Returns the same shape as a single row from §6.1, plus an optional `history` fi
 **Auth:** admin only.
 
 **Request body (Zod):**
+
 ```ts
 {
   resolution: 'parent_wins' | 'challenger_wins',
@@ -413,6 +447,7 @@ Returns the same shape as a single row from §6.1, plus an optional `history` fi
 `reason` required, min 10 chars (forces deliberate text, blocks accidental empty submits), max 2000 chars (generous; admins occasionally need to write paragraphs).
 
 **Response:**
+
 - 200 with `{ success: true, data: { resolution, parent: <updatedRow>, challenger: <updatedRow>, eventPriceUpdated: boolean } }`
 - 404 if either submission not found
 - 409 if any precondition fails (status mismatch — parent already archived, challenger withdrawn, etc.) — error body includes which precondition
@@ -422,6 +457,7 @@ Returns the same shape as a single row from §6.1, plus an optional `history` fi
 **Auth:** admin only.
 
 **Request body:**
+
 ```ts
 {
   reason: z.string().min(10).max(2000),
@@ -429,6 +465,7 @@ Returns the same shape as a single row from §6.1, plus an optional `history` fi
 ```
 
 **Effect:**
+
 - No status changes to either submission (both stay as they are — parent `disputed`, challenger `pending`)
 - **Sets `last_admin_action_at = NOW()` and `last_admin_action_kind = 'defer'` on the COUNTER row** (not the parent — the pill in §4.5 surfaces on the counter card via `priceByTier[].counterSubmission`). This is the mechanism that lights up the "Admin requested more info" pill on the consumer event-detail page; without setting these columns, the defer action is invisible to consumers.
 - Writes audit row `contest.defer` with the reason via `ctx.set('auditAction', ...)` (the audit middleware handles the insert)
@@ -445,6 +482,7 @@ The column writes happen inside a small transaction (or single UPDATE — no con
 ### 6.6 Audit metadata schema
 
 For `contest.resolve`:
+
 ```ts
 {
   resolution: 'parent_wins' | 'challenger_wins',
@@ -464,6 +502,7 @@ For `contest.resolve`:
 ```
 
 For `contest.defer`:
+
 ```ts
 {
   parentId: string,
@@ -489,15 +528,15 @@ The design property table at `docs/superpowers/design-tables/admin-contest-revie
 
 ### 7.2 Components
 
-| Component | Location | Notes |
-|---|---|---|
-| `PriceDisputesQueue` | `apps/web/src/components/admin/review/PriceDisputesQueue.tsx` | Auto-hides when `items.length === 0` per design |
-| `PriceDisputesQueueRow` | inline in same file | One per `(parent, counter)` pair |
-| `AdminDisputePanel` | `apps/web/src/components/admin/review/AdminDisputePanel.tsx` | Modal-style; opens in a new route `/admin/review/contests/:contestId` (deep-linkable) |
-| `AdminEntry` | `apps/web/src/components/admin/review/AdminEntry.tsx` | Shared sub-component for parent + counter columns |
-| `useReviewContestsQuery` | `apps/web/src/lib/queries/admin-contests.ts` | List query |
-| `useReviewContestDetail` | same | Single contest query |
-| `useResolveContest`, `useDeferContest` | same | Mutations |
+| Component                              | Location                                                      | Notes                                                                                 |
+| -------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `PriceDisputesQueue`                   | `apps/web/src/components/admin/review/PriceDisputesQueue.tsx` | Auto-hides when `items.length === 0` per design                                       |
+| `PriceDisputesQueueRow`                | inline in same file                                           | One per `(parent, counter)` pair                                                      |
+| `AdminDisputePanel`                    | `apps/web/src/components/admin/review/AdminDisputePanel.tsx`  | Modal-style; opens in a new route `/admin/review/contests/:contestId` (deep-linkable) |
+| `AdminEntry`                           | `apps/web/src/components/admin/review/AdminEntry.tsx`         | Shared sub-component for parent + counter columns                                     |
+| `useReviewContestsQuery`               | `apps/web/src/lib/queries/admin-contests.ts`                  | List query                                                                            |
+| `useReviewContestDetail`               | same                                                          | Single contest query                                                                  |
+| `useResolveContest`, `useDeferContest` | same                                                          | Mutations                                                                             |
 
 **A12 resolution — buttons commit on click.** The design's `Keep original` / `Promote counter` buttons are the action triggers directly; there is NO separate "Submit resolution" step. Each button requires a non-empty (min 10-char) reason before it enables. On click, the corresponding column gets the `winner` border treatment optimistically (preview UI while the API request is in flight) and the API call fires immediately. The `winner` parameter is therefore a transient client-side preview state derived from the action click, not a committed pre-decision.
 
@@ -510,6 +549,7 @@ The design property table at `docs/superpowers/design-tables/admin-contest-revie
 - `Promote counter` — solid azure (`AZ_D`), requires reason ≥ 10 chars before enabling, calls resolve with `challenger_wins`
 
 **Reason field validation:**
+
 - Empty or < 10 chars: all three buttons disabled
 - ≥ 10 chars: all three enabled
 - 2000-char hard limit at the input level (textarea `maxLength`)
@@ -530,20 +570,21 @@ This is the answer to A4 (parent already resolved) and A6 (withdrawn challenger)
 
 ### 7.5 Loading / error / success states (A10, A11)
 
-| State | UI |
-|---|---|
-| Queue loading | Skeleton rows (3 placeholder rows with shimmer) |
-| Queue empty | Auto-hides per design (`return null`) |
-| Queue error | Inline error block with retry button |
-| Panel loading | Skeleton in panel chrome (header, two columns, actions) |
-| Panel error | Error toast + retry button in panel |
-| Action in flight | Buttons disabled, spinner on the clicked button, optimistic `winner` highlight |
-| Action success | Toast + navigation back to queue |
-| Action error (409) | Toast with error body; panel reloads state |
+| State              | UI                                                                             |
+| ------------------ | ------------------------------------------------------------------------------ |
+| Queue loading      | Skeleton rows (3 placeholder rows with shimmer)                                |
+| Queue empty        | Auto-hides per design (`return null`)                                          |
+| Queue error        | Inline error block with retry button                                           |
+| Panel loading      | Skeleton in panel chrome (header, two columns, actions)                        |
+| Panel error        | Error toast + retry button in panel                                            |
+| Action in flight   | Buttons disabled, spinner on the clicked button, optimistic `winner` highlight |
+| Action success     | Toast + navigation back to queue                                               |
+| Action error (409) | Toast with error body; panel reloads state                                     |
 
 ### 7.6 Accessibility (A9)
 
 Required for v1:
+
 - `AdminDisputePanel` is a route (not a modal), so no `role="dialog"` needed. But it does need:
   - Focus management on mount: first focusable element receives focus
   - ESC keybind to close (navigate back to queue)
@@ -555,6 +596,7 @@ Required for v1:
 ### 7.7 Mobile / responsive (A8)
 
 **Carve-out: admin chrome is desktop-first.** Min recommended viewport: 1024×768. Below that:
+
 - Existing admin shell (`AdminShellClient`) handles the responsive shell — sidebar collapses to mobile bottom bar
 - `PriceDisputesQueue` table degrades to horizontal-scroll on viewports < 768px (no bespoke mobile chrome)
 - `AdminDisputePanel` (760px design width) wraps to single-column at < 800px viewport — two-up becomes stacked
@@ -617,35 +659,35 @@ Audit logging and notifications are **outside** the transaction (in the response
 
 Resolution of every ambiguity from the design table + recon report:
 
-| Ref | Concern | Locked behavior |
-|---|---|---|
-| A1 | Atomicity of admin price-side promotion | Single DB transaction wraps status flips + events projection + cred. Audit + notifications outside transaction. See §9. |
-| A2 | "Need more info" semantics | Records audit row `contest.defer`, sends in-app notifications, no state change to either submission. Contest stays in queue. See §6.4. |
-| A3 | Reason required / optional | Required for all three actions, min 10 chars, max 2000. Buttons disabled until valid. See §7.3. |
-| A4 | Parent already resolved when admin opens panel | Detail API returns current state; panel renders read-only stale-state view with banner. See §7.4. |
-| A5 | Multiple concurrent counters | API rejects 2nd pending counter at submit time (409). Admin panel is always 1-vs-1. See §4.6. |
-| A6 | Withdrawn challenger | Detail returns current state (challenger status=archived if withdrawn); panel renders stale-state view. See §7.4. |
-| A7 | Clickable submitter handles | Plain text for v1; trust-history view is a separate PR. See §7.9. |
-| A8 | Mobile / responsive | Admin chrome is desktop-first; min recommended 1024×768. Below that, table scrolls horizontally; panel stacks columns. No bespoke mobile chrome. See §7.7. |
-| A9 | Accessibility | Focus management on panel mount, ESC to close, `aria-pressed` on filter chips, `<th scope>` on table headers, native semantic elements throughout. See §7.6. |
-| A10 | Loading + error states | Skeleton rows for queue loading; inline error block with retry; panel-level skeleton + retry. See §7.5. |
-| A11 | Success state after promote/keep/defer | Toast + navigate back to queue; optimistic UI sets `winner` border on click. See §7.5. |
-| A12 | `winner` parameter semantics | Preview state set optimistically on action click. Commit happens via the action button; reason field validates client-side first. See §7.2. |
-| A13 | Filter chip persistence | URL query param (e.g. `?tab=eventreports&filter=cancelled`). PR 2. See §7.8. |
-| A14 | Sort affordances | v1 is `filed-at asc`, no UI control. "All disputes" defer. See §7.8. |
-| A15 | Audit logging | Every action writes an audit row. Schema in §6.6. |
-| A16 | 3-button vs 2-button race for event reports | PR 2 concern — handled by panel re-fetching state on focus + buttons disabled until counter confirmed present. |
-| A17 | `confirms` field type inconsistency | API returns `{ fans: number, admin: number }`; display layer formats as `"{fans} fans · {admin} admin"`. See §6.1. |
-| R1 | Contest queue visibility | New tab on `/admin/review?tab=contests`. See §4.1. |
-| R2 | Parent+challenger atomicity | Single DB transaction. See §4.3. |
-| R3 | UI layout for contest display | Per-(parent, counter) row in the queue table, opens to dedicated panel route. See §7.1, §7.2. |
-| R4 | Admin actions / outcomes | Keep original / Promote counter / Need more info (defer). No "approve both" or "force-set arbitrary price". See §7.3. |
-| R5 | Counter-submission API today | `POST /v1/submissions/:id/dispute` is the existing endpoint. No separate `/counter` route. Spec extends it with the §4.6 pre-insert duplicate check. |
-| R6 | Partial indexes for contest queries | Migration adds two partial indexes. See §5.3. |
-| R7 | Audit log metadata for contests | Schema locked in §6.6. |
-| R8 | Cred for dispute winners | +1 `priceCredScore` for the winner's submitter (challenger if they win, parent submitter already had it). Losers lose nothing. See §4.3. |
-| R9 | Consumer notifications on outcome | In-app to both parties on resolve and on defer. No email for v1. See §4.5. |
-| R10 | Bulk contest operations | Out of scope. See §3. |
+| Ref | Concern                                        | Locked behavior                                                                                                                                              |
+| --- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | Atomicity of admin price-side promotion        | Single DB transaction wraps status flips + events projection + cred. Audit + notifications outside transaction. See §9.                                      |
+| A2  | "Need more info" semantics                     | Records audit row `contest.defer`, sends in-app notifications, no state change to either submission. Contest stays in queue. See §6.4.                       |
+| A3  | Reason required / optional                     | Required for all three actions, min 10 chars, max 2000. Buttons disabled until valid. See §7.3.                                                              |
+| A4  | Parent already resolved when admin opens panel | Detail API returns current state; panel renders read-only stale-state view with banner. See §7.4.                                                            |
+| A5  | Multiple concurrent counters                   | API rejects 2nd pending counter at submit time (409). Admin panel is always 1-vs-1. See §4.6.                                                                |
+| A6  | Withdrawn challenger                           | Detail returns current state (challenger status=archived if withdrawn); panel renders stale-state view. See §7.4.                                            |
+| A7  | Clickable submitter handles                    | Plain text for v1; trust-history view is a separate PR. See §7.9.                                                                                            |
+| A8  | Mobile / responsive                            | Admin chrome is desktop-first; min recommended 1024×768. Below that, table scrolls horizontally; panel stacks columns. No bespoke mobile chrome. See §7.7.   |
+| A9  | Accessibility                                  | Focus management on panel mount, ESC to close, `aria-pressed` on filter chips, `<th scope>` on table headers, native semantic elements throughout. See §7.6. |
+| A10 | Loading + error states                         | Skeleton rows for queue loading; inline error block with retry; panel-level skeleton + retry. See §7.5.                                                      |
+| A11 | Success state after promote/keep/defer         | Toast + navigate back to queue; optimistic UI sets `winner` border on click. See §7.5.                                                                       |
+| A12 | `winner` parameter semantics                   | Preview state set optimistically on action click. Commit happens via the action button; reason field validates client-side first. See §7.2.                  |
+| A13 | Filter chip persistence                        | URL query param (e.g. `?tab=eventreports&filter=cancelled`). PR 2. See §7.8.                                                                                 |
+| A14 | Sort affordances                               | v1 is `filed-at asc`, no UI control. "All disputes" defer. See §7.8.                                                                                         |
+| A15 | Audit logging                                  | Every action writes an audit row. Schema in §6.6.                                                                                                            |
+| A16 | 3-button vs 2-button race for event reports    | PR 2 concern — handled by panel re-fetching state on focus + buttons disabled until counter confirmed present.                                               |
+| A17 | `confirms` field type inconsistency            | API returns `{ fans: number, admin: number }`; display layer formats as `"{fans} fans · {admin} admin"`. See §6.1.                                           |
+| R1  | Contest queue visibility                       | New tab on `/admin/review?tab=contests`. See §4.1.                                                                                                           |
+| R2  | Parent+challenger atomicity                    | Single DB transaction. See §4.3.                                                                                                                             |
+| R3  | UI layout for contest display                  | Per-(parent, counter) row in the queue table, opens to dedicated panel route. See §7.1, §7.2.                                                                |
+| R4  | Admin actions / outcomes                       | Keep original / Promote counter / Need more info (defer). No "approve both" or "force-set arbitrary price". See §7.3.                                        |
+| R5  | Counter-submission API today                   | `POST /v1/submissions/:id/dispute` is the existing endpoint. No separate `/counter` route. Spec extends it with the §4.6 pre-insert duplicate check.         |
+| R6  | Partial indexes for contest queries            | Migration adds two partial indexes. See §5.3.                                                                                                                |
+| R7  | Audit log metadata for contests                | Schema locked in §6.6.                                                                                                                                       |
+| R8  | Cred for dispute winners                       | +1 `priceCredScore` for the winner's submitter (challenger if they win, parent submitter already had it). Losers lose nothing. See §4.3.                     |
+| R9  | Consumer notifications on outcome              | In-app to both parties on resolve and on defer. No email for v1. See §4.5.                                                                                   |
+| R10 | Bulk contest operations                        | Out of scope. See §3.                                                                                                                                        |
 
 ---
 
@@ -773,21 +815,21 @@ Each step has a discrete commit + test pass before moving on.
 
 ## 14. Scope split: PR 1 (now) vs. PR 2 (follow-up)
 
-| Item | PR 1 | PR 2 |
-|---|---|---|
-| `archived` enum value + `archived_reason` column + indexes | ✅ | — |
-| `PriceSubmission` shared type extension | ✅ | — |
-| Defensive PATCH + duplicate-counter pre-insert check | ✅ | — |
-| Price contest API endpoints (list / detail / resolve / defer / counts) | ✅ | — |
-| `PriceDisputesQueue` + `AdminDisputePanel` + `AdminEntry` | ✅ | — |
-| Audit `contest.resolve` + `contest.defer` actions | ✅ | — |
-| In-app notifications on resolve + defer | ✅ | — |
-| `EventReportsQueue` + `EventReportResolutionPanel` + filter chips + imminent tell | — | ✅ |
-| Event-report adjudication API endpoints | — | ✅ |
-| "All disputes" / "All reports" full-list views | — | ✅ |
-| Submitter trust-history view (README §8.4) | — | Separate PR |
-| Email notifications | — | Separate PR |
-| Bulk contest operations | — | Separate PR if needed |
+| Item                                                                              | PR 1 | PR 2                  |
+| --------------------------------------------------------------------------------- | ---- | --------------------- |
+| `archived` enum value + `archived_reason` column + indexes                        | ✅   | —                     |
+| `PriceSubmission` shared type extension                                           | ✅   | —                     |
+| Defensive PATCH + duplicate-counter pre-insert check                              | ✅   | —                     |
+| Price contest API endpoints (list / detail / resolve / defer / counts)            | ✅   | —                     |
+| `PriceDisputesQueue` + `AdminDisputePanel` + `AdminEntry`                         | ✅   | —                     |
+| Audit `contest.resolve` + `contest.defer` actions                                 | ✅   | —                     |
+| In-app notifications on resolve + defer                                           | ✅   | —                     |
+| `EventReportsQueue` + `EventReportResolutionPanel` + filter chips + imminent tell | —    | ✅                    |
+| Event-report adjudication API endpoints                                           | —    | ✅                    |
+| "All disputes" / "All reports" full-list views                                    | —    | ✅                    |
+| Submitter trust-history view (README §8.4)                                        | —    | Separate PR           |
+| Email notifications                                                               | —    | Separate PR           |
+| Bulk contest operations                                                           | —    | Separate PR if needed |
 
 PR 1 is **#697** as originally filed. PR 2 ships separately under a new issue once #697 has been validated in staging + prod.
 
@@ -842,23 +884,23 @@ Once this spec is approved:
 
 ### §15 locks confirmed
 
-| # | Lock | Sign-off |
-|---|---|---|
-| 1 | Tab on `/admin/review` (not separate route) | ✅ Confirmed. Existing `ReviewTabs` primitive at `apps/web/src/components/admin/review/ReviewTabs.tsx` is WAI-ARIA-compliant and accepts a `ReviewTabDescriptor[]`. Adding a 4th tab is a one-line array addition + new `ContestsTabContent.tsx` mirroring the existing `_tabs/*.tsx` pattern. No design input needed. The `priceContests` count surfaces on the tab pill AND the admin nav sidebar badge — the sidebar badge plumbing in `apps/web/src/app/(protected)/admin/layout.tsx` currently sums `eventFlags + prices + missing` into `pendingReview`; this PR extends the `ReviewCounts` type and the sum so the badge includes `priceContests` (see plan task that touches `layout.tsx`). |
-| 2 | `archived` as distinct status from `stale` | ✅ Confirmed |
-| 3 | Reason min 10 chars | ✅ Confirmed |
-| 4 | 1-pending-counter-per-parent | ✅ **Strengthened** — DB-enforced via partial unique index (not just app-level 409). Consumer side hides the dispute affordance entirely so users never fill out a form they'll 409 on. Saved as `memory:project_pr4_dispute_affordance_hiding` for PR 4 of the price-source cycle. |
-| 5 | Pre-insert duplicate counter check ships with PR 1 | ✅ Confirmed, plus DB unique index per #4 above |
+| #   | Lock                                               | Sign-off                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Tab on `/admin/review` (not separate route)        | ✅ Confirmed. Existing `ReviewTabs` primitive at `apps/web/src/components/admin/review/ReviewTabs.tsx` is WAI-ARIA-compliant and accepts a `ReviewTabDescriptor[]`. Adding a 4th tab is a one-line array addition + new `ContestsTabContent.tsx` mirroring the existing `_tabs/*.tsx` pattern. No design input needed. The `priceContests` count surfaces on the tab pill AND the admin nav sidebar badge — the sidebar badge plumbing in `apps/web/src/app/(protected)/admin/layout.tsx` currently sums `eventFlags + prices + missing` into `pendingReview`; this PR extends the `ReviewCounts` type and the sum so the badge includes `priceContests` (see plan task that touches `layout.tsx`). |
+| 2   | `archived` as distinct status from `stale`         | ✅ Confirmed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 3   | Reason min 10 chars                                | ✅ Confirmed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 4   | 1-pending-counter-per-parent                       | ✅ **Strengthened** — DB-enforced via partial unique index (not just app-level 409). Consumer side hides the dispute affordance entirely so users never fill out a form they'll 409 on. Saved as `memory:project_pr4_dispute_affordance_hiding` for PR 4 of the price-source cycle.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 5   | Pre-insert duplicate counter check ships with PR 1 | ✅ Confirmed, plus DB unique index per #4 above                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### §16 open questions resolved
 
-| Q | Resolution |
-|---|---|
-| Q1 | **Surface engagement state on event detail page via a quiet pill** ("Admin requested more info") using new `lastAdminActionAt` + `lastAdminActionKind` columns on `price_submissions`. **Write `notifications` rows on every action** for future use, but no consumer notification UI in this PR. Consumer notification system tracked as **#737** with a design prompt — design pass required before implementation. |
-| Q2 | +1 cred for contest winner (same as standard approve). Locked in §4.3. |
-| Q3 | Loud Sentry on PATCH lockout with `endpoint_lockout: contest_row` tag. Baseline volume near-zero; firings are real signal. Locked in §4.7 + §11.3. |
-| Q4 | 1-to-1 only — see §15 #4 above. Auto-archive of orphans is dead-by-construction (kept as graceful cleanup for migration-window in-flight rows). |
-| Q5 | Unlimited defers for v1. Operational note: admins default to deciding, not deferring. `Need more info` is an edge case. Tracked operationally, not enforced in code. Locked in §4.5 + §16-Q5. |
+| Q   | Resolution                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | **Surface engagement state on event detail page via a quiet pill** ("Admin requested more info") using new `lastAdminActionAt` + `lastAdminActionKind` columns on `price_submissions`. **Write `notifications` rows on every action** for future use, but no consumer notification UI in this PR. Consumer notification system tracked as **#737** with a design prompt — design pass required before implementation. |
+| Q2  | +1 cred for contest winner (same as standard approve). Locked in §4.3.                                                                                                                                                                                                                                                                                                                                                |
+| Q3  | Loud Sentry on PATCH lockout with `endpoint_lockout: contest_row` tag. Baseline volume near-zero; firings are real signal. Locked in §4.7 + §11.3.                                                                                                                                                                                                                                                                    |
+| Q4  | 1-to-1 only — see §15 #4 above. Auto-archive of orphans is dead-by-construction (kept as graceful cleanup for migration-window in-flight rows).                                                                                                                                                                                                                                                                       |
+| Q5  | Unlimited defers for v1. Operational note: admins default to deciding, not deferring. `Need more info` is an edge case. Tracked operationally, not enforced in code. Locked in §4.5 + §16-Q5.                                                                                                                                                                                                                         |
 
 ### Adjacent decisions captured
 
@@ -872,6 +914,7 @@ Once this spec is approved:
 The implementation PR that closes issue #697 (drafted as the companion plan) will ship:
 
 **Backend:**
+
 - Migration: `archived` enum + `archived_reason` + `last_admin_action_at` + `last_admin_action_kind` columns + 3 indexes (queue perf × 2 + 1-counter-per-parent uniqueness) + defensive pre-index cleanup
 - `PATCH /v1/admin/prices/submissions/:id` rejects contest rows with 409 + loud Sentry
 - `POST /v1/submissions/:id/dispute` pre-insert duplicate check (belt-and-braces; DB now enforces)
@@ -886,6 +929,7 @@ The implementation PR that closes issue #697 (drafted as the companion plan) wil
 - Event detail handler (PR 3 of price-source cycle) extends `priceByTier[].counterSubmission` with `lastAdminActionAt` + `lastAdminActionKind` so the consumer pill works
 
 **Frontend:**
+
 - 4th tab on `/admin/review` — "Contests · {count}"
 - `ContestsTabContent.tsx` + `PriceDisputesQueue.tsx` queue
 - `AdminDisputePanel.tsx` per-contest panel at `/admin/review/contests/:contestId`
@@ -895,10 +939,12 @@ The implementation PR that closes issue #697 (drafted as the companion plan) wil
 - Stale-state read-only view when contest already resolved between queue load and panel open
 
 **Audit:**
+
 - `contest.resolve` action with full before/after metadata for both submissions + events projection
 - `contest.defer` action with reason
 
 **NOT in this PR (deferred):**
+
 - Event reports adjudication queue (PR 2 follow-up)
 - "All disputes" / "All reports" full-list views
 - Submitter trust-history drill-through (README §8.4)

@@ -1,8 +1,8 @@
-import { defineConfig } from 'vitest/config'
-import { fileURLToPath } from 'url'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Integration test config — exercises crawlVenue against a real Postgres
 // (the apps/api test DB at port 5433). Kept in a separate config from the
@@ -55,4 +55,4 @@ export default defineConfig({
         'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
     },
   },
-})
+});

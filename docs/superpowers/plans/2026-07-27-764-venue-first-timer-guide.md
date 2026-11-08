@@ -16,7 +16,7 @@
 ## Global Constraints
 
 - **TDD** — every new module lands with a failing test first. Pure logic in `packages/types/src/venue-guide.ts` is tested exhaustively before any UI consumes it.
-- **Voice bar (Sour Patch, #782)** — every displayed string lifts **verbatim** from the `*_COPY` maps in `design/design_handoff_venue_first_timer_guide/guide-data.jsx:55-114` (`ROXY_GUIDE_COPY` is *sample content*, not shipped copy — only `CALLOUT_COPY`, `EVENT_CHIP_COPY`, `PLACEHOLDER_COPY`, `ADMIN_COPY` are shipped strings). Do not rewrite them; the READINESS audit voice-passed them (READINESS.md:92-104).
+- **Voice bar (Sour Patch, #782)** — every displayed string lifts **verbatim** from the `*_COPY` maps in `design/design_handoff_venue_first_timer_guide/guide-data.jsx:55-114` (`ROXY_GUIDE_COPY` is _sample content_, not shipped copy — only `CALLOUT_COPY`, `EVENT_CHIP_COPY`, `PLACEHOLDER_COPY`, `ADMIN_COPY` are shipped strings). Do not rewrite them; the READINESS audit voice-passed them (READINESS.md:92-104).
 - **All customer-facing strings in `definitions/copy.ts`** — consumer strings extend `CONSUMER_COPY` (`apps/web/src/components/consumer/definitions/copy.ts`) under a new `venueGuide` block, next to the existing `venueProfile` block at line 676. Admin strings extend `ADMIN_COPY.venueDetailsClient` (`apps/web/src/components/admin/definitions/copy.ts:658`).
 - **Vocabulary is locked** — **Watching** (never Saved/Favorites/Following), **Submitted prices**, **price check**. The Watching affordance is an **eye** (lucide `Eye`). There is no heart icon in this product and none is introduced here. The prototype's `WatchingPill` (`guide-consumer.jsx:373`) is scaffolding for the canvas only — the real page keeps the shipped `WatchShowButton`.
 - **Tokens only** — every color reads from `var(--*)`. No ad-hoc hex, no Tailwind `dark:` variants. All 9 production themes must hold; spot-check Electric / Jade / Light.
@@ -53,14 +53,14 @@ Design's short keys (`age`, `bag`, `coat`, `entry`, `food`) were display-only in
 
 `chip_type` is a **`text` column validated by Zod, not a `pgEnum`.** Direct precedent: `venues.platform` (`packages/db/src/schema/venues.ts:76-81`) — "intentionally not a Postgres enum, to avoid the ALTER TYPE pain when we add more platforms." #997 adds four more chip types; that must not require a migration.
 
-### 2. Chip-state data model — `blank` is *absence*, not a stored value
+### 2. Chip-state data model — `blank` is _absence_, not a stored value
 
 Design's three states are `blank | authored | honest_placeholder` (`guide-data.jsx:127-131`). Persisting all three would require storing empty rows, which then need cleanup rules. Instead:
 
-| Design state | Storage |
-| --- | --- |
-| `blank` | **no row** in `venue_guide_chips` |
-| `authored` | row with `is_placeholder = false`, `body` non-empty after trim |
+| Design state         | Storage                                                                      |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `blank`              | **no row** in `venue_guide_chips`                                            |
+| `authored`           | row with `is_placeholder = false`, `body` non-empty after trim               |
 | `honest_placeholder` | row with `is_placeholder = true`, `body = ''`, `chip_type = 'accessibility'` |
 
 A DB CHECK constraint makes `blank` **unrepresentable**:
@@ -72,17 +72,17 @@ CONSTRAINT venue_guide_chips_state_check CHECK (
 )
 ```
 
-Consequence, accepted deliberately: a chip the admin *selects in the picker but leaves empty* is not persisted. Select Parking, type nothing, save, reload → the chip is unselected again. This is honest (a blank chip renders nowhere on display anyway, per the legend at `guide-admin.jsx:306`) and it costs zero cleanup machinery. Document it in the admin help copy? **No** — it's non-surprising and adding copy for it clutters the block. The `blank` state stays purely a client-side, in-session concept.
+Consequence, accepted deliberately: a chip the admin _selects in the picker but leaves empty_ is not persisted. Select Parking, type nothing, save, reload → the chip is unselected again. This is honest (a blank chip renders nowhere on display anyway, per the legend at `guide-admin.jsx:306`) and it costs zero cleanup machinery. Document it in the admin help copy? **No** — it's non-surprising and adding copy for it clutters the block. The `blank` state stays purely a client-side, in-session concept.
 
 **No `sort_order` column.** The brief mentions one (brief line 182) but display order is fully determined by `GUIDE_CHIP_ORDER` in `packages/types` (accessibility pinned first, per Q4). Per-venue reordering was never a designed affordance. YAGNI — killed explicitly.
 
 **Insider tip lives on `venues`, not in the chip table.** It's 1:1 with the venue, it's not a chip (different render treatment, different admin panel, different position), and per the KISS convention we exhaust existing tables first: `venues.insider_tip text`.
 
-### 3. Publish-state derivation — the *badge* is derived, the *published* flag is persisted
+### 3. Publish-state derivation — the _badge_ is derived, the _published_ flag is persisted
 
 Two distinct things the READINESS item conflates:
 
-- **The badge** (`Ready to publish` / `Publishable · access marked undocumented` / `Blocked · accessibility required`, `guide-admin.jsx:213-215`) is **never persisted.** It is computed by a single shared pure function, `deriveGuidePublishState()`, exported from `packages/types/src/venue-guide.ts` and imported by *both* the admin client (badge) and the API `POST .../guide/publish` handler (server-side gate). One function, two call sites — the client cannot show "Ready" for something the server will reject, and the server cannot be bypassed by a hand-rolled request.
+- **The badge** (`Ready to publish` / `Publishable · access marked undocumented` / `Blocked · accessibility required`, `guide-admin.jsx:213-215`) is **never persisted.** It is computed by a single shared pure function, `deriveGuidePublishState()`, exported from `packages/types/src/venue-guide.ts` and imported by _both_ the admin client (badge) and the API `POST .../guide/publish` handler (server-side gate). One function, two call sites — the client cannot show "Ready" for something the server will reject, and the server cannot be bypassed by a hand-rolled request.
 - **Publication itself** is persisted as `venues.guide_published_at timestamptz null`. The admin block has two buttons (`Save draft` / `Publish guide`, `guide-admin.jsx:293-295`), so a draft/live distinction genuinely exists. `Save draft` writes chips + insider tip and leaves `guide_published_at` untouched. `Publish guide` runs the gate and, on pass, sets `guide_published_at = now()`. The consumer endpoint returns a guide **only** when `guide_published_at IS NOT NULL`.
 
 ### 4. v2 chip hooks — two arrays, one Zod enum, zero migrations
@@ -90,8 +90,22 @@ Two distinct things the READINESS item conflates:
 `packages/types/src/venue-guide.ts` exports:
 
 ```ts
-export const GUIDE_CHIP_ORDER = ['accessibility','parking','age_policy','bag_check','coat_check','will_call','food_drink','transit'] as const
-export const GUIDE_CHIP_V2_KEYS = ['weather','restrooms','atm','cell_service'] as const   // #997, not authorable
+export const GUIDE_CHIP_ORDER = [
+  'accessibility',
+  'parking',
+  'age_policy',
+  'bag_check',
+  'coat_check',
+  'will_call',
+  'food_drink',
+  'transit',
+] as const;
+export const GUIDE_CHIP_V2_KEYS = [
+  'weather',
+  'restrooms',
+  'atm',
+  'cell_service',
+] as const; // #997, not authorable
 ```
 
 The Zod enum is built from `GUIDE_CHIP_ORDER` only. The admin picker renders `GUIDE_CHIP_V2_KEYS` as disabled ghosts with a `SOON · #997` marker (`guide-admin.jsx:96-104`). Because `chip_type` is `text` (decision 1) and there is no value CHECK on it, #997 is a pure application-code change: move keys from the v2 array into `GUIDE_CHIP_ORDER`, add label + placeholder copy, done. **No migration, no `ALTER TYPE`.** The `is_placeholder`/`body` CHECK stays — that invariant never expands.
@@ -100,9 +114,9 @@ The Zod enum is built from `GUIDE_CHIP_ORDER` only. The admin picker renders `GU
 
 ## Correction to the handoff's sequencing note
 
-`design/design_handoff_venue_first_timer_guide/README.md:180-182` says: *"If eng ships the section before detection is wired, everyone sees the collapsed (returner) state."*
+`design/design_handoff_venue_first_timer_guide/README.md:180-182` says: _"If eng ships the section before detection is wired, everyone sees the collapsed (returner) state."_
 
-**That is inverted and this plan does the opposite.** Brief Q7 (spec lines 68-72) and the READINESS lifecycle sweep (READINESS.md:124-127) both lock *anonymous → callout fires; we default to helpful when we don't know the user's history*. Before #70 lands we do not know anyone's history — so the pre-detection default is **first-timer for everyone**, callout firing, guide expanded. The returner accordion is dark until detection exists. Shipping the collapsed state as the default would suppress the callout for 100% of users, which is the exact opposite of the locked decision.
+**That is inverted and this plan does the opposite.** Brief Q7 (spec lines 68-72) and the READINESS lifecycle sweep (READINESS.md:124-127) both lock _anonymous → callout fires; we default to helpful when we don't know the user's history_. Before #70 lands we do not know anyone's history — so the pre-detection default is **first-timer for everyone**, callout firing, guide expanded. The returner accordion is dark until detection exists. Shipping the collapsed state as the default would suppress the callout for 100% of users, which is the exact opposite of the locked decision.
 
 ---
 
@@ -110,18 +124,18 @@ The Zod enum is built from `GUIDE_CHIP_ORDER` only. The admin picker renders `GU
 
 Four PRs, strictly ordered. Each passes CI standalone.
 
-| PR | Scope | Depends on | Blocked by |
-| --- | --- | --- | --- |
-| **PR-1** | Schema + shared pure module (`packages/db`, `packages/types`) | — | — |
-| **PR-2** | Admin authoring surface (API + admin UI) | PR-1 | — |
-| **PR-3** | Consumer surface: populated · thin · anonymous | PR-1, PR-2 (needs real data to eyeball) | — |
-| **PR-4** | **Returner state only** | PR-3 | **#70 Concert History** must ship `user_events.attending_at` |
+| PR       | Scope                                                         | Depends on                              | Blocked by                                                   |
+| -------- | ------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------ |
+| **PR-1** | Schema + shared pure module (`packages/db`, `packages/types`) | —                                       | —                                                            |
+| **PR-2** | Admin authoring surface (API + admin UI)                      | PR-1                                    | —                                                            |
+| **PR-3** | Consumer surface: populated · thin · anonymous                | PR-1, PR-2 (needs real data to eyeball) | —                                                            |
+| **PR-4** | **Returner state only**                                       | PR-3                                    | **#70 Concert History** must ship `user_events.attending_at` |
 
 PR-1 → PR-3 ship immediately. **PR-4 is the only thing gated on #70** — this is the seam the READINESS verdict called "the section ships independent of the callout."
 
 ### The #70 data contract (name it, don't guess it)
 
-⚠️ **The brief and handoff both cite "#55" for Concert History. That is wrong.** [#55](https://github.com/HartiganHM/concert-crawl/issues/55) is *"Saving shows (Watching)"* and is **closed**. Concert History is [#70](https://github.com/HartiganHM/concert-crawl/issues/70), open, design-🟢-Green, unbuilt. Fix the reference wherever it's repeated.
+⚠️ **The brief and handoff both cite "#55" for Concert History. That is wrong.** [#55](https://github.com/HartiganHM/concert-crawl/issues/55) is _"Saving shows (Watching)"_ and is **closed**. Concert History is [#70](https://github.com/HartiganHM/concert-crawl/issues/70), open, design-🟢-Green, unbuilt. Fix the reference wherever it's repeated.
 
 What PR-4 needs from #70, per `design/design_handoff_concert_history/READINESS.md:13-17`:
 
@@ -145,10 +159,10 @@ surfaced as `viewerHasAttended: boolean` on `VenueWithEvents`. If #70 lands with
 
 ### Adjacent: #794 logged-out UX
 
-[#794](https://github.com/HartiganHM/concert-crawl/issues/794) (design-🟢) makes `/venues` and `/venues/[slug]` public; today they sit under `apps/web/src/app/(protected)/(main)/venues/`. The **anonymous** state built in PR-3 is precisely what an unauthenticated visitor sees there, and it needs no extra code — anonymous and signed-in-first-timer are the *same branch* (brief Q7: "copy reads identically because it's a question, not an assertion"). Two consequences to honor in PR-3:
+[#794](https://github.com/HartiganHM/concert-crawl/issues/794) (design-🟢) makes `/venues` and `/venues/[slug]` public; today they sit under `apps/web/src/app/(protected)/(main)/venues/`. The **anonymous** state built in PR-3 is precisely what an unauthenticated visitor sees there, and it needs no extra code — anonymous and signed-in-first-timer are the _same branch_ (brief Q7: "copy reads identically because it's a question, not an assertion"). Two consequences to honor in PR-3:
 
 1. The guide payload must ride on the **unauthenticated** response of `GET /v1/venues/:slug` — that endpoint already serves `publicApiClient` (`apps/web/src/app/(protected)/(main)/venues/[slug]/page.tsx:27-34`), so do not gate the guide fields behind a token.
-2. `resolveGuideViewerMode` must handle `isSignedIn: false` explicitly, and PR-3's tests must cover it, even though the state is not *reachable* in prod until #794 moves the route out of `(protected)` (or `REQUIRE_BETA_AUTH` flips — see `apps/api/src/routes/venues-public.ts:28-30`).
+2. `resolveGuideViewerMode` must handle `isSignedIn: false` explicitly, and PR-3's tests must cover it, even though the state is not _reachable_ in prod until #794 moves the route out of `(protected)` (or `REQUIRE_BETA_AUTH` flips — see `apps/api/src/routes/venues-public.ts:28-30`).
 
 ---
 
@@ -309,6 +323,7 @@ pnpm db:migrate
 docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db \
   -c "insert into venue_guide_chips (venue_id, chip_type, body) select id,'parking','' from venues limit 1;"
 ```
+
 Expected: `new row for relation "venue_guide_chips" violates check constraint`.
 
 Also confirm `is_placeholder = true` on a non-accessibility chip is rejected.
@@ -379,10 +394,10 @@ The routes live in a **separate file**, not appended to `admin/venues.ts` (alrea
 
 **Audit logging** (required on both mutations — the PUT save and the POST publish):
 
-| Route | `auditAction` | `auditTargetId` | `auditMeta` |
-| --- | --- | --- | --- |
-| `PUT .../guide` | `venue.guide.save` | venue id | `{ chipCount, hasInsiderTip, accessibilityState }` |
-| `POST .../guide/publish` | `venue.guide.publish` | venue id | `{ publishState }` |
+| Route                    | `auditAction`         | `auditTargetId` | `auditMeta`                                        |
+| ------------------------ | --------------------- | --------------- | -------------------------------------------------- |
+| `PUT .../guide`          | `venue.guide.save`    | venue id        | `{ chipCount, hasInsiderTip, accessibilityState }` |
+| `POST .../guide/publish` | `venue.guide.publish` | venue id        | `{ publishState }`                                 |
 
 `auditActorId` from `getAuthUser(ctx).userId`, matching `admin/venues.ts:440-442`.
 
@@ -413,7 +428,7 @@ Run: `pnpm --filter @concert-crawl/api test -- venue-guide` → FAIL.
 - Modify: `apps/web/src/lib/actions/venues.ts` — add `saveVenueGuide(venueId, payload)` and `publishVenueGuide(venueId)`
 - Modify: `apps/web/src/components/admin/definitions/copy.ts` — new `ADMIN_COPY.venueDetailsClient.guide` block
 
-- [ ] **Step 1:** Actions mirror `updateVenue` (`apps/web/src/lib/actions/venues.ts:83-128`): `getToken()`, `apiClient.put` / `apiClient.post`, `revalidatePath(\`/admin/venues/${venueId}\`)` — the concrete path, not a `:id` pattern, `ApiError` narrowing for the 400 accessibility case returning `{ success: false, field: 'accessibility', error }`. Every catch logs (async try/catch convention).
+- [ ] **Step 1:** Actions mirror `updateVenue` (`apps/web/src/lib/actions/venues.ts:83-128`): `getToken()`, `apiClient.put` / `apiClient.post`, `revalidatePath(\`/admin/venues/${venueId}\`)`— the concrete path, not a`:id`pattern,`ApiError`narrowing for the 400 accessibility case returning`{ success: false, field: 'accessibility', error }`. Every catch logs (async try/catch convention).
 
 - [ ] **Step 2:** Copy block — lift verbatim from `ADMIN_COPY` in `guide-data.jsx:92-114` plus the legend rows from `guide-admin.jsx:305-309`:
 
@@ -465,7 +480,7 @@ Note the `fieldPlaceholder` keys are re-keyed from Design's short keys to the ca
 **Layout order (locked by Hugh's R2, `guide-admin.jsx:225-284`):**
 
 1. Block sub-copy
-2. **Insider tip panel — FIRST**, accent-tinted, `SURFACED FIRST` marker. This is the R2 lock; it sits *above* accessibility even though accessibility is the required field.
+2. **Insider tip panel — FIRST**, accent-tinted, `SURFACED FIRST` marker. This is the R2 lock; it sits _above_ accessibility even though accessibility is the required field.
 3. Validation banner (only when publish was attempted and the gate failed)
 4. Accessibility field (pinned, `REQUIRED`, two-mode with the `role="switch"` toggle)
 5. `Add more chips` header + `ChipPicker` (7 selectable + 4 ghosted v2)
@@ -685,7 +700,7 @@ Branch: `feat/764-guide-returner`
   - authenticated, no `attending_at` rows at this venue → `false`.
   - authenticated, a row with `attending_at` set at this venue → `true`.
   - authenticated, a row at this venue with `attending_at IS NULL` (watching only) → `false`. **Watching is not attending.**
-  - a row with `attending_at` set at a *different* venue → `false`.
+  - a row with `attending_at` set at a _different_ venue → `false`.
 
 - [ ] **Step 2: Implement** the single `EXISTS` predicate named in the Sequencing lock. Guard it behind `viewerId != null` so the anonymous path adds zero queries.
 

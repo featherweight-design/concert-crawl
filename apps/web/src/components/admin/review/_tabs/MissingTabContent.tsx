@@ -1,37 +1,37 @@
-'use client'
+'use client';
 
-import { useCallback, useState } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { Pagination } from '@/components/admin/primitives'
-import { MissingTable } from '../missing/MissingTable'
-import { MissingMobile } from '../missing/MissingMobile'
-import { type MissingRowEvent } from '../missing/MissingRow'
-import { MoveConfirmDialog } from '../missing/MoveConfirmDialog'
+import { useCallback, useState } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { Pagination } from '@/components/admin/primitives';
+import { MissingTable } from '../missing/MissingTable';
+import { MissingMobile } from '../missing/MissingMobile';
+import { type MissingRowEvent } from '../missing/MissingRow';
+import { MoveConfirmDialog } from '../missing/MoveConfirmDialog';
 
 export interface MissingTabContentProps {
-  events: MissingRowEvent[]
-  isDesktop: boolean
-  nowIso: string
+  events: MissingRowEvent[];
+  isDesktop: boolean;
+  nowIso: string;
   // When true, render a skeleton instead of the table/cards. Without this
   // gate the empty state ("Nothing's gone missing.") flashes for one paint
   // before the first fetch resolves.
-  loading?: boolean
+  loading?: boolean;
   // Pagination wiring — optional so the mobile shell can pass through the
   // same total/handlers it gets from the parent.
-  page?: number
-  pageSize?: number
-  total?: number
-  onPageChange?: (next: number) => void
-  onPageSizeChange?: (next: number) => void
-  onMarkPostponed: (id: string) => Promise<void>
-  onMarkCancelled: (id: string) => Promise<void>
-  onDismiss: (id: string) => Promise<void>
+  page?: number;
+  pageSize?: number;
+  total?: number;
+  onPageChange?: (next: number) => void;
+  onPageSizeChange?: (next: number) => void;
+  onMarkPostponed: (id: string) => Promise<void>;
+  onMarkCancelled: (id: string) => Promise<void>;
+  onDismiss: (id: string) => Promise<void>;
   /**
    * Confirm a suggested relocation. Called only after the admin passes the
    * confirm dialog — the merge deletes a row, moves watch rows and notifies
    * every watcher, none of which is reversible.
    */
-  onConfirmMove: (event: MissingRowEvent) => Promise<void>
+  onConfirmMove: (event: MissingRowEvent) => Promise<void>;
 }
 
 const Skeleton = () => (
@@ -60,7 +60,7 @@ const Skeleton = () => (
       />
     ))}
   </div>
-)
+);
 
 export const MissingTabContent = ({
   events,
@@ -77,48 +77,48 @@ export const MissingTabContent = ({
   onDismiss,
   onConfirmMove,
 }: MissingTabContentProps) => {
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
   // The row awaiting confirmation. Held here rather than per-row so the
   // dialog is mounted once for whichever shell is rendering.
-  const [moveTarget, setMoveTarget] = useState<MissingRowEvent | null>(null)
+  const [moveTarget, setMoveTarget] = useState<MissingRowEvent | null>(null);
 
   const wrap = useCallback(
     (handler: (id: string) => Promise<void>) => (id: string) => {
-      setPendingIds((prev) => new Set(prev).add(id))
+      setPendingIds((prev) => new Set(prev).add(id));
       void handler(id).finally(() => {
         setPendingIds((prev) => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
-      })
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
     },
     [],
-  )
+  );
 
-  const wrappedPostponed = wrap(onMarkPostponed)
-  const wrappedCancelled = wrap(onMarkCancelled)
-  const wrappedDismiss = wrap(onDismiss)
+  const wrappedPostponed = wrap(onMarkPostponed);
+  const wrappedCancelled = wrap(onMarkCancelled);
+  const wrappedDismiss = wrap(onDismiss);
   const openMoveConfirm = useCallback((event: MissingRowEvent) => {
-    setMoveTarget(event)
-  }, [])
+    setMoveTarget(event);
+  }, []);
   // Close first, then fire: the row carries the pending state, and leaving
   // the dialog up over a row that is already merging reads as unconfirmed.
   const confirmMove = useCallback(() => {
-    if (!moveTarget) return
-    const event = moveTarget
-    setMoveTarget(null)
-    setPendingIds((prev) => new Set(prev).add(event.id))
+    if (!moveTarget) return;
+    const event = moveTarget;
+    setMoveTarget(null);
+    setPendingIds((prev) => new Set(prev).add(event.id));
     void onConfirmMove(event).finally(() => {
       setPendingIds((prev) => {
-        const next = new Set(prev)
-        next.delete(event.id)
-        return next
-      })
-    })
-  }, [moveTarget, onConfirmMove])
+        const next = new Set(prev);
+        next.delete(event.id);
+        return next;
+      });
+    });
+  }, [moveTarget, onConfirmMove]);
 
-  if (loading) return <Skeleton />
+  if (loading) return <Skeleton />;
 
   // Hide the pager for single-page results (`total <= pageSize` AND
   // `page === 1`). Mount it whenever the user is on `page > 1` so the
@@ -130,7 +130,7 @@ export const MissingTabContent = ({
     total !== undefined &&
     onPageChange !== undefined &&
     onPageSizeChange !== undefined &&
-    (total > pageSize || page > 1)
+    (total > pageSize || page > 1);
 
   const table = isDesktop ? (
     <MissingTable
@@ -153,11 +153,11 @@ export const MissingTabContent = ({
       onConfirmMove={openMoveConfirm}
       pendingIds={pendingIds}
     />
-  )
+  );
 
   // Mounted once for whichever shell rendered, so both return paths below
   // carry it rather than only the paginated one.
-  const candidate = moveTarget?.movedCandidate
+  const candidate = moveTarget?.movedCandidate;
   const dialog =
     moveTarget && candidate ? (
       <MoveConfirmDialog
@@ -171,7 +171,7 @@ export const MissingTabContent = ({
         onCancel={() => setMoveTarget(null)}
         onConfirm={confirmMove}
       />
-    ) : null
+    ) : null;
 
   if (!showPager)
     return (
@@ -179,7 +179,7 @@ export const MissingTabContent = ({
         {table}
         {dialog}
       </>
-    )
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -194,5 +194,5 @@ export const MissingTabContent = ({
       />
       {dialog}
     </div>
-  )
-}
+  );
+};

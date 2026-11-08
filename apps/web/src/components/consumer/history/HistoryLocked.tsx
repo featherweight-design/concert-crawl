@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The locked History takeover (#70), design_handoff_concert_history/history-routes.jsx:135-221.
 //
@@ -11,14 +11,14 @@
 // Copilot caught on #820. Free-tier stats are hidden outright, not blurred or
 // teased: handoff open question #4, answered in the plan.
 
-import { useState } from 'react'
-import type { PlanState } from '@concert-crawl/types'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { unlockTierFor } from '@/lib/unlock-tier'
-import { HISTORY_COPY } from './definitions/copy'
+import { useState } from 'react';
+import type { PlanState } from '@concert-crawl/types';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { unlockTierFor } from '@/lib/unlock-tier';
+import { HISTORY_COPY } from './definitions/copy';
 
-const COPY = HISTORY_COPY.locked
+const COPY = HISTORY_COPY.locked;
 
 // Mirrors derivePlanState's logged-out shape, as TasteFilterChip and
 // EventDetailCtaBlock do — the picker needs a full PlanState and a logged-out
@@ -31,7 +31,7 @@ const LOGGED_OUT_PLAN_STATE: PlanState = {
   cancelAtPeriodEnd: false,
   currentPeriodEnd: null,
   roleComped: false,
-}
+};
 
 const LockIcon = () => (
   <svg
@@ -58,7 +58,7 @@ const LockIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 // Faint stub silhouettes fanned behind the card — wallpaper, not bait
 // (history-routes.jsx:94-129).
@@ -68,7 +68,7 @@ const SILHOUETTES: readonly { tx: number; rot: number; opacity: number }[] = [
   { tx: 0, rot: -2, opacity: 0.12 },
   { tx: 60, rot: 8, opacity: 0.09 },
   { tx: 110, rot: 16, opacity: 0.06 },
-]
+];
 
 const SilhouetteStubs = () => (
   <div
@@ -111,14 +111,14 @@ const SilhouetteStubs = () => (
       ))}
     </div>
   </div>
-)
+);
 
 export const HistoryLocked = ({ scaRegion }: { scaRegion: boolean }) => {
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const tier = unlockTierFor('concert-history')
-  const ctaLabel = tier === null ? COPY.ctaFallback : COPY.cta(tier.name)
+  const tier = unlockTierFor('concert-history');
+  const ctaLabel = tier === null ? COPY.ctaFallback : COPY.cta(tier.name);
 
   return (
     <section className="relative flex min-h-[480px] flex-col items-center justify-center overflow-hidden px-6 py-10">
@@ -263,5 +263,5 @@ export const HistoryLocked = ({ scaRegion }: { scaRegion: boolean }) => {
         entry="paywall"
       />
     </section>
-  )
-}
+  );
+};

@@ -2,4 +2,4 @@
 // pricing is US-market ($2/$3/$5) and Stripe returns cents.
 
 export const formatDollarsFromCents = (cents: number): string =>
-  `$${(cents / 100).toFixed(2)}`
+  `$${(cents / 100).toFixed(2)}`;

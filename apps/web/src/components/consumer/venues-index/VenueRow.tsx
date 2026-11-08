@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { VenueIdentityTile } from './VenueIdentityTile'
+import Link from 'next/link';
+import { VenueIdentityTile } from './VenueIdentityTile';
 import {
   fmtNum,
   fmtDistance,
   type VenueWithDistance,
-} from './venue-filter-defs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './venue-filter-defs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex
+const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
 
 interface VenueRowProps {
-  venue: VenueWithDistance
-  last?: boolean
+  venue: VenueWithDistance;
+  last?: boolean;
 }
 
 function IconChevron() {
@@ -27,15 +27,15 @@ function IconChevron() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconPin({
   size = 11,
   dotRadius = 1.2,
 }: {
-  size?: number
-  dotRadius?: number
+  size?: number;
+  dotRadius?: number;
 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -47,7 +47,7 @@ function IconPin({
       />
       <circle cx="6" cy="5" r={dotRadius} fill="currentColor" />
     </svg>
-  )
+  );
 }
 
 export function VenueRow({ venue, last = false }: VenueRowProps) {
@@ -225,5 +225,5 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
         </div>
       </div>
     </Link>
-  )
+  );
 }

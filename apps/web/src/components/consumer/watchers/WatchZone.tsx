@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useAuth } from '@clerk/nextjs'
-import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
+import { useAuth } from '@clerk/nextjs';
+import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 import {
   FollowNudgeCard,
   useFirstWatchNudge,
-} from '@/components/consumer/following/nudge'
-import { useEventWatchers } from '@/lib/queries/use-event-watchers'
-import { useWatching } from '@/lib/queries/use-watching'
-import { showWatcherCrawl } from '@/lib/watchers'
-import { WatchersSurface } from './WatchersSurface'
+} from '@/components/consumer/following/nudge';
+import { useEventWatchers } from '@/lib/queries/use-event-watchers';
+import { useWatching } from '@/lib/queries/use-watching';
+import { showWatcherCrawl } from '@/lib/watchers';
+import { WatchersSurface } from './WatchersSurface';
 
 interface WatchZoneProps {
-  eventId: string
-  initialWatching?: boolean
+  eventId: string;
+  initialWatching?: boolean;
   /** Headliner name, forwarded to the button's signed-out accessible name. */
-  artist?: string | undefined
+  artist?: string | undefined;
   /** Server-resolved, forwarded to the nudge's tier picker. */
-  scaRegion: boolean
+  scaRegion: boolean;
 }
 
 /**
@@ -47,25 +47,25 @@ export const WatchZone = ({
   artist,
   scaRegion,
 }: WatchZoneProps) => {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn } = useAuth();
   // Scoped to this show: a watch started elsewhere in the session belongs to
   // the floating gate, and the two are mutually exclusive by route.
-  const nudge = useFirstWatchNudge(eventId)
-  const { data: watchedShows } = useWatching()
-  const { data: watchers, isPending } = useEventWatchers(eventId)
+  const nudge = useFirstWatchNudge(eventId);
+  const { data: watchedShows } = useWatching();
+  const { data: watchers, isPending } = useEventWatchers(eventId);
 
   // Mirrors WatchShowButton's derivation so the strip's chrome flips with the
   // button rather than lagging a render behind — same hook, same cache entry,
   // no extra request and no lifted state.
-  const cacheIsReady = watchedShows !== undefined
+  const cacheIsReady = watchedShows !== undefined;
   const isWatching = cacheIsReady
     ? watchedShows.some((show) => show.eventId === eventId)
-    : initialWatching
+    : initialWatching;
   // Signed out nothing is watched, however stale the cache is.
-  const renderedWatching = !!isSignedIn && isWatching
+  const renderedWatching = !!isSignedIn && isWatching;
 
-  const loading = isPending && !!isSignedIn
-  const showCrawl = !loading && showWatcherCrawl(watchers, renderedWatching)
+  const loading = isPending && !!isSignedIn;
+  const showCrawl = !loading && showWatcherCrawl(watchers, renderedWatching);
 
   if (nudge.target !== null) {
     return (
@@ -75,7 +75,7 @@ export const WatchZone = ({
         scaRegion={scaRegion}
         onAnswer={nudge.answer}
       />
-    )
+    );
   }
 
   return (
@@ -114,5 +114,5 @@ export const WatchZone = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

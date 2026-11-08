@@ -229,4 +229,4 @@ export const REVIEW_CONTEST_COPY = {
     // readable.
     mutationError: 'That action failed. Please try again.',
   },
-} as const
+} as const;

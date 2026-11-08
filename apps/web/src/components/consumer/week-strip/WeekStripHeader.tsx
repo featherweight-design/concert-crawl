@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { JumpPicker } from '@/components/consumer/jump-picker'
-import { accessibleDayLabelFor } from '@/components/consumer/jump-picker/date-math'
-import { BackToTodayControl } from './BackToTodayControl'
+import Link from 'next/link';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { JumpPicker } from '@/components/consumer/jump-picker';
+import { accessibleDayLabelFor } from '@/components/consumer/jump-picker/date-math';
+import { BackToTodayControl } from './BackToTodayControl';
 
 interface WeekStripHeaderProps {
-  monthLabel: string
-  selectedDate: string
-  today: string
-  availability: Map<string, number>
-  onPick: (iso: string) => void
-  prevWeekHref: string | null
-  nextWeekHref: string
-  showBackToToday: boolean
-  onBackToToday: () => void
+  monthLabel: string;
+  selectedDate: string;
+  today: string;
+  availability: Map<string, number>;
+  onPick: (iso: string) => void;
+  prevWeekHref: string | null;
+  nextWeekHref: string;
+  showBackToToday: boolean;
+  onBackToToday: () => void;
 }
 
-const STYLE_ID = 'cjp-header-styles'
+const STYLE_ID = 'cjp-header-styles';
 const STYLE_CONTENT = [
   '.cjp-cue{transition:background .12s,border-color .12s}',
   '.cjp-cue:hover{background:var(--overlay-hover)}',
@@ -38,16 +38,16 @@ const STYLE_CONTENT = [
   '.cjp-pos{position:absolute;top:46px;left:12px;z-index:40}',
   '@media (max-width:639.98px){.cjp-pos{top:150px;left:12px;right:12px;display:flex;justify-content:center}}',
   '@media (prefers-reduced-motion: reduce){.cjp-car{transition:none!important}}',
-].join('\n')
+].join('\n');
 
 const ensureStyles = (): void => {
-  if (typeof document === 'undefined') return
-  if (document.getElementById(STYLE_ID)) return
-  const styleEl = document.createElement('style')
-  styleEl.id = STYLE_ID
-  styleEl.textContent = STYLE_CONTENT
-  document.head.appendChild(styleEl)
-}
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = STYLE_ID;
+  styleEl.textContent = STYLE_CONTENT;
+  document.head.appendChild(styleEl);
+};
 
 const chevStyle: CSSProperties = {
   width: 34,
@@ -58,7 +58,7 @@ const chevStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-}
+};
 
 const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
   <svg
@@ -76,7 +76,7 @@ const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 export const WeekStripHeader = ({
   monthLabel,
@@ -89,17 +89,17 @@ export const WeekStripHeader = ({
   showBackToToday,
   onBackToToday,
 }: WeekStripHeaderProps) => {
-  const [open, setOpen] = useState(false)
-  const cueRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false);
+  const cueRef = useRef<HTMLButtonElement>(null);
 
   // Inject the one-off style tag after commit, not during render — a
   // render-time DOM mutation would run on every (possibly aborted) render.
-  useEffect(ensureStyles, [])
+  useEffect(ensureStyles, []);
 
   const close = () => {
-    setOpen(false)
-    cueRef.current?.focus()
-  }
+    setOpen(false);
+    cueRef.current?.focus();
+  };
 
   const cueStyle: CSSProperties = {
     display: 'inline-flex',
@@ -118,7 +118,7 @@ export const WeekStripHeader = ({
     border: open
       ? '1px solid var(--border-focus)'
       : '1px solid var(--border-strong)',
-  }
+  };
 
   return (
     <div style={{ position: 'relative' }}>
@@ -208,11 +208,11 @@ export const WeekStripHeader = ({
           today={today}
           availability={availability}
           onPick={(iso) => {
-            close()
-            onPick(iso)
+            close();
+            onPick(iso);
           }}
         />
       </div>
     </div>
-  )
-}
+  );
+};

@@ -9,27 +9,27 @@
 // The token is bound to the family, so a digest link cannot be replayed
 // against the product family or the reverse.
 
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { eq } from 'drizzle-orm';
 import {
   db,
   userNotificationPreferences,
   userSpotifyConnections,
-} from '@concert-crawl/db'
-import { apiLogger } from '../lib/logger.js'
+} from '@concert-crawl/db';
+import { apiLogger } from '../lib/logger.js';
 import {
   UNSUBSCRIBE_FAMILIES,
   isUnsubscribeConfigured,
   verifyUnsubscribeToken,
-} from '../lib/email-unsubscribe.js'
+} from '../lib/email-unsubscribe.js';
 
 const unsubscribeQuerySchema = z.object({
   uid: z.string().min(1).max(256),
   family: z.enum(UNSUBSCRIBE_FAMILIES),
   token: z.string().min(1).max(256),
-})
+});
 
 // Deliberately dependency-free HTML (no shared web shell): this page renders
 // for logged-out users straight off an email client, so it stays a static,
@@ -51,9 +51,9 @@ const confirmationPage = (
 <p style="font-size: 14px; color: #9AA8C7; line-height: 1.5; margin: 0;">${body}</p>
 </div>
 </body>
-</html>`
+</html>`;
 
-export const emailUnsubscribeRouter = new Hono()
+export const emailUnsubscribeRouter = new Hono();
 
 emailUnsubscribeRouter.get(
   '/unsubscribe',
@@ -65,49 +65,49 @@ emailUnsubscribeRouter.get(
       apiLogger.warn(
         { issues: result.error.issues },
         'email unsubscribe query rejected',
-      )
+      );
       return ctx.html(
         confirmationPage(
           'That link didn’t work.',
           'This unsubscribe link is invalid or has expired. You can still manage emails in Settings → Notifications.',
         ),
         400,
-      )
+      );
     }
-    return undefined
+    return undefined;
   }),
   async (ctx) => {
-    const { uid, family, token } = ctx.req.valid('query')
+    const { uid, family, token } = ctx.req.valid('query');
 
     if (!isUnsubscribeConfigured()) {
       apiLogger.error(
         { family },
         'EMAIL_UNSUBSCRIBE_SECRET not configured — unsubscribe unavailable',
-      )
+      );
       return ctx.html(
         confirmationPage(
           'Something went wrong.',
           'Unsubscribe is temporarily unavailable. Please try again later, or manage emails in Settings → Notifications.',
         ),
         503,
-      )
+      );
     }
 
     if (!verifyUnsubscribeToken(uid, family, token)) {
       // uid is loggable for support tracing; the token never is.
-      apiLogger.warn({ uid, family }, 'email unsubscribe token rejected')
+      apiLogger.warn({ uid, family }, 'email unsubscribe token rejected');
       return ctx.html(
         confirmationPage(
           'That link didn’t work.',
           'This unsubscribe link is invalid or has expired. You can still manage emails in Settings → Notifications.',
         ),
         400,
-      )
+      );
     }
 
     // What the confirmation page says depends on the family, and the switch
     // below is the only place that knows which one ran.
-    let confirmationBody: string
+    let confirmationBody: string;
 
     try {
       switch (family) {
@@ -119,17 +119,17 @@ emailUnsubscribeRouter.get(
           await db
             .update(userSpotifyConnections)
             .set({ digestEnabled: false })
-            .where(eq(userSpotifyConnections.userId, uid))
+            .where(eq(userSpotifyConnections.userId, uid));
           await db
             .insert(userNotificationPreferences)
             .values({ userId: uid, weeklyDigestEnabled: false })
             .onConflictDoUpdate({
               target: userNotificationPreferences.userId,
               set: { weeklyDigestEnabled: false, updatedAt: new Date() },
-            })
+            });
           confirmationBody =
-            'The weekly digest is off. You can turn it back on any time from Settings → Notifications.'
-          break
+            'The weekly digest is off. You can turn it back on any time from Settings → Notifications.';
+          break;
         case 'product':
           // Only the preferences table. There is no legacy column for this
           // family, and no Spotify connection is involved.
@@ -139,10 +139,10 @@ emailUnsubscribeRouter.get(
             .onConflictDoUpdate({
               target: userNotificationPreferences.userId,
               set: { productEmailsEnabled: false, updatedAt: new Date() },
-            })
+            });
           confirmationBody =
-            'Product emails are off, and you can turn them back on from Settings → Notifications. Receipts and billing notices still come through.'
-          break
+            'Product emails are off, and you can turn them back on from Settings → Notifications. Receipts and billing notices still come through.';
+          break;
       }
     } catch (err) {
       // Humans land here from email clients — a DB hiccup must render the
@@ -150,17 +150,17 @@ emailUnsubscribeRouter.get(
       apiLogger.error(
         { err, uid, family },
         'email unsubscribe DB update failed',
-      )
+      );
       return ctx.html(
         confirmationPage(
           'Something went wrong.',
           'We couldn’t process your unsubscribe just now. Please try the link again, or manage emails in Settings → Notifications.',
         ),
         500,
-      )
+      );
     }
 
-    apiLogger.info({ uid, family }, 'email unsubscribe applied')
-    return ctx.html(confirmationPage('You’re unsubscribed.', confirmationBody))
+    apiLogger.info({ uid, family }, 'email unsubscribe applied');
+    return ctx.html(confirmationPage('You’re unsubscribed.', confirmationBody));
   },
-)
+);

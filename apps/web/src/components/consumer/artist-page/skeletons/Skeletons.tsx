@@ -1,8 +1,8 @@
-import React from 'react'
+import React from 'react';
 
-import { ARTIST_COPY } from '../definitions/copy'
-import { NF_FOLLOW_SIZES } from '../definitions/constants'
-import { CRUMB_BOX } from '../Crumb'
+import { ARTIST_COPY } from '../definitions/copy';
+import { NF_FOLLOW_SIZES } from '../definitions/constants';
+import { CRUMB_BOX } from '../Crumb';
 
 /**
  * Two independent loading clocks live on this page: the artist payload and the
@@ -17,27 +17,27 @@ const skel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
   background: 'var(--surface-2)',
   animation: 'skeletonPulse 1.4s ease-in-out infinite',
   ...extra,
-})
+});
 
 export const HeroSkeleton = ({
   height,
   className,
 }: {
-  height: number
-  className?: string
+  height: number;
+  className?: string;
 }) => (
   <div
     aria-hidden="true"
     className={className}
     style={skel({ width: '100%', height })}
   />
-)
+);
 
 interface TextSkeletonProps {
   /** Width as a CSS length — the design table specifies percentages. */
-  width: string
-  height?: number
-  marginTop?: number
+  width: string;
+  height?: number;
+  marginTop?: number;
 }
 
 export const TextSkeleton = ({
@@ -49,7 +49,7 @@ export const TextSkeleton = ({
     aria-hidden="true"
     style={skel({ width, height, marginTop, borderRadius: 4 })}
   />
-)
+);
 
 /**
  * Desktop crumb placeholder. Reuses `CRUMB_BOX` — the real crumb's own metrics —
@@ -63,7 +63,7 @@ export const CrumbSkeleton = () => (
     <span style={{ color: 'var(--fg-subtle)' }}>/</span>
     <span style={skel({ width: 140, height: 13, borderRadius: 4 })} />
   </div>
-)
+);
 
 /**
  * The Follow control's reserved box. It reads its height and corner from the
@@ -80,7 +80,7 @@ export const FollowSkeleton = () => (
       borderRadius: NF_FOLLOW_SIZES.primary.radius,
     })}
   />
-)
+);
 
 export const ShowsSkeleton = ({ rows }: { rows: number }) => (
   <div
@@ -123,4 +123,4 @@ export const ShowsSkeleton = ({ rows }: { rows: number }) => (
       </div>
     ))}
   </div>
-)
+);

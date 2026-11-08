@@ -1,38 +1,38 @@
-'use client'
+'use client';
 
-import { nfLocked } from '@concert-crawl/entitlements'
-import type { ArtistDetailResponse } from '@concert-crawl/types'
-import React, { useCallback, useRef, useState } from 'react'
+import { nfLocked } from '@concert-crawl/entitlements';
+import type { ArtistDetailResponse } from '@concert-crawl/types';
+import React, { useCallback, useRef, useState } from 'react';
 
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { useTheme } from '@/theme'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useTheme } from '@/theme';
 
-import { BackChip } from '../back-chip/BackChip'
-import { HeroBand, Panel } from '../image-slot'
+import { BackChip } from '../back-chip/BackChip';
+import { HeroBand, Panel } from '../image-slot';
 
-import { Crumb } from './Crumb'
+import { Crumb } from './Crumb';
 import {
   AP_BAND_H,
   AP_RAIL_W,
   AP_STICKY_BAR_H,
   CRAWL_SINCE,
-} from './definitions/constants'
-import { ARTIST_COPY } from './definitions/copy'
-import { ArtistEmbed } from './embed/ArtistEmbed'
-import { EmptyUpcoming } from './EmptyUpcoming'
-import { FollowBlock } from './FollowBlock'
-import { historyLine } from './lib/history-line'
-import { useArtistFollow } from './lib/use-artist-follow'
+} from './definitions/constants';
+import { ARTIST_COPY } from './definitions/copy';
+import { ArtistEmbed } from './embed/ArtistEmbed';
+import { EmptyUpcoming } from './EmptyUpcoming';
+import { FollowBlock } from './FollowBlock';
+import { historyLine } from './lib/history-line';
+import { useArtistFollow } from './lib/use-artist-follow';
 import {
   useIsDesktop,
   useMeasuredHeight,
   useScrolledPast,
-} from './lib/use-viewport'
-import { PastShows } from './PastShows'
-import { StickyBar } from './StickyBar'
-import { UpcomingShows } from './UpcomingShows'
+} from './lib/use-viewport';
+import { PastShows } from './PastShows';
+import { StickyBar } from './StickyBar';
+import { UpcomingShows } from './UpcomingShows';
 
 /**
  * ONE responsive component, not two trees. The handoff ships a Mobile and a
@@ -65,32 +65,32 @@ export const ArtistPageContent = ({
   data,
   scaRegion = false,
 }: {
-  data: ArtistDetailResponse
-  scaRegion?: boolean
+  data: ArtistDetailResponse;
+  scaRegion?: boolean;
 }) => {
-  const { artist, shows, past, history } = data
-  const hasShows = shows.length > 0
+  const { artist, shows, past, history } = data;
+  const hasShows = shows.length > 0;
 
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.
-  const signedOut = data.following === null
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const openUpgrade = useCallback(() => setPickerOpen(true), [])
+  const signedOut = data.following === null;
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const openUpgrade = useCallback(() => setPickerOpen(true), []);
   const { following, toggle } = useArtistFollow(
     artist.slug,
     data.following ?? false,
     openUpgrade,
-  )
+  );
 
-  const isDesktop = useIsDesktop()
+  const isDesktop = useIsDesktop();
   // Measured, not assumed: the band is one height below 640 and another
   // between 640 and this page's own 768 breakpoint, and a fixed threshold
   // brought the bar up over a band still on screen at those widths.
-  const bandRef = useRef<HTMLDivElement>(null)
-  const bandHeight = useMeasuredHeight(bandRef, AP_BAND_H)
-  const scrolled = useScrolledPast(bandHeight - AP_STICKY_BAR_H)
-  const { theme } = useTheme()
+  const bandRef = useRef<HTMLDivElement>(null);
+  const bandHeight = useMeasuredHeight(bandRef, AP_BAND_H);
+  const scrolled = useScrolledPast(bandHeight - AP_STICKY_BAR_H);
+  const { theme } = useTheme();
 
   // ONE gate, asked once, passed down. `nfLocked` takes the plan state rather
   // than a tier string because `roleComped` is an override the matrix does not
@@ -108,7 +108,7 @@ export const ArtistPageContent = ({
   // the artist page is the surface most people would reach for to remove it.
   // Once the follow is gone the control locks again, which is correct.
   const locked =
-    !signedOut && planState !== undefined && nfLocked(planState) && !following
+    !signedOut && planState !== undefined && nfLocked(planState) && !following;
 
   const followProps = {
     name: artist.name,
@@ -117,11 +117,11 @@ export const ArtistPageContent = ({
     locked,
     onToggle: toggle,
     onLockedTap: openUpgrade,
-  }
+  };
 
   // Mobile hands the follow control to the sub-header the moment the bar
   // arrives; desktop never renders the bar, so its rail keeps it throughout.
-  const inlineFollow = hasShows && !isDesktop && !scrolled
+  const inlineFollow = hasShows && !isDesktop && !scrolled;
 
   // The title lives in the band on mobile and in the content column on
   // desktop, so it is rendered once and placed by the same JS decision the
@@ -133,7 +133,7 @@ export const ArtistPageContent = ({
       <h1 className="ap-name">{artist.name}</h1>
       <p className="ap-history">{historyLine(history, CRAWL_SINCE)}</p>
     </>
-  )
+  );
 
   const player = (
     <ArtistEmbed
@@ -144,7 +144,7 @@ export const ArtistPageContent = ({
       skipTo={hasShows ? 'upcoming' : null}
       themeKey={theme}
     />
-  )
+  );
 
   return (
     <main className="ap-page" aria-label={ARTIST_COPY.pageAria(artist.name)}>
@@ -242,5 +242,5 @@ export const ArtistPageContent = ({
         entry="paywall"
       />
     </main>
-  )
-}
+  );
+};

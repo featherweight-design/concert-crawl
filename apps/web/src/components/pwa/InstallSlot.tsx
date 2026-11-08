@@ -1,57 +1,57 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react';
 import {
   isIosSafari,
   isStandalone,
   type BeforeInstallPromptEvent,
-} from '@/lib/pwa/beforeinstallprompt'
-import { dismissOnce, getDismissalState } from '@/lib/pwa/install-dismissal'
-import { INSTALL_COPY } from './definitions/copy'
-import { IosHowToSheet } from './IosHowToSheet'
+} from '@/lib/pwa/beforeinstallprompt';
+import { dismissOnce, getDismissalState } from '@/lib/pwa/install-dismissal';
+import { INSTALL_COPY } from './definitions/copy';
+import { IosHowToSheet } from './IosHowToSheet';
 
 export const InstallSlot = () => {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(
     null,
-  )
-  const [isIos, setIsIos] = useState(false)
-  const [dismissed, setDismissed] = useState(true) // start hidden until we know
-  const [sheetOpen, setSheetOpen] = useState(false)
+  );
+  const [isIos, setIsIos] = useState(false);
+  const [dismissed, setDismissed] = useState(true); // start hidden until we know
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    if (isStandalone()) return
-    setIsIos(isIosSafari())
-    setDismissed(getDismissalState() !== 'active')
+    if (isStandalone()) return;
+    setIsIos(isIosSafari());
+    setDismissed(getDismissalState() !== 'active');
 
     const onPrompt = (event: BeforeInstallPromptEvent) => {
-      event.preventDefault()
-      setDeferred(event)
-    }
-    window.addEventListener('beforeinstallprompt', onPrompt)
-    return () => window.removeEventListener('beforeinstallprompt', onPrompt)
-  }, [])
+      event.preventDefault();
+      setDeferred(event);
+    };
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+  }, []);
 
   const onTap = useCallback(async () => {
     if (isIos && !deferred) {
-      setSheetOpen(true)
-      return
+      setSheetOpen(true);
+      return;
     }
-    if (!deferred) return
+    if (!deferred) return;
     try {
-      await deferred.prompt()
-      await deferred.userChoice
+      await deferred.prompt();
+      await deferred.userChoice;
     } catch (err) {
-      console.error('InstallSlot: prompt failed', err)
+      console.error('InstallSlot: prompt failed', err);
     } finally {
-      setDeferred(null)
+      setDeferred(null);
     }
-  }, [deferred, isIos])
+  }, [deferred, isIos]);
 
   // Hidden if the user quieted or retired the slot, if the app is standalone,
   // or if the browser hasn't fired beforeinstallprompt AND we're not iOS Safari
   // (nothing to show).
-  if (dismissed) return null
-  if (!deferred && !isIos) return null
+  if (dismissed) return null;
+  if (!deferred && !isIos) return null;
 
   return (
     <>
@@ -83,8 +83,8 @@ export const InstallSlot = () => {
         <button
           type="button"
           onClick={() => {
-            dismissOnce()
-            setDismissed(true)
+            dismissOnce();
+            setDismissed(true);
           }}
           aria-label={INSTALL_COPY.dismissAria}
           className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-fg-subtle hover:text-fg"
@@ -107,5 +107,5 @@ export const InstallSlot = () => {
       </div>
       <IosHowToSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </>
-  )
-}
+  );
+};

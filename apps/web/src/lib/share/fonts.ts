@@ -13,10 +13,10 @@
 
 export interface ShareFontSpec {
   /** Family name as referenced by `fontFamily` in the card's inline styles. */
-  name: string
+  name: string;
   /** Path relative to the site root, i.e. what a browser would request. */
-  assetPath: string
-  weight: 400 | 700 | 900
+  assetPath: string;
+  weight: 400 | 700 | 900;
 }
 
 /**
@@ -33,21 +33,21 @@ export const SHARE_FONTS: readonly ShareFontSpec[] = [
     assetPath: '/fonts/share/jbmono-700.ttf',
     weight: 700,
   },
-]
+];
 
 /**
  * How the bytes are fetched. Injected so the edge route can fetch against its
  * own origin while tests read the same files off disk — the alternative is a
  * module that can only be exercised by booting a server.
  */
-export type ShareFontLoader = (assetPath: string) => Promise<ArrayBuffer>
+export type ShareFontLoader = (assetPath: string) => Promise<ArrayBuffer>;
 
 /** The shape `ImageResponse` wants in its `fonts` option. */
 export interface LoadedShareFont {
-  name: string
-  data: ArrayBuffer
-  weight: 400 | 700 | 900
-  style: 'normal'
+  name: string;
+  data: ArrayBuffer;
+  weight: 400 | 700 | 900;
+  style: 'normal';
 }
 
 /**
@@ -62,18 +62,18 @@ export const loadShareFonts = async (
 ): Promise<LoadedShareFont[]> =>
   Promise.all(
     SHARE_FONTS.map(async (font) => {
-      let data: ArrayBuffer
+      let data: ArrayBuffer;
       try {
-        data = await loader(font.assetPath)
+        data = await loader(font.assetPath);
       } catch (err) {
-        const reason = err instanceof Error ? err.message : String(err)
+        const reason = err instanceof Error ? err.message : String(err);
         throw new Error(
           `Share font failed to load: ${font.assetPath} (${reason})`,
-        )
+        );
       }
       if (data.byteLength === 0) {
-        throw new Error(`Share font loaded empty: ${font.assetPath}`)
+        throw new Error(`Share font loaded empty: ${font.assetPath}`);
       }
-      return { name: font.name, data, weight: font.weight, style: 'normal' }
+      return { name: font.name, data, weight: font.weight, style: 'normal' };
     }),
-  )
+  );

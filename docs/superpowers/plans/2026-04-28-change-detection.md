@@ -43,14 +43,14 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 export const crawlStatusEnum = pgEnum('crawl_status', [
   'success',
   'failed',
   'partial',
-])
+]);
 
 export const crawlRuns = pgTable('crawl_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -69,10 +69,10 @@ export const crawlRuns = pgTable('crawl_runs', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type CrawlRun = typeof crawlRuns.$inferSelect
-export type NewCrawlRun = typeof crawlRuns.$inferInsert
+export type CrawlRun = typeof crawlRuns.$inferSelect;
+export type NewCrawlRun = typeof crawlRuns.$inferInsert;
 ```
 
 - [ ] **Step 2: Remove `rawHtml` from `events.ts`**
@@ -92,14 +92,14 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 export const eventStatusEnum = pgEnum('event_status', [
   'upcoming',
   'cancelled',
   'postponed',
-])
+]);
 
 export const events = pgTable(
   'events',
@@ -143,10 +143,10 @@ export const events = pgTable(
       table.artist,
     ),
   }),
-)
+);
 
-export type Event = typeof events.$inferSelect
-export type NewEvent = typeof events.$inferInsert
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
 ```
 
 - [ ] **Step 3: Verify TypeScript compiles**
@@ -221,40 +221,40 @@ git commit -m "feat: add pageHash to crawl_runs, drop rawHtml from events"
 Create `packages/crawler-core/src/lib/hash.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { hashPage, hashEvent } from './hash.js'
+import { describe, it, expect } from 'vitest';
+import { hashPage, hashEvent } from './hash.js';
 
 describe('hashPage', () => {
   it('returns a 64-character hex string', () => {
-    const result = hashPage('<html><body>hello</body></html>')
-    expect(result).toMatch(/^[0-9a-f]{64}$/)
-  })
+    const result = hashPage('<html><body>hello</body></html>');
+    expect(result).toMatch(/^[0-9a-f]{64}$/);
+  });
 
   it('is deterministic', () => {
-    const html = '<html><body>hello</body></html>'
-    expect(hashPage(html)).toBe(hashPage(html))
-  })
+    const html = '<html><body>hello</body></html>';
+    expect(hashPage(html)).toBe(hashPage(html));
+  });
 
   it('strips <script> blocks before hashing', () => {
     const withScript =
-      '<html><script>let x = Math.random()</script><body>events</body></html>'
-    const withoutScript = '<html><body>events</body></html>'
-    expect(hashPage(withScript)).toBe(hashPage(withoutScript))
-  })
+      '<html><script>let x = Math.random()</script><body>events</body></html>';
+    const withoutScript = '<html><body>events</body></html>';
+    expect(hashPage(withScript)).toBe(hashPage(withoutScript));
+  });
 
   it('strips <style> blocks before hashing', () => {
     const withStyle =
-      '<html><style>.btn { color: red }</style><body>events</body></html>'
-    const withoutStyle = '<html><body>events</body></html>'
-    expect(hashPage(withStyle)).toBe(hashPage(withoutStyle))
-  })
+      '<html><style>.btn { color: red }</style><body>events</body></html>';
+    const withoutStyle = '<html><body>events</body></html>';
+    expect(hashPage(withStyle)).toBe(hashPage(withoutStyle));
+  });
 
   it('produces different hashes for different content', () => {
     expect(hashPage('<body>event A</body>')).not.toBe(
       hashPage('<body>event B</body>'),
-    )
-  })
-})
+    );
+  });
+});
 
 describe('hashEvent', () => {
   const base = {
@@ -263,45 +263,47 @@ describe('hashEvent', () => {
     date: '2026-08-15',
     doorsTime: '19:00',
     showTime: '20:00',
-  }
+  };
 
   it('returns a 64-character hex string', () => {
-    expect(hashEvent(base)).toMatch(/^[0-9a-f]{64}$/)
-  })
+    expect(hashEvent(base)).toMatch(/^[0-9a-f]{64}$/);
+  });
 
   it('is deterministic', () => {
-    expect(hashEvent(base)).toBe(hashEvent(base))
-  })
+    expect(hashEvent(base)).toBe(hashEvent(base));
+  });
 
   it('produces different hashes when title changes', () => {
     expect(hashEvent(base)).not.toBe(
       hashEvent({ ...base, title: 'Metallica Unplugged' }),
-    )
-  })
+    );
+  });
 
   it('produces different hashes when date changes', () => {
-    expect(hashEvent(base)).not.toBe(hashEvent({ ...base, date: '2026-08-16' }))
-  })
+    expect(hashEvent(base)).not.toBe(
+      hashEvent({ ...base, date: '2026-08-16' }),
+    );
+  });
 
   it('treats null and undefined doorsTime identically', () => {
     expect(hashEvent({ ...base, doorsTime: null })).toBe(
       hashEvent({ ...base, doorsTime: undefined }),
-    )
-  })
+    );
+  });
 
   it('treats null and undefined showTime identically', () => {
     expect(hashEvent({ ...base, showTime: null })).toBe(
       hashEvent({ ...base, showTime: undefined }),
-    )
-  })
+    );
+  });
 
   it('avoids field boundary collisions (delimiter)', () => {
     // Without a delimiter, 'ab'+'c' would hash the same as 'a'+'bc'
-    const a = hashEvent({ ...base, title: 'ab', artist: 'c' })
-    const b = hashEvent({ ...base, title: 'a', artist: 'bc' })
-    expect(a).not.toBe(b)
-  })
-})
+    const a = hashEvent({ ...base, title: 'ab', artist: 'c' });
+    const b = hashEvent({ ...base, title: 'a', artist: 'bc' });
+    expect(a).not.toBe(b);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -317,21 +319,21 @@ Expected: tests fail with `Cannot find module './hash.js'` or similar.
 Create `packages/crawler-core/src/lib/hash.ts`:
 
 ```ts
-import { createHash } from 'crypto'
+import { createHash } from 'crypto';
 
 export function hashPage(html: string): string {
   const stripped = html
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
-  return createHash('sha256').update(stripped).digest('hex')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '');
+  return createHash('sha256').update(stripped).digest('hex');
 }
 
 export function hashEvent(fields: {
-  title: string
-  artist: string
-  date: string
-  doorsTime?: string | null
-  showTime?: string | null
+  title: string;
+  artist: string;
+  date: string;
+  doorsTime?: string | null;
+  showTime?: string | null;
 }): string {
   const str = [
     fields.title,
@@ -339,8 +341,8 @@ export function hashEvent(fields: {
     fields.date,
     fields.doorsTime ?? '',
     fields.showTime ?? '',
-  ].join('|')
-  return createHash('sha256').update(str).digest('hex')
+  ].join('|');
+  return createHash('sha256').update(str).digest('hex');
 }
 ```
 
@@ -372,8 +374,8 @@ git commit -m "feat: add hashPage and hashEvent utilities"
 At the top of `packages/crawler-core/src/crawl.ts`, add `desc` to the drizzle-orm import and add the hash import:
 
 ```ts
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { hashPage, hashEvent } from './lib/hash.js'
+import { and, desc, eq, sql } from 'drizzle-orm';
+import { hashPage, hashEvent } from './lib/hash.js';
 ```
 
 - [ ] **Step 2: Add page-level skip after `fetchPage()`**
@@ -381,19 +383,19 @@ import { hashPage, hashEvent } from './lib/hash.js'
 In the `try` block, after the `fetchPage()` call and before the `extractJsonLd` call, insert:
 
 ```ts
-const pageHash = hashPage(html)
+const pageHash = hashPage(html);
 
 const [lastRun] = await db
   .select({ pageHash: crawlRuns.pageHash })
   .from(crawlRuns)
   .where(and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')))
   .orderBy(desc(crawlRuns.createdAt))
-  .limit(1)
+  .limit(1);
 
 if (lastRun?.pageHash === pageHash) {
   console.log(
     JSON.stringify({ event: 'crawl.skipped', venueId, url: venue.websiteUrl }),
-  )
+  );
   const [crawlRun] = await db
     .insert(crawlRuns)
     .values({
@@ -407,8 +409,8 @@ if (lastRun?.pageHash === pageHash) {
       eventsInserted: 0,
       durationMs: Date.now() - startedAt,
     })
-    .returning()
-  if (!crawlRun) throw new Error('crawl_runs insert returned no row')
+    .returning();
+  if (!crawlRun) throw new Error('crawl_runs insert returned no row');
   await db
     .update(venues)
     .set({
@@ -416,8 +418,8 @@ if (lastRun?.pageHash === pageHash) {
       consecutiveFailures: 0,
       updatedAt: new Date(),
     })
-    .where(eq(venues.id, venueId))
-  return crawlRun
+    .where(eq(venues.id, venueId));
+  return crawlRun;
 }
 ```
 
@@ -440,7 +442,7 @@ const [crawlRun] = await db
     eventsInserted,
     durationMs,
   })
-  .returning()
+  .returning();
 ```
 
 - [ ] **Step 4: Verify TypeScript compiles**
@@ -471,7 +473,7 @@ git commit -m "feat: skip crawl when page hash unchanged"
 In the `try` block, replace the existing upsert section (starting from `let eventsInserted = 0`) with the following. This is the complete replacement for that block:
 
 ```ts
-let eventsInserted = 0
+let eventsInserted = 0;
 if (normalizedEvents.length > 0) {
   // Compute sourceHash for each extracted event
   const eventsWithHashes = normalizedEvents.map((event) => ({
@@ -483,7 +485,7 @@ if (normalizedEvents.length > 0) {
       doorsTime: event.doorsTime,
       showTime: event.showTime,
     }),
-  }))
+  }));
 
   // Load existing events for this venue to compare hashes
   const existingRows = await db
@@ -495,17 +497,17 @@ if (normalizedEvents.length > 0) {
       verified: events.verified,
     })
     .from(events)
-    .where(eq(events.venueId, venueId))
+    .where(eq(events.venueId, venueId));
 
   const existingMap = new Map(
     existingRows.map((e) => [`${e.artist}|${e.date}`, e]),
-  )
+  );
 
   // Notify admin when a verified event's source data has changed
   const changedVerified = eventsWithHashes.filter((e) => {
-    const existing = existingMap.get(`${e.artist}|${e.date}`)
-    return existing?.verified === true && existing.sourceHash !== e.sourceHash
-  })
+    const existing = existingMap.get(`${e.artist}|${e.date}`);
+    return existing?.verified === true && existing.sourceHash !== e.sourceHash;
+  });
 
   if (changedVerified.length > 0) {
     await db.insert(notifications).values(
@@ -516,15 +518,15 @@ if (normalizedEvents.length > 0) {
         body: `Verified event may have changed: "${e.title}" at ${venue.name} on ${e.date}`,
         metadata: JSON.stringify({ venueId, crawlRunId: id }),
       })),
-    )
+    );
   }
 
   // Only upsert events that are new or have changed content
   const eventsToUpsert = eventsWithHashes.filter((e) => {
-    const existing = existingMap.get(`${e.artist}|${e.date}`)
-    if (!existing) return true // new event
-    return existing.sourceHash !== e.sourceHash // content changed
-  })
+    const existing = existingMap.get(`${e.artist}|${e.date}`);
+    if (!existing) return true; // new event
+    return existing.sourceHash !== e.sourceHash; // content changed
+  });
 
   if (eventsToUpsert.length > 0) {
     const eventValues = eventsToUpsert.map((event) => ({
@@ -543,7 +545,7 @@ if (normalizedEvents.length > 0) {
       confidenceScore: event.confidence.toFixed(2),
       verified: strategy === 'structured_data',
       extractionStrategy: strategy,
-    }))
+    }));
 
     const upserted = await db
       .insert(events)
@@ -564,9 +566,9 @@ if (normalizedEvents.length > 0) {
           updatedAt: new Date(),
         },
       })
-      .returning()
+      .returning();
 
-    eventsInserted = upserted.length
+    eventsInserted = upserted.length;
   }
 }
 ```
@@ -577,7 +579,7 @@ if (normalizedEvents.length > 0) {
 
 ```ts
 const lowConfidence =
-  strategy === 'llm' ? normalizedEvents.filter((e) => e.confidence < 0.7) : []
+  strategy === 'llm' ? normalizedEvents.filter((e) => e.confidence < 0.7) : [];
 ```
 
 and in the crawl run insert:
@@ -619,10 +621,16 @@ Integration tests use a real local DB (no mocks). Run `docker compose up -d` bef
 Create `packages/crawler-core/src/crawl.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { db, venues, events, crawlRuns, notifications } from '@concert-crawl/db'
-import { eq, and, desc } from 'drizzle-orm'
-import { crawlVenue } from './crawl.js'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  db,
+  venues,
+  events,
+  crawlRuns,
+  notifications,
+} from '@concert-crawl/db';
+import { eq, and, desc } from 'drizzle-orm';
+import { crawlVenue } from './crawl.js';
 
 // Mock external I/O — only the fetch and LLM calls leave the process
 vi.mock('./lib/fetcher.js', () => ({
@@ -632,22 +640,22 @@ vi.mock('./lib/fetcher.js', () => ({
       public httpStatus: number,
       message: string,
     ) {
-      super(message)
+      super(message);
     }
   },
-}))
+}));
 vi.mock('./lib/robots.js', () => ({
   isAllowed: vi.fn().mockResolvedValue(true),
-}))
+}));
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
-}))
+}));
 
-import { fetchPage } from './lib/fetcher.js'
-import { extractWithLlm } from './lib/extractors/llm.js'
+import { fetchPage } from './lib/fetcher.js';
+import { extractWithLlm } from './lib/extractors/llm.js';
 
-const mockFetchPage = vi.mocked(fetchPage)
-const mockExtractWithLlm = vi.mocked(extractWithLlm)
+const mockFetchPage = vi.mocked(fetchPage);
+const mockExtractWithLlm = vi.mocked(extractWithLlm);
 
 // Minimal venue fixture — inserted fresh per test
 async function seedVenue() {
@@ -661,19 +669,19 @@ async function seedVenue() {
       active: true,
       verified: true,
     })
-    .returning()
-  if (!venue) throw new Error('venue seed failed')
-  return venue
+    .returning();
+  if (!venue) throw new Error('venue seed failed');
+  return venue;
 }
 
 async function cleanVenue(venueId: string) {
-  await db.delete(venues).where(eq(venues.id, venueId))
+  await db.delete(venues).where(eq(venues.id, venueId));
 }
 
 const HTML_V1 =
-  '<html><body><p>Event: Metallica on 2026-08-15</p></body></html>'
+  '<html><body><p>Event: Metallica on 2026-08-15</p></body></html>';
 const HTML_V2 =
-  '<html><body><p>Event: Metallica on 2026-08-15. Doors at 7pm.</p></body></html>'
+  '<html><body><p>Event: Metallica on 2026-08-15. Doors at 7pm.</p></body></html>';
 
 const METALLICA_EVENT = {
   title: 'Metallica Live',
@@ -684,31 +692,31 @@ const METALLICA_EVENT = {
   ticketUrl: 'https://test-venue.example.com/tickets',
   sourceUrl: 'https://test-venue.example.com',
   confidence: 0.95,
-}
+};
 
 describe('crawlVenue — page-level skip', () => {
   it('returns early with eventsFound=0 when page hash matches last successful run', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     try {
       mockFetchPage.mockResolvedValue({
         html: HTML_V1,
         httpStatus: 200,
         finalUrl: venue.websiteUrl,
-      })
+      });
       mockExtractWithLlm.mockResolvedValue({
         events: [METALLICA_EVENT],
         usage: { inputTokens: 100, outputTokens: 50 },
-      })
+      });
 
       // First crawl — page is new, should extract
-      await crawlVenue(venue.id)
+      await crawlVenue(venue.id);
 
       // Second crawl — same HTML, should skip
-      const run = await crawlVenue(venue.id)
+      const run = await crawlVenue(venue.id);
 
-      expect(run.eventsFound).toBe(0)
-      expect(run.eventsInserted).toBe(0)
-      expect(run.status).toBe('success')
+      expect(run.eventsFound).toBe(0);
+      expect(run.eventsInserted).toBe(0);
+      expect(run.status).toBe('success');
 
       // Verify crawl.skipped was logged (check crawl_runs for a skipped row)
       const [skippedRun] = await db
@@ -716,15 +724,15 @@ describe('crawlVenue — page-level skip', () => {
         .from(crawlRuns)
         .where(eq(crawlRuns.venueId, venue.id))
         .orderBy(desc(crawlRuns.createdAt))
-        .limit(1)
-      expect(skippedRun?.pageHash).toBeTruthy()
+        .limit(1);
+      expect(skippedRun?.pageHash).toBeTruthy();
     } finally {
-      await cleanVenue(venue.id)
+      await cleanVenue(venue.id);
     }
-  })
+  });
 
   it('proceeds to extraction when page hash differs', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     try {
       mockFetchPage
         .mockResolvedValueOnce({
@@ -736,25 +744,25 @@ describe('crawlVenue — page-level skip', () => {
           html: HTML_V2,
           httpStatus: 200,
           finalUrl: venue.websiteUrl,
-        })
+        });
       mockExtractWithLlm.mockResolvedValue({
         events: [METALLICA_EVENT],
         usage: { inputTokens: 100, outputTokens: 50 },
-      })
+      });
 
-      await crawlVenue(venue.id) // first crawl
-      const run = await crawlVenue(venue.id) // second crawl — page changed
+      await crawlVenue(venue.id); // first crawl
+      const run = await crawlVenue(venue.id); // second crawl — page changed
 
-      expect(run.eventsFound).toBeGreaterThan(0)
+      expect(run.eventsFound).toBeGreaterThan(0);
     } finally {
-      await cleanVenue(venue.id)
+      await cleanVenue(venue.id);
     }
-  })
-})
+  });
+});
 
 describe('crawlVenue — event-level sourceHash', () => {
   it('skips DB write for unchanged non-verified events', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     try {
       mockFetchPage
         .mockResolvedValueOnce({
@@ -766,27 +774,27 @@ describe('crawlVenue — event-level sourceHash', () => {
           html: HTML_V2,
           httpStatus: 200,
           finalUrl: venue.websiteUrl,
-        })
+        });
       mockExtractWithLlm.mockResolvedValue({
         events: [METALLICA_EVENT],
         usage: { inputTokens: 100, outputTokens: 50 },
-      })
+      });
 
-      const run1 = await crawlVenue(venue.id)
-      expect(run1.eventsInserted).toBe(1) // new event inserted
+      const run1 = await crawlVenue(venue.id);
+      expect(run1.eventsInserted).toBe(1); // new event inserted
 
       // Same event returned again — hash will match, should not write
-      const run2 = await crawlVenue(venue.id)
-      expect(run2.eventsInserted).toBe(0) // unchanged — skipped
+      const run2 = await crawlVenue(venue.id);
+      expect(run2.eventsInserted).toBe(0); // unchanged — skipped
     } finally {
-      await cleanVenue(venue.id)
+      await cleanVenue(venue.id);
     }
-  })
+  });
 
   it('inserts admin alert when a verified event sourceHash changes', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     try {
-      const updatedEvent = { ...METALLICA_EVENT, doorsTime: '19:00' } // changed field
+      const updatedEvent = { ...METALLICA_EVENT, doorsTime: '19:00' }; // changed field
 
       mockFetchPage
         .mockResolvedValueOnce({
@@ -798,7 +806,7 @@ describe('crawlVenue — event-level sourceHash', () => {
           html: HTML_V2,
           httpStatus: 200,
           finalUrl: venue.websiteUrl,
-        })
+        });
       mockExtractWithLlm
         .mockResolvedValueOnce({
           events: [METALLICA_EVENT],
@@ -807,9 +815,9 @@ describe('crawlVenue — event-level sourceHash', () => {
         .mockResolvedValueOnce({
           events: [updatedEvent],
           usage: { inputTokens: 100, outputTokens: 50 },
-        })
+        });
 
-      await crawlVenue(venue.id)
+      await crawlVenue(venue.id);
 
       // Manually mark the event as verified
       await db
@@ -817,21 +825,21 @@ describe('crawlVenue — event-level sourceHash', () => {
         .set({ verified: true })
         .where(
           and(eq(events.venueId, venue.id), eq(events.artist, 'Metallica')),
-        )
+        );
 
-      await crawlVenue(venue.id)
+      await crawlVenue(venue.id);
 
       const [alert] = await db
         .select()
         .from(notifications)
-        .where(eq(notifications.category, 'crawl.verified_event_changed'))
-      expect(alert).toBeDefined()
-      expect(alert?.body).toContain('Metallica Live')
+        .where(eq(notifications.category, 'crawl.verified_event_changed'));
+      expect(alert).toBeDefined();
+      expect(alert?.body).toContain('Metallica Live');
     } finally {
-      await cleanVenue(venue.id)
+      await cleanVenue(venue.id);
     }
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Run the integration tests**

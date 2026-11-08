@@ -22,9 +22,9 @@
 
 ```ts
 export function crawlFailureGrouping(message: string): {
-  fingerprint: string[]
-  errorKind: CrawlErrorKind
-}
+  fingerprint: string[];
+  errorKind: CrawlErrorKind;
+};
 ```
 
 - [x] **Step 1: Failing tests.** In `crawl-error-class.test.ts` (reusing its `QUOTA` fixture):
@@ -35,14 +35,14 @@ describe('crawlFailureGrouping', () => {
     expect(crawlFailureGrouping(QUOTA)).toEqual({
       fingerprint: ['crawl.failed', 'llm_quota'],
       errorKind: 'llm_quota',
-    })
-  })
+    });
+  });
   it('gives different causes different fingerprints', () => {
     expect(crawlFailureGrouping('HTTP 403').fingerprint).not.toEqual(
       crawlFailureGrouping('HTTP 500').fingerprint,
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 In `run.test.ts`, add to the crawler-core mock factory:
@@ -59,10 +59,10 @@ it('fingerprints a failed venue by cause', async () => {
     ...SUCCESSFUL_CRAWL_RUN,
     status: 'failed',
     errorMessage: 'boom',
-  })
-  const { runDailyCrawl } = await import('./run.js')
+  });
+  const { runDailyCrawl } = await import('./run.js');
 
-  await runDailyCrawl()
+  await runDailyCrawl();
 
   expect(Sentry.captureException).toHaveBeenCalledWith(
     expect.any(Error),
@@ -70,8 +70,8 @@ it('fingerprints a failed venue by cause', async () => {
       fingerprint: ['crawl.failed', 'k'],
       tags: { crawl_error_kind: 'other' },
     }),
-  )
-})
+  );
+});
 ```
 
 (`Sentry` is the file's existing `@sentry/node` mock, ~line 8; import it the way the file's other Sentry assertions do.)
@@ -83,21 +83,21 @@ it('fingerprints a failed venue by cause', async () => {
 ```ts
 /** Sentry grouping for a failed crawl: one issue per cause, on every path. */
 export function crawlFailureGrouping(message: string) {
-  const { kind, key } = classifyCrawlError(message)
-  return { fingerprint: ['crawl.failed', key], errorKind: kind }
+  const { kind, key } = classifyCrawlError(message);
+  return { fingerprint: ['crawl.failed', key], errorKind: kind };
 }
 ```
 
 Re-export it from `packages/crawler-core/src/index.ts`. At both `run.ts` capture sites:
 
 ```ts
-const message = result.value.errorMessage ?? 'Crawl failed'
-const grouping = crawlFailureGrouping(message)
+const message = result.value.errorMessage ?? 'Crawl failed';
+const grouping = crawlFailureGrouping(message);
 Sentry.captureException(new Error(message), {
   fingerprint: grouping.fingerprint,
   tags: { crawl_error_kind: grouping.errorKind },
   extra: { venueId: batch[idx]?.id, name: batch[idx]?.name },
-})
+});
 ```
 
 (triggers path: `crawlRun.errorMessage`, `extra: { venueId: trigger.venueId, triggerId: trigger.id }`). Leave the `rejected` branch (~line 384) on default grouping — it carries a real stack trace, the right grouping for an unexpected throw.

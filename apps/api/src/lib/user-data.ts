@@ -11,7 +11,7 @@
 // cannot be added without the test demanding a disposition for it, and every
 // disposition is executed here.
 
-import { and, eq, ne, sql } from 'drizzle-orm'
+import { and, eq, ne, sql } from 'drizzle-orm';
 import {
   CREW_EXPORT_KEY,
   USER_DATA_REGISTRY,
@@ -25,8 +25,8 @@ import {
   priceSubmissions,
   userEvents,
   venues,
-} from '@concert-crawl/db'
-import type { DbTransaction } from './db-executor.js'
+} from '@concert-crawl/db';
+import type { DbTransaction } from './db-executor.js';
 
 /**
  * Removes everything a deleted account should not keep, per
@@ -41,33 +41,33 @@ import type { DbTransaction } from './db-executor.js'
  */
 export const deleteUserData = async (userId: string): Promise<void> => {
   if (userId.trim().length === 0) {
-    throw new Error('deleteUserData requires a non-empty user id')
+    throw new Error('deleteUserData requires a non-empty user id');
   }
 
   await db.transaction(async (tx) => {
     // Crews first. Keepership has to transfer before `crew_members` rows go,
     // or there is no member left to promote.
-    await reassignCrews(tx, userId)
+    await reassignCrews(tx, userId);
 
     for (const entry of USER_DATA_REGISTRY) {
-      if (entry.userIdColumn === null) continue
+      if (entry.userIdColumn === null) continue;
       // 'none' holds no user data; 'retain' survives under a legal-obligation
       // exemption. `crews` is 'retain' and is handled above — this guard keeps
       // that true if its disposition is ever revisited.
       if (entry.disposition !== 'delete' && entry.disposition !== 'anonymize') {
-        continue
+        continue;
       }
-      if (entry.tableName === 'crews') continue
+      if (entry.tableName === 'crews') continue;
 
-      const table = sql.identifier(entry.tableName)
-      const column = sql.identifier(entry.userIdColumn)
+      const table = sql.identifier(entry.tableName);
+      const column = sql.identifier(entry.userIdColumn);
 
       if (entry.disposition === 'delete') {
-        await tx.execute(sql`DELETE FROM ${table} WHERE ${column} = ${userId}`)
+        await tx.execute(sql`DELETE FROM ${table} WHERE ${column} = ${userId}`);
       } else {
         await tx.execute(
           sql`UPDATE ${table} SET ${column} = NULL WHERE ${column} = ${userId}`,
-        )
+        );
       }
     }
 
@@ -82,16 +82,16 @@ export const deleteUserData = async (userId: string): Promise<void> => {
     await tx
       .update(crewInvites)
       .set({ revokedBy: null })
-      .where(eq(crewInvites.revokedBy, userId))
+      .where(eq(crewInvites.revokedBy, userId));
 
     // The sighting itself stays — last_seen_at is a freshness fact about the
     // price, not about the person — but the actor does not.
     await tx
       .update(priceSubmissions)
       .set({ lastSeenBy: null })
-      .where(eq(priceSubmissions.lastSeenBy, userId))
-  })
-}
+      .where(eq(priceSubmissions.lastSeenBy, userId));
+  });
+};
 
 /**
  * A crew outlives its founder. The name is a label for a group, not personal
@@ -106,7 +106,7 @@ const reassignCrews = async (
   const kept = await tx
     .select({ id: crews.id })
     .from(crews)
-    .where(eq(crews.keeperId, userId))
+    .where(eq(crews.keeperId, userId));
 
   for (const crew of kept) {
     const [heir] = await tx
@@ -116,18 +116,18 @@ const reassignCrews = async (
         and(eq(crewMembers.crewId, crew.id), ne(crewMembers.userId, userId)),
       )
       .orderBy(crewMembers.joinedAt)
-      .limit(1)
+      .limit(1);
 
     if (heir === undefined) {
-      await tx.delete(crews).where(eq(crews.id, crew.id))
+      await tx.delete(crews).where(eq(crews.id, crew.id));
     } else {
       await tx
         .update(crews)
         .set({ keeperId: heir.userId })
-        .where(eq(crews.id, crew.id))
+        .where(eq(crews.id, crew.id));
     }
   }
-}
+};
 
 /**
  * Gathers every row keyed to this user, under the registry's `exportKey`
@@ -147,10 +147,10 @@ export const collectUserData = async (
   userId: string,
 ): Promise<Record<string, unknown[]>> => {
   if (userId.trim().length === 0) {
-    throw new Error('collectUserData requires a non-empty user id')
+    throw new Error('collectUserData requires a non-empty user id');
   }
 
-  const payload: Record<string, unknown[]> = {}
+  const payload: Record<string, unknown[]> = {};
 
   for (const entry of USER_DATA_REGISTRY) {
     if (
@@ -158,13 +158,13 @@ export const collectUserData = async (
       entry.exportColumns === null ||
       entry.userIdColumn === null
     ) {
-      continue
+      continue;
     }
 
     const columns = sql.join(
       entry.exportColumns.map((name) => sql.identifier(name)),
       sql`, `,
-    )
+    );
 
     // Order by every selected column, by ordinal. Postgres leaves row order
     // undefined without an ORDER BY, so two exports of unchanged data can come
@@ -177,22 +177,22 @@ export const collectUserData = async (
     const ordering = sql.join(
       entry.exportColumns.map((_column, index) => sql.raw(String(index + 1))),
       sql`, `,
-    )
+    );
 
     // postgres-js returns the row array directly; there is no `.rows` wrapper.
     const rows = await db.execute(
       sql`SELECT ${columns} FROM ${sql.identifier(entry.tableName)}
           WHERE ${sql.identifier(entry.userIdColumn)} = ${userId}
           ORDER BY ${ordering}`,
-    )
-    payload[entry.exportKey] = [...rows]
+    );
+    payload[entry.exportKey] = [...rows];
   }
 
-  payload[CREW_EXPORT_KEY] = await collectCrews(userId)
-  payload[WATCHING_EXPORT_KEY] = await collectWatching(userId)
+  payload[CREW_EXPORT_KEY] = await collectCrews(userId);
+  payload[WATCHING_EXPORT_KEY] = await collectWatching(userId);
 
-  return payload
-}
+  return payload;
+};
 
 /**
  * Every show this user watched or attended, resolved to something readable.
@@ -227,10 +227,10 @@ const collectWatching = async (userId: string): Promise<unknown[]> => {
     // event_id breaks ties: a seed or a bulk import can stamp several rows with
     // the same createdAt, and the generic exporter's determinism is worth
     // nothing if the two hand-written joins below it shuffle.
-    .orderBy(userEvents.createdAt, userEvents.eventId)
+    .orderBy(userEvents.createdAt, userEvents.eventId);
 
-  return rows
-}
+  return rows;
+};
 
 /**
  * The crews this user belongs to: the crew's name, when THEY joined, and
@@ -256,7 +256,7 @@ const collectCrews = async (userId: string): Promise<unknown[]> => {
     .where(eq(crewMembers.userId, userId))
     // Same tie-breaker reasoning as collectWatching. crew_id, not name, since
     // two crews may legitimately share a name.
-    .orderBy(crewMembers.joinedAt, crewMembers.crewId)
+    .orderBy(crewMembers.joinedAt, crewMembers.crewId);
 
-  return rows
-}
+  return rows;
+};

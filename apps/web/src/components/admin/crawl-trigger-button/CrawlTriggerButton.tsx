@@ -1,126 +1,126 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import type { CrawlRun } from '@concert-crawl/types'
-import { ApiError } from '@/lib/api'
-import { formatDurationMs } from '@/lib/time'
-import { AdminButton } from '@/components/admin/primitives'
-import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
-import { RefreshCw, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import type { CrawlRun } from '@concert-crawl/types';
+import { ApiError } from '@/lib/api';
+import { formatDurationMs } from '@/lib/time';
+import { AdminButton } from '@/components/admin/primitives';
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import {
   triggerVenueCrawl,
   fetchCrawlTrigger,
   fetchCrawlRun,
-} from './lib/crawl'
-import { POLL_INTERVAL_MS } from './definitions/constants'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import type { TriggerState } from './definitions/types'
+} from './lib/crawl';
+import { POLL_INTERVAL_MS } from './definitions/constants';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import type { TriggerState } from './definitions/types';
 
 interface CrawlTriggerButtonProps {
-  venueId: string
+  venueId: string;
 }
 
 export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
-  const { getToken } = useAuth()
-  const router = useRouter()
-  const [triggerState, setTriggerState] = useState<TriggerState>('idle')
-  const [result, setResult] = useState<CrawlRun | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isUnmounted = useRef(false)
+  const { getToken } = useAuth();
+  const router = useRouter();
+  const [triggerState, setTriggerState] = useState<TriggerState>('idle');
+  const [result, setResult] = useState<CrawlRun | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isUnmounted = useRef(false);
 
   useEffect(() => {
     return () => {
-      isUnmounted.current = true
-      if (pollTimeout.current) clearTimeout(pollTimeout.current)
-    }
-  }, [])
+      isUnmounted.current = true;
+      if (pollTimeout.current) clearTimeout(pollTimeout.current);
+    };
+  }, []);
 
   const startVenueCrawl = async () => {
-    setTriggerState('triggering')
-    setResult(null)
-    setErrorMessage(null)
+    setTriggerState('triggering');
+    setResult(null);
+    setErrorMessage(null);
 
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token)
-        throw new Error(ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated)
+        throw new Error(ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated);
 
-      const { triggerId } = await triggerVenueCrawl(venueId, token)
+      const { triggerId } = await triggerVenueCrawl(venueId, token);
 
-      if (isUnmounted.current) return
-      setTriggerState('polling')
+      if (isUnmounted.current) return;
+      setTriggerState('polling');
 
       // Self-scheduling poll: each tick is queued only after the previous one
       // resolves, so a slow token fetch or request can never overlap with the
       // next tick (which a fixed setInterval would allow).
       const poll = async () => {
         try {
-          const pollToken = await getToken()
+          const pollToken = await getToken();
           if (!pollToken)
             throw new Error(
               ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated,
-            )
+            );
 
           // The trigger is processed asynchronously by the crawler service,
           // which stamps a terminal status and (once a run row exists) a
           // crawlRunId. Poll the trigger until it settles, then fetch the
           // linked run for the result display.
-          const trigger = await fetchCrawlTrigger(triggerId, pollToken)
+          const trigger = await fetchCrawlTrigger(triggerId, pollToken);
 
           // Bail if the component unmounted while this tick was in flight, so
           // we never set state or schedule another timeout on a dead component.
-          if (isUnmounted.current) return
+          if (isUnmounted.current) return;
 
           if (trigger.status === 'done' || trigger.status === 'failed') {
             if (trigger.crawlRunId) {
-              const run = await fetchCrawlRun(trigger.crawlRunId, pollToken)
-              if (isUnmounted.current) return
-              setResult(run)
-              setTriggerState('done')
-              router.refresh()
+              const run = await fetchCrawlRun(trigger.crawlRunId, pollToken);
+              if (isUnmounted.current) return;
+              setResult(run);
+              setTriggerState('done');
+              router.refresh();
             } else {
-              setTriggerState('error')
-              setErrorMessage(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed)
+              setTriggerState('error');
+              setErrorMessage(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed);
             }
-            return
+            return;
           }
 
-          pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
+          pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS);
         } catch (err) {
-          if (isUnmounted.current) return
-          setTriggerState('error')
+          if (isUnmounted.current) return;
+          setTriggerState('error');
           setErrorMessage(
             err instanceof ApiError || err instanceof Error
               ? err.message
               : ADMIN_COPY.crawlTriggerButton.errors.pollFailed,
-          )
+          );
         }
-      }
+      };
 
-      if (isUnmounted.current) return
-      pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
+      if (isUnmounted.current) return;
+      pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS);
     } catch (err) {
-      if (isUnmounted.current) return
-      setTriggerState('error')
+      if (isUnmounted.current) return;
+      setTriggerState('error');
       setErrorMessage(
         err instanceof ApiError || err instanceof Error
           ? err.message
           : ADMIN_COPY.crawlTriggerButton.errors.triggerFailed,
-      )
+      );
     }
-  }
+  };
 
-  const isLoading = triggerState === 'triggering' || triggerState === 'polling'
+  const isLoading = triggerState === 'triggering' || triggerState === 'polling';
 
   const buttonLabel =
     triggerState === 'triggering'
       ? ADMIN_COPY.crawlTriggerButton.button.triggering
       : triggerState === 'polling'
         ? ADMIN_COPY.crawlTriggerButton.button.polling
-        : ADMIN_COPY.crawlTriggerButton.button.idle
+        : ADMIN_COPY.crawlTriggerButton.button.idle;
 
   return (
     <div
@@ -205,5 +205,5 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};

@@ -69,21 +69,21 @@ Replace the flat `bg-surface-2` fallback with a hue-shifted gradient derived fro
 **Hash function:**
 
 ```ts
-const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-const hues = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260]
-const hue = hues[hash % hues.length]
+const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+const hues = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260];
+const hue = hues[hash % hues.length];
 ```
 
 **Gradient (inline style on the fallback div):**
 
 ```ts
-background: `linear-gradient(135deg, oklch(0.35 0.08 ${hue}), oklch(0.22 0.06 ${hue + 40}))`
+background: `linear-gradient(135deg, oklch(0.35 0.08 ${hue}), oklch(0.22 0.06 ${hue + 40}))`;
 ```
 
 **Initial letter color:**
 
 ```ts
-color: `oklch(0.75 0.12 ${hue})`
+color: `oklch(0.75 0.12 ${hue})`;
 ```
 
 - Extract this logic into a small helper (`getArtistGradientStyle(artist: string)`) co-located in the `event-card/` folder (not global `definitions/`).

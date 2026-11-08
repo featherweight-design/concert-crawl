@@ -6,23 +6,23 @@
 // send pipeline treats an unregistered key as log-and-skip WITHOUT consuming
 // the dedupe key, so real sends happen once templates land.
 
-import type { EmailTemplateKey } from '@concert-crawl/db'
-import { renderCancellationAck } from './templates/cancellation-ack.js'
-import { renderCardExpiringSoon } from './templates/card-expiring-soon.js'
-import { renderDunning1CardDeclined } from './templates/dunning-1-card-declined.js'
-import { renderDunning2StillDeclined } from './templates/dunning-2-still-declined.js'
-import { renderDunning3FinalWarning } from './templates/dunning-3-final-warning.js'
-import { renderGiftingEndingNotice } from './templates/gifting-ending-notice.js'
-import { renderRenewalReceiptAnnual } from './templates/renewal-receipt-annual.js'
-import { renderRenewalReceiptMonthly } from './templates/renewal-receipt-monthly.js'
-import { renderWelcomeGifted } from './templates/welcome-gifted.js'
-import { renderWelcomePaid } from './templates/welcome-paid.js'
-import { renderSpotifyDigest } from './templates/spotify-digest.js'
-import { renderWinback } from './templates/winback.js'
-import type { EmailTemplateVars, TemplateRenderer } from './types.js'
+import type { EmailTemplateKey } from '@concert-crawl/db';
+import { renderCancellationAck } from './templates/cancellation-ack.js';
+import { renderCardExpiringSoon } from './templates/card-expiring-soon.js';
+import { renderDunning1CardDeclined } from './templates/dunning-1-card-declined.js';
+import { renderDunning2StillDeclined } from './templates/dunning-2-still-declined.js';
+import { renderDunning3FinalWarning } from './templates/dunning-3-final-warning.js';
+import { renderGiftingEndingNotice } from './templates/gifting-ending-notice.js';
+import { renderRenewalReceiptAnnual } from './templates/renewal-receipt-annual.js';
+import { renderRenewalReceiptMonthly } from './templates/renewal-receipt-monthly.js';
+import { renderWelcomeGifted } from './templates/welcome-gifted.js';
+import { renderWelcomePaid } from './templates/welcome-paid.js';
+import { renderSpotifyDigest } from './templates/spotify-digest.js';
+import { renderWinback } from './templates/winback.js';
+import type { EmailTemplateVars, TemplateRenderer } from './types.js';
 
 const templateRegistry: {
-  [K in EmailTemplateKey]?: TemplateRenderer<EmailTemplateVars[K]>
+  [K in EmailTemplateKey]?: TemplateRenderer<EmailTemplateVars[K]>;
 } = {
   welcome_paid: renderWelcomePaid,
   welcome_gifted: renderWelcomeGifted,
@@ -36,9 +36,9 @@ const templateRegistry: {
   gifting_ending_notice: renderGiftingEndingNotice,
   winback: renderWinback,
   spotify_digest: renderSpotifyDigest,
-}
+};
 
 export const getTemplateRenderer = <K extends EmailTemplateKey>(
   templateKey: K,
 ): TemplateRenderer<EmailTemplateVars[K]> | null =>
-  templateRegistry[templateKey] ?? null
+  templateRegistry[templateKey] ?? null;

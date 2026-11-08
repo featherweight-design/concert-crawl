@@ -6,11 +6,11 @@
 // which reads as the acknowledgement having silently failed. The API re-derives
 // and validates the same figure, so this is a convenience, not the authority.
 
-import type { TriageFault } from '@/components/admin/triage/definitions/types'
+import type { TriageFault } from '@/components/admin/triage/definitions/types';
 
 export interface AcknowledgementEvidence {
-  evidenceKind: 'pinned_count' | 'horizon_shrank' | null
-  evidenceValue: string | null
+  evidenceKind: 'pinned_count' | 'horizon_shrank' | null;
+  evidenceValue: string | null;
 }
 
 export const acknowledgementEvidence = (
@@ -24,21 +24,24 @@ export const acknowledgementEvidence = (
           fault.evidence.kind === 'horizon_shrank'
             ? fault.evidence.furthest
             : String(fault.evidence.count),
-      }
+      };
     case 'wentDark':
-      return { evidenceKind: null, evidenceValue: String(fault.evidence.count) }
+      return {
+        evidenceKind: null,
+        evidenceValue: String(fault.evidence.count),
+      };
     case 'coverage':
       return {
         evidenceKind: null,
         evidenceValue: String(fault.evidence.uncovered),
-      }
+      };
     case 'blocked':
       return {
         evidenceKind: null,
         evidenceValue:
           fault.evidence.status === null ? null : String(fault.evidence.status),
-      }
+      };
     case 'failed':
-      return { evidenceKind: null, evidenceValue: fault.evidence.errorClass }
+      return { evidenceKind: null, evidenceValue: fault.evidence.errorClass };
   }
-}
+};

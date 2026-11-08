@@ -5,6 +5,6 @@ export {
   IconClock,
   IconUsers,
   ExternalLinkIcon,
-} from './InfoRow'
-export { EventTicketCta } from './EventTicketCta'
-export { PublicEventDetail } from './PublicEventDetail'
+} from './InfoRow';
+export { EventTicketCta } from './EventTicketCta';
+export { PublicEventDetail } from './PublicEventDetail';

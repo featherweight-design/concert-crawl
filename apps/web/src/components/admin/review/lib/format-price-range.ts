@@ -16,12 +16,12 @@ export const formatPriceRange = (
   floor: string,
   ceiling: string | null,
 ): string => {
-  const floorNum = parseFloat(floor)
+  const floorNum = parseFloat(floor);
   const formatNum = (num: number): string =>
-    Number.isInteger(num) ? `$${num}` : `$${num.toFixed(2)}`
-  if (ceiling === null) return formatNum(floorNum)
-  const ceilingNum = parseFloat(ceiling)
+    Number.isInteger(num) ? `$${num}` : `$${num.toFixed(2)}`;
+  if (ceiling === null) return formatNum(floorNum);
+  const ceilingNum = parseFloat(ceiling);
   if (ceilingNum > floorNum)
-    return `${formatNum(floorNum)}–${formatNum(ceilingNum)}`
-  return formatNum(floorNum)
-}
+    return `${formatNum(floorNum)}–${formatNum(ceilingNum)}`;
+  return formatNum(floorNum);
+};

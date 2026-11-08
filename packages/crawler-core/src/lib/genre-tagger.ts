@@ -1,25 +1,25 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { z } from 'zod'
-import { and, eq, isNull } from 'drizzle-orm'
-import { db, events, costTracking } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { calculateCost } from './cost.js'
-import type { TokenUsage } from '../types.js'
+import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
+import { and, eq, isNull } from 'drizzle-orm';
+import { db, events, costTracking } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { calculateCost } from './cost.js';
+import type { TokenUsage } from '../types.js';
 
-const logger = createLogger('genre-tagger')
-const MODEL = 'claude-haiku-4-5-20251001'
+const logger = createLogger('genre-tagger');
+const MODEL = 'claude-haiku-4-5-20251001';
 
-export const GENRE_TAG_BATCH_SIZE = 50
+export const GENRE_TAG_BATCH_SIZE = 50;
 
 export interface GenreTagInput {
-  id: string
-  title: string
-  artist: string
+  id: string;
+  title: string;
+  artist: string;
 }
 
 interface GenreTagResult {
-  eventId: string
-  genres: string[]
+  eventId: string;
+  genres: string[];
 }
 
 const SYSTEM_PROMPT = `You are a music genre classifier. Given concert events, classify each into 1–3 genres.
@@ -28,7 +28,7 @@ Use lowercase, common genre names (e.g. rock, indie, hip-hop, electronic, countr
 
 Rules:
 - Prefer fewer genres over more when uncertain
-- Base classification on artist name and event title`
+- Base classification on artist name and event title`;
 
 const TAG_GENRES_TOOL: Anthropic.Tool = {
   name: 'tag_genres',
@@ -54,33 +54,33 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
     },
     required: ['results'],
   },
-}
+};
 
 const SingleResultSchema = z.object({
   eventId: z.string().uuid(),
   genres: z.array(z.string().min(1)).min(1).max(3),
-})
+});
 
 const TagResponseSchema = z.object({
   results: z.array(z.unknown()).catch([]),
-})
+});
 
 export function chunkArray<T>(arr: T[], size: number): T[][] {
   if (size <= 0) {
-    throw new Error(`chunkArray: size must be a positive integer, got ${size}`)
+    throw new Error(`chunkArray: size must be a positive integer, got ${size}`);
   }
-  const chunks: T[][] = []
+  const chunks: T[][] = [];
   for (let idx = 0; idx < arr.length; idx += size) {
-    chunks.push(arr.slice(idx, idx + size))
+    chunks.push(arr.slice(idx, idx + size));
   }
-  return chunks
+  return chunks;
 }
 
 export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
-  results: GenreTagResult[]
-  tokenUsage: TokenUsage
+  results: GenreTagResult[];
+  tokenUsage: TokenUsage;
 }> {
-  const client = new Anthropic()
+  const client = new Anthropic();
 
   const response = await client.messages.create({
     model: MODEL,
@@ -106,36 +106,36 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
         )}`,
       },
     ],
-  })
+  });
 
-  const usage = response.usage
+  const usage = response.usage;
   const tokenUsage: TokenUsage = {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
-  }
+  };
 
-  const toolBlock = response.content.find((bl) => bl.type === 'tool_use')
+  const toolBlock = response.content.find((bl) => bl.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    logger.error('genre-tagger: no tool_use block in response')
-    return { results: [], tokenUsage }
+    logger.error('genre-tagger: no tool_use block in response');
+    return { results: [], tokenUsage };
   }
 
-  const parsed = TagResponseSchema.safeParse(toolBlock.input)
+  const parsed = TagResponseSchema.safeParse(toolBlock.input);
   if (!parsed.success) {
     logger.error(
       { error: parsed.error.message },
       'genre-tagger: invalid tool response schema',
-    )
-    return { results: [], tokenUsage }
+    );
+    return { results: [], tokenUsage };
   }
 
-  const results: GenreTagResult[] = []
+  const results: GenreTagResult[] = [];
   for (const item of parsed.data.results) {
-    const itemParsed = SingleResultSchema.safeParse(item)
+    const itemParsed = SingleResultSchema.safeParse(item);
     if (itemParsed.success) {
-      results.push(itemParsed.data)
+      results.push(itemParsed.data);
     }
   }
 
@@ -143,10 +143,10 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
     logger.warn(
       { inputCount: eventInputs.length },
       'genre-tagger: LLM returned no usable results for non-empty input',
-    )
+    );
   }
 
-  return { results, tokenUsage }
+  return { results, tokenUsage };
 }
 
 export async function tagEventsWithGenres(
@@ -162,7 +162,7 @@ export async function tagEventsWithGenres(
       canonicalHeadliners: events.canonicalHeadliners,
     })
     .from(events)
-    .where(and(eq(events.venueId, venueId), isNull(events.genre)))
+    .where(and(eq(events.venueId, venueId), isNull(events.genre)));
 
   // An event with no artist string has nothing to infer a genre from, so it is
   // skipped rather than sent to the model with an empty artist field.
@@ -182,11 +182,11 @@ export async function tagEventsWithGenres(
   // canonicalization strips the diacritics and casing it uses.
   const untagged: GenreTagInput[] = rows
     .filter((row) => {
-      if (row.artist.trim() === '') return false
+      if (row.artist.trim() === '') return false;
       const ruledNobodyBilled =
         Array.isArray(row.canonicalHeadliners) &&
-        row.canonicalHeadliners.length === 0
-      return !ruledNobodyBilled
+        row.canonicalHeadliners.length === 0;
+      return !ruledNobodyBilled;
     })
     .map((row) => {
       // `??` alone would let an empty `headliners` through as `''`, since
@@ -194,34 +194,37 @@ export async function tagEventsWithGenres(
       // only rejects an EMPTY canonical_headliners, and a row whose
       // canonical_headliners is NULL has never been near the ladder. Falling
       // through to `artist` is what the non-empty-artist guard promised.
-      const billed = row.headliners?.join(', ').trim()
+      const billed = row.headliners?.join(', ').trim();
       return {
         id: row.id,
         title: row.title,
         artist: billed !== undefined && billed !== '' ? billed : row.artist,
-      }
-    })
+      };
+    });
 
   if (untagged.length === 0) {
-    logger.info({ venueId }, 'No untagged events — skipping genre tagging')
-    return
+    logger.info({ venueId }, 'No untagged events — skipping genre tagging');
+    return;
   }
 
-  logger.info({ venueId, count: untagged.length }, 'Tagging events with genres')
+  logger.info(
+    { venueId, count: untagged.length },
+    'Tagging events with genres',
+  );
 
   try {
-    const batches = chunkArray(untagged, GENRE_TAG_BATCH_SIZE)
-    const allResults: GenreTagResult[] = []
+    const batches = chunkArray(untagged, GENRE_TAG_BATCH_SIZE);
+    const allResults: GenreTagResult[] = [];
     let totalTokenUsage: TokenUsage = {
       inputTokens: 0,
       outputTokens: 0,
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
-    }
+    };
 
     for (const batch of batches) {
-      const { results, tokenUsage } = await classifyGenres(batch)
-      allResults.push(...results)
+      const { results, tokenUsage } = await classifyGenres(batch);
+      allResults.push(...results);
       totalTokenUsage = {
         inputTokens: totalTokenUsage.inputTokens + tokenUsage.inputTokens,
         outputTokens: totalTokenUsage.outputTokens + tokenUsage.outputTokens,
@@ -229,17 +232,17 @@ export async function tagEventsWithGenres(
           totalTokenUsage.cacheReadTokens + tokenUsage.cacheReadTokens,
         cacheWriteTokens:
           totalTokenUsage.cacheWriteTokens + tokenUsage.cacheWriteTokens,
-      }
+      };
     }
 
     for (const { eventId, genres } of allResults) {
       await db
         .update(events)
         .set({ genre: genres })
-        .where(eq(events.id, eventId))
+        .where(eq(events.id, eventId));
     }
 
-    const costUsd = calculateCost(totalTokenUsage)
+    const costUsd = calculateCost(totalTokenUsage);
     await db.insert(costTracking).values({
       service: 'genre-tagger',
       costUsd: costUsd.toFixed(6),
@@ -252,16 +255,16 @@ export async function tagEventsWithGenres(
         eventsTagged: allResults.length,
         ...totalTokenUsage,
       }),
-    })
+    });
 
     logger.info(
       { venueId, eventsTagged: allResults.length, costUsd },
       'Genre tagging complete',
-    )
+    );
   } catch (err) {
     logger.error(
       { err, venueId },
       'Genre tagging failed — events will retry on next crawl',
-    )
+    );
   }
 }

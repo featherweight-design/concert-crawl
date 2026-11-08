@@ -1,18 +1,18 @@
-import type { GuideChipKey } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '../definitions/copy'
+import type { GuideChipKey } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '../definitions/copy';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 interface StillGatheringProps {
   /** The chip keys this venue has nothing for yet. Derived, never hard-coded. */
-  chipTypes: GuideChipKey[]
-  venueShortName: string
+  chipTypes: GuideChipKey[];
+  venueShortName: string;
   /**
    * The closing line reads "that's the lot — this venue is new to us," which is
    * only true of a thin guide. On a populated one the missing-topic line still
    * belongs, but that sentence would contradict the five chips sitting above it.
    */
-  showFooter: boolean
+  showFooter: boolean;
 }
 
 /**
@@ -25,7 +25,7 @@ export const StillGathering = ({
   venueShortName,
   showFooter,
 }: StillGatheringProps) => {
-  if (chipTypes.length === 0) return null
+  if (chipTypes.length === 0) return null;
 
   return (
     <div style={{ marginTop: 12 }} data-testid="guide-still-gathering">
@@ -53,5 +53,5 @@ export const StillGathering = ({
         </p>
       )}
     </div>
-  )
-}
+  );
+};

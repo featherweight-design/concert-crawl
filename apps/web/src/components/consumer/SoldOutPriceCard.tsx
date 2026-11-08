@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // SoldOutPriceCard — extracted from the inline JSX in EventDetailPriceBlock
 // (formerly lines 372–498). Renders the "Tickets" eyebrow + strikethrough
@@ -18,54 +18,54 @@
 //
 // Property table reference: §8 state #10 + #11, Appendix A.2.
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const AMBER = 'oklch(0.73 0.13 78)'
+const AMBER = 'oklch(0.73 0.13 78)';
 
 const formatTimeAgo = (reportedAtIso: string): string => {
-  const reportedAtMs = new Date(reportedAtIso).getTime()
-  if (Number.isNaN(reportedAtMs)) return 'recently'
+  const reportedAtMs = new Date(reportedAtIso).getTime();
+  if (Number.isNaN(reportedAtMs)) return 'recently';
   // Clamp at 0 so future timestamps (e.g. server-client clock skew) don't
   // render as "-5m ago".
-  const diffMs = Math.max(0, Date.now() - reportedAtMs)
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Math.max(0, Date.now() - reportedAtMs);
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
-export type SoldOutPriceCardVariant = 'has-listing' | 'no-listing'
+export type SoldOutPriceCardVariant = 'has-listing' | 'no-listing';
 
 interface SoldOutPriceCardSharedProps {
-  variant?: SoldOutPriceCardVariant
+  variant?: SoldOutPriceCardVariant;
 }
 
 interface SoldOutPriceCardHasListingProps extends SoldOutPriceCardSharedProps {
-  variant?: 'has-listing'
-  priceMin: number | null
-  priceMax: number | null
-  reporterHandle: string | null
-  confirmsCount: number
-  reportedAt: string
+  variant?: 'has-listing';
+  priceMin: number | null;
+  priceMax: number | null;
+  reporterHandle: string | null;
+  confirmsCount: number;
+  reportedAt: string;
 }
 
 interface SoldOutPriceCardNoListingProps extends SoldOutPriceCardSharedProps {
-  variant: 'no-listing'
+  variant: 'no-listing';
 }
 
 export type SoldOutPriceCardProps =
-  SoldOutPriceCardHasListingProps | SoldOutPriceCardNoListingProps
+  SoldOutPriceCardHasListingProps | SoldOutPriceCardNoListingProps;
 
 export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
-  const variant: SoldOutPriceCardVariant = props.variant ?? 'has-listing'
+  const variant: SoldOutPriceCardVariant = props.variant ?? 'has-listing';
 
   // Has-listing variant — uses the shipped strikethrough + reporter caption.
   if (variant === 'has-listing') {
-    const hasListing = props as SoldOutPriceCardHasListingProps
+    const hasListing = props as SoldOutPriceCardHasListingProps;
     const { priceMin, priceMax, reporterHandle, confirmsCount, reportedAt } =
-      hasListing
-    const timeAgo = formatTimeAgo(reportedAt)
+      hasListing;
+    const timeAgo = formatTimeAgo(reportedAt);
 
     return (
       <div
@@ -183,7 +183,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
           </span>
         </div>
       </div>
-    )
+    );
   }
 
   // No-listing variant — Appendix A.2.
@@ -260,5 +260,5 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
         {CONSUMER_COPY.priceRegion.soldOutNoListingCaption}
       </div>
     </div>
-  )
+  );
 }

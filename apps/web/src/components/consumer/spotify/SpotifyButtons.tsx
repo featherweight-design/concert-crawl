@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Shared button atoms for the Spotify connect chapter (#763 PR 5).
 //
@@ -6,13 +6,13 @@
 // (--signal), never Spotify green — --spotify-green exists only inside the
 // official logo asset.
 
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
 
 interface ActionButtonProps {
-  children: React.ReactNode
-  onClick?: () => void
-  disabled?: boolean
-  ariaLabel?: string
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  ariaLabel?: string;
 }
 
 // Solid primary action. `withLogo` renders the official Spotify mark on the
@@ -27,13 +27,13 @@ export const SignalButton = ({
   withLogo = false,
   leftIcon,
 }: ActionButtonProps & {
-  tone?: 'solid' | 'ghost'
-  size?: 'md' | 'sm'
-  withLogo?: boolean
-  leftIcon?: React.ReactNode
+  tone?: 'solid' | 'ghost';
+  size?: 'md' | 'sm';
+  withLogo?: boolean;
+  leftIcon?: React.ReactNode;
 }) => {
-  const solid = tone === 'solid'
-  const small = size === 'sm'
+  const solid = tone === 'solid';
+  const small = size === 'sm';
   return (
     <button
       type="button"
@@ -57,8 +57,8 @@ export const SignalButton = ({
       {leftIcon}
       {children}
     </button>
-  )
-}
+  );
+};
 
 // Bordered neutral (or danger) secondary action.
 export const GhostButton = ({
@@ -86,7 +86,7 @@ export const GhostButton = ({
   >
     {children}
   </button>
-)
+);
 
 // Borderless text action ("Cancel", "Maybe later", "Not now").
 export const TextButton = ({
@@ -108,4 +108,4 @@ export const TextButton = ({
   >
     {children}
   </button>
-)
+);

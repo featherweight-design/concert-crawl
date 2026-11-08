@@ -43,67 +43,67 @@
  * This one-off script follows that same pattern.
  */
 
-import { pathToFileURL } from 'node:url'
-import { createClerkClient } from '@clerk/backend'
-import { db, giftedComps } from '@concert-crawl/db'
+import { pathToFileURL } from 'node:url';
+import { createClerkClient } from '@clerk/backend';
+import { db, giftedComps } from '@concert-crawl/db';
 import {
   hasGiftedPlanMetadata,
   redactEmail,
   resolveGrantedBy,
-} from './2026-07-11-gifted-comps-backfill-helpers.js'
+} from './2026-07-11-gifted-comps-backfill-helpers.js';
 
-const CLERK_PAGE_SIZE = 100
+const CLERK_PAGE_SIZE = 100;
 
 export interface GiftedCandidate {
-  userId: string
-  email: string
-  createdAt: Date
+  userId: string;
+  email: string;
+  createdAt: Date;
 }
 
 export interface BackfillSummary {
-  usersScanned: number
-  giftedFound: number
-  rowsInserted: number
-  rowsSkippedExisting: number
-  committed: boolean
+  usersScanned: number;
+  giftedFound: number;
+  rowsInserted: number;
+  rowsSkippedExisting: number;
+  committed: boolean;
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
-  grantedBy: string
+  commit: boolean;
+  grantedBy: string;
 }): Promise<BackfillSummary> {
-  const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
+  const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
   if (!secretKey) {
-    throw new Error('CLERK_SECRET_KEY is required (staging or prod key)')
+    throw new Error('CLERK_SECRET_KEY is required (staging or prod key)');
   }
-  const clerkClient = createClerkClient({ secretKey })
+  const clerkClient = createClerkClient({ secretKey });
 
   // 1. Page through every Clerk user and collect the gifted cohort.
-  const candidates: GiftedCandidate[] = []
-  let usersScanned = 0
-  let offset = 0
+  const candidates: GiftedCandidate[] = [];
+  let usersScanned = 0;
+  let offset = 0;
   for (;;) {
     const page = await clerkClient.users.getUserList({
       limit: CLERK_PAGE_SIZE,
       offset,
       orderBy: '+created_at',
-    })
-    usersScanned += page.data.length
+    });
+    usersScanned += page.data.length;
     for (const user of page.data) {
-      if (!hasGiftedPlanMetadata(user.publicMetadata)) continue
+      if (!hasGiftedPlanMetadata(user.publicMetadata)) continue;
       candidates.push({
         userId: user.id,
         email: user.emailAddresses[0]?.emailAddress ?? '(no email)',
         createdAt: new Date(user.createdAt),
-      })
+      });
     }
-    if (page.data.length < CLERK_PAGE_SIZE) break
-    offset += CLERK_PAGE_SIZE
+    if (page.data.length < CLERK_PAGE_SIZE) break;
+    offset += CLERK_PAGE_SIZE;
   }
 
   console.log(
     `Scanned ${usersScanned} Clerk users; ${candidates.length} carry publicMetadata.plan = 'premium_gifted'.`,
-  )
+  );
 
   // Per-user operator log (dry-run and --commit alike) — the cohort is
   // small enough to eyeball before committing.
@@ -117,15 +117,15 @@ export async function runBackfill(opts: {
         `grantedBy = ${opts.grantedBy}`,
         'expiresAt = (null — lifetime gift)',
       ].join('\n'),
-    )
+    );
   }
 
   if (candidates.length === 0 || !opts.commit) {
     if (!opts.commit) {
-      console.log('---')
+      console.log('---');
       console.log(
         'Dry-run mode — no rows written. Re-run with --commit to apply.',
-      )
+      );
     }
     return {
       usersScanned,
@@ -135,12 +135,12 @@ export async function runBackfill(opts: {
       // Sibling-script convention: committed reflects commit-mode
       // invocation, not whether any rows changed.
       committed: opts.commit,
-    }
+    };
   }
 
   // 2. --commit path: insert with ON CONFLICT DO NOTHING on user_id so
   //    re-runs and pre-existing grants are no-ops.
-  let insertedCount = 0
+  let insertedCount = 0;
   for (const candidate of candidates) {
     const inserted = await db
       .insert(giftedComps)
@@ -151,19 +151,19 @@ export async function runBackfill(opts: {
         redeemedAt: candidate.createdAt,
       })
       .onConflictDoNothing({ target: giftedComps.userId })
-      .returning({ id: giftedComps.id })
+      .returning({ id: giftedComps.id });
     if (inserted.length > 0) {
-      insertedCount += 1
-      console.log(`Inserted gifted_comps row for ${candidate.userId}`)
+      insertedCount += 1;
+      console.log(`Inserted gifted_comps row for ${candidate.userId}`);
     } else {
-      console.log(`Skipped ${candidate.userId} — gifted_comps row exists`)
+      console.log(`Skipped ${candidate.userId} — gifted_comps row exists`);
     }
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Inserted ${insertedCount} rows, skipped ${candidates.length - insertedCount} existing.`,
-  )
+  );
 
   return {
     usersScanned,
@@ -171,25 +171,25 @@ export async function runBackfill(opts: {
     rowsInserted: insertedCount,
     rowsSkippedExisting: candidates.length - insertedCount,
     committed: true,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can be imported by a test without
 // auto-running — same shape as the sibling scripts.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
-  const grantedBy = resolveGrantedBy(process.argv)
+  const commit = process.argv.includes('--commit');
+  const grantedBy = resolveGrantedBy(process.argv);
   runBackfill({ commit, grantedBy })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

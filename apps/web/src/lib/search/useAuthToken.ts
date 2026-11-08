@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useAuth } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs';
 
 export function useAuthToken(): () => Promise<string | null> {
-  const { getToken } = useAuth()
-  return getToken
+  const { getToken } = useAuth();
+  return getToken;
 }

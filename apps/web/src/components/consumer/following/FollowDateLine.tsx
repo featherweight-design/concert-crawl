@@ -11,16 +11,16 @@
 // carries `dateLine` already flattened, and both call sites should truncate
 // identically.
 
-import { FOLLOWING_COPY } from './definitions/copy'
+import { FOLLOWING_COPY } from './definitions/copy';
 
-const SEPARATOR = FOLLOWING_COPY.cardDateSeparator
+const SEPARATOR = FOLLOWING_COPY.cardDateSeparator;
 
 interface FollowDateLineProps {
   /** `venue · date`, or `null` when the artist has no announced date. */
-  dateLine: string | null
+  dateLine: string | null;
   /** Rendered whole, un-split, when there is no date. */
-  fallback: string
-  style?: React.CSSProperties
+  fallback: string;
+  style?: React.CSSProperties;
 }
 
 export const FollowDateLine = ({
@@ -29,7 +29,7 @@ export const FollowDateLine = ({
   style,
 }: FollowDateLineProps) => {
   // Split on the LAST separator: a venue may contain one of its own.
-  const cut = dateLine === null ? -1 : dateLine.lastIndexOf(SEPARATOR)
+  const cut = dateLine === null ? -1 : dateLine.lastIndexOf(SEPARATOR);
 
   if (dateLine === null || cut === -1) {
     return (
@@ -39,7 +39,7 @@ export const FollowDateLine = ({
       >
         {dateLine ?? fallback}
       </span>
-    )
+    );
   }
 
   return (
@@ -55,5 +55,5 @@ export const FollowDateLine = ({
       </span>
       <span className="shrink-0 whitespace-nowrap">{dateLine.slice(cut)}</span>
     </span>
-  )
-}
+  );
+};

@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 // Typed union for user-visible notification categories written to the
 // `notifications` table (#971). Categories intentionally stay `text` on the
@@ -29,11 +29,11 @@ export const UserNotificationCategorySchema = z.enum([
   'crew.going',
   'crew.joined',
   'crew.left',
-])
+]);
 
 export type UserNotificationCategory = z.infer<
   typeof UserNotificationCategorySchema
->
+>;
 
 export const PUSH_ELIGIBLE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
   new Set([
@@ -43,9 +43,9 @@ export const PUSH_ELIGIBLE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
     'watch.backonsale',
     'watch.pricedrop',
     'artist.new_show',
-  ])
+  ]);
 
-export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop'
+export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop';
 
 // The four watch-update sub-types respect the `watchUpdatesEnabled`
 // preference. Price drops respect `priceDropsEnabled`.
@@ -61,4 +61,4 @@ export const WATCH_UPDATE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
     'watch.postponed',
     'watch.soldout',
     'watch.backonsale',
-  ])
+  ]);

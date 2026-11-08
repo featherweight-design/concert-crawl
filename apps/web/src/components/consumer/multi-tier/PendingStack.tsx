@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { PendingCardB } from '@/components/consumer/PendingCardB'
+import { PendingCardB } from '@/components/consumer/PendingCardB';
 
 // ── Props ────────────────────────────────────────────────────────
 export interface PendingStackProps {
-  cards: Array<React.ComponentProps<typeof PendingCardB>>
+  cards: Array<React.ComponentProps<typeof PendingCardB>>;
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -27,5 +27,5 @@ export const PendingStack = ({ cards }: PendingStackProps) => {
         />
       ))}
     </div>
-  )
-}
+  );
+};

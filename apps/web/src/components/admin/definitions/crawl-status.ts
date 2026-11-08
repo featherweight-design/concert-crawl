@@ -1,5 +1,5 @@
-import type { CrawlStatus } from '@concert-crawl/types'
-import type { StatusKind } from '@/components/admin/primitives/utils'
+import type { CrawlStatus } from '@concert-crawl/types';
+import type { StatusKind } from '@/components/admin/primitives/utils';
 
 /**
  * The four real crawl-run statuses plus the venue-level states the same
@@ -8,11 +8,11 @@ import type { StatusKind } from '@/components/admin/primitives/utils'
  * outcomes.
  */
 export type CrawlDisplayStatus =
-  CrawlStatus | 'blocked' | 'paused' | 'in_progress' | 'never'
+  CrawlStatus | 'blocked' | 'paused' | 'in_progress' | 'never';
 
 interface CrawlStatusDisplay {
-  label: string
-  kind: StatusKind
+  label: string;
+  kind: StatusKind;
 }
 
 /**
@@ -37,7 +37,7 @@ export const CRAWL_STATUS_DISPLAY: Record<
   paused: { label: 'Paused', kind: 'warning' },
   in_progress: { label: 'Running', kind: 'accent' },
   never: { label: 'Never crawled', kind: 'neutral' },
-}
+};
 
 /**
  * `hasOwn` rather than `in`: callers pass a widened `string`, so a value like
@@ -45,7 +45,7 @@ export const CRAWL_STATUS_DISPLAY: Record<
  */
 export const isCrawlDisplayStatus = (
   status: string,
-): status is CrawlDisplayStatus => Object.hasOwn(CRAWL_STATUS_DISPLAY, status)
+): status is CrawlDisplayStatus => Object.hasOwn(CRAWL_STATUS_DISPLAY, status);
 
 /**
  * For the places that colour something other than a badge — the dot on a
@@ -53,6 +53,6 @@ export const isCrawlDisplayStatus = (
  * carrying a second copy of it.
  */
 export const crawlStatusKind = (status: string | null): StatusKind => {
-  const key = status ?? 'never'
-  return isCrawlDisplayStatus(key) ? CRAWL_STATUS_DISPLAY[key].kind : 'neutral'
-}
+  const key = status ?? 'never';
+  return isCrawlDisplayStatus(key) ? CRAWL_STATUS_DISPLAY[key].kind : 'neutral';
+};

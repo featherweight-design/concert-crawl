@@ -124,13 +124,13 @@ Rendered as an error under the API Account ID field. Error styling matches the e
 `packages/db/src/schema/venues.ts`:
 
 ```ts
-export const apiProviderEnum = pgEnum('api_provider', ['venuepilot'])
+export const apiProviderEnum = pgEnum('api_provider', ['venuepilot']);
 
 export const venues = pgTable('venues', {
   // ... existing columns
-  apiProvider: apiProviderEnum('api_provider'),                  // nullable, default null
-  apiAccountId: text('api_account_id'),                          // nullable
-})
+  apiProvider: apiProviderEnum('api_provider'), // nullable, default null
+  apiAccountId: text('api_account_id'), // nullable
+});
 ```
 
 Both columns are nullable. Default is `null` for existing venues — no backfill needed.
@@ -158,10 +158,10 @@ ALTER TABLE "venues" ADD COLUMN "api_account_id" text;
 
 The codebase splits validation and persistence across two layers — this plan respects that split rather than collapsing them.
 
-| Layer | File | Role |
-|-------|------|------|
-| Web server action | `apps/web/src/lib/actions/venues.ts` (`updateVenue`) | Receives FormData from the Edit page, normalizes to a JSON body, forwards to API via `apiClient.patch(...)`. No Zod here today. |
-| API route | `apps/api/src/routes/admin/venues.ts` (`updateVenueSchema`) | Zod-validates the JSON body via `zValidator('json', updateVenueSchema)`. This is the single source of truth for the venue update contract. |
+| Layer             | File                                                        | Role                                                                                                                                       |
+| ----------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Web server action | `apps/web/src/lib/actions/venues.ts` (`updateVenue`)        | Receives FormData from the Edit page, normalizes to a JSON body, forwards to API via `apiClient.patch(...)`. No Zod here today.            |
+| API route         | `apps/api/src/routes/admin/venues.ts` (`updateVenueSchema`) | Zod-validates the JSON body via `zValidator('json', updateVenueSchema)`. This is the single source of truth for the venue update contract. |
 
 ### API Zod additions (`apps/api/src/routes/admin/venues.ts`)
 
@@ -209,9 +209,9 @@ const updateVenueSchema = createVenueSchema
       .nullable()
       .optional()
       .transform((val) => {
-        if (val == null) return val
-        const trimmed = val.trim()
-        return trimmed === '' ? null : trimmed
+        if (val == null) return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? null : trimmed;
       }),
   })
   .superRefine((data, ctx) => {
@@ -219,11 +219,10 @@ const updateVenueSchema = createVenueSchema
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['apiAccountId'],
-        message:
-          'API account ID is required when an API provider is selected',
-      })
+        message: 'API account ID is required when an API provider is selected',
+      });
     }
-  })
+  });
 ```
 
 Notes:
@@ -239,22 +238,18 @@ Notes:
 
 ```ts
 // inside updateVenue, building the body:
-const apiProviderRaw = formData.get('apiProvider')
+const apiProviderRaw = formData.get('apiProvider');
 // Treat missing key (null), empty string, and whitespace-only as None.
 const apiProvider =
   typeof apiProviderRaw === 'string' && apiProviderRaw.trim() !== ''
     ? apiProviderRaw
-    : null
+    : null;
 
-const apiAccountIdRaw = formData.get('apiAccountId')
+const apiAccountIdRaw = formData.get('apiAccountId');
 const apiAccountIdStr =
-  typeof apiAccountIdRaw === 'string' ? apiAccountIdRaw.trim() : ''
+  typeof apiAccountIdRaw === 'string' ? apiAccountIdRaw.trim() : '';
 const apiAccountId =
-  apiProvider === null
-    ? null
-    : apiAccountIdStr === ''
-      ? null
-      : apiAccountIdStr
+  apiProvider === null ? null : apiAccountIdStr === '' ? null : apiAccountIdStr;
 
 // ... include both in the apiClient.patch body
 ```
@@ -278,8 +273,10 @@ State additions (mirror `ticketVendorVal` shape):
 ```ts
 const [apiProviderVal, setApiProviderVal] = useState<string | null>(
   venue.apiProvider ?? null,
-)
-const [apiAccountIdVal, setApiAccountIdVal] = useState(venue.apiAccountId ?? '')
+);
+const [apiAccountIdVal, setApiAccountIdVal] = useState(
+  venue.apiAccountId ?? '',
+);
 ```
 
 Dirty-tracking appends:
@@ -292,26 +289,26 @@ Dirty-tracking appends:
 Reset on cancel:
 
 ```ts
-setApiProviderVal(venue.apiProvider ?? null)
-setApiAccountIdVal(venue.apiAccountId ?? '')
+setApiProviderVal(venue.apiProvider ?? null);
+setApiAccountIdVal(venue.apiAccountId ?? '');
 ```
 
 FormData on save:
 
 ```ts
 if (apiProviderVal !== null) {
-  formData.set('apiProvider', apiProviderVal)
+  formData.set('apiProvider', apiProviderVal);
 }
-formData.set('apiAccountId', apiAccountIdVal.trim())
+formData.set('apiAccountId', apiAccountIdVal.trim());
 ```
 
 **Extending `fieldErrors`:** the current `fieldErrors` state in `VenueDetailsClient.tsx` (line ~554) only tracks `slug`. Extend its type to include `apiAccountId`:
 
 ```ts
 const [fieldErrors, setFieldErrors] = useState<{
-  slug?: string | undefined
-  apiAccountId?: string | undefined
-}>({})
+  slug?: string | undefined;
+  apiAccountId?: string | undefined;
+}>({});
 ```
 
 **Wiring API validation errors back to `fieldErrors`** — this requires extending the web action's return shape, because today's `updateVenue` action only sets `field: 'slug'` (for the 409 conflict on slug uniqueness — see the `catch` block at `apps/web/src/lib/actions/venues.ts:54-56` for `createVenue` and the analogous handler in `updateVenue` around line 223) and the `apiClient` doesn't surface Zod issue paths from a 400. The impl PR adds the following:
@@ -324,13 +321,13 @@ const [fieldErrors, setFieldErrors] = useState<{
    if (err instanceof ApiError && err.status === 400 && err.zodIssues) {
      const apiAccountIdIssue = err.zodIssues.find(
        (issue) => issue.path[0] === 'apiAccountId',
-     )
+     );
      if (apiAccountIdIssue) {
        return {
          success: false,
          error: apiAccountIdIssue.message,
          field: 'apiAccountId',
-       }
+       };
      }
    }
    ```
@@ -423,21 +420,21 @@ Exact micro-copy is not design-locked; the implementation PR can refine the voic
 
 This file already exists and covers the `createVenue` / `updateVenue` HTTP routes. Extend it with the new cases — `updateVenueSchema` is the schema under test (not the web action):
 
-  - JSON `{ apiProvider: null, apiAccountId: null }` accepted.
-  - JSON `{ apiProvider: null }` accepted (both fields can be omitted entirely).
-  - JSON `{ apiProvider: 'venuepilot', apiAccountId: '1105' }` accepted.
-  - JSON `{ apiProvider: 'venuepilot', apiAccountId: '   ' }` rejected with Zod issue `path: ['apiAccountId']` (whitespace-only after transform → null → cross-field check fails).
-  - JSON `{ apiProvider: 'venuepilot', apiAccountId: '' }` rejected with the same Zod issue.
-  - JSON `{ apiProvider: 'venuepilot', apiAccountId: '  1105  ' }` accepted; transform trims to `'1105'`.
-  - Persistence sanity (already an integration-style pattern in `venues.integration.test.ts`): updating from `apiProvider: 'venuepilot'` to `apiProvider: null` writes `apiAccountId = null` to the DB (defensive — verified against the route handler, not just the schema).
+- JSON `{ apiProvider: null, apiAccountId: null }` accepted.
+- JSON `{ apiProvider: null }` accepted (both fields can be omitted entirely).
+- JSON `{ apiProvider: 'venuepilot', apiAccountId: '1105' }` accepted.
+- JSON `{ apiProvider: 'venuepilot', apiAccountId: '   ' }` rejected with Zod issue `path: ['apiAccountId']` (whitespace-only after transform → null → cross-field check fails).
+- JSON `{ apiProvider: 'venuepilot', apiAccountId: '' }` rejected with the same Zod issue.
+- JSON `{ apiProvider: 'venuepilot', apiAccountId: '  1105  ' }` accepted; transform trims to `'1105'`.
+- Persistence sanity (already an integration-style pattern in `venues.integration.test.ts`): updating from `apiProvider: 'venuepilot'` to `apiProvider: null` writes `apiAccountId = null` to the DB (defensive — verified against the route handler, not just the schema).
 
 **Web action FormData normalization (new — `apps/web/src/lib/actions/venues.test.ts`)**
 
 No web action test file exists today (web actions are tested via integration today). Add this file with focused unit coverage of the FormData→JSON normalization logic in `updateVenue`:
 
-  - FormData `apiProvider=""` produces JSON body `{ apiProvider: null, apiAccountId: null }` (no API Account ID written when provider is None).
-  - FormData `apiProvider="venuepilot", apiAccountId="  1105  "` produces JSON body `{ apiProvider: 'venuepilot', apiAccountId: '1105' }` (trimmed before send).
-  - FormData `apiProvider="venuepilot", apiAccountId=""` produces JSON body with `apiAccountId: null` — the API-side `superRefine` then rejects this, which is the desired single-point-of-truth behaviour.
+- FormData `apiProvider=""` produces JSON body `{ apiProvider: null, apiAccountId: null }` (no API Account ID written when provider is None).
+- FormData `apiProvider="venuepilot", apiAccountId="  1105  "` produces JSON body `{ apiProvider: 'venuepilot', apiAccountId: '1105' }` (trimmed before send).
+- FormData `apiProvider="venuepilot", apiAccountId=""` produces JSON body with `apiAccountId: null` — the API-side `superRefine` then rejects this, which is the desired single-point-of-truth behaviour.
 
 To make `updateVenue` unit-testable, the FormData→body assembly should be extracted into a pure helper (e.g. `buildUpdateVenueBody(formData)`) — the helper is what these tests call. The wrapping `updateVenue` server action stays untested at this layer; its happy path is covered by the API integration tests above.
 
@@ -509,14 +506,14 @@ Voice tone: match the existing entries in `releases.ts` (casual, second-person, 
 
 ## Out of scope / explicit follow-ups
 
-| Item | Why deferred | Follow-up |
-|------|--------------|-----------|
-| Add Venue modal getting the new fields | Locked by Hugh — keeps modal scope clean | Open ticket if user demand emerges |
-| "Informational only" badge on Source URL when provider set | Design polish — needs design call | Optional design addendum ticket |
+| Item                                                                                          | Why deferred                                                                | Follow-up                                                    |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Add Venue modal getting the new fields                                                        | Locked by Hugh — keeps modal scope clean                                    | Open ticket if user demand emerges                           |
+| "Informational only" badge on Source URL when provider set                                    | Design polish — needs design call                                           | Optional design addendum ticket                              |
 | Own top-level "Integration" section (separate `VDSection`) vs. subsection inside Crawl config | Decided: subsection inside Crawl config (eyebrow line above the two fields) | If form density gets uncomfortable later, restructure ticket |
-| Provider-specific account-ID hint text ("e.g. VenuePilot venue ID") | Generic hint is fine for v1 (one provider) | Add per-provider hints when 2nd provider lands |
-| Add `read_only` treatment when API Provider is set | Source URL stays editable | Revisit when 2nd provider lands |
-| Source URL required-bypass for API-backed venues | Source URL is consumer-facing, not just crawler input | Not changing — kept as-is |
+| Provider-specific account-ID hint text ("e.g. VenuePilot venue ID")                           | Generic hint is fine for v1 (one provider)                                  | Add per-provider hints when 2nd provider lands               |
+| Add `read_only` treatment when API Provider is set                                            | Source URL stays editable                                                   | Revisit when 2nd provider lands                              |
+| Source URL required-bypass for API-backed venues                                              | Source URL is consumer-facing, not just crawler input                       | Not changing — kept as-is                                    |
 
 ---
 

@@ -7,27 +7,27 @@
 // bounded flush kept alive through `waitUntil`; the response is never delayed
 // and a flush failure is logged, never surfaced.
 
-import * as Sentry from '@sentry/hono/node'
-import { apiLogger } from './logger.js'
-import { isVercelRuntime, keepAliveUntil } from './wait-until.js'
+import * as Sentry from '@sentry/hono/node';
+import { apiLogger } from './logger.js';
+import { isVercelRuntime, keepAliveUntil } from './wait-until.js';
 
 /** Upper bound on a single flush, in milliseconds. */
-export const SENTRY_FLUSH_TIMEOUT_MS = 2000
+export const SENTRY_FLUSH_TIMEOUT_MS = 2000;
 
 const flushSentry = async (): Promise<void> => {
   try {
     // Resolves false, rather than rejecting, when the timeout expires first.
-    const drained = await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS)
+    const drained = await Sentry.flush(SENTRY_FLUSH_TIMEOUT_MS);
     if (!drained) {
       apiLogger.warn(
         { timeoutMs: SENTRY_FLUSH_TIMEOUT_MS },
         'sentry: serverless flush timed out before the queue drained',
-      )
+      );
     }
   } catch (err) {
-    apiLogger.warn({ err }, 'sentry: serverless flush failed')
+    apiLogger.warn({ err }, 'sentry: serverless flush failed');
   }
-}
+};
 
 /**
  * Wrap a Web-standard handler so that, on Vercel, each request registers a
@@ -41,8 +41,8 @@ export const withSentryFlush =
   ): ((req: Request) => Promise<Response>) =>
   async (req) => {
     try {
-      return await handler(req)
+      return await handler(req);
     } finally {
-      if (isVercelRuntime()) keepAliveUntil(flushSentry())
+      if (isVercelRuntime()) keepAliveUntil(flushSentry());
     }
-  }
+  };

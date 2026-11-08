@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog } from '@base-ui/react/dialog'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Dialog } from '@base-ui/react/dialog';
 import {
   Plus,
   RefreshCw,
@@ -12,10 +12,10 @@ import {
   Play,
   X,
   ChevronRight,
-} from 'lucide-react'
-import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues'
-import { AdminButton, Kbd } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from 'lucide-react';
+import { createVenue, createVenueAndCrawl } from '@/lib/actions/venues';
+import { AdminButton, Kbd } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 function slugify(name: string): string {
   return name
@@ -25,212 +25,212 @@ function slugify(name: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
-    .slice(0, 60)
+    .slice(0, 60);
 }
 
-type SubmitState = 'idle' | 'validating' | 'submitting' | 'success' | 'error'
-type FocusedField = 'name' | 'slug' | 'url' | 'city' | 'address' | null
-type RobotsState = 'idle' | 'checking' | 'allowed' | 'disallowed' | 'unknown'
+type SubmitState = 'idle' | 'validating' | 'submitting' | 'success' | 'error';
+type FocusedField = 'name' | 'slug' | 'url' | 'city' | 'address' | null;
+type RobotsState = 'idle' | 'checking' | 'allowed' | 'disallowed' | 'unknown';
 
 interface FieldError {
-  name?: string | undefined
-  slug?: string | undefined
-  websiteUrl?: string | undefined
-  city?: string | undefined
+  name?: string | undefined;
+  slug?: string | undefined;
+  websiteUrl?: string | undefined;
+  city?: string | undefined;
 }
 
 interface AddVenueModalProps {
-  onSuccess?: () => void
-  fullWidth?: boolean
+  onSuccess?: () => void;
+  fullWidth?: boolean;
 }
 
 export function AddVenueModal({
   onSuccess,
   fullWidth = false,
 }: AddVenueModalProps) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [submitState, setSubmitState] = useState<SubmitState>('idle')
-  const [errors, setErrors] = useState<FieldError>({})
-  const [bannerError, setBannerError] = useState<string | null>(null)
-  const [slugManual, setSlugManual] = useState(false)
-  const [robotsState, setRobotsState] = useState<RobotsState>('idle')
-  const [urlValue, setUrlValue] = useState('')
-  const [focusedField, setFocusedField] = useState<FocusedField>(null)
-  const [closeButtonFocused, setCloseButtonFocused] = useState(false)
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
+  const [errors, setErrors] = useState<FieldError>({});
+  const [bannerError, setBannerError] = useState<string | null>(null);
+  const [slugManual, setSlugManual] = useState(false);
+  const [robotsState, setRobotsState] = useState<RobotsState>('idle');
+  const [urlValue, setUrlValue] = useState('');
+  const [focusedField, setFocusedField] = useState<FocusedField>(null);
+  const [closeButtonFocused, setCloseButtonFocused] = useState(false);
 
-  const nameRef = useRef<HTMLInputElement>(null)
-  const slugRef = useRef<HTMLInputElement>(null)
-  const websiteUrlRef = useRef<HTMLInputElement>(null)
-  const cityRef = useRef<HTMLInputElement>(null)
-  const addressRef = useRef<HTMLInputElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
+  const websiteUrlRef = useRef<HTMLInputElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
 
-  const disabled = submitState === 'submitting' || submitState === 'success'
+  const disabled = submitState === 'submitting' || submitState === 'success';
 
   function resetState() {
-    setSubmitState('idle')
-    setErrors({})
-    setBannerError(null)
-    setSlugManual(false)
-    setRobotsState('idle')
-    setUrlValue('')
-    setFocusedField(null)
-    setCloseButtonFocused(false)
-    if (nameRef.current) nameRef.current.value = ''
-    if (slugRef.current) slugRef.current.value = ''
-    if (websiteUrlRef.current) websiteUrlRef.current.value = ''
-    if (cityRef.current) cityRef.current.value = 'Denver'
-    if (addressRef.current) addressRef.current.value = ''
+    setSubmitState('idle');
+    setErrors({});
+    setBannerError(null);
+    setSlugManual(false);
+    setRobotsState('idle');
+    setUrlValue('');
+    setFocusedField(null);
+    setCloseButtonFocused(false);
+    if (nameRef.current) nameRef.current.value = '';
+    if (slugRef.current) slugRef.current.value = '';
+    if (websiteUrlRef.current) websiteUrlRef.current.value = '';
+    if (cityRef.current) cityRef.current.value = 'Denver';
+    if (addressRef.current) addressRef.current.value = '';
   }
 
   function handleNameChange(evt: React.ChangeEvent<HTMLInputElement>) {
     if (!slugManual && slugRef.current) {
-      slugRef.current.value = slugify(evt.target.value)
+      slugRef.current.value = slugify(evt.target.value);
     }
-    setErrors((prev) => ({ ...prev, name: undefined }))
+    setErrors((prev) => ({ ...prev, name: undefined }));
   }
 
   function handleSlugChange() {
-    setSlugManual(true)
-    setErrors((prev) => ({ ...prev, slug: undefined }))
+    setSlugManual(true);
+    setErrors((prev) => ({ ...prev, slug: undefined }));
   }
 
   function handleRegenerateSlug() {
     if (nameRef.current && slugRef.current) {
-      slugRef.current.value = slugify(nameRef.current.value)
-      setSlugManual(false)
-      setErrors((prev) => ({ ...prev, slug: undefined }))
+      slugRef.current.value = slugify(nameRef.current.value);
+      setSlugManual(false);
+      setErrors((prev) => ({ ...prev, slug: undefined }));
     }
   }
 
   const checkRobots = useCallback(async (url: string) => {
-    if (!url) return
-    setRobotsState('checking')
+    if (!url) return;
+    setRobotsState('checking');
     try {
-      const parsed = new URL(url)
+      const parsed = new URL(url);
       const res = await fetch(
         `/api/admin/robots-check?url=${encodeURIComponent(parsed.href)}`,
-      )
+      );
       if (res.ok) {
-        const data = (await res.json()) as { allowed: boolean | null }
+        const data = (await res.json()) as { allowed: boolean | null };
         setRobotsState(
           data.allowed === null
             ? 'unknown'
             : data.allowed
               ? 'allowed'
               : 'disallowed',
-        )
+        );
       } else {
-        setRobotsState('unknown')
+        setRobotsState('unknown');
       }
     } catch {
-      setRobotsState('unknown')
+      setRobotsState('unknown');
     }
-  }, [])
+  }, []);
 
   function handleUrlBlur(evt: React.FocusEvent<HTMLInputElement>) {
-    setFocusedField(null)
-    const url = evt.target.value.trim()
-    setErrors((prev) => ({ ...prev, websiteUrl: undefined }))
-    if (url) void checkRobots(url)
+    setFocusedField(null);
+    const url = evt.target.value.trim();
+    setErrors((prev) => ({ ...prev, websiteUrl: undefined }));
+    if (url) void checkRobots(url);
   }
 
   function validate(): FieldError {
-    const fieldErrors: FieldError = {}
-    const name = nameRef.current?.value.trim() ?? ''
-    const slug = slugRef.current?.value.trim() ?? ''
-    const url = websiteUrlRef.current?.value.trim() ?? ''
-    const city = cityRef.current?.value.trim() ?? ''
+    const fieldErrors: FieldError = {};
+    const name = nameRef.current?.value.trim() ?? '';
+    const slug = slugRef.current?.value.trim() ?? '';
+    const url = websiteUrlRef.current?.value.trim() ?? '';
+    const city = cityRef.current?.value.trim() ?? '';
 
     if (!name || name.length < 2)
-      fieldErrors.name = ADMIN_COPY.addVenueModal.validation.nameRequired
+      fieldErrors.name = ADMIN_COPY.addVenueModal.validation.nameRequired;
     if (
       !slug ||
       !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(slug) ||
       slug.length < 2
     ) {
-      fieldErrors.slug = ADMIN_COPY.addVenueModal.validation.slugInvalid
+      fieldErrors.slug = ADMIN_COPY.addVenueModal.validation.slugInvalid;
     }
     try {
-      new URL(url)
+      new URL(url);
       if (!url.startsWith('http'))
-        fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlNotHttp
+        fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlNotHttp;
     } catch {
-      fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlInvalid
+      fieldErrors.websiteUrl = ADMIN_COPY.addVenueModal.validation.urlInvalid;
     }
     if (!city || city.length < 2)
-      fieldErrors.city = ADMIN_COPY.addVenueModal.validation.cityRequired
+      fieldErrors.city = ADMIN_COPY.addVenueModal.validation.cityRequired;
 
-    return fieldErrors
+    return fieldErrors;
   }
 
   async function handleSubmit(crawlAfter: boolean) {
-    setBannerError(null)
-    setErrors({})
+    setBannerError(null);
+    setErrors({});
 
-    const fieldErrors = validate()
+    const fieldErrors = validate();
     if (Object.keys(fieldErrors).length > 0) {
-      setErrors(fieldErrors)
-      return
+      setErrors(fieldErrors);
+      return;
     }
 
-    setSubmitState('submitting')
+    setSubmitState('submitting');
 
-    const formData = new FormData()
-    formData.set('name', nameRef.current!.value.trim())
-    formData.set('slug', slugRef.current!.value.trim())
-    formData.set('websiteUrl', websiteUrlRef.current!.value.trim())
-    formData.set('city', cityRef.current!.value.trim() || 'Denver')
-    formData.set('address', addressRef.current?.value.trim() ?? '')
-    formData.set('active', 'true')
+    const formData = new FormData();
+    formData.set('name', nameRef.current!.value.trim());
+    formData.set('slug', slugRef.current!.value.trim());
+    formData.set('websiteUrl', websiteUrlRef.current!.value.trim());
+    formData.set('city', cityRef.current!.value.trim() || 'Denver');
+    formData.set('address', addressRef.current?.value.trim() ?? '');
+    formData.set('active', 'true');
 
     try {
-      const action = crawlAfter ? createVenueAndCrawl : createVenue
-      const result = await action(formData)
+      const action = crawlAfter ? createVenueAndCrawl : createVenue;
+      const result = await action(formData);
 
       if (!result.success) {
         if (result.field === 'slug') {
           setErrors({
             slug: result.error ?? ADMIN_COPY.addVenueModal.errors.slugInUse,
-          })
-          setBannerError(ADMIN_COPY.addVenueModal.errors.slugInUse)
+          });
+          setBannerError(ADMIN_COPY.addVenueModal.errors.slugInUse);
         } else {
-          setBannerError(result.error ?? 'Something went wrong')
+          setBannerError(result.error ?? 'Something went wrong');
         }
-        setSubmitState('error')
-        return
+        setSubmitState('error');
+        return;
       }
 
-      setSubmitState('success')
+      setSubmitState('success');
       setTimeout(() => {
-        setOpen(false)
-        resetState()
-        router.refresh()
-        onSuccess?.()
-      }, 400)
+        setOpen(false);
+        resetState();
+        router.refresh();
+        onSuccess?.();
+      }, 400);
     } catch {
-      setBannerError(ADMIN_COPY.addVenueModal.errors.unexpected)
-      setSubmitState('error')
+      setBannerError(ADMIN_COPY.addVenueModal.errors.unexpected);
+      setSubmitState('error');
     }
   }
 
   useEffect(() => {
     function handleKeyDown(evt: KeyboardEvent) {
-      if (!open) return
+      if (!open) return;
       if (evt.key === 'Escape') {
-        setOpen(false)
-        resetState()
+        setOpen(false);
+        resetState();
       }
       if ((evt.metaKey || evt.ctrlKey) && evt.key === 'Enter') {
-        evt.preventDefault()
-        if (!disabled) void handleSubmit(true)
+        evt.preventDefault();
+        if (!disabled) void handleSubmit(true);
       }
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, disabled]) // eslint-disable-line react-hooks/exhaustive-deps
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, disabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const showFavicon = urlValue && robotsState !== 'checking'
+  const showFavicon = urlValue && robotsState !== 'checking';
 
   return (
     <>
@@ -247,8 +247,8 @@ export function AddVenueModal({
       <Dialog.Root
         open={open}
         onOpenChange={(nextOpen) => {
-          setOpen(nextOpen)
-          if (!nextOpen) resetState()
+          setOpen(nextOpen);
+          if (!nextOpen) resetState();
         }}
       >
         <Dialog.Portal>
@@ -583,13 +583,13 @@ export function AddVenueModal({
                         onFocus={() => setFocusedField('url')}
                         onBlur={handleUrlBlur}
                         onChange={() => {
-                          const val = websiteUrlRef.current?.value.trim() ?? ''
-                          setUrlValue(val)
+                          const val = websiteUrlRef.current?.value.trim() ?? '';
+                          setUrlValue(val);
                           setErrors((prev) => ({
                             ...prev,
                             websiteUrl: undefined,
-                          }))
-                          setRobotsState('idle')
+                          }));
+                          setRobotsState('idle');
                         }}
                         style={{
                           flex: 1,
@@ -807,7 +807,7 @@ export function AddVenueModal({
         </Dialog.Portal>
       </Dialog.Root>
     </>
-  )
+  );
 }
 
 // ── Atoms ────────────────────────────────────────────────────────────────────
@@ -819,11 +819,11 @@ function Field({
   style,
   children,
 }: {
-  label: string
-  htmlFor: string
-  error?: string | undefined
-  style?: React.CSSProperties
-  children: React.ReactNode
+  label: string;
+  htmlFor: string;
+  error?: string | undefined;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
@@ -844,17 +844,17 @@ function Field({
         </span>
       )}
     </div>
-  )
+  );
 }
 
 function RobotsChip({
   state,
   hasUrl,
 }: {
-  state: RobotsState
-  hasUrl: boolean
+  state: RobotsState;
+  hasUrl: boolean;
 }) {
-  if (!hasUrl || state === 'idle') return null
+  if (!hasUrl || state === 'idle') return null;
   if (state === 'checking') {
     return (
       <span
@@ -872,7 +872,7 @@ function RobotsChip({
       >
         {ADMIN_COPY.addVenueModal.robots.checking}
       </span>
-    )
+    );
   }
   const config = {
     allowed: {
@@ -887,8 +887,9 @@ function RobotsChip({
       color: 'var(--fg-muted)',
       text: ADMIN_COPY.addVenueModal.robots.unknown,
     },
-  } as const
-  const { color, text } = config[state as keyof typeof config] ?? config.unknown
+  } as const;
+  const { color, text } =
+    config[state as keyof typeof config] ?? config.unknown;
   return (
     <span
       style={{
@@ -908,18 +909,18 @@ function RobotsChip({
     >
       {text}
     </span>
-  )
+  );
 }
 
 function FaviconChip({ url }: { url: string }) {
   const host = useMemo(() => {
     try {
-      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname
+      return new URL(url.startsWith('http') ? url : `https://${url}`).hostname;
     } catch {
-      return null
+      return null;
     }
-  }, [url])
-  if (!host) return null
+  }, [url]);
+  if (!host) return null;
   return (
     <span
       style={{
@@ -945,12 +946,12 @@ function FaviconChip({ url }: { url: string }) {
         height="13"
         style={{ borderRadius: 3 }}
         onError={(evt) => {
-          ;(evt.currentTarget as HTMLImageElement).style.visibility = 'hidden'
+          (evt.currentTarget as HTMLImageElement).style.visibility = 'hidden';
         }}
       />
       {host}
     </span>
-  )
+  );
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -961,7 +962,7 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 600,
   color: 'var(--fg)',
   letterSpacing: '-0.005em',
-}
+};
 
 function inputStyle(
   hasError: boolean,
@@ -972,12 +973,12 @@ function inputStyle(
     ? 'var(--danger)'
     : focused
       ? 'var(--signal)'
-      : 'var(--border)'
+      : 'var(--border)';
   const ring = hasError
     ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
     : focused
       ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-      : 'none'
+      : 'none';
   return {
     width: '100%',
     height: 38,
@@ -996,7 +997,7 @@ function inputStyle(
     cursor: isDisabled ? 'not-allowed' : 'text',
     transition: 'border-color .12s, box-shadow .12s',
     boxShadow: ring,
-  }
+  };
 }
 
 function compositeWrapperStyle(
@@ -1008,12 +1009,12 @@ function compositeWrapperStyle(
     ? 'var(--danger)'
     : focused
       ? 'var(--signal)'
-      : 'var(--border)'
+      : 'var(--border)';
   const ring = hasError
     ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
     : focused
       ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-      : 'none'
+      : 'none';
   return {
     display: 'flex',
     alignItems: 'center',
@@ -1024,5 +1025,5 @@ function compositeWrapperStyle(
     opacity: isDisabled ? 0.66 : 1,
     boxShadow: ring,
     transition: 'border-color .12s, box-shadow .12s',
-  }
+  };
 }

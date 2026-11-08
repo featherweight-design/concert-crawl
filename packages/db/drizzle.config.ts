@@ -1,4 +1,4 @@
-import type { Config } from 'drizzle-kit'
+import type { Config } from 'drizzle-kit';
 
 export default {
   schema: './src/schema/*.ts',
@@ -9,4 +9,4 @@ export default {
       process.env['DATABASE_URL'] ??
       'postgresql://postgres:postgres@localhost:5433/concert_crawl_db',
   },
-} satisfies Config
+} satisfies Config;

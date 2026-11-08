@@ -1,34 +1,34 @@
-import pino, { type Logger } from 'pino'
-import * as Sentry from '@sentry/node'
-import type {} from 'hono'
+import pino, { type Logger } from 'pino';
+import * as Sentry from '@sentry/node';
+import type {} from 'hono';
 
 // Extend Hono's context type map so c.get('requestId') is typed everywhere.
 declare module 'hono' {
   interface ContextVariableMap {
-    requestId: string
+    requestId: string;
   }
 }
 
-export type { Logger }
-export { requestLogger } from './middleware.js'
+export type { Logger };
+export { requestLogger } from './middleware.js';
 
 export function createLogger(name: string): Logger {
-  const level = process.env['LOG_LEVEL'] ?? 'info'
+  const level = process.env['LOG_LEVEL'] ?? 'info';
 
   // Skip pretty-printing in tests (pino-pretty spawns a ThreadStream that
   // causes instability in Vitest) and in production (raw JSON is captured
   // by Render's log aggregator).
-  const isProduction = process.env['NODE_ENV'] === 'production'
-  const isTest = process.env['NODE_ENV'] === 'test'
+  const isProduction = process.env['NODE_ENV'] === 'production';
+  const isTest = process.env['NODE_ENV'] === 'test';
 
   // pino.transport returns ThreadStream (typed as `any` in pino's own .d.ts),
   // so we annotate explicitly to keep the call-site type-safe.
   const transport: pino.DestinationStream | undefined =
     !isProduction && !isTest
       ? pino.transport({ target: 'pino-pretty', options: { colorize: true } })
-      : undefined
+      : undefined;
 
-  return pino({ name, level }, transport)
+  return pino({ name, level }, transport);
 }
 
 // Operational-failure reporter: emits a structured stderr log AND forwards
@@ -56,19 +56,19 @@ export function createLogger(name: string): Logger {
 // Sentry.captureMessage is a no-op when Sentry has not been initialized in
 // the current process (e.g. local dev, unit tests), so callers do not need
 // to gate on environment.
-export type FailureSeverity = 'error' | 'warn'
+export type FailureSeverity = 'error' | 'warn';
 
 export interface FailureReport {
   /** Structured event identifier, e.g. 'llm.invalid_tool_input'. */
-  event: string
+  event: string;
   /** Routing severity. 'error' maps to Sentry level 'error'; 'warn' maps to 'warning'. */
-  severity: FailureSeverity
+  severity: FailureSeverity;
   /**
    * Sentry grouping override. Omit for the default: one issue per `event`,
    * which merges every cause reported under one event name into a single
    * long-lived issue.
    */
-  fingerprint?: string[]
+  fingerprint?: string[];
   /**
    * Arbitrary structured context. Forwarded to Sentry `extra` verbatim.
    *
@@ -76,7 +76,7 @@ export interface FailureReport {
    * `apikey` — Sentry's default data scrubbing matches those substrings and
    * nulls the value out, so the field arrives empty on the issue page.
    */
-  [key: string]: unknown
+  [key: string]: unknown;
 }
 
 export function reportFailure(report: FailureReport): void {
@@ -97,21 +97,25 @@ export function reportFailure(report: FailureReport): void {
   // circular references or BigInt values in `extra`, and the Sentry SDK
   // can in principle raise; both are wrapped so a logging failure cannot
   // mask the original error.
-  const { event, severity, fingerprint, ...extra } = report
+  const { event, severity, fingerprint, ...extra } = report;
   try {
-    let json: string
+    let json: string;
     try {
-      json = JSON.stringify(report)
+      json = JSON.stringify(report);
     } catch {
       // Fall back to a minimal payload that's guaranteed to serialize.
       // We lose `extra` here but preserve the event identifier so the
       // original failure is still visible in logs/dashboards.
-      json = JSON.stringify({ event, severity, extraSerializationFailed: true })
+      json = JSON.stringify({
+        event,
+        severity,
+        extraSerializationFailed: true,
+      });
     }
     if (severity === 'error') {
-      console.error(json)
+      console.error(json);
     } else {
-      console.warn(json)
+      console.warn(json);
     }
   } catch {
     // console.error/warn themselves shouldn't throw, but if the runtime
@@ -130,7 +134,7 @@ export function reportFailure(report: FailureReport): void {
       level: severity === 'error' ? 'error' : 'warning',
       extra,
       ...(fingerprint ? { fingerprint } : {}),
-    })
+    });
   } catch {
     // Swallow per the no-throw contract.
   }

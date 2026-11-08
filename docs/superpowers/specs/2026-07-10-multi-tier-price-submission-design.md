@@ -14,12 +14,12 @@ Beta feedback (2026-06-26 prod test): "no multi-tier price submission (GA+VIP)."
 
 ## Locked Decisions
 
-| # | Question | Decision |
-|---|----------|----------|
-| 1 | Product shape | Single-form **bundle** submission is the primary flow; the existing one-tier "trickle" flow stays clean and unchanged |
-| 2 | Corroboration | **Per-tier confirms** — each tier row corroborates independently, exactly as single submissions do today |
-| 3 | UI pattern | **Single form with "Add another tier"** — one modal, repeatable tier panels |
-| 4 | API shape | **New atomic batch endpoint** — one request, one atomic insert, all rows or none |
+| #   | Question      | Decision                                                                                                              |
+| --- | ------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1   | Product shape | Single-form **bundle** submission is the primary flow; the existing one-tier "trickle" flow stays clean and unchanged |
+| 2   | Corroboration | **Per-tier confirms** — each tier row corroborates independently, exactly as single submissions do today              |
+| 3   | UI pattern    | **Single form with "Add another tier"** — one modal, repeatable tier panels                                           |
+| 4   | API shape     | **New atomic batch endpoint** — one request, one atomic insert, all rows or none                                      |
 
 ---
 
@@ -48,14 +48,14 @@ POST /v1/events/:eventId/price-submissions/batch
 
 ```jsonc
 {
-  "vendor": "VenueBoxOffice",          // shared across all rows
-  "howFound": "at_the_venue",          // shared; API accepts any HowFound value — the web client derives 'bought_myself' for boxoffice via howFoundForSource
-  "sourceCategory": "boxoffice",       // shared, optional (derived when absent, same as single POST)
-  "note": "posted at the window",      // shared, optional, max 280, moderated once
+  "vendor": "VenueBoxOffice", // shared across all rows
+  "howFound": "at_the_venue", // shared; API accepts any HowFound value — the web client derives 'bought_myself' for boxoffice via howFoundForSource
+  "sourceCategory": "boxoffice", // shared, optional (derived when absent, same as single POST)
+  "note": "posted at the window", // shared, optional, max 280, moderated once
   "tiers": [
     { "tier": "GA", "priceMin": 45 },
-    { "tier": "VIP", "priceMin": 120, "priceMax": 150 }
-  ]
+    { "tier": "VIP", "priceMin": 120, "priceMax": 150 },
+  ],
 }
 ```
 
@@ -70,10 +70,10 @@ POST /v1/events/:eventId/price-submissions/batch
 {
   "success": false,
   "errors": [
-    { "index": 1, "tier": "VIP", "error": "already_submitted" }
+    { "index": 1, "tier": "VIP", "error": "already_submitted" },
     // `tier` is string | null — null when the row is malformed enough that
     // the tier itself failed Zod validation
-  ]
+  ],
 }
 ```
 

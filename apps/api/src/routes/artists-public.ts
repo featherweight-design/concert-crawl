@@ -1,14 +1,14 @@
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import {
   db,
   artists,
   events,
   userArtistFollows,
   venues,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   and,
   asc,
@@ -20,43 +20,43 @@ import {
   lt,
   ne,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   ARTIST_SLUG_MAX_LENGTH,
   ARTIST_SUGGESTIONS_DEFAULT_LIMIT,
   ARTIST_SUGGESTIONS_MAX_LIMIT,
   expandBucket,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import type {
   ArtistDetailResponse,
   ArtistPastShow,
   ArtistShow,
   ArtistSuggestion,
-} from '@concert-crawl/types'
-import { loadNextShowByCanonical } from '../lib/artist-follows.js'
-import { billsCanonicalName } from '../lib/event-billing.js'
+} from '@concert-crawl/types';
+import { loadNextShowByCanonical } from '../lib/artist-follows.js';
+import { billsCanonicalName } from '../lib/event-billing.js';
 import {
   loadPriceByTierByEventId,
   lowestHeadlinePrice,
-} from '../lib/price-aggregation/index.js'
-import { parsePrice } from '../lib/price.js'
-import { todayInTimezone } from '../lib/time.js'
+} from '../lib/price-aggregation/index.js';
+import { parsePrice } from '../lib/price.js';
+import { todayInTimezone } from '../lib/time.js';
 
-export const artistsPublicRouter = new Hono()
+export const artistsPublicRouter = new Hono();
 
 // Denver is the only market we crawl, and an artist's shows span venues, so
 // there is no single venue timezone to pivot "today" on the way
 // venues-public.ts does. Mountain Time is the product's display timezone
 // (see history.ts, ics.ts).
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 // Past shows are capped so an artist with a decade of history can't produce an
 // unbounded response. EXTENSION POINT (Item 3): when the page grows a
 // "show all history" affordance, paginate here — and remember that
 // `history.count` is derived from the returned rows, so a LIMIT that hides
 // rows also lowers the count by design. A separate COUNT(*) would drift.
-const PAST_LIMIT = 50
-const UPCOMING_LIMIT = 50
+const PAST_LIMIT = 50;
+const UPCOMING_LIMIT = 50;
 
 // Public, like every other /v1 read route. The plan described a
 // REQUIRE_BETA_AUTH router gate copied from venues-public.ts, but that flag was
@@ -67,7 +67,7 @@ const UPCOMING_LIMIT = 50
 //
 // Clerk is mounted so `getAuth(ctx)` can resolve a session when one is present.
 // It never rejects — anonymous readers get `following: null`.
-artistsPublicRouter.use('*', clerkMiddleware())
+artistsPublicRouter.use('*', clerkMiddleware());
 
 // Mirrors artistSlug() output (packages/types/src/artist-slug.ts). A param that
 // cannot be a slug is answered with the same 404 as a slug that simply doesn't
@@ -78,21 +78,21 @@ const slugParamSchema = z.object({
     .min(1)
     .max(ARTIST_SLUG_MAX_LENGTH)
     .regex(/^[a-z0-9-]+$/),
-})
+});
 
 // Cancelled and postponed rows stay, matching every other list surface.
-const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
+const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const;
 
 // There are 16 buckets (@concert-crawl/types) and the onboarding step can only
 // send bucket labels, so anything past that is not a real selection — the cap
 // exists so a hand-rolled query string can't expand into an unbounded ARRAY[].
-const MAX_GENRE_FILTERS = 24
+const MAX_GENRE_FILTERS = 24;
 
 // The count cap alone still lets 24 megabyte-long values through into the
 // ARRAY[] predicate. The longest real bucket label is well under this, so the
 // ceiling is generous and still bounds the query. `filterVibe` on /v1/events
 // caps its single value the same way.
-const MAX_GENRE_LENGTH = 64
+const MAX_GENRE_LENGTH = 64;
 
 const suggestionsQuerySchema = z.object({
   limit: z.coerce
@@ -125,7 +125,7 @@ const suggestionsQuerySchema = z.object({
           values.every((value) => value.length <= MAX_GENRE_LENGTH)),
       { message: 'Invalid genres' },
     ),
-})
+});
 
 // GET /v1/artists/suggestions — followable artists with an upcoming Denver date
 //
@@ -150,12 +150,12 @@ artistsPublicRouter.get(
   '/suggestions',
   zValidator('query', suggestionsQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid query' }, 400)
+      return ctx.json({ success: false, error: 'Invalid query' }, 400);
     }
   }),
   async (ctx) => {
-    const { limit, genres } = ctx.req.valid('query')
-    const today = todayInTimezone(MT_TIME_ZONE)
+    const { limit, genres } = ctx.req.valid('query');
+    const today = todayInTimezone(MT_TIME_ZONE);
 
     // Bucket taxonomy (#1101), same expansion the browse Vibe filter applies
     // in events.ts: 'punk' widens to every sub-genre in the bucket, and an
@@ -168,21 +168,21 @@ artistsPublicRouter.get(
         : (() => {
             const values = Array.from(
               new Set(genres.flatMap((genre) => expandBucket(genre))),
-            )
+            );
             const placeholders = sql.join(
               values.map((value) => sql`${value}`),
               sql`, `,
-            )
+            );
             // `&&` rather than `= ANY` so the GIN index on events.genre is usable.
-            return sql`${events.genre} && ARRAY[${placeholders}]::text[]`
-          })()
+            return sql`${events.genre} && ARRAY[${placeholders}]::text[]`;
+          })();
 
     // Same billing match the detail route uses, but column-to-column rather
     // than against a literal.
-    const appearsOnBill = billsCanonicalName(artists.canonicalName)
+    const appearsOnBill = billsCanonicalName(artists.canonicalName);
 
-    const upcomingCount = sql<number>`count(distinct ${events.id})::int`
-    const soonestDate = sql<string>`min(${events.date})`
+    const upcomingCount = sql<number>`count(distinct ${events.id})::int`;
+    const soonestDate = sql<string>`min(${events.date})`;
 
     const rows = await db
       .select({
@@ -217,15 +217,15 @@ artistsPublicRouter.get(
         artists.photoUrl,
       )
       .orderBy(desc(upcomingCount), asc(soonestDate), asc(artists.name))
-      .limit(limit)
+      .limit(limit);
 
-    const canonicalNames = rows.map((row) => row.canonicalName)
-    const nextShows = await loadNextShowByCanonical(canonicalNames)
+    const canonicalNames = rows.map((row) => row.canonicalName);
+    const nextShows = await loadNextShowByCanonical(canonicalNames);
 
     // Anonymous readers get `following: null` — there is no session to read,
     // and `false` would be a claim we cannot make.
-    const authInfo = getAuth(ctx)
-    let followed: Set<string> | null = null
+    const authInfo = getAuth(ctx);
+    let followed: Set<string> | null = null;
     if (authInfo?.userId && canonicalNames.length > 0) {
       // `spotify_top` is listening history, not a follow — counting it would
       // render the badge pre-engaged for an artist the user never followed.
@@ -239,18 +239,18 @@ artistsPublicRouter.get(
             inArray(userArtistFollows.canonicalName, canonicalNames),
             ne(userArtistFollows.source, 'spotify_top'),
           ),
-        )
-      followed = new Set(followRows.map((row) => row.canonicalName))
+        );
+      followed = new Set(followRows.map((row) => row.canonicalName));
     }
 
     const data: ArtistSuggestion[] = rows.flatMap((row): ArtistSuggestion[] => {
-      const nextShow = nextShows.get(row.canonicalName)
+      const nextShow = nextShows.get(row.canonicalName);
       // Unreachable by construction — the row exists because it has an
       // upcoming consumer-visible date at an active venue, which is exactly
       // what loadNextShowByCanonical asks. Dropped rather than faked so a
       // future divergence between the two queries can never emit a
       // suggestion with no date attached.
-      if (!nextShow) return []
+      if (!nextShow) return [];
       return [
         {
           name: row.name,
@@ -260,23 +260,23 @@ artistsPublicRouter.get(
           nextShow,
           following: followed === null ? null : followed.has(row.canonicalName),
         },
-      ]
-    })
+      ];
+    });
 
-    return ctx.json({ success: true, data })
+    return ctx.json({ success: true, data });
   },
-)
+);
 
 // GET /v1/artists/:slug — artist detail + upcoming/past shows (public)
 artistsPublicRouter.get(
   '/:slug',
   zValidator('param', slugParamSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
   }),
   async (ctx) => {
-    const { slug } = ctx.req.valid('param')
+    const { slug } = ctx.req.valid('param');
 
     const [artist] = await db
       .select({
@@ -290,15 +290,15 @@ artistsPublicRouter.get(
       // A hidden row (#1342) answers exactly like a slug that never existed —
       // an admin hid it because it doesn't name a performer, so there is
       // nothing for a reader to learn from the difference.
-      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
+      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)));
 
     if (!artist) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const today = todayInTimezone(MT_TIME_ZONE)
+    const today = todayInTimezone(MT_TIME_ZONE);
 
-    const appearsOnBill = billsCanonicalName(artist.canonicalName)
+    const appearsOnBill = billsCanonicalName(artist.canonicalName);
 
     // The consumer filter pair every public query applies: non-concert rows
     // are hidden, and crawler-flagged stale rows are suppressed so a duplicate
@@ -306,7 +306,7 @@ artistsPublicRouter.get(
     const consumerVisible = and(
       eq(events.hiddenFromConsumer, false),
       isNull(events.firstMissingAt),
-    )
+    );
 
     const showColumns = {
       eventId: events.id,
@@ -317,7 +317,7 @@ artistsPublicRouter.get(
       venue: venues.name,
       venueSlug: venues.slug,
       city: venues.city,
-    }
+    };
 
     // The upcoming row renders through the shared event row, which promotes
     // the tour name into the title slot and chips one genre. The past row is a
@@ -327,7 +327,7 @@ artistsPublicRouter.get(
       tourName: events.tourName,
       genre: events.genre,
       imageUrl: events.imageUrl,
-    }
+    };
 
     const upcomingRows = await db
       .select(upcomingColumns)
@@ -348,7 +348,7 @@ artistsPublicRouter.get(
         ),
       )
       .orderBy(asc(events.date), asc(events.showTime))
-      .limit(UPCOMING_LIMIT)
+      .limit(UPCOMING_LIMIT);
 
     const pastRows = await db
       .select(showColumns)
@@ -374,7 +374,7 @@ artistsPublicRouter.get(
         ),
       )
       .orderBy(desc(events.date), desc(events.showTime))
-      .limit(PAST_LIMIT)
+      .limit(PAST_LIMIT);
 
     // The cheapest corroborated tier, falling back to the denormalized scalar
     // whenever the event has no corroborated tier to aggregate — usually a
@@ -384,7 +384,7 @@ artistsPublicRouter.get(
     // cheaper tier existed (#1365).
     const priceByTierByEventId = await loadPriceByTierByEventId(
       upcomingRows.map((row) => row.eventId),
-    )
+    );
 
     const shows: ArtistShow[] = upcomingRows.map((row) => ({
       eventId: row.eventId,
@@ -400,7 +400,7 @@ artistsPublicRouter.get(
       genres: row.genre ?? [],
       imageUrl: row.imageUrl,
       status: row.status,
-    }))
+    }));
 
     const past: ArtistPastShow[] = pastRows.map((row) => ({
       eventId: row.eventId,
@@ -408,7 +408,7 @@ artistsPublicRouter.get(
       venue: row.venue,
       venueSlug: row.venueSlug,
       city: row.city,
-    }))
+    }));
 
     // The gate `search.ts` already applies and this route did not: an artist
     // is only real if at least one consumer-visible event bills them (#1343).
@@ -427,23 +427,23 @@ artistsPublicRouter.get(
         .select({ id: events.id })
         .from(events)
         .where(and(appearsOnBill, consumerVisible))
-        .limit(1)
+        .limit(1);
 
       if (!billed) {
-        return ctx.json({ success: false, error: 'Artist not found' }, 404)
+        return ctx.json({ success: false, error: 'Artist not found' }, 404);
       }
     }
 
     // Derived from `past` itself — never a separate COUNT(*), which would
     // drift past PAST_LIMIT and make the history sentence contradict the list
     // rendered underneath it.
-    const historyVenues: string[] = []
+    const historyVenues: string[] = [];
     for (const row of past) {
-      if (!historyVenues.includes(row.venue)) historyVenues.push(row.venue)
+      if (!historyVenues.includes(row.venue)) historyVenues.push(row.venue);
     }
 
-    const authInfo = getAuth(ctx)
-    let following: boolean | null = null
+    const authInfo = getAuth(ctx);
+    let following: boolean | null = null;
     if (authInfo?.userId) {
       // `manual` and `spotify_followed` are both follows the user performed;
       // `spotify_top` is listening history, and counting it would render the
@@ -462,8 +462,8 @@ artistsPublicRouter.get(
             ne(userArtistFollows.source, 'spotify_top'),
           ),
         )
-        .limit(1)
-      following = Boolean(followRow)
+        .limit(1);
+      following = Boolean(followRow);
     }
 
     const data: ArtistDetailResponse = {
@@ -477,8 +477,8 @@ artistsPublicRouter.get(
       past,
       history: { count: past.length, venues: historyVenues },
       following,
-    }
+    };
 
-    return ctx.json({ success: true, data })
+    return ctx.json({ success: true, data });
   },
-)
+);

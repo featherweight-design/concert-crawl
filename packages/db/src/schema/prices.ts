@@ -9,15 +9,15 @@ import {
   timestamp,
   uuid,
   varchar,
-} from 'drizzle-orm/pg-core'
-import { events, priceSourceEnum } from './events.js'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { events, priceSourceEnum } from './events.js';
+import { venues } from './venues.js';
 
 export const priceRetrievalOutcomeEnum = pgEnum('price_retrieval_outcome', [
   'hit',
   'miss',
   'error',
-])
+]);
 
 export const priceSubmissionStatusEnum = pgEnum('price_submission_status', [
   'pending',
@@ -25,7 +25,7 @@ export const priceSubmissionStatusEnum = pgEnum('price_submission_status', [
   'disputed',
   'stale',
   'archived',
-])
+]);
 
 export const submissionTierEnum = pgEnum('submission_tier', [
   'GA',
@@ -33,7 +33,7 @@ export const submissionTierEnum = pgEnum('submission_tier', [
   'VIP',
   'Pit',
   'Lawn',
-])
+]);
 
 export const submissionVendorEnum = pgEnum('submission_vendor', [
   'AXS',
@@ -48,13 +48,13 @@ export const submissionVendorEnum = pgEnum('submission_vendor', [
   'Viagogo',
   'TicketNetwork',
   'Other',
-])
+]);
 
 export const submissionHowFoundEnum = pgEnum('submission_how_found', [
   'bought_myself',
   'saw_listing',
   'at_the_venue',
-])
+]);
 
 // source_category replaces how_found semantically — the submit form now asks
 // "Where's this price from?" directly (boxoffice / standard / resale) instead of
@@ -64,7 +64,7 @@ export const sourceCategoryEnum = pgEnum('source_category', [
   'boxoffice',
   'standard',
   'resale',
-])
+]);
 
 export const priceRetrievalLog = pgTable(
   'price_retrieval_log',
@@ -93,7 +93,7 @@ export const priceRetrievalLog = pgTable(
       table.attemptedAt,
     ),
   }),
-)
+);
 
 export const priceSubmissions = pgTable(
   'price_submissions',
@@ -160,10 +160,10 @@ export const priceSubmissions = pgTable(
       'price_submissions_event_user_created_idx',
     ).on(table.eventId, table.userId, table.createdAt),
   }),
-)
+);
 
-export type PriceRetrievalLog = typeof priceRetrievalLog.$inferSelect
-export type NewPriceRetrievalLog = typeof priceRetrievalLog.$inferInsert
+export type PriceRetrievalLog = typeof priceRetrievalLog.$inferSelect;
+export type NewPriceRetrievalLog = typeof priceRetrievalLog.$inferInsert;
 
-export type PriceSubmission = typeof priceSubmissions.$inferSelect
-export type NewPriceSubmission = typeof priceSubmissions.$inferInsert
+export type PriceSubmission = typeof priceSubmissions.$inferSelect;
+export type NewPriceSubmission = typeof priceSubmissions.$inferInsert;

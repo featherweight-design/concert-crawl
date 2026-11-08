@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockDb } = vi.hoisted(() => {
   const mockDb = {
@@ -11,15 +11,15 @@ const { mockDb } = vi.hoisted(() => {
     limit: vi.fn(),
     offset: vi.fn(),
     groupBy: vi.fn(),
-  }
-  return { mockDb }
-})
+  };
+  return { mockDb };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_a, _b) => ({ type: 'eq' })),
@@ -39,7 +39,7 @@ vi.mock('drizzle-orm', () => ({
     vi.fn(() => ({ type: 'sql' })),
     { placeholder: vi.fn() },
   ),
-}))
+}));
 
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
@@ -107,9 +107,9 @@ vi.mock('@concert-crawl/db', () => ({
     canonicalName: 'canonicalName',
     slug: 'slug',
   },
-}))
+}));
 
-import { createApp } from '../app.js'
+import { createApp } from '../app.js';
 
 const mockEvent = {
   id: 'event-1',
@@ -142,105 +142,105 @@ const mockEvent = {
     timezone: 'America/Denver',
     websiteUrl: 'https://venue.example.com',
   },
-}
+};
 
 // Resets all chain methods to return mockDb so tests start clean
 function resetChain() {
-  mockDb.select.mockReturnValue(mockDb)
-  mockDb.from.mockReturnValue(mockDb)
-  mockDb.innerJoin.mockReturnValue(mockDb)
-  mockDb.leftJoin.mockReturnValue(mockDb)
-  mockDb.orderBy.mockReturnValue(mockDb)
-  mockDb.limit.mockReturnValue(mockDb)
-  mockDb.where.mockReturnValue(mockDb)
-  mockDb.groupBy.mockReturnValue(mockDb)
-  mockDb.offset.mockResolvedValue([])
+  mockDb.select.mockReturnValue(mockDb);
+  mockDb.from.mockReturnValue(mockDb);
+  mockDb.innerJoin.mockReturnValue(mockDb);
+  mockDb.leftJoin.mockReturnValue(mockDb);
+  mockDb.orderBy.mockReturnValue(mockDb);
+  mockDb.limit.mockReturnValue(mockDb);
+  mockDb.where.mockReturnValue(mockDb);
+  mockDb.groupBy.mockReturnValue(mockDb);
+  mockDb.offset.mockResolvedValue([]);
 }
 
 describe('GET /v1/events', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    resetChain()
-  })
+    vi.clearAllMocks();
+    resetChain();
+  });
 
   it('returns 200 with data array and pagination metadata', async () => {
     // count query: select().from().where() → terminal
-    mockDb.where.mockResolvedValueOnce([{ total: 1 }])
+    mockDb.where.mockResolvedValueOnce([{ total: 1 }]);
     // rows query: select().from().innerJoin().where().orderBy().limit().offset() → terminal
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.offset.mockResolvedValueOnce([mockEvent])
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.offset.mockResolvedValueOnce([mockEvent]);
     // priceByTier corroborated-rows query — closes #787. Terminal at .where().
     // mockEvent.priceSource is 'structured_data' so the community-vendor query
     // is skipped, but the priceByTier query runs for every visible event ID.
     // Empty array → priceByTier ends up null for the row.
-    mockDb.where.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([]);
 
-    const res = await createApp().request('/v1/events')
-    expect(res.status).toBe(200)
+    const res = await createApp().request('/v1/events');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: unknown[]; total: number; limit: number; offset: number }
-    }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data.data)).toBe(true)
-    expect(typeof body.data.total).toBe('number')
-    expect(typeof body.data.limit).toBe('number')
-    expect(typeof body.data.offset).toBe('number')
-  })
+      success: boolean;
+      data: { data: unknown[]; total: number; limit: number; offset: number };
+    };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data.data)).toBe(true);
+    expect(typeof body.data.total).toBe('number');
+    expect(typeof body.data.limit).toBe('number');
+    expect(typeof body.data.offset).toBe('number');
+  });
 
   it('returns 400 for invalid limit value', async () => {
-    const res = await createApp().request('/v1/events?limit=abc')
-    expect(res.status).toBe(400)
-  })
+    const res = await createApp().request('/v1/events?limit=abc');
+    expect(res.status).toBe(400);
+  });
 
   it('returns 400 for limit exceeding maximum', async () => {
-    const res = await createApp().request('/v1/events?limit=999')
-    expect(res.status).toBe(400)
-  })
+    const res = await createApp().request('/v1/events?limit=999');
+    expect(res.status).toBe(400);
+  });
 
   it('returns 400 for negative offset', async () => {
-    const res = await createApp().request('/v1/events?offset=-1')
-    expect(res.status).toBe(400)
-  })
+    const res = await createApp().request('/v1/events?offset=-1');
+    expect(res.status).toBe(400);
+  });
 
   it('returns 400 for invalid from date format', async () => {
-    const res = await createApp().request('/v1/events?from=not-a-date')
-    expect(res.status).toBe(400)
-  })
+    const res = await createApp().request('/v1/events?from=not-a-date');
+    expect(res.status).toBe(400);
+  });
 
   it('accepts valid from/to date filter combination', async () => {
-    mockDb.where.mockResolvedValueOnce([{ total: 0 }])
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.offset.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }]);
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.offset.mockResolvedValueOnce([]);
 
     const res = await createApp().request(
       '/v1/events?from=2099-01-01&to=2099-12-31',
-    )
-    expect(res.status).toBe(200)
-  })
+    );
+    expect(res.status).toBe(200);
+  });
 
   it('returns empty data for an unknown venueSlug', async () => {
     // venue lookup: select({id}).from(venues).where().limit(1) → terminal, empty
-    mockDb.where.mockReturnValueOnce(mockDb)
-    mockDb.limit.mockResolvedValueOnce([])
+    mockDb.where.mockReturnValueOnce(mockDb);
+    mockDb.limit.mockResolvedValueOnce([]);
 
-    const res = await createApp().request('/v1/events?venueSlug=unknown-slug')
-    expect(res.status).toBe(200)
+    const res = await createApp().request('/v1/events?venueSlug=unknown-slug');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: unknown[]; total: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.data).toEqual([])
-    expect(body.data.total).toBe(0)
-  })
-})
+      success: boolean;
+      data: { data: unknown[]; total: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.data).toEqual([]);
+    expect(body.data.total).toBe(0);
+  });
+});
 
 describe('GET /v1/events/:id', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    resetChain()
-  })
+    vi.clearAllMocks();
+    resetChain();
+  });
 
   it('returns 200 with event data for a known id', async () => {
     // After PR 3's consolidation the handler runs queries in this order
@@ -252,48 +252,48 @@ describe('GET /v1/events/:id', () => {
     //   5. priceByTier pending      — select().from().where()                  → terminal
     //   6. reports-by-tier          — select().from().where().groupBy()        → chainable where
     // Queue mocks in call order so each .where() gets the right behavior.
-    mockDb.where.mockResolvedValueOnce([mockEvent]) // 1
-    mockDb.where.mockResolvedValueOnce([{ total: 0 }]) // 2
-    mockDb.where.mockReturnValueOnce(mockDb) // 3 (chain into orderBy)
-    mockDb.where.mockResolvedValueOnce([]) // 4
-    mockDb.where.mockResolvedValueOnce([]) // 5
-    mockDb.where.mockReturnValueOnce(mockDb) // 6 (chain into groupBy)
+    mockDb.where.mockResolvedValueOnce([mockEvent]); // 1
+    mockDb.where.mockResolvedValueOnce([{ total: 0 }]); // 2
+    mockDb.where.mockReturnValueOnce(mockDb); // 3 (chain into orderBy)
+    mockDb.where.mockResolvedValueOnce([]); // 4
+    mockDb.where.mockResolvedValueOnce([]); // 5
+    mockDb.where.mockReturnValueOnce(mockDb); // 6 (chain into groupBy)
     // 7. artist-page slugs (#1115 PR-G) — select().from().where() → terminal.
     // Empty: this fixture's artist has no `artists` row, so both slug fields
     // come back null and the UI renders plain text.
-    mockDb.where.mockResolvedValueOnce([]) // 7
+    mockDb.where.mockResolvedValueOnce([]); // 7
     // sold-out report orderBy → limit terminal
-    mockDb.orderBy.mockReturnValueOnce(mockDb)
-    mockDb.limit.mockResolvedValueOnce([])
+    mockDb.orderBy.mockReturnValueOnce(mockDb);
+    mockDb.limit.mockResolvedValueOnce([]);
     // reports-by-tier groupBy terminal
-    mockDb.groupBy.mockResolvedValueOnce([])
+    mockDb.groupBy.mockResolvedValueOnce([]);
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000001',
-    )
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown }
-    expect(body.success).toBe(true)
-    expect(body.data).toBeTruthy()
-  })
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown };
+    expect(body.success).toBe(true);
+    expect(body.data).toBeTruthy();
+  });
 
   it('returns 404 for a non-UUID event id', async () => {
-    const res = await createApp().request('/v1/events/not-a-uuid')
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
+    const res = await createApp().request('/v1/events/not-a-uuid');
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
 
   it('returns 404 for a valid UUID that matches no event', async () => {
-    mockDb.where.mockResolvedValueOnce([])
+    mockDb.where.mockResolvedValueOnce([]);
 
     const res = await createApp().request(
       '/v1/events/00000000-0000-0000-0000-000000000000',
-    )
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
-})
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
+});

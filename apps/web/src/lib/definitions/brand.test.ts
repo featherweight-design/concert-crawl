@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 
-import { BRAND_PAPER } from './brand'
-import { THEMES } from '@/theme/themes'
+import { BRAND_PAPER } from './brand';
+import { THEMES } from '@/theme/themes';
 
 describe('BRAND_PAPER', () => {
   // The manifest, the browser theme colour and the social card all paint this
@@ -9,6 +9,6 @@ describe('BRAND_PAPER', () => {
   // second copy of a value the theme table already holds, and a second copy
   // that nothing checks is a second copy that drifts.
   it('agrees with the electric theme background the app paints', () => {
-    expect(BRAND_PAPER.toLowerCase()).toBe(THEMES.electric.bg?.toLowerCase())
-  })
-})
+    expect(BRAND_PAPER.toLowerCase()).toBe(THEMES.electric.bg?.toLowerCase());
+  });
+});

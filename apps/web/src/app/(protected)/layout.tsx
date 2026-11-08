@@ -1,11 +1,11 @@
-import { FeedbackEdgeTabGate } from '@/components/consumer/feedback'
-import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush'
-import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate'
-import { LifecycleNudgesGate } from '@/components/consumer/lifecycle-nudges'
-import { FollowNudgeGate } from '@/components/consumer/following/nudge/FollowNudgeGate'
+import { FeedbackEdgeTabGate } from '@/components/consumer/feedback';
+import { OnboardingThemeFlush } from '@/components/auth/OnboardingThemeFlush';
+import { FeatureDropPillGate } from '@/components/consumer/release-notes/FeatureDropPillGate';
+import { LifecycleNudgesGate } from '@/components/consumer/lifecycle-nudges';
+import { FollowNudgeGate } from '@/components/consumer/following/nudge/FollowNudgeGate';
 
 interface ProtectedLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 // Auth gating is handled by the proxy (apps/web/src/proxy.ts) — any
@@ -27,5 +27,5 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
       <LifecycleNudgesGate />
       <FollowNudgeGate />
     </>
-  )
+  );
 }

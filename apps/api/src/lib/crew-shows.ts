@@ -6,7 +6,7 @@
 // user_events_user_attending_idx. A crew is capped at 12 members, so the
 // widest possible query is a 12-way `user_id IN (...)` against that index.
 
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
 import {
   artists,
   crewMembers,
@@ -15,11 +15,11 @@ import {
   userEvents,
   userProfiles,
   venues,
-} from '@concert-crawl/db'
-import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types'
-import { displayHeadliner, portraitCanonicalName } from './event-billing.js'
+} from '@concert-crawl/db';
+import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types';
+import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
 
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 /**
  * The tense rule (locked decision 2). Upcoming needs at least one member
@@ -27,18 +27,18 @@ const MT_TIME_ZONE = 'America/Denver'
  * degrading into a merged feed of solo nights, so both numbers live here and
  * are read by every call site rather than inlined where they can drift.
  */
-export const UPCOMING_MIN_GOING = 1
-export const PAST_MIN_GOING = 2
+export const UPCOMING_MIN_GOING = 1;
+export const PAST_MIN_GOING = 2;
 
-export type CrewShowTense = 'upcoming' | 'past'
+export type CrewShowTense = 'upcoming' | 'past';
 
 // Mountain Time, not UTC: a late-evening Denver user would otherwise watch
 // tonight's show cross into the past hours early. Built per call rather than
 // once at module scope, so importing this module runs no drizzle template.
-const todayMt = () => sql`(NOW() AT TIME ZONE ${MT_TIME_ZONE})::date`
+const todayMt = () => sql`(NOW() AT TIME ZONE ${MT_TIME_ZONE})::date`;
 
 const minGoingFor = (tense: CrewShowTense): number =>
-  tense === 'upcoming' ? UPCOMING_MIN_GOING : PAST_MIN_GOING
+  tense === 'upcoming' ? UPCOMING_MIN_GOING : PAST_MIN_GOING;
 
 /**
  * Every attendance row belonging to `memberIds` on one side of today, with the
@@ -94,7 +94,7 @@ const selectAttendanceRows = async (
       // reorder between requests.
       asc(events.id),
       asc(userEvents.userId),
-    )
+    );
 
 /**
  * Crew shows for one tense, ascending for upcoming and descending for past.
@@ -106,23 +106,23 @@ export const loadCrewShows = async (
   memberIds: string[],
   tense: CrewShowTense,
 ): Promise<CrewShow[]> => {
-  if (memberIds.length === 0) return []
+  if (memberIds.length === 0) return [];
 
-  const rows = await selectAttendanceRows(memberIds, tense)
-  const minGoing = minGoingFor(tense)
-  const byEvent = new Map<string, CrewShow>()
+  const rows = await selectAttendanceRows(memberIds, tense);
+  const minGoing = minGoingFor(tense);
+  const byEvent = new Map<string, CrewShow>();
 
   for (const row of rows) {
     const going: CrewMemberPreview = {
       userId: row.userId,
       handle: row.handle ?? null,
       avatarColor: row.avatarColor ?? null,
-    }
-    const existing = byEvent.get(row.eventId)
+    };
+    const existing = byEvent.get(row.eventId);
     if (existing) {
-      existing.going.push(going)
-      existing.goingCount += 1
-      continue
+      existing.going.push(going);
+      existing.goingCount += 1;
+      continue;
     }
     byEvent.set(row.eventId, {
       eventId: row.eventId,
@@ -136,11 +136,11 @@ export const loadCrewShows = async (
       venueSlug: row.venueSlug,
       goingCount: 1,
       going: [going],
-    })
+    });
   }
 
-  return [...byEvent.values()].filter((show) => show.goingCount >= minGoing)
-}
+  return [...byEvent.values()].filter((show) => show.goingCount >= minGoing);
+};
 
 /**
  * Who, among the people you share a crew with, is going to one event. Event
@@ -161,7 +161,7 @@ export const loadCrewGoingForEvent = async (
   const mine = db
     .select({ crewId: crewMembers.crewId })
     .from(crewMembers)
-    .where(eq(crewMembers.userId, userId))
+    .where(eq(crewMembers.userId, userId));
 
   const rows = await db
     .selectDistinct({
@@ -180,14 +180,14 @@ export const loadCrewGoingForEvent = async (
         isNotNull(userEvents.attendingAt),
       ),
     )
-    .orderBy(asc(userProfiles.handle), asc(userEvents.userId))
+    .orderBy(asc(userProfiles.handle), asc(userEvents.userId));
 
   return rows.map((row) => ({
     userId: row.userId,
     handle: row.handle ?? null,
     avatarColor: row.avatarColor ?? null,
-  }))
-}
+  }));
+};
 
 /**
  * Upcoming-show counts for a set of crews, keyed by crew id. Used by the crews
@@ -198,8 +198,8 @@ export const loadCrewGoingForEvent = async (
 export const loadUpcomingCounts = async (
   crewIds: string[],
 ): Promise<Map<string, number>> => {
-  const counts = new Map<string, number>()
-  if (crewIds.length === 0) return counts
+  const counts = new Map<string, number>();
+  if (crewIds.length === 0) return counts;
 
   const rows = await db
     .select({
@@ -218,8 +218,8 @@ export const loadUpcomingCounts = async (
         ne(events.status, 'cancelled'),
       ),
     )
-    .groupBy(crewMembers.crewId)
+    .groupBy(crewMembers.crewId);
 
-  for (const row of rows) counts.set(row.crewId, row.total)
-  return counts
-}
+  for (const row of rows) counts.set(row.crewId, row.total);
+  return counts;
+};

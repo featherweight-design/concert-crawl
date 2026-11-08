@@ -1,6 +1,6 @@
-import React from 'react'
+import React from 'react';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 /**
  * The `ConcertCrawl` footer signature.
@@ -11,8 +11,8 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
  * the letter-spacing in three places is how that stops being true.
  */
 export interface ShareWordmarkProps {
-  size: number
-  color: string
+  size: number;
+  color: string;
 }
 
 export const ShareWordmark = ({ size, color }: ShareWordmarkProps) => (
@@ -29,4 +29,4 @@ export const ShareWordmark = ({ size, color }: ShareWordmarkProps) => (
   >
     {CONSUMER_COPY.share.wordmark}
   </div>
-)
+);

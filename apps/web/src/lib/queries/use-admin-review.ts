@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import { apiClient } from '@/lib/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import { apiClient } from '@/lib/api';
 import {
   filtersToFetchQuery,
   type AllEventsFilters,
-} from '@/components/admin/review/all/filters'
-import { type AllEvent } from '@/components/admin/review/all/types'
-import { type MissingRowEvent } from '@/components/admin/review/missing/MissingRow'
+} from '@/components/admin/review/all/filters';
+import { type AllEvent } from '@/components/admin/review/all/types';
+import { type MissingRowEvent } from '@/components/admin/review/missing/MissingRow';
 
 // Page-replacement model: each `useQuery` returns just the rows for the
 // current page plus the server-reported `total`. The new <Pagination/>
@@ -20,46 +20,46 @@ import { type MissingRowEvent } from '@/components/admin/review/missing/MissingR
 // URL is the source of truth in the wired-up parent (ReviewPageClient ↔
 // PAGINATION_URL_DEFAULT_PAGE_SIZE), so this only kicks in when the tab
 // is rendered without a parent-controlled pagination state.
-export const REVIEW_ALL_EVENTS_PAGE_SIZE = 20
+export const REVIEW_ALL_EVENTS_PAGE_SIZE = 20;
 
 // Re-exported types so consumers can import everything review-related from
 // one place. The shapes mirror the inline interfaces in ReviewPageClient.
 export interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 export interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 // Backend response shape when ?count=true is passed.
 interface CountedResponse<TRow> {
-  rows: TRow[]
-  total: number
+  rows: TRow[];
+  total: number;
 }
 
 // Aggregate counts for the Review tab pills — surfaced on initial mount via
@@ -71,10 +71,10 @@ interface CountedResponse<TRow> {
 // this field stays lock-step with the /v1/admin/contests/prices list so the
 // pill never disagrees with the queue table's row count.
 export interface ReviewCounts {
-  eventFlags: number
-  prices: number
-  missing: number
-  priceContests: number
+  eventFlags: number;
+  prices: number;
+  missing: number;
+  priceContests: number;
 }
 
 // Stable query key roots. Each `(page, pageSize)` pair gets its own cache
@@ -91,25 +91,25 @@ export const reviewQueryKeys = {
     ['admin', 'review', 'missing', page, pageSize] as const,
   priceEvents: (filter: 'missing' | 'all', page: number, pageSize: number) =>
     ['admin', 'review', 'price-events', filter, page, pageSize] as const,
-}
+};
 
 export interface PaginatedQueryInput {
-  page: number
-  pageSize: number
+  page: number;
+  pageSize: number;
 }
 
 // ───── Counts (Review tab pills + sidebar badge) ─────────────────────────────
 export function useReviewCounts(initialData?: ReviewCounts) {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   return useQuery({
     queryKey: reviewQueryKeys.counts,
     queryFn: async (): Promise<ReviewCounts> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      return apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      return apiClient.get<ReviewCounts>('/v1/admin/review/counts', token);
     },
     ...(initialData ? { initialData } : {}),
-  })
+  });
 }
 
 // ───── All Events tab ────────────────────────────────────────────────────────
@@ -117,23 +117,23 @@ export function useReviewAllEvents(
   filters: AllEventsFilters,
   pagination: PaginatedQueryInput,
 ) {
-  const { getToken } = useAuth()
-  const { page, pageSize } = pagination
-  const filterQuery = filtersToFetchQuery(filters)
+  const { getToken } = useAuth();
+  const { page, pageSize } = pagination;
+  const filterQuery = filtersToFetchQuery(filters);
   return useQuery({
     queryKey: reviewQueryKeys.allEvents(filterQuery, page, pageSize),
     queryFn: async (): Promise<CountedResponse<AllEvent>> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      const offset = (page - 1) * pageSize
-      const suffix = filterQuery ? `&${filterQuery}` : ''
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      const offset = (page - 1) * pageSize;
+      const suffix = filterQuery ? `&${filterQuery}` : '';
       return apiClient.get<CountedResponse<AllEvent>>(
         `/v1/admin/events?count=true&limit=${pageSize}&offset=${offset}${suffix}`,
         token,
-      )
+      );
     },
     placeholderData: (prev) => prev,
-  })
+  });
 }
 
 // ───── Event Flags tab ───────────────────────────────────────────────────────
@@ -143,22 +143,22 @@ export function useReviewEventFlags(
   pagination: PaginatedQueryInput,
   enabled: boolean = true,
 ) {
-  const { getToken } = useAuth()
-  const { page, pageSize } = pagination
+  const { getToken } = useAuth();
+  const { page, pageSize } = pagination;
   return useQuery({
     queryKey: reviewQueryKeys.eventFlags(page, pageSize),
     enabled,
     queryFn: async (): Promise<CountedResponse<EventFlag>> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      const offset = (page - 1) * pageSize
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      const offset = (page - 1) * pageSize;
       return apiClient.get<CountedResponse<EventFlag>>(
         `/v1/admin/events?count=true&verified=false&limit=${pageSize}&offset=${offset}`,
         token,
-      )
+      );
     },
     placeholderData: (prev) => prev,
-  })
+  });
 }
 
 // ───── Missing tab ───────────────────────────────────────────────────────────
@@ -167,22 +167,22 @@ export function useReviewMissingEvents(
   enabled: boolean,
   pagination: PaginatedQueryInput,
 ) {
-  const { getToken } = useAuth()
-  const { page, pageSize } = pagination
+  const { getToken } = useAuth();
+  const { page, pageSize } = pagination;
   return useQuery({
     queryKey: reviewQueryKeys.missing(page, pageSize),
     enabled,
     queryFn: async (): Promise<CountedResponse<MissingRowEvent>> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      const offset = (page - 1) * pageSize
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      const offset = (page - 1) * pageSize;
       return apiClient.get<CountedResponse<MissingRowEvent>>(
         `/v1/admin/events?count=true&missing=true&limit=${pageSize}&offset=${offset}`,
         token,
-      )
+      );
     },
     placeholderData: (prev) => prev,
-  })
+  });
 }
 
 // ───── Price Coverage tab ────────────────────────────────────────────────────
@@ -191,23 +191,23 @@ export function useReviewPriceEvents(
   pagination: PaginatedQueryInput,
   enabled: boolean = true,
 ) {
-  const { getToken } = useAuth()
-  const { page, pageSize } = pagination
+  const { getToken } = useAuth();
+  const { page, pageSize } = pagination;
   return useQuery({
     queryKey: reviewQueryKeys.priceEvents(filter, page, pageSize),
     enabled,
     queryFn: async (): Promise<CountedResponse<PriceEvent>> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      const offset = (page - 1) * pageSize
-      const missingOnly = filter === 'missing'
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      const offset = (page - 1) * pageSize;
+      const missingOnly = filter === 'missing';
       return apiClient.get<CountedResponse<PriceEvent>>(
         `/v1/admin/prices/events?count=true&missingOnly=${String(missingOnly)}&limit=${pageSize}&offset=${offset}`,
         token,
-      )
+      );
     },
     placeholderData: (prev) => prev,
-  })
+  });
 }
 
 // ───── Invalidation helpers ──────────────────────────────────────────────────
@@ -216,7 +216,7 @@ export function useReviewPriceEvents(
 // refetch lazily on next render.
 
 export function useInvalidateReviewQueries() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return {
     allEvents: () =>
       queryClient.invalidateQueries({
@@ -238,5 +238,5 @@ export function useInvalidateReviewQueries() {
       queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts }),
     all: () =>
       queryClient.invalidateQueries({ queryKey: reviewQueryKeys.root }),
-  }
+  };
 }

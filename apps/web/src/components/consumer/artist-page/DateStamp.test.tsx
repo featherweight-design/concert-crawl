@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 
-import { formatEventDate } from '../definitions/lib'
+import { formatEventDate } from '../definitions/lib';
 
-import { fmtDate } from './DateStamp'
+import { fmtDate } from './DateStamp';
 
 describe('fmtDate', () => {
   it('splits an ISO date into its display parts', () => {
@@ -10,8 +10,8 @@ describe('fmtDate', () => {
       dow: 'WED',
       mon: 'AUG',
       day: '5',
-    })
-  })
+    });
+  });
 
   // The date belongs to the venue, not the viewer. This pins the delegation
   // rather than catching a regression: the bespoke parse it replaced happened to
@@ -26,7 +26,7 @@ describe('fmtDate', () => {
         }).toUpperCase(),
         mon: formatEventDate(iso, undefined, { month: 'short' }).toUpperCase(),
         day: formatEventDate(iso, undefined, { day: 'numeric' }),
-      })
+      });
     },
-  )
-})
+  );
+});

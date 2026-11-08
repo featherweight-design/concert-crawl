@@ -13,41 +13,41 @@
 // `$elements_chain` is one serialized string, `tag:key="value"key="value";…`,
 // in which posthog-js escapes a `"` inside a value as `\"`. Each quoted value
 // is redacted on its own, so a value never runs into the next attribute.
-import type { CaptureResult, Properties } from 'posthog-js'
-import { redactInviteTokens } from '@/lib/sentry-redact'
-import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties'
+import type { CaptureResult, Properties } from 'posthog-js';
+import { redactInviteTokens } from '@/lib/sentry-redact';
+import { CAMPAIGN_PROPERTIES } from './definitions/campaign-properties';
 
-const URL_START = /^(?:https?:\/\/|\/)/i
+const URL_START = /^(?:https?:\/\/|\/)/i;
 
 // The admin's user page is addressed by another reader's Clerk id.
-const ADMIN_USER_PATH = /(\/admin\/users\/)[^/?#]+/g
+const ADMIN_USER_PATH = /(\/admin\/users\/)[^/?#]+/g;
 
 export const redactAnalyticsString = (value: string): string =>
   redactInviteTokens(
     URL_START.test(value) ? (value.split(/[?#]/, 1)[0] ?? '') : value,
-  ).replace(ADMIN_USER_PATH, '$1[redacted]')
+  ).replace(ADMIN_USER_PATH, '$1[redacted]');
 
 // A double-quoted chain value, escaped quotes included.
-const CHAIN_VALUE = /"((?:\\"|[^"])*)"/g
+const CHAIN_VALUE = /"((?:\\"|[^"])*)"/g;
 
 export const redactElementsChain = (chain: string): string =>
   chain.replace(
     CHAIN_VALUE,
     (_match, inner: string) => `"${redactAnalyticsString(inner)}"`,
-  )
+  );
 
 const redactValue = (value: unknown): unknown => {
-  if (typeof value === 'string') return redactAnalyticsString(value)
-  if (Array.isArray(value)) return value.map(redactValue)
+  if (typeof value === 'string') return redactAnalyticsString(value);
+  if (Array.isArray(value)) return value.map(redactValue);
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value).map(([key, inner]) => [key, redactValue(inner)]),
-    )
+    );
   }
-  return value
-}
+  return value;
+};
 
-const DROPPED = new Set(CAMPAIGN_PROPERTIES)
+const DROPPED = new Set(CAMPAIGN_PROPERTIES);
 
 // `property_denylist` covers event properties only; `$set` and `$set_once`
 // reach before_send untouched, so the same names are dropped here as well.
@@ -61,12 +61,12 @@ const redactProperties = (properties: Properties): Properties =>
           ? redactElementsChain(value)
           : redactValue(value),
       ]),
-  )
+  );
 
 export const redactCapture = (
   event: CaptureResult | null,
 ): CaptureResult | null => {
-  if (event === null) return null
+  if (event === null) return null;
   return {
     ...event,
     properties: redactProperties(event.properties),
@@ -74,5 +74,5 @@ export const redactCapture = (
     ...(event.$set_once
       ? { $set_once: redactProperties(event.$set_once) }
       : {}),
-  }
-}
+  };
+};

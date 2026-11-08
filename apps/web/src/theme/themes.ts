@@ -7,12 +7,12 @@ export type ThemeName =
   | 'bluenote'
   | 'drip'
   | 'cedar'
-  | 'gloss'
+  | 'gloss';
 
 export interface ThemeMeta {
-  label: string
-  mode: 'dark' | 'light'
-  role: string
+  label: string;
+  mode: 'dark' | 'light';
+  role: string;
 }
 
 export const THEME_META: Record<ThemeName, ThemeMeta> = {
@@ -25,7 +25,7 @@ export const THEME_META: Record<ThemeName, ThemeMeta> = {
   drip: { label: 'Drip', mode: 'dark', role: 'Hip-Hop' },
   cedar: { label: 'Cedar', mode: 'dark', role: 'Indie / Folk' },
   gloss: { label: 'Gloss', mode: 'dark', role: 'Pop' },
-}
+};
 
 const electric: Record<string, string> = {
   bg: '#070A1A',
@@ -57,7 +57,7 @@ const electric: Record<string, string> = {
   'image-tint': 'rgba(7,10,26,0.20)',
   'shadow-soft': 'rgba(7,10,26,0.45)',
   'shadow-strong': 'rgba(7,10,26,0.62)',
-}
+};
 
 const jade: Record<string, string> = {
   bg: '#06201F',
@@ -89,7 +89,7 @@ const jade: Record<string, string> = {
   'image-tint': 'rgba(6,32,31,0.20)',
   'shadow-soft': 'rgba(6,32,31,0.45)',
   'shadow-strong': 'rgba(6,32,31,0.62)',
-}
+};
 
 const light: Record<string, string> = {
   bg: '#FAFCFF',
@@ -121,7 +121,7 @@ const light: Record<string, string> = {
   'image-tint': 'transparent',
   'shadow-soft': 'rgba(7,10,26,0.12)',
   'shadow-strong': 'rgba(7,10,26,0.20)',
-}
+};
 
 const pulse: Record<string, string> = {
   bg: '#050008',
@@ -153,7 +153,7 @@ const pulse: Record<string, string> = {
   'shadow-strong': 'rgba(5,0,8,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 const forge: Record<string, string> = {
   bg: '#060403',
@@ -185,7 +185,7 @@ const forge: Record<string, string> = {
   'shadow-strong': 'rgba(6,4,3,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 const bluenote: Record<string, string> = {
   bg: '#0E0A1F',
@@ -217,7 +217,7 @@ const bluenote: Record<string, string> = {
   'shadow-strong': 'rgba(14,10,31,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 const drip: Record<string, string> = {
   bg: '#000000',
@@ -249,7 +249,7 @@ const drip: Record<string, string> = {
   'shadow-strong': 'rgba(0,0,0,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 const cedar: Record<string, string> = {
   bg: '#10201A',
@@ -281,7 +281,7 @@ const cedar: Record<string, string> = {
   'shadow-strong': 'rgba(16,32,26,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 const gloss: Record<string, string> = {
   bg: '#0F0810',
@@ -313,7 +313,7 @@ const gloss: Record<string, string> = {
   'shadow-strong': 'rgba(15,8,16,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
-}
+};
 
 export const THEMES: Record<ThemeName, Record<string, string>> = {
   electric,
@@ -325,7 +325,7 @@ export const THEMES: Record<ThemeName, Record<string, string>> = {
   drip,
   cedar,
   gloss,
-}
+};
 
 export const THEME_NAMES = [
   'electric',
@@ -337,4 +337,4 @@ export const THEME_NAMES = [
   'drip',
   'cedar',
   'gloss',
-] as const satisfies readonly ThemeName[]
+] as const satisfies readonly ThemeName[];

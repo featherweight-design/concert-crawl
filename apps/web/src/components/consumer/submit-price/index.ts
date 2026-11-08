@@ -1,1 +1,1 @@
-export { SubmitPriceModal } from './SubmitPriceModal'
+export { SubmitPriceModal } from './SubmitPriceModal';

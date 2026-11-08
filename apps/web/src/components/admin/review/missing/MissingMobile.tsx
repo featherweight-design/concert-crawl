@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { AlertTriangle, Check } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { StatusBadge } from '@/components/admin/primitives'
+import { AlertTriangle, Check } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { StatusBadge } from '@/components/admin/primitives';
 import {
   computeMissedSweeps,
   formatEventDate,
   formatLastSeen,
-} from '@/lib/admin/missing'
-import { MissingChips } from './MissingChips'
+} from '@/lib/admin/missing';
+import { MissingChips } from './MissingChips';
 import {
   MissingEventLink,
   MissingVenueLink,
   VenueCheckLink,
-} from './MissingLinks'
-import { MissingRowMenu } from './MissingRowMenu'
-import { type MissingRowEvent } from './MissingRow'
+} from './MissingLinks';
+import { MissingRowMenu } from './MissingRowMenu';
+import { type MissingRowEvent } from './MissingRow';
 
 export interface MissingMobileProps {
-  events: MissingRowEvent[]
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  onConfirmMove: (event: MissingRowEvent) => void
-  pendingIds: ReadonlySet<string>
+  events: MissingRowEvent[];
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  onConfirmMove: (event: MissingRowEvent) => void;
+  pendingIds: ReadonlySet<string>;
 }
 
 export const MissingMobile = ({
@@ -119,7 +119,7 @@ export const MissingMobile = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -153,8 +153,8 @@ export const MissingMobile = ({
         </span>
       </div>
       {events.map((event) => {
-        const missed = computeMissedSweeps(event.firstMissingAt, nowIso)
-        const pending = pendingIds.has(event.id)
+        const missed = computeMissedSweeps(event.firstMissingAt, nowIso);
+        const pending = pendingIds.has(event.id);
         return (
           <div
             key={event.id}
@@ -254,8 +254,8 @@ export const MissingMobile = ({
               disabled={pending}
             />
           </div>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};

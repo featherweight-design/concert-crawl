@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
+import { useEffect } from 'react';
+import { GUIDE_ANCHOR_ID } from './FirstTimerCallout';
 
 /**
  * A cold load of `/venues/x#ft-guide` scrolls to the guide because the browser
@@ -15,16 +15,16 @@ import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
  */
 export const GuideAnchorScroll = () => {
   useEffect(() => {
-    if (window.location.hash !== `#${GUIDE_ANCHOR_ID}`) return
-    const target = document.getElementById(GUIDE_ANCHOR_ID)
-    if (target === null) return
+    if (window.location.hash !== `#${GUIDE_ANCHOR_ID}`) return;
+    const target = document.getElementById(GUIDE_ANCHOR_ID);
+    if (target === null) return;
     // rAF so the scroll runs after the section has been laid out, otherwise the
     // offset is measured against a page that is still growing.
     const frame = window.requestAnimationFrame(() => {
-      target.scrollIntoView({ block: 'start' })
-    })
-    return () => window.cancelAnimationFrame(frame)
-  }, [])
+      target.scrollIntoView({ block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
-  return null
-}
+  return null;
+};

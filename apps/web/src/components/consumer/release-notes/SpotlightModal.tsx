@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import type { Release } from '@/lib/definitions/releases'
-import { SpotlightHero } from './SpotlightHero'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState, useEffect, useRef } from 'react';
+import type { Release } from '@/lib/definitions/releases';
+import { SpotlightHero } from './SpotlightHero';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 interface SpotlightModalProps {
-  release: Release
-  onClose: () => void
-  onCTA?: () => void
+  release: Release;
+  onClose: () => void;
+  onCTA?: () => void;
 }
 
 export function SpotlightModal({
@@ -18,48 +18,48 @@ export function SpotlightModal({
   onClose,
   onCTA,
 }: SpotlightModalProps) {
-  const sp = release.spotlight
-  const [step, setStep] = useState(0)
-  const heroRef = useRef<HTMLDivElement>(null)
-  const [heroScale, setHeroScale] = useState(1)
-  const [isMobile, setIsMobile] = useState(false)
+  const sp = release.spotlight;
+  const [step, setStep] = useState(0);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [heroScale, setHeroScale] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (!sp) return
+    if (!sp) return;
     function handleKeyDown(ev: KeyboardEvent) {
-      if (ev.key === 'Escape') onClose()
+      if (ev.key === 'Escape') onClose();
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, sp])
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, sp]);
 
   // isMobile tracks viewport width — intentionally separate from heroScale so
   // the dialog layout never feeds back into the ResizeObserver measurement.
   useEffect(() => {
-    if (!sp) return
+    if (!sp) return;
     function update() {
-      setIsMobile(window.innerWidth < 580)
+      setIsMobile(window.innerWidth < 580);
     }
-    update()
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [sp])
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [sp]);
 
   // heroScale tracks the actual rendered width of the hero container so the
   // 580×300 stage scales down correctly on narrow viewports.
   useEffect(() => {
-    const el = heroRef.current
-    if (!el) return
+    const el = heroRef.current;
+    if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      if (!entry) return
-      setHeroScale(Math.min(1, entry.contentRect.width / 580))
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+      if (!entry) return;
+      setHeroScale(Math.min(1, entry.contentRect.width / 580));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-  if (!sp) return null
-  const totalSteps = sp.steps.length
+  if (!sp) return null;
+  const totalSteps = sp.steps.length;
 
   return (
     <div
@@ -548,5 +548,5 @@ export function SpotlightModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -12,4 +12,4 @@
  * points at is the failure this constant exists to prevent.
  */
 export const CRAWLER_USER_AGENT =
-  'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
+  'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';

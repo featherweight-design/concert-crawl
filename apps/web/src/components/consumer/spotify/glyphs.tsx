@@ -18,4 +18,4 @@ export const NoAnswerGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);

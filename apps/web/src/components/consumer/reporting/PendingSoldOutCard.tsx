@@ -1,44 +1,44 @@
-'use client'
+'use client';
 
-import { REPORTING_COPY } from './definitions/copy'
-import { REPORT_TOKENS } from './reportTokens'
-import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { REPORTING_COPY } from './definitions/copy';
+import { REPORT_TOKENS } from './reportTokens';
+import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = REPORTING_COPY.pendingSoldOutCard
-const tokens = REPORT_TOKENS['sold-out']
+const copy = REPORTING_COPY.pendingSoldOutCard;
+const tokens = REPORT_TOKENS['sold-out'];
 
 // ── Helper ────────────────────────────────────────────────────────
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface PendingSoldOutCardProps {
-  floor: number
-  ceiling?: number
-  vendor: string
-  reporter: { handle: string; url: string } | null
-  reportedAt: string // ISO
-  confirms: number
-  needed: number
-  view: 'other' | 'reporter' // NO self-locked for sold-out per design
-  userHasConfirmed?: boolean
-  evidenceMethod?: string | null
-  evidenceUrl?: string | null
-  note?: string | null
-  onConfirm: () => void
-  onWithdraw: () => void
-  onEdit: () => void
-  onSawDifferent?: () => void
+  floor: number;
+  ceiling?: number;
+  vendor: string;
+  reporter: { handle: string; url: string } | null;
+  reportedAt: string; // ISO
+  confirms: number;
+  needed: number;
+  view: 'other' | 'reporter'; // NO self-locked for sold-out per design
+  userHasConfirmed?: boolean;
+  evidenceMethod?: string | null;
+  evidenceUrl?: string | null;
+  note?: string | null;
+  onConfirm: () => void;
+  onWithdraw: () => void;
+  onEdit: () => void;
+  onSawDifferent?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -48,22 +48,22 @@ const evidenceLabel = (
   vendor: string,
   note: string | null | undefined,
 ): string => {
-  let base: string
+  let base: string;
   switch (method) {
     case 'saw_listing':
-      base = `${vendor} listing`
-      break
+      base = `${vendor} listing`;
+      break;
     case 'venue_site':
-      base = 'Venue website'
-      break
+      base = 'Venue website';
+      break;
     case 'bought_myself':
-      base = 'Bought personally'
-      break
+      base = 'Bought personally';
+      break;
     default:
-      base = 'Community evidence'
+      base = 'Community evidence';
   }
-  return note ? `${base} · '${note}'` : base
-}
+  return note ? `${base} · '${note}'` : base;
+};
 
 export const PendingSoldOutCard = ({
   floor,
@@ -83,13 +83,13 @@ export const PendingSoldOutCard = ({
   onEdit,
   onSawDifferent,
 }: PendingSoldOutCardProps) => {
-  const timeAgo = formatTimeAgo(reportedAt)
+  const timeAgo = formatTimeAgo(reportedAt);
 
-  const priceStr = ceiling != null ? `$${floor}–$${ceiling}` : `$${floor}`
+  const priceStr = ceiling != null ? `$${floor}–$${ceiling}` : `$${floor}`;
 
   const attributionText = reporter
     ? copy.reportedBy(reporter.handle)
-    : copy.reportedAnonymously
+    : copy.reportedAnonymously;
 
   return (
     <div
@@ -435,5 +435,5 @@ export const PendingSoldOutCard = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};

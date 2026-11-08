@@ -5,7 +5,7 @@
 **Eng kickoff brief:** `design/design_handoff_event_row_overflow/CLAUDE_CODE_PROMPT.md`
 **Amends:** `design/design_handoff_event_row_system/`, shipped in PRs #1430 / #1436 / #1445 and planned in `docs/superpowers/plans/2026-08-03-event-row-system.md`.
 
-**Goal:** Give the three facts that currently render *outside* the four-line contract a slot inside it — or no slot at all — so a row's height stops depending on its data. The tour name becomes a measured clause on line 1, the legacy fallback title leaves the row, and lifecycle status moves into the price slot as a chip. Two genres share one chip. Every geometry then has exactly **one** height.
+**Goal:** Give the three facts that currently render _outside_ the four-line contract a slot inside it — or no slot at all — so a row's height stops depending on its data. The tour name becomes a measured clause on line 1, the legacy fallback title leaves the row, and lifecycle status moves into the price slot as a chip. Two genres share one chip. Every geometry then has exactly **one** height.
 
 **Architecture:** No schema change, no migration, no new API route. One package lift (`genre-buckets` → `packages/types`), one component split (`EventTitleBlock` stops serving the row), and three additions inside the existing `event-row/` folder — a title line that measures, a `ROW_MIN` per surface, and a paired-genre collapse step folded into `MetaRow`'s existing fit pass. One new `SURFACES` entry (`artist`) absorbs `artist-page/ShowRow.tsx`.
 
@@ -17,22 +17,22 @@ The handoff was written against the design prototypes, and `READINESS.md` record
 
 ### 1. The genre reorder is the majority path, not the tail
 
-The handoff's `SCOPE` paragraph and README §9 both argue the reorder is a no-op in the common case — *"Buckets are wide, so that's the common case"* — and caution that "matched genre leads" oversells a line most rows never exercise. Measured against prod on 2026-08-15 (1,149 upcoming events, 2,218 total), the distribution is the opposite:
+The handoff's `SCOPE` paragraph and README §9 both argue the reorder is a no-op in the common case — _"Buckets are wide, so that's the common case"_ — and caution that "matched genre leads" oversells a line most rows never exercise. Measured against prod on 2026-08-15 (1,149 upcoming events, 2,218 total), the distribution is the opposite:
 
-| | count | share |
-| --- | --- | --- |
-| Upcoming events | 1,149 | — |
-| With ≥2 genres | 587 | **51.1%** |
-| ≥2 genres, reorder fires under at least one bucket | 446 | **76% of multi-genre, 38.8% of all upcoming** |
-| With ≥3 genres | 2 | 0.2% |
+|                                                    | count | share                                         |
+| -------------------------------------------------- | ----- | --------------------------------------------- |
+| Upcoming events                                    | 1,149 | —                                             |
+| With ≥2 genres                                     | 587   | **51.1%**                                     |
+| ≥2 genres, reorder fires under at least one bucket | 446   | **76% of multi-genre, 38.8% of all upcoming** |
+| With ≥3 genres                                     | 2     | 0.2%                                          |
 
-The tagger picks genres that live in *different* buckets. `indie`+`rock` is 60 events, `indie`+`alternative` 36, `indie`+`folk` 33 — all cross-bucket. Masego's `funk`/`soul`, the same-bucket exemplar the whole scope argument rests on, is 12. Filter Browse by `rock` today and 60 rows come back labelled `INDIE`.
+The tagger picks genres that live in _different_ buckets. `indie`+`rock` is 60 events, `indie`+`alternative` 36, `indie`+`folk` 33 — all cross-bucket. Masego's `funk`/`soul`, the same-bucket exemplar the whole scope argument rests on, is 12. Filter Browse by `rock` today and 60 rows come back labelled `INDIE`.
 
-**Consequence:** the handoff's *"until the seam exists, fall back to primary-genre order"* is a correct **safety** rule and a bad **sequencing** rule. Read as sequencing it ships a wrong-looking lead on ~39% of upcoming inventory under an active filter. The seam is therefore PR-A, before the pair renders anywhere. The design call is unchanged; only its priority moves.
+**Consequence:** the handoff's _"until the seam exists, fall back to primary-genre order"_ is a correct **safety** rule and a bad **sequencing** rule. Read as sequencing it ships a wrong-looking lead on ~39% of upcoming inventory under an active filter. The seam is therefore PR-A, before the pair renders anywhere. The design call is unchanged; only its priority moves.
 
 ### 2. The zero-chip row exists, but not where the handoff says
 
-The prompt (§2, §4) and README §8.2 justify `ROW_MIN` on the fallback-title population — *"no Spotify match, no genre, so zero chips and no line 4"* — and Design corrected the fixtures to match, giving `bassbingo` and `mainiak` `genres: []`.
+The prompt (§2, §4) and README §8.2 justify `ROW_MIN` on the fallback-title population — _"no Spotify match, no genre, so zero chips and no line 4"_ — and Design corrected the fixtures to match, giving `bassbingo` and `mainiak` `genres: []`.
 
 Production has **zero** events with a null or empty genre array. Not 0 of upcoming: 0 of 2,218. And `surfaces.ts` puts `genre` in `chipPriority` for `browse`, `venue`, `related`, `crew` and `crewLens` — so on all five, line 4 always renders at least one chip.
 
@@ -42,7 +42,7 @@ Production has **zero** events with a null or empty genre array. Not 0 of upcomi
 
 ### 3. `EventTitleBlock` is shared with event detail
 
-`EventRow.tsx:122` renders `EventTitleBlock` with `surface="card"`. Event detail renders the *same component* at `hero` and `detail`. Every element this handoff removes from the row lives in that one file:
+`EventRow.tsx:122` renders `EventTitleBlock` with `surface="card"`. Event detail renders the _same component_ at `hero` and `detail`. Every element this handoff removes from the row lives in that one file:
 
 - `EventTitleBlock.tsx:72-88` — an entire extra row above the title holding `StatusPill` + tour name
 - `:101-107` — the struck title (`textDecoration: 'line-through'`, gated on `status === 'cancelled'`)
@@ -61,15 +61,15 @@ Two consequences follow, both ruled here rather than sent back to Design:
 
 ### 5. `related` chip priority diverges silently
 
-The prototype's `OVF_SURFACES.related` has `meta: ["genre"]`; shipped `surfaces.ts` has `['following', 'genre']`. Harmless until now — but `ROW_MIN` reserves height *per surface*, so a wrong `chipPriority` produces a wrong constant. **Shipped config wins.** The prototype is a simplification, not a ruling. Same class: `crew` and `crewLens` are absent from the prototype's surface table entirely and both need constants derived, not defaulted to Browse.
+The prototype's `OVF_SURFACES.related` has `meta: ["genre"]`; shipped `surfaces.ts` has `['following', 'genre']`. Harmless until now — but `ROW_MIN` reserves height _per surface_, so a wrong `chipPriority` produces a wrong constant. **Shipped config wins.** The prototype is a simplification, not a ruling. Same class: `crew` and `crewLens` are absent from the prototype's surface table entirely and both need constants derived, not defaulted to Browse.
 
 ### 6. The genre seam is API-only
 
 `apps/api/src/lib/genre-buckets.ts` holds the 16-bucket taxonomy and its `expandBucket` / `bucketForGenre` / `bucketsPresentIn` helpers. The web app never sees it — it only ever holds the bare `filterVibe` string from the URL. `apps/api/src/routes/events.ts:296-310` expands the bucket server-side and queries with Postgres array overlap:
 
 ```ts
-const genreValues = expandBucket(filterVibe)
-conditions.push(sql`${events.genre} && ARRAY[${genrePlaceholders}]::text[]`)
+const genreValues = expandBucket(filterVibe);
+conditions.push(sql`${events.genre} && ARRAY[${genrePlaceholders}]::text[]`);
 ```
 
 Design flagged the seam as "not free" and stated no preference between lifting the map or having the API report which sub-genre matched. **That is an engineering call and it is made here: lift the map.** `packages/types` already ships runtime values (`CREW_MEMBER_CAP`, `GUIDE_CHIP_ORDER`, `mapDeclineCategory`), the taxonomy is a static 161-line constant with no I/O, and the alternative adds a per-row field to two API responses to serve one UI concern. The lift has exactly three importers (`routes/events.ts`, `routes/artists-public.ts`, and the co-located test).
@@ -82,16 +82,17 @@ Note also that `genre-pair.jsx:6-9` and prompt §5 cite `filter-system.jsx`'s `h
 
 - **TDD** — every pure function lands with its test in the same task. `orderGenres`, the precedence resolver and the title-clause fit helper are all pure and are tested directly, not only through the DOM. The measure passes are the risk in this feature, exactly as they were in the parent plan.
 - **The four-line contract is unchanged.** Line 1 artist · line 2 `with {supports}` · line 3 `when · where` · line 4 meta chips. Rule 1 (context subtraction per surface), Rule 2 (two-chip budget, one when a support line is present), the meta budget, the line-3 drop ladder and the narrow step are all untouched by this epic. Nothing here adds a fifth line, and nothing here renders above line 1 or below line 4.
-- **One height per geometry.** The prompt contradicts itself — its `THE CALL` paragraph says *"exactly TWO values per geometry"* while §4 says *"ONE height per geometry"* and the verification step asserts *"the distinct set is 1"*. **ONE is correct**; the `TWO` is stale from R1. The verification asserts a distinct set of size 1.
+- **One height per geometry.** The prompt contradicts itself — its `THE CALL` paragraph says _"exactly TWO values per geometry"_ while §4 says _"ONE height per geometry"_ and the verification step asserts _"the distinct set is 1"_. **ONE is correct**; the `TWO` is stale from R1. The verification asserts a distinct set of size 1.
 - **Dim and strike are generic "something's wrong" cues, not per-state encodings.** `struck = cancelled || postponed`; `dimArt = struck || soldout`. The **chip** disambiguates, and it lives in the price slot so it is always present and can never be dropped by the meta fit pass. Do not raise redundancy or non-distinctiveness findings against these two signals.
 - **Vocabulary is locked** — **Watching**, never Saved / Favorites / Following. The Watching affordance is the lucide **`Eye`**; no heart icon exists in this codebase and none is introduced.
 - **Tokens only** — every color reads `var(--*)`. No hex in screen code, no Tailwind `dark:` variants. Chip tones contrast-checked on all **nine** production themes (`userThemeEnum`), not the mock's three.
 - **No literal customer-facing strings in JSX** — everything into `event-row/definitions/copy.ts`. Any PR touching a `copy.ts` runs the `copy-review` skill before opening.
-- **The handoff's two `srText` strings ship corrected, not verbatim.** `READINESS.md` records the copy pass. Both `" — this show has been cancelled"` and `" — new date not announced yet"` lead with an em-dash (banned) and *append* to the visible label, where every shipped row a11y string **replaces** it (`RowMetaChip`'s `srLabel` prop is documented as "Replaces the visible label for screen readers"). Ship as:
+- **The handoff's two `srText` strings ship corrected, not verbatim.** `READINESS.md` records the copy pass. Both `" — this show has been cancelled"` and `" — new date not announced yet"` lead with an em-dash (banned) and _append_ to the visible label, where every shipped row a11y string **replaces** it (`RowMetaChip`'s `srLabel` prop is documented as "Replaces the visible label for screen readers"). Ship as:
   - `a11y.cancelled: 'This show has been cancelled'`
   - `a11y.postponed: 'Postponed, new date not announced yet'` — the replacing form has to carry the word itself.
 
-  The dropped-genre `srText` is the one legitimate *appender* (it adds to a visible label rather than replacing it) and stays additive as `` ` and ${g[1]}` ``.
+  The dropped-genre `srText` is the one legitimate _appender_ (it adds to a visible label rather than replacing it) and stays additive as `` ` and ${g[1]}` ``.
+
 - **No native `title=` tooltips.** Context the visible text does not carry goes in screen-reader-only spans.
 - **TypeScript strict, no `as` casts.** `GenreBucket` and `isGenreBucket` already exist and move with the lift; narrow with the guard.
 - **Mobile/desktop parity in the same PR** — non-negotiable. 320 baseline.
@@ -113,7 +114,7 @@ Note also that `genre-pair.jsx:6-9` and prompt §5 cite `filter-system.jsx`'s `h
 
 Three of the passes in this epic observe an element whose size their own state change can alter. An uncapped version of this killed the page three times during prototyping with no console error, which is why the prompt specifies a state machine rather than a debounce. Every measure pass added or edited in this epic obeys all five rules:
 
-1. **Observe a parent-driven box, never the box you resize.** The tour clause observes the title *column* (`boxRef`), whose width is set by the parent. `MetaRow` already observes its own container — that container's *width* is parent-driven even though its *height* churns, which rule 2 handles. Same fix applied to `WhenWhere`.
+1. **Observe a parent-driven box, never the box you resize.** The tour clause observes the title _column_ (`boxRef`), whose width is set by the parent. `MetaRow` already observes its own container — that container's _width_ is parent-driven even though its _height_ churns, which rule 2 handles. Same fix applied to `WhenWhere`.
 2. **Width guard.** Toggling a chip between in-flow and absolute changes the meta line's own height, so a `ResizeObserver` on that box re-fires on its own mutation. Ignore any callback where `Math.abs(w - lastWidth) < 1`.
 3. **Coalesce with `requestAnimationFrame`.** One measurement per frame maximum; cancel any pending frame on the next callback and on unmount.
 4. **Two ceilings, and nothing resets the outer one.** A per-mount write budget of **12** state writes that only a remount clears, plus a per-width episode cap of **3** collapse steps that resets when the observed width actually changes. The inner cap makes a normal resize responsive; the outer one makes a pathological layout terminate. A single cap gives you one or the other.
@@ -128,7 +129,7 @@ Three of the passes in this epic observe an element whose size their own state c
 - **A before D** because the reorder is the 38.8% path (finding 1), and a pair that renders before the seam exists ships a wrong-looking lead on the majority of filtered inventory.
 - **B before C** because the status chip cannot move into the price slot while `EventTitleBlock` is still rendering a `StatusPill` above the title on the row — the two would double up.
 - **C before D** because both edit `PriceStack`/`MetaRow` and the precedence ladder must be settled before the genre chip starts competing for budget.
-- **E last** because `ROW_MIN` is derived from the *finished* type metrics. Deriving it earlier measures a row that no longer exists.
+- **E last** because `ROW_MIN` is derived from the _finished_ type metrics. Deriving it earlier measures a row that no longer exists.
 
 ---
 
@@ -147,7 +148,9 @@ Do **not** leave a re-export shim at the old path. Three importers is a complete
 Add to `packages/types/src/genre-buckets.ts`:
 
 ```ts
-export function bucketMembersFor(filterValue: string | null | undefined): readonly string[] | null
+export function bucketMembersFor(
+  filterValue: string | null | undefined,
+): readonly string[] | null;
 ```
 
 Returns `expandBucket(value)` when `isGenreBucket(value)`, else `null`. A `null` return is the handoff's explicit safety fallback: no reorder, never a wrong reorder. Test the three cases — a valid bucket, an unknown string, and `null`/`undefined`.
@@ -210,7 +213,7 @@ cancelled > postponed > soldout > presale > price
 
 ### Task C2 — The chips
 
-`Cancelled` and `Postponed` render as `RowMetaChip`s in the **price slot**. That is deliberate and is the reason they can never be dropped: the price slot is outside the meta budget and outside `MetaRow`'s fit pass. They are the one thing that tells the user *which* problem the dim and the strike are gesturing at.
+`Cancelled` and `Postponed` render as `RowMetaChip`s in the **price slot**. That is deliberate and is the reason they can never be dropped: the price slot is outside the meta budget and outside `MetaRow`'s fit pass. They are the one thing that tells the user _which_ problem the dim and the strike are gesturing at.
 
 Copy ships as-is (`Cancelled`, `Postponed` — plain, not apologetic, matching the locked vocabulary). The a11y strings ship in the corrected replacing form per Global Constraints. Tone: reuse the existing `warn`, matching sold-out; do not introduce a fifth tone for this.
 
@@ -256,11 +259,11 @@ The chip cannot measure itself, and the reason is worth recording because it cos
 
 So the decision lives in the component that already owns "what fits". `MetaRow` measures; if the set overflows and a paired genre chip is present, it collapses the pair **first**, re-measures, and only then starts dropping whole chips. One extra step in the existing pass — not a second measuring system — and the `paired` state lives in `MetaRow`, so there is no parent round-trip mid-measure.
 
-The collapsed chip keeps the dropped genre in an appended screen-reader span (`` ` and ${g[1]}` ``). This is the one place the system degrades *within* a unit rather than dropping it whole, and it is deliberate: the unit is the chip, the chip survives, and what degrades is its contents — the same way line 3 shortens the date before it drops the venue.
+The collapsed chip keeps the dropped genre in an appended screen-reader span (`` ` and ${g[1]}` ``). This is the one place the system degrades _within_ a unit rather than dropping it whole, and it is deliberate: the unit is the chip, the chip survives, and what degrades is its contents — the same way line 3 shortens the date before it drops the venue.
 
 It is width, not a breakpoint. A pair sharing the line with a `Following` chip gives up its second genre earlier than a pair with the line to itself. Measured, so nobody maintains a table of which combination fits where.
 
-Full measure-loop contract applies, and this pass is the reason rule 2 exists: toggling `paired` changes the meta line's own *height*, so an unguarded observer re-fires on its own mutation.
+Full measure-loop contract applies, and this pass is the reason rule 2 exists: toggling `paired` changes the meta line's own _height_, so an unguarded observer re-fires on its own mutation.
 
 ### Task D4 — Release note
 

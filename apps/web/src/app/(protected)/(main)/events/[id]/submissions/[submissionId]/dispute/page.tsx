@@ -1,46 +1,46 @@
-import { auth } from '@clerk/nextjs/server'
-import { notFound, redirect } from 'next/navigation'
-import { DisputeForm } from '@/components/consumer/DisputeForm'
-import { apiClient } from '@/lib/api'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import type { Event, PriceSubmission } from '@concert-crawl/types'
+import { auth } from '@clerk/nextjs/server';
+import { notFound, redirect } from 'next/navigation';
+import { DisputeForm } from '@/components/consumer/DisputeForm';
+import { apiClient } from '@/lib/api';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import type { Event, PriceSubmission } from '@concert-crawl/types';
 
 interface DisputePageProps {
-  params: Promise<{ id: string; submissionId: string }>
+  params: Promise<{ id: string; submissionId: string }>;
 }
 
 // Auth gating handled by the proxy (apps/web/src/proxy.ts); this
 // page only runs for authenticated users (#841). The token-null guard remains
 // because getToken() can transiently return null during session refresh.
 export default async function DisputePage({ params }: DisputePageProps) {
-  const { id, submissionId } = await params
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) redirect('/sign-in')
+  const { id, submissionId } = await params;
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) redirect('/sign-in');
 
   const eventFetch = apiClient.get<Event & { venue: { name: string } }>(
     `/v1/events/${id}`,
     token,
-  )
+  );
 
   const submissionFetch = apiClient.get<PriceSubmission>(
     `/v1/submissions/${submissionId}`,
     token,
-  )
+  );
 
   const [event, submission] = await Promise.all([
     eventFetch.catch(() => null),
     submissionFetch.catch(() => null),
-  ])
+  ]);
 
-  if (!event || !submission) notFound()
+  if (!event || !submission) notFound();
 
   const dateStr = new Date(event.date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 
   return (
     <main className="min-h-screen bg-bg">
@@ -87,5 +87,5 @@ export default async function DisputePage({ params }: DisputePageProps) {
         <DisputeForm submission={submission} eventId={id} />
       </div>
     </main>
-  )
+  );
 }

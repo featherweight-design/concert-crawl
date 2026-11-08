@@ -5,29 +5,29 @@
 // render for a visitor with no session. Middleware makes it reachable via
 // `isPublicOnceLaunched`, i.e. it is invite-gated until the public launch and
 // open after — the same terms as /events and /artists.
-import type { Metadata } from 'next'
-import { headers } from 'next/headers'
-import { notFound, redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import type { Metadata } from 'next';
+import { headers } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import type {
   EventDetailResponse,
   EventsRelatedResponse,
   RelatedEvent,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-import { publicApiClient } from '@/lib/api'
-import { isScaRegion } from '@/lib/sca-region'
-import { PublicEventDetail } from '@/components/consumer/event-detail'
+import { publicApiClient } from '@/lib/api';
+import { isScaRegion } from '@/lib/sca-region';
+import { PublicEventDetail } from '@/components/consumer/event-detail';
 import {
   BillFollowBlock,
   billArtists,
   followedSlugSet,
-} from '@/components/consumer/following/bill'
-import { eventShareMetadata } from '@/lib/share/event-metadata'
+} from '@/components/consumer/following/bill';
+import { eventShareMetadata } from '@/lib/share/event-metadata';
 
 interface PublicEventPageProps {
-  params: Promise<{ id: string }>
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 // GET /v1/events/:id validates the id as a UUID (z.string().uuid()) and 400s on
@@ -42,30 +42,30 @@ interface PublicEventPageProps {
 // a round-trip that then logs as a fetch failure. (lib/pwa/route-cache.ts keeps
 // the loose shape on purpose: it only picks a cache bucket, it gates nothing.)
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
+const isUuid = (value: string): boolean => UUID_PATTERN.test(value);
 
 const fetchEvent = async (id: string): Promise<EventDetailResponse | null> => {
   try {
-    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`)
+    return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`);
   } catch (err) {
-    console.error('[public event] event fetch failed', { id, err })
-    return null
+    console.error('[public event] event fetch failed', { id, err });
+    return null;
   }
-}
+};
 
 const fetchRelated = async (id: string): Promise<RelatedEvent[]> => {
   try {
     const result = await publicApiClient.get<EventsRelatedResponse>(
       `/v1/events/${id}/related`,
-    )
-    return result.data
+    );
+    return result.data;
   } catch (err) {
-    console.error('[public event] related fetch failed', { id, err })
-    return []
+    console.error('[public event] related fetch failed', { id, err });
+    return [];
   }
-}
+};
 
 /**
  * What a pasted poster link unfurls into.
@@ -80,14 +80,14 @@ const fetchRelated = async (id: string): Promise<RelatedEvent[]> => {
 export const generateMetadata = async ({
   params,
 }: PublicEventPageProps): Promise<Metadata> => {
-  const { id } = await params
-  if (!isUuid(id)) return {}
+  const { id } = await params;
+  if (!isUuid(id)) return {};
 
-  const event = await fetchEvent(id)
-  if (event === null) return {}
+  const event = await fetchEvent(id);
+  if (event === null) return {};
 
-  return eventShareMetadata(event, `/e/${id}`)
-}
+  return eventShareMetadata(event, `/e/${id}`);
+};
 
 /**
  * The incoming query, re-serialised for the signed-in redirect.
@@ -100,29 +100,29 @@ export const generateMetadata = async ({
 const forwardedQuery = async (
   searchParams: PublicEventPageProps['searchParams'],
 ): Promise<string> => {
-  const incoming = await searchParams
-  if (!incoming) return ''
-  const forwarded = new URLSearchParams()
+  const incoming = await searchParams;
+  if (!incoming) return '';
+  const forwarded = new URLSearchParams();
   for (const [key, value] of Object.entries(incoming)) {
-    if (typeof value === 'string') forwarded.append(key, value)
+    if (typeof value === 'string') forwarded.append(key, value);
     else if (Array.isArray(value))
-      for (const each of value) forwarded.append(key, each)
+      for (const each of value) forwarded.append(key, each);
   }
-  const query = forwarded.toString()
-  return query ? `?${query}` : ''
-}
+  const query = forwarded.toString();
+  return query ? `?${query}` : '';
+};
 
 const PublicEventPage = async ({
   params,
   searchParams,
 }: PublicEventPageProps) => {
-  const { id } = await params
+  const { id } = await params;
   // Ahead of the redirect: a malformed id is a dead link for everyone, and
   // bouncing it to /events/:id would just hand the same garbage to a second
   // route rather than showing the branded 404 here.
-  if (!isUuid(id)) notFound()
+  if (!isUuid(id)) notFound();
 
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   // Middleware early-returns for authenticated users, so without this a
   // signed-in visitor clicking a shared link would land on the stripped-down
@@ -133,7 +133,7 @@ const PublicEventPage = async ({
   // here is indistinguishable from never having seeded it. The fragment needs
   // no handling: browsers reapply it across a redirect, and it never reaches
   // the server to be carried by hand.
-  if (userId) redirect(`/events/${id}${await forwardedQuery(searchParams)}`)
+  if (userId) redirect(`/events/${id}${await forwardedQuery(searchParams)}`);
 
   // Same parallel shape as the protected page (#833), minus the reports fetch —
   // reports are auth-only and the mirror does not render them.
@@ -141,12 +141,12 @@ const PublicEventPage = async ({
     fetchEvent(id),
     fetchRelated(id),
     headers(),
-  ])
-  if (!event) notFound()
+  ]);
+  if (!event) notFound();
 
   // Nobody standing here has a session, so nothing on the bill can be followed
   // yet — the empty set is the truth, not a fallback.
-  const bill = billArtists(event, followedSlugSet([]))
+  const bill = billArtists(event, followedSlugSet([]));
 
   return (
     <PublicEventDetail
@@ -162,7 +162,7 @@ const PublicEventPage = async ({
         ) : null
       }
     />
-  )
-}
+  );
+};
 
-export default PublicEventPage
+export default PublicEventPage;

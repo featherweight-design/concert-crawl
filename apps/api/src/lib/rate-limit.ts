@@ -28,19 +28,19 @@
 // A user-scoped limiter passes `userId`, which is stored beside the key so
 // account deletion removes that user's buckets (see the user-data registry).
 
-import * as Sentry from '@sentry/hono/node'
-import { db as appDb, rateLimitBuckets } from '@concert-crawl/db'
-import type { Database } from '@concert-crawl/db'
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
-import { and, inArray, lte, sql } from 'drizzle-orm'
-import { z } from 'zod'
-import { runBackgroundTask } from './background-tasks.js'
-import { apiLogger } from './logger.js'
-import { describeDbError } from './pg-errors.js'
+import * as Sentry from '@sentry/hono/node';
+import { db as appDb, rateLimitBuckets } from '@concert-crawl/db';
+import type { Database } from '@concert-crawl/db';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { and, inArray, lte, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { runBackgroundTask } from './background-tasks.js';
+import { apiLogger } from './logger.js';
+import { describeDbError } from './pg-errors.js';
 
 export interface RateLimitResult {
-  allowed: boolean
-  retryAfterMs: number
+  allowed: boolean;
+  retryAfterMs: number;
 }
 
 /**
@@ -55,38 +55,38 @@ export interface RateLimitResult {
  *   the same database straight afterwards, so failing closed costs almost no
  *   availability that a real outage had not already taken.
  */
-export type OnStoreError = 'allow' | 'deny'
+export type OnStoreError = 'allow' | 'deny';
 
 export interface RateLimitOptions {
-  onStoreError: OnStoreError
+  onStoreError: OnStoreError;
   /**
    * The Clerk ID this limiter is keyed on, when it is keyed on a user. Stored
    * on the bucket so account deletion can remove it. Omit for IP-keyed limits.
    */
-  userId?: string
+  userId?: string;
 }
 
 /** Retry-After advertised when a fail-closed limiter could not reach its store. */
-export const STORE_ERROR_RETRY_MS = 60 * 1000
+export const STORE_ERROR_RETRY_MS = 60 * 1000;
 
 /** Most rows one prune pass deletes, so it never becomes a long statement. */
-export const PRUNE_BATCH = 500
+export const PRUNE_BATCH = 500;
 
 /** Fraction of hits that kick off a background prune. */
-const DEFAULT_PRUNE_SAMPLE_RATE = 0.02
+const DEFAULT_PRUNE_SAMPLE_RATE = 0.02;
 
 const hitRowSchema = z.object({
   count: z.number().int(),
   retryAfterMs: z.number(),
-})
+});
 
 export interface RateLimiterDeps<TSchema extends Record<string, unknown>> {
   // Generic so a test can hand in a second, schema-less client: a second
   // connection pool is how the suite stands in for a second API instance.
-  db: PostgresJsDatabase<TSchema>
+  db: PostgresJsDatabase<TSchema>;
   /** Probability in [0, 1] that a hit schedules a prune. */
-  pruneSampleRate?: number
-  random?: () => number
+  pruneSampleRate?: number;
+  random?: () => number;
 }
 
 export interface RateLimiter {
@@ -95,17 +95,17 @@ export interface RateLimiter {
     maxRequests: number,
     windowMs: number,
     options: RateLimitOptions,
-  ) => Promise<RateLimitResult>
+  ) => Promise<RateLimitResult>;
   /** Delete up to PRUNE_BATCH expired buckets. Returns how many went. */
-  pruneExpired: () => Promise<number>
+  pruneExpired: () => Promise<number>;
 }
 
 export function createRateLimiter<TSchema extends Record<string, unknown>>(
   deps: RateLimiterDeps<TSchema>,
 ): RateLimiter {
-  const { db } = deps
-  const pruneSampleRate = deps.pruneSampleRate ?? DEFAULT_PRUNE_SAMPLE_RATE
-  const random = deps.random ?? Math.random
+  const { db } = deps;
+  const pruneSampleRate = deps.pruneSampleRate ?? DEFAULT_PRUNE_SAMPLE_RATE;
+  const random = deps.random ?? Math.random;
 
   const hit = async (
     key: string,
@@ -113,8 +113,8 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
     windowMs: number,
     userId: string | null,
   ): Promise<RateLimitResult> => {
-    const expired = sql`${rateLimitBuckets.resetAt} <= now()`
-    const freshResetAt = sql`now() + ${windowMs}::integer * interval '1 millisecond'`
+    const expired = sql`${rateLimitBuckets.resetAt} <= now()`;
+    const freshResetAt = sql`now() + ${windowMs}::integer * interval '1 millisecond'`;
     const rows = await db
       .insert(rateLimitBuckets)
       .values({ key, count: 1, resetAt: freshResetAt, userId })
@@ -130,29 +130,29 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
       .returning({
         count: rateLimitBuckets.count,
         retryAfterMs: sql<number>`greatest(0, ceil(extract(epoch from (${rateLimitBuckets.resetAt} - now())) * 1000))::double precision`,
-      })
+      });
 
-    const row = hitRowSchema.parse(rows[0])
-    if (row.count <= maxRequests) return { allowed: true, retryAfterMs: 0 }
-    return { allowed: false, retryAfterMs: row.retryAfterMs }
-  }
+    const row = hitRowSchema.parse(rows[0]);
+    if (row.count <= maxRequests) return { allowed: true, retryAfterMs: 0 };
+    return { allowed: false, retryAfterMs: row.retryAfterMs };
+  };
 
   const pruneExpired = async (): Promise<number> => {
-    const isExpired = lte(rateLimitBuckets.resetAt, sql`now()`)
+    const isExpired = lte(rateLimitBuckets.resetAt, sql`now()`);
     const batch = db
       .select({ key: rateLimitBuckets.key })
       .from(rateLimitBuckets)
       .where(isExpired)
-      .limit(PRUNE_BATCH)
+      .limit(PRUNE_BATCH);
     // The outer reset_at test is re-checked against the row's latest version
     // if a concurrent hit reopened its window meanwhile, so a live window is
     // never deleted out from under that hit.
     const deleted = await db
       .delete(rateLimitBuckets)
       .where(and(inArray(rateLimitBuckets.key, batch), isExpired))
-      .returning({ key: rateLimitBuckets.key })
-    return deleted.length
-  }
+      .returning({ key: rateLimitBuckets.key });
+    return deleted.length;
+  };
 
   const check = async (
     key: string,
@@ -163,31 +163,31 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
     if (random() < pruneSampleRate) {
       runBackgroundTask(async () => {
         try {
-          await pruneExpired()
+          await pruneExpired();
         } catch (err) {
           // Housekeeping only: the next sampled hit tries again.
           apiLogger.warn(
             { error: describeDbError(err) },
             'rate-limit: expired-bucket prune failed',
-          )
+          );
         }
-      })
+      });
     }
 
     try {
-      return await hit(key, maxRequests, windowMs, options.userId ?? null)
+      return await hit(key, maxRequests, windowMs, options.userId ?? null);
     } catch (err) {
-      const allowed = options.onStoreError === 'allow'
+      const allowed = options.onStoreError === 'allow';
       // Never log or report the raw error: Drizzle puts the bound parameters
       // in its message, and those include the key, which holds a Clerk ID or
       // an IP. Only the limiter name (the key's prefix) and the error's class
       // and code leave this function.
-      const limiter = key.split(':')[0] ?? 'unknown'
-      const error = describeDbError(err)
+      const limiter = key.split(':')[0] ?? 'unknown';
+      const error = describeDbError(err);
       apiLogger.error(
         { error, limiter, onStoreError: options.onStoreError },
         'rate-limit: store unavailable',
-      )
+      );
       Sentry.captureMessage('rate-limit: store unavailable', {
         level: 'error',
         tags: {
@@ -197,24 +197,24 @@ export function createRateLimiter<TSchema extends Record<string, unknown>>(
           errorClass: error.errorClass,
           errorCode: error.code ?? 'none',
         },
-      })
+      });
       return allowed
         ? { allowed: true, retryAfterMs: 0 }
-        : { allowed: false, retryAfterMs: STORE_ERROR_RETRY_MS }
+        : { allowed: false, retryAfterMs: STORE_ERROR_RETRY_MS };
     }
-  }
+  };
 
-  return { check, pruneExpired }
+  return { check, pruneExpired };
 }
 
-const defaultLimiter = createRateLimiter({ db: appDb })
+const defaultLimiter = createRateLimiter({ db: appDb });
 
 /**
  * Count one hit against `key` and say whether it is within `maxRequests` per
  * `windowMs`. The window opens on the key's first hit. Blocked hits report
  * how long until the window closes.
  */
-export const checkRateLimit = defaultLimiter.check
+export const checkRateLimit = defaultLimiter.check;
 
 /**
  * Delete every expired bucket in one set-based statement. Run daily by the
@@ -237,6 +237,6 @@ export const sweepExpiredRateLimitBuckets = async <
   const deleted = await db
     .delete(rateLimitBuckets)
     .where(lte(rateLimitBuckets.resetAt, sql`now()`))
-    .returning({ key: rateLimitBuckets.key })
-  return deleted.length
-}
+    .returning({ key: rateLimitBuckets.key });
+  return deleted.length;
+};

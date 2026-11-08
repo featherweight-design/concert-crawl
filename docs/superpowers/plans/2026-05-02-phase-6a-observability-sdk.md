@@ -105,14 +105,14 @@
 - [ ] **Step 3: Create `packages/logger/vitest.config.ts`**
 
 ```ts
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
   },
-})
+});
 ```
 
 - [ ] **Step 4: Install dependencies**
@@ -137,42 +137,42 @@ Expected: pnpm resolves `pino` and `pino-pretty` into `packages/logger/node_modu
 Create `packages/logger/src/index.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createLogger } from './index.js'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createLogger } from './index.js';
 
 describe('createLogger', () => {
   beforeEach(() => {
-    delete process.env['LOG_LEVEL']
-  })
+    delete process.env['LOG_LEVEL'];
+  });
 
   afterEach(() => {
-    delete process.env['LOG_LEVEL']
-  })
+    delete process.env['LOG_LEVEL'];
+  });
 
   it('returns a logger with standard methods', () => {
-    const logger = createLogger('test')
-    expect(typeof logger.info).toBe('function')
-    expect(typeof logger.error).toBe('function')
-    expect(typeof logger.warn).toBe('function')
-    expect(typeof logger.debug).toBe('function')
-  })
+    const logger = createLogger('test');
+    expect(typeof logger.info).toBe('function');
+    expect(typeof logger.error).toBe('function');
+    expect(typeof logger.warn).toBe('function');
+    expect(typeof logger.debug).toBe('function');
+  });
 
   it('defaults to info log level', () => {
-    const logger = createLogger('test')
-    expect(logger.level).toBe('info')
-  })
+    const logger = createLogger('test');
+    expect(logger.level).toBe('info');
+  });
 
   it('respects LOG_LEVEL env var', () => {
-    process.env['LOG_LEVEL'] = 'debug'
-    const logger = createLogger('test')
-    expect(logger.level).toBe('debug')
-  })
+    process.env['LOG_LEVEL'] = 'debug';
+    const logger = createLogger('test');
+    expect(logger.level).toBe('debug');
+  });
 
   it('includes the name binding', () => {
-    const logger = createLogger('api')
-    expect(logger.bindings().name).toBe('api')
-  })
-})
+    const logger = createLogger('api');
+    expect(logger.bindings().name).toBe('api');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -186,31 +186,31 @@ Expected: `FAIL` — `Cannot find module './index.js'`
 - [ ] **Step 3: Create `packages/logger/src/index.ts`**
 
 ```ts
-import pino, { type Logger } from 'pino'
+import pino, { type Logger } from 'pino';
 
 // Extend Hono's context type map so c.get('requestId') is typed everywhere.
 declare module 'hono' {
   interface ContextVariableMap {
-    requestId: string
+    requestId: string;
   }
 }
 
-export type { Logger }
+export type { Logger };
 
 export function createLogger(name: string): Logger {
-  const level = process.env['LOG_LEVEL'] ?? 'info'
+  const level = process.env['LOG_LEVEL'] ?? 'info';
 
   // Skip pretty-printing in tests (avoids worker thread spawning issues)
   // and in production (raw JSON is captured by Render's log aggregator).
-  const isProduction = process.env['NODE_ENV'] === 'production'
-  const isTest = process.env['NODE_ENV'] === 'test'
+  const isProduction = process.env['NODE_ENV'] === 'production';
+  const isTest = process.env['NODE_ENV'] === 'test';
 
   const transport =
     !isProduction && !isTest
       ? pino.transport({ target: 'pino-pretty', options: { colorize: true } })
-      : undefined
+      : undefined;
 
-  return pino({ name, level }, transport)
+  return pino({ name, level }, transport);
 }
 ```
 
@@ -243,61 +243,61 @@ git commit -m "feat: scaffold packages/logger with createLogger"
 Create `packages/logger/src/middleware.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { Hono } from 'hono'
-import { createLogger } from './index.js'
-import { requestLogger } from './middleware.js'
+import { describe, it, expect } from 'vitest';
+import { Hono } from 'hono';
+import { createLogger } from './index.js';
+import { requestLogger } from './middleware.js';
 
 describe('requestLogger', () => {
-  const logger = createLogger('test')
+  const logger = createLogger('test');
 
   it('calls next() and returns the response', async () => {
-    const app = new Hono()
-    app.use(requestLogger(logger))
-    app.get('/ping', (c) => c.json({ ok: true }))
+    const app = new Hono();
+    app.use(requestLogger(logger));
+    app.get('/ping', (c) => c.json({ ok: true }));
 
-    const res = await app.request('/ping')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.ok).toBe(true)
-  })
+    const res = await app.request('/ping');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+  });
 
   it('attaches a UUID requestId to the context', async () => {
-    const app = new Hono()
-    let capturedId: string | undefined
+    const app = new Hono();
+    let capturedId: string | undefined;
 
-    app.use(requestLogger(logger))
+    app.use(requestLogger(logger));
     app.get('/ping', (c) => {
-      capturedId = c.get('requestId')
-      return c.json({ ok: true })
-    })
+      capturedId = c.get('requestId');
+      return c.json({ ok: true });
+    });
 
-    await app.request('/ping')
-    expect(capturedId).toBeDefined()
+    await app.request('/ping');
+    expect(capturedId).toBeDefined();
     // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
     expect(capturedId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    )
-  })
+    );
+  });
 
   it('does not overwrite an existing requestId', async () => {
-    const app = new Hono()
-    let capturedId: string | undefined
+    const app = new Hono();
+    let capturedId: string | undefined;
 
     app.use(async (c, next) => {
-      c.set('requestId', 'preset-id')
-      await next()
-    })
-    app.use(requestLogger(logger))
+      c.set('requestId', 'preset-id');
+      await next();
+    });
+    app.use(requestLogger(logger));
     app.get('/ping', (c) => {
-      capturedId = c.get('requestId')
-      return c.json({ ok: true })
-    })
+      capturedId = c.get('requestId');
+      return c.json({ ok: true });
+    });
 
-    await app.request('/ping')
-    expect(capturedId).toBe('preset-id')
-  })
-})
+    await app.request('/ping');
+    expect(capturedId).toBe('preset-id');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -311,19 +311,19 @@ Expected: `FAIL` — `Cannot find module './middleware.js'`
 - [ ] **Step 3: Create `packages/logger/src/middleware.ts`**
 
 ```ts
-import type { MiddlewareHandler } from 'hono'
-import type { Logger } from 'pino'
+import type { MiddlewareHandler } from 'hono';
+import type { Logger } from 'pino';
 
 export function requestLogger(logger: Logger): MiddlewareHandler {
   return async (c, next) => {
     // Preserve any requestId set by upstream middleware (e.g. a gateway)
     if (!c.get('requestId')) {
-      c.set('requestId', crypto.randomUUID())
+      c.set('requestId', crypto.randomUUID());
     }
 
-    const start = Date.now()
-    await next()
-    const durationMs = Date.now() - start
+    const start = Date.now();
+    await next();
+    const durationMs = Date.now() - start;
 
     logger.info({
       requestId: c.get('requestId'),
@@ -331,8 +331,8 @@ export function requestLogger(logger: Logger): MiddlewareHandler {
       path: c.req.path,
       status: c.res.status,
       durationMs,
-    })
-  }
+    });
+  };
 }
 ```
 
@@ -386,9 +386,9 @@ pnpm install
 - [ ] **Step 3: Create `apps/api/src/lib/logger.ts`**
 
 ```ts
-import { createLogger } from '@concert-crawl/logger'
+import { createLogger } from '@concert-crawl/logger';
 
-export const apiLogger = createLogger('api')
+export const apiLogger = createLogger('api');
 ```
 
 - [ ] **Step 4: Update `apps/api/src/app.ts`**
@@ -396,27 +396,27 @@ export const apiLogger = createLogger('api')
 Replace the existing `hono/logger` import and usage with `requestLogger` from `@concert-crawl/logger`:
 
 ```ts
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import { requestLogger } from '@concert-crawl/logger'
-import { registerRoutes } from './routes/index.js'
-import { apiLogger } from './lib/logger.js'
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { requestLogger } from '@concert-crawl/logger';
+import { registerRoutes } from './routes/index.js';
+import { apiLogger } from './lib/logger.js';
 
 export function createApp() {
-  const app = new Hono()
+  const app = new Hono();
 
-  app.use('*', requestLogger(apiLogger))
+  app.use('*', requestLogger(apiLogger));
   app.use(
     '*',
     cors({
       origin: process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000',
       credentials: true,
     }),
-  )
+  );
 
-  registerRoutes(app)
+  registerRoutes(app);
 
-  return app
+  return app;
 }
 ```
 
@@ -460,7 +460,7 @@ Expected: package added to `apps/api/package.json` dependencies.
 This file must be imported before all other app code so Sentry can instrument modules at load time.
 
 ```ts
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
@@ -468,7 +468,7 @@ Sentry.init({
   // Sample 10% of traces in production. Sentry's built-in tracing handles
   // distributed traces — no separate OTEL SDK needed.
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 - [ ] **Step 3: Update `apps/api/src/index.ts`**
@@ -476,13 +476,13 @@ Sentry.init({
 The `instrument.ts` import must be the very first line so Sentry and OTEL patch modules before they load.
 
 ```ts
-import './instrument.js'
-import { serve } from '@hono/node-server'
-import { createApp } from './app.js'
-import { env } from './env.js'
-import { apiLogger } from './lib/logger.js'
+import './instrument.js';
+import { serve } from '@hono/node-server';
+import { createApp } from './app.js';
+import { env } from './env.js';
+import { apiLogger } from './lib/logger.js';
 
-const app = createApp()
+const app = createApp();
 
 serve(
   {
@@ -490,9 +490,9 @@ serve(
     port: env.PORT,
   },
   () => {
-    apiLogger.info({ port: env.PORT }, '🎸 Concert Crawl API running')
+    apiLogger.info({ port: env.PORT }, '🎸 Concert Crawl API running');
   },
-)
+);
 ```
 
 - [ ] **Step 4: Add Sentry error handler to `apps/api/src/app.ts`**
@@ -500,36 +500,36 @@ serve(
 Add `onError` handler after `registerRoutes`. Import Sentry at the top of `app.ts`:
 
 ```ts
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import * as Sentry from '@sentry/node'
-import { requestLogger } from '@concert-crawl/logger'
-import { registerRoutes } from './routes/index.js'
-import { apiLogger } from './lib/logger.js'
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import * as Sentry from '@sentry/node';
+import { requestLogger } from '@concert-crawl/logger';
+import { registerRoutes } from './routes/index.js';
+import { apiLogger } from './lib/logger.js';
 
 export function createApp() {
-  const app = new Hono()
+  const app = new Hono();
 
-  app.use('*', requestLogger(apiLogger))
+  app.use('*', requestLogger(apiLogger));
   app.use(
     '*',
     cors({
       origin: process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000',
       credentials: true,
     }),
-  )
+  );
 
-  registerRoutes(app)
+  registerRoutes(app);
 
   app.onError((err, c) => {
     Sentry.captureException(err, {
       extra: { requestId: c.get('requestId') },
-    })
-    apiLogger.error({ err, requestId: c.get('requestId') }, 'Unhandled error')
-    return c.json({ success: false, error: 'Internal server error' }, 500)
-  })
+    });
+    apiLogger.error({ err, requestId: c.get('requestId') }, 'Unhandled error');
+    return c.json({ success: false, error: 'Internal server error' }, 500);
+  });
 
-  return app
+  return app;
 }
 ```
 
@@ -606,49 +606,49 @@ pnpm add @sentry/nextjs --filter web
 - [ ] **Step 2: Create `apps/web/sentry.client.config.ts`**
 
 ```ts
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
   dsn: process.env['NEXT_PUBLIC_SENTRY_DSN'],
   environment: process.env['NEXT_PUBLIC_SENTRY_ENVIRONMENT'] ?? 'local',
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 - [ ] **Step 3: Create `apps/web/sentry.server.config.ts`**
 
 ```ts
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 - [ ] **Step 4: Create `apps/web/sentry.edge.config.ts`**
 
 ```ts
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 - [ ] **Step 5: Update `apps/web/next.config.ts`**
 
 ```ts
-import type { NextConfig } from 'next'
-import { withSentryConfig } from '@sentry/nextjs'
+import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@concert-crawl/types'],
-}
+};
 
 export default withSentryConfig(config, {
   org: 'concert-crawl',
@@ -659,7 +659,7 @@ export default withSentryConfig(config, {
   hideSourceMaps: true,
   disableLogger: true,
   automaticVercelMonitors: false,
-})
+});
 ```
 
 Note: `org` and `project` must match what you create in the Sentry dashboard (see external service setup in the design spec).
@@ -722,26 +722,26 @@ pnpm add @sentry/node @concert-crawl/logger --filter crawler
 - [ ] **Step 2: Create `apps/crawler/src/instrument.ts`**
 
 ```ts
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
   environment: process.env['SENTRY_ENVIRONMENT'] ?? 'local',
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 - [ ] **Step 3: Update `apps/crawler/src/index.ts`**
 
 ```ts
-import './instrument.js'
-import { createLogger } from '@concert-crawl/logger'
+import './instrument.js';
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('crawler')
+const logger = createLogger('crawler');
 
 // Crawler stub — implemented in Phase 7 (Automation + Scheduling)
-logger.warn('Concert Crawl crawler — not yet implemented. Coming in Phase 7.')
-process.exit(0)
+logger.warn('Concert Crawl crawler — not yet implemented. Coming in Phase 7.');
+process.exit(0);
 ```
 
 - [ ] **Step 4: Update `apps/crawler/.env.example`**
@@ -804,7 +804,7 @@ In `apps/api/src/routes/health.ts`, temporarily add a throw:
 
 ```ts
 // Temporary — remove after verifying
-throw new Error('Sentry test error')
+throw new Error('Sentry test error');
 ```
 
 Set `SENTRY_DSN` in `apps/api/.env.local` to your real staging Sentry DSN.

@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { apiClient, ApiError } from '@/lib/api'
-import { SectionHead } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { apiClient, ApiError } from '@/lib/api';
+import { SectionHead } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   reviewQueryKeys,
   useInvalidateReviewQueries,
@@ -16,24 +16,24 @@ import {
   type EventFlag,
   type PriceEvent,
   type ReviewCounts,
-} from '@/lib/queries/use-admin-review'
-import { useQueryClient } from '@tanstack/react-query'
-import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions'
-import { AdminReviewMobile } from './AdminReviewMobile'
-import { ReviewTabs } from './ReviewTabs'
-import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
-import { editEventHref } from '@/lib/admin/edit-event-link'
+} from '@/lib/queries/use-admin-review';
+import { useQueryClient } from '@tanstack/react-query';
+import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions';
+import { AdminReviewMobile } from './AdminReviewMobile';
+import { ReviewTabs } from './ReviewTabs';
+import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent';
+import { editEventHref } from '@/lib/admin/edit-event-link';
 import {
   isReviewTabKey,
   resolveReviewTab,
   type ReviewTabKey,
-} from '@/lib/admin/review-tabs'
-import { buildReviewTabs } from './lib/build-review-tabs'
-import { computePendingCount } from '@/lib/admin/review-pending'
-import { PricesTabContent } from './_tabs/PricesTabContent'
-import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent'
-import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
-import { ContestsTabContent } from './_tabs/ContestsTabContent'
+} from '@/lib/admin/review-tabs';
+import { buildReviewTabs } from './lib/build-review-tabs';
+import { computePendingCount } from '@/lib/admin/review-pending';
+import { PricesTabContent } from './_tabs/PricesTabContent';
+import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent';
+import { AllEventsTabContent } from './_tabs/AllEventsTabContent';
+import { ContestsTabContent } from './_tabs/ContestsTabContent';
 import {
   EMPTY_PAGINATION,
   parseFiltersFromParams,
@@ -41,16 +41,16 @@ import {
   serializeFiltersToParams,
   serializePaginationToParams,
   type PaginationState,
-} from './all/filters'
-import { type AllEvent } from './all/types'
-import { MissingTabContent } from './_tabs/MissingTabContent'
-import { type MissingRowEvent } from './missing/MissingRow'
+} from './all/filters';
+import { type AllEvent } from './all/types';
+import { MissingTabContent } from './_tabs/MissingTabContent';
+import { type MissingRowEvent } from './missing/MissingRow';
 
 interface ReviewPageClientProps {
-  initialEvents: EventFlag[]
-  initialSubmissions: PriceSubmissionHistoryRow[]
-  initialSubmissionsTotal: number
-  initialCounts: ReviewCounts
+  initialEvents: EventFlag[];
+  initialSubmissions: PriceSubmissionHistoryRow[];
+  initialSubmissionsTotal: number;
+  initialCounts: ReviewCounts;
 }
 
 export const ReviewPageClient = ({
@@ -59,25 +59,25 @@ export const ReviewPageClient = ({
   initialSubmissionsTotal,
   initialCounts,
 }: ReviewPageClientProps) => {
-  const { getToken } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname() ?? ''
-  const searchParams = useSearchParams()
-  const queryClient = useQueryClient()
-  const invalidate = useInvalidateReviewQueries()
+  const { getToken } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname() ?? '';
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateReviewQueries();
 
   // Push helper — pushing an empty query string leaves a trailing "?" in
   // the URL, so route through pathname when there are no params.
   const pushParams = useCallback(
     (params: URLSearchParams) => {
-      const query = params.toString()
-      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
     [pathname, router],
-  )
+  );
   const activeTab: ReviewTabKey = resolveReviewTab(
     new URLSearchParams(searchParams?.toString() ?? ''),
-  )
+  );
 
   // Pagination state is parsed straight out of the URL — one (page, pageSize)
   // shared across whichever tab is active. Switching tabs strips the keys so
@@ -85,31 +85,31 @@ export const ReviewPageClient = ({
   // is never what the admin wants).
   const pagination: PaginationState = parsePaginationFromParams(
     new URLSearchParams(searchParams?.toString() ?? ''),
-  )
+  );
 
   const onPaginationChange = useCallback(
     (next: PaginationState) => {
-      const base = new URLSearchParams(searchParams?.toString() ?? '')
-      pushParams(serializePaginationToParams(next, base))
+      const base = new URLSearchParams(searchParams?.toString() ?? '');
+      pushParams(serializePaginationToParams(next, base));
     },
     [pushParams, searchParams],
-  )
+  );
 
   const setActiveTab = useCallback(
     (next: string) => {
-      if (!isReviewTabKey(next)) return
-      const params = new URLSearchParams(searchParams?.toString() ?? '')
-      params.set('tab', next)
-      params.delete('section') // retire legacy key once user navigates
+      if (!isReviewTabKey(next)) return;
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      params.set('tab', next);
+      params.delete('section'); // retire legacy key once user navigates
       // Each tab opens at its own page 1 — strip pagination from the URL.
-      pushParams(serializePaginationToParams(EMPTY_PAGINATION, params))
+      pushParams(serializePaginationToParams(EMPTY_PAGINATION, params));
     },
     [pushParams, searchParams],
-  )
+  );
 
-  const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
-  const [error, setError] = useState<string | null>(null)
-  const [isDesktop, setIsDesktop] = useState(true)
+  const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing');
+  const [error, setError] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(true);
   // Pending-remove IDs let mutations feel instant without touching the cached
   // page arrays. Mutating the cache (filter() on each page) was shrinking
   // page lengths, which `getNextPageParam` then summed for the next offset —
@@ -117,10 +117,10 @@ export const ReviewPageClient = ({
   // instead; invalidate the cache; clear the pending id on settle.
   const [pendingRemoveFlagIds, setPendingRemoveFlagIds] = useState<Set<string>>(
     new Set(),
-  )
+  );
   const [pendingRemoveMissingIds, setPendingRemoveMissingIds] = useState<
     Set<string>
-  >(new Set())
+  >(new Set());
 
   // Each data-bearing tab is its own paginated useQuery, keyed by
   // (filterQuery, page, pageSize). Page-replacement model: changing page
@@ -138,37 +138,37 @@ export const ReviewPageClient = ({
   const eventFlagsQuery = useReviewEventFlags(
     pagination,
     !isDesktop || activeTab === 'event-flags',
-  )
+  );
   const events = useMemo<EventFlag[]>(() => {
-    const all = eventFlagsQuery.data?.rows ?? initialEvents
+    const all = eventFlagsQuery.data?.rows ?? initialEvents;
     return pendingRemoveFlagIds.size === 0
       ? all
-      : all.filter((event) => !pendingRemoveFlagIds.has(event.id))
-  }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds])
+      : all.filter((event) => !pendingRemoveFlagIds.has(event.id));
+  }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds]);
   // Before the paged query resolves, fall back to the SSR pending count (not
   // the single-page `events.length`, which would undercount and hide the pager
   // / show a wrong badge on first paint). The query `total` is authoritative
   // once loaded.
   const eventFlagsTotal =
-    eventFlagsQuery.data?.total ?? initialCounts.eventFlags
+    eventFlagsQuery.data?.total ?? initialCounts.eventFlags;
 
   // Missing: gated by tab activation so we don't fetch until the admin
   // looks. The mobile shell also nudges the gate via onEnterMissingTab.
   const [missingActivated, setMissingActivated] = useState(
     activeTab === 'missing',
-  )
+  );
   useEffect(() => {
-    if (activeTab === 'missing') setMissingActivated(true)
-  }, [activeTab])
-  const missingQuery = useReviewMissingEvents(missingActivated, pagination)
-  const missingTotal = missingQuery.data?.total ?? 0
+    if (activeTab === 'missing') setMissingActivated(true);
+  }, [activeTab]);
+  const missingQuery = useReviewMissingEvents(missingActivated, pagination);
+  const missingTotal = missingQuery.data?.total ?? 0;
   const missingEvents = useMemo<MissingRowEvent[]>(() => {
-    const all = missingQuery.data?.rows ?? []
+    const all = missingQuery.data?.rows ?? [];
     return pendingRemoveMissingIds.size === 0
       ? all
-      : all.filter((event) => !pendingRemoveMissingIds.has(event.id))
-  }, [missingQuery.data, pendingRemoveMissingIds])
-  const missingLoading = missingActivated && !missingQuery.isFetched
+      : all.filter((event) => !pendingRemoveMissingIds.has(event.id));
+  }, [missingQuery.data, pendingRemoveMissingIds]);
+  const missingLoading = missingActivated && !missingQuery.isFetched;
 
   // Price coverage: keyed by both the filter toggle and the current page so
   // flipping the toggle resets to page 1 cleanly (handled in togglePriceFilter).
@@ -178,85 +178,85 @@ export const ReviewPageClient = ({
     priceFilter,
     pagination,
     !isDesktop || activeTab === 'prices',
-  )
-  const priceEventsTotal = priceEventsQuery.data?.total ?? 0
-  const priceEvents: PriceEvent[] = priceEventsQuery.data?.rows ?? []
+  );
+  const priceEventsTotal = priceEventsQuery.data?.total ?? 0;
+  const priceEvents: PriceEvent[] = priceEventsQuery.data?.rows ?? [];
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1280px)')
-    setIsDesktop(mq.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia('(min-width: 1280px)');
+    setIsDesktop(mq.matches);
+    const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const togglePriceFilter = useCallback(() => {
-    setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'))
+    setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'));
     // Reset to page 1 — page 5 of "missing" rarely lines up with page 5 of "all".
-    onPaginationChange({ page: 1, pageSize: pagination.pageSize })
-  }, [onPaginationChange, pagination.pageSize])
+    onPaginationChange({ page: 1, pageSize: pagination.pageSize });
+  }, [onPaginationChange, pagination.pageSize]);
 
   // Mark/unmark helpers for the render-time pending-remove filters. The
   // mutation flow is: addPending → fire request → on settle, remove pending.
   // Invalidation runs in parallel so the cache refetches without the row.
   const addPendingFlag = useCallback((id: string) => {
-    setPendingRemoveFlagIds((prev) => new Set(prev).add(id))
-  }, [])
+    setPendingRemoveFlagIds((prev) => new Set(prev).add(id));
+  }, []);
   const clearPendingFlag = useCallback((id: string) => {
     setPendingRemoveFlagIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-  }, [])
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
   const addPendingMissing = useCallback((id: string) => {
-    setPendingRemoveMissingIds((prev) => new Set(prev).add(id))
-  }, [])
+    setPendingRemoveMissingIds((prev) => new Set(prev).add(id));
+  }, []);
   const clearPendingMissing = useCallback((id: string) => {
     setPendingRemoveMissingIds((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      return next
-    })
-  }, [])
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   const patchMissingEvent = useCallback(
     async (id: string, body: Record<string, unknown>): Promise<void> => {
-      setError(null)
-      addPendingMissing(id)
+      setError(null);
+      addPendingMissing(id);
       try {
-        const token = await getToken()
-        if (!token) return
-        await apiClient.patch(`/v1/admin/events/${id}`, token, body)
-        await invalidate.missing()
-        void invalidate.counts()
-        router.refresh()
+        const token = await getToken();
+        if (!token) return;
+        await apiClient.patch(`/v1/admin/events/${id}`, token, body);
+        await invalidate.missing();
+        void invalidate.counts();
+        router.refresh();
       } catch (patchErr) {
         const message =
           patchErr instanceof ApiError
             ? patchErr.message
-            : 'Failed to update event.'
-        console.error('patchMissingEvent error:', patchErr)
-        setError(message)
+            : 'Failed to update event.';
+        console.error('patchMissingEvent error:', patchErr);
+        setError(message);
       } finally {
-        clearPendingMissing(id)
+        clearPendingMissing(id);
       }
     },
     [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
-  )
+  );
 
   const markMissingPostponed = useCallback(
     (id: string) => patchMissingEvent(id, { status: 'postponed' }),
     [patchMissingEvent],
-  )
+  );
   const markMissingCancelled = useCallback(
     (id: string) => patchMissingEvent(id, { status: 'cancelled' }),
     [patchMissingEvent],
-  )
+  );
   const dismissMissing = useCallback(
     (id: string) => patchMissingEvent(id, { firstMissingAt: null }),
     [patchMissingEvent],
-  )
+  );
 
   // Confirm a suggested relocation: fold the missing row into the replacement
   // and tell its watchers. `notifyWatchers` is what separates this from an
@@ -265,34 +265,34 @@ export const ReviewPageClient = ({
   // the two rows rather than from this claim.
   const confirmMissingMove = useCallback(
     async (event: MissingRowEvent): Promise<void> => {
-      const candidate = event.movedCandidate
-      if (!candidate) return
-      setError(null)
-      addPendingMissing(event.id)
+      const candidate = event.movedCandidate;
+      if (!candidate) return;
+      setError(null);
+      addPendingMissing(event.id);
       try {
-        const token = await getToken()
-        if (!token) return
+        const token = await getToken();
+        if (!token) return;
         await apiClient.post(`/v1/admin/events/${event.id}/merge`, token, {
           targetId: candidate.id,
           notifyWatchers: true,
           suggestion: { reason: candidate.reason },
-        })
-        await invalidate.missing()
-        void invalidate.counts()
-        router.refresh()
+        });
+        await invalidate.missing();
+        void invalidate.counts();
+        router.refresh();
       } catch (mergeErr) {
         const message =
           mergeErr instanceof ApiError
             ? mergeErr.message
-            : 'Failed to merge the moved event.'
-        console.error('confirmMissingMove error:', mergeErr)
-        setError(message)
+            : 'Failed to merge the moved event.';
+        console.error('confirmMissingMove error:', mergeErr);
+        setError(message);
       } finally {
-        clearPendingMissing(event.id)
+        clearPendingMissing(event.id);
       }
     },
     [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
-  )
+  );
 
   // (Auto-fetch-when-low effect removed — the old infinite query needed it to
   // keep the visible queue from emptying mid-scroll. With true pagination the
@@ -300,54 +300,54 @@ export const ReviewPageClient = ({
 
   // Tab-pill counts. SSR seeds initial values so all three numbers paint on
   // first render; subsequent mutations call `invalidate.counts()` to refresh.
-  const countsQuery = useReviewCounts(initialCounts)
-  const counts = countsQuery.data ?? initialCounts
+  const countsQuery = useReviewCounts(initialCounts);
+  const counts = countsQuery.data ?? initialCounts;
 
   const approveEvent = useCallback(
     async (id: string) => {
-      setError(null)
-      addPendingFlag(id)
+      setError(null);
+      addPendingFlag(id);
       try {
-        const token = await getToken()
-        if (!token) return
-        await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
-        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
-        void invalidate.counts()
-        router.refresh()
+        const token = await getToken();
+        if (!token) return;
+        await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {});
+        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()]);
+        void invalidate.counts();
+        router.refresh();
       } catch (err) {
         const message =
-          err instanceof ApiError ? err.message : 'Failed to approve event.'
-        console.error('approveEvent error:', err)
-        setError(message)
+          err instanceof ApiError ? err.message : 'Failed to approve event.';
+        console.error('approveEvent error:', err);
+        setError(message);
       } finally {
-        clearPendingFlag(id)
+        clearPendingFlag(id);
       }
     },
     [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
-  )
+  );
 
   const rejectEvent = useCallback(
     async (id: string) => {
-      setError(null)
-      addPendingFlag(id)
+      setError(null);
+      addPendingFlag(id);
       try {
-        const token = await getToken()
-        if (!token) return
-        await apiClient.delete(`/v1/admin/events/${id}`, token)
-        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()])
-        void invalidate.counts()
-        router.refresh()
+        const token = await getToken();
+        if (!token) return;
+        await apiClient.delete(`/v1/admin/events/${id}`, token);
+        await Promise.all([invalidate.eventFlags(), invalidate.allEvents()]);
+        void invalidate.counts();
+        router.refresh();
       } catch (err) {
         const message =
-          err instanceof ApiError ? err.message : 'Failed to reject event.'
-        console.error('rejectEvent error:', err)
-        setError(message)
+          err instanceof ApiError ? err.message : 'Failed to reject event.';
+        console.error('rejectEvent error:', err);
+        setError(message);
       } finally {
-        clearPendingFlag(id)
+        clearPendingFlag(id);
       }
     },
     [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
-  )
+  );
 
   const addPrice = useCallback(
     async (
@@ -357,25 +357,25 @@ export const ReviewPageClient = ({
       vendor: string,
       howFound: string,
     ) => {
-      setError(null)
+      setError(null);
       try {
-        const token = await getToken()
-        if (!token) return
+        const token = await getToken();
+        if (!token) return;
         await apiClient.post('/v1/admin/prices/submissions', token, {
           eventId,
           priceMin,
           ...(priceMax !== null && { priceMax }),
           vendor,
           howFound,
-        })
+        });
         // Optimistic patch on the active price-events cache slot: the row
         // that just got a price gets the new min/max + 'community' source so
         // the admin sees the change without waiting on a refetch. The
         // invalidate below sweeps every (page, pageSize) slot so the truth
         // wins eventually.
         queryClient.setQueryData<{
-          rows: PriceEvent[]
-          total: number
+          rows: PriceEvent[];
+          total: number;
         }>(
           reviewQueryKeys.priceEvents(
             priceFilter,
@@ -383,7 +383,7 @@ export const ReviewPageClient = ({
             pagination.pageSize,
           ),
           (prev) => {
-            if (!prev) return prev
+            if (!prev) return prev;
             return {
               ...prev,
               rows: prev.rows.map((ev) =>
@@ -391,16 +391,16 @@ export const ReviewPageClient = ({
                   ? { ...ev, priceMin, priceMax, priceSource: 'community' }
                   : ev,
               ),
-            }
+            };
           },
-        )
-        void invalidate.priceEvents()
-        void invalidate.counts()
+        );
+        void invalidate.priceEvents();
+        void invalidate.counts();
       } catch (err) {
         const message =
-          err instanceof ApiError ? err.message : 'Failed to save price.'
-        console.error('addPrice error:', err)
-        setError(message)
+          err instanceof ApiError ? err.message : 'Failed to save price.';
+        console.error('addPrice error:', err);
+        setError(message);
       }
     },
     [
@@ -411,12 +411,12 @@ export const ReviewPageClient = ({
       priceFilter,
       queryClient,
     ],
-  )
+  );
 
   // Pending count formula is extracted so a unit test can pin it — see
   // lib/admin/review-pending.ts. Server-driven counts so the number
   // stays accurate beyond the first page of any individual tab.
-  const pendingCount = computePendingCount(counts)
+  const pendingCount = computePendingCount(counts);
 
   const sectionHead = (
     <SectionHead
@@ -446,97 +446,97 @@ export const ReviewPageClient = ({
       }
       subtitle={ADMIN_COPY.review.reviewPageClient.subtitle}
     />
-  )
+  );
 
   const allEventsApi = {
     verify: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.patch(`/v1/admin/events/${event.id}/verify`, token, {})
-      void invalidate.eventFlags()
-      void invalidate.counts()
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.patch(`/v1/admin/events/${event.id}/verify`, token, {});
+      void invalidate.eventFlags();
+      void invalidate.counts();
     },
     unverify: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
         verified: false,
-      })
-      void invalidate.eventFlags()
-      void invalidate.counts()
+      });
+      void invalidate.eventFlags();
+      void invalidate.counts();
     },
     setStatus: async (
       event: AllEvent,
       status: 'upcoming' | 'cancelled' | 'postponed',
     ) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.patch(`/v1/admin/events/${event.id}`, token, { status })
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.patch(`/v1/admin/events/${event.id}`, token, { status });
     },
     markSoldOut: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.post(`/v1/admin/events/${event.id}/sold-out`, token, {})
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.post(`/v1/admin/events/${event.id}/sold-out`, token, {});
     },
     markAvailable: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.post(`/v1/admin/events/${event.id}/available`, token, {})
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.post(`/v1/admin/events/${event.id}/available`, token, {});
     },
     markNonConcert: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
         hiddenFromConsumer: true,
-      })
+      });
     },
     deleteEvent: async (event: AllEvent) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.delete(`/v1/admin/events/${event.id}`, token)
-      void invalidate.eventFlags()
-      void invalidate.counts()
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.delete(`/v1/admin/events/${event.id}`, token);
+      void invalidate.eventFlags();
+      void invalidate.counts();
     },
     bulkUnverify: async (ids: string[]) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.post('/v1/admin/events/bulk/unverify', token, { ids })
-      void invalidate.eventFlags()
-      void invalidate.counts()
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.post('/v1/admin/events/bulk/unverify', token, { ids });
+      void invalidate.eventFlags();
+      void invalidate.counts();
     },
     bulkMarkNonConcert: async (ids: string[]) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.post('/v1/admin/events/bulk/mark-non-concert', token, {
         ids,
-      })
+      });
     },
     bulkMarkAsConcert: async (ids: string[]) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.post('/v1/admin/events/bulk/mark-as-concert', token, {
         ids,
-      })
+      });
     },
     bulkDelete: async (ids: string[]) => {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.post('/v1/admin/events/bulk/delete', token, {
         ids,
         confirmation: 'DELETE',
-      })
-      void invalidate.eventFlags()
-      void invalidate.counts()
+      });
+      void invalidate.eventFlags();
+      void invalidate.counts();
     },
-  }
+  };
 
   // Callers inside Review pass `activeTab` so the editor's topbar breadcrumb
   // takes the admin back to whichever tab they came from (#1083).
   const onAllEventsEdit = (event: AllEvent) =>
-    router.push(editEventHref(event.id, activeTab))
+    router.push(editEventHref(event.id, activeTab));
   const onAllEventsViewDetail = (event: AllEvent) => {
-    window.open(`/events/${event.id}`, '_blank', 'noopener,noreferrer')
-  }
+    window.open(`/events/${event.id}`, '_blank', 'noopener,noreferrer');
+  };
 
   const errorBanner = error && (
     <div
@@ -552,7 +552,7 @@ export const ReviewPageClient = ({
     >
       {error}
     </div>
-  )
+  );
 
   if (!isDesktop) {
     const mobileSectionHead = (
@@ -584,7 +584,7 @@ export const ReviewPageClient = ({
           )}
         </div>
       </div>
-    )
+    );
 
     return (
       <div
@@ -652,13 +652,13 @@ export const ReviewPageClient = ({
               new URLSearchParams(searchParams?.toString() ?? ''),
             )}
             onAllEventsFiltersChange={(next) => {
-              const base = new URLSearchParams(searchParams?.toString() ?? '')
-              const merged = serializeFiltersToParams(next, base)
-              merged.set('tab', 'all-events')
+              const base = new URLSearchParams(searchParams?.toString() ?? '');
+              const merged = serializeFiltersToParams(next, base);
+              merged.set('tab', 'all-events');
               // Reset pagination in the same push so changing filters
               // doesn't briefly retain a stale ?page=N. See PR #702
               // comment #28.
-              pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged))
+              pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged));
             }}
             allEventsPagination={pagination}
             onAllEventsPaginationChange={onPaginationChange}
@@ -668,10 +668,10 @@ export const ReviewPageClient = ({
           />
         </div>
       </div>
-    )
+    );
   }
 
-  const tabs = buildReviewTabs(counts)
+  const tabs = buildReviewTabs(counts);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -762,12 +762,12 @@ export const ReviewPageClient = ({
             new URLSearchParams(searchParams?.toString() ?? ''),
           )}
           onFiltersChange={(next) => {
-            const base = new URLSearchParams(searchParams?.toString() ?? '')
-            const merged = serializeFiltersToParams(next, base)
-            merged.set('tab', 'all-events')
+            const base = new URLSearchParams(searchParams?.toString() ?? '');
+            const merged = serializeFiltersToParams(next, base);
+            merged.set('tab', 'all-events');
             // Filter changes reset pagination in the same push — see
             // PR #702 comment #28.
-            pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged))
+            pushParams(serializePaginationToParams(EMPTY_PAGINATION, merged));
           }}
           pagination={pagination}
           onPaginationChange={onPaginationChange}
@@ -776,5 +776,5 @@ export const ReviewPageClient = ({
 
       {activeTab === 'contests' && <ContestsTabContent />}
     </div>
-  )
-}
+  );
+};

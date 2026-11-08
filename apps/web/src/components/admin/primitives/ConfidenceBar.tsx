@@ -1,12 +1,12 @@
-import { confidenceColor, KIND_COLORS } from './utils'
+import { confidenceColor, KIND_COLORS } from './utils';
 
 interface ConfidenceBarProps {
-  score: number
+  score: number;
 }
 
 export const ConfidenceBar = ({ score }: ConfidenceBarProps) => {
-  const kind = confidenceColor(score)
-  const color = KIND_COLORS[kind].fg
+  const kind = confidenceColor(score);
+  const color = KIND_COLORS[kind].fg;
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -42,5 +42,5 @@ export const ConfidenceBar = ({ score }: ConfidenceBarProps) => {
         {score.toFixed(2)}
       </span>
     </div>
-  )
-}
+  );
+};

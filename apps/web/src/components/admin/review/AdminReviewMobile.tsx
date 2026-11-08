@@ -1,134 +1,134 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { Check } from 'lucide-react'
+import { useEffect, useState } from 'react';
+import { Check } from 'lucide-react';
 import {
   ConfidenceBar,
   AdminButton,
   Pagination,
   StatusBadge,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { MissingTabContent } from './_tabs/MissingTabContent'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { MissingTabContent } from './_tabs/MissingTabContent';
 import {
   AllEventsTabContent,
   type AllEventsApi,
-} from './_tabs/AllEventsTabContent'
-import { ContestsTabContent } from './_tabs/ContestsTabContent'
+} from './_tabs/AllEventsTabContent';
+import { ContestsTabContent } from './_tabs/ContestsTabContent';
 import {
   SubmissionsTabContent,
   type SubmissionsTabContentProps,
-} from './_tabs/SubmissionsTabContent'
-import { type ReviewTabKey } from '@/lib/admin/review-tabs'
-import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters'
-import { type AllEvent } from './all/types'
-import { type MissingRowEvent } from './missing/MissingRow'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+} from './_tabs/SubmissionsTabContent';
+import { type ReviewTabKey } from '@/lib/admin/review-tabs';
+import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters';
+import { type AllEvent } from './all/types';
+import { type MissingRowEvent } from './missing/MissingRow';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 interface AdminReviewMobileProps {
-  events: EventFlag[]
-  priceEvents: PriceEvent[]
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  events: EventFlag[];
+  priceEvents: PriceEvent[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
   onAddPrice?: (
     eventId: string,
     priceMin: string,
     priceMax: string | null,
     vendor: string,
     howFound: string,
-  ) => Promise<void>
-  initialTab?: ReviewTabKey
-  contestCount?: number
+  ) => Promise<void>;
+  initialTab?: ReviewTabKey;
+  contestCount?: number;
   // Server counts, not page lengths. `events` holds a single paginated page,
   // so its length understates the queue as soon as the queue exceeds one page.
-  eventFlagsCount?: number
-  submissionsCount?: number
-  initialSubmissions?: SubmissionsTabContentProps['initialSubmissions']
-  initialSubmissionsTotal?: SubmissionsTabContentProps['initialTotal']
-  pricesMissingOnly: boolean
-  priceEventsPage: number
-  priceEventsPageSize: number
-  priceEventsTotal: number
+  eventFlagsCount?: number;
+  submissionsCount?: number;
+  initialSubmissions?: SubmissionsTabContentProps['initialSubmissions'];
+  initialSubmissionsTotal?: SubmissionsTabContentProps['initialTotal'];
+  pricesMissingOnly: boolean;
+  priceEventsPage: number;
+  priceEventsPageSize: number;
+  priceEventsTotal: number;
   // `isFetching` on the price-events query. The underlying React Query
   // uses `placeholderData: (prev) => prev`, so during an all → missing
   // toggle `priceEventsTotal` momentarily reflects the previous filter's
   // total; gating the badge on this flag keeps it hidden until the new
   // request resolves.
-  priceEventsLoading?: boolean
-  onTogglePriceFilter: () => void
-  onPriceEventsPageChange: (next: number) => void
-  onPriceEventsPageSizeChange: (next: number) => void
-  missingEvents: MissingRowEvent[]
-  missingLoading?: boolean
-  missingPage?: number
-  missingPageSize?: number
-  missingTotal?: number
-  onMissingPageChange?: (next: number) => void
-  onMissingPageSizeChange?: (next: number) => void
-  onMarkMissingPostponed: (id: string) => Promise<void>
-  onMarkMissingCancelled: (id: string) => Promise<void>
-  onDismissMissing: (id: string) => Promise<void>
-  onConfirmMissingMove: (event: MissingRowEvent) => Promise<void>
-  onEnterMissingTab?: () => void
-  onAllEventsRowClick?: (id: string) => void
-  allEventsFilters?: AllEventsFilters
-  onAllEventsFiltersChange?: (next: AllEventsFilters) => void
-  allEventsPagination?: { page: number; pageSize: number }
+  priceEventsLoading?: boolean;
+  onTogglePriceFilter: () => void;
+  onPriceEventsPageChange: (next: number) => void;
+  onPriceEventsPageSizeChange: (next: number) => void;
+  missingEvents: MissingRowEvent[];
+  missingLoading?: boolean;
+  missingPage?: number;
+  missingPageSize?: number;
+  missingTotal?: number;
+  onMissingPageChange?: (next: number) => void;
+  onMissingPageSizeChange?: (next: number) => void;
+  onMarkMissingPostponed: (id: string) => Promise<void>;
+  onMarkMissingCancelled: (id: string) => Promise<void>;
+  onDismissMissing: (id: string) => Promise<void>;
+  onConfirmMissingMove: (event: MissingRowEvent) => Promise<void>;
+  onEnterMissingTab?: () => void;
+  onAllEventsRowClick?: (id: string) => void;
+  allEventsFilters?: AllEventsFilters;
+  onAllEventsFiltersChange?: (next: AllEventsFilters) => void;
+  allEventsPagination?: { page: number; pageSize: number };
   onAllEventsPaginationChange?: (next: {
-    page: number
-    pageSize: number
-  }) => void
-  allEventsApi?: AllEventsApi
-  onAllEventsEdit?: (event: AllEvent) => void
-  onAllEventsViewDetail?: (event: AllEvent) => void
+    page: number;
+    pageSize: number;
+  }) => void;
+  allEventsApi?: AllEventsApi;
+  onAllEventsEdit?: (event: AllEvent) => void;
+  onAllEventsViewDetail?: (event: AllEvent) => void;
 }
 
 function getEventFlagChips(
   ev: EventFlag,
 ): { label: string; kind: 'warning' | 'signal' | 'neutral' }[] {
-  const chips: { label: string; kind: 'warning' | 'signal' | 'neutral' }[] = []
-  if (!ev.title) chips.push({ label: 'title missing', kind: 'warning' })
-  if (!ev.artist) chips.push({ label: 'artist missing', kind: 'warning' })
+  const chips: { label: string; kind: 'warning' | 'signal' | 'neutral' }[] = [];
+  if (!ev.title) chips.push({ label: 'title missing', kind: 'warning' });
+  if (!ev.artist) chips.push({ label: 'artist missing', kind: 'warning' });
   if (ev.confidenceScore !== null && ev.confidenceScore < 0.5) {
-    chips.push({ label: 'low confidence', kind: 'warning' })
+    chips.push({ label: 'low confidence', kind: 'warning' });
   }
   if (ev.extractionStrategy === 'llm') {
-    chips.push({ label: 'llm source', kind: 'signal' })
+    chips.push({ label: 'llm source', kind: 'signal' });
   }
-  if (!ev.ticketPriceMin) chips.push({ label: 'no price', kind: 'neutral' })
-  return chips
+  if (!ev.ticketPriceMin) chips.push({ label: 'no price', kind: 'neutral' });
+  return chips;
 }
 
 function EventFlagCard({
@@ -136,12 +136,12 @@ function EventFlagCard({
   onApprove,
   onReject,
 }: {
-  event: EventFlag
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  event: EventFlag;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
 }) {
-  const [reasonOpen, setReasonOpen] = useState(false)
-  const chips = getEventFlagChips(event)
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const chips = getEventFlagChips(event);
 
   return (
     <div
@@ -298,26 +298,26 @@ function EventFlagCard({
         </AdminButton>
       </div>
     </div>
-  )
+  );
 }
 
 function NeedsPriceRow({
   event,
   onAddPrice,
 }: {
-  event: PriceEvent
-  onAddPrice?: AdminReviewMobileProps['onAddPrice']
+  event: PriceEvent;
+  onAddPrice?: AdminReviewMobileProps['onAddPrice'];
 }) {
-  const [isAdding, setIsAdding] = useState(false)
-  const [priceMin, setPriceMin] = useState('')
-  const [priceMax, setPriceMax] = useState('')
-  const [vendor, setVendor] = useState('Ticketmaster')
-  const [howFound, setHowFound] = useState('saw_listing')
-  const [isSaving, setIsSaving] = useState(false)
+  const [isAdding, setIsAdding] = useState(false);
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [vendor, setVendor] = useState('Ticketmaster');
+  const [howFound, setHowFound] = useState('saw_listing');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!priceMin.trim() || !onAddPrice) return
-    setIsSaving(true)
+    if (!priceMin.trim() || !onAddPrice) return;
+    setIsSaving(true);
     try {
       await onAddPrice(
         event.eventId,
@@ -325,16 +325,16 @@ function NeedsPriceRow({
         priceMax.trim() || null,
         vendor,
         howFound,
-      )
-      setIsAdding(false)
-      setPriceMin('')
-      setPriceMax('')
-      setVendor('Ticketmaster')
-      setHowFound('saw_listing')
+      );
+      setIsAdding(false);
+      setPriceMin('');
+      setPriceMax('');
+      setVendor('Ticketmaster');
+      setHowFound('saw_listing');
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <div
@@ -582,7 +582,7 @@ function NeedsPriceRow({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export function AdminReviewMobile({
@@ -626,23 +626,23 @@ export function AdminReviewMobile({
   onAllEventsEdit,
   onAllEventsViewDetail,
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<ReviewTabKey>(initialTab)
+  const [activeTab, setActiveTab] = useState<ReviewTabKey>(initialTab);
 
   // If the mobile surface mounts already on the Missing tab (deep-link via
   // ?tab=missing), trigger the lazy fetch — the tab-click handler only
   // fires on subsequent user clicks.
   useEffect(() => {
-    if (initialTab === 'missing' && onEnterMissingTab) onEnterMissingTab()
+    if (initialTab === 'missing' && onEnterMissingTab) onEnterMissingTab();
     // initialTab + onEnterMissingTab are stable for the lifetime of this mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   const onTabChange = (key: ReviewTabKey) => {
-    setActiveTab(key)
-    if (key === 'missing' && onEnterMissingTab) onEnterMissingTab()
-  }
+    setActiveTab(key);
+    if (key === 'missing' && onEnterMissingTab) onEnterMissingTab();
+  };
 
-  const noopRowClick = (_id: string): void => undefined
+  const noopRowClick = (_id: string): void => undefined;
 
   // #1080 — the "Needs price" badge and Prices/Missing tab counts previously
   // used `priceEvents.filter((ev) => ev.priceMin === null).length` and
@@ -659,7 +659,7 @@ export function AdminReviewMobile({
   const needsPriceTotal =
     !priceEventsLoading && pricesMissingOnly && priceEventsTotal > 0
       ? priceEventsTotal
-      : null
+      : null;
 
   const tabOptions = [
     {
@@ -688,14 +688,14 @@ export function AdminReviewMobile({
       label: ADMIN_COPY.review.tabs.contests,
       count: contestCount,
     },
-  ] as const
+  ] as const;
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--bg-elevated)',
     border: '1px solid var(--border)',
     borderRadius: 12,
     overflow: 'hidden',
-  }
+  };
 
   return (
     <div
@@ -716,8 +716,8 @@ export function AdminReviewMobile({
         aria-label={ADMIN_COPY.review.tabs.ariaLabel}
         value={activeTab}
         onChange={(evt) => {
-          const next = tabOptions.find((opt) => opt.key === evt.target.value)
-          if (next) onTabChange(next.key)
+          const next = tabOptions.find((opt) => opt.key === evt.target.value);
+          if (next) onTabChange(next.key);
         }}
         style={{
           flexShrink: 0,
@@ -973,5 +973,5 @@ export function AdminReviewMobile({
         </div>
       )}
     </div>
-  )
+  );
 }

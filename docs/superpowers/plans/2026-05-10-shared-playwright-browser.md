@@ -37,28 +37,28 @@ The current function calls `chromium.launch()` internally. After this change it 
 Replace the entire file content:
 
 ```typescript
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright';
 
-const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
+const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';
 
 export class CrawlFetchError extends Error {
   constructor(
     public readonly httpStatus: number,
     message: string,
   ) {
-    super(message)
-    this.name = 'CrawlFetchError'
+    super(message);
+    this.name = 'CrawlFetchError';
   }
 }
 
 export interface FetchResult {
-  html: string
-  httpStatus: number
-  finalUrl: string
+  html: string;
+  httpStatus: number;
+  finalUrl: string;
 }
 
 function jitter(ms: number): number {
-  return ms + Math.floor(Math.random() * 1000) - 500
+  return ms + Math.floor(Math.random() * 1000) - 500;
 }
 
 export async function fetchPage(
@@ -66,52 +66,52 @@ export async function fetchPage(
   browser: Browser,
   crawlDelayMs = 3000,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+  const delay = Math.max(0, jitter(crawlDelayMs));
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
   const context = await browser.newContext({
     userAgent: HONEST_USER_AGENT,
-  })
+  });
   try {
-    const page = await context.newPage()
+    const page = await context.newPage();
 
-    console.log(JSON.stringify({ event: 'fetch.start', url }))
+    console.log(JSON.stringify({ event: 'fetch.start', url }));
 
-    let httpStatus = 200
+    let httpStatus = 200;
     page.on('response', (response) => {
       if (
         response.url() === page.url() ||
         response.request().isNavigationRequest()
       ) {
-        httpStatus = response.status()
+        httpStatus = response.status();
       }
-    })
+    });
 
     const response = await page.goto(url, {
       waitUntil: 'networkidle',
       timeout: 30_000,
-    })
-    const finalStatus = response?.status() ?? httpStatus
+    });
+    const finalStatus = response?.status() ?? httpStatus;
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
-      )
+      );
       throw new CrawlFetchError(
         finalStatus,
         `HTTP ${finalStatus} — venue may have blocked crawler`,
-      )
+      );
     }
 
     if (finalStatus >= 400) {
       console.log(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
-      )
-      throw new Error(`HTTP ${finalStatus}`)
+      );
+      throw new Error(`HTTP ${finalStatus}`);
     }
 
-    const html = await page.content()
-    const finalUrl = page.url()
+    const html = await page.content();
+    const finalUrl = page.url();
 
     console.log(
       JSON.stringify({
@@ -120,10 +120,10 @@ export async function fetchPage(
         finalUrl,
         status: finalStatus,
       }),
-    )
-    return { html, httpStatus: finalStatus, finalUrl }
+    );
+    return { html, httpStatus: finalStatus, finalUrl };
   } finally {
-    await context.close()
+    await context.close();
   }
 }
 ```
@@ -154,19 +154,19 @@ Change the function signature from:
 export async function crawlVenue(
   venueId: string,
   crawlRunId?: string,
-): Promise<CrawlRun>
+): Promise<CrawlRun>;
 ```
 
 To:
 
 ```typescript
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright';
 
 export async function crawlVenue(
   venueId: string,
   browser: Browser,
   crawlRunId?: string,
-): Promise<CrawlRun>
+): Promise<CrawlRun>;
 ```
 
 Then update the `fetchPage` call at line ~75 (inside the `try` block) from:
@@ -175,7 +175,7 @@ Then update the `fetchPage` call at line ~75 (inside the `try` block) from:
 const { html, httpStatus, finalUrl } = await fetchPage(
   venue.websiteUrl,
   venue.crawlDelayMs,
-)
+);
 ```
 
 To:
@@ -185,13 +185,13 @@ const { html, httpStatus, finalUrl } = await fetchPage(
   venue.websiteUrl,
   venue.crawlDelayMs,
   browser,
-)
+);
 ```
 
 Add the import at the top of the file alongside the existing imports:
 
 ```typescript
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright';
 ```
 
 - [ ] **Step 2: Verify TypeScript compiles in crawler-core**
@@ -217,8 +217,8 @@ Expected: no errors.
 Add this constant near the top of the file, after the existing imports:
 
 ```typescript
-import type { Browser } from 'playwright'
-const mockBrowser = {} as Browser
+import type { Browser } from 'playwright';
+const mockBrowser = {} as Browser;
 ```
 
 Then update every `crawlVenue(venue.id)` call to `crawlVenue(venue.id, mockBrowser)`.
@@ -260,36 +260,36 @@ Both `runDailyCrawl` and `runTriggeredCrawls` need to launch one browser, pass i
 Replace the entire file:
 
 ```typescript
-import { chromium } from 'playwright'
-import { createLogger } from '@concert-crawl/logger'
-import { db, venues, crawlTriggers } from '@concert-crawl/db'
-import { eq, and } from 'drizzle-orm'
-import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
+import { chromium } from 'playwright';
+import { createLogger } from '@concert-crawl/logger';
+import { db, venues, crawlTriggers } from '@concert-crawl/db';
+import { eq, and } from 'drizzle-orm';
+import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core';
 
-const logger = createLogger('crawler')
-const MAX_CONCURRENT = 3
+const logger = createLogger('crawler');
+const MAX_CONCURRENT = 3;
 
 export async function runTriggeredCrawls(): Promise<{ processed: number }> {
   const claimed = await db
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(crawlTriggers.status, 'pending'))
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
 
   if (claimed.length === 0) {
-    logger.info('No pending crawl triggers')
-    return { processed: 0 }
+    logger.info('No pending crawl triggers');
+    return { processed: 0 };
   }
 
-  logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
+  logger.info({ count: claimed.length }, 'Processing pending crawl triggers');
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: true });
   try {
     for (const trigger of claimed) {
       try {
-        const crawlRun = await crawlVenue(trigger.venueId, browser)
-        await tagEventsWithGenres(trigger.venueId, crawlRun.id)
-        const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
+        const crawlRun = await crawlVenue(trigger.venueId, browser);
+        await tagEventsWithGenres(trigger.venueId, crawlRun.id);
+        const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done';
         await db
           .update(crawlTriggers)
           .set({
@@ -297,66 +297,66 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
             crawlRunId: crawlRun.id,
             updatedAt: new Date(),
           })
-          .where(eq(crawlTriggers.id, trigger.id))
+          .where(eq(crawlTriggers.id, trigger.id));
       } catch (err) {
         logger.error(
           { err, triggerId: trigger.id, venueId: trigger.venueId },
           'Triggered crawl threw unexpectedly',
-        )
+        );
         await db
           .update(crawlTriggers)
           .set({ status: 'failed', updatedAt: new Date() })
-          .where(eq(crawlTriggers.id, trigger.id))
+          .where(eq(crawlTriggers.id, trigger.id));
       }
     }
   } finally {
-    await browser.close()
+    await browser.close();
   }
 
-  return { processed: claimed.length }
+  return { processed: claimed.length };
 }
 
 export async function runDailyCrawl(): Promise<{
-  succeeded: number
-  failed: number
-  total: number
+  succeeded: number;
+  failed: number;
+  total: number;
 }> {
-  logger.info('Starting daily crawl')
+  logger.info('Starting daily crawl');
 
   const activeVenues = await db
     .select({ id: venues.id, name: venues.name })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(and(eq(venues.active, true), eq(venues.verified, true)));
 
-  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
+  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues');
 
-  let succeeded = 0
-  let failed = 0
+  let succeeded = 0;
+  let failed = 0;
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({ headless: true });
   try {
     for (
       let batchStart = 0;
       batchStart < activeVenues.length;
       batchStart += MAX_CONCURRENT
     ) {
-      const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT)
+      const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT);
       const results = await Promise.allSettled(
         batch.map((venue) => crawlVenue(venue.id, browser)),
-      )
+      );
 
       for (const [idx, result] of results.entries()) {
         if (result.status === 'fulfilled') {
-          succeeded++
+          succeeded++;
           if (batch[idx]?.id) {
-            await tagEventsWithGenres(batch[idx].id, result.value.id)
+            await tagEventsWithGenres(batch[idx].id, result.value.id);
           }
           logger.info(
             { venueId: batch[idx]?.id, name: batch[idx]?.name },
             'Crawl succeeded',
-          )
+          );
         } else {
-          failed++
+          failed++;
           logger.error(
             {
               venueId: batch[idx]?.id,
@@ -364,19 +364,19 @@ export async function runDailyCrawl(): Promise<{
               err: result.reason,
             },
             'Crawl failed',
-          )
+          );
         }
       }
     }
   } finally {
-    await browser.close()
+    await browser.close();
   }
 
   logger.info(
     { succeeded, failed, total: activeVenues.length },
     'Daily crawl complete',
-  )
-  return { succeeded, failed, total: activeVenues.length }
+  );
+  return { succeeded, failed, total: activeVenues.length };
 }
 ```
 
@@ -403,7 +403,7 @@ Expected: no errors.
 Replace the entire `run.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock DB
 const mockVenues = [
@@ -411,40 +411,40 @@ const mockVenues = [
   { id: 'venue-2', name: 'Bluebird Theater' },
   { id: 'venue-3', name: 'Red Rocks' },
   { id: 'venue-4', name: 'Mission Ballroom' },
-]
+];
 
 const mockDbChain = {
   select: vi.fn().mockReturnThis(),
   from: vi.fn().mockReturnThis(),
   where: vi.fn().mockResolvedValue(mockVenues),
-}
+};
 vi.mock('@concert-crawl/db', () => ({
   db: mockDbChain,
   venues: { id: 'id', name: 'name', active: 'active', verified: 'verified' },
-}))
+}));
 
 vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
-}))
+}));
 
 // Mock Playwright — return a minimal browser-shaped object
-const mockBrowser = { close: vi.fn().mockResolvedValue(undefined) }
+const mockBrowser = { close: vi.fn().mockResolvedValue(undefined) };
 vi.mock('playwright', () => ({
   chromium: {
     launch: vi.fn().mockResolvedValue(mockBrowser),
   },
-}))
+}));
 
 // Mock crawlVenue and tagEventsWithGenres
 const mockCrawlVenue = vi
   .fn()
-  .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
-const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
+  .mockResolvedValue({ id: 'run-uuid-1', status: 'success' });
+const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined);
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
-}))
+}));
 
 // Mock logger
 vi.mock('@concert-crawl/logger', () => ({
@@ -453,86 +453,86 @@ vi.mock('@concert-crawl/logger', () => ({
     error: vi.fn(),
     warn: vi.fn(),
   }),
-}))
+}));
 
 describe('runDailyCrawl', () => {
   beforeEach(() => {
-    vi.resetModules()
-    vi.clearAllMocks()
-    mockDbChain.select.mockReturnThis()
-    mockDbChain.from.mockReturnThis()
-    mockDbChain.where.mockResolvedValue(mockVenues)
-    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
-    mockBrowser.close.mockResolvedValue(undefined)
-  })
+    vi.resetModules();
+    vi.clearAllMocks();
+    mockDbChain.select.mockReturnThis();
+    mockDbChain.from.mockReturnThis();
+    mockDbChain.where.mockResolvedValue(mockVenues);
+    mockCrawlVenue.mockResolvedValue({ id: 'run-uuid-1', status: 'success' });
+    mockBrowser.close.mockResolvedValue(undefined);
+  });
 
   it('calls crawlVenue for each active venue, passing the shared browser', async () => {
-    const { chromium } = await import('playwright')
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
-    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3', browser)
-    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4', browser)
-  })
+    const { chromium } = await import('playwright');
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    const browser = await vi.mocked(chromium.launch).mock.results[0]?.value;
+    expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-1', browser);
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-2', browser);
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-3', browser);
+    expect(mockCrawlVenue).toHaveBeenCalledWith('venue-4', browser);
+  });
 
   it('closes the browser after all crawls complete', async () => {
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
-  })
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1);
+  });
 
   it('closes the browser even when a crawl throws', async () => {
-    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
-  })
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'));
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1);
+  });
 
   it('returns succeeded and failed counts', async () => {
-    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
-    const { runDailyCrawl } = await import('./run.js')
-    const result = await runDailyCrawl()
-    expect(result.succeeded).toBe(3)
-    expect(result.failed).toBe(1)
-  })
+    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'));
+    const { runDailyCrawl } = await import('./run.js');
+    const result = await runDailyCrawl();
+    expect(result.succeeded).toBe(3);
+    expect(result.failed).toBe(1);
+  });
 
   it('continues processing remaining venues when one fails', async () => {
     mockCrawlVenue
       .mockRejectedValueOnce(new Error('venue-1 blocked'))
-      .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-  })
+      .mockResolvedValue({ id: 'run-uuid-1', status: 'success' });
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(mockCrawlVenue).toHaveBeenCalledTimes(4);
+  });
 
   it('processes no more than 3 venues concurrently per batch', async () => {
-    let maxConcurrent = 0
-    let currentConcurrent = 0
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
     mockCrawlVenue.mockImplementation(async () => {
-      currentConcurrent++
-      maxConcurrent = Math.max(maxConcurrent, currentConcurrent)
-      await new Promise((resolve) => setTimeout(resolve, 10))
-      currentConcurrent--
-      return { id: 'run-uuid-1', status: 'success' }
-    })
+      currentConcurrent++;
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      currentConcurrent--;
+      return { id: 'run-uuid-1', status: 'success' };
+    });
 
-    const { runDailyCrawl } = await import('./run.js')
-    await runDailyCrawl()
-    expect(maxConcurrent).toBeLessThanOrEqual(3)
-  })
+    const { runDailyCrawl } = await import('./run.js');
+    await runDailyCrawl();
+    expect(maxConcurrent).toBeLessThanOrEqual(3);
+  });
 
   it('returns zero counts when no active venues exist', async () => {
-    mockDbChain.where.mockResolvedValue([])
-    const { runDailyCrawl } = await import('./run.js')
-    const result = await runDailyCrawl()
-    expect(result.succeeded).toBe(0)
-    expect(result.failed).toBe(0)
-    expect(mockCrawlVenue).not.toHaveBeenCalled()
-  })
-})
+    mockDbChain.where.mockResolvedValue([]);
+    const { runDailyCrawl } = await import('./run.js');
+    const result = await runDailyCrawl();
+    expect(result.succeeded).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(mockCrawlVenue).not.toHaveBeenCalled();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the full test suite for the crawler app**

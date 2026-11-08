@@ -1,42 +1,42 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { getAuthUser } from '../../middleware/auth.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { getAuthUser } from '../../middleware/auth.js';
 import {
   sendAdminAlertEmail,
   sendTestEmail,
   type EmailSendResult,
-} from '../../lib/email.js'
+} from '../../lib/email.js';
 import {
   TEST_EMAIL_KEYS,
   TEST_EMAIL_OPTIONS,
   type TestEmailKey,
-} from '../../emails/test-fixtures.js'
-import type { AdminVariables } from './index.js'
+} from '../../emails/test-fixtures.js';
+import type { AdminVariables } from './index.js';
 
 // TEST_EMAIL_KEYS (readonly TestEmailKey[]) is the single source of truth for
 // the picker, the send path, and this validator. z.enum wants a literal tuple,
 // so validate membership with a refine + type guard instead — no cast, and the
 // list can never drift from what the send path can actually build.
 function isTestEmailKey(value: string): value is TestEmailKey {
-  return TEST_EMAIL_KEYS.some((key) => key === value)
+  return TEST_EMAIL_KEYS.some((key) => key === value);
 }
 const testEmailBodySchema = z.object({
   emailKey: z
     .string()
     .refine(isTestEmailKey, { message: 'Unknown email key' })
     .default('admin_alert'),
-})
+});
 
-export const notificationsAdminRouter = new Hono<AdminVariables>()
+export const notificationsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/notifications/test-email/options — enumerate every email the
 // app can send, grouped for the Admin > Settings picker. Sourced from the same
 // key set the send path validates, so the menu can never list a key the backend
 // can't build, or omit one it can.
 notificationsAdminRouter.get('/test-email/options', (ctx) => {
-  return ctx.json({ success: true, data: TEST_EMAIL_OPTIONS })
-})
+  return ctx.json({ success: true, data: TEST_EMAIL_OPTIONS });
+});
 
 // POST /v1/admin/notifications/test-email — send a sample of any email the app
 // can produce to ADMIN_EMAIL, so an admin can review how each template lands in
@@ -47,8 +47,8 @@ notificationsAdminRouter.post(
   '/test-email',
   zValidator('json', testEmailBodySchema),
   async (ctx) => {
-    const { userId } = getAuthUser(ctx)
-    const { emailKey } = ctx.req.valid('json')
+    const { userId } = getAuthUser(ctx);
+    const { emailKey } = ctx.req.valid('json');
 
     // The generic admin alert keeps its richer, contextual body (who triggered
     // it and when) via the dedicated sender; every other key routes through the
@@ -56,19 +56,19 @@ notificationsAdminRouter.post(
     const result: EmailSendResult =
       emailKey === 'admin_alert'
         ? await sendGenericAdminAlertTest(userId)
-        : await sendTestEmail(emailKey)
+        : await sendTestEmail(emailKey);
 
-    ctx.set('auditAction', 'notification.test_email')
-    ctx.set('auditActorId', userId)
-    ctx.set('auditMeta', { emailKey, result: serializeResultForAudit(result) })
+    ctx.set('auditAction', 'notification.test_email');
+    ctx.set('auditActorId', userId);
+    ctx.set('auditMeta', { emailKey, result: serializeResultForAudit(result) });
 
-    return ctx.json({ success: true, data: result })
+    return ctx.json({ success: true, data: result });
   },
-)
+);
 
 function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
-  const triggeredAt = new Date().toISOString()
-  const adminUrl = process.env['ADMIN_URL'] ?? 'https://concertcrawl.app'
+  const triggeredAt = new Date().toISOString();
+  const adminUrl = process.env['ADMIN_URL'] ?? 'https://concertcrawl.app';
 
   return sendAdminAlertEmail({
     subject: 'Concert Crawl — test alert',
@@ -89,7 +89,7 @@ function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
       '',
       'If you received this, the alert pipeline is working end-to-end.',
     ].join('\n'),
-  })
+  });
 }
 
 // audit_log.metadata is jsonb, and JSON.stringify(new Error('msg')) returns
@@ -98,17 +98,17 @@ function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
 function serializeResultForAudit(
   result: EmailSendResult,
 ): Record<string, unknown> {
-  if (result.sent) return { sent: true, resendId: result.resendId }
-  const base: Record<string, unknown> = { sent: false, reason: result.reason }
+  if (result.sent) return { sent: true, resendId: result.resendId };
+  const base: Record<string, unknown> = { sent: false, reason: result.reason };
   if (result.error !== undefined)
-    base.error = serializeErrorForAudit(result.error)
-  return base
+    base.error = serializeErrorForAudit(result.error);
+  return base;
 }
 
 function serializeErrorForAudit(err: unknown): unknown {
   if (err instanceof Error) {
-    return { name: err.name, message: err.message }
+    return { name: err.name, message: err.message };
   }
-  if (err && typeof err === 'object') return err
-  return String(err)
+  if (err && typeof err === 'object') return err;
+  return String(err);
 }

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The generic form of `useIsMobileViewport`. Same job, arbitrary query, so a
 // surface with two breakpoints (the search results have three densities)
@@ -16,22 +16,22 @@
 // have to agree on a guess, and only a component mounted after hydration can
 // read the real one.
 
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react';
 
 export const useMediaQuery = (query: string): boolean => {
   const subscribe = useCallback(
     (onChange: () => void) => {
-      const mql = window.matchMedia(query)
-      mql.addEventListener('change', onChange)
-      return () => mql.removeEventListener('change', onChange)
+      const mql = window.matchMedia(query);
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
     },
     [query],
-  )
+  );
 
   const getSnapshot = useCallback(
     () => window.matchMedia(query).matches,
     [query],
-  )
+  );
 
-  return useSyncExternalStore(subscribe, getSnapshot, () => false)
-}
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+};

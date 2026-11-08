@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The top-of-menu inbox strip (#737, handoff Option B). Ported from
 // notifications-chrome.jsx (InboxStrip).
@@ -13,31 +13,31 @@
 // menu that is itself inside a dialog is three activation targets stacked in
 // 44px. The strip advertises; the panel acts.
 
-import type { ConsumerNotification } from '@/lib/notifications'
+import type { ConsumerNotification } from '@/lib/notifications';
 import {
   useNotifications,
   flattenNotifications,
   unreadCountOf,
-} from '@/lib/queries/use-notifications'
-import { NMono } from './NMono'
-import { NotifItem } from './NotifItem'
-import { NotifPip } from './NotifPip'
-import { MenuNotifRow } from './MenuNotifRow'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
+} from '@/lib/queries/use-notifications';
+import { NMono } from './NMono';
+import { NotifItem } from './NotifItem';
+import { NotifPip } from './NotifPip';
+import { MenuNotifRow } from './MenuNotifRow';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
 
 /** The mock previews at most two rows before deferring to "See all N". */
-const MAX_PREVIEW = 2
+const MAX_PREVIEW = 2;
 
 export const InboxStrip = ({ onSeeAll }: { onSeeAll: () => void }) => {
-  const query = useNotifications()
-  const items = flattenNotifications(query.data)
+  const query = useNotifications();
+  const items = flattenNotifications(query.data);
   const unread: ConsumerNotification[] = items.filter(
     (item) => item.readAt === null,
-  )
+  );
   // Window-wide truth from the API — the loaded page can hold fewer unread
   // rows than the account actually has.
-  const count = unreadCountOf(query.data)
-  const settled = !query.isPending && !query.isError
+  const count = unreadCountOf(query.data);
+  const settled = !query.isPending && !query.isError;
 
   if (count === 0 || unread.length === 0) {
     return (
@@ -55,7 +55,7 @@ export const InboxStrip = ({ onSeeAll }: { onSeeAll: () => void }) => {
           : {})}
         onActivate={onSeeAll}
       />
-    )
+    );
   }
 
   return (
@@ -125,5 +125,5 @@ export const InboxStrip = ({ onSeeAll }: { onSeeAll: () => void }) => {
         </svg>
       </button>
     </div>
-  )
-}
+  );
+};

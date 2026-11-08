@@ -65,20 +65,20 @@ Find the `CrawlStatusRow` interface and add `lastRunStatus: string` after the `s
 
 ```typescript
 export interface CrawlStatusRow {
-  venueId: string
-  venueName: string
-  websiteUrl: string
-  status: string // venue-level: used by IssuesBanner and dot color
-  lastRunStatus: string // last run's actual status: used by the venue list badge
-  lastRunAt: string | null
-  eventsFound: number
-  durationMs: number | null
-  httpStatusCode: number | null
-  consecutiveFailures: number
-  blockedAt: string | null
-  strategy: string
-  cost: number
-  error: string | null
+  venueId: string;
+  venueName: string;
+  websiteUrl: string;
+  status: string; // venue-level: used by IssuesBanner and dot color
+  lastRunStatus: string; // last run's actual status: used by the venue list badge
+  lastRunAt: string | null;
+  eventsFound: number;
+  durationMs: number | null;
+  httpStatusCode: number | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
+  strategy: string;
+  cost: number;
+  error: string | null;
 }
 ```
 
@@ -101,7 +101,7 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
     cost: 0,
     error: venue.lastRun?.errorMessage ?? null,
-  }
+  };
 }
 ```
 
@@ -111,20 +111,20 @@ In `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`, find the local `Cra
 
 ```typescript
 interface CrawlStatusRow {
-  venueId: string
-  venueName: string
-  websiteUrl: string
-  status: string
-  lastRunStatus: string
-  lastRunAt: string | null
-  eventsFound: number
-  durationMs: number | null
-  httpStatusCode: number | null
-  consecutiveFailures: number
-  blockedAt: string | null
-  strategy: string
-  cost: number
-  error: string | null
+  venueId: string;
+  venueName: string;
+  websiteUrl: string;
+  status: string;
+  lastRunStatus: string;
+  lastRunAt: string | null;
+  eventsFound: number;
+  durationMs: number | null;
+  httpStatusCode: number | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
+  strategy: string;
+  cost: number;
+  error: string | null;
 }
 ```
 
@@ -259,23 +259,23 @@ git commit -m "fix(admin/crawl): sticky venues panel header with 'Latest run · 
 Create `apps/web/src/app/api/admin/crawl/run-all/route.ts`:
 
 ```typescript
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
-import { isRole } from '@concert-crawl/types'
+import { auth } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { isRole } from '@concert-crawl/types';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export async function POST() {
-  const { getToken, sessionClaims } = await auth()
-  const token = await getToken()
+  const { getToken, sessionClaims } = await auth();
+  const token = await getToken();
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const role = isRole(sessionClaims?.metadata?.role)
     ? sessionClaims.metadata.role
-    : null
+    : null;
   if (role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const upstream = await fetch(`${API_URL}/v1/admin/crawl`, {
@@ -284,10 +284,10 @@ export async function POST() {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-  })
+  });
 
-  const body: unknown = await upstream.json().catch(() => ({}))
-  return NextResponse.json(body, { status: upstream.status })
+  const body: unknown = await upstream.json().catch(() => ({}));
+  return NextResponse.json(body, { status: upstream.status });
 }
 ```
 
@@ -301,18 +301,18 @@ Add this exported component at the bottom of `CrawlSplitView.tsx` (after the `Cr
 export const CrawlRunAllButton = () => {
   const [state, setState] = useState<
     'idle' | 'triggering' | 'queued' | 'error'
-  >('idle')
+  >('idle');
 
   async function handleRunAll() {
-    setState('triggering')
+    setState('triggering');
     try {
-      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setState('queued')
-      setTimeout(() => setState('idle'), 5000)
+      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setState('queued');
+      setTimeout(() => setState('idle'), 5000);
     } catch {
-      setState('error')
-      setTimeout(() => setState('idle'), 4000)
+      setState('error');
+      setTimeout(() => setState('idle'), 4000);
     }
   }
 
@@ -323,7 +323,7 @@ export const CrawlRunAllButton = () => {
         ? 'Queued ✓'
         : state === 'error'
           ? 'Error — retry?'
-          : 'Run all'
+          : 'Run all';
 
   return (
     <button
@@ -354,8 +354,8 @@ export const CrawlRunAllButton = () => {
     >
       ↻ {label}
     </button>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 3: Import `CrawlRunAllButton` in `page.tsx` and add to page header**
@@ -366,7 +366,7 @@ In `apps/web/src/app/(protected)/admin/crawl/page.tsx`, update the import:
 import {
   CrawlSplitView,
   CrawlRunAllButton,
-} from '@/components/admin/crawl/CrawlSplitView'
+} from '@/components/admin/crawl/CrawlSplitView';
 ```
 
 Find the page title block (the `<div>` containing `<h1>Crawl status</h1>`). Replace it with a two-column header row:
@@ -455,47 +455,47 @@ Currently `jumpToIssues` calls `scrollIntoView` but may not select the venue in 
 Replace the entire file:
 
 ```tsx
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 interface IssueVenue {
-  venueId: string
-  venueName: string
-  status: string
-  consecutiveFailures: number
-  blockedAt: string | null
+  venueId: string;
+  venueName: string;
+  status: string;
+  consecutiveFailures: number;
+  blockedAt: string | null;
 }
 
 interface Props {
-  blockedVenues: IssueVenue[]
+  blockedVenues: IssueVenue[];
 }
 
 export function IssuesBanner({ blockedVenues }: Props) {
-  const router = useRouter()
+  const router = useRouter();
 
-  if (blockedVenues.length === 0) return null
+  if (blockedVenues.length === 0) return null;
 
-  const blocked = blockedVenues.filter((row) => row.status === 'blocked')
-  const failed = blockedVenues.filter((row) => row.status === 'failed')
-  const paused = blockedVenues.filter((row) => row.status === 'paused')
+  const blocked = blockedVenues.filter((row) => row.status === 'blocked');
+  const failed = blockedVenues.filter((row) => row.status === 'failed');
+  const paused = blockedVenues.filter((row) => row.status === 'paused');
 
-  const parts: string[] = []
+  const parts: string[] = [];
   if (blocked.length > 0)
     parts.push(
       `${blocked.length} venue${blocked.length > 1 ? 's' : ''} blocked`,
-    )
+    );
   if (failed.length > 0)
-    parts.push(`${failed.length} venue${failed.length > 1 ? 's' : ''} failed`)
+    parts.push(`${failed.length} venue${failed.length > 1 ? 's' : ''} failed`);
   if (paused.length > 0)
-    parts.push(`${paused.length} venue${paused.length > 1 ? 's' : ''} paused`)
+    parts.push(`${paused.length} venue${paused.length > 1 ? 's' : ''} paused`);
 
-  const headline = parts.join(' · ')
+  const headline = parts.join(' · ');
 
   function jumpToIssues() {
-    const firstVenue = blockedVenues[0]
-    if (!firstVenue) return
-    router.push(`?venueId=${firstVenue.venueId}`)
+    const firstVenue = blockedVenues[0];
+    if (!firstVenue) return;
+    router.push(`?venueId=${firstVenue.venueId}`);
   }
 
   return (
@@ -567,7 +567,7 @@ export function IssuesBanner({ blockedVenues }: Props) {
         Jump to issues ›
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -647,7 +647,7 @@ Replace from `<Panel title={selected.venueName} action={...}>` through to `</Pan
 {
   /* Venue detail — inline, not in a Panel */
 }
-;<div
+<div
   style={{
     padding: '16px 20px',
     borderBottom: '1px solid var(--border)',
@@ -872,7 +872,7 @@ Replace from `<Panel title={selected.venueName} action={...}>` through to `</Pan
       {venueRecrawlError}
     </div>
   )}
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Replace the Run history Panel with an inline section**
@@ -883,7 +883,7 @@ Find `<Panel title="Run history" padding={0}>` through its closing `</Panel>` an
 {
   /* Run history — flush below venue detail */
 }
-;<div
+<div
   style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
 >
   <div
@@ -955,7 +955,7 @@ Find `<Panel title="Run history" padding={0}>` through its closing `</Panel>` an
       </tbody>
     </AdminTable>
   </div>
-</div>
+</div>;
 ```
 
 Also remove the import of `Panel` from primitives if it's no longer used — check all usages first.
@@ -978,29 +978,29 @@ Add a new formatter that shows "Today, HH:MM:SS" for today or "May 9, HH:MM:SS" 
 
 ```typescript
 function fmtDateTimeMT(iso: string): string {
-  const date = new Date(iso)
+  const date = new Date(iso);
   const nowDateMT = new Date().toLocaleDateString('en-US', {
     timeZone: MT_TIMEZONE,
-  })
+  });
   const thisDateMT = date.toLocaleDateString('en-US', {
     timeZone: MT_TIMEZONE,
-  })
+  });
   const timePart = date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
     timeZone: MT_TIMEZONE,
-  })
+  });
   if (thisDateMT === nowDateMT) {
-    return `Today, ${timePart}`
+    return `Today, ${timePart}`;
   }
   const datePart = date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: MT_TIMEZONE,
-  })
-  return `${datePart}, ${timePart}`
+  });
+  return `${datePart}, ${timePart}`;
 }
 ```
 
@@ -1020,10 +1020,10 @@ The spec shows a structured error card for 403/blocked: icon + bold title + body
 
 ```tsx
 interface ErrorBlockProps {
-  errorMessage: string
-  httpStatusCode: number | null
-  consecutiveFailures: number
-  blockedAt: string | null
+  errorMessage: string;
+  httpStatusCode: number | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
 }
 
 function ErrorBlock({
@@ -1034,13 +1034,13 @@ function ErrorBlock({
 }: ErrorBlockProps) {
   const isHttpBlock =
     httpStatusCode !== null &&
-    (httpStatusCode === 403 || httpStatusCode === 429)
+    (httpStatusCode === 403 || httpStatusCode === 429);
 
   const title = isHttpBlock
     ? `HTTP ${httpStatusCode} · venue blocked`
     : errorMessage.length > 100
       ? `${errorMessage.slice(0, 100)}…`
-      : errorMessage
+      : errorMessage;
 
   return (
     <div style={{ marginTop: 14 }}>
@@ -1130,7 +1130,7 @@ function ErrorBlock({
         )}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1188,8 +1188,8 @@ If `THead` renders a plain `<thead>`, add sticky positioning:
 
 ```tsx
 interface THeadProps {
-  children: React.ReactNode
-  sticky?: boolean
+  children: React.ReactNode;
+  sticky?: boolean;
 }
 
 export const THead = ({ children, sticky = false }: THeadProps) => (
@@ -1207,7 +1207,7 @@ export const THead = ({ children, sticky = false }: THeadProps) => (
   >
     {children}
   </thead>
-)
+);
 ```
 
 If `THead` already has different props, extend carefully without breaking existing usages.

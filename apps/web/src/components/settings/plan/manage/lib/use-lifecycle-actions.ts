@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Cancel + change-tier mutations for the #780 lifecycle flows. On success:
 // invalidate the plan-state query (same key the entitlement gate reads),
@@ -7,29 +7,29 @@
 // an ErrorLine — the design defines no error states, so this follows the
 // tier-picker convention.
 
-import { useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import type { SwitchableTier } from '@/lib/billing'
-import { cancelSubscription, changeSubscriptionTier } from '@/lib/billing'
-import { planStateQueryKey } from '@/lib/queries/use-plan-state'
-import { MANAGE_ERRORS_COPY } from '../definitions/copy'
+import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import type { SwitchableTier } from '@/lib/billing';
+import { cancelSubscription, changeSubscriptionTier } from '@/lib/billing';
+import { planStateQueryKey } from '@/lib/queries/use-plan-state';
+import { MANAGE_ERRORS_COPY } from '../definitions/copy';
 
 interface LifecycleActions {
-  cancel: (onDone: () => void) => void
-  changeTier: (tier: SwitchableTier, onDone: () => void) => void
-  pending: boolean
-  errorText: string | null
-  clearError: () => void
+  cancel: (onDone: () => void) => void;
+  changeTier: (tier: SwitchableTier, onDone: () => void) => void;
+  pending: boolean;
+  errorText: string | null;
+  clearError: () => void;
 }
 
 export const useLifecycleActions = (): LifecycleActions => {
-  const { getToken, userId } = useAuth()
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const [pending, setPending] = useState(false)
-  const [errorText, setErrorText] = useState<string | null>(null)
+  const { getToken, userId } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [pending, setPending] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const run = useCallback(
     (
@@ -39,27 +39,27 @@ export const useLifecycleActions = (): LifecycleActions => {
       onDone: () => void,
     ) => {
       void (async () => {
-        setPending(true)
-        setErrorText(null)
+        setPending(true);
+        setErrorText(null);
         try {
-          const token = await getToken()
-          if (!token) throw new Error('Auth token unavailable')
-          await mutate(token)
+          const token = await getToken();
+          if (!token) throw new Error('Auth token unavailable');
+          await mutate(token);
           await queryClient.invalidateQueries({
             queryKey: planStateQueryKey(userId),
-          })
-          router.refresh()
-          onDone()
+          });
+          router.refresh();
+          onDone();
         } catch (err) {
-          console.error(`manage-sheet: ${logLabel} failed`, err)
-          setErrorText(failureCopy)
+          console.error(`manage-sheet: ${logLabel} failed`, err);
+          setErrorText(failureCopy);
         } finally {
-          setPending(false)
+          setPending(false);
         }
-      })()
+      })();
     },
     [getToken, queryClient, router, userId],
-  )
+  );
 
   const cancel = useCallback(
     (onDone: () => void) => {
@@ -68,10 +68,10 @@ export const useLifecycleActions = (): LifecycleActions => {
         MANAGE_ERRORS_COPY.cancel,
         'cancel',
         onDone,
-      )
+      );
     },
     [run],
-  )
+  );
 
   const changeTier = useCallback(
     (tier: SwitchableTier, onDone: () => void) => {
@@ -80,12 +80,12 @@ export const useLifecycleActions = (): LifecycleActions => {
         MANAGE_ERRORS_COPY.changeTier,
         'change-tier',
         onDone,
-      )
+      );
     },
     [run],
-  )
+  );
 
-  const clearError = useCallback(() => setErrorText(null), [])
+  const clearError = useCallback(() => setErrorText(null), []);
 
-  return { cancel, changeTier, pending, errorText, clearError }
-}
+  return { cancel, changeTier, pending, errorText, clearError };
+};

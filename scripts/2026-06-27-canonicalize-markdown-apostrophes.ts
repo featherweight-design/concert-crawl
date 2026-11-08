@@ -78,9 +78,9 @@
  * headliner (e.g. "**Beyoncé** World Tour").
  */
 
-import { pathToFileURL } from 'node:url'
-import { randomUUID } from 'node:crypto'
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { pathToFileURL } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   db,
   events,
@@ -89,77 +89,77 @@ import {
   eventReports,
   priceSubmissions,
   priceRetrievalLog,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 // Relative source import (not package barrel) so this one-shot script
 // runs against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
 // `.js` suffix back to the `.ts` source.
-import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-title.js'
+import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-title.js';
 import {
   chunk,
   planUserEventDedup,
   selectCollapseClusters,
   sortBucketByWinnerPriority,
   type UserEventRow,
-} from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
+} from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js';
 
 // Postgres' bind-parameter ceiling is 65,535 and query size grows linearly
 // with params. 1000 rows per snapshot INSERT keeps each statement well
 // under both limits with headroom for additional per-row params.
-const SNAPSHOT_BATCH_SIZE = 1000
+const SNAPSHOT_BATCH_SIZE = 1000;
 
 // Sidecar table for 7-day rollback. Mirrors events_consolidate_821 from
 // scripts/2026-06-26-event-canonical-title-consolidate.sql.
-const BACKUP_TABLE = 'events_canonicalize_850_backup'
+const BACKUP_TABLE = 'events_canonicalize_850_backup';
 
 interface RowWithCanonical {
-  id: string
-  venueId: string | null
-  venueName: string | null
-  date: string
-  status: 'upcoming' | 'cancelled' | 'postponed'
-  title: string
-  storedCanonical: string
-  computedCanonical: string
-  confidenceScore: string | null // numeric → string in postgres-js
-  createdAt: Date
+  id: string;
+  venueId: string | null;
+  venueName: string | null;
+  date: string;
+  status: 'upcoming' | 'cancelled' | 'postponed';
+  title: string;
+  storedCanonical: string;
+  computedCanonical: string;
+  confidenceScore: string | null; // numeric → string in postgres-js
+  createdAt: Date;
   // Mergeable fields used when collapsing losers into a winner.
-  description: string | null
-  imageUrl: string | null
-  ticketUrl: string | null
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
+  description: string | null;
+  imageUrl: string | null;
+  ticketUrl: string | null;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
 }
 
 interface ClusterPlan {
   /** Unique cluster key — (venueId, date, newCanonical). */
-  key: string
-  venueName: string | null
-  date: string
-  newCanonical: string
-  winner: RowWithCanonical
-  losers: RowWithCanonical[]
+  key: string;
+  venueName: string | null;
+  date: string;
+  newCanonical: string;
+  winner: RowWithCanonical;
+  losers: RowWithCanonical[];
   /** Pre-computed merge patch the winner should receive (non-null fields
    * pulled from losers where the winner is currently null). */
   winnerPatch: Partial<{
-    description: string
-    imageUrl: string
-    ticketUrl: string
-    doorsTime: string
-    showTime: string
-    ticketPriceMin: string
-    ticketPriceMax: string
-  }>
+    description: string;
+    imageUrl: string;
+    ticketUrl: string;
+    doorsTime: string;
+    showTime: string;
+    ticketPriceMin: string;
+    ticketPriceMax: string;
+  }>;
 }
 
 interface RecomputeOnly {
-  row: RowWithCanonical
+  row: RowWithCanonical;
 }
 
 export interface BackfillSummary {
-  rowsScanned: number
+  rowsScanned: number;
   /** Rows where computedCanonical !== storedCanonical — i.e. the recompute
    * produced a different canonical_title than what's stored. Note this
    * counts the change, not the cluster: a row that gets pulled into a
@@ -167,32 +167,32 @@ export interface BackfillSummary {
    * winner whose stored canonical already matches the new value) is NOT
    * counted here. See rowsRecomputedStandalone + collapseClustersFound
    * + collapseLosers for cluster-shape breakdowns. */
-  rowsRecomputed: number
+  rowsRecomputed: number;
   /** Standalone recomputes (no collision with another row). */
-  rowsRecomputedStandalone: number
+  rowsRecomputedStandalone: number;
   /** Collapse clusters identified. Only counts buckets where the new
    * normalizer would change at least one row's canonical_title; pre-
    * existing (venue_id, date, canonical_title) collisions where every
    * row already has matching canonical_title are intentionally skipped
    * (see selectCollapseClusters / PR #855 R3). */
-  collapseClustersFound: number
+  collapseClustersFound: number;
   /** Loser rows that would be deleted post-collapse. */
-  collapseLosers: number
-  rowsUpdated: number
-  rowsDeleted: number
+  collapseLosers: number;
+  rowsUpdated: number;
+  rowsDeleted: number;
   fkReassignments: {
-    userEvents: number
-    eventReports: number
-    priceSubmissions: number
-    priceRetrievalLog: number
-  }
-  committed: boolean
+    userEvents: number;
+    eventReports: number;
+    priceSubmissions: number;
+    priceRetrievalLog: number;
+  };
+  committed: boolean;
 }
 
 /** Preview a long string for operator dry-run logs. */
 function preview(value: string, max = 80): string {
-  if (value.length <= max) return value
-  return `${value.slice(0, max - 3)}...`
+  if (value.length <= max) return value;
+  return `${value.slice(0, max - 3)}...`;
 }
 
 // Winner selection lives in the helpers module as sortBucketByWinnerPriority
@@ -213,7 +213,7 @@ function preview(value: string, max = 80): string {
  *
  * Typed via Record<PatchKey, string> so the keys are statically known
  * to be PatchKey — no `as` cast needed inside the helpers. */
-type PatchKey = keyof Required<ClusterPlan['winnerPatch']>
+type PatchKey = keyof Required<ClusterPlan['winnerPatch']>;
 const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
   description: 'description',
   imageUrl: 'image_url',
@@ -222,7 +222,7 @@ const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
   showTime: 'show_time',
   ticketPriceMin: 'ticket_price_min',
   ticketPriceMax: 'ticket_price_max',
-}
+};
 
 /** Iteration order for the merge helpers, derived from
  * `MERGEABLE_FIELD_COLUMNS` so the two helpers cannot drift. The cast
@@ -233,7 +233,7 @@ const MERGEABLE_FIELD_COLUMNS: Record<PatchKey, string> = {
  * helpers operate on the exact same field set. */
 export const MERGEABLE_PATCH_KEYS = Object.keys(
   MERGEABLE_FIELD_COLUMNS,
-) as PatchKey[]
+) as PatchKey[];
 
 /**
  * Build SQL fragments of the form `col = COALESCE(col, $patch)` for
@@ -249,19 +249,19 @@ export const MERGEABLE_PATCH_KEYS = Object.keys(
 function buildCoalesceAssignments(
   patch: ClusterPlan['winnerPatch'],
 ): ReturnType<typeof sql>[] {
-  const out: ReturnType<typeof sql>[] = []
+  const out: ReturnType<typeof sql>[] = [];
   // Iterates `MERGEABLE_PATCH_KEYS` so this helper and buildWinnerPatch
   // are guaranteed to share the same field set — adding a column to
   // MERGEABLE_FIELD_COLUMNS picks up in both helpers automatically.
   for (const patchKey of MERGEABLE_PATCH_KEYS) {
-    const value = patch[patchKey]
-    if (value === undefined) continue
-    const columnName = MERGEABLE_FIELD_COLUMNS[patchKey]
+    const value = patch[patchKey];
+    if (value === undefined) continue;
+    const columnName = MERGEABLE_FIELD_COLUMNS[patchKey];
     out.push(
       sql`${sql.identifier(columnName)} = COALESCE(${sql.identifier(columnName)}, ${value})`,
-    )
+    );
   }
-  return out
+  return out;
 }
 
 /** For each mergeable field, prefer winner's value; fall back to the first
@@ -271,25 +271,25 @@ export function buildWinnerPatch(
   winner: RowWithCanonical,
   losers: RowWithCanonical[],
 ): ClusterPlan['winnerPatch'] {
-  const patch: ClusterPlan['winnerPatch'] = {}
+  const patch: ClusterPlan['winnerPatch'] = {};
   // Iterates `MERGEABLE_PATCH_KEYS` (derived from MERGEABLE_FIELD_COLUMNS)
   // so this helper and buildCoalesceAssignments cannot drift — both
   // walk the exact same field set in the same order.
   for (const field of MERGEABLE_PATCH_KEYS) {
-    if (winner[field] !== null) continue
+    if (winner[field] !== null) continue;
     for (const loser of losers) {
-      const value = loser[field]
+      const value = loser[field];
       if (value !== null) {
-        patch[field] = value
-        break
+        patch[field] = value;
+        break;
       }
     }
   }
-  return patch
+  return patch;
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<BackfillSummary> {
   // 1. Load every event row + recompute its canonical_title in JS.
   //    Scan everything (not just status=upcoming) so the snapshot
@@ -316,36 +316,36 @@ export async function runBackfill(opts: {
       ticketPriceMax: events.ticketPriceMax,
     })
     .from(events)
-    .leftJoin(venues, eq(events.venueId, venues.id))
+    .leftJoin(venues, eq(events.venueId, venues.id));
 
-  console.log(`Scanned ${rawRows.length} events.`)
+  console.log(`Scanned ${rawRows.length} events.`);
 
   const rows: RowWithCanonical[] = rawRows.map((row) => ({
     ...row,
     computedCanonical: canonicalizeTitle(row.title),
-  }))
+  }));
 
   // 2. Partition: rows whose canonical changed, then split those into
   //    standalone recomputes vs. collapse clusters.
   const changed = rows.filter(
     (row) => row.computedCanonical !== row.storedCanonical,
-  )
+  );
 
-  console.log(`Of those, ${changed.length} rows recompute to a new canonical.`)
+  console.log(`Of those, ${changed.length} rows recompute to a new canonical.`);
 
   // Group changed-or-existing rows by their NEW (venue_id, date,
   // canonical) so a row whose recompute lands on an existing row's value
   // surfaces as a cluster. Only consider status='upcoming' rows for the
   // collision check — that matches the partial UNIQUE index's predicate
   // exactly. Non-upcoming rows can recompute freely (standalone path).
-  const upcomingByKey = new Map<string, RowWithCanonical[]>()
+  const upcomingByKey = new Map<string, RowWithCanonical[]>();
   for (const row of rows) {
-    if (row.status !== 'upcoming') continue
-    if (row.venueId === null) continue
-    const key = `${row.venueId}|${row.date}|${row.computedCanonical}`
-    const bucket = upcomingByKey.get(key) ?? []
-    bucket.push(row)
-    upcomingByKey.set(key, bucket)
+    if (row.status !== 'upcoming') continue;
+    if (row.venueId === null) continue;
+    const key = `${row.venueId}|${row.date}|${row.computedCanonical}`;
+    const bucket = upcomingByKey.get(key) ?? [];
+    bucket.push(row);
+    upcomingByKey.set(key, bucket);
   }
 
   // Tighten cluster construction so this script only processes
@@ -355,19 +355,19 @@ export async function runBackfill(opts: {
   // would silently widen this script's blast radius beyond what the
   // filename + PR title claim. See helpers/selectCollapseClusters for
   // the full Copilot R3 rationale.
-  const qualifyingClusters = selectCollapseClusters(upcomingByKey)
+  const qualifyingClusters = selectCollapseClusters(upcomingByKey);
   const skippedPreExistingClusters =
     [...upcomingByKey.values()].filter((bucket) => bucket.length >= 2).length -
-    qualifyingClusters.size
+    qualifyingClusters.size;
   if (skippedPreExistingClusters > 0) {
     console.log(
       `Skipped ${skippedPreExistingClusters} pre-existing collision cluster(s) — every row's canonical already matches the new normalizer (out of scope for #850).`,
-    )
+    );
   }
 
-  const collapseClusters: ClusterPlan[] = []
-  const recomputeOnly: RecomputeOnly[] = []
-  const handledRowIds = new Set<string>()
+  const collapseClusters: ClusterPlan[] = [];
+  const recomputeOnly: RecomputeOnly[] = [];
+  const handledRowIds = new Set<string>();
 
   for (const [key, bucket] of qualifyingClusters) {
     // This bucket has a collision the new normalization is responsible
@@ -382,9 +382,9 @@ export async function runBackfill(opts: {
     // patch source from a lower-confidence loser before a higher-
     // confidence one when both had a value for the same field. Sorting
     // the full bucket once makes the entire merge plan deterministic.
-    const sorted = sortBucketByWinnerPriority(bucket)
-    const winner = sorted[0]!
-    const losers = sorted.slice(1)
+    const sorted = sortBucketByWinnerPriority(bucket);
+    const winner = sorted[0]!;
+    const losers = sorted.slice(1);
     collapseClusters.push({
       key,
       venueName: winner.venueName,
@@ -393,16 +393,16 @@ export async function runBackfill(opts: {
       winner,
       losers,
       winnerPatch: buildWinnerPatch(winner, losers),
-    })
-    for (const row of bucket) handledRowIds.add(row.id)
+    });
+    for (const row of bucket) handledRowIds.add(row.id);
   }
 
   // Remaining changed rows that aren't part of a collapse cluster: plain
   // recompute. Includes status=cancelled/postponed changed rows and
   // upcoming changed rows that landed in their own (size=1) bucket.
   for (const row of changed) {
-    if (handledRowIds.has(row.id)) continue
-    recomputeOnly.push({ row })
+    if (handledRowIds.has(row.id)) continue;
+    recomputeOnly.push({ row });
   }
 
   console.log(
@@ -410,40 +410,40 @@ export async function runBackfill(opts: {
       (sum, plan) => sum + plan.losers.length,
       0,
     )} loser rows to merge + delete).`,
-  )
+  );
 
   // 3. Per-cluster dry-run log.
   for (const plan of collapseClusters) {
-    console.log('---')
-    console.log(`COLLAPSE @ ${plan.venueName ?? '(no venue)'} on ${plan.date}`)
-    console.log(`  new canonical = ${preview(plan.newCanonical, 100)}`)
+    console.log('---');
+    console.log(`COLLAPSE @ ${plan.venueName ?? '(no venue)'} on ${plan.date}`);
+    console.log(`  new canonical = ${preview(plan.newCanonical, 100)}`);
     console.log(
       `  winner id     = ${plan.winner.id} (conf=${plan.winner.confidenceScore ?? 'null'}, title=${preview(plan.winner.title, 60)})`,
-    )
+    );
     for (const loser of plan.losers) {
       console.log(
         `  loser  id     = ${loser.id} (conf=${loser.confidenceScore ?? 'null'}, title=${preview(loser.title, 60)})`,
-      )
+      );
     }
     if (Object.keys(plan.winnerPatch).length > 0) {
-      console.log(`  winner patch  = ${JSON.stringify(plan.winnerPatch)}`)
+      console.log(`  winner patch  = ${JSON.stringify(plan.winnerPatch)}`);
     }
   }
 
   // Standalone recomputes — sample only (long log otherwise). Operator
   // can grep the JSON summary for full counts.
-  const sampleStandalone = recomputeOnly.slice(0, 20)
+  const sampleStandalone = recomputeOnly.slice(0, 20);
   if (sampleStandalone.length > 0) {
-    console.log('---')
+    console.log('---');
     console.log(
       `Standalone recompute sample (first ${sampleStandalone.length} of ${recomputeOnly.length}):`,
-    )
+    );
     for (const { row } of sampleStandalone) {
       console.log(
         `  id=${row.id} venue=${row.venueName ?? '(no venue)'} date=${row.date}`,
-      )
-      console.log(`     stored   = ${preview(row.storedCanonical, 100)}`)
-      console.log(`     computed = ${preview(row.computedCanonical, 100)}`)
+      );
+      console.log(`     stored   = ${preview(row.storedCanonical, 100)}`);
+      console.log(`     computed = ${preview(row.computedCanonical, 100)}`);
     }
   }
 
@@ -456,20 +456,20 @@ export async function runBackfill(opts: {
   //     UUID); see the block further down for the prune-then-append
   //     write strategy that preserves partial-progress snapshots across
   //     retries (PR #855 R4).
-  const idsToSnapshot = new Set<string>()
-  for (const { row } of recomputeOnly) idsToSnapshot.add(row.id)
+  const idsToSnapshot = new Set<string>();
+  for (const { row } of recomputeOnly) idsToSnapshot.add(row.id);
   for (const plan of collapseClusters) {
-    idsToSnapshot.add(plan.winner.id)
-    for (const loser of plan.losers) idsToSnapshot.add(loser.id)
+    idsToSnapshot.add(plan.winner.id);
+    for (const loser of plan.losers) idsToSnapshot.add(loser.id);
   }
 
-  console.log('---')
-  console.log(`Snapshot plan: ${idsToSnapshot.size} rows.`)
+  console.log('---');
+  console.log(`Snapshot plan: ${idsToSnapshot.size} rows.`);
 
   if (!opts.commit) {
     console.log(
       'Dry-run mode — no rows touched. Re-run with --commit to apply.',
-    )
+    );
     return {
       rowsScanned: rows.length,
       rowsRecomputed: changed.length,
@@ -492,7 +492,7 @@ export async function runBackfill(opts: {
       // not the flag the operator set. Same shape as
       // 2026-06-27-strip-description-html.ts (#844 Copilot R4).
       committed: false,
-    }
+    };
   }
 
   // Ensure the snapshot table + operator metadata columns exist before
@@ -527,15 +527,15 @@ export async function runBackfill(opts: {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS ${sql.identifier(BACKUP_TABLE)}
       (LIKE events INCLUDING DEFAULTS)
-  `)
+  `);
   await db.execute(sql`
     ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
       ADD COLUMN IF NOT EXISTS snapshot_at timestamptz NOT NULL DEFAULT NOW()
-  `)
+  `);
   await db.execute(sql`
     ALTER TABLE ${sql.identifier(BACKUP_TABLE)}
       ADD COLUMN IF NOT EXISTS run_id uuid NOT NULL DEFAULT gen_random_uuid()
-  `)
+  `);
   // Prune rows older than the 7-day rollback window unconditionally on
   // every --commit run so the table stays bounded even when the recompute
   // is a no-op (otherwise stale rows would never get cleaned up). Anything
@@ -544,7 +544,7 @@ export async function runBackfill(opts: {
   const pruneResult = await db.execute(sql`
     DELETE FROM ${sql.identifier(BACKUP_TABLE)}
     WHERE snapshot_at < NOW() - INTERVAL '7 days'
-  `)
+  `);
   // postgres-js exposes `count` on the result for DML returns
   // (the `pg` package uses `rowCount` — postgres-js does not).
   const prunedCount =
@@ -553,13 +553,13 @@ export async function runBackfill(opts: {
     'count' in pruneResult &&
     typeof pruneResult.count === 'number'
       ? pruneResult.count
-      : 0
+      : 0;
   if (prunedCount > 0) {
-    console.log(`Pruned ${prunedCount} snapshot row(s) older than 7 days.`)
+    console.log(`Pruned ${prunedCount} snapshot row(s) older than 7 days.`);
   }
 
   if (idsToSnapshot.size === 0) {
-    console.log('Nothing to do — no canonical_title changes detected.')
+    console.log('Nothing to do — no canonical_title changes detected.');
     return {
       rowsScanned: rows.length,
       rowsRecomputed: 0,
@@ -575,13 +575,13 @@ export async function runBackfill(opts: {
         priceRetrievalLog: 0,
       },
       committed: false,
-    }
+    };
   }
 
   // Stamp every row written by this invocation with a single run_id so
   // operators can scope queries (rollback, audit) to this run.
-  const runId = randomUUID()
-  console.log(`Snapshot run_id = ${runId}`)
+  const runId = randomUUID();
+  console.log(`Snapshot run_id = ${runId}`);
   // INSERT only the columns events has — snapshot_at gets the column
   // default, run_id is bound per row. Using SELECT * would mismatch the
   // column count.
@@ -591,8 +591,8 @@ export async function runBackfill(opts: {
   // bind-parameter ceiling (65,535) before any cleanup runs. Each batch
   // is an independent INSERT; partial progress is acceptable here
   // because the cluster transactions below are the actual atomic units.
-  const snapshotBatches = chunk(Array.from(idsToSnapshot), SNAPSHOT_BATCH_SIZE)
-  let snapshotInserted = 0
+  const snapshotBatches = chunk(Array.from(idsToSnapshot), SNAPSHOT_BATCH_SIZE);
+  let snapshotInserted = 0;
   for (const batch of snapshotBatches) {
     await db.execute(sql`
       INSERT INTO ${sql.identifier(BACKUP_TABLE)}
@@ -617,29 +617,29 @@ export async function runBackfill(opts: {
         batch.map((id) => sql`${id}::uuid`),
         sql`, `,
       )})
-    `)
-    snapshotInserted += batch.length
+    `);
+    snapshotInserted += batch.length;
   }
   console.log(
     `SNAPSHOT captured ${snapshotInserted} rows into ${BACKUP_TABLE} (${snapshotBatches.length} batch(es) of up to ${SNAPSHOT_BATCH_SIZE}, run_id=${runId}).`,
-  )
+  );
 
   // 4b. APPLY — process collapse clusters first so the winner update
   //     happens after FK reassignment but before delete. One transaction
   //     per cluster so a single bad cluster doesn't roll back the whole
   //     run.
-  let updatedCount = 0
-  let deletedCount = 0
+  let updatedCount = 0;
+  let deletedCount = 0;
   const fkCounts = {
     userEvents: 0,
     eventReports: 0,
     priceSubmissions: 0,
     priceRetrievalLog: 0,
-  }
+  };
 
   for (const plan of collapseClusters) {
     await db.transaction(async (tx) => {
-      const loserIds = plan.losers.map((loser) => loser.id)
+      const loserIds = plan.losers.map((loser) => loser.id);
 
       // FK reassignment — user_events first. UNIQUE(user_id, event_id)
       // means we must dedupe per-user across (winner ∪ losers) before
@@ -650,7 +650,7 @@ export async function runBackfill(opts: {
       // plan keeps exactly one row per user (winner-side preferred,
       // otherwise the earliest loser-side row) and deletes the rest;
       // remaining loser rows are then collision-free to redirect.
-      const clusterEventIds = [plan.winner.id, ...loserIds]
+      const clusterEventIds = [plan.winner.id, ...loserIds];
       const userEventRowsForCluster = await tx
         .select({
           id: userEvents.id,
@@ -659,15 +659,15 @@ export async function runBackfill(opts: {
           createdAt: userEvents.createdAt,
         })
         .from(userEvents)
-        .where(inArray(userEvents.eventId, clusterEventIds))
+        .where(inArray(userEvents.eventId, clusterEventIds));
 
-      const userEventRowsTyped: UserEventRow[] = userEventRowsForCluster
-      const dedupPlan = planUserEventDedup(userEventRowsTyped, plan.winner.id)
+      const userEventRowsTyped: UserEventRow[] = userEventRowsForCluster;
+      const dedupPlan = planUserEventDedup(userEventRowsTyped, plan.winner.id);
 
       if (dedupPlan.rowIdsToDelete.length > 0) {
         await tx
           .delete(userEvents)
-          .where(inArray(userEvents.id, dedupPlan.rowIdsToDelete))
+          .where(inArray(userEvents.id, dedupPlan.rowIdsToDelete));
       }
       // Only redirect the rows the plan explicitly promoted — any
       // surplus loser rows for that user were already deleted above,
@@ -677,33 +677,33 @@ export async function runBackfill(opts: {
           .update(userEvents)
           .set({ eventId: plan.winner.id })
           .where(inArray(userEvents.id, dedupPlan.rowIdsToRedirect))
-          .returning({ id: userEvents.id })
-        fkCounts.userEvents += ueResult.length
+          .returning({ id: userEvents.id });
+        fkCounts.userEvents += ueResult.length;
       }
 
       const erResult = await tx
         .update(eventReports)
         .set({ eventId: plan.winner.id })
         .where(inArray(eventReports.eventId, loserIds))
-        .returning({ id: eventReports.id })
-      fkCounts.eventReports += erResult.length
+        .returning({ id: eventReports.id });
+      fkCounts.eventReports += erResult.length;
 
       const psResult = await tx
         .update(priceSubmissions)
         .set({ eventId: plan.winner.id })
         .where(inArray(priceSubmissions.eventId, loserIds))
-        .returning({ id: priceSubmissions.id })
-      fkCounts.priceSubmissions += psResult.length
+        .returning({ id: priceSubmissions.id });
+      fkCounts.priceSubmissions += psResult.length;
 
       const prlResult = await tx
         .update(priceRetrievalLog)
         .set({ eventId: plan.winner.id })
         .where(inArray(priceRetrievalLog.eventId, loserIds))
-        .returning({ id: priceRetrievalLog.id })
-      fkCounts.priceRetrievalLog += prlResult.length
+        .returning({ id: priceRetrievalLog.id });
+      fkCounts.priceRetrievalLog += prlResult.length;
 
       // Delete losers (no CASCADE concerns — FKs already reassigned).
-      await tx.delete(events).where(inArray(events.id, loserIds))
+      await tx.delete(events).where(inArray(events.id, loserIds));
 
       // Update winner: new canonical + merge patch.
       //
@@ -728,25 +728,25 @@ export async function runBackfill(opts: {
           ...buildCoalesceAssignments(plan.winnerPatch),
         ],
         sql`, `,
-      )
+      );
       await tx.execute(sql`
         UPDATE events
         SET ${patchAssignments}
         WHERE id = ${plan.winner.id}::uuid
-      `)
-    })
-    updatedCount += 1
-    deletedCount += plan.losers.length
+      `);
+    });
+    updatedCount += 1;
+    deletedCount += plan.losers.length;
     console.log(
       `COLLAPSE applied: winner ${plan.winner.id}, deleted ${plan.losers.length} loser(s).`,
-    )
+    );
   }
 
   // 4c. APPLY standalone recomputes — single UPDATE per row, optimistic-
   //     locked on the original canonical so a concurrent crawler write
   //     between the SELECT and the UPDATE doesn't get silently clobbered.
   //     Pattern matches 2026-06-27-strip-description-html.ts.
-  let skippedConcurrent = 0
+  let skippedConcurrent = 0;
   for (const { row } of recomputeOnly) {
     const updated = await db
       .update(events)
@@ -757,21 +757,21 @@ export async function runBackfill(opts: {
           eq(events.canonicalTitle, row.storedCanonical),
         ),
       )
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     if (updated.length === 0) {
       console.log(
         `Skipped standalone ${row.id} — canonical_title changed between scan and update`,
-      )
-      skippedConcurrent += 1
-      continue
+      );
+      skippedConcurrent += 1;
+      continue;
     }
-    updatedCount += 1
+    updatedCount += 1;
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Updated ${updatedCount} rows. Deleted ${deletedCount} losers. FK reassignments: user_events=${fkCounts.userEvents}, event_reports=${fkCounts.eventReports}, price_submissions=${fkCounts.priceSubmissions}, price_retrieval_log=${fkCounts.priceRetrievalLog}. Skipped (concurrent edit): ${skippedConcurrent}.`,
-  )
+  );
 
   return {
     rowsScanned: rows.length,
@@ -790,24 +790,24 @@ export async function runBackfill(opts: {
     // clusters ran, updatedCount + deletedCount is 0 and we report
     // committed=false — matches the early-return semantics above.
     committed: updatedCount > 0 || deletedCount > 0,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can also be imported by a test
 // without auto-running.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

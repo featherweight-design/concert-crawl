@@ -1,35 +1,35 @@
-'use client'
+'use client';
 
 // #1063 Settings ▸ Notifications section — master push toggle + Watch updates
 // / Price drops sub-toggles, wired to /v1/me/notification-preferences and the
 // push-client subscribe flow (#763 PR 9 shipped push-client itself; this
 // consumes it).
 
-import { useCallback, useEffect, useId, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { nfLocked } from '@concert-crawl/entitlements'
+import { useCallback, useEffect, useId, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { nfLocked } from '@concert-crawl/entitlements';
 import {
   getPushDeviceState,
   subscribeToPush,
   unsubscribeFromPush,
   type PushDeviceState,
-} from '@/lib/push/client'
-import { isIosSafari, isStandalone } from '@/lib/pwa/beforeinstallprompt'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+} from '@/lib/push/client';
+import { isIosSafari, isStandalone } from '@/lib/pwa/beforeinstallprompt';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 import {
   useNotificationPreferences,
   usePatchNotificationPreferences,
   type NotificationPreferences,
-} from '@/lib/queries/use-notification-preferences'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
-import { ToggleSwitch } from '../connections/ToggleSwitch'
-import { CrewActivityBlock } from './CrewActivityBlock'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
+} from '@/lib/queries/use-notification-preferences';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
+import { ToggleSwitch } from '../connections/ToggleSwitch';
+import { CrewActivityBlock } from './CrewActivityBlock';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
 
-const ARTISTS_COPY = NOTIFICATIONS_COPY.artists
-const PRODUCT_EMAIL_COPY = NOTIFICATIONS_COPY.productEmail
+const ARTISTS_COPY = NOTIFICATIONS_COPY.artists;
+const PRODUCT_EMAIL_COPY = NOTIFICATIONS_COPY.productEmail;
 
 /**
  * A sub-group label inside the section. `h3`, not `h2`: "Notifications" is the
@@ -45,7 +45,7 @@ const GroupHeading = ({ text }: { text: string }) => (
   >
     {text}
   </h3>
-)
+);
 
 const LockGlyph = () => (
   <svg
@@ -72,7 +72,7 @@ const LockGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 // Detail line under the master switch: shows "On" only when BOTH the server
 // preference has push enabled AND this device holds a live subscription. The
@@ -84,10 +84,10 @@ const detailForMaster = (
   master: boolean,
   deviceState: PushDeviceState | null,
 ): string => {
-  if (!master) return NOTIFICATIONS_COPY.masterOffDetail
-  if (deviceState?.subscribed) return NOTIFICATIONS_COPY.masterOnDetail
-  return NOTIFICATIONS_COPY.masterOffDetail
-}
+  if (!master) return NOTIFICATIONS_COPY.masterOffDetail;
+  if (deviceState?.subscribed) return NOTIFICATIONS_COPY.masterOnDetail;
+  return NOTIFICATIONS_COPY.masterOffDetail;
+};
 
 interface NotificationsSectionProps {
   /**
@@ -95,13 +95,13 @@ interface NotificationsSectionProps {
    * bordered panel; the mobile scroll renders it inline. Wrapper markup for
    * both lives at the mount site, so the component stays layout-neutral.
    */
-  variant?: 'mobile' | 'desktop'
+  variant?: 'mobile' | 'desktop';
   /**
    * Server-resolved SCA-region boolean, forwarded to the TierPickerSheet the
    * locked artist card opens. Both settings shells already hold it for
    * PlanPanel, so it is passed down rather than re-resolved here.
    */
-  scaRegion?: boolean
+  scaRegion?: boolean;
 }
 
 export const NotificationsSection = ({
@@ -111,96 +111,96 @@ export const NotificationsSection = ({
   // Per-instance, because `/me` mounts this section twice: the mobile shell and
   // the desktop one are both in the DOM with one CSS-hidden. A fixed id would
   // appear twice, and a switch could resolve its description to the hidden copy.
-  const idPrefix = useId()
-  const headingId = `${idPrefix}-heading`
+  const idPrefix = useId();
+  const headingId = `${idPrefix}-heading`;
   const rowIds = {
     alerts: `${idPrefix}-artist-alerts-detail`,
     autoWatch: `${idPrefix}-artist-auto-watch-detail`,
     digest: `${idPrefix}-weekly-digest-detail`,
     productEmail: `${idPrefix}-product-email-detail`,
-  }
+  };
 
-  const { getToken } = useAuth()
-  const { data: prefs, isLoading, isError } = useNotificationPreferences()
-  const patch = usePatchNotificationPreferences()
-  const { data: planState, isPending: planPending } = usePlanState()
-  const { data: spotify } = useSpotifyConnection()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null)
+  const { getToken } = useAuth();
+  const { data: prefs, isLoading, isError } = useNotificationPreferences();
+  const patch = usePatchNotificationPreferences();
+  const { data: planState, isPending: planPending } = usePlanState();
+  const { data: spotify } = useSpotifyConnection();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null);
   // #1130 fix — surface a visible error when the toggle pipeline fails
   // (subscribe returns error, or PATCH throws). Previously the click just
   // logged and the toggle stayed off, which read as "clicking does
   // nothing." Cleared on every fresh toggle attempt.
-  const [toggleError, setToggleError] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     const refresh = async () => {
-      const state = await getPushDeviceState()
-      if (!cancelled) setDeviceState(state)
-    }
-    void refresh()
+      const state = await getPushDeviceState();
+      if (!cancelled) setDeviceState(state);
+    };
+    void refresh();
     // Re-read device state on tab-focus and visibilitychange — the common
     // path is the "denied → user unblocks in browser site settings → returns
     // to the tab" flow. Without these listeners the section would stay
     // stuck in the Blocked state until a full refresh.
     const onFocus = () => {
-      void refresh()
-    }
+      void refresh();
+    };
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') void refresh()
-    }
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', onVisibility)
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      cancelled = true
-      window.removeEventListener('focus', onFocus)
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [])
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
-  const masterOn = prefs?.masterEnabled ?? false
-  const watchUpdatesOn = prefs?.watchUpdatesEnabled ?? true
-  const priceDropsOn = prefs?.priceDropsEnabled ?? true
-  const artistAlertsOn = prefs?.artistAlertsEnabled ?? true
-  const artistAutoWatchOn = prefs?.artistAutoWatch ?? false
-  const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true
-  const productEmailsOn = prefs?.productEmailsEnabled ?? true
+  const masterOn = prefs?.masterEnabled ?? false;
+  const watchUpdatesOn = prefs?.watchUpdatesEnabled ?? true;
+  const priceDropsOn = prefs?.priceDropsEnabled ?? true;
+  const artistAlertsOn = prefs?.artistAlertsEnabled ?? true;
+  const artistAutoWatchOn = prefs?.artistAutoWatch ?? false;
+  const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true;
+  const productEmailsOn = prefs?.productEmailsEnabled ?? true;
 
   // ONE gate for the whole artist group, asked through nfLocked rather than by
   // testing a tier string — design R2 leaked a live Follow control to Supporter
   // on six surfaces doing exactly that. Fails closed: a plan state that never
   // arrives renders the locked card, which offers an upgrade, rather than live
   // switches the API would then reject.
-  const artistsLocked = planState === undefined || nfLocked(planState)
-  const spotifyConnected = spotify?.status === 'connected'
+  const artistsLocked = planState === undefined || nfLocked(planState);
+  const spotifyConnected = spotify?.status === 'connected';
 
   const refreshDeviceState = useCallback(async () => {
-    const state = await getPushDeviceState()
-    setDeviceState(state)
-  }, [])
+    const state = await getPushDeviceState();
+    setDeviceState(state);
+  }, []);
 
   const onToggleMaster = useCallback(
     async (next: boolean) => {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
         // Should be rare on this page (settings is auth-gated), but a token
         // gap without any signal makes debugging session edge cases painful.
         // Match the log convention used elsewhere in this file.
         console.warn(
           'notifications: master toggle skipped — no auth token available',
-        )
-        return
+        );
+        return;
       }
       // Clear any prior error banner as a fresh attempt starts.
-      setToggleError(null)
+      setToggleError(null);
       try {
         if (next) {
           // Fire browser permission (if undecided) → subscribe → POST server row.
-          const result = await subscribeToPush(token)
+          const result = await subscribeToPush(token);
           if (result.status === 'subscribed') {
             try {
-              await patch.mutateAsync({ masterEnabled: true })
+              await patch.mutateAsync({ masterEnabled: true });
             } catch (patchErr) {
               // The subscription landed server-side but the preference PATCH
               // failed — roll back so we don't strand a live push_subscription
@@ -211,16 +211,16 @@ export const NotificationsSection = ({
               console.warn(
                 'notifications: prefs patch failed after subscribe; rolling back',
                 patchErr,
-              )
+              );
               await unsubscribeFromPush(token, result.id).catch(
                 (rollbackErr) => {
                   console.warn(
                     'notifications: rollback unsubscribe failed',
                     rollbackErr,
-                  )
+                  );
                 },
-              )
-              setToggleError(NOTIFICATIONS_COPY.toggleError.patch)
+              );
+              setToggleError(NOTIFICATIONS_COPY.toggleError.patch);
             }
           } else if (result.status === 'error') {
             // Subscribe hit the server (or the browser) and came back with a
@@ -228,7 +228,7 @@ export const NotificationsSection = ({
             // isn't configured, or a serviceWorker failure. #1130 makes this
             // visible: prior code silently swallowed it and the toggle
             // appeared inert.
-            setToggleError(NOTIFICATIONS_COPY.toggleError.subscribe)
+            setToggleError(NOTIFICATIONS_COPY.toggleError.subscribe);
           } else if (result.status === 'permission-denied') {
             // Not really an "error" — the device-state effect below will
             // re-read Notification.permission and the denied banner takes
@@ -243,25 +243,25 @@ export const NotificationsSection = ({
           // retry. If the PATCH succeeds but unsubscribe fails, the device
           // stays subscribed but the send pipeline reads master=false and
           // won't push anyway, so no spam. Best-effort log covers it.
-          await patch.mutateAsync({ masterEnabled: false })
+          await patch.mutateAsync({ masterEnabled: false });
           await unsubscribeFromPush(token).catch((unsubErr) => {
             console.warn(
               'notifications: unsubscribe after master OFF failed; send pipeline still gated by prefs',
               unsubErr,
-            )
-          })
+            );
+          });
         }
       } catch (toggleErr) {
         // Any unexpected failure (e.g. subscribeToPush throws, permission
         // API rejects) is caught here so the click handler never leaks an
         // unhandled rejection to React.
-        console.warn('notifications: master toggle failed', toggleErr)
-        setToggleError(NOTIFICATIONS_COPY.toggleError.generic)
+        console.warn('notifications: master toggle failed', toggleErr);
+        setToggleError(NOTIFICATIONS_COPY.toggleError.generic);
       }
-      await refreshDeviceState()
+      await refreshDeviceState();
     },
     [getToken, patch, refreshDeviceState],
-  )
+  );
 
   // Multi-device activation: user already flipped master ON on another
   // device (server pref = true) and lands here on a fresh device with no
@@ -271,23 +271,23 @@ export const NotificationsSection = ({
   // subscriptions). Fire subscribeToPush without touching the server
   // preference.
   const subscribeThisDevice = useCallback(async () => {
-    const token = await getToken()
+    const token = await getToken();
     if (!token) {
       console.warn(
         'notifications: enable-on-device skipped — no auth token available',
-      )
-      return
+      );
+      return;
     }
     try {
-      await subscribeToPush(token)
+      await subscribeToPush(token);
     } catch (subscribeErr) {
       console.warn(
         'notifications: enable-on-device subscribe failed',
         subscribeErr,
-      )
+      );
     }
-    await refreshDeviceState()
-  }, [getToken, refreshDeviceState])
+    await refreshDeviceState();
+  }, [getToken, refreshDeviceState]);
 
   const onToggleSub = useCallback(
     (updates: Partial<NotificationPreferences>) => {
@@ -295,23 +295,23 @@ export const NotificationsSection = ({
       // server preference). Use mutate() so the mutation's onError has a
       // chance to log — plain unhandled rejections from `void mutateAsync`
       // surface as noisy console errors.
-      setToggleError(null)
+      setToggleError(null);
       patch.mutate(updates, {
         onError: (subToggleErr) => {
           console.warn(
             'notifications: sub-toggle patch failed',
             updates,
             subToggleErr,
-          )
+          );
           // Previously log-only, which read to the user as a switch that
           // snapped back for no reason. The banner above the rows is the one
           // place a settings failure can be told.
-          setToggleError(NOTIFICATIONS_COPY.toggleError.preference)
+          setToggleError(NOTIFICATIONS_COPY.toggleError.preference);
         },
-      })
+      });
     },
     [patch],
-  )
+  );
 
   // Query-error gate. If the preferences fetch fails (token gap, transient
   // API error), rendering the empty/toggle UI would show defaulted prefs
@@ -336,7 +336,7 @@ export const NotificationsSection = ({
     >
       {NOTIFICATIONS_COPY.heading}
     </h2>
-  )
+  );
 
   if (isError) {
     return (
@@ -347,7 +347,7 @@ export const NotificationsSection = ({
         </p>
         <CrewActivityBlock />
       </section>
-    )
+    );
   }
 
   // Loading placeholder — match the neighboring skeleton density so the
@@ -366,20 +366,20 @@ export const NotificationsSection = ({
         </div>
         <CrewActivityBlock />
       </section>
-    )
+    );
   }
 
-  const { support, permission } = deviceState
+  const { support, permission } = deviceState;
 
   // Empty state — never opted in yet on this device: master off on the server
   // AND no subscription live locally. Both gates matter: a user who's opted
   // in on another device but has master enabled shouldn't see the empty CTA;
   // a user whose local subscription outlives a master-off patch shouldn't
   // either.
-  const isEmpty = !masterOn && !deviceState.subscribed
-  const isDenied = permission === 'denied'
-  const isIosNeedsInstall = support === 'ios-needs-install'
-  const isIosInstalled = isIosSafari() && isStandalone()
+  const isEmpty = !masterOn && !deviceState.subscribed;
+  const isDenied = permission === 'denied';
+  const isIosNeedsInstall = support === 'ios-needs-install';
+  const isIosInstalled = isIosSafari() && isStandalone();
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby={headingId}>
@@ -668,8 +668,8 @@ export const NotificationsSection = ({
         <div className="flex flex-col gap-2">
           <GroupHeading text={NOTIFICATIONS_COPY.watching.heading} />
           {NOTIFICATIONS_COPY.subs.map((sub) => {
-            const checked = sub.key === 'watch' ? watchUpdatesOn : priceDropsOn
-            const detailId = `${idPrefix}-sub-${sub.key}-detail`
+            const checked = sub.key === 'watch' ? watchUpdatesOn : priceDropsOn;
+            const detailId = `${idPrefix}-sub-${sub.key}-detail`;
             return (
               <div
                 key={sub.key}
@@ -697,7 +697,7 @@ export const NotificationsSection = ({
                   disabled={patch.isPending}
                 />
               </div>
-            )
+            );
           })}
         </div>
       )}
@@ -718,5 +718,5 @@ export const NotificationsSection = ({
         entry="paywall"
       />
     </section>
-  )
-}
+  );
+};

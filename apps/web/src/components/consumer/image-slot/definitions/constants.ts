@@ -8,7 +8,7 @@ export const SLOT_RADIUS = {
   panel: 12,
   card: 14,
   avatar: 999,
-} as const
+} as const;
 
 /**
  * The frame every slot wears. Inset rather than a border so it costs no layout
@@ -16,7 +16,7 @@ export const SLOT_RADIUS = {
  * the slot, not of what happens to be inside it.
  */
 export const SLOT_HAIRLINE =
-  'inset 0 0 0 1px color-mix(in oklch, var(--fg) 12%, transparent)'
+  'inset 0 0 0 1px color-mix(in oklch, var(--fg) 12%, transparent)';
 
 /** The taste-pick row's floor. The row owns the height above it (#763 r4). */
-export const FLEX_ART_MIN_HEIGHT = 116
+export const FLEX_ART_MIN_HEIGHT = 116;

@@ -1,19 +1,19 @@
-import Link from 'next/link'
-import type { EventWithVenue } from '@concert-crawl/types'
-import { Panel } from '@/components/consumer/image-slot'
-import { WatchShowButton } from '../watch-show-button'
-import { formatShowTime, venueShort } from '../definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { EventTitleBlock } from '../event-title-block'
-import { GenreChips } from '../GenreChips'
-import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight'
+import Link from 'next/link';
+import type { EventWithVenue } from '@concert-crawl/types';
+import { Panel } from '@/components/consumer/image-slot';
+import { WatchShowButton } from '../watch-show-button';
+import { formatShowTime, venueShort } from '../definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { EventTitleBlock } from '../event-title-block';
+import { GenreChips } from '../GenreChips';
+import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface HeroEventCardProps {
-  event: EventWithVenue
-  label?: string
-  isWatching?: boolean
+  event: EventWithVenue;
+  label?: string;
+  isWatching?: boolean;
 }
 
 export function HeroEventCard({
@@ -21,13 +21,13 @@ export function HeroEventCard({
   label = copy.heroTonight,
   isWatching = false,
 }: HeroEventCardProps) {
-  const showTime = formatShowTime(event.showTime)
+  const showTime = formatShowTime(event.showTime);
   // Present only for connected viewers (#763 PR 6) — swaps the eyebrow badge.
-  const isFollowed = (event.followedArtists?.length ?? 0) > 0
+  const isFollowed = (event.followedArtists?.length ?? 0) > 0;
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null
+      : null;
 
   return (
     <div className="relative overflow-hidden rounded-[14px] border border-border-strong bg-surface-1">
@@ -119,5 +119,5 @@ export function HeroEventCard({
         />
       </div>
     </div>
-  )
+  );
 }

@@ -16,7 +16,7 @@
 #1215 was filed as a wiring problem: the bell is dead code, the inbox is absent from nav.
 **That is not why the went-dark alerts went unnoticed.** The dashboard panel lists a venue
 when `venue.status === 'failed'` or `blockedAt` is set. A went-dark crawl is neither — it
-*succeeded*, it just returned far fewer events than baseline. The panel had no expression
+_succeeded_, it just returned far fewer events than baseline. The panel had no expression
 for that condition, nor for `event_ceiling_suspected` or `url_coverage_gap`. Wiring the
 inbox into the nav would not have caught it.
 
@@ -72,7 +72,7 @@ went-dark baseline. **It does not.** Verified while building PR 1: the baseline 
 `status = 'success' AND events_usable > 0`, so a zero-usable run is excluded twice, and the
 exclusion is deliberate per #645 — a venue intermittently returning 0 must not drag down its
 own baseline and understate the size of the regression in the alert copy. What #1165 changed
-is only that the *check still runs* on a `partial` row.
+is only that the _check still runs_ on a `partial` row.
 
 **PR 2 must not widen the baseline window to include `partial` rows.** If it does, the
 panel's baseline figure will diverge from the figure in the emails — the precise drift this
@@ -84,7 +84,7 @@ a fresh baseline query.
 - **Any production database migration.** (Skill default, restated because this epic ends in
   a table drop.)
 - **The `inbox_reads` / `inbox_read_watermarks` DROP migration is OUT OF SCOPE for this
-  run.** Per expand/contract, PR 4 removes only the *readers*. The drop ships in a later
+  run.** Per expand/contract, PR 4 removes only the _readers_. The drop ships in a later
   deploy, after the reader-removal is live in prod. Do not bundle it into PR 4, and do not
   add a fifth PR for it — surface it as a follow-up issue instead.
 - **Do not touch `packages/db/src/schema/notifications.ts`.** The `notifications` table
@@ -92,7 +92,7 @@ a fresh baseline query.
   write to it inside their alert transactions, and it is the durable audit record. It only
   stops being a UI source.
 - **PR 1 must be a pure refactor.** If making the existing alert tests pass requires
-  *changing* any of them, stop — that means behaviour moved, and the "no behaviour change"
+  _changing_ any of them, stop — that means behaviour moved, and the "no behaviour change"
   claim is false. Unchanged existing tests are the proof; ask before editing one.
 
 ## Notify-and-proceed

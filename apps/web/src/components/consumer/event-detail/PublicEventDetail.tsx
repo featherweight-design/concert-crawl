@@ -18,27 +18,27 @@
 // In their place there is exactly one sign-in CTA. The Watching affordance on
 // the authed page is the lucide Eye; the mirror simply omits it rather than
 // substituting another glyph — there is no second show-tracking concept.
-import { Fragment } from 'react'
-import type { ReactNode } from 'react'
-import Link from 'next/link'
-import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types'
+import { Fragment } from 'react';
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types';
 
-import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
-import { SectionHeader } from '@/components/consumer/section-header'
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
+import { SectionHeader } from '@/components/consumer/section-header';
 
-import { HeroBand } from '@/components/consumer/image-slot'
-import { GenreChips } from '@/components/consumer/GenreChips'
-import { EventTitleBlock } from '@/components/consumer/event-title-block'
+import { HeroBand } from '@/components/consumer/image-slot';
+import { GenreChips } from '@/components/consumer/GenreChips';
+import { EventTitleBlock } from '@/components/consumer/event-title-block';
 import {
   formatEventDate,
   formatPrice,
   formatShowTime,
   isEventPast,
-} from '@/components/consumer/definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
-import { ShareButton } from './ShareButton'
-import { PublicEventView } from './PublicEventView'
+} from '@/components/consumer/definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { ShareButton } from './ShareButton';
+import { PublicEventView } from './PublicEventView';
 
 import {
   InfoRow,
@@ -47,16 +47,16 @@ import {
   IconClock,
   IconUsers,
   IconTag,
-} from './InfoRow'
-import { EventTicketCta } from './EventTicketCta'
+} from './InfoRow';
+import { EventTicketCta } from './EventTicketCta';
 
-const copy = CONSUMER_COPY.eventDetail
-const publicCopy = CONSUMER_COPY.publicEvent
+const copy = CONSUMER_COPY.eventDetail;
+const publicCopy = CONSUMER_COPY.publicEvent;
 
 export interface PublicEventDetailProps {
-  event: EventDetailResponse
+  event: EventDetailResponse;
   /** Other upcoming shows at the same venue. Empty when the fetch failed. */
-  related: EventWithVenue[]
+  related: EventWithVenue[];
   /**
    * The bill follow block (native following, PR 7), rendered directly under
    * the primary CTA. A SLOT rather than data: the block is a client component
@@ -69,7 +69,7 @@ export interface PublicEventDetailProps {
    * someone else's poster is exactly the person worth recruiting, and the
    * signed-out follow control is a sign-up route by construction (#794 §3.10).
    */
-  billBlock?: ReactNode
+  billBlock?: ReactNode;
 }
 
 export const PublicEventDetail = ({
@@ -77,36 +77,36 @@ export const PublicEventDetail = ({
   related,
   billBlock,
 }: PublicEventDetailProps) => {
-  const showTime = formatShowTime(event.showTime)
-  const doorsTime = formatShowTime(event.doorsTime)
-  const dateLabel = formatEventDate(event.date, event.venue.timezone)
+  const showTime = formatShowTime(event.showTime);
+  const doorsTime = formatShowTime(event.doorsTime);
+  const dateLabel = formatEventDate(event.date, event.venue.timezone);
   const doorsShow =
     doorsTime && showTime
       ? `${doorsTime} / ${showTime}`
-      : (showTime ?? doorsTime ?? '—')
+      : (showTime ?? doorsTime ?? '—');
 
   // ticketUrl/eventUrl are crawler-derived and untrusted — filter the CTA
   // target to http(s) so a compromised venue page can't inject a
   // javascript:/data: href into the rendered link (#1152).
-  const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null
-  const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null
+  const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null;
+  const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null;
   const ctaHref =
     safeTicketUrl ??
     safeEventUrl ??
-    (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null)
+    (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null);
 
   // A poster link is often opened days after the gig. The protected page keeps
   // its CTA on past shows because a signed-in browser navigated there
   // deliberately; here the whole CTA is dropped, since a "Get tickets" button
   // pointing at a dead vendor page is the first thing a new visitor would tap.
-  const past = isEventPast(event.date, event.venue.timezone)
+  const past = isEventPast(event.date, event.venue.timezone);
 
   // Sold out beats a stale number: a shared link is often opened after the
   // show sold out, and a price next to a gone show reads as availability.
   const priceLabel =
     event.priceStatus === 'soldout'
       ? copy.soldOut
-      : formatPrice(event.ticketPriceMin, event.ticketPriceMax)
+      : formatPrice(event.ticketPriceMin, event.ticketPriceMax);
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
@@ -292,5 +292,5 @@ export const PublicEventDetail = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -98,4 +98,4 @@ export const HISTORY_COPY = {
       ].join(' · '),
     link: 'See your Passport →',
   },
-} as const
+} as const;

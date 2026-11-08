@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The shell underneath every anchored explainer and data panel: anchored
 // popover on desktop, bottom sheet on mobile.
@@ -7,45 +7,45 @@
 // and Escape, and knows nothing about its content. Both CCTip and the watcher
 // roster consume it rather than growing a second popover/sheet pair.
 
-import { useRef, type ReactNode } from 'react'
-import { useFocusTrap } from '@/lib/hooks/useFocusTrap'
-import { CCOverlayHost } from './CCOverlayHost'
-import { useAnchoredPosition } from './lib/use-anchored-position'
-import { OVERLAY_COPY } from './definitions/copy'
+import { useRef, type ReactNode } from 'react';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
+import { CCOverlayHost } from './CCOverlayHost';
+import { useAnchoredPosition } from './lib/use-anchored-position';
+import { OVERLAY_COPY } from './definitions/copy';
 import type {
   OverlayAlign,
   OverlayMode,
   OverlayPlacement,
-} from './definitions/types'
+} from './definitions/types';
 
-export type { OverlayAlign, OverlayMode, OverlayPlacement }
+export type { OverlayAlign, OverlayMode, OverlayPlacement };
 
 interface OverlayCommonProps {
   // Referenced by the trigger's aria-controls, so the caller owns it.
-  id: string
+  id: string;
   // Header line on the popover, accessible name of the dialog in both shells.
-  title: string
-  showHeader?: boolean
-  onClose: () => void
-  children: ReactNode
+  title: string;
+  showHeader?: boolean;
+  onClose: () => void;
+  children: ReactNode;
 }
 
 // Split on mode so the anchor is required exactly where it is load-bearing: a
 // popover is portalled out of its trigger's box and renders nothing without an
 // element to measure, while a sheet has no anchor to speak of.
 interface CCOverlayPopoverProps extends OverlayCommonProps {
-  mode: 'popover'
-  anchor: HTMLElement | null
-  placement?: OverlayPlacement
-  align?: OverlayAlign
-  width?: number
+  mode: 'popover';
+  anchor: HTMLElement | null;
+  placement?: OverlayPlacement;
+  align?: OverlayAlign;
+  width?: number;
 }
 
 interface CCOverlaySheetProps extends OverlayCommonProps {
-  mode: 'sheet'
+  mode: 'sheet';
 }
 
-type CCOverlayProps = CCOverlayPopoverProps | CCOverlaySheetProps
+type CCOverlayProps = CCOverlayPopoverProps | CCOverlaySheetProps;
 
 const CloseGlyph = ({ size }: { size: number }) => (
   <svg width={size} height={size} viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -56,11 +56,11 @@ const CloseGlyph = ({ size }: { size: number }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const HEADER_CLASS =
-  'flex-1 font-bold uppercase tracking-[0.14em] text-[var(--fg-subtle)]'
-const HEADER_FONT = { fontFamily: 'var(--font-mono)' }
+  'flex-1 font-bold uppercase tracking-[0.14em] text-[var(--fg-subtle)]';
+const HEADER_FONT = { fontFamily: 'var(--font-mono)' };
 
 const Sheet = ({
   id,
@@ -69,12 +69,12 @@ const Sheet = ({
   onClose,
   children,
 }: OverlayCommonProps) => {
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null);
   // The trap ref sits on the dialog, never on the wrapper that also holds the
   // scrim — a wrapper would put the scrim inside the trap and hand it a tab
   // stop. Popovers stay untrapped: they are not modal and hover-open panels
   // must not steal focus.
-  useFocusTrap(dialogRef, true)
+  useFocusTrap(dialogRef, true);
 
   return (
     <div className="fixed inset-0 z-[60] flex flex-col justify-end">
@@ -121,8 +121,8 @@ const Sheet = ({
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const Popover = ({
   id,
@@ -135,15 +135,15 @@ const Popover = ({
   onClose,
   children,
 }: CCOverlayPopoverProps) => {
-  const position = useAnchoredPosition(anchor, placement, align, width)
+  const position = useAnchoredPosition(anchor, placement, align, width);
 
   // Nothing to anchor to yet: the first paint happens before the layout effect
   // measures, and rendering at a guessed position would flash it in the wrong
   // place before snapping.
-  if (position === null) return null
+  if (position === null) return null;
 
   const arrowVertical =
-    position.placement === 'bottom' ? { top: -4.5 } : { bottom: -4.5 }
+    position.placement === 'bottom' ? { top: -4.5 } : { bottom: -4.5 };
 
   return (
     <CCOverlayHost>
@@ -191,8 +191,8 @@ const Popover = ({
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
     </CCOverlayHost>
-  )
-}
+  );
+};
 
 export const CCOverlay = (props: CCOverlayProps) =>
-  props.mode === 'sheet' ? <Sheet {...props} /> : <Popover {...props} />
+  props.mode === 'sheet' ? <Sheet {...props} /> : <Popover {...props} />;

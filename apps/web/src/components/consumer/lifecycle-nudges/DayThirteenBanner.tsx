@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Day-13 trial-ends-tomorrow banner (#780, PR 4.2). Two placements per
 // the design decisions log: `pinned` (default) — a full-bleed thin strip
@@ -6,25 +6,25 @@
 // card for content flow (exported for future surfaces; only pinned is
 // mounted by LifecycleNudgesGate today).
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { PLAN_SETTINGS_ROUTE } from '@/components/consumer/tier-picker/definitions/constants'
-import { LIFECYCLE_NUDGES_COPY } from './definitions/copy'
-import { DAY13_BANNER_Z_INDEX } from './definitions/constants'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { PLAN_SETTINGS_ROUTE } from '@/components/consumer/tier-picker/definitions/constants';
+import { LIFECYCLE_NUDGES_COPY } from './definitions/copy';
+import { DAY13_BANNER_Z_INDEX } from './definitions/constants';
 
-const BANNER_COPY = LIFECYCLE_NUDGES_COPY.banner
+const BANNER_COPY = LIFECYCLE_NUDGES_COPY.banner;
 
 interface DayThirteenBannerProps {
-  variant: 'pinned' | 'inline'
-  onDismiss: () => void
+  variant: 'pinned' | 'inline';
+  onDismiss: () => void;
 }
 
 export const DayThirteenBanner = ({
   variant,
   onDismiss,
 }: DayThirteenBannerProps) => {
-  const router = useRouter()
-  const inline = variant === 'inline'
+  const router = useRouter();
+  const inline = variant === 'inline';
 
   // Lazy init from matchMedia so desktop doesn't flash mobile spacing on
   // first paint. Safe: the gate mounts this only after a client-side
@@ -33,14 +33,14 @@ export const DayThirteenBanner = ({
     () =>
       typeof window !== 'undefined' &&
       window.matchMedia('(min-width: 640px)').matches,
-  )
+  );
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)')
-    setWide(mql.matches)
-    const listener = (ev: MediaQueryListEvent) => setWide(ev.matches)
-    mql.addEventListener('change', listener)
-    return () => mql.removeEventListener('change', listener)
-  }, [])
+    const mql = window.matchMedia('(min-width: 640px)');
+    setWide(mql.matches);
+    const listener = (ev: MediaQueryListEvent) => setWide(ev.matches);
+    mql.addEventListener('change', listener);
+    return () => mql.removeEventListener('change', listener);
+  }, []);
 
   const strip = (
     <div
@@ -170,7 +170,7 @@ export const DayThirteenBanner = ({
         </svg>
       </button>
     </div>
-  )
+  );
 
   if (!inline) {
     return (
@@ -185,7 +185,7 @@ export const DayThirteenBanner = ({
       >
         {strip}
       </div>
-    )
+    );
   }
-  return strip
-}
+  return strip;
+};

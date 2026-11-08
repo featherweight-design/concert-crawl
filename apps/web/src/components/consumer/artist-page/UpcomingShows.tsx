@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import type { ArtistShow } from '@concert-crawl/types'
-import React, { useMemo, useState } from 'react'
+import type { ArtistShow } from '@concert-crawl/types';
+import React, { useMemo, useState } from 'react';
 
-import { SHOWS_VISIBLE } from './definitions/constants'
-import { ARTIST_COPY } from './definitions/copy'
-import { firstIso, showsInItem } from './definitions/types'
-import { groupShows } from './lib/group-shows'
-import { RunGroup } from './RunGroup'
-import { SectionHead } from './SectionHead'
-import { EventRow } from '@/components/consumer/event-row/EventRow'
-import { fromArtistShow } from '@/components/consumer/event-row/lib/row-model'
-import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
+import { SHOWS_VISIBLE } from './definitions/constants';
+import { ARTIST_COPY } from './definitions/copy';
+import { firstIso, showsInItem } from './definitions/types';
+import { groupShows } from './lib/group-shows';
+import { RunGroup } from './RunGroup';
+import { SectionHead } from './SectionHead';
+import { EventRow } from '@/components/consumer/event-row/EventRow';
+import { fromArtistShow } from '@/components/consumer/event-row/lib/row-model';
+import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 
 interface UpcomingShowsProps {
-  name: string
-  photoUrl: string | null
-  shows: ArtistShow[]
+  name: string;
+  photoUrl: string | null;
+  shows: ArtistShow[];
 }
 
 export const UpcomingShows = ({
@@ -24,14 +24,14 @@ export const UpcomingShows = ({
   photoUrl,
   shows,
 }: UpcomingShowsProps) => {
-  const [expanded, setExpanded] = useState(false)
-  const items = useMemo(() => groupShows(shows), [shows])
+  const [expanded, setExpanded] = useState(false);
+  const items = useMemo(() => groupShows(shows), [shows]);
 
   // SHOWS_VISIBLE caps ITEMS — a run is one item. Every label counts SHOWS,
   // so a page can render five items above a "Show all 13 shows" control.
-  const showCount = items.reduce((total, item) => total + showsInItem(item), 0)
-  const visible = expanded ? items : items.slice(0, SHOWS_VISIBLE)
-  const truncated = items.length > SHOWS_VISIBLE
+  const showCount = items.reduce((total, item) => total + showsInItem(item), 0);
+  const visible = expanded ? items : items.slice(0, SHOWS_VISIBLE);
+  const truncated = items.length > SHOWS_VISIBLE;
 
   return (
     <section aria-label={ARTIST_COPY.showsListAria(name)}>
@@ -108,5 +108,5 @@ export const UpcomingShows = ({
           this control is where pagination lands — the API caps at 50 rows and
           `history.count` is derived from them, so the number never lies. */}
     </section>
-  )
-}
+  );
+};

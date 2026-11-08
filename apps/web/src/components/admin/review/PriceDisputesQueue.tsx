@@ -1,42 +1,42 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { type FC, type ReactNode, useState } from 'react'
-import { RelTime } from '@/components/admin/primitives'
-import { REVIEW_CONTEST_COPY } from './definitions/copy'
-import { formatPriceRange } from './lib/format-price-range'
+import Link from 'next/link';
+import { type FC, type ReactNode, useState } from 'react';
+import { RelTime } from '@/components/admin/primitives';
+import { REVIEW_CONTEST_COPY } from './definitions/copy';
+import { formatPriceRange } from './lib/format-price-range';
 // Type lives in the query module — hooks own the API contract, components
 // import the type (see admin-contests.ts header comment). Keeping the
 // direction one-way prevents circular imports if this component ever needs
 // to reach back into the query layer.
-import type { PriceContestRow } from '@/lib/queries/admin-contests'
+import type { PriceContestRow } from '@/lib/queries/admin-contests';
 
 interface PriceDisputesQueueProps {
-  items: ReadonlyArray<PriceContestRow>
+  items: ReadonlyArray<PriceContestRow>;
   // Total open-contest count from the paginated API envelope
   // (`{ items, total, limit, offset }`). Required — `items.length` is
   // capped by `limit` (default 20) so using it for the header badge
   // under-reports once contests exceed one page. The Contests tab pill
   // pulls from `counts.priceContests` (the same true total), so reading
   // `total` here keeps the two surfaces in agreement.
-  total: number
+  total: number;
   // Header ghost buttons (#758). Optional so the queue can render without
   // the affordances (e.g. embedded previews / existing tests); the
   // Contests tab always wires them. Each button renders only when its
   // handler is provided.
-  sortDirection?: 'asc' | 'desc'
-  onSortToggle?: () => void
-  showAllDisputes?: boolean
-  onShowAllToggle?: () => void
+  sortDirection?: 'asc' | 'desc';
+  onSortToggle?: () => void;
+  showAllDisputes?: boolean;
+  onShowAllToggle?: () => void;
   // Pagination footer slot (#759) — rendered inside the panel below the
   // table so the footer inherits the panel's border radius / overflow.
-  footer?: ReactNode
+  footer?: ReactNode;
 }
 
 // Inter font stack repeated across the panel + cells. Pulled out so the
 // design tokens stay legible inline.
-const INTER = 'Inter, system-ui'
-const MONO = "'JetBrains Mono', monospace"
+const INTER = 'Inter, system-ui';
+const MONO = "'JetBrains Mono', monospace";
 
 // Status badge — mirrors `AdminStatusBadge` from the design source
 // (admin-queues.jsx:32). Kind values used here: `warning` (open-count
@@ -74,21 +74,21 @@ const PALETTES = {
     bg: 'color-mix(in oklab, var(--fg-muted) 12%, transparent)',
     bd: 'color-mix(in oklab, var(--fg-muted) 30%, transparent)',
   },
-} as const
+} as const;
 
 // Counter-status → badge palette. Pending keeps the design's azure pill;
 // everything else (only reachable via the all-history scope) goes neutral.
 const counterBadgeKind = (
   status: PriceContestRow['counter']['status'],
-): BadgeKind => (status === 'pending' ? 'azure' : 'neutral')
+): BadgeKind => (status === 'pending' ? 'azure' : 'neutral');
 
-type BadgeKind = keyof typeof PALETTES
+type BadgeKind = keyof typeof PALETTES;
 
 const StatusBadge: FC<{ kind: BadgeKind; children: string }> = ({
   kind,
   children,
 }) => {
-  const palette = PALETTES[kind]
+  const palette = PALETTES[kind];
   return (
     <span
       style={{
@@ -111,8 +111,8 @@ const StatusBadge: FC<{ kind: BadgeKind; children: string }> = ({
     >
       {children}
     </span>
-  )
-}
+  );
+};
 
 // Ghost button — mirrors `AdminBtn` variant="ghost" from the design source
 // (admin-queues.jsx ~line 90): transparent background + border, fg-muted
@@ -120,12 +120,12 @@ const StatusBadge: FC<{ kind: BadgeKind; children: string }> = ({
 // active, or hover) lifts the text to full foreground so the toggle state
 // is visible without inventing a filled variant the design doesn't have.
 const GhostButton: FC<{
-  children: string
-  onClick: () => void
-  ariaLabel: string
-  pressed?: boolean
+  children: string;
+  onClick: () => void;
+  ariaLabel: string;
+  pressed?: boolean;
 }> = ({ children, onClick, ariaLabel, pressed }) => {
-  const [hover, setHover] = useState(false)
+  const [hover, setHover] = useState(false);
   return (
     <button
       type="button"
@@ -162,8 +162,8 @@ const GhostButton: FC<{
     >
       {children}
     </button>
-  )
-}
+  );
+};
 
 export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
   items,
@@ -177,7 +177,7 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
   // Auto-hide on empty — design property table §1 line 15. The tab pill
   // (separate ReviewTabs surface) still shows (0); this panel renders
   // nothing rather than an "empty" message.
-  if (items.length === 0) return null
+  if (items.length === 0) return null;
 
   return (
     <section
@@ -289,13 +289,13 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({
       </table>
       {footer}
     </section>
-  )
-}
+  );
+};
 
 const ColumnHeader: FC<{
-  children: string
-  align?: 'left' | 'right'
-  width?: number
+  children: string;
+  align?: 'left' | 'right';
+  width?: number;
 }> = ({ children, align = 'left', width }) => (
   <th
     scope="col"
@@ -316,13 +316,13 @@ const ColumnHeader: FC<{
   >
     {children}
   </th>
-)
+);
 
 // Reusable td chrome — pinned to design property table §1 lines 44–47
 // (td.padding / td.font / td.color.default / td.borderBottom).
 const DataCell: FC<{
-  children: ReactNode
-  align?: 'left' | 'right'
+  children: ReactNode;
+  align?: 'left' | 'right';
 }> = ({ children, align = 'left' }) => (
   <td
     style={{
@@ -337,7 +337,7 @@ const DataCell: FC<{
   >
     {children}
   </td>
-)
+);
 
 const PriceRangeText: FC<{ floor: string; ceiling: string | null }> = ({
   floor,
@@ -357,13 +357,13 @@ const PriceRangeText: FC<{ floor: string; ceiling: string | null }> = ({
   >
     {formatPriceRange(floor, ceiling)}
   </span>
-)
+);
 
 const handleOrAnon = (handle: string | null): string =>
-  handle ?? REVIEW_CONTEST_COPY.queue.anonymousHandle
+  handle ?? REVIEW_CONTEST_COPY.queue.anonymousHandle;
 
 const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
-  const isBoxOffice = row.sourceCategory === 'boxoffice'
+  const isBoxOffice = row.sourceCategory === 'boxoffice';
   return (
     <tr>
       {/* Event cell — design property table §2 lines 56–63. Title (Inter
@@ -503,5 +503,5 @@ const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
         </Link>
       </DataCell>
     </tr>
-  )
-}
+  );
+};

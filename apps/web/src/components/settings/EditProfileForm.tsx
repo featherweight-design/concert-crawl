@@ -1,37 +1,37 @@
-'use client'
+'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { useQueryClient } from '@tanstack/react-query'
-import { patchMe, checkHandleAvailability } from '@/lib/users'
-import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider'
-import { Avatar } from './Avatar'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { useQueryClient } from '@tanstack/react-query';
+import { patchMe, checkHandleAvailability } from '@/lib/users';
+import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider';
+import { Avatar } from './Avatar';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   HANDLE_REGEX,
   RESERVED_HANDLES,
   AVATAR_COLORS,
-} from './definitions/constants'
-import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
+} from './definitions/constants';
+import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
-export const EDIT_PROFILE_FORM_ID = 'edit-profile-form'
+export const EDIT_PROFILE_FORM_ID = 'edit-profile-form';
 
 interface EditProfileFormProps {
-  profile: UserProfileResponse
-  onClose?: () => void
+  profile: UserProfileResponse;
+  onClose?: () => void;
 }
 
-type HandleError = 'tooShort' | 'invalidChars' | 'reserved' | 'taken' | null
+type HandleError = 'tooShort' | 'invalidChars' | 'reserved' | 'taken' | null;
 
 function validateHandleLocal(handle: string): HandleError {
-  if (handle.length > 0 && handle.length < 3) return 'tooShort'
-  if (handle.length > 0 && !HANDLE_REGEX.test(handle)) return 'invalidChars'
-  if (handle.length >= 3 && RESERVED_HANDLES.has(handle)) return 'reserved'
-  return null
+  if (handle.length > 0 && handle.length < 3) return 'tooShort';
+  if (handle.length > 0 && !HANDLE_REGEX.test(handle)) return 'invalidChars';
+  if (handle.length >= 3 && RESERVED_HANDLES.has(handle)) return 'reserved';
+  return null;
 }
 
 const MONO_BTN: React.CSSProperties = {
@@ -40,108 +40,108 @@ const MONO_BTN: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.10em',
   textTransform: 'uppercase',
-}
+};
 
 export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
-  const router = useRouter()
-  const { getToken, userId } = useAuth()
-  const queryClient = useQueryClient()
+  const router = useRouter();
+  const { getToken, userId } = useAuth();
+  const queryClient = useQueryClient();
 
-  const [handle, setHandle] = useState(profile.handle ?? '')
-  const [city, setCity] = useState(profile.city ?? '')
+  const [handle, setHandle] = useState(profile.handle ?? '');
+  const [city, setCity] = useState(profile.city ?? '');
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(
     profile.avatarColor,
-  )
-  const [handleError, setHandleError] = useState<HandleError>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  );
+  const [handleError, setHandleError] = useState<HandleError>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hadHandleBefore = profile.handle !== null
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hadHandleBefore = profile.handle !== null;
 
   const checkAvailability = useCallback(
     async (value: string) => {
-      if (value === profile.handle) return
-      setCheckingAvailability(true)
+      if (value === profile.handle) return;
+      setCheckingAvailability(true);
       try {
-        const token = await getToken()
-        if (!token) return
-        const result = await checkHandleAvailability(token, value)
+        const token = await getToken();
+        if (!token) return;
+        const result = await checkHandleAvailability(token, value);
         if (!result.available) {
-          setHandleError(result.reason === 'reserved' ? 'reserved' : 'taken')
+          setHandleError(result.reason === 'reserved' ? 'reserved' : 'taken');
         } else {
-          setHandleError(null)
+          setHandleError(null);
         }
       } finally {
-        setCheckingAvailability(false)
+        setCheckingAvailability(false);
       }
     },
     [getToken, profile.handle],
-  )
+  );
 
   function handleHandleChange(value: string) {
-    const normalized = value.toLowerCase()
-    setHandle(normalized)
+    const normalized = value.toLowerCase();
+    setHandle(normalized);
 
-    const localError = validateHandleLocal(normalized)
-    setHandleError(localError)
+    const localError = validateHandleLocal(normalized);
+    setHandleError(localError);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!localError && normalized.length >= 3) {
       debounceRef.current = setTimeout(() => {
-        void checkAvailability(normalized)
-      }, 300)
+        void checkAvailability(normalized);
+      }, 300);
     }
   }
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
-  const isGoingAnonymous = hadHandleBefore && handle === ''
-  const hasError = handleError !== null
-  const isSaveDisabled = hasError || saving || checkingAvailability
+  const isGoingAnonymous = hadHandleBefore && handle === '';
+  const hasError = handleError !== null;
+  const isSaveDisabled = hasError || saving || checkingAvailability;
 
   async function handleSave() {
-    if (isSaveDisabled) return
-    setSaving(true)
+    if (isSaveDisabled) return;
+    setSaving(true);
     try {
-      const token = await getToken()
-      if (!token) return
-      const savedHandle = handle === '' ? null : handle
+      const token = await getToken();
+      if (!token) return;
+      const savedHandle = handle === '' ? null : handle;
       await patchMe(token, {
         handle: savedHandle,
         city: city === '' ? null : city,
         avatarColor,
-      })
+      });
       // The analytics provider outlives router.refresh(), so hand it the new
       // handle directly: a changed or cleared name reaches PostHog now, not
       // whenever the cached profile goes stale. A profile read still in
       // flight was sent before the save; cancel it first, or its late answer
       // would put the old name back.
       if (userId) {
-        const key = analyticsHandleQueryKey(userId)
-        await queryClient.cancelQueries({ queryKey: key })
-        queryClient.setQueryData(key, savedHandle)
+        const key = analyticsHandleQueryKey(userId);
+        await queryClient.cancelQueries({ queryKey: key });
+        queryClient.setQueryData(key, savedHandle);
       }
-      router.refresh()
+      router.refresh();
       if (onClose) {
-        onClose()
+        onClose();
       } else {
-        router.push('/me')
+        router.push('/me');
       }
     } catch (err) {
-      console.error('Failed to save profile', err)
+      console.error('Failed to save profile', err);
       setSaveError(
         err instanceof Error
           ? err.message
           : SETTINGS_COPY.editSaveErrorFallback,
-      )
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -204,8 +204,8 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
       <form
         id={EDIT_PROFILE_FORM_ID}
         onSubmit={(evt) => {
-          evt.preventDefault()
-          void handleSave()
+          evt.preventDefault();
+          void handleSave();
         }}
         className="flex flex-col gap-6 px-4 py-6"
       >
@@ -228,7 +228,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
             </span>
             <div className="flex flex-wrap gap-3">
               {AVATAR_COLORS.map((color) => {
-                const isSelected = avatarColor === color
+                const isSelected = avatarColor === color;
                 return (
                   <button
                     key={color}
@@ -248,7 +248,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
                         : 'none',
                     }}
                   />
-                )
+                );
               })}
             </div>
           </div>
@@ -329,7 +329,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
         )}
       </form>
     </div>
-  )
+  );
 
-  return formContent
+  return formContent;
 }

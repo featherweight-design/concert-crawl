@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/actions'
+import { useState, useTransition } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/actions';
 
-type ExpiresIn = '7d' | '30d' | 'never'
+type ExpiresIn = '7d' | '30d' | 'never';
 
 // #1085 — default the expiry to "never" rather than 30d. Beta invite
 // codes have been long-lived in practice, and a 30-day auto-expiry
 // silently rots the batches Hugh sends to prospects; "never" matches
 // how admins actually use the mint form.
 export function InviteCreatorPanel() {
-  const [expiresIn, setExpiresIn] = useState<ExpiresIn>('never')
-  const [isPending, startTransition] = useTransition()
+  const [expiresIn, setExpiresIn] = useState<ExpiresIn>('never');
+  const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{
-    ok: boolean
-    code?: string
-    error?: string
-  } | null>(null)
+    ok: boolean;
+    code?: string;
+    error?: string;
+  } | null>(null);
 
   function handleMint() {
-    setResult(null)
+    setResult(null);
     startTransition(async () => {
-      const res = await mintInviteCodeWithOptions({ expiresIn })
-      setResult(res)
-    })
+      const res = await mintInviteCodeWithOptions({ expiresIn });
+      setResult(res);
+    });
   }
 
   return (
@@ -107,5 +107,5 @@ export function InviteCreatorPanel() {
         </span>
       )}
     </div>
-  )
+  );
 }

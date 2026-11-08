@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 
-import { ARTIST_COPY } from './definitions/copy'
-import { FollowButton, type FollowButtonProps } from './FollowButton'
-import { SectionHead } from './SectionHead'
+import { ARTIST_COPY } from './definitions/copy';
+import { FollowButton, type FollowButtonProps } from './FollowButton';
+import { SectionHead } from './SectionHead';
 
 interface EmptyUpcomingProps extends Omit<
   FollowButtonProps,
@@ -15,7 +15,7 @@ interface EmptyUpcomingProps extends Omit<
    * the sticky rail already holds it, so the card is copy only — two live
    * follows on one page is the bug this prop exists to prevent.
    */
-  inlineFollow: boolean
+  inlineFollow: boolean;
 }
 
 /**
@@ -71,4 +71,4 @@ export const EmptyUpcoming = ({
       ) : null}
     </div>
   </section>
-)
+);

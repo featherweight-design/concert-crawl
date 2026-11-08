@@ -1,43 +1,43 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
-import { events, notifications, userCred, venues } from '@concert-crawl/db'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
+import { events, notifications, userCred, venues } from '@concert-crawl/db';
 
 vi.mock('@sentry/hono/node', async () => {
   const actual =
     await vi.importActual<typeof import('@sentry/hono/node')>(
       '@sentry/hono/node',
-    )
+    );
   return {
     ...actual,
     captureMessage: vi.fn(),
-  }
-})
+  };
+});
 
-import * as Sentry from '@sentry/hono/node'
+import * as Sentry from '@sentry/hono/node';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
 // Prevent the async price pipeline from escaping into adjacent tests and
 // causing TRUNCATE/INSERT deadlocks. The pipeline's correctness is covered
 // by packages/price-pipeline unit tests.
 vi.mock('@concert-crawl/price-pipeline', () => ({
   runPricePipeline: vi.fn().mockResolvedValue(undefined),
-}))
+}));
 
-import { createApp } from '../../app.js'
+import { createApp } from '../../app.js';
 import {
   clearTables,
   seedEvent,
@@ -45,166 +45,166 @@ import {
   seedPriceSubmission,
   seedUserEvent,
   seedVenue,
-} from '../../test/helpers/seed.js'
-import { testDb } from '../../test/helpers/db.js'
-import { observeBlocking, withLockHolder } from '../../test/helpers/locks.js'
+} from '../../test/helpers/seed.js';
+import { testDb } from '../../test/helpers/db.js';
+import { observeBlocking, withLockHolder } from '../../test/helpers/locks.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAdminAuth(): void {
   authState.current = {
     userId: 'admin_user',
     sessionClaims: { metadata: { role: 'admin' } },
-  }
+  };
 }
 
 const ADMIN_HEADERS = {
   Authorization: 'Bearer admin-token',
   'Content-Type': 'application/json',
-}
+};
 
 describe('GET /v1/admin/prices/activity', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns expected fields for each row', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-06-15' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-06-15' });
     await seedPriceRetrievalLog(event.id, venue.id, {
       source: 'ticketmaster',
       outcome: 'miss',
       latencyMs: 42,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/activity', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: Array<{
-        eventId: string
-        eventTitle: string | null
-        venueName: string | null
-        date: string
-        source: string
-        outcome: string
-        latencyMs: number
-        attemptedAt: string
-      }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(1)
-    const row = body.data[0]
-    expect(row?.eventId).toBe(event.id)
-    expect(row?.source).toBe('ticketmaster')
-    expect(row?.outcome).toBe('miss')
-    expect(row?.latencyMs).toBe(42)
-    expect(row?.attemptedAt).toBeDefined()
-  })
+        eventId: string;
+        eventTitle: string | null;
+        venueName: string | null;
+        date: string;
+        source: string;
+        outcome: string;
+        latencyMs: number;
+        attemptedAt: string;
+      }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    const row = body.data[0];
+    expect(row?.eventId).toBe(event.id);
+    expect(row?.source).toBe('ticketmaster');
+    expect(row?.outcome).toBe('miss');
+    expect(row?.latencyMs).toBe(42);
+    expect(row?.attemptedAt).toBeDefined();
+  });
 
   it('orders rows by event date ascending then attempt time descending', async () => {
-    const venue = await seedVenue()
-    const near = await seedEvent(venue.id, { date: '2026-06-01' })
-    const far = await seedEvent(venue.id, { date: '2026-12-01' })
+    const venue = await seedVenue();
+    const near = await seedEvent(venue.id, { date: '2026-06-01' });
+    const far = await seedEvent(venue.id, { date: '2026-12-01' });
     await seedPriceRetrievalLog(far.id, venue.id, {
       source: 'seatgeek',
       outcome: 'miss',
       latencyMs: 0,
-    })
+    });
     await seedPriceRetrievalLog(near.id, venue.id, {
       source: 'ticketmaster',
       outcome: 'hit',
       latencyMs: 50,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/activity', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ eventId: string }>
-    }
-    expect(body.data[0]?.eventId).toBe(near.id)
-    expect(body.data[1]?.eventId).toBe(far.id)
-  })
-})
+      success: boolean;
+      data: Array<{ eventId: string }>;
+    };
+    expect(body.data[0]?.eventId).toBe(near.id);
+    expect(body.data[1]?.eventId).toBe(far.id);
+  });
+});
 
 describe('GET /v1/admin/prices/health', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns pipeline health stats', async () => {
     const res = await app.request('/v1/admin/prices/health', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { stats: unknown[] }
-    }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data.stats)).toBe(true)
-  })
-})
+      success: boolean;
+      data: { stats: unknown[] };
+    };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data.stats)).toBe(true);
+  });
+});
 
 describe('GET /v1/admin/prices/log', () => {
   beforeEach(() => {
-    setAdminAuth()
-  })
+    setAdminAuth();
+  });
 
   it('returns last retrieval attempts', async () => {
     const res = await app.request('/v1/admin/prices/log', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown[] }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
-})
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown[] };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+});
 
 describe('POST /v1/admin/prices/pipeline/:eventId', () => {
   beforeEach(() => {
-    setAdminAuth()
-  })
+    setAdminAuth();
+  });
 
   it('returns 202 and starts pipeline for existing event', async () => {
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
 
     const res = await app.request(`/v1/admin/prices/pipeline/${event.id}`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(202)
+    });
+    expect(res.status).toBe(202);
     const body = (await res.json()) as {
-      success: boolean
-      data: { eventId: string }
-    }
-    expect(body.data.eventId).toBe(event.id)
-  })
+      success: boolean;
+      data: { eventId: string };
+    };
+    expect(body.data.eventId).toBe(event.id);
+  });
 
   it('refuses an event at a venue whose crawling is paused', async () => {
-    await clearTables()
-    const venue = await seedVenue()
+    await clearTables();
+    const venue = await seedVenue();
     await testDb
       .update(venues)
       .set({ crawlPausedAt: new Date() })
-      .where(eq(venues.id, venue.id))
-    const event = await seedEvent(venue.id)
+      .where(eq(venues.id, venue.id));
+    const event = await seedEvent(venue.id);
 
     const res = await app.request(`/v1/admin/prices/pipeline/${event.id}`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(409)
-  })
+    });
+    expect(res.status).toBe(409);
+  });
 
   it('returns 404 for unknown event', async () => {
     const res = await app.request(
@@ -213,25 +213,25 @@ describe('POST /v1/admin/prices/pipeline/:eventId', () => {
         method: 'POST',
         headers: ADMIN_HEADERS,
       },
-    )
-    expect(res.status).toBe(404)
-  })
-})
+    );
+    expect(res.status).toBe(404);
+  });
+});
 
 describe('PATCH /v1/admin/prices/submissions/:id', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   // Regression for #1012: a regular fan has NO user_roles row, so the old
   // UPDATE-user_roles award silently matched zero rows and their cred stayed 0.
   // The award now upserts into user_cred, so the fan gets a row scored 1.
   it('awards cred to a fan with no user_roles row on pending → corroborated', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    const userId = 'user_cred_test'
-    const submission = await seedPriceSubmission(event.id, userId)
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const userId = 'user_cred_test';
+    const submission = await seedPriceSubmission(event.id, userId);
 
     const res = await app.request(
       `/v1/admin/prices/submissions/${submission.id}`,
@@ -240,24 +240,24 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ status: 'corroborated' }),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
 
     const [cred] = await testDb
       .select({ priceCredScore: userCred.priceCredScore })
       .from(userCred)
       .where(eq(userCred.userId, userId))
-      .limit(1)
-    expect(cred?.priceCredScore).toBe(1)
-  })
+      .limit(1);
+    expect(cred?.priceCredScore).toBe(1);
+  });
 
   it('does not double-increment when status is already corroborated', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    const userId = 'user_no_double'
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    const userId = 'user_no_double';
     const submission = await seedPriceSubmission(event.id, userId, {
       status: 'corroborated',
-    })
+    });
 
     const res = await app.request(
       `/v1/admin/prices/submissions/${submission.id}`,
@@ -266,8 +266,8 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ status: 'corroborated' }),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
 
     // No transition occurred, so no award ran and no user_cred row exists —
     // which the read path treats as 0.
@@ -275,16 +275,16 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       .select({ priceCredScore: userCred.priceCredScore })
       .from(userCred)
       .where(eq(userCred.userId, userId))
-      .limit(1)
-    expect(cred?.priceCredScore ?? 0).toBe(0)
-  })
+      .limit(1);
+    expect(cred?.priceCredScore ?? 0).toBe(0);
+  });
 
   it('does not increment for anonymous submissions (null userId)', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
     const submission = await seedPriceSubmission(event.id, 'placeholder', {
       userId: null,
-    })
+    });
 
     const res = await app.request(
       `/v1/admin/prices/submissions/${submission.id}`,
@@ -293,11 +293,11 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ status: 'corroborated' }),
       },
-    )
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean }
-    expect(body.success).toBe(true)
-  })
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean };
+    expect(body.success).toBe(true);
+  });
 
   it('returns 404 for missing submission', async () => {
     const res = await app.request(
@@ -307,9 +307,9 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ status: 'corroborated' }),
       },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   // Defensive lockout — see spec §4.7 + §11.3 and plan Task 4.
   // The pre-contest-UI PATCH endpoint cannot be allowed to overturn a
@@ -324,22 +324,22 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
   // remains PATCH-able.
   describe('contest-row lockout', () => {
     beforeEach(() => {
-      vi.mocked(Sentry.captureMessage).mockClear()
-    })
+      vi.mocked(Sentry.captureMessage).mockClear();
+    });
 
     it('rejects PATCH on a counter row (disputedSubmissionId !== null) with 409', async () => {
       const venue = await seedVenue({
         name: 'PATCH Lockout',
         slug: 'patch-lockout-1',
-      })
-      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      });
+      const event = await seedEvent(venue.id, { date: '2027-06-01' });
       const parent = await seedPriceSubmission(event.id, 'parent-user', {
         tier: 'GA',
         vendor: 'AXS',
         howFound: 'bought_myself',
         priceMin: '40',
         status: 'corroborated',
-      })
+      });
       const counter = await seedPriceSubmission(event.id, 'challenger-user', {
         tier: 'GA',
         vendor: 'AXS',
@@ -347,7 +347,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         priceMin: '50',
         status: 'pending',
         disputedSubmissionId: parent.id,
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${counter.id}`,
@@ -356,21 +356,21 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
+      );
 
-      expect(res.status).toBe(409)
-      const body = (await res.json()) as { success: boolean; error: string }
-      expect(body.success).toBe(false)
-      expect(body.error).toMatch(/contest/i)
-      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/)
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { success: boolean; error: string };
+      expect(body.success).toBe(false);
+      expect(body.error).toMatch(/contest/i);
+      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/);
 
-      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
-      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? [];
       expect(options).toMatchObject({
         level: 'warning',
         tags: { endpoint_lockout: 'contest_row' },
-      })
-    })
+      });
+    });
 
     // R8: the lockout is narrowed to fire only when a contest actually
     // exists. A row in status='disputed' but with disputed_submission_id
@@ -381,8 +381,8 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       const venue = await seedVenue({
         name: 'PATCH Non-Contest Disputed',
         slug: 'patch-non-contest-disputed',
-      })
-      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      });
+      const event = await seedEvent(venue.id, { date: '2027-06-01' });
       // status='disputed' but no counter row points at it and
       // disputedSubmissionId is NULL — a moderation denial, not a contest.
       const submission = await seedPriceSubmission(event.id, 'denied-user', {
@@ -391,7 +391,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         howFound: 'bought_myself',
         priceMin: '40',
         status: 'disputed',
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -400,19 +400,19 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
+      );
 
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(200);
       const body = (await res.json()) as {
-        success: boolean
-        data: { id: string; status: string }
-      }
-      expect(body.success).toBe(true)
-      expect(body.data.status).toBe('corroborated')
+        success: boolean;
+        data: { id: string; status: string };
+      };
+      expect(body.success).toBe(true);
+      expect(body.data.status).toBe('corroborated');
 
       // The lockout Sentry capture must NOT fire for non-contest rows.
-      expect(Sentry.captureMessage).not.toHaveBeenCalled()
-    })
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    });
 
     // R2-2: a parent in status='corroborated' with a pending counter
     // against it must be locked from PATCH too. Both counter-creation
@@ -424,15 +424,15 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       const venue = await seedVenue({
         name: 'PATCH Lockout 3',
         slug: 'patch-lockout-3',
-      })
-      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      });
+      const event = await seedEvent(venue.id, { date: '2027-06-01' });
       const parent = await seedPriceSubmission(event.id, 'parent-user-3', {
         tier: 'GA',
         vendor: 'AXS',
         howFound: 'bought_myself',
         priceMin: '40',
         status: 'corroborated',
-      })
+      });
       // Pending counter against the parent — but the parent's status
       // was not flipped (simulating the orphan / race scenarios the R2-2
       // lockout guards against).
@@ -443,7 +443,7 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
         priceMin: '55',
         status: 'pending',
         disputedSubmissionId: parent.id,
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${parent.id}`,
@@ -452,32 +452,32 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'stale' }),
         },
-      )
+      );
 
-      expect(res.status).toBe(409)
-      const body = (await res.json()) as { success: boolean; error: string }
-      expect(body.success).toBe(false)
-      expect(body.error).toMatch(/contest/i)
-      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/)
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as { success: boolean; error: string };
+      expect(body.success).toBe(false);
+      expect(body.error).toMatch(/contest/i);
+      expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/);
 
-      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
-      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+      expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+      const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? [];
       expect(options).toMatchObject({
         level: 'warning',
         tags: { endpoint_lockout: 'contest_row' },
-      })
-    })
+      });
+    });
 
     it('still accepts PATCH on a non-contest pending row (regression)', async () => {
-      const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' })
-      const event = await seedEvent(venue.id, { date: '2027-06-01' })
+      const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' });
+      const event = await seedEvent(venue.id, { date: '2027-06-01' });
       const submission = await seedPriceSubmission(event.id, 'plain-user', {
         tier: 'GA',
         vendor: 'AXS',
         howFound: 'bought_myself',
         priceMin: '40',
         status: 'pending',
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -486,26 +486,26 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
-      expect(res.status).toBe(200)
-      expect(Sentry.captureMessage).not.toHaveBeenCalled()
-    })
-  })
+      );
+      expect(res.status).toBe(200);
+      expect(Sentry.captureMessage).not.toHaveBeenCalled();
+    });
+  });
 
   describe('watch.pricedrop fan-out (#1107)', () => {
     it('fires watch.pricedrop to status=watching users when corroborated price is strictly lower', async () => {
-      const venue = await seedVenue()
+      const venue = await seedVenue();
       const event = await seedEvent(venue.id, {
         date: '2026-09-01',
         ticketPriceMin: '48',
-      })
-      const WATCHER = 'user_pricedrop_watcher'
-      const GOING = 'user_pricedrop_going'
-      await seedUserEvent(WATCHER, event.id, { status: 'watching' })
-      await seedUserEvent(GOING, event.id, { status: 'going' })
+      });
+      const WATCHER = 'user_pricedrop_watcher';
+      const GOING = 'user_pricedrop_going';
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+      await seedUserEvent(GOING, event.id, { status: 'going' });
       const submission = await seedPriceSubmission(event.id, 'submitter_1', {
         priceMin: '32',
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -514,16 +514,16 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
-      expect(res.status).toBe(200)
+      );
+      expect(res.status).toBe(200);
 
       // Event price actually updated to the new floor.
       const [updatedEvent] = await testDb
         .select({ ticketPriceMin: events.ticketPriceMin })
         .from(events)
         .where(eq(events.id, event.id))
-        .limit(1)
-      expect(updatedEvent?.ticketPriceMin).toBe('32.00')
+        .limit(1);
+      expect(updatedEvent?.ticketPriceMin).toBe('32.00');
 
       // Watcher got exactly one watch.pricedrop bell row; going/interested
       // did not.
@@ -534,26 +534,26 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           body: notifications.body,
         })
         .from(notifications)
-        .where(eq(notifications.category, 'watch.pricedrop'))
-      expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+        .where(eq(notifications.category, 'watch.pricedrop'));
+      expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
       // Copy carries the concrete new and old dollar amounts per the design
       // handoff mock.
-      expect(rows[0]?.title).toMatch(/\$32.*just went on sale/)
-      expect(rows[0]?.body).toMatch(/\$48/)
-    })
+      expect(rows[0]?.title).toMatch(/\$32.*just went on sale/);
+      expect(rows[0]?.body).toMatch(/\$48/);
+    });
 
     it('does not fire when the new corroborated price equals the current event price', async () => {
-      const venue = await seedVenue()
+      const venue = await seedVenue();
       const event = await seedEvent(venue.id, {
         date: '2026-09-02',
         ticketPriceMin: '35',
-      })
+      });
       await seedUserEvent('user_equal_watcher', event.id, {
         status: 'watching',
-      })
+      });
       const submission = await seedPriceSubmission(event.id, 'submitter_eq', {
         priceMin: '35',
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -562,28 +562,28 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
-      expect(res.status).toBe(200)
+      );
+      expect(res.status).toBe(200);
 
       const rows = await testDb
         .select({ id: notifications.id })
         .from(notifications)
-        .where(eq(notifications.category, 'watch.pricedrop'))
-      expect(rows).toHaveLength(0)
-    })
+        .where(eq(notifications.category, 'watch.pricedrop'));
+      expect(rows).toHaveLength(0);
+    });
 
     it('does not fire when the new corroborated price is higher than the current event price', async () => {
-      const venue = await seedVenue()
+      const venue = await seedVenue();
       const event = await seedEvent(venue.id, {
         date: '2026-09-03',
         ticketPriceMin: '30',
-      })
+      });
       await seedUserEvent('user_higher_watcher', event.id, {
         status: 'watching',
-      })
+      });
       const submission = await seedPriceSubmission(event.id, 'submitter_hi', {
         priceMin: '40',
-      })
+      });
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -592,29 +592,29 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
-      expect(res.status).toBe(200)
+      );
+      expect(res.status).toBe(200);
 
       const rows = await testDb
         .select({ id: notifications.id })
         .from(notifications)
-        .where(eq(notifications.category, 'watch.pricedrop'))
-      expect(rows).toHaveLength(0)
-    })
+        .where(eq(notifications.category, 'watch.pricedrop'));
+      expect(rows).toHaveLength(0);
+    });
 
     it('is not blocked by a foreign-key KEY SHARE lock on the event (deadlock guard)', async () => {
       // A concurrent dispute insert holds KEY SHARE on the event via its FK
       // check while waiting on the submission row this request locks. If the
       // event pre-read used FOR UPDATE it would wait on that KEY SHARE and
       // deadlock; FOR NO KEY UPDATE does not conflict with it.
-      const venue = await seedVenue()
+      const venue = await seedVenue();
       const event = await seedEvent(venue.id, {
         date: '2026-09-05',
         ticketPriceMin: '48',
-      })
+      });
       const submission = await seedPriceSubmission(event.id, 'submitter_ks', {
         priceMin: '32',
-      })
+      });
       const { blocked, result } = await withLockHolder(
         [sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`],
         () =>
@@ -625,27 +625,27 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
               body: JSON.stringify({ status: 'corroborated' }),
             }),
           ),
-      )
-      const res = await result
-      expect(blocked).toBe(false)
-      expect(res.status).toBe(200)
-    })
+      );
+      const res = await result;
+      expect(blocked).toBe(false);
+      expect(res.status).toBe(200);
+    });
 
     it('does not fire when the event had no prior price to compare against', async () => {
-      const venue = await seedVenue()
+      const venue = await seedVenue();
       // ticketPriceMin defaults to null on the seed. A first-ever price
       // isn't a "drop" — it's just data appearing.
-      const event = await seedEvent(venue.id, { date: '2026-09-04' })
+      const event = await seedEvent(venue.id, { date: '2026-09-04' });
       await seedUserEvent('user_first_price_watcher', event.id, {
         status: 'watching',
-      })
+      });
       const submission = await seedPriceSubmission(
         event.id,
         'submitter_first',
         {
           priceMin: '25',
         },
-      )
+      );
 
       const res = await app.request(
         `/v1/admin/prices/submissions/${submission.id}`,
@@ -654,111 +654,111 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
           headers: ADMIN_HEADERS,
           body: JSON.stringify({ status: 'corroborated' }),
         },
-      )
-      expect(res.status).toBe(200)
+      );
+      expect(res.status).toBe(200);
 
       const rows = await testDb
         .select({ id: notifications.id })
         .from(notifications)
-        .where(eq(notifications.category, 'watch.pricedrop'))
-      expect(rows).toHaveLength(0)
-    })
-  })
-})
+        .where(eq(notifications.category, 'watch.pricedrop'));
+      expect(rows).toHaveLength(0);
+    });
+  });
+});
 
 describe('GET /v1/admin/prices/events', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns only missing-price events by default', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].priceMin).toBeNull()
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].priceMin).toBeNull();
+  });
 
   it('returns all upcoming events when missingOnly=false', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events?missingOnly=false', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
+  });
 
   it('respects limit and offset', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     for (let idx = 1; idx <= 5; idx++) {
       await seedEvent(venue.id, {
         date: `2099-07-0${idx}`,
         status: 'upcoming',
         ticketPriceMin: null,
-      })
+      });
     }
 
     const res = await app.request(
       '/v1/admin/prices/events?missingOnly=true&limit=2&offset=2',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
-    expect(body.data[0].date).toBe('2099-07-03')
-    expect(body.data[1].date).toBe('2099-07-04')
-  })
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
+    expect(body.data[0].date).toBe('2099-07-03');
+    expect(body.data[1].date).toBe('2099-07-04');
+  });
 
   it('excludes past events', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2020-01-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    const body = await res.json()
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].date).toBe('2099-07-01')
-  })
+    });
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].date).toBe('2099-07-01');
+  });
 
   // Regression for #732: an event marked non-concert
   // (hidden_from_consumer=true) without a ticket price would otherwise
@@ -766,7 +766,7 @@ describe('GET /v1/admin/prices/events', () => {
   // triaged it, it's not actionable. Same fix pattern as #712 applied
   // to the Missing tab.
   it('excludes hidden_from_consumer events from missing-price list', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Visible Concert',
       supportingArtists: null,
@@ -775,7 +775,7 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Hidden Non-Concert',
       supportingArtists: null,
@@ -784,20 +784,20 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    const body = await res.json()
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].eventTitle).toBeDefined()
+    });
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].eventTitle).toBeDefined();
     // Visible Concert seeded as artist; default title is 'Test Show'.
-    expect(body.data[0].artist).toBe('Visible Concert')
-  })
+    expect(body.data[0].artist).toBe('Visible Concert');
+  });
 
   it('excludes hidden_from_consumer events when missingOnly=false too', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Visible',
       supportingArtists: null,
@@ -806,7 +806,7 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: '25.00',
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Hidden',
       supportingArtists: null,
@@ -815,15 +815,15 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: '30.00',
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events?missingOnly=false', {
       headers: ADMIN_HEADERS,
-    })
-    const body = await res.json()
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].artist).toBe('Visible')
-  })
+    });
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].artist).toBe('Visible');
+  });
 
   // The admin UI fetches this surface via ?count=true (see
   // use-admin-review.ts). Pin the hidden filter on the counted shape
@@ -831,7 +831,7 @@ describe('GET /v1/admin/prices/events', () => {
   // to the count(*) would otherwise slip past the array-shape test
   // above.
   it('excludes hidden_from_consumer from both rows AND total when count=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Visible Missing 1',
       supportingArtists: null,
@@ -840,7 +840,7 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Visible Missing 2',
       supportingArtists: null,
@@ -849,7 +849,7 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Hidden Missing',
       supportingArtists: null,
@@ -858,29 +858,29 @@ describe('GET /v1/admin/prices/events', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/prices/events?count=true&limit=10&offset=0',
       { headers: ADMIN_HEADERS },
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: { artist: string }[]; total: number }
-    }
-    expect(body.data.rows).toHaveLength(2)
-    expect(body.data.total).toBe(2)
+      success: boolean;
+      data: { rows: { artist: string }[]; total: number };
+    };
+    expect(body.data.rows).toHaveLength(2);
+    expect(body.data.total).toBe(2);
     expect(body.data.rows.map((row) => row.artist)).not.toContain(
       'Hidden Missing',
-    )
-  })
-})
+    );
+  });
+});
 
 describe('GET /v1/admin/prices/coverage', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   // Regression for #732: coverage % was deflated by admin-hidden
   // non-concerts (counted as upcoming events that "lack" prices). The
@@ -888,7 +888,7 @@ describe('GET /v1/admin/prices/coverage', () => {
   // coverage. Also enforces date >= today (parity with /prices/events)
   // since status='upcoming' alone can persist on stale past rows.
   it('excludes hidden_from_consumer and past dates from total and withPrice counts', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     // 2 visible upcoming, 1 with price → coverage 1/2 = 50%
     await seedEvent(venue.id, {
       artist: 'Visible With Price',
@@ -898,7 +898,7 @@ describe('GET /v1/admin/prices/coverage', () => {
       status: 'upcoming',
       ticketPriceMin: '25.00',
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Visible Missing Price',
       supportingArtists: null,
@@ -907,7 +907,7 @@ describe('GET /v1/admin/prices/coverage', () => {
       status: 'upcoming',
       ticketPriceMin: null,
       hiddenFromConsumer: false,
-    })
+    });
     // 1 hidden non-concert with price (should NOT count toward either)
     await seedEvent(venue.id, {
       artist: 'Hidden Non-Concert',
@@ -917,7 +917,7 @@ describe('GET /v1/admin/prices/coverage', () => {
       status: 'upcoming',
       ticketPriceMin: '20.00',
       hiddenFromConsumer: true,
-    })
+    });
     // 1 past-date row still marked upcoming (should NOT count — parity
     // with /prices/events which enforces date >= today)
     await seedEvent(venue.id, {
@@ -928,27 +928,27 @@ describe('GET /v1/admin/prices/coverage', () => {
       status: 'upcoming',
       ticketPriceMin: '15.00',
       hiddenFromConsumer: false,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/coverage', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.data.total).toBe(2)
-    expect(body.data.withPrice).toBe(1)
-    expect(body.data.pct).toBe(50)
-  })
-})
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.total).toBe(2);
+    expect(body.data.withPrice).toBe(1);
+    expect(body.data.pct).toBe(50);
+  });
+});
 
 describe('GET /v1/admin/prices/events?count=true', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns { rows, total } with total ignoring limit/offset', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     for (let idx = 0; idx < 4; idx++) {
       await seedEvent(venue.id, {
         artist: `Artist ${idx}`,
@@ -957,24 +957,24 @@ describe('GET /v1/admin/prices/events?count=true', () => {
         date: `2099-08-0${idx + 1}`,
         status: 'upcoming',
         ticketPriceMin: null,
-      })
+      });
     }
 
     const res = await app.request(
       '/v1/admin/prices/events?count=true&limit=2&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: { eventId: string }[]; total: number }
-    }
-    expect(body.data.rows.length).toBe(2)
-    expect(body.data.total).toBe(4)
-  })
+      success: boolean;
+      data: { rows: { eventId: string }[]; total: number };
+    };
+    expect(body.data.rows.length).toBe(2);
+    expect(body.data.total).toBe(4);
+  });
 
   it('keeps legacy array shape when count is omitted', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Solo',
       supportingArtists: null,
@@ -982,17 +982,17 @@ describe('GET /v1/admin/prices/events?count=true', () => {
       date: '2099-08-15',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { success: boolean; data: unknown }
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    });
+    const body = (await res.json()) as { success: boolean; data: unknown };
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('applies missingOnly to both rows and total', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     // 2 with price, 1 without — missingOnly=true should count only 1.
     await seedEvent(venue.id, {
       artist: 'Priced 1',
@@ -1001,7 +1001,7 @@ describe('GET /v1/admin/prices/events?count=true', () => {
       date: '2099-09-01',
       status: 'upcoming',
       ticketPriceMin: '30',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Priced 2',
       supportingArtists: null,
@@ -1009,7 +1009,7 @@ describe('GET /v1/admin/prices/events?count=true', () => {
       date: '2099-09-02',
       status: 'upcoming',
       ticketPriceMin: '40',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Missing',
       supportingArtists: null,
@@ -1017,173 +1017,179 @@ describe('GET /v1/admin/prices/events?count=true', () => {
       date: '2099-09-03',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/prices/events?count=true&missingOnly=true&limit=10',
       { headers: ADMIN_HEADERS },
-    )
+    );
     const body = (await res.json()) as {
-      data: { rows: { eventId: string }[]; total: number }
-    }
-    expect(body.data.rows.length).toBe(1)
-    expect(body.data.total).toBe(1)
-  })
-})
+      data: { rows: { eventId: string }[]; total: number };
+    };
+    expect(body.data.rows.length).toBe(1);
+    expect(body.data.total).toBe(1);
+  });
+});
 
 describe('GET /v1/admin/prices/submissions?count=true', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns { rows, total } with total ignoring limit/offset', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2099-10-01' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2099-10-01' });
     for (let idx = 0; idx < 3; idx++) {
       await seedPriceSubmission(event.id, `user-${idx}`, {
         priceMin: `${20 + idx}`,
-      })
+      });
     }
 
     const res = await app.request(
       '/v1/admin/prices/submissions?count=true&limit=2&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: { id: string }[]; total: number }
-    }
-    expect(body.data.rows.length).toBe(2)
-    expect(body.data.total).toBe(3)
-  })
+      success: boolean;
+      data: { rows: { id: string }[]; total: number };
+    };
+    expect(body.data.rows.length).toBe(2);
+    expect(body.data.total).toBe(3);
+  });
 
   it('keeps legacy array shape when count is omitted', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2099-11-01' })
-    await seedPriceSubmission(event.id, 'lone-user')
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2099-11-01' });
+    await seedPriceSubmission(event.id, 'lone-user');
 
     const res = await app.request('/v1/admin/prices/submissions', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { success: boolean; data: unknown }
-    expect(Array.isArray(body.data)).toBe(true)
-  })
-})
+    });
+    const body = (await res.json()) as { success: boolean; data: unknown };
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+});
 
 describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   // Regression for #708: the moderation queue must default to status='pending'
   // so the panel badge and the /admin/review pill agree. The submissions
   // endpoint historically returned every status — that's how 14 rows showed
   // under a "pending" label when only 1 was actually pending.
   it('defaults to status=pending and excludes corroborated/disputed/stale', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
-    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+    });
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' });
     await seedPriceSubmission(event.id, 'user-corroborated', {
       status: 'corroborated',
-    })
-    await seedPriceSubmission(event.id, 'user-disputed', { status: 'disputed' })
-    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' })
+    });
+    await seedPriceSubmission(event.id, 'user-disputed', {
+      status: 'disputed',
+    });
+    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' });
 
     const res = await app.request('/v1/admin/prices/submissions', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: { userId: string; status: string }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.userId).toBe('user-pending')
-    expect(body.data[0]?.status).toBe('pending')
-  })
+      success: boolean;
+      data: { userId: string; status: string }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.userId).toBe('user-pending');
+    expect(body.data[0]?.status).toBe('pending');
+  });
 
   // The admin table is the only place a human can see who reported a price
   // still on sale, so the projection has to carry both columns through.
   it('projects the sighting timestamp and actor', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
-    const seenAt = new Date('2026-08-20T00:00:00Z')
+    });
+    const seenAt = new Date('2026-08-20T00:00:00Z');
     await seedPriceSubmission(event.id, 'user-pending', {
       status: 'pending',
       lastSeenAt: seenAt,
       lastSeenBy: 'user-sighter',
-    })
-    await seedPriceSubmission(event.id, 'user-unseen', { status: 'pending' })
+    });
+    await seedPriceSubmission(event.id, 'user-unseen', { status: 'pending' });
 
     const res = await app.request('/v1/admin/prices/submissions', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const body = (await res.json()) as {
       data: {
-        userId: string
-        lastSeenAt: string | null
-        lastSeenBy: string | null
-      }[]
-    }
-    const seen = body.data.find((row) => row.userId === 'user-pending')
-    expect(seen?.lastSeenAt).toBe(seenAt.toISOString())
-    expect(seen?.lastSeenBy).toBe('user-sighter')
+        userId: string;
+        lastSeenAt: string | null;
+        lastSeenBy: string | null;
+      }[];
+    };
+    const seen = body.data.find((row) => row.userId === 'user-pending');
+    expect(seen?.lastSeenAt).toBe(seenAt.toISOString());
+    expect(seen?.lastSeenBy).toBe('user-sighter');
 
-    const unseen = body.data.find((row) => row.userId === 'user-unseen')
-    expect(unseen?.lastSeenAt).toBeNull()
-    expect(unseen?.lastSeenBy).toBeNull()
-  })
+    const unseen = body.data.find((row) => row.userId === 'user-unseen');
+    expect(unseen?.lastSeenAt).toBeNull();
+    expect(unseen?.lastSeenBy).toBeNull();
+  });
 
   it('applies the pending filter to the count when count=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
-    await seedPriceSubmission(event.id, 'user-pending-1', { status: 'pending' })
-    await seedPriceSubmission(event.id, 'user-pending-2', { status: 'pending' })
-    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' })
+    });
+    await seedPriceSubmission(event.id, 'user-pending-1', {
+      status: 'pending',
+    });
+    await seedPriceSubmission(event.id, 'user-pending-2', {
+      status: 'pending',
+    });
+    await seedPriceSubmission(event.id, 'user-stale', { status: 'stale' });
 
     const res = await app.request(
       '/v1/admin/prices/submissions?count=true&limit=10&offset=0',
       { headers: ADMIN_HEADERS },
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: unknown[]; total: number }
-    }
-    expect(body.data.total).toBe(2)
-    expect(body.data.rows).toHaveLength(2)
-  })
+      success: boolean;
+      data: { rows: unknown[]; total: number };
+    };
+    expect(body.data.total).toBe(2);
+    expect(body.data.rows).toHaveLength(2);
+  });
 
   it('returns all statuses when status=all is passed', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
-    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' })
+    });
+    await seedPriceSubmission(event.id, 'user-pending', { status: 'pending' });
     await seedPriceSubmission(event.id, 'user-corroborated', {
       status: 'corroborated',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/submissions?status=all', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: { userId: string }[]
-    }
-    expect(body.data).toHaveLength(2)
-  })
+      success: boolean;
+      data: { userId: string }[];
+    };
+    expect(body.data).toHaveLength(2);
+  });
 
   // R1-1 (PR #754): contest counter rows (status='pending' AND
   // disputed_submission_id IS NOT NULL) belong to the dedicated contest
@@ -1193,18 +1199,18 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
   // double-counted in BOTH the `prices` pill and the `priceContests` pill
   // on /admin/review.
   it('excludes contest counter rows (disputed_submission_id IS NOT NULL)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
+    });
     const parent = await seedPriceSubmission(event.id, 'parent-user', {
       tier: 'GA',
       vendor: 'AXS',
       howFound: 'bought_myself',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     await seedPriceSubmission(event.id, 'counter-user', {
       tier: 'GA',
       vendor: 'AXS',
@@ -1212,43 +1218,43 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
       priceMin: '60',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
     // Non-contest pending row to prove the filter is precise — should be
     // the ONLY row returned.
     await seedPriceSubmission(event.id, 'plain-pending-user', {
       status: 'pending',
       priceMin: '45',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/submissions', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { userId: string; disputedSubmissionId: string | null }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.userId).toBe('plain-pending-user')
+      success: boolean;
+      data: { userId: string; disputedSubmissionId: string | null }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.userId).toBe('plain-pending-user');
     // disputedSubmissionId is surfaced on the wire so any future UI can
     // tell contest rows apart without re-querying. Always null in the
     // filtered result.
-    expect(body.data[0]?.disputedSubmissionId).toBeNull()
-  })
+    expect(body.data[0]?.disputedSubmissionId).toBeNull();
+  });
 
   it('excludes contest counter rows from the count when count=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
+    });
     const parent = await seedPriceSubmission(event.id, 'parent-user', {
       tier: 'GA',
       vendor: 'AXS',
       howFound: 'bought_myself',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     await seedPriceSubmission(event.id, 'counter-user', {
       tier: 'GA',
       vendor: 'AXS',
@@ -1256,62 +1262,62 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
       priceMin: '60',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
     await seedPriceSubmission(event.id, 'plain-pending-1', {
       status: 'pending',
       priceMin: '45',
-    })
+    });
     await seedPriceSubmission(event.id, 'plain-pending-2', {
       status: 'pending',
       priceMin: '50',
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/prices/submissions?count=true&limit=10&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: unknown[]; total: number }
-    }
-    expect(body.data.total).toBe(2)
-    expect(body.data.rows).toHaveLength(2)
-  })
-})
+      success: boolean;
+      data: { rows: unknown[]; total: number };
+    };
+    expect(body.data.total).toBe(2);
+    expect(body.data.rows).toHaveLength(2);
+  });
+});
 
 describe('GET /v1/admin/prices/submissions/count', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns the pending count for plain submissions', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2099-10-01' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2099-10-01' });
     await seedPriceSubmission(event.id, 'user-pending-1', {
       status: 'pending',
       priceMin: '20',
-    })
+    });
     await seedPriceSubmission(event.id, 'user-pending-2', {
       status: 'pending',
       priceMin: '25',
-    })
+    });
     await seedPriceSubmission(event.id, 'user-corroborated', {
       status: 'corroborated',
       priceMin: '30',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/submissions/count', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { pending: number }
-    }
-    expect(body.data.pending).toBe(2)
-  })
+      success: boolean;
+      data: { pending: number };
+    };
+    expect(body.data.pending).toBe(2);
+  });
 
   // R11-1 (PR #754): the dashboard count must stay in lock-step with the
   // list endpoint (/v1/admin/prices/submissions) and the `prices` field on
@@ -1320,18 +1326,18 @@ describe('GET /v1/admin/prices/submissions/count', () => {
   // included them, so dashboard count > list count > review counts and
   // admins saw three disagreeing numbers for the same surface.
   it('excludes contest counter rows (disputed_submission_id IS NOT NULL)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2099-10-01',
       verified: true,
-    })
+    });
     const parent = await seedPriceSubmission(event.id, 'parent-user', {
       tier: 'GA',
       vendor: 'AXS',
       howFound: 'bought_myself',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     await seedPriceSubmission(event.id, 'counter-user', {
       tier: 'GA',
       vendor: 'AXS',
@@ -1339,26 +1345,26 @@ describe('GET /v1/admin/prices/submissions/count', () => {
       priceMin: '60',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
     // Two plain pending rows — the count should return exactly these and
     // exclude the counter above.
     await seedPriceSubmission(event.id, 'plain-pending-1', {
       status: 'pending',
       priceMin: '45',
-    })
+    });
     await seedPriceSubmission(event.id, 'plain-pending-2', {
       status: 'pending',
       priceMin: '50',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/submissions/count', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { pending: number }
-    }
-    expect(body.data.pending).toBe(2)
-  })
-})
+      success: boolean;
+      data: { pending: number };
+    };
+    expect(body.data.pending).toBe(2);
+  });
+});

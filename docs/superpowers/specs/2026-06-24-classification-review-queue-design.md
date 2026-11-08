@@ -160,7 +160,7 @@ This is a small semantic-correctness refactor surfaced during brainstorming: rec
 #### New query param on `GET /v1/admin/events`
 
 ```typescript
-view: z.enum(['hidden-flagged-for-review']).optional()
+view: z.enum(['hidden-flagged-for-review']).optional();
 ```
 
 When `view=hidden-flagged-for-review`, the where clause ANDs `eq(events.hiddenFromConsumer, true)` and `eq(events.isConcertReviewNeeded, true)`. Single combined param (rather than two orthogonal `hiddenFromConsumer` + `reviewNeeded` params) keeps the API surface narrow until a second use case demands the orthogonal shape.

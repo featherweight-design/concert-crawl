@@ -1,11 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   aggregateByTier,
   pickHeadlinesByTier,
   type AggregateByTierInput,
   type CorroboratedTierRow,
   type PendingTierRow,
-} from './aggregate-by-tier.js'
+} from './aggregate-by-tier.js';
 
 const corrob = (
   overrides: Partial<CorroboratedTierRow>,
@@ -21,7 +21,7 @@ const corrob = (
   updatedAt: overrides.updatedAt ?? new Date('2026-06-02T00:00:00Z'),
   lastSeenAt: overrides.lastSeenAt ?? null,
   confirmsCount: overrides.confirmsCount ?? 1,
-})
+});
 
 const pendingRow = (overrides: Partial<PendingTierRow>): PendingTierRow => ({
   id: overrides.id ?? 'pending-1',
@@ -35,7 +35,7 @@ const pendingRow = (overrides: Partial<PendingTierRow>): PendingTierRow => ({
   userId: overrides.userId ?? 'submitter-2',
   createdAt: overrides.createdAt ?? new Date('2026-06-10T00:00:00Z'),
   confirmsCount: overrides.confirmsCount ?? 0,
-})
+});
 
 const baseInput: AggregateByTierInput = {
   corroborated: [],
@@ -45,12 +45,12 @@ const baseInput: AggregateByTierInput = {
   reportsByTier: new Map(),
   confirmsNeeded: 2,
   viewerUserId: null,
-}
+};
 
 describe('aggregateByTier', () => {
   it('returns empty array when no submissions exist', () => {
-    expect(aggregateByTier(baseInput)).toEqual([])
-  })
+    expect(aggregateByTier(baseInput)).toEqual([]);
+  });
 
   it('emits one block per tier with the cheapest headline first', () => {
     const blocks = aggregateByTier({
@@ -63,11 +63,11 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks).toHaveLength(2)
-    expect(blocks[0]?.tier).toBe('GA')
-    expect(blocks[1]?.tier).toBe('VIP')
-  })
+    });
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]?.tier).toBe('GA');
+    expect(blocks[1]?.tier).toBe('VIP');
+  });
 
   it('boxoffice wins over standard within same tier', () => {
     const blocks = aggregateByTier({
@@ -88,11 +88,11 @@ describe('aggregateByTier', () => {
         }),
       ],
       reportsByTier: new Map([['GA', 2]]),
-    })
-    expect(blocks[0]?.headline?.submissionId).toBe('bo')
-    expect(blocks[0]?.alternates).toHaveLength(1)
-    expect(blocks[0]?.alternates[0]?.submissionId).toBe('std')
-  })
+    });
+    expect(blocks[0]?.headline?.submissionId).toBe('bo');
+    expect(blocks[0]?.alternates).toHaveLength(1);
+    expect(blocks[0]?.alternates[0]?.submissionId).toBe('std');
+  });
 
   it('resolves submitter handle via the handles map', () => {
     const blocks = aggregateByTier({
@@ -100,9 +100,9 @@ describe('aggregateByTier', () => {
       corroborated: [corrob({ id: 'ga', userId: 'user-1' })],
       handles: new Map([['user-1', 'price-watcher']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.headline?.submitterHandle).toBe('price-watcher')
-  })
+    });
+    expect(blocks[0]?.headline?.submitterHandle).toBe('price-watcher');
+  });
 
   it('sets approvalKind to fan when confirmsCount > 0, admin otherwise', () => {
     const blocks = aggregateByTier({
@@ -115,12 +115,12 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    const ga = blocks.find((block) => block.tier === 'GA')
-    const vip = blocks.find((block) => block.tier === 'VIP')
-    expect(ga?.headline?.approvalKind).toBe('fan')
-    expect(vip?.headline?.approvalKind).toBe('admin')
-  })
+    });
+    const ga = blocks.find((block) => block.tier === 'GA');
+    const vip = blocks.find((block) => block.tier === 'VIP');
+    expect(ga?.headline?.approvalKind).toBe('fan');
+    expect(vip?.headline?.approvalKind).toBe('admin');
+  });
 
   it('emits pending rows per tier with confirmsNeeded threaded through', () => {
     const blocks = aggregateByTier({
@@ -134,12 +134,14 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks.find((block) => block.tier === 'GA')?.pending).toHaveLength(1)
+    });
+    expect(blocks.find((block) => block.tier === 'GA')?.pending).toHaveLength(
+      1,
+    );
     expect(
       blocks.find((block) => block.tier === 'GA')?.pending[0]?.confirmsNeeded,
-    ).toBe(3)
-  })
+    ).toBe(3);
+  });
 
   it('marks isSubmitter true when pending row userId matches viewer', () => {
     const blocks = aggregateByTier({
@@ -147,12 +149,12 @@ describe('aggregateByTier', () => {
       pending: [pendingRow({ id: 'pen', tier: 'GA', userId: 'viewer-1' })],
       viewerUserId: 'viewer-1',
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.pending[0]?.isSubmitter).toBe(true)
-  })
+    });
+    expect(blocks[0]?.pending[0]?.isSubmitter).toBe(true);
+  });
 
   it('attaches counter-submission to its parent tier', () => {
-    const headline = corrob({ id: 'head', tier: 'GA' })
+    const headline = corrob({ id: 'head', tier: 'GA' });
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [headline],
@@ -171,19 +173,19 @@ describe('aggregateByTier', () => {
       ],
       handles: new Map([['challenger', 'fan-2']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.counterSubmission?.id).toBe('counter-1')
-    expect(blocks[0]?.counterSubmission?.parentSubmissionId).toBe('head')
-    expect(blocks[0]?.counterSubmission?.floor).toBe(20)
-    expect(blocks[0]?.counterSubmission?.submitter?.handle).toBe('fan-2')
+    });
+    expect(blocks[0]?.counterSubmission?.id).toBe('counter-1');
+    expect(blocks[0]?.counterSubmission?.parentSubmissionId).toBe('head');
+    expect(blocks[0]?.counterSubmission?.floor).toBe(20);
+    expect(blocks[0]?.counterSubmission?.submitter?.handle).toBe('fan-2');
     // Default state — neither field set on the row → both null in the output.
-    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
-    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
-  })
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull();
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull();
+  });
 
   it('counter-submission carries lastAdminActionKind="defer" when the counter row was deferred', () => {
-    const headline = corrob({ id: 'head', tier: 'GA' })
-    const deferredAt = new Date('2026-06-15T12:00:00Z')
+    const headline = corrob({ id: 'head', tier: 'GA' });
+    const deferredAt = new Date('2026-06-15T12:00:00Z');
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [headline],
@@ -202,12 +204,12 @@ describe('aggregateByTier', () => {
       ],
       handles: new Map([['challenger', 'fan-2']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBe('defer')
+    });
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBe('defer');
     expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBe(
       deferredAt.toISOString(),
-    )
-  })
+    );
+  });
 
   it('counter-submission narrows unrecognized lastAdminActionKind values to null AND pairs the timestamp to null', () => {
     // Regression for R16: when kind narrows away an unrecognized value,
@@ -215,7 +217,7 @@ describe('aggregateByTier', () => {
     // wire never carries a half-populated pair (kind=null, at=<timestamp>).
     // Without the pair-narrow, an unknown kind landing in the column would
     // partially leak the existence of a future internal admin action.
-    const headline = corrob({ id: 'head', tier: 'GA' })
+    const headline = corrob({ id: 'head', tier: 'GA' });
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [headline],
@@ -235,11 +237,11 @@ describe('aggregateByTier', () => {
       ],
       handles: new Map([['challenger', 'fan-2']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
+    });
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull();
     // Paired: the timestamp must also be null when kind narrowed away.
-    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
-  })
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull();
+  });
 
   it('counter-submission forces lastAdminActionKind to null when kind="defer" but the timestamp is missing', () => {
     // Regression for R19: matching half of the pair-narrow contract — if the
@@ -247,7 +249,7 @@ describe('aggregateByTier', () => {
     // forgot the timestamp, bad backfill), we must not surface kind='defer'
     // to consumers. The contract is "both null unless a real defer event
     // occurred"; a half-populated kind without a timestamp is invalid state.
-    const headline = corrob({ id: 'head', tier: 'GA' })
+    const headline = corrob({ id: 'head', tier: 'GA' });
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [headline],
@@ -266,10 +268,10 @@ describe('aggregateByTier', () => {
       ],
       handles: new Map([['challenger', 'fan-2']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull()
-    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull()
-  })
+    });
+    expect(blocks[0]?.counterSubmission?.lastAdminActionKind).toBeNull();
+    expect(blocks[0]?.counterSubmission?.lastAdminActionAt).toBeNull();
+  });
 
   it('includes pending-only tiers after corroborated-headline tiers', () => {
     const blocks = aggregateByTier({
@@ -280,27 +282,27 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks.map((block) => block.tier)).toEqual(['GA', 'VIP'])
-  })
+    });
+    expect(blocks.map((block) => block.tier)).toEqual(['GA', 'VIP']);
+  });
 
   it('surfaces reports count from the input map', () => {
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [corrob({ id: 'ga', tier: 'GA' })],
       reportsByTier: new Map([['GA', 5]]),
-    })
-    expect(blocks[0]?.reports).toBe(5)
-  })
+    });
+    expect(blocks[0]?.reports).toBe(5);
+  });
 
   it('defaults reports to 0 when tier missing from map', () => {
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [corrob({ id: 'ga', tier: 'GA' })],
       reportsByTier: new Map(),
-    })
-    expect(blocks[0]?.reports).toBe(0)
-  })
+    });
+    expect(blocks[0]?.reports).toBe(0);
+  });
 
   it('emits alternates in deterministic trust-then-price order regardless of input order', () => {
     // Input order is intentionally scrambled — the composer should still emit
@@ -312,39 +314,39 @@ describe('aggregateByTier', () => {
       sourceCategory: 'boxoffice',
       vendor: 'VenueBoxOffice',
       priceMin: '40',
-    })
+    });
     const resale = corrob({
       id: 'resale',
       tier: 'GA',
       sourceCategory: 'resale',
       priceMin: '80',
-    })
+    });
     const standardCheap = corrob({
       id: 'std-cheap',
       tier: 'GA',
       sourceCategory: 'standard',
       priceMin: '45',
-    })
+    });
     const standardPricey = corrob({
       id: 'std-pricey',
       tier: 'GA',
       sourceCategory: 'standard',
       priceMin: '60',
-    })
+    });
 
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [resale, standardPricey, boxoffice, standardCheap],
       reportsByTier: new Map([['GA', 4]]),
-    })
+    });
 
-    expect(blocks[0]?.headline?.submissionId).toBe('bo')
+    expect(blocks[0]?.headline?.submissionId).toBe('bo');
     expect(blocks[0]?.alternates.map((alt) => alt.submissionId)).toEqual([
       'std-cheap',
       'std-pricey',
       'resale',
-    ])
-  })
+    ]);
+  });
 
   it('sorts pending-only tiers by min pending price (not pending[0] which is VenueBoxOffice-first)', () => {
     // pending[] sorts VenueBoxOffice-first + newest-first for display, so
@@ -379,31 +381,31 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 2],
       ]),
-    })
+    });
 
     // VIP's cheapest pending is $120; GA's only pending is $150. VIP should
     // lead because its min is lower — even though the VIP pending list's
     // pending[0] is the $200 VenueBoxOffice row (sorted VenueBoxOffice-first
     // for display). compareBlocks has to scan all pending rows for the true
     // min, not trust pending[0].
-    expect(blocks.map((block) => block.tier)).toEqual(['VIP', 'GA'])
-  })
-})
+    expect(blocks.map((block) => block.tier)).toEqual(['VIP', 'GA']);
+  });
+});
 
 describe('pickHeadlinesByTier', () => {
   it('returns empty map for empty input', () => {
-    expect(pickHeadlinesByTier([])).toEqual(new Map())
-  })
+    expect(pickHeadlinesByTier([])).toEqual(new Map());
+  });
 
   it('returns one headline per tier present in the input', () => {
     const heads = pickHeadlinesByTier([
       corrob({ id: 'ga-row', tier: 'GA' }),
       corrob({ id: 'vip-row', tier: 'VIP' }),
-    ])
-    expect(heads.size).toBe(2)
-    expect(heads.get('GA')?.id).toBe('ga-row')
-    expect(heads.get('VIP')?.id).toBe('vip-row')
-  })
+    ]);
+    expect(heads.size).toBe(2);
+    expect(heads.get('GA')?.id).toBe('ga-row');
+    expect(heads.get('VIP')?.id).toBe('vip-row');
+  });
 
   it('within a tier picks the boxoffice row over a cheaper standard row (trust > price)', () => {
     const heads = pickHeadlinesByTier([
@@ -420,9 +422,9 @@ describe('pickHeadlinesByTier', () => {
         vendor: 'VenueBoxOffice',
         priceMin: '40',
       }),
-    ])
-    expect(heads.get('GA')?.id).toBe('ga-bo')
-  })
+    ]);
+    expect(heads.get('GA')?.id).toBe('ga-bo');
+  });
 
   it('within a tier picks the cheaper row when trust is equal (price tie-break)', () => {
     const heads = pickHeadlinesByTier([
@@ -438,9 +440,9 @@ describe('pickHeadlinesByTier', () => {
         sourceCategory: 'standard',
         priceMin: '30',
       }),
-    ])
-    expect(heads.get('GA')?.id).toBe('ga-std-30')
-  })
+    ]);
+    expect(heads.get('GA')?.id).toBe('ga-std-30');
+  });
 
   it('within a tier breaks a trust+price tie by newest updatedAt', () => {
     const heads = pickHeadlinesByTier([
@@ -458,9 +460,9 @@ describe('pickHeadlinesByTier', () => {
         priceMin: '30',
         updatedAt: new Date('2026-06-15T00:00:00Z'),
       }),
-    ])
-    expect(heads.get('GA')?.id).toBe('ga-new')
-  })
+    ]);
+    expect(heads.get('GA')?.id).toBe('ga-new');
+  });
 
   it('selects the right headline per tier independently when multiple tiers each have multiple rows', () => {
     const heads = pickHeadlinesByTier([
@@ -489,13 +491,13 @@ describe('pickHeadlinesByTier', () => {
         sourceCategory: 'standard',
         priceMin: '180',
       }),
-    ])
+    ]);
     // GA boxoffice wins over cheaper standard
-    expect(heads.get('GA')?.id).toBe('ga-bo')
+    expect(heads.get('GA')?.id).toBe('ga-bo');
     // VIP standard wins over cheaper resale
-    expect(heads.get('VIP')?.id).toBe('vip-std')
-  })
-})
+    expect(heads.get('VIP')?.id).toBe('vip-std');
+  });
+});
 
 // The headline's `observedAt` is what the stale badge reads, so it has to be
 // the later of the submission's creation and its most recent sighting. A
@@ -504,29 +506,29 @@ describe('pickHeadlinesByTier', () => {
 describe('aggregateByTier observedAt', () => {
   const observedAtFor = (row: CorroboratedTierRow): string | null =>
     aggregateByTier({ ...baseInput, corroborated: [row] })[0]?.headline
-      ?.observedAt ?? null
+      ?.observedAt ?? null;
 
   it('falls back to createdAt when the price has never been sighted', () => {
     const row = corrob({
       createdAt: new Date('2026-06-01T00:00:00Z'),
       lastSeenAt: null,
-    })
-    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z')
-  })
+    });
+    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z');
+  });
 
   it('takes lastSeenAt when a sighting is more recent', () => {
     const row = corrob({
       createdAt: new Date('2026-06-01T00:00:00Z'),
       lastSeenAt: new Date('2026-06-20T00:00:00Z'),
-    })
-    expect(observedAtFor(row)).toBe('2026-06-20T00:00:00.000Z')
-  })
+    });
+    expect(observedAtFor(row)).toBe('2026-06-20T00:00:00.000Z');
+  });
 
   it('keeps createdAt when lastSeenAt sits behind it', () => {
     const row = corrob({
       createdAt: new Date('2026-06-01T00:00:00Z'),
       lastSeenAt: new Date('2026-05-01T00:00:00Z'),
-    })
-    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z')
-  })
-})
+    });
+    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z');
+  });
+});

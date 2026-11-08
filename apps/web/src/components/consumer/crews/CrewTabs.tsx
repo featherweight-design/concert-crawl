@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useRef } from 'react'
+import { useRef } from 'react';
 
 export interface CrewTab {
-  id: string
-  label: string
-  count: number
+  id: string;
+  label: string;
+  count: number;
 }
 
 interface CrewTabsProps {
-  tabs: CrewTab[]
-  active: string
-  onSelect: (id: string) => void
-  label: string
+  tabs: CrewTab[];
+  active: string;
+  onSelect: (id: string) => void;
+  label: string;
   /** Stable per-page prefix so the panels can point back at their tab. */
-  idPrefix: string
-  wide: boolean
+  idPrefix: string;
+  wide: boolean;
 }
 
-export const tabId = (prefix: string, id: string) => `${prefix}-tab-${id}`
-export const panelId = (prefix: string, id: string) => `${prefix}-panel-${id}`
+export const tabId = (prefix: string, id: string) => `${prefix}-tab-${id}`;
+export const panelId = (prefix: string, id: string) => `${prefix}-panel-${id}`;
 
 /**
  * The ARIA tabs pattern with automatic activation: an arrow both moves focus
@@ -36,19 +36,19 @@ export const CrewTabs = ({
   idPrefix,
   wide,
 }: CrewTabsProps) => {
-  const stripRef = useRef<HTMLDivElement>(null)
+  const stripRef = useRef<HTMLDivElement>(null);
 
   const focusTab = (id: string) => {
-    onSelect(id)
+    onSelect(id);
     stripRef.current
       ?.querySelector<HTMLButtonElement>(`#${CSS.escape(tabId(idPrefix, id))}`)
-      ?.focus()
-  }
+      ?.focus();
+  };
 
   const onKeyDown = (ev: React.KeyboardEvent<HTMLDivElement>) => {
-    const index = tabs.findIndex((tab) => tab.id === active)
-    if (index < 0) return
-    const last = tabs.length - 1
+    const index = tabs.findIndex((tab) => tab.id === active);
+    if (index < 0) return;
+    const last = tabs.length - 1;
     const next =
       ev.key === 'ArrowRight'
         ? (index + 1) % tabs.length
@@ -58,12 +58,12 @@ export const CrewTabs = ({
             ? 0
             : ev.key === 'End'
               ? last
-              : null
-    if (next === null) return
-    ev.preventDefault()
-    const target = tabs[next]
-    if (target !== undefined) focusTab(target.id)
-  }
+              : null;
+    if (next === null) return;
+    ev.preventDefault();
+    const target = tabs[next];
+    if (target !== undefined) focusTab(target.id);
+  };
 
   return (
     <div
@@ -80,7 +80,7 @@ export const CrewTabs = ({
       }}
     >
       {tabs.map((tab) => {
-        const selected = tab.id === active
+        const selected = tab.id === active;
         return (
           <button
             key={tab.id}
@@ -139,8 +139,8 @@ export const CrewTabs = ({
               </span>
             </span>
           </button>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};

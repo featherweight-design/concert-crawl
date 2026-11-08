@@ -9,36 +9,36 @@
 //   5. active paid tier  — supporter / premium / founder
 //   6. free              — post-cancel / post-trial context, else plain
 
-import type { PlanState } from '@concert-crawl/types'
-import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants'
-import type { TierKey } from '@/components/consumer/tier-picker/definitions/types'
-import { PLAN_CARD_COPY } from '../definitions/copy'
-import { DISPLAY_TIME_ZONE, TRIAL_LENGTH_DAYS } from '../definitions/constants'
-import type { PlanCardContent, PlanCardCta } from '../definitions/types'
+import type { PlanState } from '@concert-crawl/types';
+import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants';
+import type { TierKey } from '@/components/consumer/tier-picker/definitions/types';
+import { PLAN_CARD_COPY } from '../definitions/copy';
+import { DISPLAY_TIME_ZONE, TRIAL_LENGTH_DAYS } from '../definitions/constants';
+import type { PlanCardContent, PlanCardCta } from '../definitions/types';
 
-const MS_PER_DAY = 86_400_000
+const MS_PER_DAY = 86_400_000;
 
-const PAID_TIERS = ['supporter', 'premium', 'founder'] as const
-type PaidTier = (typeof PAID_TIERS)[number]
+const PAID_TIERS = ['supporter', 'premium', 'founder'] as const;
+type PaidTier = (typeof PAID_TIERS)[number];
 
 const isPaidTier = (plan: PlanState['plan']): plan is PaidTier =>
-  (PAID_TIERS as readonly string[]).includes(plan)
+  (PAID_TIERS as readonly string[]).includes(plan);
 
 const periodEndFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   timeZone: DISPLAY_TIME_ZONE,
-})
+});
 
 /** ISO timestamp → "Jul 15" in Mountain Time; null for absent/unparseable.
  * Exported so the PlanPanel can feed the same display date to the #780
  * manage sheet. */
 export const formatPeriodEnd = (iso: string | null): string | null => {
-  if (!iso) return null
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return null
-  return periodEndFormatter.format(date)
-}
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return periodEndFormatter.format(date);
+};
 
 // "Ends today / tomorrow" are calendar statements in Mountain Time, not
 // 24-hour windows — a trial ending in 2 hours ends *today*.
@@ -47,44 +47,44 @@ const calendarDayFormatter = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
   timeZone: DISPLAY_TIME_ZONE,
-})
+});
 
 // formatToParts (matching lib/time.ts localDateString) instead of parsing
 // the formatted string — locale output is not a stable parse target.
 const utcMidnightOf = (date: Date): number => {
-  const parts = calendarDayFormatter.formatToParts(date)
+  const parts = calendarDayFormatter.formatToParts(date);
   const partValue = (type: 'year' | 'month' | 'day'): number => {
-    const part = parts.find((candidate) => candidate.type === type)
-    return part ? Number(part.value) : NaN
-  }
-  const year = partValue('year')
-  const month = partValue('month')
-  const day = partValue('day')
+    const part = parts.find((candidate) => candidate.type === type);
+    return part ? Number(part.value) : NaN;
+  };
+  const year = partValue('year');
+  const month = partValue('month');
+  const day = partValue('day');
   if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
     // Callers NaN-guard their inputs; this only trips on an Intl anomaly.
     // Fall back to the raw instant so day-diffs stay finite, never NaN.
-    return date.getTime()
+    return date.getTime();
   }
-  return Date.UTC(year, month - 1, day)
-}
+  return Date.UTC(year, month - 1, day);
+};
 
 const isPastTimestamp = (iso: string, now: Date): boolean => {
-  const date = new Date(iso)
-  return !Number.isNaN(date.getTime()) && date.getTime() <= now.getTime()
-}
+  const date = new Date(iso);
+  return !Number.isNaN(date.getTime()) && date.getTime() <= now.getTime();
+};
 
 const trialDaysRemaining = (trialEndsAt: string | null, now: Date): number => {
-  if (!trialEndsAt) return 0
-  const endsAt = new Date(trialEndsAt)
-  if (Number.isNaN(endsAt.getTime())) return 0
+  if (!trialEndsAt) return 0;
+  const endsAt = new Date(trialEndsAt);
+  if (Number.isNaN(endsAt.getTime())) return 0;
   const dayDiff = Math.round(
     (utcMidnightOf(endsAt) - utcMidnightOf(now)) / MS_PER_DAY,
-  )
-  return Math.max(0, dayDiff)
-}
+  );
+  return Math.max(0, dayDiff);
+};
 
 const clampTrialDay = (daysRemaining: number): number =>
-  Math.min(Math.max(TRIAL_LENGTH_DAYS - daysRemaining, 1), TRIAL_LENGTH_DAYS)
+  Math.min(Math.max(TRIAL_LENGTH_DAYS - daysRemaining, 1), TRIAL_LENGTH_DAYS);
 
 // PR 4.5: active paid tiers open the in-app #780 manage sheet instead of
 // jumping straight to the Stripe portal (the sheet's tooling rows still
@@ -93,7 +93,7 @@ const manageSheetCta = (label: string): PlanCardCta => ({
   label,
   kind: 'primary',
   action: 'manage-sheet',
-})
+});
 
 const baseContent = {
   betaChip: false,
@@ -102,22 +102,22 @@ const baseContent = {
   rail: null,
   emphasis: false,
   founderGradient: false,
-} satisfies Partial<PlanCardContent>
+} satisfies Partial<PlanCardContent>;
 
 export const resolvePlanCard = (
   planState: PlanState,
   now: Date = new Date(),
 ): PlanCardContent => {
-  const { plan, roleComped, status, onTrial, trialEndsAt } = planState
-  const periodEnd = formatPeriodEnd(planState.currentPeriodEnd)
+  const { plan, roleComped, status, onTrial, trialEndsAt } = planState;
+  const periodEnd = formatPeriodEnd(planState.currentPeriodEnd);
 
   // 1 — dunning outranks celebration (#782; pinned since PR 3.1).
   if (status === 'past_due') {
     // Defensive: plan should stay paid during the dunning window; if the
     // API ever reports past_due on a free plan, name Premium (#782 call).
-    const tier: PaidTier = isPaidTier(plan) ? plan : 'premium'
-    const tierDef = TIER_DEFINITIONS[tier]
-    const copy = PLAN_CARD_COPY.pastDue
+    const tier: PaidTier = isPaidTier(plan) ? plan : 'premium';
+    const tierDef = TIER_DEFINITIONS[tier];
+    const copy = PLAN_CARD_COPY.pastDue;
     return {
       ...baseContent,
       variant: 'past-due',
@@ -143,13 +143,13 @@ export const resolvePlanCard = (
         },
         { label: copy.manageCta, kind: 'ghost', action: 'portal' },
       ],
-    }
+    };
   }
 
   // 2 — gifted / role-comped: gratitude voice, no payment relationship
   // to manage (#781 §4). Discovery-only CTA.
   if (roleComped || plan === 'gifted') {
-    const copy = PLAN_CARD_COPY.gifted
+    const copy = PLAN_CARD_COPY.gifted;
     return {
       ...baseContent,
       variant: 'gifted',
@@ -161,16 +161,16 @@ export const resolvePlanCard = (
       body: copy.body,
       punchline: copy.punchline,
       ctas: [{ label: copy.discoverCta, kind: 'ghost', action: 'tier-picker' }],
-    }
+    };
   }
 
   // 3 — trial (Decision 7: card-less Premium trial; no portal to manage).
   if (onTrial) {
-    const daysRemaining = trialDaysRemaining(trialEndsAt, now)
-    const trialEndDisplay = formatPeriodEnd(trialEndsAt)
-    const chip = PLAN_CARD_COPY.trial.chip
+    const daysRemaining = trialDaysRemaining(trialEndsAt, now);
+    const trialEndDisplay = formatPeriodEnd(trialEndsAt);
+    const chip = PLAN_CARD_COPY.trial.chip;
     if (daysRemaining <= 0) {
-      const copy = PLAN_CARD_COPY.trial.endsToday
+      const copy = PLAN_CARD_COPY.trial.endsToday;
       return {
         ...baseContent,
         variant: 'trial-ends-today',
@@ -191,10 +191,10 @@ export const resolvePlanCard = (
             glow: true,
           },
         ],
-      }
+      };
     }
     if (daysRemaining === 1) {
-      const copy = PLAN_CARD_COPY.trial.endsTomorrow
+      const copy = PLAN_CARD_COPY.trial.endsTomorrow;
       return {
         ...baseContent,
         variant: 'trial-ends-tomorrow',
@@ -223,9 +223,9 @@ export const resolvePlanCard = (
             glow: true,
           },
         ],
-      }
+      };
     }
-    const copy = PLAN_CARD_COPY.trial.early
+    const copy = PLAN_CARD_COPY.trial.early;
     return {
       ...baseContent,
       variant: 'trial-early',
@@ -237,15 +237,15 @@ export const resolvePlanCard = (
       body: copy.body(daysRemaining),
       punchline: copy.punchline,
       ctas: [{ label: copy.cta, kind: 'primary', action: 'tier-picker' }],
-    }
+    };
   }
 
   // 4 — cancel-at-period-end grace window (#780). One-tap Resubscribe
   // flips auto-renew back on (README decision #3 — user never lost access,
   // so no checkout trip); the ghost keeps the Stripe portal escape hatch.
   if (planState.cancelAtPeriodEnd && isPaidTier(plan)) {
-    const tierDef = TIER_DEFINITIONS[plan]
-    const copy = PLAN_CARD_COPY.cancelGrace
+    const tierDef = TIER_DEFINITIONS[plan];
+    const copy = PLAN_CARD_COPY.cancelGrace;
     return {
       ...baseContent,
       variant: 'cancel-grace',
@@ -271,12 +271,12 @@ export const resolvePlanCard = (
         },
         { label: copy.manageCta, kind: 'ghost', action: 'portal' },
       ],
-    }
+    };
   }
 
   // 5 — active paid tiers.
   if (plan === 'supporter') {
-    const copy = PLAN_CARD_COPY.activeSupporter
+    const copy = PLAN_CARD_COPY.activeSupporter;
     return {
       ...baseContent,
       variant: 'active-supporter',
@@ -287,10 +287,10 @@ export const resolvePlanCard = (
       body: copy.body,
       punchline: copy.punchline,
       ctas: [manageSheetCta(copy.manageCta)],
-    }
+    };
   }
   if (plan === 'founder') {
-    const copy = PLAN_CARD_COPY.activeFounder
+    const copy = PLAN_CARD_COPY.activeFounder;
     return {
       ...baseContent,
       variant: 'active-founder',
@@ -302,10 +302,10 @@ export const resolvePlanCard = (
       punchline: copy.punchline,
       founderGradient: true,
       ctas: [manageSheetCta(copy.manageCta)],
-    }
+    };
   }
   if (plan === 'premium') {
-    const copy = PLAN_CARD_COPY.activePremium
+    const copy = PLAN_CARD_COPY.activePremium;
     return {
       ...baseContent,
       variant: 'active-premium',
@@ -316,14 +316,14 @@ export const resolvePlanCard = (
       body: copy.body,
       punchline: copy.punchline,
       ctas: [manageSheetCta(copy.manageCta)],
-    }
+    };
   }
 
   // 6 — free / logged-out, with lifecycle context where the fields
   // make it reachable (KISS: no new columns, existing PlanState only).
-  const freeBadge: TierKey | null = null
+  const freeBadge: TierKey | null = null;
   if (status === 'cancelled') {
-    const copy = PLAN_CARD_COPY.freePostCancel
+    const copy = PLAN_CARD_COPY.freePostCancel;
     return {
       ...baseContent,
       variant: 'free-post-cancel',
@@ -335,7 +335,7 @@ export const resolvePlanCard = (
       body: copy.body(periodEnd),
       punchline: copy.punchline,
       ctas: [{ label: copy.cta, kind: 'primary', action: 'tier-picker' }],
-    }
+    };
   }
   // Post-trial context only applies once the trial has actually ended; a
   // future (or unparseable) trialEndsAt on a free plan is inconsistent
@@ -345,8 +345,8 @@ export const resolvePlanCard = (
     trialEndsAt !== null &&
     isPastTimestamp(trialEndsAt, now)
   ) {
-    const copy = PLAN_CARD_COPY.freePostTrial
-    const endedAt = formatPeriodEnd(trialEndsAt)
+    const copy = PLAN_CARD_COPY.freePostTrial;
+    const endedAt = formatPeriodEnd(trialEndsAt);
     return {
       ...baseContent,
       variant: 'free-post-trial',
@@ -358,9 +358,9 @@ export const resolvePlanCard = (
       body: copy.body,
       punchline: copy.punchline,
       ctas: [{ label: copy.cta, kind: 'primary', action: 'tier-picker' }],
-    }
+    };
   }
-  const copy = PLAN_CARD_COPY.free
+  const copy = PLAN_CARD_COPY.free;
   return {
     ...baseContent,
     variant: 'free',
@@ -371,5 +371,5 @@ export const resolvePlanCard = (
     body: copy.body,
     punchline: copy.punchline,
     ctas: [{ label: copy.cta, kind: 'primary', action: 'tier-picker' }],
-  }
-}
+  };
+};

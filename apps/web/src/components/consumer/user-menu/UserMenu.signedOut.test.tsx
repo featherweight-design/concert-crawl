@@ -1,57 +1,57 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup, act, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { AccountMenuProvider, UserMenu } from './UserMenu'
-import { AppHeader } from '@/components/consumer/app-header/AppHeader'
-import { BottomNav } from '@/components/consumer/bottom-nav/BottomNav'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import React from 'react';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import { render, screen, cleanup, act, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AccountMenuProvider, UserMenu } from './UserMenu';
+import { AppHeader } from '@/components/consumer/app-header/AppHeader';
+import { BottomNav } from '@/components/consumer/bottom-nav/BottomNav';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const patchMe = vi.fn()
-const fetchMe = vi.fn()
+const patchMe = vi.fn();
+const fetchMe = vi.fn();
 
 vi.mock('@/lib/users', () => ({
   patchMe: (...args: unknown[]) => patchMe(...args),
   fetchMe: (...args: unknown[]) => fetchMe(...args),
-}))
+}));
 
 let mockAuth: {
-  isSignedIn: boolean
-  isLoaded: boolean
-  getToken: () => Promise<string | null>
-  sessionClaims: null
+  isSignedIn: boolean;
+  isLoaded: boolean;
+  getToken: () => Promise<string | null>;
+  sessionClaims: null;
 } = {
   isSignedIn: false,
   isLoaded: true,
   getToken: async () => null,
   sessionClaims: null,
-}
+};
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => mockAuth,
   useUser: () => ({ user: null }),
   useClerk: () => ({ signOut: vi.fn() }),
-}))
+}));
 
-let mockPathname = '/events'
+let mockPathname = '/events';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockPathname,
   useRouter: () => ({ push: vi.fn() }),
-}))
+}));
 
-let mockTheme = 'electric'
+let mockTheme = 'electric';
 const setTheme = vi.fn((next: string) => {
-  mockTheme = next
-})
+  mockTheme = next;
+});
 
 vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: mockTheme, setTheme }),
-}))
+}));
 
-const SIGNED_OUT_LABEL = CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
+const SIGNED_OUT_LABEL = CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut;
 
 // The provider now reads the notification count (#737), so it needs a query
 // client above it even signed out — where the query itself stays disabled.
@@ -61,12 +61,12 @@ function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: { queries: { retry: false, gcTime: 0 } },
       }),
-  )
+  );
   return (
     <QueryClientProvider client={client}>
       <AccountMenuProvider>{children}</AccountMenuProvider>
     </QueryClientProvider>
-  )
+  );
 }
 
 /** Widen the viewport past `sm` so the desktop popover branch is the one taken. */
@@ -80,7 +80,7 @@ function setViewport(matchesSm: boolean): void {
     addListener: () => {},
     removeListener: () => {},
     dispatchEvent: () => false,
-  })
+  });
 }
 
 beforeEach(() => {
@@ -89,23 +89,23 @@ beforeEach(() => {
     isLoaded: true,
     getToken: async () => null,
     sessionClaims: null,
-  }
-  mockTheme = 'electric'
-  mockPathname = '/events'
-  patchMe.mockReset()
-  fetchMe.mockReset()
-  setTheme.mockReset()
-  localStorage.clear()
-  setViewport(false)
-})
+  };
+  mockTheme = 'electric';
+  mockPathname = '/events';
+  patchMe.mockReset();
+  fetchMe.mockReset();
+  setTheme.mockReset();
+  localStorage.clear();
+  setViewport(false);
+});
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 function openDesktopMenu(): void {
-  const trigger = screen.getByRole('button', { name: SIGNED_OUT_LABEL })
+  const trigger = screen.getByRole('button', { name: SIGNED_OUT_LABEL });
   act(() => {
-    trigger.click()
-  })
+    trigger.click();
+  });
 }
 
 describe('account menu — signed out (#794)', () => {
@@ -114,27 +114,27 @@ describe('account menu — signed out (#794)', () => {
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
-    expect(screen.getByRole('link', { name: /sign up free/i })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /sign up free/i })).toBeTruthy();
     // "You" is the signed-in identity section; there is no `you` signed out.
-    expect(screen.queryByText(CONSUMER_COPY.userMenu.sections.you)).toBeNull()
-    expect(screen.getByText(CONSUMER_COPY.userMenu.sections.app)).toBeTruthy()
-  })
+    expect(screen.queryByText(CONSUMER_COPY.userMenu.sections.you)).toBeNull();
+    expect(screen.getByText(CONSUMER_COPY.userMenu.sections.app)).toBeTruthy();
+  });
 
   it('omits the signed-in rows rather than rendering them disabled', () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
     // A disabled row still advertises a feature the visitor cannot use; the
     // signed-out body is meant to be short and entirely actionable.
     for (const label of [/settings/i, /sign out/i, /submitted prices/i]) {
-      expect(screen.queryByText(label)).toBeNull()
+      expect(screen.queryByText(label)).toBeNull();
     }
     const disabled = screen
       .getAllByRole('button')
@@ -142,149 +142,149 @@ describe('account menu — signed out (#794)', () => {
         (el) =>
           el.hasAttribute('disabled') ||
           el.getAttribute('aria-disabled') === 'true',
-      )
-    expect(disabled).toHaveLength(0)
-  })
+      );
+    expect(disabled).toHaveLength(0);
+  });
 
   it('keeps the theme picker, the how-it-works row, and the legal pair', () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
-    const copy = CONSUMER_COPY.userMenu.signedOut
-    expect(screen.getByText(copy.howItWorks)).toBeTruthy()
+    const copy = CONSUMER_COPY.userMenu.signedOut;
+    expect(screen.getByText(copy.howItWorks)).toBeTruthy();
     expect(
       screen.getByRole('link', { name: copy.terms }).getAttribute('href'),
-    ).toBe(copy.termsHref)
+    ).toBe(copy.termsHref);
     expect(
       screen.getByRole('link', { name: copy.privacy }).getAttribute('href'),
-    ).toBe(copy.privacyHref)
+    ).toBe(copy.privacyHref);
     // The theme row is the reason the menu still earns its place signed out.
-    expect(screen.getByText(/electric/i)).toBeTruthy()
-  })
+    expect(screen.getByText(/electric/i)).toBeTruthy();
+  });
 
   it('picks a theme locally without a server round-trip', async () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
-    const themeToggle = screen.getByText(/electric/i).closest('button')
-    if (!themeToggle) throw new Error('theme row button not found')
+    const themeToggle = screen.getByText(/electric/i).closest('button');
+    if (!themeToggle) throw new Error('theme row button not found');
     act(() => {
-      themeToggle.click()
-    })
-    const jade = screen.getByText(/jade/i).closest('button')
-    if (!jade) throw new Error('jade swatch not found')
+      themeToggle.click();
+    });
+    const jade = screen.getByText(/jade/i).closest('button');
+    if (!jade) throw new Error('jade swatch not found');
     await act(async () => {
-      jade.click()
-    })
+      jade.click();
+    });
 
-    expect(setTheme).toHaveBeenCalled()
+    expect(setTheme).toHaveBeenCalled();
     // No token signed out, so the persist call must be skipped entirely —
     // patchMe with a null token would 401 on every theme pick.
-    expect(patchMe).not.toHaveBeenCalled()
-  })
+    expect(patchMe).not.toHaveBeenCalled();
+  });
 
   it('is a dialog whose surface takes focus, so the first Tab lands on Sign up free', () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
-    const dialog = screen.getByRole('dialog')
+    const dialog = screen.getByRole('dialog');
     expect(dialog.getAttribute('aria-label')).toBe(
       CONSUMER_COPY.userMenu.ariaLabels.menuTitle,
-    )
-    expect(dialog.getAttribute('tabindex')).toBe('-1')
+    );
+    expect(dialog.getAttribute('tabindex')).toBe('-1');
     // The popover has no scrim and leaves the page interactive, so claiming
     // modality would misdescribe it — only the mobile sheet is truly modal.
-    expect(dialog.hasAttribute('aria-modal')).toBe(false)
-    expect(document.activeElement).toBe(dialog)
-  })
+    expect(dialog.hasAttribute('aria-modal')).toBe(false);
+    expect(document.activeElement).toBe(dialog);
+  });
 
   it('marks the mobile sheet modal, since that surface does render a scrim', () => {
-    setViewport(true)
+    setViewport(true);
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
+    );
+    openDesktopMenu();
 
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.getAttribute('aria-modal')).toBe('true')
-  })
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+  });
 
   it('returns focus to the trigger when dismissed by an outside click', () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    const trigger = screen.getByRole('button', { name: SIGNED_OUT_LABEL })
+    );
+    const trigger = screen.getByRole('button', { name: SIGNED_OUT_LABEL });
     act(() => {
-      trigger.click()
-    })
+      trigger.click();
+    });
 
     // Outside-click dismissal must restore focus like Escape does — otherwise a
     // keyboard or screen-reader user is stranded at the top of the document.
     act(() => {
-      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-    })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(document.activeElement).toBe(trigger)
-  })
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
 
   it('pulls focus back inside when Tab is pressed from outside the surface', () => {
     render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
-    const dialog = screen.getByRole('dialog')
+    );
+    openDesktopMenu();
+    const dialog = screen.getByRole('dialog');
 
     // Something moved focus out of the dialog. A surface-scoped listener would
     // never see this Tab, letting a keyboard user step behind an aria-modal
     // surface — so the handler lives on document instead.
     act(() => {
-      document.body.focus()
+      document.body.focus();
       document.body.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }),
-      )
-    })
-    expect(dialog.contains(document.activeElement)).toBe(true)
-  })
+      );
+    });
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
 
   it('dismisses itself when a row navigates within the same layout', () => {
     const { rerender } = render(
       <Providers>
         <UserMenu />
       </Providers>,
-    )
-    openDesktopMenu()
-    expect(screen.queryByRole('dialog')).not.toBeNull()
+    );
+    openDesktopMenu();
+    expect(screen.queryByRole('dialog')).not.toBeNull();
 
     // The version footer pushes to /changelog, which shares this layout, so the
     // menu would otherwise stay open covering the destination page.
-    mockPathname = '/changelog'
+    mockPathname = '/changelog';
     act(() => {
       rerender(
         <Providers>
           <UserMenu />
         </Providers>,
-      )
-    })
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
+      );
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
   it('never renders more than one dialog, whichever trigger opens it', () => {
     // The desktop header menu and bottom-nav slot 4 are separate triggers over
@@ -294,9 +294,9 @@ describe('account menu — signed out (#794)', () => {
         <AppHeader />
         <BottomNav />
       </Providers>,
-    )
+    );
 
-    expect(screen.queryAllByRole('dialog')).toHaveLength(0)
+    expect(screen.queryAllByRole('dialog')).toHaveLength(0);
 
     // Each trigger is scoped to its own landmark: they carry the same
     // accessible name, which is itself the point — they are one control in
@@ -307,20 +307,20 @@ describe('account menu — signed out (#794)', () => {
       }),
     ).getByRole('button', {
       name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut,
-    })
+    });
     const headerTrigger = within(screen.getByRole('banner')).getByRole(
       'button',
       { name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut },
-    )
+    );
 
     act(() => {
-      navTrigger.click()
-    })
-    expect(screen.queryAllByRole('dialog')).toHaveLength(1)
+      navTrigger.click();
+    });
+    expect(screen.queryAllByRole('dialog')).toHaveLength(1);
 
     act(() => {
-      headerTrigger.click()
-    })
-    expect(screen.queryAllByRole('dialog').length).toBeLessThanOrEqual(1)
-  })
-})
+      headerTrigger.click();
+    });
+    expect(screen.queryAllByRole('dialog').length).toBeLessThanOrEqual(1);
+  });
+});

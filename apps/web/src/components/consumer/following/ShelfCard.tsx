@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One artist card in the browse follow shelf.
 //
@@ -20,19 +20,19 @@
 // section heading; the badge that survives is the starter shelf's plus/lock,
 // which is the only follow affordance that surface has.
 
-import { useId } from 'react'
-import Link from 'next/link'
-import { formatPrice } from '@/components/consumer/definitions/lib'
-import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants'
-import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
+import { useId } from 'react';
+import Link from 'next/link';
+import { formatPrice } from '@/components/consumer/definitions/lib';
+import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants';
+import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
 import {
   NF_FOLLOW_SIZES,
   NF_TAP_MIN,
-} from '@/components/consumer/artist-page/definitions/constants'
-import { Panel } from '@/components/consumer/image-slot'
-import { FollowDateLine } from './FollowDateLine'
-import { FOLLOWING_COPY } from './definitions/copy'
-import type { ShelfArtist } from './definitions/types'
+} from '@/components/consumer/artist-page/definitions/constants';
+import { Panel } from '@/components/consumer/image-slot';
+import { FollowDateLine } from './FollowDateLine';
+import { FOLLOWING_COPY } from './definitions/copy';
+import type { ShelfArtist } from './definitions/types';
 
 // Only the starter shelf's badge reaches this: it is the acknowledgement of a
 // follow the viewer just made, not a label on a list that is followed by
@@ -40,10 +40,10 @@ import type { ShelfArtist } from './definitions/types'
 //
 // All three draw at the size table's `badge` glyph so the on-art control keeps
 // step with every other follow affordance in the app.
-const GLYPH = NF_FOLLOW_SIZES.badge.glyph
+const GLYPH = NF_FOLLOW_SIZES.badge.glyph;
 
 /** How far the invisible target grows past the 26px circle on every side. */
-const BADGE_GROW = (NF_TAP_MIN - NF_FOLLOW_SIZES.badge.height) / 2
+const BADGE_GROW = (NF_TAP_MIN - NF_FOLLOW_SIZES.badge.height) / 2;
 
 const CheckGlyph = () => (
   <svg width={GLYPH} height={GLYPH} viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -55,7 +55,7 @@ const CheckGlyph = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const PlusGlyph = () => (
   <svg width={GLYPH} height={GLYPH} viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -66,7 +66,7 @@ const PlusGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const LockGlyph = () => (
   <svg width={GLYPH} height={GLYPH} viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -86,29 +86,29 @@ const LockGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 interface ShelfCardProps {
-  artist: ShelfArtist
-  width: number
+  artist: ShelfArtist;
+  width: number;
   /**
    * The starter shelf, where nothing is followed yet. It is the only mode that
    * draws a follow badge: on "Your artists" the badge could only ever say
    * "following", which the section heading already said.
    */
-  starter: boolean
+  starter: boolean;
   /** Signed in, but the plan cannot follow. Never true while already following. */
-  locked: boolean
+  locked: boolean;
   /** No session at all — the badge hands off rather than writing anything. */
-  signedOut: boolean
+  signedOut: boolean;
   /** Locked or signed-out activation. The shelf owns the sheet. */
-  onGatedTap: () => void
+  onGatedTap: () => void;
   /**
    * The API answered 403. Separate from `onGatedTap` because that one can
    * decline to open the sheet while the plan is still resolving, whereas a 403
    * is the server's settled answer and must always be honoured.
    */
-  onEntitlementRequired: () => void
+  onEntitlementRequired: () => void;
 }
 
 export const ShelfCard = ({
@@ -127,21 +127,21 @@ export const ShelfCard = ({
     artist.slug ?? '',
     artist.following,
     onEntitlementRequired,
-  )
-  const gateId = `nf-shelf-gate-${useId().replace(/:/g, '')}`
+  );
+  const gateId = `nf-shelf-gate-${useId().replace(/:/g, '')}`;
 
-  const gated = locked || signedOut
+  const gated = locked || signedOut;
   // Signed out or locked we draw the at-rest skin: there is no relationship to
   // render for a viewer who has none.
-  const on = !gated && follow.following
+  const on = !gated && follow.following;
   const price = formatPrice(
     artist.price === null ? null : String(artist.price),
     null,
-  )
+  );
 
   // The badge is a `<button>`, so it cannot live inside the card's `<a>`. It is
   // a sibling positioned over the art instead.
-  const badge = starter && artist.slug !== null
+  const badge = starter && artist.slug !== null;
 
   const body = (
     <>
@@ -204,7 +204,7 @@ export const ShelfCard = ({
         </span>
       </span>
     </>
-  )
+  );
 
   // The show wins over the profile: the card is showing a date and a price, so
   // the thing behind it is the night, not the act's page. The artist page is
@@ -215,14 +215,14 @@ export const ShelfCard = ({
       ? `/events/${artist.eventId}`
       : artist.slug !== null
         ? `/artists/${artist.slug}`
-        : null
+        : null;
 
   const shellClass =
-    'flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+    'flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
   const shellStyle = {
     background: 'var(--surface-1)',
     border: '1px solid var(--border)',
-  }
+  };
 
   return (
     <li
@@ -246,10 +246,10 @@ export const ShelfCard = ({
             type="button"
             onClick={() => {
               if (gated) {
-                onGatedTap()
-                return
+                onGatedTap();
+                return;
               }
-              follow.toggle()
+              follow.toggle();
             }}
             // Locked has no pressed state to report — it is not a toggle.
             aria-pressed={gated ? undefined : on}
@@ -298,5 +298,5 @@ export const ShelfCard = ({
         </>
       )}
     </li>
-  )
-}
+  );
+};

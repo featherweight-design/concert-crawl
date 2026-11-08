@@ -1,7 +1,7 @@
 interface StatPillProps {
-  label: string
-  value: string
-  signal?: boolean
+  label: string;
+  value: string;
+  signal?: boolean;
 }
 
 export function StatPill({ label, value, signal = false }: StatPillProps) {
@@ -29,5 +29,5 @@ export function StatPill({ label, value, signal = false }: StatPillProps) {
         {value}
       </span>
     </div>
-  )
+  );
 }

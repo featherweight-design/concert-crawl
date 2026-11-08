@@ -7,15 +7,15 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 export const crawlStatusEnum = pgEnum('crawl_status', [
   'success',
   'failed',
   'partial',
   'skipped',
-])
+]);
 
 export const crawlRuns = pgTable('crawl_runs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -47,7 +47,7 @@ export const crawlRuns = pgTable('crawl_runs', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type CrawlRun = typeof crawlRuns.$inferSelect
-export type NewCrawlRun = typeof crawlRuns.$inferInsert
+export type CrawlRun = typeof crawlRuns.$inferSelect;
+export type NewCrawlRun = typeof crawlRuns.$inferInsert;

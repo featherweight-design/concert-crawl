@@ -1,17 +1,17 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
-import { z } from 'zod'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { events } from '@concert-crawl/db'
-import { STALE_AFTER_MS } from '@concert-crawl/types'
-import { createApp } from '../app.js'
-import { testDb } from '../test/helpers/db.js'
+import { events } from '@concert-crawl/db';
+import { STALE_AFTER_MS } from '@concert-crawl/types';
+import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
   seedVenue,
@@ -19,85 +19,85 @@ import {
   seedEvent,
   seedUserProfile,
   seedPriceSubmission,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 describe('GET /v1/events — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns empty list when no events exist', async () => {
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: unknown[]; total: number; limit: number; offset: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.data).toHaveLength(0)
-    expect(body.data.total).toBe(0)
-  })
+      success: boolean;
+      data: { data: unknown[]; total: number; limit: number; offset: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.data).toHaveLength(0);
+    expect(body.data.total).toBe(0);
+  });
 
   it('returns events with joined venue data', async () => {
-    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
-    await seedEvent(venue.id, { title: 'Rock Night', date: '2027-06-01' })
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    await seedEvent(venue.id, { title: 'Rock Night', date: '2027-06-01' });
 
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        data: { title: string; venue: { name: string } }[]
-        total: number
-      }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Rock Night')
-    expect(body.data.data[0]?.venue.name).toBe('Globe Hall')
-  })
+        data: { title: string; venue: { name: string } }[];
+        total: number;
+      };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Rock Night');
+    expect(body.data.data[0]?.venue.name).toBe('Globe Hall');
+  });
 
   it('filters by venueSlug', async () => {
-    const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a' })
-    const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b' })
-    await seedEvent(venueA.id, { title: 'Show at A', date: '2027-06-01' })
-    await seedEvent(venueB.id, { title: 'Show at B', date: '2027-06-01' })
+    const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a' });
+    const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b' });
+    await seedEvent(venueA.id, { title: 'Show at A', date: '2027-06-01' });
+    await seedEvent(venueB.id, { title: 'Show at B', date: '2027-06-01' });
 
-    const res = await app.request('/v1/events?venueSlug=venue-a')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?venueSlug=venue-a');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Show at A')
-  })
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Show at A');
+  });
 
   it('filters by from date', async () => {
     const venue = await seedVenue({
       name: 'The Bluebird',
       slug: 'the-bluebird',
-    })
-    await seedEvent(venue.id, { title: 'Early Show', date: '2027-01-01' })
-    await seedEvent(venue.id, { title: 'Late Show', date: '2027-12-01' })
+    });
+    await seedEvent(venue.id, { title: 'Early Show', date: '2027-01-01' });
+    await seedEvent(venue.id, { title: 'Late Show', date: '2027-12-01' });
 
-    const res = await app.request('/v1/events?from=2027-06-01')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?from=2027-06-01');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Late Show')
-  })
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Late Show');
+  });
 
   it('excludes events with hiddenFromConsumer=true (PR 6)', async () => {
-    const venue = await seedVenue({ name: 'Test', slug: 'test-pr6' })
+    const venue = await seedVenue({ name: 'Test', slug: 'test-pr6' });
     await seedEvent(venue.id, {
       title: 'Visible Concert',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Non-Concert',
       artist: 'Other Artist',
@@ -105,50 +105,50 @@ describe('GET /v1/events — integration', () => {
       tourName: null,
       date: '2027-06-02',
       hiddenFromConsumer: true,
-    })
+    });
 
-    const res = await app.request('/v1/events')
+    const res = await app.request('/v1/events');
     const body = (await res.json()) as {
-      data: { data: { title: string }[] }
-    }
-    const titles = body.data.data.map((row) => row.title)
-    expect(titles).toContain('Visible Concert')
-    expect(titles).not.toContain('Hidden Non-Concert')
-  })
+      data: { data: { title: string }[] };
+    };
+    const titles = body.data.data.map((row) => row.title);
+    expect(titles).toContain('Visible Concert');
+    expect(titles).not.toContain('Hidden Non-Concert');
+  });
 
   it('respects limit parameter', async () => {
     const venue = await seedVenue({
       name: 'Ogden Theatre',
       slug: 'ogden-theatre',
-    })
-    await seedEvent(venue.id, { title: 'Show 1', date: '2027-06-01' })
-    await seedEvent(venue.id, { title: 'Show 2', date: '2027-07-01' })
-    await seedEvent(venue.id, { title: 'Show 3', date: '2027-08-01' })
+    });
+    await seedEvent(venue.id, { title: 'Show 1', date: '2027-06-01' });
+    await seedEvent(venue.id, { title: 'Show 2', date: '2027-07-01' });
+    await seedEvent(venue.id, { title: 'Show 3', date: '2027-08-01' });
 
-    const res = await app.request('/v1/events?limit=2')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?limit=2');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: unknown[]; total: number; limit: number }
-    }
-    expect(body.data.data).toHaveLength(2)
-    expect(body.data.total).toBeGreaterThanOrEqual(3)
-    expect(body.data.limit).toBe(2)
-  })
+      success: boolean;
+      data: { data: unknown[]; total: number; limit: number };
+    };
+    expect(body.data.data).toHaveLength(2);
+    expect(body.data.total).toBeGreaterThanOrEqual(3);
+    expect(body.data.limit).toBe(2);
+  });
 
   it('includes priceByTier with per-row headline for each event (closes #787 — browse chip parity)', async () => {
     const venue = await seedVenue({
       name: 'Tier List Venue',
       slug: 'tier-list-venue',
-    })
+    });
     const event = await seedEvent(venue.id, {
       title: 'Tier Show',
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
     const profile = await seedUserProfile('user-list-tier', {
       handle: 'list-tier',
-    })
+    });
     // Corroborated GA box-office at $25 (this is what the browse chip
     // should show as `from $25` with kind=boxoffice — even though the
     // event row's ticketPriceMin / priceSource / priceVendor may diverge).
@@ -159,49 +159,49 @@ describe('GET /v1/events — integration', () => {
       sourceCategory: 'boxoffice',
       priceMin: '25',
       status: 'corroborated',
-    })
+    });
 
-    const res = await app.request('/v1/events?venueSlug=tier-list-venue')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?venueSlug=tier-list-venue');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         data: Array<{
-          id: string
+          id: string;
           priceByTier: Array<{
-            tier: string
-            headline: { priceMin: string; sourceCategory: string } | null
-          }> | null
-        }>
-      }
-    }
-    expect(body.data.data).toHaveLength(1)
-    const row = body.data.data[0]
-    expect(row?.priceByTier).not.toBeNull()
-    expect(row?.priceByTier).toHaveLength(1)
-    const gaBlock = row?.priceByTier?.[0]
-    expect(gaBlock?.tier).toBe('GA')
+            tier: string;
+            headline: { priceMin: string; sourceCategory: string } | null;
+          }> | null;
+        }>;
+      };
+    };
+    expect(body.data.data).toHaveLength(1);
+    const row = body.data.data[0];
+    expect(row?.priceByTier).not.toBeNull();
+    expect(row?.priceByTier).toHaveLength(1);
+    const gaBlock = row?.priceByTier?.[0];
+    expect(gaBlock?.tier).toBe('GA');
     // Postgres `numeric` columns serialize with their precision suffix.
-    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(25)
-    expect(gaBlock?.headline?.sourceCategory).toBe('boxoffice')
-  })
+    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(25);
+    expect(gaBlock?.headline?.sourceCategory).toBe('boxoffice');
+  });
 
   it('priceByTier on list endpoint is null when event has no corroborated submissions', async () => {
     const venue = await seedVenue({
       name: 'No Subs Venue',
       slug: 'no-subs-venue',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'No-subs show',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?venueSlug=no-subs-venue')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?venueSlug=no-subs-venue');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { data: Array<{ priceByTier: unknown }> }
-    }
-    expect(body.data.data[0]?.priceByTier).toBeNull()
-  })
+      data: { data: Array<{ priceByTier: unknown }> };
+    };
+    expect(body.data.data[0]?.priceByTier).toBeNull();
+  });
 
   it('excludes rows with first_missing_at set so stale dupes do not leak to consumers', async () => {
     // Regression for the BASS BINGO / Olivia Rodrigo duplicate-display issue
@@ -213,7 +213,7 @@ describe('GET /v1/events — integration', () => {
     const venue = await seedVenue({
       name: 'Hide Missing Venue',
       slug: 'hide-missing-venue',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Active Show',
       artist: 'Active Artist',
@@ -222,7 +222,7 @@ describe('GET /v1/events — integration', () => {
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: null,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Stale Show',
       artist: 'Stale Artist',
@@ -231,96 +231,96 @@ describe('GET /v1/events — integration', () => {
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-    })
+    });
 
-    const res = await app.request('/v1/events?venueSlug=hide-missing-venue')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?venueSlug=hide-missing-venue');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.total).toBe(1)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Active Show')
-  })
-})
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.total).toBe(1);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Active Show');
+  });
+});
 
 describe('GET /v1/events/:id — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('404s when the event is hidden from consumers (PR 6)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       title: 'Hidden Detail',
       date: '2027-06-01',
       hiddenFromConsumer: true,
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(404);
+  });
 
   it('reports venueGuidePublished true when the venue has published a guide (#764)', async () => {
     const venue = await seedVenue({
       slug: 'guide-published-venue',
       guidePublishedAt: new Date('2026-08-01T12:00:00.000Z'),
-    })
-    const event = await seedEvent(venue.id, { date: '2027-06-05' })
+    });
+    const event = await seedEvent(venue.id, { date: '2027-06-05' });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
-      data: { venueGuidePublished: boolean }
-    }
-    expect(body.data.venueGuidePublished).toBe(true)
-  })
+      data: { venueGuidePublished: boolean };
+    };
+    expect(body.data.venueGuidePublished).toBe(true);
+  });
 
   it('reports venueGuidePublished false for an unpublished venue guide (#764)', async () => {
-    const venue = await seedVenue({ slug: 'guide-draft-venue' })
-    const event = await seedEvent(venue.id, { date: '2027-06-06' })
+    const venue = await seedVenue({ slug: 'guide-draft-venue' });
+    const event = await seedEvent(venue.id, { date: '2027-06-06' });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
-      data: { venueGuidePublished: boolean; venueGuidePublishedAt?: unknown }
-    }
-    expect(body.data.venueGuidePublished).toBe(false)
+      data: { venueGuidePublished: boolean; venueGuidePublishedAt?: unknown };
+    };
+    expect(body.data.venueGuidePublished).toBe(false);
     // The raw timestamp is an internal detail — only the boolean ships.
-    expect(body.data.venueGuidePublishedAt).toBeUndefined()
-  })
+    expect(body.data.venueGuidePublishedAt).toBeUndefined();
+  });
 
   // #1115 PR-G — the event-detail page links artist names to their pages.
   describe('artist slugs (#1115 PR-G)', () => {
     it('resolves the headliner slug and a positionally aligned supporting array', async () => {
-      const venue = await seedVenue({ slug: 'slug-venue' })
-      await seedArtist({ name: 'Ghost Bath' })
+      const venue = await seedVenue({ slug: 'slug-venue' });
+      await seedArtist({ name: 'Ghost Bath' });
       // Deliberately seeding only the SECOND opener: the null must land at
       // index 0 so the UI zip lines names up with slugs.
-      await seedArtist({ name: 'Second Opener' })
+      await seedArtist({ name: 'Second Opener' });
 
       const event = await seedEvent(venue.id, {
         artist: 'Ghost Bath',
         supportingArtists: ['First Opener', 'Second Opener'],
         date: '2027-07-01',
-      })
+      });
 
-      const res = await app.request(`/v1/events/${event.id}`)
-      expect(res.status).toBe(200)
+      const res = await app.request(`/v1/events/${event.id}`);
+      expect(res.status).toBe(200);
       const body = (await res.json()) as {
         data: {
-          supportingArtists: string[]
-          artistSlug: string | null
-          supportingArtistSlugs: Array<string | null>
-        }
-      }
-      expect(body.data.artistSlug).toBe('ghost-bath')
+          supportingArtists: string[];
+          artistSlug: string | null;
+          supportingArtistSlugs: Array<string | null>;
+        };
+      };
+      expect(body.data.artistSlug).toBe('ghost-bath');
       expect(body.data.supportingArtists).toEqual([
         'First Opener',
         'Second Opener',
-      ])
-      expect(body.data.supportingArtistSlugs).toEqual([null, 'second-opener'])
-    })
+      ]);
+      expect(body.data.supportingArtistSlugs).toEqual([null, 'second-opener']);
+    });
 
     // The tour-name defect: the venue billed the night under a string that is
     // not an act, so `artist` (and `canonical_artist` under it, which is the
@@ -329,9 +329,9 @@ describe('GET /v1/events/:id — integration', () => {
     // string resolves to no artist row, which used to cost the bill its
     // headliner entirely.
     it('credits the derived headliner, not the tour string it was billed as', async () => {
-      const venue = await seedVenue({ slug: 'tour-name-venue' })
-      await seedArtist({ name: 'Son Little' })
-      await seedArtist({ name: 'Tonina' })
+      const venue = await seedVenue({ slug: 'tour-name-venue' });
+      await seedArtist({ name: 'Son Little' });
+      await seedArtist({ name: 'Tonina' });
 
       const event = await seedEvent(venue.id, {
         title: 'Son Little: CityFolk Tour 2026',
@@ -342,143 +342,143 @@ describe('GET /v1/events/:id — integration', () => {
         supportingArtists: ['Tonina'],
         canonicalSupporting: ['tonina'],
         date: '2027-07-05',
-      })
+      });
 
-      const res = await app.request(`/v1/events/${event.id}`)
+      const res = await app.request(`/v1/events/${event.id}`);
       const body = (await res.json()) as {
         data: {
-          title: string
-          artist: string
-          artistSlug: string | null
-          supportingArtistSlugs: Array<string | null> | null
-        }
-      }
-      expect(body.data.artist).toBe('Son Little')
-      expect(body.data.artistSlug).toBe('son-little')
-      expect(body.data.supportingArtistSlugs).toEqual(['tonina'])
+          title: string;
+          artist: string;
+          artistSlug: string | null;
+          supportingArtistSlugs: Array<string | null> | null;
+        };
+      };
+      expect(body.data.artist).toBe('Son Little');
+      expect(body.data.artistSlug).toBe('son-little');
+      expect(body.data.supportingArtistSlugs).toEqual(['tonina']);
       // The event's own title is untouched — only who is billed on it moved.
-      expect(body.data.title).toBe('Son Little: CityFolk Tour 2026')
-    })
+      expect(body.data.title).toBe('Son Little: CityFolk Tour 2026');
+    });
 
     it('returns a null headliner slug when the artists projection has no row', async () => {
-      const venue = await seedVenue({ slug: 'unresolved-venue' })
+      const venue = await seedVenue({ slug: 'unresolved-venue' });
       const event = await seedEvent(venue.id, {
         artist: 'Never Projected',
         supportingArtists: null,
         date: '2027-07-02',
-      })
+      });
 
-      const res = await app.request(`/v1/events/${event.id}`)
+      const res = await app.request(`/v1/events/${event.id}`);
       const body = (await res.json()) as {
         data: {
-          artistSlug: string | null
-          supportingArtistSlugs: Array<string | null> | null
-        }
-      }
-      expect(body.data.artistSlug).toBeNull()
+          artistSlug: string | null;
+          supportingArtistSlugs: Array<string | null> | null;
+        };
+      };
+      expect(body.data.artistSlug).toBeNull();
       // Null supportingArtists (legacy row) yields a null slug array, not [].
-      expect(body.data.supportingArtistSlugs).toBeNull()
-    })
+      expect(body.data.supportingArtistSlugs).toBeNull();
+    });
 
     it('keeps duplicate opener names aligned rather than deduping them', async () => {
-      const venue = await seedVenue({ slug: 'dupe-venue' })
-      await seedArtist({ name: 'Echo Act' })
+      const venue = await seedVenue({ slug: 'dupe-venue' });
+      await seedArtist({ name: 'Echo Act' });
       const event = await seedEvent(venue.id, {
         artist: 'Headliner Only',
         // canonicalizeSupporting() would collapse and sort this; the response
         // array must not, or the UI zip silently shifts.
         supportingArtists: ['Echo Act', 'Echo Act'],
         date: '2027-07-03',
-      })
+      });
 
-      const res = await app.request(`/v1/events/${event.id}`)
+      const res = await app.request(`/v1/events/${event.id}`);
       const body = (await res.json()) as {
-        data: { supportingArtistSlugs: Array<string | null> }
-      }
-      expect(body.data.supportingArtistSlugs).toEqual(['echo-act', 'echo-act'])
-    })
-  })
+        data: { supportingArtistSlugs: Array<string | null> };
+      };
+      expect(body.data.supportingArtistSlugs).toEqual(['echo-act', 'echo-act']);
+    });
+  });
 
   it('includes priceSource in event detail response', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       priceSource: 'ticketmaster',
       ticketPriceMin: '45',
       ticketPriceMax: '90',
       date: '2027-06-01',
-    })
+    });
 
-    const eventsRes = await app.request('/v1/events')
+    const eventsRes = await app.request('/v1/events');
     const listBody = (await eventsRes.json()) as {
-      success: boolean
-      data: { data: Array<{ id: string }> }
-    }
-    const eventId = listBody.data.data[0]?.id
-    expect(eventId).toBeDefined()
+      success: boolean;
+      data: { data: Array<{ id: string }> };
+    };
+    const eventId = listBody.data.data[0]?.id;
+    expect(eventId).toBeDefined();
 
-    const res = await app.request(`/v1/events/${eventId}`)
+    const res = await app.request(`/v1/events/${eventId}`);
     const body = (await res.json()) as {
-      success: boolean
-      data: { priceSource: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.priceSource).toBe('ticketmaster')
-  })
+      success: boolean;
+      data: { priceSource: string | null };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.priceSource).toBe('ticketmaster');
+  });
 
   it('includes eventUrl in the event detail response (#1152)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       eventUrl: 'https://www.redrocksonline.com/events/griz-1489047/',
       date: '2027-06-02',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
-      success: boolean
-      data: { eventUrl: string | null }
-    }
-    expect(body.success).toBe(true)
+      success: boolean;
+      data: { eventUrl: string | null };
+    };
+    expect(body.success).toBe(true);
     expect(body.data.eventUrl).toBe(
       'https://www.redrocksonline.com/events/griz-1489047/',
-    )
-  })
+    );
+  });
 
   it('returns event with venue data', async () => {
     const venue = await seedVenue({
       name: 'Fillmore Auditorium',
       slug: 'fillmore-auditorium',
-    })
+    });
     const event = await seedEvent(venue.id, {
       title: 'Jazz Festival',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string; venue: { name: string } }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.title).toBe('Jazz Festival')
-    expect(body.data.venue.name).toBe('Fillmore Auditorium')
-  })
+      success: boolean;
+      data: { title: string; venue: { name: string } };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.title).toBe('Jazz Festival');
+    expect(body.data.venue.name).toBe('Fillmore Auditorium');
+  });
 
   it('returns 404 for unknown event id', async () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000000',
-    )
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
 
   it('returns 404 when the event is flagged first_missing_at so direct-link traffic does not see stale data', async () => {
     const venue = await seedVenue({
       name: 'Detail Missing Venue',
       slug: 'detail-missing-venue',
-    })
+    });
     const evt = await seedEvent(venue.id, {
       title: 'Stale Detail',
       artist: 'Stale Detail Artist',
@@ -487,29 +487,29 @@ describe('GET /v1/events/:id — integration', () => {
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-    })
+    });
 
-    const res = await app.request(`/v1/events/${evt.id}`)
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
+    const res = await app.request(`/v1/events/${evt.id}`);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
 
   it('includes priceByTier with per-tier headline + alternates + pending', async () => {
     const venue = await seedVenue({
       name: 'Globe Hall',
       slug: 'globe-hall-pbt',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
 
     const profileA = await seedUserProfile('user-a', {
       handle: 'price-watcher',
-    })
-    const profileB = await seedUserProfile('user-b', { handle: 'fan-two' })
+    });
+    const profileB = await seedUserProfile('user-b', { handle: 'fan-two' });
 
     // Corroborated GA box-office at $40
     await seedPriceSubmission(event.id, profileA.userId, {
@@ -519,7 +519,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'boxoffice',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     // Corroborated GA standard alternate at $50
     await seedPriceSubmission(event.id, profileB.userId, {
       tier: 'GA',
@@ -527,7 +527,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '50',
       status: 'corroborated',
-    })
+    });
     // Pending VIP at $120
     await seedPriceSubmission(event.id, profileA.userId, {
       tier: 'VIP',
@@ -535,35 +535,35 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '120',
       status: 'pending',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         priceByTier: Array<{
-          tier: string
-          headline: { submissionId: string; priceMin: string } | null
-          alternates: Array<{ priceMin: string }>
-          pending: Array<{ priceMin: string }>
-          reports: number
-        }>
-      }
-    }
+          tier: string;
+          headline: { submissionId: string; priceMin: string } | null;
+          alternates: Array<{ priceMin: string }>;
+          pending: Array<{ priceMin: string }>;
+          reports: number;
+        }>;
+      };
+    };
 
-    expect(body.data.priceByTier).toHaveLength(2)
-    const [gaBlock, vipBlock] = body.data.priceByTier
-    expect(gaBlock?.tier).toBe('GA')
-    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(40)
-    expect(gaBlock?.alternates).toHaveLength(1)
-    expect(parseFloat(gaBlock?.alternates[0]?.priceMin ?? '0')).toBe(50)
-    expect(gaBlock?.reports).toBe(2)
-    expect(vipBlock?.tier).toBe('VIP')
-    expect(vipBlock?.headline).toBeNull()
-    expect(vipBlock?.pending).toHaveLength(1)
-    expect(parseFloat(vipBlock?.pending[0]?.priceMin ?? '0')).toBe(120)
-    expect(vipBlock?.reports).toBe(1)
-  })
+    expect(body.data.priceByTier).toHaveLength(2);
+    const [gaBlock, vipBlock] = body.data.priceByTier;
+    expect(gaBlock?.tier).toBe('GA');
+    expect(parseFloat(gaBlock?.headline?.priceMin ?? '0')).toBe(40);
+    expect(gaBlock?.alternates).toHaveLength(1);
+    expect(parseFloat(gaBlock?.alternates[0]?.priceMin ?? '0')).toBe(50);
+    expect(gaBlock?.reports).toBe(2);
+    expect(vipBlock?.tier).toBe('VIP');
+    expect(vipBlock?.headline).toBeNull();
+    expect(vipBlock?.pending).toHaveLength(1);
+    expect(parseFloat(vipBlock?.pending[0]?.priceMin ?? '0')).toBe(120);
+    expect(vipBlock?.reports).toBe(1);
+  });
 
   // The flat priceObservedAt is derived at events.ts:967, separately from the
   // tier path's aggregate. Both implement one rule, so both need the max case
@@ -573,47 +573,47 @@ describe('GET /v1/events/:id — integration', () => {
       slug: string,
       overrides: Partial<Parameters<typeof seedPriceSubmission>[2]>,
     ) => {
-      const venue = await seedVenue({ name: `Venue ${slug}`, slug })
+      const venue = await seedVenue({ name: `Venue ${slug}`, slug });
       const event = await seedEvent(venue.id, {
         date: '2027-06-01',
         priceSource: 'community',
-      })
+      });
       await seedPriceSubmission(event.id, 'user-flat', {
         tier: 'GA',
         priceMin: '40',
         status: 'corroborated',
         createdAt: new Date('2026-06-01T00:00:00Z'),
         ...overrides,
-      })
-      const res = await app.request(`/v1/events/${event.id}`)
+      });
+      const res = await app.request(`/v1/events/${event.id}`);
       const body = (await res.json()) as {
-        data: { priceObservedAt: string | null }
-      }
-      return body.data.priceObservedAt
-    }
+        data: { priceObservedAt: string | null };
+      };
+      return body.data.priceObservedAt;
+    };
 
     it('falls back to createdAt when the price has never been sighted', async () => {
       expect(await seedFlat('flat-null', { lastSeenAt: null })).toBe(
         '2026-06-01T00:00:00.000Z',
-      )
-    })
+      );
+    });
 
     it('uses lastSeenAt when the sighting is the newer of the two', async () => {
       expect(
         await seedFlat('flat-newer', {
           lastSeenAt: new Date('2026-07-01T00:00:00Z'),
         }),
-      ).toBe('2026-07-01T00:00:00.000Z')
-    })
+      ).toBe('2026-07-01T00:00:00.000Z');
+    });
 
     it('keeps createdAt when lastSeenAt is older, rather than coalescing to it', async () => {
       expect(
         await seedFlat('flat-older', {
           lastSeenAt: new Date('2026-05-01T00:00:00Z'),
         }),
-      ).toBe('2026-06-01T00:00:00.000Z')
-    })
-  })
+      ).toBe('2026-06-01T00:00:00.000Z');
+    });
+  });
 
   // priceSubmissionId names the row the flat fields describe, and the two
   // orderings genuinely disagree: the legacy flat sort ranks by vendor trust,
@@ -623,11 +623,11 @@ describe('GET /v1/events/:id — integration', () => {
     const venue = await seedVenue({
       name: 'Divergent Hall',
       slug: 'divergent-hall',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
 
     // Highest vendor trust (rank 0) but the pricier tier: wins the legacy sort.
     const boxOffice = await seedPriceSubmission(event.id, 'user-bo', {
@@ -637,7 +637,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'boxoffice',
       priceMin: '125',
       status: 'corroborated',
-    })
+    });
     // Cheaper tier, so it leads priceByTier — but lower vendor trust.
     await seedPriceSubmission(event.id, 'user-ga', {
       tier: 'GA',
@@ -645,103 +645,105 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
       data: {
-        priceSubmissionId: string | null
+        priceSubmissionId: string | null;
         priceByTier: Array<{
-          tier: string
-          headline: { submissionId: string } | null
-        }>
-      }
-    }
+          tier: string;
+          headline: { submissionId: string } | null;
+        }>;
+      };
+    };
 
-    expect(body.data.priceByTier[0]?.tier).toBe('GA')
+    expect(body.data.priceByTier[0]?.tier).toBe('GA');
     expect(body.data.priceByTier[0]?.headline?.submissionId).not.toBe(
       boxOffice.id,
-    )
-    expect(body.data.priceSubmissionId).toBe(boxOffice.id)
-  })
+    );
+    expect(body.data.priceSubmissionId).toBe(boxOffice.id);
+  });
 
   // The point of the whole feature: a sighting has to make the price read
   // fresh, and it has to do so on the list and on detail alike, because those
   // read observedAt from two different aggregators.
   it('a recent sighting reads fresh on both the list row and event detail', async () => {
-    const venue = await seedVenue({ name: 'Fresh Hall', slug: 'fresh-hall' })
+    const venue = await seedVenue({ name: 'Fresh Hall', slug: 'fresh-hall' });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
     await seedPriceSubmission(event.id, 'user-fresh', {
       tier: 'GA',
       priceMin: '40',
       status: 'corroborated',
       createdAt: new Date(Date.now() - STALE_AFTER_MS * 3),
       lastSeenAt: new Date(Date.now() - 60 * 60 * 1000),
-    })
+    });
 
     const isFresh = (observedAt: string | null): boolean =>
       observedAt !== null &&
-      Date.now() - new Date(observedAt).getTime() <= STALE_AFTER_MS
+      Date.now() - new Date(observedAt).getTime() <= STALE_AFTER_MS;
 
     const detail = (await (
       await app.request(`/v1/events/${event.id}`)
     ).json()) as {
       data: {
-        priceObservedAt: string | null
-        priceByTier: Array<{ headline: { observedAt: string } | null }>
-      }
-    }
-    expect(isFresh(detail.data.priceObservedAt)).toBe(true)
+        priceObservedAt: string | null;
+        priceByTier: Array<{ headline: { observedAt: string } | null }>;
+      };
+    };
+    expect(isFresh(detail.data.priceObservedAt)).toBe(true);
     expect(
       isFresh(detail.data.priceByTier[0]?.headline?.observedAt ?? null),
-    ).toBe(true)
+    ).toBe(true);
 
     const list = (await (
       await app.request(`/v1/events?venueId=${venue.id}`)
     ).json()) as {
       data: {
         data: Array<{
-          id: string
-          priceByTier: Array<{ headline: { observedAt: string } | null }> | null
-        }>
-      }
-    }
-    const listRow = list.data.data.find((row) => row.id === event.id)
+          id: string;
+          priceByTier: Array<{
+            headline: { observedAt: string } | null;
+          }> | null;
+        }>;
+      };
+    };
+    const listRow = list.data.data.find((row) => row.id === event.id);
     expect(
       isFresh(listRow?.priceByTier?.[0]?.headline?.observedAt ?? null),
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
 
   it('priceByTier is empty array when event has no submissions', async () => {
-    const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' })
-    const event = await seedEvent(venue.id, { date: '2027-06-01' })
+    const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' });
+    const event = await seedEvent(venue.id, { date: '2027-06-01' });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
-      data: { priceByTier: unknown[] }
-    }
-    expect(body.data.priceByTier).toEqual([])
-  })
+      data: { priceByTier: unknown[] };
+    };
+    expect(body.data.priceByTier).toEqual([]);
+  });
 
   it('pendingSubmissions excludes counter rows (counters surface only via counterSubmission / priceByTier.counterSubmission)', async () => {
     const venue = await seedVenue({
       name: 'Counter Test',
       slug: 'counter-test',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
 
     const submitter = await seedUserProfile('counter-parent', {
       handle: 'parent-fan',
-    })
+    });
     const challenger = await seedUserProfile('counter-challenger', {
       handle: 'challenger-fan',
-    })
+    });
 
     // Corroborated parent submission
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
@@ -750,7 +752,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
 
     // Pending counter against the corroborated parent — should appear in
     // counterSubmission only, NOT in pendingSubmissions.
@@ -761,48 +763,48 @@ describe('GET /v1/events/:id — integration', () => {
       priceMin: '30',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
       data: {
-        pendingSubmissions: Array<{ id: string }> | null
-        counterSubmission: { id: string } | null
+        pendingSubmissions: Array<{ id: string }> | null;
+        counterSubmission: { id: string } | null;
         priceByTier: Array<{
-          counterSubmission: { id: string } | null
-        }>
-      }
-    }
+          counterSubmission: { id: string } | null;
+        }>;
+      };
+    };
     // counterSubmission is set (via the flat path AND priceByTier)
-    expect(body.data.counterSubmission).not.toBeNull()
-    expect(body.data.priceByTier[0]?.counterSubmission).not.toBeNull()
+    expect(body.data.counterSubmission).not.toBeNull();
+    expect(body.data.priceByTier[0]?.counterSubmission).not.toBeNull();
     // pendingSubmissions does NOT include the counter row — it should be null
     // or omit the counter's id.
     if (body.data.pendingSubmissions !== null) {
-      const counterId = body.data.counterSubmission?.id
+      const counterId = body.data.counterSubmission?.id;
       expect(
         body.data.pendingSubmissions.find((sub) => sub.id === counterId),
-      ).toBeUndefined()
+      ).toBeUndefined();
     }
-  })
+  });
 
   it('pendingSubmissions is populated even when a corroborated price exists', async () => {
     const venue = await seedVenue({
       name: 'Pending Always',
       slug: 'pending-always',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       ticketPriceMin: '30',
       priceSource: 'community',
-    })
+    });
 
     const profileA = await seedUserProfile('user-corrob', {
       handle: 'corrob-fan',
-    })
+    });
     const profileB = await seedUserProfile('user-pending', {
       handle: 'pending-fan',
-    })
+    });
 
     // Corroborated GA at $30 — historically suppressed pendingSubmissions when a
     // corroborated price already existed for the event.
@@ -812,7 +814,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '30',
       status: 'corroborated',
-    })
+    });
     // Pending VIP at $90 — a different tier; the gate hid it because the event
     // had any corroborated price. PR 3 always surfaces pending rows.
     await seedPriceSubmission(event.id, profileB.userId, {
@@ -821,31 +823,31 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '90',
       status: 'pending',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
+    const res = await app.request(`/v1/events/${event.id}`);
     const body = (await res.json()) as {
       data: {
-        pendingSubmissions: Array<{ tier: string; priceMin: string }> | null
-      }
-    }
-    expect(body.data.pendingSubmissions).not.toBeNull()
-    expect(body.data.pendingSubmissions).toHaveLength(1)
-    expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP')
-  })
+        pendingSubmissions: Array<{ tier: string; priceMin: string }> | null;
+      };
+    };
+    expect(body.data.pendingSubmissions).not.toBeNull();
+    expect(body.data.pendingSubmissions).toHaveLength(1);
+    expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP');
+  });
 
   it('counterSubmission carries lastAdminActionAt + lastAdminActionKind as null when never deferred', async () => {
     const venue = await seedVenue({
       name: 'Counter No Defer',
       slug: 'counter-no-defer',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
 
-    const submitter = await seedUserProfile('cnd-parent', { handle: 'p-cnd' })
-    const challenger = await seedUserProfile('cnd-chal', { handle: 'c-cnd' })
+    const submitter = await seedUserProfile('cnd-parent', { handle: 'p-cnd' });
+    const challenger = await seedUserProfile('cnd-chal', { handle: 'c-cnd' });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -853,7 +855,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'Ticketmaster',
@@ -861,50 +863,50 @@ describe('GET /v1/events/:id — integration', () => {
       priceMin: '55',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         counterSubmission: {
-          lastAdminActionAt: string | null
-          lastAdminActionKind: string | null
-        } | null
+          lastAdminActionAt: string | null;
+          lastAdminActionKind: string | null;
+        } | null;
         priceByTier: Array<{
-          tier: string
+          tier: string;
           counterSubmission: {
-            lastAdminActionAt: string | null
-            lastAdminActionKind: string | null
-          } | null
-        }>
-      }
-    }
+            lastAdminActionAt: string | null;
+            lastAdminActionKind: string | null;
+          } | null;
+        }>;
+      };
+    };
 
     // Flat counterSubmission carries both fields as null.
-    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull()
-    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull()
+    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull();
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull();
 
     // priceByTier counterSubmission carries both fields as null too — the two
     // surfaces stay lock-step during PR 4's migration window.
-    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
-    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull()
-    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull()
-  })
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA');
+    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull();
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull();
+  });
 
   it('priceByTier counterSubmission surfaces lastAdminActionKind="defer" after a defer', async () => {
     const venue = await seedVenue({
       name: 'Defer surfacing',
       slug: 'defer-surface',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       ticketPriceMin: '40',
       priceSource: 'community',
-    })
+    });
 
-    const submitter = await seedUserProfile('parent-u-d', { handle: 'p-d' })
-    const challenger = await seedUserProfile('chal-u-d', { handle: 'c-d' })
+    const submitter = await seedUserProfile('parent-u-d', { handle: 'p-d' });
+    const challenger = await seedUserProfile('chal-u-d', { handle: 'c-d' });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -915,11 +917,11 @@ describe('GET /v1/events/:id — integration', () => {
       // contest naturally lands in (corroborated parent + pending counter,
       // then admin marks defer on the counter).
       status: 'corroborated',
-    })
+    });
     // The defer endpoint writes these two fields to the counter; the seed
     // helper writes them directly so this test verifies only the projection.
     // Task 9 covers end-to-end via the defer endpoint.
-    const deferredAt = new Date('2026-06-21T18:00:00Z')
+    const deferredAt = new Date('2026-06-21T18:00:00Z');
     await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -929,39 +931,39 @@ describe('GET /v1/events/:id — integration', () => {
       disputedSubmissionId: parent.id,
       lastAdminActionKind: 'defer',
       lastAdminActionAt: deferredAt,
-    })
+    });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         counterSubmission: {
-          lastAdminActionAt: string | null
-          lastAdminActionKind: string | null
-        } | null
+          lastAdminActionAt: string | null;
+          lastAdminActionKind: string | null;
+        } | null;
         priceByTier: Array<{
-          tier: string
+          tier: string;
           counterSubmission: {
-            lastAdminActionAt: string | null
-            lastAdminActionKind: string | null
-          } | null
-        }>
-      }
-    }
+            lastAdminActionAt: string | null;
+            lastAdminActionKind: string | null;
+          } | null;
+        }>;
+      };
+    };
 
     // priceByTier surfaces the defer signal on the right tier's counter.
-    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
-    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBe('defer')
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA');
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBe('defer');
     expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBe(
       deferredAt.toISOString(),
-    )
+    );
 
     // The flat counterSubmission stays in lock-step (PR 4 migration window).
-    expect(body.data.counterSubmission?.lastAdminActionKind).toBe('defer')
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBe('defer');
     expect(body.data.counterSubmission?.lastAdminActionAt).toBe(
       deferredAt.toISOString(),
-    )
-  })
+    );
+  });
 
   // R16: counterSubmission emits paired (kind=null, at=null) when the DB
   // text column carries an unrecognized kind. Without the paired narrow
@@ -970,14 +972,14 @@ describe('GET /v1/events/:id — integration', () => {
     const venue = await seedVenue({
       name: 'Unrecognized kind venue',
       slug: 'unrecognized-kind-venue',
-    })
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       priceSource: 'community',
-    })
+    });
 
-    const submitter = await seedUserProfile('uk-parent', { handle: 'p-uk' })
-    const challenger = await seedUserProfile('uk-chal', { handle: 'c-uk' })
+    const submitter = await seedUserProfile('uk-parent', { handle: 'p-uk' });
+    const challenger = await seedUserProfile('uk-chal', { handle: 'c-uk' });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -985,7 +987,7 @@ describe('GET /v1/events/:id — integration', () => {
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
     const counter = await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -996,7 +998,7 @@ describe('GET /v1/events/:id — integration', () => {
       // Real timestamp paired with a future kind that the narrowing
       // union doesn't yet recognize — the projection must drop both.
       lastAdminActionAt: new Date('2027-05-15T12:00:00Z'),
-    })
+    });
 
     // Direct SQL write: simulate an unrecognized internal kind landing in
     // the column. Bypass the typed Drizzle insert path so we can write a
@@ -1005,629 +1007,629 @@ describe('GET /v1/events/:id — integration', () => {
       sql`UPDATE price_submissions
           SET last_admin_action_kind = 'some_future_kind'
           WHERE id = ${counter.id}`,
-    )
+    );
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
       data: {
         counterSubmission: {
-          lastAdminActionAt: string | null
-          lastAdminActionKind: string | null
-        } | null
+          lastAdminActionAt: string | null;
+          lastAdminActionKind: string | null;
+        } | null;
         priceByTier: Array<{
-          tier: string
+          tier: string;
           counterSubmission: {
-            lastAdminActionAt: string | null
-            lastAdminActionKind: string | null
-          } | null
-        }>
-      }
-    }
+            lastAdminActionAt: string | null;
+            lastAdminActionKind: string | null;
+          } | null;
+        }>;
+      };
+    };
 
     // Flat counterSubmission must pair both fields to null.
-    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull()
-    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull()
+    expect(body.data.counterSubmission?.lastAdminActionKind).toBeNull();
+    expect(body.data.counterSubmission?.lastAdminActionAt).toBeNull();
 
     // Per-tier counterSubmission must too — the two surfaces stay lock-step.
-    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
-    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull()
-    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull()
-  })
-})
+    const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA');
+    expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBeNull();
+    expect(gaBlock?.counterSubmission?.lastAdminActionAt).toBeNull();
+  });
+});
 
 describe('GET /v1/events — filterPrice', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('under-25 returns only events with price < 25', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Cheap Show',
       ticketPriceMin: '15',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Pricey Show',
       ticketPriceMin: '60',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'No Price',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=under-25')
+    const res = await app.request('/v1/events?filterPrice=under-25');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Cheap Show')
-  })
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Cheap Show');
+  });
 
   it('25-50 returns events with 25 <= price < 50', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Low Show',
       ticketPriceMin: '10',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Mid Show',
       ticketPriceMin: '35',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'Boundary Show',
       ticketPriceMin: '25',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 4',
       title: 'High Show',
       ticketPriceMin: '75',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=25-50')
+    const res = await app.request('/v1/events?filterPrice=25-50');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Boundary Show', 'Mid Show'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Boundary Show', 'Mid Show']);
+  });
 
   it('50-plus returns events with price >= 50', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Cheap Show',
       ticketPriceMin: '20',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Boundary Show',
       ticketPriceMin: '50',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'Pricey Show',
       ticketPriceMin: '120',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=50-plus')
+    const res = await app.request('/v1/events?filterPrice=50-plus');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Boundary Show', 'Pricey Show'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Boundary Show', 'Pricey Show']);
+  });
 
   it('tbd returns only events with no price data', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Priced Show',
       ticketPriceMin: '45',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'TBD Show',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=tbd')
+    const res = await app.request('/v1/events?filterPrice=tbd');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('TBD Show')
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('TBD Show');
+  });
 
   it('returns 400 for an invalid filterPrice value', async () => {
-    const res = await app.request('/v1/events?filterPrice=invalid')
-    expect(res.status).toBe(400)
-  })
-})
+    const res = await app.request('/v1/events?filterPrice=invalid');
+    expect(res.status).toBe(400);
+  });
+});
 
 describe('GET /v1/events — search', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('searches by venue name', async () => {
     const venue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird-theater',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Rock Night',
       artist: 'Test Band',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?search=Bluebird')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/events?search=Bluebird');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Rock Night')
-    expect(body.data.total).toBe(1)
-  })
-})
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Rock Night');
+    expect(body.data.total).toBe(1);
+  });
+});
 
 describe('GET /v1/events — filterVibe', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns only events whose genre array contains the selected vibe', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Rock Night',
       genre: ['rock', 'indie'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Jazz Evening',
       genre: ['jazz'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'No Genre',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=rock')
+    const res = await app.request('/v1/events?filterVibe=rock');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Rock Night')
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Rock Night');
+  });
 
   it('matches events that have the vibe among multiple genres', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Indie Rock Show',
       genre: ['indie', 'rock'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Pure Indie',
       genre: ['indie'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'Pop Show',
       genre: ['pop'],
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=indie')
+    const res = await app.request('/v1/events?filterVibe=indie');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Indie Rock Show', 'Pure Indie'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Indie Rock Show', 'Pure Indie']);
+  });
 
   it('expands a bucket to its sub-genres — filterVibe=electronic surfaces house / dubstep / bass', async () => {
     // #1101 — the whole point of the taxonomy: picking one bucket surfaces
     // the entire family. Without expansion, filterVibe=electronic would
     // only match events literally tagged 'electronic'.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'House DJ',
       title: 'House Night',
       genre: ['house'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Dubstep DJ',
       title: 'Bass Bin',
       genre: ['dubstep', 'bass'],
       date: '2027-06-02',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Rock Band',
       title: 'Not Electronic',
       genre: ['rock'],
       date: '2027-06-03',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=electronic')
+    const res = await app.request('/v1/events?filterVibe=electronic');
     const body: {
-      success: boolean
-      data: { data: { title: string }[] }
-    } = await res.json()
-    expect(res.status).toBe(200)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Bass Bin', 'House Night'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    } = await res.json();
+    expect(res.status).toBe(200);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Bass Bin', 'House Night']);
+  });
 
   it('bucket also matches rows tagged with the bucket label itself', async () => {
     // Some events are tagged with the umbrella label directly ('rock',
     // 'electronic') rather than a sub-genre. The expansion has to include
     // the bucket label or those rows would silently disappear.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Umbrella Act',
       title: 'Just Electronic',
       genre: ['electronic'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Sub Act',
       title: 'Techno Set',
       genre: ['techno'],
       date: '2027-06-02',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=electronic')
+    const res = await app.request('/v1/events?filterVibe=electronic');
     const body: {
-      success: boolean
-      data: { data: { title: string }[] }
-    } = await res.json()
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Just Electronic', 'Techno Set'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    } = await res.json();
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Just Electronic', 'Techno Set']);
+  });
 
   it('falls back to exact-string overlap for unknown filterVibe (back-compat with bookmarks)', async () => {
     // A bookmarked ?filterVibe=dubstep from before the bucket switch must
     // still work — even though dubstep is no longer in the /genres response,
     // it's a valid raw genre and the fallback path preserves the exact
     // string overlap semantics.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Dubstep DJ',
       title: 'Only Dubstep',
       genre: ['dubstep'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'House DJ',
       title: 'Only House',
       genre: ['house'],
       date: '2027-06-02',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=dubstep')
+    const res = await app.request('/v1/events?filterVibe=dubstep');
     const body: {
-      success: boolean
-      data: { data: { title: string }[] }
-    } = await res.json()
+      success: boolean;
+      data: { data: { title: string }[] };
+    } = await res.json();
     // Fallback = single-value overlap; House Night should NOT match.
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Only Dubstep')
-  })
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Only Dubstep');
+  });
 
   it('returns 400 for a filterVibe value exceeding 100 characters', async () => {
-    const longGenre = 'a'.repeat(101)
-    const res = await app.request(`/v1/events?filterVibe=${longGenre}`)
-    expect(res.status).toBe(400)
-  })
+    const longGenre = 'a'.repeat(101);
+    const res = await app.request(`/v1/events?filterVibe=${longGenre}`);
+    expect(res.status).toBe(400);
+  });
 
   it('combines filterPrice and filterVibe', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist 1',
       title: 'Cheap Rock',
       genre: ['rock'],
       ticketPriceMin: '20',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 2',
       title: 'Pricey Rock',
       genre: ['rock'],
       ticketPriceMin: '80',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist 3',
       title: 'Cheap Jazz',
       genre: ['jazz'],
       ticketPriceMin: '15',
       date: '2027-06-01',
-    })
+    });
 
     const res = await app.request(
       '/v1/events?filterVibe=rock&filterPrice=under-25',
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Cheap Rock')
-  })
-})
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Cheap Rock');
+  });
+});
 
 describe('GET /v1/events — anonymous reads (#794)', () => {
   // These replace the REQUIRE_BETA_AUTH 401 assertions. The flag is gone, so
   // the contract is the inverse: reads serve anonymous callers, and the
   // mutating routes still 401 on their own.
   it('serves the list to an anonymous caller', async () => {
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
-  })
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
+  });
 
   it('serves GET /genres to an anonymous caller', async () => {
-    const res = await app.request('/v1/events/genres')
-    expect(res.status).toBe(200)
-  })
+    const res = await app.request('/v1/events/genres');
+    expect(res.status).toBe(200);
+  });
 
   it('reaches the handler on GET /:id for an anonymous caller', async () => {
     // 404 rather than 401 — auth no longer intercepts before the lookup.
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000001',
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('still rejects an anonymous POST /:id/watch', async () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000001/watch',
       { method: 'POST' },
-    )
-    expect(res.status).toBe(401)
-  })
+    );
+    expect(res.status).toBe(401);
+  });
 
   it('still rejects an anonymous DELETE /:id/watch', async () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000001/watch',
       { method: 'DELETE' },
-    )
-    expect(res.status).toBe(401)
-  })
-})
+    );
+    expect(res.status).toBe(401);
+  });
+});
 
 describe('GET /v1/events/genres', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns empty array when no upcoming events exist', async () => {
-    const res = await app.request('/v1/events/genres')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: string[] }
-    expect(body.success).toBe(true)
-    expect(body.data).toEqual([])
-  })
+    const res = await app.request('/v1/events/genres');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: string[] };
+    expect(body.success).toBe(true);
+    expect(body.data).toEqual([]);
+  });
 
   it('returns bucket labels (not raw genres) sorted alphabetically', async () => {
     // #1101 — the endpoint used to return raw genre strings ('r&b', 'dubstep',
     // 'metalcore', ...). It now collapses them to bucket labels so the Vibe
     // filter has 16 stable options instead of ~85 long-tail LLM strings.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Artist One',
       genre: ['rock', 'indie'],
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Artist Two',
       genre: ['r&b', 'rock'],
       status: 'upcoming',
-    })
+    });
 
-    const res = await app.request('/v1/events/genres')
-    expect(res.status).toBe(200)
-    const body: { success: boolean; data: string[] } = await res.json()
+    const res = await app.request('/v1/events/genres');
+    expect(res.status).toBe(200);
+    const body: { success: boolean; data: string[] } = await res.json();
     // r&b buckets under hip-hop; rock and indie are their own buckets.
-    expect(body.data).toEqual(['hip-hop', 'indie', 'rock'])
-  })
+    expect(body.data).toEqual(['hip-hop', 'indie', 'rock']);
+  });
 
   it('collapses electronic sub-genres into a single "electronic" bucket', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'DJ One',
       genre: ['dubstep'],
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'DJ Two',
       genre: ['house', 'bass'],
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'DJ Three',
       genre: ['drum and bass'],
       status: 'upcoming',
-    })
+    });
 
-    const res = await app.request('/v1/events/genres')
-    const body: { success: boolean; data: string[] } = await res.json()
-    expect(body.data).toEqual(['electronic'])
-  })
+    const res = await app.request('/v1/events/genres');
+    const body: { success: boolean; data: string[] } = await res.json();
+    expect(body.data).toEqual(['electronic']);
+  });
 
   it('drops unbucketed long-tail genres from the filter surface', async () => {
     // 'ceremony', 'film', '<UNKNOWN>' exist in prod but are not real music
     // vibes — they should not appear as filter chips.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Wedding Band',
       genre: ['ceremony'],
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Rock Band',
       genre: ['rock'],
       status: 'upcoming',
-    })
+    });
 
-    const res = await app.request('/v1/events/genres')
-    const body: { success: boolean; data: string[] } = await res.json()
-    expect(body.data).toEqual(['rock'])
-  })
+    const res = await app.request('/v1/events/genres');
+    const body: { success: boolean; data: string[] } = await res.json();
+    expect(body.data).toEqual(['rock']);
+  });
 
   it('excludes genres from non-upcoming events', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Jazz Act',
       genre: ['jazz'],
       status: 'cancelled',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Rock Act',
       genre: ['rock'],
       status: 'upcoming',
-    })
+    });
 
-    const res = await app.request('/v1/events/genres')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: string[] }
-    expect(body.data).toEqual(['rock'])
-  })
+    const res = await app.request('/v1/events/genres');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: string[] };
+    expect(body.data).toEqual(['rock']);
+  });
 
   it('omits genres that only appear on first_missing_at rows', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Stale Genre Artist',
       genre: ['ghost-genre-do-not-show'],
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Active Genre Artist',
       genre: ['rock'],
       status: 'upcoming',
-    })
+    });
 
-    const res = await app.request('/v1/events/genres')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: string[] }
-    expect(body.data).not.toContain('ghost-genre-do-not-show')
-    expect(body.data).toContain('rock')
-  })
-})
+    const res = await app.request('/v1/events/genres');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: string[] };
+    expect(body.data).not.toContain('ghost-genre-do-not-show');
+    expect(body.data).toContain('rock');
+  });
+});
 
 describe('GET /v1/events/:id/related — integration (#833)', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns up to 3 other upcoming events at the same venue, excluding source', async () => {
-    const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' })
+    const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' });
     const source = await seedEvent(venue.id, {
       artist: 'Source Artist',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
-    await seedEvent(venue.id, { artist: 'Sibling One', date: '2027-06-16' })
-    await seedEvent(venue.id, { artist: 'Sibling Two', date: '2027-06-17' })
-    await seedEvent(venue.id, { artist: 'Sibling Three', date: '2027-06-18' })
-    await seedEvent(venue.id, { artist: 'Sibling Four', date: '2027-06-19' })
+    });
+    await seedEvent(venue.id, { artist: 'Sibling One', date: '2027-06-16' });
+    await seedEvent(venue.id, { artist: 'Sibling Two', date: '2027-06-17' });
+    await seedEvent(venue.id, { artist: 'Sibling Three', date: '2027-06-18' });
+    await seedEvent(venue.id, { artist: 'Sibling Four', date: '2027-06-19' });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: Array<{ id: string; artist: string }> }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.data).toHaveLength(3)
-    const ids = body.data.data.map((row) => row.id)
-    expect(ids).not.toContain(source.id)
-  })
+      success: boolean;
+      data: { data: Array<{ id: string; artist: string }> };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.data).toHaveLength(3);
+    const ids = body.data.data.map((row) => row.id);
+    expect(ids).not.toContain(source.id);
+  });
 
   it('does not include events from other venues', async () => {
-    const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a-rel' })
-    const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b-rel' })
+    const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a-rel' });
+    const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b-rel' });
     const source = await seedEvent(venueA.id, {
       artist: 'Source Artist',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
-    await seedEvent(venueA.id, { artist: 'Same Venue', date: '2027-06-16' })
-    await seedEvent(venueB.id, { artist: 'Other Venue', date: '2027-06-17' })
+    });
+    await seedEvent(venueA.id, { artist: 'Same Venue', date: '2027-06-16' });
+    await seedEvent(venueB.id, { artist: 'Other Venue', date: '2027-06-17' });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
+    const res = await app.request(`/v1/events/${source.id}/related`);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: Array<{ artist: string }> }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.artist).toBe('Same Venue')
-  })
+      success: boolean;
+      data: { data: Array<{ artist: string }> };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.artist).toBe('Same Venue');
+  });
 
   it('returns a slim payload (no priceByTier aggregation, no enrichment)', async () => {
-    const venue = await seedVenue({ name: 'Slim Venue', slug: 'slim-venue' })
+    const venue = await seedVenue({ name: 'Slim Venue', slug: 'slim-venue' });
     const source = await seedEvent(venue.id, {
       artist: 'Source Artist',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
       priceSource: 'community',
-    })
+    });
     const sibling = await seedEvent(venue.id, {
       artist: 'Sibling',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-16',
       priceSource: 'community',
-    })
-    const profile = await seedUserProfile('user-slim', { handle: 'fan' })
+    });
+    const profile = await seedUserProfile('user-slim', { handle: 'fan' });
     // Seed a corroborated submission on the sibling — the list endpoint
     // would surface this via priceByTier. The related endpoint must NOT.
     await seedPriceSubmission(sibling.id, profile.userId, {
@@ -1637,133 +1639,133 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
       sourceCategory: 'boxoffice',
       priceMin: '40',
       status: 'corroborated',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
+    const res = await app.request(`/v1/events/${source.id}/related`);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
         data: Array<{
-          id: string
-          artist: string
-          title: string
-          date: string
-          imageUrl: string | null
-          venue: { slug: string; name: string }
-          priceByTier?: unknown
-          priceVendor?: unknown
-        }>
-      }
-    }
-    expect(body.data.data).toHaveLength(1)
-    const row = body.data.data[0]
-    expect(row?.artist).toBe('Sibling')
-    expect(row?.venue.slug).toBe('slim-venue')
-    expect(row?.venue.name).toBe('Slim Venue')
+          id: string;
+          artist: string;
+          title: string;
+          date: string;
+          imageUrl: string | null;
+          venue: { slug: string; name: string };
+          priceByTier?: unknown;
+          priceVendor?: unknown;
+        }>;
+      };
+    };
+    expect(body.data.data).toHaveLength(1);
+    const row = body.data.data[0];
+    expect(row?.artist).toBe('Sibling');
+    expect(row?.venue.slug).toBe('slim-venue');
+    expect(row?.venue.name).toBe('Slim Venue');
     // Slim payload — priceByTier and priceVendor must NOT be present.
-    expect(row?.priceByTier).toBeUndefined()
-    expect(row?.priceVendor).toBeUndefined()
-  })
+    expect(row?.priceByTier).toBeUndefined();
+    expect(row?.priceVendor).toBeUndefined();
+  });
 
   it('excludes hiddenFromConsumer events from the related list', async () => {
-    const venue = await seedVenue({ name: 'Hide Venue', slug: 'hide-venue' })
+    const venue = await seedVenue({ name: 'Hide Venue', slug: 'hide-venue' });
     const source = await seedEvent(venue.id, {
       artist: 'Source',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Hidden Sibling',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-16',
       hiddenFromConsumer: true,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Visible Sibling',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-17',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
+    const res = await app.request(`/v1/events/${source.id}/related`);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: Array<{ artist: string }> }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.artist).toBe('Visible Sibling')
-  })
+      success: boolean;
+      data: { data: Array<{ artist: string }> };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.artist).toBe('Visible Sibling');
+  });
 
   it('excludes events flagged first_missing_at from the related list', async () => {
     const venue = await seedVenue({
       name: 'Missing Venue',
       slug: 'missing-venue',
-    })
+    });
     const source = await seedEvent(venue.id, {
       artist: 'Source',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Stale Sibling',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-16',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Visible Sibling',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-17',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
+    const res = await app.request(`/v1/events/${source.id}/related`);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: Array<{ artist: string }> }
-    }
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.artist).toBe('Visible Sibling')
-  })
+      success: boolean;
+      data: { data: Array<{ artist: string }> };
+    };
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.artist).toBe('Visible Sibling');
+  });
 
   it('returns 404 for an unknown event id', async () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000000/related',
-    )
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
 
   it('returns 404 for a non-UUID id', async () => {
-    const res = await app.request('/v1/events/not-a-uuid/related')
-    expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toBe('Event not found')
-  })
+    const res = await app.request('/v1/events/not-a-uuid/related');
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toBe('Event not found');
+  });
 
   it('returns 404 when the source event is hidden from consumers', async () => {
     const venue = await seedVenue({
       name: 'Hidden Source Venue',
       slug: 'hidden-source-venue',
-    })
+    });
     const source = await seedEvent(venue.id, {
       artist: 'Hidden Source',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
       hiddenFromConsumer: true,
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(404);
+  });
 
   // Lock down the two remaining source-event exclusion paths so a future
   // refactor of the source-event WHERE clause can't silently leak related
@@ -1773,218 +1775,218 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venue = await seedVenue({
       name: 'Stale Source Venue',
       slug: 'stale-source-venue',
-    })
+    });
     const source = await seedEvent(venue.id, {
       artist: 'Stale Source',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
       firstMissingAt: new Date('2026-06-26T09:00:00Z'),
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(404);
+  });
 
   it('returns 404 when the source event has venueId = null (draft / unassigned)', async () => {
     const venue = await seedVenue({
       name: 'Detached Source Venue',
       slug: 'detached-source-venue',
-    })
+    });
     const source = await seedEvent(venue.id, {
       artist: 'Detached Source',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
+    });
     // Drop the venue association directly — the route can't group related
     // shows by venue when there's no venue to group by, so it must 404
     // rather than match every venueless event in the system.
     await testDb
       .update(events)
       .set({ venueId: null })
-      .where(eq(events.id, source.id))
+      .where(eq(events.id, source.id));
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(404)
-  })
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(404);
+  });
 
   it('returns an empty list when the venue has no other upcoming events', async () => {
-    const venue = await seedVenue({ name: 'Solo Venue', slug: 'solo-venue' })
+    const venue = await seedVenue({ name: 'Solo Venue', slug: 'solo-venue' });
     const source = await seedEvent(venue.id, {
       artist: 'Only Show',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-15',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: unknown[] }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.data).toHaveLength(0)
-  })
+      success: boolean;
+      data: { data: unknown[] };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.data).toHaveLength(0);
+  });
 
   it('serializes supportingArtists and tourName on related events', async () => {
     const venue = await seedVenue({
       name: 'Related Ogden',
       slug: 'related-ogden',
-    })
+    });
     const source = await seedEvent(venue.id, {
       artist: 'Wednesday',
       supportingArtists: null,
       tourName: null,
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Opener Act',
       supportingArtists: ['Hotline TNT'],
       tourName: 'Rat Saw God Tour',
       date: '2027-06-10',
-    })
+    });
 
-    const res = await app.request(`/v1/events/${source.id}/related`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
         data: Array<{
-          id: string
-          supportingArtists: string[] | null
-          tourName: string | null
-        }>
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.supportingArtists).toEqual(['Hotline TNT'])
-    expect(body.data.data[0]?.tourName).toBe('Rat Saw God Tour')
-  })
-})
+          id: string;
+          supportingArtists: string[] | null;
+          tourName: string | null;
+        }>;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.supportingArtists).toEqual(['Hotline TNT']);
+    expect(body.data.data[0]?.tourName).toBe('Rat Saw God Tour');
+  });
+});
 
 describe('GET /v1/events — supportingArtists + tourName serialization', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns supportingArtists and tourName on list + detail', async () => {
-    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
     const event = await seedEvent(venue.id, {
       title: 'Wednesday',
       date: '2027-06-01',
       supportingArtists: ['Hotline TNT'],
       tourName: 'Rat Saw God Tour',
-    })
+    });
 
-    const list = await app.request('/v1/events')
+    const list = await app.request('/v1/events');
     const listBody = (await list.json()) as {
-      success: boolean
+      success: boolean;
       data: {
         data: Array<{
-          id: string
-          supportingArtists: string[] | null
-          tourName: string | null
-        }>
-        total: number
-      }
-    }
-    const listed = listBody.data.data.find((row) => row.id === event.id)
-    expect(listed?.supportingArtists).toEqual(['Hotline TNT'])
-    expect(listed?.tourName).toBe('Rat Saw God Tour')
+          id: string;
+          supportingArtists: string[] | null;
+          tourName: string | null;
+        }>;
+        total: number;
+      };
+    };
+    const listed = listBody.data.data.find((row) => row.id === event.id);
+    expect(listed?.supportingArtists).toEqual(['Hotline TNT']);
+    expect(listed?.tourName).toBe('Rat Saw God Tour');
 
-    const detail = await app.request(`/v1/events/${event.id}`)
+    const detail = await app.request(`/v1/events/${event.id}`);
     const detailBody = (await detail.json()) as {
-      success: boolean
-      data: { supportingArtists: string[] | null; tourName: string | null }
-    }
-    expect(detailBody.data.supportingArtists).toEqual(['Hotline TNT'])
-    expect(detailBody.data.tourName).toBe('Rat Saw God Tour')
-  })
-})
+      success: boolean;
+      data: { supportingArtists: string[] | null; tourName: string | null };
+    };
+    expect(detailBody.data.supportingArtists).toEqual(['Hotline TNT']);
+    expect(detailBody.data.tourName).toBe('Rat Saw God Tour');
+  });
+});
 
 describe('GET /v1/events/availability', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns per-date show counts within the window', async () => {
-    const venue = await seedVenue({ slug: 'larimer', name: 'Larimer Lounge' })
+    const venue = await seedVenue({ slug: 'larimer', name: 'Larimer Lounge' });
     await seedEvent(venue.id, {
       artist: 'Show A',
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Show B',
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Show C',
       date: '2026-05-02',
       status: 'upcoming',
-    })
+    });
 
     const res = await app.request(
       '/v1/events/availability?from=2026-04-01&to=2026-05-31',
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data.from).toBe('2026-04-01')
-    expect(body.data.to).toBe('2026-05-31')
-    const dates = body.data.data.map((day) => day.date)
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.from).toBe('2026-04-01');
+    expect(body.data.to).toBe('2026-05-31');
+    const dates = body.data.data.map((day) => day.date);
     // The endpoint sorts by date ascending, not the planner's arbitrary order.
-    expect(dates).toEqual(['2026-04-28', '2026-05-02'])
+    expect(dates).toEqual(['2026-04-28', '2026-05-02']);
     const byDate = Object.fromEntries(
       body.data.data.map((day) => [day.date, day.count]),
-    )
-    expect(byDate['2026-04-28']).toBe(2)
-    expect(byDate['2026-05-02']).toBe(1)
-  })
+    );
+    expect(byDate['2026-04-28']).toBe(2);
+    expect(byDate['2026-05-02']).toBe(1);
+  });
 
   it('excludes hidden and missing events', async () => {
-    const venue = await seedVenue({ slug: 'hi-dive', name: 'Hi-Dive' })
+    const venue = await seedVenue({ slug: 'hi-dive', name: 'Hi-Dive' });
     await seedEvent(venue.id, {
       artist: 'Visible Show',
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Hidden Show',
       date: '2026-04-28',
       status: 'upcoming',
       hiddenFromConsumer: true,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Missing Show',
       date: '2026-04-28',
       status: 'upcoming',
       firstMissingAt: new Date(),
-    })
+    });
 
     const res = await app.request(
       '/v1/events/availability?from=2026-04-01&to=2026-04-30',
-    )
-    const body = await res.json()
+    );
+    const body = await res.json();
     const byDate = Object.fromEntries(
       body.data.data.map((day) => [day.date, day.count]),
-    )
-    expect(byDate['2026-04-28']).toBe(1)
-  })
+    );
+    expect(byDate['2026-04-28']).toBe(1);
+  });
 
   it('rejects a window wider than 400 days', async () => {
     const res = await app.request(
       '/v1/events/availability?from=2026-01-01&to=2027-12-31',
-    )
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.success).toBe(false)
-    expect(typeof body.error).toBe('string')
-  })
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(typeof body.error).toBe('string');
+  });
 
   it('rejects a regex-matching but invalid calendar date', async () => {
     // 2026-02-31 passes the YYYY-MM-DD regex but is not a real date, so the
@@ -1992,151 +1994,153 @@ describe('GET /v1/events/availability', () => {
     // bad string reaching Postgres.
     const res = await app.request(
       '/v1/events/availability?from=2026-02-01&to=2026-02-31',
-    )
-    expect(res.status).toBe(400)
-  })
+    );
+    expect(res.status).toBe(400);
+  });
 
   it('defaults `from` to today when omitted', async () => {
-    const res = await app.request('/v1/events/availability?to=2026-12-31')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.data.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-  })
+    const res = await app.request('/v1/events/availability?to=2026-12-31');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 
   it('defaults `from` to Mountain Time today, not UTC', async () => {
     // 2026-07-11T04:00:00Z is 2026-07-10 22:00 in America/Denver (UTC-6 DST):
     // UTC "today" is already the 11th while MT is still the 10th. events.date
     // holds MT calendar dates, so the default window must start on the 10th or a
     // same-day evening show would silently drop off the calendar.
-    const venue = await seedVenue({ slug: 'ogden', name: 'Ogden Theatre' })
+    const venue = await seedVenue({ slug: 'ogden', name: 'Ogden Theatre' });
     await seedEvent(venue.id, {
       artist: 'Tonight Show',
       date: '2026-07-10',
       status: 'upcoming',
-    })
+    });
 
     // Fake only Date (not timers) so async DB calls still settle while the
     // handler's `new Date()` reads the frozen MT-evening instant.
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date('2026-07-11T04:00:00Z'))
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-07-11T04:00:00Z'));
     try {
-      const res = await app.request('/v1/events/availability?to=2026-12-31')
-      expect(res.status).toBe(200)
-      const body = await res.json()
-      expect(body.data.from).toBe('2026-07-10')
+      const res = await app.request('/v1/events/availability?to=2026-12-31');
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.data.from).toBe('2026-07-10');
       const byDate = Object.fromEntries(
         body.data.data.map((day) => [day.date, day.count]),
-      )
-      expect(byDate['2026-07-10']).toBe(1)
+      );
+      expect(byDate['2026-07-10']).toBe(1);
     } finally {
-      vi.useRealTimers()
+      vi.useRealTimers();
     }
-  })
-})
+  });
+});
 
 // The headliner's portrait, second link in the event-surface imagery chain.
 // `artists` is a projection joined on canonicalName with no foreign key, so
 // every assertion here is really about that join behaving like a lookup.
 describe('GET /v1/events — artistPhotoUrl join', () => {
-  const PORTRAIT = 'https://i.scdn.co/image/headliner'
+  const PORTRAIT = 'https://i.scdn.co/image/headliner';
 
   // Parsed rather than cast: the point of these cases is that the field is
   // actually serialized, and a cast would assert that instead of checking it.
   const photoFields = z.object({
     imageUrl: z.string().nullable(),
     artistPhotoUrl: z.string().nullable(),
-  })
-  const listShape = z.object({ data: z.object({ data: z.array(photoFields) }) })
-  const detailShape = z.object({ data: photoFields })
+  });
+  const listShape = z.object({
+    data: z.object({ data: z.array(photoFields) }),
+  });
+  const detailShape = z.object({ data: photoFields });
   const relatedShape = z.object({
     data: z.object({ data: z.array(photoFields) }),
-  })
+  });
 
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   const listRow = async (): Promise<z.infer<typeof photoFields>> => {
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
-    const body = listShape.parse(await res.json())
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
+    const body = listShape.parse(await res.json());
     // One event seeded per test, so a second row would mean the left join
     // fanned out — the failure mode the unique canonicalName index prevents.
-    expect(body.data.data).toHaveLength(1)
-    return body.data.data[0]!
-  }
+    expect(body.data.data).toHaveLength(1);
+    return body.data.data[0]!;
+  };
 
   it('returns both sources when the event has art and the headliner is matched', async () => {
-    const venue = await seedVenue({ slug: 'photo-both' })
-    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    const venue = await seedVenue({ slug: 'photo-both' });
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT });
     await seedEvent(venue.id, {
       artist: 'Khruangbin',
       date: '2027-06-01',
       imageUrl: 'https://venue.test/poster.jpg',
-    })
+    });
 
     expect(await listRow()).toEqual({
       imageUrl: 'https://venue.test/poster.jpg',
       artistPhotoUrl: PORTRAIT,
-    })
-  })
+    });
+  });
 
   it('returns the portrait alone when the event has no art', async () => {
-    const venue = await seedVenue({ slug: 'photo-artist-only' })
-    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    const venue = await seedVenue({ slug: 'photo-artist-only' });
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT });
     await seedEvent(venue.id, {
       artist: 'Khruangbin',
       date: '2027-06-01',
       imageUrl: null,
-    })
+    });
 
     expect(await listRow()).toEqual({
       imageUrl: null,
       artistPhotoUrl: PORTRAIT,
-    })
-  })
+    });
+  });
 
   // Ordinary, not an error: most events have no projection row at all, and a
   // matched row may still be waiting on the photo backfill.
   it('returns null when no projection row matches, and when it has no photo', async () => {
-    const venue = await seedVenue({ slug: 'photo-none' })
-    await seedEvent(venue.id, { artist: 'Nobody Here', date: '2027-06-01' })
-    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
+    const venue = await seedVenue({ slug: 'photo-none' });
+    await seedEvent(venue.id, { artist: 'Nobody Here', date: '2027-06-01' });
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null });
 
-    await clearTables()
-    const other = await seedVenue({ slug: 'photo-unmatched' })
-    await seedArtist({ name: 'Khruangbin', photoUrl: null })
-    await seedEvent(other.id, { artist: 'Khruangbin', date: '2027-06-01' })
-    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
-  })
+    await clearTables();
+    const other = await seedVenue({ slug: 'photo-unmatched' });
+    await seedArtist({ name: 'Khruangbin', photoUrl: null });
+    await seedEvent(other.id, { artist: 'Khruangbin', date: '2027-06-01' });
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null });
+  });
 
   // A projection row keyed on a different canonical name must not leak in.
   it('does not match a different artist', async () => {
-    const venue = await seedVenue({ slug: 'photo-other' })
-    await seedArtist({ name: 'Some Opener', photoUrl: PORTRAIT })
-    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-01' })
+    const venue = await seedVenue({ slug: 'photo-other' });
+    await seedArtist({ name: 'Some Opener', photoUrl: PORTRAIT });
+    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-01' });
 
-    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
-  })
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null });
+  });
 
   it('serializes the portrait on the detail and related shapes too', async () => {
-    const venue = await seedVenue({ slug: 'photo-detail' })
-    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    const venue = await seedVenue({ slug: 'photo-detail' });
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT });
     const source = await seedEvent(venue.id, {
       artist: 'Khruangbin',
       date: '2027-06-01',
-    })
-    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-02' })
+    });
+    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-02' });
 
-    const detail = await app.request(`/v1/events/${source.id}`)
-    expect(detail.status).toBe(200)
-    const detailBody = detailShape.parse(await detail.json())
-    expect(detailBody.data.artistPhotoUrl).toBe(PORTRAIT)
+    const detail = await app.request(`/v1/events/${source.id}`);
+    expect(detail.status).toBe(200);
+    const detailBody = detailShape.parse(await detail.json());
+    expect(detailBody.data.artistPhotoUrl).toBe(PORTRAIT);
 
-    const related = await app.request(`/v1/events/${source.id}/related`)
-    expect(related.status).toBe(200)
-    const relatedBody = relatedShape.parse(await related.json())
-    expect(relatedBody.data.data).toHaveLength(1)
-    expect(relatedBody.data.data[0]?.artistPhotoUrl).toBe(PORTRAIT)
-  })
-})
+    const related = await app.request(`/v1/events/${source.id}/related`);
+    expect(related.status).toBe(200);
+    const relatedBody = relatedShape.parse(await related.json());
+    expect(relatedBody.data.data).toHaveLength(1);
+    expect(relatedBody.data.data[0]?.artistPhotoUrl).toBe(PORTRAIT);
+  });
+});

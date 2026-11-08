@@ -53,7 +53,7 @@ export const inboxItemType = pgEnum('inbox_item_type', [
   'price_submission',
   'blocked_venue',
   'crawl_failure',
-])
+]);
 
 // Per-occurrence read marks. The key includes `source_created_at` (the same
 // occurrence timestamp the GET row exposes) so an entity that re-enters the
@@ -84,7 +84,7 @@ export const inboxReads = pgTable(
       'inbox_reads_item_type_item_id_source_created_at_unique',
     ).on(table.itemType, table.itemId, table.sourceCreatedAt),
   }),
-)
+);
 
 // Per-category "read up to" watermark. mark-all-read upserts read_up_to = now()
 // for a category (O(1)) instead of inserting one inbox_reads row per historical
@@ -97,7 +97,7 @@ export const inboxReadWatermarks = pgTable('inbox_read_watermarks', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 - Expand-only: purely additive, no changes to `events`/`price_submissions`/`venues`/`notifications`.

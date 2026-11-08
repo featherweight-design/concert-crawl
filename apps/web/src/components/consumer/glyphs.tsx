@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 
 // PendingDot
 export const PendingDot = ({
@@ -8,9 +8,9 @@ export const PendingDot = ({
   filled = false,
   color = 'oklch(0.62 0.12 240)',
 }: {
-  size?: number
-  filled?: boolean
-  color?: string
+  size?: number;
+  filled?: boolean;
+  color?: string;
 }) => (
   <svg width={size} height={size} viewBox="0 0 7 7" style={{ flexShrink: 0 }}>
     <circle
@@ -22,7 +22,7 @@ export const PendingDot = ({
       strokeWidth="1.1"
     />
   </svg>
-)
+);
 
 // LockGlyph
 export const LockGlyph = ({ size = 10 }: { size?: number }) => (
@@ -44,15 +44,15 @@ export const LockGlyph = ({ size = 10 }: { size?: number }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 // CheckGlyph
 export const CheckGlyph = ({
   size = 10,
   color = 'currentColor',
 }: {
-  size?: number
-  color?: string
+  size?: number;
+  color?: string;
 }) => (
   <svg width={size} height={size} viewBox="0 0 10 10" fill="none">
     <path
@@ -63,15 +63,15 @@ export const CheckGlyph = ({
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 // ArrowGlyph
 export const ArrowGlyph = ({
   size = 13,
   dir = 'right',
 }: {
-  size?: number
-  dir?: 'right' | 'left'
+  size?: number;
+  dir?: 'right' | 'left';
 }) => (
   <svg
     width={size}
@@ -88,15 +88,15 @@ export const ArrowGlyph = ({
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 // StarGlyph
 export const StarGlyph = ({
   size = 10,
   color = 'oklch(0.66 0.14 78)',
 }: {
-  size?: number
-  color?: string
+  size?: number;
+  color?: string;
 }) => (
   <svg width={size} height={size} viewBox="0 0 10 10" style={{ flexShrink: 0 }}>
     <path
@@ -104,15 +104,15 @@ export const StarGlyph = ({
       fill={color}
     />
   </svg>
-)
+);
 
 // Eyebrow
 export const Eyebrow = ({
   children,
   color = 'var(--fg-subtle)',
 }: {
-  children: React.ReactNode
-  color?: string
+  children: React.ReactNode;
+  color?: string;
 }) => (
   <div
     style={{
@@ -125,37 +125,37 @@ export const Eyebrow = ({
   >
     {children}
   </div>
-)
+);
 
 // PendingTrustPill
-const AZURE = 'oklch(0.62 0.12 240)'
-const GOLD = 'oklch(0.66 0.14 78)'
-const CORAL = 'oklch(0.65 0.20 25)'
+const AZURE = 'oklch(0.62 0.12 240)';
+const GOLD = 'oklch(0.66 0.14 78)';
+const CORAL = 'oklch(0.65 0.20 25)';
 
 const pendingPillTokens = (kind: 'community' | 'boxoffice' | 'resale') => {
-  const color = kind === 'boxoffice' ? GOLD : kind === 'resale' ? CORAL : AZURE
+  const color = kind === 'boxoffice' ? GOLD : kind === 'resale' ? CORAL : AZURE;
   const pillPercent =
-    kind === 'boxoffice' ? '22%' : kind === 'resale' ? '18%' : '16%'
+    kind === 'boxoffice' ? '22%' : kind === 'resale' ? '18%' : '16%';
   return {
     color,
     pill: `color-mix(in oklab, ${color} ${pillPercent}, transparent)`,
-  }
-}
+  };
+};
 
 export const PendingTrustPill = ({
   kind,
 }: {
-  kind: 'community' | 'boxoffice' | 'resale'
+  kind: 'community' | 'boxoffice' | 'resale';
 }) => {
-  const tok = pendingPillTokens(kind)
-  const isBox = kind === 'boxoffice'
-  const isResale = kind === 'resale'
-  const label = isBox ? 'Box office' : isResale ? 'Resale' : 'Community'
+  const tok = pendingPillTokens(kind);
+  const isBox = kind === 'boxoffice';
+  const isResale = kind === 'resale';
+  const label = isBox ? 'Box office' : isResale ? 'Resale' : 'Community';
   const border = isBox
     ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
     : isResale
       ? `1px solid color-mix(in oklab, ${CORAL} 60%, transparent)`
-      : 'none'
+      : 'none';
   return (
     <span
       style={{
@@ -179,8 +179,8 @@ export const PendingTrustPill = ({
       {isBox && <StarGlyph size={8} />}
       {label}
     </span>
-  )
-}
+  );
+};
 
 // TierMark
 // Property table §primitives lines 42-63. The boxoffice star intentionally uses
@@ -192,19 +192,19 @@ const TIER_COLOR = {
   boxoffice: 'oklch(0.66 0.14 78)',
   resale: 'oklch(0.65 0.20 25)',
   community: 'oklch(0.62 0.12 240)',
-} as const
+} as const;
 
 const TIER_MARK_STAR_PATH =
-  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z'
+  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z';
 
 export interface TierMarkProps {
-  kind: 'boxoffice' | 'resale' | 'community'
-  glyph?: boolean
-  children: React.ReactNode
+  kind: 'boxoffice' | 'resale' | 'community';
+  glyph?: boolean;
+  children: React.ReactNode;
 }
 
 export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
-  const color = TIER_COLOR[kind]
+  const color = TIER_COLOR[kind];
   return (
     <span
       style={{
@@ -239,5 +239,5 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
       )}
       {children}
     </span>
-  )
-}
+  );
+};

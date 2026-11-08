@@ -1,18 +1,18 @@
-import type { GuideChipKey } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '../definitions/copy'
-import { GuideIcon } from './GuideIcon'
+import type { GuideChipKey } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '../definitions/copy';
+import { GuideIcon } from './GuideIcon';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 interface GuideChipRowProps {
-  chipType: GuideChipKey
-  body: string
+  chipType: GuideChipKey;
+  body: string;
   /** First row in its column — suppresses the hairline separator above it. */
-  first?: boolean
+  first?: boolean;
 }
 
 export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
-  const isAccessibility = chipType === 'accessibility'
+  const isAccessibility = chipType === 'accessibility';
 
   // The separator is a class, not an inline style, so the two-column desktop
   // grid can drop it wholesale at `sm:` — each column starts fresh there and a
@@ -66,5 +66,5 @@ export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
         </p>
       </div>
     </div>
-  )
-}
+  );
+};

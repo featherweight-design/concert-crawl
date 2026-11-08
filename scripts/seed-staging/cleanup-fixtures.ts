@@ -35,7 +35,7 @@
  * so callers (and tests) can pass a narrowed subset of users.
  */
 
-import { inArray, or } from 'drizzle-orm'
+import { inArray, or } from 'drizzle-orm';
 import {
   crews,
   feedback,
@@ -44,22 +44,22 @@ import {
   submissionConfirms,
   userEvents,
   userProfiles,
-} from '../../packages/db/src/schema/index.js'
-import { SEEDED_CREW_ID_LIST } from './fixture-users.js'
-import type { DrizzleWriteDb } from './sync-venues.js'
+} from '../../packages/db/src/schema/index.js';
+import { SEEDED_CREW_ID_LIST } from './fixture-users.js';
+import type { DrizzleWriteDb } from './sync-venues.js';
 
 export async function cleanupFixtures(deps: {
-  staging: DrizzleWriteDb
-  fixtureUserIds: readonly string[]
+  staging: DrizzleWriteDb;
+  fixtureUserIds: readonly string[];
   /**
    * Users whose user_events the seeder owns but whose other rows it does not.
    * The owner account gets a seeded Concert History while also carrying real
    * hand-made rows — profile, feedback, notifications, price submissions — so
    * it must never enter the full fixture sweep.
    */
-  userEventsOnlyUserIds?: readonly string[]
+  userEventsOnlyUserIds?: readonly string[];
 }): Promise<{ deleted: Record<string, number> }> {
-  const { staging, fixtureUserIds, userEventsOnlyUserIds = [] } = deps
+  const { staging, fixtureUserIds, userEventsOnlyUserIds = [] } = deps;
 
   // user_events for the narrow-scope users, deleted ahead of the fixture sweep
   // so an empty fixture set still clears them. Counted into the same
@@ -70,7 +70,7 @@ export async function cleanupFixtures(deps: {
           .delete(userEvents)
           .where(inArray(userEvents.userId, [...userEventsOnlyUserIds]))
           .returning({ id: userEvents.id })
-      : []
+      : [];
 
   // Seeded crews, matched on their fixed ids so a crew Hugh made by hand on
   // staging is never swept. crew_members, crew_invites and crew_mutes all
@@ -80,7 +80,7 @@ export async function cleanupFixtures(deps: {
   const deletedCrews = await staging
     .delete(crews)
     .where(inArray(crews.id, [...SEEDED_CREW_ID_LIST]))
-    .returning({ id: crews.id })
+    .returning({ id: crews.id });
 
   // Empty fixture set → nothing further to delete. Drizzle's inArray([]) emits
   // `IN ()`, which is invalid Postgres SQL (some drivers substitute
@@ -98,7 +98,7 @@ export async function cleanupFixtures(deps: {
         userProfiles: 0,
         crews: deletedCrews.length,
       },
-    }
+    };
   }
 
   // 1. submissionConfirms — child of priceSubmissions.
@@ -117,8 +117,8 @@ export async function cleanupFixtures(deps: {
   const fixtureSubmissionRows = await staging
     .select({ id: priceSubmissions.id })
     .from(priceSubmissions)
-    .where(inArray(priceSubmissions.userId, [...fixtureUserIds]))
-  const fixtureSubmissionIds = fixtureSubmissionRows.map((row) => row.id)
+    .where(inArray(priceSubmissions.userId, [...fixtureUserIds]));
+  const fixtureSubmissionIds = fixtureSubmissionRows.map((row) => row.id);
 
   const confirmsWhere =
     fixtureSubmissionIds.length > 0
@@ -126,11 +126,11 @@ export async function cleanupFixtures(deps: {
           inArray(submissionConfirms.userId, [...fixtureUserIds]),
           inArray(submissionConfirms.submissionId, fixtureSubmissionIds),
         )
-      : inArray(submissionConfirms.userId, [...fixtureUserIds])
+      : inArray(submissionConfirms.userId, [...fixtureUserIds]);
   const deletedSubmissionConfirms = await staging
     .delete(submissionConfirms)
     .where(confirmsWhere)
-    .returning({ id: submissionConfirms.id })
+    .returning({ id: submissionConfirms.id });
 
   // 2. priceSubmissions — child of events; parent of submissionConfirms.
   // Any orphaned confirms would cascade-drop here, but step 1 already
@@ -138,32 +138,32 @@ export async function cleanupFixtures(deps: {
   const deletedPriceSubmissions = await staging
     .delete(priceSubmissions)
     .where(inArray(priceSubmissions.userId, [...fixtureUserIds]))
-    .returning({ id: priceSubmissions.id })
+    .returning({ id: priceSubmissions.id });
 
   // 3. feedback — no downstream FK children
   const deletedFeedback = await staging
     .delete(feedback)
     .where(inArray(feedback.userId, [...fixtureUserIds]))
-    .returning({ id: feedback.id })
+    .returning({ id: feedback.id });
 
   // 4. userEvents — no downstream FK children
   const deletedUserEvents = await staging
     .delete(userEvents)
     .where(inArray(userEvents.userId, [...fixtureUserIds]))
-    .returning({ id: userEvents.id })
+    .returning({ id: userEvents.id });
 
   // 5. notifications — nullable userId; NULL IN (...) evaluates to NULL so
   //    admin-broadcast rows are never matched.
   const deletedNotifications = await staging
     .delete(notifications)
     .where(inArray(notifications.userId, [...fixtureUserIds]))
-    .returning({ id: notifications.id })
+    .returning({ id: notifications.id });
 
   // 6. userProfiles — must come last; no FK children among the six tables
   const deletedUserProfiles = await staging
     .delete(userProfiles)
     .where(inArray(userProfiles.userId, [...fixtureUserIds]))
-    .returning({ id: userProfiles.id })
+    .returning({ id: userProfiles.id });
 
   return {
     deleted: {
@@ -175,5 +175,5 @@ export async function cleanupFixtures(deps: {
       userProfiles: deletedUserProfiles.length,
       crews: deletedCrews.length,
     },
-  }
+  };
 }

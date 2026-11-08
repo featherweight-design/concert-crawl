@@ -1,15 +1,15 @@
-export type NavKind = 'danger' | 'warning' | 'signal'
+export type NavKind = 'danger' | 'warning' | 'signal';
 
 export interface NavItem {
-  key: string
-  label: string
-  href: string
-  iconName: string
+  key: string;
+  label: string;
+  href: string;
+  iconName: string;
   badge?: {
-    count: number
-    kind: NavKind
-  }
-  section: 'operations' | 'account'
+    count: number;
+    kind: NavKind;
+  };
+  section: 'operations' | 'account';
 }
 
 export const NAV_V2: NavItem[] = [
@@ -93,7 +93,7 @@ export const NAV_V2: NavItem[] = [
     iconName: 'Settings',
     section: 'account',
   },
-]
+];
 
 /** @deprecated Use NAV_V2 */
-export const NAV = NAV_V2
+export const NAV = NAV_V2;

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 Supporter → Premium upgrade confirmation (design table
 // lifecycle-flows.md). Signal-toned proration card + 2×2 unlocks grid;
@@ -6,7 +6,7 @@
 // proratedText is the live proration preview; the design defines no
 // loading state, so a quiet placeholder holds the slot while it lands.
 
-import { AMOUNT_PLACEHOLDER, UPGRADE_FLOW_COPY } from './definitions/copy'
+import { AMOUNT_PLACEHOLDER, UPGRADE_FLOW_COPY } from './definitions/copy';
 import {
   ErrorLine,
   FinePrint,
@@ -15,19 +15,19 @@ import {
   MathRow,
   MonoEyebrow,
   RailHeader,
-} from './primitives'
+} from './primitives';
 
 interface UpgradeFlowProps {
   /** Formatted prorated charge, e.g. "$3.25" — null while the preview loads. */
-  proratedText: string | null
+  proratedText: string | null;
   /** Desktop modal layout — larger headline/subhead sizes. */
-  wide: boolean
-  pending: boolean
+  wide: boolean;
+  pending: boolean;
   /** Gates the confirm CTA while the proration preview is still loading. */
-  confirmDisabled?: boolean
-  errorText: string | null
-  onConfirm: () => void
-  onBack: () => void
+  confirmDisabled?: boolean;
+  errorText: string | null;
+  onConfirm: () => void;
+  onBack: () => void;
 }
 
 export const UpgradeFlow = ({
@@ -39,8 +39,8 @@ export const UpgradeFlow = ({
   onConfirm,
   onBack,
 }: UpgradeFlowProps) => {
-  const copy = UPGRADE_FLOW_COPY
-  const prorated = proratedText ?? AMOUNT_PLACEHOLDER
+  const copy = UPGRADE_FLOW_COPY;
+  const prorated = proratedText ?? AMOUNT_PLACEHOLDER;
 
   return (
     <div
@@ -183,5 +183,5 @@ export const UpgradeFlow = ({
       </div>
       <FinePrint>{copy.finePrint}</FinePrint>
     </div>
-  )
-}
+  );
+};

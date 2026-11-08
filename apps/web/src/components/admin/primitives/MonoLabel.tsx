@@ -1,11 +1,11 @@
 interface MonoLabelProps {
-  children: React.ReactNode
-  color?: string
+  children: React.ReactNode;
+  color?: string;
   /**
    * Overrides the 10px default. The triage panel's desktop persistence
    * column uses 9 to sit under the value it labels without competing.
    */
-  size?: number
+  size?: number;
 }
 
 export const MonoLabel = ({ children, color, size = 10 }: MonoLabelProps) => (
@@ -21,4 +21,4 @@ export const MonoLabel = ({ children, color, size = 10 }: MonoLabelProps) => (
   >
     {children}
   </span>
-)
+);

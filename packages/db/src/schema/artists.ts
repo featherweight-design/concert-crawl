@@ -10,7 +10,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 /**
  * A Spotify search hit, snapshotted at match time into
@@ -23,12 +23,12 @@ import {
  * picker needs to tell those apart to know whether hydrating is worth a call.
  */
 export type SpotifyCandidateSnapshot = {
-  id: string
-  name: string
-  imageUrl: string | null
-  genres: string[] | null
-  spotifyUrl: string | null
-}
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  genres: string[] | null;
+  spotifyUrl: string | null;
+};
 
 /**
  * Fruitless searches a row gets before the match job stops asking.
@@ -42,7 +42,7 @@ export type SpotifyCandidateSnapshot = {
  * tiebreaker in `packages/db/src/scripts` also spends this budget, and two
  * copies of the number is the same parity trap that produced the Ø/ø incident.
  */
-export const MATCH_ATTEMPT_LIMIT = 3
+export const MATCH_ATTEMPT_LIMIT = 3;
 
 /**
  * Where an artist sits in the Spotify identity-match lifecycle (#1115).
@@ -63,7 +63,7 @@ export const artistMatchStatusEnum = pgEnum('artist_match_status', [
   'ambiguous', // candidates found, none cleared the bar — needs a human
   'no_match', // searched, nothing plausible
   'not_an_artist', // a human confirmed there is no act here to match
-])
+]);
 
 /**
  * Projection table giving every artist a stable, URL-safe identity (#1115).
@@ -158,4 +158,4 @@ export const artists = pgTable(
     // The admin match-review queue scans by status.
     matchStatusIdx: index('artists_match_status_idx').on(table.matchStatus),
   }),
-)
+);

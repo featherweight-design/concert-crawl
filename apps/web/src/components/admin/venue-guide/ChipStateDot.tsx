@@ -1,23 +1,23 @@
-import type { GuideChipState } from '@concert-crawl/types'
-import { ADMIN_COPY } from '../definitions/copy'
+import type { GuideChipState } from '@concert-crawl/types';
+import { ADMIN_COPY } from '../definitions/copy';
 
 // The handoff's dot carried state by colour + fill alone (design-table §D.11).
 // We keep the dot and pair it with the state word, so the distinction survives
 // greyscale, colour-blindness, and a screen reader.
 
-const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
+const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide;
 
 const TOKENS: Record<GuideChipState, { color: string; fill: boolean }> = {
   blank: { color: 'var(--fg-subtle)', fill: false },
   authored: { color: 'var(--success)', fill: true },
   honest_placeholder: { color: 'var(--warning)', fill: true },
-}
+};
 
 interface ChipStateDotProps {
-  state: GuideChipState
-  size?: number
+  state: GuideChipState;
+  size?: number;
   /** Render the dot alone; the caller supplies the text equivalent. */
-  hideLabel?: boolean
+  hideLabel?: boolean;
 }
 
 export const ChipStateDot = ({
@@ -25,7 +25,7 @@ export const ChipStateDot = ({
   size = 7,
   hideLabel = false,
 }: ChipStateDotProps) => {
-  const token = TOKENS[state]
+  const token = TOKENS[state];
   return (
     <span
       style={{
@@ -65,5 +65,5 @@ export const ChipStateDot = ({
         </span>
       )}
     </span>
-  )
-}
+  );
+};

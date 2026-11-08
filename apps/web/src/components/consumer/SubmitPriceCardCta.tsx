@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { SubmitPriceModal } from '@/components/consumer/submit-price'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState } from 'react';
+import { SubmitPriceModal } from '@/components/consumer/submit-price';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface SubmitPriceCardCtaProps {
-  eventId: string
-  artist: string
-  venueName: string
-  date: string
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string;
 }
 
 // Presentational-only version: renders the dashed "submit another price" card
@@ -21,13 +21,13 @@ export function SubmitPriceCardButton({
   onClick,
   signedOut = false,
 }: {
-  onClick: () => void
+  onClick: () => void;
   /**
    * Announces the sign-up gate to assistive tech without drawing it (#1247).
    * The card is unchanged visually and still opens on tap; SubmitPriceModal
    * swaps itself for the tier picker once it is open.
    */
-  signedOut?: boolean
+  signedOut?: boolean;
 }) {
   return (
     <button
@@ -104,7 +104,7 @@ export function SubmitPriceCardButton({
         </svg>
       </span>
     </button>
-  )
+  );
 }
 
 // Self-contained version: the button plus its own SubmitPriceModal. Used in
@@ -116,7 +116,7 @@ export function SubmitPriceCardCta({
   venueName,
   date,
 }: SubmitPriceCardCtaProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
@@ -131,5 +131,5 @@ export function SubmitPriceCardCta({
         date={date}
       />
     </>
-  )
+  );
 }

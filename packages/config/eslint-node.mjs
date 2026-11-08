@@ -1,4 +1,4 @@
-import kitNode from '@fwd-stack/eslint-config/node'
+import kitNode from '@fwd-stack/eslint-config/node';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -23,4 +23,4 @@ export default [
       ],
     },
   },
-]
+];

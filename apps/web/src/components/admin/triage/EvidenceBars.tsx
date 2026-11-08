@@ -11,14 +11,14 @@
 // gap that reads as missing data.
 
 interface EvidenceBarsProps {
-  series: number[]
+  series: number[];
   /** Severity ink. Tints the final bar only. */
-  tone: string
-  width: number
-  label: string
+  tone: string;
+  width: number;
+  label: string;
 }
 
-const HEIGHT = 22
+const HEIGHT = 22;
 
 export const EvidenceBars = ({
   series,
@@ -28,8 +28,8 @@ export const EvidenceBars = ({
 }: EvidenceBarsProps) => {
   // `Math.max(...series, 1)` — the seed keeps an all-zero series (a venue
   // that returned nothing on every run in the window) from dividing by zero.
-  const max = Math.max(...series, 1)
-  const last = series.length - 1
+  const max = Math.max(...series, 1);
+  const last = series.length - 1;
 
   return (
     <span
@@ -60,5 +60,5 @@ export const EvidenceBars = ({
         />
       ))}
     </span>
-  )
-}
+  );
+};

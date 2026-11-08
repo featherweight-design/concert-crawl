@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Settings ▸ Notifications ▸ Crew activity (#1226 PR-7).
 //
@@ -12,17 +12,17 @@
 // everyone, and the mute is stored as row-presence anyway (there is no muted
 // boolean to mirror).
 
-import { ToggleSwitch } from '../connections/ToggleSwitch'
-import { useCrews, useCrewMuteToggle } from '@/lib/queries/use-crew-mutes'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
+import { ToggleSwitch } from '../connections/ToggleSwitch';
+import { useCrews, useCrewMuteToggle } from '@/lib/queries/use-crew-mutes';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
 
-const COPY = NOTIFICATIONS_COPY.crew
+const COPY = NOTIFICATIONS_COPY.crew;
 
 export const CrewActivityBlock = () => {
-  const { enabled: crewsEnabled } = useFeatureFlag('crews')
-  const { data: crews, isLoading, isError } = useCrews()
-  const toggle = useCrewMuteToggle()
+  const { enabled: crewsEnabled } = useFeatureFlag('crews');
+  const { data: crews, isLoading, isError } = useCrews();
+  const toggle = useCrewMuteToggle();
 
   // Deliberately NOT role="alert": the push half of this section already owns
   // the section's one alert, and two live regions announcing at once on a
@@ -36,7 +36,7 @@ export const CrewActivityBlock = () => {
   ) : (
     <div className="flex flex-col gap-2">
       {crews.map((crew) => {
-        const audible = !crew.muted
+        const audible = !crew.muted;
         return (
           <div
             key={crew.id}
@@ -60,14 +60,14 @@ export const CrewActivityBlock = () => {
               disabled={toggle.isPending}
             />
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 
   // Gated here rather than at the three mount sites in NotificationsSection,
   // which render it from separate error, loading and settled branches.
-  if (!crewsEnabled) return null
+  if (!crewsEnabled) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -75,5 +75,5 @@ export const CrewActivityBlock = () => {
       <p className="text-xs text-fg-muted">{COPY.detail}</p>
       {body}
     </div>
-  )
-}
+  );
+};

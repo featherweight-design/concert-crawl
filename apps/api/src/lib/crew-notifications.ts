@@ -16,7 +16,7 @@
 // a person belongs to a handful of crews. One insert per call is sufficient and
 // there is deliberately no batching layer.
 
-import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import {
   crewMembers,
   crewMutes,
@@ -26,21 +26,21 @@ import {
   notifications,
   userProfiles,
   venues,
-} from '@concert-crawl/db'
-import type { UserNotificationCategory } from '@concert-crawl/push'
-import { displayHeadliner } from './event-billing.js'
-import { apiLogger } from './logger.js'
+} from '@concert-crawl/db';
+import type { UserNotificationCategory } from '@concert-crawl/push';
+import { displayHeadliner } from './event-billing.js';
+import { apiLogger } from './logger.js';
 import {
   CREW_NOTIFICATION_ACTOR_FALLBACK,
   crewNotificationCopy,
-} from './definitions/crew-notification-copy.js'
+} from './definitions/crew-notification-copy.js';
 
 /** One resolved recipient, already attributed to the crew that will show. */
 interface CrewRecipient {
-  userId: string
-  crewId: string
-  crewName: string
-  patchSalt: number
+  userId: string;
+  crewId: string;
+  crewName: string;
+  patchSalt: number;
 }
 
 /**
@@ -49,11 +49,11 @@ interface CrewRecipient {
  * three are denormalized here rather than re-fetched per row at render time.
  */
 interface CrewNotificationMetadata {
-  crewId: string
-  crewName: string
-  patchSalt: number
-  category: UserNotificationCategory
-  eventId?: string
+  crewId: string;
+  crewName: string;
+  patchSalt: number;
+  category: UserNotificationCategory;
+  eventId?: string;
 }
 
 /**
@@ -65,9 +65,9 @@ const loadActorName = async (userId: string): Promise<string> => {
     .select({ handle: userProfiles.handle })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
-    .limit(1)
-  return row?.handle ?? CREW_NOTIFICATION_ACTOR_FALLBACK
-}
+    .limit(1);
+  return row?.handle ?? CREW_NOTIFICATION_ACTOR_FALLBACK;
+};
 
 /**
  * Every member of `crewIds` other than the actor, with anyone holding a
@@ -82,7 +82,7 @@ const loadRecipients = async (
   crewIds: string[],
   actorUserId: string,
 ): Promise<CrewRecipient[]> => {
-  if (crewIds.length === 0) return []
+  if (crewIds.length === 0) return [];
 
   const rows = await db
     .select({
@@ -107,35 +107,35 @@ const loadRecipients = async (
         isNull(crewMutes.id),
       ),
     )
-    .orderBy(asc(crews.name), asc(crews.id), asc(crewMembers.userId))
+    .orderBy(asc(crews.name), asc(crews.id), asc(crewMembers.userId));
 
   // Dedupe across crews: sharing three crews with the actor is still one
   // notification. The first crew in the deterministic order above is the one
   // named on the row.
-  const seen = new Map<string, CrewRecipient>()
+  const seen = new Map<string, CrewRecipient>();
   for (const row of rows) {
-    if (seen.has(row.userId)) continue
-    seen.set(row.userId, row)
+    if (seen.has(row.userId)) continue;
+    seen.set(row.userId, row);
   }
-  return [...seen.values()]
-}
+  return [...seen.values()];
+};
 
 const insertRows = async (
   rows: (typeof notifications.$inferInsert)[],
   context: Record<string, unknown>,
 ): Promise<{ written: number }> => {
-  if (rows.length === 0) return { written: 0 }
+  if (rows.length === 0) return { written: 0 };
   try {
-    await db.insert(notifications).values(rows)
-    return { written: rows.length }
+    await db.insert(notifications).values(rows);
+    return { written: rows.length };
   } catch (notifyErr) {
     apiLogger.warn(
       { ...context, err: notifyErr },
       'Failed to write crew notifications; the triggering action already committed.',
-    )
-    return { written: 0 }
+    );
+    return { written: 0 };
   }
-}
+};
 
 const buildMetadata = (
   recipient: CrewRecipient,
@@ -148,24 +148,24 @@ const buildMetadata = (
     patchSalt: recipient.patchSalt,
     category,
     ...(eventId === undefined ? {} : { eventId }),
-  }
-  return JSON.stringify(metadata)
-}
+  };
+  return JSON.stringify(metadata);
+};
 
 /**
  * `crew.going` — someone marked attendance, so everyone they share a crew with
  * hears about it once. Call AFTER the attendance row commits.
  */
 export async function notifyCrewGoing(input: {
-  actorUserId: string
-  eventId: string
+  actorUserId: string;
+  eventId: string;
 }): Promise<{ written: number }> {
   try {
     const myCrews = await db
       .select({ crewId: crewMembers.crewId })
       .from(crewMembers)
-      .where(eq(crewMembers.userId, input.actorUserId))
-    if (myCrews.length === 0) return { written: 0 }
+      .where(eq(crewMembers.userId, input.actorUserId));
+    if (myCrews.length === 0) return { written: 0 };
 
     const [recipients, eventRow, actorName] = await Promise.all([
       loadRecipients(
@@ -179,16 +179,16 @@ export async function notifyCrewGoing(input: {
         .where(eq(events.id, input.eventId))
         .limit(1),
       loadActorName(input.actorUserId),
-    ])
-    if (recipients.length === 0) return { written: 0 }
+    ]);
+    if (recipients.length === 0) return { written: 0 };
 
-    const context = eventRow[0]
-    if (!context) return { written: 0 }
+    const context = eventRow[0];
+    if (!context) return { written: 0 };
     const artistAtVenue =
       context.venue === null
         ? context.artist
-        : `${context.artist} at ${context.venue}`
-    const copy = crewNotificationCopy.going(actorName, artistAtVenue)
+        : `${context.artist} at ${context.venue}`;
+    const copy = crewNotificationCopy.going(actorName, artistAtVenue);
 
     return await insertRows(
       recipients.map((recipient) => ({
@@ -201,7 +201,7 @@ export async function notifyCrewGoing(input: {
         metadata: buildMetadata(recipient, 'crew.going', input.eventId),
       })),
       { actorUserId: input.actorUserId, eventId: input.eventId },
-    )
+    );
   } catch (fanoutErr) {
     apiLogger.warn(
       {
@@ -210,8 +210,8 @@ export async function notifyCrewGoing(input: {
         err: fanoutErr,
       },
       'crew.going fan-out failed; attendance already committed.',
-    )
-    return { written: 0 }
+    );
+    return { written: 0 };
   }
 }
 
@@ -221,26 +221,26 @@ export async function notifyCrewGoing(input: {
  * leave the actor's row is already gone, so they cannot notify themselves.
  */
 export async function notifyCrewMembershipChange(input: {
-  actorUserId: string
-  crewId: string
-  action: 'joined' | 'left'
+  actorUserId: string;
+  crewId: string;
+  action: 'joined' | 'left';
 }): Promise<{ written: number }> {
   try {
     const [recipients, actorName] = await Promise.all([
       loadRecipients([input.crewId], input.actorUserId),
       loadActorName(input.actorUserId),
-    ])
-    if (recipients.length === 0) return { written: 0 }
+    ]);
+    if (recipients.length === 0) return { written: 0 };
 
     const category: UserNotificationCategory =
-      input.action === 'joined' ? 'crew.joined' : 'crew.left'
+      input.action === 'joined' ? 'crew.joined' : 'crew.left';
 
     return await insertRows(
       recipients.map((recipient) => {
         const copy =
           input.action === 'joined'
             ? crewNotificationCopy.joined(actorName, recipient.crewName)
-            : crewNotificationCopy.left(actorName, recipient.crewName)
+            : crewNotificationCopy.left(actorName, recipient.crewName);
         return {
           userId: recipient.userId,
           type: 'user_notification' as const,
@@ -249,10 +249,10 @@ export async function notifyCrewMembershipChange(input: {
           body: copy.body,
           actionUrl: `/crews/${input.crewId}`,
           metadata: buildMetadata(recipient, category),
-        }
+        };
       }),
       { actorUserId: input.actorUserId, crewId: input.crewId, category },
-    )
+    );
   } catch (fanoutErr) {
     apiLogger.warn(
       {
@@ -262,7 +262,7 @@ export async function notifyCrewMembershipChange(input: {
         err: fanoutErr,
       },
       'crew membership fan-out failed; the membership change already committed.',
-    )
-    return { written: 0 }
+    );
+    return { written: 0 };
   }
 }

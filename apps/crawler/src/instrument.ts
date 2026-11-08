@@ -1,10 +1,10 @@
-import { fileURLToPath } from 'node:url'
-import { config } from 'dotenv'
-config({ path: fileURLToPath(new URL('../.env.local', import.meta.url)) })
+import { fileURLToPath } from 'node:url';
+import { config } from 'dotenv';
+config({ path: fileURLToPath(new URL('../.env.local', import.meta.url)) });
 
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 
-const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local'
+const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
@@ -14,4 +14,4 @@ Sentry.init({
   enabled: environment !== 'local',
   tracesSampleRate: 0.1,
   enableLogs: true,
-})
+});

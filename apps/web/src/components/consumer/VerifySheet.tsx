@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import type { SubmissionWithMeta } from '@concert-crawl/types'
-import { SubmissionList } from './SubmissionList'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import type { SubmissionWithMeta } from '@concert-crawl/types';
+import { SubmissionList } from './SubmissionList';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface VerifySheetProps {
-  open: boolean
-  onClose: () => void
-  submissions: SubmissionWithMeta[]
-  eventId: string
-  artistName: string
-  venueName: string
-  eventDate: string
-  currentUserId: string | null
+  open: boolean;
+  onClose: () => void;
+  submissions: SubmissionWithMeta[];
+  eventId: string;
+  artistName: string;
+  venueName: string;
+  eventDate: string;
+  currentUserId: string | null;
 }
 
 export function VerifySheet({
@@ -27,13 +27,13 @@ export function VerifySheet({
   eventDate,
   currentUserId,
 }: VerifySheetProps) {
-  if (!open) return null
+  if (!open) return null;
 
   const dateStr = new Date(eventDate).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 
   return (
     <>
@@ -83,5 +83,5 @@ export function VerifySheet({
         </div>
       </div>
     </>
-  )
+  );
 }

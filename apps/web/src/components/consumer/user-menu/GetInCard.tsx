@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { AnonDisc } from '@/components/consumer/app-header/AnonDisc';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.userMenu.signedOut
+const copy = CONSUMER_COPY.userMenu.signedOut;
 
 interface GetInCardProps {
-  onNavigate: () => void
+  onNavigate: () => void;
 }
 
 /**
@@ -106,5 +106,5 @@ export function GetInCard({ onNavigate }: GetInCardProps) {
         </Link>
       </span>
     </div>
-  )
+  );
 }

@@ -14,9 +14,11 @@
 ### Task 1.1: Create worktree + branch + env files
 
 **Files:**
+
 - Create: `.worktrees/feat-classification-review-schema/` (worktree dir)
 
 **Interfaces:**
+
 - Produces: a clean worktree at `.worktrees/feat-classification-review-schema/` with `.env.local` files in place, on branch `feat/classification-review-schema`.
 
 - [ ] **Step 1: Create the worktree**
@@ -50,12 +52,14 @@ All remaining tasks for PR 1 run inside `.worktrees/feat-classification-review-s
 ### Task 1.2: Add `is_concert_review_needed` column migration
 
 **Files:**
+
 - Create: `packages/db/migrations/0042_events_is_concert_review_needed.sql`
 - Create: `apps/api/src/test/migration-0042.integration.test.ts`
 - Modify: `packages/db/migrations/meta/_journal.json` (append 0042 entry)
 - Modify: `packages/db/src/schema/events.ts:75-78` (add column accessor next to `hiddenFromConsumer`)
 
 **Interfaces:**
+
 - Produces: `events.isConcertReviewNeeded` Drizzle column of type `boolean`, NOT NULL, default `false`. Available via `import { events } from '@concert-crawl/db'` → `events.isConcertReviewNeeded`.
 
 - [ ] **Step 1: Write the failing migration integration test**
@@ -63,9 +67,9 @@ All remaining tasks for PR 1 run inside `.worktrees/feat-classification-review-s
 Create `apps/api/src/test/migration-0042.integration.test.ts`. Follows the pattern of `apps/api/src/test/migration-0040.integration.test.ts` — exercises the schema produced by the migration directly via information_schema queries. The `packages/db/src/schema.test.ts` file is a pure unit test of exports (no DB connection); structural migration tests live in `apps/api/src/test/` per repo convention.
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { db } from '@concert-crawl/db'
+import { describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { db } from '@concert-crawl/db';
 
 // Migration 0042 — events.is_concert_review_needed column. Exercises the
 // schema produced by the migration directly via information_schema so
@@ -75,24 +79,24 @@ import { db } from '@concert-crawl/db'
 describe('migration 0042 — events.is_concert_review_needed', () => {
   it('adds is_concert_review_needed column with NOT NULL DEFAULT FALSE', async () => {
     const rows = await db.execute<{
-      column_name: string
-      data_type: string
-      is_nullable: string
-      column_default: string | null
+      column_name: string;
+      data_type: string;
+      is_nullable: string;
+      column_default: string | null;
     }>(sql`
       SELECT column_name, data_type, is_nullable, column_default
         FROM information_schema.columns
        WHERE table_name = 'events' AND column_name = 'is_concert_review_needed'
-    `)
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.data_type).toBe('boolean')
-    expect(rows[0]?.is_nullable).toBe('NO')
-    expect(rows[0]?.column_default).toBe('false')
-  })
-})
+    `);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.data_type).toBe('boolean');
+    expect(rows[0]?.is_nullable).toBe('NO');
+    expect(rows[0]?.column_default).toBe('false');
+  });
+});
 ```
 
-Note: `db.execute(sql\`...\`)` returns the rows array directly (see `apps/api/src/routes/admin/contests.migration.integration.test.ts:21-49` for the canonical pattern). It does NOT return `{ rows: [...] }` — the Drizzle/Neon shape repo-wide is a bare array.
+Note: `db.execute(sql\`...\`)`returns the rows array directly (see`apps/api/src/routes/admin/contests.migration.integration.test.ts:21-49`for the canonical pattern). It does NOT return`{ rows: [...] }` — the Drizzle/Neon shape repo-wide is a bare array.
 
 - [ ] **Step 2: Run the test, verify it fails**
 
@@ -130,13 +134,13 @@ ALTER TABLE events
 Open `packages/db/migrations/meta/_journal.json`. The last entry is `idx: 41, when: 1782604800000, tag: "0041_admin_contest_review"`. Append:
 
 ```json
-    {
-      "idx": 42,
-      "version": "7",
-      "when": 1782691200000,
-      "tag": "0042_events_is_concert_review_needed",
-      "breakpoints": true
-    }
+{
+  "idx": 42,
+  "version": "7",
+  "when": 1782691200000,
+  "tag": "0042_events_is_concert_review_needed",
+  "breakpoints": true
+}
 ```
 
 (Note: `1782691200000` = 1 day after 0041. If you regenerated via `pnpm drizzle-kit generate`, verify `when` is greater than `1782604800000` and hand-edit if not.)
@@ -185,10 +189,12 @@ git commit -m "feat(db): add events.is_concert_review_needed column"
 ### Task 1.3: Add `reviewNeeded` to `NormalizedEvent` + LLM Zod schema
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/types.ts:1-13`
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts:13-23` (NormalizedEventSchema)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `NormalizedEvent.reviewNeeded?: boolean`. Zod schema in `llm.ts` accepts `reviewNeeded: z.boolean().optional()`. The output mapping at `llm.ts:184-197` includes it conditionally.
 
@@ -207,12 +213,12 @@ it('returns reviewNeeded=true when the LLM emits it (borderline event)', async (
       isConcert: false,
       reviewNeeded: true,
     },
-  ]
-  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-  const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-  expect(result.events).toHaveLength(1)
-  expect(result.events[0]?.reviewNeeded).toBe(true)
-})
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.reviewNeeded).toBe(true);
+});
 
 it('returns reviewNeeded=false when the LLM emits it (unambiguous event)', async () => {
   const mockEvents = [
@@ -224,12 +230,12 @@ it('returns reviewNeeded=false when the LLM emits it (unambiguous event)', async
       isConcert: true,
       reviewNeeded: false,
     },
-  ]
-  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-  const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-  expect(result.events).toHaveLength(1)
-  expect(result.events[0]?.reviewNeeded).toBe(false)
-})
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.reviewNeeded).toBe(false);
+});
 
 it('defaults reviewNeeded to undefined when the LLM omits the field', async () => {
   const mockEvents = [
@@ -241,12 +247,12 @@ it('defaults reviewNeeded to undefined when the LLM omits the field', async () =
       isConcert: true,
       // reviewNeeded intentionally omitted
     },
-  ]
-  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-  const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-  expect(result.events).toHaveLength(1)
-  expect(result.events[0]?.reviewNeeded).toBeUndefined()
-})
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.reviewNeeded).toBeUndefined();
+});
 ```
 
 - [ ] **Step 2: Run the tests, verify they fail**
@@ -263,18 +269,18 @@ In `packages/crawler-core/src/types.ts`, after line 12:
 
 ```typescript
 export interface NormalizedEvent {
-  title: string
-  artist: string
-  date: string
-  doorsTime?: string
-  showTime?: string
-  ticketUrl?: string
-  description?: string
-  imageUrl?: string
-  sourceUrl: string
-  confidence: number
-  isConcert?: boolean
-  reviewNeeded?: boolean
+  title: string;
+  artist: string;
+  date: string;
+  doorsTime?: string;
+  showTime?: string;
+  ticketUrl?: string;
+  description?: string;
+  imageUrl?: string;
+  sourceUrl: string;
+  confidence: number;
+  isConcert?: boolean;
+  reviewNeeded?: boolean;
 }
 ```
 
@@ -294,7 +300,7 @@ const NormalizedEventSchema = z.object({
   confidence: z.number().min(0).max(1),
   isConcert: z.boolean().optional(),
   reviewNeeded: z.boolean().optional(),
-})
+});
 ```
 
 - [ ] **Step 5: Pass `reviewNeeded` through the output mapping**
@@ -308,21 +314,21 @@ In `packages/crawler-core/src/lib/extractors/llm.ts`, after line 196 (the `isCon
 So the mapping reads:
 
 ```typescript
-  const events = parsed.data.events.map((evt) => ({
-    title: evt.title,
-    artist: evt.artist,
-    date: evt.date,
-    confidence: evt.confidence,
-    sourceUrl,
-    ...(evt.doorsTime != null &&
-      evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
-    ...(evt.showTime != null &&
-      evt.showTime !== '' && { showTime: evt.showTime }),
-    ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
-    ...(evt.description != null && { description: evt.description }),
-    ...(evt.isConcert != null && { isConcert: evt.isConcert }),
-    ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
-  }))
+const events = parsed.data.events.map((evt) => ({
+  title: evt.title,
+  artist: evt.artist,
+  date: evt.date,
+  confidence: evt.confidence,
+  sourceUrl,
+  ...(evt.doorsTime != null &&
+    evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
+  ...(evt.showTime != null &&
+    evt.showTime !== '' && { showTime: evt.showTime }),
+  ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
+  ...(evt.description != null && { description: evt.description }),
+  ...(evt.isConcert != null && { isConcert: evt.isConcert }),
+  ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
+}));
 ```
 
 - [ ] **Step 6: Run the tests, verify they pass**
@@ -347,10 +353,12 @@ git commit -m "feat(crawler-core): emit reviewNeeded from LLM extractor"
 ### Task 1.4: Update tool schema + IS_CONCERT_RULES prompt block
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts:34-51` (IS_CONCERT_RULES const)
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts:67-117` (SAVE_EVENTS_TOOL)
 
 **Interfaces:**
+
 - Consumes: existing `IS_CONCERT_RULES` block reference.
 - Produces: updated prompt + tool input schema so the LLM is instructed to emit `reviewNeeded` and the tool's `required` array includes it.
 
@@ -360,30 +368,30 @@ Add to `packages/crawler-core/src/lib/extractors/llm.test.ts`:
 
 ```typescript
 it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
-  mockCreate.mockResolvedValue(makeAnthropicResponse([]))
-  await extractWithLlm('<html>test</html>', SOURCE_URL)
+  mockCreate.mockResolvedValue(makeAnthropicResponse([]));
+  await extractWithLlm('<html>test</html>', SOURCE_URL);
 
-  const call = mockCreate.mock.calls[0]?.[0]
-  const tool = call.tools[0]
-  expect(tool.name).toBe('save_events')
-  const itemSchema = tool.input_schema.properties.events.items
+  const call = mockCreate.mock.calls[0]?.[0];
+  const tool = call.tools[0];
+  expect(tool.name).toBe('save_events');
+  const itemSchema = tool.input_schema.properties.events.items;
   expect(itemSchema.properties.reviewNeeded).toEqual({
     type: 'boolean',
     description: expect.stringContaining('reasonable doubt'),
-  })
-  expect(itemSchema.required).toContain('reviewNeeded')
-})
+  });
+  expect(itemSchema.required).toContain('reviewNeeded');
+});
 
 it('system prompt instructs the LLM to set reviewNeeded for borderline cases', async () => {
-  mockCreate.mockResolvedValue(makeAnthropicResponse([]))
-  await extractWithLlm('<html>test</html>', SOURCE_URL)
+  mockCreate.mockResolvedValue(makeAnthropicResponse([]));
+  await extractWithLlm('<html>test</html>', SOURCE_URL);
 
-  const call = mockCreate.mock.calls[0]?.[0]
-  const systemText: string = call.system[0].text
-  expect(systemText).toContain('reviewNeeded')
-  expect(systemText).toContain('ambiguous')
-  expect(systemText).toContain('PRESIDENT')
-})
+  const call = mockCreate.mock.calls[0]?.[0];
+  const systemText: string = call.system[0].text;
+  expect(systemText).toContain('reviewNeeded');
+  expect(systemText).toContain('ambiguous');
+  expect(systemText).toContain('PRESIDENT');
+});
 ```
 
 - [ ] **Step 2: Run the tests, verify they fail**
@@ -451,10 +459,12 @@ git commit -m "feat(crawler-core): add reviewNeeded to LLM tool schema + prompt"
 ### Task 1.5: Wire crawler INSERT mapping + integration tests
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/crawl.ts:642-644` (add sibling to `hiddenFromConsumer` in INSERT values)
 - Modify: `packages/crawler-core/src/crawl.integration.test.ts` (add INSERT + UPDATE cases)
 
 **Interfaces:**
+
 - Consumes: `NormalizedEvent.reviewNeeded` from task 1.3.
 - Produces: events INSERTed by the crawler have `isConcertReviewNeeded = (event.reviewNeeded === true)`. Re-crawls (the `onConflictDoUpdate` path) leave the column unchanged.
 
@@ -464,14 +474,14 @@ Add to `packages/crawler-core/src/crawl.integration.test.ts`, inside the `descri
 
 ```typescript
 it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded=true', async () => {
-  const venue = await seedTestVenue()
-  const dateA = futureDate(7)
+  const venue = await seedTestVenue();
+  const dateA = futureDate(7);
 
   mockFetchPage.mockResolvedValue({
     html: HTML_BASE,
     finalUrl: venue.url,
     httpStatus: 200,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: [
       {
@@ -490,9 +500,9 @@ it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
     },
-  })
+  });
 
-  await crawlVenue(venue.id, mockBrowser)
+  await crawlVenue(venue.id, mockBrowser);
 
   const [row] = await db
     .select({
@@ -500,21 +510,21 @@ it('INSERT path sets is_concert_review_needed=true when LLM returns reviewNeeded
       isConcertReviewNeeded: events.isConcertReviewNeeded,
     })
     .from(events)
-    .where(eq(events.venueId, venue.id))
+    .where(eq(events.venueId, venue.id));
 
-  expect(row?.hiddenFromConsumer).toBe(true)
-  expect(row?.isConcertReviewNeeded).toBe(true)
-})
+  expect(row?.hiddenFromConsumer).toBe(true);
+  expect(row?.isConcertReviewNeeded).toBe(true);
+});
 
 it('INSERT path defaults is_concert_review_needed=false when LLM omits reviewNeeded', async () => {
-  const venue = await seedTestVenue()
-  const dateA = futureDate(7)
+  const venue = await seedTestVenue();
+  const dateA = futureDate(7);
 
   mockFetchPage.mockResolvedValue({
     html: HTML_BASE,
     finalUrl: venue.url,
     httpStatus: 200,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: [
       {
@@ -533,21 +543,21 @@ it('INSERT path defaults is_concert_review_needed=false when LLM omits reviewNee
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
     },
-  })
+  });
 
-  await crawlVenue(venue.id, mockBrowser)
+  await crawlVenue(venue.id, mockBrowser);
 
   const [row] = await db
     .select({ isConcertReviewNeeded: events.isConcertReviewNeeded })
     .from(events)
-    .where(eq(events.venueId, venue.id))
+    .where(eq(events.venueId, venue.id));
 
-  expect(row?.isConcertReviewNeeded).toBe(false)
-})
+  expect(row?.isConcertReviewNeeded).toBe(false);
+});
 
 it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async () => {
-  const venue = await seedTestVenue()
-  const dateA = futureDate(7)
+  const venue = await seedTestVenue();
+  const dateA = futureDate(7);
 
   // Seed an event with is_concert_review_needed=true (as if from a prior
   // crawl). Re-crawl with reviewNeeded=false; column should stay true.
@@ -560,13 +570,13 @@ it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async (
     status: 'upcoming',
     isConcertReviewNeeded: true,
     sourceHash: 'old-hash',
-  })
+  });
 
   mockFetchPage.mockResolvedValue({
     html: HTML_BASE_V2,
     finalUrl: venue.url,
     httpStatus: 200,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: [
       {
@@ -585,9 +595,9 @@ it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async (
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
     },
-  })
+  });
 
-  await crawlVenue(venue.id, mockBrowser)
+  await crawlVenue(venue.id, mockBrowser);
 
   const [row] = await db
     .select({
@@ -595,11 +605,11 @@ it('UPDATE path leaves is_concert_review_needed alone (crawler-frozen)', async (
       title: events.title,
     })
     .from(events)
-    .where(eq(events.venueId, venue.id))
+    .where(eq(events.venueId, venue.id));
 
-  expect(row?.isConcertReviewNeeded).toBe(true) // crawler-frozen
-  expect(row?.title).toBe('Borderline Show — Updated') // mutable fields update normally
-})
+  expect(row?.isConcertReviewNeeded).toBe(true); // crawler-frozen
+  expect(row?.title).toBe('Borderline Show — Updated'); // mutable fields update normally
+});
 ```
 
 - [ ] **Step 2: Run the tests, verify they fail**
@@ -652,9 +662,11 @@ git commit -m "feat(crawler-core): write is_concert_review_needed on INSERT"
 ### Task 1.6: Pre-push checks + PR
 
 **Files:**
+
 - (none — verification only)
 
 **Interfaces:**
+
 - Produces: a green branch ready to push.
 
 - [ ] **Step 1: Full test suite, typecheck, lint**
@@ -725,4 +737,3 @@ Expected output: `copilot-pull-request-reviewer[bot]`.
 Min 2 SUCCESSFUL Copilot rounds, no Crit/High/Medium remaining, apply valid Nits, skip invalid (push back via thread reply). Do not iterate to zero. Hand off to user for merge.
 
 ---
-

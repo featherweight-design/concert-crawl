@@ -7,35 +7,35 @@
  */
 
 export interface EventForHeadlinerCheck {
-  id: string
-  title: string
-  artist: string
-  supportingArtists: string[] | null
-  date: string
-  venueName: string
+  id: string;
+  title: string;
+  artist: string;
+  supportingArtists: string[] | null;
+  date: string;
+  venueName: string;
 }
 
 export interface HeadlinerResult {
-  eventId: string
-  title: string
-  artist: string
-  date: string
-  venueName: string
-  currentSupporting: string[] | null
+  eventId: string;
+  title: string;
+  artist: string;
+  date: string;
+  venueName: string;
+  currentSupporting: string[] | null;
   /**
    * The headliner list we would write. Always starts with the stored `artist`
    * string (invariant 1 of #1203) and has length >= 1. `wouldChange` is only
    * true when length >= 2.
    */
-  proposedHeadliners: string[]
+  proposedHeadliners: string[];
   /** supporting_artists with any promoted co-headliner removed. */
-  proposedSupporting: string[]
-  wouldChange: boolean
+  proposedSupporting: string[];
+  wouldChange: boolean;
 }
 
 export interface BatchHeadliners {
-  eventId: string
-  headliners: string[]
+  eventId: string;
+  headliners: string[];
 }
 
 /**
@@ -48,18 +48,18 @@ export interface BatchHeadliners {
  *
  * `and` is word-boundaried so "Portland" and "Sandy" are not candidates.
  */
-export const CO_HEADLINER_CANDIDATE_PATTERN = /&|\+|\band\b/i
+export const CO_HEADLINER_CANDIDATE_PATTERN = /&|\+|\band\b/i;
 
 export function isCoHeadlinerCandidate(artist: string): boolean {
-  return CO_HEADLINER_CANDIDATE_PATTERN.test(artist)
+  return CO_HEADLINER_CANDIDATE_PATTERN.test(artist);
 }
 
 export function buildBatches<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = []
+  const batches: T[][] = [];
   for (let idx = 0; idx < items.length; idx += batchSize) {
-    batches.push(items.slice(idx, idx + batchSize))
+    batches.push(items.slice(idx, idx + batchSize));
   }
-  return batches
+  return batches;
 }
 
 /**
@@ -75,7 +75,7 @@ const foldForCompare = (val: string): string =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .trim()
+    .trim();
 
 /**
  * Builds the headliner list to write for one event.
@@ -92,24 +92,24 @@ export function buildHeadlinerUpdate(
   llmHeadliners: string[],
   currentSupporting: string[] | null,
 ): { headliners: string[]; supportingArtists: string[]; wouldChange: boolean } {
-  const seen = new Set<string>([foldForCompare(storedArtist)])
-  const headliners = [storedArtist]
+  const seen = new Set<string>([foldForCompare(storedArtist)]);
+  const headliners = [storedArtist];
   for (const candidate of llmHeadliners) {
-    const trimmed = candidate.trim()
-    if (trimmed === '') continue
-    const folded = foldForCompare(trimmed)
-    if (seen.has(folded)) continue
-    seen.add(folded)
-    headliners.push(trimmed)
+    const trimmed = candidate.trim();
+    if (trimmed === '') continue;
+    const folded = foldForCompare(trimmed);
+    if (seen.has(folded)) continue;
+    seen.add(folded);
+    headliners.push(trimmed);
   }
 
   // A promoted co-headliner must not remain listed as their own opener.
-  const promoted = new Set(headliners.slice(1).map(foldForCompare))
+  const promoted = new Set(headliners.slice(1).map(foldForCompare));
   const supportingArtists = (currentSupporting ?? []).filter(
     (act) => !promoted.has(foldForCompare(act)),
-  )
+  );
 
-  return { headliners, supportingArtists, wouldChange: headliners.length > 1 }
+  return { headliners, supportingArtists, wouldChange: headliners.length > 1 };
 }
 
 /**
@@ -126,24 +126,24 @@ export function untraceableHeadliners(
   supportingArtists: string[] | null,
   proposedHeadliners: string[],
 ): string[] {
-  const artistHaystack = foldForCompare(storedArtist)
+  const artistHaystack = foldForCompare(storedArtist);
   const supportingFolded = new Set(
     (supportingArtists ?? []).map(foldForCompare),
-  )
+  );
   // Position 0 is the stored artist by construction, so only the promoted acts
   // need checking.
   return proposedHeadliners.slice(1).filter((name) => {
-    const folded = foldForCompare(name)
-    return !artistHaystack.includes(folded) && !supportingFolded.has(folded)
-  })
+    const folded = foldForCompare(name);
+    return !artistHaystack.includes(folded) && !supportingFolded.has(folded);
+  });
 }
 
 const escapeCsv = (val: string): string => {
   if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-    return `"${val.replace(/"/g, '""')}"`
+    return `"${val.replace(/"/g, '""')}"`;
   }
-  return val
-}
+  return val;
+};
 
 export function formatCsvRow(result: HeadlinerResult): string {
   return (
@@ -158,5 +158,5 @@ export function formatCsvRow(result: HeadlinerResult): string {
       escapeCsv(result.proposedSupporting.join(' | ')),
       String(result.wouldChange),
     ].join(',') + '\n'
-  )
+  );
 }

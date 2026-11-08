@@ -1,37 +1,37 @@
-'use client'
+'use client';
 
 // The /crews destination. It owns all four states so the header, the list and
 // the create affordance can never disagree about which one is showing.
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import type { CrewSummary } from '@concert-crawl/types'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { CrewSummary } from '@concert-crawl/types';
 
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { CrewRow } from './CrewRow'
-import { CrewRowSkeleton, ShimmerKeyframes } from './CrewRowSkeleton'
-import { CreateCrewButton } from './CreateCrewButton'
-import { CREWS_COPY } from './definitions/copy'
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { CrewRow } from './CrewRow';
+import { CrewRowSkeleton, ShimmerKeyframes } from './CrewRowSkeleton';
+import { CreateCrewButton } from './CreateCrewButton';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
-export type CrewsState = 'ready' | 'loading' | 'empty' | 'error'
+export type CrewsState = 'ready' | 'loading' | 'empty' | 'error';
 
 interface CrewsContentProps {
   /** `null` means the server load failed; the page paints the error state. */
-  initialCrews: CrewSummary[] | null
-  scaRegion: boolean
+  initialCrews: CrewSummary[] | null;
+  scaRegion: boolean;
   /** Only the route-level skeleton passes this; the page itself never does. */
-  loading?: boolean
+  loading?: boolean;
 }
 
 const PageHeader = ({
   wide,
   children,
 }: {
-  wide: boolean
-  children?: React.ReactNode
+  wide: boolean;
+  children?: React.ReactNode;
 }) => (
   <header className="flex flex-col gap-2">
     <div className="flex items-center justify-between gap-3">
@@ -76,27 +76,27 @@ const PageHeader = ({
       {COPY.list.subtitle}
     </p>
   </header>
-)
+);
 
 export const CrewsContent = ({
   initialCrews,
   scaRegion,
   loading = false,
 }: CrewsContentProps) => {
-  const router = useRouter()
-  const wide = !useIsMobileViewport()
+  const router = useRouter();
+  const wide = !useIsMobileViewport();
   // Only the optimistic additions live in state. Mirroring the whole server
   // list into useState freezes it at first render, so router.refresh() refetched
   // and the list still painted the empty state it was seeded with.
-  const [created, setCreated] = useState<CrewSummary[]>([])
-  const [announcement, setAnnouncement] = useState('')
-  const serverCrews = initialCrews ?? []
+  const [created, setCreated] = useState<CrewSummary[]>([]);
+  const [announcement, setAnnouncement] = useState('');
+  const serverCrews = initialCrews ?? [];
   // The override clears on the SERVER value changing, not on the mutation
   // resolving — dropping it at mutation time flashes the old list back.
   const crews = [
     ...created.filter((own) => !serverCrews.some((row) => row.id === own.id)),
     ...serverCrews,
-  ]
+  ];
 
   const state: CrewsState = loading
     ? 'loading'
@@ -104,7 +104,7 @@ export const CrewsContent = ({
       ? 'error'
       : crews.length === 0
         ? 'empty'
-        : 'ready'
+        : 'ready';
 
   // Straight into the crew, which is where every other membership change ends
   // up — join, leave, delete and handoff all navigate, and creating one was
@@ -112,10 +112,10 @@ export const CrewsContent = ({
   // the announcement stay: navigation is client-side and the list is what a
   // back tap returns to.
   const onCreated = (crew: CrewSummary) => {
-    setCreated((prev) => [crew, ...prev])
-    setAnnouncement(COPY.list.created(crew.name))
-    router.push(`/crews/${crew.id}`)
-  }
+    setCreated((prev) => [crew, ...prev]);
+    setAnnouncement(COPY.list.created(crew.name));
+    router.push(`/crews/${crew.id}`);
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
@@ -235,5 +235,5 @@ export const CrewsContent = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

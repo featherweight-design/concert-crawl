@@ -1,11 +1,11 @@
-import React from 'react'
+import React from 'react';
 
-import { formatEventDate } from '../definitions/lib'
+import { formatEventDate } from '../definitions/lib';
 
 interface DateStampProps {
-  iso: string
+  iso: string;
   /** Cancelled and postponed nights render dimmed. */
-  dim?: boolean
+  dim?: boolean;
 }
 
 /**
@@ -19,17 +19,17 @@ export const fmtDate = (
   dow: formatEventDate(iso, undefined, { weekday: 'short' }).toUpperCase(),
   mon: formatEventDate(iso, undefined, { month: 'short' }).toUpperCase(),
   day: formatEventDate(iso, undefined, { day: 'numeric' }),
-})
+});
 
 export const DateStamp = ({ iso, dim = false }: DateStampProps) => {
-  const { dow, mon, day } = fmtDate(iso)
+  const { dow, mon, day } = fmtDate(iso);
   const label = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: 9,
     fontWeight: 700,
     letterSpacing: '0.1em',
     color: 'var(--fg-subtle)',
-  }
+  };
   return (
     <div style={{ width: 44, flexShrink: 0, textAlign: 'center' }}>
       <div style={label}>{dow}</div>
@@ -47,5 +47,5 @@ export const DateStamp = ({ iso, dim = false }: DateStampProps) => {
       </div>
       <div style={label}>{mon}</div>
     </div>
-  )
-}
+  );
+};

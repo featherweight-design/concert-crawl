@@ -16,23 +16,24 @@ All commands must be run from the worktree root above. Run `pnpm` not `npm`.
 
 ## File Map
 
-| File | Action |
-|---|---|
-| `packages/db/migrations/0022_venue_crawl_mode.sql` | Create — adds `crawl_mode` column |
-| `packages/db/src/schema/venues.ts` | Modify — add `crawlMode` field, import `varchar` |
-| `packages/crawler-core/src/lib/fetcher.ts` | Modify — add `fetchPageHttp()`, export `FetchResult` |
-| `packages/crawler-core/src/lib/fetcher.test.ts` | Modify — add tests for `fetchPageHttp()` |
-| `packages/crawler-core/src/crawl.ts` | Modify — import `fetchPageHttp`, add `runExtraction` helper, mode-aware fetch orchestration, save resolved mode |
-| `packages/crawler-core/src/crawl.test.ts` | Modify — add tests for each `crawlMode` behavior |
-| `apps/api/src/routes/admin/venues.ts` | Modify — add `crawlMode` to `updateVenueSchema` |
-| `apps/web/src/lib/actions/venues.ts` | Modify — add `crawlMode` parsing and passthrough |
-| `apps/web/src/components/admin/VenueDetailsClient.tsx` | Modify — add Fetch mode state, dirty check, formData, and Select |
+| File                                                   | Action                                                                                                          |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `packages/db/migrations/0022_venue_crawl_mode.sql`     | Create — adds `crawl_mode` column                                                                               |
+| `packages/db/src/schema/venues.ts`                     | Modify — add `crawlMode` field, import `varchar`                                                                |
+| `packages/crawler-core/src/lib/fetcher.ts`             | Modify — add `fetchPageHttp()`, export `FetchResult`                                                            |
+| `packages/crawler-core/src/lib/fetcher.test.ts`        | Modify — add tests for `fetchPageHttp()`                                                                        |
+| `packages/crawler-core/src/crawl.ts`                   | Modify — import `fetchPageHttp`, add `runExtraction` helper, mode-aware fetch orchestration, save resolved mode |
+| `packages/crawler-core/src/crawl.test.ts`              | Modify — add tests for each `crawlMode` behavior                                                                |
+| `apps/api/src/routes/admin/venues.ts`                  | Modify — add `crawlMode` to `updateVenueSchema`                                                                 |
+| `apps/web/src/lib/actions/venues.ts`                   | Modify — add `crawlMode` parsing and passthrough                                                                |
+| `apps/web/src/components/admin/VenueDetailsClient.tsx` | Modify — add Fetch mode state, dirty check, formData, and Select                                                |
 
 ---
 
 ## Task 1: DB Migration + Schema
 
 **Files:**
+
 - Create: `packages/db/migrations/0022_venue_crawl_mode.sql`
 - Modify: `packages/db/src/schema/venues.ts`
 
@@ -58,7 +59,7 @@ import {
   timestamp,
   uuid,
   varchar,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 ```
 
 Add after `crawlWaitForSelector` (around line 48):
@@ -101,6 +102,7 @@ git commit -m "feat(db): add crawl_mode column to venues"
 ## Task 2: `fetchPageHttp()` + Tests
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/fetcher.ts`
 - Modify: `packages/crawler-core/src/lib/fetcher.test.ts`
 
@@ -111,21 +113,21 @@ Add to the end of `packages/crawler-core/src/lib/fetcher.test.ts`:
 ```typescript
 describe('fetchPageHttp', () => {
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn())
-  })
+    vi.stubGlobal('fetch', vi.fn());
+  });
   afterEach(() => {
-    vi.unstubAllGlobals()
-  })
+    vi.unstubAllGlobals();
+  });
 
   it('fetches the URL with the ConcertCrawl user agent', async () => {
-    const mockFetch = vi.mocked(fetch)
+    const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
       status: 200,
       url: 'https://example.com',
       text: vi.fn().mockResolvedValue('<html>events</html>'),
-    } as unknown as Response)
+    } as unknown as Response);
 
-    await fetchPageHttp('https://example.com', 0)
+    await fetchPageHttp('https://example.com', 0);
 
     expect(mockFetch).toHaveBeenCalledWith(
       'https://example.com',
@@ -134,71 +136,71 @@ describe('fetchPageHttp', () => {
           'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
         }),
       }),
-    )
-  })
+    );
+  });
 
   it('returns html, httpStatus, and finalUrl on success', async () => {
-    const mockFetch = vi.mocked(fetch)
+    const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
       status: 200,
       url: 'https://example.com/redirected',
       text: vi.fn().mockResolvedValue('<html>event content</html>'),
-    } as unknown as Response)
+    } as unknown as Response);
 
-    const result = await fetchPageHttp('https://example.com', 0)
+    const result = await fetchPageHttp('https://example.com', 0);
 
     expect(result).toEqual({
       html: '<html>event content</html>',
       httpStatus: 200,
       finalUrl: 'https://example.com/redirected',
-    })
-  })
+    });
+  });
 
   it('throws CrawlFetchError on 403', async () => {
-    const mockFetch = vi.mocked(fetch)
+    const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
       status: 403,
       url: 'https://example.com',
       text: vi.fn().mockResolvedValue(''),
-    } as unknown as Response)
+    } as unknown as Response);
 
     await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
       CrawlFetchError,
-    )
-  })
+    );
+  });
 
   it('throws CrawlFetchError on 429', async () => {
-    const mockFetch = vi.mocked(fetch)
+    const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
       status: 429,
       url: 'https://example.com',
       text: vi.fn().mockResolvedValue(''),
-    } as unknown as Response)
+    } as unknown as Response);
 
     await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
       CrawlFetchError,
-    )
-  })
+    );
+  });
 
   it('throws a generic Error on other 4xx', async () => {
-    const mockFetch = vi.mocked(fetch)
+    const mockFetch = vi.mocked(fetch);
     mockFetch.mockResolvedValue({
       status: 404,
       url: 'https://example.com',
       text: vi.fn().mockResolvedValue(''),
-    } as unknown as Response)
+    } as unknown as Response);
 
     await expect(fetchPageHttp('https://example.com', 0)).rejects.toThrow(
       'HTTP 404',
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 Also add `fetchPageHttp` to the import at the top of `fetcher.test.ts`:
 
 ```typescript
-import { fetchPage, fetchPageHttp, CrawlFetchError } from './fetcher.js'
+import { fetchPage, fetchPageHttp, CrawlFetchError } from './fetcher.js';
 ```
 
 - [ ] **Step 2: Run to verify tests fail**
@@ -214,28 +216,28 @@ Expected: tests fail with "fetchPageHttp is not a function" or similar.
 Replace the contents of `packages/crawler-core/src/lib/fetcher.ts` with:
 
 ```typescript
-import type { Browser } from 'playwright'
+import type { Browser } from 'playwright';
 
-const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
+const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';
 
 export class CrawlFetchError extends Error {
   constructor(
     public readonly httpStatus: number,
     message: string,
   ) {
-    super(message)
-    this.name = 'CrawlFetchError'
+    super(message);
+    this.name = 'CrawlFetchError';
   }
 }
 
 export interface FetchResult {
-  html: string
-  httpStatus: number
-  finalUrl: string
+  html: string;
+  httpStatus: number;
+  finalUrl: string;
 }
 
 function jitter(ms: number): number {
-  return ms + Math.floor(Math.random() * 1000) - 500
+  return ms + Math.floor(Math.random() * 1000) - 500;
 }
 
 export async function fetchPage(
@@ -245,26 +247,26 @@ export async function fetchPage(
   waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
   waitForSelector?: string,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+  const delay = Math.max(0, jitter(crawlDelayMs));
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
   const context = await browser.newContext({
     userAgent: HONEST_USER_AGENT,
-  })
+  });
   try {
-    const page = await context.newPage()
+    const page = await context.newPage();
 
-    console.log(JSON.stringify({ event: 'fetch.start', url }))
+    console.log(JSON.stringify({ event: 'fetch.start', url }));
 
-    let httpStatus = 200
+    let httpStatus = 200;
     page.on('response', (response) => {
       if (
         response.url() === page.url() ||
         response.request().isNavigationRequest()
       ) {
-        httpStatus = response.status()
+        httpStatus = response.status();
       }
-    })
+    });
 
     // When a CSS selector is provided, use domcontentloaded for navigation
     // (fast connection) then let waitForSelector handle SPA render timing —
@@ -272,33 +274,33 @@ export async function fetchPage(
     const response = await page.goto(url, {
       waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
       timeout: 60_000,
-    })
+    });
 
-    const finalStatus = response?.status() ?? httpStatus
+    const finalStatus = response?.status() ?? httpStatus;
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
-      )
+      );
       throw new CrawlFetchError(
         finalStatus,
         `HTTP ${finalStatus} — venue may have blocked crawler`,
-      )
+      );
     }
 
     if (finalStatus >= 400) {
       console.log(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
-      )
-      throw new Error(`HTTP ${finalStatus}`)
+      );
+      throw new Error(`HTTP ${finalStatus}`);
     }
 
     if (waitForSelector) {
-      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
+      await page.waitForSelector(waitForSelector, { timeout: 30_000 });
     }
 
-    const html = await page.content()
-    const finalUrl = page.url()
+    const html = await page.content();
+    const finalUrl = page.url();
 
     console.log(
       JSON.stringify({
@@ -307,10 +309,10 @@ export async function fetchPage(
         finalUrl,
         status: finalStatus,
       }),
-    )
-    return { html, httpStatus: finalStatus, finalUrl }
+    );
+    return { html, httpStatus: finalStatus, finalUrl };
   } finally {
-    await context.close()
+    await context.close();
   }
 }
 
@@ -318,10 +320,10 @@ export async function fetchPageHttp(
   url: string,
   crawlDelayMs = 3000,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+  const delay = Math.max(0, jitter(crawlDelayMs));
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
-  console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }))
+  console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }));
 
   const response = await fetch(url, {
     headers: {
@@ -329,27 +331,27 @@ export async function fetchPageHttp(
       Accept: 'text/html,application/xhtml+xml',
     },
     redirect: 'follow',
-  })
+  });
 
   if (response.status === 403 || response.status === 429) {
     console.log(
       JSON.stringify({ event: 'fetch.blocked', url, status: response.status }),
-    )
+    );
     throw new CrawlFetchError(
       response.status,
       `HTTP ${response.status} — venue may have blocked crawler`,
-    )
+    );
   }
 
   if (response.status >= 400) {
     console.log(
       JSON.stringify({ event: 'fetch.error', url, status: response.status }),
-    )
-    throw new Error(`HTTP ${response.status}`)
+    );
+    throw new Error(`HTTP ${response.status}`);
   }
 
-  const html = await response.text()
-  const finalUrl = response.url
+  const html = await response.text();
+  const finalUrl = response.url;
 
   console.log(
     JSON.stringify({
@@ -359,8 +361,8 @@ export async function fetchPageHttp(
       status: response.status,
       mode: 'http',
     }),
-  )
-  return { html, httpStatus: response.status, finalUrl }
+  );
+  return { html, httpStatus: response.status, finalUrl };
 }
 ```
 
@@ -384,6 +386,7 @@ git commit -m "feat(crawler-core): add fetchPageHttp for plain HTTP crawling"
 ## Task 3: Crawl Orchestration + Tests
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/crawl.ts`
 - Modify: `packages/crawler-core/src/crawl.test.ts`
 
@@ -400,18 +403,18 @@ vi.mock('./lib/fetcher.js', () => ({
       public httpStatus: number,
       message: string,
     ) {
-      super(message)
+      super(message);
     }
   },
-}))
+}));
 ```
 
 Add after the existing imports of mocked modules:
 
 ```typescript
-import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
-const mockFetchPage = vi.mocked(fetchPage)
-const mockFetchPageHttp = vi.mocked(fetchPageHttp)
+import { fetchPage, fetchPageHttp } from './lib/fetcher.js';
+const mockFetchPage = vi.mocked(fetchPage);
+const mockFetchPageHttp = vi.mocked(fetchPageHttp);
 ```
 
 Remove the old `const mockFetchPage = vi.mocked(fetchPage)` line if present, replace with both lines above.
@@ -434,13 +437,13 @@ function seedVenue(overrides: Record<string, unknown> = {}) {
     crawlDelayMs: 3000,
     crawlWaitUntil: 'networkidle' as const,
     crawlWaitForSelector: null,
-    crawlMode: 'browser' as const,   // default: existing tests use browser path
+    crawlMode: 'browser' as const, // default: existing tests use browser path
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  }
-  stores.venues.push(venue)
-  return venue
+  };
+  stores.venues.push(venue);
+  return venue;
 }
 ```
 
@@ -454,33 +457,33 @@ describe('crawlVenue — crawlMode orchestration', () => {
     html: HTML_V1,
     httpStatus: 200,
     finalUrl: 'https://test-venue.example.com',
-  }
+  };
 
   beforeEach(() => {
     mockExtractWithLlm.mockResolvedValue({
       events: [METALLICA_EVENT],
       usage: { inputTokens: 100, outputTokens: 50 },
-    })
-  })
+    });
+  });
 
   it('uses fetchPageHttp when crawlMode is http', async () => {
-    const venue = seedVenue({ crawlMode: 'http' })
-    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+    const venue = seedVenue({ crawlMode: 'http' });
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     expect(mockFetchPageHttp).toHaveBeenCalledWith(
       venue.websiteUrl,
       venue.crawlDelayMs,
-    )
-    expect(mockFetchPage).not.toHaveBeenCalled()
-  })
+    );
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
 
   it('uses fetchPage when crawlMode is browser', async () => {
-    const venue = seedVenue({ crawlMode: 'browser' })
-    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+    const venue = seedVenue({ crawlMode: 'browser' });
+    mockFetchPage.mockResolvedValue(FETCH_RESULT);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     expect(mockFetchPage).toHaveBeenCalledWith(
       venue.websiteUrl,
@@ -488,96 +491,105 @@ describe('crawlVenue — crawlMode orchestration', () => {
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
       undefined,
-    )
-    expect(mockFetchPageHttp).not.toHaveBeenCalled()
-  })
+    );
+    expect(mockFetchPageHttp).not.toHaveBeenCalled();
+  });
 
   it('auto-detect: saves crawlMode=http when HTTP fetch returns events', async () => {
-    const venue = seedVenue({ crawlMode: null })
-    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+    const venue = seedVenue({ crawlMode: null });
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPageHttp).toHaveBeenCalled()
-    expect(mockFetchPage).not.toHaveBeenCalled()
+    expect(mockFetchPageHttp).toHaveBeenCalled();
+    expect(mockFetchPage).not.toHaveBeenCalled();
 
-    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
-    expect(savedVenue?.crawlMode).toBe('http')
-  })
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
+    expect(savedVenue?.crawlMode).toBe('http');
+  });
 
   it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP returns no events', async () => {
-    const venue = seedVenue({ crawlMode: null })
-    const emptyHtml = '<html><body>No events here</body></html>'
+    const venue = seedVenue({ crawlMode: null });
+    const emptyHtml = '<html><body>No events here</body></html>';
     mockFetchPageHttp.mockResolvedValue({
       html: emptyHtml,
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
-    })
-    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+    });
+    mockFetchPage.mockResolvedValue(FETCH_RESULT);
     // First LLM call (for HTTP html) returns no events
     // Second LLM call (for browser html) returns events
     mockExtractWithLlm
-      .mockResolvedValueOnce({ events: [], usage: { inputTokens: 50, outputTokens: 10 } })
-      .mockResolvedValueOnce({ events: [METALLICA_EVENT], usage: { inputTokens: 100, outputTokens: 50 } })
+      .mockResolvedValueOnce({
+        events: [],
+        usage: { inputTokens: 50, outputTokens: 10 },
+      })
+      .mockResolvedValueOnce({
+        events: [METALLICA_EVENT],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPageHttp).toHaveBeenCalled()
-    expect(mockFetchPage).toHaveBeenCalled()
+    expect(mockFetchPageHttp).toHaveBeenCalled();
+    expect(mockFetchPage).toHaveBeenCalled();
 
-    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
-    expect(savedVenue?.crawlMode).toBe('browser')
-  })
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
+    expect(savedVenue?.crawlMode).toBe('browser');
+  });
 
   it('auto-detect: falls back to browser and saves crawlMode=browser when HTTP fetch throws', async () => {
-    const venue = seedVenue({ crawlMode: null })
-    mockFetchPageHttp.mockRejectedValue(new Error('network error'))
-    mockFetchPage.mockResolvedValue(FETCH_RESULT)
+    const venue = seedVenue({ crawlMode: null });
+    mockFetchPageHttp.mockRejectedValue(new Error('network error'));
+    mockFetchPage.mockResolvedValue(FETCH_RESULT);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPage).toHaveBeenCalled()
+    expect(mockFetchPage).toHaveBeenCalled();
 
-    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
-    expect(savedVenue?.crawlMode).toBe('browser')
-  })
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
+    expect(savedVenue?.crawlMode).toBe('browser');
+  });
 
   it('forced http: does not fall back to browser when HTTP returns no events', async () => {
-    const venue = seedVenue({ crawlMode: 'http' })
-    const emptyHtml = '<html><body>No events</body></html>'
+    const venue = seedVenue({ crawlMode: 'http' });
+    const emptyHtml = '<html><body>No events</body></html>';
     mockFetchPageHttp.mockResolvedValue({
       html: emptyHtml,
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
-    })
-    mockExtractWithLlm.mockResolvedValue({ events: [], usage: { inputTokens: 50, outputTokens: 10 } })
+    });
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 50, outputTokens: 10 },
+    });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockFetchPage).not.toHaveBeenCalled()
-  })
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
 
   it('forced http: propagates fetch errors without falling back', async () => {
-    const venue = seedVenue({ crawlMode: 'http' })
-    mockFetchPageHttp.mockRejectedValue(new Error('timeout'))
+    const venue = seedVenue({ crawlMode: 'http' });
+    mockFetchPageHttp.mockRejectedValue(new Error('timeout'));
 
-    const result = await crawlVenue(venue.id, mockBrowser)
+    const result = await crawlVenue(venue.id, mockBrowser);
 
-    expect(result.status).toBe('failed')
-    expect(mockFetchPage).not.toHaveBeenCalled()
-  })
+    expect(result.status).toBe('failed');
+    expect(mockFetchPage).not.toHaveBeenCalled();
+  });
 
   it('does not overwrite a stored crawlMode on subsequent crawls', async () => {
-    const venue = seedVenue({ crawlMode: 'http' })
-    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+    const venue = seedVenue({ crawlMode: 'http' });
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     // crawlMode should still be 'http', not re-saved
-    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
-    expect(savedVenue?.crawlMode).toBe('http')
-  })
-})
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id);
+    expect(savedVenue?.crawlMode).toBe('http');
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -593,27 +605,35 @@ Expected: multiple failures related to `fetchPageHttp` not being used / crawlMod
 At the top of `packages/crawler-core/src/crawl.ts`, update the fetcher import:
 
 ```typescript
-import { fetchPage, fetchPageHttp, CrawlFetchError, type FetchResult } from './lib/fetcher.js'
+import {
+  fetchPage,
+  fetchPageHttp,
+  CrawlFetchError,
+  type FetchResult,
+} from './lib/fetcher.js';
 ```
 
 Add a private helper function just before `crawlVenue` (after all imports):
 
 ```typescript
-async function runExtraction(html: string, finalUrl: string): Promise<{
-  normalizedEvents: NormalizedEvent[]
-  strategy: 'structured_data' | 'llm'
-  tokenUsage: TokenUsage | undefined
+async function runExtraction(
+  html: string,
+  finalUrl: string,
+): Promise<{
+  normalizedEvents: NormalizedEvent[];
+  strategy: 'structured_data' | 'llm';
+  tokenUsage: TokenUsage | undefined;
 }> {
-  let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
-  let strategy: 'structured_data' | 'llm' = 'structured_data'
-  let tokenUsage: TokenUsage | undefined
+  let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl);
+  let strategy: 'structured_data' | 'llm' = 'structured_data';
+  let tokenUsage: TokenUsage | undefined;
   if (normalizedEvents.length === 0) {
-    strategy = 'llm'
-    const llmResult = await extractWithLlm(html, finalUrl)
-    normalizedEvents = llmResult.events
-    tokenUsage = llmResult.usage
+    strategy = 'llm';
+    const llmResult = await extractWithLlm(html, finalUrl);
+    normalizedEvents = llmResult.events;
+    tokenUsage = llmResult.usage;
   }
-  return { normalizedEvents, strategy, tokenUsage }
+  return { normalizedEvents, strategy, tokenUsage };
 }
 ```
 
@@ -624,115 +644,119 @@ Find and replace the existing fetch call (lines 77-83, the `const { html, httpSt
 Replace lines 77-83 (the old single `fetchPage` call) with:
 
 ```typescript
-    // Determine fetch strategy and execute
-    let fetchResult: FetchResult
-    let resolvedMode: 'http' | 'browser'
+// Determine fetch strategy and execute
+let fetchResult: FetchResult;
+let resolvedMode: 'http' | 'browser';
 
-    if (venue.crawlMode === 'browser') {
-      fetchResult = await fetchPage(
-        venue.websiteUrl,
-        browser,
-        venue.crawlDelayMs,
-        venue.crawlWaitUntil,
-        venue.crawlWaitForSelector ?? undefined,
-      )
-      resolvedMode = 'browser'
-    } else {
-      // crawlMode is 'http' or null (auto-detect: HTTP first)
-      let httpResult: FetchResult | null = null
-      try {
-        httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs)
-      } catch (httpErr) {
-        if (venue.crawlMode === 'http') {
-          throw httpErr // forced HTTP — no browser fallback
-        }
-        // auto-detect: HTTP failed, will fall through to browser below
-      }
-
-      if (httpResult !== null) {
-        fetchResult = httpResult
-        resolvedMode = 'http'
-      } else {
-        // auto-detect: HTTP threw — fall back to browser
-        fetchResult = await fetchPage(
-          venue.websiteUrl,
-          browser,
-          venue.crawlDelayMs,
-          venue.crawlWaitUntil,
-          venue.crawlWaitForSelector ?? undefined,
-        )
-        resolvedMode = 'browser'
-      }
+if (venue.crawlMode === 'browser') {
+  fetchResult = await fetchPage(
+    venue.websiteUrl,
+    browser,
+    venue.crawlDelayMs,
+    venue.crawlWaitUntil,
+    venue.crawlWaitForSelector ?? undefined,
+  );
+  resolvedMode = 'browser';
+} else {
+  // crawlMode is 'http' or null (auto-detect: HTTP first)
+  let httpResult: FetchResult | null = null;
+  try {
+    httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs);
+  } catch (httpErr) {
+    if (venue.crawlMode === 'http') {
+      throw httpErr; // forced HTTP — no browser fallback
     }
+    // auto-detect: HTTP failed, will fall through to browser below
+  }
 
-    const { html, httpStatus, finalUrl } = fetchResult
+  if (httpResult !== null) {
+    fetchResult = httpResult;
+    resolvedMode = 'http';
+  } else {
+    // auto-detect: HTTP threw — fall back to browser
+    fetchResult = await fetchPage(
+      venue.websiteUrl,
+      browser,
+      venue.crawlDelayMs,
+      venue.crawlWaitUntil,
+      venue.crawlWaitForSelector ?? undefined,
+    );
+    resolvedMode = 'browser';
+  }
+}
+
+const { html, httpStatus, finalUrl } = fetchResult;
 ```
 
 Now find the `pageHash` early-return block (lines 96-132, the "crawl.skipped" block). Inside the DB update for skipped crawls, add `crawlMode` persistence for auto-detect:
 
 ```typescript
-      await db
-        .update(venues)
-        .set({
-          lastCrawledAt: new Date(),
-          consecutiveFailures: 0,
-          ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(venues.id, venueId))
+await db
+  .update(venues)
+  .set({
+    lastCrawledAt: new Date(),
+    consecutiveFailures: 0,
+    ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
+    updatedAt: new Date(),
+  })
+  .where(eq(venues.id, venueId));
 ```
 
 Replace the old extraction block (lines 135-144):
 
 ```typescript
-    // Structured data first — LLM fallback only when needed
-    let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl)
-    let strategy: 'structured_data' | 'llm' = 'structured_data'
-    let tokenUsage: TokenUsage | undefined
+// Structured data first — LLM fallback only when needed
+let normalizedEvents: NormalizedEvent[] = extractJsonLd(html, finalUrl);
+let strategy: 'structured_data' | 'llm' = 'structured_data';
+let tokenUsage: TokenUsage | undefined;
 
-    if (normalizedEvents.length === 0) {
-      strategy = 'llm'
-      const llmResult = await extractWithLlm(html, finalUrl)
-      normalizedEvents = llmResult.events
-      tokenUsage = llmResult.usage
-    }
+if (normalizedEvents.length === 0) {
+  strategy = 'llm';
+  const llmResult = await extractWithLlm(html, finalUrl);
+  normalizedEvents = llmResult.events;
+  tokenUsage = llmResult.usage;
+}
 ```
 
 Replace with:
 
 ```typescript
-    // Extract events from HTTP result; if auto-detect and no events, fall back to browser
-    let extraction = await runExtraction(html, finalUrl)
+// Extract events from HTTP result; if auto-detect and no events, fall back to browser
+let extraction = await runExtraction(html, finalUrl);
 
-    if (venue.crawlMode === null && resolvedMode === 'http' && extraction.normalizedEvents.length === 0) {
-      // HTTP returned content but no events — fall back to browser for auto-detect
-      const browserResult = await fetchPage(
-        venue.websiteUrl,
-        browser,
-        venue.crawlDelayMs,
-        venue.crawlWaitUntil,
-        venue.crawlWaitForSelector ?? undefined,
-      )
-      extraction = await runExtraction(browserResult.html, browserResult.finalUrl)
-      resolvedMode = 'browser'
-    }
+if (
+  venue.crawlMode === null &&
+  resolvedMode === 'http' &&
+  extraction.normalizedEvents.length === 0
+) {
+  // HTTP returned content but no events — fall back to browser for auto-detect
+  const browserResult = await fetchPage(
+    venue.websiteUrl,
+    browser,
+    venue.crawlDelayMs,
+    venue.crawlWaitUntil,
+    venue.crawlWaitForSelector ?? undefined,
+  );
+  extraction = await runExtraction(browserResult.html, browserResult.finalUrl);
+  resolvedMode = 'browser';
+}
 
-    let { normalizedEvents, strategy, tokenUsage } = extraction
+let { normalizedEvents, strategy, tokenUsage } = extraction;
 ```
 
 Finally, find the successful crawl `db.update(venues).set(...)` block (around line 320-328) and add `crawlMode` persistence:
 
 ```typescript
-    await db
-      .update(venues)
-      .set({
-        lastCrawledAt: new Date(),
-        consecutiveFailures: 0,
-        blockedAt: null,
-        ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(venues.id, venueId))
+await db
+  .update(venues)
+  .set({
+    lastCrawledAt: new Date(),
+    consecutiveFailures: 0,
+    blockedAt: null,
+    ...(venue.crawlMode === null ? { crawlMode: resolvedMode } : {}),
+    updatedAt: new Date(),
+  })
+  .where(eq(venues.id, venueId));
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -771,6 +795,7 @@ git commit -m "feat(crawler-core): HTTP-first crawl mode with auto-detect and br
 ## Task 4: API — Add `crawlMode` to venue update schema
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/venues.ts`
 
 - [ ] **Step 1: Add `crawlMode` to `updateVenueSchema`**
@@ -784,7 +809,7 @@ const updateVenueSchema = createVenueSchema.partial().extend({
   active: z.boolean().optional(),
   verified: z.boolean().optional(),
   verifiedBy: z.string().max(200).nullable().optional(),
-})
+});
 ```
 
 To:
@@ -795,7 +820,7 @@ const updateVenueSchema = createVenueSchema.partial().extend({
   verified: z.boolean().optional(),
   verifiedBy: z.string().max(200).nullable().optional(),
   crawlMode: z.enum(['http', 'browser']).nullable().optional(),
-})
+});
 ```
 
 - [ ] **Step 2: Typecheck the API**
@@ -818,6 +843,7 @@ git commit -m "feat(api): add crawlMode to venue update schema"
 ## Task 5: Server Action — Parse and forward `crawlMode`
 
 **Files:**
+
 - Modify: `apps/web/src/lib/actions/venues.ts`
 
 - [ ] **Step 1: Add `crawlMode` parsing to `updateVenue`**
@@ -825,30 +851,30 @@ git commit -m "feat(api): add crawlMode to venue update schema"
 In `apps/web/src/lib/actions/venues.ts`, the `updateVenue` function is at line 71. Inside the try block, after the `ticketVendor` parsing block (around line 112), add:
 
 ```typescript
-    const crawlModeRaw = formData.get('crawlMode')
-    const crawlMode =
-      crawlModeRaw === 'http' || crawlModeRaw === 'browser'
-        ? (crawlModeRaw as 'http' | 'browser')
-        : crawlModeRaw === ''
-          ? null
-          : undefined
+const crawlModeRaw = formData.get('crawlMode');
+const crawlMode =
+  crawlModeRaw === 'http' || crawlModeRaw === 'browser'
+    ? (crawlModeRaw as 'http' | 'browser')
+    : crawlModeRaw === ''
+      ? null
+      : undefined;
 ```
 
 Then add `crawlMode` to the `apiClient.patch` call body (around line 114):
 
 ```typescript
-    await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
-      name: formData.get('name'),
-      slug: formData.get('slug'),
-      websiteUrl: formData.get('websiteUrl'),
-      city: formData.get('city') || 'Denver',
-      active: formData.get('active') === 'true',
-      crawlWaitUntil,
-      crawlDelayMs,
-      crawlWaitForSelector,
-      ticketVendor,
-      crawlMode,
-    })
+await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
+  name: formData.get('name'),
+  slug: formData.get('slug'),
+  websiteUrl: formData.get('websiteUrl'),
+  city: formData.get('city') || 'Denver',
+  active: formData.get('active') === 'true',
+  crawlWaitUntil,
+  crawlDelayMs,
+  crawlWaitForSelector,
+  ticketVendor,
+  crawlMode,
+});
 ```
 
 - [ ] **Step 2: Typecheck**
@@ -871,6 +897,7 @@ git commit -m "feat(web): pass crawlMode through venue update server action"
 ## Task 6: Admin UI — Fetch mode selector
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/VenueDetailsClient.tsx`
 
 The venue prop type is inferred from the API response. The `crawlMode` field will now be present as `string | null` — no explicit type change is needed since the Venue type flows from the DB schema through the API.
@@ -880,9 +907,9 @@ The venue prop type is inferred from the API response. The `crawlMode` field wil
 After the existing `ticketVendorVal` state line (around line 431), add:
 
 ```typescript
-  const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
-    (venue.crawlMode as 'http' | 'browser' | null) ?? null,
-  )
+const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
+  (venue.crawlMode as 'http' | 'browser' | null) ?? null,
+);
 ```
 
 - [ ] **Step 2: Add to `isDirty`**
@@ -890,16 +917,16 @@ After the existing `ticketVendorVal` state line (around line 431), add:
 Update the `isDirty` expression (around line 437) to include crawlMode:
 
 ```typescript
-  const isDirty =
-    nameVal !== venue.name ||
-    slugVal !== venue.slug ||
-    urlVal !== venue.websiteUrl ||
-    cityVal !== venue.city ||
-    waitUntilVal !== venue.crawlWaitUntil ||
-    crawlDelayVal !== venue.crawlDelayMs ||
-    (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
-    ticketVendorVal !== (venue.ticketVendor ?? null) ||
-    crawlModeVal !== ((venue.crawlMode as 'http' | 'browser' | null) ?? null)
+const isDirty =
+  nameVal !== venue.name ||
+  slugVal !== venue.slug ||
+  urlVal !== venue.websiteUrl ||
+  cityVal !== venue.city ||
+  waitUntilVal !== venue.crawlWaitUntil ||
+  crawlDelayVal !== venue.crawlDelayMs ||
+  (waitForSelectorVal || null) !== venue.crawlWaitForSelector ||
+  ticketVendorVal !== (venue.ticketVendor ?? null) ||
+  crawlModeVal !== ((venue.crawlMode as 'http' | 'browser' | null) ?? null);
 ```
 
 - [ ] **Step 3: Add to `handleDiscard`**
@@ -907,7 +934,7 @@ Update the `isDirty` expression (around line 437) to include crawlMode:
 Inside `handleDiscard` (around line 466), add after the `setTicketVendorVal` line:
 
 ```typescript
-    setCrawlModeVal((venue.crawlMode as 'http' | 'browser' | null) ?? null)
+setCrawlModeVal((venue.crawlMode as 'http' | 'browser' | null) ?? null);
 ```
 
 - [ ] **Step 4: Add to `handleSave` FormData**
@@ -915,7 +942,7 @@ Inside `handleDiscard` (around line 466), add after the `setTicketVendorVal` lin
 Inside `handleSave` (around line 492), after the `ticketVendor` conditional block, add:
 
 ```typescript
-    formData.set('crawlMode', crawlModeVal ?? '')
+formData.set('crawlMode', crawlModeVal ?? '');
 ```
 
 - [ ] **Step 5: Add the Fetch mode select to the Crawl Settings section**
@@ -923,63 +950,63 @@ Inside `handleSave` (around line 492), after the `ticketVendor` conditional bloc
 After the closing `</Field>` of the Wait strategy field (around line 1016) and before the `{/* Crawl delay */}` comment, insert:
 
 ```tsx
-            {/* Fetch mode */}
-            <Field
-              label="Fetch mode"
-              htmlFor="edit-venue-crawl-mode"
-              hint={
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: 'var(--fg-muted)',
-                    lineHeight: 1.5,
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  {crawlModeVal === null && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>Auto-detect</strong>{' '}
-                      — tries plain HTTP first. If events are found, saves{' '}
-                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong> for
-                      future crawls. Falls back to browser if HTTP returns no events.
-                    </>
-                  )}
-                  {crawlModeVal === 'http' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>HTTP only</strong>{' '}
-                      — fetches the page with a plain HTTP request. Fast and
-                      lightweight. Only works for server-rendered sites where event
-                      data is present in the raw HTML. A crawl returning zero events
-                      is recorded as a failure — it will not escalate to browser.
-                    </>
-                  )}
-                  {crawlModeVal === 'browser' && (
-                    <>
-                      <strong style={{ color: 'var(--fg)' }}>Browser only</strong>{' '}
-                      — always uses Playwright (headless Chromium). Required for
-                      JavaScript-rendered pages and SPAs. Set this if auto-detect
-                      incorrectly detected HTTP mode for a venue.
-                    </>
-                  )}
-                </div>
-              }
-            >
-              <StyledSelect
-                id="edit-venue-crawl-mode"
-                value={crawlModeVal ?? ''}
-                disabled={isDisabled}
-                onChange={(evt) => {
-                  const val = evt.target.value
-                  setCrawlModeVal(
-                    val === 'http' || val === 'browser' ? val : null,
-                  )
-                }}
-              >
-                <option value="">auto-detect — HTTP first, browser fallback</option>
-                <option value="http">HTTP only — server-rendered pages</option>
-                <option value="browser">Browser only — JS-rendered pages</option>
-              </StyledSelect>
-            </Field>
+{
+  /* Fetch mode */
+}
+<Field
+  label="Fetch mode"
+  htmlFor="edit-venue-crawl-mode"
+  hint={
+    <div
+      style={{
+        fontSize: 11,
+        color: 'var(--fg-muted)',
+        lineHeight: 1.5,
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      {crawlModeVal === null && (
+        <>
+          <strong style={{ color: 'var(--fg)' }}>Auto-detect</strong> — tries
+          plain HTTP first. If events are found, saves{' '}
+          <strong style={{ color: 'var(--fg)' }}>HTTP only</strong> for future
+          crawls. Falls back to browser if HTTP returns no events.
+        </>
+      )}
+      {crawlModeVal === 'http' && (
+        <>
+          <strong style={{ color: 'var(--fg)' }}>HTTP only</strong> — fetches
+          the page with a plain HTTP request. Fast and lightweight. Only works
+          for server-rendered sites where event data is present in the raw HTML.
+          A crawl returning zero events is recorded as a failure — it will not
+          escalate to browser.
+        </>
+      )}
+      {crawlModeVal === 'browser' && (
+        <>
+          <strong style={{ color: 'var(--fg)' }}>Browser only</strong> — always
+          uses Playwright (headless Chromium). Required for JavaScript-rendered
+          pages and SPAs. Set this if auto-detect incorrectly detected HTTP mode
+          for a venue.
+        </>
+      )}
+    </div>
+  }
+>
+  <StyledSelect
+    id="edit-venue-crawl-mode"
+    value={crawlModeVal ?? ''}
+    disabled={isDisabled}
+    onChange={(evt) => {
+      const val = evt.target.value;
+      setCrawlModeVal(val === 'http' || val === 'browser' ? val : null);
+    }}
+  >
+    <option value="">auto-detect — HTTP first, browser fallback</option>
+    <option value="http">HTTP only — server-rendered pages</option>
+    <option value="browser">Browser only — JS-rendered pages</option>
+  </StyledSelect>
+</Field>;
 ```
 
 - [ ] **Step 6: Typecheck the web app**
@@ -1002,6 +1029,7 @@ git commit -m "feat(web): add Fetch mode selector to Admin venue Crawl Settings"
 ## Task 7: Pre-push checks, progress doc, and PR
 
 **Files:**
+
 - Modify: `docs/superpowers/progress.md`
 
 - [ ] **Step 1: Run full typecheck + lint + test suite**
@@ -1059,7 +1087,7 @@ gh pr create \
 
 Sweep of all 12 active venues confirmed 3 can use HTTP mode:
 - **Red Rocks Amphitheatre** — 738KB, 367 dates, 881 event links
-- **Larimer Lounge** — 865KB, 103 dates, 424 event links  
+- **Larimer Lounge** — 865KB, 103 dates, 424 event links
 - **Cervantes' Masterpiece Ballroom** — 851KB, 120 events (currently inactive, Sentry CONCERT-CRAWL-CRAWLER-2)
 
 After merge: set these three venues to `http` via Admin UI and re-activate Cervantes.

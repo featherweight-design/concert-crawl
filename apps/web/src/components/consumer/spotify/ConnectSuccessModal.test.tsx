@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SpotifyConnectionView } from '@concert-crawl/types'
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { SpotifyConnectionView } from '@concert-crawl/types';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -17,13 +17,13 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
-import { ConnectSuccessModal } from './ConnectSuccessModal'
-import { SPOTIFY_COPY } from './definitions/copy'
+import { ConnectSuccessModal } from './ConnectSuccessModal';
+import { SPOTIFY_COPY } from './definitions/copy';
 
-const COPY = SPOTIFY_COPY.connectSuccess
+const COPY = SPOTIFY_COPY.connectSuccess;
 
 const CONNECTION: SpotifyConnectionView = {
   status: 'connected',
@@ -44,7 +44,7 @@ const CONNECTION: SpotifyConnectionView = {
     'Bright Eyes',
     'Wisp',
   ],
-}
+};
 
 describe('ConnectSuccessModal', () => {
   it('renders the counts, stat strip and recognized chips with a +more chip', () => {
@@ -55,18 +55,18 @@ describe('ConnectSuccessModal', () => {
         onContinue={vi.fn()}
         onClose={vi.fn()}
       />,
-    )
-    expect(screen.getByText(COPY.title)).toBeTruthy()
+    );
+    expect(screen.getByText(COPY.title)).toBeTruthy();
     // Body bolds: 34 artists / 9 play Denver.
-    expect(screen.getByText(`34${COPY.bodyArtistsSuffix}`)).toBeTruthy()
-    expect(screen.getByText(COPY.statDenver)).toBeTruthy()
+    expect(screen.getByText(`34${COPY.bodyArtistsSuffix}`)).toBeTruthy();
+    expect(screen.getByText(COPY.statDenver)).toBeTruthy();
     // First six Denver-matched chips render; the rest of the matched list
     // folds into "+1 more" (7 matched - 6 shown).
-    expect(screen.getByText('Sleep Token')).toBeTruthy()
-    expect(screen.getByText('Bright Eyes')).toBeTruthy()
-    expect(screen.queryByText('Wisp')).toBeNull()
-    expect(screen.getByText(COPY.moreChip(1))).toBeTruthy()
-  })
+    expect(screen.getByText('Sleep Token')).toBeTruthy();
+    expect(screen.getByText('Bright Eyes')).toBeTruthy();
+    expect(screen.queryByText('Wisp')).toBeNull();
+    expect(screen.getByText(COPY.moreChip(1))).toBeTruthy();
+  });
 
   it('expands the full matched-artist list when the +more chip is clicked', () => {
     render(
@@ -76,14 +76,14 @@ describe('ConnectSuccessModal', () => {
         onContinue={vi.fn()}
         onClose={vi.fn()}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: COPY.moreChipAria(1) }))
-    expect(screen.getByText('Wisp')).toBeTruthy()
-    expect(screen.queryByText(COPY.moreChip(1))).toBeNull()
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: COPY.moreChipAria(1) }));
+    expect(screen.getByText('Wisp')).toBeTruthy();
+    expect(screen.queryByText(COPY.moreChip(1))).toBeNull();
+  });
 
   it('fires onContinue from the CTA', () => {
-    const onContinue = vi.fn()
+    const onContinue = vi.fn();
     render(
       <ConnectSuccessModal
         open
@@ -91,10 +91,10 @@ describe('ConnectSuccessModal', () => {
         onContinue={onContinue}
         onClose={vi.fn()}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: COPY.cta }))
-    expect(onContinue).toHaveBeenCalledTimes(1)
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: COPY.cta }));
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
 
   it('omits the chip strip when no artists matched', () => {
     render(
@@ -104,7 +104,7 @@ describe('ConnectSuccessModal', () => {
         onContinue={vi.fn()}
         onClose={vi.fn()}
       />,
-    )
-    expect(screen.queryByText(COPY.recognizedLabel)).toBeNull()
-  })
-})
+    );
+    expect(screen.queryByText(COPY.recognizedLabel)).toBeNull();
+  });
+});

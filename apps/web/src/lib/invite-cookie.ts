@@ -1,8 +1,8 @@
-import 'server-only'
-import { createHmac, timingSafeEqual } from 'crypto'
+import 'server-only';
+import { createHmac, timingSafeEqual } from 'crypto';
 
-export const INVITE_COOKIE_NAME = 'invite_verified'
-export const INVITE_COOKIE_MAX_AGE = 3600 // 1 hour in seconds
+export const INVITE_COOKIE_NAME = 'invite_verified';
+export const INVITE_COOKIE_MAX_AGE = 3600; // 1 hour in seconds
 
 /**
  * Where to send a new arrival once signup completes, when they started at a
@@ -14,16 +14,16 @@ export const INVITE_COOKIE_MAX_AGE = 3600 // 1 hour in seconds
  * "we wrote it": the value is still a redirect target and is re-sanitised on
  * read as well as on write.
  */
-export const RETURN_PATH_COOKIE_NAME = 'invite_return_path'
+export const RETURN_PATH_COOKIE_NAME = 'invite_return_path';
 
 export function signInviteCookie(code: string, secret: string): string {
-  const iat = Math.floor(Date.now() / 1000)
-  const payload = JSON.stringify({ code, iat })
-  const payloadB64 = Buffer.from(payload).toString('base64url')
+  const iat = Math.floor(Date.now() / 1000);
+  const payload = JSON.stringify({ code, iat });
+  const payloadB64 = Buffer.from(payload).toString('base64url');
   const sig = createHmac('sha256', secret)
     .update(payloadB64)
-    .digest('base64url')
-  return `${payloadB64}.${sig}`
+    .digest('base64url');
+  return `${payloadB64}.${sig}`;
 }
 
 export function verifyInviteCookie(
@@ -31,35 +31,35 @@ export function verifyInviteCookie(
   secret: string,
 ): { code: string } | null {
   try {
-    const dotIdx = value.lastIndexOf('.')
-    if (dotIdx === -1) return null
+    const dotIdx = value.lastIndexOf('.');
+    if (dotIdx === -1) return null;
 
-    const payloadB64 = value.slice(0, dotIdx)
-    const sigB64 = value.slice(dotIdx + 1)
+    const payloadB64 = value.slice(0, dotIdx);
+    const sigB64 = value.slice(dotIdx + 1);
 
     const expectedSig = createHmac('sha256', secret)
       .update(payloadB64)
-      .digest('base64url')
-    const sigBuf = Buffer.from(sigB64, 'base64url')
-    const expectedBuf = Buffer.from(expectedSig, 'base64url')
+      .digest('base64url');
+    const sigBuf = Buffer.from(sigB64, 'base64url');
+    const expectedBuf = Buffer.from(expectedSig, 'base64url');
 
-    if (sigBuf.length !== expectedBuf.length) return null
-    if (!timingSafeEqual(sigBuf, expectedBuf)) return null
+    if (sigBuf.length !== expectedBuf.length) return null;
+    if (!timingSafeEqual(sigBuf, expectedBuf)) return null;
 
-    const payloadStr = Buffer.from(payloadB64, 'base64url').toString()
-    const payload = JSON.parse(payloadStr) as { code: string; iat: number }
+    const payloadStr = Buffer.from(payloadB64, 'base64url').toString();
+    const payload = JSON.parse(payloadStr) as { code: string; iat: number };
 
     if (typeof payload.iat !== 'number' || !Number.isFinite(payload.iat))
-      return null
+      return null;
 
-    const now = Math.floor(Date.now() / 1000)
-    if (payload.iat > now) return null
-    if (now - payload.iat > INVITE_COOKIE_MAX_AGE) return null
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.iat > now) return null;
+    if (now - payload.iat > INVITE_COOKIE_MAX_AGE) return null;
 
-    if (typeof payload.code !== 'string' || !payload.code) return null
+    if (typeof payload.code !== 'string' || !payload.code) return null;
 
-    return { code: payload.code }
+    return { code: payload.code };
   } catch {
-    return null
+    return null;
   }
 }

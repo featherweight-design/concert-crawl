@@ -8,10 +8,10 @@
 // /json/data/data_rv1/<id>/search_queries.json the spec originally
 // described. See aeg.ts for details.)
 
-import type { Venue } from '@concert-crawl/db'
-import type { NormalizedEvent } from '../../types.js'
+import type { Venue } from '@concert-crawl/db';
+import type { NormalizedEvent } from '../../types.js';
 
-export type { VenuePlatform } from '@concert-crawl/types'
+export type { VenuePlatform } from '@concert-crawl/types';
 
 /**
  * The union of platform-fetcher identifiers. Single source of truth: the
@@ -19,10 +19,11 @@ export type { VenuePlatform } from '@concert-crawl/types'
  * strategy type both derive from this, so adding a fetcher is a compile
  * error until every consumer is updated.
  */
-export type PlatformSource = 'aeg' | 'venuepilot' | 'livenation' | 'detail-page'
+export type PlatformSource =
+  'aeg' | 'venuepilot' | 'livenation' | 'detail-page';
 
 export interface PlatformFetchResult {
-  events: NormalizedEvent[]
+  events: NormalizedEvent[];
   /**
    * The platform endpoint the adapter actually hit (e.g. the AEG events
    * blob URL). Used only in the crawler's structured logs for incident
@@ -30,23 +31,23 @@ export interface PlatformFetchResult {
    * NormalizedEvent is the venue's canonical calendar URL, set by the
    * adapter when normalizing each event.
    */
-  sourceUrl: string
+  sourceUrl: string;
   /**
    * Every other URL whose body the adapter read, as it landed after any
    * redirect. Event text came from these, so crawl.ts requires robots.txt to
    * allow AI use on each before sending any event to the adjudicator.
    */
-  readUrls?: string[]
+  readUrls?: string[];
   /** Platform-specific metadata logged with the crawl run (e.g. fetch
    * latency, JSON page count). */
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>;
 }
 
 export interface PlatformFetchOptions {
   /** Per-domain pacing between this adapter's sequential requests. */
-  crawlDelayMs: number
+  crawlDelayMs: number;
   /** Ceiling on any single HTTP request. */
-  perRequestTimeoutMs?: number
+  perRequestTimeoutMs?: number;
   /**
    * Ceiling on the whole fetch — every request plus the crawl delays
    * between them. Adapters make many sequential requests, so a per-request
@@ -54,7 +55,7 @@ export interface PlatformFetchOptions {
    * A breach throws `PlatformFetchDeadlineError` rather than returning the
    * pages gathered so far (see deadline.ts for why partial is unsafe).
    */
-  overallTimeoutMs?: number
+  overallTimeoutMs?: number;
   /**
    * Whether `overallTimeoutMs` was sized from `crawlDelayMs`, so an adapter
    * that finds a longer Crawl-delay on another host should widen it to
@@ -62,7 +63,7 @@ export interface PlatformFetchOptions {
    * leaves it unset, and a long delay then breaches the deadline instead of
    * stretching it. Either way the delay itself is never shortened.
    */
-  budgetFollowsCrawlDelay?: boolean
+  budgetFollowsCrawlDelay?: boolean;
 }
 
 export interface PlatformFetcher {
@@ -72,7 +73,7 @@ export interface PlatformFetcher {
    * is an apiProvider, not a venues.platform value, so this is a
    * fetcher-local union rather than `VenuePlatform`.
    */
-  readonly source: PlatformSource
+  readonly source: PlatformSource;
   /**
    * Upper bound on the deadline-wrapped request stages one `fetch` can issue.
    *
@@ -90,16 +91,16 @@ export interface PlatformFetcher {
    * however many months its sitemap advertises) declare a ceiling well
    * above what the site has ever served.
    */
-  readonly maxRequests: number
+  readonly maxRequests: number;
   /** Returns false if this fetcher can't handle the venue
    * (e.g. missing platformVenueId / apiAccountId). */
-  canHandle(venue: Venue): boolean
-  fetch(venue: Venue, opts: PlatformFetchOptions): Promise<PlatformFetchResult>
+  canHandle(venue: Venue): boolean;
+  fetch(venue: Venue, opts: PlatformFetchOptions): Promise<PlatformFetchResult>;
 }
 
-export { PlatformFetchDeadlineError, createDeadline } from './deadline.js'
-export { aegFetcher } from './aeg.js'
-export { detailPageFetcher } from './detail-page.js'
-export { liveNationFetcher } from './livenation.js'
-export { venuePilotFetcher } from './venuepilot.js'
-export { dispatch } from './dispatch.js'
+export { PlatformFetchDeadlineError, createDeadline } from './deadline.js';
+export { aegFetcher } from './aeg.js';
+export { detailPageFetcher } from './detail-page.js';
+export { liveNationFetcher } from './livenation.js';
+export { venuePilotFetcher } from './venuepilot.js';
+export { dispatch } from './dispatch.js';

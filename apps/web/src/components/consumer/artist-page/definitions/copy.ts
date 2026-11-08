@@ -117,4 +117,4 @@ export const ARTIST_COPY = {
   pageAria: (name: string) => `Artist page for ${name}`,
   showsListAria: (name: string) => `Upcoming shows for ${name}`,
   pastListAria: (name: string) => `Past shows we've recorded for ${name}`,
-} as const
+} as const;

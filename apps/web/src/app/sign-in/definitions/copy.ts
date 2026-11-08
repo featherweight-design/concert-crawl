@@ -10,4 +10,4 @@ export const SIGN_IN_COPY = {
     sub: "Usually something is blocking it: a VPN, an ad blocker, or your browser's shields. Switch one off and try again.",
     retry: 'Try again',
   },
-} as const
+} as const;

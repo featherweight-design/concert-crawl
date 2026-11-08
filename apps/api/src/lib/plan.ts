@@ -1,10 +1,10 @@
-import { eq, isNull } from 'drizzle-orm'
-import { z } from 'zod'
-import { db, giftedComps, subscriptions, userBilling } from '@concert-crawl/db'
-import type { PlanState } from '@concert-crawl/types'
-import { derivePlanState, isGiftLive } from '@concert-crawl/entitlements'
-import { apiLogger } from './logger.js'
-import { resolveTrialEndsAt } from './trial.js'
+import { eq, isNull } from 'drizzle-orm';
+import { z } from 'zod';
+import { db, giftedComps, subscriptions, userBilling } from '@concert-crawl/db';
+import type { PlanState } from '@concert-crawl/types';
+import { derivePlanState, isGiftLive } from '@concert-crawl/entitlements';
+import { apiLogger } from './logger.js';
+import { resolveTrialEndsAt } from './trial.js';
 
 // Pure derivation moved to @concert-crawl/entitlements (#763 PR 10) so the
 // crawler's Spotify fan-out can gate on plan without importing API code.
@@ -14,31 +14,31 @@ export {
   derivePlanState,
   LIVE_STATUSES,
   type PlanDerivationInput,
-} from '@concert-crawl/entitlements'
+} from '@concert-crawl/entitlements';
 
 const publicMetadataSchema = z.object({
   role: z.string().optional(),
   plan: z.string().optional(),
-})
+});
 
 // Nudge-predicate timestamps from user_billing, as Dates so callers never
 // reparse the PlanState ISO strings (eng infra spec Part 2 §6; PR 4.2).
 export interface PlanContext {
-  planState: PlanState
-  trialEndsAt: Date | null
+  planState: PlanState;
+  trialEndsAt: Date | null;
   nudgeTimestamps: {
-    lastTrialEndedShownAt: Date | null
-    dayThirteenBannerDismissedAt: Date | null
-    pastDueBannerDismissedAt: Date | null
-  }
+    lastTrialEndedShownAt: Date | null;
+    dayThirteenBannerDismissedAt: Date | null;
+    pastDueBannerDismissedAt: Date | null;
+  };
 }
 
 // The two instants the trial clock needs, passed together so a caller cannot
 // supply the account without the cutover it is measured against.
 // `monetizationLiveAt` is `founder_window.opensAt` — null before launch.
 export interface TrialSeed {
-  accountCreatedAt: Date
-  monetizationLiveAt: Date | null
+  accountCreatedAt: Date;
+  monetizationLiveAt: Date | null;
 }
 
 /**
@@ -53,8 +53,8 @@ const seedTrial = async (
   const trialEndsAt = resolveTrialEndsAt(
     seed.accountCreatedAt,
     seed.monetizationLiveAt,
-  )
-  if (trialEndsAt === null) return null
+  );
+  if (trialEndsAt === null) return null;
 
   // The row may already exist without a trial: billing-nudges, the daily job
   // and the Stripe webhooks all upsert user_billing for their own columns, and
@@ -69,8 +69,8 @@ const seedTrial = async (
       set: { trialEndsAt, updatedAt: new Date() },
       setWhere: isNull(userBilling.trialEndsAt),
     })
-    .returning({ trialEndsAt: userBilling.trialEndsAt })
-  if (written[0] !== undefined) return written[0].trialEndsAt
+    .returning({ trialEndsAt: userBilling.trialEndsAt });
+  if (written[0] !== undefined) return written[0].trialEndsAt;
 
   // Empty means setWhere was false: the row already carries a trial. That value
   // is authoritative — read it back rather than reporting none, which would
@@ -79,9 +79,9 @@ const seedTrial = async (
     .select({ trialEndsAt: userBilling.trialEndsAt })
     .from(userBilling)
     .where(eq(userBilling.userId, userId))
-    .limit(1)
-  return existing?.trialEndsAt ?? null
-}
+    .limit(1);
+  return existing?.trialEndsAt ?? null;
+};
 
 // Loads DB context and derives PlanState + nudge timestamps for an
 // authenticated user. publicMetadata is Clerk's untyped payload — parsed at
@@ -92,8 +92,8 @@ export async function loadPlanContext(
   publicMetadata: unknown,
   trialSeed?: TrialSeed,
 ): Promise<PlanContext> {
-  const parsedMetadata = publicMetadataSchema.safeParse(publicMetadata)
-  const metadata = parsedMetadata.success ? parsedMetadata.data : {}
+  const parsedMetadata = publicMetadataSchema.safeParse(publicMetadata);
+  const metadata = parsedMetadata.success ? parsedMetadata.data : {};
 
   const [[giftRow], [subRow], [billingRow]] = await Promise.all([
     db
@@ -124,27 +124,27 @@ export async function loadPlanContext(
       .from(userBilling)
       .where(eq(userBilling.userId, userId))
       .limit(1),
-  ])
+  ]);
 
   // Where the trial clock starts (spec §3). Keyed on a null trialEndsAt rather
   // than a missing row, because another writer may have created the row for its
   // own columns and left the trial unset — gating on the row would drop that
   // user's trial permanently. Ineligible accounts return before any write.
-  let trialEndsAt = billingRow?.trialEndsAt ?? null
+  let trialEndsAt = billingRow?.trialEndsAt ?? null;
   if (trialEndsAt === null && trialSeed !== undefined) {
     try {
-      trialEndsAt = await seedTrial(userId, trialSeed)
+      trialEndsAt = await seedTrial(userId, trialSeed);
     } catch (err) {
       apiLogger.error(
         { err, userId },
         'trial seed failed — treating as no trial',
-      )
+      );
     }
   }
 
-  const now = new Date()
-  const giftLive = isGiftLive(giftRow ?? null, now)
-  const mirrorSaysGifted = metadata.plan === 'premium_gifted'
+  const now = new Date();
+  const giftLive = isGiftLive(giftRow ?? null, now);
+  const mirrorSaysGifted = metadata.plan === 'premium_gifted';
   // gifted_comps is the source of truth; the Clerk mirror is the JWT-fast
   // path. Disagreement is repaired by the gifting admin flows — here we log
   // so drift is visible (eng infra spec Part 1 §7).
@@ -152,7 +152,7 @@ export async function loadPlanContext(
     apiLogger.warn(
       { userId, giftLive, mirrorSaysGifted },
       'gifted_comps and Clerk publicMetadata.plan mirror disagree — table wins',
-    )
+    );
   }
 
   const planState = derivePlanState({
@@ -162,7 +162,7 @@ export async function loadPlanContext(
     subscription: subRow ?? null,
     billing: { trialEndsAt },
     now,
-  })
+  });
 
   return {
     planState,
@@ -173,7 +173,7 @@ export async function loadPlanContext(
         billingRow?.dayThirteenBannerDismissedAt ?? null,
       pastDueBannerDismissedAt: billingRow?.pastDueBannerDismissedAt ?? null,
     },
-  }
+  };
 }
 
 // Thin wrapper — existing callers only need the derived PlanState.
@@ -181,6 +181,6 @@ export async function loadPlanState(
   userId: string,
   publicMetadata: unknown,
 ): Promise<PlanState> {
-  const context = await loadPlanContext(userId, publicMetadata)
-  return context.planState
+  const context = await loadPlanContext(userId, publicMetadata);
+  return context.planState;
 }

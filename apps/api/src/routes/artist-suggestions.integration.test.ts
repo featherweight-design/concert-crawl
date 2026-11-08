@@ -5,119 +5,119 @@
 // follower-count column to order by (Gate 1, decisions D2/D3). The ordering
 // contract asserted here — upcoming-show count desc, soonest date asc, name
 // asc — IS the substitute for that missing column.
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as { userId: string } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import type { ArtistSuggestion } from '@concert-crawl/types'
-import { userArtistFollows } from '@concert-crawl/db'
-import { createApp } from '../app.js'
-import { testDb } from '../test/helpers/db.js'
+import type { ArtistSuggestion } from '@concert-crawl/types';
+import { userArtistFollows } from '@concert-crawl/db';
+import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
   seedArtist,
   seedEvent,
   seedVenue,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 interface SuccessBody {
-  success: true
-  data: ArtistSuggestion[]
+  success: true;
+  data: ArtistSuggestion[];
 }
 
 const getSuggestions = async (query = ''): Promise<Response> =>
-  app.request(`/v1/artists/suggestions${query}`)
+  app.request(`/v1/artists/suggestions${query}`);
 
 const readNames = async (res: Response): Promise<string[]> => {
-  const body: SuccessBody = await res.json()
-  return body.data.map((row) => row.name)
-}
+  const body: SuccessBody = await res.json();
+  return body.data.map((row) => row.name);
+};
 
 describe('GET /v1/artists/suggestions — integration', () => {
   beforeEach(async () => {
-    authState.current = null
-    await clearTables()
-  })
+    authState.current = null;
+    await clearTables();
+  });
 
   it('orders by upcoming show count desc, then soonest date asc, then name asc', async () => {
-    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
 
     // Busy: three upcoming. Should lead on count alone.
-    await seedArtist({ name: 'Busy Act', canonicalName: 'busy act' })
+    await seedArtist({ name: 'Busy Act', canonicalName: 'busy act' });
     for (const date of ['2099-03-01', '2099-04-01', '2099-05-01']) {
       await seedEvent(venue.id, {
         artist: 'Busy Act',
         canonicalArtist: 'busy act',
         date,
-      })
+      });
     }
 
     // Two artists tied at one show each — the earlier date wins the tiebreak.
-    await seedArtist({ name: 'Early Act', canonicalName: 'early act' })
+    await seedArtist({ name: 'Early Act', canonicalName: 'early act' });
     await seedEvent(venue.id, {
       artist: 'Early Act',
       canonicalArtist: 'early act',
       date: '2099-02-01',
-    })
-    await seedArtist({ name: 'Later Act', canonicalName: 'later act' })
+    });
+    await seedArtist({ name: 'Later Act', canonicalName: 'later act' });
     await seedEvent(venue.id, {
       artist: 'Later Act',
       canonicalArtist: 'later act',
       date: '2099-06-01',
-    })
+    });
 
     // Same count AND same date as Later Act — name asc breaks the final tie,
     // which is what makes the ordering deterministic across runs.
-    await seedArtist({ name: 'Alpha Act', canonicalName: 'alpha act' })
+    await seedArtist({ name: 'Alpha Act', canonicalName: 'alpha act' });
     await seedEvent(venue.id, {
       artist: 'Alpha Act',
       canonicalArtist: 'alpha act',
       date: '2099-06-01',
-    })
+    });
 
-    const res = await getSuggestions()
-    expect(res.status).toBe(200)
+    const res = await getSuggestions();
+    expect(res.status).toBe(200);
     expect(await readNames(res)).toEqual([
       'Busy Act',
       'Early Act',
       'Alpha Act',
       'Later Act',
-    ])
-  })
+    ]);
+  });
 
   it('returns nextShow and upcomingShowCount for each row', async () => {
-    const venue = await seedVenue({ name: 'Larimer Lounge', slug: 'larimer' })
+    const venue = await seedVenue({ name: 'Larimer Lounge', slug: 'larimer' });
     await seedArtist({
       name: 'Nightjar Choir',
       canonicalName: 'nightjar choir',
       photoUrl: 'https://i.example.com/nightjar.jpg',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Nightjar Choir',
       canonicalArtist: 'nightjar choir',
       date: '2099-09-02',
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Nightjar Choir',
       canonicalArtist: 'nightjar choir',
       date: '2099-08-14',
-    })
+    });
 
-    const res = await getSuggestions()
-    const body: SuccessBody = await res.json()
-    expect(body.data).toHaveLength(1)
+    const res = await getSuggestions();
+    const body: SuccessBody = await res.json();
+    expect(body.data).toHaveLength(1);
     expect(body.data[0]).toMatchObject({
       name: 'Nightjar Choir',
       slug: 'nightjar-choir',
@@ -129,13 +129,13 @@ describe('GET /v1/artists/suggestions — integration', () => {
         venue: 'Larimer Lounge',
         venueSlug: 'larimer',
       },
-    })
-  })
+    });
+  });
 
   it('counts co-headliner and supporting billings, not just canonical_artist', async () => {
-    const venue = await seedVenue({ slug: 'hi-dive' })
-    await seedArtist({ name: 'Second Act', canonicalName: 'second act' })
-    await seedArtist({ name: 'Support Act', canonicalName: 'support act' })
+    const venue = await seedVenue({ slug: 'hi-dive' });
+    await seedArtist({ name: 'Second Act', canonicalName: 'second act' });
+    await seedArtist({ name: 'Support Act', canonicalName: 'support act' });
 
     // Only headliners[0] reaches canonical_artist (#1203), so without the
     // array arms neither of these artists would be suggestable at all.
@@ -145,96 +145,96 @@ describe('GET /v1/artists/suggestions — integration', () => {
       canonicalHeadliners: ['lead act', 'second act'],
       canonicalSupporting: ['support act'],
       date: '2099-07-04',
-    })
+    });
 
-    const names = await readNames(await getSuggestions())
-    expect(names).toContain('Second Act')
-    expect(names).toContain('Support Act')
-  })
+    const names = await readNames(await getSuggestions());
+    expect(names).toContain('Second Act');
+    expect(names).toContain('Support Act');
+  });
 
   it('excludes hidden artists, hidden/stale events, past dates, and inactive venues', async () => {
-    const active = await seedVenue({ slug: 'active-venue' })
-    const inactive = await seedVenue({ slug: 'inactive-venue', active: false })
+    const active = await seedVenue({ slug: 'active-venue' });
+    const inactive = await seedVenue({ slug: 'inactive-venue', active: false });
 
     await seedArtist({
       name: 'Hidden Act',
       canonicalName: 'hidden act',
       hidden: true,
-    })
+    });
     await seedEvent(active.id, {
       artist: 'Hidden Act',
       canonicalArtist: 'hidden act',
       date: '2099-01-01',
-    })
+    });
 
     await seedArtist({
       name: 'Consumer Hidden',
       canonicalName: 'consumer hidden',
-    })
+    });
     await seedEvent(active.id, {
       artist: 'Consumer Hidden',
       canonicalArtist: 'consumer hidden',
       date: '2099-01-01',
       hiddenFromConsumer: true,
-    })
+    });
 
-    await seedArtist({ name: 'Stale Act', canonicalName: 'stale act' })
+    await seedArtist({ name: 'Stale Act', canonicalName: 'stale act' });
     await seedEvent(active.id, {
       artist: 'Stale Act',
       canonicalArtist: 'stale act',
       date: '2099-01-01',
       firstMissingAt: new Date(),
-    })
+    });
 
-    await seedArtist({ name: 'Past Act', canonicalName: 'past act' })
+    await seedArtist({ name: 'Past Act', canonicalName: 'past act' });
     await seedEvent(active.id, {
       artist: 'Past Act',
       canonicalArtist: 'past act',
       date: '2020-01-01',
-    })
+    });
 
     await seedArtist({
       name: 'Inactive Venue Act',
       canonicalName: 'inactive venue act',
-    })
+    });
     await seedEvent(inactive.id, {
       artist: 'Inactive Venue Act',
       canonicalArtist: 'inactive venue act',
       date: '2099-01-01',
-    })
+    });
 
-    await seedArtist({ name: 'Real Act', canonicalName: 'real act' })
+    await seedArtist({ name: 'Real Act', canonicalName: 'real act' });
     await seedEvent(active.id, {
       artist: 'Real Act',
       canonicalArtist: 'real act',
       date: '2099-01-01',
-    })
+    });
 
-    expect(await readNames(await getSuggestions())).toEqual(['Real Act'])
-  })
+    expect(await readNames(await getSuggestions())).toEqual(['Real Act']);
+  });
 
   it('keeps cancelled and postponed dates, matching every other list surface', async () => {
-    const venue = await seedVenue({ slug: 'ogden' })
-    await seedArtist({ name: 'Cancelled Act', canonicalName: 'cancelled act' })
+    const venue = await seedVenue({ slug: 'ogden' });
+    await seedArtist({ name: 'Cancelled Act', canonicalName: 'cancelled act' });
     await seedEvent(venue.id, {
       artist: 'Cancelled Act',
       canonicalArtist: 'cancelled act',
       date: '2099-01-01',
       status: 'cancelled',
-    })
+    });
 
-    expect(await readNames(await getSuggestions())).toEqual(['Cancelled Act'])
-  })
+    expect(await readNames(await getSuggestions())).toEqual(['Cancelled Act']);
+  });
 
   it('stamps following per row for an authed viewer and ignores spotify_top', async () => {
-    const venue = await seedVenue({ slug: 'bluebird' })
+    const venue = await seedVenue({ slug: 'bluebird' });
     for (const name of ['Followed Act', 'Listened Act', 'Unknown Act']) {
-      await seedArtist({ name, canonicalName: name.toLowerCase() })
+      await seedArtist({ name, canonicalName: name.toLowerCase() });
       await seedEvent(venue.id, {
         artist: name,
         canonicalArtist: name.toLowerCase(),
         date: '2099-01-01',
-      })
+      });
     }
 
     await testDb.insert(userArtistFollows).values([
@@ -252,132 +252,134 @@ describe('GET /v1/artists/suggestions — integration', () => {
         artistName: 'Listened Act',
         source: 'spotify_top',
       },
-    ])
+    ]);
 
-    authState.current = { userId: 'user_suggest' }
-    const body: SuccessBody = await (await getSuggestions()).json()
-    const byName = new Map(body.data.map((row) => [row.name, row.following]))
-    expect(byName.get('Followed Act')).toBe(true)
-    expect(byName.get('Listened Act')).toBe(false)
-    expect(byName.get('Unknown Act')).toBe(false)
-  })
+    authState.current = { userId: 'user_suggest' };
+    const body: SuccessBody = await (await getSuggestions()).json();
+    const byName = new Map(body.data.map((row) => [row.name, row.following]));
+    expect(byName.get('Followed Act')).toBe(true);
+    expect(byName.get('Listened Act')).toBe(false);
+    expect(byName.get('Unknown Act')).toBe(false);
+  });
 
   it('honours ?limit= and rejects one over the cap', async () => {
-    const venue = await seedVenue({ slug: 'marquis' })
+    const venue = await seedVenue({ slug: 'marquis' });
     for (const name of ['Aa Act', 'Bb Act', 'Cc Act']) {
-      await seedArtist({ name, canonicalName: name.toLowerCase() })
+      await seedArtist({ name, canonicalName: name.toLowerCase() });
       await seedEvent(venue.id, {
         artist: name,
         canonicalArtist: name.toLowerCase(),
         date: '2099-01-01',
-      })
+      });
     }
 
     expect(await readNames(await getSuggestions('?limit=2'))).toEqual([
       'Aa Act',
       'Bb Act',
-    ])
-    expect((await getSuggestions('?limit=99')).status).toBe(400)
-    expect((await getSuggestions('?limit=0')).status).toBe(400)
-  })
+    ]);
+    expect((await getSuggestions('?limit=99')).status).toBe(400);
+    expect((await getSuggestions('?limit=0')).status).toBe(400);
+  });
 
   // PR 8 (onboarding): the genre step filters this same endpoint rather than
   // authoring a second query. Genre lives on the EVENT (artists carry none of
   // their own), so the filter is an array overlap against the billed events.
   describe('?genres= filter', () => {
     const seedGenreFixture = async (): Promise<void> => {
-      const venue = await seedVenue({ slug: 'globe-hall' })
-      await seedArtist({ name: 'Punk Act', canonicalName: 'punk act' })
+      const venue = await seedVenue({ slug: 'globe-hall' });
+      await seedArtist({ name: 'Punk Act', canonicalName: 'punk act' });
       await seedEvent(venue.id, {
         artist: 'Punk Act',
         canonicalArtist: 'punk act',
         date: '2099-01-01',
         genre: ['emo', 'pop punk'],
-      })
+      });
 
-      await seedArtist({ name: 'Jazz Act', canonicalName: 'jazz act' })
+      await seedArtist({ name: 'Jazz Act', canonicalName: 'jazz act' });
       await seedEvent(venue.id, {
         artist: 'Jazz Act',
         canonicalArtist: 'jazz act',
         date: '2099-01-02',
         genre: ['blues'],
-      })
+      });
 
-      await seedArtist({ name: 'Blank Act', canonicalName: 'blank act' })
+      await seedArtist({ name: 'Blank Act', canonicalName: 'blank act' });
       await seedEvent(venue.id, {
         artist: 'Blank Act',
         canonicalArtist: 'blank act',
         date: '2099-01-03',
         genre: [],
-      })
-    }
+      });
+    };
 
     it('keeps only artists whose upcoming events overlap the chosen buckets', async () => {
-      await seedGenreFixture()
+      await seedGenreFixture();
 
       // 'punk' is a bucket label, not a raw genre — it must expand to its
       // sub-genres (emo, pop punk, ...) or this artist is invisible.
       expect(await readNames(await getSuggestions('?genres=punk'))).toEqual([
         'Punk Act',
-      ])
+      ]);
       expect(await readNames(await getSuggestions('?genres=jazz'))).toEqual([
         'Jazz Act',
-      ])
-    })
+      ]);
+    });
 
     it('unions multiple buckets rather than intersecting them', async () => {
-      await seedGenreFixture()
+      await seedGenreFixture();
 
-      const names = await readNames(await getSuggestions('?genres=punk,jazz'))
-      expect(names).toEqual(['Punk Act', 'Jazz Act'])
-    })
+      const names = await readNames(await getSuggestions('?genres=punk,jazz'));
+      expect(names).toEqual(['Punk Act', 'Jazz Act']);
+    });
 
     it('accepts a raw sub-genre verbatim, matching the browse filter', async () => {
-      await seedGenreFixture()
+      await seedGenreFixture();
 
       expect(await readNames(await getSuggestions('?genres=emo'))).toEqual([
         'Punk Act',
-      ])
-    })
+      ]);
+    });
 
     it('returns every artist when the param is absent', async () => {
-      await seedGenreFixture()
+      await seedGenreFixture();
 
       expect(await readNames(await getSuggestions())).toEqual([
         'Punk Act',
         'Jazz Act',
         'Blank Act',
-      ])
-    })
+      ]);
+    });
 
     it('returns an empty list for a bucket nothing is playing', async () => {
-      await seedGenreFixture()
+      await seedGenreFixture();
 
       expect(await readNames(await getSuggestions('?genres=reggae'))).toEqual(
         [],
-      )
-    })
+      );
+    });
 
     it('rejects an empty or over-long genre list', async () => {
-      expect((await getSuggestions('?genres=')).status).toBe(400)
-      expect((await getSuggestions('?genres=,,')).status).toBe(400)
-      const tooMany = Array.from({ length: 40 }, (_, i) => `g${i}`).join(',')
-      expect((await getSuggestions(`?genres=${tooMany}`)).status).toBe(400)
-    })
+      expect((await getSuggestions('?genres=')).status).toBe(400);
+      expect((await getSuggestions('?genres=,,')).status).toBe(400);
+      const tooMany = Array.from({ length: 40 }, (_, i) => `g${i}`).join(',');
+      expect((await getSuggestions(`?genres=${tooMany}`)).status).toBe(400);
+    });
 
     // The count cap alone would still let a handful of enormous values expand
     // into the ARRAY[] predicate.
     it('rejects a single over-long genre', async () => {
-      const tooLong = 'g'.repeat(200)
-      expect((await getSuggestions(`?genres=${tooLong}`)).status).toBe(400)
-      expect((await getSuggestions(`?genres=punk,${tooLong}`)).status).toBe(400)
-    })
-  })
+      const tooLong = 'g'.repeat(200);
+      expect((await getSuggestions(`?genres=${tooLong}`)).status).toBe(400);
+      expect((await getSuggestions(`?genres=punk,${tooLong}`)).status).toBe(
+        400,
+      );
+    });
+  });
 
   it('is not shadowed by GET /:slug', async () => {
     // `suggestions` satisfies the slug param schema, so a route-order
     // regression would answer 404 here rather than an empty list.
-    const res = await getSuggestions()
-    expect(res.status).toBe(200)
-  })
-})
+    const res = await getSuggestions();
+    expect(res.status).toBe(200);
+  });
+});

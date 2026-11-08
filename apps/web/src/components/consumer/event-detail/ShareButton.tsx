@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { ShareSheet } from '@/components/consumer/share/ShareSheet'
-import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event'
-import { track } from '@/lib/analytics'
-import { cn } from '@/lib/utils'
+import { useState } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { ShareSheet } from '@/components/consumer/share/ShareSheet';
+import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event';
+import { track } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 
 /**
  * The share affordance in the event hero — the mirror of `BackChip`.
@@ -18,28 +18,28 @@ import { cn } from '@/lib/utils'
  * below the title, and the handoff is explicit that the hero carries Back and
  * Share only.
  */
-const HIT_AREA_OFFSET_PX = 4
+const HIT_AREA_OFFSET_PX = 4;
 
 export interface ShareButtonProps {
-  event: PosterSource
+  event: PosterSource;
   /** The sharer's handle, or null for a logged-out or handle-less visitor. */
-  handle?: string | null
+  handle?: string | null;
   /**
    * Whether the visitor has a session. Required rather than defaulted: the
    * public mirror and the protected page mount this component with the same
    * props otherwise, and a default would silently record every public share as
    * whichever value was guessed here.
    */
-  authed: boolean
+  authed: boolean;
   /** Matches BackChip's `top` so the two chips align. */
-  top?: number
+  top?: number;
   /**
    * Lay the chip out in flow instead of over artwork — the same mode BackChip
    * carries, for bars that draw their own background (the hero band). `top` is
    * ignored in this mode.
    */
-  inline?: boolean
-  className?: string
+  inline?: boolean;
+  className?: string;
 }
 
 export const ShareButton = ({
@@ -50,20 +50,20 @@ export const ShareButton = ({
   inline = false,
   className,
 }: ShareButtonProps) => {
-  const [open, setOpen] = useState(false)
-  const poster = toPosterEvent(event)
+  const [open, setOpen] = useState(false);
+  const poster = toPosterEvent(event);
 
   return (
     <>
       <button
         type="button"
         onClick={() => {
-          setOpen(true)
+          setOpen(true);
           track('share_sheet_opened', {
             eventId: event.id,
             surface: 'event-detail',
             authed,
-          })
+          });
         }}
         aria-label={CONSUMER_COPY.share.triggerLabel}
         aria-haspopup="dialog"
@@ -118,5 +118,5 @@ export const ShareButton = ({
         handle={handle}
       />
     </>
-  )
-}
+  );
+};

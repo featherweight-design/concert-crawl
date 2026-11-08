@@ -2,16 +2,16 @@
 // gratitude panel (design brief §2; handoff GiftedThankYou). No cards,
 // no upsell, no management affordance.
 
-import { CCMark } from '@/components/brand/cc-mark'
-import { TIER_PICKER_COPY } from './definitions/copy'
-import { TierBadge } from './TierBadge'
+import { CCMark } from '@/components/brand/cc-mark';
+import { TIER_PICKER_COPY } from './definitions/copy';
+import { TierBadge } from './TierBadge';
 
-const GIFTED_COPY = TIER_PICKER_COPY.gifted
+const GIFTED_COPY = TIER_PICKER_COPY.gifted;
 
 interface GiftedThankYouProps {
-  variant?: 'mobile' | 'desktop'
+  variant?: 'mobile' | 'desktop';
   /** The single non-management affordance — discovery, not billing. */
-  onDiscover?: () => void
+  onDiscover?: () => void;
 }
 
 export const GiftedThankYou = ({
@@ -242,4 +242,4 @@ export const GiftedThankYou = ({
       {GIFTED_COPY.footer}
     </div>
   </div>
-)
+);

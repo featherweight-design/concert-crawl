@@ -8,35 +8,35 @@
  * guard rather than a schema.
  */
 
-const INTENT_ACTIONS = ['watch'] as const
+const INTENT_ACTIONS = ['watch'] as const;
 
-export type IntentAction = (typeof INTENT_ACTIONS)[number]
+export type IntentAction = (typeof INTENT_ACTIONS)[number];
 
 export interface Intent {
-  action: IntentAction
-  eventId: string
+  action: IntentAction;
+  eventId: string;
 }
 
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const isIntentAction = (value: string): value is IntentAction =>
-  INTENT_ACTIONS.some((action) => action === value)
+  INTENT_ACTIONS.some((action) => action === value);
 
 export const encodeIntent = (intent: Intent): string =>
-  `${intent.action}:${intent.eventId}`
+  `${intent.action}:${intent.eventId}`;
 
 export const decodeIntent = (raw: string | null | undefined): Intent | null => {
-  if (!raw) return null
+  if (!raw) return null;
   // Exactly one separator: `watch:a:b` is malformed, not a nested payload.
-  const parts = raw.split(':')
-  if (parts.length !== 2) return null
-  const [action, eventId] = parts
-  if (!action || !eventId) return null
-  if (!isIntentAction(action)) return null
-  if (!UUID_PATTERN.test(eventId)) return null
-  return { action, eventId }
-}
+  const parts = raw.split(':');
+  if (parts.length !== 2) return null;
+  const [action, eventId] = parts;
+  if (!action || !eventId) return null;
+  if (!isIntentAction(action)) return null;
+  if (!UUID_PATTERN.test(eventId)) return null;
+  return { action, eventId };
+};
 
 /**
  * The tier a signed-out visitor chose in the picker, carried to the other side
@@ -47,15 +47,15 @@ export const decodeIntent = (raw: string | null | undefined): Intent | null => {
  * force dropping one. Which tier keys are valid is a picker question, so the
  * value is validated there rather than here.
  */
-export const PENDING_TIER_PARAM = 'tier'
+export const PENDING_TIER_PARAM = 'tier';
 
-export const DEFAULT_RETURN_PATH = '/events'
+export const DEFAULT_RETURN_PATH = '/events';
 
 /**
  * `URL` needs an absolute base to parse a path, but every value built here is
  * re-serialised as a path — the origin is never read.
  */
-const PLACEHOLDER_ORIGIN = 'https://placeholder.invalid'
+const PLACEHOLDER_ORIGIN = 'https://placeholder.invalid';
 
 /**
  * Drops the seam's own params and keeps everything else. The destination may
@@ -73,16 +73,16 @@ export const stripIntentParams = (
   search: URLSearchParams,
   hash = '',
 ): string => {
-  const kept = new URLSearchParams(search)
-  kept.delete('intent')
-  kept.delete('label')
-  kept.delete(PENDING_TIER_PARAM)
-  const query = kept.toString()
-  return `${pathname}${query ? `?${query}` : ''}${hash}`
-}
+  const kept = new URLSearchParams(search);
+  kept.delete('intent');
+  kept.delete('label');
+  kept.delete(PENDING_TIER_PARAM);
+  const query = kept.toString();
+  return `${pathname}${query ? `?${query}` : ''}${hash}`;
+};
 
 /** A path still unstable after this many passes is an attack, not a route. */
-const MAX_DECODE_PASSES = 5
+const MAX_DECODE_PASSES = 5;
 
 /**
  * An accepted path is both written into a `Location` header and signed into a
@@ -94,7 +94,7 @@ const MAX_DECODE_PASSES = 5
  * Checked against the raw value: decoding only ever shortens it, so this is
  * the upper bound on every later pass.
  */
-const MAX_RETURN_PATH_LENGTH = 512
+const MAX_RETURN_PATH_LENGTH = 512;
 
 /**
  * Every value this module accepts ends up in a `Location` header — middleware's
@@ -104,7 +104,7 @@ const MAX_RETURN_PATH_LENGTH = 512
  * whole value, query and fragment included, rather than of the path alone.
  */
 const hasControlCharacters = (value: string): boolean =>
-  /[\x00-\x1f\x7f]/.test(value)
+  /[\x00-\x1f\x7f]/.test(value);
 
 /**
  * The same rule for a value that is never going to be decoded here.
@@ -122,7 +122,7 @@ const hasControlCharacters = (value: string): boolean =>
 const ENCODED_CONTROL_CHARACTER = new RegExp(
   `%(?:25){0,${MAX_DECODE_PASSES}}(?:0[0-9a-f]|1[0-9a-f]|7f)`,
   'i',
-)
+);
 
 /**
  * Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts, and
@@ -130,7 +130,7 @@ const ENCODED_CONTROL_CHARACTER = new RegExp(
  * so an encoded newline is caught at whichever pass reveals it.
  */
 const isPlainInAppPath = (value: string): boolean =>
-  /^\/[^/\\]/.test(value) && !hasControlCharacters(value)
+  /^\/[^/\\]/.test(value) && !hasControlCharacters(value);
 
 /**
  * This module runs in three places — the proxy, server actions, and
@@ -142,9 +142,9 @@ const warnOnServer = (
   message: string,
   detail?: Record<string, number>,
 ): void => {
-  if (typeof window !== 'undefined') return
-  console.warn(message, detail)
-}
+  if (typeof window !== 'undefined') return;
+  console.warn(message, detail);
+};
 
 /**
  * A `return` param is a redirect target, so anything that could leave the origin
@@ -162,13 +162,13 @@ const warnOnServer = (
  * is how one branch ended up weaker than its sibling.
  */
 export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
-  if (!raw) return false
+  if (!raw) return false;
 
   if (raw.length > MAX_RETURN_PATH_LENGTH) {
     warnOnServer('[auth] return path rejected: too long', {
       length: raw.length,
-    })
-    return false
+    });
+    return false;
   }
 
   // The control-character rule covers the whole value, since all of it reaches
@@ -180,17 +180,17 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   // rejects `/me?q=50%25`: the first pass turns `%25` into a bare `%` and the
   // next throws on it. That is a legitimate return path, and answering it with
   // /events loses the visitor's place.
-  if (hasControlCharacters(raw)) return false
-  if (ENCODED_CONTROL_CHARACTER.test(raw)) return false
-  const suffixAt = raw.search(/[?#]/)
-  const pathOnly = suffixAt === -1 ? raw : raw.slice(0, suffixAt)
+  if (hasControlCharacters(raw)) return false;
+  if (ENCODED_CONTROL_CHARACTER.test(raw)) return false;
+  const suffixAt = raw.search(/[?#]/);
+  const pathOnly = suffixAt === -1 ? raw : raw.slice(0, suffixAt);
 
-  let current = pathOnly
+  let current = pathOnly;
   for (let i = 0; i < MAX_DECODE_PASSES; i++) {
-    if (!isPlainInAppPath(current)) return false
-    let next: string
+    if (!isPlainInAppPath(current)) return false;
+    let next: string;
     try {
-      next = decodeURIComponent(current)
+      next = decodeURIComponent(current);
     } catch {
       // Malformed escapes: undecodable is not the same as safe. Logged
       // because a rejection here is either a hand-crafted param or a bug in
@@ -198,22 +198,22 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
       // is attacker-controlled and stays out of the log line — the pass index
       // is what distinguishes a malformed input from one that survived a
       // decode and then broke.
-      warnOnServer('[auth] return path rejected: undecodable', { pass: i })
-      return false
+      warnOnServer('[auth] return path rejected: undecodable', { pass: i });
+      return false;
     }
-    if (next === current) return true
-    current = next
+    if (next === current) return true;
+    current = next;
   }
 
   // Still changing after five passes is layered encoding, not a route.
-  warnOnServer('[auth] return path rejected: never reached a fixed point')
-  return false
-}
+  warnOnServer('[auth] return path rejected: never reached a fixed point');
+  return false;
+};
 
 export const sanitizeReturnPath = (raw: string | null | undefined): string =>
-  isSafeReturnPath(raw) && raw ? raw : DEFAULT_RETURN_PATH
+  isSafeReturnPath(raw) && raw ? raw : DEFAULT_RETURN_PATH;
 
-const MAX_LABEL_LENGTH = 60
+const MAX_LABEL_LENGTH = 60;
 
 /**
  * The artist name shown in "Skip: back to {label}" and "Now watching {label}."
@@ -225,31 +225,31 @@ const MAX_LABEL_LENGTH = 60
 export const sanitizeDestinationLabel = (
   raw: string | null | undefined,
 ): string | null => {
-  if (!raw) return null
-  const cleaned = raw.replace(/[\x00-\x1f\x7f]/g, ' ').trim()
-  if (!cleaned) return null
-  return cleaned.slice(0, MAX_LABEL_LENGTH)
-}
+  if (!raw) return null;
+  const cleaned = raw.replace(/[\x00-\x1f\x7f]/g, ' ').trim();
+  if (!cleaned) return null;
+  return cleaned.slice(0, MAX_LABEL_LENGTH);
+};
 
 /**
  * Where the tour sends the visitor when it ends. The intent rides along so the
  * destination can replay it — the tour itself never performs the action.
  */
 export const buildReturnUrl = (args: {
-  returnPath: string
-  intent: string | null
-  label: string | null
+  returnPath: string;
+  intent: string | null;
+  label: string | null;
 }): string => {
-  const path = sanitizeReturnPath(args.returnPath)
-  if (!args.intent) return path
+  const path = sanitizeReturnPath(args.returnPath);
+  if (!args.intent) return path;
   // The path may already carry a query string — `/events/e1?tab=prices` is a
   // legitimate destination — so the intent is merged into it rather than
   // appended behind a second `?`, which would invalidate both.
-  const url = new URL(path, PLACEHOLDER_ORIGIN)
-  url.searchParams.set('intent', args.intent)
-  if (args.label) url.searchParams.set('label', args.label)
-  return `${url.pathname}${url.search}${url.hash}`
-}
+  const url = new URL(path, PLACEHOLDER_ORIGIN);
+  url.searchParams.set('intent', args.intent);
+  if (args.label) url.searchParams.set('label', args.label);
+  return `${url.pathname}${url.search}${url.hash}`;
+};
 
 /**
  * Adds the pending tier to a destination the funnel has already accepted.
@@ -262,8 +262,8 @@ export const appendPendingTier = (
   path: string,
   tier: string | null,
 ): string => {
-  if (!tier) return path
-  const url = new URL(path, PLACEHOLDER_ORIGIN)
-  url.searchParams.set(PENDING_TIER_PARAM, tier)
-  return `${url.pathname}${url.search}${url.hash}`
-}
+  if (!tier) return path;
+  const url = new URL(path, PLACEHOLDER_ORIGIN);
+  url.searchParams.set(PENDING_TIER_PARAM, tier);
+  return `${url.pathname}${url.search}${url.hash}`;
+};

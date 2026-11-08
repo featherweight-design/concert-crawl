@@ -9,21 +9,21 @@
  * always produces the same row array.
  */
 
-import { userProfiles } from '../../../packages/db/src/schema/index.js'
-import type { DrizzleWriteDb } from '../sync-venues.js'
-import type { createRng } from '../seeded-rng.js'
+import { userProfiles } from '../../../packages/db/src/schema/index.js';
+import type { DrizzleWriteDb } from '../sync-venues.js';
+import type { createRng } from '../seeded-rng.js';
 
 export type GeneratorDeps = {
-  staging: DrizzleWriteDb
-  fixtureUserIds: readonly string[]
-  eventIds: readonly string[]
-  rng: ReturnType<typeof createRng>
-}
+  staging: DrizzleWriteDb;
+  fixtureUserIds: readonly string[];
+  eventIds: readonly string[];
+  rng: ReturnType<typeof createRng>;
+};
 
-export type GenResult = { inserted: number }
+export type GenResult = { inserted: number };
 
-const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789' as const
-const SLUG_CHAR_ARRAY = SLUG_CHARS.split('')
+const SLUG_CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789' as const;
+const SLUG_CHAR_ARRAY = SLUG_CHARS.split('');
 
 const THEMES = [
   'electric',
@@ -35,7 +35,7 @@ const THEMES = [
   'drip',
   'cedar',
   'gloss',
-] as const
+] as const;
 
 const CITIES = [
   'Denver, CO',
@@ -43,37 +43,37 @@ const CITIES = [
   'Aurora, CO',
   'Fort Collins, CO',
   'Colorado Springs, CO',
-] as const
+] as const;
 
 /** Deterministically generate a 40-char lowercase-alphanumeric slug. */
 function makeSlug(rng: ReturnType<typeof createRng>): string {
-  let slug = ''
+  let slug = '';
   for (let idx = 0; idx < 40; idx++) {
-    slug += rng.pick(SLUG_CHAR_ARRAY)
+    slug += rng.pick(SLUG_CHAR_ARRAY);
   }
-  return slug
+  return slug;
 }
 
 export const generateUserProfiles = async (
   deps: GeneratorDeps,
 ): Promise<GenResult> => {
-  const { staging, fixtureUserIds, rng } = deps
+  const { staging, fixtureUserIds, rng } = deps;
 
   const rows = fixtureUserIds.map((userId) => {
-    const handle = 'seededHandle_' + makeSlug(rng)
+    const handle = 'seededHandle_' + makeSlug(rng);
     // ~40% chance of null city for layout variety
-    const city = rng.int(0, 9) < 4 ? null : rng.pick(CITIES)
-    const theme = rng.pick(THEMES)
+    const city = rng.int(0, 9) < 4 ? null : rng.pick(CITIES);
+    const theme = rng.pick(THEMES);
 
     return {
       userId,
       handle,
       city,
       theme,
-    }
-  })
+    };
+  });
 
-  await staging.insert(userProfiles).values(rows)
+  await staging.insert(userProfiles).values(rows);
 
-  return { inserted: rows.length }
-}
+  return { inserted: rows.length };
+};

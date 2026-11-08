@@ -1,10 +1,10 @@
-import Link from 'next/link'
+import Link from 'next/link';
 
-import { CCMark } from '@/components/brand/cc-mark'
-import { CCWordmark } from '@/components/brand/cc-wordmark'
-import { CREWS_COPY } from './definitions/copy'
+import { CCMark } from '@/components/brand/cc-mark';
+import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 /**
  * The invite landing's frame. The route sits outside `(protected)/(main)`, so
@@ -18,8 +18,8 @@ export const InviteShell = ({
   /** The landing opens up at desktop width; the terminal states hold at 18. */
   tightGap = false,
 }: {
-  children: React.ReactNode
-  tightGap?: boolean
+  children: React.ReactNode;
+  tightGap?: boolean;
 }) => (
   <main
     aria-label={COPY.a11y.inviteLanding}
@@ -38,12 +38,12 @@ export const InviteShell = ({
     </div>
     {children}
   </main>
-)
+);
 
 interface EyebrowProps {
   /** `count` is the member tally, which the handoff sets a step wider and louder. */
-  tone: 'signal' | 'warning' | 'subtle' | 'count'
-  children: string
+  tone: 'signal' | 'warning' | 'subtle' | 'count';
+  children: string;
 }
 
 const EYEBROW_TONES = {
@@ -51,7 +51,7 @@ const EYEBROW_TONES = {
   warning: { color: 'var(--warning)', fontSize: 9.5, letterSpacing: '0.18em' },
   subtle: { color: 'var(--fg-subtle)', fontSize: 9.5, letterSpacing: '0.14em' },
   count: { color: 'var(--fg-muted)', fontSize: 10, letterSpacing: '0.14em' },
-} as const
+} as const;
 
 /** Mono meta. The uppercase lives in the string, never in CSS. */
 export const InviteEyebrow = ({ tone, children }: EyebrowProps) => (
@@ -64,7 +64,7 @@ export const InviteEyebrow = ({ tone, children }: EyebrowProps) => (
   >
     {children}
   </span>
-)
+);
 
 export const InviteTitle = ({ children }: { children: string }) => (
   <h1
@@ -80,7 +80,7 @@ export const InviteTitle = ({ children }: { children: string }) => (
   >
     {children}
   </h1>
-)
+);
 
 export const InviteBody = ({ children }: { children: string }) => (
   <p
@@ -94,7 +94,7 @@ export const InviteBody = ({ children }: { children: string }) => (
   >
     {children}
   </p>
-)
+);
 
 // Geometry from the handoff's shared `Btn` atom, which every other crews
 // surface is drawn against. A pill here would make this route the only one
@@ -111,21 +111,21 @@ const buttonBase: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '-0.01em',
   textDecoration: 'none',
-}
+};
 
 export const ghostButtonStyle: React.CSSProperties = {
   ...buttonBase,
   background: 'transparent',
   border: '1px solid var(--border-strong)',
   color: 'var(--fg)',
-}
+};
 
 export const primaryButtonStyle: React.CSSProperties = {
   ...buttonBase,
   background: 'var(--signal)',
   border: '1px solid var(--signal)',
   color: 'var(--fg-on-accent)',
-}
+};
 
 /**
  * The way out of every terminal state on this route. `wide` is for the
@@ -143,11 +143,11 @@ export const BrowseInstead = ({ wide = false }: { wide?: boolean }) => (
   >
     {COPY.linkDead.browse}
   </Link>
-)
+);
 
 /** The dimmed mark that stands in for a patch we are not allowed to draw. */
 export const DimmedMark = () => (
   <span aria-hidden="true" style={{ opacity: 0.5 }}>
     <CCMark size={76} />
   </span>
-)
+);

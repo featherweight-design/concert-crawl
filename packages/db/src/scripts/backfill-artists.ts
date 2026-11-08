@@ -24,24 +24,24 @@
  * `run-backfill-artists.ts` once, after 0069 lands.
  */
 
-import { sql } from 'drizzle-orm'
-import { artistSlug, resolveSlug } from '@concert-crawl/types'
-import { artists } from '../schema/artists.js'
-import type { Database } from '../client.js'
+import { sql } from 'drizzle-orm';
+import { artistSlug, resolveSlug } from '@concert-crawl/types';
+import { artists } from '../schema/artists.js';
+import type { Database } from '../client.js';
 
 export interface BackfillArtistsResult {
   /** Distinct canonical names discovered in `events`. */
-  discovered: number
+  discovered: number;
   /** Rows actually inserted this run. Zero on a re-run with no new artists. */
-  inserted: number
+  inserted: number;
 }
 
 /** How many rows to send per INSERT. Keeps the parameter count well clear of Postgres' 65535 limit. */
-const INSERT_CHUNK_SIZE = 500
+const INSERT_CHUNK_SIZE = 500;
 
 interface CanonicalRow extends Record<string, unknown> {
-  canonical_name: string
-  display_name: string
+  canonical_name: string;
+  display_name: string;
 }
 
 /**
@@ -158,41 +158,41 @@ export async function backfillArtists(
     FROM ranked
     WHERE rank = 1
     ORDER BY canonical_name ASC
-  `)
+  `);
 
-  const candidates = [...rows]
+  const candidates = [...rows];
   if (candidates.length === 0) {
-    return { discovered: 0, inserted: 0 }
+    return { discovered: 0, inserted: 0 };
   }
 
   // Slugs already stored — a re-run must not hand an existing slug to a new
   // artist, and must not renumber an artist that already has a URL.
   const stored = await database
     .select({ canonicalName: artists.canonicalName, slug: artists.slug })
-    .from(artists)
-  const taken = new Set(stored.map((row) => row.slug))
-  const alreadyProjected = new Set(stored.map((row) => row.canonicalName))
+    .from(artists);
+  const taken = new Set(stored.map((row) => row.slug));
+  const alreadyProjected = new Set(stored.map((row) => row.canonicalName));
 
-  const values: (typeof artists.$inferInsert)[] = []
+  const values: (typeof artists.$inferInsert)[] = [];
   for (const candidate of candidates) {
-    if (alreadyProjected.has(candidate.canonical_name)) continue
+    if (alreadyProjected.has(candidate.canonical_name)) continue;
 
     const slug = resolveSlug(
       artistSlug(candidate.canonical_name),
       taken,
       candidate.canonical_name,
-    )
-    taken.add(slug)
+    );
+    taken.add(slug);
     values.push({
       name: candidate.display_name,
       canonicalName: candidate.canonical_name,
       slug,
-    })
+    });
   }
 
-  let inserted = 0
+  let inserted = 0;
   for (let i = 0; i < values.length; i += INSERT_CHUNK_SIZE) {
-    const chunk = values.slice(i, i + INSERT_CHUNK_SIZE)
+    const chunk = values.slice(i, i + INSERT_CHUNK_SIZE);
     const insertedRows = await database
       .insert(artists)
       .values(chunk)
@@ -200,9 +200,9 @@ export async function backfillArtists(
       // name between the SELECT above and this INSERT. Do nothing rather than
       // fail the whole backfill.
       .onConflictDoNothing()
-      .returning({ id: artists.id })
-    inserted += insertedRows.length
+      .returning({ id: artists.id });
+    inserted += insertedRows.length;
   }
 
-  return { discovered: candidates.length, inserted }
+  return { discovered: candidates.length, inserted };
 }

@@ -24,14 +24,14 @@
 
 ```typescript
 export interface SubmitPriceResult {
-  isEdit: boolean
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: SourceCategory | null
+  isEdit: boolean;
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: SourceCategory | null;
 }
 // onSuccess?: (results: SubmitPriceResult[]) => void
 ```
@@ -53,14 +53,14 @@ In `SubmitPriceModal.test.tsx`:
 ```tsx
 describe('SubmitPriceModal — batch submit (#832)', () => {
   it('POSTs the bundle to the /batch endpoint and calls onSuccess with the row array', async () => {
-    const onSuccess = vi.fn()
-    let postUrl = ''
-    let postBody: unknown
-    let callCount = 0
+    const onSuccess = vi.fn();
+    let postUrl = '';
+    let postBody: unknown;
+    let callCount = 0;
     global.fetch = vi
       .fn()
       .mockImplementation((url: string, init?: RequestInit) => {
-        callCount++
+        callCount++;
         if (callCount === 1) {
           return Promise.resolve({
             ok: true,
@@ -68,10 +68,10 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
               success: true,
               data: { alreadySubmitted: false, userSubmission: null },
             }),
-          })
+          });
         }
-        postUrl = url
-        if (init?.body) postBody = JSON.parse(init.body as string)
+        postUrl = url;
+        if (init?.body) postBody = JSON.parse(init.body as string);
         return Promise.resolve({
           ok: true,
           status: 201,
@@ -98,43 +98,43 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
               },
             ],
           }),
-        })
-      })
+        });
+      });
 
-    render(<SubmitPriceModal {...defaultProps} onSuccess={onSuccess} />)
-    await fillForm() // panel 0: boxoffice + GA + floor 32
-    fireEvent.click(screen.getByText('+ Add another tier'))
+    render(<SubmitPriceModal {...defaultProps} onSuccess={onSuccess} />);
+    await fillForm(); // panel 0: boxoffice + GA + floor 32
+    fireEvent.click(screen.getByText('+ Add another tier'));
     // Panel 1: VIP + floor 120
-    fireEvent.click(screen.getByText('VIP'))
-    const floorInputs = screen.getAllByLabelText(/Face value/i)
-    fireEvent.change(floorInputs[1]!, { target: { value: '120' } })
+    fireEvent.click(screen.getByText('VIP'));
+    const floorInputs = screen.getAllByLabelText(/Face value/i);
+    fireEvent.change(floorInputs[1]!, { target: { value: '120' } });
 
-    fireEvent.click(screen.getByText('Submit 2 tiers'))
-    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy())
+    fireEvent.click(screen.getByText('Submit 2 tiers'));
+    await waitFor(() => expect(screen.getByText('Got it.')).toBeTruthy());
 
-    expect(postUrl).toContain('/v1/events/evt-1/price-submissions/batch')
-    const body = postBody as Record<string, unknown>
-    expect(body['vendor']).toBe('VenueBoxOffice')
-    expect(body['howFound']).toBe('bought_myself')
-    expect(body['sourceCategory']).toBe('boxoffice')
+    expect(postUrl).toContain('/v1/events/evt-1/price-submissions/batch');
+    const body = postBody as Record<string, unknown>;
+    expect(body['vendor']).toBe('VenueBoxOffice');
+    expect(body['howFound']).toBe('bought_myself');
+    expect(body['sourceCategory']).toBe('boxoffice');
     expect(body['tiers']).toEqual([
       { tier: 'GA', priceMin: 32 },
       { tier: 'VIP', priceMin: 120 },
-    ])
-    expect(onSuccess).toHaveBeenCalledTimes(1)
+    ]);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
     const results = onSuccess.mock.calls[0]![0] as Array<{
-      isEdit: boolean
-      tier: string
-    }>
-    expect(results).toHaveLength(2)
-    expect(results[0]).toMatchObject({ isEdit: false, tier: 'GA' })
-    expect(results[1]).toMatchObject({ isEdit: false, tier: 'VIP' })
-  })
+      isEdit: boolean;
+      tier: string;
+    }>;
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ isEdit: false, tier: 'GA' });
+    expect(results[1]).toMatchObject({ isEdit: false, tier: 'VIP' });
+  });
 
   it('renders a 422 already_submitted error inline on the right panel, keeping form values intact', async () => {
-    let callCount = 0
+    let callCount = 0;
     global.fetch = vi.fn().mockImplementation(() => {
-      callCount++
+      callCount++;
       if (callCount === 1) {
         return Promise.resolve({
           ok: true,
@@ -142,7 +142,7 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
             success: true,
             data: { alreadySubmitted: false, userSubmission: null },
           }),
-        })
+        });
       }
       return Promise.resolve({
         ok: false,
@@ -151,38 +151,38 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
           success: false,
           errors: [{ index: 0, tier: 'GA', error: 'already_submitted' }],
         }),
-      })
-    })
+      });
+    });
 
-    render(<SubmitPriceModal {...defaultProps} />)
-    await fillForm()
-    fireEvent.click(screen.getByText('Submit price'))
+    render(<SubmitPriceModal {...defaultProps} />);
+    await fillForm();
+    fireEvent.click(screen.getByText('Submit price'));
     await waitFor(() =>
       expect(
         screen.getByText(
           'You already submitted a GA price — edit it from the event page.',
         ),
       ).toBeTruthy(),
-    )
+    );
     // Atomic rejection never wipes input (spec §3): form still visible with values
-    expect(screen.getByText("Where's this price from?")).toBeTruthy()
-    const floorInput = screen.getByLabelText(/Face value/i) as HTMLInputElement
-    expect(floorInput.value).toBe('32')
+    expect(screen.getByText("Where's this price from?")).toBeTruthy();
+    const floorInput = screen.getByLabelText(/Face value/i) as HTMLInputElement;
+    expect(floorInput.value).toBe('32');
     // NOT routed to the alreadySubmitted view
-    expect(screen.queryByText('Already in.')).toBeNull()
-  })
-})
+    expect(screen.queryByText('Already in.')).toBeNull();
+  });
+});
 
 describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
   it('edit mode PATCHes the existing submission and calls onSuccess with a single-element array', async () => {
-    const onSuccess = vi.fn()
-    let patchMethod = ''
-    let patchUrl = ''
-    let callCount = 0
+    const onSuccess = vi.fn();
+    let patchMethod = '';
+    let patchUrl = '';
+    let callCount = 0;
     global.fetch = vi
       .fn()
       .mockImplementation((url: string, init?: RequestInit) => {
-        callCount++
+        callCount++;
         if (callCount === 1) {
           return Promise.resolve({
             ok: true,
@@ -201,10 +201,10 @@ describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
                 },
               },
             }),
-          })
+          });
         }
-        patchMethod = init?.method ?? ''
-        patchUrl = url
+        patchMethod = init?.method ?? '';
+        patchUrl = url;
         return Promise.resolve({
           ok: true,
           json: async () => ({
@@ -219,8 +219,8 @@ describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
               sourceCategory: 'standard',
             },
           }),
-        })
-      })
+        });
+      });
 
     render(
       <SubmitPriceModal
@@ -228,28 +228,28 @@ describe('SubmitPriceModal — edit mode PATCH (#832)', () => {
         openInEditMode
         onSuccess={onSuccess}
       />,
-    )
-    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy())
-    const floorInput = screen.getByLabelText(/Floor/i)
-    fireEvent.change(floorInput, { target: { value: '50' } })
-    fireEvent.click(screen.getByText('Save changes'))
-    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
+    );
+    await waitFor(() => expect(screen.getByText('Save changes')).toBeTruthy());
+    const floorInput = screen.getByLabelText(/Floor/i);
+    fireEvent.change(floorInput, { target: { value: '50' } });
+    fireEvent.click(screen.getByText('Save changes'));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
 
-    expect(patchMethod).toBe('PATCH')
-    expect(patchUrl).toContain('/v1/submissions/sub-1')
+    expect(patchMethod).toBe('PATCH');
+    expect(patchUrl).toContain('/v1/submissions/sub-1');
     const results = onSuccess.mock.calls[0]![0] as Array<{
-      isEdit: boolean
-      id: string
-      priceMin: string
-    }>
-    expect(results).toHaveLength(1)
+      isEdit: boolean;
+      id: string;
+      priceMin: string;
+    }>;
+    expect(results).toHaveLength(1);
     expect(results[0]).toMatchObject({
       isEdit: true,
       id: 'sub-1',
       priceMin: '50',
-    })
-  })
-})
+    });
+  });
+});
 ```
 
 **(e) Update** the pre-existing `describe('SubmitPriceModal — payload shape', …)` test: its POST mock now returns the batch shape (`data` as a one-element array of the same row object) and the body assertions change to `expect(body['tiers']).toEqual([{ tier: 'GA', priceMin: 32 }])` alongside the existing bundle-level `sourceCategory`/`howFound`/`vendor` assertions. The success-state describe needs no change (an `ok` response with an empty `{}` body still lands on the success view, matching the single-POST behavior).
@@ -267,14 +267,14 @@ All edits in `SubmitPriceModal.tsx`.
 
 ```typescript
 interface BatchRowError {
-  index: number
-  tier: string | null
-  error: string
+  index: number;
+  tier: string | null;
+  error: string;
 }
 
 type BatchSubmissionResponse =
   | { success: true; data: PriceSubmission[] }
-  | { success?: false; error?: string; errors?: BatchRowError[] }
+  | { success?: false; error?: string; errors?: BatchRowError[] };
 
 function isBatchRowError(value: unknown): value is BatchRowError {
   return (
@@ -282,25 +282,25 @@ function isBatchRowError(value: unknown): value is BatchRowError {
     typeof value['index'] === 'number' &&
     (value['tier'] === null || typeof value['tier'] === 'string') &&
     typeof value['error'] === 'string'
-  )
+  );
 }
 
 function isBatchSubmissionResponse(
   value: unknown,
 ): value is BatchSubmissionResponse {
-  if (!isObject(value)) return false
+  if (!isObject(value)) return false;
   if (value['success'] === true) {
-    return Array.isArray(value['data']) && value['data'].every(isObject)
+    return Array.isArray(value['data']) && value['data'].every(isObject);
   }
   // Non-success arm: every field the handler reads must be well-typed when
   // present. A bare `{}` is still valid — an `ok` response with an empty
   // body lands on the success view, matching the single-POST behavior.
   const errorOk =
-    value['error'] === undefined || typeof value['error'] === 'string'
+    value['error'] === undefined || typeof value['error'] === 'string';
   const errorsOk =
     value['errors'] === undefined ||
-    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError))
-  return errorOk && errorsOk
+    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError));
+  return errorOk && errorsOk;
 }
 ```
 
@@ -308,14 +308,14 @@ function isBatchSubmissionResponse(
 
 ```typescript
 export interface SubmitPriceResult {
-  isEdit: boolean
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: SourceCategory | null
+  isEdit: boolean;
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: SourceCategory | null;
 }
 ```
 
@@ -331,10 +331,10 @@ const handleSubmit = useCallback(async () => {
   // injecting the bundle-level fields into each panel's input. Bundle-field
   // errors (sourceCategory, vendor) are hoisted out of the per-panel maps so
   // they render once at the top of the form.
-  const nextPanelErrors: Array<Partial<Record<string, string>>> = []
-  const nextPanelWarnings: Array<Partial<Record<string, string>>> = []
-  const nextBundleErrors: Partial<Record<string, string>> = {}
-  let allValid = true
+  const nextPanelErrors: Array<Partial<Record<string, string>>> = [];
+  const nextPanelWarnings: Array<Partial<Record<string, string>>> = [];
+  const nextBundleErrors: Partial<Record<string, string>> = {};
+  let allValid = true;
   for (const panel of panels) {
     const validation = validateSubmission({
       floor: panel.floor,
@@ -342,22 +342,22 @@ const handleSubmit = useCallback(async () => {
       tier: panel.tier,
       vendor: bundleState.vendor,
       sourceCategory: bundleState.sourceCategory,
-    })
+    });
     const {
       sourceCategory: sourceError,
       vendor: vendorError,
       ...rowErrors
-    } = validation.errors
-    if (sourceError) nextBundleErrors['sourceCategory'] = sourceError
-    if (vendorError) nextBundleErrors['vendor'] = vendorError
-    nextPanelErrors.push(rowErrors)
-    nextPanelWarnings.push(validation.warnings)
-    if (!validation.valid) allValid = false
+    } = validation.errors;
+    if (sourceError) nextBundleErrors['sourceCategory'] = sourceError;
+    if (vendorError) nextBundleErrors['vendor'] = vendorError;
+    nextPanelErrors.push(rowErrors);
+    nextPanelWarnings.push(validation.warnings);
+    if (!validation.valid) allValid = false;
   }
-  setPanelErrors(nextPanelErrors)
-  setPanelWarnings(nextPanelWarnings)
-  setBundleErrors(nextBundleErrors)
-  if (!allValid) return
+  setPanelErrors(nextPanelErrors);
+  setPanelWarnings(nextPanelWarnings);
+  setBundleErrors(nextBundleErrors);
+  if (!allValid) return;
 
   // Runtime enum guards — validateSubmission guarantees non-null but not
   // enum membership (no `as` casts per CLAUDE.md).
@@ -369,49 +369,49 @@ const handleSubmit = useCallback(async () => {
     console.error(
       'Submit reached non-null guard with invalid bundle fields',
       bundleState,
-    )
-    setModalState('error')
-    return
+    );
+    setModalState('error');
+    return;
   }
-  const sourceCategory: SourceCategory = bundleState.sourceCategory
+  const sourceCategory: SourceCategory = bundleState.sourceCategory;
 
   const tierRows: Array<{ tier: Tier; priceMin: number; priceMax?: number }> =
-    []
+    [];
   for (const panel of panels) {
     if (panel.tier === null || !isTier(panel.tier)) {
-      console.error('Submit reached non-null guard with invalid tier', panel)
-      setModalState('error')
-      return
+      console.error('Submit reached non-null guard with invalid tier', panel);
+      setModalState('error');
+      return;
     }
     tierRows.push({
       tier: panel.tier,
       priceMin: Number(panel.floor),
       ...(panel.ceiling ? { priceMax: Number(panel.ceiling) } : {}),
-    })
+    });
   }
 
-  setModalState('submitting')
+  setModalState('submitting');
   try {
-    const token = await getToken()
+    const token = await getToken();
     if (!token) {
-      setModalState('error')
-      return
+      setModalState('error');
+      return;
     }
 
     const vendor: Vendor =
       sourceCategory === 'boxoffice'
         ? VENDOR_BOXOFFICE_AUTOFILL
-        : bundleState.vendor
-    const howFound: HowFound = howFoundForSource(sourceCategory)
+        : bundleState.vendor;
+    const howFound: HowFound = howFoundForSource(sourceCategory);
 
     // Edit mode → PATCH the existing single submission (spec §4: editing
     // never converts a single into a bundle; the form is locked to one
     // panel in edit mode).
     if (isEditMode && existingSubmission) {
-      const firstPanel = tierRows[0]
+      const firstPanel = tierRows[0];
       if (!firstPanel) {
-        setModalState('error')
-        return
+        setModalState('error');
+        return;
       }
       const res = await fetch(
         `${API_URL}/v1/submissions/${existingSubmission.id}`,
@@ -431,16 +431,16 @@ const handleSubmit = useCallback(async () => {
             howFound,
           }),
         },
-      )
-      const patchRaw: unknown = await res.json()
+      );
+      const patchRaw: unknown = await res.json();
       if (!isPriceSubmissionResponse(patchRaw)) {
-        throw new Error('Edit failed (invalid response shape)')
+        throw new Error('Edit failed (invalid response shape)');
       }
-      const patchResponse = patchRaw
+      const patchResponse = patchRaw;
       if (!res.ok || !patchResponse.success) {
         throw new Error(
           (!patchResponse.success && patchResponse.error) || 'Edit failed',
-        )
+        );
       }
       onSuccess?.([
         {
@@ -454,9 +454,9 @@ const handleSubmit = useCallback(async () => {
           howFound,
           sourceCategory: patchResponse.data.sourceCategory,
         },
-      ])
-      setModalState('success')
-      return
+      ]);
+      setModalState('success');
+      return;
     }
 
     // Bundle POST — one atomic request, all rows or none (spec §2).
@@ -475,39 +475,39 @@ const handleSubmit = useCallback(async () => {
           tiers: tierRows,
         }),
       },
-    )
-    const rawResponse: unknown = await res.json()
+    );
+    const rawResponse: unknown = await res.json();
     if (!isBatchSubmissionResponse(rawResponse)) {
-      throw new Error('Submission failed (invalid response shape)')
+      throw new Error('Submission failed (invalid response shape)');
     }
     if (!res.ok) {
       const rowErrors =
-        rawResponse.success !== true ? (rawResponse.errors ?? []) : []
+        rawResponse.success !== true ? (rawResponse.errors ?? []) : [];
       if (res.status === 422 && rowErrors.length > 0) {
         // Per-row 422 → annotate the exact panel and stay on the form with
         // every value intact (spec §3: atomic rejection never wipes input).
         setPanelErrors((prev) => {
-          const next = prev.map((panelError) => ({ ...panelError }))
+          const next = prev.map((panelError) => ({ ...panelError }));
           for (const rowError of rowErrors) {
-            const target = next[rowError.index]
-            if (!target) continue
+            const target = next[rowError.index];
+            if (!target) continue;
             target['tier'] =
               rowError.error === 'already_submitted'
                 ? CONSUMER_COPY.submitPriceV2.multiTier.errorAlreadySubmitted.replace(
                     '{tier}',
                     rowError.tier ?? '',
                   )
-                : rowError.error
+                : rowError.error;
           }
-          return next
-        })
-        setModalState('form')
-        return
+          return next;
+        });
+        setModalState('form');
+        return;
       }
       throw new Error(
         (rawResponse.success !== true && rawResponse.error) ||
           'Submission failed',
-      )
+      );
     }
     if (rawResponse.success === true) {
       onSuccess?.(
@@ -521,12 +521,12 @@ const handleSubmit = useCallback(async () => {
           howFound: row.howFound,
           sourceCategory: row.sourceCategory,
         })),
-      )
+      );
     }
-    setModalState('success')
+    setModalState('success');
   } catch (err) {
-    console.error('Price submission failed', err)
-    setModalState('error')
+    console.error('Price submission failed', err);
+    setModalState('error');
   }
 }, [
   panels,
@@ -536,7 +536,7 @@ const handleSubmit = useCallback(async () => {
   getToken,
   eventId,
   onSuccess,
-])
+]);
 ```
 
 Implementation note: `validateSubmission`'s return lives in `apps/web/src/lib/sp-policy.ts` — read it first. If its `errors`/`warnings` are typed narrower than `Partial<Record<string, string>>` (e.g. a fixed-key object), adjust the destructuring in the loop to explicit key reads (`validation.errors['sourceCategory']` etc.) rather than rest-spread, keeping the same hoisting behavior.

@@ -4,12 +4,12 @@
 // so neither concern may unconditionally DELETE — un-watching a show you already
 // committed to would erase the night from your Concert History (#70).
 
-import { and, eq } from 'drizzle-orm'
-import { db, userEvents } from '@concert-crawl/db'
+import { and, eq } from 'drizzle-orm';
+import { db, userEvents } from '@concert-crawl/db';
 
 export interface ReleaseWatchResult {
   /** True when the whole row was removed; false when only Watching was cleared. */
-  deleted: boolean
+  deleted: boolean;
 }
 
 /**
@@ -26,21 +26,21 @@ export const releaseWatch = async (
     .select({ id: userEvents.id, attendingAt: userEvents.attendingAt })
     .from(userEvents)
     .where(and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)))
-    .limit(1)
+    .limit(1);
 
-  if (!existing) return { deleted: false }
+  if (!existing) return { deleted: false };
 
   if (existing.attendingAt === null) {
-    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
-    return { deleted: true }
+    await db.delete(userEvents).where(eq(userEvents.id, existing.id));
+    return { deleted: true };
   }
 
   await db
     .update(userEvents)
     .set({ status: null, savedPrice: null })
-    .where(eq(userEvents.id, existing.id))
-  return { deleted: false }
-}
+    .where(eq(userEvents.id, existing.id));
+  return { deleted: false };
+};
 
 /**
  * Mirror of {@link releaseWatch} for the attendance side: drop the attendance,
@@ -54,18 +54,18 @@ export const releaseAttendance = async (
     .select({ id: userEvents.id, status: userEvents.status })
     .from(userEvents)
     .where(and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)))
-    .limit(1)
+    .limit(1);
 
-  if (!existing) return { deleted: false }
+  if (!existing) return { deleted: false };
 
   if (existing.status === null) {
-    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
-    return { deleted: true }
+    await db.delete(userEvents).where(eq(userEvents.id, existing.id));
+    return { deleted: true };
   }
 
   await db
     .update(userEvents)
     .set({ attendingAt: null })
-    .where(eq(userEvents.id, existing.id))
-  return { deleted: false }
-}
+    .where(eq(userEvents.id, existing.id));
+  return { deleted: false };
+};

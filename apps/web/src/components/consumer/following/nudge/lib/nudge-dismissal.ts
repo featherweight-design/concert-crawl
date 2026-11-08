@@ -24,50 +24,50 @@
 // Its own key space, not shared with `cc-nudge-answered` (the going nudge):
 // same key shape, unrelated question, and one store rejecting the other's
 // values would drop both.
-const KEY = 'cc-nf-nudge-answered'
+const KEY = 'cc-nf-nudge-answered';
 
 // One outcome, not two. Dismissing and following both end the nudge, and
 // nothing downstream reads which — the follow itself is already recorded
 // server-side, so a second local copy of it would only be somewhere to drift.
-type Answered = true
+type Answered = true;
 
 const isStore = (value: unknown): value is Record<string, Answered> => {
   // Arrays and null are typeof 'object' — both must be rejected before the
   // values walk, which would otherwise accept `[true]`.
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false
+    return false;
   }
-  return Object.values(value).every((answered) => answered === true)
-}
+  return Object.values(value).every((answered) => answered === true);
+};
 
 const readStore = (): Record<string, Answered> => {
   try {
-    if (typeof localStorage === 'undefined') return {}
-    const raw = localStorage.getItem(KEY)
-    if (!raw) return {}
-    const parsed: unknown = JSON.parse(raw)
-    return isStore(parsed) ? parsed : {}
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    return isStore(parsed) ? parsed : {};
   } catch (readErr) {
-    console.warn('follow nudge: dropping unreadable record', readErr)
-    return {}
+    console.warn('follow nudge: dropping unreadable record', readErr);
+    return {};
   }
-}
+};
 
 /** Whether this watch row has already had its follow nudge answered. */
 export const isFollowNudgeAnswered = (userEventId: string): boolean =>
-  readStore()[userEventId] === true
+  readStore()[userEventId] === true;
 
 /** Close the nudge for this watch row, whichever way the user answered it. */
 export const markFollowNudgeAnswered = (userEventId: string): void => {
   try {
-    if (typeof localStorage === 'undefined') return
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(
       KEY,
       JSON.stringify({ ...readStore(), [userEventId]: true }),
-    )
+    );
   } catch (writeErr) {
     // Quota-exceeded or disabled storage — a no-op, so a failed persist can
     // never break the click handler. Worst case the nudge returns next visit.
-    console.warn('follow nudge: write failed', writeErr)
+    console.warn('follow nudge: write failed', writeErr);
   }
-}
+};

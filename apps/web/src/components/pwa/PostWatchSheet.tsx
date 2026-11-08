@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #1062 post-watch permission ask. Fires ~500ms after a user's first
 // successful Watch commit when they haven't dismissed the prompt before
@@ -9,14 +9,14 @@
 // - ios: iOS Safari not-installed → push isn't available at all. The
 //   CTA opens IosHowToSheet so the user can add to Home Screen first.
 
-import { BottomSheet } from './BottomSheet'
-import { POST_WATCH_COPY } from './definitions/copy'
+import { BottomSheet } from './BottomSheet';
+import { POST_WATCH_COPY } from './definitions/copy';
 
 interface PostWatchSheetProps {
-  open: boolean
-  onClose: () => void
-  onTurnOn: () => void | Promise<void>
-  variant?: 'default' | 'ios'
+  open: boolean;
+  onClose: () => void;
+  onTurnOn: () => void | Promise<void>;
+  variant?: 'default' | 'ios';
 }
 
 const BellIcon = () => (
@@ -40,7 +40,7 @@ const BellIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const ShareIcon = () => (
   <svg
@@ -64,7 +64,7 @@ const ShareIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 export const PostWatchSheet = ({
   open,
@@ -72,11 +72,11 @@ export const PostWatchSheet = ({
   onTurnOn,
   variant = 'default',
 }: PostWatchSheetProps) => {
-  const isIos = variant === 'ios'
-  const copy = isIos ? POST_WATCH_COPY.ios : POST_WATCH_COPY.default
+  const isIos = variant === 'ios';
+  const copy = isIos ? POST_WATCH_COPY.ios : POST_WATCH_COPY.default;
   const srTitle = isIos
     ? POST_WATCH_COPY.srTitleIos
-    : POST_WATCH_COPY.srTitleDefault
+    : POST_WATCH_COPY.srTitleDefault;
 
   return (
     <BottomSheet open={open} onClose={onClose} title={srTitle}>
@@ -131,5 +131,5 @@ export const PostWatchSheet = ({
         )}
       </div>
     </BottomSheet>
-  )
-}
+  );
+};

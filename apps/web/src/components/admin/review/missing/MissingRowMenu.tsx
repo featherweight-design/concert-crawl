@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { Pause, X, Check, ArrowRightLeft } from 'lucide-react'
-import { AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Pause, X, Check, ArrowRightLeft } from 'lucide-react';
+import { AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface MissingRowMenuProps {
-  eventId: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
+  eventId: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
   /** Omitted when the matcher found no relocation candidate for this row. */
-  onConfirmMove?: () => void
-  stacked?: boolean
-  disabled?: boolean
+  onConfirmMove?: () => void;
+  stacked?: boolean;
+  disabled?: boolean;
 }
 
 export const MissingRowMenu = ({
@@ -75,4 +75,4 @@ export const MissingRowMenu = ({
       {ADMIN_COPY.review.missing.actionDismiss}
     </AdminButton>
   </div>
-)
+);

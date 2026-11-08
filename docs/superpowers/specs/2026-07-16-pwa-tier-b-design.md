@@ -41,12 +41,15 @@ Use **Serwist** (`@serwist/next`), the maintained successor to Workbox/next-pwa 
 ### 2. Manifest + icon/asset completion
 
 Extend `apps/web/src/app/manifest.ts`:
+
 - Add a **maskable** icon variant (`purpose: 'maskable'`), `screenshots` (Android install prompt), `shortcuts` (e.g. "Browse events", "Search"), `categories`, and explicit `scope` + `orientation`.
 
 Extend the icon pipeline (`/api/pwa/icon-*` Edge routes):
+
 - Emit a 180×180 apple-touch-icon and a maskable variant; add a favicon set (favicon.ico / svg).
 
 Add to `apps/web/src/app/layout.tsx` (missing today — why iOS shows no affordance):
+
 - `apple-touch-icon` link and `apple-mobile-web-app-capable` / `apple-mobile-web-app-status-bar-style` / `apple-mobile-web-app-title` meta.
 - Fix the existing `metadata.manifest` value — it currently points at `/manifest.json` (no such route). Set it to `/manifest.webmanifest`, the path Next serves `manifest.ts` from, so the manifest is actually discoverable.
 
@@ -54,12 +57,12 @@ Add to `apps/web/src/app/layout.tsx` (missing today — why iOS shows no afforda
 
 Serwist runtime caching:
 
-| Request class | Strategy | Notes |
-|---|---|---|
-| App shell / static build assets | Precache (cache-first, versioned) | Serwist injects the precache manifest at build |
-| Navigation requests | Network-first → offline fallback page | Fallback served when offline + uncached |
-| Public API GETs (events, venues) via `NEXT_PUBLIC_API_URL` | Stale-while-revalidate | Size cap + TTL; matched by URL path allowlist |
-| **Authenticated API routes** | **Network-only (never cached)** | Enforced by explicit exclusion; no auth data on device |
+| Request class                                              | Strategy                              | Notes                                                  |
+| ---------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------ |
+| App shell / static build assets                            | Precache (cache-first, versioned)     | Serwist injects the precache manifest at build         |
+| Navigation requests                                        | Network-first → offline fallback page | Fallback served when offline + uncached                |
+| Public API GETs (events, venues) via `NEXT_PUBLIC_API_URL` | Stale-while-revalidate                | Size cap + TTL; matched by URL path allowlist          |
+| **Authenticated API routes**                               | **Network-only (never cached)**       | Enforced by explicit exclusion; no auth data on device |
 
 Serwist is the **transport** cache; React Query (already integrated) remains the **in-memory UX** cache. No React Query persistence is added. The public/authenticated split is enforced by an explicit route allowlist in the SW config, defaulting to network-only for anything not on the public list.
 

@@ -215,9 +215,9 @@ Props:
 
 ```ts
 interface SmallEventRowProps {
-  event: EventWithVenue | Event
-  showVenue?: boolean // default true; set false on VenueProfile (venue is redundant)
-  date: string // formatted "Apr 28"
+  event: EventWithVenue | Event;
+  showVenue?: boolean; // default true; set false on VenueProfile (venue is redundant)
+  date: string; // formatted "Apr 28"
 }
 ```
 
@@ -265,7 +265,7 @@ Changes:
          {i > 0 && <div className="h-px bg-border ml-[58px]" />}
          <EventCard event={event} />
        </Fragment>
-     ))
+     ));
    }
    ```
 4. **Page wrapper**: add `pb-16 sm:pb-0` to the `<main>` element so content doesn't hide behind the BottomNav on mobile.
@@ -373,11 +373,11 @@ This is the largest change. The design removes the shared `AppHeader` on mobile 
 
 ```ts
 interface InfoRowProps {
-  icon: ReactNode
-  label: string // JetBrains Mono 9px uppercase --fg-subtle
-  value: string // Inter 600 14px --fg (or --signal when signal=true)
-  signal?: boolean
-  onClick?: () => void // makes it a <button> instead of <div>; adds chevron
+  icon: ReactNode;
+  label: string; // JetBrains Mono 9px uppercase --fg-subtle
+  value: string; // Inter 600 14px --fg (or --signal when signal=true)
+  signal?: boolean;
+  onClick?: () => void; // makes it a <button> instead of <div>; adds chevron
 }
 ```
 

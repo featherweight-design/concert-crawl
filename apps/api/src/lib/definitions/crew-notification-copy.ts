@@ -6,7 +6,7 @@
 // "Someone" is the fallback for a member with no handle, matching the invite
 // landing (crews copy `landing.titleNoName`). We never invent a name.
 
-export const CREW_NOTIFICATION_ACTOR_FALLBACK = 'Someone'
+export const CREW_NOTIFICATION_ACTOR_FALLBACK = 'Someone';
 
 export const crewNotificationCopy = {
   going: (who: string, artistAtVenue: string) => ({
@@ -21,4 +21,4 @@ export const crewNotificationCopy = {
     title: `${who} left ${crewName}.`,
     body: '',
   }),
-}
+};

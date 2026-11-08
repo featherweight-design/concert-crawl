@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // 3DS / SCA challenge chrome (PR 4.4, design table CHALLENGE_CONFIG).
 // Stripe's Payment Element presents the actual bank verification in its
@@ -7,21 +7,21 @@
 // and a way out. The hosting ModalShell stays a plain dialog (a step,
 // not an error — never alertdialog), relabeled via challengeDialogProps.
 
-import { TIER_PICKER_COPY } from './definitions/copy'
-import type { ChallengeKind, TierKey } from './definitions/types'
-import { TierSummaryLine } from './FailureSurface'
+import { TIER_PICKER_COPY } from './definitions/copy';
+import type { ChallengeKind, TierKey } from './definitions/types';
+import { TierSummaryLine } from './FailureSurface';
 
-const CHALLENGE_COPY = TIER_PICKER_COPY.challenge
+const CHALLENGE_COPY = TIER_PICKER_COPY.challenge;
 
-export const challengeHeadlineId = (kind: ChallengeKind) => `chal-h-${kind}`
-export const challengeBodyId = (kind: ChallengeKind) => `chal-d-${kind}`
+export const challengeHeadlineId = (kind: ChallengeKind) => `chal-h-${kind}`;
+export const challengeBodyId = (kind: ChallengeKind) => `chal-d-${kind}`;
 
 /** ModalShell overrides while the challenge chrome is up. */
 export const challengeDialogProps = (kind: ChallengeKind) => ({
   role: 'dialog' as const,
   ariaLabelledBy: challengeHeadlineId(kind),
   ariaDescribedBy: challengeBodyId(kind),
-})
+});
 
 const monoLabelStyle = {
   fontFamily: 'var(--font-mono)',
@@ -30,7 +30,7 @@ const monoLabelStyle = {
   textTransform: 'uppercase',
   letterSpacing: '0.16em',
   color: 'var(--fg-subtle)',
-} as const
+} as const;
 
 const StripeChallengeFrame = () => (
   <div
@@ -132,18 +132,18 @@ const StripeChallengeFrame = () => (
       {CHALLENGE_COPY.frameBottom}
     </span>
   </div>
-)
+);
 
 export const ChallengeMount = ({
   kind,
   tierKey,
   onCancel,
 }: {
-  kind: ChallengeKind
-  tierKey: Exclude<TierKey, 'free'>
-  onCancel: () => void
+  kind: ChallengeKind;
+  tierKey: Exclude<TierKey, 'free'>;
+  onCancel: () => void;
 }) => {
-  const config = CHALLENGE_COPY.kinds[kind]
+  const config = CHALLENGE_COPY.kinds[kind];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
@@ -240,5 +240,5 @@ export const ChallengeMount = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};

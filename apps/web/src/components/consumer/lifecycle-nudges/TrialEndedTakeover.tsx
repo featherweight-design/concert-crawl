@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Trial-ended takeover (#780, PR 4.2) — full-bleed surface shown once,
 // next session after trial_ends_at. Renders the LOCKED #781 picker inline
@@ -6,80 +6,80 @@
 // note, NOT wrapped in a sheet/modal chrome). Paid-tier CTA selections
 // bubble to the gate, which routes to Settings · Plan.
 
-import { useEffect, useState } from 'react'
-import { useFounderWindow } from '@/lib/queries/use-founder-window'
-import { visibleTiers } from '@/components/consumer/tier-picker/lib/visible-tiers'
-import { scarcityRailData } from '@/components/consumer/tier-picker/lib/scarcity'
-import { TierRowMobile } from '@/components/consumer/tier-picker/TierRowMobile'
-import { TierCardDesktop } from '@/components/consumer/tier-picker/TierCardDesktop'
-import { FULL_BLEED_TAKEOVER_Z_INDEX } from '@/components/consumer/tier-picker/definitions/constants'
+import { useEffect, useState } from 'react';
+import { useFounderWindow } from '@/lib/queries/use-founder-window';
+import { visibleTiers } from '@/components/consumer/tier-picker/lib/visible-tiers';
+import { scarcityRailData } from '@/components/consumer/tier-picker/lib/scarcity';
+import { TierRowMobile } from '@/components/consumer/tier-picker/TierRowMobile';
+import { TierCardDesktop } from '@/components/consumer/tier-picker/TierCardDesktop';
+import { FULL_BLEED_TAKEOVER_Z_INDEX } from '@/components/consumer/tier-picker/definitions/constants';
 import type {
   TierCta,
   TierKey,
-} from '@/components/consumer/tier-picker/definitions/types'
-import { LIFECYCLE_NUDGES_COPY } from './definitions/copy'
-import { TAKEOVER_DEFAULT_EXPANDED_TIER } from './definitions/constants'
+} from '@/components/consumer/tier-picker/definitions/types';
+import { LIFECYCLE_NUDGES_COPY } from './definitions/copy';
+import { TAKEOVER_DEFAULT_EXPANDED_TIER } from './definitions/constants';
 
-const TAKEOVER_COPY = LIFECYCLE_NUDGES_COPY.takeover
+const TAKEOVER_COPY = LIFECYCLE_NUDGES_COPY.takeover;
 
 interface TrialEndedTakeoverProps {
-  onDismiss: () => void
-  onSelectTier: (tierKey: TierKey) => void
+  onDismiss: () => void;
+  onSelectTier: (tierKey: TierKey) => void;
 }
 
 export const TrialEndedTakeover = ({
   onDismiss,
   onSelectTier,
 }: TrialEndedTakeoverProps) => {
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const listener = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', listener)
-    return () => mql.removeEventListener('change', listener)
-  }, [])
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const listener = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', listener);
+    return () => mql.removeEventListener('change', listener);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onDismiss()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onDismiss])
+      if (ev.key === 'Escape') onDismiss();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onDismiss]);
 
   // Body scroll lock while the full-bleed surface is up.
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
+      document.body.style.overflow = previous;
+    };
+  }, []);
 
   // Same founder-window derivation as TierPickerSheet: until the window
   // loads, treat it as pre-launch so the Founder card renders disabled
   // rather than flashing in/out.
-  const founderWindow = useFounderWindow(true)
+  const founderWindow = useFounderWindow(true);
   const windowView = founderWindow.data ?? {
     state: 'pre-launch' as const,
     seatsTotal: 100,
     closesAt: null,
-  }
-  const tiers = visibleTiers(windowView.state, 'free')
-  const rail = scarcityRailData(windowView, new Date())
+  };
+  const tiers = visibleTiers(windowView.state, 'free');
+  const rail = scarcityRailData(windowView, new Date());
 
   const [expandedTier, setExpandedTier] = useState<TierKey | null>(
     TAKEOVER_DEFAULT_EXPANDED_TIER,
-  )
+  );
 
   const selectTier = (tierKey: TierKey, cta: TierCta) => {
     // Signed-in free user: paid tiers resolve to checkout — the gate
     // routes to Settings · Plan where the real sheet handles payment.
-    if (cta.action === 'checkout') onSelectTier(tierKey)
-  }
+    if (cta.action === 'checkout') onSelectTier(tierKey);
+  };
 
-  const wide = !isMobile
+  const wide = !isMobile;
 
   return (
     <div
@@ -332,5 +332,5 @@ export const TrialEndedTakeover = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

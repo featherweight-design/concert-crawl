@@ -1,37 +1,37 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
-const copy = CONSUMER_COPY.corroborationSheet
+const copy = CONSUMER_COPY.corroborationSheet;
 
 // ── Helpers ──────────────────────────────────────────────────────
 const vendorDisplayName = (vendor: string): string =>
-  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor
+  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor;
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 // ── Color constants ──────────────────────────────────────────────
-const AZURE = 'oklch(0.62 0.12 240)'
-const GOLD = 'oklch(0.66 0.14 78)'
+const AZURE = 'oklch(0.62 0.12 240)';
+const GOLD = 'oklch(0.66 0.14 78)';
 
 // ── Token shape ──────────────────────────────────────────────────
 interface PendingTokens {
-  color: string
-  bg: string
-  border: string
+  color: string;
+  bg: string;
+  border: string;
 }
 
 const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
@@ -40,63 +40,63 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
       color: AZURE,
       bg: `color-mix(in oklab, ${AZURE} 6%, var(--surface-1))`,
       border: `color-mix(in oklab, ${AZURE} 32%, var(--border))`,
-    }
+    };
   }
 
   return {
     color: GOLD,
     bg: `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`,
     border: `color-mix(in oklab, ${GOLD} 38%, var(--border))`,
-  }
-}
+  };
+};
 
 // ── Verify option type ────────────────────────────────────────────
 type VerifyMethod =
-  'same_vendor' | 'other_vendor' | 'saw_listing' | 'bought_myself'
+  'same_vendor' | 'other_vendor' | 'saw_listing' | 'bought_myself';
 
-type ApiConfirmMethod = 'same-vendor' | 'other-vendor' | 'box-office'
+type ApiConfirmMethod = 'same-vendor' | 'other-vendor' | 'box-office';
 
 const VERIFY_METHOD_TO_API: Record<VerifyMethod, ApiConfirmMethod> = {
   same_vendor: 'same-vendor',
   other_vendor: 'other-vendor',
   saw_listing: 'box-office',
   bought_myself: 'box-office',
-}
+};
 
 // ── Props ────────────────────────────────────────────────────────
 export interface CorroborationSheetProps {
   submission: {
-    floor: number
-    ceiling?: number
-    tier: string
-    vendor: string
-    kind: 'community' | 'boxoffice'
-    submitter: { handle: string; url: string } | null
-    submittedAt: string
-    confirms: number
-    needed: number
-    note?: string | null
-    submissionId: string
-  }
-  open: boolean
-  isSelfLocked?: boolean
-  onClose: () => void
-  onConfirm: (method: ApiConfirmMethod) => void
-  onWithdraw?: () => void
-  onSubmitUpdate: () => void
+    floor: number;
+    ceiling?: number;
+    tier: string;
+    vendor: string;
+    kind: 'community' | 'boxoffice';
+    submitter: { handle: string; url: string } | null;
+    submittedAt: string;
+    confirms: number;
+    needed: number;
+    note?: string | null;
+    submissionId: string;
+  };
+  open: boolean;
+  isSelfLocked?: boolean;
+  onClose: () => void;
+  onConfirm: (method: ApiConfirmMethod) => void;
+  onWithdraw?: () => void;
+  onSubmitUpdate: () => void;
 }
 
 // ── Sub-component: SubmissionDetailCard ──────────────────────────
 interface SubmissionDetailCardProps {
-  floor: number
-  ceiling?: number
-  tier: string
-  vendor: string
-  kind: 'community' | 'boxoffice'
-  submitter: { handle: string; url: string } | null
-  submittedAt: string
-  note?: string | null | undefined
-  accentColor: string
+  floor: number;
+  ceiling?: number;
+  tier: string;
+  vendor: string;
+  kind: 'community' | 'boxoffice';
+  submitter: { handle: string; url: string } | null;
+  submittedAt: string;
+  note?: string | null | undefined;
+  accentColor: string;
 }
 
 const SubmissionDetailCard = ({
@@ -110,7 +110,7 @@ const SubmissionDetailCard = ({
   note,
   accentColor,
 }: SubmissionDetailCardProps) => {
-  const tokens = pendingTokens(kind)
+  const tokens = pendingTokens(kind);
 
   const byNode = (() => {
     if (submitter === null) {
@@ -126,7 +126,7 @@ const SubmissionDetailCard = ({
             ? copy.viaAnonymous
             : copy.viaAnonymous}
         </span>
-      )
+      );
     }
     return (
       <span
@@ -140,8 +140,8 @@ const SubmissionDetailCard = ({
         {copy.viaHandlePrefix}
         {submitter.handle}
       </span>
-    )
-  })()
+    );
+  })();
 
   const labelStyle = {
     fontFamily: 'JetBrains Mono, monospace',
@@ -149,12 +149,12 @@ const SubmissionDetailCard = ({
     color: 'var(--fg-subtle)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.06em',
-  }
+  };
   const valueStyle = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '10px',
     color: 'var(--fg)',
-  }
+  };
 
   return (
     <div
@@ -267,17 +267,17 @@ const SubmissionDetailCard = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 // ── Sub-component: VerifyOption row ──────────────────────────────
 interface VerifyOptionProps {
-  method: VerifyMethod
-  label: string
-  description: string
-  isSelected: boolean
-  accentColor: string
-  onSelect: (method: VerifyMethod) => void
+  method: VerifyMethod;
+  label: string;
+  description: string;
+  isSelected: boolean;
+  accentColor: string;
+  onSelect: (method: VerifyMethod) => void;
 }
 
 const VerifyOption = ({
@@ -296,8 +296,8 @@ const VerifyOption = ({
       onClick={() => onSelect(method)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault()
-          onSelect(method)
+          evt.preventDefault();
+          onSelect(method);
         }
       }}
       style={{
@@ -377,8 +377,8 @@ const VerifyOption = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // ── Main component ────────────────────────────────────────────────
 export const CorroborationSheet = ({
@@ -390,19 +390,19 @@ export const CorroborationSheet = ({
   onWithdraw,
   onSubmitUpdate,
 }: CorroborationSheetProps) => {
-  const { isLoaded, isSignedIn } = useAuth()
+  const { isLoaded, isSignedIn } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<VerifyMethod | null>(
     null,
-  )
+  );
 
-  const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE
+  const accentColor = submission.kind === 'boxoffice' ? GOLD : AZURE;
 
-  const isBoxOfficeSubmission = submission.kind === 'boxoffice'
+  const isBoxOfficeSubmission = submission.kind === 'boxoffice';
 
   const verifyOptions: Array<{
-    method: VerifyMethod
-    label: string
-    description: string
+    method: VerifyMethod;
+    label: string;
+    description: string;
   }> = [
     {
       method: 'same_vendor',
@@ -432,7 +432,7 @@ export const CorroborationSheet = ({
           },
         ]
       : []),
-  ]
+  ];
 
   // Gated here rather than at each trigger, matching SubmitPriceModal: two
   // surfaces open this sheet, and the confirm POST needs a Clerk token, so a
@@ -449,7 +449,7 @@ export const CorroborationSheet = ({
         scaRegion
         entry="logged-out-price"
       />
-    )
+    );
   }
 
   return (
@@ -582,7 +582,7 @@ export const CorroborationSheet = ({
               type="button"
               onClick={() => {
                 if (selectedMethod !== null) {
-                  onConfirm(VERIFY_METHOD_TO_API[selectedMethod])
+                  onConfirm(VERIFY_METHOD_TO_API[selectedMethod]);
                 }
               }}
               disabled={selectedMethod === null}
@@ -713,5 +713,5 @@ export const CorroborationSheet = ({
         )}
       </div>
     </ModalShell>
-  )
-}
+  );
+};

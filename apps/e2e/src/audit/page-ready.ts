@@ -1,6 +1,6 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test';
 
-import { waitForHydrated } from '../fixtures/hydration.js'
+import { waitForHydrated } from '../fixtures/hydration.js';
 
 /**
  * Whether the page has finished loading what the sweep is about to capture:
@@ -45,10 +45,10 @@ import { waitForHydrated } from '../fixtures/hydration.js'
 export function isPageSettled(): boolean {
   const isDisplayed = (el: Element | null): boolean => {
     for (let node = el; node !== null; node = node.parentElement) {
-      if (getComputedStyle(node).display === 'none') return false
+      if (getComputedStyle(node).display === 'none') return false;
     }
-    return el !== null
-  }
+    return el !== null;
+  };
   const markers = document.querySelectorAll(
     [
       '.admin-skeleton',
@@ -58,38 +58,38 @@ export function isPageSettled(): boolean {
       '.dl-sweep',
       '[aria-busy="true"]',
     ].join(', '),
-  )
+  );
   const pending = Array.from(markers).some((el) =>
     isDisplayed(el.classList.contains('dl-sweep') ? el.parentElement : el),
-  )
-  if (pending) return false
+  );
+  if (pending) return false;
   const controls = document.querySelectorAll(
     'button, input, select, textarea, [data-testid="event-row"]',
-  )
+  );
   const unhydrated = Array.from(controls).some(
     (el) => !Object.keys(el).some((key) => key.startsWith('__reactProps$')),
-  )
-  if (unhydrated) return false
+  );
+  if (unhydrated) return false;
   // Checked in the same pass as the placeholders so both hold at one moment: a
   // placeholder can mount while fonts load. `document.fonts.status` rather
   // than awaiting `document.fonts.ready`, which never resolves if a font
   // request stalls. The `in` check is for environments without the Font
   // Loading API (jsdom), where there is nothing to wait for.
-  if ('fonts' in document && document.fonts.status !== 'loaded') return false
+  if ('fonts' in document && document.fonts.status !== 'loaded') return false;
   return Array.from(document.images).every((img) => {
     if (img.complete || img.getAttribute('loading') !== 'lazy') {
-      return img.complete
+      return img.complete;
     }
-    const rect = img.getBoundingClientRect()
+    const rect = img.getBoundingClientRect();
     const inViewport =
       rect.width > 0 &&
       rect.height > 0 &&
       rect.bottom > 0 &&
       rect.right > 0 &&
       rect.top < window.innerHeight &&
-      rect.left < window.innerWidth
-    return !inViewport
-  })
+      rect.left < window.innerWidth;
+    return !inViewport;
+  });
 }
 
 /**
@@ -106,11 +106,11 @@ export async function waitForPageReady(
 ): Promise<void> {
   // The root layout renders <body>, so React writes its props key onto it on
   // hydration: the earliest point at which the page is live.
-  await waitForHydrated(page.locator('body'), timeout)
+  await waitForHydrated(page.locator('body'), timeout);
   await expect
     .poll(
       async () => {
-        if (!(await page.evaluate(isPageSettled))) return false
+        if (!(await page.evaluate(isPageSettled))) return false;
         // Effects run after the hydration commit and can still swap what is
         // on screen (a responsive layout, a query starting). Give them two
         // frames, and only accept a page that is still settled after them.
@@ -119,10 +119,10 @@ export async function waitForPageReady(
             new Promise<void>((resolve) => {
               requestAnimationFrame(() =>
                 requestAnimationFrame(() => resolve()),
-              )
+              );
             }),
-        )
-        return page.evaluate(isPageSettled)
+        );
+        return page.evaluate(isPageSettled);
       },
       {
         timeout,
@@ -130,5 +130,5 @@ export async function waitForPageReady(
           'page still showing a loading placeholder, an unhydrated control, an unloaded image or loading fonts',
       },
     )
-    .toBe(true)
+    .toBe(true);
 }

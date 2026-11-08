@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { type ReactNode } from 'react'
-import { EditLabel } from './EditLabel'
+import { type ReactNode } from 'react';
+import { EditLabel } from './EditLabel';
 
 export type EditFieldType =
   | 'text'
@@ -11,22 +11,22 @@ export type EditFieldType =
   | 'textarea'
   | 'tags'
   | 'readonly'
-  | 'mono'
+  | 'mono';
 
 export interface EditFieldProps {
-  label: string
-  type?: EditFieldType | undefined
+  label: string;
+  type?: EditFieldType | undefined;
   /** String value for text/number/time/select/textarea; ReactNode for readonly. */
-  value?: string | ReactNode | undefined
-  placeholder?: string | undefined
-  prefix?: string | undefined
-  changed?: boolean | undefined
-  error?: string | undefined
-  help?: string | undefined
+  value?: string | ReactNode | undefined;
+  placeholder?: string | undefined;
+  prefix?: string | undefined;
+  changed?: boolean | undefined;
+  error?: string | undefined;
+  help?: string | undefined;
   /** Tag list for type='tags'. */
-  tags?: string[] | undefined
+  tags?: string[] | undefined;
   /** When true, spans the full grid row. */
-  full?: boolean | undefined
+  full?: boolean | undefined;
 }
 
 const boxStyle = (error: boolean, surface1: boolean): React.CSSProperties => ({
@@ -40,7 +40,7 @@ const boxStyle = (error: boolean, surface1: boolean): React.CSSProperties => ({
   fontSize: 13.5,
   fontWeight: 500,
   color: surface1 ? 'var(--fg-muted)' : 'var(--fg)',
-})
+});
 
 export const EditField = ({
   label,
@@ -54,8 +54,8 @@ export const EditField = ({
   tags,
   full = false,
 }: EditFieldProps) => {
-  let control: ReactNode
-  const hasError = Boolean(error)
+  let control: ReactNode;
+  const hasError = Boolean(error);
 
   if (type === 'readonly' || type === 'mono') {
     control = (
@@ -73,7 +73,7 @@ export const EditField = ({
       >
         {value ?? '—'}
       </div>
-    )
+    );
   } else if (type === 'textarea') {
     control = (
       <div
@@ -86,7 +86,7 @@ export const EditField = ({
       >
         {value || placeholder || '—'}
       </div>
-    )
+    );
   } else if (type === 'tags') {
     control = (
       <div
@@ -130,7 +130,7 @@ export const EditField = ({
           ))
         )}
       </div>
-    )
+    );
   } else if (type === 'select') {
     control = (
       <div
@@ -147,10 +147,10 @@ export const EditField = ({
           {value || placeholder || '—'}
         </span>
       </div>
-    )
+    );
   } else {
     // text / number / time
-    const monoLike = type === 'number' || type === 'time'
+    const monoLike = type === 'number' || type === 'time';
     control = (
       <div
         style={{
@@ -183,7 +183,7 @@ export const EditField = ({
           {value || placeholder || '—'}
         </span>
       </div>
-    )
+    );
   }
 
   return (
@@ -222,5 +222,5 @@ export const EditField = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

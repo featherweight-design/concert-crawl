@@ -1,9 +1,9 @@
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.appHeader.anonDisc
+const copy = CONSUMER_COPY.appHeader.anonDisc;
 
 interface AnonDiscProps {
-  size?: number
+  size?: number;
 }
 
 /**
@@ -63,5 +63,5 @@ export function AnonDisc({ size = 36 }: AnonDiscProps) {
         </svg>
       </span>
     </span>
-  )
+  );
 }

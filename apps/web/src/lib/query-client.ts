@@ -1,7 +1,7 @@
-import { QueryClient } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/react-query';
 
-const STALE_30_MIN = 30 * 60 * 1000
-const STALE_5_MIN = 5 * 60 * 1000
+const STALE_30_MIN = 30 * 60 * 1000;
+const STALE_5_MIN = 5 * 60 * 1000;
 
 export function makeQueryClient() {
   return new QueryClient({
@@ -13,7 +13,7 @@ export function makeQueryClient() {
         refetchOnWindowFocus: false,
       },
     },
-  })
+  });
 }
 
-export { STALE_30_MIN, STALE_5_MIN }
+export { STALE_30_MIN, STALE_5_MIN };

@@ -40,11 +40,11 @@ So today it is a mobile-responsive website with a manifest file — roughly 20% 
 
 ## The three paths
 
-| Path | What it is | LOE | Store presence |
-|---|---|---|---|
-| **A. Finish the PWA** | Service worker + offline + install prompt + web push | ~1–2 wks | No store listing (browser "Add to Home Screen") |
-| **B. Capacitor wrapper** | Bundle the web app in a native shell, ship to both stores | ~3–5 wks on top of A | Yes, both stores |
-| **C. React Native / Expo rewrite** | Rebuild the UI natively, share only the API | ~3–6 **months** | Yes, most "native" feel |
+| Path                               | What it is                                                | LOE                  | Store presence                                  |
+| ---------------------------------- | --------------------------------------------------------- | -------------------- | ----------------------------------------------- |
+| **A. Finish the PWA**              | Service worker + offline + install prompt + web push      | ~1–2 wks             | No store listing (browser "Add to Home Screen") |
+| **B. Capacitor wrapper**           | Bundle the web app in a native shell, ship to both stores | ~3–5 wks on top of A | Yes, both stores                                |
+| **C. React Native / Expo rewrite** | Rebuild the UI natively, share only the API               | ~3–6 **months**      | Yes, most "native" feel                         |
 
 **Path C is off the table** for a concert-browsing app — you rebuild every screen, re-implement auth, and maintain two frontends forever for a marginal gain.
 

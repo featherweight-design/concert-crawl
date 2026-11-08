@@ -4,26 +4,26 @@
 // The band owns the title, so the page below it starts at content — there is no
 // negative margin pulling type back over an image any more (#1525).
 
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react';
 import {
   IdentityArt,
   identityFor,
-} from '@/components/consumer/identity-art/IdentityArt'
-import { Panel } from './Panel'
-import type { SlotSource } from './definitions/types'
-import { bandArtOpacity } from './lib/band-art'
-import { bandField } from './lib/band-field'
+} from '@/components/consumer/identity-art/IdentityArt';
+import { Panel } from './Panel';
+import type { SlotSource } from './definitions/types';
+import { bandArtOpacity } from './lib/band-art';
+import { bandField } from './lib/band-field';
 
 export type HeroBandProps = {
   /** The name the generated mark and the ink field are both keyed on. */
-  name: string
+  name: string;
   /** The title column. The band positions it; it owns its own type ramp. */
-  children: ReactNode
+  children: ReactNode;
   /** Back control, leading the row above the band. Keeps its own touch target. */
-  back?: ReactNode
+  back?: ReactNode;
   /** Share and similar, trailing the same row. */
-  actions?: ReactNode
-} & SlotSource
+  actions?: ReactNode;
+} & SlotSource;
 
 /**
  * The backdrop turns the band's own mark a half-turn off the panel's — the
@@ -34,22 +34,22 @@ export type HeroBandProps = {
  * thing behind it was the failure mode this avoids.
  */
 const backdropRotate = (natural: number): 0 | 1 | 2 | 3 => {
-  const rotations = [0, 1, 2, 3] as const
-  return rotations[(natural + 2) % 4] ?? 0
-}
+  const rotations = [0, 1, 2, 3] as const;
+  return rotations[(natural + 2) % 4] ?? 0;
+};
 
 /**
  * Resolved once so the rotation and the opacity read the same identity — two
  * identityFor calls would be two chances to drift.
  */
 const BandArt = ({ name }: { name: string }) => {
-  const identity = identityFor(name, 'artist', { scale: 'hero' })
+  const identity = identityFor(name, 'artist', { scale: 'hero' });
   // `CSSProperties` has no room for custom properties, so the one the class
   // reads is declared alongside it rather than cast in. A string, because
   // React appends a unit to numeric style values.
   const style: CSSProperties & { '--band-art-opacity': string } = {
     '--band-art-opacity': String(bandArtOpacity(identity.palette.bg)),
-  }
+  };
   return (
     <div
       className="hero-band-art"
@@ -64,8 +64,8 @@ const BandArt = ({ name }: { name: string }) => {
         rotateOverride={backdropRotate(identity.rotate)}
       />
     </div>
-  )
-}
+  );
+};
 
 export const HeroBand = ({
   name,
@@ -101,4 +101,4 @@ export const HeroBand = ({
       <div className="min-w-0 flex-1 pt-0.5 sm:pt-1.5">{children}</div>
     </div>
   </div>
-)
+);

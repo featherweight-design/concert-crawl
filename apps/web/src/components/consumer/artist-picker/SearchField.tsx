@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The tour's search field, and the control that opens it.
 //
@@ -11,16 +11,16 @@
 // asks for "the same object as the one on /search", and two copies of the same
 // numbers stop being the same object the first time either moves.
 
-import { Search, X } from 'lucide-react'
-import { forwardRef } from 'react'
+import { Search, X } from 'lucide-react';
+import { forwardRef } from 'react';
 import {
   SEARCH_FIELD_BOX,
   SEARCH_FIELD_FONT_SIZE,
-} from '@/components/consumer/search/definitions/constants'
-import { ARTIST_PICKER_COPY } from './definitions/copy'
+} from '@/components/consumer/search/definitions/constants';
+import { ARTIST_PICKER_COPY } from './definitions/copy';
 
 interface SearchTriggerProps {
-  onOpen: () => void
+  onOpen: () => void;
 }
 
 export const SearchTrigger = forwardRef<HTMLButtonElement, SearchTriggerProps>(
@@ -47,14 +47,14 @@ export const SearchTrigger = forwardRef<HTMLButtonElement, SearchTriggerProps>(
           {ARTIST_PICKER_COPY.searchEscape}
         </span>
       </button>
-    )
+    );
   },
-)
+);
 
 interface SearchFieldProps {
-  value: string
-  onChange: (next: string) => void
-  onClose: () => void
+  value: string;
+  onChange: (next: string) => void;
+  onClose: () => void;
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
@@ -75,7 +75,7 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
           // the mode, and a cleared box with no rows under it is the same
           // screen as the one Escape is asking to leave.
           onKeyDown={(ev) => {
-            if (ev.key === 'Escape') onClose()
+            if (ev.key === 'Escape') onClose();
           }}
           placeholder={ARTIST_PICKER_COPY.searchPlaceholder}
           aria-label={ARTIST_PICKER_COPY.searchFieldLabel}
@@ -114,6 +114,6 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(
           <X size={12} strokeWidth={1.5} aria-hidden />
         </button>
       </div>
-    )
+    );
   },
-)
+);

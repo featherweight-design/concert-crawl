@@ -1,6 +1,6 @@
-import { asc, eq, gt, isNotNull, and } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
-import { deriveTicketLinks } from '@concert-crawl/crawler-core'
+import { asc, eq, gt, isNotNull, and } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core';
 
 // One-shot backfill. Re-derives every event's ticket_links from its current
 // (ticket_url + venue) so prod data reflects the PR 2 heuristic immediately
@@ -16,18 +16,18 @@ import { deriveTicketLinks } from '@concert-crawl/crawler-core'
 // stays bounded and progress is reportable. 500 keeps each round-trip small
 // enough to interleave with normal traffic without spiking active connections.
 
-const BATCH_SIZE = 500
+const BATCH_SIZE = 500;
 
 async function main(): Promise<void> {
-  console.warn('[backfill-ticket-links] starting')
+  console.warn('[backfill-ticket-links] starting');
 
-  let cursor: string | null = null
-  let scanned = 0
-  let updated = 0
+  let cursor: string | null = null;
+  let scanned = 0;
+  let updated = 0;
 
   for (;;) {
-    const conditions = [isNotNull(events.ticketUrl)]
-    if (cursor !== null) conditions.push(gt(events.id, cursor))
+    const conditions = [isNotNull(events.ticketUrl)];
+    if (cursor !== null) conditions.push(gt(events.id, cursor));
 
     const batch = await db
       .select({
@@ -40,9 +40,9 @@ async function main(): Promise<void> {
       .innerJoin(venues, eq(events.venueId, venues.id))
       .where(and(...conditions))
       .orderBy(asc(events.id))
-      .limit(BATCH_SIZE)
+      .limit(BATCH_SIZE);
 
-    if (batch.length === 0) break
+    if (batch.length === 0) break;
 
     for (const row of batch) {
       // Normalize empty-string ticketUrl to null and write it back alongside
@@ -53,11 +53,11 @@ async function main(): Promise<void> {
       // crawl.ts is preventing on new writes. Write both columns so they
       // agree after the backfill runs.
       const normalizedTicketUrl =
-        row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null
+        row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null;
       const ticketLinks = deriveTicketLinks(normalizedTicketUrl, {
         websiteUrl: row.venueWebsiteUrl,
         ticketVendor: row.venueTicketVendor,
-      })
+      });
 
       await db
         .update(events)
@@ -66,29 +66,29 @@ async function main(): Promise<void> {
           ticketLinks,
           updatedAt: new Date(),
         })
-        .where(eq(events.id, row.eventId))
-      updated += 1
+        .where(eq(events.id, row.eventId));
+      updated += 1;
     }
 
-    scanned += batch.length
-    const lastRow = batch[batch.length - 1]
-    if (lastRow === undefined) break
-    cursor = lastRow.eventId
+    scanned += batch.length;
+    const lastRow = batch[batch.length - 1];
+    if (lastRow === undefined) break;
+    cursor = lastRow.eventId;
     console.warn(
       `[backfill-ticket-links] scanned=${scanned} updated=${updated} cursor=${cursor}`,
-    )
+    );
 
-    if (batch.length < BATCH_SIZE) break
+    if (batch.length < BATCH_SIZE) break;
   }
 
   console.warn(
     `[backfill-ticket-links] done — scanned=${scanned} updated=${updated}`,
-  )
+  );
 }
 
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error('[backfill-ticket-links] failed:', err)
-    process.exit(1)
-  })
+    console.error('[backfill-ticket-links] failed:', err);
+    process.exit(1);
+  });

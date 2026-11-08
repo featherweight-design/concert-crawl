@@ -1,11 +1,11 @@
 // apps/web/src/app/(protected)/admin/settings/page.tsx
-import { requireAdminUser } from '@/lib/auth'
-import { AppearanceSection } from '@/components/admin/settings/AppearanceSection'
-import { OpsToolsSection } from '@/components/admin/settings/OpsToolsSection'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { requireAdminUser } from '@/lib/auth';
+import { AppearanceSection } from '@/components/admin/settings/AppearanceSection';
+import { OpsToolsSection } from '@/components/admin/settings/OpsToolsSection';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export default async function SettingsPage() {
-  await requireAdminUser()
+  await requireAdminUser();
 
   return (
     <div className="max-w-2xl">
@@ -17,5 +17,5 @@ export default async function SettingsPage() {
         <OpsToolsSection />
       </div>
     </div>
-  )
+  );
 }

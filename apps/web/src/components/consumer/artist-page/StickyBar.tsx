@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 
-import { BackChip } from '../back-chip/BackChip'
+import { BackChip } from '../back-chip/BackChip';
 
-import { FollowButton, type FollowButtonProps } from './FollowButton'
+import { FollowButton, type FollowButtonProps } from './FollowButton';
 
 interface StickyBarProps extends Omit<
   FollowButtonProps,
   'size' | 'tone' | 'full'
 > {
   /** True once the identity plate has scrolled past. */
-  visible: boolean
+  visible: boolean;
   /**
    * Whether the bar carries the page's one live follow. Decided by the page —
    * with no upcoming shows the follow lives in the empty-upcoming block, and
    * the bar must not grow a second one.
    */
-  showFollow: boolean
+  showFollow: boolean;
 }
 
 /**
@@ -30,8 +30,8 @@ export const StickyBar = ({
   showFollow,
   ...followProps
 }: StickyBarProps) => {
-  const { name } = followProps
-  if (!visible) return null
+  const { name } = followProps;
+  if (!visible) return null;
 
   return (
     <div
@@ -71,5 +71,5 @@ export const StickyBar = ({
       </span>
       {showFollow ? <FollowButton {...followProps} size="row" /> : null}
     </div>
-  )
-}
+  );
+};

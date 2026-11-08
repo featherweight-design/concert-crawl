@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // CCTip: the app-wide explainer tooltip, and the replacement for InfoTooltip.
 //
@@ -14,33 +14,33 @@
 // the description isn't announced twice. Escape closes and returns focus. No
 // native title= tooltips anywhere.
 
-import { useId, type CSSProperties, type ReactNode } from 'react'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
+import { useId, type CSSProperties, type ReactNode } from 'react';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import {
   CCOverlay,
   CCOverlayHost,
   useOverlayTrigger,
   type OverlayAlign,
   type OverlayPlacement,
-} from '@/components/ui/cc-overlay'
-import { CCTipBody } from './CCTipBody'
-import { TIP_CONTENT, type TipKey } from './definitions/copy'
-import type { TipContent } from './definitions/types'
+} from '@/components/ui/cc-overlay';
+import { CCTipBody } from './CCTipBody';
+import { TIP_CONTENT, type TipKey } from './definitions/copy';
+import type { TipContent } from './definitions/types';
 
 interface CCTipProps {
   // A registry key, or a record built from a call site's own copy file.
-  tip: TipKey | TipContent
+  tip: TipKey | TipContent;
   // Overrides the accessible name when the call site's visible affordance says
   // something shorter or different from the tip's header line.
-  triggerLabel?: string
-  placement?: OverlayPlacement
-  align?: OverlayAlign
-  width?: number
-  defaultOpen?: boolean
+  triggerLabel?: string;
+  placement?: OverlayPlacement;
+  align?: OverlayAlign;
+  width?: number;
+  defaultOpen?: boolean;
   // Visible trigger content. Omit for the default info disc.
-  children?: ReactNode
-  triggerClassName?: string
-  triggerStyle?: CSSProperties
+  children?: ReactNode;
+  triggerClassName?: string;
+  triggerStyle?: CSSProperties;
 }
 
 const InfoDisc = ({ open }: { open: boolean }) => (
@@ -65,10 +65,10 @@ const InfoDisc = ({ open }: { open: boolean }) => (
       />
     </svg>
   </span>
-)
+);
 
 const isTipKey = (value: TipKey | TipContent): value is TipKey =>
-  typeof value === 'string'
+  typeof value === 'string';
 
 export const CCTip = ({
   tip,
@@ -81,24 +81,24 @@ export const CCTip = ({
   triggerClassName,
   triggerStyle,
 }: CCTipProps) => {
-  const isMobile = useIsMobileViewport()
-  const trigger = useOverlayTrigger({ isMobile, defaultOpen })
-  const panelId = useId()
+  const isMobile = useIsMobileViewport();
+  const trigger = useOverlayTrigger({ isMobile, defaultOpen });
+  const panelId = useId();
 
-  const content: TipContent = isTipKey(tip) ? TIP_CONTENT[tip] : tip
-  const label = triggerLabel ?? content.label
+  const content: TipContent = isTipKey(tip) ? TIP_CONTENT[tip] : tip;
+  const label = triggerLabel ?? content.label;
   // A one-line tip is its own header, so the popover drops the header row. The
   // sheet always keeps it: it carries the only accessible close control.
-  const showPopoverHeader = content.variant !== 'text'
+  const showPopoverHeader = content.variant !== 'text';
   // Only the headerless popover is a pure description. Once a header renders,
   // the panel also holds the title (already the trigger's name) and the close
   // control, and pointing a description at that subtree makes a screen reader
   // read both back as part of the trigger.
   const describedBy =
-    trigger.open && !isMobile && !showPopoverHeader ? panelId : undefined
+    trigger.open && !isMobile && !showPopoverHeader ? panelId : undefined;
   const popoverWidth =
     width ??
-    (content.variant === 'text' || content.variant === 'titled' ? 272 : 320)
+    (content.variant === 'text' || content.variant === 'titled' ? 272 : 320);
 
   return (
     <span
@@ -159,5 +159,5 @@ export const CCTip = ({
           </CCOverlay>
         ))}
     </span>
-  )
-}
+  );
+};

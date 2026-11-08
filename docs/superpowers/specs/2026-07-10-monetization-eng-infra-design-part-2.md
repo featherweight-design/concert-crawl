@@ -100,7 +100,7 @@ export type DeclineCategory =
   | 'expired_or_incorrect_card'
   | 'issuer_declined'
   | 'fraud_block'
-  | 'network_timeout'
+  | 'network_timeout';
 ```
 
 | Category                    | Mapped from                                                                                                                                                |
@@ -137,7 +137,7 @@ const claimed = await db
       gt(founderWindow.closesAt, now),
     ),
   )
-  .returning({ seatsRemaining: founderWindow.seatsRemaining })
+  .returning({ seatsRemaining: founderWindow.seatsRemaining });
 ```
 
 The §3.3 gates run **before** this UPDATE, so window-not-open/closed cases are already rejected with their distinct error codes; an empty result here therefore means the seat race was lost (seats exhausted between gate check and decrement) ⇒ 410 `founder_seats_exhausted` (the #781 "Just missed it" surface). Non-empty ⇒ seat number = `seatsTotal - seatsRemaining` (e.g. 100 − 62 = seat #38), stamped into the Stripe subscription `metadata.founderSeatNumber` + the `founder_claimed` event. The claim happens **before** subscription creation; the seat is held by the `incomplete` subscription.
@@ -182,12 +182,12 @@ Out of scope for implementation here (execution-plan Phases 6–7 own the admin 
 
 ```ts
 export interface RenderedEmail {
-  subject: string
-  preheader: string
-  html: string
-  text: string
+  subject: string;
+  preheader: string;
+  html: string;
+  text: string;
 }
-export type TemplateRenderer<Vars> = (vars: Vars) => RenderedEmail
+export type TemplateRenderer<Vars> = (vars: Vars) => RenderedEmail;
 ```
 
 Plain TS string-template functions (table-based HTML, inline styles, single `<head>` media-query block, email-only palette constants in `apps/api/src/emails/palette.ts`) per #783 §5. No JSX email framework — 10 templates don't justify the dependency; revisit if the inventory triples. Copy strings live in the email modules themselves (server-side; the web `definitions/copy.ts` convention governs customer-facing **UI** strings — emails are API-side and version-controlled here).

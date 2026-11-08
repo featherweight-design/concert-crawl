@@ -1,11 +1,11 @@
-import type { EventStatus } from '@concert-crawl/types'
+import type { EventStatus } from '@concert-crawl/types';
 
 /** The price's own state, which is a different axis from the lifecycle. */
-export type RowPriceState = 'live' | 'soldout' | 'presale'
+export type RowPriceState = 'live' | 'soldout' | 'presale';
 
 /** What the price slot renders. Exactly one, always. */
 export type RowStatus =
-  'cancelled' | 'postponed' | 'soldout' | 'presale' | 'price'
+  'cancelled' | 'postponed' | 'soldout' | 'presale' | 'price';
 
 /**
  * The price slot's precedence: `cancelled > postponed > soldout > presale >
@@ -18,11 +18,11 @@ export function resolveRowStatus(
   lifecycle: EventStatus,
   priceState: RowPriceState,
 ): RowStatus {
-  if (lifecycle === 'cancelled') return 'cancelled'
-  if (lifecycle === 'postponed') return 'postponed'
-  if (priceState === 'soldout') return 'soldout'
-  if (priceState === 'presale') return 'presale'
-  return 'price'
+  if (lifecycle === 'cancelled') return 'cancelled';
+  if (lifecycle === 'postponed') return 'postponed';
+  if (priceState === 'soldout') return 'soldout';
+  if (priceState === 'presale') return 'presale';
+  return 'price';
 }
 
 /**
@@ -30,5 +30,5 @@ export function resolveRowStatus(
  * the dimmed artwork, but the date and time it names are still going to happen.
  */
 export function isStruck(status: RowStatus): boolean {
-  return status === 'cancelled' || status === 'postponed'
+  return status === 'cancelled' || status === 'postponed';
 }

@@ -1,6 +1,6 @@
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 export function SoldOutCta() {
   return (
@@ -29,5 +29,5 @@ export function SoldOutCta() {
     >
       {copy.soldOutCta.label}
     </button>
-  )
+  );
 }

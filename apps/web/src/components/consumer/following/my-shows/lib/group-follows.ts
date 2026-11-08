@@ -8,24 +8,24 @@
 // Follow order (`followedAt`) is deliberately not used on either group. It is
 // the order the rows arrived in, which after a Spotify import is arbitrary.
 
-import type { FollowedArtist } from '@concert-crawl/types'
+import type { FollowedArtist } from '@concert-crawl/types';
 
 export interface FollowGroups {
   /** Has an upcoming Denver date. Soonest first. */
-  dated: FollowedArtist[]
+  dated: FollowedArtist[];
   /** Nothing announced. Alphabetical by display name. */
-  undated: FollowedArtist[]
+  undated: FollowedArtist[];
 }
 
 export const groupFollows = (follows: FollowedArtist[]): FollowGroups => {
-  const dated: FollowedArtist[] = []
-  const undated: FollowedArtist[] = []
+  const dated: FollowedArtist[] = [];
+  const undated: FollowedArtist[] = [];
 
   for (const follow of follows) {
     if (follow.nextShow === null) {
-      undated.push(follow)
+      undated.push(follow);
     } else {
-      dated.push(follow)
+      dated.push(follow);
     }
   }
 
@@ -34,20 +34,20 @@ export const groupFollows = (follows: FollowedArtist[]): FollowGroups => {
   dated.sort((first, second) => {
     const byDate = (first.nextShow?.iso ?? '').localeCompare(
       second.nextShow?.iso ?? '',
-    )
-    return byDate === 0 ? compareNames(first, second) : byDate
-  })
+    );
+    return byDate === 0 ? compareNames(first, second) : byDate;
+  });
 
-  undated.sort(compareNames)
+  undated.sort(compareNames);
 
-  return { dated, undated }
-}
+  return { dated, undated };
+};
 
 // Locale-aware so "Ø" and "É" sort where a reader expects rather than after Z,
 // and case-insensitive so "the xx" doesn't land in a lowercase ghetto.
 const compareNames = (first: FollowedArtist, second: FollowedArtist): number =>
-  first.name.localeCompare(second.name, undefined, { sensitivity: 'base' })
+  first.name.localeCompare(second.name, undefined, { sensitivity: 'base' });
 
 /** How many follows came in from Spotify. Zero means no footnote is owed. */
 export const spotifyFollowCount = (follows: FollowedArtist[]): number =>
-  follows.filter((follow) => follow.source !== 'manual').length
+  follows.filter((follow) => follow.source !== 'manual').length;

@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { REPORT_TOKENS } from './reportTokens'
-import { REPORTING_COPY } from './definitions/copy'
+import { REPORT_TOKENS } from './reportTokens';
+import { REPORTING_COPY } from './definitions/copy';
 
-const copy = REPORTING_COPY.reportTypeMark
+const copy = REPORTING_COPY.reportTypeMark;
 
 // ── Glyphs ────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ const CancelledGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const PostponedGlyph = () => (
   <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -36,7 +36,7 @@ const PostponedGlyph = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const SoldOutGlyph = () => (
   <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -55,7 +55,7 @@ const SoldOutGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const AvailableGlyph = () => (
   <svg width="9" height="9" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -73,20 +73,20 @@ const AvailableGlyph = () => (
       strokeDasharray="1.2 1.6"
     />
   </svg>
-)
+);
 
 const GLYPHS: Record<ReportTypeMarkProps['kind'], () => React.JSX.Element> = {
   cancelled: CancelledGlyph,
   postponed: PostponedGlyph,
   'sold-out': SoldOutGlyph,
   available: AvailableGlyph,
-}
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface ReportTypeMarkProps {
-  kind: 'cancelled' | 'postponed' | 'sold-out' | 'available'
-  pending?: boolean
+  kind: 'cancelled' | 'postponed' | 'sold-out' | 'available';
+  pending?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -95,8 +95,8 @@ export const ReportTypeMark = ({
   kind,
   pending = false,
 }: ReportTypeMarkProps) => {
-  const token = REPORT_TOKENS[kind]
-  const Glyph = GLYPHS[kind]
+  const token = REPORT_TOKENS[kind];
+  const Glyph = GLYPHS[kind];
 
   return (
     <span
@@ -126,5 +126,5 @@ export const ReportTypeMark = ({
         </span>
       )}
     </span>
-  )
-}
+  );
+};

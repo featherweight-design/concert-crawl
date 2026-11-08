@@ -90,7 +90,7 @@ export const sourceCategoryEnum = pgEnum('source_category', [
   'boxoffice',
   'standard',
   'resale',
-])
+]);
 ```
 
 In the `priceSubmissions` `pgTable` definition, after the `howFound` column, add:
@@ -117,10 +117,10 @@ In `packages/db/src/schema/events.ts`, define the `TicketLink` type and add the 
 
 ```typescript
 export type TicketLink = {
-  kind: 'boxoffice' | 'primary' | 'resale'
-  vendor: string | null
-  url: string
-}
+  kind: 'boxoffice' | 'primary' | 'resale';
+  vendor: string | null;
+  url: string;
+};
 ```
 
 In the `events` `pgTable` definition, immediately after the `ticketUrl: text('ticket_url'),` line, add:
@@ -354,14 +354,14 @@ Open `packages/db/src/schema.test.ts` to confirm the existing setup uses `db` fr
 Add a new `describe('migration 0040 — source_category + ticket_links + corroboration', ...)` block. Example test cases:
 
 ```typescript
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { db } from './client.js'
-import { events, priceSubmissions, venues } from './schema/index.js'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { db } from './client.js';
+import { events, priceSubmissions, venues } from './schema/index.js';
 
 describe('migration 0040 — source_category + ticket_links + corroboration', () => {
-  let venueId: string
-  let eventId: string
+  let venueId: string;
+  let eventId: string;
 
   beforeAll(async () => {
     const [venue] = await db
@@ -373,8 +373,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         city: 'Denver',
         timezone: 'America/Denver',
       })
-      .returning({ id: venues.id })
-    venueId = venue.id
+      .returning({ id: venues.id });
+    venueId = venue.id;
 
     const [event] = await db
       .insert(events)
@@ -385,14 +385,14 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         date: '2030-01-01',
         canonicalArtist: 'test artist',
       })
-      .returning({ id: events.id })
-    eventId = event.id
-  })
+      .returning({ id: events.id });
+    eventId = event.id;
+  });
 
   afterAll(async () => {
-    await db.delete(events).where(sql`id = ${eventId}`)
-    await db.delete(venues).where(sql`id = ${venueId}`)
-  })
+    await db.delete(events).where(sql`id = ${eventId}`);
+    await db.delete(venues).where(sql`id = ${venueId}`);
+  });
 
   it('source_category column accepts boxoffice/standard/resale and rejects others', async () => {
     const [inserted] = await db
@@ -406,18 +406,18 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'bought_myself',
         sourceCategory: 'boxoffice',
       })
-      .returning()
-    expect(inserted.sourceCategory).toBe('boxoffice')
+      .returning();
+    expect(inserted.sourceCategory).toBe('boxoffice');
 
     await expect(
       db.execute(
         sql`INSERT INTO price_submissions (event_id, user_id, price_min, tier, vendor, how_found, source_category)
             VALUES (${eventId}, 'user_test_0040_b', 25, 'GA', 'Ticketmaster', 'bought_myself', 'invalid_value')`,
       ),
-    ).rejects.toThrow()
+    ).rejects.toThrow();
 
-    await db.delete(priceSubmissions).where(sql`user_id = 'user_test_0040_a'`)
-  })
+    await db.delete(priceSubmissions).where(sql`user_id = 'user_test_0040_a'`);
+  });
 
   it('corroboration_count defaults to 1 on insert', async () => {
     const [inserted] = await db
@@ -431,13 +431,13 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'bought_myself',
         sourceCategory: 'standard',
       })
-      .returning()
-    expect(inserted.corroborationCount).toBe(1)
+      .returning();
+    expect(inserted.corroborationCount).toBe(1);
 
     await db
       .delete(priceSubmissions)
-      .where(sql`user_id = 'user_test_0040_default'`)
-  })
+      .where(sql`user_id = 'user_test_0040_default'`);
+  });
 
   it('partial unique index pins corroborated boxoffice to one row per (event, tier)', async () => {
     await db.insert(priceSubmissions).values({
@@ -449,7 +449,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'corroborated',
-    })
+    });
 
     await expect(
       db.insert(priceSubmissions).values({
@@ -462,7 +462,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'boxoffice',
         status: 'corroborated',
       }),
-    ).rejects.toThrow(/price_submissions_event_tier_boxoffice_uniq/)
+    ).rejects.toThrow(/price_submissions_event_tier_boxoffice_uniq/);
 
     // Different tier should not collide
     await db.insert(priceSubmissions).values({
@@ -474,7 +474,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'corroborated',
-    })
+    });
 
     // Different source_category should not collide
     await db.insert(priceSubmissions).values({
@@ -486,10 +486,10 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'bought_myself',
       sourceCategory: 'standard',
       status: 'corroborated',
-    })
+    });
 
-    await db.delete(priceSubmissions).where(sql`event_id = ${eventId}`)
-  })
+    await db.delete(priceSubmissions).where(sql`event_id = ${eventId}`);
+  });
 
   it('ticket_links column accepts the TicketLink shape', async () => {
     const links = [
@@ -499,20 +499,20 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         vendor: 'ticketmaster',
         url: 'https://example.com/tm',
       },
-    ]
+    ];
     await db
       .update(events)
       .set({ ticketLinks: links })
-      .where(sql`id = ${eventId}`)
+      .where(sql`id = ${eventId}`);
 
     const [row] = await db
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(sql`id = ${eventId}`)
+      .where(sql`id = ${eventId}`);
 
-    expect(row.ticketLinks).toEqual(links)
-  })
-})
+    expect(row.ticketLinks).toEqual(links);
+  });
+});
 ```
 
 - [ ] **Step 3: Run the test**
@@ -556,14 +556,14 @@ In `packages/types/src/index.ts`, near the existing `PriceSource` / `Vendor` / `
 // PriceSource (which identifies the upstream data origin for events.priceSource).
 // Captured directly from the submit form; legacy rows backfilled from
 // (vendor, how_found) heuristics in migration 0040.
-export type SourceCategory = 'boxoffice' | 'standard' | 'resale'
+export type SourceCategory = 'boxoffice' | 'standard' | 'resale';
 
 // Typed entry in events.ticketLinks (issue #641). Populated by the crawler
 // (PR 2) and consumed by the Consumer UI (PR 4) for source-category disclosure.
 export interface TicketLink {
-  kind: 'boxoffice' | 'primary' | 'resale'
-  vendor: string | null
-  url: string
+  kind: 'boxoffice' | 'primary' | 'resale';
+  vendor: string | null;
+  url: string;
 }
 ```
 
@@ -573,20 +573,20 @@ Find the `PriceSubmission` interface (around line 243) and add `sourceCategory` 
 
 ```typescript
 export interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  disputedSubmissionId: string | null
-  status: 'pending' | 'corroborated' | 'disputed' | 'stale'
-  corroborationCount: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  disputedSubmissionId: string | null;
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale';
+  corroborationCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
 
@@ -660,8 +660,8 @@ In `apps/api/src/routes/price-submissions.integration.test.ts`, add inside the e
 
 ```typescript
 it('persists sourceCategory and returns it on GET', async () => {
-  const eventId = await seedEvent()
-  const userId = 'user_source_category_test'
+  const eventId = await seedEvent();
+  const userId = 'user_source_category_test';
 
   const postResponse = await client.post(
     `/v1/events/${eventId}/price-submissions`,
@@ -675,21 +675,21 @@ it('persists sourceCategory and returns it on GET', async () => {
         sourceCategory: 'boxoffice',
       },
     },
-  )
-  expect(postResponse.status).toBe(201)
-  const postBody = await postResponse.json()
-  expect(postBody.success).toBe(true)
-  expect(postBody.data.sourceCategory).toBe('boxoffice')
-  expect(postBody.data.corroborationCount).toBe(1)
+  );
+  expect(postResponse.status).toBe(201);
+  const postBody = await postResponse.json();
+  expect(postBody.success).toBe(true);
+  expect(postBody.data.sourceCategory).toBe('boxoffice');
+  expect(postBody.data.corroborationCount).toBe(1);
 
   const getResponse = await client.get(
     `/v1/events/${eventId}/price-submissions`,
-  )
-  const getBody = await getResponse.json()
-  const row = getBody.data.submissions.find((sub) => sub.userId === userId)
-  expect(row.sourceCategory).toBe('boxoffice')
-  expect(row.corroborationCount).toBe(1)
-})
+  );
+  const getBody = await getResponse.json();
+  const row = getBody.data.submissions.find((sub) => sub.userId === userId);
+  expect(row.sourceCategory).toBe('boxoffice');
+  expect(row.corroborationCount).toBe(1);
+});
 ```
 
 (Adapt to whatever test client / seed helpers the existing tests use — read them first.)
@@ -728,7 +728,7 @@ const submissionBodySchema = z
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
     path: ['priceMax'],
-  })
+  });
 ```
 
 - [ ] **Step 4: Add `sourceCategory` to GET select list**
@@ -755,7 +755,7 @@ const [created] = await db
     note: body.note ?? null,
     disputedSubmissionId: body.disputedSubmissionId ?? null,
   })
-  .returning()
+  .returning();
 ```
 
 (The DB default also writes `1`, but the explicit value is defensive and easier to spot in code review.)
@@ -822,12 +822,12 @@ In `apps/api/src/routes/price-submission-confirms.integration.test.ts`, **update
 
 ```typescript
 it('promotes a pending submission to corroborated after one non-submitter confirm', async () => {
-  const eventId = await seedEvent({ farFutureDate: true }) // not imminent
+  const eventId = await seedEvent({ farFutureDate: true }); // not imminent
   const submissionId = await seedPendingSubmission({
     eventId,
     userId: 'submitter_user',
     sourceCategory: 'boxoffice',
-  })
+  });
 
   const response = await client.post(
     `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`,
@@ -835,13 +835,13 @@ it('promotes a pending submission to corroborated after one non-submitter confir
       headers: authHeader('confirmer_user_1'),
       body: { method: 'box-office' },
     },
-  )
+  );
 
-  expect(response.status).toBe(200)
-  const body = await response.json()
-  expect(body.data.promoted).toBe(true)
-  expect(body.data.confirmsCount).toBe(1)
-})
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.data.promoted).toBe(true);
+  expect(body.data.confirmsCount).toBe(1);
+});
 ```
 
 Then update other existing tests that currently loop `for (let idx = 0; idx < SP_POLICY.confirmsRequired; idx++)` to expect promotion after the **first** non-submitter confirm (not after `confirmsRequired` confirms).
@@ -859,7 +859,7 @@ Expected: FAIL — promotion currently happens after 2 confirms, not 1.
 In `apps/api/src/routes/price-submission-confirms.ts`, change line ~111:
 
 ```typescript
-const promoted = confirmsCount >= confirmsRequired
+const promoted = confirmsCount >= confirmsRequired;
 ```
 
 to:
@@ -868,7 +868,7 @@ to:
 // confirmsCount counts non-submitter confirms; the submitter counts as
 // observation #1, so the effective observation count is confirmsCount + 1.
 // Promotion happens when total observations meets confirmsRequired.
-const promoted = confirmsCount + 1 >= confirmsRequired
+const promoted = confirmsCount + 1 >= confirmsRequired;
 ```
 
 Also update the corroborationCount update site (around line 116) to write `confirmsCount + 1` instead of `confirmsCount`:

@@ -1,7 +1,7 @@
-import { Eyebrow, StepHeading, Lede } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { Eyebrow, StepHeading, Lede } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.whatItDoesntYet
+const copy = ONBOARDING_COPY.whatItDoesntYet;
 
 export function WhatItDoesntYet() {
   return (
@@ -76,5 +76,5 @@ export function WhatItDoesntYet() {
         ))}
       </ul>
     </div>
-  )
+  );
 }

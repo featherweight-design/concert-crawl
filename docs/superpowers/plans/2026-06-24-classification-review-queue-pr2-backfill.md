@@ -18,9 +18,11 @@ PR 2 is opened after PR 1's column has deployed to prod. Same worktree conventio
 ### Task 2.1: Create worktree + branch + env files
 
 **Files:**
+
 - Create: `.worktrees/feat-classification-review-backfill/`
 
 **Interfaces:**
+
 - Produces: clean worktree on branch `feat/classification-review-backfill`.
 
 - [ ] **Step 1: Create the worktree**
@@ -51,10 +53,12 @@ All remaining tasks for PR 2 run inside this worktree.
 ### Task 2.2: Write backfill helpers + tests
 
 **Files:**
+
 - Create: `scripts/2026-06-24-isconcert-review-needed-backfill-helpers.ts`
 - Create: `scripts/2026-06-24-isconcert-review-needed-backfill.test.ts`
 
 **Interfaces:**
+
 - Produces: `buildBatches<T>(items: T[], batchSize: number): T[][]`, `formatCsvRow(result: ClassificationResult): string`, and types `EventForClassification`, `ClassificationResult`, `BatchClassification`. Imported by `2026-06-24-isconcert-review-needed-backfill.ts` (task 2.3) and the test file (this task).
 
 - [ ] **Step 1: Write failing helper tests**
@@ -62,37 +66,40 @@ All remaining tasks for PR 2 run inside this worktree.
 Create `scripts/2026-06-24-isconcert-review-needed-backfill.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildBatches,
   formatCsvRow,
   type EventForClassification,
   type ClassificationResult,
-} from './2026-06-24-isconcert-review-needed-backfill-helpers.js'
+} from './2026-06-24-isconcert-review-needed-backfill-helpers.js';
 
 describe('isconcert-review-needed-backfill — buildBatches', () => {
   it('splits events into batches of the configured size', () => {
-    const events: EventForClassification[] = Array.from({ length: 53 }, (_, idx) => ({
-      id: `evt-${idx}`,
-      title: `Show ${idx}`,
-      artist: `Artist ${idx}`,
-      description: null,
-      date: '2026-08-01',
-      venueName: 'Test Venue',
-      currentHidden: true,
-      currentReviewNeeded: false,
-    }))
-    const batches = buildBatches(events, 25)
-    expect(batches).toHaveLength(3)
-    expect(batches[0]).toHaveLength(25)
-    expect(batches[1]).toHaveLength(25)
-    expect(batches[2]).toHaveLength(3)
-  })
+    const events: EventForClassification[] = Array.from(
+      { length: 53 },
+      (_, idx) => ({
+        id: `evt-${idx}`,
+        title: `Show ${idx}`,
+        artist: `Artist ${idx}`,
+        description: null,
+        date: '2026-08-01',
+        venueName: 'Test Venue',
+        currentHidden: true,
+        currentReviewNeeded: false,
+      }),
+    );
+    const batches = buildBatches(events, 25);
+    expect(batches).toHaveLength(3);
+    expect(batches[0]).toHaveLength(25);
+    expect(batches[1]).toHaveLength(25);
+    expect(batches[2]).toHaveLength(3);
+  });
 
   it('returns empty array for empty input', () => {
-    expect(buildBatches([], 25)).toEqual([])
-  })
-})
+    expect(buildBatches([], 25)).toEqual([]);
+  });
+});
 
 describe('isconcert-review-needed-backfill — formatCsvRow', () => {
   const baseResult: ClassificationResult = {
@@ -105,23 +112,23 @@ describe('isconcert-review-needed-backfill — formatCsvRow', () => {
     llmIsConcert: true,
     llmReviewNeeded: true,
     action: 'disagrees-with-prior',
-  }
+  };
 
   it('quotes fields containing commas', () => {
-    const row = formatCsvRow({ ...baseResult, title: 'Show, with, commas' })
-    expect(row).toContain('"Show, with, commas"')
-  })
+    const row = formatCsvRow({ ...baseResult, title: 'Show, with, commas' });
+    expect(row).toContain('"Show, with, commas"');
+  });
 
   it('escapes embedded double quotes by doubling them (RFC 4180)', () => {
-    const row = formatCsvRow({ ...baseResult, title: 'Show "with" quotes' })
-    expect(row).toContain('"Show ""with"" quotes"')
-  })
+    const row = formatCsvRow({ ...baseResult, title: 'Show "with" quotes' });
+    expect(row).toContain('"Show ""with"" quotes"');
+  });
 
   it('includes the action label in the trailing column', () => {
-    const row = formatCsvRow({ ...baseResult, action: 'flag-for-review' })
-    expect(row.trimEnd().endsWith(',flag-for-review')).toBe(true)
-  })
-})
+    const row = formatCsvRow({ ...baseResult, action: 'flag-for-review' });
+    expect(row.trimEnd().endsWith(',flag-for-review')).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the tests, verify they fail**
@@ -144,65 +151,66 @@ Create `scripts/2026-06-24-isconcert-review-needed-backfill-helpers.ts`:
  * scripts/2026-06-19-non-concert-backfill-helpers.ts.
  */
 
-export type BackfillAction = 'flag-for-review' | 'unflag' | 'disagrees-with-prior'
+export type BackfillAction =
+  'flag-for-review' | 'unflag' | 'disagrees-with-prior';
 
 export interface EventForClassification {
-  id: string
-  title: string
-  artist: string
-  description: string | null
-  date: string
-  venueName: string
-  currentHidden: boolean
-  currentReviewNeeded: boolean
+  id: string;
+  title: string;
+  artist: string;
+  description: string | null;
+  date: string;
+  venueName: string;
+  currentHidden: boolean;
+  currentReviewNeeded: boolean;
 }
 
 export interface ClassificationResult {
-  eventId: string
-  title: string
-  artist: string
-  date: string
-  venueName: string
-  currentHiddenFromConsumer: boolean
-  llmIsConcert: boolean
-  llmReviewNeeded: boolean
-  action: BackfillAction
+  eventId: string;
+  title: string;
+  artist: string;
+  date: string;
+  venueName: string;
+  currentHiddenFromConsumer: boolean;
+  llmIsConcert: boolean;
+  llmReviewNeeded: boolean;
+  action: BackfillAction;
 }
 
 export interface BatchClassification {
-  eventId: string
-  isConcert: boolean
-  reviewNeeded: boolean
+  eventId: string;
+  isConcert: boolean;
+  reviewNeeded: boolean;
 }
 
 export function buildBatches<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = []
+  const batches: T[][] = [];
   for (let idx = 0; idx < items.length; idx += batchSize) {
-    batches.push(items.slice(idx, idx + batchSize))
+    batches.push(items.slice(idx, idx + batchSize));
   }
-  return batches
+  return batches;
 }
 
 export function classifyAction(input: {
-  currentHidden: boolean
-  llmIsConcert: boolean
-  llmReviewNeeded: boolean
+  currentHidden: boolean;
+  llmIsConcert: boolean;
+  llmReviewNeeded: boolean;
 }): BackfillAction {
   // disagrees-with-prior takes precedence over flag/unflag: the row is
   // currently hidden, but the LLM now thinks it's a concert. Surface this
   // for the human reviewer to consider applying Mark-as-concert post-
   // commit. The script itself NEVER auto-unhides.
-  if (input.currentHidden && input.llmIsConcert) return 'disagrees-with-prior'
-  return input.llmReviewNeeded ? 'flag-for-review' : 'unflag'
+  if (input.currentHidden && input.llmIsConcert) return 'disagrees-with-prior';
+  return input.llmReviewNeeded ? 'flag-for-review' : 'unflag';
 }
 
 export function formatCsvRow(result: ClassificationResult): string {
   const escape = (val: string): string => {
     if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`
+      return `"${val.replace(/"/g, '""')}"`;
     }
-    return val
-  }
+    return val;
+  };
   return (
     [
       result.eventId,
@@ -215,7 +223,7 @@ export function formatCsvRow(result: ClassificationResult): string {
       String(result.llmReviewNeeded),
       result.action,
     ].join(',') + '\n'
-  )
+  );
 }
 ```
 
@@ -240,9 +248,11 @@ git commit -m "feat(scripts): isconcert-review-needed backfill helpers"
 ### Task 2.3: Write the backfill script main module
 
 **Files:**
+
 - Create: `scripts/2026-06-24-isconcert-review-needed-backfill.ts`
 
 **Interfaces:**
+
 - Consumes: helpers from task 2.2.
 - Produces: `runBackfill({ commit: boolean, outputPath?: string }): Promise<BackfillSummary>` where `BackfillSummary = { totalEvents: number, flaggedCount: number, unflaggedCount: number, disagreementCount: number, committed: boolean, raceSkipped: string[] }`. CLI entry point at bottom of file.
 
@@ -255,18 +265,19 @@ Append to `scripts/2026-06-24-isconcert-review-needed-backfill.test.ts`:
 // parsing without making real API calls. Pattern mirrors
 // scripts/2026-06-19-non-concert-backfill.test.ts.
 
-const mockCreate = vi.fn()
+const mockCreate = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(
     class {
-      messages = { create: mockCreate }
+      messages = { create: mockCreate };
     },
   ),
-}))
+}));
 
-const { classifyBatch } = await import('./2026-06-24-isconcert-review-needed-backfill.js')
+const { classifyBatch } =
+  await import('./2026-06-24-isconcert-review-needed-backfill.js');
 
-const Anthropic = (await import('@anthropic-ai/sdk')).default
+const Anthropic = (await import('@anthropic-ai/sdk')).default;
 
 describe('isconcert-review-needed-backfill — classifyBatch', () => {
   it('parses isConcert + reviewNeeded out of the tool_use response', async () => {
@@ -285,8 +296,8 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
         },
       ],
       usage: { input_tokens: 100, output_tokens: 30 },
-    })
-    const client = new Anthropic()
+    });
+    const client = new Anthropic();
     const out = await classifyBatch(client, [
       {
         id: 'evt-1',
@@ -308,19 +319,19 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
         currentHidden: true,
         currentReviewNeeded: false,
       },
-    ])
+    ]);
     expect(out).toEqual([
       { eventId: 'evt-1', isConcert: true, reviewNeeded: true },
       { eventId: 'evt-2', isConcert: false, reviewNeeded: false },
-    ])
-  })
+    ]);
+  });
 
   it('throws when the LLM returns no classify_events tool_use block', async () => {
     mockCreate.mockResolvedValue({
       content: [{ type: 'text', text: 'no tool call' }],
       usage: { input_tokens: 10, output_tokens: 5 },
-    })
-    const client = new Anthropic()
+    });
+    const client = new Anthropic();
     await expect(
       classifyBatch(client, [
         {
@@ -334,8 +345,8 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
           currentReviewNeeded: false,
         },
       ]),
-    ).rejects.toThrow(/classify_events/)
-  })
+    ).rejects.toThrow(/classify_events/);
+  });
 
   it('rejects malformed classification entries', async () => {
     mockCreate.mockResolvedValue({
@@ -350,8 +361,8 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
         },
       ],
       usage: { input_tokens: 10, output_tokens: 5 },
-    })
-    const client = new Anthropic()
+    });
+    const client = new Anthropic();
     await expect(
       classifyBatch(client, [
         {
@@ -365,9 +376,9 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
           currentReviewNeeded: false,
         },
       ]),
-    ).rejects.toThrow(/wrong types|Malformed/)
-  })
-})
+    ).rejects.toThrow(/wrong types|Malformed/);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test, verify it fails**
@@ -411,13 +422,13 @@ Create `scripts/2026-06-24-isconcert-review-needed-backfill.ts`:
  * should be stable).
  */
 
-import { writeFileSync } from 'node:fs'
-import path from 'node:path'
-import { pathToFileURL } from 'node:url'
-import Anthropic from '@anthropic-ai/sdk'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { IS_CONCERT_RULES } from '../packages/crawler-core/src/lib/extractors/llm.js'
-import { db, events, venues } from '@concert-crawl/db'
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import Anthropic from '@anthropic-ai/sdk';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { IS_CONCERT_RULES } from '../packages/crawler-core/src/lib/extractors/llm.js';
+import { db, events, venues } from '@concert-crawl/db';
 import {
   buildBatches,
   classifyAction,
@@ -425,24 +436,24 @@ import {
   type BatchClassification,
   type ClassificationResult,
   type EventForClassification,
-} from './2026-06-24-isconcert-review-needed-backfill-helpers.js'
+} from './2026-06-24-isconcert-review-needed-backfill-helpers.js';
 
-const MODEL = 'claude-haiku-4-5-20251001'
-const BATCH_SIZE = 25
-const CLASSIFY_TOOL_NAME = 'classify_events'
+const MODEL = 'claude-haiku-4-5-20251001';
+const BATCH_SIZE = 25;
+const CLASSIFY_TOOL_NAME = 'classify_events';
 
 export interface BackfillSummary {
-  totalEvents: number
-  flaggedCount: number
-  unflaggedCount: number
-  disagreementCount: number
-  committed: boolean
-  raceSkipped: string[]
+  totalEvents: number;
+  flaggedCount: number;
+  unflaggedCount: number;
+  disagreementCount: number;
+  committed: boolean;
+  raceSkipped: string[];
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
-  outputPath?: string
+  commit: boolean;
+  outputPath?: string;
 }): Promise<BackfillSummary> {
   // Denver-tz "today" mirrors the admin events route + crawl.ts so the
   // backfill window doesn't shift around UTC midnight relative to what
@@ -450,9 +461,9 @@ export async function runBackfill(opts: {
   // contests.migration.integration.test.ts:21-49) — not { rows: [...] }.
   const todayRows = await db.execute<{ today: string }>(
     sql`SELECT to_char((NOW() AT TIME ZONE 'America/Denver')::date, 'YYYY-MM-DD') AS today`,
-  )
-  const today = todayRows[0]?.today
-  if (!today) throw new Error('Could not determine Denver-tz today')
+  );
+  const today = todayRows[0]?.today;
+  if (!today) throw new Error('Could not determine Denver-tz today');
 
   const rows = await db
     .select({
@@ -473,7 +484,7 @@ export async function runBackfill(opts: {
         inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
         gte(events.date, today),
       ),
-    )
+    );
 
   const inputs: EventForClassification[] = rows.map((row) => ({
     id: row.id,
@@ -484,27 +495,27 @@ export async function runBackfill(opts: {
     venueName: row.venueName ?? '(no venue)',
     currentHidden: row.currentHidden,
     currentReviewNeeded: row.currentReviewNeeded,
-  }))
+  }));
 
-  console.log(`Loaded ${inputs.length} hidden events for classification`)
-  const batches = buildBatches(inputs, BATCH_SIZE)
-  console.log(`Split into ${batches.length} batches of ${BATCH_SIZE}`)
+  console.log(`Loaded ${inputs.length} hidden events for classification`);
+  const batches = buildBatches(inputs, BATCH_SIZE);
+  console.log(`Split into ${batches.length} batches of ${BATCH_SIZE}`);
 
-  const results: ClassificationResult[] = []
-  const client = new Anthropic()
+  const results: ClassificationResult[] = [];
+  const client = new Anthropic();
 
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-    const batch = batches[batchIdx]
-    if (!batch) continue
-    console.log(`Classifying batch ${batchIdx + 1}/${batches.length}...`)
-    const classifications = await classifyBatch(client, batch)
+    const batch = batches[batchIdx];
+    if (!batch) continue;
+    console.log(`Classifying batch ${batchIdx + 1}/${batches.length}...`);
+    const classifications = await classifyBatch(client, batch);
     for (const evt of batch) {
-      const result = classifications.find((cls) => cls.eventId === evt.id)
+      const result = classifications.find((cls) => cls.eventId === evt.id);
       if (!result) {
         console.error(
           `MISSING classification for event ${evt.id} (${evt.title}); aborting before any DB write`,
-        )
-        throw new Error(`Classification missing for event ${evt.id}`)
+        );
+        throw new Error(`Classification missing for event ${evt.id}`);
       }
       results.push({
         eventId: evt.id,
@@ -520,43 +531,48 @@ export async function runBackfill(opts: {
           llmIsConcert: result.isConcert,
           llmReviewNeeded: result.reviewNeeded,
         }),
-      })
+      });
     }
   }
 
-  const flaggedCount = results.filter((row) => row.action === 'flag-for-review').length
-  const unflaggedCount = results.filter((row) => row.action === 'unflag').length
+  const flaggedCount = results.filter(
+    (row) => row.action === 'flag-for-review',
+  ).length;
+  const unflaggedCount = results.filter(
+    (row) => row.action === 'unflag',
+  ).length;
   const disagreementCount = results.filter(
     (row) => row.action === 'disagrees-with-prior',
-  ).length
+  ).length;
   console.log(
     `Classification done. flag-for-review=${flaggedCount}, disagrees-with-prior=${disagreementCount}, unflag=${unflaggedCount}`,
-  )
+  );
 
   // Sort: flag-for-review + disagrees-with-prior first, then unflag last.
   // Within each group, alphabetical by title for human scannability.
   const actionWeight = (action: ClassificationResult['action']): number => {
-    if (action === 'flag-for-review') return 0
-    if (action === 'disagrees-with-prior') return 0
-    return 1
-  }
+    if (action === 'flag-for-review') return 0;
+    if (action === 'disagrees-with-prior') return 0;
+    return 1;
+  };
   results.sort((firstRow, secondRow) => {
-    const weightDelta = actionWeight(firstRow.action) - actionWeight(secondRow.action)
-    if (weightDelta !== 0) return weightDelta
-    return firstRow.title.localeCompare(secondRow.title)
-  })
+    const weightDelta =
+      actionWeight(firstRow.action) - actionWeight(secondRow.action);
+    if (weightDelta !== 0) return weightDelta;
+    return firstRow.title.localeCompare(secondRow.title);
+  });
 
   const header =
-    'event_id,title,artist,date,venue_name,current_hidden,llm_is_concert,llm_review_needed,action\n'
-  const csv = header + results.map(formatCsvRow).join('')
+    'event_id,title,artist,date,venue_name,current_hidden,llm_is_concert,llm_review_needed,action\n';
+  const csv = header + results.map(formatCsvRow).join('');
 
   if (!opts.commit) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath =
       opts.outputPath ??
-      path.resolve(`./dry-run-isconcert-review-needed-${timestamp}.csv`)
-    writeFileSync(outPath, csv, 'utf-8')
-    console.log(`Dry-run CSV written to ${outPath}`)
+      path.resolve(`./dry-run-isconcert-review-needed-${timestamp}.csv`);
+    writeFileSync(outPath, csv, 'utf-8');
+    console.log(`Dry-run CSV written to ${outPath}`);
     return {
       totalEvents: results.length,
       flaggedCount,
@@ -564,7 +580,7 @@ export async function runBackfill(opts: {
       disagreementCount,
       committed: false,
       raceSkipped: [],
-    }
+    };
   }
 
   // --commit path: write is_concert_review_needed only. Never touches
@@ -576,19 +592,19 @@ export async function runBackfill(opts: {
   // from the LLM's view. "unflag" rows already at false are no-ops
   // (filtered out here). Rows whose LLM verdict matches the stored flag
   // are skipped to keep the transaction small.
-  const inputById = new Map(inputs.map((evt) => [evt.id, evt] as const))
+  const inputById = new Map(inputs.map((evt) => [evt.id, evt] as const));
   const writes = results.filter((row) => {
-    const inputRow = inputById.get(row.eventId)
-    if (!inputRow) return false
-    return inputRow.currentReviewNeeded !== row.llmReviewNeeded
-  })
+    const inputRow = inputById.get(row.eventId);
+    if (!inputRow) return false;
+    return inputRow.currentReviewNeeded !== row.llmReviewNeeded;
+  });
 
-  console.log(`Committing ${writes.length} updates...`)
-  const raceSkipped: string[] = []
+  console.log(`Committing ${writes.length} updates...`);
+  const raceSkipped: string[] = [];
   await db.transaction(async (tx) => {
     for (const row of writes) {
-      const inputRow = inputById.get(row.eventId)
-      if (!inputRow) continue
+      const inputRow = inputById.get(row.eventId);
+      if (!inputRow) continue;
       const updated = await tx
         .update(events)
         .set({ isConcertReviewNeeded: row.llmReviewNeeded })
@@ -599,19 +615,19 @@ export async function runBackfill(opts: {
             eq(events.isConcertReviewNeeded, inputRow.currentReviewNeeded),
           ),
         )
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (updated.length === 0) {
-        raceSkipped.push(row.eventId)
+        raceSkipped.push(row.eventId);
       }
     }
-  })
-  const updatedCount = writes.length - raceSkipped.length
-  console.log(`Commit done. Updated ${updatedCount} rows.`)
+  });
+  const updatedCount = writes.length - raceSkipped.length;
+  console.log(`Commit done. Updated ${updatedCount} rows.`);
   if (raceSkipped.length > 0) {
     console.warn(
       `Skipped ${raceSkipped.length} rows whose hidden_from_consumer or is_concert_review_needed changed between SELECT and UPDATE. Event IDs:`,
-    )
-    for (const eventId of raceSkipped) console.warn(`  ${eventId}`)
+    );
+    for (const eventId of raceSkipped) console.warn(`  ${eventId}`);
   }
   return {
     totalEvents: results.length,
@@ -620,7 +636,7 @@ export async function runBackfill(opts: {
     disagreementCount,
     committed: true,
     raceSkipped,
-  }
+  };
 }
 
 export async function classifyBatch(
@@ -649,14 +665,14 @@ export async function classifyBatch(
       },
       required: ['classifications'],
     },
-  }
+  };
 
   const eventList = batch
     .map(
       (evt) =>
         `- id: ${evt.id}\n  title: ${evt.title}\n  artist: ${evt.artist}\n  date: ${evt.date}\n  venue: ${evt.venueName}${evt.description ? `\n  description: ${evt.description}` : ''}`,
     )
-    .join('\n\n')
+    .join('\n\n');
 
   const response = await client.messages.create({
     model: MODEL,
@@ -676,22 +692,24 @@ Events:
 ${eventList}`,
       },
     ],
-  })
+  });
 
   const toolUseBlock = response.content.find(
     (blk) => blk.type === 'tool_use' && blk.name === CLASSIFY_TOOL_NAME,
-  )
+  );
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    throw new Error(`LLM did not return a ${CLASSIFY_TOOL_NAME} tool_use block`)
+    throw new Error(
+      `LLM did not return a ${CLASSIFY_TOOL_NAME} tool_use block`,
+    );
   }
-  const inputRaw = toolUseBlock.input
+  const inputRaw = toolUseBlock.input;
   if (typeof inputRaw !== 'object' || inputRaw === null) {
-    throw new Error('LLM tool_use input was not an object')
+    throw new Error('LLM tool_use input was not an object');
   }
   const classificationsField =
-    'classifications' in inputRaw ? inputRaw.classifications : undefined
+    'classifications' in inputRaw ? inputRaw.classifications : undefined;
   if (!Array.isArray(classificationsField)) {
-    throw new Error('LLM tool_use input.classifications was not an array')
+    throw new Error('LLM tool_use input.classifications was not an array');
   }
   return classificationsField.map((cls: unknown): BatchClassification => {
     if (
@@ -701,11 +719,11 @@ ${eventList}`,
       !('isConcert' in cls) ||
       !('reviewNeeded' in cls)
     ) {
-      throw new Error(`Malformed classification entry: ${JSON.stringify(cls)}`)
+      throw new Error(`Malformed classification entry: ${JSON.stringify(cls)}`);
     }
-    const eventId = (cls as { eventId: unknown }).eventId
-    const isConcert = (cls as { isConcert: unknown }).isConcert
-    const reviewNeeded = (cls as { reviewNeeded: unknown }).reviewNeeded
+    const eventId = (cls as { eventId: unknown }).eventId;
+    const isConcert = (cls as { isConcert: unknown }).isConcert;
+    const reviewNeeded = (cls as { reviewNeeded: unknown }).reviewNeeded;
     if (
       typeof eventId !== 'string' ||
       typeof isConcert !== 'boolean' ||
@@ -713,29 +731,29 @@ ${eventList}`,
     ) {
       throw new Error(
         `Classification entry has wrong types: ${JSON.stringify(cls)}`,
-      )
+      );
     }
-    return { eventId, isConcert, reviewNeeded }
-  })
+    return { eventId, isConcert, reviewNeeded };
+  });
 }
 
-const entryArg = process.argv[1]
+const entryArg = process.argv[1];
 const isCli =
   typeof entryArg === 'string' &&
-  import.meta.url === pathToFileURL(entryArg).href
+  import.meta.url === pathToFileURL(entryArg).href;
 if (isCli) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
       console.log(
         `Done. ${summary.totalEvents} events processed, flagged=${summary.flaggedCount}, disagreements=${summary.disagreementCount}, unflagged=${summary.unflaggedCount}, committed=${summary.committed}`,
-      )
-      process.exit(0)
+      );
+      process.exit(0);
     })
     .catch((err: unknown) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }
 ```
 
@@ -841,4 +859,3 @@ gh api "repos/HartiganHM/concert-crawl/pulls/${PR}" --jq '.requested_reviewers[]
 Same rules as PR 1. Hand off for merge.
 
 ---
-

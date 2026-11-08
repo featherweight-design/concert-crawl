@@ -71,10 +71,10 @@
 //   /iu         — `u` enables Unicode mode (required for \p{...}); `i`
 //                  keeps the duplicate match case-insensitive.
 const DUPLICATED_TRAILING_WORD_REGEX =
-  /(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu
+  /(^|[^\p{L}\p{M}\p{N}_])([\p{L}\p{M}\p{N}_]+)\s+\2\s*$/iu;
 
-const UNICODE_WORD_CLASS = '[\\p{L}\\p{M}\\p{N}_]'
-const NON_UNICODE_WORD_CLASS = '[^\\p{L}\\p{M}\\p{N}_]'
+const UNICODE_WORD_CLASS = '[\\p{L}\\p{M}\\p{N}_]';
+const NON_UNICODE_WORD_CLASS = '[^\\p{L}\\p{M}\\p{N}_]';
 
 export function stripDuplicatedTrailingWord(
   title: string,
@@ -86,12 +86,12 @@ export function stripDuplicatedTrailingWord(
   // even when an upstream caller bypasses TypeScript and passes
   // null / undefined / a number.
   if (typeof title !== 'string' || title.length === 0) {
-    return ''
+    return '';
   }
 
-  const match = title.match(DUPLICATED_TRAILING_WORD_REGEX)
+  const match = title.match(DUPLICATED_TRAILING_WORD_REGEX);
   if (!match) {
-    return title
+    return title;
   }
 
   // rawTitle cross-check (#863): if the verbatim source title also contains
@@ -101,13 +101,13 @@ export function stripDuplicatedTrailingWord(
   // contain regex metacharacters and needs no escaping. Whole-word guards
   // on both sides prevent substring false negatives ("Edition Editions").
   if (typeof rawTitle === 'string' && rawTitle.length > 0) {
-    const word = match[2]
+    const word = match[2];
     const doubledPairInRawTitle = new RegExp(
       `(?:^|${NON_UNICODE_WORD_CLASS})${word}\\s+${word}(?!${UNICODE_WORD_CLASS})`,
       'iu',
-    )
+    );
     if (doubledPairInRawTitle.test(rawTitle)) {
-      return title
+      return title;
     }
   }
 
@@ -120,5 +120,5 @@ export function stripDuplicatedTrailingWord(
   // match started at the beginning of the string) and group 2 (the
   // first-occurrence word, in its original casing). The trailing repeat
   // + separating whitespace are dropped.
-  return title.replace(DUPLICATED_TRAILING_WORD_REGEX, '$1$2')
+  return title.replace(DUPLICATED_TRAILING_WORD_REGEX, '$1$2');
 }

@@ -1,3 +1,3 @@
-import { createLogger, type Logger } from '@concert-crawl/logger'
+import { createLogger, type Logger } from '@concert-crawl/logger';
 
-export const apiLogger: Logger = createLogger('api')
+export const apiLogger: Logger = createLogger('api');

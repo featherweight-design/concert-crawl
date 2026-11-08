@@ -3,17 +3,17 @@
 // from these numbers rather than from a viewport.
 
 export interface ShareRatioSpec {
-  width: number
-  height: number
+  width: number;
+  height: number;
 }
 
-export const SHARE_RATIOS = ['story', 'square', 'link'] as const
+export const SHARE_RATIOS = ['story', 'square', 'link'] as const;
 
 // Derived from the tuple so one edit moves the type, the guard and the lookup
 // together — same pattern as `lib/share/taglines.ts`.
-export type ShareRatio = (typeof SHARE_RATIOS)[number]
+export type ShareRatio = (typeof SHARE_RATIOS)[number];
 
-export const DEFAULT_SHARE_RATIO: ShareRatio = 'story'
+export const DEFAULT_SHARE_RATIO: ShareRatio = 'story';
 
 /**
  * ⚠️ `link` is 1200×628, not 1200×630. 628 is the locked value from the design
@@ -24,7 +24,7 @@ export const SC_RATIOS: Record<ShareRatio, ShareRatioSpec> = {
   story: { width: 1080, height: 1920 },
   square: { width: 1080, height: 1080 },
   link: { width: 1200, height: 628 },
-}
+};
 
 /**
  * Every pixel measurement the poster uses, per ratio.
@@ -37,29 +37,29 @@ export const SC_RATIOS: Record<ShareRatio, ShareRatioSpec> = {
  */
 export interface PosterMetrics {
   /** Edge inset of the whole bottom block. */
-  padding: number
+  padding: number;
   /** Vertical rhythm between the bottom block's rows. */
-  gap: number
+  gap: number;
   /** Artist display type. */
-  title: number
+  title: number;
   /** Venue · city. */
-  subtitle: number
+  subtitle: number;
   /** Mono date stamp; the show time sits at `time` under it. */
-  date: number
-  time: number
+  date: number;
+  time: number;
   /** Tagline. Not drawn at `link` — there is no room. */
-  tagline: number
+  tagline: number;
   /** State pill label. */
-  pill: number
-  pillPaddingY: number
-  pillPaddingX: number
+  pill: number;
+  pillPaddingY: number;
+  pillPaddingX: number;
   /** `ConcertCrawl` footer wordmark. */
-  wordmark: number
+  wordmark: number;
   /** `@handle`, drawn only for a signed mint. */
-  handle: number
+  handle: number;
   /** Mis-registration ghost offset, x/y. */
-  ghostX: number
-  ghostY: number
+  ghostX: number;
+  ghostY: number;
 }
 
 export const SC_METRICS: Record<ShareRatio, PosterMetrics> = {
@@ -111,11 +111,11 @@ export const SC_METRICS: Record<ShareRatio, PosterMetrics> = {
     ghostX: 5,
     ghostY: 4,
   },
-}
+};
 
 /** Closed-set guard. `apps/web` has no Zod; three members is a full validator. */
 export const isShareRatio = (candidate: string): candidate is ShareRatio =>
-  SHARE_RATIOS.some((ratio) => ratio === candidate)
+  SHARE_RATIOS.some((ratio) => ratio === candidate);
 
 /**
  * The route rejects an unknown ratio with a 400 rather than falling back, so
@@ -123,4 +123,4 @@ export const isShareRatio = (candidate: string): candidate is ShareRatio =>
  * initial selection). Guard first — never index on an unvalidated string.
  */
 export const resolveShareRatio = (raw: string | undefined): ShareRatio =>
-  raw !== undefined && isShareRatio(raw) ? raw : DEFAULT_SHARE_RATIO
+  raw !== undefined && isShareRatio(raw) ? raw : DEFAULT_SHARE_RATIO;

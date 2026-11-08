@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { SPNumberField } from './SPNumberField'
-import { ChipGroup } from './ChipGroup'
-import { ArrowGlyph } from './glyphs'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { VendorField } from '@/components/consumer/submit-price/VendorField'
-import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
-import { SP_POLICY } from '@concert-crawl/types'
-import type { Tier, Vendor } from '@concert-crawl/types'
+import { useState, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { SPNumberField } from './SPNumberField';
+import { ChipGroup } from './ChipGroup';
+import { ArrowGlyph } from './glyphs';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { VendorField } from '@/components/consumer/submit-price/VendorField';
+import { apiErrorMessage } from '@/components/consumer/lib/api-error-message';
+import { SP_POLICY } from '@concert-crawl/types';
+import type { Tier, Vendor } from '@concert-crawl/types';
 
-const copy = CONSUMER_COPY.counterSubmitSheet
+const copy = CONSUMER_COPY.counterSubmitSheet;
 
 const TIER_OPTIONS: { value: string; label: string }[] = [
   { value: 'GA', label: 'GA' },
@@ -23,40 +23,40 @@ const TIER_OPTIONS: { value: string; label: string }[] = [
   { value: 'VIP', label: 'VIP' },
   { value: 'Pit', label: 'Pit' },
   { value: 'Lawn', label: 'Lawn' },
-]
+];
 
-type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue';
 
 const HOW_FOUND_OPTIONS: { value: HowFound; label: string }[] = [
   { value: 'bought_myself', label: 'Bought it myself' },
   { value: 'saw_listing', label: 'Saw the listing' },
   { value: 'at_the_venue', label: 'At the venue' },
-]
+];
 
 const isValidHowFound = (value: string): value is HowFound =>
-  HOW_FOUND_OPTIONS.some((opt) => opt.value === value)
+  HOW_FOUND_OPTIONS.some((opt) => opt.value === value);
 
-type SheetState = 'form' | 'submitting' | 'success' | 'error'
+type SheetState = 'form' | 'submitting' | 'success' | 'error';
 
 export interface CounterSubmitSheetProps {
-  open: boolean
-  onClose: () => void
-  eventId: string
-  disputedSubmissionId: string
-  currentFloor: number
-  currentCeiling?: number
-  currentVendor: string
-  onSuccess?: () => void
+  open: boolean;
+  onClose: () => void;
+  eventId: string;
+  disputedSubmissionId: string;
+  currentFloor: number;
+  currentCeiling?: number;
+  currentVendor: string;
+  onSuccess?: () => void;
 }
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
 interface FormErrors {
-  floor?: string
-  ceiling?: string
-  tier?: string
-  vendor?: string
-  howFound?: string
+  floor?: string;
+  ceiling?: string;
+  tier?: string;
+  vendor?: string;
+  howFound?: string;
 }
 
 const validateForm = (
@@ -66,35 +66,35 @@ const validateForm = (
   vendor: string | null,
   howFound: string | null,
 ): FormErrors => {
-  const errors: FormErrors = {}
-  const floorNum = Number(floor)
+  const errors: FormErrors = {};
+  const floorNum = Number(floor);
 
   if (!floor || isNaN(floorNum) || floorNum < SP_POLICY.floorMin) {
-    errors.floor = 'Has to be at least $1.'
+    errors.floor = 'Has to be at least $1.';
   } else if (floorNum > SP_POLICY.floorMax) {
-    errors.floor = 'Cap is $2,000.'
+    errors.floor = 'Cap is $2,000.';
   }
 
   if (ceiling) {
-    const ceilingNum = Number(ceiling)
+    const ceilingNum = Number(ceiling);
     if (isNaN(ceilingNum) || ceilingNum > SP_POLICY.ceilingMax) {
-      errors.ceiling = 'Cap is $2,000.'
+      errors.ceiling = 'Cap is $2,000.';
     } else if (!errors.floor && ceilingNum < floorNum) {
-      errors.ceiling = "Ceiling can't be below floor."
+      errors.ceiling = "Ceiling can't be below floor.";
     }
   }
 
-  if (!tier) errors.tier = 'Pick a tier.'
-  if (!vendor) errors.vendor = "Pick where it's listed."
-  if (!howFound) errors.howFound = 'Tell us how you found out.'
+  if (!tier) errors.tier = 'Pick a tier.';
+  if (!vendor) errors.vendor = "Pick where it's listed.";
+  if (!howFound) errors.howFound = 'Tell us how you found out.';
 
-  return errors
-}
+  return errors;
+};
 
 const isValidTier = (value: string): value is Tier => {
-  const validTiers: Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
-  return validTiers.includes(value as Tier)
-}
+  const validTiers: Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn'];
+  return validTiers.includes(value as Tier);
+};
 
 export function CounterSubmitSheet({
   open,
@@ -106,40 +106,40 @@ export function CounterSubmitSheet({
   currentVendor,
   onSuccess,
 }: CounterSubmitSheetProps) {
-  const { getToken, isLoaded, isSignedIn } = useAuth()
-  const router = useRouter()
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
 
-  const [sheetState, setSheetState] = useState<SheetState>('form')
-  const [floor, setFloor] = useState('')
-  const [ceiling, setCeiling] = useState('')
-  const [tier, setTier] = useState<string | null>(null)
-  const [vendor, setVendor] = useState<Vendor | null>(null)
-  const [howFound, setHowFound] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
+  const [sheetState, setSheetState] = useState<SheetState>('form');
+  const [floor, setFloor] = useState('');
+  const [ceiling, setCeiling] = useState('');
+  const [tier, setTier] = useState<string | null>(null);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
+  const [howFound, setHowFound] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
 
   const subtitle =
     currentCeiling != null
       ? copy.subtitleWithRange(currentFloor, currentCeiling, currentVendor)
-      : copy.subtitleFloorOnly(currentFloor, currentVendor)
+      : copy.subtitleFloorOnly(currentFloor, currentVendor);
 
   const handleSubmit = useCallback(async () => {
-    const errors = validateForm(floor, ceiling, tier, vendor, howFound)
-    setFieldErrors(errors)
-    if (Object.keys(errors).length > 0) return
+    const errors = validateForm(floor, ceiling, tier, vendor, howFound);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
 
-    if (!tier || !vendor || !howFound) return
+    if (!tier || !vendor || !howFound) return;
 
-    const resolvedTier = isValidTier(tier) ? tier : 'GA'
+    const resolvedTier = isValidTier(tier) ? tier : 'GA';
     const resolvedHowFound: HowFound = isValidHowFound(howFound)
       ? howFound
-      : 'saw_listing'
+      : 'saw_listing';
 
-    setSheetState('submitting')
+    setSheetState('submitting');
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setSheetState('error')
-        return
+        setSheetState('error');
+        return;
       }
       const res = await fetch(
         `${API_URL}/v1/events/${eventId}/price-submissions`,
@@ -158,18 +158,18 @@ export function CounterSubmitSheet({
             disputedSubmissionId,
           }),
         },
-      )
+      );
       if (!res.ok) {
         throw new Error(
           apiErrorMessage(await res.json().catch(() => null)) ??
             'Submission failed',
-        )
+        );
       }
-      router.refresh()
-      setSheetState('success')
+      router.refresh();
+      setSheetState('success');
     } catch (err) {
-      console.error('CounterSubmitSheet: price update failed', err)
-      setSheetState('error')
+      console.error('CounterSubmitSheet: price update failed', err);
+      setSheetState('error');
     }
   }, [
     floor,
@@ -181,28 +181,28 @@ export function CounterSubmitSheet({
     eventId,
     disputedSubmissionId,
     router,
-  ])
+  ]);
 
   const handleSuccess = useCallback(() => {
-    onSuccess?.()
-    onClose()
-  }, [onSuccess, onClose])
+    onSuccess?.();
+    onClose();
+  }, [onSuccess, onClose]);
 
   const handleReset = useCallback(() => {
-    setSheetState('form')
-    setFieldErrors({})
-  }, [])
+    setSheetState('form');
+    setFieldErrors({});
+  }, []);
 
   const handleClose = useCallback(() => {
-    setSheetState('form')
-    setFloor('')
-    setCeiling('')
-    setTier(null)
-    setVendor(null)
-    setHowFound(null)
-    setFieldErrors({})
-    onClose()
-  }, [onClose])
+    setSheetState('form');
+    setFloor('');
+    setCeiling('');
+    setTier(null);
+    setVendor(null);
+    setHowFound(null);
+    setFieldErrors({});
+    onClose();
+  }, [onClose]);
 
   const headerNode = (
     <>
@@ -244,7 +244,7 @@ export function CounterSubmitSheet({
         {subtitle}
       </p>
     </>
-  )
+  );
 
   const footerNode =
     sheetState === 'form' || sheetState === 'submitting' ? (
@@ -293,7 +293,7 @@ export function CounterSubmitSheet({
           {copy.footerDisclaimer}
         </p>
       </>
-    ) : undefined
+    ) : undefined;
 
   // Gated here rather than at the trigger, matching SubmitPriceModal: the
   // counter POST needs a Clerk token, so a signed-out visitor previously filled
@@ -310,7 +310,7 @@ export function CounterSubmitSheet({
         scaRegion
         entry="logged-out-price"
       />
-    )
+    );
   }
 
   return (
@@ -422,13 +422,13 @@ export function CounterSubmitSheet({
         </div>
       )}
     </ModalShell>
-  )
+  );
 }
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
 
 function SuccessState({ onClose }: { onClose: () => void }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet
+  const copy = CONSUMER_COPY.counterSubmitSheet;
   return (
     <div
       style={{
@@ -486,17 +486,17 @@ function SuccessState({ onClose }: { onClose: () => void }) {
         {copy.successBackButton}
       </button>
     </div>
-  )
+  );
 }
 
 function ErrorState({
   onReset,
   onClose,
 }: {
-  onReset: () => void
-  onClose: () => void
+  onReset: () => void;
+  onClose: () => void;
 }) {
-  const copy = CONSUMER_COPY.counterSubmitSheet
+  const copy = CONSUMER_COPY.counterSubmitSheet;
   return (
     <div
       style={{
@@ -583,5 +583,5 @@ function ErrorState({
         </button>
       </div>
     </div>
-  )
+  );
 }

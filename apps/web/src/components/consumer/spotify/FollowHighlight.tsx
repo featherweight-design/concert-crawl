@@ -3,10 +3,10 @@
 // Design lock: neutral + Spotify-marked, NEVER --accent (accent is reserved
 // for Watching). The SpotifyLogo glyph is the only place --spotify-green
 // appears.
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from './definitions/copy'
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from './definitions/copy';
 
-const copy = SPOTIFY_COPY.followHighlight
+const copy = SPOTIFY_COPY.followHighlight;
 
 // Hero-card eyebrow badge — replaces the accent "★ Tonight's pick" badge in
 // the hero's top-left slot when the headliner/support matches a followed
@@ -31,16 +31,16 @@ export const HeroFollowingBadge = () => (
     </span>
     <span className="sr-only">{copy.chipAria}</span>
   </span>
-)
+);
 
 interface DetailFollowStripProps {
-  artists: string[]
+  artists: string[];
 }
 
 // Event-detail attribution strip — sits directly under the Watching pill and
 // names the matched artist(s): "You follow X on Spotify".
 export const DetailFollowStrip = ({ artists }: DetailFollowStripProps) => {
-  if (artists.length === 0) return null
+  if (artists.length === 0) return null;
   return (
     <div
       className="flex items-center rounded-[12px] border border-border bg-surface-1"
@@ -54,5 +54,5 @@ export const DetailFollowStrip = ({ artists }: DetailFollowStripProps) => {
         {copy.strip(artists)}
       </p>
     </div>
-  )
-}
+  );
+};

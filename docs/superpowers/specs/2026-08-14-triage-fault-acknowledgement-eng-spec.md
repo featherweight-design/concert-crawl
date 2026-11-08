@@ -11,10 +11,10 @@
 The "Needs attention" panel currently shows three faults, and all three are
 correct:
 
-| Venue | Fault | Reality |
-| --- | --- | --- |
-| Summit Music Hall | `ceiling` / `pinned_count`, stuck at 36 for 24d | A real, permanent Live Nation list cap (#1127) |
-| Ball Arena | `ceiling` / `pinned_count`, stuck at 86 for 10d | Plausibly seasonal — NBA/NHL schedules land in blocks |
+| Venue                  | Fault                                                      | Reality                                                |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------------ |
+| Summit Music Hall      | `ceiling` / `pinned_count`, stuck at 36 for 24d            | A real, permanent Live Nation list cap (#1127)         |
+| Ball Arena             | `ceiling` / `pinned_count`, stuck at 86 for 10d            | Plausibly seasonal — NBA/NHL schedules land in blocks  |
 | Red Rocks Amphitheatre | `ceiling` / `horizon_shrank`, furthest show 2026-11-15, 1d | A seasonal outdoor venue whose season ends in November |
 
 None of them is a defect, none of them can be fixed, and none of them can be
@@ -43,7 +43,7 @@ the change that matters.
 
 The stateless design was a deliberate and good call. This spec does not overturn
 it — it narrows it. The panel stays derived; what becomes persistent is a
-statement of the *expected value*, and the derivation now compares against it.
+statement of the _expected value_, and the derivation now compares against it.
 
 ---
 
@@ -90,7 +90,7 @@ a horizon that drifts by days or weeks is the same fact, not a new one.
 straight `abs(dayDiff)` between 2026-11-15 and 2027-11-09 is ~359 days, so a
 plain tolerance would re-fire this venue every single year, which is the exact
 failure the band exists to prevent. What is being compared is the horizon's
-*position in the year*, and only a year-aware comparison expresses that.
+_position in the year_, and only a year-aware comparison expresses that.
 
 **Implementation:** build candidate dates by substituting the years
 `{currentYear - 1, currentYear, currentYear + 1}` into the acknowledged date's
@@ -104,14 +104,14 @@ into March and quietly shifts the comparison by a day.
 
 **Value: 45 days.** Note this is a different quantity from the one first
 proposed: matching within the annual cycle rather than on absolute drift means
-the band only has to absorb year-over-year wobble in the *same* seasonal event,
+the band only has to absorb year-over-year wobble in the _same_ seasonal event,
 not a year's worth of separation. A season end that moves by more than six weeks
 is a real change worth surfacing. 45 also keeps a genuine mid-winter collapse
 outside the band — 2027-01-20 sits 66 days from the acknowledged 2026-11-15
 position and re-fires, with margin that 60 days would have left uncomfortably
 thin.
 
-It is deliberately *not* derived from `HORIZON_SHRINK_DAYS = 30` — they answer
+It is deliberately _not_ derived from `HORIZON_SHRINK_DAYS = 30` — they answer
 different questions, and coupling them would mean tuning detection sensitivity
 silently retunes suppression.
 
@@ -124,7 +124,7 @@ closes and the calendar empties, the venue stops tripping `ceiling` and starts
 tripping `wentDark` — a seasonal outdoor venue genuinely goes to zero events in
 January. A ceiling-only acknowledgement would suppress the fault in autumn and
 let the same venue, for the same reason, reappear under a different heading in
-winter. The condition is part of the key precisely so that a *different* kind of
+winter. The condition is part of the key precisely so that a _different_ kind of
 wrong still surfaces.
 
 ---
@@ -192,19 +192,19 @@ than announcing an unqualified all-clear.
 
 New table, `venue_fault_acknowledgements`:
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | uuid pk | |
-| `venue_id` | uuid not null → `venues.id` on delete cascade | |
-| `condition` | text not null | `blocked` \| `failed` \| `wentDark` \| `ceiling` \| `coverage` |
-| `evidence_kind` | text null | Ceiling's `pinned_count` / `horizon_shrank`; null elsewhere |
-| `evidence_value` | text **null** | The canonical acknowledged value: `"36"`, `"2026-11-15"`. Null means the evidence figure was itself absent — see below |
-| `reason` | text not null | Operator's one-line justification. **Required.** |
-| `acknowledged_by` | text not null | Clerk user id |
-| `acknowledged_at` | timestamptz not null default now() | |
+| Column            | Type                                          | Notes                                                                                                                  |
+| ----------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `id`              | uuid pk                                       |                                                                                                                        |
+| `venue_id`        | uuid not null → `venues.id` on delete cascade |                                                                                                                        |
+| `condition`       | text not null                                 | `blocked` \| `failed` \| `wentDark` \| `ceiling` \| `coverage`                                                         |
+| `evidence_kind`   | text null                                     | Ceiling's `pinned_count` / `horizon_shrank`; null elsewhere                                                            |
+| `evidence_value`  | text **null**                                 | The canonical acknowledged value: `"36"`, `"2026-11-15"`. Null means the evidence figure was itself absent — see below |
+| `reason`          | text not null                                 | Operator's one-line justification. **Required.**                                                                       |
+| `acknowledged_by` | text not null                                 | Clerk user id                                                                                                          |
+| `acknowledged_at` | timestamptz not null default now()            |                                                                                                                        |
 
 Unique on `(venue_id, condition)`. One ceiling fault per venue is guaranteed by
-`evaluateCeilingCondition`, which returns horizon *or* pinned via `??` and never
+`evaluateCeilingCondition`, which returns horizon _or_ pinned via `??` and never
 both, so the narrower key is unnecessary.
 
 `evidence_value` **is** nullable, and only because one condition needs it:
@@ -222,7 +222,7 @@ field would be empty on every row within a month.
 
 A new table rather than columns on `venues`: `venues` already carries
 `lastEventCeilingAlertAt` and `lastUrlCoverageAlertAt`, which are email cooldown
-stamps and explicitly *not* triage filters
+stamps and explicitly _not_ triage filters
 (`apps/api/src/routes/admin/lib/triage.ts:18-20`,
 `packages/crawler-core/src/lib/triage-conditions.ts:16-18` — note there are
 several `triage.ts` files in the repo, so these are given in full). Putting
@@ -274,14 +274,14 @@ one file that is allowed to own them.
 
 Per condition, the value the API derives and the rule the matcher applies:
 
-| Condition | Derived value | Match rule |
-| --- | --- | --- |
-| `ceiling` / `pinned_count` | `eventsFound` | exact integer equality |
+| Condition                    | Derived value       | Match rule                                                                                               |
+| ---------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ceiling` / `pinned_count`   | `eventsFound`       | exact integer equality                                                                                   |
 | `ceiling` / `horizon_shrank` | `furthestEventDate` | smallest `abs(dayDiff)` against the acked date's year-shifted candidates `<= HORIZON_ACK_TOLERANCE_DAYS` |
-| `wentDark` | `eventsUsable` | exact integer equality |
-| `coverage` | `uncoveredCount` | exact integer equality |
-| `blocked` | HTTP `status` | exact equality; null matches only null |
-| `failed` | `errorClass` | exact string equality |
+| `wentDark`                   | `eventsUsable`      | exact integer equality                                                                                   |
+| `coverage`                   | `uncoveredCount`    | exact integer equality                                                                                   |
+| `blocked`                    | HTTP `status`       | exact equality; null matches only null                                                                   |
+| `failed`                     | `errorClass`        | exact string equality                                                                                    |
 
 A mismatched `condition` or `evidenceKind` is an immediate non-match, before any
 value comparison — that is what makes a seasonal venue's autumn `ceiling`
@@ -303,10 +303,10 @@ only a deliberate `null` reaches the matcher.
 
 ## API surface
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `POST` | `/v1/admin/venues/:venueId/fault-acknowledgements` | Create or replace; body `{ condition, evidenceKind?, evidenceValue: string \| null, reason }` |
-| `DELETE` | `/v1/admin/venues/:venueId/fault-acknowledgements/:condition` | Un-acknowledge |
+| Method   | Path                                                          | Purpose                                                                                       |
+| -------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `POST`   | `/v1/admin/venues/:venueId/fault-acknowledgements`            | Create or replace; body `{ condition, evidenceKind?, evidenceValue: string \| null, reason }` |
+| `DELETE` | `/v1/admin/venues/:venueId/fault-acknowledgements/:condition` | Un-acknowledge                                                                                |
 
 Zod at both boundaries. Both write an audit log entry — acknowledging a fault
 hides a signal from the dashboard, which is exactly the class of admin action
@@ -364,5 +364,5 @@ the triage response and the audit-log write.
 - Bulk acknowledgement. Three faults.
 - Per-venue threshold tuning. `triage-conditions.ts:35` already anticipates it
   ("can be tightened per-venue later") and it is a different feature — this spec
-  changes what is *shown*, not what is *detected*.
+  changes what is _shown_, not what is _detected_.
 - Any change to the detection thresholds themselves.

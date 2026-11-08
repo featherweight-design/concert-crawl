@@ -260,4 +260,4 @@ export const LEGAL_COPY = {
       emailLink: 'Email Hugh directly.',
     },
   },
-} as const
+} as const;

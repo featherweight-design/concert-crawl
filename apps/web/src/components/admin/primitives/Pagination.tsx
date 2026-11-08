@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useEffect, useRef, useState } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   PAGINATION_PAGE_SIZE_OPTIONS,
   derivePagination,
   pageWindow,
-} from './pagination-logic'
+} from './pagination-logic';
 
 // Match design tokens exactly — the JetBrains-first stack falls back to the
 // platform-native monos when JetBrains isn't loaded yet.
 const ADMIN_MONO =
-  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
-const ADMIN_FONT = "'Inter', sans-serif"
+  "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+const ADMIN_FONT = "'Inter', sans-serif";
 
 // Hand-rolled icons match the design's stroke geometry (stroke-width 1.6,
 // rounded caps). Inline SVG keeps us free of an icon dependency for this
 // admin-only surface; the paths are copied from the design handoff.
-type IconName = 'chevL' | 'chevR' | 'chevsL' | 'chevsR' | 'chevD' | 'check'
+type IconName = 'chevL' | 'chevR' | 'chevsL' | 'chevsR' | 'chevD' | 'check';
 
 interface AdminIconProps {
-  name: IconName
-  size?: number
-  color?: string
+  name: IconName;
+  size?: number;
+  color?: string;
 }
 
 const ICON_PATHS: Record<IconName, React.ReactNode> = {
@@ -42,7 +42,7 @@ const ICON_PATHS: Record<IconName, React.ReactNode> = {
   ),
   chevD: <path d="M6 9l6 6 6-6" />,
   check: <path d="M5 12l5 5L20 6" />,
-}
+};
 
 const AdminIcon = ({ name, size = 14, color }: AdminIconProps) => (
   <svg
@@ -58,7 +58,7 @@ const AdminIcon = ({ name, size = 14, color }: AdminIconProps) => (
   >
     {ICON_PATHS[name]}
   </svg>
-)
+);
 
 // Shared CSS for the pager: the spinner keyframes and the focus-visible
 // outline. We inject this once per Pagination instance (sibling of the
@@ -72,7 +72,7 @@ const PAGER_STYLE = `
   outline: 2px solid var(--focus, var(--signal));
   outline-offset: 2px;
 }
-`
+`;
 
 const Spinner = ({ size = 12, color = 'var(--signal)' }) => (
   <svg
@@ -99,9 +99,9 @@ const Spinner = ({ size = 12, color = 'var(--signal)' }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
-const COPY = ADMIN_COPY.pagination
+const COPY = ADMIN_COPY.pagination;
 
 // Reusable pager for every admin Review tab. Server-driven (limit/offset);
 // the parent owns `page`/`pageSize` and feeds in `total`. Renders inside a
@@ -111,17 +111,17 @@ const COPY = ADMIN_COPY.pagination
 // Next layout under ~560px so the same component works on phones. Force
 // either mode with `forceCompact` (used by tests and the design canvas).
 export interface PaginationProps {
-  page: number
-  pageSize: number
-  total: number
-  onPageChange: (next: number) => void
-  onPageSizeChange?: (next: number) => void
-  pageSizeOptions?: ReadonlyArray<number>
-  loading?: boolean
-  showSizeSelector?: boolean
-  itemLabel?: string
-  forceCompact?: boolean
-  threshold?: number
+  page: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (next: number) => void;
+  onPageSizeChange?: (next: number) => void;
+  pageSizeOptions?: ReadonlyArray<number>;
+  loading?: boolean;
+  showSizeSelector?: boolean;
+  itemLabel?: string;
+  forceCompact?: boolean;
+  threshold?: number;
 }
 
 const usePagerCompact = (
@@ -129,34 +129,34 @@ const usePagerCompact = (
   threshold: number,
   force?: boolean,
 ): boolean => {
-  const [compact, setCompact] = useState<boolean>(force ?? false)
+  const [compact, setCompact] = useState<boolean>(force ?? false);
   useEffect(() => {
     if (force !== undefined) {
-      setCompact(force)
-      return
+      setCompact(force);
+      return;
     }
-    const node = ref.current
-    if (!node || typeof ResizeObserver === 'undefined') return
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setCompact(entry.contentRect.width < threshold)
+        setCompact(entry.contentRect.width < threshold);
       }
-    })
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [force, ref, threshold])
-  return compact
-}
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [force, ref, threshold]);
+  return compact;
+};
 
 interface PagerBtnProps {
-  children: React.ReactNode
-  onClick?: () => void
-  disabled?: boolean
-  active?: boolean
-  ariaLabel: string
-  size?: number
-  mono?: boolean
-  grow?: boolean
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  ariaLabel: string;
+  size?: number;
+  mono?: boolean;
+  grow?: boolean;
 }
 
 const PagerBtn = ({
@@ -169,9 +169,9 @@ const PagerBtn = ({
   mono = true,
   grow = false,
 }: PagerBtnProps) => {
-  const [hover, setHover] = useState(false)
-  const interactive = !disabled && !active
-  const hovered = interactive && hover
+  const [hover, setHover] = useState(false);
+  const interactive = !disabled && !active;
+  const hovered = interactive && hover;
   return (
     <button
       type="button"
@@ -223,14 +223,14 @@ const PagerBtn = ({
     >
       {children}
     </button>
-  )
-}
+  );
+};
 
 interface SizeSelectProps {
-  value: number
-  options: ReadonlyArray<number>
-  onChange: ((next: number) => void) | undefined
-  disabled?: boolean
+  value: number;
+  options: ReadonlyArray<number>;
+  onChange: ((next: number) => void) | undefined;
+  disabled?: boolean;
 }
 
 const SizeSelect = ({
@@ -239,29 +239,29 @@ const SizeSelect = ({
   onChange,
   disabled,
 }: SizeSelectProps) => {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     // Close on outside pointer-down (mouse + touch) and on Escape — the
     // common dismiss expectations for popovers on desktop and mobile.
     const outsideHandler = (evt: MouseEvent | TouchEvent) => {
       if (ref.current && !ref.current.contains(evt.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
-    }
+    };
     const keyHandler = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('mousedown', outsideHandler)
-    document.addEventListener('touchstart', outsideHandler)
-    document.addEventListener('keydown', keyHandler)
+      if (evt.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', outsideHandler);
+    document.addEventListener('touchstart', outsideHandler);
+    document.addEventListener('keydown', keyHandler);
     return () => {
-      document.removeEventListener('mousedown', outsideHandler)
-      document.removeEventListener('touchstart', outsideHandler)
-      document.removeEventListener('keydown', keyHandler)
-    }
-  }, [open])
+      document.removeEventListener('mousedown', outsideHandler);
+      document.removeEventListener('touchstart', outsideHandler);
+      document.removeEventListener('keydown', keyHandler);
+    };
+  }, [open]);
   return (
     <div
       ref={ref}
@@ -333,7 +333,7 @@ const SizeSelect = ({
           }}
         >
           {options.map((opt) => {
-            const selected = opt === value
+            const selected = opt === value;
             return (
               <button
                 key={opt}
@@ -342,8 +342,8 @@ const SizeSelect = ({
                 role="option"
                 aria-selected={selected}
                 onClick={() => {
-                  onChange?.(opt)
-                  setOpen(false)
+                  onChange?.(opt);
+                  setOpen(false);
                 }}
                 style={{
                   all: 'unset',
@@ -366,20 +366,20 @@ const SizeSelect = ({
                 {opt}
                 {selected && <AdminIcon name="check" size={13} />}
               </button>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 interface RangeReadoutProps {
-  start: number
-  end: number
-  total: number
-  itemLabel: string
-  loading?: boolean
+  start: number;
+  end: number;
+  total: number;
+  itemLabel: string;
+  loading?: boolean;
 }
 
 const RangeReadout = ({
@@ -424,7 +424,7 @@ const RangeReadout = ({
       )}
     </span>
   </div>
-)
+);
 
 export const Pagination = ({
   page,
@@ -442,9 +442,9 @@ export const Pagination = ({
   forceCompact,
   threshold = 560,
 }: PaginationProps) => {
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const compact = usePagerCompact(wrapRef, threshold, forceCompact)
-  const state = derivePagination({ page, pageSize, total })
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const compact = usePagerCompact(wrapRef, threshold, forceCompact);
+  const state = derivePagination({ page, pageSize, total });
 
   // Page-clamp sync: when the URL deep-links to ?page=99 but total only
   // supports 3 pages, derivePagination clamps `state.page` to 3 for the
@@ -452,11 +452,11 @@ export const Pagination = ({
   // empty rows. Push the clamped value back so the controlled state
   // catches up and the query refetches against a real page.
   useEffect(() => {
-    if (state.page !== page) onPageChange(state.page)
-  }, [state.page, page, onPageChange])
+    if (state.page !== page) onPageChange(state.page);
+  }, [state.page, page, onPageChange]);
 
   const go = (next: number) =>
-    onPageChange(Math.min(state.totalPages, Math.max(1, next)))
+    onPageChange(Math.min(state.totalPages, Math.max(1, next)));
 
   const footerStyle: React.CSSProperties = {
     display: 'flex',
@@ -474,7 +474,7 @@ export const Pagination = ({
     opacity: loading ? 0.72 : 1,
     pointerEvents: loading ? 'none' : 'auto',
     transition: 'opacity .15s',
-  }
+  };
 
   if (compact) {
     return (
@@ -560,10 +560,10 @@ export const Pagination = ({
           </PagerBtn>
         </div>
       </nav>
-    )
+    );
   }
 
-  const window = pageWindow(state.page, state.totalPages)
+  const window = pageWindow(state.page, state.totalPages);
   return (
     <nav ref={wrapRef} aria-label={COPY.navAriaLabel} style={footerStyle}>
       <style>{PAGER_STYLE}</style>
@@ -669,5 +669,5 @@ export const Pagination = ({
         </div>
       </div>
     </nav>
-  )
-}
+  );
+};

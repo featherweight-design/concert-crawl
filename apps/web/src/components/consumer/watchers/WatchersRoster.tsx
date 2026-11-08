@@ -1,20 +1,20 @@
-import type { EventWatcher } from '@concert-crawl/types'
-import { Avatar } from '@/components/settings/Avatar'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { watcherInitial, watcherTone } from '@/lib/watchers'
-import { WatcherAnonDisc } from './WatcherAnonDisc'
+import type { EventWatcher } from '@concert-crawl/types';
+import { Avatar } from '@/components/settings/Avatar';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { watcherInitial, watcherTone } from '@/lib/watchers';
+import { WatcherAnonDisc } from './WatcherAnonDisc';
 
 // Inside the roster card the separator ring is drawn in the card's own surface,
 // not the page background.
-const ROSTER_RING = 'var(--surface-1)'
+const ROSTER_RING = 'var(--surface-1)';
 
 interface WatchersRosterProps {
-  named: EventWatcher[]
+  named: EventWatcher[];
   /** Handle-less watchers, collapsed into a single summary row. */
-  anonymousCount: number
+  anonymousCount: number;
 }
 
-const copy = CONSUMER_COPY.watchers
+const copy = CONSUMER_COPY.watchers;
 
 /**
  * The roster's contents. Handles are plain text, never links — no profile pages
@@ -62,4 +62,4 @@ export const WatchersRoster = ({
       </li>
     )}
   </ul>
-)
+);

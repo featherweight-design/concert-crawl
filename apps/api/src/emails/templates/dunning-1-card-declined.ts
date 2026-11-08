@@ -2,8 +2,8 @@
 // Calm signal-accent "give it a refresh" nudge; step 1 of the tracker. Honest,
 // never blamey, never "fraud" — Premium stays on while retries run.
 
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { renderDunning } from './dunning-core.js'
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { renderDunning } from './dunning-core.js';
 
 export const renderDunning1CardDeclined: TemplateRenderer<
   EmailTemplateVars['dunning_1_card_declined']
@@ -21,4 +21,4 @@ export const renderDunning1CardDeclined: TemplateRenderer<
       isFinal: false,
     },
     portalUrl,
-  )
+  );

@@ -7,7 +7,7 @@
 // and the unread dot; the words stay --fg-muted. Colour redundancy is
 // unaffected, because the category is spelled out here.
 
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react';
 
 export const NMono = ({
   children,
@@ -16,11 +16,11 @@ export const NMono = ({
   ls = '0.14em',
   style,
 }: {
-  children: ReactNode
-  color?: string
-  size?: number
-  ls?: string
-  style?: CSSProperties
+  children: ReactNode;
+  color?: string;
+  size?: number;
+  ls?: string;
+  style?: CSSProperties;
 }) => (
   <span
     style={{
@@ -35,4 +35,4 @@ export const NMono = ({
   >
     {children}
   </span>
-)
+);

@@ -1,48 +1,48 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useTheme } from '@/theme/ThemeProvider'
-import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
-import { ThemeSwatch } from '@/theme/ThemeSwatch'
-import { patchMe } from '@/lib/users'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useTheme } from '@/theme/ThemeProvider';
+import { THEMES, THEME_META, type ThemeName } from '@/theme/themes';
+import { ThemeSwatch } from '@/theme/ThemeSwatch';
+import { patchMe } from '@/lib/users';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 export function ThemePickerInline() {
-  const { theme, setTheme } = useTheme()
-  const { getToken } = useAuth()
-  const [isSaving, setIsSaving] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const activeMeta = THEME_META[theme]
+  const { theme, setTheme } = useTheme();
+  const { getToken } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const activeMeta = THEME_META[theme];
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 480px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 480px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   async function handleSelectTheme(name: ThemeName) {
-    if (name === theme || isSaving) return
-    const previous = theme
-    setTheme(name)
-    setIsSaving(true)
+    if (name === theme || isSaving) return;
+    const previous = theme;
+    setTheme(name);
+    setIsSaving(true);
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (token) {
-        await patchMe(token, { theme: name })
+        await patchMe(token, { theme: name });
       }
     } catch {
-      setTheme(previous)
+      setTheme(previous);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
-  const themeKeys = Object.keys(THEMES) as ThemeName[]
+  const themeKeys = Object.keys(THEMES) as ThemeName[];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -131,5 +131,5 @@ export function ThemePickerInline() {
         )}
       </div>
     </div>
-  )
+  );
 }

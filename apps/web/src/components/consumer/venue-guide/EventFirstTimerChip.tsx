@@ -1,17 +1,17 @@
-import type { GuideViewerMode } from '@concert-crawl/types'
-import Link from 'next/link'
-import { CONSUMER_COPY } from '../definitions/copy'
-import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
-import { venueShortName } from './lib'
+import type { GuideViewerMode } from '@concert-crawl/types';
+import Link from 'next/link';
+import { CONSUMER_COPY } from '../definitions/copy';
+import { GUIDE_ANCHOR_ID } from './FirstTimerCallout';
+import { venueShortName } from './lib';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 interface EventFirstTimerChipProps {
-  venueName: string
-  venueSlug: string
+  venueName: string;
+  venueSlug: string;
   /** Whether the venue has actually published a guide to link to. */
-  venueGuidePublished: boolean
-  mode: GuideViewerMode
+  venueGuidePublished: boolean;
+  mode: GuideViewerMode;
 }
 
 /**
@@ -25,8 +25,8 @@ export const EventFirstTimerChip = ({
   venueGuidePublished,
   mode,
 }: EventFirstTimerChipProps) => {
-  if (!venueGuidePublished) return null
-  if (mode !== 'first_timer') return null
+  if (!venueGuidePublished) return null;
+  if (mode !== 'first_timer') return null;
 
   return (
     <Link
@@ -75,5 +75,5 @@ export const EventFirstTimerChip = ({
         </span>
       </span>
     </Link>
-  )
-}
+  );
+};

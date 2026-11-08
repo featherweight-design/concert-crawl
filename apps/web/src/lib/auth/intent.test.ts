@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   decodeIntent,
   encodeIntent,
@@ -8,16 +8,16 @@ import {
   stripIntentParams,
   appendPendingTier,
   DEFAULT_RETURN_PATH,
-} from './intent'
+} from './intent';
 
-const ID = '3f1a9c62-8d4b-4e17-9f2a-1b6c7d8e9f01'
+const ID = '3f1a9c62-8d4b-4e17-9f2a-1b6c7d8e9f01';
 
 describe('intent codec (#794)', () => {
   it('round-trips a watch intent', () => {
     expect(
       decodeIntent(encodeIntent({ action: 'watch', eventId: ID })),
-    ).toEqual({ action: 'watch', eventId: ID })
-  })
+    ).toEqual({ action: 'watch', eventId: ID });
+  });
 
   it.each([
     ['null', null],
@@ -31,16 +31,16 @@ describe('intent codec (#794)', () => {
     ['empty action', `:${ID}`],
     ['empty id', 'watch:'],
   ])('returns null for %s instead of throwing', (_label, raw) => {
-    expect(decodeIntent(raw)).toBeNull()
-  })
-})
+    expect(decodeIntent(raw)).toBeNull();
+  });
+});
 
 describe('sanitizeReturnPath (#794)', () => {
   it('keeps a relative in-app path, query string included', () => {
     expect(sanitizeReturnPath('/events/abc?tab=prices')).toBe(
       '/events/abc?tab=prices',
-    )
-  })
+    );
+  });
 
   it.each([
     ['absolute http', 'https://evil.example/steal'],
@@ -60,26 +60,26 @@ describe('sanitizeReturnPath (#794)', () => {
     // Triple, to prove the loop is a loop and not two hardcoded passes.
     ['triple-encoded backslash', '/%25255Cevil.example'],
   ])('falls back to /events for %s', (_label, raw) => {
-    expect(sanitizeReturnPath(raw)).toBe(DEFAULT_RETURN_PATH)
-  })
-})
+    expect(sanitizeReturnPath(raw)).toBe(DEFAULT_RETURN_PATH);
+  });
+});
 
 describe('sanitizeDestinationLabel (#794)', () => {
   it('keeps an ordinary artist name', () => {
-    expect(sanitizeDestinationLabel('Geese')).toBe('Geese')
-  })
+    expect(sanitizeDestinationLabel('Geese')).toBe('Geese');
+  });
 
   it('trims surrounding whitespace', () => {
-    expect(sanitizeDestinationLabel('  Geese  ')).toBe('Geese')
-  })
+    expect(sanitizeDestinationLabel('  Geese  ')).toBe('Geese');
+  });
 
   it('flattens control characters that would break a one-line strip', () => {
-    expect(sanitizeDestinationLabel('Ge\nese\t!')).toBe('Ge ese !')
-  })
+    expect(sanitizeDestinationLabel('Ge\nese\t!')).toBe('Ge ese !');
+  });
 
   it('caps the length so a long label cannot blow out the strip', () => {
-    expect(sanitizeDestinationLabel('x'.repeat(400))).toHaveLength(60)
-  })
+    expect(sanitizeDestinationLabel('x'.repeat(400))).toHaveLength(60);
+  });
 
   it.each([
     ['null', null],
@@ -87,9 +87,9 @@ describe('sanitizeDestinationLabel (#794)', () => {
     ['empty', ''],
     ['whitespace only', '   '],
   ])('returns null for %s', (_label, raw) => {
-    expect(sanitizeDestinationLabel(raw)).toBeNull()
-  })
-})
+    expect(sanitizeDestinationLabel(raw)).toBeNull();
+  });
+});
 
 describe('stripIntentParams (#794)', () => {
   it('drops the seam params', () => {
@@ -98,8 +98,8 @@ describe('stripIntentParams (#794)', () => {
         '/events/e1',
         new URLSearchParams({ intent: `watch:${ID}`, label: 'Geese' }),
       ),
-    ).toBe('/events/e1')
-  })
+    ).toBe('/events/e1');
+  });
 
   it("keeps the destination's own query params", () => {
     expect(
@@ -111,8 +111,8 @@ describe('stripIntentParams (#794)', () => {
           label: 'Geese',
         }),
       ),
-    ).toBe('/events/e1?tab=prices')
-  })
+    ).toBe('/events/e1?tab=prices');
+  });
 
   it('drops the pending tier alongside them (#1284)', () => {
     // Both seam readers strip through here. If this dropped only the watch
@@ -122,14 +122,14 @@ describe('stripIntentParams (#794)', () => {
         '/events/e1',
         new URLSearchParams({ intent: `watch:${ID}`, tier: 'premium' }),
       ),
-    ).toBe('/events/e1')
-  })
+    ).toBe('/events/e1');
+  });
 
   it('leaves a param-free path alone', () => {
     expect(stripIntentParams('/events/e1', new URLSearchParams())).toBe(
       '/events/e1',
-    )
-  })
+    );
+  });
 
   it("keeps the destination's fragment, which buildReturnUrl preserves", () => {
     expect(
@@ -138,8 +138,8 @@ describe('stripIntentParams (#794)', () => {
         new URLSearchParams({ intent: `watch:${ID}` }),
         '#lineup',
       ),
-    ).toBe('/events/e1#lineup')
-  })
+    ).toBe('/events/e1#lineup');
+  });
 
   it('keeps a fragment alongside a surviving query', () => {
     expect(
@@ -148,9 +148,9 @@ describe('stripIntentParams (#794)', () => {
         new URLSearchParams({ tab: 'prices', label: 'Geese' }),
         '#lineup',
       ),
-    ).toBe('/events/e1?tab=prices#lineup')
-  })
-})
+    ).toBe('/events/e1?tab=prices#lineup');
+  });
+});
 
 describe('buildReturnUrl (#794)', () => {
   it('appends the intent and label for replay', () => {
@@ -160,8 +160,8 @@ describe('buildReturnUrl (#794)', () => {
         intent: `watch:${ID}`,
         label: 'Geese',
       }),
-    ).toBe(`/events/e1?intent=watch%3A${ID}&label=Geese`)
-  })
+    ).toBe(`/events/e1?intent=watch%3A${ID}&label=Geese`);
+  });
 
   it('omits the label when there is none', () => {
     expect(
@@ -170,8 +170,8 @@ describe('buildReturnUrl (#794)', () => {
         intent: `watch:${ID}`,
         label: null,
       }),
-    ).toBe(`/events/e1?intent=watch%3A${ID}`)
-  })
+    ).toBe(`/events/e1?intent=watch%3A${ID}`);
+  });
 
   it('returns a bare path when there is nothing to replay', () => {
     expect(
@@ -180,8 +180,8 @@ describe('buildReturnUrl (#794)', () => {
         intent: null,
         label: 'Geese',
       }),
-    ).toBe('/events/e1')
-  })
+    ).toBe('/events/e1');
+  });
 
   it('merges into a return path that already has a query string', () => {
     expect(
@@ -190,8 +190,8 @@ describe('buildReturnUrl (#794)', () => {
         intent: `watch:${ID}`,
         label: 'Geese',
       }),
-    ).toBe(`/events/e1?tab=prices&intent=watch%3A${ID}&label=Geese`)
-  })
+    ).toBe(`/events/e1?tab=prices&intent=watch%3A${ID}&label=Geese`);
+  });
 
   it('preserves a hash on the return path', () => {
     expect(
@@ -200,8 +200,8 @@ describe('buildReturnUrl (#794)', () => {
         intent: `watch:${ID}`,
         label: null,
       }),
-    ).toBe(`/events/e1?intent=watch%3A${ID}#lineup`)
-  })
+    ).toBe(`/events/e1?intent=watch%3A${ID}#lineup`);
+  });
 
   it('still refuses an off-origin return path', () => {
     expect(
@@ -210,22 +210,22 @@ describe('buildReturnUrl (#794)', () => {
         intent: `watch:${ID}`,
         label: null,
       }),
-    ).toBe(`${DEFAULT_RETURN_PATH}?intent=watch%3A${ID}`)
-  })
-})
+    ).toBe(`${DEFAULT_RETURN_PATH}?intent=watch%3A${ID}`);
+  });
+});
 
 describe('appendPendingTier (#1284)', () => {
   it('appends the tier to a bare path', () => {
     expect(appendPendingTier('/events/e1', 'premium')).toBe(
       '/events/e1?tier=premium',
-    )
-  })
+    );
+  });
 
   it('merges into an existing query rather than opening a second one', () => {
     expect(appendPendingTier('/events/e1?tab=prices', 'premium')).toBe(
       '/events/e1?tab=prices&tier=premium',
-    )
-  })
+    );
+  });
 
   it('rides alongside the watch seam params', () => {
     expect(
@@ -237,20 +237,20 @@ describe('appendPendingTier (#1284)', () => {
         }),
         'supporter',
       ),
-    ).toBe(`/events/e1?intent=watch%3A${ID}&label=Geese&tier=supporter`)
-  })
+    ).toBe(`/events/e1?intent=watch%3A${ID}&label=Geese&tier=supporter`);
+  });
 
   it('preserves a fragment', () => {
     expect(appendPendingTier('/events/e1#lineup', 'founder')).toBe(
       '/events/e1?tier=founder#lineup',
-    )
-  })
+    );
+  });
 
   it('replaces a tier the path already carries', () => {
     expect(appendPendingTier('/events/e1?tier=free', 'premium')).toBe(
       '/events/e1?tier=premium',
-    )
-  })
+    );
+  });
 
   it.each([
     ['null', null],
@@ -258,6 +258,6 @@ describe('appendPendingTier (#1284)', () => {
   ])('leaves the path untouched for %s', (_label, tier) => {
     expect(appendPendingTier('/events/e1?tab=prices', tier)).toBe(
       '/events/e1?tab=prices',
-    )
-  })
-})
+    );
+  });
+});

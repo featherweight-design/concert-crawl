@@ -46,8 +46,8 @@ A static SVG file. A `<style>` block defines CSS classes (`bg`, `ac`, `sig`, `do
 A Next.js route segment file:
 
 ```ts
-export const size = { width: 180, height: 180 }
-export const contentType = 'image/png'
+export const size = { width: 180, height: 180 };
+export const contentType = 'image/png';
 ```
 
 Default export: async function returning `ImageResponse` with JSX that mirrors the MiniMark geometry scaled to 180×180. Uses Electric theme colors hardcoded (no media query support in canvas-rendered PNGs).

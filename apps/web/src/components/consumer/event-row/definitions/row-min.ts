@@ -1,4 +1,4 @@
-import { SURFACES, type RowSurface } from './surfaces'
+import { SURFACES, type RowSurface } from './surfaces';
 
 /**
  * Rule 3 — the row reserves its own height.
@@ -34,8 +34,8 @@ import { SURFACES, type RowSurface } from './surfaces'
  * absorb the reservation. The artwork (56 wide, 44 narrow) never reaches these
  * figures, so the text column always governs.
  */
-const FOUR_LINE = { wide: 81, narrow: 79 } as const
-const THREE_LINE = { wide: 63, narrow: 61 } as const
+const FOUR_LINE = { wide: 81, narrow: 79 } as const;
+const THREE_LINE = { wide: 63, narrow: 61 } as const;
 
 /**
  * Keyed off `showsSupports` rather than hand-listed per surface, so adding a
@@ -43,6 +43,6 @@ const THREE_LINE = { wide: 63, narrow: 61 } as const
  * reserved height.
  */
 export function rowMin(surface: RowSurface, narrow: boolean): number {
-  const lines = SURFACES[surface].showsSupports ? FOUR_LINE : THREE_LINE
-  return narrow ? lines.narrow : lines.wide
+  const lines = SURFACES[surface].showsSupports ? FOUR_LINE : THREE_LINE;
+  return narrow ? lines.narrow : lines.wide;
 }

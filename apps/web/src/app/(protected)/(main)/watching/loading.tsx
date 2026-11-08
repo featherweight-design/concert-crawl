@@ -65,7 +65,7 @@ function WatchingCardSkeleton({ delay }: { delay: number }) {
       {/* Action gutter */}
       <div />
     </div>
-  )
+  );
 }
 
 export default function WatchingLoading() {
@@ -137,5 +137,5 @@ export default function WatchingLoading() {
         </div>
       </main>
     </>
-  )
+  );
 }

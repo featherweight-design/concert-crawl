@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, type RefObject } from 'react'
+import { useEffect, useRef, type RefObject } from 'react';
 
 // `:not([disabled])` is load-bearing, not tidiness. A disabled button cannot
 // take focus, so counting one as a trap member breaks the trap twice over:
@@ -10,7 +10,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 // disables its confirm until the token is typed — the state it is in for most
 // of its life.
 const FOCUSABLE =
-  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export interface UseDialogKeyboardOptions {
   /**
@@ -21,14 +21,14 @@ export interface UseDialogKeyboardOptions {
    * Callers whose panel is its own component, mounted only when open, can
    * leave it alone.
    */
-  enabled?: boolean
+  enabled?: boolean;
   /**
    * When false, Escape is inert. Callers pass their pending flag here: a
    * dialog mid-request has already committed, so dismissing it would leave
    * the admin believing they cancelled something that is still running.
    * Focus containment stays on either way — the background is still inert.
    */
-  dismissible?: boolean
+  dismissible?: boolean;
 }
 
 /**
@@ -63,72 +63,72 @@ export const useDialogKeyboard = (
   // `onDismiss` in the dep array the effect tore down and rebuilt on every
   // keystroke, blurring to the opener and refocusing the input each time.
   // That cancels IME composition mid-word.
-  const dismissRef = useRef(onDismiss)
-  dismissRef.current = onDismiss
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
 
   useEffect(() => {
-    if (!enabled) return
-    const previouslyFocused = document.activeElement
+    if (!enabled) return;
+    const previouslyFocused = document.activeElement;
     const focusable = (): HTMLElement[] =>
       Array.from(
         panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
-      )
+      );
 
-    const opening = focusable()[0]
-    if (opening) opening.focus()
+    const opening = focusable()[0];
+    if (opening) opening.focus();
     else if (panelRef.current) {
       // Everything is disabled — mid-request, usually. Focus the panel so it
       // never sits outside a dialog that still claims the page is inert.
-      panelRef.current.tabIndex = -1
-      panelRef.current.focus()
+      panelRef.current.tabIndex = -1;
+      panelRef.current.focus();
     }
 
     const onKeyDown = (evt: KeyboardEvent) => {
       if (evt.key === 'Escape') {
-        if (dismissible) dismissRef.current()
-        return
+        if (dismissible) dismissRef.current();
+        return;
       }
-      if (evt.key !== 'Tab') return
-      const panel = panelRef.current
+      if (evt.key !== 'Tab') return;
+      const panel = panelRef.current;
       // Boundary wrapping alone is not containment: it only fires when focus
       // is already ON the head or tail. Focus can sit outside the panel —
       // returning from browser chrome, or anything that moves it
       // programmatically — and from there Tab walks into the page behind a
       // dialog still claiming it is inert. Pull it back in first.
       if (panel && !panel.contains(document.activeElement)) {
-        evt.preventDefault()
-        const entry = focusable()[0]
-        if (entry) entry.focus()
+        evt.preventDefault();
+        const entry = focusable()[0];
+        if (entry) entry.focus();
         else {
-          panel.tabIndex = -1
-          panel.focus()
+          panel.tabIndex = -1;
+          panel.focus();
         }
-        return
+        return;
       }
-      const items = focusable()
-      const head = items[0]
-      const tail = items[items.length - 1]
+      const items = focusable();
+      const head = items[0];
+      const tail = items[items.length - 1];
       if (!head || !tail) {
         // Nothing focusable left to cycle between; keep Tab inside anyway.
-        evt.preventDefault()
-        return
+        evt.preventDefault();
+        return;
       }
       if (evt.shiftKey && document.activeElement === head) {
-        evt.preventDefault()
-        tail.focus()
+        evt.preventDefault();
+        tail.focus();
       } else if (!evt.shiftKey && document.activeElement === tail) {
-        evt.preventDefault()
-        head.focus()
+        evt.preventDefault();
+        head.focus();
       }
-    }
+    };
 
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onKeyDown);
       // Returning focus to the control that opened the dialog is the other
       // half of the contract: without it focus falls back to <body> and a
       // keyboard user restarts their traversal from the top of the page.
-      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus()
-    }
-  }, [panelRef, dismissible, enabled])
-}
+      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+    };
+  }, [panelRef, dismissible, enabled]);
+};

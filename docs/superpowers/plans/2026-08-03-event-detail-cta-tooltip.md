@@ -40,11 +40,11 @@ the system token. The scopes are named in the handoff README §10 — note they 
 **not** currently written down in `CLAUDE.md`, which is why this keeps getting
 re-litigated (see Out of scope):
 
-| CTA | Token | Scope |
-|---|---|---|
-| Get Tickets | `--signal` | system, constant app-wide |
-| Watching | `--accent` | brand presence, constant app-wide |
-| Going | `stampAccentFor(artist)` | per-show |
+| CTA         | Token                    | Scope                             |
+| ----------- | ------------------------ | --------------------------------- |
+| Get Tickets | `--signal`               | system, constant app-wide         |
+| Watching    | `--accent`               | brand presence, constant app-wide |
+| Going       | `stampAccentFor(artist)` | per-show                          |
 
 The separator is **weight, not hue**: Get Tickets is always filled, Going is
 outlined until you commit. `locked` is outlined too, so the Free path never shows
@@ -125,7 +125,7 @@ initial focus lands inside the dialog, not on the scrim.
 
 Restructure `WatchZone` into the strip the handoff specifies:
 
-- **Row 1** — the eye toggle plus a status line. The line carries copy in *both*
+- **Row 1** — the eye toggle plus a status line. The line carries copy in _both_
   toggle states so the strip doesn't change height when you tap. Today the hint
   renders only when not watching, which is the height jump.
 - **Row 2** — the crawl, gated on the two-nameable-people rule. Implement it as a

@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId } from 'react';
 
 import {
   crewIdentity,
@@ -6,27 +6,27 @@ import {
   type CrewGround,
   type CrewSigil,
   type CrewWeave,
-} from './lib/crew-identity'
+} from './lib/crew-identity';
 
-export type CrewPatchScale = 'hero' | 'tile' | 'micro'
+export type CrewPatchScale = 'hero' | 'tile' | 'micro';
 
 interface CrewPatchProps {
-  crewId: string
-  patchSalt?: number
-  size?: number
-  scale?: CrewPatchScale
+  crewId: string;
+  patchSalt?: number;
+  size?: number;
+  scale?: CrewPatchScale;
 }
 
 interface LayerColors {
-  pri: string
-  sec: string
+  pri: string;
+  sec: string;
 }
 
 /** Weaves are single-colour by design, so they take the primary alone. */
 interface WeaveArgs {
-  pri: string
-  sw: number
-  pid: string
+  pri: string;
+  sw: number;
+  pid: string;
 }
 
 /** Wraps n copies of a node in evenly spaced rotations about the patch centre. */
@@ -35,13 +35,13 @@ const radial = (count: number, node: (index: number) => React.ReactNode) =>
     <g key={i} transform={`rotate(${(360 / count) * i} 50 50)`}>
       {node(i)}
     </g>
-  ))
+  ));
 
 const hexPoints = (radius: number) =>
   Array.from({ length: 6 }, (_, i) => {
-    const angle = ((i * 60 - 90) * Math.PI) / 180
-    return `${(50 + Math.cos(angle) * radius).toFixed(2)} ${(50 + Math.sin(angle) * radius).toFixed(2)}`
-  }).join(' L ')
+    const angle = ((i * 60 - 90) * Math.PI) / 180;
+    return `${(50 + Math.cos(angle) * radius).toFixed(2)} ${(50 + Math.sin(angle) * radius).toFixed(2)}`;
+  }).join(' L ');
 
 /** Grounds — the field the sigil sits on. Always the chord's secondary. */
 const GROUND_RENDERERS: Record<
@@ -63,14 +63,14 @@ const GROUND_RENDERERS: Record<
     </g>
   ),
   wedges: ({ sec }) => {
-    const wedges: string[] = []
+    const wedges: string[] = [];
     for (let i = 0; i < 6; i += 2) {
-      const from = ((i * 60 - 90) * Math.PI) / 180
-      const to = (((i + 1) * 60 - 90) * Math.PI) / 180
-      const radius = 70
+      const from = ((i * 60 - 90) * Math.PI) / 180;
+      const to = (((i + 1) * 60 - 90) * Math.PI) / 180;
+      const radius = 70;
       wedges.push(
         `M50 50 L${(50 + Math.cos(from) * radius).toFixed(2)} ${(50 + Math.sin(from) * radius).toFixed(2)} L${(50 + Math.cos(to) * radius).toFixed(2)} ${(50 + Math.sin(to) * radius).toFixed(2)} Z`,
-      )
+      );
     }
     return (
       <g>
@@ -86,7 +86,7 @@ const GROUND_RENDERERS: Record<
           <path key={path} d={path} fill={sec} fillOpacity="0.13" />
         ))}
       </g>
-    )
+    );
   },
   bands: ({ sec }) => (
     <g>
@@ -103,7 +103,7 @@ const GROUND_RENDERERS: Record<
       ))}
     </g>
   ),
-}
+};
 
 /**
  * Weaves — the fabric. Three of the four tile as an SVG <pattern> painted
@@ -148,7 +148,7 @@ const WEAVE_RENDERERS: Record<CrewWeave, (args: WeaveArgs) => React.ReactNode> =
     warp: ({ pri, sw }) => (
       <g>
         {Array.from({ length: 12 }, (_, i) => {
-          const angle = (i * 30 * Math.PI) / 180
+          const angle = (i * 30 * Math.PI) / 180;
           return (
             <line
               key={i}
@@ -160,7 +160,7 @@ const WEAVE_RENDERERS: Record<CrewWeave, (args: WeaveArgs) => React.ReactNode> =
               strokeWidth={sw}
               strokeOpacity="0.22"
             />
-          )
+          );
         })}
         {[20, 32, 44].map((radius) => (
           <circle
@@ -231,7 +231,7 @@ const WEAVE_RENDERERS: Record<CrewWeave, (args: WeaveArgs) => React.ReactNode> =
         <rect x="-20" y="-20" width="140" height="140" fill={`url(#${pid})`} />
       </g>
     ),
-  }
+  };
 
 /** Sigils — the crest. Upright at every size; the chord's primary carries it. */
 const SIGIL_RENDERERS: Record<
@@ -313,9 +313,9 @@ const SIGIL_RENDERERS: Record<
       <circle cx="50" cy="50" r="4.5" fill={sec} />
     </g>
   ),
-}
+};
 
-const SQUIRCLE_RADIUS = 28
+const SQUIRCLE_RADIUS = 28;
 
 /**
  * The generated emblem for a crew: a sew-on patch, not a poster. Every colour
@@ -329,18 +329,18 @@ export function CrewPatch({
   size = 96,
   scale = 'hero',
 }: CrewPatchProps) {
-  const identity = crewIdentity(crewId, patchSalt)
+  const identity = crewIdentity(crewId, patchSalt);
   // useId, not a module-scope counter: server and client counters diverge under
   // SSR and hydrate the clipPath/pattern refs onto ids that do not exist.
-  const uid = `cp${useId().replace(/:/g, '')}`
-  const chord = CREW_CHORD_TOKENS[identity.chord]
-  const pri = `var(${chord.primary})`
-  const sec = `var(${chord.secondary})`
+  const uid = `cp${useId().replace(/:/g, '')}`;
+  const chord = CREW_CHORD_TOKENS[identity.chord];
+  const pri = `var(${chord.primary})`;
+  const sec = `var(${chord.secondary})`;
   // micro drops the weave and the stitch: at 24-28px they turn to mud, and the
   // sigil plus chord is what makes a crew recognisable in a picker.
-  const showWeave = scale !== 'micro'
-  const showStitch = scale === 'hero'
-  const sw = scale === 'hero' ? 1.6 : 2.2
+  const showWeave = scale !== 'micro';
+  const showStitch = scale === 'hero';
+  const sw = scale === 'hero' ? 1.6 : 2.2;
 
   return (
     <svg
@@ -408,5 +408,5 @@ export function CrewPatch({
         />
       )}
     </svg>
-  )
+  );
 }

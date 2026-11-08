@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import type { EventsListResponse } from '@concert-crawl/types'
-import { STALE_30_MIN } from '@/lib/query-client'
-import { apiClient, publicApiClient } from '@/lib/api'
-import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection'
-import { buildEventsApiParams } from '@/lib/events-api-params'
-import { useSpotifyConnection } from './use-spotify-connection'
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import type { EventsListResponse } from '@concert-crawl/types';
+import { STALE_30_MIN } from '@/lib/query-client';
+import { apiClient, publicApiClient } from '@/lib/api';
+import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection';
+import { buildEventsApiParams } from '@/lib/events-api-params';
+import { useSpotifyConnection } from './use-spotify-connection';
 
 // personalizedFor is the viewer's userId when the response carries their
 // followedArtists overlay, null for the shared anonymous shape. Scoping the
@@ -18,14 +18,14 @@ export function eventsQueryKey(
   paramsString: string,
   personalizedFor: string | null,
 ) {
-  return ['events', paramsString, personalizedFor] as const
+  return ['events', paramsString, personalizedFor] as const;
 }
 
 interface UseEventsOptions {
-  searchParamsString: string // URLSearchParams serialized (without offset)
-  limit: number
-  initialData?: EventsListResponse
-  initialOffset?: number
+  searchParamsString: string; // URLSearchParams serialized (without offset)
+  limit: number;
+  initialData?: EventsListResponse;
+  initialOffset?: number;
 }
 
 export function useEvents({
@@ -34,7 +34,7 @@ export function useEvents({
   initialData,
   initialOffset = 0,
 }: UseEventsOptions) {
-  const { getToken, userId } = useAuth()
+  const { getToken, userId } = useAuth();
   // The /v1/events list route personalizes for viewers with Spotify taste rows
   // (#763 PR 6: optional followedArtists per event). Only those viewers need a
   // credentialed fetch — everyone else keeps the anonymous request so the
@@ -45,27 +45,28 @@ export function useEvents({
   // count of Spotify-sourced rows persisted at the last sync — a connection
   // with zero of them gets no followedArtists from the API, so it keeps the
   // cacheable anonymous fetch.
-  const { data: connection } = useSpotifyConnection()
+  const { data: connection } = useSpotifyConnection();
   const hasTaste =
     connection != null &&
     (connection.status === 'connected' || connection.status === 'error') &&
-    connection.artistCount > 0
+    connection.artistCount > 0;
   // Taste filter (#763 PR 7): filterTaste=1 in the page URL maps to the API's
   // taste=1 param, which requires a token + the spotify-sync entitlement.
   // Logged-out viewers can't hold the entitlement (the chip is locked for
   // them), so a filterTaste URL without a userId is a tampered/stale link —
   // drop the flag and fetch the plain list.
-  const pageParams = new URLSearchParams(searchParamsString)
-  const tasteRequested = pageParams.get('filterTaste') === '1' && userId != null
+  const pageParams = new URLSearchParams(searchParamsString);
+  const tasteRequested =
+    pageParams.get('filterTaste') === '1' && userId != null;
   // "My artists" (native following) is gated exactly like taste, and was the
   // scope Load More lost: the page URL carries `filterFollowing`, the API
   // takes `following`, and nothing translated between them on this path — so
   // page 2 returned the unscoped list under a banner still claiming the scope.
   const followingRequested =
-    pageParams.get('filterFollowing') === '1' && userId != null
-  const scopeRequested = tasteRequested || followingRequested
+    pageParams.get('filterFollowing') === '1' && userId != null;
+  const scopeRequested = tasteRequested || followingRequested;
   const personalizedFor =
-    (hasTaste || scopeRequested) && userId != null ? userId : null
+    (hasTaste || scopeRequested) && userId != null ? userId : null;
   return useInfiniteQuery({
     // personalizedFor is part of the key so pages fetched anonymously before
     // the connection query resolves aren't reused for the personalized view,
@@ -88,22 +89,22 @@ export function useEvents({
           offset: pageParam,
           taste,
           following,
-        }).toString()}`
+        }).toString()}`;
 
-      const path = pathFor(tasteRequested, followingRequested)
+      const path = pathFor(tasteRequested, followingRequested);
       if (personalizedFor != null) {
-        const token = await getToken()
+        const token = await getToken();
         // Throw instead of falling back to the anonymous fetch — with
         // staleTime, a cached anonymous page under the personalized key
         // would stick (no followedArtists) after a transient token gap.
         // Throwing lets React Query retry (same reasoning as
         // useSpotifyConnection).
         if (!token) {
-          throw new Error('Auth token unavailable while fetching events')
+          throw new Error('Auth token unavailable while fetching events');
         }
         if (scopeRequested) {
           try {
-            return await apiClient.get<EventsListResponse>(path, token)
+            return await apiClient.get<EventsListResponse>(path, token);
           } catch (err) {
             // Entitlement lapsed (or lost) mid-session, or the flag went off:
             // fall back to the unfiltered list rather than erroring the whole
@@ -114,24 +115,24 @@ export function useEvents({
               console.warn(
                 'scope filter rejected — falling back to unfiltered',
                 err,
-              )
-              const retryToken = scopeRetryToken(err, token)
-              const unscoped = pathFor(false, false)
+              );
+              const retryToken = scopeRetryToken(err, token);
+              const unscoped = pathFor(false, false);
               return retryToken
                 ? apiClient.get<EventsListResponse>(unscoped, retryToken)
-                : publicApiClient.get<EventsListResponse>(unscoped)
+                : publicApiClient.get<EventsListResponse>(unscoped);
             }
-            throw err
+            throw err;
           }
         }
-        return apiClient.get<EventsListResponse>(path, token)
+        return apiClient.get<EventsListResponse>(path, token);
       }
-      return publicApiClient.get<EventsListResponse>(path)
+      return publicApiClient.get<EventsListResponse>(path);
     },
     initialPageParam: initialOffset,
     getNextPageParam: (lastPage: EventsListResponse) => {
-      const nextOffset = lastPage.offset + lastPage.limit
-      return nextOffset < lastPage.total ? nextOffset : undefined
+      const nextOffset = lastPage.offset + lastPage.limit;
+      return nextOffset < lastPage.total ? nextOffset : undefined;
     },
     // Spread conditional to avoid passing `initialData: undefined` with exactOptionalPropertyTypes
     ...(initialData
@@ -143,5 +144,5 @@ export function useEvents({
         }
       : {}),
     staleTime: STALE_30_MIN,
-  })
+  });
 }

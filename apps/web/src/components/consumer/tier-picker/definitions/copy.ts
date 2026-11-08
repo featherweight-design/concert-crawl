@@ -326,4 +326,4 @@ export const TIER_PICKER_COPY = {
   aria: {
     tierDetails: (tierName: string) => `${tierName} tier details`,
   },
-} as const
+} as const;

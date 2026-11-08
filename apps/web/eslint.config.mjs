@@ -1,4 +1,4 @@
-import kitNext from '@fwd-stack/eslint-config/next'
+import kitNext from '@fwd-stack/eslint-config/next';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -138,8 +138,7 @@ export default [
           // (`— Hugh`) and divider (`— end of log —`) conventions, where the
           // glyph is typography rather than punctuation. So is a string that
           // is nothing but the glyph, which is the empty-data placeholder.
-          selector:
-            'Literal[value=/—/]:not([value=/^(\\$?—|—[  ].*)$/])',
+          selector: 'Literal[value=/—/]:not([value=/^(\\$?—|—[  ].*)$/])',
           message:
             'No em-dash in customer-facing copy — use a comma, colon or full stop. Exempt: a bare “—” or “$—” placeholder, or a leading “— ” sign-off. See the copy-review skill.',
         },
@@ -167,4 +166,4 @@ export default [
       ],
     },
   },
-]
+];

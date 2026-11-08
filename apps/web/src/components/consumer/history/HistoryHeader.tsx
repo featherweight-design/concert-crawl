@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The History stat hero (#70), from
 // design_handoff_concert_history/history-screens.jsx:216-259, with the desktop
@@ -9,10 +9,10 @@
 // shouldn't see a "top genre — " tile. Nights/venues/artists are always
 // numbers, so they always render.
 
-import type { HistoryStats } from '@concert-crawl/types'
-import { HISTORY_COPY } from './definitions/copy'
+import type { HistoryStats } from '@concert-crawl/types';
+import { HISTORY_COPY } from './definitions/copy';
 
-const COPY = HISTORY_COPY.header
+const COPY = HISTORY_COPY.header;
 
 // dt precedes dd in the DOM because HTML requires that order inside a <dl>
 // wrapper div; flex-col-reverse puts the big number back on top visually.
@@ -47,12 +47,12 @@ const StatTile = ({ value, label }: { value: string; label: string }) => (
       {value}
     </dd>
   </div>
-)
+);
 
 interface Tile {
-  key: string
-  value: string
-  label: string
+  key: string;
+  value: string;
+  label: string;
 }
 
 // Kept as a pure function so the null-hiding rule is testable independently of
@@ -83,47 +83,47 @@ export const historyTilesFor = (stats: HistoryStats): Tile[] => {
           ? COPY.stats.artistsSingular
           : COPY.stats.artistsPlural,
     },
-  ]
+  ];
 
   if (stats.topGenre !== null) {
     tiles.push({
       key: 'topGenre',
       value: stats.topGenre,
       label: COPY.stats.topGenre,
-    })
+    });
   }
   if (stats.topVenue !== null) {
     tiles.push({
       key: 'topVenue',
       value: stats.topVenue,
       label: COPY.stats.topVenue,
-    })
+    });
   }
   if (stats.totalSpent !== null) {
     tiles.push({
       key: 'spent',
       value: `$${Math.round(stats.totalSpent)}`,
       label: COPY.stats.spent,
-    })
+    });
   }
 
-  return tiles
-}
+  return tiles;
+};
 
 // `first` is a YYYY-MM-DD event-local date; parsed at local midnight so the
 // month never slides backwards a day.
 const sinceLabelFor = (first: string | null): string | null => {
-  if (first === null) return null
-  const parsed = new Date(`${first}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) return null
+  if (first === null) return null;
+  const parsed = new Date(`${first}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
   return COPY.since(
     parsed.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-  )
-}
+  );
+};
 
 export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
-  const tiles = historyTilesFor(stats)
-  const since = sinceLabelFor(stats.first)
+  const tiles = historyTilesFor(stats);
+  const since = sinceLabelFor(stats.first);
 
   return (
     <header className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
@@ -168,5 +168,5 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
         </p>
       )}
     </header>
-  )
-}
+  );
+};

@@ -23,7 +23,7 @@ Binding for every task below. A PR that violates one of these does not merge.
 1. **Worktree discipline.** All work in `.worktrees/<branch>`; the main repo directory stays clean.
 2. **Locked vocabulary.** **Watching** (never "Saved"/"Favorites"/"Following"), **Submitted prices**, **price check** (never "dispute"/"contest" in customer-facing copy). The Watching affordance is an **eye** (lucide `Eye`). There is no heart icon in this product: no heart glyph may be rendered, and the string `heart` must not appear in any customer-facing copy, component name, icon import, or CSS class this plan ships. (Prose stating the rule is exempt.)
 3. **Copy rule.** Every customer-facing string lives in a `definitions/copy.ts`. No inline literals in components. New panel strings go in `apps/web/src/components/consumer/notifications/definitions/copy.ts`.
-4. **Row `title`/`body` come from the shipped writers, never from the prototype fixtures.** The panel renders `notifications.title` and `notifications.body` verbatim. Authoritative sources: `packages/push/src/definitions/copy.ts` (watch.*), `apps/api/src/lib/contest-notifications.ts` (contest.*), `packages/crawler-core/src/lib/spotify-fanout/definitions/copy.ts` (spotify.new_show). The handoff's `watch.pricedrop` fixture ("The price for Geese at Bluebird Theater dropped from $41 to $28.") is **not** the shipped string — the shipped title is `` `${newPrice} tickets for ${artistAtVenue} just went on sale.` ``. Fixtures in tests must be copied from the writers.
+4. **Row `title`/`body` come from the shipped writers, never from the prototype fixtures.** The panel renders `notifications.title` and `notifications.body` verbatim. Authoritative sources: `packages/push/src/definitions/copy.ts` (watch._), `apps/api/src/lib/contest-notifications.ts` (contest._), `packages/crawler-core/src/lib/spotify-fanout/definitions/copy.ts` (spotify.new_show). The handoff's `watch.pricedrop` fixture ("The price for Geese at Bluebird Theater dropped from $41 to $28.") is **not** the shipped string — the shipped title is `` `${newPrice} tickets for ${artistAtVenue} just went on sale.` ``. Fixtures in tests must be copied from the writers.
 5. **No `as` casts.** Zod `safeParse` at every boundary, type guards for union narrowing, declaration merging for library types. `apps/web/src/lib/api.ts` is the model.
 6. **Zod at every Hono endpoint.** `zValidator('query'|'json', …)` for bodies/queries; `z.string().uuid().safeParse(ctx.req.param('id'))` for path params (pattern: `apps/api/src/routes/me-push.ts`).
 7. **All API routes under `/v1/`.**
@@ -38,11 +38,11 @@ Binding for every task below. A PR that violates one of these does not merge.
 
 ## Sequencing lock
 
-| PR | Scope | Depends on | Can start |
-| --- | --- | --- | --- |
-| **PR-A** | Migration `0064`, `/v1/notifications` router, retention job, integration tests | — | Immediately |
-| **PR-B** | Panel components, category map, copy, time helpers, react-query hook | PR-A merged (contract + fixtures) | After PR-A |
-| **PR-C** | Chrome integration, pip, mobile menu mount, keyboard/focus, releases entry | PR-B merged | After PR-B |
+| PR       | Scope                                                                          | Depends on                        | Can start   |
+| -------- | ------------------------------------------------------------------------------ | --------------------------------- | ----------- |
+| **PR-A** | Migration `0064`, `/v1/notifications` router, retention job, integration tests | —                                 | Immediately |
+| **PR-B** | Panel components, category map, copy, time helpers, react-query hook           | PR-A merged (contract + fixtures) | After PR-A  |
+| **PR-C** | Chrome integration, pip, mobile menu mount, keyboard/focus, releases entry     | PR-B merged                       | After PR-B  |
 
 PR-B may be authored against the PR-A contract in parallel, but must not merge before PR-A — its react-query hook calls endpoints that do not exist until then. PR-C is strictly last: it mounts PR-B's components into shipped chrome and is the only PR that touches `UserMenu.tsx`, `AppHeader.tsx`, and `BottomNav.tsx`.
 
@@ -63,6 +63,7 @@ Branch: `feat/737-notifications-api`
 ### Task 1: Add `user_profiles.notifications_seen_at`
 
 **Files:**
+
 - modify `packages/db/src/schema/user-profiles.ts`
 - create `packages/db/migrations/0064_notifications_seen_at.sql`
 - modify `packages/db/migrations/meta/_journal.json`
@@ -78,15 +79,16 @@ Nullable, no default. `NULL` means "never opened the panel" — every row in the
 - [ ] **Step 1: Write the schema column.** Place it adjacent to `spotifyNudgeSeenAt` so the two markers read as a set.
 - [ ] **Step 2: Write the migration.** `ALTER TABLE user_profiles ADD COLUMN notifications_seen_at timestamptz;` — additive only, no backfill, no `NOT NULL`. Expand-only.
 - [ ] **Step 3: Append the journal entry.** `idx: 64`, `when` strictly greater than `1785628800000`.
-  Run: `pnpm db:migrate`
-  Expected: clean apply against the local DB; re-running is a no-op.
+      Run: `pnpm db:migrate`
+      Expected: clean apply against the local DB; re-running is a no-op.
 - [ ] **Step 4: Add a covering index for the list query.**
-  `CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at DESC) WHERE type = 'user_notification';`
-  Same migration file. The list endpoint's hot path is exactly this predicate + ordering.
+      `CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at DESC) WHERE type = 'user_notification';`
+      Same migration file. The list endpoint's hot path is exactly this predicate + ordering.
 
 ### Task 2: Notification window constants
 
 **Files:**
+
 - create `apps/api/src/lib/definitions/notification-windows.ts`
 
 **Interface:**
@@ -102,9 +104,10 @@ export const NOTIFICATION_PAGE_SIZE_MAX = 50;
 
 ### Task 3: `GET /v1/notifications` — list + unread count
 
-> **Deliberate divergence from the brief.** The design brief and handoff both say `GET /v1/notifications/me`. This plan ships `GET /v1/notifications` instead, to match `/v1/watching` — the closest shipped analogue, which is likewise an implicitly viewer-scoped collection and carries no `/me` suffix (`apps/api/src/routes/index.ts:43`). The `/v1/me` prefix in this codebase is reserved for the *singular* profile resource (`mePushRouter`, line 47), not for collections. Nothing downstream of the brief depends on the literal path.
+> **Deliberate divergence from the brief.** The design brief and handoff both say `GET /v1/notifications/me`. This plan ships `GET /v1/notifications` instead, to match `/v1/watching` — the closest shipped analogue, which is likewise an implicitly viewer-scoped collection and carries no `/me` suffix (`apps/api/src/routes/index.ts:43`). The `/v1/me` prefix in this codebase is reserved for the _singular_ profile resource (`mePushRouter`, line 47), not for collections. Nothing downstream of the brief depends on the literal path.
 
 **Files:**
+
 - create `apps/api/src/routes/notifications.ts`
 - modify `apps/api/src/routes/index.ts`
 - create `apps/api/src/routes/notifications.integration.test.ts`
@@ -113,7 +116,12 @@ export const NOTIFICATION_PAGE_SIZE_MAX = 50;
 
 ```ts
 const listQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(NOTIFICATION_PAGE_SIZE_MAX).default(NOTIFICATION_PAGE_SIZE),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(NOTIFICATION_PAGE_SIZE_MAX)
+    .default(NOTIFICATION_PAGE_SIZE),
   before: z.string().datetime({ offset: true }).optional(),
 });
 
@@ -145,44 +153,47 @@ interface ConsumerNotification {
 ```
 
 - [ ] **Step 1: Write the failing integration test.** Copy the harness shape from `apps/api/src/routes/watching.integration.test.ts:1-50` (`vi.hoisted` auth state, `vi.mock('@hono/clerk-auth')`, `createApp()`, `clearTables()`). Assert: 401 unauthenticated; empty `items` for a user with no rows; only that user's rows returned; `admin_alert` rows excluded; rows older than `NOTIFICATION_BACKFILL_DAYS` excluded; `items` ordered `createdAt DESC`; `hasMore` true when a 21st in-window row exists.
-  Run: `pnpm --filter @concert-crawl/api test notifications.integration`
-  Expected: FAIL (module not found).
+      Run: `pnpm --filter @concert-crawl/api test notifications.integration`
+      Expected: FAIL (module not found).
 - [ ] **Step 2: Create the router skeleton.** `notificationsRouter.use('*', clerkMiddleware())`, then the `getAuth(ctx)` → `userId ?? null` → 401 guard verbatim from `me-push.ts`.
 - [ ] **Step 3: Implement the query.** Drizzle `select` from `notifications` where `userId = $userId and type = 'user_notification' and createdAt > now() - interval`, order by `createdAt desc`, limit `limit + 1` to derive `hasMore`. `before` (when present) adds `createdAt < new Date(before)` for the "Older notifications" page — convert the validated datetime **string** to a `Date` before it reaches the predicate, as `admin/invite-codes.ts:48` does; passing the raw string leaves the comparison at the driver's mercy.
 - [ ] **Step 4: Parse `metadata` safely.** The column is a JSON **string** (`packages/db/src/schema/notifications.ts`). Parse inside a `try`/`catch`; on failure log `apiLogger.warn` and return `metadata: null`. Validate the parse result with a `z.record(z.unknown()).safeParse` — no casts.
 - [ ] **Step 5: Validate `category` against the shipped union.** `UserNotificationCategorySchema.safeParse(row.category)`; on failure, still return the row but with the raw string, and let the client's `CATEGORY_FALLBACK` handle it. Log once per unknown value.
 - [ ] **Step 6: Compute `unreadCount`.** A row is unread when `readAt IS NULL`. Count over the same window and return the **true** count — do not cap it server-side. The pip is a dot, so the number exists only for the `aria-label`, and announcing "99" to someone with 140 unread is simply wrong. Cap at the render layer instead: the visible affordance stays a dot and the label reads the real number. Return `seenAt` from `user_profiles.notificationsSeenAt` so the client can render the "fresh vs. backfill" divider without a second call.
 - [ ] **Step 7: Mount at `/v1/notifications`** in `apps/api/src/routes/index.ts`, adjacent to the `/v1/me` mount.
-  Run: `pnpm --filter @concert-crawl/api test notifications.integration`
-  Expected: PASS.
+      Run: `pnpm --filter @concert-crawl/api test notifications.integration`
+      Expected: PASS.
 
 ### Task 4: `POST /v1/notifications/:id/read` and `/read-all`
 
 **Files:**
+
 - modify `apps/api/src/routes/notifications.ts`
 - modify `apps/api/src/routes/notifications.integration.test.ts`
 
 - [ ] **Step 1: Write the failing tests.** Per-item: marks only that row, is idempotent (second call still 200, `readAt` unchanged), 404 for another user's id, 400 for a non-UUID id. Mark-all: sets `readAt` on every unread in-window row for that user only, returns the number updated, is idempotent.
-  Expected: FAIL.
+      Expected: FAIL.
 - [ ] **Step 2: Register `/read-all` BEFORE `/:id/read`.** Hono matches in registration order and will otherwise bind `read-all` to `:id`. The admin router carries this same comment (`apps/api/src/routes/admin/notifications.ts`) — repeat it here so the trap is documented at both sites.
 - [ ] **Step 3: Implement `/:id/read`.** `z.string().uuid().safeParse(ctx.req.param('id'))` → 400 on failure. `update … set readAt = coalesce(read_at, now()) where id = $id and user_id = $userId and type = 'user_notification'` and `returning({ id })`; empty result → 404. The `coalesce` is what makes it idempotent.
 - [ ] **Step 4: Implement `/read-all`.** Single `update … where user_id = $userId and read_at is null and type = 'user_notification'` plus the backfill-window predicate, `returning({ id })`; respond `{ success: true, data: { updated: rows.length } }`. One statement — no N+1.
-  Expected: PASS.
+      Expected: PASS.
 
 ### Task 5: `POST /v1/notifications/mark-panel-seen`
 
 **Files:**
+
 - modify `apps/api/src/routes/notifications.ts`
 - modify `apps/api/src/routes/notifications.integration.test.ts`
 
 - [ ] **Step 1: Write the failing tests.** Creates the `user_profiles` row when absent; advances `notificationsSeenAt` when present; never moves the timestamp backwards; does **not** touch `readAt` on any row (seen ≠ read — this is the whole point of the two-level model).
-  Expected: FAIL.
-- [ ] **Step 2: Implement with `onConflictDoUpdate`.** `insert(userProfiles).values({ userId, notificationsSeenAt: sql\`now()\` }).onConflictDoUpdate({ target: userProfiles.userId, set: { notificationsSeenAt: sql\`greatest(${userProfiles.notificationsSeenAt}, now())\`, updatedAt: sql\`now()\` } })` — the same upsert shape as `me-push.ts`, plus a `greatest(...)` guard. The guard is what actually enforces "never moves backwards": `now()` is transaction-start time, so two concurrent marks can commit out of order and the later writer would otherwise stamp an *earlier* timestamp. A dedicated endpoint (rather than overloading `PATCH /v1/users/me`) keeps pip derivation to a single read and keeps profile PATCH free of a side effect on every save.
-  Expected: PASS.
+      Expected: FAIL.
+- [ ] **Step 2: Implement with `onConflictDoUpdate`.** `insert(userProfiles).values({ userId, notificationsSeenAt: sql\`now()\` }).onConflictDoUpdate({ target: userProfiles.userId, set: { notificationsSeenAt: sql\`greatest(${userProfiles.notificationsSeenAt}, now())\`, updatedAt: sql\`now()\` } })`— the same upsert shape as`me-push.ts`, plus a `greatest(...)`guard. The guard is what actually enforces "never moves backwards":`now()`is transaction-start time, so two concurrent marks can commit out of order and the later writer would otherwise stamp an *earlier* timestamp. A dedicated endpoint (rather than overloading`PATCH /v1/users/me`) keeps pip derivation to a single read and keeps profile PATCH free of a side effect on every save.
+      Expected: PASS.
 
 ### Task 6: Retention prune
 
 **Files:**
+
 - modify `apps/api/src/routes/admin/…` or the existing daily job entry point (locate the daily cron entry alongside the 3 AM MT crawl job)
 - create `apps/api/src/lib/prune-notifications.ts`
 - create `apps/api/src/lib/prune-notifications.test.ts`
@@ -194,10 +205,10 @@ export const pruneNotifications = async (db: Database): Promise<{ deleted: numbe
 ```
 
 - [ ] **Step 1: Write the failing unit test.** Deletes `user_notification` rows older than `NOTIFICATION_RETENTION_DAYS`; leaves in-window rows; leaves `admin_alert` rows of any age; returns the count.
-  Expected: FAIL.
+      Expected: FAIL.
 - [ ] **Step 2: Implement the delete** with an explicit `type = 'user_notification'` predicate. Log the deleted count at info.
 - [ ] **Step 3: Wire it into the existing daily cron** rather than adding a new Render cron job. Wrap the call in try/catch; a prune failure must never fail the job that hosts it.
-  Expected: PASS.
+      Expected: PASS.
 
 ---
 
@@ -210,6 +221,7 @@ All components live under `apps/web/src/components/consumer/notifications/`. The
 ### Task 7: Copy, category map, and time helpers
 
 **Files:**
+
 - create `apps/web/src/components/consumer/notifications/definitions/copy.ts`
 - create `apps/web/src/components/consumer/notifications/definitions/categories.ts`
 - create `apps/web/src/components/consumer/notifications/lib/format-time.ts`
@@ -227,27 +239,29 @@ export const categoryFor = (raw: string): CategoryPresentation => { … };
 
 - [ ] **Step 1: Port `CATEGORY_MAP` verbatim** from `notifications-data.jsx:117-126`. All **eight** shipped categories, keyed to `UserNotificationCategorySchema` (`packages/push/src/notification-categories.ts:16-25`):
 
-  | key | label | ink | glyph |
-  | --- | --- | --- | --- |
-  | `watch.cancelled` | Cancelled | `var(--danger)` | cancelled |
-  | `watch.postponed` | Moved | `var(--warning)` | postponed |
-  | `watch.soldout` | Sold out | `var(--warning)` | soldout |
-  | `watch.backonsale` | Back on | `var(--success)` | backonsale |
-  | `watch.pricedrop` | Price drop | `var(--success)` | pricedrop |
-  | `contest.resolved` | Price check | `var(--fg-muted)` | resolved |
-  | `contest.needs_info` | Needs you | `var(--signal)` | needsinfo |
-  | `spotify.new_show` | Spotify | `var(--accent)` | spotify |
+  | key                  | label       | ink               | glyph      |
+  | -------------------- | ----------- | ----------------- | ---------- |
+  | `watch.cancelled`    | Cancelled   | `var(--danger)`   | cancelled  |
+  | `watch.postponed`    | Moved       | `var(--warning)`  | postponed  |
+  | `watch.soldout`      | Sold out    | `var(--warning)`  | soldout    |
+  | `watch.backonsale`   | Back on     | `var(--success)`  | backonsale |
+  | `watch.pricedrop`    | Price drop  | `var(--success)`  | pricedrop  |
+  | `contest.resolved`   | Price check | `var(--fg-muted)` | resolved   |
+  | `contest.needs_info` | Needs you   | `var(--signal)`   | needsinfo  |
+  | `spotify.new_show`   | Spotify     | `var(--accent)`   | spotify    |
 
   The five `watch.*` categories are deliberately **not** collapsed into one row type: ink encodes valence, glyph encodes event. Do not "simplify" this.
+
 - [ ] **Step 2: Type the map exhaustively.** `Record<UserNotificationCategory, CategoryPresentation>` makes a future ninth category a compile error at this file. `categoryFor` narrows an unknown string via `UserNotificationCategorySchema.safeParse` and returns `CATEGORY_FALLBACK` on failure — no cast.
 - [ ] **Step 3: Port `NOTIF_COPY`** from `notifications-data.jsx:139-166` into `definitions/copy.ts` as `NOTIFICATIONS_COPY`. Keys, verbatim: `bellLabel(n)`, `pipLabel`, `panelTitle` ("What you missed"), `panelSub(n)`, `markAll` ("Mark all read"), `markedAll` ("All caught up."), `seeAll(n)`, `menuRow`, `menuBack`, `closeLabel`, `loadMore` ("Older notifications"), `loading` ("Checking what you missed…"), `error` ("Couldn't load your notifications."), `errorBody`, `errorAction` ("Retry"), `emptyTitle` ("All quiet."), `emptyBody`, `emptyAction` ("Find something to watch"), `endOfList`, `today`, `yesterday`, `unreadTag`, `segments`. Every string a component renders comes from here.
 - [ ] **Step 4: Write failing tests for the time helpers.** `relTime` boundaries at 55m / 22h / 7d (and the switch to an absolute date past 7d), `relTimeLong`, `dayKey`, `groupByDay` (stable order, today/yesterday labels). Timezone: format in Mountain Time, consistent with the rest of the app.
-  Run: `pnpm --filter web test format-time`
-  Expected: FAIL, then implement, then PASS.
+      Run: `pnpm --filter web test format-time`
+      Expected: FAIL, then implement, then PASS.
 
 ### Task 8: Panel primitives
 
 **Files:**
+
 - create `apps/web/src/components/consumer/notifications/NotifItem.tsx`
 - create `apps/web/src/components/consumer/notifications/NotifTile.tsx`
 - create `apps/web/src/components/consumer/notifications/NotifDayDivider.tsx`
@@ -270,6 +284,7 @@ Ported from `notifications-panel.jsx`, converted to TSX with real props. Arrow-f
 ### Task 9: `useNotifications` query hook
 
 **Files:**
+
 - create `apps/web/src/lib/queries/use-notifications.ts`
 - create `apps/web/src/lib/notifications.ts`
 - create `apps/web/src/lib/notifications.test.ts`
@@ -285,7 +300,7 @@ export const markPanelSeen = async (token: string): Promise<void> => { … };
 ```
 
 - [ ] **Step 1: Write failing tests** for the response parser — a Zod schema over the API payload, `safeParse`, `ApiError` on shape mismatch. No casts.
-  Expected: FAIL → implement → PASS.
+      Expected: FAIL → implement → PASS.
 - [ ] **Step 2: Build the hook** on TanStack query, keyed `['notifications']`. Poll on a 60s interval while the panel is open and on window focus; **not** a bare 30s `setInterval` like the admin bell (`apps/web/src/components/admin/notification-bell/NotificationBell.tsx`) — the consumer surface is far higher traffic.
 - [ ] **Step 3: Optimistic mutations.** `markRead` flips `readAt` locally and decrements `unreadCount`; `markAllRead` zeroes the count and shows `NOTIFICATIONS_COPY.markedAll`. Roll back and refetch on error.
 - [ ] **Step 4: Expose `unreadCount` cheaply** so PR-C's pip can subscribe without mounting the panel.
@@ -301,6 +316,7 @@ This is the only PR that edits shipped chrome. **There is no bell icon in consum
 ### Task 10: Unread pip on the profile affordance (both surfaces)
 
 **Files:**
+
 - create `apps/web/src/components/consumer/notifications/NotifPip.tsx`
 - modify `apps/web/src/components/consumer/user-menu/UserMenu.tsx`
 - modify `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx`
@@ -315,6 +331,7 @@ This is the only PR that edits shipped chrome. **There is no bell icon in consum
 ### Task 11: `InboxStrip` and the nested panel mode
 
 **Files:**
+
 - modify `apps/web/src/components/consumer/user-menu/UserMenu.tsx`
 - create `apps/web/src/components/consumer/notifications/InboxStrip.tsx`
 - create `apps/web/src/components/consumer/notifications/MenuNotifRow.tsx`
@@ -330,6 +347,7 @@ The locked shape (handoff README, Option B): **one anchor, one surface, one Esca
 ### Task 12: Make the mobile `me` affordance a menu
 
 **Files:**
+
 - modify `apps/web/src/components/consumer/app-header/AppHeader.tsx`
 - modify `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx`
 - modify or delete `apps/web/src/components/consumer/app-header/MobileProfileEntry.tsx`
@@ -344,6 +362,7 @@ Today `<UserMenu />` is mounted **only** inside the desktop `hidden … sm:flex`
 ### Task 13: Keyboard and focus — first-class scope
 
 **Files:**
+
 - modify `apps/web/src/components/consumer/notifications/InboxStrip.tsx`
 - modify `apps/web/src/components/consumer/notifications/MenuNotifRow.tsx`
 - modify `apps/web/src/components/consumer/user-menu/UserMenu.tsx`
@@ -358,12 +377,13 @@ This is **not** polish. READINESS records it as eng-owned and unfixed in the pro
 - [ ] **Step 4: Focus restore on close.** Closing the menu returns focus to the trigger that opened it (desktop avatar button or mobile nav slot). Store the trigger ref on open; restore in the close path, including the Escape path.
 - [ ] **Step 5: Focus trap in the mobile sheet.** The sheet is modal over a scrim; Tab must cycle within it. `use-focus-trap.ts` — first/last focusable wrap-around, restore on unmount. The desktop popover is **not** trapped (it closes on outside click); only the sheet traps.
 - [ ] **Step 6: Write the keyboard test file.** Testing-library, per row type: Enter activates, Space activates without scrolling, Escape closes, focus lands on open, focus restores on close, Tab wraps in the sheet.
-  Run: `pnpm --filter web test keyboard`
-  Expected: FAIL → implement → PASS.
+      Run: `pnpm --filter web test keyboard`
+      Expected: FAIL → implement → PASS.
 
 ### Task 14: Release notes
 
 **Files:**
+
 - modify `apps/web/src/lib/definitions/releases.ts`
 
 - [ ] **Step 1: Add the entry** at the top of the array (newest-first — do not anchor to a version string; `releases.ts` gains entries continuously). User-facing framing, Hugh's voice, locked vocabulary — "Watching", never "Saved". No spotlight asset unless one exists in `design/design_handoff_spotlight_heroes/`.
@@ -374,44 +394,44 @@ This is **not** polish. READINESS records it as eng-owned and unfixed in the pro
 
 **Created**
 
-| Path | PR |
-| --- | --- |
-| `packages/db/migrations/0064_notifications_seen_at.sql` | A |
-| `apps/api/src/lib/definitions/notification-windows.ts` | A |
-| `apps/api/src/routes/notifications.ts` | A |
-| `apps/api/src/routes/notifications.integration.test.ts` | A |
-| `apps/api/src/lib/prune-notifications.ts` + `.test.ts` | A |
-| `apps/web/src/components/consumer/notifications/definitions/copy.ts` | B |
-| `apps/web/src/components/consumer/notifications/definitions/categories.ts` | B |
-| `apps/web/src/components/consumer/notifications/lib/format-time.ts` + `.test.ts` | B |
-| `apps/web/src/components/consumer/notifications/NotifItem.tsx` | B |
-| `apps/web/src/components/consumer/notifications/NotifTile.tsx` | B |
-| `apps/web/src/components/consumer/notifications/NotifDayDivider.tsx` | B |
-| `apps/web/src/components/consumer/notifications/NotifStates.tsx` | B |
-| `apps/web/src/components/consumer/notifications/NotifHeader.tsx` | B |
-| `apps/web/src/components/consumer/notifications/NotifBody.tsx` | B |
-| `apps/web/src/components/consumer/notifications/glyphs/index.tsx` | B |
-| `apps/web/src/lib/notifications.ts` + `.test.ts` | B |
-| `apps/web/src/lib/queries/use-notifications.ts` | B |
-| `apps/web/src/components/consumer/notifications/NotifPip.tsx` | C |
-| `apps/web/src/components/consumer/notifications/InboxStrip.tsx` | C |
-| `apps/web/src/components/consumer/notifications/MenuNotifRow.tsx` | C |
-| `apps/web/src/components/consumer/notifications/lib/use-focus-trap.ts` | C |
-| `apps/web/src/components/consumer/notifications/keyboard.test.tsx` | C |
+| Path                                                                             | PR  |
+| -------------------------------------------------------------------------------- | --- |
+| `packages/db/migrations/0064_notifications_seen_at.sql`                          | A   |
+| `apps/api/src/lib/definitions/notification-windows.ts`                           | A   |
+| `apps/api/src/routes/notifications.ts`                                           | A   |
+| `apps/api/src/routes/notifications.integration.test.ts`                          | A   |
+| `apps/api/src/lib/prune-notifications.ts` + `.test.ts`                           | A   |
+| `apps/web/src/components/consumer/notifications/definitions/copy.ts`             | B   |
+| `apps/web/src/components/consumer/notifications/definitions/categories.ts`       | B   |
+| `apps/web/src/components/consumer/notifications/lib/format-time.ts` + `.test.ts` | B   |
+| `apps/web/src/components/consumer/notifications/NotifItem.tsx`                   | B   |
+| `apps/web/src/components/consumer/notifications/NotifTile.tsx`                   | B   |
+| `apps/web/src/components/consumer/notifications/NotifDayDivider.tsx`             | B   |
+| `apps/web/src/components/consumer/notifications/NotifStates.tsx`                 | B   |
+| `apps/web/src/components/consumer/notifications/NotifHeader.tsx`                 | B   |
+| `apps/web/src/components/consumer/notifications/NotifBody.tsx`                   | B   |
+| `apps/web/src/components/consumer/notifications/glyphs/index.tsx`                | B   |
+| `apps/web/src/lib/notifications.ts` + `.test.ts`                                 | B   |
+| `apps/web/src/lib/queries/use-notifications.ts`                                  | B   |
+| `apps/web/src/components/consumer/notifications/NotifPip.tsx`                    | C   |
+| `apps/web/src/components/consumer/notifications/InboxStrip.tsx`                  | C   |
+| `apps/web/src/components/consumer/notifications/MenuNotifRow.tsx`                | C   |
+| `apps/web/src/components/consumer/notifications/lib/use-focus-trap.ts`           | C   |
+| `apps/web/src/components/consumer/notifications/keyboard.test.tsx`               | C   |
 
 **Modified**
 
-| Path | PR | Why |
-| --- | --- | --- |
-| `packages/db/src/schema/user-profiles.ts` | A | `notificationsSeenAt` |
-| `packages/db/migrations/meta/_journal.json` | A | `idx: 64` |
-| `apps/api/src/routes/index.ts` | A | mount `/v1/notifications` |
-| `apps/web/src/components/consumer/user-menu/UserMenu.tsx` | C | `mode` state, InboxStrip, pip, focus |
-| `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx` | C | pip + menu trigger |
-| `apps/web/src/components/consumer/app-header/AppHeader.tsx` | C | mobile `UserMenu` mount |
-| `apps/web/src/components/consumer/app-header/MobileProfileEntry.tsx` | C | reuse or delete |
-| `apps/web/src/components/consumer/definitions/copy.ts` | C | profile aria-label |
-| `apps/web/src/lib/definitions/releases.ts` | C | release entry |
+| Path                                                                 | PR  | Why                                  |
+| -------------------------------------------------------------------- | --- | ------------------------------------ |
+| `packages/db/src/schema/user-profiles.ts`                            | A   | `notificationsSeenAt`                |
+| `packages/db/migrations/meta/_journal.json`                          | A   | `idx: 64`                            |
+| `apps/api/src/routes/index.ts`                                       | A   | mount `/v1/notifications`            |
+| `apps/web/src/components/consumer/user-menu/UserMenu.tsx`            | C   | `mode` state, InboxStrip, pip, focus |
+| `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx`          | C   | pip + menu trigger                   |
+| `apps/web/src/components/consumer/app-header/AppHeader.tsx`          | C   | mobile `UserMenu` mount              |
+| `apps/web/src/components/consumer/app-header/MobileProfileEntry.tsx` | C   | reuse or delete                      |
+| `apps/web/src/components/consumer/definitions/copy.ts`               | C   | profile aria-label                   |
+| `apps/web/src/lib/definitions/releases.ts`                           | C   | release entry                        |
 
 ---
 

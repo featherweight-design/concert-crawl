@@ -1,67 +1,67 @@
-'use client'
+'use client';
 
 import {
   MonoLabel,
   StatusBadge,
   ConfidenceBar,
   AdminButton,
-} from '@/components/admin/primitives'
-import { SquarePen } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+} from '@/components/admin/primitives';
+import { SquarePen } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
   // Optional enriched fields from LLM extraction runs
-  llmReasoning?: string | null
-  rawSource?: string | null
-  runId?: string | null
-  llmCost?: number | null
-  tokenCount?: number | null
+  llmReasoning?: string | null;
+  rawSource?: string | null;
+  runId?: string | null;
+  llmCost?: number | null;
+  tokenCount?: number | null;
 }
 
 interface EventFlagInspectorProps {
-  event: EventFlag | null
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  event: EventFlag | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
   // Explicit `| undefined` keeps these compatible with callers that pass
   // `onClose={maybeUndefined}` or `onEdit={maybeUndefined}` under
   // exactOptionalPropertyTypes.
-  onClose?: (() => void) | undefined
-  onEdit?: ((id: string) => void) | undefined
+  onClose?: (() => void) | undefined;
+  onEdit?: ((id: string) => void) | undefined;
 }
 
 function formatDateTime(date: string, showTime: string | null): string {
   try {
-    const [year, month, day] = date.split('-').map(Number)
-    const dateObj = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1)
+    const [year, month, day] = date.split('-').map(Number);
+    const dateObj = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
     const datePart = dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-    })
-    if (!showTime) return datePart
-    const [hh, mm] = showTime.split(':')
-    const hours = parseInt(hh ?? '0', 10)
-    const mins = mm ?? '00'
-    const ampm = hours >= 12 ? 'PM' : 'AM'
-    const displayHour = hours % 12 || 12
-    return `${datePart} ${displayHour}:${mins} ${ampm}`
+    });
+    if (!showTime) return datePart;
+    const [hh, mm] = showTime.split(':');
+    const hours = parseInt(hh ?? '0', 10);
+    const mins = mm ?? '00';
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    return `${datePart} ${displayHour}:${mins} ${ampm}`;
   } catch {
-    return date
+    return date;
   }
 }
 
@@ -87,15 +87,15 @@ export const EventFlagInspector = ({
       >
         {ADMIN_COPY.review.eventFlagInspector.emptyState}
       </div>
-    )
+    );
   }
 
-  const shortId = `EVT-${event.id.slice(-4).toUpperCase()}`
-  const flags = event.genre?.filter(Boolean) ?? []
-  const dateTime = formatDateTime(event.date, event.showTime)
+  const shortId = `EVT-${event.id.slice(-4).toUpperCase()}`;
+  const flags = event.genre?.filter(Boolean) ?? [];
+  const dateTime = formatDateTime(event.date, event.showTime);
   const venueLine = [event.venueName ?? event.venueId, dateTime]
     .filter(Boolean)
-    .join(' · ')
+    .join(' · ');
 
   return (
     <div
@@ -428,5 +428,5 @@ export const EventFlagInspector = ({
         </AdminButton>
       </div>
     </div>
-  )
-}
+  );
+};

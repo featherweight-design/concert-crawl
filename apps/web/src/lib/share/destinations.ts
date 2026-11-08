@@ -1,5 +1,5 @@
-import type { ShareRatio } from '@/components/consumer/share/definitions/ratios'
-import type { PosterEvent } from '@/lib/share/poster-event'
+import type { ShareRatio } from '@/components/consumer/share/definitions/ratios';
+import type { PosterEvent } from '@/lib/share/poster-event';
 
 /**
  * What the share sheet can actually do in a browser, and what it does when it
@@ -16,9 +16,9 @@ import type { PosterEvent } from '@/lib/share/poster-event'
 
 /** The slice of `navigator` the sheet touches. */
 export interface ShareCapabilities {
-  share?: (data: ShareData) => Promise<void>
-  canShare?: (data: ShareData) => boolean
-  clipboard?: { writeText: (text: string) => Promise<void> }
+  share?: (data: ShareData) => Promise<void>;
+  canShare?: (data: ShareData) => boolean;
+  clipboard?: { writeText: (text: string) => Promise<void> };
 }
 
 export type ShareOutcome =
@@ -26,14 +26,14 @@ export type ShareOutcome =
   /** The user dismissed the OS sheet. Not an error — say nothing. */
   | 'cancelled'
   | 'unsupported'
-  | 'failed'
+  | 'failed';
 
 export interface PosterUrlParams {
-  eventId: string
-  ratio: ShareRatio
-  theme?: string | undefined
+  eventId: string;
+  ratio: ShareRatio;
+  theme?: string | undefined;
   /** The sharer's handle, or undefined for an anonymous poster. */
-  by?: string | null | undefined
+  by?: string | null | undefined;
 }
 
 /** The PNG route. Also what the sheet's live preview points its `<img>` at. */
@@ -43,35 +43,35 @@ export const posterImageUrl = ({
   theme,
   by,
 }: PosterUrlParams): string => {
-  const query = new URLSearchParams()
-  if (theme !== undefined) query.set('theme', theme)
-  if (by !== undefined && by !== null && by !== '') query.set('by', by)
-  const suffix = query.toString()
-  return `/share/${eventId}/${ratio}${suffix === '' ? '' : `?${suffix}`}`
-}
+  const query = new URLSearchParams();
+  if (theme !== undefined) query.set('theme', theme);
+  if (by !== undefined && by !== null && by !== '') query.set('by', by);
+  const suffix = query.toString();
+  return `/share/${eventId}/${ratio}${suffix === '' ? '' : `?${suffix}`}`;
+};
 
 /**
  * The link the poster points at: the public mirror, never the (protected)
  * event page. A recipient with no account has to land somewhere that renders.
  */
 export const publicEventUrl = (eventId: string, origin: string): string =>
-  `${origin}/e/${eventId}`
+  `${origin}/e/${eventId}`;
 
 /** `snakebite-revival-bluebird-theater.png` — recognisable in a camera roll. */
 export const posterFileName = (event: PosterEvent): string => {
   const slug = `${event.artist}-${event.venue}`
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return `${slug === '' ? 'concert-crawl' : slug}.png`
-}
+    .replace(/^-+|-+$/g, '');
+  return `${slug === '' ? 'concert-crawl' : slug}.png`;
+};
 
 /**
  * Enough to open the OS sheet at all. Correct for any share that can degrade
  * to a URL — see `systemShare`, which does exactly that.
  */
 export const canSystemShare = (caps: ShareCapabilities): boolean =>
-  typeof caps.share === 'function'
+  typeof caps.share === 'function';
 
 /**
  * Enough to hand the OS sheet a *file*.
@@ -88,19 +88,19 @@ export const canSystemShare = (caps: ShareCapabilities): boolean =>
  * bytes have been fetched.
  */
 export const canShareFiles = (caps: ShareCapabilities): boolean => {
-  if (typeof caps.share !== 'function') return false
-  if (typeof caps.canShare !== 'function') return false
-  if (typeof File !== 'function') return false
+  if (typeof caps.share !== 'function') return false;
+  if (typeof caps.canShare !== 'function') return false;
+  if (typeof File !== 'function') return false;
   try {
     return caps.canShare({
       files: [new File([], 'probe.png', { type: 'image/png' })],
-    })
+    });
   } catch (err) {
     // Feature detection must never be the thing that breaks the page.
-    console.warn('[share] file-share probe threw', { err })
-    return false
+    console.warn('[share] file-share probe threw', { err });
+    return false;
   }
-}
+};
 
 /**
  * Hand the poster to the OS share sheet.
@@ -113,33 +113,33 @@ export const canShareFiles = (caps: ShareCapabilities): boolean => {
 export const systemShare = async (
   caps: ShareCapabilities,
   args: {
-    title: string
-    url: string
-    imageUrl: string
-    fileName: string
-    fetchImpl?: typeof fetch
+    title: string;
+    url: string;
+    imageUrl: string;
+    fileName: string;
+    fetchImpl?: typeof fetch;
   },
 ): Promise<ShareOutcome> => {
-  const { share, canShare } = caps
-  if (typeof share !== 'function') return 'unsupported'
+  const { share, canShare } = caps;
+  if (typeof share !== 'function') return 'unsupported';
 
-  let files: File[] | undefined
+  let files: File[] | undefined;
   if (typeof canShare === 'function' && typeof File === 'function') {
     try {
-      const fetcher = args.fetchImpl ?? fetch
-      const response = await fetcher(args.imageUrl)
+      const fetcher = args.fetchImpl ?? fetch;
+      const response = await fetcher(args.imageUrl);
       if (response.ok) {
-        const blob = await response.blob()
+        const blob = await response.blob();
         const candidate = [
           new File([blob], args.fileName, { type: 'image/png' }),
-        ]
+        ];
         if (canShare({ files: candidate })) {
-          files = candidate
+          files = candidate;
         }
       }
     } catch (err) {
       // Fall through to the URL-only share — this is a degradation, not a bug.
-      console.warn('[share] poster fetch failed, sharing link only', { err })
+      console.warn('[share] poster fetch failed, sharing link only', { err });
     }
   }
 
@@ -158,16 +158,16 @@ export const systemShare = async (
             url: args.url,
             files,
           },
-    )
-    return 'shared'
+    );
+    return 'shared';
   } catch (err) {
     // The spec models a dismissed sheet as an AbortError rejection, so a
     // cancel is indistinguishable from a failure except by name.
-    if (err instanceof Error && err.name === 'AbortError') return 'cancelled'
-    console.error('[share] system share failed', { err })
-    return 'failed'
+    if (err instanceof Error && err.name === 'AbortError') return 'cancelled';
+    console.error('[share] system share failed', { err });
+    return 'failed';
   }
-}
+};
 
 /**
  * `navigator.clipboard` is undefined on insecure origins and older Safari, so
@@ -177,13 +177,13 @@ export const copyLink = async (
   caps: ShareCapabilities,
   url: string,
 ): Promise<ShareOutcome> => {
-  const { clipboard } = caps
-  if (clipboard === undefined) return 'unsupported'
+  const { clipboard } = caps;
+  if (clipboard === undefined) return 'unsupported';
   try {
-    await clipboard.writeText(url)
-    return 'shared'
+    await clipboard.writeText(url);
+    return 'shared';
   } catch (err) {
-    console.error('[share] clipboard write failed', { err })
-    return 'failed'
+    console.error('[share] clipboard write failed', { err });
+    return 'failed';
   }
-}
+};

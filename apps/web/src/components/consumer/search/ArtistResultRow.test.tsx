@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render } from '@testing-library/react'
-import type { ArtistSearchResult } from '@concert-crawl/types'
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render } from '@testing-library/react';
+import type { ArtistSearchResult } from '@concert-crawl/types';
 
 vi.mock('@/components/consumer/artist-page/FollowButton', () => ({
   FollowButton: () => <button data-testid="follow-stub" type="button" />,
-}))
+}));
 
 vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
   useArtistFollow: () => ({
@@ -14,11 +14,11 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
     pending: false,
     toggle: () => {},
   }),
-}))
+}));
 
-import { ArtistResultRow } from './ArtistResultRow'
+import { ArtistResultRow } from './ArtistResultRow';
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 const ARTIST: ArtistSearchResult = {
   name: 'Turnstile',
@@ -35,7 +35,7 @@ const ARTIST: ArtistSearchResult = {
     price: null,
   },
   following: false,
-}
+};
 
 const renderRow = (artist: ArtistSearchResult) =>
   render(
@@ -50,22 +50,22 @@ const renderRow = (artist: ArtistSearchResult) =>
       size="rowWide"
       iconOnly={false}
     />,
-  )
+  );
 
 // #1525 — an artist surface resolves portrait, then the generated mark. It
 // never reaches an event's artwork, so there is no second source to pass.
 describe('<ArtistResultRow /> imagery', () => {
   it('renders the portrait when the artist has one', () => {
-    const portrait = 'https://example.test/artist.jpg'
-    const { container } = renderRow({ ...ARTIST, photoUrl: portrait })
+    const portrait = 'https://example.test/artist.jpg';
+    const { container } = renderRow({ ...ARTIST, photoUrl: portrait });
 
-    expect(container.querySelector('img')?.getAttribute('src')).toBe(portrait)
-  })
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(portrait);
+  });
 
   it('renders identity art rather than any photo when there is no portrait', () => {
-    const { container } = renderRow(ARTIST)
+    const { container } = renderRow(ARTIST);
 
-    expect(container.querySelector('img')).toBeNull()
-    expect(container.querySelector('svg')).not.toBeNull()
-  })
-})
+    expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+});

@@ -9,19 +9,19 @@
 // SHELF_CARD_HEIGHT · 14 · surface-1 · border · flex-1 art · body pad
 // 10/11/12 · gap 7) so real picks land with zero shift.
 
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import {
   SHELF_CARD_HEIGHT,
   SHELF_CARD_WIDTH,
-} from '@/components/consumer/definitions/constants'
-import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay'
-import { SPOTIFY_COPY } from './definitions/copy'
+} from '@/components/consumer/definitions/constants';
+import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
+import { SPOTIFY_COPY } from './definitions/copy';
 
-const COPY = SPOTIFY_COPY.discovery
-const LOADING = COPY.loading
+const COPY = SPOTIFY_COPY.discovery;
+const LOADING = COPY.loading;
 
 // Design handoff DL_MOTION (sole source of truth for motion timings).
-const DOT_ANIM = 'dlDot 1400ms ease-in-out infinite'
+const DOT_ANIM = 'dlDot 1400ms ease-in-out infinite';
 
 // Placeholder bar. `tint="price"` paints a faint --signal wash so the price
 // row still reads as "price" through the skeleton.
@@ -31,10 +31,10 @@ const SkeletonBar = ({
   radius = 5,
   tint,
 }: {
-  width: number | string
-  height: number
-  radius?: number
-  tint?: 'price'
+  width: number | string;
+  height: number;
+  radius?: number;
+  tint?: 'price';
 }) => (
   <div
     aria-hidden
@@ -49,7 +49,7 @@ const SkeletonBar = ({
           : 'var(--surface-2)',
     }}
   />
-)
+);
 
 // One skeleton pick card — box-identical to TastePickCard.
 const SkeletonCard = ({ className = '' }: { className?: string }) => (
@@ -78,7 +78,7 @@ const SkeletonCard = ({ className = '' }: { className?: string }) => (
     </div>
     <SweepOverlay />
   </li>
-)
+);
 
 // aria-hidden on the whole visible header block: the parent section's
 // aria-label already announces "Loading picks based on your taste" as the
@@ -128,7 +128,7 @@ export const ShelfSkeletonHeader = ({ isTimeout }: { isTimeout: boolean }) => (
       </div>
     </div>
   </div>
-)
+);
 
 // 3 cards mobile / 5 desktop. Both counts are one past the fold on their
 // viewport: a skeleton that stops exactly where the screen does reserves a
@@ -150,7 +150,7 @@ export const ShelfSkeletonCards = () => (
     <SkeletonCard className="hidden sm:flex" />
     <SkeletonCard className="hidden sm:flex" />
   </ul>
-)
+);
 
 // Route-fallback composition (events/loading.tsx). aria-hidden throughout:
 // the whole page is a fallback here, so there is no meaningful live region
@@ -161,4 +161,4 @@ export const DiscoveryShelfSkeleton = () => (
     <ShelfSkeletonHeader isTimeout={false} />
     <ShelfSkeletonCards />
   </section>
-)
+);

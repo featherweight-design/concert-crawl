@@ -19,9 +19,9 @@ export const FIXTURE_USER_IDS = [
   'user_3GYqr7qRwQdEuUvmHEDiqkCPImQ', // charlie
   'user_3GYquWEByYLXHmyg3LqM3Z8nHJa', // delta
   'user_3GYqwsWNeehFh3GWkjiVgYxwixZ', // echo
-] as const
+] as const;
 
-export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
+export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number];
 
 /**
  * Hugh's own staging Clerk account. Seeded with a Concert History of its own so
@@ -32,7 +32,7 @@ export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
  * notifications and price submissions on this account are real rows created by
  * hand while testing, and the seeder must never delete them.
  */
-export const OWNER_USER_ID = 'user_3Cr1V8iMq5Ey5iHsF66tKxIuRe0'
+export const OWNER_USER_ID = 'user_3Cr1V8iMq5Ey5iHsF66tKxIuRe0';
 
 /**
  * Synthetic watcher-crowd users. "Who else is watching" reports a `total` count
@@ -43,7 +43,7 @@ export const OWNER_USER_ID = 'user_3Cr1V8iMq5Ey5iHsF66tKxIuRe0'
 export const CROWD_USER_IDS: readonly string[] = Array.from(
   { length: 40 },
   (_, idx) => `user_seedcrowd_${String(idx).padStart(4, '0')}`,
-)
+);
 
 /**
  * Fixed crew ids. Cleanup deletes exactly these, so a crew Hugh made by hand on
@@ -56,9 +56,9 @@ export const SEEDED_CREW_IDS = {
   keeper: '5eeded00-0000-0000-0000-000000000002',
   solo: '5eeded00-0000-0000-0000-000000000003',
   muted: '5eeded00-0000-0000-0000-000000000004',
-} as const
+} as const;
 
 export const SEEDED_CREW_ID_LIST: readonly string[] =
-  Object.values(SEEDED_CREW_IDS)
+  Object.values(SEEDED_CREW_IDS);
 
-export const FIXTURE_SEED = 202607_12
+export const FIXTURE_SEED = 202607_12;

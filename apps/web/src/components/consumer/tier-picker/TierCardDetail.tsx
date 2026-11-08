@@ -2,11 +2,11 @@
 // price-promise line. Used by both the desktop card and the expanded
 // mobile row so the two surfaces can never drift.
 
-import { tierShell } from './lib/tier-shell'
-import type { TierDefinition } from './definitions/types'
+import { tierShell } from './lib/tier-shell';
+import type { TierDefinition } from './definitions/types';
 
 export const TierRationale = ({ tier }: { tier: TierDefinition }) => {
-  const shell = tierShell(tier.key)
+  const shell = tierShell(tier.key);
   return (
     <div
       style={{
@@ -22,18 +22,18 @@ export const TierRationale = ({ tier }: { tier: TierDefinition }) => {
     >
       {tier.rationale}
     </div>
-  )
-}
+  );
+};
 
 export const TierFeatureList = ({
   tier,
   gap = 5,
 }: {
-  tier: TierDefinition
+  tier: TierDefinition;
   /** Design: 5 on the desktop card, 6 in the expanded mobile row. */
-  gap?: number
+  gap?: number;
 }) => {
-  const shell = tierShell(tier.key)
+  const shell = tierShell(tier.key);
   return (
     <ul
       style={{
@@ -98,8 +98,8 @@ export const TierFeatureList = ({
         </li>
       ))}
     </ul>
-  )
-}
+  );
+};
 
 export const TierMonoNote = ({ text }: { text: string }) => (
   <div
@@ -113,4 +113,4 @@ export const TierMonoNote = ({ text }: { text: string }) => (
   >
     {text}
   </div>
-)
+);

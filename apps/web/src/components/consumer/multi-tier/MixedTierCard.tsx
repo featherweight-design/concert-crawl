@@ -1,47 +1,47 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
 import {
   TierAlternateRow,
   type TierAlternateRowProps,
-} from '@/components/consumer/multi-tier/TierAlternateRow'
-import { displayVendor } from '@/components/consumer/vendor-display'
+} from '@/components/consumer/multi-tier/TierAlternateRow';
+import { displayVendor } from '@/components/consumer/vendor-display';
 
-const copy = CONSUMER_COPY.multiTier
+const copy = CONSUMER_COPY.multiTier;
 
 // ── Types ────────────────────────────────────────────────────────
 interface AlternateTierBase {
-  tier: string
-  vendor: string
-  floor: number
-  ceiling?: number
-  kind: 'community' | 'boxoffice' | 'resale' | null
+  tier: string;
+  vendor: string;
+  floor: number;
+  ceiling?: number;
+  kind: 'community' | 'boxoffice' | 'resale' | null;
 }
 
 type AlternateTier = AlternateTierBase &
   (
     | { pending: true; confirms: number; needed: number }
     | { pending?: false; confirms?: never; needed?: never }
-  )
+  );
 
 // ── Props ────────────────────────────────────────────────────────
 export interface MixedTierCardProps {
   headline: {
-    floor: number
-    ceiling?: number
-    tier: string
-    vendor: string
-    kind: 'community' | 'boxoffice' | 'resale'
-  }
-  alternates: Array<AlternateTier>
+    floor: number;
+    ceiling?: number;
+    tier: string;
+    vendor: string;
+    kind: 'community' | 'boxoffice' | 'resale';
+  };
+  alternates: Array<AlternateTier>;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
 const formatHeadlinePrice = (floor: number, ceiling?: number): string => {
-  if (ceiling !== undefined) return `$${floor}–${ceiling}`
-  return `$${floor}`
-}
+  if (ceiling !== undefined) return `$${floor}–${ceiling}`;
+  return `$${floor}`;
+};
 
 // ── Component ────────────────────────────────────────────────────
 export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
@@ -127,7 +127,7 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
             floor: alt.floor,
             kind: alt.kind,
             ...(alt.ceiling !== undefined ? { ceiling: alt.ceiling } : {}),
-          }
+          };
           const rowProps: TierAlternateRowProps = alt.pending
             ? {
                 ...base,
@@ -135,10 +135,10 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
                 confirms: alt.confirms,
                 needed: alt.needed,
               }
-            : base
-          return <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />
+            : base;
+          return <TierAlternateRow key={`${alt.tier}-${idx}`} {...rowProps} />;
         })}
       </div>
     </div>
-  )
-}
+  );
+};

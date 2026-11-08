@@ -7,8 +7,8 @@
  * handles — the same reason the sibling `-helpers.ts` file exists.
  */
 
-import { sql, type SQL } from 'drizzle-orm'
-import { events } from '../packages/db/src/schema/events.js'
+import { sql, type SQL } from 'drizzle-orm';
+import { events } from '../packages/db/src/schema/events.js';
 
 /**
  * Optimistic-lock clause asserting `supporting_artists` still holds exactly
@@ -22,5 +22,5 @@ import { events } from '../packages/db/src/schema/events.js'
  * arrays alike.
  */
 export function supportingArtistsUnchanged(observed: string[] | null): SQL {
-  return sql`${events.supportingArtists} IS NOT DISTINCT FROM ${sql.param(observed)}::text[]`
+  return sql`${events.supportingArtists} IS NOT DISTINCT FROM ${sql.param(observed)}::text[]`;
 }

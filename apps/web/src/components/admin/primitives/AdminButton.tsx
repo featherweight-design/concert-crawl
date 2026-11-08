@@ -1,12 +1,12 @@
-import { type ButtonHTMLAttributes } from 'react'
-import { type LucideIcon } from 'lucide-react'
+import { type ButtonHTMLAttributes } from 'react';
+import { type LucideIcon } from 'lucide-react';
 
 interface AdminButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'success'
-  size?: 'sm' | 'md'
-  icon?: LucideIcon
-  iconRight?: LucideIcon
-  fullWidth?: boolean
+  variant?: 'primary' | 'outline' | 'ghost' | 'danger' | 'success';
+  size?: 'sm' | 'md';
+  icon?: LucideIcon;
+  iconRight?: LucideIcon;
+  fullWidth?: boolean;
 }
 
 const VARIANT_STYLES: Record<
@@ -38,7 +38,7 @@ const VARIANT_STYLES: Record<
     color: 'var(--success)',
     border: '1px solid rgba(47,122,77,0.25)',
   },
-}
+};
 
 export const AdminButton = ({
   variant = 'outline',
@@ -50,9 +50,9 @@ export const AdminButton = ({
   style,
   ...props
 }: AdminButtonProps) => {
-  const height = size === 'sm' ? 28 : 32
-  const px = size === 'sm' ? 10 : 12
-  const fontSize = size === 'sm' ? 12 : 13
+  const height = size === 'sm' ? 28 : 32;
+  const px = size === 'sm' ? 10 : 12;
+  const fontSize = size === 'sm' ? 12 : 13;
 
   return (
     <button
@@ -79,5 +79,5 @@ export const AdminButton = ({
       {children}
       {IconRight && <IconRight size={14} />}
     </button>
-  )
-}
+  );
+};

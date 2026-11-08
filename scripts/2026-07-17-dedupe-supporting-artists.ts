@@ -48,44 +48,44 @@
  * surgery.
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, isNotNull, sql } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { pathToFileURL } from 'node:url';
+import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
 // Relative source import (not package barrel) so this one-shot script runs
 // against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the `.js`
 // suffix back to the `.ts` source. Mirrors the sibling backfill scripts.
-import { normalizeSupportingArtists } from '../packages/crawler-core/src/lib/normalize-supporting-artists.js'
+import { normalizeSupportingArtists } from '../packages/crawler-core/src/lib/normalize-supporting-artists.js';
 
 export interface BackfillSummary {
-  rowsScanned: number
-  rowsDirty: number
-  rowsUpdated: number
+  rowsScanned: number;
+  rowsDirty: number;
+  rowsUpdated: number;
   // Dirty rows whose supporting_artists changed between the initial SELECT and
   // the optimistic-locked UPDATE — operator should re-run to pick them up.
-  rowsSkippedConcurrentEdit: number
-  committed: boolean
+  rowsSkippedConcurrentEdit: number;
+  committed: boolean;
 }
 
 interface DirtyRow {
-  id: string
-  venueName: string | null
-  title: string
-  artist: string
-  before: string[]
-  after: string[]
+  id: string;
+  venueName: string | null;
+  title: string;
+  artist: string;
+  before: string[];
+  after: string[];
 }
 
 // Order-sensitive array equality. The normalizer never reorders openers, so a
 // same-length element-wise compare is sufficient to decide whether a row needs
 // a rewrite.
 function sameArray(left: readonly string[], right: readonly string[]): boolean {
-  if (left.length !== right.length) return false
-  return left.every((value, index) => value === right[index])
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<BackfillSummary> {
   // Candidates: any row that actually has openers. `supporting_artists` is a
   // nullable text[] — null (legacy/pre-recrawl) and empty-array rows have
@@ -105,18 +105,18 @@ export async function runBackfill(opts: {
         isNotNull(events.supportingArtists),
         sql`array_length(${events.supportingArtists}, 1) > 0`,
       ),
-    )
+    );
 
-  console.log(`Loaded ${candidates.length} candidate rows from events.`)
+  console.log(`Loaded ${candidates.length} candidate rows from events.`);
 
-  const dirty: DirtyRow[] = []
+  const dirty: DirtyRow[] = [];
   for (const row of candidates) {
-    if (row.supportingArtists === null) continue
+    if (row.supportingArtists === null) continue;
     const cleaned = normalizeSupportingArtists(
       row.artist,
       row.supportingArtists,
-    )
-    if (sameArray(cleaned, row.supportingArtists)) continue
+    );
+    if (sameArray(cleaned, row.supportingArtists)) continue;
     dirty.push({
       id: row.id,
       venueName: row.venueName,
@@ -124,10 +124,10 @@ export async function runBackfill(opts: {
       artist: row.artist,
       before: row.supportingArtists,
       after: cleaned,
-    })
+    });
   }
 
-  console.log(`Of those, ${dirty.length} actually need a rewrite.`)
+  console.log(`Of those, ${dirty.length} actually need a rewrite.`);
 
   if (dirty.length === 0) {
     return {
@@ -138,7 +138,7 @@ export async function runBackfill(opts: {
       // committed=false on no-op early-return paths even if --commit was passed
       // — the summary reflects whether writes actually happened, not the flag.
       committed: false,
-    }
+    };
   }
 
   // Per-row operator log (always — both dry-run and --commit). Keeps the
@@ -154,29 +154,29 @@ export async function runBackfill(opts: {
         `before = [${row.before.join(', ')}]`,
         `after  = [${row.after.join(', ')}]`,
       ].join('\n'),
-    )
+    );
   }
 
   if (!opts.commit) {
-    console.log('---')
+    console.log('---');
     console.log(
       `Dry-run mode — no rows touched. Re-run with --commit to apply.`,
-    )
+    );
     return {
       rowsScanned: candidates.length,
       rowsDirty: dirty.length,
       rowsUpdated: 0,
       rowsSkippedConcurrentEdit: 0,
       committed: false,
-    }
+    };
   }
 
   // --commit: one UPDATE per row. Optimistic-lock the WHERE on the original
   // array so a concurrent crawler / admin edit between the SELECT and the
   // UPDATE isn't silently clobbered. If the row's supporting_artists changed
   // in the window, .returning() yields zero rows and we log + skip.
-  let updatedCount = 0
-  let skippedCount = 0
+  let updatedCount = 0;
+  let skippedCount = 0;
   for (const row of dirty) {
     const updated = await db
       .update(events)
@@ -184,21 +184,21 @@ export async function runBackfill(opts: {
       .where(
         and(eq(events.id, row.id), eq(events.supportingArtists, row.before)),
       )
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     if (updated.length === 0) {
       console.log(
         `Skipped ${row.id} — supporting_artists changed between scan and update`,
-      )
-      skippedCount += 1
-      continue
+      );
+      skippedCount += 1;
+      continue;
     }
-    updatedCount += 1
+    updatedCount += 1;
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Updated ${updatedCount} rows. Skipped ${skippedCount} rows (concurrent edit).`,
-  )
+  );
 
   return {
     rowsScanned: candidates.length,
@@ -207,24 +207,24 @@ export async function runBackfill(opts: {
     rowsSkippedConcurrentEdit: skippedCount,
     // `committed` reflects whether writes actually happened.
     committed: updatedCount > 0,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can also be imported by a test without
 // auto-running.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

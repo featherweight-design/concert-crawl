@@ -4,18 +4,18 @@
 // 'VenueBoxOffice'; everywhere the consumer-side UI renders that as a display
 // label, it resolves to VENUE_BOX_OFFICE_LABEL.
 
-import type { Vendor } from '@concert-crawl/types'
+import type { Vendor } from '@concert-crawl/types';
 import {
   CONSUMER_COPY,
   VENDOR_PICKER_COPY,
-} from '@/components/consumer/definitions/copy'
+} from '@/components/consumer/definitions/copy';
 
-export const VENUE_BOX_OFFICE_LABEL = CONSUMER_COPY.vendors.venueBoxOffice
+export const VENUE_BOX_OFFICE_LABEL = CONSUMER_COPY.vendors.venueBoxOffice;
 
 // Own-property only: `in` would also match Object.prototype keys, so
 // displayVendor('toString') would hand the UI a function.
 const isKnownVendor = (vendor: string): vendor is Vendor =>
-  Object.hasOwn(VENDOR_PICKER_COPY.vendors, vendor)
+  Object.hasOwn(VENDOR_PICKER_COPY.vendors, vendor);
 
 /**
  * Map a stored Vendor enum value to its consumer-facing display label.
@@ -31,8 +31,8 @@ const isKnownVendor = (vendor: string): vendor is Vendor =>
  * would spell the seller wrong on the card.
  */
 export function displayVendor(vendor: Vendor | string): string {
-  if (vendor === 'VenueBoxOffice') return VENUE_BOX_OFFICE_LABEL
-  if (vendor === 'Other') return CONSUMER_COPY.vendors.otherVendor
-  if (isKnownVendor(vendor)) return VENDOR_PICKER_COPY.vendors[vendor]
-  return vendor
+  if (vendor === 'VenueBoxOffice') return VENUE_BOX_OFFICE_LABEL;
+  if (vendor === 'Other') return CONSUMER_COPY.vendors.otherVendor;
+  if (isKnownVendor(vendor)) return VENDOR_PICKER_COPY.vendors[vendor];
+  return vendor;
 }

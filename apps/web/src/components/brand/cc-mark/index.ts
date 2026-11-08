@@ -1,1 +1,1 @@
-export { CCMark } from './CCMark'
+export { CCMark } from './CCMark';

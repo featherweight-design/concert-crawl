@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { THEMES, THEME_META, type ThemeName } from './themes'
-import { MiniMark } from './MiniMark'
-import { THEME_COPY } from './definitions/copy'
+import { THEMES, THEME_META, type ThemeName } from './themes';
+import { MiniMark } from './MiniMark';
+import { THEME_COPY } from './definitions/copy';
 
 export function ThemeSwatch({
   name,
@@ -10,14 +10,14 @@ export function ThemeSwatch({
   onClick,
   disabled,
 }: {
-  name: ThemeName
-  active: boolean
-  onClick: () => void
-  disabled?: boolean
+  name: ThemeName;
+  active: boolean;
+  onClick: () => void;
+  disabled?: boolean;
 }) {
-  const tokens = THEMES[name]
-  const meta = THEME_META[name]
-  const hasDistinctAccent2 = tokens['accent-2'] !== tokens['accent']
+  const tokens = THEMES[name];
+  const meta = THEME_META[name];
+  const hasDistinctAccent2 = tokens['accent-2'] !== tokens['accent'];
 
   return (
     <button
@@ -190,5 +190,5 @@ export function ThemeSwatch({
         </span>
       </div>
     </button>
-  )
+  );
 }

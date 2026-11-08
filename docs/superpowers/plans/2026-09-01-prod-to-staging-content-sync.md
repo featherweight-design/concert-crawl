@@ -27,16 +27,16 @@
 
 ## File Structure
 
-| File | Responsibility |
-| --- | --- |
-| `scripts/seed-staging/sync-artists.ts` (create) | Read prod `artists`, upsert into staging on `slug`. No FK parents, no id map needed by anything downstream. |
-| `scripts/seed-staging/sync-artists.test.ts` (create) | Unit tests: upsert per row, dry-run writes nothing, scanned/processed counts. |
-| `scripts/seed-staging/sync-venue-guide-chips.ts` (create) | Read prod `venue_guide_chips`, translate `venueId` through `venueIdMap`, upsert on the `(venue_id, chip_type)` unique index, count rows skipped for a missing FK parent. |
-| `scripts/seed-staging/sync-venue-guide-chips.test.ts` (create) | Unit tests: upsert with translated venueId, skip on unmapped venue, dry-run writes nothing. |
-| `scripts/seed-staging/sync-prod-public-data.ts` (modify) | Orchestrate five steps instead of three; update the FK-order docblock, the step labels, and the summary block. |
+| File                                                               | Responsibility                                                                                                                                                                                      |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scripts/seed-staging/sync-artists.ts` (create)                    | Read prod `artists`, upsert into staging on `slug`. No FK parents, no id map needed by anything downstream.                                                                                         |
+| `scripts/seed-staging/sync-artists.test.ts` (create)               | Unit tests: upsert per row, dry-run writes nothing, scanned/processed counts.                                                                                                                       |
+| `scripts/seed-staging/sync-venue-guide-chips.ts` (create)          | Read prod `venue_guide_chips`, translate `venueId` through `venueIdMap`, upsert on the `(venue_id, chip_type)` unique index, count rows skipped for a missing FK parent.                            |
+| `scripts/seed-staging/sync-venue-guide-chips.test.ts` (create)     | Unit tests: upsert with translated venueId, skip on unmapped venue, dry-run writes nothing.                                                                                                         |
+| `scripts/seed-staging/sync-prod-public-data.ts` (modify)           | Orchestrate five steps instead of three; update the FK-order docblock, the step labels, and the summary block.                                                                                      |
 | `scripts/seed-staging/sync-prod-public-data-main.test.ts` (create) | Assert `main()` runs all five steps, threads `venueIdMap` into the chip step, and propagates `dryRun`. The existing `sync-prod-public-data.test.ts` covers only the pure helpers and is left alone. |
-| `.github/workflows/staging-content-sync.yml` (create) | Weekly `schedule` + `workflow_dispatch` runner with a `dry_run` input defaulting to `true`. |
-| `docs/runbooks/staging-environment.md` (modify or create) | Document what is synced, what is never synced and why, how to run it by hand, and the two secrets it needs. |
+| `.github/workflows/staging-content-sync.yml` (create)              | Weekly `schedule` + `workflow_dispatch` runner with a `dry_run` input defaulting to `true`.                                                                                                         |
+| `docs/runbooks/staging-environment.md` (modify or create)          | Document what is synced, what is never synced and why, how to run it by hand, and the two secrets it needs.                                                                                         |
 
 `artists` has no FK into `venues`, so ordering it after venues is convention, not requirement. `venue_guide_chips` **does** have `venue_id` → `venues.id ON DELETE CASCADE`, so it must run after `syncVenues` and consume its `venueIdMap`. Placing chips last keeps the existing three steps' numbering contiguous with their current log labels' meaning.
 
@@ -47,10 +47,12 @@ Step order: `venues` → `events` → `artists` → `price_retrieval_log` → `v
 ## Task 1: Sync artists
 
 **Files:**
+
 - Create: `scripts/seed-staging/sync-artists.ts`
 - Test: `scripts/seed-staging/sync-artists.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ProdReadonlyClient` from `./prod-readonly-client.js`; `DrizzleWriteDb` re-exported from `./sync-venues.js`.
 - Produces: `syncArtists(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean }): Promise<{ scanned: number; processed: number }>`. No id map — nothing references `artists` by foreign key.
 
@@ -61,8 +63,8 @@ Step order: `venues` → `events` → `artists` → `price_retrieval_log` → `v
 Create `scripts/seed-staging/sync-artists.test.ts`:
 
 ```ts
-import { describe, it, expect, vi } from 'vitest'
-import { syncArtists } from './sync-artists.js'
+import { describe, it, expect, vi } from 'vitest';
+import { syncArtists } from './sync-artists.js';
 
 describe('syncArtists', () => {
   const rows = [
@@ -102,61 +104,61 @@ describe('syncArtists', () => {
       createdAt: new Date('2026-07-01T00:00:00Z'),
       updatedAt: new Date('2026-08-01T00:00:00Z'),
     },
-  ]
+  ];
 
   const prod = {
     select: vi.fn(
       async (
         fn: (db: {
-          select: () => { from: () => typeof rows }
+          select: () => { from: () => typeof rows };
         }) => Promise<typeof rows>,
       ) => fn({ select: () => ({ from: () => rows }) }),
     ),
     close: vi.fn(),
-  }
+  };
 
   const stagingFor = (upsertSpy: ReturnType<typeof vi.fn>) => ({
     insert: () => ({
       values: (row: unknown) => ({ onConflictDoUpdate: () => upsertSpy(row) }),
     }),
-  })
+  });
 
   it('upserts one row per prod artist', async () => {
-    const upsertSpy = vi.fn().mockResolvedValue([])
+    const upsertSpy = vi.fn().mockResolvedValue([]);
     const result = await syncArtists({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: false,
-    })
-    expect(upsertSpy).toHaveBeenCalledTimes(2)
-    expect(result.scanned).toBe(2)
-    expect(result.processed).toBe(2)
-  })
+    });
+    expect(upsertSpy).toHaveBeenCalledTimes(2);
+    expect(result.scanned).toBe(2);
+    expect(result.processed).toBe(2);
+  });
 
   it('never carries the prod id into the staging insert', async () => {
-    const upsertSpy = vi.fn().mockResolvedValue([])
+    const upsertSpy = vi.fn().mockResolvedValue([]);
     await syncArtists({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: false,
-    })
-    const firstArg = upsertSpy.mock.calls[0]?.[0]
-    expect(firstArg).not.toHaveProperty('id')
-    expect(firstArg).toMatchObject({ slug: 'khruangbin' })
-  })
+    });
+    const firstArg = upsertSpy.mock.calls[0]?.[0];
+    expect(firstArg).not.toHaveProperty('id');
+    expect(firstArg).toMatchObject({ slug: 'khruangbin' });
+  });
 
   it('makes no writes when dryRun is true', async () => {
-    const upsertSpy = vi.fn()
+    const upsertSpy = vi.fn();
     const result = await syncArtists({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: true,
-    })
-    expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result.scanned).toBe(2)
-    expect(result.processed).toBe(2)
-  })
-})
+    });
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(result.scanned).toBe(2);
+    expect(result.processed).toBe(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -188,29 +190,29 @@ Create `scripts/seed-staging/sync-artists.ts`:
  * swallowing.
  */
 
-import { artists } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { DrizzleWriteDb } from './sync-venues.js'
+import { artists } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { DrizzleWriteDb } from './sync-venues.js';
 
 export async function syncArtists(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
 }): Promise<{ scanned: number; processed: number }> {
-  const { prod, staging, dryRun } = deps
+  const { prod, staging, dryRun } = deps;
 
-  const prodRows = await prod.select((db) => db.select().from(artists))
+  const prodRows = await prod.select((db) => db.select().from(artists));
 
-  const scanned = prodRows.length
+  const scanned = prodRows.length;
   // `processed` counts rows we attempted to upsert (or, in dry-run, would
   // attempt) — not rows that actually changed. ON CONFLICT UPDATE fires even
   // when incoming values match stored ones. Same naming rationale as
   // sync-venues.ts.
-  let processed = 0
+  let processed = 0;
 
   for (const row of prodRows) {
     if (!dryRun) {
-      const { id: _prodId, ...rowWithoutId } = row
+      const { id: _prodId, ...rowWithoutId } = row;
       await staging
         .insert(artists)
         .values(rowWithoutId)
@@ -231,12 +233,12 @@ export async function syncArtists(deps: {
             spotifyCandidatesFetchedAt: row.spotifyCandidatesFetchedAt,
             updatedAt: row.updatedAt,
           },
-        })
+        });
     }
-    processed++
+    processed++;
   }
 
-  return { scanned, processed }
+  return { scanned, processed };
 }
 ```
 
@@ -262,10 +264,12 @@ git commit -m "feat(seed-staging): sync artists from prod to staging"
 ## Task 2: Sync venue guide chips
 
 **Files:**
+
 - Create: `scripts/seed-staging/sync-venue-guide-chips.ts`
 - Test: `scripts/seed-staging/sync-venue-guide-chips.test.ts`
 
 **Interfaces:**
+
 - Consumes: `ProdReadonlyClient`; `IdMap` and `DrizzleWriteDb` from `./sync-venues.js`; the `venueIdMap` produced by `syncVenues`.
 - Produces: `syncVenueGuideChips(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean; venueIdMap: IdMap }): Promise<{ scanned: number; processed: number; skippedMissingFk: number }>`.
 
@@ -278,8 +282,8 @@ Prod venue uuids do not exist in staging, so `venueId` must be translated throug
 Create `scripts/seed-staging/sync-venue-guide-chips.test.ts`:
 
 ```ts
-import { describe, it, expect, vi } from 'vitest'
-import { syncVenueGuideChips } from './sync-venue-guide-chips.js'
+import { describe, it, expect, vi } from 'vitest';
+import { syncVenueGuideChips } from './sync-venue-guide-chips.js';
 
 describe('syncVenueGuideChips', () => {
   const rows = [
@@ -301,73 +305,73 @@ describe('syncVenueGuideChips', () => {
       createdAt: new Date('2026-07-01T00:00:00Z'),
       updatedAt: new Date('2026-08-01T00:00:00Z'),
     },
-  ]
+  ];
 
   const prod = {
     select: vi.fn(
       async (
         fn: (db: {
-          select: () => { from: () => typeof rows }
+          select: () => { from: () => typeof rows };
         }) => Promise<typeof rows>,
       ) => fn({ select: () => ({ from: () => rows }) }),
     ),
     close: vi.fn(),
-  }
+  };
 
   const stagingFor = (upsertSpy: ReturnType<typeof vi.fn>) => ({
     insert: () => ({
       values: (row: unknown) => ({ onConflictDoUpdate: () => upsertSpy(row) }),
     }),
-  })
+  });
 
-  const venueIdMap = new Map([['v1', 'staging-v1']])
+  const venueIdMap = new Map([['v1', 'staging-v1']]);
 
   it('upserts with the translated staging venueId and skips unmapped parents', async () => {
-    const upsertSpy = vi.fn().mockResolvedValue([])
+    const upsertSpy = vi.fn().mockResolvedValue([]);
     const result = await syncVenueGuideChips({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: false,
       venueIdMap,
-    })
-    expect(upsertSpy).toHaveBeenCalledTimes(1)
+    });
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
     expect(upsertSpy.mock.calls[0]?.[0]).toMatchObject({
       venueId: 'staging-v1',
       chipType: 'parking',
-    })
-    expect(upsertSpy.mock.calls[0]?.[0]).not.toHaveProperty('id')
-    expect(result.scanned).toBe(2)
-    expect(result.processed).toBe(1)
-    expect(result.skippedMissingFk).toBe(1)
-  })
+    });
+    expect(upsertSpy.mock.calls[0]?.[0]).not.toHaveProperty('id');
+    expect(result.scanned).toBe(2);
+    expect(result.processed).toBe(1);
+    expect(result.skippedMissingFk).toBe(1);
+  });
 
   it('makes no writes when dryRun is true', async () => {
-    const upsertSpy = vi.fn()
+    const upsertSpy = vi.fn();
     const result = await syncVenueGuideChips({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: true,
       venueIdMap,
-    })
-    expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result.scanned).toBe(2)
-    expect(result.processed).toBe(1)
-    expect(result.skippedMissingFk).toBe(1)
-  })
+    });
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(result.scanned).toBe(2);
+    expect(result.processed).toBe(1);
+    expect(result.skippedMissingFk).toBe(1);
+  });
 
   it('skips every row when the venueIdMap is empty', async () => {
-    const upsertSpy = vi.fn()
+    const upsertSpy = vi.fn();
     const result = await syncVenueGuideChips({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: false,
       venueIdMap: new Map(),
-    })
-    expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result.processed).toBe(0)
-    expect(result.skippedMissingFk).toBe(2)
-  })
-})
+    });
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(result.processed).toBe(0);
+    expect(result.skippedMissingFk).toBe(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -398,51 +402,51 @@ Create `scripts/seed-staging/sync-venue-guide-chips.ts`:
  * per prod chip. The aggregate count is always reported.
  */
 
-import { venueGuideChips } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { IdMap, DrizzleWriteDb } from './sync-venues.js'
+import { venueGuideChips } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { IdMap, DrizzleWriteDb } from './sync-venues.js';
 
-const MAX_SKIP_WARNINGS = 5
+const MAX_SKIP_WARNINGS = 5;
 
 export async function syncVenueGuideChips(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
-  venueIdMap: IdMap
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
+  venueIdMap: IdMap;
 }): Promise<{ scanned: number; processed: number; skippedMissingFk: number }> {
-  const { prod, staging, dryRun, venueIdMap } = deps
+  const { prod, staging, dryRun, venueIdMap } = deps;
 
-  const prodRows = await prod.select((db) => db.select().from(venueGuideChips))
+  const prodRows = await prod.select((db) => db.select().from(venueGuideChips));
 
-  const scanned = prodRows.length
-  let processed = 0
-  let skippedMissingFk = 0
-  let skipWarningsEmitted = 0
+  const scanned = prodRows.length;
+  let processed = 0;
+  let skippedMissingFk = 0;
+  let skipWarningsEmitted = 0;
 
   const warnSkip = (msg: string): void => {
     if (skipWarningsEmitted < MAX_SKIP_WARNINGS) {
-      console.warn(msg)
-      skipWarningsEmitted++
+      console.warn(msg);
+      skipWarningsEmitted++;
       if (skipWarningsEmitted === MAX_SKIP_WARNINGS) {
         console.warn(
           '[sync-venue-guide-chips] (further per-row skip warnings suppressed — see aggregate summary at end)',
-        )
+        );
       }
     }
-  }
+  };
 
   for (const row of prodRows) {
-    const stagingVenueId = venueIdMap.get(row.venueId)
+    const stagingVenueId = venueIdMap.get(row.venueId);
     if (stagingVenueId === undefined) {
       warnSkip(
         `[sync-venue-guide-chips] skipping chip ${row.id} — prod venueId ${row.venueId} not in venueIdMap`,
-      )
-      skippedMissingFk++
-      continue
+      );
+      skippedMissingFk++;
+      continue;
     }
 
     if (!dryRun) {
-      const { id: _prodId, venueId: _prodVenueId, ...rest } = row
+      const { id: _prodId, venueId: _prodVenueId, ...rest } = row;
       await staging
         .insert(venueGuideChips)
         .values({ ...rest, venueId: stagingVenueId })
@@ -453,12 +457,12 @@ export async function syncVenueGuideChips(deps: {
             isPlaceholder: row.isPlaceholder,
             updatedAt: row.updatedAt,
           },
-        })
+        });
     }
-    processed++
+    processed++;
   }
 
-  return { scanned, processed, skippedMissingFk }
+  return { scanned, processed, skippedMissingFk };
 }
 ```
 
@@ -484,10 +488,12 @@ git commit -m "feat(seed-staging): sync venue guide chips from prod to staging"
 ## Task 3: Wire both steps into the orchestrator
 
 **Files:**
+
 - Modify: `scripts/seed-staging/sync-prod-public-data.ts`
 - Test: `scripts/seed-staging/sync-prod-public-data-main.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: `syncArtists` (Task 1) and `syncVenueGuideChips` (Task 2), with exactly the signatures given there.
 - Produces: nothing new for later tasks; Task 4's workflow invokes this file through `pnpm db:seed:staging:sync`.
 
@@ -500,37 +506,37 @@ The orchestrator becomes five steps. Log labels change from `Step N/3` to `Step 
 Create `scripts/seed-staging/sync-prod-public-data-main.test.ts`:
 
 ```ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // The orchestrator opens real connections, so every I/O boundary is mocked:
 // postgres-js, Drizzle, the prod read-only client, and all five step modules.
 // What is under test is ordering and FK plumbing — nothing else.
 vi.mock('postgres', () => ({
   default: vi.fn(() => ({ end: vi.fn() })),
-}))
+}));
 vi.mock('drizzle-orm/postgres-js', () => ({
   drizzle: vi.fn(() => ({ __staging: true })),
-}))
+}));
 vi.mock('./prod-readonly-client.js', () => ({
   openProdReadonly: vi.fn(() => ({ select: vi.fn(), close: vi.fn() })),
-}))
+}));
 vi.mock('./sync-venues.js', () => ({
   syncVenues: vi.fn().mockResolvedValue({
     scanned: 2,
     processed: 2,
     venueIdMap: new Map([['v1', 'staging-v1']]),
   }),
-}))
+}));
 vi.mock('./sync-events.js', () => ({
   syncEvents: vi.fn().mockResolvedValue({
     scanned: 5,
     processed: 5,
     eventIdMap: new Map([['e1', 'staging-e1']]),
   }),
-}))
+}));
 vi.mock('./sync-artists.js', () => ({
   syncArtists: vi.fn().mockResolvedValue({ scanned: 3, processed: 3 }),
-}))
+}));
 vi.mock('./sync-price-retrieval-log.js', () => ({
   syncPriceRetrievalLog: vi.fn().mockResolvedValue({
     scanned: 7,
@@ -538,41 +544,41 @@ vi.mock('./sync-price-retrieval-log.js', () => ({
     skippedMissingFk: 0,
     skippedDuplicates: 0,
   }),
-}))
+}));
 vi.mock('./sync-venue-guide-chips.js', () => ({
   syncVenueGuideChips: vi
     .fn()
     .mockResolvedValue({ scanned: 4, processed: 4, skippedMissingFk: 0 }),
-}))
+}));
 
-import { main } from './sync-prod-public-data.js'
-import { syncVenues } from './sync-venues.js'
-import { syncEvents } from './sync-events.js'
-import { syncArtists } from './sync-artists.js'
-import { syncPriceRetrievalLog } from './sync-price-retrieval-log.js'
-import { syncVenueGuideChips } from './sync-venue-guide-chips.js'
+import { main } from './sync-prod-public-data.js';
+import { syncVenues } from './sync-venues.js';
+import { syncEvents } from './sync-events.js';
+import { syncArtists } from './sync-artists.js';
+import { syncPriceRetrievalLog } from './sync-price-retrieval-log.js';
+import { syncVenueGuideChips } from './sync-venue-guide-chips.js';
 
 describe('sync-prod-public-data main', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.clearAllMocks();
     process.env['NEON_PROD_DIRECT'] =
-      'postgres://u:p@ep-prod.us-east-2.aws.neon.tech/db'
+      'postgres://u:p@ep-prod.us-east-2.aws.neon.tech/db';
     process.env['NEON_STAGING_DIRECT'] =
-      'postgres://u:p@ep-staging.us-east-2.aws.neon.tech/db'
-    process.argv = ['tsx', 'sync-prod-public-data.ts', '--dry-run']
-  })
+      'postgres://u:p@ep-staging.us-east-2.aws.neon.tech/db';
+    process.argv = ['tsx', 'sync-prod-public-data.ts', '--dry-run'];
+  });
 
   it('runs all five steps', async () => {
-    await main()
-    expect(syncVenues).toHaveBeenCalledTimes(1)
-    expect(syncEvents).toHaveBeenCalledTimes(1)
-    expect(syncArtists).toHaveBeenCalledTimes(1)
-    expect(syncPriceRetrievalLog).toHaveBeenCalledTimes(1)
-    expect(syncVenueGuideChips).toHaveBeenCalledTimes(1)
-  })
+    await main();
+    expect(syncVenues).toHaveBeenCalledTimes(1);
+    expect(syncEvents).toHaveBeenCalledTimes(1);
+    expect(syncArtists).toHaveBeenCalledTimes(1);
+    expect(syncPriceRetrievalLog).toHaveBeenCalledTimes(1);
+    expect(syncVenueGuideChips).toHaveBeenCalledTimes(1);
+  });
 
   it('runs the steps in FK-parent-first order', async () => {
-    await main()
+    await main();
 
     // Call counts alone would stay green if the orchestrator ran the five
     // steps in any order, or in parallel via Promise.all — and the FK order is
@@ -585,27 +591,27 @@ describe('sync-prod-public-data main', () => {
     // read as `number | undefined`, and a cast here would turn "the step never
     // ran" into a confusing NaN comparison instead of a named failure.
     const orderOf = (mock: typeof syncVenues): number => {
-      const order = vi.mocked(mock).mock.invocationCallOrder[0]
-      if (order === undefined) throw new Error('step was never invoked')
-      return order
-    }
+      const order = vi.mocked(mock).mock.invocationCallOrder[0];
+      if (order === undefined) throw new Error('step was never invoked');
+      return order;
+    };
 
-    expect(orderOf(syncVenues)).toBeLessThan(orderOf(syncEvents))
-    expect(orderOf(syncEvents)).toBeLessThan(orderOf(syncArtists))
-    expect(orderOf(syncArtists)).toBeLessThan(orderOf(syncPriceRetrievalLog))
+    expect(orderOf(syncVenues)).toBeLessThan(orderOf(syncEvents));
+    expect(orderOf(syncEvents)).toBeLessThan(orderOf(syncArtists));
+    expect(orderOf(syncArtists)).toBeLessThan(orderOf(syncPriceRetrievalLog));
     expect(orderOf(syncPriceRetrievalLog)).toBeLessThan(
       orderOf(syncVenueGuideChips),
-    )
-  })
+    );
+  });
 
   it('passes the venueIdMap from syncVenues into the chip step', async () => {
-    await main()
-    const chipArgs = vi.mocked(syncVenueGuideChips).mock.calls[0]?.[0]
-    expect(chipArgs?.venueIdMap.get('v1')).toBe('staging-v1')
-  })
+    await main();
+    const chipArgs = vi.mocked(syncVenueGuideChips).mock.calls[0]?.[0];
+    expect(chipArgs?.venueIdMap.get('v1')).toBe('staging-v1');
+  });
 
   it('propagates dryRun to every step', async () => {
-    await main()
+    await main();
     for (const step of [
       syncVenues,
       syncEvents,
@@ -615,10 +621,10 @@ describe('sync-prod-public-data main', () => {
     ]) {
       expect(vi.mocked(step).mock.calls[0]?.[0]).toMatchObject({
         dryRun: true,
-      })
+      });
     }
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -663,8 +669,8 @@ Also update the header line `Copies public venue/event/price-log rows` to `Copie
 - [ ] **Step 5: Add the two imports**
 
 ```ts
-import { syncArtists } from './sync-artists.js'
-import { syncVenueGuideChips } from './sync-venue-guide-chips.js'
+import { syncArtists } from './sync-artists.js';
+import { syncVenueGuideChips } from './sync-venue-guide-chips.js';
 ```
 
 - [ ] **Step 6: Renumber the existing step labels**
@@ -674,28 +680,28 @@ Change `'\n[sync] Step 1/3 — venues'` to `'\n[sync] Step 1/5 — venues'`, `St
 - [ ] **Step 7: Insert the artists step between events and the price log**
 
 ```ts
-    // Step 3: artists (no FK parents — position is convention, not requirement).
-    console.log('\n[sync] Step 3/5 — artists')
-    const artistResult = await syncArtists({ prod, staging, dryRun })
-    console.log(
-      `[sync] artists: scanned=${artistResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
-    )
+// Step 3: artists (no FK parents — position is convention, not requirement).
+console.log('\n[sync] Step 3/5 — artists');
+const artistResult = await syncArtists({ prod, staging, dryRun });
+console.log(
+  `[sync] artists: scanned=${artistResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
+);
 ```
 
 - [ ] **Step 8: Append the guide-chips step after the price log**
 
 ```ts
-    // Step 5: venue guide chips (depends on venueIdMap).
-    console.log('\n[sync] Step 5/5 — venue_guide_chips')
-    const chipResult = await syncVenueGuideChips({
-      prod,
-      staging,
-      dryRun,
-      venueIdMap: venueResult.venueIdMap,
-    })
-    console.log(
-      `[sync] venue_guide_chips: scanned=${chipResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed} skippedMissingFk=${chipResult.skippedMissingFk}`,
-    )
+// Step 5: venue guide chips (depends on venueIdMap).
+console.log('\n[sync] Step 5/5 — venue_guide_chips');
+const chipResult = await syncVenueGuideChips({
+  prod,
+  staging,
+  dryRun,
+  venueIdMap: venueResult.venueIdMap,
+});
+console.log(
+  `[sync] venue_guide_chips: scanned=${chipResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed} skippedMissingFk=${chipResult.skippedMissingFk}`,
+);
 ```
 
 - [ ] **Step 9: Add both to the summary block**
@@ -703,17 +709,17 @@ Change `'\n[sync] Step 1/3 — venues'` to `'\n[sync] Step 1/5 — venues'`, `St
 After the existing `events` summary line, insert:
 
 ```ts
-    console.log(
-      `  artists  scanned=${artistResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
-    )
+console.log(
+  `  artists  scanned=${artistResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
+);
 ```
 
 and after the `price_log` line:
 
 ```ts
-    console.log(
-      `  chips    scanned=${chipResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed}  skippedMissingFk=${chipResult.skippedMissingFk}`,
-    )
+console.log(
+  `  chips    scanned=${chipResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed}  skippedMissingFk=${chipResult.skippedMissingFk}`,
+);
 ```
 
 - [ ] **Step 10: Run the full scripts suite**
@@ -738,18 +744,20 @@ git commit -m "feat(seed-staging): run artists and guide chips in the prod sync 
 ## Task 4: Schedule the sync
 
 **Files:**
+
 - Create: `.github/workflows/staging-content-sync.yml`
 
 **Interfaces:**
+
 - Consumes: `pnpm db:seed:staging:sync` (package.json:17 → `tsx scripts/seed-staging/sync-prod-public-data.ts`) and the five-step orchestrator from Task 3.
 - Produces: nothing consumed by later tasks.
 
 **New GitHub secrets required** (repository scope, both already exist as local shell values Hugh holds; neither belongs in a file):
 
-| Name | Purpose | How to create |
-| --- | --- | --- |
-| `NEON_PROD_DIRECT` | Read source — full Postgres URL for the prod Neon branch | Neon console → project → prod branch → Connection string (direct, not pooled) → GitHub → Settings → Secrets and variables → Actions → New repository secret |
-| `NEON_STAGING_DIRECT` | Write target — full Postgres URL for the staging Neon branch | Same path, staging branch |
+| Name                  | Purpose                                                      | How to create                                                                                                                                               |
+| --------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEON_PROD_DIRECT`    | Read source — full Postgres URL for the prod Neon branch     | Neon console → project → prod branch → Connection string (direct, not pooled) → GitHub → Settings → Secrets and variables → Actions → New repository secret |
+| `NEON_STAGING_DIRECT` | Write target — full Postgres URL for the staging Neon branch | Same path, staging branch                                                                                                                                   |
 
 The job fails loudly with a named missing-secret error rather than running a half-configured sync, because a sync that silently no-ops looks identical to a sync that found nothing to do.
 
@@ -869,6 +877,7 @@ These steps run against live infrastructure and are done by the operator once th
 ## Task 5: Document the staging data contract
 
 **Files:**
+
 - Modify or create: `docs/runbooks/staging-environment.md`
 - Modify: `docs/superpowers/progress.md`
 

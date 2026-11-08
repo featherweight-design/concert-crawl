@@ -79,32 +79,34 @@ Grep for `AppHeader` usage across `apps/web/src/app/**` and `apps/web/src/compon
 
 ```tsx
 // apps/web/src/components/consumer/app-chrome/__tests__/AppBar.test.tsx
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { AppBar } from '../AppBar'
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { AppBar } from '../AppBar';
 
 describe('AppBar', () => {
   it('renders the mark + wordmark', () => {
-    render(<AppBar />)
-    expect(screen.getByLabelText(/concert crawl/i)).toBeInTheDocument()
-  })
+    render(<AppBar />);
+    expect(screen.getByLabelText(/concert crawl/i)).toBeInTheDocument();
+  });
 
   it('renders right-side slot children in the top-right', () => {
-    render(<AppBar rightSlots={<button>Install</button>} />)
-    expect(screen.getByRole('button', { name: /install/i })).toBeInTheDocument()
-  })
+    render(<AppBar rightSlots={<button>Install</button>} />);
+    expect(
+      screen.getByRole('button', { name: /install/i }),
+    ).toBeInTheDocument();
+  });
 
   it('collapses the wordmark at ≤320px', () => {
     // JSDOM defaults to 1024w; test the collapse class prop directly.
     // Require BOTH `hidden` at the base breakpoint AND `sm:inline` — either
     // alone leaves the ≤320px regression signal weak (an implementation that
     // sets sm:inline without hidden at base would falsely pass).
-    render(<AppBar />)
-    const wordmark = screen.getByTestId('appbar-wordmark')
-    expect(wordmark.className).toMatch(/\bhidden\b/)
-    expect(wordmark.className).toMatch(/\bsm:inline\b/)
-  })
-})
+    render(<AppBar />);
+    const wordmark = screen.getByTestId('appbar-wordmark');
+    expect(wordmark.className).toMatch(/\bhidden\b/);
+    expect(wordmark.className).toMatch(/\bsm:inline\b/);
+  });
+});
 ```
 
 Run: `pnpm --filter @concert-crawl/web test -- AppBar`
@@ -118,11 +120,11 @@ Reference:
 
 ```tsx
 // apps/web/src/components/consumer/app-chrome/AppBar.tsx
-import Link from 'next/link'
+import Link from 'next/link';
 // import existing mark from consumer/app-header/AppHeader or wherever CCMark lives
 
 interface AppBarProps {
-  rightSlots?: React.ReactNode
+  rightSlots?: React.ReactNode;
 }
 
 export const AppBar = ({ rightSlots }: AppBarProps) => (
@@ -147,19 +149,19 @@ export const AppBar = ({ rightSlots }: AppBarProps) => (
       {/* search circle, account glyph, etc. — carry forward from existing AppHeader */}
     </div>
   </header>
-)
+);
 ```
 
 - [ ] **Step 4: Implement `PwaTabBar` and `AppChrome` wrapper**
 
 ```tsx
 // apps/web/src/components/consumer/app-chrome/AppChrome.tsx
-import { AppBar } from './AppBar'
-import { PwaTabBar } from './PwaTabBar'
+import { AppBar } from './AppBar';
+import { PwaTabBar } from './PwaTabBar';
 
 interface AppChromeProps {
-  rightSlots?: React.ReactNode
-  children: React.ReactNode
+  rightSlots?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export const AppChrome = ({ rightSlots, children }: AppChromeProps) => (
@@ -168,7 +170,7 @@ export const AppChrome = ({ rightSlots, children }: AppChromeProps) => (
     <main className="flex-1 pb-[64px]">{children}</main>
     <PwaTabBar />
   </>
-)
+);
 ```
 
 `PwaTabBar` should either reuse the existing `bottom-nav` component verbatim or supersede it — decide by inspection. If the existing bottom nav is only mounted in one place, migrate it here and re-export for compatibility. If it's mounted across many pages, wrap it here without moving the source file.
@@ -207,32 +209,32 @@ git commit -m "refactor(web): extract AppChrome (AppBar + PwaTabBar) with right-
 
 ```ts
 // apps/web/src/lib/pwa/__tests__/install-dismissal.test.ts
-import { describe, it, expect, beforeEach } from 'vitest'
-import { getDismissalState, dismissOnce } from '../install-dismissal'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { getDismissalState, dismissOnce } from '../install-dismissal';
 
 describe('install-dismissal', () => {
-  beforeEach(() => localStorage.clear())
+  beforeEach(() => localStorage.clear());
 
   it('defaults to active with no record', () => {
-    expect(getDismissalState()).toBe('active')
-  })
+    expect(getDismissalState()).toBe('active');
+  });
 
   it('goes quiet on first dismiss', () => {
-    dismissOnce(new Date('2026-07-18T00:00:00Z'))
-    expect(getDismissalState(new Date('2026-07-25T00:00:00Z'))).toBe('quiet')
-  })
+    dismissOnce(new Date('2026-07-18T00:00:00Z'));
+    expect(getDismissalState(new Date('2026-07-25T00:00:00Z'))).toBe('quiet');
+  });
 
   it('returns to active after 30 days', () => {
-    dismissOnce(new Date('2026-07-18T00:00:00Z'))
-    expect(getDismissalState(new Date('2026-08-20T00:00:00Z'))).toBe('active')
-  })
+    dismissOnce(new Date('2026-07-18T00:00:00Z'));
+    expect(getDismissalState(new Date('2026-08-20T00:00:00Z'))).toBe('active');
+  });
 
   it('retires forever on second dismiss', () => {
-    dismissOnce(new Date('2026-07-18T00:00:00Z'))
-    dismissOnce(new Date('2026-07-19T00:00:00Z'))
-    expect(getDismissalState(new Date('2030-01-01T00:00:00Z'))).toBe('retired')
-  })
-})
+    dismissOnce(new Date('2026-07-18T00:00:00Z'));
+    dismissOnce(new Date('2026-07-19T00:00:00Z'));
+    expect(getDismissalState(new Date('2030-01-01T00:00:00Z'))).toBe('retired');
+  });
+});
 ```
 
 Run: `pnpm --filter @concert-crawl/web test -- install-dismissal`
@@ -242,46 +244,46 @@ Expected: FAIL — module not found.
 
 ```ts
 // apps/web/src/lib/pwa/install-dismissal.ts
-import { z } from 'zod'
+import { z } from 'zod';
 
-const KEY = 'cc-install-dismissal'
-const QUIET_MS = 30 * 24 * 60 * 60 * 1000
+const KEY = 'cc-install-dismissal';
+const QUIET_MS = 30 * 24 * 60 * 60 * 1000;
 
 const RecordSchema = z.object({
   count: z.number().int().min(0).max(2),
   firstDismissedAt: z.string().datetime(),
-})
+});
 
-export type DismissalState = 'active' | 'quiet' | 'retired'
+export type DismissalState = 'active' | 'quiet' | 'retired';
 
 const readRecord = () => {
-  if (typeof localStorage === 'undefined') return null
-  const raw = localStorage.getItem(KEY)
-  if (!raw) return null
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return null;
   // Wrap JSON.parse in try/catch — localStorage can hold invalid JSON from
   // manual devtools testing, a corrupted write, or an older on-disk format.
   // Throwing here would break the install slot render entirely; instead
   // treat the record as absent and let the UI default to `active`.
   try {
-    const parsed = RecordSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data : null
+    const parsed = RecordSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
   } catch (parseErr) {
-    console.warn('install-dismissal: dropping unparseable record', parseErr)
-    return null
+    console.warn('install-dismissal: dropping unparseable record', parseErr);
+    return null;
   }
-}
+};
 
 export const getDismissalState = (now: Date = new Date()): DismissalState => {
-  const record = readRecord()
-  if (!record) return 'active'
-  if (record.count >= 2) return 'retired'
-  const first = new Date(record.firstDismissedAt).getTime()
-  return now.getTime() - first < QUIET_MS ? 'quiet' : 'active'
-}
+  const record = readRecord();
+  if (!record) return 'active';
+  if (record.count >= 2) return 'retired';
+  const first = new Date(record.firstDismissedAt).getTime();
+  return now.getTime() - first < QUIET_MS ? 'quiet' : 'active';
+};
 
 export const dismissOnce = (now: Date = new Date()): void => {
-  if (typeof localStorage === 'undefined') return
-  const existing = readRecord()
+  if (typeof localStorage === 'undefined') return;
+  const existing = readRecord();
   // Clamp count to 2 so we never write a value the schema rejects on next
   // read (safeParse would return null → UI reverts to 'active' instead of
   // staying 'retired'). Once we've hit 2, further dismisses are no-ops on
@@ -291,9 +293,9 @@ export const dismissOnce = (now: Date = new Date()): void => {
         count: Math.min(existing.count + 1, 2),
         firstDismissedAt: existing.firstDismissedAt,
       }
-    : { count: 1, firstDismissedAt: now.toISOString() }
-  localStorage.setItem(KEY, JSON.stringify(next))
-}
+    : { count: 1, firstDismissedAt: now.toISOString() };
+  localStorage.setItem(KEY, JSON.stringify(next));
+};
 ```
 
 Runtime uses Zod `safeParse` on the localStorage read — matches the no-`as` policy for boundary parsing.
@@ -366,7 +368,7 @@ export const INSTALL_COPY = {
   },
   dismissNote:
     "We'll quit asking. You can still add it from Settings whenever.",
-} as const
+} as const;
 ```
 
 Delete the old `PWA_COPY` const (or migrate remaining callers — grep for `PWA_COPY`).
@@ -501,38 +503,38 @@ export const OFFLINE_COPY = {
       link: 'Back to cached content',
     },
   },
-} as const
+} as const;
 ```
 
 - [ ] **Step 2: Write failing test**
 
 ```tsx
 // apps/web/src/components/pwa/__tests__/OfflinePill.test.tsx
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { OfflinePill } from '../OfflinePill'
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { OfflinePill } from '../OfflinePill';
 
 describe('OfflinePill', () => {
   it('renders nothing when online', () => {
     Object.defineProperty(navigator, 'onLine', {
       value: true,
       configurable: true,
-    })
-    const { container } = render(<OfflinePill />)
-    expect(container).toBeEmptyDOMElement()
-  })
+    });
+    const { container } = render(<OfflinePill />);
+    expect(container).toBeEmptyDOMElement();
+  });
 
   it('renders status + label when offline', () => {
     Object.defineProperty(navigator, 'onLine', {
       value: false,
       configurable: true,
-    })
-    render(<OfflinePill />)
-    const status = screen.getByRole('status')
-    expect(status).toHaveTextContent(/offline/i)
-    expect(status).toHaveAttribute('aria-live', 'polite')
-  })
-})
+    });
+    render(<OfflinePill />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/offline/i);
+    expect(status).toHaveAttribute('aria-live', 'polite');
+  });
+});
 ```
 
 - [ ] **Step 3: Implement**
@@ -584,7 +586,7 @@ Mock `global.caches` with a fake `CacheStorage` implementation. Assert:
 
 ```ts
 // apps/web/src/lib/pwa/cached-content.ts
-import { z } from 'zod'
+import { z } from 'zod';
 
 const EventSummarySchema = z.object({
   id: z.string(),
@@ -592,50 +594,50 @@ const EventSummarySchema = z.object({
   venueName: z.string(),
   startTime: z.string(),
   // extend as needed for CachedShortcuts display
-})
+});
 
 const VenueSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   upcomingCount: z.number().int(),
-})
+});
 
-export type CachedEvent = z.infer<typeof EventSummarySchema>
-export type CachedVenue = z.infer<typeof VenueSummarySchema>
+export type CachedEvent = z.infer<typeof EventSummarySchema>;
+export type CachedVenue = z.infer<typeof VenueSummarySchema>;
 
-const CACHE_NAME = 'public-api'
+const CACHE_NAME = 'public-api';
 
 const readCache = async <T>(
   pathPrefix: string,
   schema: z.ZodType<T>,
   extract: (data: unknown) => unknown,
 ): Promise<T[]> => {
-  if (typeof caches === 'undefined') return []
+  if (typeof caches === 'undefined') return [];
   // Check the cache exists BEFORE opening — caches.open(name) creates the
   // cache when it's absent, which would make an "empty" cache indistinguishable
   // from "never populated" and cause the offline fallback to lose its honest
   // empty state.
-  const cacheNames = await caches.keys()
-  if (!cacheNames.includes(CACHE_NAME)) return []
-  const cache = await caches.open(CACHE_NAME).catch(() => null)
-  if (!cache) return []
-  const keys = await cache.keys()
-  const results: T[] = []
+  const cacheNames = await caches.keys();
+  if (!cacheNames.includes(CACHE_NAME)) return [];
+  const cache = await caches.open(CACHE_NAME).catch(() => null);
+  if (!cache) return [];
+  const keys = await cache.keys();
+  const results: T[] = [];
   for (const request of keys) {
-    const url = new URL(request.url)
+    const url = new URL(request.url);
     // Match the collection URL exactly — sub-paths (`/v1/events/genres`,
     // `/v1/events/:id`) have different JSON shapes and would fail safeParse
     // anyway, but skipping them here keeps the log noise down.
-    if (url.pathname !== pathPrefix) continue
-    const response = await cache.match(request)
-    if (!response) continue
+    if (url.pathname !== pathPrefix) continue;
+    const response = await cache.match(request);
+    if (!response) continue;
     try {
-      const raw = await response.clone().json()
-      const rows = extract(raw)
+      const raw = await response.clone().json();
+      const rows = extract(raw);
       if (Array.isArray(rows)) {
         for (const row of rows) {
-          const parsed = schema.safeParse(row)
-          if (parsed.success) results.push(parsed.data)
+          const parsed = schema.safeParse(row);
+          if (parsed.success) results.push(parsed.data);
         }
       }
     } catch (parseErr) {
@@ -644,17 +646,17 @@ const readCache = async <T>(
       console.warn('cached-content: skipping malformed entry', {
         url: request.url,
         err: parseErr,
-      })
+      });
     }
   }
-  return results
-}
+  return results;
+};
 
 export const getCachedEvents = (): Promise<CachedEvent[]> =>
-  readCache('/v1/events', EventSummarySchema, (data) => data)
+  readCache('/v1/events', EventSummarySchema, (data) => data);
 
 export const getCachedVenues = (): Promise<CachedVenue[]> =>
-  readCache('/v1/venues', VenueSummarySchema, (data) => data)
+  readCache('/v1/venues', VenueSummarySchema, (data) => data);
 ```
 
 Adjust `extract` per each endpoint's actual JSON shape (list vs. wrapped `{ items: [...] }`). Check current shape by inspecting the API route bodies.
@@ -702,10 +704,10 @@ Mobile 320 + 390 + desktop. Uses `OFFLINE_COPY.fallback`. Populated shortcuts li
 
 ```tsx
 // apps/web/src/app/~offline/page.tsx
-import { OfflineFallback } from '@/components/pwa/OfflineFallback'
+import { OfflineFallback } from '@/components/pwa/OfflineFallback';
 
 export default function OfflinePage() {
-  return <OfflineFallback />
+  return <OfflineFallback />;
 }
 ```
 
@@ -774,7 +776,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 export const pushSubscriptions = pgTable(
   'push_subscriptions',
@@ -798,7 +800,7 @@ export const pushSubscriptions = pgTable(
     ),
     userIdx: index('push_subscriptions_user_id_idx').on(table.userId),
   }),
-)
+);
 
 export const userNotificationPreferences = pgTable(
   'user_notification_preferences',
@@ -813,7 +815,7 @@ export const userNotificationPreferences = pgTable(
       .notNull()
       .defaultNow(),
   },
-)
+);
 ```
 
 - [ ] **Step 2: Write the migration**
@@ -846,7 +848,7 @@ git commit -m "feat(db): push_subscriptions + user_notification_preferences tabl
 
 ```ts
 // packages/db/src/schema/notification-categories.ts
-import { z } from 'zod'
+import { z } from 'zod';
 
 export const UserNotificationCategorySchema = z.enum([
   'contest.resolved',
@@ -856,10 +858,10 @@ export const UserNotificationCategorySchema = z.enum([
   'watch.soldout',
   'watch.backonsale',
   'watch.pricedrop',
-])
+]);
 export type UserNotificationCategory = z.infer<
   typeof UserNotificationCategorySchema
->
+>;
 
 export const PUSH_ELIGIBLE_CATEGORIES = new Set<UserNotificationCategory>([
   'watch.cancelled',
@@ -867,9 +869,9 @@ export const PUSH_ELIGIBLE_CATEGORIES = new Set<UserNotificationCategory>([
   'watch.soldout',
   'watch.backonsale',
   'watch.pricedrop',
-])
+]);
 
-export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop'
+export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop';
 ```
 
 - [ ] **Step 2: Migrate contest-notifications writer**
@@ -902,11 +904,11 @@ git commit -m "feat(db): type-constrain user notification categories (Zod union)
 
 ```ts
 // scripts/generate-vapid-keys.ts
-import webpush from 'web-push'
+import webpush from 'web-push';
 
-const keys = webpush.generateVAPIDKeys()
-console.log('VAPID_PUBLIC_KEY=' + keys.publicKey)
-console.log('VAPID_PRIVATE_KEY=' + keys.privateKey)
+const keys = webpush.generateVAPIDKeys();
+console.log('VAPID_PUBLIC_KEY=' + keys.publicKey);
+console.log('VAPID_PRIVATE_KEY=' + keys.privateKey);
 ```
 
 - [ ] **Step 2: Add env schema entries**
@@ -1007,7 +1009,7 @@ git commit -m "feat(api): send-push pipeline gated by user prefs + category"
 Reference existing worker; add:
 
 ```ts
-import { z } from 'zod'
+import { z } from 'zod';
 
 // Push payloads cross a trust boundary (attacker could POST to a compromised
 // endpoint URL). Validate shape with Zod and constrain actionUrl to a
@@ -1022,36 +1024,36 @@ const PushPayloadSchema = z.object({
     .max(500)
     .optional(),
   tag: z.string().max(100).optional(),
-})
+});
 
 const safeSameOriginPath = (raw: unknown): string => {
-  if (typeof raw !== 'string') return '/'
+  if (typeof raw !== 'string') return '/';
   // Strip any scheme + host by resolving against self.location.origin and
   // taking only the path + search. Anything malformed lands on '/'.
   try {
-    const parsed = new URL(raw, self.location.origin)
-    if (parsed.origin !== self.location.origin) return '/'
-    return parsed.pathname + parsed.search
+    const parsed = new URL(raw, self.location.origin);
+    if (parsed.origin !== self.location.origin) return '/';
+    return parsed.pathname + parsed.search;
   } catch {
-    return '/'
+    return '/';
   }
-}
+};
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return
+  if (!event.data) return;
   // Wrap json() in try/catch — non-JSON payloads throw. safeParse guards shape.
-  let payload: z.infer<typeof PushPayloadSchema>
+  let payload: z.infer<typeof PushPayloadSchema>;
   try {
-    const raw = event.data.json()
-    const parsed = PushPayloadSchema.safeParse(raw)
+    const raw = event.data.json();
+    const parsed = PushPayloadSchema.safeParse(raw);
     if (!parsed.success) {
-      console.warn('sw: dropping push with invalid payload', parsed.error)
-      return
+      console.warn('sw: dropping push with invalid payload', parsed.error);
+      return;
     }
-    payload = parsed.data
+    payload = parsed.data;
   } catch (parseErr) {
-    console.warn('sw: dropping push with unparseable body', parseErr)
-    return
+    console.warn('sw: dropping push with unparseable body', parseErr);
+    return;
   }
   event.waitUntil(
     self.registration.showNotification(payload.title, {
@@ -1061,15 +1063,15 @@ self.addEventListener('push', (event) => {
       data: { actionUrl: safeSameOriginPath(payload.actionUrl) },
       tag: payload.tag,
     }),
-  )
-})
+  );
+});
 
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
+  event.notification.close();
   // Re-normalize on click too — defense in depth in case the stored data was
   // ever tampered with (e.g. via a compromised extension writing to the SW
   // registration).
-  const target = safeSameOriginPath(event.notification.data?.actionUrl)
+  const target = safeSameOriginPath(event.notification.data?.actionUrl);
   event.waitUntil(
     // includeUncontrolled: true is critical — after a fresh SW install or
     // update, existing tabs aren't controlled yet, so the default matchAll
@@ -1080,13 +1082,13 @@ self.addEventListener('notificationclick', (event) => {
       .then((clients) => {
         for (const client of clients) {
           if (new URL(client.url).origin === self.location.origin) {
-            return client.focus().then(() => client.navigate(target))
+            return client.focus().then(() => client.navigate(target));
           }
         }
-        return self.clients.openWindow(target)
+        return self.clients.openWindow(target);
       }),
-  )
-})
+  );
+});
 ```
 
 `safeSameOriginPath` is the critical security bit: push payloads are untrusted, and `notification.data` persists across events, so a malicious `actionUrl` like `https://evil.example.com/steal` must never reach `client.navigate` or `openWindow`.

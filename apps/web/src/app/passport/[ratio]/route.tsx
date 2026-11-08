@@ -1,13 +1,13 @@
-import { ImageResponse } from 'next/og'
-import { PassportCard } from '@/components/consumer/passport/PassportCard'
+import { ImageResponse } from 'next/og';
+import { PassportCard } from '@/components/consumer/passport/PassportCard';
 import {
   PASSPORT_PRINT_MODE,
   PASSPORT_PRINT_SCALE,
-} from '@/components/consumer/passport/definitions/modes'
-import type { UserProfileResponse } from '@concert-crawl/types'
-import { auth } from '@/lib/auth'
-import { fetchHistory, type HistoryFetchResult } from '@/lib/history'
-import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts'
+} from '@/components/consumer/passport/definitions/modes';
+import type { UserProfileResponse } from '@concert-crawl/types';
+import { auth } from '@/lib/auth';
+import { fetchHistory, type HistoryFetchResult } from '@/lib/history';
+import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts';
 import {
   isPassportRatio,
   PASSPORT_CACHE_CONTROL,
@@ -15,9 +15,9 @@ import {
   PASSPORT_VARY,
   passportYear,
   resolvePassportTheme,
-} from '@/lib/passport/passport-request'
-import { toAttendedShows } from '@/lib/passport/select-shows'
-import { fetchMe } from '@/lib/users'
+} from '@/lib/passport/passport-request';
+import { toAttendedShows } from '@/lib/passport/select-shows';
+import { fetchMe } from '@/lib/users';
 
 // The passport PNG.
 //
@@ -33,10 +33,10 @@ import { fetchMe } from '@/lib/users'
 
 // Pinned, not inferred: the sibling poster route pins `edge`, and a default
 // that drifted would move Clerk session resolution without anything failing.
-export const runtime = 'nodejs'
+export const runtime = 'nodejs';
 
 interface PassportRouteContext {
-  params: Promise<{ ratio: string }>
+  params: Promise<{ ratio: string }>;
 }
 
 const problem = (status: number, message: string): Response =>
@@ -46,7 +46,7 @@ const problem = (status: number, message: string): Response =>
       'Content-Type': 'text/plain; charset=utf-8',
       'Cache-Control': 'no-store',
     },
-  })
+  });
 
 /**
  * Fonts come from our own origin: `next/font/google` output is unreachable
@@ -54,60 +54,60 @@ const problem = (status: number, message: string): Response =>
  * rather than falling back — a card in a font nobody chose is worse than a 502.
  */
 const originFontLoader = (request: Request) => async (assetPath: string) => {
-  const url = new URL(assetPath, request.url)
-  const response = await fetch(url)
+  const url = new URL(assetPath, request.url);
+  const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`)
+    throw new Error(`HTTP ${response.status}`);
   }
-  return response.arrayBuffer()
-}
+  return response.arrayBuffer();
+};
 
 export const GET = async (
   request: Request,
   context: PassportRouteContext,
 ): Promise<Response> => {
-  const { ratio } = await context.params
+  const { ratio } = await context.params;
   // Rejected before the session lookup and the two API calls: an unknown ratio
   // is unanswerable regardless of who is asking.
   if (!isPassportRatio(ratio)) {
-    return problem(400, 'unknown ratio')
+    return problem(400, 'unknown ratio');
   }
 
-  const { getToken } = await auth()
-  const token = await getToken()
+  const { getToken } = await auth();
+  const token = await getToken();
   if (token === null) {
-    return problem(401, 'sign in to render your passport')
+    return problem(401, 'sign in to render your passport');
   }
 
-  let profile: UserProfileResponse
-  let history: HistoryFetchResult
+  let profile: UserProfileResponse;
+  let history: HistoryFetchResult;
   try {
-    ;[profile, history] = await Promise.all([
+    [profile, history] = await Promise.all([
       fetchMe(token),
       fetchHistory(token),
-    ])
+    ]);
   } catch (err) {
-    console.error('[passport card] data fetch failed', { err })
-    return problem(502, 'passport data unavailable')
+    console.error('[passport card] data fetch failed', { err });
+    return problem(502, 'passport data unavailable');
   }
 
   // A 403 from /v1/history is the entitlement gate, not a failure — Concert
   // History is a Supporter feature, and so is the card drawn from it.
   if (history.locked) {
-    return problem(403, 'concert history is a Supporter feature')
+    return problem(403, 'concert history is a Supporter feature');
   }
 
   const { tokens } = resolvePassportTheme({
     theme: new URL(request.url).searchParams.get('theme') ?? undefined,
     profileTheme: profile.theme,
-  })
+  });
 
-  let fonts: LoadedShareFont[]
+  let fonts: LoadedShareFont[];
   try {
-    fonts = await loadShareFonts(originFontLoader(request))
+    fonts = await loadShareFonts(originFontLoader(request));
   } catch (err) {
-    console.error('[passport card] font load failed', { err })
-    return problem(502, 'share fonts unavailable')
+    console.error('[passport card] font load failed', { err });
+    return problem(502, 'share fonts unavailable');
   }
 
   return new ImageResponse(
@@ -124,5 +124,5 @@ export const GET = async (
       fonts,
       headers: { 'Cache-Control': PASSPORT_CACHE_CONTROL, Vary: PASSPORT_VARY },
     },
-  )
-}
+  );
+};

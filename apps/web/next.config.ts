@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto'
-import type { NextConfig } from 'next'
-import { withSentryConfig } from '@sentry/nextjs'
-import withSerwistInit from '@serwist/next'
-import rootPkg from '../../package.json'
+import { createHash } from 'node:crypto';
+import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
+import withSerwistInit from '@serwist/next';
+import rootPkg from '../../package.json';
 
 const config: NextConfig = {
   reactStrictMode: true,
@@ -19,7 +19,7 @@ const config: NextConfig = {
       '',
     NEXT_PUBLIC_PACKAGE_VERSION: rootPkg.version,
   },
-}
+};
 
 const withSerwist = withSerwistInit({
   swSrc: 'src/app/sw.ts',
@@ -63,7 +63,7 @@ const withSerwist = withSerwistInit({
       warnings: [],
     }),
   ],
-})
+});
 
 export default withSentryConfig(withSerwist(config), {
   org: 'fw-design',
@@ -82,4 +82,4 @@ export default withSentryConfig(withSerwist(config), {
     },
     automaticVercelMonitors: false,
   },
-})
+});

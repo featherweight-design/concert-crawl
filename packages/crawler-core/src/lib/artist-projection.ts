@@ -1,11 +1,11 @@
-import { artists, db } from '@concert-crawl/db'
-import { eq, inArray, like, or } from 'drizzle-orm'
+import { artists, db } from '@concert-crawl/db';
+import { eq, inArray, like, or } from 'drizzle-orm';
 import {
   ARTIST_SLUG_FALLBACK_PREFIX,
   artistSlug,
   resolveSlug,
-} from '@concert-crawl/types'
-import { reportFailure } from '@concert-crawl/logger'
+} from '@concert-crawl/types';
+import { reportFailure } from '@concert-crawl/logger';
 
 /**
  * Crawler write-through for the `artists` projection table (#1115).
@@ -30,9 +30,9 @@ import { reportFailure } from '@concert-crawl/logger'
 
 export interface ArtistProjectionInput {
   /** Raw, display-cased artist string as billed by the venue. */
-  name: string
+  name: string;
   /** canonicalizeArtist() output — the join key and uniqueness key. */
-  canonicalName: string
+  canonicalName: string;
 }
 
 /**
@@ -50,14 +50,14 @@ export async function projectArtists(
     // Collapse to one entry per canonical name, first spelling wins — the
     // display name is only a seed here; the backfill's most-frequent-spelling
     // pass and PR-C's admin surface are the authorities.
-    const byCanonical = new Map<string, string>()
+    const byCanonical = new Map<string, string>();
     for (const candidate of candidates) {
-      if (candidate.canonicalName === '') continue
+      if (candidate.canonicalName === '') continue;
       if (!byCanonical.has(candidate.canonicalName)) {
-        byCanonical.set(candidate.canonicalName, candidate.name)
+        byCanonical.set(candidate.canonicalName, candidate.name);
       }
     }
-    if (byCanonical.size === 0) return 0
+    if (byCanonical.size === 0) return 0;
 
     // Narrowed deliberately: this runs after every venue crawl and `artists`
     // grows without bound, so a full-table read here would become a hot path.
@@ -65,22 +65,22 @@ export async function projectArtists(
     // slug that could collide with one of our base slugs. `resolveSlug` only
     // ever appends `-<n>`, so `base` plus `base-%` covers every collision it
     // can produce.
-    const canonicalNames = [...byCanonical.keys()]
+    const canonicalNames = [...byCanonical.keys()];
     const baseSlugs = canonicalNames.map((canonicalName) =>
       artistSlug(canonicalName),
-    )
+    );
     const slugPredicates = baseSlugs
       .filter((base) => base !== '')
       .flatMap((base) => [
         eq(artists.slug, base),
         like(artists.slug, `${base}-%`),
-      ])
+      ]);
     // A name that slugs to nothing falls back to `artist-<hash>`; the hash is
     // internal to resolveSlug, so pull the whole fallback namespace instead.
     if (baseSlugs.some((base) => base === '')) {
       slugPredicates.push(
         like(artists.slug, `${ARTIST_SLUG_FALLBACK_PREFIX}-%`),
-      )
+      );
     }
 
     const existing = await database
@@ -88,18 +88,18 @@ export async function projectArtists(
       .from(artists)
       .where(
         or(inArray(artists.canonicalName, canonicalNames), ...slugPredicates),
-      )
-    const taken = new Set(existing.map((row) => row.slug))
-    const alreadyProjected = new Set(existing.map((row) => row.canonicalName))
+      );
+    const taken = new Set(existing.map((row) => row.slug));
+    const alreadyProjected = new Set(existing.map((row) => row.canonicalName));
 
-    const values: (typeof artists.$inferInsert)[] = []
+    const values: (typeof artists.$inferInsert)[] = [];
     for (const [canonicalName, name] of byCanonical) {
-      if (alreadyProjected.has(canonicalName)) continue
-      const slug = resolveSlug(artistSlug(canonicalName), taken, canonicalName)
-      taken.add(slug)
-      values.push({ name, canonicalName, slug })
+      if (alreadyProjected.has(canonicalName)) continue;
+      const slug = resolveSlug(artistSlug(canonicalName), taken, canonicalName);
+      taken.add(slug);
+      values.push({ name, canonicalName, slug });
     }
-    if (values.length === 0) return 0
+    if (values.length === 0) return 0;
 
     // onConflictDoNothing covers the race where a concurrent crawl or the
     // backfill claimed the same canonical name (or the same slug) between the
@@ -109,16 +109,16 @@ export async function projectArtists(
       .insert(artists)
       .values(values)
       .onConflictDoNothing()
-      .returning({ id: artists.id })
+      .returning({ id: artists.id });
 
-    return inserted.length
+    return inserted.length;
   } catch (err) {
     reportFailure({
       event: 'crawl.artist_projection_failed',
       severity: 'warn',
       candidateCount: candidates.length,
       error: err instanceof Error ? err.message : String(err),
-    })
-    return 0
+    });
+    return 0;
   }
 }

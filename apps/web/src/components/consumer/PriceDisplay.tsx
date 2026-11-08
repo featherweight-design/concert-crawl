@@ -1,113 +1,113 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import type { PriceSource, SourceCategory } from '@concert-crawl/types'
-import { SubmitPriceModal } from '@/components/consumer/submit-price'
-import { CCTip } from '@/components/ui/cc-tip'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
+import { useState } from 'react';
+import type { PriceSource, SourceCategory } from '@concert-crawl/types';
+import { SubmitPriceModal } from '@/components/consumer/submit-price';
+import { CCTip } from '@/components/ui/cc-tip';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display';
 import {
   resolveAlternateKind,
   resolveSourceKind,
-} from '@/components/consumer/lib/price-source-kind'
-import { relTimeAgo } from '@/components/consumer/lib/staleness'
-import { StaleStamp } from '@/components/consumer/StaleStamp'
-import { StillAccurateAction } from '@/components/consumer/StillAccurateAction'
+} from '@/components/consumer/lib/price-source-kind';
+import { relTimeAgo } from '@/components/consumer/lib/staleness';
+import { StaleStamp } from '@/components/consumer/StaleStamp';
+import { StillAccurateAction } from '@/components/consumer/StillAccurateAction';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 // ── Price shape used by PriceBlockB ─────────────────────────────
 // Maps from the flat EventDetailResponse fields into a richer object
 // that mirrors the design's price data shape. Fields not yet in the DB
 // are optional and default to null — no migration needed this round.
 export interface PriceBlockPrice {
-  face: number
-  max?: number | null
-  fees?: number | null
-  feeBreakdown?: Array<{ label: string; amount: number }> | null
-  tier?: 'exact' | 'from'
-  source?: string | null
-  sourceUrl?: string | null
-  sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice'
-  observedAt?: string | null
-  openedAt?: number | null
-  range14d?: number[] | null
-  status?: 'live' | 'soldout'
-  submitter?: { handle: string; url: string } | null
+  face: number;
+  max?: number | null;
+  fees?: number | null;
+  feeBreakdown?: Array<{ label: string; amount: number }> | null;
+  tier?: 'exact' | 'from';
+  source?: string | null;
+  sourceUrl?: string | null;
+  sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice';
+  observedAt?: string | null;
+  openedAt?: number | null;
+  range14d?: number[] | null;
+  status?: 'live' | 'soldout';
+  submitter?: { handle: string; url: string } | null;
   verification?: {
-    at: string
+    at: string;
     by: {
-      kind: 'user' | 'auto' | 'admin'
-      handle?: string
-      url?: string
-      label?: string
-    }
-  } | null
+      kind: 'user' | 'auto' | 'admin';
+      handle?: string;
+      url?: string;
+      label?: string;
+    };
+  } | null;
   alternates?: Array<{
-    source: string
-    sourceUrl?: string | null
-    sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice'
-    face: number
-    fees?: number | null
-  }>
-  soldOutBy?: { handle: string; url: string } | null
-  soldOutConfirms?: number | null
+    source: string;
+    sourceUrl?: string | null;
+    sourceKind: 'primary' | 'resale' | 'community' | 'boxoffice';
+    face: number;
+    fees?: number | null;
+  }>;
+  soldOutBy?: { handle: string; url: string } | null;
+  soldOutConfirms?: number | null;
   // Fan confirms count — shown for community/boxoffice prices confirmed by the community
-  confirmsCount?: number | null
+  confirmsCount?: number | null;
   // Box-office meta
-  boxOfficeAction?: 'bought' | 'saw'
-  boxOfficeMethod?: 'in-person' | 'phone'
-  boxOfficeFaceLiteral?: boolean
-  venueName?: string | null
+  boxOfficeAction?: 'bought' | 'saw';
+  boxOfficeMethod?: 'in-person' | 'phone';
+  boxOfficeFaceLiteral?: boolean;
+  venueName?: string | null;
 }
 
 interface PriceDisplayProps {
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: PriceSource | null
-  venueName: string
-  ticketUrl: string | null
-  eventId: string
-  artist: string
-  date: string
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: PriceSource | null;
+  venueName: string;
+  ticketUrl: string | null;
+  eventId: string;
+  artist: string;
+  date: string;
   // Extended fields (optional — undefined = not yet in API response)
-  observedAt?: string | null
-  range14d?: number[] | null
-  priceStatus?: 'live' | 'soldout' | null
-  ticketPriceOpenedAt?: number | null
-  ticketFees?: number | null
-  priceVendor?: string | null
+  observedAt?: string | null;
+  range14d?: number[] | null;
+  priceStatus?: 'live' | 'soldout' | null;
+  ticketPriceOpenedAt?: number | null;
+  ticketFees?: number | null;
+  priceVendor?: string | null;
   // The submitter's "Where's the price from?" answer. Drives the trust mark;
   // null only for rows predating #641, which fall back to vendor inference.
-  priceSourceCategory?: SourceCategory | null
-  priceSubmitterHandle?: string | null
-  priceObservedAt?: string | null
+  priceSourceCategory?: SourceCategory | null;
+  priceSubmitterHandle?: string | null;
+  priceObservedAt?: string | null;
   // The submission behind the displayed price, when there is one. A crawler
   // price has no row to stamp, so its absence is what excludes the action.
-  priceSubmissionId?: string | null
+  priceSubmissionId?: string | null;
   // Only the locally-promoted submission needs this: its timestamp lives in
   // client state, which `router.refresh()` cannot reach.
-  onSighted?: () => void
-  priceApprovalKind?: 'admin' | 'fan' | null
-  priceApprovedAt?: string | null
+  onSighted?: () => void;
+  priceApprovalKind?: 'admin' | 'fan' | null;
+  priceApprovedAt?: string | null;
   priceAlternates?: Array<{
-    vendor: string | null
-    priceMin: string
-    priceMax: string | null
-    sourceCategory?: SourceCategory | null
-  }> | null
+    vendor: string | null;
+    priceMin: string;
+    priceMax: string | null;
+    sourceCategory?: SourceCategory | null;
+  }> | null;
   // Fan confirms count — passed from optimistic section 4a to show "N fans confirmed"
-  priceConfirmsCount?: number | null
+  priceConfirmsCount?: number | null;
   // When provided, the "Submit a price" button in the no-price state calls this
   // instead of opening an internal modal (lets parent own the submission flow)
-  onSubmitPrice?: () => void
+  onSubmitPrice?: () => void;
 }
 
 // ── Color constants ───────────────────────────────────────────────
-const RESALE = 'var(--trust-resale)'
-const GOLD = 'oklch(0.66 0.14 78)'
+const RESALE = 'var(--trust-resale)';
+const GOLD = 'oklch(0.66 0.14 78)';
 // Community color token — consumed from CSS variable so it responds to theme.
-const COMMUNITY = 'var(--trust-community)'
+const COMMUNITY = 'var(--trust-community)';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -116,30 +116,30 @@ function resolveSourceName(
   venueName: string,
   vendor?: string | null,
 ): string | null {
-  if (!source) return venueName
+  if (!source) return venueName;
   switch (source) {
     case 'structured_data':
-      return venueName
+      return venueName;
     case 'ticketmaster':
-      return 'Ticketmaster'
+      return 'Ticketmaster';
     case 'eventbrite':
-      return 'Eventbrite'
+      return 'Eventbrite';
     case 'dice':
-      return 'Dice.fm'
+      return 'Dice.fm';
     case 'songkick':
-      return 'Songkick'
+      return 'Songkick';
     case 'bandsintown':
-      return 'Bandsintown'
+      return 'Bandsintown';
     case 'seatgeek':
-      return 'SeatGeek'
+      return 'SeatGeek';
     case 'community':
-      return vendor === 'SeatGeek' ? 'SeatGeek' : null
+      return vendor === 'SeatGeek' ? 'SeatGeek' : null;
   }
 }
 
 function formatUSD(val: number, opts?: { whole?: boolean }): string {
-  if (opts?.whole || Number.isInteger(val)) return `$${Math.round(val)}`
-  return `$${val.toFixed(2)}`
+  if (opts?.whole || Number.isInteger(val)) return `$${Math.round(val)}`;
+  return `$${val.toFixed(2)}`;
 }
 
 // ── SVG icons ────────────────────────────────────────────────────
@@ -162,11 +162,11 @@ function ExternalIcon({ size = 10 }: { size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function CaretIcon({ dir = 'down' }: { dir?: 'down' | 'up' }) {
-  const rot = dir === 'up' ? 180 : 0
+  const rot = dir === 'up' ? 180 : 0;
   return (
     <svg
       width={9}
@@ -184,15 +184,15 @@ function CaretIcon({ dir = 'down' }: { dir?: 'down' | 'up' }) {
         fill="none"
       />
     </svg>
-  )
+  );
 }
 
 function CheckIcon({
   size = 10,
   color = 'currentColor',
 }: {
-  size?: number
-  color?: string
+  size?: number;
+  color?: string;
 }) {
   return (
     <svg
@@ -211,7 +211,7 @@ function CheckIcon({
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 // ── TrustMark — four tiers ────────────────────────────────────────
@@ -220,8 +220,8 @@ export function TrustMark({
   kind,
   glyph = true,
 }: {
-  kind: 'primary' | 'resale' | 'community' | 'boxoffice'
-  glyph?: boolean
+  kind: 'primary' | 'resale' | 'community' | 'boxoffice';
+  glyph?: boolean;
 }) {
   const label =
     kind === 'resale'
@@ -230,7 +230,7 @@ export function TrustMark({
         ? copy.priceDisplay.communityLabel
         : kind === 'boxoffice'
           ? copy.priceDisplay.boxOfficeTrustLabel
-          : copy.priceDisplay.vendorLabel
+          : copy.priceDisplay.vendorLabel;
 
   const tint =
     kind === 'resale'
@@ -239,7 +239,7 @@ export function TrustMark({
         ? COMMUNITY
         : kind === 'boxoffice'
           ? GOLD
-          : 'var(--fg-muted)'
+          : 'var(--fg-muted)';
 
   const bg =
     kind === 'resale'
@@ -248,12 +248,12 @@ export function TrustMark({
         ? `color-mix(in oklab, ${COMMUNITY} 16%, transparent)`
         : kind === 'boxoffice'
           ? `color-mix(in oklab, ${GOLD} 22%, transparent)`
-          : 'color-mix(in oklab, var(--fg-muted) 12%, transparent)'
+          : 'color-mix(in oklab, var(--fg-muted) 12%, transparent)';
 
   const border =
     kind === 'boxoffice'
       ? `1px solid color-mix(in oklab, ${GOLD} 60%, transparent)`
-      : 'none'
+      : 'none';
 
   return (
     <span
@@ -293,7 +293,7 @@ export function TrustMark({
       )}
       {label}
     </span>
-  )
+  );
 }
 
 // ── Sparkline ────────────────────────────────────────────────────
@@ -307,36 +307,36 @@ function Sparkline({
   flag = null,
   dim = false,
 }: {
-  values: number[]
-  width?: number
-  height?: number
-  flag?: 'drop' | 'rise' | null
-  dim?: boolean
+  values: number[];
+  width?: number;
+  height?: number;
+  flag?: 'drop' | 'rise' | null;
+  dim?: boolean;
 }) {
-  if (values.length < 4) return null
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const range = Math.max(max - min, 1)
-  const stepX = width / (values.length - 1)
+  if (values.length < 4) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 1);
+  const stepX = width / (values.length - 1);
   const points = values.map((val, idx) => {
-    const xCoord = idx * stepX
-    const yCoord = height - 2 - ((val - min) / range) * (height - 4)
-    return [xCoord, yCoord] as [number, number]
-  })
+    const xCoord = idx * stepX;
+    const yCoord = height - 2 - ((val - min) / range) * (height - 4);
+    return [xCoord, yCoord] as [number, number];
+  });
   const pathD = points
     .map(([xCoord, yCoord], idx) =>
       idx === 0 ? `M${xCoord},${yCoord}` : `L${xCoord},${yCoord}`,
     )
-    .join(' ')
-  const last = points[points.length - 1]
-  if (!last) return null
+    .join(' ');
+  const last = points[points.length - 1];
+  if (!last) return null;
 
   const stroke =
     flag === 'drop'
       ? 'var(--success)'
       : flag === 'rise'
         ? 'var(--warning)'
-        : 'var(--fg-subtle)'
+        : 'var(--fg-subtle)';
 
   return (
     <svg
@@ -356,7 +356,7 @@ function Sparkline({
       />
       <circle cx={last[0]} cy={last[1]} r="2" fill={stroke} />
     </svg>
-  )
+  );
 }
 
 // ── VerifiedStamp ───────────────────────────────────────────────
@@ -364,20 +364,20 @@ function VerifiedStamp({
   verification,
   subject,
 }: {
-  verification: NonNullable<PriceBlockPrice['verification']>
-  subject?: string | null
+  verification: NonNullable<PriceBlockPrice['verification']>;
+  subject?: string | null;
 }) {
   const stale =
-    Date.now() - new Date(verification.at).getTime() > 7 * 24 * 60 * 60 * 1000
-  const rel = relTimeAgo(verification.at)
-  const color = stale ? 'var(--warning)' : 'var(--success)'
-  const headWord = subject ? `${subject} verified` : 'Verified'
-  const { by } = verification
+    Date.now() - new Date(verification.at).getTime() > 7 * 24 * 60 * 60 * 1000;
+  const rel = relTimeAgo(verification.at);
+  const color = stale ? 'var(--warning)' : 'var(--success)';
+  const headWord = subject ? `${subject} verified` : 'Verified';
+  const { by } = verification;
   const whenText = stale
     ? `${rel}${copy.priceStaleness.couldBeStaleSuffix}`
-    : rel
+    : rel;
 
-  let head: React.ReactNode
+  let head: React.ReactNode;
   if (by.kind === 'user' && by.handle) {
     head = (
       <>
@@ -395,15 +395,15 @@ function VerifiedStamp({
           {by.handle}
         </a>
       </>
-    )
+    );
   } else if (by.label) {
     head = (
       <>
         {headWord} {copy.priceDisplay.attribution} {by.label}
       </>
-    )
+    );
   } else {
-    head = <>{headWord}</>
+    head = <>{headWord}</>;
   }
 
   return (
@@ -425,14 +425,14 @@ function VerifiedStamp({
         {head} · {whenText}
       </span>
     </span>
-  )
+  );
 }
 
 // ── FeeBreakdown — collapsible ───────────────────────────────────
 function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
-  const [open, setOpen] = useState(false)
-  if (!price.feeBreakdown || price.fees == null || price.fees <= 0) return null
-  const allIn = price.face + price.fees
+  const [open, setOpen] = useState(false);
+  if (!price.feeBreakdown || price.fees == null || price.fees <= 0) return null;
+  const allIn = price.face + price.fees;
 
   return (
     <div>
@@ -522,18 +522,18 @@ function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── AlternateSourceRow ───────────────────────────────────────────
 function AlternateSourceRow({
   alt,
 }: {
-  alt: NonNullable<PriceBlockPrice['alternates']>[number]
+  alt: NonNullable<PriceBlockPrice['alternates']>[number];
 }) {
-  if (alt.face == null) return null
-  const allInVal = alt.face + (alt.fees ?? 0)
-  const showAllIn = (alt.fees ?? 0) > 0
+  if (alt.face == null) return null;
+  const allInVal = alt.face + (alt.fees ?? 0);
+  const showAllIn = (alt.fees ?? 0) > 0;
   const dotColor =
     alt.sourceKind === 'resale'
       ? RESALE
@@ -541,7 +541,7 @@ function AlternateSourceRow({
         ? COMMUNITY
         : alt.sourceKind === 'boxoffice'
           ? GOLD
-          : 'var(--fg-muted)'
+          : 'var(--fg-muted)';
   const kindLabel =
     alt.sourceKind === 'resale'
       ? copy.priceDisplay.resaleLabel
@@ -549,7 +549,7 @@ function AlternateSourceRow({
         ? copy.priceDisplay.communityLabel
         : alt.sourceKind === 'boxoffice'
           ? copy.priceDisplay.boxOfficeTrustLabel
-          : copy.priceDisplay.vendorLabel
+          : copy.priceDisplay.vendorLabel;
 
   const inner = (
     <>
@@ -615,7 +615,7 @@ function AlternateSourceRow({
       )}
       {alt.sourceUrl && <ExternalIcon size={8} />}
     </>
-  )
+  );
 
   return alt.sourceUrl ? (
     <a
@@ -646,7 +646,7 @@ function AlternateSourceRow({
     >
       {inner}
     </div>
-  )
+  );
 }
 
 // ── DropDotIcon ─────────────────────────────────────────────────
@@ -655,7 +655,7 @@ function DropDotIcon({ size = 8 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 8 8" aria-hidden>
       <circle cx="4" cy="4" r="3" fill="var(--success)" />
     </svg>
-  )
+  );
 }
 
 // ── DeltaPill — price-vs-on-sale indicator ───────────────────────
@@ -665,17 +665,17 @@ function DeltaPill({
   face,
   openedAt,
 }: {
-  face: number
-  openedAt: number | null | undefined
+  face: number;
+  openedAt: number | null | undefined;
 }) {
-  if (openedAt == null || openedAt === face) return null
-  const diff = face - openedAt
-  const isDown = diff < 0
-  const absDiff = Math.abs(diff)
-  const deltaStr = formatUSD(absDiff, { whole: absDiff >= 1 })
+  if (openedAt == null || openedAt === face) return null;
+  const diff = face - openedAt;
+  const isDown = diff < 0;
+  const absDiff = Math.abs(diff);
+  const deltaStr = formatUSD(absDiff, { whole: absDiff >= 1 });
   const text = isDown
     ? `${deltaStr} ${copy.priceDisplay.cheaperThanOnSale}`
-    : `+${deltaStr} ${copy.priceDisplay.sinceOnSale}`
+    : `+${deltaStr} ${copy.priceDisplay.sinceOnSale}`;
 
   return (
     <span
@@ -694,7 +694,7 @@ function DeltaPill({
       {isDown && <DropDotIcon />}
       {text}
     </span>
-  )
+  );
 }
 
 // ── BoxOfficeAttribution — in-person or phone purchase line ──────
@@ -705,9 +705,9 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
     venueName,
     submitter,
     confirmsCount,
-  } = price
+  } = price;
   // Render nothing unless we have at least the venue name
-  if (!venueName) return null
+  if (!venueName) return null;
 
   // Fan-corroborated box office price — no purchase/observation metadata recorded.
   // Show simple "Submitted by @handle · N fans confirmed" attribution instead.
@@ -715,7 +715,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
     const confirmsText =
       confirmsCount != null && confirmsCount > 0
         ? ` · ${confirmsCount} ${confirmsCount !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
-        : ''
+        : '';
     return (
       <div style={{ marginTop: 6 }}>
         <span
@@ -750,17 +750,17 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
           {confirmsText}
         </span>
       </div>
-    )
+    );
   }
 
   const actionWord =
     boxOfficeAction === 'saw'
       ? copy.priceDisplay.sawVerb
-      : copy.priceDisplay.boughtVerb
+      : copy.priceDisplay.boughtVerb;
   // Phone purchases use "from" (called remotely); in-person uses "at" (was there)
-  const prep = boxOfficeMethod === 'phone' ? 'from' : 'at'
+  const prep = boxOfficeMethod === 'phone' ? 'from' : 'at';
   const methodSuffix =
-    boxOfficeMethod === 'phone' ? ` ${copy.priceDisplay.byPhoneSuffix}` : ''
+    boxOfficeMethod === 'phone' ? ` ${copy.priceDisplay.byPhoneSuffix}` : '';
   const byLine = submitter ? (
     <>
       {' by '}
@@ -786,7 +786,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
       {' '}
       {copy.priceDisplay.attribution} <em>{copy.priceDisplay.anonymousFan}</em>
     </>
-  )
+  );
 
   return (
     <div style={{ marginTop: 6 }}>
@@ -808,18 +808,18 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
         {methodSuffix}
       </span>
     </div>
-  )
+  );
 }
 
 // ── SoldOutReporterAttribution — who flagged this as sold out ────
 function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
-  const { soldOutBy, soldOutConfirms } = price
+  const { soldOutBy, soldOutConfirms } = price;
   if (soldOutBy == null && (soldOutConfirms == null || soldOutConfirms <= 0))
-    return null
+    return null;
   const confirmsText =
     soldOutConfirms != null && soldOutConfirms > 0
       ? ` · ${soldOutConfirms} ${soldOutConfirms !== 1 ? copy.priceDisplay.fansConfirmedSuffix : copy.priceDisplay.fanConfirmedSuffix}`
-      : ''
+      : '';
 
   const reportedBy = soldOutBy ? (
     <>
@@ -843,7 +843,7 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
     </>
   ) : (
     copy.priceDisplay.reportedSoldOut
-  )
+  );
 
   return (
     <div style={{ marginTop: 6 }}>
@@ -859,7 +859,7 @@ function SoldOutReporterAttribution({ price }: { price: PriceBlockPrice }) {
         {confirmsText}
       </span>
     </div>
-  )
+  );
 }
 
 // ── CommunityHandoffCard — shown when price is null ──────────────
@@ -870,13 +870,13 @@ function CommunityHandoffCard({
   date,
   onSubmitPrice,
 }: {
-  eventId: string
-  artist: string
-  venueName: string
-  date: string
-  onSubmitPrice?: () => void
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string;
+  onSubmitPrice?: () => void;
 }) {
-  const [isSubmitOpen, setIsSubmitOpen] = useState(false)
+  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   return (
     <div
       style={{
@@ -1030,7 +1030,7 @@ function CommunityHandoffCard({
         {copy.priceDisplay.anonymousWorksHint}
       </div>
     </div>
-  )
+  );
 }
 
 // ── PriceBlockB — spacious dedicated card ────────────────────────
@@ -1040,19 +1040,19 @@ function CommunityHandoffCard({
 function resolveAlternateName(vendor: string | null): string | null {
   switch (vendor) {
     case 'VenueBoxOffice':
-      return VENUE_BOX_OFFICE_LABEL
+      return VENUE_BOX_OFFICE_LABEL;
     case 'SeatGeek':
-      return 'SeatGeek'
+      return 'SeatGeek';
     case 'AXS':
-      return 'AXS'
+      return 'AXS';
     case 'Ticketmaster':
-      return 'Ticketmaster'
+      return 'Ticketmaster';
     case 'DICE':
-      return 'Dice.fm'
+      return 'Dice.fm';
     case 'Eventbrite':
-      return 'Eventbrite'
+      return 'Eventbrite';
     default:
-      return null
+      return null;
   }
 }
 
@@ -1082,18 +1082,18 @@ export function PriceDisplay({
   priceConfirmsCount,
   onSubmitPrice,
 }: PriceDisplayProps) {
-  const parsedMin = priceMin ? parseFloat(priceMin) : null
-  const parsedMax = priceMax ? parseFloat(priceMax) : null
-  const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null
-  const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
+  const parsedMin = priceMin ? parseFloat(priceMin) : null;
+  const parsedMax = priceMax ? parseFloat(priceMax) : null;
+  const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null;
+  const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null;
   const sourceKind = resolveSourceKind(
     priceSource,
     priceVendor,
     priceSourceCategory,
-  )
-  const sourceName = resolveSourceName(priceSource, venueName, priceVendor)
-  const effectiveObservedAt = observedAt ?? priceObservedAt ?? null
-  const sourceUrl = ticketUrl
+  );
+  const sourceName = resolveSourceName(priceSource, venueName, priceVendor);
+  const effectiveObservedAt = observedAt ?? priceObservedAt ?? null;
+  const sourceUrl = ticketUrl;
 
   // No-price state → community-handoff card
   if (face === null) {
@@ -1105,7 +1105,7 @@ export function PriceDisplay({
         date={date}
         {...(onSubmitPrice ? { onSubmitPrice } : {})}
       />
-    )
+    );
   }
 
   // Build a PriceBlockPrice-shaped object from the flat API fields.
@@ -1144,11 +1144,11 @@ export function PriceDisplay({
     soldOutBy: null,
     soldOutConfirms: null,
     confirmsCount: priceConfirmsCount ?? null,
-  }
+  };
 
-  const soldOut = priceStatus === 'soldout'
-  const isBoxOffice = sourceKind === 'boxoffice'
-  const isCommunity = sourceKind === 'community'
+  const soldOut = priceStatus === 'soldout';
+  const isBoxOffice = sourceKind === 'boxoffice';
+  const isCommunity = sourceKind === 'community';
 
   // Sparkline for primary and resale tiers with ≥4 datapoints.
   // Community and box-office are excluded per spec (single data point / no history).
@@ -1157,7 +1157,7 @@ export function PriceDisplay({
     Array.isArray(range14d) &&
     range14d.length >= 4 &&
     sourceKind !== 'community' &&
-    sourceKind !== 'boxoffice'
+    sourceKind !== 'boxoffice';
 
   // Sparkline flag: compare first vs last value in the 14-day range.
   // 'drop' = price went down (success green), 'rise' = price went up (warning), null = flat.
@@ -1168,29 +1168,29 @@ export function PriceDisplay({
         : range14d[range14d.length - 1]! > range14d[0]!
           ? 'rise'
           : null
-      : null
+      : null;
 
   // Card theming
   const cardBg = isBoxOffice
     ? `color-mix(in oklab, ${GOLD} 8%, var(--surface-1))`
-    : 'var(--surface-1)'
+    : 'var(--surface-1)';
   const cardBorder = isBoxOffice
     ? `1px solid color-mix(in oklab, ${GOLD} 52%, var(--border))`
-    : '1px solid var(--border)'
+    : '1px solid var(--border)';
   const cardBoxShadow = isBoxOffice
     ? `inset 0 1px 0 color-mix(in oklab, oklch(0.66 0.14 78) 40%, transparent)`
-    : undefined
+    : undefined;
 
   // Headline price — show all-in (face + fees) for non-boxoffice tiers when fees exist.
   // Box-office always shows face (no fees by definition). Ranges use face min/max only.
   const allInFace =
     !isBoxOffice && priceObj.fees && priceObj.fees > 0
       ? face + priceObj.fees
-      : face
+      : face;
   const headlineStr =
     faceMax && faceMax > face
       ? `$${Math.round(face)}–$${Math.round(faceMax)}`
-      : formatUSD(allInFace, { whole: allInFace >= 10 })
+      : formatUSD(allInFace, { whole: allInFace >= 10 });
 
   return (
     <div
@@ -1609,5 +1609,5 @@ export function PriceDisplay({
         )}
       </div>
     </div>
-  )
+  );
 }

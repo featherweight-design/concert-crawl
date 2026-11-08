@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { Tag } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Tag } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface BulkActionDockProps {
-  count: number
-  onApproveAll: () => void
-  onRejectAll: () => void
-  onClear?: () => void
-  onRetag?: () => void
+  count: number;
+  onApproveAll: () => void;
+  onRejectAll: () => void;
+  onClear?: () => void;
+  onRetag?: () => void;
 }
 
 export const BulkActionDock = ({
@@ -128,5 +128,5 @@ export const BulkActionDock = ({
         {ADMIN_COPY.review.bulkActionDock.approveCount(count)}
       </button>
     </div>
-  )
-}
+  );
+};

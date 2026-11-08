@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import { type MovedReason } from '@concert-crawl/types'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton, AdminDialog } from '@/components/admin/primitives'
-import { formatEventDate } from '@/lib/admin/missing'
+import { type MovedReason } from '@concert-crawl/types';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton, AdminDialog } from '@/components/admin/primitives';
+import { formatEventDate } from '@/lib/admin/missing';
 
-const COPY = ADMIN_COPY.review.missing.moveConfirm
+const COPY = ADMIN_COPY.review.missing.moveConfirm;
 
 export interface MoveConfirmDialogProps {
-  missingTitle: string
-  missingDate: string
-  missingVenueName: string | null
-  candidateTitle: string
-  candidateDate: string
-  candidateVenueName: string | null
-  reason: MovedReason
-  onCancel: () => void
-  onConfirm: () => void
+  missingTitle: string;
+  missingDate: string;
+  missingVenueName: string | null;
+  candidateTitle: string;
+  candidateDate: string;
+  candidateVenueName: string | null;
+  reason: MovedReason;
+  onCancel: () => void;
+  onConfirm: () => void;
 }
 
 const LABEL_STYLE = {
@@ -26,10 +26,10 @@ const LABEL_STYLE = {
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
   color: 'var(--fg-subtle)',
-} as const
+} as const;
 
 const line = (title: string, date: string, venueName: string | null): string =>
-  [title, formatEventDate(date), venueName ?? '—'].join(' · ')
+  [title, formatEventDate(date), venueName ?? '—'].join(' · ');
 
 /**
  * Confirm step for a suggested relocation. Deliberately not the typed-token
@@ -102,4 +102,4 @@ export const MoveConfirmDialog = ({
       {COPY.body}
     </div>
   </AdminDialog>
-)
+);

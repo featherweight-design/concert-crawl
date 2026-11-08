@@ -1,5 +1,5 @@
-import { TIER_ORDER } from '../definitions/constants'
-import type { TierKey } from '../definitions/types'
+import { TIER_ORDER } from '../definitions/constants';
+import type { TierKey } from '../definitions/types';
 
 /**
  * The tier a visitor chose before they had an account, read back off the URL on
@@ -11,4 +11,4 @@ import type { TierKey } from '../definitions/types'
  */
 export const decodePendingTier = (
   raw: string | null | undefined,
-): TierKey | null => TIER_ORDER.find((key) => key === raw) ?? null
+): TierKey | null => TIER_ORDER.find((key) => key === raw) ?? null;

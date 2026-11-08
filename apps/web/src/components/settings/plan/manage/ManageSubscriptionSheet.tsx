@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 manage-subscription controller (PR 4.5). Owns which surface shows —
 // the two-group manage sheet or one of the cancel/downgrade/upgrade confirm
@@ -10,40 +10,40 @@
 // 409s with 'founder_not_switchable'); Supporter → UpgradeFlow. The cancel
 // retention nudge's "Switch to Supporter instead" follows the same routing.
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { CancelFlow } from './CancelFlow'
-import { DowngradeFlow } from './DowngradeFlow'
-import { LifecycleSurface } from './LifecycleSurface'
-import { ManageSheet } from './ManageSheet'
-import { UpgradeFlow } from './UpgradeFlow'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { CancelFlow } from './CancelFlow';
+import { DowngradeFlow } from './DowngradeFlow';
+import { LifecycleSurface } from './LifecycleSurface';
+import { ManageSheet } from './ManageSheet';
+import { UpgradeFlow } from './UpgradeFlow';
 import {
   CANCEL_FLOW_COPY,
   DOWNGRADE_FLOW_COPY,
   MANAGE_SHEET_COPY,
   UPGRADE_FLOW_COPY,
-} from './definitions/copy'
-import { SURFACE_DESKTOP_WIDTH } from './definitions/constants'
-import type { ManageSurface, PaidTier } from './definitions/types'
-import { formatDollarsFromCents } from './lib/format-amount'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
-import { useLifecycleActions } from './lib/use-lifecycle-actions'
-import { useProrationPreview } from './lib/use-proration-preview'
-import { usePortalNavigation } from '../lib/use-portal-navigation'
+} from './definitions/copy';
+import { SURFACE_DESKTOP_WIDTH } from './definitions/constants';
+import type { ManageSurface, PaidTier } from './definitions/types';
+import { formatDollarsFromCents } from './lib/format-amount';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
+import { useLifecycleActions } from './lib/use-lifecycle-actions';
+import { useProrationPreview } from './lib/use-proration-preview';
+import { usePortalNavigation } from '../lib/use-portal-navigation';
 
 const SURFACE_ARIA_LABEL: Record<ManageSurface, string> = {
   manage: MANAGE_SHEET_COPY.ariaLabel,
   cancel: CANCEL_FLOW_COPY.ariaLabel,
   downgrade: DOWNGRADE_FLOW_COPY.ariaLabel,
   upgrade: UPGRADE_FLOW_COPY.ariaLabel,
-}
+};
 
 interface ManageSubscriptionSheetProps {
-  open: boolean
-  onClose: () => void
-  tier: PaidTier
+  open: boolean;
+  onClose: () => void;
+  tier: PaidTier;
   /** Pre-formatted current period end via formatPeriodEnd (e.g. "Jul 15") or null. */
-  periodEnd: string | null
+  periodEnd: string | null;
 }
 
 export const ManageSubscriptionSheet = ({
@@ -52,47 +52,47 @@ export const ManageSubscriptionSheet = ({
   tier,
   periodEnd,
 }: ManageSubscriptionSheetProps) => {
-  const [surface, setSurface] = useState<ManageSurface>('manage')
-  const isMobile = useIsMobileViewport()
-  const { isSignedIn } = useAuth()
+  const [surface, setSurface] = useState<ManageSurface>('manage');
+  const isMobile = useIsMobileViewport();
+  const { isSignedIn } = useAuth();
 
   const { openPortal, portalPending, portalError, clearPortalError } =
-    usePortalNavigation({ newTab: true })
+    usePortalNavigation({ newTab: true });
   const { cancel, changeTier, pending, errorText, clearError } =
-    useLifecycleActions()
+    useLifecycleActions();
 
   // Every open starts back at the manage sheet with stale errors cleared.
   useEffect(() => {
-    if (!open) return
-    setSurface('manage')
-    clearError()
-    clearPortalError()
-  }, [open, clearError, clearPortalError])
+    if (!open) return;
+    setSurface('manage');
+    clearError();
+    clearPortalError();
+  }, [open, clearError, clearPortalError]);
 
   const downgradePreview = useProrationPreview(
     'supporter',
     Boolean(isSignedIn) && open && surface === 'downgrade',
-  )
+  );
   const upgradePreview = useProrationPreview(
     'premium',
     Boolean(isSignedIn) && open && surface === 'upgrade',
-  )
+  );
 
   const showSurface = (next: ManageSurface) => {
-    clearError()
-    setSurface(next)
-  }
+    clearError();
+    setSurface(next);
+  };
 
   const openChangePlan = () => {
-    if (tier === 'supporter') showSurface('upgrade')
-    else showSurface('downgrade')
-  }
+    if (tier === 'supporter') showSurface('upgrade');
+    else showSurface('downgrade');
+  };
 
-  const switchToSupporterFromCancel = () => showSurface('downgrade')
+  const switchToSupporterFromCancel = () => showSurface('downgrade');
 
   const confirmCancel = () => {
-    cancel(onClose)
-  }
+    cancel(onClose);
+  };
 
   return (
     <LifecycleSurface
@@ -161,5 +161,5 @@ export const ManageSubscriptionSheet = ({
         />
       )}
     </LifecycleSurface>
-  )
-}
+  );
+};

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The browse shelf slot (native following, PR 4). ONE component, two modes:
 //
@@ -15,20 +15,20 @@
 // Mode is decided on the SERVER from the SSR follow seed, so the slot never
 // renders one shelf and swaps to another after a client fetch lands.
 
-import { useEffect, useMemo, useState } from 'react'
-import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
-import { useAuth } from '@clerk/nextjs'
-import type { PickerEntry } from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { ShelfCard } from './ShelfCard'
-import { FOLLOWING_COPY } from './definitions/copy'
-import { SHELF_CARD_WIDTH } from '@/components/consumer/definitions/constants'
-import { SHELF_VISIBLE_CARDS } from './definitions/constants'
-import type { ShelfArtist, ShelfMode } from './definitions/types'
-import { readSessionSeed, shuffleWithSeed } from './lib/shuffle'
+import { useEffect, useMemo, useState } from 'react';
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
+import { useAuth } from '@clerk/nextjs';
+import type { PickerEntry } from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { ShelfCard } from './ShelfCard';
+import { FOLLOWING_COPY } from './definitions/copy';
+import { SHELF_CARD_WIDTH } from '@/components/consumer/definitions/constants';
+import { SHELF_VISIBLE_CARDS } from './definitions/constants';
+import type { ShelfArtist, ShelfMode } from './definitions/types';
+import { readSessionSeed, shuffleWithSeed } from './lib/shuffle';
 
 const ChevronGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -40,16 +40,16 @@ const ChevronGlyph = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const ShelfHead = ({
   eyebrow,
   title,
   body,
 }: {
-  eyebrow: string
-  title: string
-  body?: string
+  eyebrow: string;
+  title: string;
+  body?: string;
 }) => (
   <div className="mb-[11px] flex items-end justify-between gap-3">
     <div className="flex min-w-0 flex-col gap-[5px]">
@@ -80,14 +80,14 @@ const ShelfHead = ({
       )}
     </div>
   </div>
-)
+);
 
 interface FollowShelfProps {
-  mode: ShelfMode
-  artists: ShelfArtist[]
+  mode: ShelfMode;
+  artists: ShelfArtist[];
   /** Follows the server counted. Drives the `some` eyebrow only. */
-  followCount: number
-  scaRegion: boolean
+  followCount: number;
+  scaRegion: boolean;
 }
 
 export const FollowShelf = ({
@@ -96,33 +96,33 @@ export const FollowShelf = ({
   followCount,
   scaRegion,
 }: FollowShelfProps) => {
-  const { isSignedIn } = useAuth()
-  const { surface } = useEntitlement('following')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [seed, setSeed] = useState<number | null>(null)
+  const { isSignedIn } = useAuth();
+  const { surface } = useEntitlement('following');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [seed, setSeed] = useState<number | null>(null);
 
   // Read AFTER mount: the server rendered the API's order, and reading storage
   // during render would make the first client pass disagree with the HTML.
   // Only the starter shelf rotates — your own artists are yours, in a stable
   // soonest-first order, and shuffling them would be noise.
-  const shuffles = mode === 'zero'
+  const shuffles = mode === 'zero';
   useEffect(() => {
-    if (shuffles) setSeed(readSessionSeed())
-  }, [shuffles])
+    if (shuffles) setSeed(readSessionSeed());
+  }, [shuffles]);
 
   // The cap is universal and lives here alone: a caller that sliced first would
   // hand the shuffle a pre-truncated list, so the same ten would rotate all
   // session instead of the whole set.
   const visible = useMemo(() => {
     const ordered =
-      shuffles && seed !== null ? shuffleWithSeed(artists, seed) : artists
-    return ordered.slice(0, SHELF_VISIBLE_CARDS)
-  }, [artists, seed, shuffles])
+      shuffles && seed !== null ? shuffleWithSeed(artists, seed) : artists;
+    return ordered.slice(0, SHELF_VISIBLE_CARDS);
+  }, [artists, seed, shuffles]);
 
-  if (visible.length === 0) return null
+  if (visible.length === 0) return null;
 
-  const signedOut = isSignedIn === false
+  const signedOut = isSignedIn === false;
   // Clerk and the entitlement both resolve after mount. Until they do the
   // starter shelf fails CLOSED: a tap that reached `toggle` before Clerk
   // answered would find no token and die on "Not authenticated", which is not
@@ -133,7 +133,7 @@ export const FollowShelf = ({
   // paint would draw over an existing follow there. The starter shelf has no
   // followed rows by definition and locked renders the same at-rest skin as
   // idle, so failing closed here costs nothing visible.
-  const resolved = isSignedIn !== undefined && surface !== null
+  const resolved = isSignedIn !== undefined && surface !== null;
 
   // Scoped to `zero` on purpose. A downgraded viewer still has to be able to
   // unfollow, and DELETE /v1/artists/:slug/follow is deliberately ungated to
@@ -142,7 +142,7 @@ export const FollowShelf = ({
   // whose rows are all not-yet-followed, gates on entitlement.
   const locked =
     mode === 'zero' &&
-    (!resolved || (!signedOut && surface !== 'visible-active'))
+    (!resolved || (!signedOut && surface !== 'visible-active'));
 
   // Fail-closed cuts both ways: an unresolved tap must not write a follow, and
   // it must not show an entitled viewer a paywall either. `pickerEntry` reads
@@ -150,7 +150,7 @@ export const FollowShelf = ({
   // 403 comes back through `onEntitlementRequired` instead, which never
   // declines — that answer is the server's and is already settled.
   const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   return (
     <section aria-label={FOLLOWING_COPY.shelfAria} className="mb-5 pt-1.5">
@@ -182,7 +182,7 @@ export const FollowShelf = ({
               locked={locked}
               signedOut={signedOut}
               onGatedTap={() => {
-                if (resolved) setPickerOpen(true)
+                if (resolved) setPickerOpen(true);
               }}
               onEntitlementRequired={() => setPickerOpen(true)}
             />
@@ -217,5 +217,5 @@ export const FollowShelf = ({
         entry={pickerEntry}
       />
     </section>
-  )
-}
+  );
+};

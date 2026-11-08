@@ -6,15 +6,15 @@
  * Depends only on the Anthropic SDK and the pure helpers.
  */
 
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic from '@anthropic-ai/sdk';
 import type {
   BatchHeadliners,
   EventForHeadlinerCheck,
-} from './2026-08-03-co-headliner-backfill-helpers.js'
+} from './2026-08-03-co-headliner-backfill-helpers.js';
 
-export const MODEL = 'claude-haiku-4-5-20251001'
+export const MODEL = 'claude-haiku-4-5-20251001';
 
-const HEADLINER_TOOL_NAME = 'identify_headliners'
+const HEADLINER_TOOL_NAME = 'identify_headliners';
 
 export const HEADLINER_RULES = `A HEADLINER is an act with top billing on the show. Return the ordered list of headliners for each event.
 
@@ -29,7 +29,7 @@ Rules:
   acts already recorded for the event are given to you so you can exclude them —
   unless one of them is in fact a co-equal headliner that was mis-filed.
 - Use the exact spelling as it appears in the event's artist or supporting acts.
-- Return one entry for EVERY event id given. Omitting an event is an error.`
+- Return one entry for EVERY event id given. Omitting an event is an error.`;
 
 export async function identifyHeadlinersBatch(
   client: Anthropic,
@@ -55,7 +55,7 @@ export async function identifyHeadlinersBatch(
       },
       required: ['results'],
     },
-  }
+  };
 
   const eventList = batch
     .map(
@@ -66,7 +66,7 @@ export async function identifyHeadlinersBatch(
             : '(none)'
         }\n  date: ${evt.date}\n  venue: ${evt.venueName}`,
     )
-    .join('\n\n')
+    .join('\n\n');
 
   const response = await client.messages.create({
     model: MODEL,
@@ -84,7 +84,7 @@ Events:
 ${eventList}`,
       },
     ],
-  })
+  });
 
   // Find a tool_use block AND verify it's our identify_headliners tool.
   // Forcing tool_choice constrains the response today, but a name check is
@@ -92,19 +92,19 @@ ${eventList}`,
   // invoked (or a Haiku regression that ignores tool_choice).
   const toolUseBlock = response.content.find(
     (blk) => blk.type === 'tool_use' && blk.name === HEADLINER_TOOL_NAME,
-  )
+  );
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
     throw new Error(
       `LLM did not return a ${HEADLINER_TOOL_NAME} tool_use block`,
-    )
+    );
   }
-  const inputRaw = toolUseBlock.input
+  const inputRaw = toolUseBlock.input;
   if (typeof inputRaw !== 'object' || inputRaw === null) {
-    throw new Error('LLM tool_use input was not an object')
+    throw new Error('LLM tool_use input was not an object');
   }
-  const resultsField = 'results' in inputRaw ? inputRaw.results : undefined
+  const resultsField = 'results' in inputRaw ? inputRaw.results : undefined;
   if (!Array.isArray(resultsField)) {
-    throw new Error('LLM tool_use input.results was not an array')
+    throw new Error('LLM tool_use input.results was not an array');
   }
   return resultsField.map((entry: unknown): BatchHeadliners => {
     if (
@@ -113,13 +113,13 @@ ${eventList}`,
       !('eventId' in entry) ||
       !('headliners' in entry)
     ) {
-      throw new Error(`Malformed headliner entry: ${JSON.stringify(entry)}`)
+      throw new Error(`Malformed headliner entry: ${JSON.stringify(entry)}`);
     }
-    const { eventId, headliners } = entry
+    const { eventId, headliners } = entry;
     if (typeof eventId !== 'string') {
       throw new Error(
         `Headliner entry has wrong types: ${JSON.stringify(entry)}`,
-      )
+      );
     }
     if (
       !Array.isArray(headliners) ||
@@ -127,11 +127,11 @@ ${eventList}`,
     ) {
       throw new Error(
         `Headliner entry has wrong types: ${JSON.stringify(entry)}`,
-      )
+      );
     }
     const names: string[] = headliners.filter(
       (name): name is string => typeof name === 'string',
-    )
-    return { eventId, headliners: names }
-  })
+    );
+    return { eventId, headliners: names };
+  });
 }

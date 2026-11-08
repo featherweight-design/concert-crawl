@@ -12,19 +12,20 @@
 
 ## File Map
 
-| Action | Path | Purpose |
-|--------|------|---------|
-| Create | `scripts/staging-snapshot.sql` | Data-only SQL dump of staging core tables |
-| Modify | `packages/db/seed.ts` | Add user-linked synthetic data + export new constants |
-| Modify | `packages/db/src/seed.test.ts` | Add tests for new exported constants |
-| Modify | `package.json` (root) | Add `db:sync-local` convenience script |
-| Modify | `README.md` | Add seeding with staging data section |
+| Action | Path                           | Purpose                                               |
+| ------ | ------------------------------ | ----------------------------------------------------- |
+| Create | `scripts/staging-snapshot.sql` | Data-only SQL dump of staging core tables             |
+| Modify | `packages/db/seed.ts`          | Add user-linked synthetic data + export new constants |
+| Modify | `packages/db/src/seed.test.ts` | Add tests for new exported constants                  |
+| Modify | `package.json` (root)          | Add `db:sync-local` convenience script                |
+| Modify | `README.md`                    | Add seeding with staging data section                 |
 
 ---
 
 ## Task 1: Generate scripts/staging-snapshot.sql
 
 **Files:**
+
 - Create: `scripts/staging-snapshot.sql`
 
 Use `mcp__render__query_render_postgres` with postgres ID `dpg-d7lni3reo5us73dp36d0-a`. Run each query below in order. Each query returns rows with an `insert_sql` column — collect all values and assemble the final file.
@@ -145,6 +146,7 @@ git commit -m "feat(db): add staging snapshot SQL for local dev"
 ## Task 2: Add failing tests for new seed constants
 
 **Files:**
+
 - Modify: `packages/db/src/seed.test.ts`
 
 The existing tests only cover `SEED_VENUES` (a static exported constant). We'll follow the same pattern: export new constants from `seed.ts`, test their shape here.
@@ -160,94 +162,94 @@ import {
   SEED_INVITE_CODES,
   SEED_FEEDBACK,
   SEED_NOTIFICATIONS,
-} from '../seed.js'
+} from '../seed.js';
 
 describe('FAKE_USER_PROFILES', () => {
   it('has 5 entries', () => {
-    expect(FAKE_USER_PROFILES).toHaveLength(5)
-  })
+    expect(FAKE_USER_PROFILES).toHaveLength(5);
+  });
 
   it('every profile has a userId and theme', () => {
     for (const profile of FAKE_USER_PROFILES) {
-      expect(profile.userId).toBeTruthy()
-      expect(profile.theme).toBeTruthy()
+      expect(profile.userId).toBeTruthy();
+      expect(profile.theme).toBeTruthy();
     }
-  })
+  });
 
   it("hugh's profile has handle 'hugh' and theme 'electric'", () => {
     const hugh = FAKE_USER_PROFILES.find(
       (profile) => profile.userId === 'user_3CoSI01LtxRAvremTpL0yDfuEJ6',
-    )
-    expect(hugh).toBeDefined()
-    expect(hugh?.handle).toBe('hugh')
-    expect(hugh?.theme).toBe('electric')
-  })
-})
+    );
+    expect(hugh).toBeDefined();
+    expect(hugh?.handle).toBe('hugh');
+    expect(hugh?.theme).toBe('electric');
+  });
+});
 
 describe('FAKE_USER_ROLES', () => {
   it('has 5 entries', () => {
-    expect(FAKE_USER_ROLES).toHaveLength(5)
-  })
+    expect(FAKE_USER_ROLES).toHaveLength(5);
+  });
 
   it('every role has a priceCredScore', () => {
     for (const role of FAKE_USER_ROLES) {
-      expect(typeof role.priceCredScore).toBe('number')
+      expect(typeof role.priceCredScore).toBe('number');
     }
-  })
+  });
 
   it("hugh's role is admin with priceCredScore 15", () => {
     const hughRole = FAKE_USER_ROLES.find(
       (role) => role.userId === 'user_3CoSI01LtxRAvremTpL0yDfuEJ6',
-    )
-    expect(hughRole?.role).toBe('admin')
-    expect(hughRole?.priceCredScore).toBe(15)
-  })
-})
+    );
+    expect(hughRole?.role).toBe('admin');
+    expect(hughRole?.priceCredScore).toBe(15);
+  });
+});
 
 describe('SEED_INVITE_CODES', () => {
   it('has 7 entries', () => {
-    expect(SEED_INVITE_CODES).toHaveLength(7)
-  })
+    expect(SEED_INVITE_CODES).toHaveLength(7);
+  });
 
   it('5 codes are unused and 2 have usedAt set', () => {
-    const unused = SEED_INVITE_CODES.filter((code) => !code.usedAt)
-    const used = SEED_INVITE_CODES.filter((code) => !!code.usedAt)
-    expect(unused).toHaveLength(5)
-    expect(used).toHaveLength(2)
-  })
+    const unused = SEED_INVITE_CODES.filter((code) => !code.usedAt);
+    const used = SEED_INVITE_CODES.filter((code) => !!code.usedAt);
+    expect(unused).toHaveLength(5);
+    expect(used).toHaveLength(2);
+  });
 
   it('every code string is unique', () => {
-    const codes = SEED_INVITE_CODES.map((entry) => entry.code)
-    expect(new Set(codes).size).toBe(codes.length)
-  })
-})
+    const codes = SEED_INVITE_CODES.map((entry) => entry.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+});
 
 describe('SEED_FEEDBACK', () => {
   it('has 6 entries', () => {
-    expect(SEED_FEEDBACK).toHaveLength(6)
-  })
+    expect(SEED_FEEDBACK).toHaveLength(6);
+  });
 
   it('has 2 bugs, 2 ideas, 2 praise entries', () => {
-    const bugs = SEED_FEEDBACK.filter((fb) => fb.category === 'bug')
-    const ideas = SEED_FEEDBACK.filter((fb) => fb.category === 'idea')
-    const praise = SEED_FEEDBACK.filter((fb) => fb.category === 'praise')
-    expect(bugs).toHaveLength(2)
-    expect(ideas).toHaveLength(2)
-    expect(praise).toHaveLength(2)
-  })
-})
+    const bugs = SEED_FEEDBACK.filter((fb) => fb.category === 'bug');
+    const ideas = SEED_FEEDBACK.filter((fb) => fb.category === 'idea');
+    const praise = SEED_FEEDBACK.filter((fb) => fb.category === 'praise');
+    expect(bugs).toHaveLength(2);
+    expect(ideas).toHaveLength(2);
+    expect(praise).toHaveLength(2);
+  });
+});
 
 describe('SEED_NOTIFICATIONS', () => {
   it('has 4 entries', () => {
-    expect(SEED_NOTIFICATIONS).toHaveLength(4)
-  })
+    expect(SEED_NOTIFICATIONS).toHaveLength(4);
+  });
 
   it('all are admin_alert type', () => {
     for (const notif of SEED_NOTIFICATIONS) {
-      expect(notif.type).toBe('admin_alert')
+      expect(notif.type).toBe('admin_alert');
     }
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests — verify they fail**
@@ -270,6 +272,7 @@ git commit -m "test(db): add failing tests for new seed constants"
 ## Task 3: Expand seed.ts with synthetic user data
 
 **Files:**
+
 - Modify: `packages/db/seed.ts`
 
 - [ ] **Step 1: Update imports at top of seed.ts**
@@ -277,8 +280,8 @@ git commit -m "test(db): add failing tests for new seed constants"
 Replace the existing imports block with:
 
 ```typescript
-import { desc, sql } from 'drizzle-orm'
-import { db } from './src/client.js'
+import { desc, sql } from 'drizzle-orm';
+import { db } from './src/client.js';
 import {
   venues,
   events as eventsTable,
@@ -293,7 +296,7 @@ import {
   notifications,
   waitlistEntries,
   type NewVenue,
-} from './src/schema/index.js'
+} from './src/schema/index.js';
 ```
 
 - [ ] **Step 2: Add exported constants after SEED_VENUES**
@@ -307,25 +310,85 @@ const FAKE_USER_IDS = {
   marco: 'user_fake_marco_0002',
   amy: 'user_fake_amy_0003',
   ghost: 'user_fake_ghost_0004',
-} as const
+} as const;
 
 export const FAKE_USER_PROFILES = [
-  { userId: FAKE_USER_IDS.hugh, handle: 'hugh', theme: 'electric' as const, avatarColor: 'signal' as const, city: 'Denver' },
-  { userId: FAKE_USER_IDS.jess, handle: 'jess_r', theme: 'pulse' as const, avatarColor: 'accent' as const, city: 'Denver' },
-  { userId: FAKE_USER_IDS.marco, handle: 'marco_d', theme: 'forge' as const, avatarColor: 'warning' as const, city: 'Denver' },
-  { userId: FAKE_USER_IDS.amy, handle: 'amy_k', theme: 'jade' as const, avatarColor: 'success' as const, city: 'Denver' },
-  { userId: FAKE_USER_IDS.ghost, handle: null, theme: 'cedar' as const, avatarColor: null, city: null },
-]
+  {
+    userId: FAKE_USER_IDS.hugh,
+    handle: 'hugh',
+    theme: 'electric' as const,
+    avatarColor: 'signal' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.jess,
+    handle: 'jess_r',
+    theme: 'pulse' as const,
+    avatarColor: 'accent' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.marco,
+    handle: 'marco_d',
+    theme: 'forge' as const,
+    avatarColor: 'warning' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.amy,
+    handle: 'amy_k',
+    theme: 'jade' as const,
+    avatarColor: 'success' as const,
+    city: 'Denver',
+  },
+  {
+    userId: FAKE_USER_IDS.ghost,
+    handle: null,
+    theme: 'cedar' as const,
+    avatarColor: null,
+    city: null,
+  },
+];
 
 export const FAKE_USER_ROLES = [
-  { userId: FAKE_USER_IDS.hugh, role: 'admin' as const, priceCredScore: 15, grantedBy: 'seed', permissions: [] as string[] },
-  { userId: FAKE_USER_IDS.amy, role: 'sub_admin' as const, priceCredScore: 5, grantedBy: 'seed', permissions: [] as string[] },
-  { userId: FAKE_USER_IDS.jess, role: 'user' as const, priceCredScore: 8, grantedBy: 'seed', permissions: [] as string[] },
-  { userId: FAKE_USER_IDS.marco, role: 'user' as const, priceCredScore: 3, grantedBy: 'seed', permissions: [] as string[] },
-  { userId: FAKE_USER_IDS.ghost, role: 'user' as const, priceCredScore: 0, grantedBy: 'seed', permissions: [] as string[] },
-]
+  {
+    userId: FAKE_USER_IDS.hugh,
+    role: 'admin' as const,
+    priceCredScore: 15,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.amy,
+    role: 'sub_admin' as const,
+    priceCredScore: 5,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.jess,
+    role: 'user' as const,
+    priceCredScore: 8,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.marco,
+    role: 'user' as const,
+    priceCredScore: 3,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+  {
+    userId: FAKE_USER_IDS.ghost,
+    role: 'user' as const,
+    priceCredScore: 0,
+    grantedBy: 'seed',
+    permissions: [] as string[],
+  },
+];
 
-const now = new Date()
+const now = new Date();
 
 export const SEED_INVITE_CODES = [
   { code: 'BETA-OPEN-01', createdBy: FAKE_USER_IDS.hugh },
@@ -345,16 +408,47 @@ export const SEED_INVITE_CODES = [
     usedBy: FAKE_USER_IDS.marco,
     usedAt: new Date(now.getTime() - 3 * 86_400_000),
   },
-]
+];
 
 export const SEED_FEEDBACK = [
-  { userId: FAKE_USER_IDS.jess, pageUrl: '/browse', category: 'bug' as const, message: 'Filter chips disappear on mobile when scrolled down.' },
-  { userId: FAKE_USER_IDS.marco, pageUrl: '/browse', category: 'bug' as const, message: 'Calendar view shows wrong month when switching back from list view.' },
-  { userId: FAKE_USER_IDS.hugh, pageUrl: '/admin/venues', category: 'idea' as const, message: 'Would be great to bulk-trigger crawls from the venues table.' },
-  { userId: FAKE_USER_IDS.jess, pageUrl: '/browse', category: 'idea' as const, message: "Can we add a 'shows this weekend' quick filter?" },
-  { userId: FAKE_USER_IDS.marco, pageUrl: '/', category: 'praise' as const, message: 'The generative art for each venue is such a nice touch.' },
-  { userId: FAKE_USER_IDS.amy, pageUrl: '/admin', category: 'praise' as const, message: 'Admin crawl health view is super useful.' },
-]
+  {
+    userId: FAKE_USER_IDS.jess,
+    pageUrl: '/browse',
+    category: 'bug' as const,
+    message: 'Filter chips disappear on mobile when scrolled down.',
+  },
+  {
+    userId: FAKE_USER_IDS.marco,
+    pageUrl: '/browse',
+    category: 'bug' as const,
+    message:
+      'Calendar view shows wrong month when switching back from list view.',
+  },
+  {
+    userId: FAKE_USER_IDS.hugh,
+    pageUrl: '/admin/venues',
+    category: 'idea' as const,
+    message: 'Would be great to bulk-trigger crawls from the venues table.',
+  },
+  {
+    userId: FAKE_USER_IDS.jess,
+    pageUrl: '/browse',
+    category: 'idea' as const,
+    message: "Can we add a 'shows this weekend' quick filter?",
+  },
+  {
+    userId: FAKE_USER_IDS.marco,
+    pageUrl: '/',
+    category: 'praise' as const,
+    message: 'The generative art for each venue is such a nice touch.',
+  },
+  {
+    userId: FAKE_USER_IDS.amy,
+    pageUrl: '/admin',
+    category: 'praise' as const,
+    message: 'Admin crawl health view is super useful.',
+  },
+];
 
 export const SEED_NOTIFICATIONS = [
   {
@@ -389,7 +483,7 @@ export const SEED_NOTIFICATIONS = [
     body: 'All 10 venues crawled. 8 succeeded, 1 partial, 1 failed.',
     actionUrl: '/admin/crawls',
   },
-]
+];
 ```
 
 - [ ] **Step 3: Add user-data seeding inside the seed() function**
@@ -397,141 +491,285 @@ export const SEED_NOTIFICATIONS = [
 Inside the `seed()` function, **after** the existing venue + event + price_retrieval_log block (before `process.exit(0)`), add:
 
 ```typescript
-  // ── USER PROFILES ──────────────────────────────────────────────────────────
-  await db.insert(userProfiles).values(FAKE_USER_PROFILES).onConflictDoNothing()
-  console.warn(`Seeded ${FAKE_USER_PROFILES.length} user profiles.`)
+// ── USER PROFILES ──────────────────────────────────────────────────────────
+await db.insert(userProfiles).values(FAKE_USER_PROFILES).onConflictDoNothing();
+console.warn(`Seeded ${FAKE_USER_PROFILES.length} user profiles.`);
 
-  // ── USER ROLES ──────────────────────────────────────────────────────────────
-  const existingRoles = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(userRoles)
-  if ((existingRoles[0]?.count ?? 0) === 0) {
-    await db.insert(userRoles).values(FAKE_USER_ROLES)
-    console.warn(`Seeded ${FAKE_USER_ROLES.length} user roles.`)
-  } else {
-    console.warn('User roles already seeded, skipping.')
-  }
+// ── USER ROLES ──────────────────────────────────────────────────────────────
+const existingRoles = await db
+  .select({ count: sql<number>`count(*)::int` })
+  .from(userRoles);
+if ((existingRoles[0]?.count ?? 0) === 0) {
+  await db.insert(userRoles).values(FAKE_USER_ROLES);
+  console.warn(`Seeded ${FAKE_USER_ROLES.length} user roles.`);
+} else {
+  console.warn('User roles already seeded, skipping.');
+}
 
-  // ── INVITE CODES ────────────────────────────────────────────────────────────
-  await db.insert(inviteCodes).values(SEED_INVITE_CODES).onConflictDoNothing()
-  console.warn(`Seeded ${SEED_INVITE_CODES.length} invite codes.`)
+// ── INVITE CODES ────────────────────────────────────────────────────────────
+await db.insert(inviteCodes).values(SEED_INVITE_CODES).onConflictDoNothing();
+console.warn(`Seeded ${SEED_INVITE_CODES.length} invite codes.`);
 
-  // ── WAITLIST ENTRIES ────────────────────────────────────────────────────────
+// ── WAITLIST ENTRIES ────────────────────────────────────────────────────────
+await db
+  .insert(waitlistEntries)
+  .values(
+    Array.from({ length: 8 }, (_unused, idx) => ({
+      email: `test+${idx + 1}@example.com`,
+      ip: `192.168.1.${10 + idx}`,
+    })),
+  )
+  .onConflictDoNothing();
+console.warn('Seeded 8 waitlist entries.');
+
+// ── FEEDBACK ────────────────────────────────────────────────────────────────
+const existingFeedback = await db
+  .select({ count: sql<number>`count(*)::int` })
+  .from(feedback);
+if ((existingFeedback[0]?.count ?? 0) === 0) {
+  await db.insert(feedback).values(SEED_FEEDBACK);
+  console.warn(`Seeded ${SEED_FEEDBACK.length} feedback entries.`);
+} else {
+  console.warn('Feedback already seeded, skipping.');
+}
+
+// ── NOTIFICATIONS ───────────────────────────────────────────────────────────
+const existingNotifs = await db
+  .select({ count: sql<number>`count(*)::int` })
+  .from(notifications);
+if ((existingNotifs[0]?.count ?? 0) === 0) {
+  await db.insert(notifications).values(SEED_NOTIFICATIONS);
+  console.warn(`Seeded ${SEED_NOTIFICATIONS.length} notifications.`);
+} else {
+  console.warn('Notifications already seeded, skipping.');
+}
+
+// ── EVENT-LINKED DATA (requires events from staging snapshot) ───────────────
+const liveEvents = await db
+  .select({ id: eventsTable.id })
+  .from(eventsTable)
+  .orderBy(desc(eventsTable.date))
+  .limit(50);
+
+if (liveEvents.length === 0) {
+  console.warn(
+    '⚠  No events found — skipping user_events and price_submissions.\n' +
+      '   Apply the staging snapshot first: pnpm db:sync-local',
+  );
+} else {
+  const ids = liveEvents.map((evt) => evt.id);
+
+  // USER EVENTS (watching / going / interested)
   await db
-    .insert(waitlistEntries)
-    .values(
-      Array.from({ length: 8 }, (_unused, idx) => ({
-        email: `test+${idx + 1}@example.com`,
-        ip: `192.168.1.${10 + idx}`,
-      })),
-    )
-    .onConflictDoNothing()
-  console.warn('Seeded 8 waitlist entries.')
+    .insert(userEvents)
+    .values([
+      {
+        userId: FAKE_USER_IDS.hugh,
+        eventId: ids[0],
+        status: 'watching' as const,
+      },
+      { userId: FAKE_USER_IDS.hugh, eventId: ids[1], status: 'going' as const },
+      {
+        userId: FAKE_USER_IDS.hugh,
+        eventId: ids[2],
+        status: 'watching' as const,
+      },
+      {
+        userId: FAKE_USER_IDS.hugh,
+        eventId: ids[3],
+        status: 'interested' as const,
+      },
+      { userId: FAKE_USER_IDS.hugh, eventId: ids[4], status: 'going' as const },
+      {
+        userId: FAKE_USER_IDS.hugh,
+        eventId: ids[5],
+        status: 'watching' as const,
+      },
+      { userId: FAKE_USER_IDS.jess, eventId: ids[0], status: 'going' as const },
+      {
+        userId: FAKE_USER_IDS.jess,
+        eventId: ids[6],
+        status: 'watching' as const,
+      },
+      {
+        userId: FAKE_USER_IDS.jess,
+        eventId: ids[7],
+        status: 'interested' as const,
+      },
+      {
+        userId: FAKE_USER_IDS.jess,
+        eventId: ids[8],
+        status: 'watching' as const,
+      },
+      { userId: FAKE_USER_IDS.jess, eventId: ids[9], status: 'going' as const },
+      {
+        userId: FAKE_USER_IDS.marco,
+        eventId: ids[2],
+        status: 'interested' as const,
+      },
+      {
+        userId: FAKE_USER_IDS.marco,
+        eventId: ids[10],
+        status: 'watching' as const,
+      },
+      {
+        userId: FAKE_USER_IDS.marco,
+        eventId: ids[11],
+        status: 'watching' as const,
+      },
+      { userId: FAKE_USER_IDS.amy, eventId: ids[4], status: 'going' as const },
+      {
+        userId: FAKE_USER_IDS.amy,
+        eventId: ids[12],
+        status: 'interested' as const,
+      },
+    ])
+    .onConflictDoNothing();
+  console.warn('Seeded 16 user_events.');
 
-  // ── FEEDBACK ────────────────────────────────────────────────────────────────
-  const existingFeedback = await db
+  // PRICE SUBMISSIONS
+  const existingSubs = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(feedback)
-  if ((existingFeedback[0]?.count ?? 0) === 0) {
-    await db.insert(feedback).values(SEED_FEEDBACK)
-    console.warn(`Seeded ${SEED_FEEDBACK.length} feedback entries.`)
-  } else {
-    console.warn('Feedback already seeded, skipping.')
-  }
-
-  // ── NOTIFICATIONS ───────────────────────────────────────────────────────────
-  const existingNotifs = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(notifications)
-  if ((existingNotifs[0]?.count ?? 0) === 0) {
-    await db.insert(notifications).values(SEED_NOTIFICATIONS)
-    console.warn(`Seeded ${SEED_NOTIFICATIONS.length} notifications.`)
-  } else {
-    console.warn('Notifications already seeded, skipping.')
-  }
-
-  // ── EVENT-LINKED DATA (requires events from staging snapshot) ───────────────
-  const liveEvents = await db
-    .select({ id: eventsTable.id })
-    .from(eventsTable)
-    .orderBy(desc(eventsTable.date))
-    .limit(50)
-
-  if (liveEvents.length === 0) {
-    console.warn(
-      '⚠  No events found — skipping user_events and price_submissions.\n' +
-        '   Apply the staging snapshot first: pnpm db:sync-local',
-    )
-  } else {
-    const ids = liveEvents.map((evt) => evt.id)
-
-    // USER EVENTS (watching / going / interested)
-    await db
-      .insert(userEvents)
+    .from(priceSubmissions);
+  if ((existingSubs[0]?.count ?? 0) === 0) {
+    const insertedSubs = await db
+      .insert(priceSubmissions)
       .values([
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[0], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[1], status: 'going' as const },
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[2], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[3], status: 'interested' as const },
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[4], status: 'going' as const },
-        { userId: FAKE_USER_IDS.hugh, eventId: ids[5], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.jess, eventId: ids[0], status: 'going' as const },
-        { userId: FAKE_USER_IDS.jess, eventId: ids[6], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.jess, eventId: ids[7], status: 'interested' as const },
-        { userId: FAKE_USER_IDS.jess, eventId: ids[8], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.jess, eventId: ids[9], status: 'going' as const },
-        { userId: FAKE_USER_IDS.marco, eventId: ids[2], status: 'interested' as const },
-        { userId: FAKE_USER_IDS.marco, eventId: ids[10], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.marco, eventId: ids[11], status: 'watching' as const },
-        { userId: FAKE_USER_IDS.amy, eventId: ids[4], status: 'going' as const },
-        { userId: FAKE_USER_IDS.amy, eventId: ids[12], status: 'interested' as const },
+        {
+          eventId: ids[0],
+          userId: FAKE_USER_IDS.jess,
+          priceMin: '35.00',
+          priceMax: '55.00',
+          tier: 'GA' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 3,
+        },
+        {
+          eventId: ids[1],
+          userId: FAKE_USER_IDS.marco,
+          priceMin: '45.00',
+          priceMax: '75.00',
+          tier: 'Reserved' as const,
+          vendor: 'Ticketmaster' as const,
+          howFound: 'saw_listing' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 2,
+        },
+        {
+          eventId: ids[2],
+          userId: FAKE_USER_IDS.hugh,
+          priceMin: '25.00',
+          priceMax: null,
+          tier: 'GA' as const,
+          vendor: 'SeatGeek' as const,
+          howFound: 'saw_listing' as const,
+          status: 'pending' as const,
+          corroborationCount: 0,
+        },
+        {
+          eventId: ids[3],
+          userId: FAKE_USER_IDS.jess,
+          priceMin: '150.00',
+          priceMax: '250.00',
+          tier: 'VIP' as const,
+          vendor: 'AXS' as const,
+          howFound: 'bought_myself' as const,
+          status: 'pending' as const,
+          corroborationCount: 1,
+        },
+        {
+          eventId: ids[4],
+          userId: FAKE_USER_IDS.marco,
+          priceMin: '30.00',
+          priceMax: '50.00',
+          tier: 'GA' as const,
+          vendor: 'Ticketmaster' as const,
+          howFound: 'at_the_venue' as const,
+          status: 'disputed' as const,
+          corroborationCount: 0,
+        },
+        {
+          eventId: ids[5],
+          userId: FAKE_USER_IDS.amy,
+          priceMin: '65.00',
+          priceMax: '95.00',
+          tier: 'Reserved' as const,
+          vendor: 'SeatGeek' as const,
+          howFound: 'saw_listing' as const,
+          status: 'pending' as const,
+          corroborationCount: 0,
+        },
+        {
+          eventId: ids[6],
+          userId: FAKE_USER_IDS.jess,
+          priceMin: '20.00',
+          priceMax: '35.00',
+          tier: 'Lawn' as const,
+          vendor: 'Eventbrite' as const,
+          howFound: 'saw_listing' as const,
+          status: 'pending' as const,
+          corroborationCount: 0,
+        },
+        {
+          eventId: ids[7],
+          userId: FAKE_USER_IDS.marco,
+          priceMin: '85.00',
+          priceMax: '120.00',
+          tier: 'Pit' as const,
+          vendor: 'DICE' as const,
+          howFound: 'bought_myself' as const,
+          status: 'corroborated' as const,
+          corroborationCount: 4,
+        },
+        {
+          eventId: ids[8],
+          userId: FAKE_USER_IDS.hugh,
+          priceMin: '40.00',
+          priceMax: '60.00',
+          tier: 'GA' as const,
+          vendor: 'VenueBoxOffice' as const,
+          howFound: 'at_the_venue' as const,
+          status: 'stale' as const,
+          corroborationCount: 0,
+        },
+        {
+          eventId: ids[9],
+          userId: FAKE_USER_IDS.jess,
+          priceMin: '55.00',
+          priceMax: '90.00',
+          tier: 'Reserved' as const,
+          vendor: 'AXS' as const,
+          howFound: 'saw_listing' as const,
+          status: 'pending' as const,
+          corroborationCount: 2,
+        },
       ])
-      .onConflictDoNothing()
-    console.warn('Seeded 16 user_events.')
+      .returning();
+    console.warn(`Seeded ${insertedSubs.length} price submissions.`);
 
-    // PRICE SUBMISSIONS
-    const existingSubs = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(priceSubmissions)
-    if ((existingSubs[0]?.count ?? 0) === 0) {
-      const insertedSubs = await db
-        .insert(priceSubmissions)
+    // SUBMISSION CONFIRMS (corroborate the corroborated ones)
+    const corroboratedIds = insertedSubs
+      .filter((sub) => sub.status === 'corroborated')
+      .map((sub) => sub.id);
+
+    if (corroboratedIds.length > 0) {
+      await db
+        .insert(submissionConfirms)
         .values([
-          { eventId: ids[0], userId: FAKE_USER_IDS.jess, priceMin: '35.00', priceMax: '55.00', tier: 'GA' as const, vendor: 'AXS' as const, howFound: 'bought_myself' as const, status: 'corroborated' as const, corroborationCount: 3 },
-          { eventId: ids[1], userId: FAKE_USER_IDS.marco, priceMin: '45.00', priceMax: '75.00', tier: 'Reserved' as const, vendor: 'Ticketmaster' as const, howFound: 'saw_listing' as const, status: 'corroborated' as const, corroborationCount: 2 },
-          { eventId: ids[2], userId: FAKE_USER_IDS.hugh, priceMin: '25.00', priceMax: null, tier: 'GA' as const, vendor: 'SeatGeek' as const, howFound: 'saw_listing' as const, status: 'pending' as const, corroborationCount: 0 },
-          { eventId: ids[3], userId: FAKE_USER_IDS.jess, priceMin: '150.00', priceMax: '250.00', tier: 'VIP' as const, vendor: 'AXS' as const, howFound: 'bought_myself' as const, status: 'pending' as const, corroborationCount: 1 },
-          { eventId: ids[4], userId: FAKE_USER_IDS.marco, priceMin: '30.00', priceMax: '50.00', tier: 'GA' as const, vendor: 'Ticketmaster' as const, howFound: 'at_the_venue' as const, status: 'disputed' as const, corroborationCount: 0 },
-          { eventId: ids[5], userId: FAKE_USER_IDS.amy, priceMin: '65.00', priceMax: '95.00', tier: 'Reserved' as const, vendor: 'SeatGeek' as const, howFound: 'saw_listing' as const, status: 'pending' as const, corroborationCount: 0 },
-          { eventId: ids[6], userId: FAKE_USER_IDS.jess, priceMin: '20.00', priceMax: '35.00', tier: 'Lawn' as const, vendor: 'Eventbrite' as const, howFound: 'saw_listing' as const, status: 'pending' as const, corroborationCount: 0 },
-          { eventId: ids[7], userId: FAKE_USER_IDS.marco, priceMin: '85.00', priceMax: '120.00', tier: 'Pit' as const, vendor: 'DICE' as const, howFound: 'bought_myself' as const, status: 'corroborated' as const, corroborationCount: 4 },
-          { eventId: ids[8], userId: FAKE_USER_IDS.hugh, priceMin: '40.00', priceMax: '60.00', tier: 'GA' as const, vendor: 'VenueBoxOffice' as const, howFound: 'at_the_venue' as const, status: 'stale' as const, corroborationCount: 0 },
-          { eventId: ids[9], userId: FAKE_USER_IDS.jess, priceMin: '55.00', priceMax: '90.00', tier: 'Reserved' as const, vendor: 'AXS' as const, howFound: 'saw_listing' as const, status: 'pending' as const, corroborationCount: 2 },
+          { submissionId: corroboratedIds[0], userId: FAKE_USER_IDS.hugh },
+          { submissionId: corroboratedIds[0], userId: FAKE_USER_IDS.marco },
+          { submissionId: corroboratedIds[1], userId: FAKE_USER_IDS.hugh },
+          { submissionId: corroboratedIds[2], userId: FAKE_USER_IDS.jess },
         ])
-        .returning()
-      console.warn(`Seeded ${insertedSubs.length} price submissions.`)
-
-      // SUBMISSION CONFIRMS (corroborate the corroborated ones)
-      const corroboratedIds = insertedSubs
-        .filter((sub) => sub.status === 'corroborated')
-        .map((sub) => sub.id)
-
-      if (corroboratedIds.length > 0) {
-        await db
-          .insert(submissionConfirms)
-          .values([
-            { submissionId: corroboratedIds[0], userId: FAKE_USER_IDS.hugh },
-            { submissionId: corroboratedIds[0], userId: FAKE_USER_IDS.marco },
-            { submissionId: corroboratedIds[1], userId: FAKE_USER_IDS.hugh },
-            { submissionId: corroboratedIds[2], userId: FAKE_USER_IDS.jess },
-          ])
-          .onConflictDoNothing()
-        console.warn('Seeded 4 submission confirms.')
-      }
-    } else {
-      console.warn('Price submissions already seeded, skipping.')
+        .onConflictDoNothing();
+      console.warn('Seeded 4 submission confirms.');
     }
+  } else {
+    console.warn('Price submissions already seeded, skipping.');
   }
+}
 ```
 
 - [ ] **Step 4: Run tests — verify they pass**
@@ -562,6 +800,7 @@ git commit -m "feat(db): expand seed with synthetic user data for local dev"
 ## Task 4: Add pnpm db:sync-local script
 
 **Files:**
+
 - Modify: `package.json` (root)
 
 - [ ] **Step 1: Add script to root package.json**
@@ -599,6 +838,7 @@ pnpm db:sync-local
 ```
 
 Expected output ends with lines like:
+
 ```
 Seeded X user profiles.
 Seeded X user roles.
@@ -625,13 +865,14 @@ git commit -m "feat(db): add db:sync-local convenience script"
 ## Task 5: Update README
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Add staging sync section**
 
 Find the `## Architecture` heading in README.md. Insert the following section immediately **before** it:
 
-```markdown
+````markdown
 ## Local Development
 
 ### Full setup
@@ -649,22 +890,25 @@ pnpm db:migrate
 # 4. Seed with staging data (real venues + events + synthetic user data)
 pnpm db:sync-local
 ```
+````
 
 `pnpm db:sync-local` applies `scripts/staging-snapshot.sql` (a snapshot of core staging tables) then runs `pnpm db:seed` to add representative user data (profiles, watching, price submissions, feedback, notifications).
 
 If you only want minimal dev data without the staging snapshot:
+
 ```bash
 pnpm db:seed
 ```
 
 Note: `user_events` and `price_submissions` are skipped if no events exist — run `pnpm db:sync-local` first for those tables to populate.
-```
+
+````
 
 - [ ] **Step 2: Verify README renders correctly**
 
 ```bash
 cat README.md | head -60
-```
+````
 
 Confirm the new section appears before `## Architecture` and the code fences are balanced.
 
@@ -681,27 +925,27 @@ git commit -m "docs: add local dev seeding section to README"
 
 **Spec coverage check:**
 
-| Spec requirement | Covered by |
-|---|---|
-| Sync venues, events, crawl_runs, price_retrieval_log from staging | Task 1 |
-| Skip waitlist_entries, crawl_triggers, audit_log, notifications, user tables | Task 1 (TRUNCATE list + query list) |
-| ≤50 events per venue | Task 1 Step 2 (PARTITION BY + ROW_NUMBER) |
-| Last 5 crawl_runs per venue | Task 1 Step 3 |
-| Last 10 price_retrieval_log per venue | Task 1 Step 4 |
-| 5 fake users with specified roles + cred scores | Task 3 (FAKE_USER_ROLES constant) |
-| Varied themes in user_profiles | Task 3 (FAKE_USER_PROFILES constant) |
-| 7 invite codes (5 unused, 2 used) | Task 3 (SEED_INVITE_CODES constant) |
-| 15+ user_events across users with mixed statuses | Task 3 (16 rows) |
-| 10 price_submissions (mixed status/tier/vendor) | Task 3 |
-| Submission confirms for corroborated submissions | Task 3 |
-| 6 feedback entries (2 bug, 2 idea, 2 praise) | Task 3 (SEED_FEEDBACK constant) |
-| 4 notifications (admin alerts) | Task 3 (SEED_NOTIFICATIONS constant) |
-| 8 waitlist entries | Task 3 |
-| cred score seeded per user | Task 3 (FAKE_USER_ROLES.priceCredScore) |
-| Graceful skip if no events (warning message) | Task 3 (liveEvents.length === 0 guard) |
-| pnpm db:sync-local convenience script | Task 4 |
-| README documentation | Task 5 |
-| Tests for new constants | Task 2 |
+| Spec requirement                                                             | Covered by                                |
+| ---------------------------------------------------------------------------- | ----------------------------------------- |
+| Sync venues, events, crawl_runs, price_retrieval_log from staging            | Task 1                                    |
+| Skip waitlist_entries, crawl_triggers, audit_log, notifications, user tables | Task 1 (TRUNCATE list + query list)       |
+| ≤50 events per venue                                                         | Task 1 Step 2 (PARTITION BY + ROW_NUMBER) |
+| Last 5 crawl_runs per venue                                                  | Task 1 Step 3                             |
+| Last 10 price_retrieval_log per venue                                        | Task 1 Step 4                             |
+| 5 fake users with specified roles + cred scores                              | Task 3 (FAKE_USER_ROLES constant)         |
+| Varied themes in user_profiles                                               | Task 3 (FAKE_USER_PROFILES constant)      |
+| 7 invite codes (5 unused, 2 used)                                            | Task 3 (SEED_INVITE_CODES constant)       |
+| 15+ user_events across users with mixed statuses                             | Task 3 (16 rows)                          |
+| 10 price_submissions (mixed status/tier/vendor)                              | Task 3                                    |
+| Submission confirms for corroborated submissions                             | Task 3                                    |
+| 6 feedback entries (2 bug, 2 idea, 2 praise)                                 | Task 3 (SEED_FEEDBACK constant)           |
+| 4 notifications (admin alerts)                                               | Task 3 (SEED_NOTIFICATIONS constant)      |
+| 8 waitlist entries                                                           | Task 3                                    |
+| cred score seeded per user                                                   | Task 3 (FAKE_USER_ROLES.priceCredScore)   |
+| Graceful skip if no events (warning message)                                 | Task 3 (liveEvents.length === 0 guard)    |
+| pnpm db:sync-local convenience script                                        | Task 4                                    |
+| README documentation                                                         | Task 5                                    |
+| Tests for new constants                                                      | Task 2                                    |
 
 **Placeholder scan:** No TBD/TODO found.
 

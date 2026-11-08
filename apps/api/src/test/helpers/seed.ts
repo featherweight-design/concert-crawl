@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto'
-import { sql } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
 import {
   USER_DATA_REGISTRY,
   artists,
@@ -35,18 +35,18 @@ import {
   userSpotifyConnections,
   venueGuideChips,
   venues,
-} from '@concert-crawl/db'
-import type { GuideChipKey } from '@concert-crawl/types'
-import { artistSlug, deriveSourceCategory } from '@concert-crawl/types'
-import { clearFeatureFlagCache } from '../../lib/feature-flags.js'
-import { testDb } from './db.js'
+} from '@concert-crawl/db';
+import type { GuideChipKey } from '@concert-crawl/types';
+import { artistSlug, deriveSourceCategory } from '@concert-crawl/types';
+import { clearFeatureFlagCache } from '../../lib/feature-flags.js';
+import { testDb } from './db.js';
 
 export async function clearTables(): Promise<void> {
   // pg_advisory_xact_lock serializes concurrent TRUNCATE calls so SELECT FOR UPDATE
   // locks from in-flight test transactions can't deadlock with the AccessExclusiveLock
   // that TRUNCATE acquires. The advisory lock is released automatically at transaction end.
   await testDb.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`);
     await tx.execute(
       // `subscriptions` is in the list because entitlement-gated routes now
       // read it: a premium row left behind makes a later 403 test pass or fail
@@ -57,11 +57,11 @@ export async function clearTables(): Promise<void> {
       // `rate_limit_buckets` too: limits are durable now (#528), so a bucket
       // spent in one file would otherwise 429 a later file's first request.
       sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags, rate_limit_buckets RESTART IDENTITY CASCADE`,
-    )
-  })
+    );
+  });
   // The loader memoizes for 30s in-process, and integration tests share one
   // process, so truncating the table alone leaves the old answer live.
-  clearFeatureFlagCache()
+  clearFeatureFlagCache();
 }
 
 export async function seedUserEvent(
@@ -77,9 +77,9 @@ export async function seedUserEvent(
       status: 'watching',
       ...overrides,
     })
-    .returning()
-  if (!row) throw new Error('seedUserEvent: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedUserEvent: insert returned no rows');
+  return row;
 }
 
 export async function seedVenue(
@@ -97,10 +97,10 @@ export async function seedVenue(
       verified: true,
       ...overrides,
     })
-    .returning()
+    .returning();
 
-  if (!venue) throw new Error('seedVenue: insert returned no rows')
-  return venue
+  if (!venue) throw new Error('seedVenue: insert returned no rows');
+  return venue;
 }
 
 export async function seedArtist(
@@ -109,11 +109,11 @@ export async function seedArtist(
   // against an artist it never seeded.
   overrides: Omit<Partial<typeof artists.$inferInsert>, 'slug'> = {},
 ): Promise<typeof artists.$inferSelect> {
-  const name = overrides.name ?? 'Test Artist'
+  const name = overrides.name ?? 'Test Artist';
   // The slug follows the canonical name, not the display name — seeding a row
   // whose slug disagrees with its identity makes a test pass on the wrong
   // artist.
-  const canonicalName = overrides.canonicalName ?? name.toLowerCase().trim()
+  const canonicalName = overrides.canonicalName ?? name.toLowerCase().trim();
   const [artist] = await testDb
     .insert(artists)
     .values({
@@ -124,10 +124,10 @@ export async function seedArtist(
       // its own canonical name.
       slug: artistSlug(canonicalName),
     })
-    .returning()
+    .returning();
 
-  if (!artist) throw new Error('seedArtist: insert returned no rows')
-  return artist
+  if (!artist) throw new Error('seedArtist: insert returned no rows');
+  return artist;
 }
 
 // #764 — one row per authored or placeholder guide chip. Callers pass chips in
@@ -135,12 +135,12 @@ export async function seedArtist(
 export async function seedVenueGuideChips(
   venueId: string,
   chips: Array<{
-    chipType: GuideChipKey
-    body: string
-    isPlaceholder?: boolean
+    chipType: GuideChipKey;
+    body: string;
+    isPlaceholder?: boolean;
   }>,
 ): Promise<void> {
-  if (chips.length === 0) return
+  if (chips.length === 0) return;
   await testDb.insert(venueGuideChips).values(
     chips.map((chip) => ({
       venueId,
@@ -148,28 +148,28 @@ export async function seedVenueGuideChips(
       body: chip.body,
       isPlaceholder: chip.isPlaceholder ?? false,
     })),
-  )
+  );
 }
 
 export async function seedEvent(
   venueId: string,
   overrides: Partial<typeof events.$inferInsert> = {},
 ): Promise<typeof events.$inferSelect> {
-  const artist = overrides.artist ?? 'Test Artist'
+  const artist = overrides.artist ?? 'Test Artist';
   // Default title derives from artist so seedEvent calls only overriding
   // artist still get distinct rows. The partial UNIQUE index is on
   // (venue, date, canonical_artist, show_time) (#1053), so callers seeding
   // multiple upcoming events for the same headliner on the same date must
   // pass distinct show_time values to avoid a collision.
-  const title = overrides.title ?? `Test Show — ${artist}`
+  const title = overrides.title ?? `Test Show — ${artist}`;
   // Derive canonical_artist + canonical_title from artist/title when not
   // explicitly provided. Production code does the canonicalization in the
   // crawler; here a simple lowercase + trim suffices for test isolation
   // since the tests only care that distinct artist/title strings produce
   // distinct canonical values.
   const canonicalArtist =
-    overrides.canonicalArtist ?? artist.toLowerCase().trim()
-  const canonicalTitle = overrides.canonicalTitle ?? title.toLowerCase().trim()
+    overrides.canonicalArtist ?? artist.toLowerCase().trim();
+  const canonicalTitle = overrides.canonicalTitle ?? title.toLowerCase().trim();
   const [event] = await testDb
     .insert(events)
     .values({
@@ -182,10 +182,10 @@ export async function seedEvent(
       status: 'upcoming',
       ...overrides,
     })
-    .returning()
+    .returning();
 
-  if (!event) throw new Error('seedEvent: insert returned no rows')
-  return event
+  if (!event) throw new Error('seedEvent: insert returned no rows');
+  return event;
 }
 
 export async function seedUserProfile(
@@ -200,9 +200,9 @@ export async function seedUserProfile(
       theme: 'electric',
       ...overrides,
     })
-    .returning()
-  if (!profile) throw new Error('seedUserProfile: insert returned no rows')
-  return profile
+    .returning();
+  if (!profile) throw new Error('seedUserProfile: insert returned no rows');
+  return profile;
 }
 
 export async function seedPriceSubmission(
@@ -213,8 +213,8 @@ export async function seedPriceSubmission(
   // Default to the same (vendor, howFound) → sourceCategory derivation that
   // the real submit handler does, so test rows match production shape.
   // Tests that explicitly need NULL (legacy backfill scenarios) can override.
-  const vendor = overrides.vendor ?? 'Ticketmaster'
-  const howFound = overrides.howFound ?? 'bought_myself'
+  const vendor = overrides.vendor ?? 'Ticketmaster';
+  const howFound = overrides.howFound ?? 'bought_myself';
 
   const [submission] = await testDb
     .insert(priceSubmissions)
@@ -234,10 +234,10 @@ export async function seedPriceSubmission(
       corroborationCount: 1,
       ...overrides,
     })
-    .returning()
+    .returning();
   if (!submission)
-    throw new Error('seedPriceSubmission: insert returned no rows')
-  return submission
+    throw new Error('seedPriceSubmission: insert returned no rows');
+  return submission;
 }
 
 export async function seedUserRole(
@@ -253,9 +253,9 @@ export async function seedUserRole(
       priceCredScore: 0,
       ...overrides,
     })
-    .returning()
-  if (!row) throw new Error('seedUserRole: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedUserRole: insert returned no rows');
+  return row;
 }
 
 export async function seedUserCred(
@@ -265,9 +265,9 @@ export async function seedUserCred(
   const [row] = await testDb
     .insert(userCred)
     .values({ userId, priceCredScore })
-    .returning()
-  if (!row) throw new Error('seedUserCred: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedUserCred: insert returned no rows');
+  return row;
 }
 
 export async function seedSubmissionConfirm(
@@ -277,9 +277,9 @@ export async function seedSubmissionConfirm(
   const [row] = await testDb
     .insert(submissionConfirms)
     .values({ submissionId, userId })
-    .returning()
-  if (!row) throw new Error('seedSubmissionConfirm: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedSubmissionConfirm: insert returned no rows');
+  return row;
 }
 
 export async function seedPriceRetrievalLog(
@@ -297,9 +297,9 @@ export async function seedPriceRetrievalLog(
       latencyMs: 100,
       ...overrides,
     })
-    .returning()
-  if (!row) throw new Error('seedPriceRetrievalLog: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedPriceRetrievalLog: insert returned no rows');
+  return row;
 }
 
 export async function seedEventReport(
@@ -316,9 +316,9 @@ export async function seedEventReport(
       evidenceMethod: 'saw_listing',
       ...overrides,
     })
-    .returning()
-  if (!row) throw new Error('seedEventReport: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedEventReport: insert returned no rows');
+  return row;
 }
 
 export async function seedEventReportConfirm(
@@ -328,9 +328,9 @@ export async function seedEventReportConfirm(
   const [row] = await testDb
     .insert(eventReportConfirms)
     .values({ reportId, userId })
-    .returning()
-  if (!row) throw new Error('seedEventReportConfirm: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedEventReportConfirm: insert returned no rows');
+  return row;
 }
 
 export async function seedNotification(
@@ -345,9 +345,9 @@ export async function seedNotification(
       body: 'A venue crawl failed three times in a row',
       ...overrides,
     })
-    .returning()
-  if (!row) throw new Error('seedNotification: insert returned no rows')
-  return row
+    .returning();
+  if (!row) throw new Error('seedNotification: insert returned no rows');
+  return row;
 }
 
 export async function seedCrawlRun(
@@ -365,9 +365,9 @@ export async function seedCrawlRun(
       durationMs: 1200,
       ...overrides,
     })
-    .returning()
-  if (!run) throw new Error('seedCrawlRun: insert returned no rows')
-  return run
+    .returning();
+  if (!run) throw new Error('seedCrawlRun: insert returned no rows');
+  return run;
 }
 
 // Every table USER_DATA_REGISTRY says holds data about a user — i.e. every
@@ -375,7 +375,7 @@ export async function seedCrawlRun(
 // scope on this list.
 const USER_OWNED_ENTRIES = USER_DATA_REGISTRY.filter(
   (entry) => entry.disposition !== 'none',
-)
+);
 
 // Seeds exactly one row for a brand-new user in EVERY table that
 // USER_DATA_REGISTRY classifies as holding user data, then proves it did.
@@ -390,62 +390,62 @@ const USER_OWNED_ENTRIES = USER_DATA_REGISTRY.filter(
 // Exactly one row per table matters too: the export tests assert a length of 1
 // to prove a query didn't pick up another user's rows.
 export const seedUserWithDataEverywhere = async (): Promise<string> => {
-  const userId = `user_test_${randomUUID()}`
+  const userId = `user_test_${randomUUID()}`;
   // Suffix shared by every unique-constrained value below, so repeated calls
   // within one test file don't collide on venue slug, invite code, or push
   // endpoint.
-  const nonce = randomUUID()
+  const nonce = randomUUID();
 
   // ---- Parent rows the foreign keys require ----
   const venue = await seedVenue({
     name: `Deletion Venue ${nonce}`,
     slug: `deletion-venue-${nonce}`,
-  })
+  });
   const event = await seedEvent(venue.id, {
     artist: `Deletion Artist ${nonce}`,
-  })
+  });
   const [crew] = await testDb
     .insert(crews)
     .values({ name: `Deletion Crew ${nonce}`, keeperId: userId })
-    .returning()
-  if (!crew) throw new Error('seedUserWithDataEverywhere: crew insert failed')
+    .returning();
+  if (!crew) throw new Error('seedUserWithDataEverywhere: crew insert failed');
 
   // ---- Profile and identity ----
-  await seedUserProfile(userId, { handle: `deletion-${nonce}` })
-  await seedUserRole(userId)
-  await seedUserCred(userId)
+  await seedUserProfile(userId, { handle: `deletion-${nonce}` });
+  await seedUserRole(userId);
+  await seedUserCred(userId);
 
   // ---- Activity ----
-  await seedUserEvent(userId, event.id)
+  await seedUserEvent(userId, event.id);
   await testDb.insert(userArtistFollows).values({
     userId,
     artistName: `Deletion Artist ${nonce}`,
     canonicalName: `deletion artist ${nonce}`,
     source: 'manual',
-  })
+  });
   await testDb.insert(feedback).values({
     userId,
     pageUrl: 'https://concertcrawl.app/browse',
     category: 'bug',
     message: 'Seeded feedback for the account-deletion tests.',
-  })
+  });
 
   // ---- Prices ----
-  const submission = await seedPriceSubmission(event.id, userId)
-  await seedSubmissionConfirm(submission.id, userId)
-  const report = await seedEventReport(event.id, userId)
-  await seedEventReportConfirm(report.id, userId)
+  const submission = await seedPriceSubmission(event.id, userId);
+  await seedSubmissionConfirm(submission.id, userId);
+  const report = await seedEventReport(event.id, userId);
+  await seedEventReportConfirm(report.id, userId);
 
   // ---- Crews ----
   // `crews` itself is covered by the keeper_id above.
-  await testDb.insert(crewMembers).values({ crewId: crew.id, userId })
+  await testDb.insert(crewMembers).values({ crewId: crew.id, userId });
   await testDb.insert(crewInvites).values({
     crewId: crew.id,
     token: `tok_${nonce}`,
     createdBy: userId,
     expiresAt: new Date(Date.now() + 86_400_000),
-  })
-  await testDb.insert(crewMutes).values({ crewId: crew.id, userId })
+  });
+  await testDb.insert(crewMutes).values({ crewId: crew.id, userId });
 
   // ---- Notifications and channels ----
   await seedNotification({
@@ -454,24 +454,24 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     category: 'price.drop',
     title: 'Price drop',
     body: 'A show you are watching got cheaper',
-  })
-  await testDb.insert(userNotificationPreferences).values({ userId })
+  });
+  await testDb.insert(userNotificationPreferences).values({ userId });
   await testDb.insert(pushSubscriptions).values({
     userId,
     endpoint: `https://push.example.com/${nonce}`,
     p256dh: 'seeded-p256dh-key',
     auth: 'seeded-auth-key',
-  })
+  });
 
   // ---- Spotify ----
   await testDb.insert(userSpotifyConnections).values({
     userId,
     spotifyUserId: `spotify_${nonce}`,
     displayName: 'Seeded Listener',
-  })
+  });
   await testDb
     .insert(spotifyAlertLog)
-    .values({ userId, eventId: event.id, kind: 'push' })
+    .values({ userId, eventId: event.id, kind: 'push' });
 
   // ---- Billing ----
   await testDb.insert(subscriptions).values({
@@ -481,23 +481,23 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     tier: 'premium',
     status: 'active',
     currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000),
-  })
-  await testDb.insert(userBilling).values({ userId })
+  });
+  await testDb.insert(userBilling).values({ userId });
   await testDb
     .insert(subscriptionEvents)
-    .values({ userId, type: 'subscription_created' })
+    .values({ userId, type: 'subscription_created' });
   await testDb
     .insert(giftedComps)
-    .values({ userId, grantedBy: 'user_test_admin' })
+    .values({ userId, grantedBy: 'user_test_admin' });
   await testDb.insert(emailSendLog).values({
     userId,
     templateKey: 'welcome_paid',
     dedupeKey: `dedupe_${nonce}`,
     status: 'sent',
-  })
+  });
   await testDb
     .insert(auditLog)
-    .values({ actorId: userId, action: 'user.seeded', targetId: event.id })
+    .values({ actorId: userId, action: 'user.seeded', targetId: event.id });
 
   // ---- Rate-limit bucket (delete, keyed on user_id) ----
   await testDb.insert(rateLimitBuckets).values({
@@ -505,7 +505,7 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     count: 1,
     resetAt: new Date(Date.now() + 3_600_000),
     userId,
-  })
+  });
 
   // ---- Invite codes (anonymize, keyed on used_by) ----
   await testDb.insert(inviteCodes).values({
@@ -513,31 +513,31 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     createdBy: 'user_test_admin',
     usedBy: userId,
     usedAt: new Date(),
-  })
+  });
 
   // ---- Self-check ----
-  const missing: string[] = []
+  const missing: string[] = [];
   for (const entry of USER_OWNED_ENTRIES) {
-    const column = entry.userIdColumn
+    const column = entry.userIdColumn;
     if (column === null) {
       throw new Error(
         `seedUserWithDataEverywhere: registry entry "${entry.tableName}" has ` +
           `disposition "${entry.disposition}" but no userIdColumn — it cannot ` +
           'be seeded or asserted on.',
-      )
+      );
     }
     // postgres-js returns the row array directly; there is no `.rows` wrapper.
     const rows = await testDb.execute(
       sql`SELECT 1 FROM ${sql.identifier(entry.tableName)} WHERE ${sql.identifier(column)} = ${userId} LIMIT 1`,
-    )
-    if (rows.length === 0) missing.push(`${entry.tableName}.${column}`)
+    );
+    if (rows.length === 0) missing.push(`${entry.tableName}.${column}`);
   }
   if (missing.length > 0) {
     throw new Error(
       'seedUserWithDataEverywhere: no row was seeded for these user-owned ' +
         `tables, so any deletion assertion against them would pass vacuously: ${missing.join(', ')}`,
-    )
+    );
   }
 
-  return userId
-}
+  return userId;
+};

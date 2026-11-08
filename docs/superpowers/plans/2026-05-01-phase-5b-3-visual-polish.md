@@ -34,23 +34,23 @@
 - [ ] **Step 1: Create the component**
 
 ```tsx
-'use client'
+'use client';
 
-import { useUser } from '@clerk/nextjs'
+import { useUser } from '@clerk/nextjs';
 
 export function UserAvatar() {
-  const { user } = useUser()
+  const { user } = useUser();
 
-  let initials = '?'
+  let initials = '?';
   if (user) {
-    const first = user.firstName?.charAt(0) ?? ''
-    const last = user.lastName?.charAt(0) ?? ''
+    const first = user.firstName?.charAt(0) ?? '';
+    const last = user.lastName?.charAt(0) ?? '';
     if (first || last) {
-      initials = (first + last).toUpperCase()
+      initials = (first + last).toUpperCase();
     } else {
       initials = (
         user.emailAddresses[0]?.emailAddress.charAt(0) ?? '?'
-      ).toUpperCase()
+      ).toUpperCase();
     }
   }
 
@@ -58,7 +58,7 @@ export function UserAvatar() {
     <div className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-2">
       <span className="text-[13px] font-bold text-fg-muted">{initials}</span>
     </div>
-  )
+  );
 }
 ```
 
@@ -85,24 +85,24 @@ The component is currently a server component. Adding `usePathname()` requires i
 Replace the entire file contents with:
 
 ```tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { ThemeToggle } from '../theme-toggle'
-import { CCMark } from '../cc-mark'
-import { UserAvatar } from './UserAvatar'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../theme-toggle';
+import { CCMark } from '../cc-mark';
+import { UserAvatar } from './UserAvatar';
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
   { label: 'Search', href: '/search' },
   { label: 'Saved', href: '/saved' },
-] as const
+] as const;
 
 export function AppHeader() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <header className="w-full">
@@ -145,7 +145,7 @@ export function AppHeader() {
 
           <nav className="flex gap-1 overflow-x-auto">
             {NAV_TABS.map((tab) => {
-              const isActive = pathname === tab.href
+              const isActive = pathname === tab.href;
               return (
                 <Link
                   key={tab.href}
@@ -159,7 +159,7 @@ export function AppHeader() {
                 >
                   {tab.label}
                 </Link>
-              )
+              );
             })}
           </nav>
         </div>
@@ -188,7 +188,7 @@ export function AppHeader() {
         </div>
       </div>
     </header>
-  )
+  );
 }
 ```
 
@@ -247,13 +247,13 @@ Keep the toggle visible on mobile (text-only) by leaving `"inline-flex items-cen
 Each toggle `<button>` (inside the map at line 223) has:
 
 ```tsx
-className = 'inline-flex items-center gap-1.5 transition-colors'
+className = 'inline-flex items-center gap-1.5 transition-colors';
 ```
 
 Change to:
 
 ```tsx
-className = 'inline-flex cursor-pointer items-center gap-1.5 transition-colors'
+className = 'inline-flex cursor-pointer items-center gap-1.5 transition-colors';
 ```
 
 - [ ] **Step 3: Change chips container to horizontal scroll**
@@ -275,14 +275,14 @@ Change to:
 The filter chip `<button>` at line 260 has:
 
 ```tsx
-className = 'inline-flex h-9 items-center gap-1.5 rounded-full border px-3'
+className = 'inline-flex h-9 items-center gap-1.5 rounded-full border px-3';
 ```
 
 Change to:
 
 ```tsx
 className =
-  'inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3'
+  'inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3';
 ```
 
 - [ ] **Step 5: Add cursor-pointer to Clear filters button**
@@ -291,14 +291,14 @@ The "× Clear filters" `<button>` at line 293 has:
 
 ```tsx
 className =
-  'inline-flex h-9 items-center gap-1 rounded-full border border-dashed border-border-strong px-3'
+  'inline-flex h-9 items-center gap-1 rounded-full border border-dashed border-border-strong px-3';
 ```
 
 Change to:
 
 ```tsx
 className =
-  'inline-flex h-9 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3'
+  'inline-flex h-9 cursor-pointer items-center gap-1 rounded-full border border-dashed border-border-strong px-3';
 ```
 
 - [ ] **Step 6: Verify TypeScript compiles**
@@ -340,58 +340,58 @@ Pre-computed values for tests:
 Create `apps/web/src/components/consumer/event-image/artist-gradient.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { getArtistGradientStyle } from './artist-gradient'
+import { describe, it, expect } from 'vitest';
+import { getArtistGradientStyle } from './artist-gradient';
 
 describe('getArtistGradientStyle', () => {
   it('returns background and color style properties', () => {
-    const style = getArtistGradientStyle('Radiohead')
-    expect(style).toHaveProperty('background')
-    expect(style).toHaveProperty('color')
-  })
+    const style = getArtistGradientStyle('Radiohead');
+    expect(style).toHaveProperty('background');
+    expect(style).toHaveProperty('color');
+  });
 
   it('background is a linear-gradient using oklch', () => {
-    const { background } = getArtistGradientStyle('Radiohead')
-    expect(background).toMatch(/^linear-gradient\(135deg, oklch/)
-  })
+    const { background } = getArtistGradientStyle('Radiohead');
+    expect(background).toMatch(/^linear-gradient\(135deg, oklch/);
+  });
 
   it('color is an oklch value', () => {
-    const { color } = getArtistGradientStyle('Radiohead')
-    expect(color).toMatch(/^oklch\(/)
-  })
+    const { color } = getArtistGradientStyle('Radiohead');
+    expect(color).toMatch(/^oklch\(/);
+  });
 
   it('is deterministic — same input always produces same output', () => {
-    const a = getArtistGradientStyle('Radiohead')
-    const b = getArtistGradientStyle('Radiohead')
-    expect(a.background).toBe(b.background)
-    expect(a.color).toBe(b.color)
-  })
+    const a = getArtistGradientStyle('Radiohead');
+    const b = getArtistGradientStyle('Radiohead');
+    expect(a.background).toBe(b.background);
+    expect(a.color).toBe(b.color);
+  });
 
   it('uses hue 180 for Radiohead (hash 897, index 7)', () => {
-    const { background } = getArtistGradientStyle('Radiohead')
-    expect(background).toContain('oklch(0.35 0.08 180)')
-    expect(background).toContain('oklch(0.22 0.06 220)')
-  })
+    const { background } = getArtistGradientStyle('Radiohead');
+    expect(background).toContain('oklch(0.35 0.08 180)');
+    expect(background).toContain('oklch(0.22 0.06 220)');
+  });
 
   it('falls back to hue 280 for empty string (index 0)', () => {
-    const { background } = getArtistGradientStyle('')
-    expect(background).toContain('oklch(0.35 0.08 280)')
-  })
+    const { background } = getArtistGradientStyle('');
+    expect(background).toContain('oklch(0.35 0.08 280)');
+  });
 
   it('falls back to hue 280 for undefined artist (index 0)', () => {
     const { background } = getArtistGradientStyle(
       undefined as unknown as string,
-    )
-    expect(background).toContain('oklch(0.35 0.08 280)')
-  })
+    );
+    expect(background).toContain('oklch(0.35 0.08 280)');
+  });
 
   it('different names with different hashes produce different gradients', () => {
     // 'Radiohead' → hue 180; 'Wilco' → hash 510, index 0, hue 280
-    const r = getArtistGradientStyle('Radiohead')
-    const w = getArtistGradientStyle('Wilco')
-    expect(r.background).not.toBe(w.background)
-  })
-})
+    const r = getArtistGradientStyle('Radiohead');
+    const w = getArtistGradientStyle('Wilco');
+    expect(r.background).not.toBe(w.background);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests — expect failure**
@@ -407,23 +407,23 @@ Expected: FAIL — `Cannot find module './artist-gradient'`
 Create `apps/web/src/components/consumer/event-image/artist-gradient.ts`:
 
 ```ts
-const HUES = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260] as const
+const HUES = [280, 200, 340, 160, 30, 220, 310, 180, 50, 260] as const;
 
 function artistHue(artist: string): number {
-  if (!artist) return HUES[0]
-  const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  return HUES[hash % HUES.length]
+  if (!artist) return HUES[0];
+  const hash = artist.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return HUES[hash % HUES.length];
 }
 
 export function getArtistGradientStyle(artist: string): {
-  background: string
-  color: string
+  background: string;
+  color: string;
 } {
-  const hue = artistHue(artist ?? '')
+  const hue = artistHue(artist ?? '');
   return {
     background: `linear-gradient(135deg, oklch(0.35 0.08 ${hue}), oklch(0.22 0.06 ${hue + 40}))`,
     color: `oklch(0.75 0.12 ${hue})`,
-  }
+  };
 }
 ```
 
@@ -460,21 +460,21 @@ Looking at call sites: `EventCard.tsx` calls `<EventImage src={event.imageUrl} a
 Replace the entire file with:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import Image from 'next/image'
-import { cn } from '@/lib/utils'
-import { getArtistGradientStyle } from './artist-gradient'
+import { useState } from 'react';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+import { getArtistGradientStyle } from './artist-gradient';
 
 interface EventImageProps {
-  src: string | null
-  alt: string
-  artist?: string
-  fallbackInitial?: string
-  className?: string
-  fill?: boolean
-  sizes?: string
+  src: string | null;
+  alt: string;
+  artist?: string;
+  fallbackInitial?: string;
+  className?: string;
+  fill?: boolean;
+  sizes?: string;
 }
 
 function Fallback({
@@ -483,12 +483,12 @@ function Fallback({
   alt,
   className,
 }: {
-  artist: string | undefined
-  fallbackInitial: string | undefined
-  alt: string
-  className: string | undefined
+  artist: string | undefined;
+  fallbackInitial: string | undefined;
+  alt: string;
+  className: string | undefined;
 }) {
-  const gradientStyle = getArtistGradientStyle(artist ?? fallbackInitial ?? '')
+  const gradientStyle = getArtistGradientStyle(artist ?? fallbackInitial ?? '');
   return (
     <div
       className={cn('flex items-center justify-center select-none', className)}
@@ -499,7 +499,7 @@ function Fallback({
         {fallbackInitial ?? '♪'}
       </span>
     </div>
-  )
+  );
 }
 
 export function EventImage({
@@ -511,7 +511,7 @@ export function EventImage({
   fill = false,
   sizes,
 }: EventImageProps) {
-  const [errored, setErrored] = useState(false)
+  const [errored, setErrored] = useState(false);
 
   if (!src || errored) {
     return (
@@ -521,7 +521,7 @@ export function EventImage({
         alt={alt}
         className={className}
       />
-    )
+    );
   }
 
   return (
@@ -553,7 +553,7 @@ export function EventImage({
         aria-hidden
       />
     </div>
-  )
+  );
 }
 ```
 
@@ -620,13 +620,13 @@ In `lib.ts`, find `dateGroupLabel` (line 70). The body calls `formatEventDate` w
 
 ```ts
 export function dateGroupLabel(dateStr: string, timezone = 'UTC'): string {
-  if (isToday(dateStr, timezone)) return 'Tonight'
-  if (isTomorrow(dateStr, timezone)) return 'Tomorrow'
+  if (isToday(dateStr, timezone)) return 'Tonight';
+  if (isTomorrow(dateStr, timezone)) return 'Tomorrow';
   return formatEventDate(dateStr, timezone, {
     weekday: 'short',
     month: 'long',
     day: 'numeric',
-  })
+  });
 }
 ```
 
@@ -658,17 +658,17 @@ git commit -m "fix: dateGroupLabel uses weekday short (Thu not Thursday)"
 Replace the entire file with:
 
 ```tsx
-'use client'
+'use client';
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition } from 'react'
-import { cn } from '@/lib/utils'
-import { copy } from '../definitions/copy'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useTransition } from 'react';
+import { cn } from '@/lib/utils';
+import { copy } from '../definitions/copy';
 
 interface LoadMoreButtonProps {
-  currentOffset: number
-  limit: number
-  total: number
+  currentOffset: number;
+  limit: number;
+  total: number;
 }
 
 export function LoadMoreButton({
@@ -676,23 +676,23 @@ export function LoadMoreButton({
   limit,
   total,
 }: LoadMoreButtonProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
-  const nextOffset = currentOffset + limit
-  const hasMore = nextOffset < total
+  const nextOffset = currentOffset + limit;
+  const hasMore = nextOffset < total;
 
-  if (!hasMore) return null
+  if (!hasMore) return null;
 
   const handleLoadMore = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('offset', String(nextOffset))
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('offset', String(nextOffset));
     startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    })
-  }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  };
 
   return (
     <div className="flex justify-center pt-2">
@@ -708,7 +708,7 @@ export function LoadMoreButton({
         {isPending ? 'Loading…' : copy.loadMore}
       </button>
     </div>
-  )
+  );
 }
 ```
 

@@ -13,63 +13,63 @@ import {
   monoEyebrow,
   row,
   statusEyebrow,
-} from '../atoms.js'
+} from '../atoms.js';
 import {
   EMAIL_FONT,
   EMAIL_MONO,
   ME,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import type { RenderedEmail } from '../types.js'
+} from '../layout.js';
+import type { RenderedEmail } from '../types.js';
 
 const FOOTER_NOTE =
-  'Already fixed it? Ignore this. The next retry will pick it up automatically.'
+  'Already fixed it? Ignore this. The next retry will pick it up automatically.';
 
-const TRACKER_LABELS = ['Notice', 'Retrying', 'Last try']
+const TRACKER_LABELS = ['Notice', 'Retrying', 'Last try'];
 
 // Three-segment progress bar. Segments 1..step are filled with `color`; the
 // rest sit muted. Labels sit under each segment, the active one brightened.
 const stepTracker = (step: number, color: string): string => {
   const cells = TRACKER_LABELS.map((label, index) => {
-    const filled = index < step
-    const barColor = filled ? color : ME.border
-    const labelColor = index === step - 1 ? color : ME.subtle
+    const filled = index < step;
+    const barColor = filled ? color : ME.border;
+    const labelColor = index === step - 1 ? color : ME.subtle;
     return `<td style="width: 33.33%; padding: 0 4px;">
 <div style="height: 4px; border-radius: 4px; background: ${barColor};"></div>
 <div style="font-family: ${EMAIL_MONO}; font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: ${labelColor}; margin-top: 7px; text-align: center;">${label}</div>
-</td>`
-  }).join('')
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`
-}
+</td>`;
+  }).join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>${cells}</tr></table>`;
+};
 
 const reassureRow = (text: string): string =>
   row(
     '16px 26px 4px',
     `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: ${ME.subtle}; text-align: center;">${text}</div>`,
-  )
+  );
 
 export interface DunningCopy {
-  step: 1 | 2 | 3
-  subject: string
-  preheader: string
-  headerEyebrow: string
-  statusText: string
-  title: string
-  sub: string
-  reassure: string
-  isFinal: boolean
-  calloutEyebrow?: string
-  calloutBody?: string
+  step: 1 | 2 | 3;
+  subject: string;
+  preheader: string;
+  headerEyebrow: string;
+  statusText: string;
+  title: string;
+  sub: string;
+  reassure: string;
+  isFinal: boolean;
+  calloutEyebrow?: string;
+  calloutBody?: string;
 }
 
-const CONTENT_PAD = '18px 26px 0'
+const CONTENT_PAD = '18px 26px 0';
 
 export const renderDunning = (
   copy: DunningCopy,
   portalUrl: string,
 ): RenderedEmail => {
-  const accent = copy.isFinal ? ME.amber : ME.signal
+  const accent = copy.isFinal ? ME.amber : ME.signal;
 
   const calloutRow =
     copy.isFinal &&
@@ -89,7 +89,7 @@ export const renderDunning = (
             soft: ME.amberSoft,
           }),
         )
-      : ''
+      : '';
 
   const bodyRows = [
     headerRow(copy.headerEyebrow),
@@ -109,7 +109,7 @@ export const renderDunning = (
     footerRow({ family: 'billing', showManage: true, note: FOOTER_NOTE }),
   ]
     .filter((rowStr) => rowStr !== '')
-    .join('\n')
+    .join('\n');
 
   const textLines = [
     copy.title,
@@ -124,7 +124,7 @@ export const renderDunning = (
     copy.reassure,
     '',
     `Update payment method: ${portalUrl}`,
-  ]
+  ];
 
   return {
     subject: copy.subject,
@@ -136,5 +136,5 @@ export const renderDunning = (
       showManage: true,
       note: FOOTER_NOTE,
     }),
-  }
-}
+  };
+};

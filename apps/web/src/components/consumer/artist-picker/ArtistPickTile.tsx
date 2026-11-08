@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One tile in the multi-select picker (nf-cold-start.jsx `ArtistPick`).
 //
@@ -11,9 +11,9 @@
 // an unentitled visitor may select as freely as anyone, and the gate is on the
 // button that commits, not on the tiles.
 
-import { Panel } from '@/components/consumer/image-slot'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import type { PickArtist } from './definitions/types'
+import { Panel } from '@/components/consumer/image-slot';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import type { PickArtist } from './definitions/types';
 
 const CheckGlyph = () => (
   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -25,7 +25,7 @@ const CheckGlyph = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const PlusGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -36,12 +36,12 @@ const PlusGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 interface ArtistPickTileProps {
-  artist: PickArtist
-  selected: boolean
-  onToggle: (slug: string) => void
+  artist: PickArtist;
+  selected: boolean;
+  onToggle: (slug: string) => void;
 }
 
 export const ArtistPickTile = ({
@@ -119,4 +119,4 @@ export const ArtistPickTile = ({
       {artist.dateLabel ?? FOLLOWING_COPY.cardNoDate}
     </span>
   </button>
-)
+);

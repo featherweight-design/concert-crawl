@@ -23,18 +23,19 @@
 
   ```ts
   export interface SubmitPriceResult {
-    isEdit: boolean
-    id: string
-    priceMin: string
-    priceMax: string | null
-    tier: string
-    vendor: string
-    howFound: string
-    sourceCategory: SourceCategory | null
+    isEdit: boolean;
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    tier: string;
+    vendor: string;
+    howFound: string;
+    sourceCategory: SourceCategory | null;
   }
   ```
 
   and the modal prop `onSuccess?: (results: SubmitPriceResult[]) => void`.
+
 - Produces: nothing consumed by later tasks — this is the last code task.
 
 **Context.** `EventDetailClient.tsx` has two distinct `onSuccess` consumers, both currently typed for a single result object:
@@ -55,96 +56,96 @@ In `apps/web/src/components/consumer/EventDetailClient.test.tsx`:
 // drive onSuccess directly from the test surface when needed.
 // Shape mirrors SubmitPriceResult exported from SubmitPriceModal (#832).
 interface ModalSuccessRow {
-  isEdit: boolean
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+  isEdit: boolean;
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null;
 }
-let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null
+let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null;
 ```
 
 ```tsx
 vi.mock('@/components/consumer/submit-price/SubmitPriceModal', () => ({
   SubmitPriceModal: (props: {
-    open: boolean
-    onSuccess?: (results: ModalSuccessRow[]) => void
+    open: boolean;
+    onSuccess?: (results: ModalSuccessRow[]) => void;
   }) => {
-    latestModalOnSuccess = props.onSuccess ?? null
-    return props.open ? <div data-testid="submit-price-modal-open" /> : null
+    latestModalOnSuccess = props.onSuccess ?? null;
+    return props.open ? <div data-testid="submit-price-modal-open" /> : null;
   },
-}))
+}));
 ```
 
-> Note: `vi.mock` factories are hoisted, but `ModalSuccessRow` is a type-only reference (erased at compile time) and `latestModalOnSuccess` is only *assigned* inside the factory at render time, so this hoisting is safe — it matches the existing pattern in this file.
+> Note: `vi.mock` factories are hoisted, but `ModalSuccessRow` is a type-only reference (erased at compile time) and `latestModalOnSuccess` is only _assigned_ inside the factory at render time, so this hoisting is safe — it matches the existing pattern in this file.
 
 **(b)** Convert the four existing `latestModalOnSuccess?.({...})` invocations (lines ~434, 460, 499, 540 — in the tests `'submit success in sold-out-resale branch...'`, `'submit success in sold-out-contribute branch...'`, `'submit success in resale-headline branch...'`, and `'submit success: after onAddTier("VIP")...'`) to single-element arrays. Example for the first (line ~434); apply the same wrap to all four:
 
 ```tsx
-    await act(async () => {
-      latestModalOnSuccess?.([
-        {
-          isEdit: false,
-          id: 'sub-ga-1',
-          priceMin: '40',
-          priceMax: null,
-          tier: 'GA',
-          vendor: 'VenueBoxOffice',
-          howFound: 'bought_myself',
-          sourceCategory: 'boxoffice',
-        },
-      ])
-    })
+await act(async () => {
+  latestModalOnSuccess?.([
+    {
+      isEdit: false,
+      id: 'sub-ga-1',
+      priceMin: '40',
+      priceMax: null,
+      tier: 'GA',
+      vendor: 'VenueBoxOffice',
+      howFound: 'bought_myself',
+      sourceCategory: 'boxoffice',
+    },
+  ]);
+});
 ```
 
 **(c)** Add a new multi-row test directly after the `'submit success: after onAddTier("VIP")...'` test (after line ~565):
 
 ```tsx
-  it('batch submit success with 2 tiers → success card shows first tier, both tiers excluded from add-pills (#832)', async () => {
-    const event = buildBaseEvent({
-      priceStatus: 'soldout',
-      soldOutReport: null,
-      ticketLinks: null,
-    })
-    render(
-      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(latestModalOnSuccess).not.toBeNull()
-    await act(async () => {
-      latestModalOnSuccess?.([
-        {
-          isEdit: false,
-          id: 'sub-ga-1',
-          priceMin: '45',
-          priceMax: null,
-          tier: 'GA',
-          vendor: 'VenueBoxOffice',
-          howFound: 'bought_myself',
-          sourceCategory: 'boxoffice',
-        },
-        {
-          isEdit: false,
-          id: 'sub-vip-1',
-          priceMin: '120',
-          priceMax: '150',
-          tier: 'VIP',
-          vendor: 'VenueBoxOffice',
-          howFound: 'bought_myself',
-          sourceCategory: 'boxoffice',
-        },
-      ])
-    })
-    // MTAddTierSuccess headline reflects the FIRST submitted tier.
-    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
-    // Both submitted tiers are locked out of the add-pill row...
-    expect(screen.queryByText(/Add ga/i)).toBeNull()
-    expect(screen.queryByText(/Add vip/i)).toBeNull()
-    // ...while an unsubmitted tier still offers a pill.
-    expect(screen.queryByText(/Add reserved/i)).not.toBeNull()
-  })
+it('batch submit success with 2 tiers → success card shows first tier, both tiers excluded from add-pills (#832)', async () => {
+  const event = buildBaseEvent({
+    priceStatus: 'soldout',
+    soldOutReport: null,
+    ticketLinks: null,
+  });
+  render(
+    <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+  );
+  expect(latestModalOnSuccess).not.toBeNull();
+  await act(async () => {
+    latestModalOnSuccess?.([
+      {
+        isEdit: false,
+        id: 'sub-ga-1',
+        priceMin: '45',
+        priceMax: null,
+        tier: 'GA',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+        sourceCategory: 'boxoffice',
+      },
+      {
+        isEdit: false,
+        id: 'sub-vip-1',
+        priceMin: '120',
+        priceMax: '150',
+        tier: 'VIP',
+        vendor: 'VenueBoxOffice',
+        howFound: 'bought_myself',
+        sourceCategory: 'boxoffice',
+      },
+    ]);
+  });
+  // MTAddTierSuccess headline reflects the FIRST submitted tier.
+  expect(screen.getByText('GA price is in. Thanks.')).toBeDefined();
+  // Both submitted tiers are locked out of the add-pill row...
+  expect(screen.queryByText(/Add ga/i)).toBeNull();
+  expect(screen.queryByText(/Add vip/i)).toBeNull();
+  // ...while an unsubmitted tier still offers a pill.
+  expect(screen.queryByText(/Add reserved/i)).not.toBeNull();
+});
 ```
 
 - [ ] **Step 2: Run tests to verify the new one fails**
@@ -163,7 +164,7 @@ Expected: the new `'batch submit success with 2 tiers...'` test FAILS (the compo
 import {
   SubmitPriceModal,
   type SubmitPriceResult,
-} from '@/components/consumer/submit-price/SubmitPriceModal'
+} from '@/components/consumer/submit-price/SubmitPriceModal';
 ```
 
 **(b)** Add a tier type guard directly below the `TIER_ENUM` declaration (line ~54). No `as` cast — the widened `ReadonlyArray<string>` view makes `includes` accept any string:
@@ -172,40 +173,41 @@ import {
 // Widened read-only view of TIER_ENUM so the type guard can probe arbitrary
 // strings — `ReadonlyArray<Tier>.includes` rejects plain strings at the type
 // level, and an `as` cast is off the table (CLAUDE.md principle 6).
-const TIER_NAMES: ReadonlyArray<string> = TIER_ENUM
-const isTierValue = (value: string): value is Tier => TIER_NAMES.includes(value)
+const TIER_NAMES: ReadonlyArray<string> = TIER_ENUM;
+const isTierValue = (value: string): value is Tier =>
+  TIER_NAMES.includes(value);
 ```
 
 **(c)** Replace `handleSubmitSuccess` (lines ~457–484) with the array version. The success card shows the FIRST new row's tier/price; ALL new rows' tiers enter `submittedThisSession` so `MTAddTierSuccess` excludes every tier the batch covered:
 
 ```tsx
-  // Shared submit-success handler — used by every new decision-tree branch
-  // that owns a SubmitPriceModal. A batch submit (#832) returns one row per
-  // tier: the follow-up card shows the first row, and every submitted tier
-  // joins the session set so the add-tier pills exclude all of them. Falls
-  // back to GA when a tier comes back non-canonical so the picker still
-  // shows something useful.
-  const handleSubmitSuccess = useCallback((results: SubmitPriceResult[]) => {
-    const newRows = results.filter((row) => !row.isEdit)
-    const firstRow = newRows[0]
-    if (!firstRow) return
-    const submittedTiers = newRows.map((row): Tier =>
-      isTierValue(row.tier) ? row.tier : 'GA',
-    )
-    const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA'
-    const price = Math.round(parseFloat(firstRow.priceMin))
-    const sourceCategory: SourceCategory = firstRow.sourceCategory ?? 'standard'
-    setSubmittedThisSession((prev) => {
-      const next = new Set(prev)
-      for (const tier of submittedTiers) {
-        next.add(tier)
-      }
-      return next
-    })
-    setSubmitSuccessPayload({ tier: firstTier, price, sourceCategory })
-    setSubmitPriceOpen(false)
-    setPreselectedTier(null)
-  }, [])
+// Shared submit-success handler — used by every new decision-tree branch
+// that owns a SubmitPriceModal. A batch submit (#832) returns one row per
+// tier: the follow-up card shows the first row, and every submitted tier
+// joins the session set so the add-tier pills exclude all of them. Falls
+// back to GA when a tier comes back non-canonical so the picker still
+// shows something useful.
+const handleSubmitSuccess = useCallback((results: SubmitPriceResult[]) => {
+  const newRows = results.filter((row) => !row.isEdit);
+  const firstRow = newRows[0];
+  if (!firstRow) return;
+  const submittedTiers = newRows.map((row): Tier =>
+    isTierValue(row.tier) ? row.tier : 'GA',
+  );
+  const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA';
+  const price = Math.round(parseFloat(firstRow.priceMin));
+  const sourceCategory: SourceCategory = firstRow.sourceCategory ?? 'standard';
+  setSubmittedThisSession((prev) => {
+    const next = new Set(prev);
+    for (const tier of submittedTiers) {
+      next.add(tier);
+    }
+    return next;
+  });
+  setSubmitSuccessPayload({ tier: firstTier, price, sourceCategory });
+  setSubmitPriceOpen(false);
+  setPreselectedTier(null);
+}, []);
 ```
 
 The seven `onSuccess={handleSubmitSuccess}` call sites (lines ~584, 612, 669, 795, 950, 1129, 1218) need no edits — the prop and handler types now match again.
@@ -213,61 +215,61 @@ The seven `onSuccess={handleSubmitSuccess}` call sites (lines ~584, 612, 669, 79
 **(d)** Add a shared `applySubmissionResults` callback directly after `handleWithdrawReport` (after line ~450), replicating the existing per-row edit/append logic in a loop:
 
 ```tsx
-  // Optimistic localSubmissions updater shared by the two decision-tree
-  // branches that render pending-submission cards. A batch submit (#832)
-  // yields one row per tier — edits map-replace in place, new rows append
-  // as optimistic PendingSubItems.
-  const applySubmissionResults = useCallback(
-    (results: SubmitPriceResult[]) => {
-      for (const result of results) {
-        if (result.isEdit) {
-          setLocalSubmissions((prev) =>
-            prev.map((sub) =>
-              sub.id === result.id
-                ? {
-                    ...sub,
-                    priceMin: result.priceMin,
-                    priceMax: result.priceMax,
-                    tier: result.tier,
-                    vendor: result.vendor,
-                    howFound: result.howFound,
-                  }
-                : sub,
-            ),
-          )
-        } else {
-          setLocalSubmissions((prev) => [
-            ...prev,
-            {
-              id: result.id,
-              priceMin: result.priceMin,
-              priceMax: result.priceMax,
-              tier: result.tier,
-              vendor: result.vendor,
-              howFound: result.howFound,
-              sourceCategory: result.sourceCategory,
-              note: null,
-              submitterHandle: null,
-              submittedAt: new Date().toISOString(),
-              confirmsCount: 0,
-              // Use the shared helper so the local-submission optimistic row
-              // picks up the UTC-midnight-correct imminent-policy denominator
-              // (#835 Copilot R5).
-              confirmsNeeded: corroborationConfirmsRequired(event.date),
-              isSubmitter: true,
-            },
-          ])
-        }
+// Optimistic localSubmissions updater shared by the two decision-tree
+// branches that render pending-submission cards. A batch submit (#832)
+// yields one row per tier — edits map-replace in place, new rows append
+// as optimistic PendingSubItems.
+const applySubmissionResults = useCallback(
+  (results: SubmitPriceResult[]) => {
+    for (const result of results) {
+      if (result.isEdit) {
+        setLocalSubmissions((prev) =>
+          prev.map((sub) =>
+            sub.id === result.id
+              ? {
+                  ...sub,
+                  priceMin: result.priceMin,
+                  priceMax: result.priceMax,
+                  tier: result.tier,
+                  vendor: result.vendor,
+                  howFound: result.howFound,
+                }
+              : sub,
+          ),
+        );
+      } else {
+        setLocalSubmissions((prev) => [
+          ...prev,
+          {
+            id: result.id,
+            priceMin: result.priceMin,
+            priceMax: result.priceMax,
+            tier: result.tier,
+            vendor: result.vendor,
+            howFound: result.howFound,
+            sourceCategory: result.sourceCategory,
+            note: null,
+            submitterHandle: null,
+            submittedAt: new Date().toISOString(),
+            confirmsCount: 0,
+            // Use the shared helper so the local-submission optimistic row
+            // picks up the UTC-midnight-correct imminent-policy denominator
+            // (#835 Copilot R5).
+            confirmsNeeded: corroborationConfirmsRequired(event.date),
+            isSubmitter: true,
+          },
+        ]);
       }
-    },
-    [event.date],
-  )
+    }
+  },
+  [event.date],
+);
 ```
 
 **(e)** Replace BOTH identical inline `onSuccess` closures (lines ~1638–1678 and ~1819–1859) with the shared callback:
 
 ```tsx
-          onSuccess={applySubmissionResults}
+onSuccess = { applySubmissionResults };
 ```
 
 Delete the full 41-line closure at each site — the `onWithdrawSuccess` props immediately below stay untouched.
@@ -332,7 +334,7 @@ There is no spotlight asset for this feature in `design/design_handoff_spotlight
 In `docs/superpowers/progress.md`, find the Beta-phase PR table (rows look like `| Beta | feat(...) ... | ✅ Complete (PR #NNN merged YYYY-MM-DD) |`) and append:
 
 ```markdown
-| Beta        | feat(web+api): multi-tier price submission — atomic batch endpoint + bundle form with repeatable tier panels (#832)                                                                                                        | ✅ Complete (PR #TBD merged 2026-07-10)        |
+| Beta | feat(web+api): multi-tier price submission — atomic batch endpoint + bundle form with repeatable tier panels (#832) | ✅ Complete (PR #TBD merged 2026-07-10) |
 ```
 
 Replace `#TBD` with the real PR number once `gh pr create` returns it (open the PR, then amend this row in a follow-up commit on the same branch — or fill it in immediately if the PR is opened before the final push). Use the actual open date, not necessarily 2026-07-10.

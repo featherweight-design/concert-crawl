@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import { type CSSProperties } from 'react'
-import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { resolveVenueCheckUrl } from '@/lib/admin/missing'
+import { type CSSProperties } from 'react';
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { resolveVenueCheckUrl } from '@/lib/admin/missing';
 
 const linkStyle: CSSProperties = {
   color: 'inherit',
   textDecoration: 'underline',
   textDecorationColor: 'var(--border)',
   textUnderlineOffset: 3,
-}
+};
 
 export interface MissingEventLinkProps {
-  eventId: string
-  title: string
-  style?: CSSProperties
+  eventId: string;
+  title: string;
+  style?: CSSProperties;
 }
 
 // The missing row points at the admin record rather than /events/[id]: the
@@ -34,12 +34,12 @@ export const MissingEventLink = ({
   >
     {title}
   </Link>
-)
+);
 
 export interface MissingVenueLinkProps {
-  venueId: string | null
-  venueName: string | null
-  style?: CSSProperties
+  venueId: string | null;
+  venueName: string | null;
+  style?: CSSProperties;
 }
 
 // venueName comes from a LEFT JOIN and venueId from the event row, so the two
@@ -50,9 +50,9 @@ export const MissingVenueLink = ({
   venueName,
   style,
 }: MissingVenueLinkProps) => {
-  const label = venueName ?? ADMIN_COPY.review.missing.venueUnknown
+  const label = venueName ?? ADMIN_COPY.review.missing.venueUnknown;
   if (venueId === null) {
-    return <span style={style}>{label}</span>
+    return <span style={style}>{label}</span>;
   }
   return (
     <Link
@@ -62,14 +62,14 @@ export const MissingVenueLink = ({
     >
       {label}
     </Link>
-  )
-}
+  );
+};
 
 export interface VenueCheckLinkProps {
-  title: string
-  eventUrl: string | null
-  sourceUrl: string | null
-  style?: CSSProperties
+  title: string;
+  eventUrl: string | null;
+  sourceUrl: string | null;
+  style?: CSSProperties;
 }
 
 export const VenueCheckLink = ({
@@ -78,8 +78,8 @@ export const VenueCheckLink = ({
   sourceUrl,
   style,
 }: VenueCheckLinkProps) => {
-  const href = resolveVenueCheckUrl(eventUrl, sourceUrl)
-  if (href === null) return null
+  const href = resolveVenueCheckUrl(eventUrl, sourceUrl);
+  if (href === null) return null;
   return (
     <a
       href={href}
@@ -101,5 +101,5 @@ export const VenueCheckLink = ({
       {ADMIN_COPY.review.missing.checkAtVenue}
       <ExternalLink size={11} aria-hidden="true" />
     </a>
-  )
-}
+  );
+};

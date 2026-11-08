@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import type { PublicCrewInvite } from './crew.js'
+import { describe, it, expect } from 'vitest';
+import type { PublicCrewInvite } from './crew.js';
 
 // Decision 4 / PR-3 Task 4: the invite landing shows crew identity and never
 // attendance. The type is the first line of that guarantee — there is no event
@@ -17,7 +17,7 @@ describe('PublicCrewInvite', () => {
       invitedByHandle: null,
       isFull: false,
       viewerIsMember: false,
-    }
+    };
 
     expect(Object.keys(invite).sort()).toEqual([
       'crewId',
@@ -27,6 +27,6 @@ describe('PublicCrewInvite', () => {
       'name',
       'patchSalt',
       'viewerIsMember',
-    ])
-  })
-})
+    ]);
+  });
+});

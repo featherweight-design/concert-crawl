@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useFormStatus } from 'react-dom'
-import type { Venue } from '@concert-crawl/types'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useFormStatus } from 'react-dom';
+import type { Venue } from '@concert-crawl/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface VenueFormProps {
-  venue?: Venue
-  action: (formData: FormData) => Promise<void>
+  venue?: Venue;
+  action: (formData: FormData) => Promise<void>;
 }
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
       {pending ? 'Saving…' : 'Save Venue'}
     </Button>
-  )
+  );
 }
 
 export function VenueForm({ venue, action }: VenueFormProps) {
@@ -86,5 +86,5 @@ export function VenueForm({ venue, action }: VenueFormProps) {
 
       <SubmitButton />
     </form>
-  )
+  );
 }

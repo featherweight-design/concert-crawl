@@ -10,23 +10,23 @@
 // signalled, so Sentry is flushed per request (lib/sentry-flush.ts), and
 // detached work is kept alive through `waitUntil` (lib/wait-until.ts).
 
-import './env.js'
-import './instrument.js'
-import { handle } from 'hono/vercel'
-import { createApp } from './app.js'
-import { withSentryFlush } from './lib/sentry-flush.js'
+import './env.js';
+import './instrument.js';
+import { handle } from 'hono/vercel';
+import { createApp } from './app.js';
+import { withSentryFlush } from './lib/sentry-flush.js';
 
 // Every request ends with a bounded Sentry flush under `waitUntil`, so an
 // exception the error handler captured is delivered before the instance is
 // frozen.
-const handler = withSentryFlush(handle(createApp()))
+const handler = withSentryFlush(handle(createApp()));
 
 // Vercel's Node runtime treats a default-exported function as a legacy
 // `(req, res)` handler, so the Web-standard handler is exported per method.
-export const GET = handler
-export const HEAD = handler
-export const OPTIONS = handler
-export const POST = handler
-export const PUT = handler
-export const PATCH = handler
-export const DELETE = handler
+export const GET = handler;
+export const HEAD = handler;
+export const OPTIONS = handler;
+export const POST = handler;
+export const PUT = handler;
+export const PATCH = handler;
+export const DELETE = handler;

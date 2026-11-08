@@ -1,12 +1,12 @@
-import { createLogger } from '@concert-crawl/logger'
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('crawler')
+const logger = createLogger('crawler');
 
 // The landing page is the only ISR-cached surface today, and the only path the
 // web endpoint accepts. Keep the two in sync if that ever grows.
-const LANDING_PATH = '/'
+const LANDING_PATH = '/';
 
-const REQUEST_TIMEOUT_MS = 5000
+const REQUEST_TIMEOUT_MS = 5000;
 
 /**
  * #847 — tell the web app to regenerate its ISR-cached landing page as soon as
@@ -25,22 +25,22 @@ export async function requestLandingRevalidationSafely(
   eventsInserted: number,
 ): Promise<void> {
   try {
-    if (eventsInserted <= 0) return
+    if (eventsInserted <= 0) return;
 
-    const secret = process.env['REVALIDATE_SECRET']
+    const secret = process.env['REVALIDATE_SECRET'];
     if (!secret) {
       logger.debug(
         'REVALIDATE_SECRET unset — skipping proactive revalidation (ISR window still applies)',
-      )
-      return
+      );
+      return;
     }
 
-    const baseUrl = process.env['ADMIN_URL']
+    const baseUrl = process.env['ADMIN_URL'];
     if (!baseUrl) {
       logger.warn(
         'ADMIN_URL unset — cannot reach the web revalidate endpoint (ISR window still applies)',
-      )
-      return
+      );
+      return;
     }
 
     const response = await fetch(
@@ -54,24 +54,24 @@ export async function requestLandingRevalidationSafely(
         body: JSON.stringify({ path: LANDING_PATH }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       },
-    )
+    );
 
     if (!response.ok) {
       logger.warn(
         { status: response.status, eventsInserted },
         'Proactive revalidation rejected — falling back to the ISR window',
-      )
-      return
+      );
+      return;
     }
 
     logger.info(
       { eventsInserted },
       'Requested proactive landing-page revalidation',
-    )
+    );
   } catch (revalidateErr: unknown) {
     logger.error(
       { revalidateErr },
       'Proactive revalidation failed — falling back to the ISR window',
-    )
+    );
   }
 }

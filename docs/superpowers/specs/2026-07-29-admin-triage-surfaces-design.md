@@ -13,7 +13,7 @@ out. For several weeks he didn't.
 
 The ticket was filed as a wiring problem — two admin notification surfaces were
 built and never mounted. Investigation found something more fundamental. The
-surface that *is* mounted, the dashboard "Needs attention" panel, structurally
+surface that _is_ mounted, the dashboard "Needs attention" panel, structurally
 cannot show the alerts that went unnoticed.
 
 The panel lists a venue when its crawl `status === 'failed'` or it has been
@@ -39,11 +39,11 @@ orphaned surfaces, which the new model makes redundant.
 `/admin` is the admin front door. The "Needs attention" panel sits near the top
 and currently lists:
 
-| Row | Source | Shape |
-| --- | --- | --- |
+| Row                     | Source                      | Shape                  |
+| ----------------------- | --------------------------- | ---------------------- |
 | Blocked or failed venue | `venue.status`, `blockedAt` | per-venue, capped at 3 |
-| Flagged events | pending event count | one aggregate row |
-| Price submissions | pending submission count | one aggregate row |
+| Flagged events          | pending event count         | one aggregate row      |
+| Price submissions       | pending submission count    | one aggregate row      |
 
 It is built from `AttentionFeed` (`components/admin/dashboard/AttentionFeed.tsx`)
 on the shared `Panel` primitive, with severity tints already tokenised as
@@ -134,7 +134,7 @@ with the read state that only existed to serve them.
 `/admin/prices/submissions`, `/admin/crawl`.
 
 Design does not need to mock anything for the removals — they are noted here so
-the panel is understood as *the* triage surface rather than one of three.
+the panel is understood as _the_ triage surface rather than one of three.
 
 ### 3.4 Two tiers: faults and queues
 
@@ -142,20 +142,20 @@ The panel carries two kinds of thing, and they are not equivalent.
 
 **Faults — something is broken.** Per-venue rows, severity-weighted:
 
-| Condition | Meaning |
-| --- | --- |
-| Blocked | venue returned 403 / 429 |
-| Failed | consecutive crawl failures |
-| Went dark | crawl succeeded, event count collapsed against baseline |
-| Ceiling suspected | crawl stuck at a suspiciously round count |
-| Coverage gap | URL coverage regressed |
+| Condition         | Meaning                                                 |
+| ----------------- | ------------------------------------------------------- |
+| Blocked           | venue returned 403 / 429                                |
+| Failed            | consecutive crawl failures                              |
+| Went dark         | crawl succeeded, event count collapsed against baseline |
+| Ceiling suspected | crawl stuck at a suspiciously round count               |
+| Coverage gap      | URL coverage regressed                                  |
 
 **Queues — nothing is broken, there is work waiting.** Aggregate count rows,
 visually subordinate:
 
-| Condition | Meaning |
-| --- | --- |
-| Flagged events | N events awaiting review |
+| Condition         | Meaning                  |
+| ----------------- | ------------------------ |
+| Flagged events    | N events awaiting review |
 | Price submissions | N prices awaiting review |
 
 **Why keep the queues on the front door at all,** given they each already have a
@@ -190,7 +190,7 @@ No timer, no manual dismiss, no resolved-but-lingering state.
 **Why:** the same query answers "is this broken" and "should this clear," so the
 panel and the alerting logic cannot drift apart. A dismiss affordance would
 reintroduce per-item state — the exact thing 3.2 and 3.3 remove — and would need
-its own re-arm rule (does a *worse* drop un-dismiss it?).
+its own re-arm rule (does a _worse_ drop un-dismiss it?).
 
 ---
 
@@ -248,14 +248,14 @@ its own re-arm rule (does a *worse* drop un-dismiss it?).
 
 ## 6. What's NOT in this brief
 
-| Out of scope | Owner |
-| --- | --- |
-| Consumer in-app notifications | #737 — separate system, `user_notification` rows, already designed |
-| Sentry and email delivery for went-dark | Closed by #1214; independent channels, unaffected |
-| Alert thresholds and detection logic | #624 / #1174 — the detection is correct and stays as-is |
-| `/admin/review` and `/admin/prices/submissions` | Survive unchanged as deep-dive surfaces |
-| The admin nav's existing badge system | Already built and working; no changes proposed |
-| Other dashboard panels | Only "Needs attention" is in scope |
+| Out of scope                                    | Owner                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| Consumer in-app notifications                   | #737 — separate system, `user_notification` rows, already designed |
+| Sentry and email delivery for went-dark         | Closed by #1214; independent channels, unaffected                  |
+| Alert thresholds and detection logic            | #624 / #1174 — the detection is correct and stays as-is            |
+| `/admin/review` and `/admin/prices/submissions` | Survive unchanged as deep-dive surfaces                            |
+| The admin nav's existing badge system           | Already built and working; no changes proposed                     |
+| Other dashboard panels                          | Only "Needs attention" is in scope                                 |
 
 ---
 
@@ -276,15 +276,15 @@ left open:
 - Row anatomy and information hierarchy for the three new crawl-health
   conditions — how much evidence to show inline versus behind the action link.
 - Whether the five fault conditions need five distinct glyphs, or fewer glyphs
-  differentiated by ink. (#737's handoff landed on *ink = valence, glyph =
-  event* for the consumer surface — worth considering for coherence, but this is
+  differentiated by ink. (#737's handoff landed on _ink = valence, glyph =
+  event_ for the consumer surface — worth considering for coherence, but this is
   a different system and Design should take it or leave it on its merits.)
 - The tier separator treatment.
 - Empty-state illustration, copy, and tone.
 - Whether persistence duration ("12d") is a first-class column, inline meta, or
   something else.
 - Whether the panel needs a total count in its header.
-- High-volume behaviour beyond simple stacking — the *content* is uncapped
+- High-volume behaviour beyond simple stacking — the _content_ is uncapped
   (locked), but presentation within that constraint is open.
 
 ---

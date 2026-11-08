@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Global broken-Spotify-connection banner on Browse (#763 PR 5,
 // spotify-states.jsx RevokeBanner mock). Renders only when the connection
@@ -6,19 +6,19 @@
 // 'revoked' (unlinked on Spotify's side). "Reconnect" opens the honesty-rail
 // handoff sheet; a healthy or absent connection renders nothing.
 
-import { useState } from 'react'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { OAuthHandoffSheet } from './OAuthHandoffSheet'
+import { useState } from 'react';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { OAuthHandoffSheet } from './OAuthHandoffSheet';
 
-const COPY = SPOTIFY_COPY.revokeBanner
+const COPY = SPOTIFY_COPY.revokeBanner;
 
 export const SpotifyStatusBanner = () => {
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
-  const { data } = useSpotifyConnection()
-  const [handoffOpen, setHandoffOpen] = useState(false)
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
+  const { data } = useSpotifyConnection();
+  const [handoffOpen, setHandoffOpen] = useState(false);
 
   // The connection query 404s with the flag off, so this would usually fall
   // through on its own. The explicit gate covers the case react-query still
@@ -29,10 +29,10 @@ export const SpotifyStatusBanner = () => {
     !data ||
     (data.status !== 'error' && data.status !== 'revoked')
   ) {
-    return null
+    return null;
   }
 
-  const variant = data.status === 'error' ? COPY.token : COPY.revoke
+  const variant = data.status === 'error' ? COPY.token : COPY.revoke;
 
   return (
     <section aria-label={COPY.regionAria} className="mb-5">
@@ -86,5 +86,5 @@ export const SpotifyStatusBanner = () => {
         onClose={() => setHandoffOpen(false)}
       />
     </section>
-  )
-}
+  );
+};

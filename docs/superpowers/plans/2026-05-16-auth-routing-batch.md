@@ -12,23 +12,24 @@
 
 ## Files
 
-| File | Change |
-|------|--------|
-| `apps/web/src/middleware.ts` | Add `unauthenticatedUrl` option to `auth.protect()` |
-| `apps/web/src/app/_components/LandingClientShell.tsx` | Add "Already have an account? Sign in →" link below CTA buttons |
-| `apps/api/src/routes/events.ts` | Conditionally add `clerkMiddleware(), requireAuth` to `GET /` |
-| `apps/api/src/routes/venues-public.ts` | Conditionally add `clerkMiddleware(), requireAuth` to all routes |
-| `apps/api/src/routes/search.ts` | Conditionally add `clerkMiddleware(), requireAuth` to all routes |
-| `apps/api/.env.example` | Document `REQUIRE_BETA_AUTH` |
-| `apps/api/src/routes/events.integration.test.ts` | Add tests for beta auth gate |
-| `apps/api/src/routes/venues-public.integration.test.ts` | Add tests for beta auth gate |
-| `apps/api/src/routes/search.integration.test.ts` | Add tests for beta auth gate |
+| File                                                    | Change                                                           |
+| ------------------------------------------------------- | ---------------------------------------------------------------- |
+| `apps/web/src/middleware.ts`                            | Add `unauthenticatedUrl` option to `auth.protect()`              |
+| `apps/web/src/app/_components/LandingClientShell.tsx`   | Add "Already have an account? Sign in →" link below CTA buttons  |
+| `apps/api/src/routes/events.ts`                         | Conditionally add `clerkMiddleware(), requireAuth` to `GET /`    |
+| `apps/api/src/routes/venues-public.ts`                  | Conditionally add `clerkMiddleware(), requireAuth` to all routes |
+| `apps/api/src/routes/search.ts`                         | Conditionally add `clerkMiddleware(), requireAuth` to all routes |
+| `apps/api/.env.example`                                 | Document `REQUIRE_BETA_AUTH`                                     |
+| `apps/api/src/routes/events.integration.test.ts`        | Add tests for beta auth gate                                     |
+| `apps/api/src/routes/venues-public.integration.test.ts` | Add tests for beta auth gate                                     |
+| `apps/api/src/routes/search.integration.test.ts`        | Add tests for beta auth gate                                     |
 
 ---
 
 ## Task 1: Fix unauthenticated redirect → `/` (#339)
 
 **Files:**
+
 - Modify: `apps/web/src/middleware.ts`
 
 The current `auth.protect()` call at line 54 uses Clerk's default redirect, which goes to `/sign-in`. It should redirect to `/` so unauthenticated users land on the landing page.
@@ -39,17 +40,17 @@ Replace line 54 in `apps/web/src/middleware.ts`:
 
 ```ts
 // Before
-  await auth.protect()
+await auth.protect();
 
 // After
-  await auth.protect({ unauthenticatedUrl: new URL('/', req.url).toString() })
+await auth.protect({ unauthenticatedUrl: new URL('/', req.url).toString() });
 ```
 
 Full updated middleware for reference:
 
 ```ts
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 const isAlwaysPublic = createRouteMatcher([
   '/',
@@ -57,52 +58,52 @@ const isAlwaysPublic = createRouteMatcher([
   '/sign-in(.*)',
   '/api/webhooks(.*)',
   '/legal(.*)',
-])
+]);
 
-const isInviteGated = createRouteMatcher(['/onboarding(.*)', '/sign-up(.*)'])
+const isInviteGated = createRouteMatcher(['/onboarding(.*)', '/sign-up(.*)']);
 
 const isPreAuth = createRouteMatcher([
   '/auth/code(.*)',
   '/onboarding(.*)',
   '/sign-up(.*)',
-])
+]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   if (userId) {
     if (isPreAuth(req)) {
-      return NextResponse.redirect(new URL('/events', req.url))
+      return NextResponse.redirect(new URL('/events', req.url));
     }
-    return
+    return;
   }
 
   if (req.nextUrl.pathname === '/') {
-    const inviteCookie = req.cookies.get('invite_verified')?.value
+    const inviteCookie = req.cookies.get('invite_verified')?.value;
     if (inviteCookie) {
-      return NextResponse.redirect(new URL('/onboarding', req.url))
+      return NextResponse.redirect(new URL('/onboarding', req.url));
     }
   }
 
-  if (isAlwaysPublic(req)) return
+  if (isAlwaysPublic(req)) return;
 
   if (isInviteGated(req)) {
-    const cookieValue = req.cookies.get('invite_verified')?.value
+    const cookieValue = req.cookies.get('invite_verified')?.value;
     if (!cookieValue) {
-      return NextResponse.redirect(new URL('/auth/code', req.url))
+      return NextResponse.redirect(new URL('/auth/code', req.url));
     }
-    return
+    return;
   }
 
-  await auth.protect({ unauthenticatedUrl: new URL('/', req.url).toString() })
-})
+  await auth.protect({ unauthenticatedUrl: new URL('/', req.url).toString() });
+});
 
 export const config = {
   matcher: [
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
-}
+};
 ```
 
 - [ ] **Step 2: Verify type-check passes**
@@ -126,6 +127,7 @@ git commit -m "fix(web): redirect unauthenticated users to / instead of sign-in"
 ## Task 2: Add Sign In path to landing page (#340)
 
 **Files:**
+
 - Modify: `apps/web/src/app/_components/LandingClientShell.tsx`
 
 Add a small "Already have an account? Sign in →" text link below the CTA button groups. It must appear in both the desktop block (line 178) and the mobile block (line 195). Use `var(--fg-muted)` colour so it doesn't compete with the two main CTAs.
@@ -135,7 +137,9 @@ Add a small "Already have an account? Sign in →" text link below the CTA butto
 In `apps/web/src/app/_components/LandingClientShell.tsx`, replace the desktop CTA block:
 
 ```tsx
-{/* CTAs — desktop only (horizontal row: code primary, waitlist secondary) */}
+{
+  /* CTAs — desktop only (horizontal row: code primary, waitlist secondary) */
+}
 <div className="hidden md:flex flex-col gap-3">
   <div className="flex flex-row gap-3">
     {ctaCode}
@@ -153,13 +157,15 @@ In `apps/web/src/app/_components/LandingClientShell.tsx`, replace the desktop CT
   >
     Already have an account? Sign in →
   </Link>
-</div>
+</div>;
 ```
 
 And replace the mobile CTA block:
 
 ```tsx
-{/* CTAs — mobile only (stacked: code primary, waitlist secondary) */}
+{
+  /* CTAs — mobile only (stacked: code primary, waitlist secondary) */
+}
 <div className="flex flex-col gap-3 md:hidden">
   {ctaCode}
   {ctaWaitlist}
@@ -175,7 +181,7 @@ And replace the mobile CTA block:
   >
     Already have an account? Sign in →
   </Link>
-</div>
+</div>;
 ```
 
 - [ ] **Step 2: Verify type-check passes**
@@ -198,6 +204,7 @@ git commit -m "feat(landing): add Sign In path for existing users below CTA butt
 ## Task 3: Document `REQUIRE_BETA_AUTH` env var (#106)
 
 **Files:**
+
 - Modify: `apps/api/.env.example`
 
 Add the env var before writing any code that uses it — keeps the intent clear.
@@ -224,6 +231,7 @@ git commit -m "chore(api): document REQUIRE_BETA_AUTH env var"
 ## Task 4: Lock down `GET /v1/venues` (#106)
 
 **Files:**
+
 - Modify: `apps/api/src/routes/venues-public.ts`
 - Modify: `apps/api/src/routes/venues-public.integration.test.ts`
 
@@ -234,17 +242,17 @@ In `apps/api/src/routes/venues-public.integration.test.ts`, add a new `describe`
 ```ts
 describe('GET /v1/venues — beta auth gate', () => {
   it('returns 401 when REQUIRE_BETA_AUTH=true and no token provided', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    process.env.REQUIRE_BETA_AUTH = 'true'
+    const original = process.env.REQUIRE_BETA_AUTH;
+    process.env.REQUIRE_BETA_AUTH = 'true';
     // Re-import to pick up the new env value
-    vi.resetModules()
-    const { createApp } = await import('../app.js')
-    const gatedApp = createApp()
-    const res = await gatedApp.request('/v1/venues')
-    process.env.REQUIRE_BETA_AUTH = original
-    expect(res.status).toBe(401)
-  })
-})
+    vi.resetModules();
+    const { createApp } = await import('../app.js');
+    const gatedApp = createApp();
+    const res = await gatedApp.request('/v1/venues');
+    process.env.REQUIRE_BETA_AUTH = original;
+    expect(res.status).toBe(401);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -260,23 +268,23 @@ Expected: new test FAILS (routes return 200, not 401).
 In `apps/api/src/routes/venues-public.ts`, add the conditional gate after the router is created:
 
 ```ts
-import { Hono } from 'hono'
-import { clerkMiddleware } from '@hono/clerk-auth'
-import { db, events, venues } from '@concert-crawl/db'
-import { type SQL, and, asc, eq, gte } from 'drizzle-orm'
-import { todayInTimezone } from '../lib/time.js'
-import { requireAuth } from '../middleware/auth.js'
+import { Hono } from 'hono';
+import { clerkMiddleware } from '@hono/clerk-auth';
+import { db, events, venues } from '@concert-crawl/db';
+import { type SQL, and, asc, eq, gte } from 'drizzle-orm';
+import { todayInTimezone } from '../lib/time.js';
+import { requireAuth } from '../middleware/auth.js';
 
-export const venuesPublicRouter = new Hono()
+export const venuesPublicRouter = new Hono();
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  venuesPublicRouter.use('*', clerkMiddleware(), requireAuth)
+  venuesPublicRouter.use('*', clerkMiddleware(), requireAuth);
 }
 
 // GET /v1/venues — list active venues
 venuesPublicRouter.get('/', async (ctx) => {
   // ... existing handler unchanged ...
-})
+});
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -299,6 +307,7 @@ git commit -m "feat(api): gate GET /v1/venues behind REQUIRE_BETA_AUTH"
 ## Task 5: Lock down `GET /v1/search/popular` (#106)
 
 **Files:**
+
 - Modify: `apps/api/src/routes/search.ts`
 - Modify: `apps/api/src/routes/search.integration.test.ts`
 
@@ -309,16 +318,16 @@ In `apps/api/src/routes/search.integration.test.ts`, add at the end:
 ```ts
 describe('GET /v1/search/popular — beta auth gate', () => {
   it('returns 401 when REQUIRE_BETA_AUTH=true and no token provided', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    process.env.REQUIRE_BETA_AUTH = 'true'
-    vi.resetModules()
-    const { createApp } = await import('../app.js')
-    const gatedApp = createApp()
-    const res = await gatedApp.request('/v1/search/popular')
-    process.env.REQUIRE_BETA_AUTH = original
-    expect(res.status).toBe(401)
-  })
-})
+    const original = process.env.REQUIRE_BETA_AUTH;
+    process.env.REQUIRE_BETA_AUTH = 'true';
+    vi.resetModules();
+    const { createApp } = await import('../app.js');
+    const gatedApp = createApp();
+    const res = await gatedApp.request('/v1/search/popular');
+    process.env.REQUIRE_BETA_AUTH = original;
+    expect(res.status).toBe(401);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -332,23 +341,23 @@ Expected: new test FAILS.
 - [ ] **Step 3: Add conditional auth to `search.ts`**
 
 ```ts
-import { Hono } from 'hono'
-import { clerkMiddleware } from '@hono/clerk-auth'
-import { db, events, userEvents, venues } from '@concert-crawl/db'
-import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
-import { todayInTimezone } from '../lib/time.js'
-import { requireAuth } from '../middleware/auth.js'
+import { Hono } from 'hono';
+import { clerkMiddleware } from '@hono/clerk-auth';
+import { db, events, userEvents, venues } from '@concert-crawl/db';
+import { and, asc, desc, eq, gte, sql } from 'drizzle-orm';
+import { todayInTimezone } from '../lib/time.js';
+import { requireAuth } from '../middleware/auth.js';
 
-export const searchRouter = new Hono()
+export const searchRouter = new Hono();
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  searchRouter.use('*', clerkMiddleware(), requireAuth)
+  searchRouter.use('*', clerkMiddleware(), requireAuth);
 }
 
 // GET /v1/search/popular — top 5 upcoming events by watcher count
 searchRouter.get('/popular', async (ctx) => {
   // ... existing handler unchanged ...
-})
+});
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -371,6 +380,7 @@ git commit -m "feat(api): gate GET /v1/search/popular behind REQUIRE_BETA_AUTH"
 ## Task 6: Lock down `GET /v1/events` (#106)
 
 **Files:**
+
 - Modify: `apps/api/src/routes/events.ts`
 - Modify: `apps/api/src/routes/events.integration.test.ts`
 
@@ -383,16 +393,16 @@ In `apps/api/src/routes/events.integration.test.ts`, add at the end of the file 
 ```ts
 describe('GET /v1/events — beta auth gate', () => {
   it('returns 401 when REQUIRE_BETA_AUTH=true and no token provided', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    process.env.REQUIRE_BETA_AUTH = 'true'
-    vi.resetModules()
-    const { createApp } = await import('../app.js')
-    const gatedApp = createApp()
-    const res = await gatedApp.request('/v1/events')
-    process.env.REQUIRE_BETA_AUTH = original
-    expect(res.status).toBe(401)
-  })
-})
+    const original = process.env.REQUIRE_BETA_AUTH;
+    process.env.REQUIRE_BETA_AUTH = 'true';
+    vi.resetModules();
+    const { createApp } = await import('../app.js');
+    const gatedApp = createApp();
+    const res = await gatedApp.request('/v1/events');
+    process.env.REQUIRE_BETA_AUTH = original;
+    expect(res.status).toBe(401);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -408,14 +418,14 @@ Expected: new test FAILS (list returns 200).
 In `apps/api/src/routes/events.ts`, after the `eventsRouter` is instantiated (find the line `export const eventsRouter = new Hono()`), add:
 
 ```ts
-import { clerkMiddleware as clerkMw } from '@hono/clerk-auth'
-import { requireAuth } from '../middleware/auth.js'
+import { clerkMiddleware as clerkMw } from '@hono/clerk-auth';
+import { requireAuth } from '../middleware/auth.js';
 
-export const eventsRouter = new Hono()
+export const eventsRouter = new Hono();
 
 if (process.env.REQUIRE_BETA_AUTH === 'true') {
   // Gate only the list route — /:id already uses optional clerkMiddleware
-  eventsRouter.use('/', clerkMw(), requireAuth)
+  eventsRouter.use('/', clerkMw(), requireAuth);
 }
 ```
 
@@ -480,10 +490,11 @@ Expected: all pass.
 In `docs/superpowers/progress.md`, update the three open rows to completed and add a 🔄 row for this PR:
 
 ```markdown
-| —           | fix: auth redirect → /, Sign In path, beta API gate (#339, #340, #106) | 🔄 Open |
+| — | fix: auth redirect → /, Sign In path, beta API gate (#339, #340, #106) | 🔄 Open |
 ```
 
 Replace the three existing open rows:
+
 ```
 | Pre-beta    | Auth redirect: unauthenticated routes → /login (#339)            | 🔄 Open (high)   |
 | Pre-beta    | Landing page Sign In path for existing users (#340)              | 🔄 Open (high)   |
@@ -493,7 +504,7 @@ Replace the three existing open rows:
 with:
 
 ```markdown
-| —           | Auth redirect → /, Sign In path, beta API gate (#339, #340, #106) | 🔄 Open |
+| — | Auth redirect → /, Sign In path, beta API gate (#339, #340, #106) | 🔄 Open |
 ```
 
 - [ ] **Step 5: Commit progress.md**

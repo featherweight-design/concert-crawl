@@ -1,11 +1,11 @@
-import { MonoLabel } from './MonoLabel'
+import { MonoLabel } from './MonoLabel';
 
 interface MetaCardProps {
-  title: string
-  action?: React.ReactNode
-  danger?: boolean
-  padding?: number
-  children: React.ReactNode
+  title: string;
+  action?: React.ReactNode;
+  danger?: boolean;
+  padding?: number;
+  children: React.ReactNode;
 }
 
 export const MetaCard = ({
@@ -42,4 +42,4 @@ export const MetaCard = ({
     </div>
     <div style={{ padding }}>{children}</div>
   </div>
-)
+);

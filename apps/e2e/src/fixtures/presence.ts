@@ -5,7 +5,7 @@
  * assignable to it.
  */
 interface VisibilityWaitable {
-  waitFor(options: { state: 'visible'; timeout: number }): Promise<void>
+  waitFor(options: { state: 'visible'; timeout: number }): Promise<void>;
 }
 
 /**
@@ -22,16 +22,16 @@ export async function isVisibleWithin(
   timeout: number,
 ): Promise<boolean> {
   try {
-    await locator.waitFor({ state: 'visible', timeout })
-    return true
+    await locator.waitFor({ state: 'visible', timeout });
+    return true;
   } catch (err) {
     // Both paths log: a skipped spec and a rethrown crash otherwise look
     // identical in a CI log, which is how a vacuously green suite hides.
     if (err instanceof Error && err.name === 'TimeoutError') {
-      console.warn(`isVisibleWithin: not visible within ${timeout}ms`)
-      return false
+      console.warn(`isVisibleWithin: not visible within ${timeout}ms`);
+      return false;
     }
-    console.error('isVisibleWithin: non-timeout failure, rethrowing', err)
-    throw err
+    console.error('isVisibleWithin: non-timeout failure, rethrowing', err);
+    throw err;
   }
 }

@@ -24,22 +24,23 @@ Conducted 2026-06-17 via direct HTML inspection (`WebFetch` + grep for platform 
 
 > **Note on the 13th venue.** Prod's `venues` table also contains **Levitt Pavilion** (slug `levitt-pavilion`), but `active = false`, so the daily/triggered crawls don't touch it. It's intentionally excluded from this audit. When/if Levitt is reactivated, an audit pass needs to identify its platform and onboard it through the same flow described in the AEG section below.
 
-| Venue | Platform | Evidence | Has direct API |
-|---|---|---|---|
-| Bluebird Theater | **AEG `template12`** | `.c-axs-event-card__wrapper`, AEG blob ref, venue ID **449** | Yes — `aegwebprod` JSON |
-| Fiddler's Green Amphitheatre | **AEG `template12`** | Same pattern, venue ID TBD | Yes |
-| Gothic Theatre | **AEG `template12`** | Same pattern, venue ID TBD | Yes |
-| Mission Ballroom | **AEG `template12`** | Same pattern, venue ID TBD | Yes |
-| Ogden Theatre | **AEG `template12`** | Same pattern, venue ID **420** | Yes |
-| The Fillmore Auditorium | **AEG `template12`** | Same pattern, venue ID TBD | Yes |
-| Cervantes' Masterpiece Ballroom | **Etix (WordPress wrapper)** | `etix.com/ticket/o/6122` references, RankMath SEO, `rhp-event-cta` classes | Etix has a partner-scoped JSON catalog API |
-| Larimer Lounge | **Etix (WordPress wrapper)** | Same pattern as Cervantes, partner_id 100 | Yes — same Etix API |
-| Marquis Theater | **Ticketmaster (Next.js SPA)** | `/_next/` chunks, Chakra UI, embedded TM event IDs (`1E006466CC26E0AB`-style) | Yes — Ticketmaster Discovery API (public, key-required) |
-| Summit Music Hall | **Ticketmaster (Next.js SPA)** | Same pattern as Marquis | Yes — same TM API |
-| Red Rocks Amphitheatre | **AXS** | `axs.com/events/` with `skin=redrocks`, WordPress CMS for content | AXS has a partner API; public discovery endpoints exist via the site itself |
-| Hi-Dive | **Bespoke (WordPress + Plot Bella theme)** | `wp-theme-plot-bella` class, no ticketing partner detected in initial scan | Unknown — keep on LLM cascade fallback |
+| Venue                           | Platform                                   | Evidence                                                                      | Has direct API                                                              |
+| ------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Bluebird Theater                | **AEG `template12`**                       | `.c-axs-event-card__wrapper`, AEG blob ref, venue ID **449**                  | Yes — `aegwebprod` JSON                                                     |
+| Fiddler's Green Amphitheatre    | **AEG `template12`**                       | Same pattern, venue ID TBD                                                    | Yes                                                                         |
+| Gothic Theatre                  | **AEG `template12`**                       | Same pattern, venue ID TBD                                                    | Yes                                                                         |
+| Mission Ballroom                | **AEG `template12`**                       | Same pattern, venue ID TBD                                                    | Yes                                                                         |
+| Ogden Theatre                   | **AEG `template12`**                       | Same pattern, venue ID **420**                                                | Yes                                                                         |
+| The Fillmore Auditorium         | **AEG `template12`**                       | Same pattern, venue ID TBD                                                    | Yes                                                                         |
+| Cervantes' Masterpiece Ballroom | **Etix (WordPress wrapper)**               | `etix.com/ticket/o/6122` references, RankMath SEO, `rhp-event-cta` classes    | Etix has a partner-scoped JSON catalog API                                  |
+| Larimer Lounge                  | **Etix (WordPress wrapper)**               | Same pattern as Cervantes, partner_id 100                                     | Yes — same Etix API                                                         |
+| Marquis Theater                 | **Ticketmaster (Next.js SPA)**             | `/_next/` chunks, Chakra UI, embedded TM event IDs (`1E006466CC26E0AB`-style) | Yes — Ticketmaster Discovery API (public, key-required)                     |
+| Summit Music Hall               | **Ticketmaster (Next.js SPA)**             | Same pattern as Marquis                                                       | Yes — same TM API                                                           |
+| Red Rocks Amphitheatre          | **AXS**                                    | `axs.com/events/` with `skin=redrocks`, WordPress CMS for content             | AXS has a partner API; public discovery endpoints exist via the site itself |
+| Hi-Dive                         | **Bespoke (WordPress + Plot Bella theme)** | `wp-theme-plot-bella` class, no ticketing partner detected in initial scan    | Unknown — keep on LLM cascade fallback                                      |
 
 **Distribution:**
+
 - **AEG: 50% (6 venues)** — highest payoff per adapter LOC
 - **Etix: 17% (2 venues)**
 - **Ticketmaster: 17% (2 venues)**
@@ -89,11 +90,11 @@ The existing `packages/crawler-core/src/lib/fetcher.ts` stays as-is — it handl
 
 ```ts
 // fetchers/index.ts
-import type { NormalizedEvent } from '../../types.js'
-import type { Venue } from '@concert-crawl/db'
+import type { NormalizedEvent } from '../../types.js';
+import type { Venue } from '@concert-crawl/db';
 
 export interface PlatformFetchResult {
-  events: NormalizedEvent[]
+  events: NormalizedEvent[];
   /**
    * The platform endpoint the adapter actually hit (e.g. the AEG blob
    * URL). Used in the crawler's structured logs only — gives an admin a
@@ -103,40 +104,38 @@ export interface PlatformFetchResult {
    * to be the venue's human-visitable calendar URL (set by the adapter
    * when normalizing each event — see the AEG mapping table below).
    */
-  sourceUrl: string
+  sourceUrl: string;
   /** Platform-specific metadata we want logged (e.g. JSON page count, fetch latency) */
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>;
 }
 
 export interface PlatformFetcher {
-  readonly platform: VenuePlatform
+  readonly platform: VenuePlatform;
   /** Returns false if this fetcher can't handle the venue (e.g. missing platformVenueId) */
-  canHandle(venue: Venue): boolean
-  fetch(venue: Venue, opts: { crawlDelayMs: number }): Promise<PlatformFetchResult>
+  canHandle(venue: Venue): boolean;
+  fetch(
+    venue: Venue,
+    opts: { crawlDelayMs: number },
+  ): Promise<PlatformFetchResult>;
 }
 
-export type VenuePlatform =
-  | 'aeg'
-  | 'etix'
-  | 'ticketmaster'
-  | 'axs'
-  | 'bespoke'
+export type VenuePlatform = 'aeg' | 'etix' | 'ticketmaster' | 'axs' | 'bespoke';
 ```
 
 ### Dispatcher
 
 ```ts
 // fetchers/dispatch.ts
-import { aegFetcher } from './aeg.js'
+import { aegFetcher } from './aeg.js';
 // import { etixFetcher } from './etix.js' (later)
 
-const FETCHERS: PlatformFetcher[] = [aegFetcher /*, etixFetcher, ...*/]
+const FETCHERS: PlatformFetcher[] = [aegFetcher /*, etixFetcher, ...*/];
 
 export function dispatch(venue: Venue): PlatformFetcher | null {
-  if (!venue.platform) return null
-  const fetcher = FETCHERS.find((fch) => fch.platform === venue.platform)
-  if (!fetcher) return null
-  return fetcher.canHandle(venue) ? fetcher : null
+  if (!venue.platform) return null;
+  const fetcher = FETCHERS.find((fch) => fch.platform === venue.platform);
+  if (!fetcher) return null;
+  return fetcher.canHandle(venue) ? fetcher : null;
 }
 ```
 
@@ -204,16 +203,16 @@ No auth required (it's a CDN blob). Response is a JSON object with a top-level `
 
 ### Mapping to `NormalizedEvent`
 
-| AEG field | `NormalizedEvent` field | Notes |
-|---|---|---|
-| `name` | `title` | Direct |
-| `artistName` | `artist` | Direct |
-| `dateString` | `date` | Parse to ISO `YYYY-MM-DD` in venue's tz |
-| `time` | `showTime` | Parse to `HH:MM:SS` |
-| `doorsTime` (when present) | `doorsTime` | Parse to `HH:MM:SS` |
-| `eventUrl` | `ticketUrl` | Direct |
-| `imageUrl` (when present) | `imageUrl` | Direct |
-| (n/a) | `sourceUrl` | The venue's canonical calendar URL (`venue.websiteUrl`), matching the existing LLM path so `events.source_url` continues to point at the human-visitable page. The actual JSON endpoint we hit is recorded separately in the crawler's structured logs and in `PlatformFetchResult.sourceUrl`, not on the event row. |
+| AEG field                  | `NormalizedEvent` field | Notes                                                                                                                                                                                                                                                                                                                |
+| -------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                     | `title`                 | Direct                                                                                                                                                                                                                                                                                                               |
+| `artistName`               | `artist`                | Direct                                                                                                                                                                                                                                                                                                               |
+| `dateString`               | `date`                  | Parse to ISO `YYYY-MM-DD` in venue's tz                                                                                                                                                                                                                                                                              |
+| `time`                     | `showTime`              | Parse to `HH:MM:SS`                                                                                                                                                                                                                                                                                                  |
+| `doorsTime` (when present) | `doorsTime`             | Parse to `HH:MM:SS`                                                                                                                                                                                                                                                                                                  |
+| `eventUrl`                 | `ticketUrl`             | Direct                                                                                                                                                                                                                                                                                                               |
+| `imageUrl` (when present)  | `imageUrl`              | Direct                                                                                                                                                                                                                                                                                                               |
+| (n/a)                      | `sourceUrl`             | The venue's canonical calendar URL (`venue.websiteUrl`), matching the existing LLM path so `events.source_url` continues to point at the human-visitable page. The actual JSON endpoint we hit is recorded separately in the crawler's structured logs and in `PlatformFetchResult.sourceUrl`, not on the event row. |
 
 `confidence` is set to `1.0` for platform fetches (no LLM uncertainty).
 
@@ -234,6 +233,7 @@ UPDATE venues SET platform = 'aeg', platform_venue_id = '420'
 We already know Bluebird = 449 and Ogden = 420 from the audit. The other four IDs will be discovered during the implementation PR by hitting their current pages once and grepping for the AEG blob URL pattern.
 
 After the AEG adapter ships and these venues are onboarded:
+
 - The existing `crawlWaitForSelector = .c-axs-event-card__wrapper` becomes dead code for them (the platform path doesn't use Playwright) — leave it set anyway as a defensive fallback in case the platform is unreachable and we need to fall back to LLM.
 - The `crawl_mode = 'browser'` setting similarly becomes irrelevant on the platform path but harmless.
 
@@ -260,6 +260,7 @@ Platform fetches don't go through `confidenceScore < AUTO_APPROVE_THRESHOLD` sin
 ### Risk: AEG outage takes out 6 venues simultaneously
 
 Acknowledged. The fallback to LLM path mitigates partially. Counter-arguments:
+
 - The current LLM path already takes out the same 6 venues simultaneously every time AEG changes their hydration timing (we've seen this).
 - Sentry + the event-count-drop alert (#624) will surface the regression within a single crawl cycle.
 

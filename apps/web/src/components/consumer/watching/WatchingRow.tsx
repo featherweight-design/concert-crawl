@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import type { WatchingShow } from '@concert-crawl/types'
-import { EventRow, fromWatchingShow } from '@/components/consumer/event-row'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { GoingNudge } from '@/components/consumer/going/GoingNudge'
-import { isInNudgeWindow } from '@/lib/going/nudge-window'
-import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal'
-import type { NudgeOutcome } from '@/lib/going/nudge-dismissal'
-import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
-import { isOptimisticWatchRow } from '@/lib/queries/optimistic-watch-row'
+import { useEffect, useState } from 'react';
+import type { WatchingShow } from '@concert-crawl/types';
+import { EventRow, fromWatchingShow } from '@/components/consumer/event-row';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { GoingNudge } from '@/components/consumer/going/GoingNudge';
+import { isInNudgeWindow } from '@/lib/going/nudge-window';
+import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal';
+import type { NudgeOutcome } from '@/lib/going/nudge-dismissal';
+import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
+import { isOptimisticWatchRow } from '@/lib/queries/optimistic-watch-row';
 
-const COPY = CONSUMER_COPY.watching
+const COPY = CONSUMER_COPY.watching;
 
 interface WatchingRowProps {
-  show: WatchingShow
-  onRemove: (userEventId: string) => void
+  show: WatchingShow;
+  onRemove: (userEventId: string) => void;
 }
 
 /**
@@ -25,19 +25,19 @@ interface WatchingRowProps {
  * four-line contract and spends none of the chip budget.
  */
 export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
-  const attending = useAttendingToggle()
+  const attending = useAttendingToggle();
 
   // `undefined` means "not read yet". The record lives in localStorage, so the
   // server render can't know it — starting at undefined keeps the first client
   // paint identical to the server's and avoids a hydration mismatch.
   const [answered, setAnswered] = useState<NudgeOutcome | null | undefined>(
     undefined,
-  )
+  );
   // Keyed on the watch row, so unwatching and re-watching clears the answer and
   // the nudge is free to ask again.
   useEffect(() => {
-    setAnswered(readNudgeState(show.userEventId))
-  }, [show.userEventId])
+    setAnswered(readNudgeState(show.userEventId));
+  }, [show.userEventId]);
 
   // An optimistic row's id is a placeholder the server response replaces, so an
   // answer recorded against it would be forgotten the moment the real id lands
@@ -45,12 +45,12 @@ export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
   const nudging =
     answered === null &&
     !isOptimisticWatchRow(show.userEventId) &&
-    isInNudgeWindow(show)
+    isInNudgeWindow(show);
 
   const answer = (outcome: NudgeOutcome) => {
-    markNudge(show.userEventId, outcome)
-    setAnswered(outcome)
-  }
+    markNudge(show.userEventId, outcome);
+    setAnswered(outcome);
+  };
 
   return (
     <EventRow
@@ -92,14 +92,14 @@ export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
                 // is only written once the server agrees: persisting up front
                 // would silently swallow a failed commitment and leave no way
                 // to retry.
-                setAnswered('going')
+                setAnswered('going');
                 attending.mutate(
                   { eventId: show.eventId, going: true },
                   {
                     onSuccess: () => markNudge(show.userEventId, 'going'),
                     onError: () => setAnswered(null),
                   },
-                )
+                );
               }}
               onDismiss={() => answer('dismissed')}
             />
@@ -107,5 +107,5 @@ export const WatchingRow = ({ show, onRemove }: WatchingRowProps) => {
         ) : null
       }
     />
-  )
-}
+  );
+};

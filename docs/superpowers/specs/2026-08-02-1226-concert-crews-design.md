@@ -10,7 +10,7 @@
 
 There is no way to coordinate a show with the people you would actually go with. The app knows who is watching a show, and since #70 it knows who is attending — but that signal never reaches your friends. Deciding to go to a show is a social act, and the app is silent on it.
 
-A **Concert Crew** is a small, invite-only group of friends. Its job is to answer one question well: *what are my people going to?*
+A **Concert Crew** is a small, invite-only group of friends. Its job is to answer one question well: _what are my people going to?_
 
 This was scoped in the original 2026-04-23 spec ("'I'm going' + friend groups") and quietly dropped from the 2026-05-09 tier table with no note. This brief is the deliberate revival.
 
@@ -20,15 +20,15 @@ This was scoped in the original 2026-04-23 spec ("'I'm going' + friend groups") 
 
 What already exists, and what Design should not assume.
 
-| Thing | State |
-|---|---|
-| `userProfiles.handle` | **Exists**, unique, populated. #762's watcher rail already renders handles + `avatarColor` monograms. Issue #86 covers only the public profile *page* at `/u/<handle>` — the handle itself is shipped. |
-| `userEvents.attendingAt` | **The only attendance signal.** Nullable timestamp. The only *user-facing* write path is `GoingButton` on event detail; backend maintenance also touches it (admin event merge coalesces it, the daily billing job purges it only at the end of the 90-day preserve-then-purge window, never on a simple lapse — so attendance stays stable when a user drops below Premium). The legacy `status` enum's `going`/`interested` values are dead. |
-| Follow / friend graph | **Does not exist.** `userArtistFollows` is artist follows. Crews are net-new schema. |
-| Who else is watching (#762) | Shipped 2026-07-30 on event detail. Names up to 3 handles, folds the rest into a count, degrades to count-only when nobody has a handle. Design principle: **don't fake identity.** |
-| Notifications (#737) | Shipped 2026-08-02. In-app bell plus web push. Categories are `watch.*`, `contest.*`, `spotify.new_show`. Push eligibility is a curated allowlist — `contest.*` is deliberately bell-only. **There is no batching or digest layer of any kind.** |
-| Entitlements | Keys are `watching`, `concert-history`, `calendar-export`, `following`, `alerts`, `spotify-sync`, `price-drop-alerts`. Cell states: `visible-active`, `paywall-on-tap`, `tier-picker-on-tap`, `hidden`. **There is no crew key.** |
-| Sign-up gating | `/sign-up` is invite-code-gated until `NEXT_PUBLIC_PUBLIC_BROWSE` flips at the Aug 18–22 launch window. Crews is `phase: launch` and lands on the public side of that flip. |
+| Thing                       | State                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `userProfiles.handle`       | **Exists**, unique, populated. #762's watcher rail already renders handles + `avatarColor` monograms. Issue #86 covers only the public profile _page_ at `/u/<handle>` — the handle itself is shipped.                                                                                                                                                                                                                                         |
+| `userEvents.attendingAt`    | **The only attendance signal.** Nullable timestamp. The only _user-facing_ write path is `GoingButton` on event detail; backend maintenance also touches it (admin event merge coalesces it, the daily billing job purges it only at the end of the 90-day preserve-then-purge window, never on a simple lapse — so attendance stays stable when a user drops below Premium). The legacy `status` enum's `going`/`interested` values are dead. |
+| Follow / friend graph       | **Does not exist.** `userArtistFollows` is artist follows. Crews are net-new schema.                                                                                                                                                                                                                                                                                                                                                           |
+| Who else is watching (#762) | Shipped 2026-07-30 on event detail. Names up to 3 handles, folds the rest into a count, degrades to count-only when nobody has a handle. Design principle: **don't fake identity.**                                                                                                                                                                                                                                                            |
+| Notifications (#737)        | Shipped 2026-08-02. In-app bell plus web push. Categories are `watch.*`, `contest.*`, `spotify.new_show`. Push eligibility is a curated allowlist — `contest.*` is deliberately bell-only. **There is no batching or digest layer of any kind.**                                                                                                                                                                                               |
+| Entitlements                | Keys are `watching`, `concert-history`, `calendar-export`, `following`, `alerts`, `spotify-sync`, `price-drop-alerts`. Cell states: `visible-active`, `paywall-on-tap`, `tier-picker-on-tap`, `hidden`. **There is no crew key.**                                                                                                                                                                                                              |
+| Sign-up gating              | `/sign-up` is invite-code-gated until `NEXT_PUBLIC_PUBLIC_BROWSE` flips at the Aug 18–22 launch window. Crews is `phase: launch` and lands on the public side of that flip.                                                                                                                                                                                                                                                                    |
 
 ---
 
@@ -38,7 +38,7 @@ Each was resolved in the 2026-08-02 brainstorm. Rejected options are recorded wi
 
 ### 3.1 The crew is a lens on your people
 
-The payoff is scanning: *what are my people going to?* Crews are discovery-shaped, not roll-call-shaped.
+The payoff is scanning: _what are my people going to?_ Crews are discovery-shaped, not roll-call-shaped.
 
 **Rejected — per-event coordination as the core.** It only pays off on shows you already found, and it stacks straight onto #762's rail. **Rejected — notification-first.** It would make the app's first social notification category carry the entire feature, with no batching layer to protect it.
 
@@ -51,10 +51,10 @@ The shared past is the part that makes the destination worth revisiting when not
 
 ### 3.3 A crew show is defined by tense
 
-| Tense | Bar | Why |
-|---|---|---|
-| Upcoming | **≥ 1 member going** | Forward-looking is discovery. Finding out one friend is going alone is precisely the moment you decide to join them. |
-| Past | **≥ 2 members going** | A memory is only shared if you were both there. |
+| Tense    | Bar                   | Why                                                                                                                  |
+| -------- | --------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Upcoming | **≥ 1 member going**  | Forward-looking is discovery. Finding out one friend is going alone is precisely the moment you decide to join them. |
+| Past     | **≥ 2 members going** | A memory is only shared if you were both there.                                                                      |
 
 A member's solo past show stays in their own Concerts and never appears in the crew's history. This one rule is what stops the crew home from degrading into a merged activity feed.
 
@@ -70,7 +70,7 @@ Consequences: the Browse lens needs a crew picker, and the destination is list-t
 
 ### 3.5 A crew has a name and generative art — on its own visual system
 
-Crews must **not** reuse the generative language built for event and venue imagery. A crew drawn by the same generator as an event poster reads as another piece of content rather than as *your people*, and it rings hollow. Design owns what the crew's visual language is.
+Crews must **not** reuse the generative language built for event and venue imagery. A crew drawn by the same generator as an event poster reads as another piece of content rather than as _your people_, and it rings hollow. Design owns what the crew's visual language is.
 
 One constraint: the art must be seeded by something **stable** to the crew's own identity, not by its membership. An identity that reshuffles when someone joins is not something you can recognize in a picker.
 
@@ -102,9 +102,9 @@ This honours #762's "don't fake identity" principle — crew members are named p
 
 ### 3.9 Free to join, Premium to create
 
-| Action | Tier |
-|---|---|
-| Join a crew | **Free** |
+| Action        | Tier        |
+| ------------- | ----------- |
+| Join a crew   | **Free**    |
 | Create a crew | **Premium** |
 
 A new `crews` entitlement key is required. The invite link must never dead-end a new user at a paywall — that is what keeps the growth loop working, the same reasoning that kept Watching free because it drives share virality. Creating is the wow-factor for paid users the ticket is chasing, and every crew has exactly one payer: the person who wanted it enough to organize it.
@@ -113,7 +113,7 @@ A new `crews` entitlement key is required. The invite link must never dead-end a
 
 ### 3.10 There is no "can't go" signal in v1
 
-The lens answers *who is going*. Not-going is the default state everyone is already in. A decline would mean every member owes every crew show an answer, turning a calendar you enjoy scanning into an inbox of unanswered RSVPs — and it would need a third attendance state that leaks into Concert History and #1357.
+The lens answers _who is going_. Not-going is the default state everyone is already in. A decline would mean every member owes every crew show an answer, turning a calendar you enjoy scanning into an inbox of unanswered RSVPs — and it would need a third attendance state that leaks into Concert History and #1357.
 
 Ship the lens; see whether anyone misses the decline. This deliberately narrows the ticket's Shape section.
 
@@ -125,7 +125,7 @@ A new `crew.*` category that lands in the in-app bell and is **excluded from pus
 
 ### 3.12 A lapsed subscription never touches an existing crew
 
-Premium buys the act of creating a crew, not the crew's continued existence. On lapse, the crew, its roster, its lens and its history all keep working for everyone. What the creator loses is the ability to start *another* one, which becomes `paywall-on-tap`.
+Premium buys the act of creating a crew, not the crew's continued existence. On lapse, the crew, its roster, its lens and its history all keep working for everyone. What the creator loses is the ability to start _another_ one, which becomes `paywall-on-tap`.
 
 A payment problem must not punish four people who never paid anything, and it must not make a private billing state visible to the group. This matches the grandfather-forever price promise and #782's non-punitive voice.
 
@@ -164,16 +164,16 @@ Deliverables land in `design/design_handoff_concert_crews/`, mirroring the struc
 
 ## 6. What is NOT in this brief
 
-| Out of scope | Owner |
-|---|---|
-| Any in-app communication — chat, threads, comments, DMs | Permanently out. Reaching out happens where these people already talk. |
-| Public crews, crew discovery, follow/follower semantics | Permanently out. |
-| Invite by handle | Mid-term follow-up, filed separately |
-| Public profile pages at `/u/<handle>` | #86 |
-| An explicit "can't go" signal | Deferred; revisit only if members ask |
-| Push delivery or notification batching for crew activity | Deferred with §3.11 |
-| Attending signal on event detail for non-crew users | #1096 — deliberately parked |
-| A crew-scale share artifact | Adjacent to #85 Passport; not this cycle |
+| Out of scope                                             | Owner                                                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Any in-app communication — chat, threads, comments, DMs  | Permanently out. Reaching out happens where these people already talk. |
+| Public crews, crew discovery, follow/follower semantics  | Permanently out.                                                       |
+| Invite by handle                                         | Mid-term follow-up, filed separately                                   |
+| Public profile pages at `/u/<handle>`                    | #86                                                                    |
+| An explicit "can't go" signal                            | Deferred; revisit only if members ask                                  |
+| Push delivery or notification batching for crew activity | Deferred with §3.11                                                    |
+| Attending signal on event detail for non-crew users      | #1096 — deliberately parked                                            |
+| A crew-scale share artifact                              | Adjacent to #85 Passport; not this cycle                               |
 
 ---
 

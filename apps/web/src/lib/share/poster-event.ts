@@ -1,9 +1,9 @@
-import type { EventDetailResponse } from '@concert-crawl/types'
+import type { EventDetailResponse } from '@concert-crawl/types';
 import {
   formatEventDate,
   formatShowTime,
-} from '@/components/consumer/definitions/lib'
-import { DEFAULT_POSTER_STATE, type PosterState } from '@/lib/share/taglines'
+} from '@/components/consumer/definitions/lib';
+import { DEFAULT_POSTER_STATE, type PosterState } from '@/lib/share/taglines';
 
 /**
  * Everything the poster draws, and nothing else.
@@ -15,24 +15,24 @@ import { DEFAULT_POSTER_STATE, type PosterState } from '@/lib/share/taglines'
  * over its own input and every fixture in the tests is a real card.
  */
 export interface PosterEvent {
-  id: string
-  artist: string
-  venue: string
-  city: string
+  id: string;
+  artist: string;
+  venue: string;
+  city: string;
   /** Uppercase short date, e.g. `FRI, MAR 14`. */
-  dateShort: string
+  dateShort: string;
   /** Localised show time, or `null` when the venue never published one. */
-  showTime: string | null
-  state: PosterState
+  showTime: string | null;
+  state: PosterState;
   /** `↓ $12` for a price drop; `null` for every other state. */
-  dropLabel: string | null
+  dropLabel: string | null;
 }
 
 const parseAmount = (raw: string | null | undefined): number | null => {
-  if (raw === null || raw === undefined) return null
-  const value = Number.parseFloat(raw)
-  return Number.isFinite(value) ? value : null
-}
+  if (raw === null || raw === undefined) return null;
+  const value = Number.parseFloat(raw);
+  return Number.isFinite(value) ? value : null;
+};
 
 /**
  * Which of the three tagline states this event is in.
@@ -42,30 +42,30 @@ const parseAmount = (raw: string | null | undefined): number | null => {
  * the tagline bank's fallback.
  */
 export const posterStateFor = (event: {
-  priceStatus?: 'live' | 'soldout' | null
-  ticketPriceMin?: string | null
-  ticketPriceOpenedAt?: number | null
+  priceStatus?: 'live' | 'soldout' | null;
+  ticketPriceMin?: string | null;
+  ticketPriceOpenedAt?: number | null;
 }): PosterState => {
-  if (event.priceStatus === 'soldout') return 'soldout'
-  const current = parseAmount(event.ticketPriceMin)
-  const opened = event.ticketPriceOpenedAt ?? null
-  if (current !== null && opened !== null && current < opened) return 'drop'
-  return DEFAULT_POSTER_STATE
-}
+  if (event.priceStatus === 'soldout') return 'soldout';
+  const current = parseAmount(event.ticketPriceMin);
+  const opened = event.ticketPriceOpenedAt ?? null;
+  if (current !== null && opened !== null && current < opened) return 'drop';
+  return DEFAULT_POSTER_STATE;
+};
 
 /**
  * The `↓ $XX` the state pill carries in the drop state (handoff README §1).
  * Null for every other state, so the pill renders label-only.
  */
 export const posterDropLabel = (event: {
-  ticketPriceMin?: string | null
-  ticketPriceOpenedAt?: number | null
+  ticketPriceMin?: string | null;
+  ticketPriceOpenedAt?: number | null;
 }): string | null => {
-  const current = parseAmount(event.ticketPriceMin)
-  const opened = event.ticketPriceOpenedAt ?? null
-  if (current === null || opened === null || current >= opened) return null
-  return `↓ $${Math.round(opened - current)}`
-}
+  const current = parseAmount(event.ticketPriceMin);
+  const opened = event.ticketPriceOpenedAt ?? null;
+  if (current === null || opened === null || current >= opened) return null;
+  return `↓ $${Math.round(opened - current)}`;
+};
 
 /** Uppercase because the poster's mono date stamp is set in caps. */
 const shortDate = (date: string, timezone: string): string =>
@@ -73,7 +73,7 @@ const shortDate = (date: string, timezone: string): string =>
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-  }).toUpperCase()
+  }).toUpperCase();
 
 /**
  * The minimum an event has to be for a poster to be drawn from it.
@@ -84,14 +84,14 @@ const shortDate = (date: string, timezone: string): string =>
  * compile time, so the two cannot drift apart unnoticed.
  */
 export interface PosterSource {
-  id: string
-  artist: string
-  date: string
-  showTime: string | null
-  venue: { name: string; city: string; timezone: string }
-  priceStatus?: 'live' | 'soldout' | null
-  ticketPriceMin?: string | null
-  ticketPriceOpenedAt?: number | null
+  id: string;
+  artist: string;
+  date: string;
+  showTime: string | null;
+  venue: { name: string; city: string; timezone: string };
+  priceStatus?: 'live' | 'soldout' | null;
+  ticketPriceMin?: string | null;
+  ticketPriceOpenedAt?: number | null;
 }
 
 // Compile-time proof that the API's event still fits the poster's input. If a
@@ -99,9 +99,9 @@ export interface PosterSource {
 // silently going blank.
 const _assertApiEventIsPosterSource: (
   event: EventDetailResponse,
-) => PosterSource = (event) => event
+) => PosterSource = (event) => event;
 
-void _assertApiEventIsPosterSource
+void _assertApiEventIsPosterSource;
 
 /**
  * Map one event onto the poster's own model — the single place the two shapes
@@ -116,4 +116,4 @@ export const toPosterEvent = (event: PosterSource): PosterEvent => ({
   showTime: formatShowTime(event.showTime),
   state: posterStateFor(event),
   dropLabel: posterDropLabel(event),
-})
+});

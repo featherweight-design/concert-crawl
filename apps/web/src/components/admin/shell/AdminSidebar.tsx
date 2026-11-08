@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { useClerk } from '@clerk/nextjs'
-import * as LucideIcons from 'lucide-react'
-import { LogOut } from 'lucide-react'
-import { NAV_V2, type NavItem } from './nav'
-import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
-import { CCMark } from '@/components/brand/cc-mark'
-import { CCWordmark } from '@/components/brand/cc-wordmark'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
+import * as LucideIcons from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { NAV_V2, type NavItem } from './nav';
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
+import { CCMark } from '@/components/brand/cc-mark';
+import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-type SidebarMode = 'full' | 'rail' | 'auto'
-const STORAGE_KEY = 'cc-admin-sidebar'
+type SidebarMode = 'full' | 'rail' | 'auto';
+const STORAGE_KEY = 'cc-admin-sidebar';
 
 interface AdminSidebarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
+  badgeCounts?: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -26,9 +26,9 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 const NavLink = ({
   item,
@@ -37,14 +37,14 @@ const NavLink = ({
   count,
   href,
 }: {
-  item: NavItem
-  mode: 'full' | 'rail'
-  active: boolean
-  count: number
-  href: string
+  item: NavItem;
+  mode: 'full' | 'rail';
+  active: boolean;
+  count: number;
+  href: string;
 }) => {
-  const [hovered, setHovered] = useState(false)
-  const showBadge = item.badge !== undefined
+  const [hovered, setHovered] = useState(false);
+  const showBadge = item.badge !== undefined;
 
   return (
     <Link
@@ -131,74 +131,74 @@ const NavLink = ({
         />
       )}
     </Link>
-  )
-}
+  );
+};
 
 export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
-  const [mode, setMode] = useState<SidebarMode>('auto')
-  const [viewportMode, setViewportMode] = useState<'full' | 'rail'>('full')
-  const [signOutOpen, setSignOutOpen] = useState(false)
-  const userCardRef = useRef<HTMLDivElement>(null)
-  const { signOut } = useClerk()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<SidebarMode>('auto');
+  const [viewportMode, setViewportMode] = useState<'full' | 'rail'>('full');
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const userCardRef = useRef<HTMLDivElement>(null);
+  const { signOut } = useClerk();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Preserve the source Review tab on the Review nav item when the current
   // page is a Review-parented sub-page (event editor, contest detail) that
   // dropped a `?from=<tab>` param — mirrors the breadcrumb behaviour so
   // both surfaces route back to the same tab (#1083).
-  const reviewHref = reviewHrefFromParam(searchParams?.get('from'))
+  const reviewHref = reviewHrefFromParam(searchParams?.get('from'));
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null
+    const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
     const resolvedMode: SidebarMode =
       stored === 'full' || stored === 'rail' || stored === 'auto'
         ? stored
-        : 'auto'
-    setMode(resolvedMode)
+        : 'auto';
+    setMode(resolvedMode);
 
-    const mq = window.matchMedia('(min-width: 1280px)')
-    const updateViewport = () => setViewportMode(mq.matches ? 'full' : 'rail')
-    updateViewport()
-    mq.addEventListener('change', updateViewport)
-    return () => mq.removeEventListener('change', updateViewport)
-  }, [])
+    const mq = window.matchMedia('(min-width: 1280px)');
+    const updateViewport = () => setViewportMode(mq.matches ? 'full' : 'rail');
+    updateViewport();
+    mq.addEventListener('change', updateViewport);
+    return () => mq.removeEventListener('change', updateViewport);
+  }, []);
 
   useEffect(() => {
-    if (!signOutOpen) return
+    if (!signOutOpen) return;
     const handleMouseDown = (evt: MouseEvent) => {
       if (
         userCardRef.current &&
         !userCardRef.current.contains(evt.target as Node)
       ) {
-        setSignOutOpen(false)
+        setSignOutOpen(false);
       }
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [signOutOpen])
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [signOutOpen]);
 
   const toggleMode = () => {
     setMode((prev) => {
-      const next = prev === 'rail' ? 'full' : 'rail'
-      localStorage.setItem(STORAGE_KEY, next)
-      return next
-    })
-  }
+      const next = prev === 'rail' ? 'full' : 'rail';
+      localStorage.setItem(STORAGE_KEY, next);
+      return next;
+    });
+  };
 
-  const effectiveMode: 'full' | 'rail' = mode === 'auto' ? viewportMode : mode
-  const width = effectiveMode === 'full' ? 240 : 64
+  const effectiveMode: 'full' | 'rail' = mode === 'auto' ? viewportMode : mode;
+  const width = effectiveMode === 'full' ? 240 : 64;
 
   const getCount = (key: string): number => {
-    if (!badgeCounts) return 0
-    if (key === 'crawl') return badgeCounts.crawl
-    if (key === 'review') return badgeCounts.review
-    if (key === 'feedback') return badgeCounts.feedback
-    return 0
-  }
+    if (!badgeCounts) return 0;
+    if (key === 'crawl') return badgeCounts.crawl;
+    if (key === 'review') return badgeCounts.review;
+    if (key === 'feedback') return badgeCounts.feedback;
+    return 0;
+  };
 
-  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase()
-  const opsItems = NAV_V2.filter((item) => item.section === 'operations')
-  const accountItems = NAV_V2.filter((item) => item.section === 'account')
+  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase();
+  const opsItems = NAV_V2.filter((item) => item.section === 'operations');
+  const accountItems = NAV_V2.filter((item) => item.section === 'account');
 
   return (
     <aside
@@ -304,11 +304,11 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         {opsItems.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href !== '/admin' && pathname.startsWith(item.href))
-          const count = getCount(item.key)
+            (item.href !== '/admin' && pathname.startsWith(item.href));
+          const count = getCount(item.key);
           // Review nav preserves `?from=<tab>` when the current page is a
           // Review-parented sub-page (#1083).
-          const href = item.key === 'review' ? reviewHref : item.href
+          const href = item.key === 'review' ? reviewHref : item.href;
           return (
             <NavLink
               key={item.key}
@@ -318,7 +318,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               count={count}
               href={href}
             />
-          )
+          );
         })}
         {effectiveMode === 'full' && (
           <div
@@ -338,7 +338,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         {accountItems.map((item) => {
           const active =
             pathname === item.href ||
-            (item.href !== '/admin' && pathname.startsWith(item.href))
+            (item.href !== '/admin' && pathname.startsWith(item.href));
           return (
             <NavLink
               key={item.key}
@@ -348,7 +348,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               count={0}
               href={item.href}
             />
-          )
+          );
         })}
       </nav>
 
@@ -381,7 +381,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
           >
             <button
               onClick={() => {
-                void signOut({ redirectUrl: '/' })
+                void signOut({ redirectUrl: '/' });
               }}
               style={{
                 display: 'flex',
@@ -398,10 +398,10 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
                 textAlign: 'left',
               }}
               onMouseEnter={(evt) => {
-                evt.currentTarget.style.background = 'var(--overlay-hover)'
+                evt.currentTarget.style.background = 'var(--overlay-hover)';
               }}
               onMouseLeave={(evt) => {
-                evt.currentTarget.style.background = 'transparent'
+                evt.currentTarget.style.background = 'transparent';
               }}
             >
               <LogOut size={14} />
@@ -545,5 +545,5 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
         </button>
       </div>
     </aside>
-  )
-}
+  );
+};

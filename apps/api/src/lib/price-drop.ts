@@ -24,13 +24,13 @@ import {
   notifications,
   userEvents,
   venues,
-} from '@concert-crawl/db'
-import { fanoutWatchNotification } from '@concert-crawl/push'
+} from '@concert-crawl/db';
+import { fanoutWatchNotification } from '@concert-crawl/push';
 
 export interface PriceDrop {
-  eventId: string
-  oldPriceMin: string
-  newPriceMin: string
+  eventId: string;
+  oldPriceMin: string;
+  newPriceMin: string;
 }
 
 // Compare two numeric-string prices (from Drizzle's `numeric(10,2)` columns,
@@ -41,11 +41,11 @@ export const isStrictlyLowerNumeric = (
   candidate: string,
   baseline: string,
 ): boolean => {
-  const candidateNum = Number.parseFloat(candidate)
-  const baselineNum = Number.parseFloat(baseline)
-  if (Number.isNaN(candidateNum) || Number.isNaN(baselineNum)) return false
-  return candidateNum < baselineNum
-}
+  const candidateNum = Number.parseFloat(candidate);
+  const baselineNum = Number.parseFloat(baseline);
+  if (Number.isNaN(candidateNum) || Number.isNaN(baselineNum)) return false;
+  return candidateNum < baselineNum;
+};
 
 // Real price-drop = strictly lower minimum. Equal prices are a corroboration
 // (same number, different source) and shouldn't fire a notification. Higher
@@ -56,10 +56,10 @@ export const detectPriceDrop = (
   oldPriceMin: string | null | undefined,
   newPriceMin: string,
 ): PriceDrop | undefined => {
-  if (oldPriceMin == null) return undefined
-  if (!isStrictlyLowerNumeric(newPriceMin, oldPriceMin)) return undefined
-  return { eventId, oldPriceMin, newPriceMin }
-}
+  if (oldPriceMin == null) return undefined;
+  if (!isStrictlyLowerNumeric(newPriceMin, oldPriceMin)) return undefined;
+  return { eventId, oldPriceMin, newPriceMin };
+};
 
 // Fan out watch.pricedrop to status='watching' users. Call AFTER the price
 // write commits. Best-effort: fanoutWatchNotification never throws, and the
@@ -86,5 +86,5 @@ export const fanoutPriceDrop = async (
         oldPriceMin: drop.oldPriceMin,
       },
     },
-  )
-}
+  );
+};

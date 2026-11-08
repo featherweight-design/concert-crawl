@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
 // Admin match-review queue for the Spotify artist identity match (#1115,
 // plan PR-C Task 9). Explicitly exempt from the design pipeline — a plain
 // table on the existing admin primitives, nothing custom.
 
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import {
   AdminButton,
   AdminTable,
@@ -16,16 +16,16 @@ import {
   TH,
   THead,
   TR,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { CandidatePicker } from '@/components/admin/artists/CandidatePicker'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { CandidatePicker } from '@/components/admin/artists/CandidatePicker';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-const COPY = ADMIN_COPY.artists
+const COPY = ADMIN_COPY.artists;
 
 type MatchStatus =
-  'unmatched' | 'matched' | 'ambiguous' | 'no_match' | 'not_an_artist'
+  'unmatched' | 'matched' | 'ambiguous' | 'no_match' | 'not_an_artist';
 
 /**
  * A chip on this page. `exhausted` is not a match status — it says the job
@@ -33,19 +33,19 @@ type MatchStatus =
  * answered — but it is a queue the admin filters by, so the two share a type
  * here and nowhere else.
  */
-type QueueFilter = MatchStatus | 'exhausted'
+type QueueFilter = MatchStatus | 'exhausted';
 
 interface AdminArtist {
-  id: string
-  name: string
-  canonicalName: string
-  slug: string
-  spotifyArtistId: string | null
-  matchStatus: MatchStatus
-  photoUrl: string | null
-  matchCheckedAt: string | null
-  hidden: boolean
-  isExhausted: boolean
+  id: string;
+  name: string;
+  canonicalName: string;
+  slug: string;
+  spotifyArtistId: string | null;
+  matchStatus: MatchStatus;
+  photoUrl: string | null;
+  matchCheckedAt: string | null;
+  hidden: boolean;
+  isExhausted: boolean;
 }
 
 /**
@@ -59,7 +59,7 @@ interface AdminArtist {
  * PATCH resets the attempt counter to zero, and the visibility PATCH never
  * touches it.
  */
-type PatchedArtist = Omit<AdminArtist, 'isExhausted'>
+type PatchedArtist = Omit<AdminArtist, 'isExhausted'>;
 
 const STATUS_CHIPS: QueueFilter[] = [
   'ambiguous',
@@ -68,11 +68,11 @@ const STATUS_CHIPS: QueueFilter[] = [
   'matched',
   'not_an_artist',
   'exhausted',
-]
+];
 
 /** The chip a row is listed under, which outranks its match status. */
 const bucketOf = (row: AdminArtist): QueueFilter =>
-  row.isExhausted ? 'exhausted' : row.matchStatus
+  row.isExhausted ? 'exhausted' : row.matchStatus;
 
 const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
   ambiguous: 'warning',
@@ -80,9 +80,9 @@ const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
   no_match: 'neutral',
   matched: 'success',
   not_an_artist: 'neutral',
-}
+};
 
-const PAGE_SIZE = 100
+const PAGE_SIZE = 100;
 
 /**
  * Move one row between chip buckets.
@@ -96,12 +96,12 @@ const shiftCounts = (
   from: QueueFilter | undefined,
   to: QueueFilter,
 ): Record<QueueFilter, number> => {
-  if (from === undefined || from === to) return counts
-  const next = { ...counts }
-  next[from] = Math.max(0, next[from] - 1)
-  next[to] += 1
-  return next
-}
+  if (from === undefined || from === to) return counts;
+  const next = { ...counts };
+  next[from] = Math.max(0, next[from] - 1);
+  next[to] += 1;
+  return next;
+};
 
 const EMPTY_COUNTS: Record<QueueFilter, number> = {
   ambiguous: 0,
@@ -110,52 +110,52 @@ const EMPTY_COUNTS: Record<QueueFilter, number> = {
   matched: 0,
   not_an_artist: 0,
   exhausted: 0,
-}
+};
 
 export default function AdminArtistsPage() {
-  const { getToken } = useAuth()
-  const [status, setStatus] = useState<QueueFilter>('ambiguous')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const { getToken } = useAuth();
+  const [status, setStatus] = useState<QueueFilter>('ambiguous');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   // On by default, matching the API. Most derived artists last played months
   // ago, and a queue counting them is a queue nobody can finish.
-  const [upcomingOnly, setUpcomingOnly] = useState(true)
-  const [offset, setOffset] = useState(0)
-  const [total, setTotal] = useState(0)
+  const [upcomingOnly, setUpcomingOnly] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [total, setTotal] = useState(0);
   const [counts, setCounts] =
-    useState<Record<QueueFilter, number>>(EMPTY_COUNTS)
-  const [rows, setRows] = useState<AdminArtist[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+    useState<Record<QueueFilter, number>>(EMPTY_COUNTS);
+  const [rows, setRows] = useState<AdminArtist[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   // One row at a time — every open picker spends a Spotify search.
   const [openCandidatesFor, setOpenCandidatesFor] = useState<string | null>(
     null,
-  )
+  );
   // Bumped whenever a load lands. A write compares the value it was issued
   // under against this one to tell whether the list it is folding into is
   // still the list it was looking at. See `applyWrite`.
-  const loadGeneration = useRef(0)
+  const loadGeneration = useRef(0);
 
   // A keystroke per request would spend a query on every prefix of the name.
   useEffect(() => {
     const timer = setTimeout(() => {
-      setSearch(searchInput.trim())
-      setOffset(0)
-      setOpenCandidatesFor(null)
-    }, 250)
-    return () => clearTimeout(timer)
-  }, [searchInput])
+      setSearch(searchInput.trim());
+      setOffset(0);
+      setOpenCandidatesFor(null);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const load = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setError(COPY.errorState)
-        return
+        setError(COPY.errorState);
+        return;
       }
-      const headers = { Authorization: `Bearer ${token}` }
+      const headers = { Authorization: `Bearer ${token}` };
       // The server ignores `status` whenever a search is present, so sending
       // both would misdescribe what comes back.
       //
@@ -163,43 +163,44 @@ export default function AdminArtistsPage() {
       // `/counts` has no search to bypass it. Sending the ticked value during a
       // search would leave the chips counting a filter the table below them is
       // not applying, so the search forces it off for both.
-      const upcomingParam = String(search === '' && upcomingOnly)
+      const upcomingParam = String(search === '' && upcomingOnly);
       const query = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
         upcoming: upcomingParam,
         ...(search === '' ? { status } : { search }),
-      })
+      });
       // The counts take the same `upcoming` value as the list, so a chip never
       // promises rows the table it opens cannot show.
-      const countsQuery = new URLSearchParams({ upcoming: upcomingParam })
+      const countsQuery = new URLSearchParams({ upcoming: upcomingParam });
       const [listResp, countsResp] = await Promise.all([
         fetch(`${API_BASE}/v1/admin/artists?${query.toString()}`, { headers }),
         fetch(`${API_BASE}/v1/admin/artists/counts?${countsQuery.toString()}`, {
           headers,
         }),
-      ])
+      ]);
       if (!listResp.ok || !countsResp.ok) {
-        setError(COPY.errorState)
-        return
+        setError(COPY.errorState);
+        return;
       }
-      const body: { data: AdminArtist[]; total: number } = await listResp.json()
+      const body: { data: AdminArtist[]; total: number } =
+        await listResp.json();
       const countsBody: { data: Record<QueueFilter, number> } =
-        await countsResp.json()
-      setRows(body.data)
-      setTotal(body.total)
+        await countsResp.json();
+      setRows(body.data);
+      setTotal(body.total);
       // Merged over the zeroed record rather than trusted whole: a staggered
       // deploy can serve counts that predate a status this build knows about,
       // and a missing key turns every later shift into NaN.
-      setCounts({ ...EMPTY_COUNTS, ...countsBody.data })
-      loadGeneration.current += 1
+      setCounts({ ...EMPTY_COUNTS, ...countsBody.data });
+      loadGeneration.current += 1;
     } catch (err) {
-      console.error('[admin artists] load failed', err)
-      setError(COPY.errorState)
+      console.error('[admin artists] load failed', err);
+      setError(COPY.errorState);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [getToken, status, search, offset, upcomingOnly])
+  }, [getToken, status, search, offset, upcomingOnly]);
 
   // A trailing page can empty under the admin — they resolved its last row, or
   // the server has nothing at this offset any more. Either way the page they
@@ -208,13 +209,13 @@ export default function AdminArtistsPage() {
   // an empty page is covered by one rule.
   useEffect(() => {
     if (!isLoading && rows.length === 0 && offset > 0) {
-      setOffset((prev) => Math.max(0, prev - PAGE_SIZE))
+      setOffset((prev) => Math.max(0, prev - PAGE_SIZE));
     }
-  }, [isLoading, rows.length, offset])
+  }, [isLoading, rows.length, offset]);
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void load();
+  }, [load]);
 
   /**
    * Fold a written row back into the list without refetching.
@@ -242,27 +243,27 @@ export default function AdminArtistsPage() {
       isExhausted: boolean,
       generation: number,
     ) => {
-      if (generation !== loadGeneration.current) return
-      const next: AdminArtist = { ...previous, ...patched, isExhausted }
-      const nextBucket = bucketOf(next)
-      setCounts((prev) => shiftCounts(prev, bucketOf(previous), nextBucket))
+      if (generation !== loadGeneration.current) return;
+      const next: AdminArtist = { ...previous, ...patched, isExhausted };
+      const nextBucket = bucketOf(next);
+      setCounts((prev) => shiftCounts(prev, bucketOf(previous), nextBucket));
       if (search !== '' || nextBucket === status) {
         // Functional, because a chip change or a debounced search can land a
         // new list while the PATCH is in flight; mapping the closed-over array
         // would put the stale page back.
-        setRows((prev) => prev.map((row) => (row.id === next.id ? next : row)))
-        return
+        setRows((prev) => prev.map((row) => (row.id === next.id ? next : row)));
+        return;
       }
       // Only once the row is actually leaving. A picker still mounted against
       // it would reopen on whatever row takes its place and spend a Spotify
       // search nobody asked for — but a row that stays keeps its picker, since
       // closing it would undo work the admin is mid-way through.
-      setOpenCandidatesFor((current) => (current === next.id ? null : current))
-      setRows((prev) => prev.filter((row) => row.id !== next.id))
-      setTotal((prev) => Math.max(0, prev - 1))
+      setOpenCandidatesFor((current) => (current === next.id ? null : current));
+      setRows((prev) => prev.filter((row) => row.id !== next.id));
+      setTotal((prev) => Math.max(0, prev - 1));
     },
     [search, status],
-  )
+  );
 
   // `photoUrl` is only passed when the id came from the candidate picker,
   // which already has the artist's image in hand. Sending it saves waiting a
@@ -283,12 +284,12 @@ export default function AdminArtistsPage() {
   ) => {
     // Read before the round trip: it is the list this write was issued
     // against, and only that list can safely receive it.
-    const generation = loadGeneration.current
+    const generation = loadGeneration.current;
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setError(COPY.saveError)
-        return
+        setError(COPY.saveError);
+        return;
       }
       const resp = await fetch(`${API_BASE}/v1/admin/artists/${previous.id}`, {
         method: 'PATCH',
@@ -301,22 +302,22 @@ export default function AdminArtistsPage() {
             ? { spotifyArtistId }
             : { spotifyArtistId, photoUrl },
         ),
-      })
+      });
       if (!resp.ok) {
-        setError(COPY.saveError)
-        return
+        setError(COPY.saveError);
+        return;
       }
-      setError(null)
-      const body: { data: PatchedArtist } = await resp.json()
+      setError(null);
+      const body: { data: PatchedArtist } = await resp.json();
       // A row the admin has just ruled on is no longer one the job gave up on:
       // the PATCH resets the attempt counter, so it must not still read as
       // given up.
-      applyWrite(previous, body.data, false, generation)
+      applyWrite(previous, body.data, false, generation);
     } catch (err) {
-      console.error('[admin artists] save failed', err)
-      setError(COPY.saveError)
+      console.error('[admin artists] save failed', err);
+      setError(COPY.saveError);
     }
-  }
+  };
 
   // The ruling that a row is not an act at all. It goes through the identity
   // PATCH because it *is* a match verdict — the other four answer "how
@@ -328,12 +329,12 @@ export default function AdminArtistsPage() {
   // its two counts together, so the chips stay honest without the table
   // blanking.
   const markNotAnArtist = async (previous: AdminArtist) => {
-    const generation = loadGeneration.current
+    const generation = loadGeneration.current;
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setError(COPY.saveError)
-        return
+        setError(COPY.saveError);
+        return;
       }
       const resp = await fetch(`${API_BASE}/v1/admin/artists/${previous.id}`, {
         method: 'PATCH',
@@ -345,21 +346,21 @@ export default function AdminArtistsPage() {
           spotifyArtistId: null,
           matchStatus: 'not_an_artist',
         }),
-      })
+      });
       if (!resp.ok) {
-        setError(COPY.saveError)
-        return
+        setError(COPY.saveError);
+        return;
       }
-      setError(null)
-      const body: { data: PatchedArtist } = await resp.json()
+      setError(null);
+      const body: { data: PatchedArtist } = await resp.json();
       // `not_an_artist` is not an exhaustible status, and the PATCH zeroes the
       // counter regardless, so the row cannot land in the given-up bucket.
-      applyWrite(previous, body.data, false, generation)
+      applyWrite(previous, body.data, false, generation);
     } catch (err) {
-      console.error('[admin artists] not-an-artist failed', err)
-      setError(COPY.saveError)
+      console.error('[admin artists] not-an-artist failed', err);
+      setError(COPY.saveError);
     }
-  }
+  };
 
   // Visibility is its own endpoint, not a field on the identity PATCH above:
   // that body requires a spotifyArtistId, so hiding through it would mean
@@ -370,12 +371,12 @@ export default function AdminArtistsPage() {
   // reads. So the refetch it used to do could not have been correcting
   // anything; it only redrew the table to flip one badge.
   const setHidden = async (previous: AdminArtist, hidden: boolean) => {
-    const generation = loadGeneration.current
+    const generation = loadGeneration.current;
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setError(COPY.visibilityError)
-        return
+        setError(COPY.visibilityError);
+        return;
       }
       const resp = await fetch(
         `${API_BASE}/v1/admin/artists/${previous.id}/visibility`,
@@ -387,21 +388,21 @@ export default function AdminArtistsPage() {
           },
           body: JSON.stringify({ hidden }),
         },
-      )
+      );
       if (!resp.ok) {
-        setError(COPY.visibilityError)
-        return
+        setError(COPY.visibilityError);
+        return;
       }
-      setError(null)
-      const body: { data: PatchedArtist } = await resp.json()
+      setError(null);
+      const body: { data: PatchedArtist } = await resp.json();
       // The visibility PATCH does not touch the attempt counter, so whatever
       // the row was given up on stays true.
-      applyWrite(previous, body.data, previous.isExhausted, generation)
+      applyWrite(previous, body.data, previous.isExhausted, generation);
     } catch (err) {
-      console.error('[admin artists] visibility change failed', err)
-      setError(COPY.visibilityError)
+      console.error('[admin artists] visibility change failed', err);
+      setError(COPY.visibilityError);
     }
-  }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -434,9 +435,9 @@ export default function AdminArtistsPage() {
             onClick={() => {
               // A picker left open on another chip reopens — and spends a fresh
               // Spotify search on mount — the moment the admin comes back.
-              setOpenCandidatesFor(null)
-              setStatus(chip)
-              setOffset(0)
+              setOpenCandidatesFor(null);
+              setStatus(chip);
+              setOffset(0);
             }}
           >
             {COPY.statusChipCount(COPY.statusChips[chip], counts[chip])}
@@ -487,9 +488,9 @@ export default function AdminArtistsPage() {
             checked={search === '' && upcomingOnly}
             disabled={search !== ''}
             onChange={(event) => {
-              setOpenCandidatesFor(null)
-              setUpcomingOnly(event.target.checked)
-              setOffset(0)
+              setOpenCandidatesFor(null);
+              setUpcomingOnly(event.target.checked);
+              setOffset(0);
             }}
           />
           {COPY.upcomingLabel}
@@ -651,15 +652,15 @@ export default function AdminArtistsPage() {
                             apiBase={API_BASE}
                             getToken={getToken}
                             onPick={(spotifyArtistId, photoUrl) => {
-                              setOpenCandidatesFor(null)
-                              void save(row, spotifyArtistId, photoUrl)
+                              setOpenCandidatesFor(null);
+                              void save(row, spotifyArtistId, photoUrl);
                             }}
                           />
                         </TD>
                       </TR>
                     )}
                   </Fragment>
-                )
+                );
               })}
             </tbody>
           </AdminTable>
@@ -687,8 +688,8 @@ export default function AdminArtistsPage() {
             variant="outline"
             disabled={offset === 0}
             onClick={() => {
-              setOpenCandidatesFor(null)
-              setOffset((current) => Math.max(0, current - PAGE_SIZE))
+              setOpenCandidatesFor(null);
+              setOffset((current) => Math.max(0, current - PAGE_SIZE));
             }}
           >
             {COPY.prev}
@@ -698,8 +699,8 @@ export default function AdminArtistsPage() {
             variant="outline"
             disabled={offset + rows.length >= total}
             onClick={() => {
-              setOpenCandidatesFor(null)
-              setOffset((current) => current + PAGE_SIZE)
+              setOpenCandidatesFor(null);
+              setOffset((current) => current + PAGE_SIZE);
             }}
           >
             {COPY.next}
@@ -707,5 +708,5 @@ export default function AdminArtistsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -12,16 +12,16 @@
 // The prop wins when supplied (chrome passes API truth); the derived count is
 // the fallback, matching the mock.
 
-import type { ConsumerNotification } from '@/lib/notifications'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
-import { NMono } from './NMono'
-import { NotifHeader } from './NotifHeader'
-import { NotifItem } from './NotifItem'
-import { NotifDayDivider } from './NotifDayDivider'
-import { NotifLoading, NotifEmpty, NotifError } from './NotifStates'
-import { groupByDay, unreadCount as countUnread } from './lib/format-time'
+import type { ConsumerNotification } from '@/lib/notifications';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
+import { NMono } from './NMono';
+import { NotifHeader } from './NotifHeader';
+import { NotifItem } from './NotifItem';
+import { NotifDayDivider } from './NotifDayDivider';
+import { NotifLoading, NotifEmpty, NotifError } from './NotifStates';
+import { groupByDay, unreadCount as countUnread } from './lib/format-time';
 
-export type NotifPanelState = 'loading' | 'ready' | 'error'
+export type NotifPanelState = 'loading' | 'ready' | 'error';
 
 export const NotifBody = ({
   items = [],
@@ -41,35 +41,35 @@ export const NotifBody = ({
   now,
   notice,
 }: {
-  items?: ConsumerNotification[]
-  state?: NotifPanelState
-  grouped?: boolean
-  hasMore?: boolean
-  isLoadingMore?: boolean
+  items?: ConsumerNotification[];
+  state?: NotifPanelState;
+  grouped?: boolean;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
   /** Window-wide count from the API. Falls back to the loaded page. */
-  unreadCount?: number
-  onOpen?: (item: ConsumerNotification) => void
-  onMarkAll?: () => void
-  onClose?: () => void
-  onRetry?: () => void
-  onAction?: () => void
-  onLoadMore?: () => void
-  showClose?: boolean
-  maxHeight?: number | string
-  now?: Date
+  unreadCount?: number;
+  onOpen?: (item: ConsumerNotification) => void;
+  onMarkAll?: () => void;
+  onClose?: () => void;
+  onRetry?: () => void;
+  onAction?: () => void;
+  onLoadMore?: () => void;
+  showClose?: boolean;
+  maxHeight?: number | string;
+  now?: Date;
   /**
    * An inline failure line under the header — currently a read mutation that
    * rolled back. Deliberately not a toast: the failure belongs to the surface
    * whose numbers just moved back.
    */
-  notice?: string
+  notice?: string;
 }) => {
-  const derived = unreadCount ?? countUnread(items)
+  const derived = unreadCount ?? countUnread(items);
   // Loading and error headers read zero: there is nothing on screen to mark.
-  const headerCount = state === 'ready' ? derived : 0
+  const headerCount = state === 'ready' ? derived : 0;
   const groups = grouped
     ? groupByDay(items, now)
-    : [{ key: '', items }].filter((group) => group.items.length > 0)
+    : [{ key: '', items }].filter((group) => group.items.length > 0);
 
   return (
     <>
@@ -179,5 +179,5 @@ export const NotifBody = ({
         )}
       </div>
     </>
-  )
-}
+  );
+};

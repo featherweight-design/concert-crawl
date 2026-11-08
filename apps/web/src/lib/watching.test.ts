@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { WatchingShow } from '@concert-crawl/types'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { WatchingShow } from '@concert-crawl/types';
 
-global.fetch = vi.fn()
+global.fetch = vi.fn();
 
 const mockShow: WatchingShow = {
   userEventId: 'ue-1',
@@ -24,10 +24,10 @@ const mockShow: WatchingShow = {
   imageUrl: null,
   artistPhotoUrl: null,
   attendingAt: null,
-}
+};
 
 describe('fetchWatching', () => {
-  beforeEach(() => vi.mocked(fetch).mockReset())
+  beforeEach(() => vi.mocked(fetch).mockReset());
 
   it('fetches /v1/watching with the provided Bearer token', async () => {
     vi.mocked(fetch).mockResolvedValue(
@@ -35,19 +35,19 @@ describe('fetchWatching', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    )
+    );
 
-    const { fetchWatching } = await import('./watching.js')
-    const result = await fetchWatching('my-token')
+    const { fetchWatching } = await import('./watching.js');
+    const result = await fetchWatching('my-token');
 
-    expect(result).toEqual([mockShow])
+    expect(result).toEqual([mockShow]);
 
-    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/v1/watching')
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/v1/watching');
     expect((init.headers as Record<string, string>)['Authorization']).toBe(
       'Bearer my-token',
-    )
-  })
+    );
+  });
 
   it('returns an array of WatchingShow objects with eventId for Set construction', async () => {
     vi.mocked(fetch).mockResolvedValue(
@@ -64,14 +64,14 @@ describe('fetchWatching', () => {
           headers: { 'Content-Type': 'application/json' },
         },
       ),
-    )
+    );
 
-    const { fetchWatching } = await import('./watching.js')
-    const shows = await fetchWatching('token')
+    const { fetchWatching } = await import('./watching.js');
+    const shows = await fetchWatching('token');
 
-    const watchedIds = new Set(shows.map((show) => show.eventId))
-    expect(watchedIds.has('ev-abc')).toBe(true)
-    expect(watchedIds.has('ev-xyz')).toBe(true)
-    expect(watchedIds.has('ev-missing')).toBe(false)
-  })
-})
+    const watchedIds = new Set(shows.map((show) => show.eventId));
+    expect(watchedIds.has('ev-abc')).toBe(true);
+    expect(watchedIds.has('ev-xyz')).toBe(true);
+    expect(watchedIds.has('ev-missing')).toBe(false);
+  });
+});

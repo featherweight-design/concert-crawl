@@ -1,5 +1,5 @@
 /* apps/web/src/app/globals.css */
-@import "tailwindcss";
+@import 'tailwindcss';
 @config "../../tailwind.config.ts";
 
 @layer base {
@@ -25,7 +25,7 @@
     --warning: #ffd27a;
     --danger: #ff7a8a;
     --trust-community: oklch(0.62 0.12 240);
-    --trust-resale: oklch(0.65 0.20 25);
+    --trust-resale: oklch(0.65 0.2 25);
     --focus: #7ae6ff;
     --overlay-hover: rgba(122, 230, 255, 0.08);
     --overlay-press: rgba(122, 230, 255, 0.16);
@@ -90,84 +90,193 @@
 }
 
 @keyframes fbPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 @keyframes fbSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
-.fb-textarea::placeholder { color: var(--fg-subtle); }
-.fb-textarea:focus { border-color: var(--border-focus); }
+.fb-textarea::placeholder {
+  color: var(--fg-subtle);
+}
+.fb-textarea:focus {
+  border-color: var(--border-focus);
+}
 @keyframes umPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 /* #737 unread pip. Scale + opacity together so the pulse still reads at 8px
    on a light theme, where an opacity-only pulse is nearly invisible. */
 @keyframes notifPip {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.18); opacity: 0.72; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.72;
+  }
 }
 @keyframes skeletonPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 @keyframes navProgress {
-  0%   { width: 0%;   opacity: 1; }
-  85%  { width: 80%;  opacity: 1; }
-  100% { width: 80%;  opacity: 1; }
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+  85% {
+    width: 80%;
+    opacity: 1;
+  }
+  100% {
+    width: 80%;
+    opacity: 1;
+  }
 }
 @keyframes ccEventHighlight {
-  0%   { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); border-radius: 8px; }
-  25%  { background: color-mix(in srgb, var(--accent) 8%, transparent);  border-left: 2px solid var(--accent); border-radius: 8px; }
-  50%  { background: color-mix(in srgb, var(--accent) 18%, transparent); border-left: 2px solid var(--accent); border-radius: 8px; }
-  75%  { background: color-mix(in srgb, var(--accent) 8%, transparent);  border-left: 2px solid var(--accent); border-radius: 8px; }
-  100% { background: transparent; border-left: 2px solid transparent; border-radius: 8px; }
+  0% {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+  }
+  25% {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+  }
+  50% {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+  }
+  75% {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+  }
+  100% {
+    background: transparent;
+    border-left: 2px solid transparent;
+    border-radius: 8px;
+  }
 }
 @keyframes rnPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 @keyframes rnSweep {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 @keyframes rnPinDrop {
-  0% { transform: translateY(-18px) scale(0.6); opacity: 0; }
-  60% { transform: translateY(0) scale(1.1); opacity: 1; }
-  100% { transform: translateY(0) scale(1); opacity: 1; }
+  0% {
+    transform: translateY(-18px) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(0) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 @keyframes rnRadar {
-  0% { transform: scale(0.6); opacity: 0.55; }
-  100% { transform: scale(2.6); opacity: 0; }
+  0% {
+    transform: scale(0.6);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
 }
 @keyframes rnDrift {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-12px, -8px); }
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(-12px, -8px);
+  }
 }
 @keyframes rnFadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 /* Tier-picker 3DS/SCA challenge spinner (failure-surfaces design table) */
 @keyframes mPaySpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 /* DiscoveryShelf loading state (design_handoff_discovery_loading). */
 @keyframes dlSweep {
-  0%   { transform: translateX(-115%); }
-  100% { transform: translateX(115%); }
+  0% {
+    transform: translateX(-115%);
+  }
+  100% {
+    transform: translateX(115%);
+  }
 }
 @keyframes dlDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%      { opacity: 0.3; transform: scale(0.82); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.82);
+  }
 }
 /* "Who else is watching" loading skeleton (design_handoff_who_else_is_watching). */
 @keyframes wShimmer {
-  0%, 100% { opacity: 0.45; }
-  50%      { opacity: 0.85; }
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
 }
-[data-highlighted="true"] {
+[data-highlighted='true'] {
   animation: ccEventHighlight 2s ease-in-out forwards;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -191,36 +300,60 @@
     transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
-  [data-highlighted="true"] { animation: none; }
+  [data-highlighted='true'] {
+    animation: none;
+  }
   /* Shimmer + dot are pure decoration with no end state worth keeping, so
      they hard-stop; the static placeholder still says "loading" via
      role=status. */
-  .dl-anim { animation: none !important; }
-  .dl-sweep { display: none !important; }
-  .w-shimmer { animation: none !important; }
+  .dl-anim {
+    animation: none !important;
+  }
+  .dl-sweep {
+    display: none !important;
+  }
+  .w-shimmer {
+    animation: none !important;
+  }
 }
 
 /* Onboarding responsive layout */
-.onboarding-mobile { display: flex; }
-.onboarding-desktop { display: none; }
+.onboarding-mobile {
+  display: flex;
+}
+.onboarding-desktop {
+  display: none;
+}
 
 @media (min-width: 760px) and (min-height: 700px) {
-  .onboarding-mobile { display: none !important; }
-  .onboarding-desktop { display: block !important; }
+  .onboarding-mobile {
+    display: none !important;
+  }
+  .onboarding-desktop {
+    display: block !important;
+  }
 }
 
 /* Onboarding step heading — 28px mobile, 34px desktop */
-.ob-step-heading { font-size: 34px; }
+.ob-step-heading {
+  font-size: 34px;
+}
 @media (max-width: 1239px) {
-  .ob-step-heading { font-size: 28px; }
+  .ob-step-heading {
+    font-size: 28px;
+  }
 }
 
 /* Onboarding button focus rings — restores :focus-visible after all:unset */
 .ob-btn-primary:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--signal);
 }
 .ob-btn-back:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--signal);
   border-radius: 4px;
 }
 
@@ -341,9 +474,15 @@
 /* ── Artist page (#1115) ─────────────────────────────────────────────────
    Breakpoints live here rather than in two component trees: mobile and
    desktop are one responsive page, not a parity risk. */
-.ap-page a { color: var(--signal); }
-.ap-page a:hover { color: var(--fg); }
-.ap-row:hover { background: var(--overlay-hover); }
+.ap-page a {
+  color: var(--signal);
+}
+.ap-page a:hover {
+  color: var(--fg);
+}
+.ap-row:hover {
+  background: var(--overlay-hover);
+}
 
 /* The route past the iframe. Hidden until focus, then a real 44px target —
    a `:focus` rule cannot be expressed inline, which is why it lives here. */
@@ -381,13 +520,24 @@
 /* Bottom padding reserves the fixed mobile bottom nav, same 80px every other
    consumer page reserves with `pb-20`. The shell no longer tucks under the
    hero: the band ends on a border and the page starts below it (#1525). */
-.ap-shell { position: relative; padding: 18px 18px 80px; }
+.ap-shell {
+  position: relative;
+  padding: 18px 18px 80px;
+}
 
 /* Block rhythm steps up on desktop (design table §1). */
-.ap-block-follow { margin-top: 20px; }
-.ap-block-player { margin-top: 24px; }
-.ap-block-shows { margin-top: 24px; }
-.ap-block-past { margin-top: 26px; }
+.ap-block-follow {
+  margin-top: 20px;
+}
+.ap-block-player {
+  margin-top: 24px;
+}
+.ap-block-shows {
+  margin-top: 24px;
+}
+.ap-block-past {
+  margin-top: 26px;
+}
 .ap-name {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
@@ -412,8 +562,13 @@
 
 /* 320px is the floor. Below 360 the type ramp and padding step down. */
 @media (max-width: 359px) {
-  .ap-shell { padding-left: 14px; padding-right: 14px; }
-  .ap-name { font-size: 21px; }
+  .ap-shell {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .ap-name {
+    font-size: 21px;
+  }
 }
 
 @media (min-width: 768px) {
@@ -429,16 +584,33 @@
     gap: 40px;
     align-items: start;
   }
-  .ap-rail { position: sticky; top: 24px; }
-  .ap-block-player { margin-top: 30px; }
-  .ap-block-shows { margin-top: 30px; }
-  .ap-block-past { margin-top: 34px; }
-  .ap-name { font-size: 42px; line-height: 1.04; letter-spacing: -0.04em; }
-  .ap-history { max-width: 560px; }
+  .ap-rail {
+    position: sticky;
+    top: 24px;
+  }
+  .ap-block-player {
+    margin-top: 30px;
+  }
+  .ap-block-shows {
+    margin-top: 30px;
+  }
+  .ap-block-past {
+    margin-top: 34px;
+  }
+  .ap-name {
+    font-size: 42px;
+    line-height: 1.04;
+    letter-spacing: -0.04em;
+  }
+  .ap-history {
+    max-width: 560px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ap-page [style*='skeletonPulse'] { animation: none !important; }
+  .ap-page [style*='skeletonPulse'] {
+    animation: none !important;
+  }
 }
 
 /* Event row — the artist-name anchor is stretched over the whole row so the

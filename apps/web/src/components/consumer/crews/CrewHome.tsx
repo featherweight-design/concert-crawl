@@ -1,41 +1,41 @@
-'use client'
+'use client';
 
 // The crew home. It owns the tab selection and every sheet, so the hero, the
 // tabs and the destructive flows can never disagree about which crew they are
 // acting on.
 
-import { useEffect, useId, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
+import { useEffect, useId, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import {
   CREW_HANDOFF_REQUIRED_CODE,
   CREW_LAST_MEMBER_CODE,
   type CrewDetail,
   type CrewMember,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-import { ApiError } from '@/lib/api'
-import { deleteCrew, handoffCrew, leaveCrew, removeMember } from '@/lib/crews'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
-import { CrewHero } from './CrewHero'
-import { CrewTabs, panelId, tabId, type CrewTab } from './CrewTabs'
-import { CrewUpcoming } from './CrewUpcoming'
-import { CrewNights } from './CrewNights'
-import { CrewRoster } from './CrewRoster'
-import { CrewNotice } from './CrewNotice'
-import { CrewOptionsSheet } from './CrewOptionsSheet'
-import { InviteSheet } from './InviteSheet'
-import { RenameSheet } from './RenameSheet'
-import { RerollSheet } from './RerollSheet'
-import { LeaveConfirm, type ConfirmKind } from './LeaveConfirm'
-import { CREWS_COPY } from './definitions/copy'
+import { ApiError } from '@/lib/api';
+import { deleteCrew, handoffCrew, leaveCrew, removeMember } from '@/lib/crews';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
+import { CrewHero } from './CrewHero';
+import { CrewTabs, panelId, tabId, type CrewTab } from './CrewTabs';
+import { CrewUpcoming } from './CrewUpcoming';
+import { CrewNights } from './CrewNights';
+import { CrewRoster } from './CrewRoster';
+import { CrewNotice } from './CrewNotice';
+import { CrewOptionsSheet } from './CrewOptionsSheet';
+import { InviteSheet } from './InviteSheet';
+import { RenameSheet } from './RenameSheet';
+import { RerollSheet } from './RerollSheet';
+import { LeaveConfirm, type ConfirmKind } from './LeaveConfirm';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
-export type CrewTabId = 'upcoming' | 'nights' | 'roster'
+export type CrewTabId = 'upcoming' | 'nights' | 'roster';
 
 interface CrewHomeProps {
-  crew: CrewDetail
+  crew: CrewDetail;
 }
 
 const control: React.CSSProperties = {
@@ -45,7 +45,7 @@ const control: React.CSSProperties = {
   fontFamily: 'var(--font-ui)',
   fontSize: 13,
   fontWeight: 700,
-}
+};
 
 /**
  * Which tab opens. Coming up when there is something in it, otherwise Been
@@ -57,27 +57,27 @@ export const leadTabFor = (crew: CrewDetail): CrewTabId =>
     ? 'upcoming'
     : crew.nights.length > 0
       ? 'nights'
-      : 'roster'
+      : 'roster';
 
 export const CrewHome = ({ crew }: CrewHomeProps) => {
-  const router = useRouter()
-  const { getToken } = useAuth()
-  const wide = !useIsMobileViewport()
-  const prefix = useId()
+  const router = useRouter();
+  const { getToken } = useAuth();
+  const wide = !useIsMobileViewport();
+  const prefix = useId();
 
   // `chosen` is an override, never a copy of the server state: it is null
   // until the customer picks a tab, so a refetch that changes the lead tab
   // still lands where it should.
-  const [chosen, setChosen] = useState<CrewTabId | null>(null)
-  const [saltOverride, setSaltOverride] = useState<number | null>(null)
-  const [nameOverride, setNameOverride] = useState<string | null>(null)
-  const [removedIds, setRemovedIds] = useState<string[]>([])
-  const [options, setOptions] = useState(false)
-  const [invite, setInvite] = useState(false)
-  const [rename, setRename] = useState(false)
-  const [reroll, setReroll] = useState(false)
-  const [confirm, setConfirm] = useState<ConfirmKind | null>(null)
-  const [target, setTarget] = useState<CrewMember | null>(null)
+  const [chosen, setChosen] = useState<CrewTabId | null>(null);
+  const [saltOverride, setSaltOverride] = useState<number | null>(null);
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const [options, setOptions] = useState(false);
+  const [invite, setInvite] = useState(false);
+  const [rename, setRename] = useState(false);
+  const [reroll, setReroll] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
+  const [target, setTarget] = useState<CrewMember | null>(null);
 
   // A removal override lives only until the server agrees, exactly like the
   // salt below. Left to accumulate it would still be hiding the same person
@@ -87,10 +87,10 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     setRemovedIds((ids) => {
       const pending = ids.filter((id) =>
         crew.members.some((member) => member.userId === id),
-      )
-      return pending.length === ids.length ? ids : pending
-    })
-  }, [crew.members])
+      );
+      return pending.length === ids.length ? ids : pending;
+    });
+  }, [crew.members]);
 
   // Both scalar overrides clear on the SERVER value moving rather than on the
   // mutation resolving: dropping them at mutation time flashes the old value
@@ -98,15 +98,15 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   // arriving at the override, so a rename from another device still wins
   // instead of losing to an override that will now never match.
   useEffect(() => {
-    setSaltOverride(null)
-  }, [crew.patchSalt])
+    setSaltOverride(null);
+  }, [crew.patchSalt]);
   useEffect(() => {
-    setNameOverride(null)
-  }, [crew.name])
+    setNameOverride(null);
+  }, [crew.name]);
 
-  const active = chosen ?? leadTabFor(crew)
-  const patchSalt = saltOverride ?? crew.patchSalt
-  const name = nameOverride ?? crew.name
+  const active = chosen ?? leadTabFor(crew);
+  const patchSalt = saltOverride ?? crew.patchSalt;
+  const name = nameOverride ?? crew.name;
   // Keeper first. Everyone else keeps the order the API sent, which is joinedAt
   // ascending — a stable sort is what preserves it, so this comparator must stay
   // a pure isKeeper test rather than gain a tiebreak. Sorting here rather than in
@@ -114,10 +114,10 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   // without moving anyone's join date.
   const members = crew.members
     .filter((member) => !removedIds.includes(member.userId))
-    .sort((one, two) => Number(two.isKeeper) - Number(one.isKeeper))
-  const memberCount = members.length
-  const viewerId = members.find((member) => member.isYou)?.userId ?? null
-  const others = members.filter((member) => !member.isYou)
+    .sort((one, two) => Number(two.isKeeper) - Number(one.isKeeper));
+  const memberCount = members.length;
+  const viewerId = members.find((member) => member.isYou)?.userId ?? null;
+  const others = members.filter((member) => !member.isYou);
 
   const tabs: CrewTab[] = [
     {
@@ -127,55 +127,55 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     },
     { id: 'nights', label: COPY.detail.pastTitle, count: crew.nights.length },
     { id: 'roster', label: COPY.detail.rosterTitle, count: memberCount },
-  ]
+  ];
 
   const asTabId = (id: string): CrewTabId =>
-    id === 'nights' ? 'nights' : id === 'roster' ? 'roster' : 'upcoming'
+    id === 'nights' ? 'nights' : id === 'roster' ? 'roster' : 'upcoming';
 
   const onConfirm = async (newKeeperId?: string) => {
-    const token = await getToken()
-    if (token === null) throw new Error('Not signed in')
+    const token = await getToken();
+    if (token === null) throw new Error('Not signed in');
     if (confirm === 'remove') {
-      if (target === null) return
-      await removeMember(token, crew.id, target.userId)
-      setRemovedIds((prev) => [...prev, target.userId])
-      setConfirm(null)
-      router.refresh()
-      return
+      if (target === null) return;
+      await removeMember(token, crew.id, target.userId);
+      setRemovedIds((prev) => [...prev, target.userId]);
+      setConfirm(null);
+      router.refresh();
+      return;
     }
     if (confirm === 'handoff') {
-      if (newKeeperId === undefined) return
-      await handoffCrew(token, crew.id, newKeeperId)
+      if (newKeeperId === undefined) return;
+      await handoffCrew(token, crew.id, newKeeperId);
       // The handoff is only ever reached on the way out, so leaving is the
       // next step rather than a second trip through the menu.
-      await leaveCrew(token, crew.id)
-      router.push('/crews')
-      return
+      await leaveCrew(token, crew.id);
+      router.push('/crews');
+      return;
     }
     if (confirm === 'delete' || confirm === 'last') {
-      await deleteCrew(token, crew.id)
-      router.push('/crews')
-      return
+      await deleteCrew(token, crew.id);
+      router.push('/crews');
+      return;
     }
     // `leave` is the only kind that can come back 409, and the code it
     // carries is what selects the next confirm.
     try {
-      await leaveCrew(token, crew.id)
-      router.push('/crews')
+      await leaveCrew(token, crew.id);
+      router.push('/crews');
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         if (err.code === CREW_HANDOFF_REQUIRED_CODE) {
-          setConfirm('handoff')
-          return
+          setConfirm('handoff');
+          return;
         }
         if (err.code === CREW_LAST_MEMBER_CODE) {
-          setConfirm('last')
-          return
+          setConfirm('last');
+          return;
         }
       }
-      throw err
+      throw err;
     }
-  }
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
@@ -272,8 +272,8 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
             memberCount={memberCount}
             isKeeper={crew.isKeeper}
             onRemove={(member) => {
-              setTarget(member)
-              setConfirm('remove')
+              setTarget(member);
+              setConfirm('remove');
             }}
             onLeave={() => setConfirm('leave')}
           />
@@ -306,8 +306,8 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         crewId={crew.id}
         crewName={name}
         onRenamed={(next) => {
-          setNameOverride(next)
-          router.refresh()
+          setNameOverride(next);
+          router.refresh();
         }}
       />
 
@@ -317,8 +317,8 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         crewId={crew.id}
         patchSalt={patchSalt}
         onApplied={(next) => {
-          setSaltOverride(next)
-          router.refresh()
+          setSaltOverride(next);
+          router.refresh();
         }}
       />
 
@@ -332,10 +332,10 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         members={others}
         onConfirm={onConfirm}
         onInvite={() => {
-          setConfirm(null)
-          setInvite(true)
+          setConfirm(null);
+          setInvite(true);
         }}
       />
     </div>
-  )
-}
+  );
+};

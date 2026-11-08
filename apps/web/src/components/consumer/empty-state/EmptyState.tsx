@@ -1,40 +1,40 @@
-import React from 'react'
-import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import React from 'react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateCta {
-  label: string
-  href: string
-  onClick?: () => void
+  label: string;
+  href: string;
+  onClick?: () => void;
 }
 
 export interface EmptyStateProps {
-  state?: 'no-data' | 'filtered' | 'error'
-  density?: 'default' | 'dense'
+  state?: 'no-data' | 'filtered' | 'error';
+  density?: 'default' | 'dense';
   /**
    * Omit on a surface whose location is already stated above the empty state,
    * such as a sub-tab bar: the rail's dot and rule still render.
    */
-  eyebrow?: string
-  title: string
-  body: string
+  eyebrow?: string;
+  title: string;
+  body: string;
   /**
    * Overrides the status rail's right-hand label. The default reads "0 / 0",
    * which is a count of events and says nothing on a surface that isn't
    * counting events.
    */
-  railLabel?: string
-  primaryCta?: EmptyStateCta
-  secondaryCta?: EmptyStateCta
-  className?: string
+  railLabel?: string;
+  primaryCta?: EmptyStateCta;
+  secondaryCta?: EmptyStateCta;
+  className?: string;
 }
 
 function EmptyStatePrimary({
   cta,
   dense,
 }: {
-  cta: EmptyStateCta
-  dense: boolean
+  cta: EmptyStateCta;
+  dense: boolean;
 }) {
   return (
     <Link
@@ -56,15 +56,15 @@ function EmptyStatePrimary({
     >
       {cta.label}
     </Link>
-  )
+  );
 }
 
 function EmptyStateSecondary({
   cta,
   dense,
 }: {
-  cta: EmptyStateCta
-  dense: boolean
+  cta: EmptyStateCta;
+  dense: boolean;
 }) {
   return (
     <Link
@@ -86,7 +86,7 @@ function EmptyStateSecondary({
     >
       {cta.label}
     </Link>
-  )
+  );
 }
 
 export function EmptyState({
@@ -100,16 +100,16 @@ export function EmptyState({
   secondaryCta,
   className,
 }: EmptyStateProps) {
-  const dense = density === 'dense'
+  const dense = density === 'dense';
   const accent =
     state === 'error'
       ? 'var(--warning)'
       : state === 'filtered'
         ? 'var(--signal)'
-        : 'var(--accent)'
+        : 'var(--accent)';
   const railRight =
     railLabel ??
-    (state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0')
+    (state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0');
 
   return (
     <div
@@ -220,5 +220,5 @@ export function EmptyState({
         </div>
       )}
     </div>
-  )
+  );
 }

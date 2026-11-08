@@ -219,10 +219,10 @@ Create `apps/api/src/routes/admin/contests.migration.integration.test.ts`:
 > **Why this lives in `apps/api`, not `packages/db`:** `packages/db` tests today are pure schema/unit-style (see `packages/db/src/schema.test.ts` — it just asserts table exports + column names without touching a real Postgres). There is no DB harness on `packages/db`'s `pnpm test` gate. The `apps/api` integration suite (`pnpm --filter @concert-crawl/api test:integration`) already wires up `concert_crawl_test` via `vitest.integration.ts` (`globalSetup`, `DATABASE_URL`, `*.integration.test.ts` glob), so dropping the migration verification next to the other `apps/api` integration tests keeps the existing CI gate intact and avoids inventing a new DB harness.
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { priceSubmissions, events, venues } from '@concert-crawl/db'
-import { testDb as db } from '../../test/helpers/db.js'
+import { describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { priceSubmissions, events, venues } from '@concert-crawl/db';
+import { testDb as db } from '../../test/helpers/db.js';
 
 describe('migration 0041 — admin contest review', () => {
   it('adds the archived status value to price_submission_status', async () => {
@@ -230,25 +230,28 @@ describe('migration 0041 — admin contest review', () => {
       SELECT enumlabel FROM pg_enum
        WHERE enumtypid = 'price_submission_status'::regtype
        ORDER BY enumsortorder
-    `)
-    const labels = rows.map((row) => row.enumlabel)
-    expect(labels).toContain('archived')
-  })
+    `);
+    const labels = rows.map((row) => row.enumlabel);
+    expect(labels).toContain('archived');
+  });
 
   it('adds archived_reason, last_admin_action_at, last_admin_action_kind columns', async () => {
-    const rows = await db.execute<{ column_name: string; data_type: string }>(sql`
+    const rows = await db.execute<{
+      column_name: string;
+      data_type: string;
+    }>(sql`
       SELECT column_name, data_type FROM information_schema.columns
        WHERE table_name = 'price_submissions'
          AND column_name IN ('archived_reason', 'last_admin_action_at', 'last_admin_action_kind')
        ORDER BY column_name
-    `)
-    const names = rows.map((row) => row.column_name)
+    `);
+    const names = rows.map((row) => row.column_name);
     expect(names).toEqual([
       'archived_reason',
       'last_admin_action_at',
       'last_admin_action_kind',
-    ])
-  })
+    ]);
+  });
 
   it('creates the three contest-queue indexes', async () => {
     const rows = await db.execute<{ indexname: string }>(sql`
@@ -260,14 +263,14 @@ describe('migration 0041 — admin contest review', () => {
            'price_submissions_pending_counter_unique_idx'
          )
        ORDER BY indexname
-    `)
-    const names = rows.map((row) => row.indexname)
+    `);
+    const names = rows.map((row) => row.indexname);
     expect(names).toEqual([
       'price_submissions_disputed_status_idx',
       'price_submissions_pending_counter_unique_idx',
       'price_submissions_pending_counters_idx',
-    ])
-  })
+    ]);
+  });
 
   it('unique index rejects a 2nd pending counter against the same parent', async () => {
     // Seed a venue + event + parent submission so we can attach counters.
@@ -282,7 +285,7 @@ describe('migration 0041 — admin contest review', () => {
         slug: 'contest-mig-test',
         websiteUrl: 'https://contest-mig-test.example.com',
       })
-      .returning({ id: venues.id })
+      .returning({ id: venues.id });
     const [event] = await db
       .insert(events)
       .values({
@@ -293,7 +296,7 @@ describe('migration 0041 — admin contest review', () => {
         date: '2027-12-01',
         verified: true,
       })
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     const [parent] = await db
       .insert(priceSubmissions)
       .values({
@@ -306,7 +309,7 @@ describe('migration 0041 — admin contest review', () => {
         sourceCategory: 'standard',
         status: 'corroborated',
       })
-      .returning({ id: priceSubmissions.id })
+      .returning({ id: priceSubmissions.id });
 
     // First pending counter — accepted.
     await db.insert(priceSubmissions).values({
@@ -319,7 +322,7 @@ describe('migration 0041 — admin contest review', () => {
       sourceCategory: 'standard',
       status: 'pending',
       disputedSubmissionId: parent!.id,
-    })
+    });
 
     // Second pending counter against the SAME parent — rejected by unique idx.
     await expect(
@@ -334,9 +337,9 @@ describe('migration 0041 — admin contest review', () => {
         status: 'pending',
         disputedSubmissionId: parent!.id,
       }),
-    ).rejects.toThrow(/price_submissions_pending_counter_unique_idx|unique/i)
-  })
-})
+    ).rejects.toThrow(/price_submissions_pending_counter_unique_idx|unique/i);
+  });
+});
 ```
 
 - [ ] **Step 5: Run the migration locally**
@@ -386,7 +389,7 @@ export const priceSubmissionStatusEnum = pgEnum('price_submission_status', [
   'disputed',
   'stale',
   'archived',
-])
+]);
 ```
 
 And add three columns to the `priceSubmissions` table after `note`:
@@ -442,32 +445,32 @@ In `packages/types/src/index.ts`, locate the `PriceSubmission` interface (~line 
 
 ```typescript
 export interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  disputedSubmissionId: string | null
-  status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-  corroborationCount: number
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  disputedSubmissionId: string | null;
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+  corroborationCount: number;
   // Submitter's free-text note (existed in DB but was missing from this
   // shared interface — added during the admin contest-review PR per #697).
-  note: string | null
+  note: string | null;
   // Admin's reason text when status = 'archived' (loser-of-contest sink).
   // Plain text, no length cap (admin reasons can run longer than `note`'s
   // 280-char submitter cap).
-  archivedReason: string | null
+  archivedReason: string | null;
   // Engagement-signal columns surfaced via priceByTier[].counterSubmission
   // so consumers see a quiet "Admin requested more info" pill on the event
   // detail page after an admin defers the contest.
-  lastAdminActionAt: string | null
-  lastAdminActionKind: 'defer' | null
-  createdAt: string
-  updatedAt: string
+  lastAdminActionAt: string | null;
+  lastAdminActionKind: 'defer' | null;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
 
@@ -508,17 +511,22 @@ Append to `apps/api/src/routes/admin/prices.integration.test.ts` (inside the PAT
 
 ```typescript
 it('rejects PATCH on a counter row (disputedSubmissionId !== null) with 409', async () => {
-  const venue = await seedVenue({ name: 'PATCH Lockout', slug: 'patch-lockout-1' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
-  const submitter = await seedUserProfile('parent-user', { handle: 'parent' })
-  const challenger = await seedUserProfile('challenger-user', { handle: 'chal' })
+  const venue = await seedVenue({
+    name: 'PATCH Lockout',
+    slug: 'patch-lockout-1',
+  });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
+  const submitter = await seedUserProfile('parent-user', { handle: 'parent' });
+  const challenger = await seedUserProfile('challenger-user', {
+    handle: 'chal',
+  });
   const parent = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
     vendor: 'AXS',
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'corroborated',
-  })
+  });
   const counter = await seedPriceSubmission(event.id, challenger.userId, {
     tier: 'GA',
     vendor: 'AXS',
@@ -526,63 +534,62 @@ it('rejects PATCH on a counter row (disputedSubmissionId !== null) with 409', as
     priceMin: '50',
     status: 'pending',
     disputedSubmissionId: parent.id,
-  })
+  });
 
-  const res = await app.request(
-    `/v1/admin/prices/submissions/${counter.id}`,
-    {
-      method: 'PATCH',
-      headers: {
-        ...ADMIN_HEADERS,
-      },
-      body: JSON.stringify({ status: 'corroborated' }),
+  const res = await app.request(`/v1/admin/prices/submissions/${counter.id}`, {
+    method: 'PATCH',
+    headers: {
+      ...ADMIN_HEADERS,
     },
-  )
+    body: JSON.stringify({ status: 'corroborated' }),
+  });
 
-  expect(res.status).toBe(409)
-  const body = (await res.json()) as { success: boolean; error: string }
-  expect(body.success).toBe(false)
-  expect(body.error).toMatch(/contest/i)
-  expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/)
-})
+  expect(res.status).toBe(409);
+  const body = (await res.json()) as { success: boolean; error: string };
+  expect(body.success).toBe(false);
+  expect(body.error).toMatch(/contest/i);
+  expect(body.error).toMatch(/\/v1\/admin\/contests\/prices/);
+});
 
 it('rejects PATCH on a parent row whose status is disputed with 409', async () => {
-  const venue = await seedVenue({ name: 'PATCH Lockout 2', slug: 'patch-lockout-2' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
-  const submitter = await seedUserProfile('parent-user-2', { handle: 'parent2' })
+  const venue = await seedVenue({
+    name: 'PATCH Lockout 2',
+    slug: 'patch-lockout-2',
+  });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
+  const submitter = await seedUserProfile('parent-user-2', {
+    handle: 'parent2',
+  });
   const parent = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
     vendor: 'AXS',
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'disputed',
-  })
+  });
 
-  const res = await app.request(
-    `/v1/admin/prices/submissions/${parent.id}`,
-    {
-      method: 'PATCH',
-      headers: {
-        ...ADMIN_HEADERS,
-      },
-      body: JSON.stringify({ status: 'corroborated' }),
+  const res = await app.request(`/v1/admin/prices/submissions/${parent.id}`, {
+    method: 'PATCH',
+    headers: {
+      ...ADMIN_HEADERS,
     },
-  )
+    body: JSON.stringify({ status: 'corroborated' }),
+  });
 
-  expect(res.status).toBe(409)
-})
+  expect(res.status).toBe(409);
+});
 
 it('still accepts PATCH on a non-contest pending row', async () => {
-  const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
-  const submitter = await seedUserProfile('plain-user', { handle: 'plain' })
+  const venue = await seedVenue({ name: 'PATCH OK', slug: 'patch-ok' });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
+  const submitter = await seedUserProfile('plain-user', { handle: 'plain' });
   const submission = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
     vendor: 'AXS',
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'pending',
-  })
+  });
 
   const res = await app.request(
     `/v1/admin/prices/submissions/${submission.id}`,
@@ -593,9 +600,9 @@ it('still accepts PATCH on a non-contest pending row', async () => {
       },
       body: JSON.stringify({ status: 'corroborated' }),
     },
-  )
-  expect(res.status).toBe(200)
-})
+  );
+  expect(res.status).toBe(200);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -625,15 +632,15 @@ const [existing] = await tx
   .from(priceSubmissions)
   .where(eq(priceSubmissions.id, id))
   .limit(1)
-  .for('update')
+  .for('update');
 
-if (!existing) return { ok: false }
+if (!existing) return { ok: false };
 
 // Defensive lockout: contests must resolve through /v1/admin/contests/prices/:id.
 // This endpoint pre-dates the contest UI and can silently overturn a corroborated
 // price when an admin approves a counter via the flat queue. Reject + loud Sentry.
 if (existing.disputedSubmissionId !== null || existing.status === 'disputed') {
-  return { ok: 'contest_lockout' as const }
+  return { ok: 'contest_lockout' as const };
 }
 ```
 
@@ -643,7 +650,7 @@ Widen the `TxResult` type:
 type TxResult =
   | { ok: true; updated: typeof priceSubmissions.$inferSelect }
   | { ok: false }
-  | { ok: 'contest_lockout' }
+  | { ok: 'contest_lockout' };
 ```
 
 And handle the new variant after the transaction:
@@ -655,7 +662,7 @@ if (result.ok === 'contest_lockout') {
       submissionId: id,
     },
     'PATCH lockout: contest row reached the non-contest endpoint',
-  )
+  );
   Sentry.captureMessage(
     'Contest row hit PATCH /v1/admin/prices/submissions/:id',
     {
@@ -663,7 +670,7 @@ if (result.ok === 'contest_lockout') {
       tags: { endpoint_lockout: 'contest_row' },
       extra: { submissionId: id },
     },
-  )
+  );
   return ctx.json(
     {
       success: false,
@@ -671,18 +678,18 @@ if (result.ok === 'contest_lockout') {
         'This submission is part of a contest. Resolve via /v1/admin/contests/prices/:contestId instead.',
     },
     409,
-  )
+  );
 }
 
 if (!result.ok)
-  return ctx.json({ success: false, error: 'Submission not found' }, 404)
+  return ctx.json({ success: false, error: 'Submission not found' }, 404);
 ```
 
 Required imports if not already present at the top of the file:
 
 ```typescript
-import { apiLogger } from '@concert-crawl/logger'
-import * as Sentry from '@sentry/node'
+import { apiLogger } from '@concert-crawl/logger';
+import * as Sentry from '@sentry/node';
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -725,11 +732,11 @@ Append to `apps/api/src/routes/submissions.integration.test.ts`:
 // Mirror that — call setAuth(challenger.userId) before each request to set the
 // current actor. Don't invent makeAuthHeader.
 it('rejects a 2nd pending counter against the same parent with 409', async () => {
-  const venue = await seedVenue({ name: 'Dup Counter', slug: 'dup-counter' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
-  const submitter = await seedUserProfile('parent-user', { handle: 'parent' })
-  const challenger1 = await seedUserProfile('chal-1', { handle: 'chal1' })
-  const challenger2 = await seedUserProfile('chal-2', { handle: 'chal2' })
+  const venue = await seedVenue({ name: 'Dup Counter', slug: 'dup-counter' });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
+  const submitter = await seedUserProfile('parent-user', { handle: 'parent' });
+  const challenger1 = await seedUserProfile('chal-1', { handle: 'chal1' });
+  const challenger2 = await seedUserProfile('chal-2', { handle: 'chal2' });
 
   const parent = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
@@ -737,10 +744,10 @@ it('rejects a 2nd pending counter against the same parent with 409', async () =>
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'corroborated',
-  })
+  });
 
   // First counter succeeds.
-  setAuth(challenger1.userId)
+  setAuth(challenger1.userId);
   const firstRes = await app.request(`/v1/submissions/${parent.id}/dispute`, {
     method: 'POST',
     headers: {
@@ -748,11 +755,11 @@ it('rejects a 2nd pending counter against the same parent with 409', async () =>
       Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ floor: 50 }),
-  })
-  expect(firstRes.status).toBe(201)
+  });
+  expect(firstRes.status).toBe(201);
 
   // Second counter against the SAME parent — rejected with 409.
-  setAuth(challenger2.userId)
+  setAuth(challenger2.userId);
   const secondRes = await app.request(`/v1/submissions/${parent.id}/dispute`, {
     method: 'POST',
     headers: {
@@ -760,12 +767,12 @@ it('rejects a 2nd pending counter against the same parent with 409', async () =>
       Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ floor: 55 }),
-  })
-  expect(secondRes.status).toBe(409)
-  const body = (await secondRes.json()) as { success: boolean; error: string }
-  expect(body.success).toBe(false)
-  expect(body.error).toMatch(/already pending/i)
-})
+  });
+  expect(secondRes.status).toBe(409);
+  const body = (await secondRes.json()) as { success: boolean; error: string };
+  expect(body.success).toBe(false);
+  expect(body.error).toMatch(/already pending/i);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -795,7 +802,7 @@ const [existingCounter] = await db
       eq(priceSubmissions.status, 'pending'),
     ),
   )
-  .limit(1)
+  .limit(1);
 
 if (existingCounter) {
   return ctx.json(
@@ -804,7 +811,7 @@ if (existingCounter) {
       error: 'Another challenge is already pending against this submission.',
     },
     409,
-  )
+  );
 }
 ```
 
@@ -814,8 +821,8 @@ Wrap the existing `db.transaction(...)` insert in a try/catch that translates DB
 try {
   const inserted = await db.transaction(async (tx) => {
     // ... existing insert + parent flip-to-disputed logic ...
-  })
-  return ctx.json({ success: true, data: inserted }, 201)
+  });
+  return ctx.json({ success: true, data: inserted }, 201);
 } catch (err) {
   if (
     typeof err === 'object' &&
@@ -831,9 +838,9 @@ try {
         error: 'Another challenge is already pending against this submission.',
       },
       409,
-    )
+    );
   }
-  throw err
+  throw err;
 }
 ```
 
@@ -882,11 +889,20 @@ Append three new cases to `apps/api/src/routes/price-submissions.integration.tes
 ```typescript
 describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
   it('rejects a 2nd pending counter against the same parent with 409', async () => {
-    const venue = await seedVenue({ name: 'Dup Counter PS', slug: 'dup-counter-ps' })
-    const event = await seedEvent(venue.id, { date: '2027-07-01' })
-    const submitter = await seedUserProfile('parent-user-ps', { handle: 'parent_ps' })
-    const challenger1 = await seedUserProfile('chal-1-ps', { handle: 'chal1_ps' })
-    const challenger2 = await seedUserProfile('chal-2-ps', { handle: 'chal2_ps' })
+    const venue = await seedVenue({
+      name: 'Dup Counter PS',
+      slug: 'dup-counter-ps',
+    });
+    const event = await seedEvent(venue.id, { date: '2027-07-01' });
+    const submitter = await seedUserProfile('parent-user-ps', {
+      handle: 'parent_ps',
+    });
+    const challenger1 = await seedUserProfile('chal-1-ps', {
+      handle: 'chal1_ps',
+    });
+    const challenger2 = await seedUserProfile('chal-2-ps', {
+      handle: 'chal2_ps',
+    });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -894,39 +910,66 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
       howFound: 'saw_listing',
       sourceCategory: 'standard',
       status: 'corroborated',
-    })
+    });
 
-    setAuth(challenger1.userId)
-    const first = await app.request(`/v1/events/${event.id}/price-submissions`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        priceMin: 50, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
-        sourceCategory: 'standard', disputedSubmissionId: parent.id,
-      }),
-    })
-    expect(first.status).toBe(201)
+    setAuth(challenger1.userId);
+    const first = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceMin: 50,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          disputedSubmissionId: parent.id,
+        }),
+      },
+    );
+    expect(first.status).toBe(201);
 
-    setAuth(challenger2.userId)
-    const second = await app.request(`/v1/events/${event.id}/price-submissions`, {
-      method: 'POST',
-      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        priceMin: 60, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
-        sourceCategory: 'standard', disputedSubmissionId: parent.id,
-      }),
-    })
-    expect(second.status).toBe(409)
-    const body = await second.json() as { success: boolean; error: string }
-    expect(body.success).toBe(false)
-    expect(body.error).toMatch(/already pending/i)
-  })
+    setAuth(challenger2.userId);
+    const second = await app.request(
+      `/v1/events/${event.id}/price-submissions`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceMin: 60,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          disputedSubmissionId: parent.id,
+        }),
+      },
+    );
+    expect(second.status).toBe(409);
+    const body = (await second.json()) as { success: boolean; error: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toMatch(/already pending/i);
+  });
 
   it('flips the parent row to disputed when a counter is filed', async () => {
-    const venue = await seedVenue({ name: 'Flip Parent PS', slug: 'flip-parent-ps' })
-    const event = await seedEvent(venue.id, { date: '2027-07-02' })
-    const submitter = await seedUserProfile('flip-parent', { handle: 'flip_parent' })
-    const challenger = await seedUserProfile('flip-chal', { handle: 'flip_chal' })
+    const venue = await seedVenue({
+      name: 'Flip Parent PS',
+      slug: 'flip-parent-ps',
+    });
+    const event = await seedEvent(venue.id, { date: '2027-07-02' });
+    const submitter = await seedUserProfile('flip-parent', {
+      handle: 'flip_parent',
+    });
+    const challenger = await seedUserProfile('flip-chal', {
+      handle: 'flip_chal',
+    });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -934,30 +977,44 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
       howFound: 'saw_listing',
       sourceCategory: 'standard',
       status: 'corroborated',
-    })
+    });
 
-    setAuth(challenger.userId)
+    setAuth(challenger.userId);
     await app.request(`/v1/events/${event.id}/price-submissions`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: 'Bearer test-token',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        priceMin: 70, tier: 'GA', vendor: 'AXS', howFound: 'saw_listing',
-        sourceCategory: 'standard', disputedSubmissionId: parent.id,
+        priceMin: 70,
+        tier: 'GA',
+        vendor: 'AXS',
+        howFound: 'saw_listing',
+        sourceCategory: 'standard',
+        disputedSubmissionId: parent.id,
       }),
-    })
+    });
 
     const [reloadedParent] = await testDb
       .select({ status: priceSubmissions.status })
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, parent.id))
-    expect(reloadedParent!.status).toBe('disputed')
-  })
+      .where(eq(priceSubmissions.id, parent.id));
+    expect(reloadedParent!.status).toBe('disputed');
+  });
 
   it('overwrites submitter-supplied slot fields with parent values', async () => {
-    const venue = await seedVenue({ name: 'Slot Inherit', slug: 'slot-inherit' })
-    const event = await seedEvent(venue.id, { date: '2027-07-03' })
-    const submitter = await seedUserProfile('slot-parent', { handle: 'slot_parent' })
-    const challenger = await seedUserProfile('slot-chal', { handle: 'slot_chal' })
+    const venue = await seedVenue({
+      name: 'Slot Inherit',
+      slug: 'slot-inherit',
+    });
+    const event = await seedEvent(venue.id, { date: '2027-07-03' });
+    const submitter = await seedUserProfile('slot-parent', {
+      handle: 'slot_parent',
+    });
+    const challenger = await seedUserProfile('slot-chal', {
+      handle: 'slot_chal',
+    });
 
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
@@ -965,12 +1022,15 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
       howFound: 'saw_listing',
       sourceCategory: 'standard',
       status: 'corroborated',
-    })
+    });
 
-    setAuth(challenger.userId)
+    setAuth(challenger.userId);
     const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer test-token', 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: 'Bearer test-token',
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         priceMin: 80,
         // Submitter tries to override slot fields — server must IGNORE these
@@ -981,14 +1041,17 @@ describe('POST /v1/events/:eventId/price-submissions — counter path', () => {
         sourceCategory: 'resale',
         disputedSubmissionId: parent.id,
       }),
-    })
-    expect(res.status).toBe(201)
-    const body = await res.json() as { success: boolean; data: { tier: string; vendor: string; sourceCategory: string } }
-    expect(body.data.tier).toBe('GA')                  // parent's value, not submitter's 'VIP'
-    expect(body.data.vendor).toBe('AXS')               // parent's value, not 'Ticketmaster'
-    expect(body.data.sourceCategory).toBe('standard')  // parent's value, not 'resale'
-  })
-})
+    });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { tier: string; vendor: string; sourceCategory: string };
+    };
+    expect(body.data.tier).toBe('GA'); // parent's value, not submitter's 'VIP'
+    expect(body.data.vendor).toBe('AXS'); // parent's value, not 'Ticketmaster'
+    expect(body.data.sourceCategory).toBe('standard'); // parent's value, not 'resale'
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -1018,12 +1081,18 @@ if (body.disputedSubmissionId) {
         eq(priceSubmissions.eventId, eventId),
       ),
     )
-    .limit(1)
+    .limit(1);
   if (!disputed) {
-    return ctx.json({ success: false, error: 'Disputed submission not found' }, 404)
+    return ctx.json(
+      { success: false, error: 'Disputed submission not found' },
+      404,
+    );
   }
   if (disputed.status !== 'corroborated') {
-    return ctx.json({ success: false, error: 'Can only dispute a corroborated submission' }, 400)
+    return ctx.json(
+      { success: false, error: 'Can only dispute a corroborated submission' },
+      400,
+    );
   }
 
   // NEW: pre-insert duplicate-counter check (same as Task 5)
@@ -1036,18 +1105,21 @@ if (body.disputedSubmissionId) {
         eq(priceSubmissions.status, 'pending'),
       ),
     )
-    .limit(1)
+    .limit(1);
   if (existingCounter.length > 0) {
     return ctx.json(
-      { success: false, error: 'Another challenge is already pending against this submission.' },
+      {
+        success: false,
+        error: 'Another challenge is already pending against this submission.',
+      },
       409,
-    )
+    );
   }
 
   // NEW: inherit slot identity from parent (overwrite submitter-supplied)
-  const inheritedTier = disputed.tier
-  const inheritedVendor = disputed.vendor
-  const inheritedSourceCategory = disputed.sourceCategory
+  const inheritedTier = disputed.tier;
+  const inheritedVendor = disputed.vendor;
+  const inheritedSourceCategory = disputed.sourceCategory;
 
   // NEW: insert child + flip parent in the SAME transaction
   try {
@@ -1067,16 +1139,16 @@ if (body.disputedSubmissionId) {
           note: body.note ?? null,
           disputedSubmissionId: body.disputedSubmissionId,
         })
-        .returning()
+        .returning();
 
       await tx
         .update(priceSubmissions)
         .set({ status: 'disputed', updatedAt: sql`now()` })
-        .where(eq(priceSubmissions.id, body.disputedSubmissionId!))
+        .where(eq(priceSubmissions.id, body.disputedSubmissionId!));
 
-      return [child]
-    })
-    return ctx.json({ success: true, data: created }, 201)
+      return [child];
+    });
+    return ctx.json({ success: true, data: created }, 201);
   } catch (err) {
     // Translate 23505 on the pending-counter unique index → clean 409
     if (
@@ -1086,11 +1158,15 @@ if (body.disputedSubmissionId) {
       err.message.includes('price_submissions_pending_counter_unique_idx')
     ) {
       return ctx.json(
-        { success: false, error: 'Another challenge is already pending against this submission.' },
+        {
+          success: false,
+          error:
+            'Another challenge is already pending against this submission.',
+        },
         409,
-      )
+      );
     }
-    throw err
+    throw err;
   }
 }
 
@@ -1098,6 +1174,7 @@ if (body.disputedSubmissionId) {
 ```
 
 Notes:
+
 - The existing 409 ("Already submitted") and 429 (rate-limit) checks below this block stay intact for the non-counter path. Counter inserts deliberately bypass the per-user-per-event-rate-limit because a counter is a response to a contest, not a fresh submission attempt.
 - `howFound` is treated as user-supplied (it's how THIS submitter saw the price; not slot identity).
 - `disputedSubmissionId` is non-null inside the try block; the `!` assertion is narrow and acceptable per `memory:feedback_no_type_casting`.
@@ -1134,44 +1211,44 @@ git commit -m "feat(api): counter-creation via price-submissions route — dupli
   // GET /v1/admin/contests/prices?limit=20&offset=0
   // Response:
   interface PriceContestRow {
-    contestId: string
-    eventId: string
-    eventTitle: string
-    venueName: string
-    eventDate: string
-    tier: Tier
-    sourceCategory: SourceCategory | null
+    contestId: string;
+    eventId: string;
+    eventTitle: string;
+    venueName: string;
+    eventDate: string;
+    tier: Tier;
+    sourceCategory: SourceCategory | null;
     parent: {
-      id: string
-      priceMin: string
-      priceMax: string | null
-      vendor: Vendor
-      submitter: { userId: string; handle: string | null }
-      confirms: { fans: number; admin: number }
-      observedAt: string
-      lastUpdatedAt: string  // parent.updatedAt — see spec §6.1 on naming
-      note: string | null
-    }
+      id: string;
+      priceMin: string;
+      priceMax: string | null;
+      vendor: Vendor;
+      submitter: { userId: string; handle: string | null };
+      confirms: { fans: number; admin: number };
+      observedAt: string;
+      lastUpdatedAt: string; // parent.updatedAt — see spec §6.1 on naming
+      note: string | null;
+    };
     counter: {
-      id: string
-      priceMin: string
-      priceMax: string | null
-      vendor: Vendor
-      submitter: { userId: string; handle: string | null }
-      confirms: { fans: number; admin: number }
-      observedAt: string
-      note: string | null
-    }
-    filedAt: string
+      id: string;
+      priceMin: string;
+      priceMax: string | null;
+      vendor: Vendor;
+      submitter: { userId: string; handle: string | null };
+      confirms: { fans: number; admin: number };
+      observedAt: string;
+      note: string | null;
+    };
+    filedAt: string;
   }
   interface ListResponse {
-    success: true
+    success: true;
     data: {
-      items: PriceContestRow[]
-      total: number
-      limit: number
-      offset: number
-    }
+      items: PriceContestRow[];
+      total: number;
+      limit: number;
+      offset: number;
+    };
   }
   ```
 
@@ -1180,51 +1257,51 @@ git commit -m "feat(api): counter-creation via price-submissions route — dupli
 Create `apps/api/src/routes/admin/contests.integration.test.ts`. Mirror the pattern from `apps/api/src/routes/admin/prices.integration.test.ts` exactly — hoisted `authState`, mocked Clerk middleware, `createApp()` factory, `setAdminAuth()` helper, `ADMIN_HEADERS` constant. Do NOT invent a `makeAdminAuthHeader` helper or import `{ app }` directly from app.js — neither exists.
 
 ```typescript
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 
 // Hoisted auth state so the Clerk mock can swap users between tests without
 // reloading modules. Same pattern as admin/prices.integration.test.ts.
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../../app.js'
+import { createApp } from '../../app.js';
 import {
   clearTables,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
   seedVenue,
-} from '../../test/helpers/seed.js'
+} from '../../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAdminAuth(): void {
   authState.current = {
     userId: 'admin_contest_test',
     sessionClaims: { metadata: { role: 'admin' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 const ADMIN_HEADERS = {
   Authorization: 'Bearer admin-token',
   'Content-Type': 'application/json',
-}
+};
 
 // Convention: every admin-action test body in this file calls
 // `setAdminAuth()` as its first line. The `requires admin auth` test starts
@@ -1235,24 +1312,27 @@ const ADMIN_HEADERS = {
 
 describe('GET /v1/admin/contests/prices', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('requires admin auth', async () => {
-    const res = await app.request('/v1/admin/contests/prices')
-    expect([401, 403]).toContain(res.status)
-  })
+    const res = await app.request('/v1/admin/contests/prices');
+    expect([401, 403]).toContain(res.status);
+  });
 
   it('lists open contests with full parent + counter shape', async () => {
-    setAdminAuth()
-    const venue = await seedVenue({ name: 'Contest Venue', slug: 'contest-list-1' })
+    setAdminAuth();
+    const venue = await seedVenue({
+      name: 'Contest Venue',
+      slug: 'contest-list-1',
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       title: 'Contest Test Show',
-    })
-    const submitter = await seedUserProfile('parent-u', { handle: 'parent-h' })
-    const challenger = await seedUserProfile('chal-u', { handle: 'chal-h' })
+    });
+    const submitter = await seedUserProfile('parent-u', { handle: 'parent-h' });
+    const challenger = await seedUserProfile('chal-u', { handle: 'chal-h' });
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -1260,7 +1340,7 @@ describe('GET /v1/admin/contests/prices', () => {
       priceMin: '40',
       status: 'disputed', // contest is open
       note: 'Original observation',
-    })
+    });
     await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -1269,56 +1349,56 @@ describe('GET /v1/admin/contests/prices', () => {
       status: 'pending',
       disputedSubmissionId: parent.id,
       note: 'Saw new price on AXS',
-    })
+    });
 
     const res = await app.request('/v1/admin/contests/prices', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
         items: Array<{
-          contestId: string
-          eventTitle: string
-          tier: string
+          contestId: string;
+          eventTitle: string;
+          tier: string;
           parent: {
-            id: string
-            priceMin: string
-            submitter: { userId: string; handle: string | null }
-            note: string | null
-          }
+            id: string;
+            priceMin: string;
+            submitter: { userId: string; handle: string | null };
+            note: string | null;
+          };
           counter: {
-            id: string
-            priceMin: string
-            submitter: { userId: string; handle: string | null }
-            note: string | null
-          }
-          filedAt: string
-        }>
-        total: number
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.items).toHaveLength(1)
-    const item = body.data.items[0]!
-    expect(item.contestId).toBe(parent.id)
-    expect(item.eventTitle).toBe('Contest Test Show')
-    expect(item.tier).toBe('GA')
-    expect(item.parent.priceMin).toBe('40')
-    expect(item.parent.note).toBe('Original observation')
-    expect(item.parent.submitter.handle).toBe('parent-h')
-    expect(item.counter.priceMin).toBe('55')
-    expect(item.counter.submitter.handle).toBe('chal-h')
-    expect(item.filedAt).toBeTruthy()
-    expect(body.data.total).toBe(1)
-  })
+            id: string;
+            priceMin: string;
+            submitter: { userId: string; handle: string | null };
+            note: string | null;
+          };
+          filedAt: string;
+        }>;
+        total: number;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.items).toHaveLength(1);
+    const item = body.data.items[0]!;
+    expect(item.contestId).toBe(parent.id);
+    expect(item.eventTitle).toBe('Contest Test Show');
+    expect(item.tier).toBe('GA');
+    expect(item.parent.priceMin).toBe('40');
+    expect(item.parent.note).toBe('Original observation');
+    expect(item.parent.submitter.handle).toBe('parent-h');
+    expect(item.counter.priceMin).toBe('55');
+    expect(item.counter.submitter.handle).toBe('chal-h');
+    expect(item.filedAt).toBeTruthy();
+    expect(body.data.total).toBe(1);
+  });
 
   it('paginates via limit + offset', async () => {
     // Seed 3 contests, request limit=2 offset=1 → expect 2 items, total=3.
     // ... (write 3 contests + assert)
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1334,45 +1414,54 @@ Expected: FAIL — the route does not exist; expect 404.
 Create `apps/api/src/routes/admin/contests.ts`:
 
 ```typescript
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { and, asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
-import { z } from 'zod'
-import { db } from '../../db.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  sql,
+} from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import { z } from 'zod';
+import { db } from '../../db.js';
 import {
   events,
   priceSubmissions,
   userProfiles,
   venues,
-} from '@concert-crawl/db'
-import type { AdminVariables } from './index.js'
-import { getAuthUser } from '../../middleware/auth.js'
+} from '@concert-crawl/db';
+import type { AdminVariables } from './index.js';
+import { getAuthUser } from '../../middleware/auth.js';
 
-export const contestsAdminRouter = new Hono<AdminVariables>()
+export const contestsAdminRouter = new Hono<AdminVariables>();
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
-})
+});
 
 // GET /v1/admin/contests/prices — paginated open price contests
 contestsAdminRouter.get(
   '/prices',
   zValidator('query', listQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
     }
   }),
   async (ctx) => {
-    const { limit, offset } = ctx.req.valid('query')
+    const { limit, offset } = ctx.req.valid('query');
 
     // Pivot the query around the counter (the pending dispute row) so we can
     // ORDER BY counter.createdAt — the spec's filedAt (oldest contest first).
     // The §4.6 partial unique index guarantees at most one pending counter per
     // parent, so one counter row = one contest. parentAlias is the aliased
     // self-join target.
-    const parentAlias = alias(priceSubmissions, 'parent')
+    const parentAlias = alias(priceSubmissions, 'parent');
     const counterRows = await db
       .select({
         contestId: parentAlias.id,
@@ -1412,7 +1501,10 @@ contestsAdminRouter.get(
         filedAt: priceSubmissions.createdAt,
       })
       .from(priceSubmissions)
-      .innerJoin(parentAlias, eq(parentAlias.id, priceSubmissions.disputedSubmissionId))
+      .innerJoin(
+        parentAlias,
+        eq(parentAlias.id, priceSubmissions.disputedSubmissionId),
+      )
       .innerJoin(events, eq(events.id, parentAlias.eventId))
       .innerJoin(venues, eq(venues.id, events.venueId))
       .where(
@@ -1424,10 +1516,10 @@ contestsAdminRouter.get(
       )
       .orderBy(asc(priceSubmissions.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     // Resolve handles for every userId surfaced across both sides.
-    const parentIds = counterRows.map((row) => row.parentId)
+    const parentIds = counterRows.map((row) => row.parentId);
     const allUserIds = Array.from(
       new Set(
         [
@@ -1435,8 +1527,8 @@ contestsAdminRouter.get(
           ...counterRows.map((row) => row.counterUserId),
         ].filter((uid): uid is string => uid !== null),
       ),
-    )
-    const handleMap = new Map<string, string | null>()
+    );
+    const handleMap = new Map<string, string | null>();
     if (allUserIds.length > 0) {
       const handles = await db
         .select({
@@ -1444,8 +1536,8 @@ contestsAdminRouter.get(
           handle: userProfiles.handle,
         })
         .from(userProfiles)
-        .where(inArray(userProfiles.userId, allUserIds))
-      for (const row of handles) handleMap.set(row.userId, row.handle ?? null)
+        .where(inArray(userProfiles.userId, allUserIds));
+      for (const row of handles) handleMap.set(row.userId, row.handle ?? null);
     }
 
     // `fans` count comes from corroborationCount directly (it already
@@ -1500,7 +1592,7 @@ contestsAdminRouter.get(
         note: row.counterNote ?? null,
       },
       filedAt: row.filedAt.toISOString(),
-    }))
+    }));
 
     // total counts contests by their pending counter (matching the items
     // shape), not by parents with status='disputed' — those numbers can
@@ -1513,14 +1605,14 @@ contestsAdminRouter.get(
           eq(priceSubmissions.status, 'pending'),
           isNotNull(priceSubmissions.disputedSubmissionId),
         ),
-      )
+      );
 
     return ctx.json({
       success: true,
       data: { items, total, limit, offset },
-    })
+    });
   },
-)
+);
 ```
 
 - [ ] **Step 4: Mount the router**
@@ -1528,9 +1620,9 @@ contestsAdminRouter.get(
 In `apps/api/src/routes/admin/index.ts`, add the import and mount:
 
 ```typescript
-import { contestsAdminRouter } from './contests.js'
+import { contestsAdminRouter } from './contests.js';
 // ...
-adminRouter.route('/contests', contestsAdminRouter)
+adminRouter.route('/contests', contestsAdminRouter);
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -1571,17 +1663,17 @@ Append to `apps/api/src/routes/admin/contests.integration.test.ts`:
 ```typescript
 describe('GET /v1/admin/contests/prices/:contestId', () => {
   it('returns the contest detail when both sides exist', async () => {
-    const venue = await seedVenue({ name: 'Detail', slug: 'contest-detail-1' })
-    const event = await seedEvent(venue.id, { date: '2027-06-01' })
-    const submitter = await seedUserProfile('p-u', { handle: 'p' })
-    const challenger = await seedUserProfile('c-u', { handle: 'c' })
+    const venue = await seedVenue({ name: 'Detail', slug: 'contest-detail-1' });
+    const event = await seedEvent(venue.id, { date: '2027-06-01' });
+    const submitter = await seedUserProfile('p-u', { handle: 'p' });
+    const challenger = await seedUserProfile('c-u', { handle: 'c' });
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
       vendor: 'AXS',
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'disputed',
-    })
+    });
     await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -1589,32 +1681,36 @@ describe('GET /v1/admin/contests/prices/:contestId', () => {
       priceMin: '55',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
+    });
 
-    const res = await app.request(
-      `/v1/admin/contests/prices/${parent.id}`,
-      { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/admin/contests/prices/${parent.id}`, {
+      headers: ADMIN_HEADERS,
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { contestId: string; parent: { priceMin: string }; counter: { priceMin: string }; history: unknown[] }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.contestId).toBe(parent.id)
-    expect(body.data.parent.priceMin).toBe('40')
-    expect(body.data.counter.priceMin).toBe('55')
-    expect(body.data.history).toEqual([])
-  })
+      success: boolean;
+      data: {
+        contestId: string;
+        parent: { priceMin: string };
+        counter: { priceMin: string };
+        history: unknown[];
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.contestId).toBe(parent.id);
+    expect(body.data.parent.priceMin).toBe('40');
+    expect(body.data.counter.priceMin).toBe('55');
+    expect(body.data.history).toEqual([]);
+  });
 
   it('returns 404 for an unknown contestId', async () => {
     const res = await app.request(
       '/v1/admin/contests/prices/00000000-0000-0000-0000-000000000000',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(404)
-  })
-})
+    );
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1631,7 +1727,7 @@ Append to `apps/api/src/routes/admin/contests.ts`:
 
 ```typescript
 contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
-  const { contestId } = ctx.req.param()
+  const { contestId } = ctx.req.param();
 
   const [parentRow] = await db
     .select({
@@ -1656,10 +1752,10 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
     .innerJoin(events, eq(events.id, priceSubmissions.eventId))
     .innerJoin(venues, eq(venues.id, events.venueId))
     .where(eq(priceSubmissions.id, contestId))
-    .limit(1)
+    .limit(1);
 
   if (!parentRow) {
-    return ctx.json({ success: false, error: 'Contest not found' }, 404)
+    return ctx.json({ success: false, error: 'Contest not found' }, 404);
   }
 
   // The counter is the one pending row whose disputedSubmissionId matches.
@@ -1684,23 +1780,23 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
     .from(priceSubmissions)
     .where(eq(priceSubmissions.disputedSubmissionId, contestId))
     .orderBy(desc(priceSubmissions.createdAt))
-    .limit(1)
+    .limit(1);
 
   if (!counterRow) {
-    return ctx.json({ success: false, error: 'Counter not found' }, 404)
+    return ctx.json({ success: false, error: 'Counter not found' }, 404);
   }
 
   // Resolve handles.
   const userIds = [parentRow.userId, counterRow.userId].filter(
     (uid): uid is string => uid !== null,
-  )
-  const handleMap = new Map<string, string | null>()
+  );
+  const handleMap = new Map<string, string | null>();
   if (userIds.length > 0) {
     const handles = await db
       .select({ userId: userProfiles.userId, handle: userProfiles.handle })
       .from(userProfiles)
-      .where(inArray(userProfiles.userId, userIds))
-    for (const row of handles) handleMap.set(row.userId, row.handle ?? null)
+      .where(inArray(userProfiles.userId, userIds));
+    for (const row of handles) handleMap.set(row.userId, row.handle ?? null);
   }
 
   // fans = corroborationCount (already includes the submitter's implicit
@@ -1724,7 +1820,9 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
         vendor: parentRow.vendor,
         submitter: {
           userId: parentRow.userId ?? '',
-          handle: parentRow.userId ? (handleMap.get(parentRow.userId) ?? null) : null,
+          handle: parentRow.userId
+            ? (handleMap.get(parentRow.userId) ?? null)
+            : null,
         },
         confirms: {
           fans: parentRow.corroborationCount,
@@ -1759,8 +1857,8 @@ contestsAdminRouter.get('/prices/:contestId', async (ctx) => {
       filedAt: counterRow.observedAt.toISOString(),
       history: [],
     },
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -1806,21 +1904,28 @@ Append to `apps/api/src/routes/admin/contests.integration.test.ts`:
 ```typescript
 describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
   const seedContest = async () => {
-    const venue = await seedVenue({ name: 'Resolve', slug: `resolve-${Date.now()}-${Math.random()}` })
+    const venue = await seedVenue({
+      name: 'Resolve',
+      slug: `resolve-${Date.now()}-${Math.random()}`,
+    });
     const event = await seedEvent(venue.id, {
       date: '2027-06-01',
       ticketPriceMin: '40',
       priceSource: 'community',
-    })
-    const submitter = await seedUserProfile(`sub-${Math.random()}`, { handle: 'sub' })
-    const challenger = await seedUserProfile(`chal-${Math.random()}`, { handle: 'chal' })
+    });
+    const submitter = await seedUserProfile(`sub-${Math.random()}`, {
+      handle: 'sub',
+    });
+    const challenger = await seedUserProfile(`chal-${Math.random()}`, {
+      handle: 'chal',
+    });
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
       vendor: 'AXS',
       sourceCategory: 'standard',
       priceMin: '40',
       status: 'disputed',
-    })
+    });
     const counter = await seedPriceSubmission(event.id, challenger.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -1828,12 +1933,12 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       priceMin: '55',
       status: 'pending',
       disputedSubmissionId: parent.id,
-    })
-    return { venue, event, submitter, challenger, parent, counter }
-  }
+    });
+    return { venue, event, submitter, challenger, parent, counter };
+  };
 
   it('parent_wins keeps parent corroborated + archives counter + events row unchanged', async () => {
-    const { event, parent, counter } = await seedContest()
+    const { event, parent, counter } = await seedContest();
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/resolve`,
       {
@@ -1846,29 +1951,29 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
           reason: 'Original price still accurate per box-office confirmation.',
         }),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { resolution: string; eventPriceUpdated: boolean }
-    }
-    expect(body.data.resolution).toBe('parent_wins')
-    expect(body.data.eventPriceUpdated).toBe(false)
+      data: { resolution: string; eventPriceUpdated: boolean };
+    };
+    expect(body.data.resolution).toBe('parent_wins');
+    expect(body.data.eventPriceUpdated).toBe(false);
 
     // Parent flips back to corroborated; counter goes to archived with reason.
-    const parentAfter = await fetchSubmission(parent.id)
-    const counterAfter = await fetchSubmission(counter.id)
-    expect(parentAfter.status).toBe('corroborated')
-    expect(counterAfter.status).toBe('archived')
-    expect(counterAfter.archivedReason).toMatch(/box-office/i)
+    const parentAfter = await fetchSubmission(parent.id);
+    const counterAfter = await fetchSubmission(counter.id);
+    expect(parentAfter.status).toBe('corroborated');
+    expect(counterAfter.status).toBe('archived');
+    expect(counterAfter.archivedReason).toMatch(/box-office/i);
 
     // events row unchanged (still $40).
-    const eventAfter = await fetchEvent(event.id)
-    expect(eventAfter.ticketPriceMin).toBe('40')
-  })
+    const eventAfter = await fetchEvent(event.id);
+    expect(eventAfter.ticketPriceMin).toBe('40');
+  });
 
   it('challenger_wins corroborates counter + archives parent + updates events row + awards cred', async () => {
-    const { event, parent, counter, challenger } = await seedContest()
-    const credBefore = await fetchCred(challenger.userId)
+    const { event, parent, counter, challenger } = await seedContest();
+    const credBefore = await fetchCred(challenger.userId);
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/resolve`,
       {
@@ -1881,28 +1986,28 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
           reason: 'Verified AXS face moved to $55 after openers announced.',
         }),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { resolution: string; eventPriceUpdated: boolean }
-    }
-    expect(body.data.eventPriceUpdated).toBe(true)
+      data: { resolution: string; eventPriceUpdated: boolean };
+    };
+    expect(body.data.eventPriceUpdated).toBe(true);
 
-    const parentAfter = await fetchSubmission(parent.id)
-    const counterAfter = await fetchSubmission(counter.id)
-    expect(parentAfter.status).toBe('archived')
-    expect(parentAfter.archivedReason).toMatch(/AXS face moved/i)
-    expect(counterAfter.status).toBe('corroborated')
+    const parentAfter = await fetchSubmission(parent.id);
+    const counterAfter = await fetchSubmission(counter.id);
+    expect(parentAfter.status).toBe('archived');
+    expect(parentAfter.archivedReason).toMatch(/AXS face moved/i);
+    expect(counterAfter.status).toBe('corroborated');
 
-    const eventAfter = await fetchEvent(event.id)
-    expect(eventAfter.ticketPriceMin).toBe('55')
+    const eventAfter = await fetchEvent(event.id);
+    expect(eventAfter.ticketPriceMin).toBe('55');
 
-    const credAfter = await fetchCred(challenger.userId)
-    expect(credAfter).toBe(credBefore + 1)
-  })
+    const credAfter = await fetchCred(challenger.userId);
+    expect(credAfter).toBe(credBefore + 1);
+  });
 
   it('rejects reason < 10 chars with 400', async () => {
-    const { parent } = await seedContest()
+    const { parent } = await seedContest();
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/resolve`,
       {
@@ -1912,17 +2017,17 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
         },
         body: JSON.stringify({ resolution: 'parent_wins', reason: 'short' }),
       },
-    )
-    expect([400, 422]).toContain(res.status)
-  })
+    );
+    expect([400, 422]).toContain(res.status);
+  });
 
   it('returns 409 when parent is already archived (stale state)', async () => {
-    const { parent } = await seedContest()
+    const { parent } = await seedContest();
     // Simulate concurrent resolution: another admin already archived parent.
     await db
       .update(priceSubmissions)
       .set({ status: 'archived', archivedReason: 'beat-you-to-it' })
-      .where(eq(priceSubmissions.id, parent.id))
+      .where(eq(priceSubmissions.id, parent.id));
 
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/resolve`,
@@ -1936,10 +2041,10 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
           reason: 'Should be rejected because parent already archived.',
         }),
       },
-    )
-    expect(res.status).toBe(409)
-  })
-})
+    );
+    expect(res.status).toBe(409);
+  });
+});
 ```
 
 (`fetchSubmission`, `fetchEvent`, `fetchCred` are seed-helpers that exist in `apps/api/src/test/helpers/seed.ts` — verify their signatures; if not present, add them as one-line wrappers around `db.select(...).where(...).limit(1)`.)
@@ -1960,7 +2065,7 @@ Append to `apps/api/src/routes/admin/contests.ts`:
 const resolveBodySchema = z.object({
   resolution: z.enum(['parent_wins', 'challenger_wins']),
   reason: z.string().min(10).max(2000),
-})
+});
 
 contestsAdminRouter.post(
   '/prices/:contestId/resolve',
@@ -1969,18 +2074,36 @@ contestsAdminRouter.post(
       return ctx.json(
         { success: false, error: 'Reason must be 10–2000 characters.' },
         400,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { contestId } = ctx.req.param()
-    const { resolution, reason } = ctx.req.valid('json')
-    const admin = getAuthUser(ctx)
+    const { contestId } = ctx.req.param();
+    const { resolution, reason } = ctx.req.valid('json');
+    const admin = getAuthUser(ctx);
 
     type TxOutcome =
-      | { ok: true; parent: typeof priceSubmissions.$inferSelect; challenger: typeof priceSubmissions.$inferSelect; eventPriceUpdated: boolean; orphanedCounterIds: string[]; before: { parent: { status: string; priceMin: string; priceMax: string | null }; challenger: { status: string; priceMin: string; priceMax: string | null } } }
+      | {
+          ok: true;
+          parent: typeof priceSubmissions.$inferSelect;
+          challenger: typeof priceSubmissions.$inferSelect;
+          eventPriceUpdated: boolean;
+          orphanedCounterIds: string[];
+          before: {
+            parent: {
+              status: string;
+              priceMin: string;
+              priceMax: string | null;
+            };
+            challenger: {
+              status: string;
+              priceMin: string;
+              priceMax: string | null;
+            };
+          };
+        }
       | { ok: 'not_found' }
-      | { ok: 'precondition_failed'; reason: string }
+      | { ok: 'precondition_failed'; reason: string };
 
     const outcome: TxOutcome = await db.transaction(async (tx) => {
       // Lock both rows for the duration of the transaction. The counter is the
@@ -1991,8 +2114,8 @@ contestsAdminRouter.post(
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, contestId))
         .limit(1)
-        .for('update')
-      if (!parent) return { ok: 'not_found' }
+        .for('update');
+      if (!parent) return { ok: 'not_found' };
 
       const [challenger] = await tx
         .select()
@@ -2004,12 +2127,12 @@ contestsAdminRouter.post(
           ),
         )
         .limit(1)
-        .for('update')
+        .for('update');
       if (!challenger) {
         return {
           ok: 'precondition_failed',
           reason: 'No pending counter exists for this contest.',
-        }
+        };
       }
 
       // Sanity gates.
@@ -2017,19 +2140,19 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: 'Target row is a counter, not a parent.',
-        }
+        };
       }
       if (parent.status !== 'disputed' && parent.status !== 'corroborated') {
         return {
           ok: 'precondition_failed',
           reason: `Parent status is ${parent.status}; cannot resolve.`,
-        }
+        };
       }
       if (challenger.status !== 'pending') {
         return {
           ok: 'precondition_failed',
           reason: `Challenger status is ${challenger.status}; cannot resolve.`,
-        }
+        };
       }
       // Same-slot assertions: defensive against any upstream bug or
       // parameter mix-up. Slot identity is (event_id, tier, source_category).
@@ -2039,19 +2162,19 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: 'Parent and challenger belong to different events.',
-        }
+        };
       }
       if (parent.tier !== challenger.tier) {
         return {
           ok: 'precondition_failed',
           reason: `Parent tier ${parent.tier} does not match challenger tier ${challenger.tier}.`,
-        }
+        };
       }
       if (parent.sourceCategory !== challenger.sourceCategory) {
         return {
           ok: 'precondition_failed',
           reason: `Parent source_category ${parent.sourceCategory ?? 'null'} does not match challenger source_category ${challenger.sourceCategory ?? 'null'}.`,
-        }
+        };
       }
 
       const before = {
@@ -2065,9 +2188,9 @@ contestsAdminRouter.post(
           priceMin: challenger.priceMin,
           priceMax: challenger.priceMax,
         },
-      }
+      };
 
-      let eventPriceUpdated = false
+      let eventPriceUpdated = false;
 
       // Every status-flip below also clears lastAdminActionKind +
       // lastAdminActionAt — per spec §4.5, the 'Admin requested more info'
@@ -2084,7 +2207,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, challenger.id))
+          .where(eq(priceSubmissions.id, challenger.id));
         await tx
           .update(priceSubmissions)
           .set({
@@ -2094,7 +2217,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, parent.id))
+          .where(eq(priceSubmissions.id, parent.id));
         await tx
           .update(events)
           .set({
@@ -2103,13 +2226,13 @@ contestsAdminRouter.post(
             priceSource: 'community',
             updatedAt: sql`now()`,
           })
-          .where(eq(events.id, parent.eventId))
-        eventPriceUpdated = true
+          .where(eq(events.id, parent.eventId));
+        eventPriceUpdated = true;
         if (challenger.userId !== null) {
           await tx
             .update(userRoles)
             .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
-            .where(eq(userRoles.userId, challenger.userId))
+            .where(eq(userRoles.userId, challenger.userId));
         }
       } else {
         // parent_wins
@@ -2121,7 +2244,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, parent.id))
+          .where(eq(priceSubmissions.id, parent.id));
         await tx
           .update(priceSubmissions)
           .set({
@@ -2131,7 +2254,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, challenger.id))
+          .where(eq(priceSubmissions.id, challenger.id));
         // events row already reflects parent's price; no propagation.
         // Parent submitter already had cred from initial corroboration.
       }
@@ -2140,7 +2263,7 @@ contestsAdminRouter.post(
       // construction in steady state (only one pending counter can exist per
       // parent at any time), but a migration-window race could leave stragglers
       // — archive them with a tagged reason.
-      const orphanedCounterIds: string[] = []
+      const orphanedCounterIds: string[] = [];
       if (resolution === 'challenger_wins') {
         const orphans = await tx
           .update(priceSubmissions)
@@ -2157,22 +2280,22 @@ contestsAdminRouter.post(
               eq(priceSubmissions.status, 'pending'),
             ),
           )
-          .returning({ id: priceSubmissions.id })
-        for (const orphan of orphans) orphanedCounterIds.push(orphan.id)
+          .returning({ id: priceSubmissions.id });
+        for (const orphan of orphans) orphanedCounterIds.push(orphan.id);
       }
 
       const [parentAfter] = await tx
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, parent.id))
-        .limit(1)
+        .limit(1);
       const [challengerAfter] = await tx
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, challenger.id))
-        .limit(1)
+        .limit(1);
       if (!parentAfter || !challengerAfter) {
-        throw new Error('Post-resolution read failed')
+        throw new Error('Post-resolution read failed');
       }
 
       return {
@@ -2182,20 +2305,20 @@ contestsAdminRouter.post(
         eventPriceUpdated,
         orphanedCounterIds,
         before,
-      }
-    })
+      };
+    });
 
     if (outcome.ok === 'not_found') {
-      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+      return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
     if (outcome.ok === 'precondition_failed') {
-      return ctx.json({ success: false, error: outcome.reason }, 409)
+      return ctx.json({ success: false, error: outcome.reason }, 409);
     }
 
     // Audit row (outside the transaction).
-    ctx.set('auditActorId', admin.userId)
-    ctx.set('auditAction', 'contest.resolve')
-    ctx.set('auditTargetId', contestId)
+    ctx.set('auditActorId', admin.userId);
+    ctx.set('auditAction', 'contest.resolve');
+    ctx.set('auditTargetId', contestId);
     ctx.set('auditMeta', {
       resolution,
       parentId: outcome.parent.id,
@@ -2218,7 +2341,7 @@ contestsAdminRouter.post(
       },
       eventPriceUpdated: outcome.eventPriceUpdated,
       orphanedCounterIds: outcome.orphanedCounterIds,
-    })
+    });
 
     // Notification fan-out is wired in Task 10.
 
@@ -2230,15 +2353,15 @@ contestsAdminRouter.post(
         challenger: outcome.challenger,
         eventPriceUpdated: outcome.eventPriceUpdated,
       },
-    })
+    });
   },
-)
+);
 ```
 
 Required imports — verify present, otherwise add:
 
 ```typescript
-import { userRoles } from '@concert-crawl/db'
+import { userRoles } from '@concert-crawl/db';
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -2283,7 +2406,7 @@ Append to `apps/api/src/routes/admin/contests.integration.test.ts`:
 ```typescript
 describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
   it('sets last_admin_action_at + kind on the counter and leaves status unchanged', async () => {
-    const { parent, counter } = await seedContest()
+    const { parent, counter } = await seedContest();
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/defer`,
       {
@@ -2295,19 +2418,19 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
           reason: 'Need ticket URL screenshot to verify the new price.',
         }),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
 
-    const parentAfter = await fetchSubmission(parent.id)
-    const counterAfter = await fetchSubmission(counter.id)
-    expect(parentAfter.status).toBe('disputed')
-    expect(counterAfter.status).toBe('pending')
-    expect(counterAfter.lastAdminActionKind).toBe('defer')
-    expect(counterAfter.lastAdminActionAt).not.toBeNull()
-  })
+    const parentAfter = await fetchSubmission(parent.id);
+    const counterAfter = await fetchSubmission(counter.id);
+    expect(parentAfter.status).toBe('disputed');
+    expect(counterAfter.status).toBe('pending');
+    expect(counterAfter.lastAdminActionKind).toBe('defer');
+    expect(counterAfter.lastAdminActionAt).not.toBeNull();
+  });
 
   it('rejects reason < 10 chars with 400', async () => {
-    const { parent } = await seedContest()
+    const { parent } = await seedContest();
     const res = await app.request(
       `/v1/admin/contests/prices/${parent.id}/defer`,
       {
@@ -2317,10 +2440,10 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
         },
         body: JSON.stringify({ reason: 'too short' }),
       },
-    )
-    expect([400, 422]).toContain(res.status)
-  })
-})
+    );
+    expect([400, 422]).toContain(res.status);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2338,7 +2461,7 @@ Append to `apps/api/src/routes/admin/contests.ts`:
 ```typescript
 const deferBodySchema = z.object({
   reason: z.string().min(10).max(2000),
-})
+});
 
 contestsAdminRouter.post(
   '/prices/:contestId/defer',
@@ -2347,13 +2470,13 @@ contestsAdminRouter.post(
       return ctx.json(
         { success: false, error: 'Reason must be 10–2000 characters.' },
         400,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { contestId } = ctx.req.param()
-    const { reason } = ctx.req.valid('json')
-    const admin = getAuthUser(ctx)
+    const { contestId } = ctx.req.param();
+    const { reason } = ctx.req.valid('json');
+    const admin = getAuthUser(ctx);
 
     const [parent] = await db
       .select({
@@ -2364,9 +2487,9 @@ contestsAdminRouter.post(
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, contestId))
-      .limit(1)
+      .limit(1);
     if (!parent) {
-      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+      return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
 
     const [counter] = await db
@@ -2382,12 +2505,15 @@ contestsAdminRouter.post(
           eq(priceSubmissions.status, 'pending'),
         ),
       )
-      .limit(1)
+      .limit(1);
     if (!counter) {
       return ctx.json(
-        { success: false, error: 'No pending counter exists for this contest.' },
+        {
+          success: false,
+          error: 'No pending counter exists for this contest.',
+        },
         409,
-      )
+      );
     }
 
     const [updated] = await db
@@ -2397,17 +2523,17 @@ contestsAdminRouter.post(
         lastAdminActionKind: 'defer',
       })
       .where(eq(priceSubmissions.id, counter.id))
-      .returning({ lastAdminActionAt: priceSubmissions.lastAdminActionAt })
+      .returning({ lastAdminActionAt: priceSubmissions.lastAdminActionAt });
 
-    ctx.set('auditActorId', admin.userId)
-    ctx.set('auditAction', 'contest.defer')
-    ctx.set('auditTargetId', contestId)
+    ctx.set('auditActorId', admin.userId);
+    ctx.set('auditAction', 'contest.defer');
+    ctx.set('auditTargetId', contestId);
     ctx.set('auditMeta', {
       parentId: parent.id,
       challengerId: counter.id,
       eventId: parent.eventId,
       reason,
-    })
+    });
 
     // Notification fan-out is wired in Task 10.
 
@@ -2417,9 +2543,9 @@ contestsAdminRouter.post(
         contestId: parent.id,
         deferredAt: updated?.lastAdminActionAt?.toISOString() ?? null,
       },
-    })
+    });
   },
-)
+);
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -2456,19 +2582,19 @@ git commit -m "feat(api): POST /v1/admin/contests/prices/:contestId/defer — se
 
   ```ts
   export interface ContestNotificationInput {
-    contestId: string
-    parentSubmissionId: string
-    challengerSubmissionId: string
-    parentUserId: string | null
-    challengerUserId: string | null
-    eventId: string
-    action: 'resolve' | 'defer'
-    resolution?: 'parent_wins' | 'challenger_wins'
-    reason: string
+    contestId: string;
+    parentSubmissionId: string;
+    challengerSubmissionId: string;
+    parentUserId: string | null;
+    challengerUserId: string | null;
+    eventId: string;
+    action: 'resolve' | 'defer';
+    resolution?: 'parent_wins' | 'challenger_wins';
+    reason: string;
   }
   export async function writeContestNotifications(
     input: ContestNotificationInput,
-  ): Promise<{ written: number }>
+  ): Promise<{ written: number }>;
   ```
 
   Behavior:
@@ -2487,21 +2613,21 @@ git commit -m "feat(api): POST /v1/admin/contests/prices/:contestId/defer — se
 Create `apps/api/src/lib/contest-notifications.test.ts`:
 
 ```typescript
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { writeContestNotifications } from './contest-notifications.js'
-import { db } from '../db.js'
-import { notifications } from '@concert-crawl/db'
-import { eq, inArray } from 'drizzle-orm'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { writeContestNotifications } from './contest-notifications.js';
+import { db } from '../db.js';
+import { notifications } from '@concert-crawl/db';
+import { eq, inArray } from 'drizzle-orm';
 
 describe('writeContestNotifications', () => {
-  const created: string[] = []
+  const created: string[] = [];
 
   afterEach(async () => {
     if (created.length > 0) {
-      await db.delete(notifications).where(inArray(notifications.id, created))
-      created.length = 0
+      await db.delete(notifications).where(inArray(notifications.id, created));
+      created.length = 0;
     }
-  })
+  });
 
   it('writes 2 rows for resolve when parent + challenger users differ', async () => {
     const result = await writeContestNotifications({
@@ -2514,22 +2640,22 @@ describe('writeContestNotifications', () => {
       action: 'resolve',
       resolution: 'challenger_wins',
       reason: 'Vendor confirmed new face value.',
-    })
-    expect(result.written).toBe(2)
+    });
+    expect(result.written).toBe(2);
 
     const rows = await db
       .select()
       .from(notifications)
-      .where(inArray(notifications.userId, ['user-A', 'user-B']))
-    rows.forEach((row) => created.push(row.id))
-    expect(rows).toHaveLength(2)
+      .where(inArray(notifications.userId, ['user-A', 'user-B']));
+    rows.forEach((row) => created.push(row.id));
+    expect(rows).toHaveLength(2);
     rows.forEach((row) => {
-      expect(row.category).toBe('contest.resolved')
-      expect(row.title).toBe('Your price submission was reviewed.')
-      expect(row.body).toBe('Vendor confirmed new face value.')
-      expect(row.actionUrl).toBe('/events/event-1')
-    })
-  })
+      expect(row.category).toBe('contest.resolved');
+      expect(row.title).toBe('Your price submission was reviewed.');
+      expect(row.body).toBe('Vendor confirmed new face value.');
+      expect(row.actionUrl).toBe('/events/event-1');
+    });
+  });
 
   it('dedupes when parentUserId === challengerUserId', async () => {
     const result = await writeContestNotifications({
@@ -2541,9 +2667,9 @@ describe('writeContestNotifications', () => {
       eventId: 'event-2',
       action: 'defer',
       reason: 'Need vendor screenshot.',
-    })
-    expect(result.written).toBe(1)
-  })
+    });
+    expect(result.written).toBe(1);
+  });
 
   it('writes contest.needs_info category on defer', async () => {
     const result = await writeContestNotifications({
@@ -2555,19 +2681,19 @@ describe('writeContestNotifications', () => {
       eventId: 'event-3',
       action: 'defer',
       reason: 'Need vendor screenshot.',
-    })
-    expect(result.written).toBe(2)
+    });
+    expect(result.written).toBe(2);
 
     const rows = await db
       .select()
       .from(notifications)
-      .where(inArray(notifications.userId, ['user-X', 'user-Y']))
-    rows.forEach((row) => created.push(row.id))
+      .where(inArray(notifications.userId, ['user-X', 'user-Y']));
+    rows.forEach((row) => created.push(row.id));
     rows.forEach((row) => {
-      expect(row.category).toBe('contest.needs_info')
-      expect(row.title).toBe('More info requested on your price submission.')
-    })
-  })
+      expect(row.category).toBe('contest.needs_info');
+      expect(row.title).toBe('More info requested on your price submission.');
+    });
+  });
 
   it('skips rows when both user ids are null', async () => {
     const result = await writeContestNotifications({
@@ -2580,10 +2706,10 @@ describe('writeContestNotifications', () => {
       action: 'resolve',
       resolution: 'parent_wins',
       reason: 'Original was correct.',
-    })
-    expect(result.written).toBe(0)
-  })
-})
+    });
+    expect(result.written).toBe(0);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2599,35 +2725,35 @@ Expected: FAIL — module doesn't exist.
 Create `apps/api/src/lib/contest-notifications.ts`:
 
 ```typescript
-import { db } from '../db.js'
-import { notifications } from '@concert-crawl/db'
+import { db } from '../db.js';
+import { notifications } from '@concert-crawl/db';
 
 export interface ContestNotificationInput {
-  contestId: string
-  parentSubmissionId: string
-  challengerSubmissionId: string
-  parentUserId: string | null
-  challengerUserId: string | null
-  eventId: string
-  action: 'resolve' | 'defer'
-  resolution?: 'parent_wins' | 'challenger_wins'
-  reason: string
+  contestId: string;
+  parentSubmissionId: string;
+  challengerSubmissionId: string;
+  parentUserId: string | null;
+  challengerUserId: string | null;
+  eventId: string;
+  action: 'resolve' | 'defer';
+  resolution?: 'parent_wins' | 'challenger_wins';
+  reason: string;
 }
 
 type Recipient = {
-  userId: string
-  submissionId: string
-}
+  userId: string;
+  submissionId: string;
+};
 
 export async function writeContestNotifications(
   input: ContestNotificationInput,
 ): Promise<{ written: number }> {
-  const recipients: Recipient[] = []
+  const recipients: Recipient[] = [];
   if (input.parentUserId !== null) {
     recipients.push({
       userId: input.parentUserId,
       submissionId: input.parentSubmissionId,
-    })
+    });
   }
   if (
     input.challengerUserId !== null &&
@@ -2636,17 +2762,17 @@ export async function writeContestNotifications(
     recipients.push({
       userId: input.challengerUserId,
       submissionId: input.challengerSubmissionId,
-    })
+    });
   }
 
-  if (recipients.length === 0) return { written: 0 }
+  if (recipients.length === 0) return { written: 0 };
 
   const category =
-    input.action === 'resolve' ? 'contest.resolved' : 'contest.needs_info'
+    input.action === 'resolve' ? 'contest.resolved' : 'contest.needs_info';
   const title =
     input.action === 'resolve'
       ? 'Your price submission was reviewed.'
-      : 'More info requested on your price submission.'
+      : 'More info requested on your price submission.';
 
   const rows = recipients.map((recipient) => ({
     userId: recipient.userId,
@@ -2664,10 +2790,10 @@ export async function writeContestNotifications(
       contestId: input.contestId,
       ...(input.resolution ? { resolution: input.resolution } : {}),
     }),
-  }))
+  }));
 
-  await db.insert(notifications).values(rows)
-  return { written: rows.length }
+  await db.insert(notifications).values(rows);
+  return { written: rows.length };
 }
 ```
 
@@ -2689,12 +2815,12 @@ try {
     action: 'resolve',
     resolution,
     reason,
-  })
+  });
 } catch (notifyErr) {
   apiLogger.warn(
     { contestId, error: notifyErr },
     'Failed to write contest resolve notifications; resolution itself committed.',
-  )
+  );
 }
 ```
 
@@ -2711,20 +2837,20 @@ try {
     eventId: parent.eventId,
     action: 'defer',
     reason,
-  })
+  });
 } catch (notifyErr) {
   apiLogger.warn(
     { contestId, error: notifyErr },
     'Failed to write contest defer notifications; defer itself committed.',
-  )
+  );
 }
 ```
 
 Import the helper at the top of `contests.ts`:
 
 ```typescript
-import { writeContestNotifications } from '../../lib/contest-notifications.js'
-import { apiLogger } from '@concert-crawl/logger'
+import { writeContestNotifications } from '../../lib/contest-notifications.js';
+import { apiLogger } from '@concert-crawl/logger';
 ```
 
 - [ ] **Step 5: Add an integration assertion**
@@ -2733,7 +2859,7 @@ Append to `apps/api/src/routes/admin/contests.integration.test.ts` inside the re
 
 ```typescript
 it('writes notification rows to both parties on resolve', async () => {
-  const { parent, challenger } = await seedContest()
+  const { parent, challenger } = await seedContest();
   await app.request(`/v1/admin/contests/prices/${parent.id}/resolve`, {
     method: 'POST',
     headers: {
@@ -2743,7 +2869,7 @@ it('writes notification rows to both parties on resolve', async () => {
       resolution: 'challenger_wins',
       reason: 'Verified new face value via AXS confirmation.',
     }),
-  })
+  });
   // Parent userId comes from parent.userId; challenger comes from contestData.challenger.userId.
   const rows = await db
     .select()
@@ -2753,9 +2879,9 @@ it('writes notification rows to both parties on resolve', async () => {
         eq(notifications.category, 'contest.resolved'),
         eq(notifications.actionUrl, `/events/${parent.eventId}`),
       ),
-    )
-  expect(rows.length).toBeGreaterThanOrEqual(2)
-})
+    );
+  expect(rows.length).toBeGreaterThanOrEqual(2);
+});
 ```
 
 - [ ] **Step 6: Run tests**
@@ -2802,14 +2928,14 @@ it('counts response includes priceContests with the disputed-parent total', asyn
   // ... seeds ...
   const res = await app.request('/v1/admin/review/counts', {
     headers: ADMIN_HEADERS,
-  })
-  expect(res.status).toBe(200)
+  });
+  expect(res.status).toBe(200);
   const body = (await res.json()) as {
-    data: { priceContests: number; prices: number }
-  }
-  expect(body.data.priceContests).toBe(2)
-  expect(body.data.prices).toBe(5)
-})
+    data: { priceContests: number; prices: number };
+  };
+  expect(body.data.priceContests).toBe(2);
+  expect(body.data.prices).toBe(5);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2828,7 +2954,7 @@ In the counts handler, add a query for disputed-parent count and include in the 
 const [contestsRow] = await db
   .select({ value: count() })
   .from(priceSubmissions)
-  .where(eq(priceSubmissions.status, 'disputed'))
+  .where(eq(priceSubmissions.status, 'disputed'));
 
 // ... in the response payload:
 return ctx.json({
@@ -2839,7 +2965,7 @@ return ctx.json({
     missing,
     priceContests: contestsRow?.value ?? 0,
   },
-})
+});
 ```
 
 - [ ] **Step 4: Update the web app type**
@@ -2848,10 +2974,10 @@ In `apps/web/src/lib/queries/use-admin-review.ts`, extend `ReviewCounts`:
 
 ```typescript
 export interface ReviewCounts {
-  eventFlags: number
-  prices: number
-  missing: number
-  priceContests: number
+  eventFlags: number;
+  prices: number;
+  missing: number;
+  priceContests: number;
 }
 ```
 
@@ -2890,14 +3016,14 @@ git commit -m "feat(api): /v1/admin/review/counts adds priceContests field"
 
   ```ts
   export interface TierCounter {
-    id: string
-    parentSubmissionId: string
-    floor: number
-    ceiling?: number
-    submitter: { handle: string } | null
-    submittedAt: string
-    lastAdminActionAt: string | null
-    lastAdminActionKind: 'defer' | null
+    id: string;
+    parentSubmissionId: string;
+    floor: number;
+    ceiling?: number;
+    submitter: { handle: string } | null;
+    submittedAt: string;
+    lastAdminActionAt: string | null;
+    lastAdminActionKind: 'defer' | null;
   }
   ```
 
@@ -2907,17 +3033,17 @@ In `packages/types/src/index.ts`, update the existing `TierCounter` interface fr
 
 ```typescript
 export interface TierCounter {
-  id: string
-  parentSubmissionId: string
-  floor: number
-  ceiling?: number
-  submitter: { handle: string } | null
-  submittedAt: string
+  id: string;
+  parentSubmissionId: string;
+  floor: number;
+  ceiling?: number;
+  submitter: { handle: string } | null;
+  submittedAt: string;
   // Engagement-signal columns surfaced when an admin defers the contest.
   // The consumer event-detail page renders a quiet "Admin requested more
   // info" pill when lastAdminActionKind === 'defer'.
-  lastAdminActionAt: string | null
-  lastAdminActionKind: 'defer' | null
+  lastAdminActionAt: string | null;
+  lastAdminActionKind: 'defer' | null;
 }
 ```
 
@@ -2927,21 +3053,24 @@ Append to `apps/api/src/routes/events.integration.test.ts`:
 
 ```typescript
 it('priceByTier counterSubmission carries lastAdminActionKind after defer', async () => {
-  const venue = await seedVenue({ name: 'Defer surfacing', slug: 'defer-surface' })
+  const venue = await seedVenue({
+    name: 'Defer surfacing',
+    slug: 'defer-surface',
+  });
   const event = await seedEvent(venue.id, {
     date: '2027-06-01',
     ticketPriceMin: '40',
     priceSource: 'community',
-  })
-  const submitter = await seedUserProfile('parent-u-d', { handle: 'p-d' })
-  const challenger = await seedUserProfile('chal-u-d', { handle: 'c-d' })
+  });
+  const submitter = await seedUserProfile('parent-u-d', { handle: 'p-d' });
+  const challenger = await seedUserProfile('chal-u-d', { handle: 'c-d' });
   const parent = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
     vendor: 'AXS',
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'disputed',
-  })
+  });
   await seedPriceSubmission(event.id, challenger.userId, {
     tier: 'GA',
     vendor: 'AXS',
@@ -2949,7 +3078,7 @@ it('priceByTier counterSubmission carries lastAdminActionKind after defer', asyn
     priceMin: '55',
     status: 'pending',
     disputedSubmissionId: parent.id,
-  })
+  });
 
   // Trigger a defer.
   await app.request(`/v1/admin/contests/prices/${parent.id}/defer`, {
@@ -2960,28 +3089,29 @@ it('priceByTier counterSubmission carries lastAdminActionKind after defer', asyn
     body: JSON.stringify({
       reason: 'Need a screenshot from the AXS cart to verify.',
     }),
-  })
+  });
 
-  const res = await app.request(`/v1/events/${event.id}`)
+  const res = await app.request(`/v1/events/${event.id}`);
   const body = (await res.json()) as {
     data: {
       priceByTier: Array<{
-        tier: string
-        counterSubmission:
-          | { lastAdminActionKind: string | null; lastAdminActionAt: string | null }
-          | null
-      }>
-    }
-  }
-  const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA')
-  expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBe('defer')
-  expect(gaBlock?.counterSubmission?.lastAdminActionAt).not.toBeNull()
-})
+        tier: string;
+        counterSubmission: {
+          lastAdminActionKind: string | null;
+          lastAdminActionAt: string | null;
+        } | null;
+      }>;
+    };
+  };
+  const gaBlock = body.data.priceByTier.find((block) => block.tier === 'GA');
+  expect(gaBlock?.counterSubmission?.lastAdminActionKind).toBe('defer');
+  expect(gaBlock?.counterSubmission?.lastAdminActionAt).not.toBeNull();
+});
 
 it('counterSubmission.lastAdminActionKind is null when never deferred', async () => {
   // ... seed a contest without deferring it ...
   // Assert lastAdminActionKind === null in the counterSubmission block.
-})
+});
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -3020,15 +3150,15 @@ In `apps/api/src/routes/events.ts`, the `CounterTierRow` Drizzle select and the 
 
    ```typescript
    export interface CounterTierRow {
-     id: string
-     parentSubmissionId: string
-     tier: Tier
-     priceMin: string
-     priceMax: string | null
-     userId: string | null
-     createdAt: Date
-     lastAdminActionAt: Date | null
-     lastAdminActionKind: string | null
+     id: string;
+     parentSubmissionId: string;
+     tier: Tier;
+     priceMin: string;
+     priceMax: string | null;
+     userId: string | null;
+     createdAt: Date;
+     lastAdminActionAt: Date | null;
+     lastAdminActionKind: string | null;
    }
    ```
 
@@ -3039,11 +3169,11 @@ In `apps/api/src/routes/events.ts`, the `CounterTierRow` Drizzle select and the 
      row: CounterTierRow,
      handles: ReadonlyMap<string, string>,
    ): TierCounter {
-     const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
-     const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
+     const handle =
+       row.userId !== null ? (handles.get(row.userId) ?? null) : null;
+     const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null;
      // Narrow the string `lastAdminActionKind` to the union before exposing it.
-     const kind =
-       row.lastAdminActionKind === 'defer' ? 'defer' : null
+     const kind = row.lastAdminActionKind === 'defer' ? 'defer' : null;
      return {
        id: row.id,
        parentSubmissionId: row.parentSubmissionId,
@@ -3053,7 +3183,7 @@ In `apps/api/src/routes/events.ts`, the `CounterTierRow` Drizzle select and the 
        submittedAt: row.createdAt.toISOString(),
        lastAdminActionAt: row.lastAdminActionAt?.toISOString() ?? null,
        lastAdminActionKind: kind,
-     }
+     };
    }
    ```
 
@@ -3175,63 +3305,60 @@ Expected: FAIL — module doesn't exist.
 Create `apps/web/src/components/admin/review/PriceDisputesQueue.tsx`. Match every property in the design property table §1 + §2 (this is the load-bearing visual spec). Example skeleton:
 
 ```tsx
-import Link from 'next/link'
-import { type FC } from 'react'
-import type { Tier, Vendor, SourceCategory } from '@concert-crawl/types'
-import { RelTime } from '@/components/admin/primitives/RelTime'
+import Link from 'next/link';
+import { type FC } from 'react';
+import type { Tier, Vendor, SourceCategory } from '@concert-crawl/types';
+import { RelTime } from '@/components/admin/primitives/RelTime';
 
 export interface PriceContestRow {
-  contestId: string
-  eventId: string
-  eventTitle: string
-  venueName: string
-  eventDate: string
-  tier: Tier
-  sourceCategory: SourceCategory | null
+  contestId: string;
+  eventId: string;
+  eventTitle: string;
+  venueName: string;
+  eventDate: string;
+  tier: Tier;
+  sourceCategory: SourceCategory | null;
   parent: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    submitter: { userId: string; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    lastUpdatedAt: string
-    note: string | null
-  }
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    submitter: { userId: string; handle: string | null };
+    confirms: { fans: number; admin: number };
+    observedAt: string;
+    lastUpdatedAt: string;
+    note: string | null;
+  };
   counter: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    submitter: { userId: string; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    note: string | null
-  }
-  filedAt: string
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    submitter: { userId: string; handle: string | null };
+    confirms: { fans: number; admin: number };
+    observedAt: string;
+    note: string | null;
+  };
+  filedAt: string;
 }
 
 interface PriceDisputesQueueProps {
-  items: ReadonlyArray<PriceContestRow>
+  items: ReadonlyArray<PriceContestRow>;
 }
 
-const formatPriceRange = (
-  floor: string,
-  ceiling: string | null,
-): string => {
-  const floorNum = parseFloat(floor)
-  if (ceiling === null) return `$${floorNum}`
-  const ceilingNum = parseFloat(ceiling)
-  if (ceilingNum > floorNum) return `$${floorNum}–$${ceilingNum}`
-  return `$${floorNum}`
-}
+const formatPriceRange = (floor: string, ceiling: string | null): string => {
+  const floorNum = parseFloat(floor);
+  if (ceiling === null) return `$${floorNum}`;
+  const ceilingNum = parseFloat(ceiling);
+  if (ceilingNum > floorNum) return `$${floorNum}–$${ceilingNum}`;
+  return `$${floorNum}`;
+};
 
 const formatConfirms = (fans: number, admin: number): string =>
-  admin > 0 ? `${fans} fans · ${admin} admin` : `${fans} fans`
+  admin > 0 ? `${fans} fans · ${admin} admin` : `${fans} fans`;
 
 export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({ items }) => {
-  if (items.length === 0) return null
+  if (items.length === 0) return null;
 
   return (
     <section
@@ -3318,8 +3445,8 @@ export const PriceDisputesQueue: FC<PriceDisputesQueueProps> = ({ items }) => {
         </tbody>
       </table>
     </section>
-  )
-}
+  );
+};
 
 const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
   // Implement per design table §2. Cells: event (title + venue·date subtitle),
@@ -3328,12 +3455,8 @@ const PriceDisputesQueueRow: FC<{ row: PriceContestRow }> = ({ row }) => {
   // submitter), filed (relative time), action (Resolve → link).
   // Use formatPriceRange, formatConfirms helpers above.
   // ... (~70 lines of JSX matching the property table)
-  return (
-    <tr>
-      {/* ... per design table §2 ... */}
-    </tr>
-  )
-}
+  return <tr>{/* ... per design table §2 ... */}</tr>;
+};
 ```
 
 Fill out `PriceDisputesQueueRow` to mirror every cell property in design table §2 (event title font, badge tokens, etc.). The `Resolve →` button is a Next.js `<Link href={`/admin/review/contests/${row.contestId}`}>`.
@@ -3343,17 +3466,17 @@ Fill out `PriceDisputesQueueRow` to mirror every cell property in design table �
 Create `apps/web/src/components/admin/review/_tabs/ContestsTabContent.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { type FC } from 'react'
-import { useReviewContestsQuery } from '@/lib/queries/admin-contests'
-import { PriceDisputesQueue } from '../PriceDisputesQueue'
+import { type FC } from 'react';
+import { useReviewContestsQuery } from '@/lib/queries/admin-contests';
+import { PriceDisputesQueue } from '../PriceDisputesQueue';
 
 export const ContestsTabContent: FC = () => {
-  const { data, isLoading, error } = useReviewContestsQuery()
+  const { data, isLoading, error } = useReviewContestsQuery();
 
   if (isLoading) {
-    return <div role="status">Loading contests…</div>
+    return <div role="status">Loading contests…</div>;
     // Skeleton states tracked at design polish; loading text is acceptable
     // for v1 per spec §7.5.
   }
@@ -3362,10 +3485,10 @@ export const ContestsTabContent: FC = () => {
       <div role="alert">
         Failed to load contests. <button type="button">Retry</button>
       </div>
-    )
+    );
   }
-  return <PriceDisputesQueue items={data?.items ?? []} />
-}
+  return <PriceDisputesQueue items={data?.items ?? []} />;
+};
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -3401,17 +3524,17 @@ git commit -m "feat(web): PriceDisputesQueue + ContestsTabContent"
 
   ```ts
   export interface AdminEntryProps {
-    side: 'original' | 'counter'
-    priceMin: string
-    priceMax: string | null
-    tier: Tier
-    vendor: Vendor
-    sourceCategory: SourceCategory | null
-    submitter: { handle: string | null }
-    observedAt: string
-    confirms: { fans: number; admin: number } | null
-    note: string | null
-    winner: 'original' | 'counter' | null
+    side: 'original' | 'counter';
+    priceMin: string;
+    priceMax: string | null;
+    tier: Tier;
+    vendor: Vendor;
+    sourceCategory: SourceCategory | null;
+    submitter: { handle: string | null };
+    observedAt: string;
+    confirms: { fans: number; admin: number } | null;
+    note: string | null;
+    winner: 'original' | 'counter' | null;
   }
   ```
 
@@ -3497,38 +3620,39 @@ Expected: FAIL — module doesn't exist.
 Create `apps/web/src/components/admin/review/AdminEntry.tsx`:
 
 ```tsx
-import { type FC } from 'react'
-import type { Tier, Vendor, SourceCategory } from '@concert-crawl/types'
-import { RelTime } from '@/components/admin/primitives/RelTime'
+import { type FC } from 'react';
+import type { Tier, Vendor, SourceCategory } from '@concert-crawl/types';
+import { RelTime } from '@/components/admin/primitives/RelTime';
 
 export interface AdminEntryProps {
-  side: 'original' | 'counter'
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  submitter: { handle: string | null }
-  observedAt: string
-  confirms: { fans: number; admin: number } | null
-  note: string | null
-  winner: 'original' | 'counter' | null
+  side: 'original' | 'counter';
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  submitter: { handle: string | null };
+  observedAt: string;
+  confirms: { fans: number; admin: number } | null;
+  note: string | null;
+  winner: 'original' | 'counter' | null;
 }
 
 const formatPriceRange = (floor: string, ceiling: string | null): string => {
-  const floorNum = parseFloat(floor)
-  if (ceiling === null) return `$${floorNum}`
-  const ceilingNum = parseFloat(ceiling)
-  return ceilingNum > floorNum ? `$${floorNum}–$${ceilingNum}` : `$${floorNum}`
-}
+  const floorNum = parseFloat(floor);
+  if (ceiling === null) return `$${floorNum}`;
+  const ceilingNum = parseFloat(ceiling);
+  return ceilingNum > floorNum ? `$${floorNum}–$${ceilingNum}` : `$${floorNum}`;
+};
 
 const formatConfirms = (
   confirms: { fans: number; admin: number } | null,
 ): string => {
-  if (confirms === null) return '0 fans'
-  if (confirms.admin > 0) return `${confirms.fans} fans · ${confirms.admin} admin`
-  return `${confirms.fans} fans`
-}
+  if (confirms === null) return '0 fans';
+  if (confirms.admin > 0)
+    return `${confirms.fans} fans · ${confirms.admin} admin`;
+  return `${confirms.fans} fans`;
+};
 
 export const AdminEntry: FC<AdminEntryProps> = ({
   side,
@@ -3542,7 +3666,7 @@ export const AdminEntry: FC<AdminEntryProps> = ({
   note,
   winner,
 }) => {
-  const isWinner = winner === side
+  const isWinner = winner === side;
   return (
     <div
       style={{
@@ -3614,7 +3738,9 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           Submitter
         </span>
-        <span style={{ color: 'var(--fg)' }}>{submitter.handle ?? 'anonymous'}</span>
+        <span style={{ color: 'var(--fg)' }}>
+          {submitter.handle ?? 'anonymous'}
+        </span>
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           Vendor
         </span>
@@ -3650,8 +3776,8 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         </blockquote>
       ) : null}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -3801,119 +3927,134 @@ Create `apps/web/src/components/admin/review/AdminDisputePanel.tsx`. Match every
 Skeleton (full implementation ~250 lines — fill out per property table):
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect, useRef, useState, type FC } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { AdminEntry } from './AdminEntry'
-import { useDeferContest, useResolveContest } from '@/lib/queries/admin-contests'
+import { useEffect, useRef, useState, type FC } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { AdminEntry } from './AdminEntry';
+import {
+  useDeferContest,
+  useResolveContest,
+} from '@/lib/queries/admin-contests';
 
 export interface ContestDetailData {
-  contestId: string
-  eventId: string
-  eventTitle: string
-  venueName: string
-  eventDate: string
-  tier: 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
-  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+  contestId: string;
+  eventId: string;
+  eventTitle: string;
+  venueName: string;
+  eventDate: string;
+  tier: 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn';
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null;
   parent: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: 'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
-    submitter: { userId: string; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    lastUpdatedAt: string
-    note: string | null
-    status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-  }
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor:
+      | 'AXS'
+      | 'Ticketmaster'
+      | 'SeatGeek'
+      | 'DICE'
+      | 'Eventbrite'
+      | 'VenueBoxOffice';
+    submitter: { userId: string; handle: string | null };
+    confirms: { fans: number; admin: number };
+    observedAt: string;
+    lastUpdatedAt: string;
+    note: string | null;
+    status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+  };
   counter: {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: 'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
-    submitter: { userId: string; handle: string | null }
-    confirms: { fans: number; admin: number }
-    observedAt: string
-    note: string | null
-    status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-    lastAdminActionAt: string | null
-    lastAdminActionKind: 'defer' | null
-  }
-  filedAt: string
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor:
+      | 'AXS'
+      | 'Ticketmaster'
+      | 'SeatGeek'
+      | 'DICE'
+      | 'Eventbrite'
+      | 'VenueBoxOffice';
+    submitter: { userId: string; handle: string | null };
+    confirms: { fans: number; admin: number };
+    observedAt: string;
+    note: string | null;
+    status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+    lastAdminActionAt: string | null;
+    lastAdminActionKind: 'defer' | null;
+  };
+  filedAt: string;
 }
 
 interface AdminDisputePanelProps {
-  contest: ContestDetailData
+  contest: ContestDetailData;
 }
 
-const REASON_MIN = 10
-const REASON_MAX = 2000
+const REASON_MIN = 10;
+const REASON_MAX = 2000;
 
 const isStale = (contest: ContestDetailData): boolean =>
-  contest.parent.status === 'archived' || contest.counter.status !== 'pending'
+  contest.parent.status === 'archived' || contest.counter.status !== 'pending';
 
 export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({ contest }) => {
-  const router = useRouter()
-  const [reason, setReason] = useState('')
-  const [winner, setWinner] = useState<'original' | 'counter' | null>(null)
-  const firstButtonRef = useRef<HTMLButtonElement | null>(null)
-  const resolve = useResolveContest()
-  const defer = useDeferContest()
-  const stale = isStale(contest)
+  const router = useRouter();
+  const [reason, setReason] = useState('');
+  const [winner, setWinner] = useState<'original' | 'counter' | null>(null);
+  const firstButtonRef = useRef<HTMLButtonElement | null>(null);
+  const resolve = useResolveContest();
+  const defer = useDeferContest();
+  const stale = isStale(contest);
 
   useEffect(() => {
-    if (!stale) firstButtonRef.current?.focus()
+    if (!stale) firstButtonRef.current?.focus();
     const handler = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') router.push('/admin/review?tab=contests')
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [router, stale])
+      if (evt.key === 'Escape') router.push('/admin/review?tab=contests');
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [router, stale]);
 
-  const reasonValid = reason.trim().length >= REASON_MIN
-  const inFlight = resolve.isPending || defer.isPending
-  const disabled = !reasonValid || inFlight || stale
+  const reasonValid = reason.trim().length >= REASON_MIN;
+  const inFlight = resolve.isPending || defer.isPending;
+  const disabled = !reasonValid || inFlight || stale;
 
   const onKeep = async () => {
-    setWinner('original')
+    setWinner('original');
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'parent_wins',
         reason,
-      })
-      router.push('/admin/review?tab=contests')
+      });
+      router.push('/admin/review?tab=contests');
     } catch (err) {
-      setWinner(null)
+      setWinner(null);
       // Toast surfaced by mutation hook
     }
-  }
+  };
 
   const onPromote = async () => {
-    setWinner('counter')
+    setWinner('counter');
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'challenger_wins',
         reason,
-      })
-      router.push('/admin/review?tab=contests')
+      });
+      router.push('/admin/review?tab=contests');
     } catch (err) {
-      setWinner(null)
+      setWinner(null);
     }
-  }
+  };
 
   const onDefer = async () => {
     try {
-      await defer.mutateAsync({ contestId: contest.contestId, reason })
-      router.push('/admin/review?tab=contests')
+      await defer.mutateAsync({ contestId: contest.contestId, reason });
+      router.push('/admin/review?tab=contests');
     } catch (err) {
       // Toast surfaced by mutation hook
     }
-  }
+  };
 
   return (
     <article
@@ -3984,7 +4125,9 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({ contest }) => {
           }}
         >
           This contest was already resolved.{' '}
-          <Link href={`/events/${contest.eventId}`}>View the new live price.</Link>
+          <Link href={`/events/${contest.eventId}`}>
+            View the new live price.
+          </Link>
         </div>
       ) : (
         <p
@@ -4186,8 +4329,8 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({ contest }) => {
         </>
       )}
     </article>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 4: Create the route page**
@@ -4195,20 +4338,20 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({ contest }) => {
 Create `apps/web/src/app/(protected)/admin/review/contests/[contestId]/page.tsx`:
 
 ```tsx
-import { notFound } from 'next/navigation'
-import { requireAdminUser } from '@/lib/auth'
-import { fetchContestDetail } from '@/lib/queries/admin-contests-server'
-import { AdminDisputePanel } from '@/components/admin/review/AdminDisputePanel'
+import { notFound } from 'next/navigation';
+import { requireAdminUser } from '@/lib/auth';
+import { fetchContestDetail } from '@/lib/queries/admin-contests-server';
+import { AdminDisputePanel } from '@/components/admin/review/AdminDisputePanel';
 
 interface PageProps {
-  params: { contestId: string }
+  params: { contestId: string };
 }
 
 export default async function ContestPage({ params }: PageProps) {
-  await requireAdminUser()
-  const contest = await fetchContestDetail(params.contestId)
-  if (!contest) notFound()
-  return <AdminDisputePanel contest={contest} />
+  await requireAdminUser();
+  const contest = await fetchContestDetail(params.contestId);
+  if (!contest) notFound();
+  return <AdminDisputePanel contest={contest} />;
 }
 ```
 
@@ -4266,27 +4409,27 @@ git commit -m "feat(web): AdminDisputePanel + /admin/review/contests/:contestId 
 Create `apps/web/src/lib/queries/admin-contests.ts`:
 
 ```typescript
-'use client'
+'use client';
 
-import { useAuth } from '@clerk/nextjs'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/lib/api'
-import { reviewQueryKeys } from './use-admin-review'
-import type { PriceContestRow } from '@/components/admin/review/PriceDisputesQueue'
-import type { ContestDetailData } from '@/components/admin/review/AdminDisputePanel'
+import { useAuth } from '@clerk/nextjs';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api';
+import { reviewQueryKeys } from './use-admin-review';
+import type { PriceContestRow } from '@/components/admin/review/PriceDisputesQueue';
+import type { ContestDetailData } from '@/components/admin/review/AdminDisputePanel';
 
 export const adminContestsKeys = {
   all: ['admin-contests'] as const,
   list: () => [...adminContestsKeys.all, 'list'] as const,
   detail: (contestId: string) =>
     [...adminContestsKeys.all, 'detail', contestId] as const,
-}
+};
 
 interface ListResponse {
-  items: PriceContestRow[]
-  total: number
-  limit: number
-  offset: number
+  items: PriceContestRow[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 // apiClient signature per apps/web/src/lib/api.ts and existing admin hooks
@@ -4297,78 +4440,78 @@ interface ListResponse {
 // every request.
 
 export const useReviewContestsQuery = () => {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   return useQuery({
     queryKey: adminContestsKeys.list(),
     queryFn: async (): Promise<ListResponse> => {
-      const token = await getToken()
-      return apiClient.get<ListResponse>('/v1/admin/contests/prices', token)
+      const token = await getToken();
+      return apiClient.get<ListResponse>('/v1/admin/contests/prices', token);
     },
-  })
-}
+  });
+};
 
 export const useReviewContestDetail = (contestId: string) => {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   return useQuery({
     queryKey: adminContestsKeys.detail(contestId),
     queryFn: async (): Promise<ContestDetailData> => {
-      const token = await getToken()
+      const token = await getToken();
       return apiClient.get<ContestDetailData>(
         `/v1/admin/contests/prices/${contestId}`,
         token,
-      )
+      );
     },
-  })
-}
+  });
+};
 
 interface ResolveInput {
-  contestId: string
-  resolution: 'parent_wins' | 'challenger_wins'
-  reason: string
+  contestId: string;
+  resolution: 'parent_wins' | 'challenger_wins';
+  reason: string;
 }
 
 export const useResolveContest = () => {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: ResolveInput) => {
-      const token = await getToken()
+      const token = await getToken();
       return apiClient.post(
         `/v1/admin/contests/prices/${input.contestId}/resolve`,
         { resolution: input.resolution, reason: input.reason },
         token,
-      )
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminContestsKeys.all })
-      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts })
+      queryClient.invalidateQueries({ queryKey: adminContestsKeys.all });
+      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts });
     },
-  })
-}
+  });
+};
 
 interface DeferInput {
-  contestId: string
-  reason: string
+  contestId: string;
+  reason: string;
 }
 
 export const useDeferContest = () => {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: DeferInput) => {
-      const token = await getToken()
+      const token = await getToken();
       return apiClient.post(
         `/v1/admin/contests/prices/${input.contestId}/defer`,
         { reason: input.reason },
         token,
-      )
+      );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminContestsKeys.all })
-      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts })
+      queryClient.invalidateQueries({ queryKey: adminContestsKeys.all });
+      queryClient.invalidateQueries({ queryKey: reviewQueryKeys.counts });
     },
-  })
-}
+  });
+};
 ```
 
 - [ ] **Step 2: Typecheck**
@@ -4408,11 +4551,7 @@ In `apps/web/src/components/admin/review/ReviewPageClient.tsx`:
 
 ```typescript
 type ReviewTabKey =
-  | 'event-flags'
-  | 'prices'
-  | 'missing'
-  | 'all-events'
-  | 'contests'
+  'event-flags' | 'prices' | 'missing' | 'all-events' | 'contests';
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
@@ -4420,7 +4559,7 @@ const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'missing',
   'all-events',
   'contests',
-])
+]);
 ```
 
 - [ ] **Step 2: Add the tab descriptor**
@@ -4429,12 +4568,22 @@ In the JSX where `<ReviewTabs tabs={...}>` is rendered (find via grep), add the 
 
 ```typescript
 const tabs: ReviewTabDescriptor[] = [
-  { key: 'event-flags', label: 'Event flags', count: counts.eventFlags, kind: 'warning' },
+  {
+    key: 'event-flags',
+    label: 'Event flags',
+    count: counts.eventFlags,
+    kind: 'warning',
+  },
   { key: 'prices', label: 'Prices', count: counts.prices, kind: 'signal' },
   { key: 'missing', label: 'Missing', count: counts.missing, kind: 'danger' },
   { key: 'all-events', label: 'All events' },
-  { key: 'contests', label: 'Contests', count: counts.priceContests, kind: 'warning' },
-]
+  {
+    key: 'contests',
+    label: 'Contests',
+    count: counts.priceContests,
+    kind: 'warning',
+  },
+];
 ```
 
 - [ ] **Step 3: Mount `ContestsTabContent`**
@@ -4442,13 +4591,15 @@ const tabs: ReviewTabDescriptor[] = [
 Inside the existing tab-content switch (search for `activeTab === 'event-flags'` etc.), add:
 
 ```tsx
-{activeTab === 'contests' ? <ContestsTabContent /> : null}
+{
+  activeTab === 'contests' ? <ContestsTabContent /> : null;
+}
 ```
 
 Import at the top:
 
 ```typescript
-import { ContestsTabContent } from './_tabs/ContestsTabContent'
+import { ContestsTabContent } from './_tabs/ContestsTabContent';
 ```
 
 - [ ] **Step 4: Run typecheck + tests**
@@ -4636,6 +4787,7 @@ After writing the complete plan, look at the spec and design table with fresh ey
 **Placeholder scan** — no `TBD`, no `implement later`, no decision-deferring placeholders. Every code block contains real, runnable code with concrete identifiers, real SQL, and real test assertions.
 
 A small number of intentional elisions exist — these are NOT decision placeholders, they're deliberate references to other source-of-truth documents to avoid duplication:
+
 - `// ... per design table §<N>` callouts in component-rendering tasks (Tasks 13, 14, 15) reference visual properties owned by `docs/superpowers/design-tables/admin-contest-review.md`. Task 18's design-review pass (Agent 2) verifies each property against the table, so duplicating them in the plan would create drift.
 - Test-data setup boilerplate that mirrors existing patterns in adjacent test files is referenced rather than copied wholesale (e.g., the `seedContest` helper in Task 8's test step is fully written; the cross-cutting boilerplate around it isn't).
 

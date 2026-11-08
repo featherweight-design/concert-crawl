@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The "Still going?" nudge banner (#70), from
 // design_handoff_concert_history/going-cta.jsx:236-306.
@@ -8,19 +8,19 @@
 // owns the window check and the per-device memory; this component only draws
 // and reports whether the night was committed to or the nudge dismissed.
 
-import type { CSSProperties } from 'react'
-import type { WatchingShow } from '@concert-crawl/types'
-import { GOING_COPY } from './definitions/copy'
-import { stampAccentFor } from './lib/stamp'
-import { daysUntilLabel } from '@/lib/going/nudge-window'
+import type { CSSProperties } from 'react';
+import type { WatchingShow } from '@concert-crawl/types';
+import { GOING_COPY } from './definitions/copy';
+import { stampAccentFor } from './lib/stamp';
+import { daysUntilLabel } from '@/lib/going/nudge-window';
 
 type GoingNudgeProps = {
-  show: Pick<WatchingShow, 'artist' | 'date'>
-  onYes: () => void
-  onDismiss: () => void
-}
+  show: Pick<WatchingShow, 'artist' | 'date'>;
+  onYes: () => void;
+  onDismiss: () => void;
+};
 
-const MIN_TAP_TARGET = 44
+const MIN_TAP_TARGET = 44;
 
 const CheckIcon = () => (
   <svg
@@ -39,7 +39,7 @@ const CheckIcon = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const XIcon = () => (
   <svg
@@ -57,7 +57,7 @@ const XIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const RESET: CSSProperties = {
   all: 'unset',
@@ -65,10 +65,10 @@ const RESET: CSSProperties = {
   cursor: 'pointer',
   flexShrink: 0,
   fontFamily: 'var(--font-ui)',
-}
+};
 
 export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
-  const accent = stampAccentFor(show.artist)
+  const accent = stampAccentFor(show.artist);
 
   return (
     <div
@@ -178,5 +178,5 @@ export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
         <XIcon />
       </button>
     </div>
-  )
-}
+  );
+};

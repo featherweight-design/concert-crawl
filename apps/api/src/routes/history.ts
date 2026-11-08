@@ -25,42 +25,42 @@
 // user_events_user_attending_idx covers the user_id + attending_at half; the
 // venue_id narrowing rides the events PK join. No new index needed for #764.
 
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
-import { db, artists, userEvents, events, venues } from '@concert-crawl/db'
-import type { HistoryShow, HistoryResponse } from '@concert-crawl/types'
-import { requireFeature } from '../middleware/entitlement.js'
-import type { EntitlementVariables } from '../middleware/entitlement.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { db, artists, userEvents, events, venues } from '@concert-crawl/db';
+import type { HistoryShow, HistoryResponse } from '@concert-crawl/types';
+import { requireFeature } from '../middleware/entitlement.js';
+import type { EntitlementVariables } from '../middleware/entitlement.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
-} from '../lib/event-billing.js'
-import { computeHistoryStats } from '../lib/history-stats.js'
-import { buildHistoryIcs } from '../lib/ics.js'
-import { parsePrice } from '../lib/price.js'
+} from '../lib/event-billing.js';
+import { computeHistoryStats } from '../lib/history-stats.js';
+import { buildHistoryIcs } from '../lib/ics.js';
+import { parsePrice } from '../lib/price.js';
 
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',
   month: 'short',
   day: 'numeric',
   timeZone: MT_TIME_ZONE,
-})
+});
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
   minute: '2-digit',
   hour12: true,
   timeZone: 'UTC',
-})
+});
 
 // The event date is a plain YYYY-MM-DD calendar day, so it is anchored at noon
 // UTC before formatting — midnight would slip to the previous day in Mountain
 // Time and label every show one day early.
 const formatDateLabel = (date: string): string =>
-  dateLabelFormatter.format(new Date(`${date}T12:00:00Z`))
+  dateLabelFormatter.format(new Date(`${date}T12:00:00Z`));
 
 // `events.show_time` is a Postgres `time` column — a wall-clock time that is
 // already Mountain, carrying no offset. Anchoring it to a real instant and
@@ -68,16 +68,16 @@ const formatDateLabel = (date: string): string =>
 // into 2:00 PM, so the HH:MM is formatted as-is via a UTC anchor that cancels
 // out. Mirrors `formatShowTime` in apps/web consumer definitions/lib.ts.
 const formatShowTime = (showTime: string | null): string | null => {
-  if (!showTime) return null
-  const [hours, minutes] = showTime.split(':').map(Number)
-  if (hours === undefined || minutes === undefined) return null
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
-  return timeFormatter.format(new Date(Date.UTC(2000, 0, 1, hours, minutes)))
-}
+  if (!showTime) return null;
+  const [hours, minutes] = showTime.split(':').map(Number);
+  if (hours === undefined || minutes === undefined) return null;
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  return timeFormatter.format(new Date(Date.UTC(2000, 0, 1, hours, minutes)));
+};
 
 interface Attendance {
-  past: HistoryShow[]
-  upcoming: HistoryShow[]
+  past: HistoryShow[];
+  upcoming: HistoryShow[];
 }
 
 // Mountain Time, not UTC: a late-evening Denver user would otherwise see
@@ -86,7 +86,7 @@ interface Attendance {
 // notions of today. A function rather than a module-level constant: building it
 // at import time makes `sql` load-bearing for every module that pulls the router
 // in, which breaks unit tests that mock drizzle-orm without a `sql` export.
-const todayMt = () => sql`((NOW() AT TIME ZONE ${MT_TIME_ZONE})::date)`
+const todayMt = () => sql`((NOW() AT TIME ZONE ${MT_TIME_ZONE})::date)`;
 
 const loadAttendance = async (userId: string): Promise<Attendance> => {
   const rows = await db
@@ -132,17 +132,17 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
         or(isNull(events.firstMissingAt), sql`${events.date} < ${todayMt()}`),
       ),
     )
-    .orderBy(asc(events.date), asc(events.showTime))
+    .orderBy(asc(events.date), asc(events.showTime));
 
-  const past: HistoryShow[] = []
-  const upcoming: HistoryShow[] = []
+  const past: HistoryShow[] = [];
+  const upcoming: HistoryShow[] = [];
 
   for (const row of rows) {
     // The query filters `attending_at IS NOT NULL`, so a null here is
     // impossible rather than merely unlikely. Dropping such a row keeps a
     // broken invariant off the surface instead of inventing a commitment the
     // user never made.
-    if (!row.attendingAt) continue
+    if (!row.attendingAt) continue;
 
     const show: HistoryShow = {
       eventId: row.eventId,
@@ -157,60 +157,60 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       priceFinal: parsePrice(row.ticketPriceMin ?? null),
       genre: row.genre?.[0] ?? null,
       attendingAt: row.attendingAt.toISOString(),
-    }
+    };
 
     if (row.date < row.today) {
-      past.push(show)
+      past.push(show);
     } else {
-      upcoming.push(show)
+      upcoming.push(show);
     }
   }
 
   // Past reads backwards from the most recent night; upcoming reads forwards
   // from the next one. Both start at today and move away from it.
-  past.reverse()
+  past.reverse();
 
-  return { past, upcoming }
-}
+  return { past, upcoming };
+};
 
-export const historyRouter = new Hono<{ Variables: EntitlementVariables }>()
+export const historyRouter = new Hono<{ Variables: EntitlementVariables }>();
 
-historyRouter.use('*', clerkMiddleware())
+historyRouter.use('*', clerkMiddleware());
 
 // export.ics is gated on its own matrix key — a user can be entitled to read
 // their history without being entitled to export it.
-historyRouter.use('/export.ics', requireFeature('calendar-export'))
+historyRouter.use('/export.ics', requireFeature('calendar-export'));
 historyRouter.get('/export.ics', async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   // Past only. The export is a record of nights that happened; a show still
   // ahead of you belongs in your calendar via the show page, not via a file
   // named for your history.
-  const { past } = await loadAttendance(authInfo.userId)
+  const { past } = await loadAttendance(authInfo.userId);
 
   return new Response(buildHistoryIcs(past), {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': 'attachment; filename="concert-crawl-history.ics"',
     },
-  })
-})
+  });
+});
 
-historyRouter.use('/', requireFeature('concert-history'))
+historyRouter.use('/', requireFeature('concert-history'));
 historyRouter.get('/', async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const { past, upcoming } = await loadAttendance(authInfo.userId)
+  const { past, upcoming } = await loadAttendance(authInfo.userId);
   const data: HistoryResponse = {
     past,
     upcoming,
     // Nights, venues, spend: all past-tense claims, so upcoming stays out.
     stats: computeHistoryStats(past),
-  }
+  };
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});

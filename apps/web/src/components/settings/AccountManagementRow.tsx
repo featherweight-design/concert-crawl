@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useClerk, useUser } from '@clerk/nextjs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { LegalLinksCard } from './LegalLinksCard'
+import { useClerk, useUser } from '@clerk/nextjs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { LegalLinksCard } from './LegalLinksCard';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface AccountManagementRowProps {
-  email: string
+  email: string;
 }
 
 function providerDisplayName(provider: string): string {
   return provider
     .replace(/^oauth_/, '')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export function AccountManagementRow({ email }: AccountManagementRowProps) {
-  const { openUserProfile } = useClerk()
-  const { user } = useUser()
+  const { openUserProfile } = useClerk();
+  const { user } = useUser();
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -175,5 +175,5 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
 
       <LegalLinksCard variant="mobile" />
     </div>
-  )
+  );
 }

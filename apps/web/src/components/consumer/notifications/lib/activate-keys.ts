@@ -12,13 +12,13 @@
 // and a held key would otherwise fire one read mutation and one navigation per
 // tick.
 
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent } from 'react';
 
 export const activateOnKey =
   (activate: () => void) =>
   (event: KeyboardEvent<Element>): void => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    event.preventDefault()
-    if (event.repeat) return
-    activate()
-  }
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (event.repeat) return;
+    activate();
+  };

@@ -1,34 +1,34 @@
-'use client'
+'use client';
 
 // Mobile accordion row — collapsed summary (name / tagline / price) with
 // tap-to-expand detail. One row open at a time; the parent owns which.
 // Translated from the handoff's TierRowMobile.
 
-import type { FounderWindowState } from '@concert-crawl/types'
-import { TIER_PICKER_COPY } from './definitions/copy'
-import { resolveTierCta } from './lib/resolve-tier-cta'
-import { tierShell, isNeutralAccent, stampColor } from './lib/tier-shell'
-import { TierBadge } from './TierBadge'
-import { ScarcityRail } from './ScarcityRail'
-import { TierCtaButton } from './TierCtaButton'
-import { TierRationale, TierFeatureList, TierMonoNote } from './TierCardDetail'
+import type { FounderWindowState } from '@concert-crawl/types';
+import { TIER_PICKER_COPY } from './definitions/copy';
+import { resolveTierCta } from './lib/resolve-tier-cta';
+import { tierShell, isNeutralAccent, stampColor } from './lib/tier-shell';
+import { TierBadge } from './TierBadge';
+import { ScarcityRail } from './ScarcityRail';
+import { TierCtaButton } from './TierCtaButton';
+import { TierRationale, TierFeatureList, TierMonoNote } from './TierCardDetail';
 import type {
   PickerState,
   ScarcityRailData,
   TierCta,
   TierDefinition,
   TierKey,
-} from './definitions/types'
+} from './definitions/types';
 
 interface TierRowMobileProps {
-  tier: TierDefinition
-  state: PickerState
-  founderWindowState: FounderWindowState
-  scarcityRail: ScarcityRailData | null
-  expanded: boolean
-  onToggle: () => void
-  onSelect: (tierKey: TierKey, cta: TierCta) => void
-  autoFocusCta?: boolean
+  tier: TierDefinition;
+  state: PickerState;
+  founderWindowState: FounderWindowState;
+  scarcityRail: ScarcityRailData | null;
+  expanded: boolean;
+  onToggle: () => void;
+  onSelect: (tierKey: TierKey, cta: TierCta) => void;
+  autoFocusCta?: boolean;
 }
 
 export const TierRowMobile = ({
@@ -41,13 +41,13 @@ export const TierRowMobile = ({
   onSelect,
   autoFocusCta = false,
 }: TierRowMobileProps) => {
-  const shell = tierShell(tier.key)
-  const isCurrent = state === tier.key
-  const neutral = isNeutralAccent(shell)
-  const stamp = stampColor(shell)
+  const shell = tierShell(tier.key);
+  const isCurrent = state === tier.key;
+  const neutral = isNeutralAccent(shell);
+  const stamp = stampColor(shell);
   const recommended =
-    tier.key === 'premium' && !isCurrent && state !== 'founder'
-  const cta = resolveTierCta(tier.key, state, founderWindowState)
+    tier.key === 'premium' && !isCurrent && state !== 'founder';
+  const cta = resolveTierCta(tier.key, state, founderWindowState);
 
   return (
     <div
@@ -255,5 +255,5 @@ export const TierRowMobile = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

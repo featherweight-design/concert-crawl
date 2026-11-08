@@ -1,4 +1,4 @@
-import { expect, type Locator } from '@playwright/test'
+import { expect, type Locator } from '@playwright/test';
 
 /**
  * Whether React has hydrated this DOM node.
@@ -14,7 +14,7 @@ import { expect, type Locator } from '@playwright/test'
  * page, so it cannot close over a module constant.
  */
 export function isHydratedNode(node: object): boolean {
-  return Object.keys(node).some((key) => key.startsWith('__reactProps$'))
+  return Object.keys(node).some((key) => key.startsWith('__reactProps$'));
 }
 
 /**
@@ -27,8 +27,8 @@ export async function waitForHydrated(
   locator: Locator,
   timeout = 15_000,
 ): Promise<void> {
-  await locator.waitFor({ state: 'attached', timeout })
+  await locator.waitFor({ state: 'attached', timeout });
   await expect
     .poll(() => locator.evaluate(isHydratedNode), { timeout })
-    .toBe(true)
+    .toBe(true);
 }

@@ -15,7 +15,7 @@ import type {
   TierAlternate,
   TierPriceBlock,
   TicketLink,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
 // PriceRegionDecision enumerates ONLY the kinds `decidePriceRegion` actually
 // returns today. The orchestrator falls through to its existing legacy
@@ -25,16 +25,16 @@ import type {
 // decision-tree match.
 export type PriceRegionDecision =
   | {
-      kind: 'sold-out-resale'
-      resaleLink: TicketLink
-      faceValueResaleVendor: string
-      faceValueResaleRange?: string
+      kind: 'sold-out-resale';
+      resaleLink: TicketLink;
+      faceValueResaleVendor: string;
+      faceValueResaleRange?: string;
     }
   | { kind: 'sold-out-contribute' } // LOCKED §9 Q1
   | {
-      kind: 'no-price-resale'
-      resaleLink: TicketLink
-      faceValueResaleVendor: string
+      kind: 'no-price-resale';
+      resaleLink: TicketLink;
+      faceValueResaleVendor: string;
     }
   | { kind: 'no-price-empty' } // LOCKED §9 Q2-eng
   | {
@@ -42,37 +42,37 @@ export type PriceRegionDecision =
       // boxoffice/standard headline elsewhere. Render shipped MultiTierLiveCard
       // (with the new kind='resale' enum value) AND a show-level FaceValueCard
       // underneath inviting box-office contribution.
-      kind: 'resale-headline'
-      priceByTier: TierPriceBlock[]
-      faceValueResaleVendor: string
+      kind: 'resale-headline';
+      priceByTier: TierPriceBlock[];
+      faceValueResaleVendor: string;
     }
   | {
-      kind: 'multi-source-mixed'
-      entryBlock: TierPriceBlock
-      crossSourceAlt: TierAlternate
-      otherTiers: TierPriceBlock[]
+      kind: 'multi-source-mixed';
+      entryBlock: TierPriceBlock;
+      crossSourceAlt: TierAlternate;
+      otherTiers: TierPriceBlock[];
     }
   | {
       // STATE #6 — at least one tier has a corroborated headline AND at least
       // one other tier has NO headline but pending submissions. MixedTierCard
       // handles the per-tier pending tells (shipped from prior cycle).
-      kind: 'mixed-tier'
-      priceByTier: TierPriceBlock[]
+      kind: 'mixed-tier';
+      priceByTier: TierPriceBlock[];
     }
   | {
       // STATE #7 — every tier is pending-only (no headlines anywhere) AND at
       // least one tier has pending submissions. Renders the focused
       // PendingStack — each block contributes its first pending row.
-      kind: 'all-tiers-pending'
-      priceByTier: TierPriceBlock[]
+      kind: 'all-tiers-pending';
+      priceByTier: TierPriceBlock[];
     }
-  | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] }
+  | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] };
 
 export interface PriceRegionInput {
   event: Pick<
     EventDetailResponse,
     'priceByTier' | 'priceStatus' | 'status' | 'ticketLinks' | 'priceVendor'
-  >
+  >;
 }
 
 // NOTE: the original plan snippet also checked `event.status === 'soldout'`
@@ -83,49 +83,49 @@ export interface PriceRegionInput {
 export function decidePriceRegion({
   event,
 }: PriceRegionInput): PriceRegionDecision {
-  const blocks = event.priceByTier ?? null
+  const blocks = event.priceByTier ?? null;
 
   // Sold-out priority — even when priceByTier exists, sold-out trumps.
   if (event.priceStatus === 'soldout') {
     const resaleLink =
-      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
     if (resaleLink === null) {
       // LOCKED §9 Q1 — render ContributeFaceValueCard (single ghost box-office
       // row + signal CTA, no resale row, no outbound ProvenanceCTA) alongside
       // SoldOutPriceCard variant='no-listing'.
-      return { kind: 'sold-out-contribute' }
+      return { kind: 'sold-out-contribute' };
     }
     return {
       kind: 'sold-out-resale',
       resaleLink,
       faceValueResaleVendor: resaleLink.vendor ?? 'Resale',
-    }
+    };
   }
 
   // No priceByTier → defer to legacy flat-field logic in EventDetailClient.
   if (blocks === null || blocks.length === 0) {
     const resaleLink =
-      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
     if (resaleLink !== null) {
       return {
         kind: 'no-price-resale',
         resaleLink,
         faceValueResaleVendor: resaleLink.vendor ?? 'Resale',
-      }
+      };
     }
     // LOCKED §9 Q2-eng — no resale link AND no priceByTier. Fall through to
     // the existing community-handoff card (NoPriceCard). NO FaceValueCard —
     // pedagogy collapses without a resale anchor.
-    return { kind: 'no-price-empty' }
+    return { kind: 'no-price-empty' };
   }
 
   // Multi-source mixed: the cheapest tier has BOTH a corroborated headline
   // AND a resale alternate in the same tier.
-  const entryBlock = blocks[0]
+  const entryBlock = blocks[0];
   if (entryBlock?.headline) {
     const crossSourceAlt =
       entryBlock.alternates.find((alt) => alt.sourceCategory === 'resale') ??
-      null
+      null;
     if (
       crossSourceAlt !== null &&
       entryBlock.headline.sourceCategory === 'boxoffice'
@@ -135,7 +135,7 @@ export function decidePriceRegion({
         entryBlock,
         crossSourceAlt,
         otherTiers: blocks.slice(1),
-      }
+      };
     }
   }
 
@@ -150,30 +150,30 @@ export function decidePriceRegion({
   // boxoffice/standard prices into the face-value-pedagogy state.
   const hasResaleHeadline = blocks.some(
     (block) => block.headline?.sourceCategory === 'resale',
-  )
+  );
   const hasNonResaleHeadline = blocks.some(
     (block) =>
       block.headline !== null && block.headline.sourceCategory !== 'resale',
-  )
+  );
   if (hasResaleHeadline && !hasNonResaleHeadline) {
     const resaleBlock = blocks.find(
       (block) => block.headline?.sourceCategory === 'resale',
-    )
+    );
     return {
       kind: 'resale-headline',
       priceByTier: blocks,
       faceValueResaleVendor: resaleBlock?.headline?.vendor ?? 'Resale',
-    }
+    };
   }
 
   // STATE #7 — all tiers pending. Every block has no headline AND at least
   // one block has pending rows. Routes to PendingStack via the renderer.
   // Checked BEFORE mixed-tier because the all-pending case is a strict subset
   // of "any-pending" — mixed-tier requires at least one headline to exist.
-  const anyHeadline = blocks.some((block) => block.headline !== null)
-  const anyPending = blocks.some((block) => block.pending.length > 0)
+  const anyHeadline = blocks.some((block) => block.headline !== null);
+  const anyPending = blocks.some((block) => block.pending.length > 0);
   if (!anyHeadline && anyPending) {
-    return { kind: 'all-tiers-pending', priceByTier: blocks }
+    return { kind: 'all-tiers-pending', priceByTier: blocks };
   }
 
   // STATE #6 — mixed-tier: at least one tier has a headline AND at least one
@@ -183,17 +183,17 @@ export function decidePriceRegion({
   // it. MixedTierCard handles this case natively (shipped per-tier pending
   // tells), where multi-tier-shipped would render the pending-only tier as
   // a muted $0.
-  const anyHeadlineTier = blocks.some((block) => block.headline !== null)
+  const anyHeadlineTier = blocks.some((block) => block.headline !== null);
   const anyPendingOnlyTier = blocks.some(
     (block) => block.headline === null && block.pending.length > 0,
-  )
+  );
   if (anyHeadlineTier && anyPendingOnlyTier) {
-    return { kind: 'mixed-tier', priceByTier: blocks }
+    return { kind: 'mixed-tier', priceByTier: blocks };
   }
 
   // Default — let MultiTierLiveCard handle it (multi-headline cases, single-
   // tier cases, etc.). MixedTierCard / PendingStack now have their own
   // explicit branches above; this branch is the simple "all tiers have a
   // headline" path.
-  return { kind: 'multi-tier-shipped', priceByTier: blocks }
+  return { kind: 'multi-tier-shipped', priceByTier: blocks };
 }

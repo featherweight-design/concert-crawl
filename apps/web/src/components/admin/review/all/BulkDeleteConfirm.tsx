@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton, AdminDialog } from '@/components/admin/primitives'
+import { useState } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton, AdminDialog } from '@/components/admin/primitives';
 
-const COPY = ADMIN_COPY.review.allEvents.bulkDeleteConfirm
+const COPY = ADMIN_COPY.review.allEvents.bulkDeleteConfirm;
 
-const TYPED_TOKEN = 'DELETE'
+const TYPED_TOKEN = 'DELETE';
 
 export interface BulkDeleteConfirmProps {
-  count: number
-  onCancel: () => void
-  onConfirm: () => void
-  pending?: boolean
+  count: number;
+  onCancel: () => void;
+  onConfirm: () => void;
+  pending?: boolean;
 }
 
 export const BulkDeleteConfirm = ({
@@ -21,8 +21,8 @@ export const BulkDeleteConfirm = ({
   onConfirm,
   pending = false,
 }: BulkDeleteConfirmProps) => {
-  const [typed, setTyped] = useState('')
-  const armed = typed === TYPED_TOKEN
+  const [typed, setTyped] = useState('');
+  const armed = typed === TYPED_TOKEN;
   return (
     <AdminDialog
       accent="var(--danger)"
@@ -95,5 +95,5 @@ export const BulkDeleteConfirm = ({
         />
       </div>
     </AdminDialog>
-  )
-}
+  );
+};

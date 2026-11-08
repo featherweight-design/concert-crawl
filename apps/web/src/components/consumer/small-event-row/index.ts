@@ -1,1 +1,1 @@
-export * from './SmallEventRow'
+export * from './SmallEventRow';

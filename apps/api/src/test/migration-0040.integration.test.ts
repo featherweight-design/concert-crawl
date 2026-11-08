@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { events, priceSubmissions } from '@concert-crawl/db'
-import type { TicketLink } from '@concert-crawl/types'
-import { testDb } from './helpers/db.js'
-import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
+import { beforeEach, describe, expect, it } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { events, priceSubmissions } from '@concert-crawl/db';
+import type { TicketLink } from '@concert-crawl/types';
+import { testDb } from './helpers/db.js';
+import { clearTables, seedEvent, seedVenue } from './helpers/seed.js';
 
 // Migration 0040 — source_category enum + ticket_links jsonb + 1/2 corroboration.
 // These tests exercise the schema produced by the migration directly (rather
@@ -11,24 +11,24 @@ import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
 // surface area routes around the new columns.
 
 describe('migration 0040 — source_category + ticket_links + corroboration', () => {
-  let eventId: string
-  let testCounter = 0
+  let eventId: string;
+  let testCounter = 0;
 
   beforeEach(async () => {
-    testCounter += 1
-    await clearTables()
+    testCounter += 1;
+    await clearTables();
     // Unique slug per test — clearTables truncates between tests, but the
     // unique constraint on venues.slug makes collisions easier to spot when
     // anything goes sideways with isolation.
     const venue = await seedVenue({
       slug: `mig-0040-venue-${testCounter}`,
       name: `Mig 0040 Venue ${testCounter}`,
-    })
+    });
     const event = await seedEvent(venue.id, {
       artist: `Mig 0040 Artist ${testCounter}`,
-    })
-    eventId = event.id
-  })
+    });
+    eventId = event.id;
+  });
 
   it('source_category column accepts boxoffice/standard/resale', async () => {
     const [boxoffice] = await testDb
@@ -42,9 +42,9 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'bought_myself',
         sourceCategory: 'boxoffice',
       })
-      .returning()
-    expect(boxoffice).toBeDefined()
-    expect(boxoffice?.sourceCategory).toBe('boxoffice')
+      .returning();
+    expect(boxoffice).toBeDefined();
+    expect(boxoffice?.sourceCategory).toBe('boxoffice');
 
     const [standard] = await testDb
       .insert(priceSubmissions)
@@ -57,9 +57,9 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'saw_listing',
         sourceCategory: 'standard',
       })
-      .returning()
-    expect(standard).toBeDefined()
-    expect(standard?.sourceCategory).toBe('standard')
+      .returning();
+    expect(standard).toBeDefined();
+    expect(standard?.sourceCategory).toBe('standard');
 
     const [resale] = await testDb
       .insert(priceSubmissions)
@@ -72,10 +72,10 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'saw_listing',
         sourceCategory: 'resale',
       })
-      .returning()
-    expect(resale).toBeDefined()
-    expect(resale?.sourceCategory).toBe('resale')
-  })
+      .returning();
+    expect(resale).toBeDefined();
+    expect(resale?.sourceCategory).toBe('resale');
+  });
 
   it('source_category rejects values outside the enum', async () => {
     await expect(
@@ -83,8 +83,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sql`INSERT INTO price_submissions (event_id, user_id, price_min, tier, vendor, how_found, source_category)
             VALUES (${eventId}, 'user_test_0040_bad', 25, 'GA', 'Ticketmaster', 'bought_myself', 'invalid_value')`,
       ),
-    ).rejects.toThrow()
-  })
+    ).rejects.toThrow();
+  });
 
   it('corroboration_count defaults to 1 on insert', async () => {
     const [inserted] = await testDb
@@ -98,10 +98,10 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'bought_myself',
         sourceCategory: 'standard',
       })
-      .returning()
-    expect(inserted).toBeDefined()
-    expect(inserted?.corroborationCount).toBe(1)
-  })
+      .returning();
+    expect(inserted).toBeDefined();
+    expect(inserted?.corroborationCount).toBe(1);
+  });
 
   it('partial unique index pins corroborated boxoffice to one row per (event, tier)', async () => {
     await testDb.insert(priceSubmissions).values({
@@ -113,7 +113,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'corroborated',
-    })
+    });
 
     // Drizzle wraps the underlying Postgres error in "Failed query: ..."; the
     // original error (with the constraint name) is on `.cause`. Postgres
@@ -122,7 +122,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
     // Postgres/Drizzle ever stop populating `.cause`, the test will fail
     // with "expected '' to match" rather than silently passing on a generic
     // error.)
-    let caught: unknown
+    let caught: unknown;
     try {
       await testDb.insert(priceSubmissions).values({
         eventId,
@@ -133,18 +133,18 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         howFound: 'at_the_venue',
         sourceCategory: 'boxoffice',
         status: 'corroborated',
-      })
+      });
     } catch (error) {
-      caught = error
+      caught = error;
     }
 
-    expect(caught).toBeDefined()
+    expect(caught).toBeDefined();
     const causeMessage =
       caught instanceof Error && caught.cause instanceof Error
         ? caught.cause.message
-        : ''
-    expect(causeMessage).toMatch(/price_submissions_event_tier_boxoffice_uniq/)
-  })
+        : '';
+    expect(causeMessage).toMatch(/price_submissions_event_tier_boxoffice_uniq/);
+  });
 
   it('different tier does not collide with corroborated boxoffice index', async () => {
     await testDb.insert(priceSubmissions).values({
@@ -156,7 +156,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'corroborated',
-    })
+    });
 
     await expect(
       testDb.insert(priceSubmissions).values({
@@ -169,8 +169,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'boxoffice',
         status: 'corroborated',
       }),
-    ).resolves.toBeDefined()
-  })
+    ).resolves.toBeDefined();
+  });
 
   it('different source_category does not collide with corroborated boxoffice index', async () => {
     await testDb.insert(priceSubmissions).values({
@@ -182,7 +182,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'corroborated',
-    })
+    });
 
     await expect(
       testDb.insert(priceSubmissions).values({
@@ -195,8 +195,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'standard',
         status: 'corroborated',
       }),
-    ).resolves.toBeDefined()
-  })
+    ).resolves.toBeDefined();
+  });
 
   it('partial unique index does NOT apply to pending boxoffice rows', async () => {
     // Two pending boxoffice rows for the same (event, tier) are allowed —
@@ -210,7 +210,7 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       status: 'pending',
-    })
+    });
 
     await expect(
       testDb.insert(priceSubmissions).values({
@@ -223,8 +223,8 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         sourceCategory: 'boxoffice',
         status: 'pending',
       }),
-    ).resolves.toBeDefined()
-  })
+    ).resolves.toBeDefined();
+  });
 
   it('ticket_links column persists the typed TicketLink shape', async () => {
     const links: TicketLink[] = [
@@ -234,18 +234,18 @@ describe('migration 0040 — source_category + ticket_links + corroboration', ()
         vendor: 'ticketmaster',
         url: 'https://example.com/tm',
       },
-    ]
+    ];
     await testDb
       .update(events)
       .set({ ticketLinks: links })
-      .where(sql`id = ${eventId}`)
+      .where(sql`id = ${eventId}`);
 
     const [row] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(sql`id = ${eventId}`)
+      .where(sql`id = ${eventId}`);
 
-    expect(row).toBeDefined()
-    expect(row?.ticketLinks).toEqual(links)
-  })
-})
+    expect(row).toBeDefined();
+    expect(row?.ticketLinks).toEqual(links);
+  });
+});

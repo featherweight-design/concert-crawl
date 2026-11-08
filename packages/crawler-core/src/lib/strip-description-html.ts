@@ -26,20 +26,20 @@
 // blank lines (`\n\n`); tighter closings produce a single newline. Both
 // tiers' OPENING tags drop to empty so adjacent `</p><p>` doesn't gain
 // stray extra newlines before step 4 normalizes runs.
-const PARAGRAPH_CLOSING = /<\/(p|div|h[1-6]|blockquote)\s*>/gi
-const TIGHT_CLOSING = /<\/(li|tr)\s*>/gi
+const PARAGRAPH_CLOSING = /<\/(p|div|h[1-6]|blockquote)\s*>/gi;
+const TIGHT_CLOSING = /<\/(li|tr)\s*>/gi;
 // Self-closing paragraph-level tags — `<p/>`, `<div/>`, `<h2/>`, etc.
 // Some AEG feeds emit these as paragraph separators; a browser renders
 // the empty element with vertical margin, producing a paragraph break.
 // Match that behavior with `\n\n`, same as an explicit `</p>` (#1132).
 // Runs BEFORE BLOCK_OPENING so `<p/>` gets the break treatment instead
 // of being stripped to empty.
-const SELF_CLOSING_PARAGRAPH = /<(p|div|h[1-6]|blockquote)(\s[^>]*)?\/>/gi
-const BLOCK_OPENING = /<(p|div|li|tr|ul|ol|h[1-6]|blockquote)(\s[^>]*)?>/gi
+const SELF_CLOSING_PARAGRAPH = /<(p|div|h[1-6]|blockquote)(\s[^>]*)?\/>/gi;
+const BLOCK_OPENING = /<(p|div|li|tr|ul|ol|h[1-6]|blockquote)(\s[^>]*)?>/gi;
 // Leading `\/?` covers the malformed `</br>` closing form of the void
 // `<br>` element that some AEG feeds emit (#1132). Both forms collapse
 // to a single newline — matches what a browser would render.
-const BR_TAG = /<\/?br\s*\/?>/gi
+const BR_TAG = /<\/?br\s*\/?>/gi;
 
 // Whitelist of inline + uncommon block tag names that may survive the
 // block-level pass above. Restricting the "remaining tag" strip to
@@ -63,8 +63,8 @@ const KNOWN_HTML_TAG_NAMES =
   'details|dfn|dialog|dl|dt|em|figcaption|figure|footer|header|hr|i|' +
   'img|kbd|main|mark|nav|ol|picture|pre|q|rp|rt|ruby|s|samp|section|' +
   'small|source|span|strong|sub|summary|sup|table|tbody|td|tfoot|th|' +
-  'thead|time|u|ul|var|wbr'
-const KNOWN_TAG = new RegExp(`<\\/?(?:${KNOWN_HTML_TAG_NAMES})\\b[^>]*>`, 'gi')
+  'thead|time|u|ul|var|wbr';
+const KNOWN_TAG = new RegExp(`<\\/?(?:${KNOWN_HTML_TAG_NAMES})\\b[^>]*>`, 'gi');
 
 // HTML entities — both named and numeric. Decoded BEFORE whitespace
 // collapse so that a `&nbsp;` that re-expands to U+00A0 still gets
@@ -86,11 +86,11 @@ const NAMED_ENTITIES: Record<string, string> = {
   ndash: '–', // en dash –
   mdash: '—', // em dash —
   hellip: '…', // ellipsis …
-}
-const NAMED_ENTITY_RE = /&([a-zA-Z]+);/g
+};
+const NAMED_ENTITY_RE = /&([a-zA-Z]+);/g;
 // Case-insensitive `x`/`X` prefix for hex entities — both `&#x2014;` and
 // `&#X2014;` appear in the wild (#844 Copilot R2).
-const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/gi
+const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/gi;
 
 /**
  * Decode named + numeric HTML entities to their characters. Unknown named
@@ -104,18 +104,18 @@ const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/gi
 export function decodeHtmlEntities(input: string): string {
   return input
     .replace(NAMED_ENTITY_RE, (match, name: string) => {
-      const decoded = NAMED_ENTITIES[name.toLowerCase()]
-      return decoded ?? match
+      const decoded = NAMED_ENTITIES[name.toLowerCase()];
+      return decoded ?? match;
     })
     .replace(NUMERIC_ENTITY_RE, (match, isHex: string, digits: string) => {
-      const code = parseInt(digits, isHex ? 16 : 10)
-      if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return match
+      const code = parseInt(digits, isHex ? 16 : 10);
+      if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return match;
       try {
-        return String.fromCodePoint(code)
+        return String.fromCodePoint(code);
       } catch {
-        return match
+        return match;
       }
-    })
+    });
 }
 
 /**
@@ -132,7 +132,7 @@ export function decodeHtmlEntities(input: string): string {
  *   casts or `@ts-expect-error` guards (#844 Copilot R4).
  */
 export function stripDescriptionHtml(html: string | null | undefined): string {
-  if (!html) return ''
+  if (!html) return '';
 
   // 1. Decode entities FIRST so any entity-encoded markup (e.g.
   //    `&lt;p&gt;Hello&lt;/p&gt;` from feeds that double-encoded their
@@ -144,7 +144,7 @@ export function stripDescriptionHtml(html: string | null | undefined): string {
   //    to a non-tag construct (e.g. `&lt;heart&gt;` → `<heart>`) is
   //    still preserved as user content, so this reorder doesn't break
   //    the round-trip / idempotency contract from R1.
-  let out = decodeHtmlEntities(html)
+  let out = decodeHtmlEntities(html);
 
   // 2. Block boundaries → newlines. Closing tag emits `\n\n` (paragraph
   //    break); opening tag drops to empty so adjacent `</p><p>` doesn't
@@ -158,14 +158,14 @@ export function stripDescriptionHtml(html: string | null | undefined): string {
     .replace(SELF_CLOSING_PARAGRAPH, '\n\n')
     .replace(PARAGRAPH_CLOSING, '\n\n')
     .replace(TIGHT_CLOSING, '\n')
-    .replace(BLOCK_OPENING, '')
+    .replace(BLOCK_OPENING, '');
 
   // 3. Strip remaining KNOWN HTML tags (inline: <strong>, <a>, <span>,
   //    table cells, less-common block elements). Unknown angle-bracketed
   //    content like "<heart>" is preserved so idempotency holds — the
   //    whitelist is the safety net that lets us decode entities first
   //    without eating legitimate user content (#844 Copilot R1+R2).
-  out = out.replace(KNOWN_TAG, '')
+  out = out.replace(KNOWN_TAG, '');
 
   // 4. Whitespace cleanup.
   //    - Collapse runs of spaces / tabs (within a single line).
@@ -176,7 +176,7 @@ export function stripDescriptionHtml(html: string | null | undefined): string {
     .replace(/[ \t]+/g, ' ')
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
-    .trim()
+    .trim();
 
-  return out
+  return out;
 }

@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import React from 'react'
-import { MissingTabContent } from './MissingTabContent'
-import { type MissingRowEvent } from '../missing/MissingRow'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { MissingTabContent } from './MissingTabContent';
+import { type MissingRowEvent } from '../missing/MissingRow';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -12,17 +12,17 @@ vi.mock('next/link', () => ({
     href,
     ...rest
   }: {
-    children: React.ReactNode
-    href: string
-    [key: string]: unknown
+    children: React.ReactNode;
+    href: string;
+    [key: string]: unknown;
   }) => (
     <a href={href} {...rest}>
       {children}
     </a>
   ),
-}))
+}));
 
-const NOW = '2026-06-16T03:00:00Z'
+const NOW = '2026-06-16T03:00:00Z';
 
 const SAMPLE: MissingRowEvent[] = [
   {
@@ -40,7 +40,7 @@ const SAMPLE: MissingRowEvent[] = [
     clusterCount: 1,
     movedCandidate: null,
   },
-]
+];
 
 const WITH_CANDIDATE: MissingRowEvent[] = [
   {
@@ -53,13 +53,13 @@ const WITH_CANDIDATE: MissingRowEvent[] = [
       venueName: 'Mission Ballroom',
     },
   },
-]
+];
 
 describe('MissingTabContent — confirm move', () => {
   // The merge deletes a row, moves watch rows and notifies every watcher.
   // None of that is reversible, so the action must not fire on one click.
   it('opens a confirm dialog rather than merging on the first click', () => {
-    const onConfirmMove = vi.fn(async () => {})
+    const onConfirmMove = vi.fn(async () => {});
     render(
       <MissingTabContent
         events={WITH_CANDIDATE}
@@ -70,11 +70,11 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={onConfirmMove}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
-    expect(onConfirmMove).not.toHaveBeenCalled()
-    expect(screen.getByRole('dialog')).toBeTruthy()
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
+    expect(onConfirmMove).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
 
   it('names both shows and the reason in the dialog', () => {
     render(
@@ -87,17 +87,17 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.textContent).toContain('Lord Huron Live')
-    expect(dialog.textContent).toContain('Same venue, new date')
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('Lord Huron Live');
+    expect(dialog.textContent).toContain('Same venue, new date');
+  });
 
   it('merges only after the dialog is confirmed', async () => {
     // Typed parameter so the call tuple carries the argument; a bare
     // `vi.fn(async () => {})` types `calls[0]` as an empty tuple.
-    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {})
+    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {});
     render(
       <MissingTabContent
         events={WITH_CANDIDATE}
@@ -108,15 +108,15 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={onConfirmMove}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Merge and notify/ }))
-    expect(onConfirmMove).toHaveBeenCalledTimes(1)
-    expect(onConfirmMove.mock.calls[0]?.[0]).toMatchObject({ id: 'evt-1' })
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Merge and notify/ }));
+    expect(onConfirmMove).toHaveBeenCalledTimes(1);
+    expect(onConfirmMove.mock.calls[0]?.[0]).toMatchObject({ id: 'evt-1' });
+  });
 
   it('cancelling closes the dialog without merging', () => {
-    const onConfirmMove = vi.fn(async () => {})
+    const onConfirmMove = vi.fn(async () => {});
     render(
       <MissingTabContent
         events={WITH_CANDIDATE}
@@ -127,16 +127,16 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={onConfirmMove}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
     // Exact, not /Cancel/ — the row's own "Cancelled" action also matches.
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(onConfirmMove).not.toHaveBeenCalled()
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onConfirmMove).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
   it('closes the dialog on Escape without merging', () => {
-    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {})
+    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {});
     render(
       <MissingTabContent
         events={WITH_CANDIDATE}
@@ -147,12 +147,12 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={onConfirmMove}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(onConfirmMove).not.toHaveBeenCalled()
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(onConfirmMove).not.toHaveBeenCalled();
+  });
 
   // `aria-modal` claims the background is inert, so focus must actually be
   // inside the dialog. Cancel rather than confirm: the confirm is
@@ -168,12 +168,12 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.contains(document.activeElement)).toBe(true)
-    expect(document.activeElement?.textContent).toBe('Cancel')
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.textContent).toBe('Cancel');
+  });
 
   it('offers no confirm action on a row with no suggestion', () => {
     render(
@@ -186,10 +186,10 @@ describe('MissingTabContent — confirm move', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.queryByRole('button', { name: /Confirm move/ })).toBeNull()
-  })
-})
+    );
+    expect(screen.queryByRole('button', { name: /Confirm move/ })).toBeNull();
+  });
+});
 
 describe('MissingTabContent', () => {
   it('renders the desktop table when isDesktop=true', () => {
@@ -203,10 +203,10 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('Lord Huron')).toBeTruthy()
-    expect(screen.getByText('Missing from crawl')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Lord Huron')).toBeTruthy();
+    expect(screen.getByText('Missing from crawl')).toBeTruthy();
+  });
 
   it('renders the mobile card list when isDesktop=false', () => {
     render(
@@ -219,22 +219,22 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('Lord Huron')).toBeTruthy()
+    );
+    expect(screen.getByText('Lord Huron')).toBeTruthy();
     // Mobile banner content differs from desktop:
     expect(
       screen.getByText(/Expected in a daily sweep but not found/),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('disables the action buttons while a dismiss is pending', async () => {
-    let resolveDismiss: () => void = () => {}
+    let resolveDismiss: () => void = () => {};
     const onDismiss = vi.fn(
       () =>
         new Promise<void>((resolve) => {
-          resolveDismiss = resolve
+          resolveDismiss = resolve;
         }),
-    )
+    );
     render(
       <MissingTabContent
         events={SAMPLE}
@@ -245,16 +245,16 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={onDismiss}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }))
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }));
     await waitFor(() => {
-      expect(onDismiss).toHaveBeenCalledWith('evt-1')
-    })
+      expect(onDismiss).toHaveBeenCalledWith('evt-1');
+    });
     expect(
       screen.getByRole('button', { name: /Dismiss/ }).hasAttribute('disabled'),
-    ).toBe(true)
-    resolveDismiss()
-  })
+    ).toBe(true);
+    resolveDismiss();
+  });
 
   it('renders a loading skeleton — not the empty state — when loading=true', () => {
     render(
@@ -268,11 +268,11 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByLabelText('Loading missing events')).toBeTruthy()
+    );
+    expect(screen.getByLabelText('Loading missing events')).toBeTruthy();
     // The empty heading must NOT render during loading — that's the flash bug.
-    expect(screen.queryByText("Nothing's gone missing.")).toBeNull()
-  })
+    expect(screen.queryByText("Nothing's gone missing.")).toBeNull();
+  });
 
   it('renders the empty state when loading=false and events is empty', () => {
     render(
@@ -286,10 +286,10 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText("Nothing's gone missing.")).toBeTruthy()
-    expect(screen.queryByLabelText('Loading missing events')).toBeNull()
-  })
+    );
+    expect(screen.getByText("Nothing's gone missing.")).toBeTruthy();
+    expect(screen.queryByLabelText('Loading missing events')).toBeNull();
+  });
 
   // Regression for #710 — the header badge must reflect the server total,
   // not the length of the current page. The user saw "20 flagged" while
@@ -310,10 +310,10 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('166 flagged')).toBeTruthy()
-    expect(screen.queryByText('1 flagged')).toBeNull()
-  })
+    );
+    expect(screen.getByText('166 flagged')).toBeTruthy();
+    expect(screen.queryByText('1 flagged')).toBeNull();
+  });
 
   it('falls back to events.length when total is not provided', () => {
     render(
@@ -326,9 +326,9 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('1 flagged')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('1 flagged')).toBeTruthy();
+  });
 
   // Copilot follow-up on #710: when an admin deep-links to a page past the
   // end (or the row fetch is briefly stale during clamp-sync), the current
@@ -351,9 +351,9 @@ describe('MissingTabContent', () => {
         onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('166 flagged')).toBeTruthy()
+    );
+    expect(screen.getByText('166 flagged')).toBeTruthy();
     // Empty-state copy strings must NOT appear.
-    expect(screen.queryByText("Nothing's gone missing.")).toBeNull()
-  })
-})
+    expect(screen.queryByText("Nothing's gone missing.")).toBeNull();
+  });
+});

@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { ONBOARDING_COPY } from './definitions/copy'
-import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent'
+import Link from 'next/link';
+import { ONBOARDING_COPY } from './definitions/copy';
+import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent';
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
   SEARCH_PICKS_KEY,
   STEP_INDEX_KEY,
   clearPicks,
-} from '@/components/consumer/artist-picker'
+} from '@/components/consumer/artist-picker';
 
-const copy = ONBOARDING_COPY.nav.skip
+const copy = ONBOARDING_COPY.nav.skip;
 
 /**
  * The mirrors exist for exactly one round-trip: the upgrade that leaves the
@@ -20,15 +20,15 @@ const copy = ONBOARDING_COPY.nav.skip
  * render site that forgets to pass one would silently reintroduce the leak.
  */
 const dropPickMirrors = () => {
-  clearPicks(GENRE_PICKS_KEY)
-  clearPicks(ARTIST_PICKS_KEY)
+  clearPicks(GENRE_PICKS_KEY);
+  clearPicks(ARTIST_PICKS_KEY);
   // The step mirror goes with them. It survives the upgrade round trip by
   // design, and skipping is the visitor saying they are done with the tour —
   // leaving it behind reopens /onboarding mid-flow with the picks already
   // dropped, which is the worst of both.
-  clearPicks(SEARCH_PICKS_KEY)
-  clearPicks(STEP_INDEX_KEY)
-}
+  clearPicks(SEARCH_PICKS_KEY);
+  clearPicks(STEP_INDEX_KEY);
+};
 
 export type SkipMode =
   /**
@@ -39,7 +39,7 @@ export type SkipMode =
   | { kind: 'default'; href: string }
   | { kind: 'mid-intent'; destinationLabel: string; href: string }
   /** Entered from the account menu's "How Concert Crawl works" row. */
-  | { kind: 'menu' }
+  | { kind: 'menu' };
 
 const QUIET_LINK: React.CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -53,7 +53,7 @@ const QUIET_LINK: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   padding: '0 2px',
-}
+};
 
 const LOUD_LINK: React.CSSProperties = {
   fontFamily: 'Inter, system-ui',
@@ -67,7 +67,7 @@ const LOUD_LINK: React.CSSProperties = {
   minHeight: 36,
   display: 'flex',
   alignItems: 'center',
-}
+};
 
 /**
  * Leaving the tour, available in the same rail position on every step — only the
@@ -109,7 +109,7 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
           {copy.pending(mode.destinationLabel)}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -120,5 +120,5 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
     >
       {mode.kind === 'menu' ? copy.menu : copy.default}
     </Link>
-  )
-}
+  );
+};

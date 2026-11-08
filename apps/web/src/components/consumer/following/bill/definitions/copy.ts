@@ -34,4 +34,4 @@ export const BILL_FOLLOW_COPY = {
   // payoff, so it names the trigger ("book a Denver date") rather than
   // gesturing at alerts in general.
   body: "We'll tell you the day any of them book another Denver date.",
-} as const
+} as const;

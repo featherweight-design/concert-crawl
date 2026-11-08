@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
-import type { Browser } from 'playwright'
-import { db, events, venues } from '@concert-crawl/db'
-import { crawlVenue } from './crawl.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
+import type { Browser } from 'playwright';
+import { db, events, venues } from '@concert-crawl/db';
+import { crawlVenue } from './crawl.js';
 
 // #1203 — the crawler persists the headliner set as a first-class array, and
 // `canonical_headliners` is its element-wise canonicalization.
@@ -27,7 +27,7 @@ vi.mock('./lib/fetcher.js', () => ({
       public httpStatus: number,
       message: string,
     ) {
-      super(message)
+      super(message);
     }
   },
   // crawl.ts narrows on this with `instanceof`, so an absent constructor makes
@@ -40,11 +40,11 @@ vi.mock('./lib/fetcher.js', () => ({
       public httpStatus: number,
       message: string,
     ) {
-      super(message)
-      this.name = 'CrawlSelectorTimeoutError'
+      super(message);
+      this.name = 'CrawlSelectorTimeoutError';
     }
   },
-}))
+}));
 vi.mock('./lib/robots.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./lib/robots.js')>()),
   isAllowed: vi.fn().mockResolvedValue(true),
@@ -52,7 +52,7 @@ vi.mock('./lib/robots.js', async (importOriginal) => ({
   checkRobots: vi.fn().mockResolvedValue({ status: 'allowed' }),
   isAiUseAllowed: vi.fn().mockResolvedValue(true),
   getCrawlDelayMs: vi.fn().mockResolvedValue(null),
-}))
+}));
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
   // Fixtures here report their performers, so the derivation ladder settles
@@ -63,28 +63,28 @@ vi.mock('./lib/extractors/llm.js', () => ({
     .mockRejectedValue(
       new Error('adjudicateEvent is not stubbed for this test'),
     ),
-}))
+}));
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
   sendEventCountDropEmail: vi.fn().mockResolvedValue(undefined),
-}))
+}));
 
-import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
-import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
+import { fetchPage, fetchPageHttp } from './lib/fetcher.js';
+import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
 
-const mockBrowser = {} as Browser
-const mockFetchPage = vi.mocked(fetchPage)
-const mockFetchPageHttp = vi.mocked(fetchPageHttp)
-const mockExtractWithLlm = vi.mocked(extractWithLlm)
-const mockAdjudicateEvent = vi.mocked(adjudicateEvent)
+const mockBrowser = {} as Browser;
+const mockFetchPage = vi.mocked(fetchPage);
+const mockFetchPageHttp = vi.mocked(fetchPageHttp);
+const mockExtractWithLlm = vi.mocked(extractWithLlm);
+const mockAdjudicateEvent = vi.mocked(adjudicateEvent);
 
-const SOURCE_URL = 'https://headliners.example.com'
-const HTML_BASE = '<html><body><p>Headliner listing</p></body></html>'
+const SOURCE_URL = 'https://headliners.example.com';
+const HTML_BASE = '<html><body><p>Headliner listing</p></body></html>';
 
 async function clearCrawlState(): Promise<void> {
   await db.execute(
     sql`TRUNCATE events, artists, venues, crawl_runs, notifications, cost_tracking RESTART IDENTITY CASCADE`,
-  )
+  );
 }
 
 async function seedTestVenue(): Promise<{ id: string }> {
@@ -100,34 +100,34 @@ async function seedTestVenue(): Promise<{ id: string }> {
       verified: true,
       crawlMode: 'browser',
     })
-    .returning()
-  if (!venue) throw new Error('venue insert returned no row')
-  return { id: venue.id }
+    .returning();
+  if (!venue) throw new Error('venue insert returned no row');
+  return { id: venue.id };
 }
 
 function futureDate(daysFromNow: number): string {
-  const now = new Date()
-  now.setUTCDate(now.getUTCDate() + daysFromNow)
-  return now.toISOString().slice(0, 10)
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + daysFromNow);
+  return now.toISOString().slice(0, 10);
 }
 
 interface ExtractedEvent {
-  title: string
-  rawTitle: string
-  artist: string
+  title: string;
+  rawTitle: string;
+  artist: string;
   /**
    * What the extractor SAW. `headliners` is deliberately absent: the derivation
    * stage overwrites it, so a fixture that set it would assert nothing.
    */
-  observedPerformers: string[]
+  observedPerformers: string[];
   // Required, not optional: every extractor and fetcher populates it, empty
   // when it saw no openers. Making a fixture able to omit it would let a shape
   // production never produces slip into the suite.
-  observedSupportingArtists: string[]
-  doorsTime?: string
-  date: string
-  sourceUrl: string
-  confidence: number
+  observedSupportingArtists: string[];
+  doorsTime?: string;
+  date: string;
+  sourceUrl: string;
+  confidence: number;
 }
 
 function makeEvent(
@@ -135,7 +135,7 @@ function makeEvent(
   date: string,
   extra: Partial<ExtractedEvent> = {},
 ): ExtractedEvent {
-  const title = `${artist} Live`
+  const title = `${artist} Live`;
   return {
     title,
     rawTitle: title,
@@ -146,7 +146,7 @@ function makeEvent(
     sourceUrl: SOURCE_URL,
     confidence: 0.9,
     ...extra,
-  }
+  };
 }
 
 function mockExtraction(extracted: ExtractedEvent[], html = HTML_BASE): void {
@@ -154,24 +154,24 @@ function mockExtraction(extracted: ExtractedEvent[], html = HTML_BASE): void {
     html,
     httpStatus: 200,
     finalUrl: SOURCE_URL,
-  })
+  });
   mockFetchPageHttp.mockResolvedValue({
     html,
     httpStatus: 200,
     finalUrl: SOURCE_URL,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: extracted,
     usage: { inputTokens: 0, outputTokens: 0 },
-  })
+  });
 }
 
 async function loadEvent(artist: string): Promise<{
-  headliners: string[] | null
-  canonicalHeadliners: string[] | null
-  canonicalArtist: string
-  artist: string
-  supportingArtists: string[] | null
+  headliners: string[] | null;
+  canonicalHeadliners: string[] | null;
+  canonicalArtist: string;
+  artist: string;
+  supportingArtists: string[] | null;
 }> {
   const [row] = await db
     .select({
@@ -182,104 +182,104 @@ async function loadEvent(artist: string): Promise<{
       supportingArtists: events.supportingArtists,
     })
     .from(events)
-    .where(eq(events.artist, artist))
-  if (!row) throw new Error(`no events row for artist "${artist}"`)
-  return row
+    .where(eq(events.artist, artist));
+  if (!row) throw new Error(`no events row for artist "${artist}"`);
+  return row;
 }
 
 beforeEach(async () => {
-  await clearCrawlState()
-  mockFetchPage.mockClear()
-  mockFetchPageHttp.mockClear()
-  mockExtractWithLlm.mockClear()
-  mockAdjudicateEvent.mockClear()
+  await clearCrawlState();
+  mockFetchPage.mockClear();
+  mockFetchPageHttp.mockClear();
+  mockExtractWithLlm.mockClear();
+  mockAdjudicateEvent.mockClear();
   mockAdjudicateEvent.mockRejectedValue(
     new Error('adjudicateEvent is not stubbed for this test'),
-  )
-})
+  );
+});
 
 describe('crawlVenue — headliner set persistence (#1203)', () => {
   it('persists the single act the extractor observed', async () => {
-    const venue = await seedTestVenue()
-    mockExtraction([makeEvent('Sigur Rós', futureDate(20))])
+    const venue = await seedTestVenue();
+    mockExtraction([makeEvent('Sigur Rós', futureDate(20))]);
 
-    const run = await crawlVenue(venue.id, mockBrowser)
-    expect(run.status).toBe('success')
+    const run = await crawlVenue(venue.id, mockBrowser);
+    expect(run.status).toBe('success');
 
-    const row = await loadEvent('Sigur Rós')
-    expect(row.headliners).toEqual(['Sigur Rós'])
-    expect(row.canonicalHeadliners).toEqual(['sigur ros'])
-  })
+    const row = await loadEvent('Sigur Rós');
+    expect(row.headliners).toEqual(['Sigur Rós']);
+    expect(row.canonicalHeadliners).toEqual(['sigur ros']);
+  });
 
   it('persists an EMPTY headliner set when the extractor observed nobody', async () => {
     // The old behavior here was to fall back to [artist]. That fallback is what
     // put 222 event titles in the artists projection, so it is gone: a listing
     // that names no performer keeps its display string and nothing else. The
     // adjudicator rules it a non-concert, which is the honest answer for bingo.
-    const venue = await seedTestVenue()
+    const venue = await seedTestVenue();
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: false,
       headliners: [],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('Drag Bingo', futureDate(26), { observedPerformers: [] }),
-    ])
+    ]);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Drag Bingo')
-    expect(row.artist).toBe('Drag Bingo')
-    expect(row.headliners).toEqual([])
-    expect(row.canonicalHeadliners).toEqual([])
-  })
+    const row = await loadEvent('Drag Bingo');
+    expect(row.artist).toBe('Drag Bingo');
+    expect(row.headliners).toEqual([]);
+    expect(row.canonicalHeadliners).toEqual([]);
+  });
 
   it('persists a multi-headliner array and canonicalizes every entry', async () => {
-    const venue = await seedTestVenue()
+    const venue = await seedTestVenue();
     mockExtraction([
       makeEvent('Desert Dwellers', futureDate(21), {
         observedPerformers: ['Desert Dwellers', 'Great Dane'],
         observedSupportingArtists: ['Numatik'],
       }),
-    ])
+    ]);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Desert Dwellers')
-    expect(row.headliners).toEqual(['Desert Dwellers', 'Great Dane'])
+    const row = await loadEvent('Desert Dwellers');
+    expect(row.headliners).toEqual(['Desert Dwellers', 'Great Dane']);
     // canonicalizeSupporting dedupes and sorts, so assert as a set.
     expect([...(row.canonicalHeadliners ?? [])].sort()).toEqual([
       'desert dwellers',
       'great dane',
-    ])
-    expect(row.canonicalArtist).toBe('desert dwellers')
+    ]);
+    expect(row.canonicalArtist).toBe('desert dwellers');
     // The opener stays an opener — it never leaks into the headliner set.
-    expect(row.supportingArtists).toEqual(['Numatik'])
-    expect(row.canonicalHeadliners).not.toContain('numatik')
-  })
+    expect(row.supportingArtists).toEqual(['Numatik']);
+    expect(row.canonicalHeadliners).not.toContain('numatik');
+  });
 
   it('keeps a band name containing an ampersand as ONE headliner', async () => {
-    const venue = await seedTestVenue()
+    const venue = await seedTestVenue();
     // The extractor emits the whole name; nothing downstream splits on '&'.
     mockExtraction([
       makeEvent('Iron & Wine', futureDate(22), {
         observedPerformers: ['Iron & Wine'],
       }),
-    ])
+    ]);
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Iron & Wine')
-    expect(row.headliners).toEqual(['Iron & Wine'])
-    expect(row.canonicalHeadliners).toHaveLength(1)
-  })
+    const row = await loadEvent('Iron & Wine');
+    expect(row.headliners).toEqual(['Iron & Wine']);
+    expect(row.canonicalHeadliners).toHaveLength(1);
+  });
 
   it('rewrites the headliner set on re-crawl when the billing changes', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(23)
-    mockExtraction([makeEvent('Turnstile', date)])
-    await crawlVenue(venue.id, mockBrowser)
-    expect((await loadEvent('Turnstile')).headliners).toEqual(['Turnstile'])
+    const venue = await seedTestVenue();
+    const date = futureDate(23);
+    mockExtraction([makeEvent('Turnstile', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    expect((await loadEvent('Turnstile')).headliners).toEqual(['Turnstile']);
 
     // Same (venue, date, canonical_artist, show_time) → the ON CONFLICT path.
     // The title has to move too: an unchanged source hash short-circuits the
@@ -293,28 +293,28 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Updated listing</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Turnstile')
-    expect(row.headliners).toEqual(['Turnstile', 'Snail Mail'])
+    const row = await loadEvent('Turnstile');
+    expect(row.headliners).toEqual(['Turnstile', 'Snail Mail']);
     expect([...(row.canonicalHeadliners ?? [])].sort()).toEqual([
       'snail mail',
       'turnstile',
-    ])
-  })
+    ]);
+  });
 
   it('collapses back to a single headliner when a co-headline bill is downgraded', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(25)
+    const venue = await seedTestVenue();
+    const date = futureDate(25);
     mockExtraction([
       makeEvent('Fontaines D.C.', date, {
         title: 'Fontaines D.C. & Just Mustard',
         rawTitle: 'Fontaines D.C. & Just Mustard',
         observedPerformers: ['Fontaines D.C.', 'Just Mustard'],
       }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
 
     // The upsert takes the newly derived array wholesale, so a bill that drops
     // back to one act narrows on re-crawl instead of keeping the stale
@@ -326,20 +326,22 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Solo billing</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Fontaines D.C.')
-    expect(row.headliners).toEqual(['Fontaines D.C.'])
-    expect(row.canonicalHeadliners).toEqual(['fontaines d.c.'])
-  })
+    const row = await loadEvent('Fontaines D.C.');
+    expect(row.headliners).toEqual(['Fontaines D.C.']);
+    expect(row.canonicalHeadliners).toEqual(['fontaines d.c.']);
+  });
 
   it('keeps the headliner set EMPTY when a re-crawl observes nobody', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(27)
-    mockExtraction([makeEvent('Bingo Night', date)])
-    await crawlVenue(venue.id, mockBrowser)
-    expect((await loadEvent('Bingo Night')).headliners).toEqual(['Bingo Night'])
+    const venue = await seedTestVenue();
+    const date = futureDate(27);
+    mockExtraction([makeEvent('Bingo Night', date)]);
+    await crawlVenue(venue.id, mockBrowser);
+    expect((await loadEvent('Bingo Night')).headliners).toEqual([
+      'Bingo Night',
+    ]);
 
     // The ON CONFLICT clause prepends the stored artist to excluded[2:], which
     // on an empty set would rebuild [artist] and quietly reinstate
@@ -349,7 +351,7 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
       isConcert: false,
       headliners: [],
       supportingArtists: [],
-    })
+    });
     // The title has to move too — an unchanged source hash short-circuits the
     // upsert before the `set` clause this test is about.
     mockExtraction(
@@ -361,30 +363,30 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Now billed as a bingo night</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Bingo Night')
-    expect(row.artist).toBe('Bingo Night')
-    expect(row.headliners).toEqual([])
-    expect(row.canonicalHeadliners).toEqual([])
-  })
+    const row = await loadEvent('Bingo Night');
+    expect(row.artist).toBe('Bingo Night');
+    expect(row.headliners).toEqual([]);
+    expect(row.canonicalHeadliners).toEqual([]);
+  });
 
   it('preserves the stored bill when the adjudicator is down on re-crawl', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(28)
+    const venue = await seedTestVenue();
+    const date = futureDate(28);
     mockExtraction([
       makeEvent('Khruangbin', date, {
         observedPerformers: ['Khruangbin'],
         observedSupportingArtists: ['Nubya Garcia'],
       }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
 
     // An outage leaves the ladder with no verdict. Writing its blank would
     // erase a correct bill and de-project both artists until some later crawl
     // happened to succeed, so the upsert keeps all four columns as stored.
-    mockAdjudicateEvent.mockRejectedValue(new Error('haiku 529'))
+    mockAdjudicateEvent.mockRejectedValue(new Error('haiku 529'));
     mockExtraction(
       [
         makeEvent('Khruangbin', date, {
@@ -394,28 +396,28 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Room change</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Khruangbin')
-    expect(row.headliners).toEqual(['Khruangbin'])
-    expect(row.canonicalHeadliners).toEqual(['khruangbin'])
-    expect(row.supportingArtists).toEqual(['Nubya Garcia'])
-  })
+    const row = await loadEvent('Khruangbin');
+    expect(row.headliners).toEqual(['Khruangbin']);
+    expect(row.canonicalHeadliners).toEqual(['khruangbin']);
+    expect(row.supportingArtists).toEqual(['Nubya Garcia']);
+  });
 
   it('reuses the stored verdict instead of re-adjudicating an unchanged listing', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(29)
+    const venue = await seedTestVenue();
+    const date = futureDate(29);
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Daedelus'],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
 
     // The page HTML moves so the crawl is not skipped wholesale and the
     // derivation ladder actually runs a second time. The ladder runs before
@@ -426,35 +428,35 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     mockExtraction(
       [makeEvent('@adsfradio presents', date, { observedPerformers: [] })],
       '<html><body><p>Unrelated page edit</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    );
+    await crawlVenue(venue.id, mockBrowser);
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
 
-    const row = await loadEvent('@adsfradio presents')
-    expect(row.headliners).toEqual(['Daedelus'])
-    expect(row.canonicalHeadliners).toEqual(['daedelus'])
-  })
+    const row = await loadEvent('@adsfradio presents');
+    expect(row.headliners).toEqual(['Daedelus']);
+    expect(row.canonicalHeadliners).toEqual(['daedelus']);
+  });
 
   it('picks up a new opener while still reusing the stored verdict', async () => {
     // The reuse key is (title, description) — the adjudicator's own inputs — so
     // it cannot see an opener change. Ticketure parses openers out of prose and
     // sets no description at all, so copying the stored list would freeze the
     // support bill for as long as the headline stayed put.
-    const venue = await seedTestVenue()
-    const date = futureDate(41)
+    const venue = await seedTestVenue();
+    const date = futureDate(41);
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Dutch Melrose'],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('Dutch Melrose presents', date, {
         observedPerformers: [],
         observedSupportingArtists: ['Kiltro'],
       }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
 
     mockExtraction(
       [
@@ -464,15 +466,15 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Unrelated page edit</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
     // Still one call: the verdict was reused, only the observation re-merged.
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
 
-    const row = await loadEvent('Dutch Melrose presents')
-    expect(row.headliners).toEqual(['Dutch Melrose'])
-    expect(row.supportingArtists).toEqual(['Kiltro', 'Neighbor Andy'])
-  })
+    const row = await loadEvent('Dutch Melrose presents');
+    expect(row.headliners).toEqual(['Dutch Melrose']);
+    expect(row.supportingArtists).toEqual(['Kiltro', 'Neighbor Andy']);
+  });
 
   it('writes a bill change two joined strings would compare equal', async () => {
     // The bill is not part of sourceHash, so the change-detection escape hatch
@@ -480,17 +482,17 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     // joining them on a delimiter would call these two bills identical:
     // canonicalizeArtist preserves punctuation, so one name containing the
     // delimiter collides with two names separated by it.
-    const venue = await seedTestVenue()
-    const date = futureDate(42)
+    const venue = await seedTestVenue();
+    const date = futureDate(42);
     mockExtraction([
       makeEvent('Winter Showcase', date, {
         observedPerformers: ['Kae Tempest|Loyle Carner'],
       }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
     expect((await loadEvent('Winter Showcase')).canonicalHeadliners).toEqual([
       'kae tempest|loyle carner',
-    ])
+    ]);
 
     mockExtraction(
       [
@@ -499,31 +501,31 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Bill split into two acts</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Winter Showcase')
-    expect(row.headliners).toEqual(['Kae Tempest', 'Loyle Carner'])
-    expect(row.canonicalHeadliners).toEqual(['kae tempest', 'loyle carner'])
-  })
+    const row = await loadEvent('Winter Showcase');
+    expect(row.headliners).toEqual(['Kae Tempest', 'Loyle Carner']);
+    expect(row.canonicalHeadliners).toEqual(['kae tempest', 'loyle carner']);
+  });
 
   it('drops the stored verdict once the source starts naming a performer', async () => {
     // A venue that adds JSON-LD performer markup, or an extractor that starts
     // populating the field, gives the ladder a step-1 answer where it
     // previously had none. That outranks a stored LLM verdict, so the reuse
     // gate must not hold the older answer just because the title is unchanged.
-    const venue = await seedTestVenue()
-    const date = futureDate(32)
+    const venue = await seedTestVenue();
+    const date = futureDate(32);
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Daedelus'],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
 
     mockExtraction(
       [
@@ -532,34 +534,34 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Performers listed</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
     // Step 1 is free, so the ladder settles without a second LLM call.
-    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
-    const row = await loadEvent('@adsfradio presents')
-    expect(row.headliners).toEqual(['Daedelus', 'Busdriver'])
-    expect(row.canonicalHeadliners).toEqual(['busdriver', 'daedelus'])
-  })
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce();
+    const row = await loadEvent('@adsfradio presents');
+    expect(row.headliners).toEqual(['Daedelus', 'Busdriver']);
+    expect(row.canonicalHeadliners).toEqual(['busdriver', 'daedelus']);
+  });
 
   it('re-adjudicates when the title moves, because the adjudicator reads it', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(30)
+    const venue = await seedTestVenue();
+    const date = futureDate(30);
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Daedelus'],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
 
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Daedelus', 'Busdriver'],
       supportingArtists: [],
-    })
+    });
     // The page HTML has to move as well as the title — an unchanged page is
     // skipped before extraction, so the derivation loop never runs at all.
     mockExtraction(
@@ -571,17 +573,17 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Busdriver added to the bill</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    expect(mockAdjudicateEvent).toHaveBeenCalledTimes(2)
-  })
+    expect(mockAdjudicateEvent).toHaveBeenCalledTimes(2);
+  });
 
   it('takes the freshly billed headliners on re-crawl rather than re-pinning to the stored artist', async () => {
-    const venue = await seedTestVenue()
-    const date = futureDate(24)
-    mockExtraction([makeEvent('Bjork', date)])
-    await crawlVenue(venue.id, mockBrowser)
+    const venue = await seedTestVenue();
+    const date = futureDate(24);
+    mockExtraction([makeEvent('Bjork', date)]);
+    await crawlVenue(venue.id, mockBrowser);
 
     // `artist` is deliberately never updated on conflict, so the stored
     // spelling survives. headliners is no longer spliced onto it: the ladder
@@ -595,13 +597,13 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Updated listing</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Bjork')
-    expect(row.artist).toBe('Bjork')
-    expect(row.headliners).toEqual(['Björk', 'Arca'])
-  })
+    const row = await loadEvent('Bjork');
+    expect(row.artist).toBe('Bjork');
+    expect(row.headliners).toEqual(['Björk', 'Arca']);
+  });
 
   it('does not collapse a real bill back to the display title on re-crawl', async () => {
     // When the listing names nobody, the ladder puts the real performer in
@@ -609,20 +611,20 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     // the array as array_prepend(artist, excluded[2:]) on conflict used to turn that
     // into ['Jazz Series presents'] — the exact title-as-headliner junk this
     // stage exists to stop.
-    const venue = await seedTestVenue()
-    const date = futureDate(31)
+    const venue = await seedTestVenue();
+    const date = futureDate(31);
     mockAdjudicateEvent.mockResolvedValue({
       isConcert: true,
       headliners: ['Kokoroko'],
       supportingArtists: [],
-    })
+    });
     mockExtraction([
       makeEvent('Jazz Series presents', date, { observedPerformers: [] }),
-    ])
-    await crawlVenue(venue.id, mockBrowser)
+    ]);
+    await crawlVenue(venue.id, mockBrowser);
 
-    const seeded = await loadEvent('Jazz Series presents')
-    expect(seeded.headliners).toEqual(['Kokoroko'])
+    const seeded = await loadEvent('Jazz Series presents');
+    expect(seeded.headliners).toEqual(['Kokoroko']);
 
     // Move the page HTML so the crawl is not skipped wholesale, and the doors
     // time so the source hash changes and the upsert's ON CONFLICT set clause
@@ -636,12 +638,12 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         }),
       ],
       '<html><body><p>Doors moved</p></body></html>',
-    )
-    await crawlVenue(venue.id, mockBrowser)
+    );
+    await crawlVenue(venue.id, mockBrowser);
 
-    const row = await loadEvent('Jazz Series presents')
-    expect(row.artist).toBe('Jazz Series presents')
-    expect(row.headliners).toEqual(['Kokoroko'])
-    expect(row.canonicalHeadliners).toEqual(['kokoroko'])
-  })
-})
+    const row = await loadEvent('Jazz Series presents');
+    expect(row.artist).toBe('Jazz Series presents');
+    expect(row.headliners).toEqual(['Kokoroko']);
+    expect(row.canonicalHeadliners).toEqual(['kokoroko']);
+  });
+});

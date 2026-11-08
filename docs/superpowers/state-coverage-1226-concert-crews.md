@@ -10,38 +10,38 @@ Each state is checked three ways: (1) is the triggering field in the response **
 
 ## `CrewSummary` — `/crews` list (PR-4)
 
-| State | Trigger | Verdict |
-| --- | --- | --- |
-| Crew of one | `memberCount === 1` | ✅ |
-| At capacity | `memberCount >= CREW_MEMBER_CAP` (12) | ✅ |
-| No upcoming nights | `upcomingCount === 0` | ✅ |
-| Muted crew | `muted` | ✅ |
-| Nullable handle | `handle === null` | ✅ |
-| Entitlement gate on create | `useEntitlement('crews')` | ✅ — see note 1 |
+| State                      | Trigger                               | Verdict         |
+| -------------------------- | ------------------------------------- | --------------- |
+| Crew of one                | `memberCount === 1`                   | ✅              |
+| At capacity                | `memberCount >= CREW_MEMBER_CAP` (12) | ✅              |
+| No upcoming nights         | `upcomingCount === 0`                 | ✅              |
+| Muted crew                 | `muted`                               | ✅              |
+| Nullable handle            | `handle === null`                     | ✅              |
+| Entitlement gate on create | `useEntitlement('crews')`             | ✅ — see note 1 |
 
 ## Crew home — roster + nights (PR-5)
 
-| State | Trigger | Verdict |
-| --- | --- | --- |
-| Empty `upcoming` | `upcoming.length === 0` | ✅ |
-| Empty `nights` | `nights.length === 0` | ✅ |
-| Keeper badge | `isKeeper` | ✅ |
-| Self row | `isYou` | ✅ |
-| Handoff required on leave | 409 `CREW_HANDOFF_REQUIRED_CODE` | ✅ |
-| Last member leaves | 409 `CREW_LAST_MEMBER_CODE` | ✅ |
+| State                     | Trigger                          | Verdict |
+| ------------------------- | -------------------------------- | ------- |
+| Empty `upcoming`          | `upcoming.length === 0`          | ✅      |
+| Empty `nights`            | `nights.length === 0`            | ✅      |
+| Keeper badge              | `isKeeper`                       | ✅      |
+| Self row                  | `isYou`                          | ✅      |
+| Handoff required on leave | 409 `CREW_HANDOFF_REQUIRED_CODE` | ✅      |
+| Last member leaves        | 409 `CREW_LAST_MEMBER_CODE`      | ✅      |
 
 ## Invites (PR-3, shipped)
 
-| State | Trigger | Verdict |
-| --- | --- | --- |
-| Live link | `GET /v1/crew-invites/:token` 200 → `PublicCrewInvite` | ✅ |
-| At capacity, not dead | `isFull: true` on a 200 | ✅ |
-| Expired link | 404 `reason: 'expired'` | ✅ |
-| Retired link | 404 `reason: 'revoked'` | ✅ |
-| Unknown token | 404 `reason: 'unknown'` | ✅ |
-| Expiry countdown | `expiresAt`, `CREW_INVITE_TTL_MS` = 7d | ✅ |
-| Creator sheet: no live link | `GET .../invites/current` → `null` | ✅ |
-| Creator sheet: "Link retired" | `revoked` prop | ⚠️ — see note 2 |
+| State                         | Trigger                                                | Verdict         |
+| ----------------------------- | ------------------------------------------------------ | --------------- |
+| Live link                     | `GET /v1/crew-invites/:token` 200 → `PublicCrewInvite` | ✅              |
+| At capacity, not dead         | `isFull: true` on a 200                                | ✅              |
+| Expired link                  | 404 `reason: 'expired'`                                | ✅              |
+| Retired link                  | 404 `reason: 'revoked'`                                | ✅              |
+| Unknown token                 | 404 `reason: 'unknown'`                                | ✅              |
+| Expiry countdown              | `expiresAt`, `CREW_INVITE_TTL_MS` = 7d                 | ✅              |
+| Creator sheet: no live link   | `GET .../invites/current` → `null`                     | ✅              |
+| Creator sheet: "Link retired" | `revoked` prop                                         | ⚠️ — see note 2 |
 
 ## Notes
 

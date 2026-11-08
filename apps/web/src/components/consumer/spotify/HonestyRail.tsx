@@ -2,9 +2,9 @@
 // OAuth handoff interstitial (#763 PR 5). Icons are signal-tinted squares;
 // copy comes verbatim from SPOTIFY_COPY.honestyRail.
 
-import { SPOTIFY_COPY } from './definitions/copy'
+import { SPOTIFY_COPY } from './definitions/copy';
 
-const ICON_STROKE = 'var(--signal)'
+const ICON_STROKE = 'var(--signal)';
 
 const RAIL_ICONS: Record<string, React.ReactNode> = {
   lock: (
@@ -53,7 +53,7 @@ const RAIL_ICONS: Record<string, React.ReactNode> = {
       />
     </svg>
   ),
-}
+};
 
 export const HonestyRail = () => (
   <ul className="m-0 flex list-none flex-col gap-[13px] p-0">
@@ -80,4 +80,4 @@ export const HonestyRail = () => (
       </li>
     ))}
   </ul>
-)
+);

@@ -57,11 +57,11 @@
  * the size of a pass is read from its output rather than guessed from here.
  */
 
-import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm'
-import { z } from 'zod'
-import { canonicalizeArtist } from '@concert-crawl/types'
-import { artists, MATCH_ATTEMPT_LIMIT } from '../schema/artists.js'
-import type { Database } from '../client.js'
+import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm';
+import { z } from 'zod';
+import { canonicalizeArtist } from '@concert-crawl/types';
+import { artists, MATCH_ATTEMPT_LIMIT } from '../schema/artists.js';
+import type { Database } from '../client.js';
 
 /** Why a row was left alone. Counted so a run reports where the queue actually goes. */
 export type SkipReason =
@@ -70,54 +70,54 @@ export type SkipReason =
   | 'no-spotify-link'
   | 'several-spotify-links'
   | 'spotify-id-not-among-candidates'
-  | 'musicbrainz-unavailable'
+  | 'musicbrainz-unavailable';
 
 export interface MusicBrainzResolution {
-  artistId: string
-  name: string
-  musicbrainzId: string
-  spotifyArtistId: string
+  artistId: string;
+  name: string;
+  musicbrainzId: string;
+  spotifyArtistId: string;
 }
 
 export interface MusicBrainzDisambiguateResult {
   /** Ambiguous rows examined this run. */
-  considered: number
+  considered: number;
   /** Rows both sources agreed on. */
-  resolved: number
+  resolved: number;
   /**
    * Rows actually written. Zero on a dry run, and short of `resolved` when an
    * admin resolved a row by hand while this run was walking the queue — the
    * write is guarded on `ambiguous`, so the human's answer wins.
    */
-  updated: number
+  updated: number;
   /** One entry per skip reason, so a run says where the queue went. */
-  skipped: Record<SkipReason, number>
+  skipped: Record<SkipReason, number>;
   /** Every agreement reached, for eyeballing before an apply run. */
-  resolutions: MusicBrainzResolution[]
+  resolutions: MusicBrainzResolution[];
   /**
    * Rows whose match budget this run spent because MusicBrainz found the name
    * ambiguous too. Zero on a dry run, and short of the
    * `several-exact-name-matches` count when a row was already exhausted or had
    * left `ambiguous` before the write.
    */
-  exhausted: number
+  exhausted: number;
 }
 
 export interface MusicBrainzDisambiguateOptions {
-  dryRun: boolean
+  dryRun: boolean;
   /** Cap on rows examined. Left undefined, the whole ambiguous queue is walked. */
-  limit?: number | undefined
+  limit?: number | undefined;
   /**
    * MusicBrainz's published rate limit is one request per second. The default
    * leaves headroom above it rather than racing the limiter — a 503 costs a
    * retry, which is slower than simply waiting.
    */
-  requestIntervalMs?: number
-  fetchImpl?: typeof fetch
-  sleepImpl?: (ms: number) => Promise<void>
+  requestIntervalMs?: number;
+  fetchImpl?: typeof fetch;
+  sleepImpl?: (ms: number) => Promise<void>;
 }
 
-const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2'
+const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2';
 
 /**
  * MusicBrainz requires a User-Agent naming the application and a contact. The
@@ -128,39 +128,39 @@ const MUSICBRAINZ_BASE = 'https://musicbrainz.org/ws/2'
  * (`Application/Version ( contact )`), not stray formatting.
  */
 const USER_AGENT =
-  'ConcertCrawl/1.0 ( hugh@featherweight.design ) +https://concertcrawl.app'
+  'ConcertCrawl/1.0 ( hugh@featherweight.design ) +https://concertcrawl.app';
 
-const DEFAULT_REQUEST_INTERVAL_MS = 1100
+const DEFAULT_REQUEST_INTERVAL_MS = 1100;
 
 /** Search hits past this rank are noise; an exact name match ranks far higher. */
-const SEARCH_LIMIT = 25
+const SEARCH_LIMIT = 25;
 
 /** 503 is MusicBrainz's rate-limit response and is documented as retryable. */
-const MAX_RETRIES = 3
+const MAX_RETRIES = 3;
 
 /**
  * A stalled connection would otherwise wedge the whole run, since nothing above
  * this loop is watching the clock. Bounding the request turns a hung socket
  * into one skipped row, which is the same outcome as any other failure here.
  */
-const REQUEST_TIMEOUT_MS = 15_000
+const REQUEST_TIMEOUT_MS = 15_000;
 
 const searchResponseSchema = z.object({
   artists: z.array(z.object({ id: z.string(), name: z.string() })).default([]),
-})
+});
 
 const lookupResponseSchema = z.object({
   relations: z
     .array(z.object({ url: z.object({ resource: z.string() }).optional() }))
     .default([]),
-})
+});
 
 /**
  * Spotify artist URLs as MusicBrainz stores them. The optional `intl-<lang>`
  * segment appears on links copied from a localised Spotify client.
  */
 const SPOTIFY_ARTIST_URL =
-  /^https?:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?artist\/([A-Za-z0-9]+)/
+  /^https?:\/\/open\.spotify\.com\/(?:intl-[a-z-]+\/)?artist\/([A-Za-z0-9]+)/;
 
 /**
  * Escapes the two characters Lucene treats as structural inside a quoted
@@ -169,15 +169,15 @@ const SPOTIFY_ARTIST_URL =
  * itself and its escape need handling.
  */
 const escapeLucenePhrase = (name: string): string =>
-  name.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  name.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
 const defaultSleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 interface RequestContext {
-  fetchImpl: typeof fetch
-  sleepImpl: (ms: number) => Promise<void>
-  intervalMs: number
+  fetchImpl: typeof fetch;
+  sleepImpl: (ms: number) => Promise<void>;
+  intervalMs: number;
 }
 
 /**
@@ -191,28 +191,28 @@ async function getJson(
   ctx: RequestContext,
 ): Promise<unknown | null> {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    await ctx.sleepImpl(ctx.intervalMs)
+    await ctx.sleepImpl(ctx.intervalMs);
     try {
       const response = await ctx.fetchImpl(url, {
         headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      })
-      if (response.status === 503) continue
+      });
+      if (response.status === 503) continue;
       if (!response.ok) {
         // Without this the row is only ever reported as `musicbrainz-unavailable`,
         // which reads the same whether MusicBrainz is down or we are being refused.
         console.warn('[musicbrainz] request rejected', {
           url,
           status: response.status,
-        })
-        return null
+        });
+        return null;
       }
-      return await response.json()
+      return await response.json();
     } catch (err: unknown) {
-      console.warn('[musicbrainz] request failed', { url, err })
+      console.warn('[musicbrainz] request failed', { url, err });
     }
   }
-  return null
+  return null;
 }
 
 /**
@@ -231,10 +231,10 @@ function soleExactMatch(
 ): { id: string; name: string } | 'none' | 'several' {
   const exact = hits.filter(
     (hit) => canonicalizeArtist(hit.name) === canonicalName,
-  )
-  if (exact.length === 0) return 'none'
-  if (exact.length > 1) return 'several'
-  return exact[0]!
+  );
+  if (exact.length === 0) return 'none';
+  if (exact.length > 1) return 'several';
+  return exact[0]!;
 }
 
 /**
@@ -249,12 +249,12 @@ function soleExactMatch(
 function spotifyIdsFrom(
   relations: { url?: { resource: string } | undefined }[],
 ): string[] {
-  const ids = new Set<string>()
+  const ids = new Set<string>();
   for (const relation of relations) {
-    const match = relation.url?.resource.match(SPOTIFY_ARTIST_URL)
-    if (match?.[1]) ids.add(match[1])
+    const match = relation.url?.resource.match(SPOTIFY_ARTIST_URL);
+    if (match?.[1]) ids.add(match[1]);
   }
-  return [...ids]
+  return [...ids];
 }
 
 export async function disambiguateArtistsWithMusicBrainz(
@@ -265,7 +265,7 @@ export async function disambiguateArtistsWithMusicBrainz(
     fetchImpl: options.fetchImpl ?? fetch,
     sleepImpl: options.sleepImpl ?? defaultSleep,
     intervalMs: options.requestIntervalMs ?? DEFAULT_REQUEST_INTERVAL_MS,
-  }
+  };
 
   const skipped: Record<SkipReason, number> = {
     'no-exact-name-match': 0,
@@ -274,10 +274,10 @@ export async function disambiguateArtistsWithMusicBrainz(
     'several-spotify-links': 0,
     'spotify-id-not-among-candidates': 0,
     'musicbrainz-unavailable': 0,
-  }
-  const resolutions: MusicBrainzResolution[] = []
+  };
+  const resolutions: MusicBrainzResolution[] = [];
   /** Rows MusicBrainz independently found ambiguous — see the header note. */
-  const exhaustibleIds: string[] = []
+  const exhaustibleIds: string[] = [];
 
   // Only rows carrying a candidate snapshot are reachable — the cross-check
   // has nothing to compare against without one. Ordered by name so a run
@@ -303,58 +303,58 @@ export async function disambiguateArtistsWithMusicBrainz(
         lt(artists.matchAttempts, MATCH_ATTEMPT_LIMIT),
       ),
     )
-    .orderBy(artists.canonicalName)
+    .orderBy(artists.canonicalName);
 
   const rows = await (options.limit === undefined
     ? selection
-    : selection.limit(options.limit))
+    : selection.limit(options.limit));
 
   for (const row of rows) {
-    const query = `artist:"${escapeLucenePhrase(row.name)}"`
-    const searchUrl = `${MUSICBRAINZ_BASE}/artist/?query=${encodeURIComponent(query)}&fmt=json&limit=${SEARCH_LIMIT}`
-    const searchBody = await getJson(searchUrl, ctx)
-    const search = searchResponseSchema.safeParse(searchBody)
+    const query = `artist:"${escapeLucenePhrase(row.name)}"`;
+    const searchUrl = `${MUSICBRAINZ_BASE}/artist/?query=${encodeURIComponent(query)}&fmt=json&limit=${SEARCH_LIMIT}`;
+    const searchBody = await getJson(searchUrl, ctx);
+    const search = searchResponseSchema.safeParse(searchBody);
     if (!search.success) {
-      skipped['musicbrainz-unavailable']++
-      continue
+      skipped['musicbrainz-unavailable']++;
+      continue;
     }
 
-    const sole = soleExactMatch(search.data.artists, row.canonicalName)
+    const sole = soleExactMatch(search.data.artists, row.canonicalName);
     if (sole === 'none') {
-      skipped['no-exact-name-match']++
-      continue
+      skipped['no-exact-name-match']++;
+      continue;
     }
     if (sole === 'several') {
-      skipped['several-exact-name-matches']++
-      exhaustibleIds.push(row.id)
-      continue
+      skipped['several-exact-name-matches']++;
+      exhaustibleIds.push(row.id);
+      continue;
     }
 
-    const lookupUrl = `${MUSICBRAINZ_BASE}/artist/${sole.id}?inc=url-rels&fmt=json`
-    const lookupBody = await getJson(lookupUrl, ctx)
-    const lookup = lookupResponseSchema.safeParse(lookupBody)
+    const lookupUrl = `${MUSICBRAINZ_BASE}/artist/${sole.id}?inc=url-rels&fmt=json`;
+    const lookupBody = await getJson(lookupUrl, ctx);
+    const lookup = lookupResponseSchema.safeParse(lookupBody);
     if (!lookup.success) {
-      skipped['musicbrainz-unavailable']++
-      continue
+      skipped['musicbrainz-unavailable']++;
+      continue;
     }
 
-    const spotifyIds = spotifyIdsFrom(lookup.data.relations)
+    const spotifyIds = spotifyIdsFrom(lookup.data.relations);
     if (spotifyIds.length === 0) {
-      skipped['no-spotify-link']++
-      continue
+      skipped['no-spotify-link']++;
+      continue;
     }
     if (spotifyIds.length > 1) {
-      skipped['several-spotify-links']++
-      continue
+      skipped['several-spotify-links']++;
+      continue;
     }
 
-    const spotifyArtistId = spotifyIds[0]!
+    const spotifyArtistId = spotifyIds[0]!;
     const candidateIds = (row.spotifyCandidates ?? []).map(
       (candidate) => candidate.id,
-    )
+    );
     if (!candidateIds.includes(spotifyArtistId)) {
-      skipped['spotify-id-not-among-candidates']++
-      continue
+      skipped['spotify-id-not-among-candidates']++;
+      continue;
     }
 
     resolutions.push({
@@ -362,7 +362,7 @@ export async function disambiguateArtistsWithMusicBrainz(
       name: row.name,
       musicbrainzId: sole.id,
       spotifyArtistId,
-    })
+    });
   }
 
   if (options.dryRun) {
@@ -373,7 +373,7 @@ export async function disambiguateArtistsWithMusicBrainz(
       skipped,
       resolutions,
       exhausted: 0,
-    }
+    };
   }
 
   // Guarded on `ambiguous` for the same reason the resolution write is — a row
@@ -396,9 +396,9 @@ export async function disambiguateArtistsWithMusicBrainz(
               lt(artists.matchAttempts, MATCH_ATTEMPT_LIMIT),
             ),
           )
-          .returning({ id: artists.id })
+          .returning({ id: artists.id });
 
-  let updated = 0
+  let updated = 0;
   for (const resolution of resolutions) {
     // Guarded on `ambiguous` so a row an admin resolved while this run was
     // walking the queue keeps the human's answer.
@@ -424,8 +424,8 @@ export async function disambiguateArtistsWithMusicBrainz(
           eq(artists.matchStatus, 'ambiguous'),
         ),
       )
-      .returning({ id: artists.id })
-    updated += written.length
+      .returning({ id: artists.id });
+    updated += written.length;
   }
 
   return {
@@ -435,5 +435,5 @@ export async function disambiguateArtistsWithMusicBrainz(
     skipped,
     resolutions,
     exhausted: exhaustedRows.length,
-  }
+  };
 }

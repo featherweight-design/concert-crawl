@@ -1,35 +1,35 @@
-import Link from 'next/link'
-import { ProfileHero } from './ProfileHero'
-import { AccountManagementRow } from './AccountManagementRow'
-import { DataExportRow } from './DataExportRow'
-import { PlanPanel } from './plan'
-import { ThemePickerInline } from './ThemePickerInline'
-import { NotificationsSection } from './notifications/NotificationsSection'
-import { MySubmissionsList } from './MySubmissionsList'
-import { DangerZone } from './DangerZone'
-import { ConnectionsPanel } from './connections'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
-import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { ProfileHero } from './ProfileHero';
+import { AccountManagementRow } from './AccountManagementRow';
+import { DataExportRow } from './DataExportRow';
+import { PlanPanel } from './plan';
+import { ThemePickerInline } from './ThemePickerInline';
+import { NotificationsSection } from './notifications/NotificationsSection';
+import { MySubmissionsList } from './MySubmissionsList';
+import { DangerZone } from './DangerZone';
+import { ConnectionsPanel } from './connections';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
+import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import type {
   UserProfileResponse,
   UserSubmissionItem,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface SettingsRouteProps {
-  profile: UserProfileResponse
-  submissions: UserSubmissionItem[]
-  scaRegion: boolean
-  isAdmin?: boolean
+  profile: UserProfileResponse;
+  submissions: UserSubmissionItem[];
+  scaRegion: boolean;
+  isAdmin?: boolean;
   /**
    * The `spotify-sync` release flag, resolved server-side on `/me` and passed
    * to both settings routes so mobile and desktop never disagree and the
    * Connections section does not flash in before the client read lands.
    */
-  spotifyEnabled: boolean
+  spotifyEnabled: boolean;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -40,7 +40,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
-  )
+  );
 }
 
 export function SettingsRoute({
@@ -52,7 +52,7 @@ export function SettingsRoute({
 }: SettingsRouteProps) {
   const confirmedCount = submissions.filter(
     (sub) => sub.status === 'confirmed',
-  ).length
+  ).length;
 
   return (
     <>
@@ -232,5 +232,5 @@ export function SettingsRoute({
         />
       </div>
     </>
-  )
+  );
 }

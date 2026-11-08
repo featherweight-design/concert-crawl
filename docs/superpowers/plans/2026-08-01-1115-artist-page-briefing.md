@@ -83,22 +83,22 @@ window where the page 404s for signed-out visitors in launched mode.
   along with the rest of the #794 browse surfaces. No separate switch.
 - **Release notes / `releases.ts` do NOT need holding back.** The entry ships with PR-F and
   describes a feature that is genuinely live for the beta audience reading it. This differs
-  from #794, whose changelog entry announced *public browse* and had to be pulled.
+  from #794, whose changelog entry announced _public browse_ and had to be pulled.
 
 Every addition to a route matcher needs a negative case in `apps/web/src/middleware.test.ts`
 proving `/me` and `/admin` still redirect. Non-negotiable, per the ⚠️ comment in the file.
 
 ## Off-happy-path homes
 
-| New state | Where it lives in the IA | How the user reaches it | Reversible? |
-|---|---|---|---|
-| Following an artist | The Follow control on `/artists/{slug}` itself | Bookmark, the artist link on an event detail page, or search | Yes — the same control unfollows |
-| Followed artist, **no other surface** | ⚠️ **Nowhere.** See below. | — | Yes, but only from the artist page |
-| Artist with zero upcoming shows | `/artists/{slug}` empty state, which pitches Follow | Any inbound artist link | n/a |
-| Artist with zero upcoming **and** zero past shows | Same empty state | Direct URL only — nothing links to a showless artist | n/a |
-| Signed-out visitor taps Follow | Sign-up hand-off; returns to the artist page | The Follow control | n/a |
-| Artist whose Spotify match failed | `IdentityArt` plate, no embed. Visually complete, silently degraded | Any inbound artist link | n/a |
-| Artist whose photo URL expired | `onError` swaps to `IdentityArt` in the same fixed-height container | Any inbound artist link | n/a |
+| New state                                         | Where it lives in the IA                                            | How the user reaches it                                      | Reversible?                        |
+| ------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------- |
+| Following an artist                               | The Follow control on `/artists/{slug}` itself                      | Bookmark, the artist link on an event detail page, or search | Yes — the same control unfollows   |
+| Followed artist, **no other surface**             | ⚠️ **Nowhere.** See below.                                          | —                                                            | Yes, but only from the artist page |
+| Artist with zero upcoming shows                   | `/artists/{slug}` empty state, which pitches Follow                 | Any inbound artist link                                      | n/a                                |
+| Artist with zero upcoming **and** zero past shows | Same empty state                                                    | Direct URL only — nothing links to a showless artist         | n/a                                |
+| Signed-out visitor taps Follow                    | Sign-up hand-off; returns to the artist page                        | The Follow control                                           | n/a                                |
+| Artist whose Spotify match failed                 | `IdentityArt` plate, no embed. Visually complete, silently degraded | Any inbound artist link                                      | n/a                                |
+| Artist whose photo URL expired                    | `onError` swaps to `IdentityArt` in the same fixed-height container | Any inbound artist link                                      | n/a                                |
 
 ⚠️ **The manual-follow black hole — filed as issue #1306, deliberately not fixed in this epic.**
 The Follow control writes `source: 'manual'` to `user_artist_follows`, but every downstream

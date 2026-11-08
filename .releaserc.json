@@ -12,6 +12,9 @@
         "message": "chore(release): ${nextRelease.version} [skip ci] [skip render]\n\n${nextRelease.notes}"
       }
     ],
-    ["@semantic-release/github", { "successComment": false, "failComment": false }]
+    [
+      "@semantic-release/github",
+      { "successComment": false, "failComment": false }
+    ]
   ]
 }

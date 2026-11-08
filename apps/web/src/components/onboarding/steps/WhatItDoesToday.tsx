@@ -1,7 +1,7 @@
-import { Eyebrow, StepHeading, Lede } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { Eyebrow, StepHeading, Lede } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.whatItDoesToday
+const copy = ONBOARDING_COPY.whatItDoesToday;
 
 export function WhatItDoesToday() {
   return (
@@ -72,5 +72,5 @@ export function WhatItDoesToday() {
         ))}
       </ul>
     </div>
-  )
+  );
 }

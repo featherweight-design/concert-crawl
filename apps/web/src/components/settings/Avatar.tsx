@@ -1,12 +1,12 @@
-import type { AvatarColor } from '@concert-crawl/types'
+import type { AvatarColor } from '@concert-crawl/types';
 
 interface AvatarProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
-  size?: number
-  ringed?: boolean
-  className?: string
-  loading?: boolean
+  handle: string | null;
+  avatarColor: AvatarColor | null;
+  size?: number;
+  ringed?: boolean;
+  className?: string;
+  loading?: boolean;
 }
 
 export function Avatar({
@@ -30,20 +30,20 @@ export function Avatar({
           background: 'var(--surface-2)',
         }}
       />
-    )
+    );
   }
 
-  const letter = handle ? handle.charAt(0).toUpperCase() : null
-  const isAnonymous = !handle
-  const fontSize = Math.round(size * 0.46)
+  const letter = handle ? handle.charAt(0).toUpperCase() : null;
+  const isAnonymous = !handle;
+  const fontSize = Math.round(size * 0.46);
 
-  const tone = avatarColor ?? 'signal'
-  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`
-  const tintBorder = `1.5px solid color-mix(in oklch, var(--${tone}) 50%, transparent)`
+  const tone = avatarColor ?? 'signal';
+  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`;
+  const tintBorder = `1.5px solid color-mix(in oklch, var(--${tone}) 50%, transparent)`;
   const ringStyle =
     ringed && !isAnonymous
       ? `0 0 0 3px color-mix(in oklch, var(--${tone}) 14%, transparent)`
-      : undefined
+      : undefined;
 
   return (
     <div
@@ -71,5 +71,5 @@ export function Avatar({
     >
       {letter}
     </div>
-  )
+  );
 }

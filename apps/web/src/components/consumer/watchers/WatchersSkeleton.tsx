@@ -1,7 +1,7 @@
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const SIZE = 24
-const OVERLAP = Math.round(SIZE * 0.3)
+const SIZE = 24;
+const OVERLAP = Math.round(SIZE * 0.3);
 
 /**
  * Placeholder while the watcher roster loads. Reserves the surface's 28px row
@@ -46,4 +46,4 @@ export const WatchersSkeleton = () => (
     />
     <span className="sr-only">{CONSUMER_COPY.watchers.loading}</span>
   </div>
-)
+);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
@@ -9,69 +9,69 @@ import {
   fireEvent,
   act,
   waitFor,
-} from '@testing-library/react'
+} from '@testing-library/react';
 import type {
   EventDetailResponse,
   TierHeadline,
   TierPriceBlock,
   Tier,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
 // ── Mocks ──────────────────────────────────────────────────────────────
-const mockGetToken = vi.fn().mockResolvedValue('test-token')
-const mockRouterRefresh = vi.fn()
-const mockRouterPush = vi.fn()
+const mockGetToken = vi.fn().mockResolvedValue('test-token');
+const mockRouterRefresh = vi.fn();
+const mockRouterPush = vi.fn();
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: mockGetToken }),
-}))
+}));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush, refresh: mockRouterRefresh }),
-}))
+}));
 // PriceDisplay is server-leaning + has its own deep tree; stub it. The stub
 // records its props so the stale-price wiring can be asserted without
 // rendering the real tree.
 interface PriceDisplayStubProps {
-  priceObservedAt?: string | null
-  priceSubmissionId?: string | null
-  onSighted?: () => void
+  priceObservedAt?: string | null;
+  priceSubmissionId?: string | null;
+  onSighted?: () => void;
 }
-let latestPriceDisplayProps: PriceDisplayStubProps | null = null
+let latestPriceDisplayProps: PriceDisplayStubProps | null = null;
 vi.mock('@/components/consumer/PriceDisplay', () => ({
   PriceDisplay: (props: PriceDisplayStubProps) => {
-    latestPriceDisplayProps = props
-    return <div data-testid="price-display-stub" />
+    latestPriceDisplayProps = props;
+    return <div data-testid="price-display-stub" />;
   },
-}))
+}));
 // SubmitPriceModal would mount + fetch on render; stub it so we can
 // drive onSuccess directly from the test surface when needed.
 // Shape mirrors SubmitPriceResult exported from SubmitPriceModal (#832).
 interface ModalSuccessRow {
-  isEdit: boolean
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
+  isEdit: boolean;
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null;
 }
-let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null
+let latestModalOnSuccess: ((results: ModalSuccessRow[]) => void) | null = null;
 // CorroborationSheet renders a portal-mounted modal; stub it so we can
 // detect open=true purely from the rendered DOM without dragging in the
 // real sheet's tree.
 vi.mock('@/components/consumer/CorroborationSheet', () => ({
   CorroborationSheet: (props: { open: boolean }) =>
     props.open ? <div data-testid="corroboration-sheet-open" /> : null,
-}))
+}));
 vi.mock('@/components/consumer/submit-price/SubmitPriceModal', () => ({
   SubmitPriceModal: (props: {
-    open: boolean
-    onSuccess?: (results: ModalSuccessRow[]) => void
+    open: boolean;
+    onSuccess?: (results: ModalSuccessRow[]) => void;
   }) => {
-    latestModalOnSuccess = props.onSuccess ?? null
-    return props.open ? <div data-testid="submit-price-modal-open" /> : null
+    latestModalOnSuccess = props.onSuccess ?? null;
+    return props.open ? <div data-testid="submit-price-modal-open" /> : null;
   },
-}))
+}));
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -86,18 +86,18 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-  vi.clearAllMocks()
-  latestModalOnSuccess = null
-  latestPriceDisplayProps = null
-})
+  });
+  vi.clearAllMocks();
+  latestModalOnSuccess = null;
+  latestPriceDisplayProps = null;
+});
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 // Imported after mocks so vi.mock takes effect.
-import { EventDetailPriceBlock } from './EventDetailClient'
+import { EventDetailPriceBlock } from './EventDetailClient';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -150,7 +150,7 @@ function buildBaseEvent(
     counterSubmission: null,
     priceAlternates: null,
     ...overrides,
-  }
+  };
 }
 
 function makeTierBlock(partial: Partial<TierPriceBlock>): TierPriceBlock {
@@ -162,7 +162,7 @@ function makeTierBlock(partial: Partial<TierPriceBlock>): TierPriceBlock {
     counterSubmission: null,
     reports: 0,
     ...partial,
-  }
+  };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -179,52 +179,52 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           url: 'https://seatgeek.example/event',
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
 
     // SoldOutPriceCard (has-listing variant) — strikethrough is rendered as
     // an em-dash when priceMin is null; either way the Sold out pill is present.
-    expect(screen.getByText('Sold out')).toBeDefined()
+    expect(screen.getByText('Sold out')).toBeDefined();
     // FaceValueCard variant='default' → "That's resale, not face value."
-    expect(screen.getByText("That's resale, not face value.")).toBeDefined()
+    expect(screen.getByText("That's resale, not face value.")).toBeDefined();
     // ProvenanceCTA kind='resale' → "See resale tickets"
     expect(
       screen.getByRole('link', { name: /buy resale on seatgeek/i }),
-    ).toBeDefined()
-  })
+    ).toBeDefined();
+  });
 
   it('sold-out + NO ticketLinks → ContributeFaceValueCard, NO FaceValueCard, NO ProvenanceCTA (Q1 lock)', () => {
     const event = buildBaseEvent({
       priceStatus: 'soldout',
       soldOutReport: null,
       ticketLinks: null,
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
 
     // SoldOutPriceCard variant='no-listing'
-    expect(screen.getByText('—')).toBeDefined()
+    expect(screen.getByText('—')).toBeDefined();
     expect(
       screen.getByText(
         'No tickets listed anywhere we can see. Not even resale.',
       ),
-    ).toBeDefined()
+    ).toBeDefined();
     // ContributeFaceValueCard — eyebrow "Face value" + headline "No price to show. Yet."
-    expect(screen.getByText('No price to show. Yet.')).toBeDefined()
+    expect(screen.getByText('No price to show. Yet.')).toBeDefined();
     expect(
       screen.getByText(
         'Sold out, nothing listed. Know the box-office number? Add it.',
       ),
-    ).toBeDefined()
+    ).toBeDefined();
     // NO FaceValueCard headlines
-    expect(screen.queryByText("That's resale, not face value.")).toBeNull()
-    expect(screen.queryByText('All we can see is resale.')).toBeNull()
+    expect(screen.queryByText("That's resale, not face value.")).toBeNull();
+    expect(screen.queryByText('All we can see is resale.')).toBeNull();
     // NO ProvenanceCTA link
-    expect(screen.queryByRole('link', { name: /resale/i })).toBeNull()
-  })
+    expect(screen.queryByRole('link', { name: /resale/i })).toBeNull();
+  });
 
   it('priceByTier with cross-source mixed entry tier → MultiSourceMultiTierCard', () => {
     const event = buildBaseEvent({
@@ -254,17 +254,17 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           ],
         }),
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // MultiSourceMultiTierCard renders the cross-source row via AltSourceRow.
     // The "Or pay for convenience" eyebrow uniquely identifies this card.
-    expect(screen.getByText('Or pay for convenience')).toBeDefined()
+    expect(screen.getByText('Or pay for convenience')).toBeDefined();
     // Cross-source vendor + price visible.
-    expect(screen.getByText('SeatGeek')).toBeDefined()
-    expect(screen.getByText('$110')).toBeDefined()
-  })
+    expect(screen.getByText('SeatGeek')).toBeDefined();
+    expect(screen.getByText('$110')).toBeDefined();
+  });
 
   // Regression — issue #1364. Once an event has a corroborated price it
   // routes to one of these headline branches, all of which mounted a
@@ -283,7 +283,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       approvedAt: '2026-06-20T00:00:00Z',
       approvalKind: 'fan' as const,
       confirmsCount: 2,
-    }
+    };
 
     const renderWithTiers = (blocks: TierPriceBlock[]) =>
       render(
@@ -292,14 +292,14 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           reports={[]}
           currentUserId={null}
         />,
-      )
+      );
 
     it('multi-tier-shipped renders it', () => {
       renderWithTiers([
         makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
-      ])
-      expect(screen.getByText('Submit another price')).toBeDefined()
-    })
+      ]);
+      expect(screen.getByText('Submit another price')).toBeDefined();
+    });
 
     it('multi-source-mixed renders it', () => {
       renderWithTiers([
@@ -316,9 +316,9 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
             },
           ],
         }),
-      ])
-      expect(screen.getByText('Submit another price')).toBeDefined()
-    })
+      ]);
+      expect(screen.getByText('Submit another price')).toBeDefined();
+    });
 
     it('resale-headline renders it', () => {
       renderWithTiers([
@@ -330,9 +330,9 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
             sourceCategory: 'resale',
           },
         }),
-      ])
-      expect(screen.getByText('Submit another price')).toBeDefined()
-    })
+      ]);
+      expect(screen.getByText('Submit another price')).toBeDefined();
+    });
 
     it('mixed-tier renders it', () => {
       renderWithTiers([
@@ -357,9 +357,9 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
             },
           ],
         }),
-      ])
-      expect(screen.getByText('Submit another price')).toBeDefined()
-    })
+      ]);
+      expect(screen.getByText('Submit another price')).toBeDefined();
+    });
 
     // Fix 14 predates this change and must survive it: a cancelled show
     // should never invite a price submission.
@@ -375,10 +375,10 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           reports={[]}
           currentUserId={null}
         />,
-      )
-      expect(screen.queryByText('Submit another price')).toBeNull()
-    })
-  })
+      );
+      expect(screen.queryByText('Submit another price')).toBeNull();
+    });
+  });
 
   it('priceByTier with single-tier boxoffice headline → MultiTierLiveCard kind=boxoffice', () => {
     const event = buildBaseEvent({
@@ -399,14 +399,14 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           },
         }),
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // Box office trust pill visible.
-    expect(screen.getByText('Box office')).toBeDefined()
-    expect(screen.getByText('$25')).toBeDefined()
-  })
+    expect(screen.getByText('Box office')).toBeDefined();
+    expect(screen.getByText('$25')).toBeDefined();
+  });
 
   it('priceByTier with resale-only headlines → MultiTierLiveCard kind=resale + FaceValueCard', () => {
     const event = buildBaseEvent({
@@ -427,22 +427,22 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           },
         }),
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // PendingTrustPill kind=resale renders "Resale" alongside FaceValueCard's
     // "Resale" ladder label, so allow the multiplicity here.
-    expect(screen.getAllByText('Resale').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Resale').length).toBeGreaterThan(0);
     // FaceValueCard variant='no-price' → "All we can see is resale."
-    expect(screen.getByText('All we can see is resale.')).toBeDefined()
+    expect(screen.getByText('All we can see is resale.')).toBeDefined();
     // Confirm the trust pill is in fact the coral resale pill (Q-resale path).
-    const resaleEls = screen.getAllByText('Resale')
+    const resaleEls = screen.getAllByText('Resale');
     const pill = resaleEls.find((el) =>
       (el as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
-    )
-    expect(pill).toBeDefined()
-  })
+    );
+    expect(pill).toBeDefined();
+  });
 
   // #1377 — the exact staging repro: a second user submits a cheaper GA price
   // on an event whose GA tier is ALREADY corroborated. No tier is pending-only,
@@ -479,25 +479,25 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock
         event={buildBaseEvent({ priceByTier: [ga] })}
         reports={[]}
         currentUserId={null}
       />,
-    )
+    );
     // The headline still leads.
-    expect(screen.getByText(/240/)).toBeDefined()
+    expect(screen.getByText(/240/)).toBeDefined();
     // The pending submission is visible rather than silently dropped.
-    expect(screen.getByText(/220/)).toBeDefined()
+    expect(screen.getByText(/220/)).toBeDefined();
     // And a third user can corroborate it.
-    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull();
     act(() => {
-      fireEvent.click(screen.getByText('Confirm price'))
-    })
-    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
-  })
+      fireEvent.click(screen.getByText('Confirm price'));
+    });
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined();
+  });
 
   it('separates the pending stack from the headline card above it', () => {
     const ga = makeTierBlock({
@@ -530,20 +530,20 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock
         event={buildBaseEvent({ priceByTier: [ga] })}
         reports={[]}
         currentUserId={null}
       />,
-    )
+    );
     // The stack sits in its own spaced wrapper rather than butting up against
     // the headline card. first:mt-0 keeps all-tiers-pending flush.
-    const stack = screen.getByText(/220/).closest('.mt-3')
-    expect(stack).not.toBeNull()
-    expect(stack?.className).toContain('first:mt-0')
-  })
+    const stack = screen.getByText(/220/).closest('.mt-3');
+    expect(stack).not.toBeNull();
+    expect(stack?.className).toContain('first:mt-0');
+  });
 
   // Same class as #1377, caught by Copilot: in mixed-tier a pending-only tier
   // renders through TierAlternateRow, whose "pending · N/M" strip has no
@@ -564,7 +564,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         approvalKind: 'fan',
         confirmsCount: 2,
       },
-    })
+    });
     const vip = makeTierBlock({
       tier: 'VIP',
       headline: null,
@@ -584,20 +584,20 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock
         event={buildBaseEvent({ priceByTier: [ga, vip] })}
         reports={[]}
         currentUserId={null}
       />,
-    )
-    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    );
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull();
     act(() => {
-      fireEvent.click(screen.getByText('Confirm price'))
-    })
-    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
-  })
+      fireEvent.click(screen.getByText('Confirm price'));
+    });
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined();
+  });
 
   it('STATE #6 mixed-tier — headline tier + pending-only tier routes through MixedTierCard', () => {
     const headlineBlock = makeTierBlock({
@@ -614,7 +614,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
         approvalKind: 'fan',
         confirmsCount: 2,
       },
-    })
+    });
     const pendingOnlyBlock = makeTierBlock({
       tier: 'VIP',
       headline: null,
@@ -634,21 +634,21 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const event = buildBaseEvent({
       priceByTier: [headlineBlock, pendingOnlyBlock],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // Headline tier renders.
-    expect(screen.getByText('$25')).toBeDefined()
+    expect(screen.getByText('$25')).toBeDefined();
     // Pending-only tier renders its price twice: the display-only TierAlternateRow
     // tell ("pending · 1/2") and the actionable pending card below it.
-    expect(screen.getAllByText('$80')).toHaveLength(2)
+    expect(screen.getAllByText('$80')).toHaveLength(2);
     // VIP shows up as alternate tier label, once per surface.
-    expect(screen.getAllByText('VIP')).toHaveLength(2)
-  })
+    expect(screen.getAllByText('VIP')).toHaveLength(2);
+  });
 
   it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {
     const ga = makeTierBlock({
@@ -670,7 +670,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const vip = makeTierBlock({
       tier: 'VIP',
       headline: null,
@@ -690,15 +690,15 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
-    const event = buildBaseEvent({ priceByTier: [ga, vip] })
+    });
+    const event = buildBaseEvent({ priceByTier: [ga, vip] });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // Both pending cards render side-by-side.
-    expect(screen.getByText('$40')).toBeDefined()
-    expect(screen.getByText('$95')).toBeDefined()
-  })
+    expect(screen.getByText('$40')).toBeDefined();
+    expect(screen.getByText('$95')).toBeDefined();
+  });
 
   it('submit success in sold-out-resale branch → MTAddTierSuccess renders (Fix 4 — hoisted surface)', async () => {
     const event = buildBaseEvent({
@@ -711,11 +711,11 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           url: 'https://seatgeek.example/event',
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(latestModalOnSuccess).not.toBeNull()
+    );
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -728,22 +728,22 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'bought_myself',
           sourceCategory: 'boxoffice',
         },
-      ])
-    })
+      ]);
+    });
     // MTAddTierSuccess headline copy template is `${tier} price is in. Thanks.`
-    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
-  })
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined();
+  });
 
   it('submit success in sold-out-contribute branch → MTAddTierSuccess renders', async () => {
     const event = buildBaseEvent({
       priceStatus: 'soldout',
       soldOutReport: null,
       ticketLinks: null,
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(latestModalOnSuccess).not.toBeNull()
+    );
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -756,10 +756,10 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'bought_myself',
           sourceCategory: 'boxoffice',
         },
-      ])
-    })
-    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
-  })
+      ]);
+    });
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined();
+  });
 
   it('submit success in resale-headline branch → MTAddTierSuccess renders', async () => {
     const event = buildBaseEvent({
@@ -780,11 +780,11 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           },
         }),
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(latestModalOnSuccess).not.toBeNull()
+    );
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -797,10 +797,10 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'bought_myself',
           sourceCategory: 'boxoffice',
         },
-      ])
-    })
-    expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined()
-  })
+      ]);
+    });
+    expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined();
+  });
 
   it('submit success: after onAddTier("VIP"), VIP pill removed on next render (Q4-eng lock)', async () => {
     const event = buildBaseEvent({
@@ -821,13 +821,13 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           },
         }),
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
 
     // Drive a submit success via the stubbed modal's captured onSuccess.
-    expect(latestModalOnSuccess).not.toBeNull()
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -840,34 +840,34 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'saw_listing',
           sourceCategory: 'standard',
         },
-      ])
-    })
+      ]);
+    });
 
     // MTAddTierSuccess should render with "VIP" submitted.
     // Headline copy template is `${tier} price is in. Thanks.`
-    expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined()
+    expect(screen.getByText('VIP price is in. Thanks.')).toBeDefined();
 
     // Add-pill row should exclude VIP — only show the other four tiers.
-    const remainingTiers: Tier[] = ['GA', 'Reserved', 'Pit', 'Lawn']
+    const remainingTiers: Tier[] = ['GA', 'Reserved', 'Pit', 'Lawn'];
     for (const tier of remainingTiers) {
       // addPillTemplate = "+ Add <lowercase-tier>"
-      const pillCopy = `Add ${tier.toLowerCase()}`
-      expect(screen.queryByText(new RegExp(pillCopy, 'i'))).not.toBeNull()
+      const pillCopy = `Add ${tier.toLowerCase()}`;
+      expect(screen.queryByText(new RegExp(pillCopy, 'i'))).not.toBeNull();
     }
     // VIP pill must NOT appear.
-    expect(screen.queryByText(/Add vip/i)).toBeNull()
-  })
+    expect(screen.queryByText(/Add vip/i)).toBeNull();
+  });
 
   it('batch submit success with 2 tiers → success card shows first tier, both tiers excluded from add-pills (#832)', async () => {
     const event = buildBaseEvent({
       priceStatus: 'soldout',
       soldOutReport: null,
       ticketLinks: null,
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(latestModalOnSuccess).not.toBeNull()
+    );
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -890,16 +890,16 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'bought_myself',
           sourceCategory: 'boxoffice',
         },
-      ])
-    })
+      ]);
+    });
     // MTAddTierSuccess headline reflects the FIRST submitted tier.
-    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined();
     // Both submitted tiers are locked out of the add-pill row...
-    expect(screen.queryByText(/Add ga/i)).toBeNull()
-    expect(screen.queryByText(/Add vip/i)).toBeNull()
+    expect(screen.queryByText(/Add ga/i)).toBeNull();
+    expect(screen.queryByText(/Add vip/i)).toBeNull();
     // ...while an unsubmitted tier still offers a pill.
-    expect(screen.queryByText(/Add reserved/i)).not.toBeNull()
-  })
+    expect(screen.queryByText(/Add reserved/i)).not.toBeNull();
+  });
 
   it('STATE #7 all-tiers-pending: clicking Confirm on a non-submitter card opens the CorroborationSheet', () => {
     const ga = makeTierBlock({
@@ -921,21 +921,21 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: false,
         },
       ],
-    })
-    const event = buildBaseEvent({ priceByTier: [ga] })
+    });
+    const event = buildBaseEvent({ priceByTier: [ga] });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // Sheet not open before click.
-    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull();
     // PendingCardB renders the "Confirm price" affordance for view='other'.
-    const confirmBtn = screen.getByText('Confirm price')
+    const confirmBtn = screen.getByText('Confirm price');
     act(() => {
-      fireEvent.click(confirmBtn)
-    })
+      fireEvent.click(confirmBtn);
+    });
     // onConfirm wired to setActiveCorroborationId → sheet now mounted.
-    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
-  })
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined();
+  });
 
   it('STATE #7 all-tiers-pending: clicking Withdraw on the submitter card DELETEs the submission + refreshes router', async () => {
     const ga = makeTierBlock({
@@ -957,31 +957,31 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: true,
         },
       ],
-    })
-    const event = buildBaseEvent({ priceByTier: [ga] })
+    });
+    const event = buildBaseEvent({ priceByTier: [ga] });
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 200 }))
+      .mockResolvedValue(new Response(null, { status: 200 }));
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // view='submitter' → "Withdraw" button is rendered alongside "Edit".
-    const withdrawBtn = screen.getByText('Withdraw')
+    const withdrawBtn = screen.getByText('Withdraw');
     await act(async () => {
-      fireEvent.click(withdrawBtn)
-    })
+      fireEvent.click(withdrawBtn);
+    });
     // Allow the void-async IIFE to resolve.
     await act(async () => {
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [calledUrl, calledInit] = fetchMock.mock.calls[0] ?? []
-    expect(String(calledUrl)).toContain('/v1/submissions/p-ga')
-    expect((calledInit as RequestInit | undefined)?.method).toBe('DELETE')
-    expect(mockRouterRefresh).toHaveBeenCalledTimes(1)
-    fetchMock.mockRestore()
-  })
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [calledUrl, calledInit] = fetchMock.mock.calls[0] ?? [];
+    expect(String(calledUrl)).toContain('/v1/submissions/p-ga');
+    expect((calledInit as RequestInit | undefined)?.method).toBe('DELETE');
+    expect(mockRouterRefresh).toHaveBeenCalledTimes(1);
+    fetchMock.mockRestore();
+  });
 
   // Regression — issue #831. The submitter counts as observation #1 in the
   // 1/2 corroboration model (price_submissions.corroboration_count defaults
@@ -1009,16 +1009,16 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: true,
         },
       ],
-    })
-    const event = buildBaseEvent({ priceByTier: [ga] })
+    });
+    const event = buildBaseEvent({ priceByTier: [ga] });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // The strip header reads "{confirms} of {needed} confirmed". Submitter
     // counts as observation #1 → must read "1 of 2" not "0 of 2".
-    expect(screen.getByText(/1\s+of\s+2\s+confirmed/i)).toBeDefined()
-    expect(screen.queryByText(/0\s+of\s+2\s+confirmed/i)).toBeNull()
-  })
+    expect(screen.getByText(/1\s+of\s+2\s+confirmed/i)).toBeDefined();
+    expect(screen.queryByText(/0\s+of\s+2\s+confirmed/i)).toBeNull();
+  });
 
   // Regression — issue #895 symptom 1. A pending price block must offer a
   // reload-surviving "submit another price" affordance. The post-submit
@@ -1046,20 +1046,20 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: true,
         },
       ],
-    })
-    const event = buildBaseEvent({ priceByTier: [ga] })
+    });
+    const event = buildBaseEvent({ priceByTier: [ga] });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(screen.getByText('Submit another price')).toBeDefined()
-  })
+    );
+    expect(screen.getByText('Submit another price')).toBeDefined();
+  });
 
   // The locally-promoted submission is the one stamp site whose timestamp lives
   // in client state. `localSubmissions` is seeded by a useState initializer, so
   // router.refresh() cannot advance it — this site has to reconcile its own row.
   // A passing test on the three server-prop sites would hide a break here.
   describe('locally-promoted submission — still-accurate wiring', () => {
-    const staleAt = '2026-06-22T00:00:00Z'
+    const staleAt = '2026-06-22T00:00:00Z';
     const buildPromotedEvent = () =>
       buildBaseEvent({
         priceByTier: null,
@@ -1080,7 +1080,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
             isSubmitter: true,
           },
         ],
-      })
+      });
 
     it('passes the submission id behind the displayed price', () => {
       render(
@@ -1089,10 +1089,10 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           reports={[]}
           currentUserId={null}
         />,
-      )
-      expect(latestPriceDisplayProps?.priceSubmissionId).toBe('p-promoted')
-      expect(latestPriceDisplayProps?.priceObservedAt).toBe(staleAt)
-    })
+      );
+      expect(latestPriceDisplayProps?.priceSubmissionId).toBe('p-promoted');
+      expect(latestPriceDisplayProps?.priceObservedAt).toBe(staleAt);
+    });
 
     it('advances its own row when the sighting lands', async () => {
       render(
@@ -1101,22 +1101,22 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           reports={[]}
           currentUserId={null}
         />,
-      )
-      const onSighted = latestPriceDisplayProps?.onSighted
-      expect(onSighted).toBeTypeOf('function')
+      );
+      const onSighted = latestPriceDisplayProps?.onSighted;
+      expect(onSighted).toBeTypeOf('function');
 
-      act(() => onSighted?.())
+      act(() => onSighted?.());
 
       await waitFor(() =>
         expect(latestPriceDisplayProps?.priceObservedAt).not.toBe(staleAt),
-      )
-      const advanced = latestPriceDisplayProps?.priceObservedAt
-      expect(advanced).toBeTruthy()
+      );
+      const advanced = latestPriceDisplayProps?.priceObservedAt;
+      expect(advanced).toBeTruthy();
       expect(new Date(advanced ?? 0).getTime()).toBeGreaterThan(
         new Date(staleAt).getTime(),
-      )
-    })
-  })
+      );
+    });
+  });
 
   it('legacy pending (pendingSubmissions) path renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {
     const event = buildBaseEvent({
@@ -1138,12 +1138,12 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: true,
         },
       ],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
-    expect(screen.getByText('Submit another price')).toBeDefined()
-  })
+    );
+    expect(screen.getByText('Submit another price')).toBeDefined();
+  });
 
   // Regression — issue #895 (post-submit form re-open). Submitting from the
   // no-price branch populates localSubmissions, which flips the decision tree
@@ -1157,12 +1157,12 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       ticketPriceMin: null,
       pendingSubmissions: null,
       priceByTier: null,
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
 
-    expect(latestModalOnSuccess).not.toBeNull()
+    expect(latestModalOnSuccess).not.toBeNull();
     await act(async () => {
       latestModalOnSuccess?.([
         {
@@ -1175,14 +1175,14 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           howFound: 'saw_listing',
           sourceCategory: 'standard',
         },
-      ])
-    })
+      ]);
+    });
 
     // Parent-owned success surface renders even though the block transitioned
     // into the legacy pending branch — the form did not re-open.
-    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
-    expect(screen.queryByTestId('submit-price-modal-open')).toBeNull()
-  })
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined();
+    expect(screen.queryByTestId('submit-price-modal-open')).toBeNull();
+  });
 
   // Regression — issue #831. Same bug in the mixed-tier branch (a pending-only
   // sibling tier renders via TierAlternateRow's "pending · {N}/{needed}" tell).
@@ -1203,7 +1203,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       },
       alternates: [],
       pending: [],
-    })
+    });
     const pendingOnlyBlock = makeTierBlock({
       tier: 'VIP',
       headline: null,
@@ -1223,18 +1223,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
           isSubmitter: true,
         },
       ],
-    })
+    });
     const event = buildBaseEvent({
       priceByTier: [headlineBlock, pendingOnlyBlock],
-    })
+    });
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
-    )
+    );
     // TierAlternateRow renders "pending · {confirms}/{needed}".
-    expect(screen.getByText(/pending · 1\/2/i)).toBeDefined()
-    expect(screen.queryByText(/pending · 0\/2/i)).toBeNull()
-  })
-})
+    expect(screen.getByText(/pending · 1\/2/i)).toBeDefined();
+    expect(screen.queryByText(/pending · 0\/2/i)).toBeNull();
+  });
+});
 
 describe('EventDetailPriceBlock — crawled price, no submissions', () => {
   // Regression: this state used to render PendingCardB, dressing a
@@ -1251,7 +1251,7 @@ describe('EventDetailPriceBlock — crawled price, no submissions', () => {
       ticketLinks: null,
       priceStatus: null,
       priceApprovalKind: null,
-    })
+    });
 
   it('does not claim the price came from the community', () => {
     render(
@@ -1260,10 +1260,10 @@ describe('EventDetailPriceBlock — crawled price, no submissions', () => {
         reports={[]}
         currentUserId={null}
       />,
-    )
-    expect(screen.queryByText('Submitted by')).toBeNull()
-    expect(screen.queryByText(/of 2 confirmed/)).toBeNull()
-  })
+    );
+    expect(screen.queryByText('Submitted by')).toBeNull();
+    expect(screen.queryByText(/of 2 confirmed/)).toBeNull();
+  });
 
   it('offers no corroboration affordance with nothing to corroborate', () => {
     render(
@@ -1272,10 +1272,10 @@ describe('EventDetailPriceBlock — crawled price, no submissions', () => {
         reports={[]}
         currentUserId={null}
       />,
-    )
-    expect(screen.queryByText('Confirm price')).toBeNull()
-    expect(screen.queryByText('Saw a different number?')).toBeNull()
-  })
+    );
+    expect(screen.queryByText('Confirm price')).toBeNull();
+    expect(screen.queryByText('Saw a different number?')).toBeNull();
+  });
 
   it('falls through to the standard PriceDisplay', () => {
     render(
@@ -1284,7 +1284,7 @@ describe('EventDetailPriceBlock — crawled price, no submissions', () => {
         reports={[]}
         currentUserId={null}
       />,
-    )
-    expect(screen.getByTestId('price-display-stub')).toBeDefined()
-  })
-})
+    );
+    expect(screen.getByTestId('price-display-stub')).toBeDefined();
+  });
+});

@@ -1,9 +1,9 @@
-import type { StatusKind } from './utils'
+import type { StatusKind } from './utils';
 
 interface ProgressBarProps {
-  value: number
-  kind?: StatusKind
-  showLabel?: boolean
+  value: number;
+  kind?: StatusKind;
+  showLabel?: boolean;
 }
 
 const KIND_STROKE: Record<StatusKind, string> = {
@@ -13,14 +13,14 @@ const KIND_STROKE: Record<StatusKind, string> = {
   signal: 'var(--signal)',
   accent: 'var(--accent)',
   neutral: 'var(--fg-subtle)',
-}
+};
 
 export const ProgressBar = ({
   value,
   kind = 'signal',
   showLabel = false,
 }: ProgressBarProps) => {
-  const clamped = Math.min(100, Math.max(0, value))
+  const clamped = Math.min(100, Math.max(0, value));
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div
@@ -55,5 +55,5 @@ export const ProgressBar = ({
         </span>
       )}
     </div>
-  )
-}
+  );
+};

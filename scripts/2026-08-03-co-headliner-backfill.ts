@@ -35,27 +35,27 @@
  * Against staging/prod set DATABASE_URL accordingly.
  */
 
-import { writeFileSync } from 'node:fs'
-import path from 'node:path'
-import { pathToFileURL } from 'node:url'
-import Anthropic from '@anthropic-ai/sdk'
-import { and, eq, sql } from 'drizzle-orm'
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import Anthropic from '@anthropic-ai/sdk';
+import { and, eq, sql } from 'drizzle-orm';
 // Relative source import (not the package barrel) so this one-shot script runs
 // against a clean checkout without requiring a prior build; tsx resolves the
 // `.js` suffix back to the `.ts` source. It reaches past the crawler-core
 // `canonical-artist` shim on purpose: that shim re-exports from
 // `@concert-crawl/types`, whose only export condition points at `dist/`, so
 // going through it would reintroduce the build requirement.
-import { canonicalizeSupporting } from '../packages/types/src/canonical-artist.js'
+import { canonicalizeSupporting } from '../packages/types/src/canonical-artist.js';
 // Same reason: every `@concert-crawl/db` export condition — the barrel and the
 // `./upcoming-events` subpath alike — points at `dist/`.
-import { db, events, venues } from '../packages/db/src/index.js'
+import { db, events, venues } from '../packages/db/src/index.js';
 import {
   SCHEDULED_STATUSES,
   upcomingEventConditions,
-} from '../packages/db/src/lib/upcoming-events.js'
-import { identifyHeadlinersBatch } from './2026-08-03-co-headliner-backfill-llm.js'
-import { supportingArtistsUnchanged } from './2026-08-03-co-headliner-backfill-sql.js'
+} from '../packages/db/src/lib/upcoming-events.js';
+import { identifyHeadlinersBatch } from './2026-08-03-co-headliner-backfill-llm.js';
+import { supportingArtistsUnchanged } from './2026-08-03-co-headliner-backfill-sql.js';
 import {
   buildBatches,
   buildHeadlinerUpdate,
@@ -63,30 +63,30 @@ import {
   untraceableHeadliners,
   type EventForHeadlinerCheck,
   type HeadlinerResult,
-} from './2026-08-03-co-headliner-backfill-helpers.js'
+} from './2026-08-03-co-headliner-backfill-helpers.js';
 
-const BATCH_SIZE = 25
+const BATCH_SIZE = 25;
 
 export interface BackfillSummary {
   // Every row the SQL net matched, including any later rejected — so it
   // reconciles with the "Loaded N candidate events" line.
-  totalCandidates: number
-  wouldChange: number
-  committed: boolean
+  totalCandidates: number;
+  wouldChange: number;
+  committed: boolean;
   // Rows whose artist/supporting_artists changed between our SELECT and our
   // UPDATE (a concurrent crawl or an admin edit). Only populated in --commit
   // mode. The script does NOT overwrite these — they're surfaced for
   // operator review.
-  raceSkipped: string[]
+  raceSkipped: string[];
   // Rows where the LLM proposed a headliner traceable to neither the stored
   // artist string nor supporting_artists. Never written, in either mode.
-  untraceableRejected: string[]
+  untraceableRejected: string[];
 }
 
 // Main function exported for testability; CLI invocation is at the bottom.
 export async function runBackfill(opts: {
-  commit: boolean
-  outputPath?: string
+  commit: boolean;
+  outputPath?: string;
 }): Promise<BackfillSummary> {
   const rows = await db
     .select({
@@ -113,7 +113,7 @@ export async function runBackfill(opts: {
         // boundary, so "Portland" and "Sandy" are not candidates.
         sql`${events.artist} ~* '(&|\\+|\\yand\\y)'`,
       ),
-    )
+    );
 
   const inputs: EventForHeadlinerCheck[] = rows.map((row) => ({
     id: row.id,
@@ -122,47 +122,47 @@ export async function runBackfill(opts: {
     supportingArtists: row.supportingArtists,
     date: row.date,
     venueName: row.venueName ?? '(no venue)',
-  }))
+  }));
 
-  console.log(`Loaded ${inputs.length} co-headliner candidate events`)
-  const batches = buildBatches(inputs, BATCH_SIZE)
-  console.log(`Split into ${batches.length} batches of up to ${BATCH_SIZE}`)
+  console.log(`Loaded ${inputs.length} co-headliner candidate events`);
+  const batches = buildBatches(inputs, BATCH_SIZE);
+  console.log(`Split into ${batches.length} batches of up to ${BATCH_SIZE}`);
 
-  const results: HeadlinerResult[] = []
-  const untraceableRejected: string[] = []
-  const client = new Anthropic()
+  const results: HeadlinerResult[] = [];
+  const untraceableRejected: string[] = [];
+  const client = new Anthropic();
 
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-    const batch = batches[batchIdx]
-    if (!batch) continue
+    const batch = batches[batchIdx];
+    if (!batch) continue;
     console.log(
       `Identifying headliners for batch ${batchIdx + 1}/${batches.length}...`,
-    )
-    const identified = await identifyHeadlinersBatch(client, batch)
+    );
+    const identified = await identifyHeadlinersBatch(client, batch);
     for (const evt of batch) {
-      const match = identified.find((entry) => entry.eventId === evt.id)
+      const match = identified.find((entry) => entry.eventId === evt.id);
       if (!match) {
         console.error(
           `MISSING headliner result for event ${evt.id} (${evt.title}); aborting before any DB write`,
-        )
-        throw new Error(`Headliner result missing for event ${evt.id}`)
+        );
+        throw new Error(`Headliner result missing for event ${evt.id}`);
       }
       const update = buildHeadlinerUpdate(
         evt.artist,
         match.headliners,
         evt.supportingArtists,
-      )
+      );
       const untraceable = untraceableHeadliners(
         evt.artist,
         evt.supportingArtists,
         update.headliners,
-      )
+      );
       if (untraceable.length > 0) {
         console.error(
           `REJECTED event ${evt.id} (${evt.title}): headliner(s) ${untraceable.join(', ')} appear in neither the stored artist nor supporting_artists`,
-        )
-        untraceableRejected.push(evt.id)
-        continue
+        );
+        untraceableRejected.push(evt.id);
+        continue;
       }
       results.push({
         eventId: evt.id,
@@ -174,43 +174,43 @@ export async function runBackfill(opts: {
         proposedHeadliners: update.headliners,
         proposedSupporting: update.supportingArtists,
         wouldChange: update.wouldChange,
-      })
+      });
     }
   }
 
-  const wouldChangeCount = results.filter((row) => row.wouldChange).length
+  const wouldChangeCount = results.filter((row) => row.wouldChange).length;
   console.log(
     `Identification done. ${wouldChangeCount}/${results.length} candidate events are genuine co-headline bills.`,
-  )
+  );
   if (untraceableRejected.length > 0) {
     console.warn(
       `Rejected ${untraceableRejected.length} rows whose proposed headliners were not traceable to stored text (see REJECTED lines above).`,
-    )
+    );
   }
 
   // Sort: wouldChange first, then by date so an operator reviews the
   // actionable rows at the top of the file.
   results.sort((firstRow, secondRow) => {
     if (firstRow.wouldChange !== secondRow.wouldChange) {
-      return firstRow.wouldChange ? -1 : 1
+      return firstRow.wouldChange ? -1 : 1;
     }
-    return firstRow.date.localeCompare(secondRow.date)
-  })
+    return firstRow.date.localeCompare(secondRow.date);
+  });
 
   const header =
-    'event_id,date,venue_name,title,current_artist,current_supporting_artists,proposed_headliners,proposed_supporting_artists,would_change\n'
-  const csv = header + results.map(formatCsvRow).join('')
+    'event_id,date,venue_name,title,current_artist,current_supporting_artists,proposed_headliners,proposed_supporting_artists,would_change\n';
+  const csv = header + results.map(formatCsvRow).join('');
 
   // Written in both modes: a commit run is the one whose decisions an operator
   // most needs a record of afterwards.
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const outPath =
     opts.outputPath ??
     path.resolve(
       `./co-headliner-backfill-${opts.commit ? 'commit' : 'dry-run'}-${timestamp}.csv`,
-    )
-  writeFileSync(outPath, csv, 'utf-8')
-  console.log(`Decision CSV written to ${outPath}`)
+    );
+  writeFileSync(outPath, csv, 'utf-8');
+  console.log(`Decision CSV written to ${outPath}`);
 
   if (!opts.commit) {
     return {
@@ -219,7 +219,7 @@ export async function runBackfill(opts: {
       committed: false,
       raceSkipped: [],
       untraceableRejected,
-    }
+    };
   }
 
   // --commit path: transactionally rewrite every genuine co-headline row,
@@ -227,9 +227,9 @@ export async function runBackfill(opts: {
   // `supporting_artists` so a concurrent crawl upsert or an admin edit
   // between our SELECT and our UPDATE isn't silently overwritten.
   // Race-skipped rows are surfaced for operator review, never swallowed.
-  const toUpdate = results.filter((row) => row.wouldChange)
-  console.log(`Committing ${toUpdate.length} updates...`)
-  const raceSkipped: string[] = []
+  const toUpdate = results.filter((row) => row.wouldChange);
+  console.log(`Committing ${toUpdate.length} updates...`);
+  const raceSkipped: string[] = [];
   await db.transaction(async (tx) => {
     for (const row of toUpdate) {
       const updated = await tx
@@ -252,20 +252,20 @@ export async function runBackfill(opts: {
             supportingArtistsUnchanged(row.currentSupporting),
           ),
         )
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (updated.length === 0) {
-        raceSkipped.push(row.eventId)
+        raceSkipped.push(row.eventId);
       }
     }
-  })
-  const updatedCount = toUpdate.length - raceSkipped.length
-  console.log(`Commit done. Updated ${updatedCount} rows.`)
+  });
+  const updatedCount = toUpdate.length - raceSkipped.length;
+  console.log(`Commit done. Updated ${updatedCount} rows.`);
   if (raceSkipped.length > 0) {
     console.warn(
       `Skipped ${raceSkipped.length} rows whose artist/supporting_artists changed between SELECT and UPDATE (concurrent crawl / admin edit). Event IDs:`,
-    )
+    );
     for (const id of raceSkipped) {
-      console.warn(`  ${id}`)
+      console.warn(`  ${id}`);
     }
   }
   return {
@@ -274,28 +274,28 @@ export async function runBackfill(opts: {
     committed: true,
     raceSkipped,
     untraceableRejected,
-  }
+  };
 }
 
 // CLI entry point — only runs when file is executed directly (not imported).
 // Use pathToFileURL to handle relative paths, special chars, and
 // platform-specific URL encoding correctly (process.argv[1] is not guaranteed
 // to be a clean absolute URL-safe path).
-const entryArg = process.argv[1]
+const entryArg = process.argv[1];
 const isCli =
   typeof entryArg === 'string' &&
-  import.meta.url === pathToFileURL(entryArg).href
+  import.meta.url === pathToFileURL(entryArg).href;
 if (isCli) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
       console.log(
         `Done. ${summary.totalCandidates} candidates processed, ${summary.wouldChange} co-headline bills, committed=${summary.committed}`,
-      )
-      process.exit(0)
+      );
+      process.exit(0);
     })
     .catch((err: unknown) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

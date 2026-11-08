@@ -12,4 +12,4 @@ export const THEME_COPY = {
       tier: 'GA',
     },
   },
-} as const
+} as const;

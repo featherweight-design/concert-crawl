@@ -28,16 +28,16 @@ hardcoded tier name, which is the exact rot class the copy pass removed.
 
 ## Current state (verified 2026-08-06)
 
-| Claim | Verified how | Result |
-| --- | --- | --- |
-| Last shipped migration is `0075_latin_extended_canonical`, `when: 1786665600000` | `tail packages/db/migrations/meta/_journal.json` | ✅ confirmed. Note the path is `packages/db/migrations/`, **not** `packages/db/drizzle/` |
-| `PREMIUM_FEATURES` holds 7 keys; `crews` is not among them | `packages/entitlements/src/index.ts:10-30` | ✅ confirmed. PR-1 takes it to 8 |
-| `concert-history` and `calendar-export` are `supporter: 'visible-active'` | same file, 2026-07-29 amendment comment | ✅ confirmed. This is the precedent the crews cell follows |
-| Neither the `/crews(.*)` nor the `/crew/join(.*)` matcher pattern appears in `isAlwaysPublic` or `isPublicOnceLaunched` | `apps/web/src/middleware.ts:13-60` | ✅ confirmed absent, which is the intended end state (PR-3 Task 5 changes nothing here) |
-| Latest release entry is `v0.34.0-beta` | `apps/web/src/lib/definitions/releases.ts:34` | ✅ confirmed. PR-7 adds the version above it |
-| `prepareAuditAuth('user' \| 'admin')` exists for the cold-eyes sweep | `apps/e2e/src/audit/audit-auth.ts:17` | ✅ exists |
-| `E2E_AUDIT_USER_*` / `E2E_AUDIT_ADMIN_*` are placed | `env \| grep -c E2E_AUDIT` → 4 | ✅ all four present. **The cold-eyes capture is not blocked** — do not report it as such |
-| `main` is green | Release `1.216.7` published after PR #1489 fixed the lockfile | ✅ green as of 2026-08-06 |
+| Claim                                                                                                                   | Verified how                                                  | Result                                                                                   |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Last shipped migration is `0075_latin_extended_canonical`, `when: 1786665600000`                                        | `tail packages/db/migrations/meta/_journal.json`              | ✅ confirmed. Note the path is `packages/db/migrations/`, **not** `packages/db/drizzle/` |
+| `PREMIUM_FEATURES` holds 7 keys; `crews` is not among them                                                              | `packages/entitlements/src/index.ts:10-30`                    | ✅ confirmed. PR-1 takes it to 8                                                         |
+| `concert-history` and `calendar-export` are `supporter: 'visible-active'`                                               | same file, 2026-07-29 amendment comment                       | ✅ confirmed. This is the precedent the crews cell follows                               |
+| Neither the `/crews(.*)` nor the `/crew/join(.*)` matcher pattern appears in `isAlwaysPublic` or `isPublicOnceLaunched` | `apps/web/src/middleware.ts:13-60`                            | ✅ confirmed absent, which is the intended end state (PR-3 Task 5 changes nothing here)  |
+| Latest release entry is `v0.34.0-beta`                                                                                  | `apps/web/src/lib/definitions/releases.ts:34`                 | ✅ confirmed. PR-7 adds the version above it                                             |
+| `prepareAuditAuth('user' \| 'admin')` exists for the cold-eyes sweep                                                    | `apps/e2e/src/audit/audit-auth.ts:17`                         | ✅ exists                                                                                |
+| `E2E_AUDIT_USER_*` / `E2E_AUDIT_ADMIN_*` are placed                                                                     | `env \| grep -c E2E_AUDIT` → 4                                | ✅ all four present. **The cold-eyes capture is not blocked** — do not report it as such |
+| `main` is green                                                                                                         | Release `1.216.7` published after PR #1489 fixed the lockfile | ✅ green as of 2026-08-06                                                                |
 
 Things that intentionally do **not** exist yet: the four crews tables, the `crews` entitlement
 key, the three `crew.*` notification categories, `/crews`, `/crew/join/<token>`, and the fifth
@@ -98,23 +98,23 @@ exists; that is acceptable and is the normal shape of a staged epic in private b
 
 ## Off-happy-path homes — REQUIRED
 
-| New state | Where it lives in the IA | How the user reaches it | Reversible? |
-| --- | --- | --- | --- |
-| Member of zero crews | `/crews` empty state, `EmptyState state="no-data"` with a "Start a crew" CTA | Fifth nav tab, always present | n/a — the tab never hides |
-| Crew of one (created, nobody joined) | Crew home, inline waiting-room notice with an invite CTA. Hero and both tabs still render | `/crews` → the crew row | Yes — delete the crew, or invite someone |
-| Crew with members but zero upcoming shows | Crew home opens on **Been there**; "Coming up" carries "Nobody's committed." | Crew home tab order (PR-5 Task 1) | Yes — any member marking going flips it |
-| Crew with 1 past attendee only | Appears in **neither** tab. This is the tense rule (decision 2) and is intended | Not reachable by design; the show lives in that member's own Concerts | n/a |
-| Crew at the 12 cap | `CrewNotice` above the roster grid, **not** an `EmptyState` | Crew home → Who's in | Yes — remove a member |
-| Holder of a dead invite link (expired / revoked / unknown) | `/crew/join/<token>` renders a dead-link state carrying **no crew identity at all** (decision 11) | The link itself | Yes — ask for a fresh link |
-| Holder of a live link to a full crew | Same join page, crew identity **visible**, CTA swapped. At-cap is not a dead link | The link itself | Yes — a member leaves, the link still resolves |
-| Signed-out registered beta member on a crew link | Clerk sign-in with `redirect_url` intact, landing back on the join page | Falls out of `auth.protect()`; no new code | Yes |
-| Not-yet-onboarded friend on a crew link | `/auth/code` → beta funnel → returned to the crew link by the signed return-path cookie | PR-3 Task 5 plumbing | Yes |
-| Keeper who wants out, with other members | Blocked at the server with a typed 409 → handoff sheet. They must pass the crew on first (decision 7) | Crew home → Who's in → leave | Yes — cancel the sheet |
-| Keeper who wants out, alone | Distinct typed 409 → "you're the last one" delete confirm. Deletion is an explicit second call | Same | Yes — cancel the confirm |
-| Lapsed subscriber who created crews | Keeps every crew, the lens, and the roster. Loses only the act of creating another (D6) | Unchanged — nothing moves | n/a. **Add no lapse branch anywhere** |
-| Free-tier member of someone else's crew | Full read, leave, and mute. Only `POST /v1/crews` 403s | Fifth nav tab, same as anyone | n/a |
-| Member who muted a crew | Muted chip on the crew hero; the toggle lives in `NotificationsSection` under "Crew activity" | Crew home hero, or settings | Yes — unmute surfaces what happens *next*, never a backlog (D5) |
-| Crew deleted under a member's feet | Their `crew_members` row cascades away; the crew leaves `/crews`. Their `user_events` attendance is untouched | `/crews` | No, and deliberately: "the nights you went stay in your Concerts" |
+| New state                                                  | Where it lives in the IA                                                                                      | How the user reaches it                                               | Reversible?                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Member of zero crews                                       | `/crews` empty state, `EmptyState state="no-data"` with a "Start a crew" CTA                                  | Fifth nav tab, always present                                         | n/a — the tab never hides                                         |
+| Crew of one (created, nobody joined)                       | Crew home, inline waiting-room notice with an invite CTA. Hero and both tabs still render                     | `/crews` → the crew row                                               | Yes — delete the crew, or invite someone                          |
+| Crew with members but zero upcoming shows                  | Crew home opens on **Been there**; "Coming up" carries "Nobody's committed."                                  | Crew home tab order (PR-5 Task 1)                                     | Yes — any member marking going flips it                           |
+| Crew with 1 past attendee only                             | Appears in **neither** tab. This is the tense rule (decision 2) and is intended                               | Not reachable by design; the show lives in that member's own Concerts | n/a                                                               |
+| Crew at the 12 cap                                         | `CrewNotice` above the roster grid, **not** an `EmptyState`                                                   | Crew home → Who's in                                                  | Yes — remove a member                                             |
+| Holder of a dead invite link (expired / revoked / unknown) | `/crew/join/<token>` renders a dead-link state carrying **no crew identity at all** (decision 11)             | The link itself                                                       | Yes — ask for a fresh link                                        |
+| Holder of a live link to a full crew                       | Same join page, crew identity **visible**, CTA swapped. At-cap is not a dead link                             | The link itself                                                       | Yes — a member leaves, the link still resolves                    |
+| Signed-out registered beta member on a crew link           | Clerk sign-in with `redirect_url` intact, landing back on the join page                                       | Falls out of `auth.protect()`; no new code                            | Yes                                                               |
+| Not-yet-onboarded friend on a crew link                    | `/auth/code` → beta funnel → returned to the crew link by the signed return-path cookie                       | PR-3 Task 5 plumbing                                                  | Yes                                                               |
+| Keeper who wants out, with other members                   | Blocked at the server with a typed 409 → handoff sheet. They must pass the crew on first (decision 7)         | Crew home → Who's in → leave                                          | Yes — cancel the sheet                                            |
+| Keeper who wants out, alone                                | Distinct typed 409 → "you're the last one" delete confirm. Deletion is an explicit second call                | Same                                                                  | Yes — cancel the confirm                                          |
+| Lapsed subscriber who created crews                        | Keeps every crew, the lens, and the roster. Loses only the act of creating another (D6)                       | Unchanged — nothing moves                                             | n/a. **Add no lapse branch anywhere**                             |
+| Free-tier member of someone else's crew                    | Full read, leave, and mute. Only `POST /v1/crews` 403s                                                        | Fifth nav tab, same as anyone                                         | n/a                                                               |
+| Member who muted a crew                                    | Muted chip on the crew hero; the toggle lives in `NotificationsSection` under "Crew activity"                 | Crew home hero, or settings                                           | Yes — unmute surfaces what happens _next_, never a backlog (D5)   |
+| Crew deleted under a member's feet                         | Their `crew_members` row cascades away; the crew leaves `/crews`. Their `user_events` attendance is untouched | `/crews`                                                              | No, and deliberately: "the nights you went stay in your Concerts" |
 
 Every row is filled from a locked decision or a plan task. **No row required a new product
 call**, which is the bar for starting PR-1.
@@ -137,7 +137,7 @@ Entry: `/crews`, as a **Supporter**.
    a patch that differs from the preview is a P1.
 
 Reverse: delete the crew from crew home → back at `/crews`, empty state if it was the only one.
-Repeat: create → delete → create again. The second crew must get a *different* patch.
+Repeat: create → delete → create again. The second crew must get a _different_ patch.
 Resume: reload mid-sheet → the sheet is gone and no crew was created. A half-filled sheet must
 not leave an orphan row.
 
@@ -176,7 +176,7 @@ Entry: `/events`, as a member of a crew with upcoming shows.
 4. Rows carry a crew chip reading "N going" — a **count**, never names.
 
 Reverse: dismiss the rail → title, eyebrow and full list all restore.
-Repeat: apply → clear → apply a *different* crew. The title must track the second crew.
+Repeat: apply → clear → apply a _different_ crew. The title must track the second crew.
 Resume: reload with the lens active — decide and record whether the lens survives. If it lives
 only in component state, say so in the artifact rather than discovering it on staging.
 Edge: a crew with zero upcoming shows → `EmptyState state="filtered"`, never a blank list.

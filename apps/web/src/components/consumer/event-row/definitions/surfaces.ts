@@ -4,59 +4,60 @@
  */
 
 export type RowSurface =
-  'browse' | 'venue' | 'watching' | 'related' | 'crew' | 'crewLens' | 'artist'
+  'browse' | 'venue' | 'watching' | 'related' | 'crew' | 'crewLens' | 'artist';
 
 /** The units line 3 can render, in reading order. */
-export const WHEN_WHERE_UNITS = ['date', 'time', 'venue'] as const
-export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number]
+export const WHEN_WHERE_UNITS = ['date', 'time', 'venue'] as const;
+export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number];
 
 /**
  * Only date and venue can be carried out of line 3. Time is never stated by a
  * page header or a page title, so no surface can subtract it. `artist` is
  * carried out of line 1 instead, which is why it is not a `WhenWhereUnit`.
  */
-export type CarriedContext = Extract<WhenWhereUnit, 'date' | 'venue'> | 'artist'
+export type CarriedContext =
+  Extract<WhenWhereUnit, 'date' | 'venue'> | 'artist';
 
 export type MetaChipKind =
-  'crew' | 'following' | 'genre' | 'freshness' | 'provenance'
+  'crew' | 'following' | 'genre' | 'freshness' | 'provenance';
 
 export interface SurfaceConfig {
   /** Context the surface states elsewhere, so the row must not repeat it. */
-  carries: readonly CarriedContext[]
+  carries: readonly CarriedContext[];
   /** Which chips compete for the meta budget, best claim first. */
-  chipPriority: readonly MetaChipKind[]
+  chipPriority: readonly MetaChipKind[];
   /** A trailing gutter is reserved only where the surface has a row action. */
-  hasActionGutter: boolean
+  hasActionGutter: boolean;
   /** Cards with their own edge, versus rows separated by a divider. */
-  carded: boolean
+  carded: boolean;
   /** The saved-price delta is a Watching idea; a Browse price never goes green. */
-  showsDelta: boolean
+  showsDelta: boolean;
   /**
    * Whether the surface's payload carries a price at all. A surface that does
    * not must suppress the slot rather than pass `null` through: the row reads
    * `null` as "to be announced", which is a claim about the show rather than
    * about what we fetched.
    */
-  showsPrice: boolean
+  showsPrice: boolean;
   /**
    * Whether line 1 may carry a tour clause. A tour name helps someone deciding
    * between shows and is noise on a list of shows already decided on, so it is
    * a per-surface declaration exactly like the price slot rather than a
    * property of the data.
    */
-  showsTour: boolean
+  showsTour: boolean;
   /**
    * Line 1 renders the tour name at title weight and moves the artist to a
    * screen-reader span. Mutually exclusive with `showsTour`: a surface that
    * carries the artist has nothing left to hang a clause off.
    */
-  promotesTour: boolean
+  promotesTour: boolean;
   /**
    * Whether the surface's payload can carry a support billing at all. This is
    * what `rowMin` keys the reserved height on, so it gates the render too —
    * a line 2 the reservation did not account for is a list that steps.
    */
-  showsSupports: boolean
+  showsSupports: boolean;
 }
 
 export const SURFACES: Record<RowSurface, SurfaceConfig> = {
@@ -170,11 +171,11 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     promotesTour: true,
     showsSupports: false,
   },
-}
+};
 
 export function whenWhereUnits(surface: RowSurface): WhenWhereUnit[] {
-  const { carries } = SURFACES[surface]
+  const { carries } = SURFACES[surface];
   return WHEN_WHERE_UNITS.filter(
     (unit) => !carries.some((carried) => carried === unit),
-  )
+  );
 }

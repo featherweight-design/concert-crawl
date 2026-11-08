@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface CrewOptionsSheetProps {
-  open: boolean
-  onClose: () => void
-  isKeeper: boolean
-  onInvite: () => void
-  onRename: () => void
-  onReroll: () => void
-  onLeave: () => void
-  onDelete: () => void
+  open: boolean;
+  onClose: () => void;
+  isKeeper: boolean;
+  onInvite: () => void;
+  onRename: () => void;
+  onReroll: () => void;
+  onLeave: () => void;
+  onDelete: () => void;
 }
 
 const row: React.CSSProperties = {
@@ -30,7 +30,7 @@ const row: React.CSSProperties = {
   fontWeight: 700,
   color: 'var(--fg)',
   textAlign: 'left',
-}
+};
 
 /**
  * The overflow menu, as a real action sheet rather than a native menu: the
@@ -76,7 +76,7 @@ export const CrewOptionsSheet = ({
           },
         ]
       : []),
-  ]
+  ];
 
   return (
     <ModalShell
@@ -92,8 +92,8 @@ export const CrewOptionsSheet = ({
             key={action.key}
             type="button"
             onClick={() => {
-              onClose()
-              action.run()
+              onClose();
+              action.run();
             }}
             className="cursor-pointer"
             style={{
@@ -106,5 +106,5 @@ export const CrewOptionsSheet = ({
         ))}
       </div>
     </ModalShell>
-  )
-}
+  );
+};

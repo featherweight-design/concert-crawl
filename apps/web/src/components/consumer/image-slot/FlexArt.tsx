@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
 // The unsized sibling of `Panel`: art that takes whatever height the row has
 // left rather than declaring one. It carries no `aspectRatio` on purpose — a
 // ratio here re-opens the taste-pick overflow of #763 r4.
 
-import { EventImage } from '../event-image'
+import { EventImage } from '../event-image';
 import {
   FLEX_ART_MIN_HEIGHT,
   SLOT_HAIRLINE,
   SLOT_RADIUS,
-} from './definitions/constants'
-import type { SlotSource } from './definitions/types'
-import { slotSources } from './lib/slot-metrics'
+} from './definitions/constants';
+import type { SlotSource } from './definitions/types';
+import { slotSources } from './lib/slot-metrics';
 
 export type FlexArtProps = {
-  name: string
-  alt?: string
-  minHeight?: number
-  radius?: number
-  className?: string
-} & SlotSource
+  name: string;
+  alt?: string;
+  minHeight?: number;
+  radius?: number;
+  className?: string;
+} & SlotSource;
 
 export const FlexArt = (props: FlexArtProps) => {
   const {
@@ -28,8 +28,8 @@ export const FlexArt = (props: FlexArtProps) => {
     minHeight = FLEX_ART_MIN_HEIGHT,
     radius = SLOT_RADIUS.card,
     className,
-  } = props
-  const { primary, secondary } = slotSources(props)
+  } = props;
+  const { primary, secondary } = slotSources(props);
 
   return (
     <span
@@ -59,5 +59,5 @@ export const FlexArt = (props: FlexArtProps) => {
         />
       </span>
     </span>
-  )
-}
+  );
+};

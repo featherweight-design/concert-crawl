@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The floating placement of the first-watch follow nudge (native following,
 // PR 10). Mounted once at the (protected) layout, so a watch started from the
@@ -17,26 +17,26 @@
 // logged-out picker) — it shows the SCA disclosure to some viewers who did not
 // need it, rather than withholding it from one who did.
 
-import { usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation';
 
-import { FollowNudgeCard } from './FollowNudgeCard'
-import { useFirstWatchNudge } from './lib/use-first-watch-nudge'
+import { FollowNudgeCard } from './FollowNudgeCard';
+import { useFirstWatchNudge } from './lib/use-first-watch-nudge';
 
 // `/events/<id>` and `/e/<id>`, but not the `/events` index itself, which is
 // browse and is exactly where this card is meant to float.
 const isEventDetail = (pathname: string): boolean =>
-  /^\/(events|e)\/[^/]+/.test(pathname)
+  /^\/(events|e)\/[^/]+/.test(pathname);
 
 export const FollowNudgeGate = () => {
-  const pathname = usePathname()
-  const stoodDown = pathname.startsWith('/admin') || isEventDetail(pathname)
+  const pathname = usePathname();
+  const stoodDown = pathname.startsWith('/admin') || isEventDetail(pathname);
   // Unscoped: any watch, from any control, on any route this gate serves.
   // `enabled` rather than a render guard, so a watch taken on event detail is
   // never held here and then floated after a navigation.
-  const nudge = useFirstWatchNudge(undefined, !stoodDown)
+  const nudge = useFirstWatchNudge(undefined, !stoodDown);
 
-  if (stoodDown) return null
-  if (nudge.target === null) return null
+  if (stoodDown) return null;
+  if (nudge.target === null) return null;
 
   return (
     <FollowNudgeCard
@@ -45,5 +45,5 @@ export const FollowNudgeGate = () => {
       scaRegion
       onAnswer={nudge.answer}
     />
-  )
-}
+  );
+};

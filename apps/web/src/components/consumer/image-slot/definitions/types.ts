@@ -1,4 +1,4 @@
-export type SlotScale = 'hero' | 'tile' | 'micro'
+export type SlotScale = 'hero' | 'tile' | 'micro';
 
 /**
  * The source chain, discriminated by surface. An `artist` slot has no
@@ -7,4 +7,4 @@ export type SlotScale = 'hero' | 'tile' | 'micro'
  */
 export type SlotSource =
   | { surface: 'event'; artworkUrl: string | null; photoUrl: string | null }
-  | { surface: 'artist'; photoUrl: string | null }
+  | { surface: 'artist'; photoUrl: string | null };

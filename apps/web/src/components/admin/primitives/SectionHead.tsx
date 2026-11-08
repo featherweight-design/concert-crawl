@@ -1,8 +1,8 @@
 interface SectionHeadProps {
-  eyebrow?: string
-  title: React.ReactNode
-  subtitle?: React.ReactNode
-  actions?: React.ReactNode
+  eyebrow?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  actions?: React.ReactNode;
 }
 
 export const SectionHead = ({
@@ -80,4 +80,4 @@ export const SectionHead = ({
       </div>
     )}
   </div>
-)
+);

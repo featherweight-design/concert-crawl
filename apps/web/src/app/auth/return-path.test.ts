@@ -7,65 +7,65 @@
 // cookie, and /auth/complete spends it — so the four edits are not plumbing
 // nobody exercises. The middleware's first hop has its own suite in
 // src/proxy.test.ts.
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('server-only', () => ({}))
+vi.mock('server-only', () => ({}));
 
 const { cookieStore, redirectCalls, authState } = vi.hoisted(() => {
-  const cookies = new Map<string, string>()
-  const redirects: string[] = []
-  const auth: { userId: string | null } = { userId: 'user_new_arrival' }
-  return { cookieStore: cookies, redirectCalls: redirects, authState: auth }
-})
+  const cookies = new Map<string, string>();
+  const redirects: string[] = [];
+  const auth: { userId: string | null } = { userId: 'user_new_arrival' };
+  return { cookieStore: cookies, redirectCalls: redirects, authState: auth };
+});
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
     get: (name: string) => {
-      const value = cookieStore.get(name)
-      return value === undefined ? undefined : { name, value }
+      const value = cookieStore.get(name);
+      return value === undefined ? undefined : { name, value };
     },
     set: (name: string, value: string) => {
-      cookieStore.set(name, value)
+      cookieStore.set(name, value);
     },
     delete: (name: string) => {
-      cookieStore.delete(name)
+      cookieStore.delete(name);
     },
   }),
-}))
+}));
 
 // The real one throws to unwind the render; mirroring that keeps the call
 // sites honest about being terminal.
 vi.mock('next/navigation', () => ({
   redirect: (target: string) => {
-    redirectCalls.push(target)
-    throw new Error(`NEXT_REDIRECT:${target}`)
+    redirectCalls.push(target);
+    throw new Error(`NEXT_REDIRECT:${target}`);
   },
-}))
+}));
 
 vi.mock('@clerk/nextjs/server', () => ({
   auth: async () => ({
     userId: authState.userId,
     getToken: async () => 'test-token',
   }),
-}))
+}));
 
-import { validateAndSetInviteCode } from './code/actions'
-import AuthCompletePage from './complete/page'
+import { validateAndSetInviteCode } from './code/actions';
+import AuthCompletePage from './complete/page';
 import {
   INVITE_COOKIE_NAME,
   RETURN_PATH_COOKIE_NAME,
   signInviteCookie,
-} from '@/lib/invite-cookie'
-import { PENDING_TIER_PARAM } from '@/lib/auth/intent'
+} from '@/lib/invite-cookie';
+import { PENDING_TIER_PARAM } from '@/lib/auth/intent';
 
-const SECRET = 'test-secret-32-bytes-minimum-len'
-const CODE = 'BETA-AB12-CD34'
-const CREW_LINK = '/crew/join/abc123XYZ_-0'
+const SECRET = 'test-secret-32-bytes-minimum-len';
+const CODE = 'BETA-AB12-CD34';
+const CREW_LINK = '/crew/join/abc123XYZ_-0';
 
 /** Next always supplies searchParams; most cases here have none to supply. */
 const completePage = (
   searchParams: Record<string, string | string[] | undefined> = {},
-) => AuthCompletePage({ searchParams: Promise.resolve(searchParams) })
+) => AuthCompletePage({ searchParams: Promise.resolve(searchParams) });
 
 /**
  * Where /auth/complete now sends a finished signup: into the tour, with the
@@ -73,62 +73,62 @@ const completePage = (
  * written out per case so the encoding is asserted in one place.
  */
 const tourTo = (destination: string, tier?: string): string => {
-  const query = new URLSearchParams({ return: destination })
-  if (tier) query.set(PENDING_TIER_PARAM, tier)
-  return `/onboarding?${query.toString()}`
-}
+  const query = new URLSearchParams({ return: destination });
+  if (tier) query.set(PENDING_TIER_PARAM, tier);
+  return `/onboarding?${query.toString()}`;
+};
 
 /** Both entry points redirect, which throws. */
 const runToRedirect = async (work: () => Promise<unknown>): Promise<string> => {
-  const before = redirectCalls.length
-  await expect(work()).rejects.toThrow(/NEXT_REDIRECT/)
-  const target = redirectCalls[before]
-  if (!target) throw new Error('expected a redirect')
-  return target
-}
+  const before = redirectCalls.length;
+  await expect(work()).rejects.toThrow(/NEXT_REDIRECT/);
+  const target = redirectCalls[before];
+  if (!target) throw new Error('expected a redirect');
+  return target;
+};
 
 beforeEach(() => {
-  cookieStore.clear()
-  redirectCalls.length = 0
-  authState.userId = 'user_new_arrival'
-  vi.stubEnv('INVITE_COOKIE_SECRET', SECRET)
+  cookieStore.clear();
+  redirectCalls.length = 0;
+  authState.userId = 'user_new_arrival';
+  vi.stubEnv('INVITE_COOKIE_SECRET', SECRET);
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => new Response('{}', { status: 200 })),
-  )
-})
+  );
+});
 
 describe('the beta funnel carries a crew link across Clerk', () => {
   it('lands the visitor back on the link rather than on /events', async () => {
     const toSignUp = await runToRedirect(() =>
       validateAndSetInviteCode(CODE, CREW_LINK),
-    )
+    );
     // The code screen hands off to sign-up; the tour comes after the account
     // exists, because every step past the genre picker reads as that user.
-    expect(toSignUp).toBe('/sign-up')
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true)
+    expect(toSignUp).toBe('/sign-up');
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true);
     // The signed cookie is opaque, so the raw path is not sitting in it in the
     // clear-and-editable sense the query param was.
-    expect(cookieStore.get(RETURN_PATH_COOKIE_NAME)).not.toBe(CREW_LINK)
+    expect(cookieStore.get(RETURN_PATH_COOKIE_NAME)).not.toBe(CREW_LINK);
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo(CREW_LINK))
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo(CREW_LINK));
     // A return path is spent once — a later visit must not replay it.
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('carries a link whose query holds an escape the path rules cannot resolve', async () => {
     // `%25` decodes to a bare `%`, which the next decode pass throws on. Only
     // the part before the `?` decides where the value points, so the query is
     // not put through that pass and a legitimate link survives.
-    const withQuery = `${CREW_LINK}?ref=50%25`
+    const withQuery = `${CREW_LINK}?ref=50%25`;
 
-    await runToRedirect(() => validateAndSetInviteCode(CODE, withQuery))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true)
+    await runToRedirect(() => validateAndSetInviteCode(CODE, withQuery));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true);
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo(withQuery))
-  })
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo(withQuery));
+  });
 
   // The query is never decoded here, so an encoded newline in one has to be
   // read in its encoded form or it is accepted by default — and downstream
@@ -139,35 +139,35 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     async (suffix) => {
       await runToRedirect(() =>
         validateAndSetInviteCode(CODE, `${CREW_LINK}${suffix}`),
-      )
-      expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+      );
+      expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
     },
-  )
+  );
 
   it('refuses a link too long to survive the cookie it would be signed into', async () => {
     // A browser drops a cookie whose serialisation passes ~4096 bytes, so an
     // unbounded path breaks the funnel for the visitor carrying it rather
     // than being caught anywhere.
-    const overlong = `${CREW_LINK}?ref=${'a'.repeat(512)}`
+    const overlong = `${CREW_LINK}?ref=${'a'.repeat(512)}`;
 
-    await runToRedirect(() => validateAndSetInviteCode(CODE, overlong))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    await runToRedirect(() => validateAndSetInviteCode(CODE, overlong));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('still reads the path through a hostile query', async () => {
     await runToRedirect(() =>
       validateAndSetInviteCode(CODE, '//evil.com?ref=/crew/join/abc'),
-    )
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    );
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('leaves a front-door arrival on /events', async () => {
-    await runToRedirect(() => validateAndSetInviteCode(CODE))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo('/events'))
-  })
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo('/events'));
+  });
 
   it.each([
     '//evil.com',
@@ -180,9 +180,9 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     '/%0Aevil',
     '/events',
   ])('writes no return-path cookie for %s', async (hostile) => {
-    await runToRedirect(() => validateAndSetInviteCode(CODE, hostile))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    await runToRedirect(() => validateAndSetInviteCode(CODE, hostile));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('clears a cookie left behind by an abandoned earlier attempt', async () => {
     // A first trip started at a crew link and was never finished, so its
@@ -190,14 +190,14 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
       signInviteCookie(CREW_LINK, SECRET),
-    )
+    );
 
-    await runToRedirect(() => validateAndSetInviteCode(CODE))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+    await runToRedirect(() => validateAndSetInviteCode(CODE));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo('/events'))
-  })
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo('/events'));
+  });
 
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/%0Aevil'])(
     're-sanitises a hostile cookie value %s on read',
@@ -208,50 +208,50 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       cookieStore.set(
         RETURN_PATH_COOKIE_NAME,
         signInviteCookie(hostile, SECRET),
-      )
+      );
 
-      const landing = await runToRedirect(() => completePage())
-      expect(landing).toBe(tourTo('/events'))
+      const landing = await runToRedirect(() => completePage());
+      expect(landing).toBe(tourTo('/events'));
     },
-  )
+  );
 
   it('clears a present-but-empty cookie rather than reprocessing it forever', async () => {
     // `Cookie: invite_return_path=` is a cookie whose value is the empty
     // string. Keying the clear off the value being truthy leaves it in place
     // on every subsequent visit.
-    cookieStore.set(RETURN_PATH_COOKIE_NAME, '')
+    cookieStore.set(RETURN_PATH_COOKIE_NAME, '');
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo('/events'))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo('/events'));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('ignores a forged cookie and clears it', async () => {
-    cookieStore.set(RETURN_PATH_COOKIE_NAME, 'forged.payload')
+    cookieStore.set(RETURN_PATH_COOKIE_NAME, 'forged.payload');
 
-    const landing = await runToRedirect(() => completePage())
-    expect(landing).toBe(tourTo('/events'))
-    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-  })
+    const landing = await runToRedirect(() => completePage());
+    expect(landing).toBe(tourTo('/events'));
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false);
+  });
 
   it('lands a launched signup back on the shared show', async () => {
     // No invite step once /sign-up is public, so nothing writes the cookie and
     // the destination arrives as a param forwarded by the sign-up page.
     const landing = await runToRedirect(() =>
       completePage({ return: '/e/11111111-1111-4111-8111-111111111111' }),
-    )
-    expect(landing).toBe(tourTo('/e/11111111-1111-4111-8111-111111111111'))
-  })
+    );
+    expect(landing).toBe(tourTo('/e/11111111-1111-4111-8111-111111111111'));
+  });
 
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/%0Aevil'])(
     'sends a hostile return param %s to the fallback',
     async (hostile) => {
       const landing = await runToRedirect(() =>
         completePage({ return: hostile }),
-      )
-      expect(landing).toBe(tourTo('/events'))
+      );
+      expect(landing).toBe(tourTo('/events'));
     },
-  )
+  );
 
   it('lets the signed cookie outrank the return param', async () => {
     // An invite link is a stronger claim on where someone was headed than a
@@ -259,40 +259,40 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
       signInviteCookie(CREW_LINK, SECRET),
-    )
+    );
 
     const landing = await runToRedirect(() =>
       completePage({ return: '/e/abc' }),
-    )
-    expect(landing).toBe(tourTo(CREW_LINK))
-  })
+    );
+    expect(landing).toBe(tourTo(CREW_LINK));
+  });
 
   it('does not wrap a destination that is already the tour', async () => {
     // The signed-out Watch and Follow buttons target the tour themselves,
     // intent and label attached. Wrapping that in a second `?return=` walks
     // the visitor through all eight steps twice before the watch is replayed.
     const pendingWatch =
-      '/onboarding?intent=watch%3A11111111-1111-4111-8111-111111111111&return=%2Fe%2Fabc&label=Geese'
+      '/onboarding?intent=watch%3A11111111-1111-4111-8111-111111111111&return=%2Fe%2Fabc&label=Geese';
 
     const landing = await runToRedirect(() =>
       completePage({ return: pendingWatch }),
-    )
-    expect(landing).toBe(pendingWatch)
-  })
+    );
+    expect(landing).toBe(pendingWatch);
+  });
 
   it("still wraps a route that merely starts with the tour's name", async () => {
     const landing = await runToRedirect(() =>
       completePage({ return: '/onboardingxyz' }),
-    )
-    expect(landing).toBe(tourTo('/onboardingxyz'))
-  })
+    );
+    expect(landing).toBe(tourTo('/onboardingxyz'));
+  });
 
   it('carries a chosen tier on to the destination (#1284)', async () => {
     const landing = await runToRedirect(() =>
       completePage({ return: '/e/abc', tier: 'premium' }),
-    )
-    expect(landing).toBe(tourTo('/e/abc', 'premium'))
-  })
+    );
+    expect(landing).toBe(tourTo('/e/abc', 'premium'));
+  });
 
   it('carries the tier onto a cookie destination too (#1284)', async () => {
     // The two halves are independent: an invite arrival can have picked a tier
@@ -300,11 +300,13 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
       signInviteCookie(CREW_LINK, SECRET),
-    )
+    );
 
-    const landing = await runToRedirect(() => completePage({ tier: 'founder' }))
-    expect(landing).toBe(tourTo(CREW_LINK, 'founder'))
-  })
+    const landing = await runToRedirect(() =>
+      completePage({ tier: 'founder' }),
+    );
+    expect(landing).toBe(tourTo(CREW_LINK, 'founder'));
+  });
 
   it.each(['platinum', '', 'free '])(
     'drops the unrecognised tier %s rather than forwarding it (#1284)',
@@ -313,25 +315,25 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       // boundary rather than passed along for someone else to validate.
       const landing = await runToRedirect(() =>
         completePage({ return: '/e/abc', tier }),
-      )
-      expect(landing).toBe(tourTo('/e/abc'))
+      );
+      expect(landing).toBe(tourTo('/e/abc'));
     },
-  )
+  );
 
   it('still redeems the beta code on the way through', async () => {
-    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET))
+    cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET));
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
       signInviteCookie(CREW_LINK, SECRET),
-    )
+    );
 
-    const landing = await runToRedirect(() => completePage())
+    const landing = await runToRedirect(() => completePage());
 
-    expect(landing).toBe(tourTo(CREW_LINK))
-    expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(false)
+    expect(landing).toBe(tourTo(CREW_LINK));
+    expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(false);
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
       expect.stringContaining('/v1/auth/redeem-code'),
       expect.objectContaining({ method: 'POST' }),
-    )
-  })
-})
+    );
+  });
+});

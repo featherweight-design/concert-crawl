@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { isTabActive } from '@/lib/nav-tab-active'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { CCMark } from '@/components/brand/cc-mark'
-import { UserMenu } from '../user-menu'
-import { useSearchPalette } from '../search-palette/search-palette-context'
-import { AuthCtaPair } from './AuthCtaPair'
-import { SignInRail } from './SignInRail'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { isTabActive } from '@/lib/nav-tab-active';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { CCMark } from '@/components/brand/cc-mark';
+import { UserMenu } from '../user-menu';
+import { useSearchPalette } from '../search-palette/search-palette-context';
+import { AuthCtaPair } from './AuthCtaPair';
+import { SignInRail } from './SignInRail';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.appHeader
+const copy = CONSUMER_COPY.appHeader;
 
 interface AppHeaderProps {
   /**
@@ -21,20 +21,20 @@ interface AppHeaderProps {
    * the search action on mobile and to the left of the user menu on desktop —
    * currently used for the PWA install slot (#969) and offline pill (#970).
    */
-  rightSlots?: React.ReactNode
+  rightSlots?: React.ReactNode;
 }
 
 export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
-  const pathname = usePathname()
+  const pathname = usePathname();
   // The palette and its ⌘K listener live in the layout provider, so the
   // "find artists" row in the page body can open the same one.
-  const palette = useSearchPalette()
-  const { enabled: crewsEnabled } = useFeatureFlag('crews')
+  const palette = useSearchPalette();
+  const { enabled: crewsEnabled } = useFeatureFlag('crews');
   const tabs = copy.nav.tabs.filter(
     // These entries carry no `key` field, unlike the bottom nav's, so the
     // href is the only stable discriminator.
     (tab) => crewsEnabled || tab.href !== '/crews',
-  )
+  );
 
   return (
     <header className="w-full">
@@ -85,7 +85,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
 
           <nav className="flex gap-1 overflow-x-auto">
             {tabs.map((tab) => {
-              const isActive = isTabActive(tab, pathname)
+              const isActive = isTabActive(tab, pathname);
               return (
                 <Link
                   key={tab.href}
@@ -100,7 +100,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                 >
                   {tab.label}
                 </Link>
-              )
+              );
             })}
           </nav>
         </div>
@@ -132,5 +132,5 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
         </div>
       </div>
     </header>
-  )
+  );
 }

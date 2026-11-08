@@ -1,5 +1,5 @@
-import { eq, gte, inArray, isNull, type SQL } from 'drizzle-orm'
-import { events } from '../schema/events.js'
+import { eq, gte, inArray, isNull, type SQL } from 'drizzle-orm';
+import { events } from '../schema/events.js';
 
 /**
  * `event_status` has no terminal value — nothing moves a show out of
@@ -25,9 +25,9 @@ export const SCHEDULED_STATUSES = [
   'upcoming',
   'cancelled',
   'postponed',
-] as const
+] as const;
 
-type EventStatus = (typeof SCHEDULED_STATUSES)[number]
+type EventStatus = (typeof SCHEDULED_STATUSES)[number];
 
 interface UpcomingEventsOptions {
   /**
@@ -36,22 +36,22 @@ interface UpcomingEventsOptions {
    * bound on the venue's own IANA zone, artist routes on Mountain Time (an
    * artist's shows span venues), and the crawler on Denver local.
    */
-  from: string | SQL
+  from: string | SQL;
   /**
    * Defaults to `['upcoming']` — the strict catalogue. Pass
    * `SCHEDULED_STATUSES` for surfaces that must keep showing cancelled and
    * postponed shows.
    */
-  statuses?: readonly [EventStatus, ...EventStatus[]]
+  statuses?: readonly [EventStatus, ...EventStatus[]];
   /** Include events flagged non-concert. Defaults to false. */
-  includeHiddenFromConsumer?: boolean
+  includeHiddenFromConsumer?: boolean;
   /**
    * Include rows the crawler stopped seeing on the venue page (#607). Defaults
    * to false. The crawler clears `firstMissingAt` on a successful
    * re-extraction, so a row that genuinely reappears becomes visible again on
    * its own.
    */
-  includeMissing?: boolean
+  includeMissing?: boolean;
 }
 
 /** The conditions every "shows still to come" query needs. */
@@ -65,21 +65,21 @@ export const upcomingEventConditions = ({
   // `status = 'upcoming'` partial index predicate. The non-empty tuple type on
   // `statuses` is what makes `firstStatus` defined — an empty list would emit
   // `IN ()`, which is not valid SQL.
-  const [firstStatus, ...restStatuses] = statuses
+  const [firstStatus, ...restStatuses] = statuses;
 
   const conditions: SQL[] = [
     restStatuses.length === 0
       ? eq(events.status, firstStatus)
       : inArray(events.status, [...statuses]),
     gte(events.date, from),
-  ]
+  ];
 
   if (!includeHiddenFromConsumer) {
-    conditions.push(eq(events.hiddenFromConsumer, false))
+    conditions.push(eq(events.hiddenFromConsumer, false));
   }
   if (!includeMissing) {
-    conditions.push(isNull(events.firstMissingAt))
+    conditions.push(isNull(events.firstMissingAt));
   }
 
-  return conditions
-}
+  return conditions;
+};

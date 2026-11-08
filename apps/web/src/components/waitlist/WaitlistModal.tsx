@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { LANDING_COPY } from '@/app/_components/definitions/copy'
+import { useState, useRef, useEffect } from 'react';
+import { LANDING_COPY } from '@/app/_components/definitions/copy';
 
 interface WaitlistModalProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
-type ModalState = 'idle' | 'submitting' | 'success' | 'error'
+type ModalState = 'idle' | 'submitting' | 'success' | 'error';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -22,56 +22,56 @@ const inputStyle: React.CSSProperties = {
   fontSize: 15,
   color: 'var(--fg)',
   outline: 'none',
-}
+};
 
 export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
-  const [email, setEmail] = useState('')
-  const [state, setState] = useState<ModalState>('idle')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState<ModalState>('idle');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset state and inputs each time the modal opens
   useEffect(() => {
     if (open) {
-      setState('idle')
-      setEmail('')
+      setState('idle');
+      setEmail('');
     }
-  }, [open])
+  }, [open]);
 
   // Auto-focus the email input when the modal opens (not on success screen)
   useEffect(() => {
-    if (!open || state === 'success') return
-    const timer = setTimeout(() => inputRef.current?.focus(), 100)
-    return () => clearTimeout(timer)
-  }, [open, state])
+    if (!open || state === 'success') return;
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
+  }, [open, state]);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+      if (ev.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
   async function handleSubmit(ev: React.FormEvent) {
-    ev.preventDefault()
-    setState('submitting')
+    ev.preventDefault();
+    setState('submitting');
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
       const res = await fetch(`${apiUrl}/v1/waitlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
-      })
+      });
       if (!res.ok) {
-        setState('error')
-        return
+        setState('error');
+        return;
       }
-      setState('success')
+      setState('success');
     } catch {
-      setState('error')
+      setState('error');
     }
   }
 
@@ -339,5 +339,5 @@ export function WaitlistModal({ open, onClose }: WaitlistModalProps) {
         )}
       </div>
     </div>
-  )
+  );
 }

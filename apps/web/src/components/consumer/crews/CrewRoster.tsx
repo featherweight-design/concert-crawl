@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { CREW_MEMBER_CAP, type CrewMember } from '@concert-crawl/types'
+import { CREW_MEMBER_CAP, type CrewMember } from '@concert-crawl/types';
 
-import { MemberDot } from './MemberCluster'
-import { CrewNotice } from './CrewNotice'
-import { joinedLabel } from './lib/format'
-import { CREWS_COPY } from './definitions/copy'
+import { MemberDot } from './MemberCluster';
+import { CrewNotice } from './CrewNotice';
+import { joinedLabel } from './lib/format';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface CrewRosterProps {
-  members: CrewMember[]
-  memberCount: number
-  isKeeper: boolean
-  onRemove: (member: CrewMember) => void
-  onLeave: () => void
+  members: CrewMember[];
+  memberCount: number;
+  isKeeper: boolean;
+  onRemove: (member: CrewMember) => void;
+  onLeave: () => void;
 }
 
 const rowAction: React.CSSProperties = {
@@ -26,7 +26,7 @@ const rowAction: React.CSSProperties = {
   fontSize: 12.5,
   fontWeight: 700,
   color: 'var(--fg-muted)',
-}
+};
 
 /**
  * Who's in. A member without a handle is drawn and counted but never named:
@@ -40,7 +40,7 @@ export const CrewRoster = ({
   onRemove,
   onLeave,
 }: CrewRosterProps) => {
-  const full = memberCount >= CREW_MEMBER_CAP
+  const full = memberCount >= CREW_MEMBER_CAP;
 
   return (
     <div className="flex flex-col gap-3">
@@ -59,7 +59,7 @@ export const CrewRoster = ({
           count and the same control said twice. */}
       <ul className="m-0 flex list-none flex-col p-0">
         {members.map((member, index) => {
-          const named = member.handle !== null && member.handle !== ''
+          const named = member.handle !== null && member.handle !== '';
           return (
             <li
               key={member.userId}
@@ -130,9 +130,9 @@ export const CrewRoster = ({
                 </button>
               ) : null}
             </li>
-          )
+          );
         })}
       </ul>
     </div>
-  )
-}
+  );
+};

@@ -6,8 +6,8 @@
 // footnote ("unfollowing here won't touch your Spotify library") only makes
 // sense if you can see which rows it is talking about.
 
-import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo'
-import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
+import { SpotifyLogo } from '@/components/brand/spotify-logo/SpotifyLogo';
+import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 
 export const SourceMark = () => (
   <span
@@ -26,4 +26,4 @@ export const SourceMark = () => (
     <SpotifyLogo size={9} />
     {MY_SHOWS_ARTISTS_COPY.source.spotify}
   </span>
-)
+);

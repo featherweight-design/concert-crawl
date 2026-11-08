@@ -1,5 +1,5 @@
-import { Resend } from 'resend'
-import { reportFailure } from '@concert-crawl/logger'
+import { Resend } from 'resend';
+import { reportFailure } from '@concert-crawl/logger';
 
 function escapeHtml(str: string): string {
   return str
@@ -7,7 +7,7 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    .replace(/'/g, '&#39;');
 }
 
 // Log a missing-env-var warning for the email-skipping case (no key, no
@@ -20,7 +20,7 @@ function warnMissingEnv(varName: string, context: string): void {
     severity: 'warn',
     reason: `${varName} not set`,
     context,
-  })
+  });
 }
 
 // Misconfiguration warning that does NOT block the email send (the alert
@@ -32,10 +32,10 @@ function warnMisconfigured(varName: string, context: string): void {
     severity: 'warn',
     reason: `${varName} missing or invalid`,
     context,
-  })
+  });
 }
 
-const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
+const ALERT_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>';
 
 // Environment label drives the subject prefix + body banner on alert emails.
 // Reuses SENTRY_ENVIRONMENT (already set per-service in Render: 'local' /
@@ -54,31 +54,31 @@ function getEnvironmentLabel(): string {
   const raw = (process.env.SENTRY_ENVIRONMENT ?? '')
     .replace(/[\r\n]/g, '')
     .trim()
-    .toLowerCase()
-  return raw === '' ? 'local' : raw
+    .toLowerCase();
+  return raw === '' ? 'local' : raw;
 }
 
 function isProduction(): boolean {
-  return getEnvironmentLabel() === 'production'
+  return getEnvironmentLabel() === 'production';
 }
 
 // Subject prefix: "[Staging] " / "[Local] " for non-prod, "" for prod.
 function subjectPrefix(): string {
-  if (isProduction()) return ''
-  const label = getEnvironmentLabel()
-  return `[${label.charAt(0).toUpperCase()}${label.slice(1)}] `
+  if (isProduction()) return '';
+  const label = getEnvironmentLabel();
+  return `[${label.charAt(0).toUpperCase()}${label.slice(1)}] `;
 }
 
 // Body banner: a single yellow strip rendered above the alert content so
 // the email is visually distinct from a prod alert in the inbox preview.
 function envBanner(): string {
-  if (isProduction()) return ''
-  const label = getEnvironmentLabel()
+  if (isProduction()) return '';
+  const label = getEnvironmentLabel();
   return `
     <div style="background:#fff4cd;border:1px solid #f0d878;padding:10px 14px;border-radius:6px;font-family:sans-serif;font-size:13px;color:#5c4400;margin-bottom:16px;">
       Sent from <strong>${escapeHtml(label)}</strong> — not production. Take action in the corresponding ${escapeHtml(label)} admin UI.
     </div>
-  `
+  `;
 }
 
 // Build the admin-crawl deep-link. Uses the URL constructor so a trailing
@@ -97,18 +97,18 @@ function envBanner(): string {
 //      and degrade to the production default rather than crash the entire
 //      alert pipeline; the warning above already covers the diagnostic.
 function adminCrawlUrl(venueId?: string): string {
-  const PROD_DEFAULT = 'https://concertcrawl.app'
-  const rawAdminUrl = process.env.ADMIN_URL
+  const PROD_DEFAULT = 'https://concertcrawl.app';
+  const rawAdminUrl = process.env.ADMIN_URL;
 
   if ((!rawAdminUrl || rawAdminUrl.trim() === '') && !isProduction()) {
-    warnMisconfigured('ADMIN_URL', 'adminCrawlUrl (non-prod env)')
+    warnMisconfigured('ADMIN_URL', 'adminCrawlUrl (non-prod env)');
   }
 
-  const adminUrl = rawAdminUrl?.trim() || PROD_DEFAULT
+  const adminUrl = rawAdminUrl?.trim() || PROD_DEFAULT;
 
-  let url: URL
+  let url: URL;
   try {
-    url = new URL('/admin/crawl', adminUrl)
+    url = new URL('/admin/crawl', adminUrl);
   } catch (err) {
     // Distinct event from email.skipped — the email still sends, we just
     // can't honour the configured ADMIN_URL.
@@ -118,11 +118,11 @@ function adminCrawlUrl(venueId?: string): string {
       reason: 'ADMIN_URL is not a parseable URL',
       adminUrl,
       error: String(err),
-    })
-    url = new URL('/admin/crawl', PROD_DEFAULT)
+    });
+    url = new URL('/admin/crawl', PROD_DEFAULT);
   }
-  if (venueId) url.searchParams.set('venueId', venueId)
-  return url.toString()
+  if (venueId) url.searchParams.set('venueId', venueId);
+  return url.toString();
 }
 
 // Shared sender for all crawl-side admin alerts. Returns void.
@@ -140,19 +140,19 @@ async function sendAdminAlert(
   context: string,
   input: { subject: string; html: string },
 ): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
-  const adminEmail = process.env.ADMIN_EMAIL
+  const apiKey = process.env.RESEND_API_KEY;
+  const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!apiKey) {
-    warnMissingEnv('RESEND_API_KEY', context)
-    return
+    warnMissingEnv('RESEND_API_KEY', context);
+    return;
   }
   if (!adminEmail) {
-    warnMissingEnv('ADMIN_EMAIL', context)
-    return
+    warnMissingEnv('ADMIN_EMAIL', context);
+    return;
   }
 
-  const resend = new Resend(apiKey)
+  const resend = new Resend(apiKey);
 
   // Defense-in-depth on the subject header: strip CR/LF from the final
   // string so untrusted input flowing into input.subject (venue names,
@@ -162,26 +162,26 @@ async function sendAdminAlert(
   const safeSubject = `${subjectPrefix()}${input.subject}`.replace(
     /[\r\n]+/g,
     ' ',
-  )
+  );
 
   await resend.emails.send({
     from: ALERT_FROM,
     to: adminEmail,
     subject: safeSubject,
     html: `${envBanner()}${input.html}`,
-  })
+  });
 }
 
 export interface CrawlFailureInput {
-  venueName: string
-  venueId: string
-  consecutiveFailures: number
+  venueName: string;
+  venueId: string;
+  consecutiveFailures: number;
 }
 
 export async function sendCrawlFailureEmail(
   input: CrawlFailureInput,
 ): Promise<void> {
-  const url = adminCrawlUrl(input.venueId)
+  const url = adminCrawlUrl(input.venueId);
   await sendAdminAlert('sendCrawlFailureEmail', {
     subject: `Crawl failing: ${input.venueName}`,
     html: `
@@ -190,47 +190,47 @@ export async function sendCrawlFailureEmail(
       <a href="${url}">admin crawl dashboard</a>
       to investigate and take action.</p>
     `,
-  })
+  });
 }
 
 export interface RunDegradedInput {
-  title: string
-  lines: string[]
+  title: string;
+  lines: string[];
 }
 
 export async function sendRunDegradedEmail(
   input: RunDegradedInput,
 ): Promise<void> {
-  const url = adminCrawlUrl()
+  const url = adminCrawlUrl();
   await sendAdminAlert('sendRunDegradedEmail', {
     subject: input.title,
     html: `
       ${input.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n')}
       <p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>
     `,
-  })
+  });
 }
 
 export interface EventCountDropInput {
-  venueName: string
-  venueId: string
-  crawlRunId: string
+  venueName: string;
+  venueId: string;
+  crawlRunId: string;
   /** Raw extractor output, before the downstream presale + canonical guards. */
-  eventsFound: number
+  eventsFound: number;
   /** Rows that survived those guards — what the alert is keyed on (#1167). */
-  eventsUsable: number
-  baselineCount: number
-  dropPercent: number
+  eventsUsable: number;
+  baselineCount: number;
+  dropPercent: number;
 }
 
 export async function sendEventCountDropEmail(
   input: EventCountDropInput,
 ): Promise<void> {
-  const url = adminCrawlUrl(input.venueId)
-  const severity = input.eventsUsable === 0 ? 'went dark' : 'dropped sharply'
+  const url = adminCrawlUrl(input.venueId);
+  const severity = input.eventsUsable === 0 ? 'went dark' : 'dropped sharply';
   // Extraction worked and the guards dropped everything — a different
   // diagnosis from "the page gave us nothing", so it gets different copy.
-  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0
+  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0;
   await sendAdminAlert('sendEventCountDropEmail', {
     subject: `Event count ${severity}: ${input.venueName}`,
     html: `
@@ -249,5 +249,5 @@ export async function sendEventCountDropEmail(
       <p>The crawl fetched and parsed the page without a hard failure, so nothing incremented the consecutive-failure counter and that alert path did <em>not</em> trigger — that's why you're getting this one instead.</p>
       <p><a href="${url}">Admin crawl dashboard</a></p>
     `,
-  })
+  });
 }

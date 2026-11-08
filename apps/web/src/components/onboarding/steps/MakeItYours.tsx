@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useTheme } from '@/theme/ThemeProvider'
-import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
-import { MiniMark } from '@/theme/MiniMark'
-import { ThemeSwatch } from '@/theme/ThemeSwatch'
-import { Eyebrow, Lede, StepHeading } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { useState, useEffect } from 'react';
+import { useTheme } from '@/theme/ThemeProvider';
+import { THEMES, THEME_META, type ThemeName } from '@/theme/themes';
+import { MiniMark } from '@/theme/MiniMark';
+import { ThemeSwatch } from '@/theme/ThemeSwatch';
+import { Eyebrow, Lede, StepHeading } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.makeItYours
-const preview = copy.preview
+const copy = ONBOARDING_COPY.makeItYours;
+const preview = copy.preview;
 
-const THEME_KEYS = Object.keys(THEMES) as ThemeName[]
+const THEME_KEYS = Object.keys(THEMES) as ThemeName[];
 
 function subLabel(meta: (typeof THEME_META)[ThemeName]): string {
-  return meta.role === 'base' ? `${meta.mode} · base` : meta.role
+  return meta.role === 'base' ? `${meta.mode} · base` : meta.role;
 }
 
 function HeroStrip({ themeName }: { themeName: ThemeName }) {
-  const tokens = THEMES[themeName]
-  const meta = THEME_META[themeName]
+  const tokens = THEMES[themeName];
+  const meta = THEME_META[themeName];
 
   return (
     <div
@@ -170,12 +170,12 @@ function HeroStrip({ themeName }: { themeName: ThemeName }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function CompactStrip({ themeName }: { themeName: ThemeName }) {
-  const tokens = THEMES[themeName]
-  const meta = THEME_META[themeName]
+  const tokens = THEMES[themeName];
+  const meta = THEME_META[themeName];
 
   return (
     <div
@@ -215,28 +215,28 @@ function CompactStrip({ themeName }: { themeName: ThemeName }) {
         </span>
       </div>
     </div>
-  )
+  );
 }
 
 export function MakeItYours() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
   const [isMobile, setIsMobile] = useState(
     () =>
       typeof window !== 'undefined' &&
       window.matchMedia('(max-width: 480px)').matches,
-  )
+  );
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 480px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 480px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   function handleSelect(name: ThemeName) {
-    setTheme(name)
-    localStorage.setItem('cc-onboarding-theme-pending', '1')
+    setTheme(name);
+    localStorage.setItem('cc-onboarding-theme-pending', '1');
   }
 
   return (
@@ -293,5 +293,5 @@ export function MakeItYours() {
         )}
       </div>
     </div>
-  )
+  );
 }

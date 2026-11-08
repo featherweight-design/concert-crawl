@@ -1,32 +1,32 @@
-'use client'
+'use client';
 
-import { useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { Rocket } from 'lucide-react'
+import { useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { Rocket } from 'lucide-react';
 import type {
   AdminFounderWindow,
   FounderWindowState,
-} from '@concert-crawl/types'
-import { apiClient, ApiError } from '@/lib/api'
+} from '@concert-crawl/types';
+import { apiClient, ApiError } from '@/lib/api';
 import {
   StatCard,
   Panel,
   AdminButton,
   RelTime,
   useDialogKeyboard,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const COPY = ADMIN_COPY.founderWindow
+const COPY = ADMIN_COPY.founderWindow;
 
 const STATE_KIND: Record<FounderWindowState, StatusKind> = {
   'pre-launch': 'neutral',
   open: 'success',
   closed: 'danger',
-}
+};
 
-type ActionKind = 'open' | 'simulate' | 'reset'
+type ActionKind = 'open' | 'simulate' | 'reset';
 
 const formatDateTime = (iso: string): string =>
   new Date(iso).toLocaleString('en-US', {
@@ -36,55 +36,55 @@ const formatDateTime = (iso: string): string =>
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  })
+  });
 
 interface FounderWindowControlProps {
-  initial: AdminFounderWindow
+  initial: AdminFounderWindow;
 }
 
 export const FounderWindowControl = ({
   initial,
 }: FounderWindowControlProps) => {
-  const { getToken } = useAuth()
-  const [win, setWin] = useState<AdminFounderWindow>(initial)
-  const [pending, setPending] = useState<ActionKind | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  const { getToken } = useAuth();
+  const [win, setWin] = useState<AdminFounderWindow>(initial);
+  const [pending, setPending] = useState<ActionKind | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<{
-    action: ActionKind
-    message: string
-  } | null>(null)
+    action: ActionKind;
+    message: string;
+  } | null>(null);
 
   const runAction = async (
     action: ActionKind,
     request: (token: string) => Promise<void>,
   ) => {
-    setPending(action)
-    setError(null)
+    setPending(action);
+    setError(null);
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setError({ action, message: COPY.errors.notAuthenticated })
-        return
+        setError({ action, message: COPY.errors.notAuthenticated });
+        return;
       }
-      await request(token)
+      await request(token);
     } catch (err) {
       const message =
         err instanceof ApiError
           ? err.message
           : err instanceof Error
             ? err.message
-            : COPY.errors.generic
-      setError({ action, message })
+            : COPY.errors.generic;
+      setError({ action, message });
     } finally {
-      setPending(null)
+      setPending(null);
     }
-  }
+  };
 
-  const launchError = error?.action === 'open' ? error.message : null
+  const launchError = error?.action === 'open' ? error.message : null;
   const rehearsalError =
     error?.action === 'simulate' || error?.action === 'reset'
       ? error.message
-      : null
+      : null;
 
   const openWindow = async () => {
     await runAction('open', async (token) => {
@@ -92,14 +92,14 @@ export const FounderWindowControl = ({
         '/v1/admin/founder-window/open',
         token,
         {},
-      )
-      setWin(data)
-    })
+      );
+      setWin(data);
+    });
     // Close on success or failure so a 409/auth error surfaces in the Launch
     // panel instead of staying hidden behind the modal. runAction swallows
     // errors internally, so this always runs.
-    setConfirmOpen(false)
-  }
+    setConfirmOpen(false);
+  };
 
   const simulateClaim = () =>
     runAction('simulate', async (token) => {
@@ -107,12 +107,12 @@ export const FounderWindowControl = ({
         '/v1/admin/founder-window/simulate-claim',
         token,
         {},
-      )
+      );
       setWin((prev) => ({
         ...prev,
         seatsRemainingTest: data.seatsRemainingTest,
-      }))
-    })
+      }));
+    });
 
   const resetTestSeats = () =>
     runAction('reset', async (token) => {
@@ -120,15 +120,15 @@ export const FounderWindowControl = ({
         '/v1/admin/founder-window/reset-test-seats',
         token,
         {},
-      )
+      );
       setWin((prev) => ({
         ...prev,
         seatsRemainingTest: data.seatsRemainingTest,
-      }))
-    })
+      }));
+    });
 
-  const isPreLaunch = win.state === 'pre-launch'
-  const isOpen = win.state === 'open'
+  const isPreLaunch = win.state === 'pre-launch';
+  const isOpen = win.state === 'open';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -329,20 +329,20 @@ export const FounderWindowControl = ({
         <FounderLaunchConfirm
           pending={pending === 'open'}
           onCancel={() => {
-            if (pending === 'open') return
-            setConfirmOpen(false)
+            if (pending === 'open') return;
+            setConfirmOpen(false);
           }}
           onConfirm={openWindow}
         />
       )}
     </div>
-  )
-}
+  );
+};
 
 interface FounderLaunchConfirmProps {
-  pending: boolean
-  onCancel: () => void
-  onConfirm: () => void
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
 }
 
 const FounderLaunchConfirm = ({
@@ -350,9 +350,9 @@ const FounderLaunchConfirm = ({
   onCancel,
   onConfirm,
 }: FounderLaunchConfirmProps) => {
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
-  const accent = 'var(--danger)'
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending });
+  const accent = 'var(--danger)';
   return (
     <div
       ref={panelRef}
@@ -370,8 +370,8 @@ const FounderLaunchConfirm = ({
         padding: 24,
       }}
       onClick={(evt) => {
-        if (pending) return
-        if (evt.target === evt.currentTarget) onCancel()
+        if (pending) return;
+        if (evt.target === evt.currentTarget) onCancel();
       }}
     >
       <div
@@ -439,5 +439,5 @@ const FounderLaunchConfirm = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

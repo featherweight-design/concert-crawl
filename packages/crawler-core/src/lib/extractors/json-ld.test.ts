@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import { extractJsonLd } from './json-ld.js'
+import { describe, it, expect } from 'vitest';
+import { extractJsonLd } from './json-ld.js';
 
-const SOURCE_URL = 'https://example.com/events'
+const SOURCE_URL = 'https://example.com/events';
 
 function makeHtml(jsonLd: object | object[]): string {
   return `<html><head>
     <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
-  </head><body></body></html>`
+  </head><body></body></html>`;
 }
 
 describe('extractJsonLd', () => {
@@ -18,18 +18,18 @@ describe('extractJsonLd', () => {
       startDate: '2026-08-15',
       performer: { name: 'Metallica' },
       url: 'https://example.com/tickets/metallica',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Metallica Live')
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Metallica Live');
     // JSON-LD never decorates titles — `rawTitle` mirrors `title` so the
     // cross-venue filter sees the same string regardless of extractor (#826).
-    expect(events[0]?.rawTitle).toBe('Metallica Live')
-    expect(events[0]?.artist).toBe('Metallica')
-    expect(events[0]?.date).toBe('2026-08-15')
-    expect(events[0]?.confidence).toBe(1.0)
-    expect(events[0]?.sourceUrl).toBe(SOURCE_URL)
-  })
+    expect(events[0]?.rawTitle).toBe('Metallica Live');
+    expect(events[0]?.artist).toBe('Metallica');
+    expect(events[0]?.date).toBe('2026-08-15');
+    expect(events[0]?.confidence).toBe(1.0);
+    expect(events[0]?.sourceUrl).toBe(SOURCE_URL);
+  });
 
   it('extracts MusicEvent objects', () => {
     const html = makeHtml({
@@ -38,11 +38,11 @@ describe('extractJsonLd', () => {
       name: 'Taylor Swift Night',
       startDate: '2026-09-01T19:30:00',
       performer: { name: 'Taylor Swift' },
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Taylor Swift Night')
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Taylor Swift Night');
+  });
 
   it('extracts multiple events from an array', () => {
     const html = makeHtml([
@@ -60,12 +60,12 @@ describe('extractJsonLd', () => {
         startDate: '2026-08-02',
         performer: { name: 'Band B' },
       },
-    ])
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(2)
-    expect(events[0]?.title).toBe('Show A')
-    expect(events[1]?.title).toBe('Show B')
-  })
+    ]);
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(2);
+    expect(events[0]?.title).toBe('Show A');
+    expect(events[1]?.title).toBe('Show B');
+  });
 
   it('extracts events from @graph', () => {
     const html = makeHtml({
@@ -78,27 +78,27 @@ describe('extractJsonLd', () => {
           performer: { name: 'Artist X' },
         },
       ],
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Graph Event')
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Graph Event');
+  });
 
   it('returns empty array when no JSON-LD found', () => {
-    const html = '<html><body><p>No structured data here</p></body></html>'
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(0)
-  })
+    const html = '<html><body><p>No structured data here</p></body></html>';
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(0);
+  });
 
   it('returns empty array when JSON-LD has no events', () => {
     const html = makeHtml({
       '@context': 'https://schema.org',
       '@type': 'Organization',
       name: 'Red Rocks',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(0)
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(0);
+  });
 
   it('extracts optional fields when present', () => {
     const html = makeHtml({
@@ -111,14 +111,14 @@ describe('extractJsonLd', () => {
       url: 'https://example.com/tickets/full',
       description: 'A full event description',
       image: 'https://example.com/image.jpg',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    const event = events[0]!
-    expect(event.ticketUrl).toBe('https://example.com/tickets/full')
-    expect(event.description).toBe('A full event description')
-    expect(event.imageUrl).toBeUndefined()
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    const event = events[0]!;
+    expect(event.ticketUrl).toBe('https://example.com/tickets/full');
+    expect(event.description).toBe('A full event description');
+    expect(event.imageUrl).toBeUndefined();
+  });
 
   it('captures the event detail page as eventUrl from schema.org url (#1152)', () => {
     const html = makeHtml({
@@ -128,13 +128,13 @@ describe('extractJsonLd', () => {
       startDate: '2026-08-20T20:00:00',
       performer: { name: 'Deep Link Band' },
       url: 'https://example.com/events/deep-link-1489047/',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
     expect(events[0]?.eventUrl).toBe(
       'https://example.com/events/deep-link-1489047/',
-    )
-  })
+    );
+  });
 
   it('prefers offers.url for ticketUrl while keeping the detail page as eventUrl (#1152)', () => {
     const html = makeHtml({
@@ -148,16 +148,16 @@ describe('extractJsonLd', () => {
         '@type': 'Offer',
         url: 'https://www.axs.com/events/1489047/offer-tickets',
       },
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
     expect(events[0]?.ticketUrl).toBe(
       'https://www.axs.com/events/1489047/offer-tickets',
-    )
+    );
     expect(events[0]?.eventUrl).toBe(
       'https://example.com/events/offer-1489047/',
-    )
-  })
+    );
+  });
 
   it('falls back to the detail page for ticketUrl when no offer URL exists (#1152)', () => {
     const html = makeHtml({
@@ -167,12 +167,12 @@ describe('extractJsonLd', () => {
       startDate: '2026-08-20T20:00:00',
       performer: { name: 'No Offer Band' },
       url: 'https://example.com/events/no-offer/',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.ticketUrl).toBe('https://example.com/events/no-offer/')
-    expect(events[0]?.eventUrl).toBe('https://example.com/events/no-offer/')
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.ticketUrl).toBe('https://example.com/events/no-offer/');
+    expect(events[0]?.eventUrl).toBe('https://example.com/events/no-offer/');
+  });
 
   it('ignores a whitespace-only offer URL and falls back to the detail page (#1152)', () => {
     const html = makeHtml({
@@ -183,12 +183,14 @@ describe('extractJsonLd', () => {
       performer: { name: 'Blank Offer Band' },
       url: 'https://example.com/events/blank-offer/',
       offers: { '@type': 'Offer', url: '   ' },
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.ticketUrl).toBe('https://example.com/events/blank-offer/')
-    expect(events[0]?.eventUrl).toBe('https://example.com/events/blank-offer/')
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.ticketUrl).toBe(
+      'https://example.com/events/blank-offer/',
+    );
+    expect(events[0]?.eventUrl).toBe('https://example.com/events/blank-offer/');
+  });
 
   it('strips HTML from the schema.org description field (#827)', () => {
     // schema.org `Event.description` commonly carries CMS-authored HTML
@@ -204,16 +206,16 @@ describe('extractJsonLd', () => {
       performer: { name: 'Test Band' },
       description:
         '<p>NPR&#039;s Tiny Desk Contest is back on the road in 2026!</p><p>This year&#039;s winner is Cure For Paranoia.</p>',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    const desc = events[0]!.description!
-    expect(desc).not.toMatch(/<p>/i)
-    expect(desc).not.toMatch(/&#039;/)
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    const desc = events[0]!.description!;
+    expect(desc).not.toMatch(/<p>/i);
+    expect(desc).not.toMatch(/&#039;/);
     expect(desc).toContain(
       "NPR's Tiny Desk Contest is back on the road in 2026!",
-    )
-  })
+    );
+  });
 
   it('omits description entirely when source is HTML that strips to empty (#827)', () => {
     const html = makeHtml({
@@ -223,19 +225,19 @@ describe('extractJsonLd', () => {
       startDate: '2026-08-23',
       performer: { name: 'Empty Band' },
       description: '<p>   </p><p></p>',
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]!.description).toBeUndefined()
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.description).toBeUndefined();
+  });
 
   it('handles malformed JSON-LD gracefully', () => {
     const html = `<html><head>
       <script type="application/ld+json">{ invalid json }</script>
-    </head></html>`
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(0)
-  })
+    </head></html>`;
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(0);
+  });
 
   // The Oriental Theater's CMS emits event titles verbatim, so a title
   // containing quotation marks produces a JSON-LD block with unescaped inner
@@ -252,33 +254,33 @@ describe('extractJsonLd', () => {
           "performer": { "name": "All Shall Perish" }
         }
       </script>
-    </head></html>`
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
+    </head></html>`;
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
     expect(events[0]?.title).toBe(
       'All Shall Perish - 20th Anniversary of "The Price Of Existence" Album',
-    )
-    expect(events[0]?.date).toBe('2026-09-09')
-  })
+    );
+    expect(events[0]?.date).toBe('2026-09-09');
+  });
 
   it('keeps parsing sibling blocks when one block is unrepairable', () => {
     const html = `<html><head>
       <script type="application/ld+json">{ "@type": "Event", "name": }</script>
       <script type="application/ld+json">${JSON.stringify({ '@type': 'Event', name: 'Good Show', startDate: '2026-08-02', performer: { name: 'Artist' } })}</script>
-    </head></html>`
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Good Show')
-  })
+    </head></html>`;
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Good Show');
+  });
 
   it('handles multiple script tags and picks events from each', () => {
     const html = `<html><head>
       <script type="application/ld+json">${JSON.stringify({ '@type': 'Event', name: 'Event One', startDate: '2026-08-01', performer: { name: 'Artist One' } })}</script>
       <script type="application/ld+json">${JSON.stringify({ '@type': 'Event', name: 'Event Two', startDate: '2026-08-02', performer: { name: 'Artist Two' } })}</script>
-    </head></html>`
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events).toHaveLength(2)
-  })
+    </head></html>`;
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events).toHaveLength(2);
+  });
 
   describe('venue-timezone-aware date extraction', () => {
     it('shifts UTC-suffixed late-night startDate back to venue-local previous day', () => {
@@ -290,12 +292,12 @@ describe('extractJsonLd', () => {
         name: 'Swing Nights',
         startDate: '2026-06-16T04:00:00Z',
         performer: { name: 'Swing Nights Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events).toHaveLength(1)
-      expect(events[0]?.date).toBe('2026-06-15')
-      expect(events[0]?.showTime).toBe('22:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events).toHaveLength(1);
+      expect(events[0]?.date).toBe('2026-06-15');
+      expect(events[0]?.showTime).toBe('22:00:00');
+    });
 
     it('skips an event whose startDate has a timezone but is not a real instant', () => {
       // Matches HAS_EXPLICIT_TZ yet yields an Invalid Date. Before the shared
@@ -307,9 +309,9 @@ describe('extractJsonLd', () => {
         name: 'Impossible Date',
         startDate: '2026-13-45T99:00:00Z',
         performer: { name: 'Nobody' },
-      })
-      expect(extractJsonLd(html, SOURCE_URL, 'America/Denver')).toEqual([])
-    })
+      });
+      expect(extractJsonLd(html, SOURCE_URL, 'America/Denver')).toEqual([]);
+    });
 
     it('preserves an explicit local-offset startDate as-is', () => {
       // Same instant, expressed with venue-local offset — no shift needed.
@@ -319,12 +321,12 @@ describe('extractJsonLd', () => {
         name: 'Local Offset Show',
         startDate: '2026-06-15T22:00:00-06:00',
         performer: { name: 'Local Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events).toHaveLength(1)
-      expect(events[0]?.date).toBe('2026-06-15')
-      expect(events[0]?.showTime).toBe('22:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events).toHaveLength(1);
+      expect(events[0]?.date).toBe('2026-06-15');
+      expect(events[0]?.showTime).toBe('22:00:00');
+    });
 
     it('handles standard-time DST boundary (MST = UTC-7)', () => {
       // Sat Jan 10 22:00 MST (UTC-7) = Sun Jan 11 05:00 UTC.
@@ -334,12 +336,12 @@ describe('extractJsonLd', () => {
         name: 'January Show',
         startDate: '2026-01-11T05:00:00Z',
         performer: { name: 'Winter Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events).toHaveLength(1)
-      expect(events[0]?.date).toBe('2026-01-10')
-      expect(events[0]?.showTime).toBe('22:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events).toHaveLength(1);
+      expect(events[0]?.date).toBe('2026-01-10');
+      expect(events[0]?.showTime).toBe('22:00:00');
+    });
 
     it('leaves naive (no-timezone) datetimes interpreted in venue zone', () => {
       // No Z, no offset — treat as already venue-local (existing behavior).
@@ -349,12 +351,12 @@ describe('extractJsonLd', () => {
         name: 'Naive Show',
         startDate: '2026-06-15T22:00:00',
         performer: { name: 'Naive Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events).toHaveLength(1)
-      expect(events[0]?.date).toBe('2026-06-15')
-      expect(events[0]?.showTime).toBe('22:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events).toHaveLength(1);
+      expect(events[0]?.date).toBe('2026-06-15');
+      expect(events[0]?.showTime).toBe('22:00:00');
+    });
 
     it('leaves date-only startDate untouched regardless of timezone', () => {
       const html = makeHtml({
@@ -363,12 +365,12 @@ describe('extractJsonLd', () => {
         name: 'Date Only',
         startDate: '2026-08-15',
         performer: { name: 'Date Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events).toHaveLength(1)
-      expect(events[0]?.date).toBe('2026-08-15')
-      expect(events[0]?.showTime).toBeUndefined()
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events).toHaveLength(1);
+      expect(events[0]?.date).toBe('2026-08-15');
+      expect(events[0]?.showTime).toBeUndefined();
+    });
 
     it('also converts doorTime to venue-local time', () => {
       const html = makeHtml({
@@ -378,10 +380,10 @@ describe('extractJsonLd', () => {
         startDate: '2026-06-16T04:00:00Z',
         doorTime: '2026-06-16T03:00:00Z',
         performer: { name: 'Doors Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events[0]?.doorsTime).toBe('21:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events[0]?.doorsTime).toBe('21:00:00');
+    });
 
     it('falls back to UTC and keeps extracting when venue timezone is invalid', () => {
       // venues.timezone is plain text — a typo would otherwise crash via RangeError.
@@ -391,14 +393,14 @@ describe('extractJsonLd', () => {
         name: 'Bad TZ Show',
         startDate: '2026-06-16T04:00:00Z',
         performer: { name: 'Bad TZ Band' },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denvr')
-      expect(events).toHaveLength(1)
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denvr');
+      expect(events).toHaveLength(1);
       // Falls back to UTC, so the UTC startDate is preserved as-is.
-      expect(events[0]?.date).toBe('2026-06-16')
-      expect(events[0]?.showTime).toBe('04:00:00')
-    })
-  })
+      expect(events[0]?.date).toBe('2026-06-16');
+      expect(events[0]?.showTime).toBe('04:00:00');
+    });
+  });
 
   it('maps trailing JSON-LD performers to supportingArtists', () => {
     const html = makeHtml({
@@ -410,11 +412,11 @@ describe('extractJsonLd', () => {
         { '@type': 'MusicGroup', name: 'Wednesday' },
         { '@type': 'MusicGroup', name: 'Hotline TNT' },
       ],
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events[0]?.artist).toBe('Wednesday')
-    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events[0]?.artist).toBe('Wednesday');
+    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT']);
+  });
 
   it('drops performers that repeat the headliner, case-insensitively (#643)', () => {
     // Real prod case: a venue listed the headliner twice in `performer[]`, so
@@ -429,11 +431,11 @@ describe('extractJsonLd', () => {
         { '@type': 'MusicGroup', name: 'vandoliers' },
         { '@type': 'MusicGroup', name: 'Mya Byrne' },
       ],
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events[0]?.artist).toBe('Vandoliers')
-    expect(events[0]?.supportingArtists).toEqual(['Mya Byrne'])
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events[0]?.artist).toBe('Vandoliers');
+    expect(events[0]?.supportingArtists).toEqual(['Mya Byrne']);
+  });
 
   it('trims and drops blank JSON-LD performer names', () => {
     const html = makeHtml({
@@ -446,11 +448,11 @@ describe('extractJsonLd', () => {
         { '@type': 'MusicGroup', name: '   ' },
         { '@type': 'MusicGroup', name: 'Hotline TNT' },
       ],
-    })
-    const events = extractJsonLd(html, SOURCE_URL)
-    expect(events[0]?.artist).toBe('Wednesday')
-    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
-  })
+    });
+    const events = extractJsonLd(html, SOURCE_URL);
+    expect(events[0]?.artist).toBe('Wednesday');
+    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT']);
+  });
 
   // Hold My Ticket — the Oriental Theater's vendor — emits both of these
   // shapes on every event. See issue #1287.
@@ -462,12 +464,12 @@ describe('extractJsonLd', () => {
         name: 'Carnivale De Sensuale',
         startDate: '2026-08-01 20:00:00',
         doorTime: '2026-08-01 19:00:00',
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events[0]?.date).toBe('2026-08-01')
-      expect(events[0]?.showTime).toBe('20:00:00')
-      expect(events[0]?.doorsTime).toBe('19:00:00')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events[0]?.date).toBe('2026-08-01');
+      expect(events[0]?.showTime).toBe('20:00:00');
+      expect(events[0]?.doorsTime).toBe('19:00:00');
+    });
 
     it('unwraps an AggregateOffer to find the purchase link', () => {
       const html = makeHtml({
@@ -482,10 +484,10 @@ describe('extractJsonLd', () => {
             { '@type': 'Offer', url: 'https://holdmyticket.com/tickets/2' },
           ],
         },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
-      expect(events[0]?.ticketUrl).toBe('https://holdmyticket.com/tickets/1')
-    })
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
+      expect(events[0]?.ticketUrl).toBe('https://holdmyticket.com/tickets/1');
+    });
 
     it('prefers a top-level offer url over a nested one', () => {
       const html = makeHtml({
@@ -498,11 +500,11 @@ describe('extractJsonLd', () => {
           url: 'https://holdmyticket.com/tickets/direct',
           offers: [{ '@type': 'Offer', url: 'https://example.com/nested' }],
         },
-      })
-      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      });
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver');
       expect(events[0]?.ticketUrl).toBe(
         'https://holdmyticket.com/tickets/direct',
-      )
-    })
-  })
-})
+      );
+    });
+  });
+});

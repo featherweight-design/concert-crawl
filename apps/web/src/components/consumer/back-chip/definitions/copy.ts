@@ -2,4 +2,4 @@
 export const BACK_CHIP_COPY = {
   /** Accessible name for the back chip. */
   label: 'Back',
-} as const
+} as const;

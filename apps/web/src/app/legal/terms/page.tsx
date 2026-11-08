@@ -1,30 +1,30 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import type { Metadata } from 'next';
+import Link from 'next/link';
 
-import { LEGAL_COPY } from '../definitions/copy'
+import { LEGAL_COPY } from '../definitions/copy';
 
 export const metadata: Metadata = {
   title: 'Terms of Service — Concert Crawl',
   robots: { index: false },
-}
+};
 
 function Section({
   title,
   children,
 }: {
-  title: string
-  children: React.ReactNode
+  title: string;
+  children: React.ReactNode;
 }) {
   return (
     <section>
       <h2 className="mb-3 text-base font-bold text-fg">{title}</h2>
       <div className="space-y-3 text-fg-muted">{children}</div>
     </section>
-  )
+  );
 }
 
 export default function TermsPage() {
-  const copy = LEGAL_COPY.terms
+  const copy = LEGAL_COPY.terms;
 
   return (
     <div className="min-h-screen bg-bg text-fg">
@@ -153,5 +153,5 @@ export default function TermsPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

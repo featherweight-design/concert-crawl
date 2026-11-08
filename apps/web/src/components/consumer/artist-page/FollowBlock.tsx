@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 
-import { ARTIST_COPY } from './definitions/copy'
-import { FollowButton, type FollowButtonProps } from './FollowButton'
+import { ARTIST_COPY } from './definitions/copy';
+import { FollowButton, type FollowButtonProps } from './FollowButton';
 
-type FollowBlockProps = Omit<FollowButtonProps, 'size' | 'tone' | 'full'>
+type FollowBlockProps = Omit<FollowButtonProps, 'size' | 'tone' | 'full'>;
 
 /**
  * The full-width follow bar plus the one line that says what a follow actually
@@ -13,14 +13,14 @@ type FollowBlockProps = Omit<FollowButtonProps, 'size' | 'tone' | 'full'>
  * an automatic entry in Watching, because a manual follow delivers neither.
  */
 export const FollowBlock = (props: FollowBlockProps) => {
-  const { following, signedOut, locked = false } = props
+  const { following, signedOut, locked = false } = props;
   // A locked plan cannot be following, whatever the prop says, so it never gets
   // the "you're following" line.
   const pitch = signedOut
     ? ARTIST_COPY.followSignedOutPitch
     : following && !locked
       ? ARTIST_COPY.followPitchActive
-      : ARTIST_COPY.followPitch
+      : ARTIST_COPY.followPitch;
 
   return (
     <div>
@@ -40,5 +40,5 @@ export const FollowBlock = (props: FollowBlockProps) => {
         {pitch}
       </p>
     </div>
-  )
-}
+  );
+};

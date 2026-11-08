@@ -36,7 +36,7 @@ The manifest file uses Next.js's built-in `MetadataRoute.Manifest` type and is a
 - [ ] **Step 1: Create `apps/web/src/app/manifest.ts`**
 
 ```ts
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -60,7 +60,7 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
     ],
-  }
+  };
 }
 ```
 
@@ -92,9 +92,9 @@ Route handlers that return images must use `.tsx` extension (JSX required for `I
 - [ ] **Step 1: Create `apps/web/src/app/api/pwa/icon-192/route.tsx`**
 
 ```tsx
-import { ImageResponse } from 'next/og'
+import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge'
+export const runtime = 'edge';
 
 export function GET() {
   return new ImageResponse(
@@ -122,7 +122,7 @@ export function GET() {
       <circle cx="14" cy="32" r="1.6" fill="#E8F3FF" opacity="0.87" />
     </svg>,
     { width: 192, height: 192 },
-  )
+  );
 }
 ```
 
@@ -154,9 +154,9 @@ Identical to the 192 route — only `width`, `height`, and the `ImageResponse` s
 - [ ] **Step 1: Create `apps/web/src/app/api/pwa/icon-512/route.tsx`**
 
 ```tsx
-import { ImageResponse } from 'next/og'
+import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge'
+export const runtime = 'edge';
 
 export function GET() {
   return new ImageResponse(
@@ -184,7 +184,7 @@ export function GET() {
       <circle cx="14" cy="32" r="1.6" fill="#E8F3FF" opacity="0.87" />
     </svg>,
     { width: 512, height: 512 },
-  )
+  );
 }
 ```
 

@@ -1,28 +1,28 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, eq, sql } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   db,
   events,
   priceSubmissions,
   submissionConfirms,
   venues,
-} from '@concert-crawl/db'
-import { SP_POLICY } from '@concert-crawl/types'
-import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
-import { isImminentEvent } from '../lib/time.js'
+} from '@concert-crawl/db';
+import { SP_POLICY } from '@concert-crawl/types';
+import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
+import { isImminentEvent } from '../lib/time.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
   type PriceDrop,
-} from '../lib/price-drop.js'
+} from '../lib/price-drop.js';
 
 const confirmBodySchema = z.object({
   method: z.enum(['same-vendor', 'other-vendor', 'box-office']),
-})
+});
 
-export const priceSubmissionConfirmsRouter = new Hono()
+export const priceSubmissionConfirmsRouter = new Hono();
 
 // POST /v1/events/:id/price-submissions/:submissionId/confirm
 priceSubmissionConfirmsRouter.post(
@@ -38,13 +38,13 @@ priceSubmissionConfirmsRouter.post(
           details: result.error.flatten(),
         },
         422,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { id: eventId, submissionId } = ctx.req.param()
-    const { userId } = getAuthUser(ctx)
-    const { method } = ctx.req.valid('json')
+    const { id: eventId, submissionId } = ctx.req.param();
+    const { userId } = getAuthUser(ctx);
+    const { method } = ctx.req.valid('json');
 
     // Up-front event visibility check. Hidden events are treated as not
     // found everywhere else in the consumer API (see price-submissions.ts);
@@ -60,10 +60,10 @@ priceSubmissionConfirmsRouter.post(
         and(eq(venues.id, events.venueId), eq(venues.active, true)),
       )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-      .limit(1)
+      .limit(1);
 
     if (!eventRow) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
     // Fetch the submission, verify it belongs to this event
@@ -78,24 +78,24 @@ priceSubmissionConfirmsRouter.post(
       })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, submissionId))
-      .limit(1)
+      .limit(1);
 
     if (!submission || submission.eventId !== eventId) {
-      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
     }
 
     if (submission.status !== 'pending') {
       return ctx.json(
         { success: false, error: 'Submission is not pending' },
         400,
-      )
+      );
     }
 
     if (submission.userId === userId) {
       return ctx.json(
         { success: false, error: 'Cannot confirm your own submission' },
         403,
-      )
+      );
     }
 
     const confirmsRequired = isImminentEvent(
@@ -103,7 +103,7 @@ priceSubmissionConfirmsRouter.post(
       SP_POLICY.imminentThresholdDays,
     )
       ? SP_POLICY.confirmsRequiredImminent
-      : SP_POLICY.confirmsRequired
+      : SP_POLICY.confirmsRequired;
 
     // Wrap the insert + atomic update + promote in a transaction so that:
     //   1. If the partial unique index on (event_id, tier, source_category)
@@ -117,25 +117,26 @@ priceSubmissionConfirmsRouter.post(
     //      `total observations + 1 >= confirmsRequired`.
     let updated:
       | {
-          corroborationCount: number
-          status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-          updatedAt: Date
+          corroborationCount: number;
+          status:
+            'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+          updatedAt: Date;
         }
-      | undefined
-    let pricedrop: PriceDrop | undefined
-    let alreadyConfirmed = false
-    let uniqueViolation = false
+      | undefined;
+    let pricedrop: PriceDrop | undefined;
+    let alreadyConfirmed = false;
+    let uniqueViolation = false;
     try {
       const txResult = await db.transaction(async (tx) => {
         const [insertedConfirm] = await tx
           .insert(submissionConfirms)
           .values({ submissionId, userId, method })
           .onConflictDoNothing()
-          .returning()
+          .returning();
 
         if (!insertedConfirm) {
-          alreadyConfirmed = true
-          return undefined
+          alreadyConfirmed = true;
+          return undefined;
         }
 
         const [updatedRow] = await tx
@@ -156,7 +157,7 @@ priceSubmissionConfirmsRouter.post(
             // #1311: the committed now() of this promotion, the price-drop
             // fan-out's transition marker.
             updatedAt: priceSubmissions.updatedAt,
-          })
+          });
 
         // Promotion propagates the corroborated community price to the
         // event, inside the same transaction so a 23505 rollback can't leave
@@ -170,14 +171,14 @@ priceSubmissionConfirmsRouter.post(
         // which would otherwise deadlock against this tx's submission lock.
         // Lock order matches every price writer: submission rows first
         // (the UPDATE above), event row second.
-        let drop: PriceDrop | undefined
+        let drop: PriceDrop | undefined;
         if (updatedRow?.status === 'corroborated') {
           const [preEvent] = await tx
             .select({ ticketPriceMin: events.ticketPriceMin })
             .from(events)
             .where(eq(events.id, eventId))
             .for('no key update')
-            .limit(1)
+            .limit(1);
 
           await tx
             .update(events)
@@ -187,19 +188,19 @@ priceSubmissionConfirmsRouter.post(
               priceSource: 'community',
               updatedAt: sql`now()`,
             })
-            .where(eq(events.id, eventId))
+            .where(eq(events.id, eventId));
 
           drop = detectPriceDrop(
             eventId,
             preEvent?.ticketPriceMin,
             submission.priceMin,
-          )
+          );
         }
 
-        return { updatedRow, drop }
-      })
-      updated = txResult?.updatedRow
-      pricedrop = txResult?.drop
+        return { updatedRow, drop };
+      });
+      updated = txResult?.updatedRow;
+      pricedrop = txResult?.drop;
     } catch (error) {
       // Match by Postgres error code (more reliable than string-matching the
       // wrapped message — `.cause` isn't always populated, but `.code` is).
@@ -214,11 +215,11 @@ priceSubmissionConfirmsRouter.post(
               error.cause instanceof Error &&
               'code' in error.cause
             ? (error.cause as { code?: string }).code
-            : undefined
+            : undefined;
       if (errorCode === '23505') {
-        uniqueViolation = true
+        uniqueViolation = true;
       } else {
-        throw error
+        throw error;
       }
     }
 
@@ -226,7 +227,7 @@ priceSubmissionConfirmsRouter.post(
       return ctx.json(
         { success: false, error: 'Already confirmed this submission' },
         409,
-      )
+      );
     }
 
     if (uniqueViolation) {
@@ -237,11 +238,11 @@ priceSubmissionConfirmsRouter.post(
             'A corroborated box-office price already exists for this tier — submit a counter-price instead of confirming this one.',
         },
         409,
-      )
+      );
     }
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
     }
 
     // #1107: fan out watch.pricedrop to status='watching' users only after
@@ -253,14 +254,14 @@ priceSubmissionConfirmsRouter.post(
       await fanoutPriceDrop(
         pricedrop,
         `submission:${submissionId}:${updated.updatedAt.toISOString()}`,
-      )
+      );
     }
 
     // `confirmsCount` in the response is the count of non-submitter confirms
     // (excludes the submitter). corroborationCount = submitter + confirms, so
     // confirms = corroborationCount - 1.
-    const confirmsCount = updated.corroborationCount - 1
-    const submissionStatus = updated.status
+    const confirmsCount = updated.corroborationCount - 1;
+    const submissionStatus = updated.status;
 
     return ctx.json({
       success: true,
@@ -269,6 +270,6 @@ priceSubmissionConfirmsRouter.post(
         submissionStatus,
         confirmsCount,
       },
-    })
+    });
   },
-)
+);

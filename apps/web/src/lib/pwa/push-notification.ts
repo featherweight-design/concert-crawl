@@ -5,67 +5,67 @@
 
 /** Payload shape sent by packages/push/src/send-push.ts. */
 export interface PushPayload {
-  title: string
-  body: string
-  actionUrl?: string
-  tag?: string
+  title: string;
+  body: string;
+  actionUrl?: string;
+  tag?: string;
   /**
    * Post to the shade without sound or vibration. Set by the sender's
    * per-category delivery policy — the new-show fan-out rides the 3 AM crawl,
    * so those arrive quietly. Absent means audible.
    */
-  silent?: boolean
+  silent?: boolean;
 }
 
 export const isValidPushPayload = (value: unknown): value is PushPayload => {
-  if (typeof value !== 'object' || value === null) return false
-  if (!('title' in value) || typeof value.title !== 'string') return false
-  if (value.title.length === 0 || value.title.length > 200) return false
-  if (!('body' in value) || typeof value.body !== 'string') return false
-  if (value.body.length === 0 || value.body.length > 500) return false
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('title' in value) || typeof value.title !== 'string') return false;
+  if (value.title.length === 0 || value.title.length > 200) return false;
+  if (!('body' in value) || typeof value.body !== 'string') return false;
+  if (value.body.length === 0 || value.body.length > 500) return false;
   if (
     'actionUrl' in value &&
     typeof value.actionUrl !== 'string' &&
     value.actionUrl !== undefined
   ) {
-    return false
+    return false;
   }
   if (
     'tag' in value &&
     typeof value.tag !== 'string' &&
     value.tag !== undefined
   ) {
-    return false
+    return false;
   }
   if (
     'silent' in value &&
     typeof value.silent !== 'boolean' &&
     value.silent !== undefined
   ) {
-    return false
+    return false;
   }
-  return true
-}
+  return true;
+};
 
 // Constrain actionUrl to a same-origin path — push payloads are untrusted
 // input, and `notification.data` persists across events, so a malicious value
 // must never reach `client.navigate` / `openWindow` as a full URL.
 export const safeSameOriginPath = (raw: unknown, origin: string): string => {
-  if (typeof raw !== 'string' || raw.length === 0) return '/'
+  if (typeof raw !== 'string' || raw.length === 0) return '/';
   try {
-    const resolved = new URL(raw, origin)
+    const resolved = new URL(raw, origin);
     if (resolved.origin !== origin) {
       // Log the drop so a compromised push endpoint injecting external URLs is
       // visible rather than silently coerced to the home route.
-      console.warn('sw: dropped cross-origin actionUrl', { raw })
-      return '/'
+      console.warn('sw: dropped cross-origin actionUrl', { raw });
+      return '/';
     }
-    return `${resolved.pathname}${resolved.search}${resolved.hash}`
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
   } catch (parseErr) {
-    console.warn('sw: dropped unparseable actionUrl', { raw, err: parseErr })
-    return '/'
+    console.warn('sw: dropped unparseable actionUrl', { raw, err: parseErr });
+    return '/';
   }
-}
+};
 
 export const buildNotificationOptions = (
   payload: PushPayload,
@@ -81,4 +81,4 @@ export const buildNotificationOptions = (
   // that keeps the door open for a future vibrate without this line quietly
   // invalidating it.
   ...(payload.silent ? { silent: true } : {}),
-})
+});

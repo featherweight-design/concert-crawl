@@ -1,1 +1,1 @@
-export { LoadMoreButton } from './LoadMoreButton'
+export { LoadMoreButton } from './LoadMoreButton';

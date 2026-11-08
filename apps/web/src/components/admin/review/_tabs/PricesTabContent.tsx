@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { type ComponentProps } from 'react'
-import { PriceCoverageTable } from '../PriceCoverageTable'
+import { type ComponentProps } from 'react';
+import { PriceCoverageTable } from '../PriceCoverageTable';
 
-type CoverageProps = ComponentProps<typeof PriceCoverageTable>
+type CoverageProps = ComponentProps<typeof PriceCoverageTable>;
 
 export interface PricesTabContentProps {
-  priceEvents: CoverageProps['events']
-  priceEventsLoading: NonNullable<CoverageProps['loading']>
-  pricesMissingOnly: CoverageProps['missingOnly']
-  onTogglePriceFilter: CoverageProps['onToggleFilter']
-  priceEventsPage: CoverageProps['page']
-  priceEventsPageSize: CoverageProps['pageSize']
-  priceEventsTotal: CoverageProps['total']
-  onPriceEventsPageChange: CoverageProps['onPageChange']
-  onPriceEventsPageSizeChange: CoverageProps['onPageSizeChange']
-  onAddPrice: NonNullable<CoverageProps['onAddPrice']>
+  priceEvents: CoverageProps['events'];
+  priceEventsLoading: NonNullable<CoverageProps['loading']>;
+  pricesMissingOnly: CoverageProps['missingOnly'];
+  onTogglePriceFilter: CoverageProps['onToggleFilter'];
+  priceEventsPage: CoverageProps['page'];
+  priceEventsPageSize: CoverageProps['pageSize'];
+  priceEventsTotal: CoverageProps['total'];
+  onPriceEventsPageChange: CoverageProps['onPageChange'];
+  onPriceEventsPageSizeChange: CoverageProps['onPageSizeChange'];
+  onAddPrice: NonNullable<CoverageProps['onAddPrice']>;
 }
 
 export const PricesTabContent = ({
@@ -44,4 +44,4 @@ export const PricesTabContent = ({
       onPageSizeChange={onPriceEventsPageSizeChange}
     />
   </div>
-)
+);

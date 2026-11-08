@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import type { CrewSummary, VenuePublic } from '@concert-crawl/types'
-import { CrewLensPill, CrewLensRail } from '@/components/consumer/crews'
-import { cn } from '@/lib/utils'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { FilterPopover } from './FilterPopover'
-import { FilterSheet } from './FilterSheet'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import type { CrewSummary, VenuePublic } from '@concert-crawl/types';
+import { CrewLensPill, CrewLensRail } from '@/components/consumer/crews';
+import { cn } from '@/lib/utils';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { FilterPopover } from './FilterPopover';
+import { FilterSheet } from './FilterSheet';
 import {
   FILTER_DEFS,
   FILTER_ORDER,
@@ -15,36 +15,36 @@ import {
   getActiveFilterCount,
   getActiveFilterLabel,
   getFilterOptions,
-} from './filter-defs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { TasteFilterChip } from './TasteFilterChip'
-import { FollowFilterChip } from './FollowFilterChip'
+} from './filter-defs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { TasteFilterChip } from './TasteFilterChip';
+import { FollowFilterChip } from './FollowFilterChip';
 
-const copy = CONSUMER_COPY.filterBar
+const copy = CONSUMER_COPY.filterBar;
 
 interface FilterBarProps {
-  venues: VenuePublic[]
-  genres?: string[]
-  className?: string
+  venues: VenuePublic[];
+  genres?: string[];
+  className?: string;
   // Server-resolved SCA-region boolean for the taste chip's tier-picker
   // handoff (#763 PR 7). Defaults true (fail-safe): isScaRegion treats an
   // unknown country as SCA, so unresolved mounts must show the notice too.
-  scaRegion?: boolean
+  scaRegion?: boolean;
   /**
    * The viewer's crews, for the Browse lens (#1226). Empty or absent hides the
    * lens pill entirely: a control that can only ever open an empty picker is
    * worse than no control.
    */
-  crews?: CrewSummary[]
+  crews?: CrewSummary[];
   /** Shows in the active lens, for the rail's count. Null when it failed. */
-  lensCount?: number | null
+  lensCount?: number | null;
   /**
    * Follows the server counted, for the "My artists" chip (native following,
    * PR 4). `null` means UNKNOWN — the seed failed, or there was no session to
    * read it with — and the chip keeps rendering rather than vanishing on a
    * viewer who follows fifty artists. `0` is a claim; `null` is an admission.
    */
-  followCount?: number | null
+  followCount?: number | null;
 }
 
 function IconList({ size = 13 }: { size?: number }) {
@@ -57,7 +57,7 @@ function IconList({ size = 13 }: { size?: number }) {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconCal({ size = 13 }: { size?: number }) {
@@ -81,7 +81,7 @@ function IconCal({ size = 13 }: { size?: number }) {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 function IconChevDown({ size = 11 }: { size?: number }) {
@@ -102,7 +102,7 @@ function IconChevDown({ size = 11 }: { size?: number }) {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 export function FilterBar({
@@ -114,110 +114,110 @@ export function FilterBar({
   lensCount = null,
   followCount = null,
 }: FilterBarProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
   // Gated at the source rather than at each render site: `lensCrew` is
   // resolved out of this list, so emptying it drops the pill, the rail and the
   // crew name in the heading together. Gating the two render sites alone would
   // still print the crew's name in the <h1> for anyone holding a `?crew=` URL.
-  const { enabled: crewsEnabled } = useFeatureFlag('crews')
-  const crews = crewsEnabled ? crewsProp : []
+  const { enabled: crewsEnabled } = useFeatureFlag('crews');
+  const crews = crewsEnabled ? crewsProp : [];
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
         if (value) {
-          params.set(key, value)
+          params.set(key, value);
         } else {
-          params.delete(key)
+          params.delete(key);
         }
       }
-      params.delete('offset')
+      params.delete('offset');
       startTransition(() => {
-        const query = params.toString()
+        const query = params.toString();
         router.replace(query ? `${pathname}?${query}` : pathname, {
           scroll: false,
-        })
-      })
+        });
+      });
     },
     [pathname, router, searchParams],
-  )
+  );
 
-  const [openFilterKey, setOpenFilterKey] = useState<FilterKey | null>(null)
-  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
-  const [isDesktop, setIsDesktop] = useState(false)
+  const [openFilterKey, setOpenFilterKey] = useState<FilterKey | null>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
   const chipRefs = useRef<Record<FilterKey, HTMLButtonElement | null>>({
     when: null,
     where: null,
     price: null,
     vibe: null,
-  })
+  });
 
   const filterValues: Partial<Record<FilterKey, string>> = {
     when: searchParams.get('filterWhen') ?? '',
     where: searchParams.get('filterWhere') ?? '',
     price: searchParams.get('filterPrice') ?? '',
     vibe: searchParams.get('filterVibe') ?? '',
-  }
+  };
 
-  const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal'
-  const activeFilterCount = getActiveFilterCount(filterValues)
+  const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal';
+  const activeFilterCount = getActiveFilterCount(filterValues);
   // Taste scope (#763 PR 7) — a mode, not a dimension: excluded from the
   // active-filter count / Clear all (it has its own ✕ on the chip).
-  const tasteActive = searchParams.get('filterTaste') === '1'
+  const tasteActive = searchParams.get('filterTaste') === '1';
   // Same treatment for the follow scope: a mode, not a dimension.
-  const followActive = searchParams.get('filterFollowing') === '1'
+  const followActive = searchParams.get('filterFollowing') === '1';
 
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 640px)')
-    const apply = () => setIsDesktop(media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [])
+    const media = window.matchMedia('(min-width: 640px)');
+    const apply = () => setIsDesktop(media.matches);
+    apply();
+    media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
 
   useEffect(() => {
-    if (!openFilterKey || !isDesktop) return
-    const nextAnchor = chipRefs.current[openFilterKey]
-    setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null)
-  }, [openFilterKey, isDesktop])
+    if (!openFilterKey || !isDesktop) return;
+    const nextAnchor = chipRefs.current[openFilterKey];
+    setAnchorRect(nextAnchor?.getBoundingClientRect() ?? null);
+  }, [openFilterKey, isDesktop]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpenFilterKey(null)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+      if (event.key === 'Escape') setOpenFilterKey(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
-  const activeDef = openFilterKey ? FILTER_DEFS[openFilterKey] : null
+  const activeDef = openFilterKey ? FILTER_DEFS[openFilterKey] : null;
   const activeOptions = openFilterKey
     ? getFilterOptions(openFilterKey, venues, genres)
-    : []
-  const activeValue = openFilterKey ? (filterValues[openFilterKey] ?? '') : ''
+    : [];
+  const activeValue = openFilterKey ? (filterValues[openFilterKey] ?? '') : '';
 
   const setFilterValue = useCallback(
     (key: FilterKey, value: string) => {
-      updateParams({ [FILTER_DEFS[key].queryKey]: value })
+      updateParams({ [FILTER_DEFS[key].queryKey]: value });
     },
     [updateParams],
-  )
+  );
 
   // The lens rides a search param like every other Browse state, so it
   // survives a refresh and a shared URL. An id with no matching crew (a stale
   // link, a crew since left) resolves to null and the page reads as resting.
-  const lensCrewId = searchParams.get('crew')
-  const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null
+  const lensCrewId = searchParams.get('crew');
+  const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null;
 
   const setLensCrew = useCallback(
     (crewId: string | null) => {
-      updateParams({ crew: crewId ?? '' })
+      updateParams({ crew: crewId ?? '' });
     },
     [updateParams],
-  )
+  );
 
   const clearAllFilters = useCallback(() => {
     updateParams({
@@ -227,9 +227,9 @@ export function FilterBar({
       [FILTER_DEFS.vibe.queryKey]: '',
       from: '',
       to: '',
-    })
-    setOpenFilterKey(null)
-  }, [updateParams])
+    });
+    setOpenFilterKey(null);
+  }, [updateParams]);
 
   return (
     <div
@@ -288,7 +288,7 @@ export function FilterBar({
               { key: 'cal', label: copy.viewCal, Icon: IconCal },
             ] as const
           ).map(({ key, label, Icon }) => {
-            const active = isCalendarView ? key === 'cal' : key === 'list'
+            const active = isCalendarView ? key === 'cal' : key === 'list';
             return (
               <button
                 key={key}
@@ -301,14 +301,14 @@ export function FilterBar({
                       view: 'list',
                       selectedDate: '',
                       weekOffset: '',
-                    })
+                    });
                   } else {
                     // Switching to cal view: clear filterWhen so the hidden chip
                     // doesn't silently apply server-side date filtering.
                     updateParams({
                       view: key,
                       [FILTER_DEFS.when.queryKey]: '',
-                    })
+                    });
                   }
                 }}
                 className="inline-flex cursor-pointer items-center gap-1.5 transition-colors"
@@ -329,7 +329,7 @@ export function FilterBar({
                 </span>
                 {label}
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -338,7 +338,7 @@ export function FilterBar({
         <CrewLensRail
           count={lensCount}
           onClear={() => {
-            setLensCrew(null)
+            setLensCrew(null);
           }}
         />
       )}
@@ -392,28 +392,28 @@ export function FilterBar({
         />
 
         {FILTER_ORDER.map((key) => {
-          if (key === 'when' && isCalendarView) return null
+          if (key === 'when' && isCalendarView) return null;
 
-          const value = filterValues[key] ?? ''
+          const value = filterValues[key] ?? '';
           const activeLabel = value
             ? getActiveFilterLabel(key, value, venues, genres)
-            : null
-          const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder
-          const isActive = Boolean(value)
-          const isOpen = openFilterKey === key
+            : null;
+          const displayLabel = activeLabel ?? FILTER_DEFS[key].placeholder;
+          const isActive = Boolean(value);
+          const isOpen = openFilterKey === key;
 
           return (
             <button
               key={key}
               type="button"
               ref={(element) => {
-                chipRefs.current[key] = element
+                chipRefs.current[key] = element;
               }}
               onClick={(event) => {
-                const nextOpen = isOpen ? null : key
-                setOpenFilterKey(nextOpen)
+                const nextOpen = isOpen ? null : key;
+                setOpenFilterKey(nextOpen);
                 if (nextOpen) {
-                  setAnchorRect(event.currentTarget.getBoundingClientRect())
+                  setAnchorRect(event.currentTarget.getBoundingClientRect());
                 }
               }}
               data-testid={key === 'where' ? 'venue-chip' : undefined}
@@ -433,7 +433,7 @@ export function FilterBar({
               <span style={{ whiteSpace: 'nowrap' }}>{displayLabel}</span>
               <IconChevDown size={11} />
             </button>
-          )
+          );
         })}
 
         {activeFilterCount > 0 && (
@@ -482,7 +482,7 @@ export function FilterBar({
         <button
           type="button"
           onClick={() => {
-            updateParams({ search: '', venueSlug: '', from: '' })
+            updateParams({ search: '', venueSlug: '', from: '' });
           }}
           className="text-sm text-fg-subtle hover:text-fg underline-offset-4 hover:underline"
         >
@@ -490,5 +490,5 @@ export function FilterBar({
         </button>
       )}
     </div>
-  )
+  );
 }

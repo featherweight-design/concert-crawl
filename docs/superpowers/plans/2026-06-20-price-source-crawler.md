@@ -78,7 +78,7 @@ Seven tasks. Each ends with an independently testable deliverable + commit:
 - Produces:
 
   ```ts
-  export function parseHost(url: string | null | undefined): string | null
+  export function parseHost(url: string | null | undefined): string | null;
   ```
 
   Behavior:
@@ -91,46 +91,46 @@ Seven tasks. Each ends with an independently testable deliverable + commit:
 Create `packages/crawler-core/src/lib/ticket-links/parse-host.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { parseHost } from './parse-host.js'
+import { describe, expect, it } from 'vitest';
+import { parseHost } from './parse-host.js';
 
 describe('parseHost', () => {
   it('returns the lowercased hostname for a full https URL', () => {
     expect(parseHost('https://Ticketmaster.com/event/123')).toBe(
       'ticketmaster.com',
-    )
-  })
+    );
+  });
 
   it('strips a leading www. subdomain', () => {
-    expect(parseHost('https://www.axs.com/events/abc')).toBe('axs.com')
-  })
+    expect(parseHost('https://www.axs.com/events/abc')).toBe('axs.com');
+  });
 
   it('preserves non-www subdomains', () => {
     expect(parseHost('https://tickets.larimerlounge.com/event/42')).toBe(
       'tickets.larimerlounge.com',
-    )
-  })
+    );
+  });
 
   it('returns null for null', () => {
-    expect(parseHost(null)).toBeNull()
-  })
+    expect(parseHost(null)).toBeNull();
+  });
 
   it('returns null for undefined', () => {
-    expect(parseHost(undefined)).toBeNull()
-  })
+    expect(parseHost(undefined)).toBeNull();
+  });
 
   it('returns null for an empty string', () => {
-    expect(parseHost('')).toBeNull()
-  })
+    expect(parseHost('')).toBeNull();
+  });
 
   it('returns null for a malformed URL', () => {
-    expect(parseHost('not a url')).toBeNull()
-  })
+    expect(parseHost('not a url')).toBeNull();
+  });
 
   it('returns null for a URL with no host (mailto:)', () => {
-    expect(parseHost('mailto:tickets@example.com')).toBeNull()
-  })
-})
+    expect(parseHost('mailto:tickets@example.com')).toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -150,16 +150,16 @@ Create `packages/crawler-core/src/lib/ticket-links/parse-host.ts`:
 // runtime URL parser refuses, so callers can fall through to a "no host
 // available" branch without try/catch noise at every site.
 export function parseHost(url: string | null | undefined): string | null {
-  if (url == null || url === '') return null
-  let parsed: URL
+  if (url == null || url === '') return null;
+  let parsed: URL;
   try {
-    parsed = new URL(url)
+    parsed = new URL(url);
   } catch {
-    return null
+    return null;
   }
-  const hostname = parsed.hostname.toLowerCase()
-  if (hostname === '') return null
-  return hostname.startsWith('www.') ? hostname.slice(4) : hostname
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === '') return null;
+  return hostname.startsWith('www.') ? hostname.slice(4) : hostname;
 }
 ```
 
@@ -194,10 +194,10 @@ git commit -m "feat(crawler-core): add parseHost URL-to-hostname helper"
 - Produces:
 
   ```ts
-  export const KNOWN_VENDOR_HOSTS: ReadonlyMap<string, Vendor>
-  export const KNOWN_RESALE_HOSTS: ReadonlySet<string>
-  export function vendorForHost(host: string | null): Vendor | null
-  export function isResaleHost(host: string | null): boolean
+  export const KNOWN_VENDOR_HOSTS: ReadonlyMap<string, Vendor>;
+  export const KNOWN_RESALE_HOSTS: ReadonlySet<string>;
+  export function vendorForHost(host: string | null): Vendor | null;
+  export function isResaleHost(host: string | null): boolean;
   ```
 
   `Vendor` is imported from `@concert-crawl/types`.
@@ -207,81 +207,81 @@ git commit -m "feat(crawler-core): add parseHost URL-to-hostname helper"
 Create `packages/crawler-core/src/lib/ticket-links/host-rules.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   KNOWN_RESALE_HOSTS,
   KNOWN_VENDOR_HOSTS,
   isResaleHost,
   vendorForHost,
-} from './host-rules.js'
+} from './host-rules.js';
 
 describe('KNOWN_VENDOR_HOSTS', () => {
   it('maps ticketmaster.com to Ticketmaster', () => {
-    expect(KNOWN_VENDOR_HOSTS.get('ticketmaster.com')).toBe('Ticketmaster')
-  })
+    expect(KNOWN_VENDOR_HOSTS.get('ticketmaster.com')).toBe('Ticketmaster');
+  });
 
   it('maps axs.com to AXS', () => {
-    expect(KNOWN_VENDOR_HOSTS.get('axs.com')).toBe('AXS')
-  })
+    expect(KNOWN_VENDOR_HOSTS.get('axs.com')).toBe('AXS');
+  });
 
   it('maps seatgeek.com to SeatGeek', () => {
-    expect(KNOWN_VENDOR_HOSTS.get('seatgeek.com')).toBe('SeatGeek')
-  })
+    expect(KNOWN_VENDOR_HOSTS.get('seatgeek.com')).toBe('SeatGeek');
+  });
 
   it('maps dice.fm to DICE', () => {
-    expect(KNOWN_VENDOR_HOSTS.get('dice.fm')).toBe('DICE')
-  })
+    expect(KNOWN_VENDOR_HOSTS.get('dice.fm')).toBe('DICE');
+  });
 
   it('maps eventbrite.com to Eventbrite', () => {
-    expect(KNOWN_VENDOR_HOSTS.get('eventbrite.com')).toBe('Eventbrite')
-  })
-})
+    expect(KNOWN_VENDOR_HOSTS.get('eventbrite.com')).toBe('Eventbrite');
+  });
+});
 
 describe('KNOWN_RESALE_HOSTS', () => {
   it('contains stubhub.com', () => {
-    expect(KNOWN_RESALE_HOSTS.has('stubhub.com')).toBe(true)
-  })
+    expect(KNOWN_RESALE_HOSTS.has('stubhub.com')).toBe(true);
+  });
 
   it('contains vividseats.com', () => {
-    expect(KNOWN_RESALE_HOSTS.has('vividseats.com')).toBe(true)
-  })
+    expect(KNOWN_RESALE_HOSTS.has('vividseats.com')).toBe(true);
+  });
 
   it('contains viagogo.com', () => {
-    expect(KNOWN_RESALE_HOSTS.has('viagogo.com')).toBe(true)
-  })
+    expect(KNOWN_RESALE_HOSTS.has('viagogo.com')).toBe(true);
+  });
 
   it('does NOT contain seatgeek.com (SeatGeek is a primary vendor per memory)', () => {
-    expect(KNOWN_RESALE_HOSTS.has('seatgeek.com')).toBe(false)
-  })
-})
+    expect(KNOWN_RESALE_HOSTS.has('seatgeek.com')).toBe(false);
+  });
+});
 
 describe('vendorForHost', () => {
   it('returns the mapped vendor for a known host', () => {
-    expect(vendorForHost('ticketmaster.com')).toBe('Ticketmaster')
-  })
+    expect(vendorForHost('ticketmaster.com')).toBe('Ticketmaster');
+  });
 
   it('returns null for an unknown host', () => {
-    expect(vendorForHost('larimerlounge.com')).toBeNull()
-  })
+    expect(vendorForHost('larimerlounge.com')).toBeNull();
+  });
 
   it('returns null for null input', () => {
-    expect(vendorForHost(null)).toBeNull()
-  })
-})
+    expect(vendorForHost(null)).toBeNull();
+  });
+});
 
 describe('isResaleHost', () => {
   it('returns true for stubhub.com', () => {
-    expect(isResaleHost('stubhub.com')).toBe(true)
-  })
+    expect(isResaleHost('stubhub.com')).toBe(true);
+  });
 
   it('returns false for ticketmaster.com', () => {
-    expect(isResaleHost('ticketmaster.com')).toBe(false)
-  })
+    expect(isResaleHost('ticketmaster.com')).toBe(false);
+  });
 
   it('returns false for null', () => {
-    expect(isResaleHost(null)).toBe(false)
-  })
-})
+    expect(isResaleHost(null)).toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -297,7 +297,7 @@ Expected: FAIL.
 Create `packages/crawler-core/src/lib/ticket-links/host-rules.ts`:
 
 ```typescript
-import type { Vendor } from '@concert-crawl/types'
+import type { Vendor } from '@concert-crawl/types';
 
 // Hosts → vendor enum value (the same case-sensitive strings used in the
 // submission_vendor pgEnum + the Vendor type in @concert-crawl/types).
@@ -310,7 +310,7 @@ export const KNOWN_VENDOR_HOSTS: ReadonlyMap<string, Vendor> = new Map([
   ['seatgeek.com', 'SeatGeek'],
   ['dice.fm', 'DICE'],
   ['eventbrite.com', 'Eventbrite'],
-])
+]);
 
 // Resale-marketplace hosts. Kept narrow — only the largest ones whose presence
 // is unambiguous evidence of resale, not a price-comparison aggregator that
@@ -320,16 +320,16 @@ export const KNOWN_RESALE_HOSTS: ReadonlySet<string> = new Set([
   'vividseats.com',
   'viagogo.com',
   'ticketnetwork.com',
-])
+]);
 
 export function vendorForHost(host: string | null): Vendor | null {
-  if (host == null) return null
-  return KNOWN_VENDOR_HOSTS.get(host) ?? null
+  if (host == null) return null;
+  return KNOWN_VENDOR_HOSTS.get(host) ?? null;
 }
 
 export function isResaleHost(host: string | null): boolean {
-  if (host == null) return false
-  return KNOWN_RESALE_HOSTS.has(host)
+  if (host == null) return false;
+  return KNOWN_RESALE_HOSTS.has(host);
 }
 ```
 
@@ -369,13 +369,13 @@ git commit -m "feat(crawler-core): add host-rules vendor + resale lookup tables"
 
   ```ts
   export interface TicketLinkVenueContext {
-    websiteUrl: string
-    ticketVendor: TicketVendor | null
+    websiteUrl: string;
+    ticketVendor: TicketVendor | null;
   }
   export function deriveTicketLinks(
     ticketUrl: string | null | undefined,
     venue: TicketLinkVenueContext,
-  ): TicketLink[] | null
+  ): TicketLink[] | null;
   ```
 
   Behavior:
@@ -396,160 +396,160 @@ git commit -m "feat(crawler-core): add host-rules vendor + resale lookup tables"
 Create `packages/crawler-core/src/lib/ticket-links/derive.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { deriveTicketLinks } from './derive.js'
+import { describe, expect, it } from 'vitest';
+import { deriveTicketLinks } from './derive.js';
 
 const BOXOFFICE_VENUE = {
   websiteUrl: 'https://www.larimerlounge.com/',
   ticketVendor: null,
-} as const
+} as const;
 
 describe('deriveTicketLinks', () => {
   it('returns null when ticketUrl is null', () => {
-    expect(deriveTicketLinks(null, BOXOFFICE_VENUE)).toBeNull()
-  })
+    expect(deriveTicketLinks(null, BOXOFFICE_VENUE)).toBeNull();
+  });
 
   it('returns null when ticketUrl is undefined', () => {
-    expect(deriveTicketLinks(undefined, BOXOFFICE_VENUE)).toBeNull()
-  })
+    expect(deriveTicketLinks(undefined, BOXOFFICE_VENUE)).toBeNull();
+  });
 
   it('returns null when ticketUrl is empty', () => {
-    expect(deriveTicketLinks('', BOXOFFICE_VENUE)).toBeNull()
-  })
+    expect(deriveTicketLinks('', BOXOFFICE_VENUE)).toBeNull();
+  });
 
   it('marks a URL on the venue host as boxoffice', () => {
     const result = deriveTicketLinks(
       'https://www.larimerlounge.com/events/42',
       BOXOFFICE_VENUE,
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'boxoffice',
         vendor: null,
         url: 'https://www.larimerlounge.com/events/42',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks a venue-subdomain URL as boxoffice when the base host matches', () => {
     const result = deriveTicketLinks(
       'https://tickets.larimerlounge.com/event/42',
       BOXOFFICE_VENUE,
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'boxoffice',
         vendor: null,
         url: 'https://tickets.larimerlounge.com/event/42',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks any URL as boxoffice when venue.ticketVendor is venue_box_office', () => {
     const result = deriveTicketLinks('https://example.com/box-office/sale', {
       websiteUrl: 'https://gothictheatre.example.com/',
       ticketVendor: 'venue_box_office',
-    })
+    });
     expect(result).toEqual([
       {
         kind: 'boxoffice',
         vendor: 'VenueBoxOffice',
         url: 'https://example.com/box-office/sale',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks a Ticketmaster URL as primary with vendor Ticketmaster', () => {
     const result = deriveTicketLinks(
       'https://www.ticketmaster.com/event/abc123',
       BOXOFFICE_VENUE,
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'primary',
         vendor: 'Ticketmaster',
         url: 'https://www.ticketmaster.com/event/abc123',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks an AXS URL as primary with vendor AXS', () => {
     const result = deriveTicketLinks(
       'https://www.axs.com/events/xyz',
       BOXOFFICE_VENUE,
-    )
+    );
     expect(result).toEqual([
       { kind: 'primary', vendor: 'AXS', url: 'https://www.axs.com/events/xyz' },
-    ])
-  })
+    ]);
+  });
 
   it('marks a StubHub URL as resale with null vendor', () => {
     const result = deriveTicketLinks(
       'https://www.stubhub.com/some-show/event/1234',
       BOXOFFICE_VENUE,
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'resale',
         vendor: null,
         url: 'https://www.stubhub.com/some-show/event/1234',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks a VividSeats URL as resale', () => {
     const result = deriveTicketLinks(
       'https://www.vividseats.com/some-show-tickets',
       BOXOFFICE_VENUE,
-    )
-    expect(result?.[0]?.kind).toBe('resale')
-  })
+    );
+    expect(result?.[0]?.kind).toBe('resale');
+  });
 
   it('falls back to venue.ticketVendor mapping when the host is unknown', () => {
     const result = deriveTicketLinks(
       'https://tickets.unknown-platform.example/event',
       { websiteUrl: 'https://larimerlounge.com/', ticketVendor: 'axs' },
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'primary',
         vendor: 'AXS',
         url: 'https://tickets.unknown-platform.example/event',
       },
-    ])
-  })
+    ]);
+  });
 
   it('returns vendor null when the venue.ticketVendor is "unknown"', () => {
     const result = deriveTicketLinks(
       'https://tickets.unknown-platform.example/event',
       { websiteUrl: 'https://larimerlounge.com/', ticketVendor: 'unknown' },
-    )
+    );
     expect(result).toEqual([
       {
         kind: 'primary',
         vendor: null,
         url: 'https://tickets.unknown-platform.example/event',
       },
-    ])
-  })
+    ]);
+  });
 
   it('prefers URL-derived vendor over venue.ticketVendor when both exist', () => {
     const result = deriveTicketLinks('https://www.ticketmaster.com/event/abc', {
       websiteUrl: 'https://example.com/',
       ticketVendor: 'axs',
-    })
-    expect(result?.[0]?.vendor).toBe('Ticketmaster')
-  })
+    });
+    expect(result?.[0]?.vendor).toBe('Ticketmaster');
+  });
 
   it('keeps a malformed-URL ticketUrl in the output (no host inference)', () => {
     // Defensive: extractors should never emit garbage, but if they do we
     // surface the value so it's visible/auditable rather than swallowed.
-    const result = deriveTicketLinks('not-a-real-url', BOXOFFICE_VENUE)
+    const result = deriveTicketLinks('not-a-real-url', BOXOFFICE_VENUE);
     expect(result).toEqual([
       { kind: 'primary', vendor: null, url: 'not-a-real-url' },
-    ])
-  })
-})
+    ]);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -565,13 +565,13 @@ Expected: FAIL — `./derive.js` not found.
 Create `packages/crawler-core/src/lib/ticket-links/derive.ts`:
 
 ```typescript
-import type { TicketLink, TicketVendor, Vendor } from '@concert-crawl/types'
-import { isResaleHost, vendorForHost } from './host-rules.js'
-import { parseHost } from './parse-host.js'
+import type { TicketLink, TicketVendor, Vendor } from '@concert-crawl/types';
+import { isResaleHost, vendorForHost } from './host-rules.js';
+import { parseHost } from './parse-host.js';
 
 export interface TicketLinkVenueContext {
-  websiteUrl: string
-  ticketVendor: TicketVendor | null
+  websiteUrl: string;
+  ticketVendor: TicketVendor | null;
 }
 
 // Map the lower-cased TicketVendor enum (DB shape) to the camel/Pascal-cased
@@ -585,46 +585,46 @@ const VENDOR_FROM_TICKET_VENDOR: Record<TicketVendor, Vendor | null> = {
   eventbrite: 'Eventbrite',
   venue_box_office: 'VenueBoxOffice',
   unknown: null,
-}
+};
 
 function vendorFromVenue(vendor: TicketVendor | null): Vendor | null {
-  if (vendor == null) return null
-  return VENDOR_FROM_TICKET_VENDOR[vendor]
+  if (vendor == null) return null;
+  return VENDOR_FROM_TICKET_VENDOR[vendor];
 }
 
 function isSameOrSubdomain(linkHost: string, venueHost: string): boolean {
-  if (linkHost === venueHost) return true
-  return linkHost.endsWith(`.${venueHost}`)
+  if (linkHost === venueHost) return true;
+  return linkHost.endsWith(`.${venueHost}`);
 }
 
 export function deriveTicketLinks(
   ticketUrl: string | null | undefined,
   venue: TicketLinkVenueContext,
 ): TicketLink[] | null {
-  if (ticketUrl == null || ticketUrl === '') return null
+  if (ticketUrl == null || ticketUrl === '') return null;
 
-  const linkHost = parseHost(ticketUrl)
-  const venueHost = parseHost(venue.websiteUrl)
+  const linkHost = parseHost(ticketUrl);
+  const venueHost = parseHost(venue.websiteUrl);
 
   // kind resolution — first match wins.
-  let kind: TicketLink['kind'] = 'primary'
+  let kind: TicketLink['kind'] = 'primary';
   if (
     linkHost != null &&
     venueHost != null &&
     isSameOrSubdomain(linkHost, venueHost)
   ) {
-    kind = 'boxoffice'
+    kind = 'boxoffice';
   } else if (venue.ticketVendor === 'venue_box_office') {
-    kind = 'boxoffice'
+    kind = 'boxoffice';
   } else if (isResaleHost(linkHost)) {
-    kind = 'resale'
+    kind = 'resale';
   }
 
   // vendor resolution — URL-derived first, then venue fallback.
   const vendor: Vendor | null =
-    vendorForHost(linkHost) ?? vendorFromVenue(venue.ticketVendor)
+    vendorForHost(linkHost) ?? vendorFromVenue(venue.ticketVendor);
 
-  return [{ kind, vendor, url: ticketUrl }]
+  return [{ kind, vendor, url: ticketUrl }];
 }
 ```
 
@@ -633,7 +633,7 @@ export function deriveTicketLinks(
 Create `packages/crawler-core/src/lib/ticket-links/index.ts`:
 
 ```typescript
-export { deriveTicketLinks, type TicketLinkVenueContext } from './derive.js'
+export { deriveTicketLinks, type TicketLinkVenueContext } from './derive.js';
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
@@ -687,7 +687,7 @@ expect(insertedRow.ticketLinks).toEqual([
     vendor: null,
     url: 'https://test-venue.example.com/tickets',
   },
-])
+]);
 ```
 
 (`test-venue.example.com` is the venue's own host in that test, so the derived kind is `'boxoffice'`.)
@@ -705,7 +705,7 @@ Expected: FAIL — `insertedRow.ticketLinks` is `null` or missing.
 In `packages/crawler-core/src/crawl.ts`, add an import at the top of the imports block:
 
 ```typescript
-import { deriveTicketLinks } from './lib/ticket-links/index.js'
+import { deriveTicketLinks } from './lib/ticket-links/index.js';
 ```
 
 In the `eventValues = eventsToUpsert.map(...)` block, add the new field next to `ticketUrl`:
@@ -736,7 +736,7 @@ const eventValues = eventsToUpsert.map((event) => ({
   verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
   extractionStrategy: strategy,
   hiddenFromConsumer: event.isConcert === false,
-}))
+}));
 ```
 
 (Use the actual local variable name for the venue row in `crawl.ts` — likely `venueRecord` or `venue`. Match what's already in scope.)
@@ -812,9 +812,9 @@ In `apps/crawler/package.json`, under `scripts`, add:
 Create `apps/crawler/scripts/backfill-ticket-links.ts` (sibling to `seed.ts` — that's the established convention for one-shot CLIs in this package):
 
 ```typescript
-import { eq, isNotNull } from 'drizzle-orm'
-import { db, events, venues } from './src/index.js'
-import { deriveTicketLinks } from '@concert-crawl/crawler-core'
+import { eq, isNotNull } from 'drizzle-orm';
+import { db, events, venues } from './src/index.js';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core';
 
 // One-shot backfill. Re-derives every event's ticket_links from its current
 // (ticket_url + venue) so prod data reflects the PR 2 heuristic immediately
@@ -823,7 +823,7 @@ import { deriveTicketLinks } from '@concert-crawl/crawler-core'
 // of its inputs.
 
 async function main(): Promise<void> {
-  console.warn('[backfill-ticket-links] starting')
+  console.warn('[backfill-ticket-links] starting');
 
   // Batch by venue so we only fetch each venue row once.
   const rows = await db
@@ -835,33 +835,33 @@ async function main(): Promise<void> {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(isNotNull(events.ticketUrl))
+    .where(isNotNull(events.ticketUrl));
 
-  console.warn(`[backfill-ticket-links] ${rows.length} rows to consider`)
+  console.warn(`[backfill-ticket-links] ${rows.length} rows to consider`);
 
-  let updated = 0
+  let updated = 0;
   for (const row of rows) {
     const ticketLinks = deriveTicketLinks(row.ticketUrl, {
       websiteUrl: row.venueWebsiteUrl,
       ticketVendor: row.venueTicketVendor,
-    })
+    });
 
     await db
       .update(events)
       .set({ ticketLinks, updatedAt: new Date() })
-      .where(eq(events.id, row.eventId))
-    updated += 1
+      .where(eq(events.id, row.eventId));
+    updated += 1;
   }
 
-  console.warn(`[backfill-ticket-links] updated ${updated} rows`)
+  console.warn(`[backfill-ticket-links] updated ${updated} rows`);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((err) => {
-    console.error('[backfill-ticket-links] failed:', err)
-    process.exit(1)
-  })
+    console.error('[backfill-ticket-links] failed:', err);
+    process.exit(1);
+  });
 ```
 
 - [ ] **Step 3: Typecheck the script**
@@ -900,12 +900,12 @@ git commit -m "feat(db): add backfill-ticket-links CLI script"
 Create `apps/api/src/test/backfill-ticket-links.integration.test.ts`:
 
 ```typescript
-import { beforeEach, describe, expect, it } from 'vitest'
-import { eq, isNotNull } from 'drizzle-orm'
-import { events, venues } from '@concert-crawl/db'
-import { deriveTicketLinks } from '@concert-crawl/crawler-core'
-import { testDb } from './helpers/db.js'
-import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
+import { beforeEach, describe, expect, it } from 'vitest';
+import { eq, isNotNull } from 'drizzle-orm';
+import { events, venues } from '@concert-crawl/db';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core';
+import { testDb } from './helpers/db.js';
+import { clearTables, seedEvent, seedVenue } from './helpers/seed.js';
 
 // Re-implementation of the CLI loop, kept in the test file so the test runs
 // inside vitest (the CLI uses `process.exit` and a fresh DB connection, which
@@ -921,42 +921,42 @@ async function runBackfill(): Promise<void> {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(isNotNull(events.ticketUrl))
+    .where(isNotNull(events.ticketUrl));
 
   for (const row of rows) {
     const ticketLinks = deriveTicketLinks(row.ticketUrl, {
       websiteUrl: row.venueWebsiteUrl,
       ticketVendor: row.venueTicketVendor,
-    })
+    });
     await testDb
       .update(events)
       .set({ ticketLinks })
-      .where(eq(events.id, row.eventId))
+      .where(eq(events.id, row.eventId));
   }
 }
 
 describe('backfill-ticket-links integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('marks venue-host URLs as boxoffice', async () => {
     const venue = await seedVenue({
       slug: `boxoffice-venue-${Date.now()}`,
       websiteUrl: 'https://www.larimerlounge.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.larimerlounge.com/event/42',
       artist: 'Boxoffice Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
     expect(reloaded?.ticketLinks).toEqual([
       {
@@ -964,26 +964,26 @@ describe('backfill-ticket-links integration', () => {
         vendor: null,
         url: 'https://www.larimerlounge.com/event/42',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks Ticketmaster URLs as primary with vendor Ticketmaster', async () => {
     const venue = await seedVenue({
       slug: `primary-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: 'ticketmaster',
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.ticketmaster.com/event/abc',
       artist: 'Ticketmaster Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
     expect(reloaded?.ticketLinks).toEqual([
       {
@@ -991,78 +991,78 @@ describe('backfill-ticket-links integration', () => {
         vendor: 'Ticketmaster',
         url: 'https://www.ticketmaster.com/event/abc',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks StubHub URLs as resale', async () => {
     const venue = await seedVenue({
       slug: `resale-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.stubhub.com/show-tickets/event/123',
       artist: 'StubHub Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(reloaded?.ticketLinks?.[0]?.kind).toBe('resale')
-    expect(reloaded?.ticketLinks?.[0]?.vendor).toBeNull()
-  })
+    expect(reloaded?.ticketLinks?.[0]?.kind).toBe('resale');
+    expect(reloaded?.ticketLinks?.[0]?.vendor).toBeNull();
+  });
 
   it('leaves events with null ticketUrl unchanged', async () => {
     const venue = await seedVenue({
       slug: `no-ticket-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: null,
       artist: 'No Ticket Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(reloaded?.ticketLinks).toBeNull()
-  })
+    expect(reloaded?.ticketLinks).toBeNull();
+  });
 
   it('is idempotent — running twice produces the same result', async () => {
     const venue = await seedVenue({
       slug: `idem-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: 'axs',
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.axs.com/events/xyz',
       artist: 'Idempotency Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
     const [afterFirst] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    await runBackfill()
+    await runBackfill();
     const [afterSecond] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(afterSecond?.ticketLinks).toEqual(afterFirst?.ticketLinks)
-  })
-})
+    expect(afterSecond?.ticketLinks).toEqual(afterFirst?.ticketLinks);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it passes**

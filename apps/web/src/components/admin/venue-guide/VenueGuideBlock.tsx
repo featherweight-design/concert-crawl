@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
 import {
   useState,
   useTransition,
   type CSSProperties,
   type KeyboardEvent,
-} from 'react'
-import { AlertTriangle, Check } from 'lucide-react'
+} from 'react';
+import { AlertTriangle, Check } from 'lucide-react';
 import {
   GUIDE_CHIP_ORDER,
   GUIDE_FIELD_MAX_LENGTH,
@@ -15,37 +15,37 @@ import {
   type GuideChipKey,
   type VenueGuide,
   type VenueGuideChip,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   publishVenueGuide,
   saveVenueGuide,
   unpublishVenueGuide,
-} from '@/lib/actions/venues'
-import { AdminButton, Kbd, MonoLabel, Panel, StatusBadge } from '../primitives'
-import { CCTip } from '@/components/ui/cc-tip'
-import { ADMIN_COPY } from '../definitions/copy'
-import { AccessibilityField } from './AccessibilityField'
-import { ChipPicker } from './ChipPicker'
-import { ChipStateDot } from './ChipStateDot'
-import { GuideIcon } from './GuideIcon'
+} from '@/lib/actions/venues';
+import { AdminButton, Kbd, MonoLabel, Panel, StatusBadge } from '../primitives';
+import { CCTip } from '@/components/ui/cc-tip';
+import { ADMIN_COPY } from '../definitions/copy';
+import { AccessibilityField } from './AccessibilityField';
+import { ChipPicker } from './ChipPicker';
+import { ChipStateDot } from './ChipStateDot';
+import { GuideIcon } from './GuideIcon';
 
-const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
+const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide;
 
-const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility')
+const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility');
 
-type OptionalChipKey = Exclude<GuideChipKey, 'accessibility'>
+type OptionalChipKey = Exclude<GuideChipKey, 'accessibility'>;
 
 const isOptionalChipKey = (key: GuideChipKey): key is OptionalChipKey =>
-  key !== 'accessibility'
+  key !== 'accessibility';
 
 interface VenueGuideBlockProps {
-  venueId: string
-  venueName: string
-  initialGuide: VenueGuide
+  venueId: string;
+  venueName: string;
+  initialGuide: VenueGuide;
   /** The server-side guide fetch failed, so `initialGuide` is an empty
       fallback rather than this venue's real draft. Saving it would delete
       every existing chip, so authoring is disabled until a reload succeeds. */
-  loadFailed?: boolean
+  loadFailed?: boolean;
 }
 
 /**
@@ -65,17 +65,17 @@ export const VenueGuideBlock = ({
 }: VenueGuideBlockProps) => {
   const accessibilityChip = initialGuide.chips.find(
     (chip) => chip.chipType === 'accessibility',
-  )
+  );
 
   const [accessibility, setAccessibility] = useState(
     accessibilityChip?.isPlaceholder ? '' : (accessibilityChip?.body ?? ''),
-  )
+  );
   const [placeholderMode, setPlaceholderMode] = useState(
     accessibilityChip?.isPlaceholder ?? false,
-  )
+  );
   const [selected, setSelected] = useState<OptionalChipKey[]>(() =>
     initialGuide.chips.map((chip) => chip.chipType).filter(isOptionalChipKey),
-  )
+  );
   const [bodies, setBodies] = useState<
     Partial<Record<OptionalChipKey, string>>
   >(() =>
@@ -84,23 +84,23 @@ export const VenueGuideBlock = ({
         .filter((chip) => isOptionalChipKey(chip.chipType))
         .map((chip) => [chip.chipType, chip.body]),
     ),
-  )
-  const [insiderTip, setInsiderTip] = useState(initialGuide.insiderTip ?? '')
-  const [publishedAt, setPublishedAt] = useState(initialGuide.publishedAt)
-  const [showError, setShowError] = useState(false)
-  const [confirmingUnpublish, setConfirmingUnpublish] = useState(false)
+  );
+  const [insiderTip, setInsiderTip] = useState(initialGuide.insiderTip ?? '');
+  const [publishedAt, setPublishedAt] = useState(initialGuide.publishedAt);
+  const [showError, setShowError] = useState(false);
+  const [confirmingUnpublish, setConfirmingUnpublish] = useState(false);
   const [status, setStatus] = useState<{
-    text: string
-    failed: boolean
-  } | null>(null)
-  const [pending, startTransition] = useTransition()
+    text: string;
+    failed: boolean;
+  } | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const publishState = deriveGuidePublishState({
     accessibilityBody: accessibility,
     accessibilityPlaceholder: placeholderMode,
-  })
-  const blocked = publishState.kind === 'blocked'
-  const accessError = showError && blocked
+  });
+  const blocked = publishState.kind === 'blocked';
+  const accessError = showError && blocked;
 
   const badge =
     publishState.kind === 'ready'
@@ -110,118 +110,118 @@ export const VenueGuideBlock = ({
             kind: 'warning' as const,
             label: GUIDE_COPY.badge.readyWithPlaceholder,
           }
-        : { kind: 'danger' as const, label: GUIDE_COPY.badge.blocked }
+        : { kind: 'danger' as const, label: GUIDE_COPY.badge.blocked };
 
   // `loadFailed` means `initialGuide` is an empty fallback, not this venue's
   // draft — so the whole authoring surface stays inert, not just the actions.
   // Letting the picker still toggle would look editable while every edit is
   // unsaveable.
   const toggleChip = (key: GuideChipKey) => {
-    if (loadFailed) return
-    if (!isOptionalChipKey(key)) return
+    if (loadFailed) return;
+    if (!isOptionalChipKey(key)) return;
     setSelected((current) =>
       current.includes(key)
         ? current.filter((entry) => entry !== key)
         : [...current, key],
-    )
-  }
+    );
+  };
 
   // Blank chips are simply absent from the payload — `blank` is the absence of
   // a row, so a selected-but-empty chip persists nothing.
   const buildPayload = (): {
-    insiderTip: string | null
-    chips: VenueGuideChip[]
+    insiderTip: string | null;
+    chips: VenueGuideChip[];
   } => {
-    const chips: VenueGuideChip[] = []
+    const chips: VenueGuideChip[] = [];
 
     if (placeholderMode) {
       chips.push({
         chipType: 'accessibility',
         body: '',
         isPlaceholder: true,
-      })
+      });
     } else if (accessibility.trim().length > 0) {
       chips.push({
         chipType: 'accessibility',
         body: accessibility.trim(),
         isPlaceholder: false,
-      })
+      });
     }
 
     for (const key of OPTIONAL_KEYS) {
-      if (!isOptionalChipKey(key) || !selected.includes(key)) continue
-      const body = (bodies[key] ?? '').trim()
-      if (body.length === 0) continue
-      chips.push({ chipType: key, body, isPlaceholder: false })
+      if (!isOptionalChipKey(key) || !selected.includes(key)) continue;
+      const body = (bodies[key] ?? '').trim();
+      if (body.length === 0) continue;
+      chips.push({ chipType: key, body, isPlaceholder: false });
     }
 
-    const tip = insiderTip.trim()
-    return { insiderTip: tip.length > 0 ? tip : null, chips }
-  }
+    const tip = insiderTip.trim();
+    return { insiderTip: tip.length > 0 ? tip : null, chips };
+  };
 
-  const succeeded = (text: string) => setStatus({ text, failed: false })
+  const succeeded = (text: string) => setStatus({ text, failed: false });
   const failed = (error: string | undefined) =>
-    setStatus({ text: error ?? GUIDE_COPY.status.saveError, failed: true })
+    setStatus({ text: error ?? GUIDE_COPY.status.saveError, failed: true });
 
   // Every action guards `pending` itself rather than relying on the buttons'
   // disabled state — the ⌘↵ shortcut reaches publish() without passing through
   // a button at all, and key repeat would otherwise queue duplicate writes.
   const saveDraft = () => {
-    if (loadFailed || pending) return
-    setStatus(null)
+    if (loadFailed || pending) return;
+    setStatus(null);
     startTransition(async () => {
-      const result = await saveVenueGuide(venueId, buildPayload())
-      if (result.success) succeeded(GUIDE_COPY.status.saved)
-      else failed(result.error)
-    })
-  }
+      const result = await saveVenueGuide(venueId, buildPayload());
+      if (result.success) succeeded(GUIDE_COPY.status.saved);
+      else failed(result.error);
+    });
+  };
 
   const publish = () => {
-    if (loadFailed || pending) return
+    if (loadFailed || pending) return;
     if (blocked) {
-      setShowError(true)
-      return
+      setShowError(true);
+      return;
     }
-    setStatus(null)
+    setStatus(null);
     startTransition(async () => {
-      const saved = await saveVenueGuide(venueId, buildPayload())
+      const saved = await saveVenueGuide(venueId, buildPayload());
       if (!saved.success) {
-        failed(saved.error)
-        return
+        failed(saved.error);
+        return;
       }
-      const result = await publishVenueGuide(venueId)
+      const result = await publishVenueGuide(venueId);
       if (!result.success) {
-        if (result.field === 'accessibility') setShowError(true)
-        failed(result.error)
-        return
+        if (result.field === 'accessibility') setShowError(true);
+        failed(result.error);
+        return;
       }
-      setPublishedAt(result.data?.publishedAt ?? new Date().toISOString())
-      succeeded(GUIDE_COPY.status.published)
-    })
-  }
+      setPublishedAt(result.data?.publishedAt ?? new Date().toISOString());
+      succeeded(GUIDE_COPY.status.published);
+    });
+  };
 
   const unpublish = () => {
-    if (pending) return
-    setStatus(null)
+    if (pending) return;
+    setStatus(null);
     startTransition(async () => {
-      const result = await unpublishVenueGuide(venueId)
-      setConfirmingUnpublish(false)
+      const result = await unpublishVenueGuide(venueId);
+      setConfirmingUnpublish(false);
       if (!result.success) {
-        failed(result.error)
-        return
+        failed(result.error);
+        return;
       }
-      setPublishedAt(null)
-      succeeded(GUIDE_COPY.status.unpublished)
-    })
-  }
+      setPublishedAt(null);
+      succeeded(GUIDE_COPY.status.unpublished);
+    });
+  };
 
   // The ⌘↵ hint in the footer is only honest if the shortcut actually fires.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault()
-      publish()
+      event.preventDefault();
+      publish();
     }
-  }
+  };
 
   return (
     <div
@@ -396,8 +396,8 @@ export const VenueGuideBlock = ({
             onChange={setAccessibility}
             placeholderMode={placeholderMode}
             onTogglePlaceholder={() => {
-              if (loadFailed) return
-              setPlaceholderMode((prev) => !prev)
+              if (loadFailed) return;
+              setPlaceholderMode((prev) => !prev);
             }}
             error={accessError}
             disabled={loadFailed}
@@ -444,10 +444,10 @@ export const VenueGuideBlock = ({
               {OPTIONAL_KEYS.filter((key) =>
                 isOptionalChipKey(key) ? selected.includes(key) : false,
               ).map((key) => {
-                if (!isOptionalChipKey(key)) return null
-                const fieldId = `venue-guide-chip-${key}`
-                const helpId = `${fieldId}-help`
-                const body = bodies[key] ?? ''
+                if (!isOptionalChipKey(key)) return null;
+                const fieldId = `venue-guide-chip-${key}`;
+                const helpId = `${fieldId}-help`;
+                const body = bodies[key] ?? '';
                 return (
                   <div key={key}>
                     <div
@@ -540,7 +540,7 @@ export const VenueGuideBlock = ({
                       {GUIDE_COPY.chipHint[key]}
                     </p>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -674,8 +674,8 @@ export const VenueGuideBlock = ({
         </div>
       </Panel>
     </div>
-  )
-}
+  );
+};
 
 const TEXTAREA_STYLE: CSSProperties = {
   boxSizing: 'border-box',
@@ -691,7 +691,7 @@ const TEXTAREA_STYLE: CSSProperties = {
   color: 'var(--fg)',
   lineHeight: 1.5,
   resize: 'vertical',
-}
+};
 
 const HELP_STYLE: CSSProperties = {
   margin: 0,
@@ -700,4 +700,4 @@ const HELP_STYLE: CSSProperties = {
   fontSize: 11.5,
   lineHeight: 1.45,
   color: 'var(--fg-muted)',
-}
+};

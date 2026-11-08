@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const COPY = ADMIN_COPY.editor.saveBar
+const COPY = ADMIN_COPY.editor.saveBar;
 
 export interface SaveBarProps {
-  dirty: boolean
-  saving: boolean
-  error?: string | null
-  onSave: () => void
-  onDiscard: () => void
+  dirty: boolean;
+  saving: boolean;
+  error?: string | null;
+  onSave: () => void;
+  onDiscard: () => void;
 }
 
 export const SaveBar = ({
@@ -20,7 +20,7 @@ export const SaveBar = ({
   onSave,
   onDiscard,
 }: SaveBarProps) => {
-  if (!dirty && !saving && !error) return null
+  if (!dirty && !saving && !error) return null;
   return (
     <div
       role="status"
@@ -68,5 +68,5 @@ export const SaveBar = ({
         {saving ? COPY.saving : COPY.save}
       </AdminButton>
     </div>
-  )
-}
+  );
+};

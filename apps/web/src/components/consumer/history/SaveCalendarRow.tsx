@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The .ics export row (#70), design_handoff_concert_history/history-screens.jsx:262-301.
 //
@@ -7,13 +7,13 @@
 // while the plan resolves — flashing a locked row at a paying Supporter is the
 // documented failure mode on useEntitlement.
 
-import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { downloadHistoryIcs } from '@/lib/history'
-import { HISTORY_COPY } from './definitions/copy'
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { downloadHistoryIcs } from '@/lib/history';
+import { HISTORY_COPY } from './definitions/copy';
 
-const COPY = HISTORY_COPY.calendar
+const COPY = HISTORY_COPY.calendar;
 
 const CalendarIcon = () => (
   <svg
@@ -40,40 +40,40 @@ const CalendarIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 export const SaveCalendarRow = ({ count }: { count: number }) => {
-  const { getToken } = useAuth()
-  const { isLoading, active } = useEntitlement('calendar-export')
-  const [pending, setPending] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const { getToken } = useAuth();
+  const { isLoading, active } = useEntitlement('calendar-export');
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  if (isLoading || !active) return null
+  if (isLoading || !active) return null;
 
-  const empty = count === 0
-  const disabled = empty || pending
+  const empty = count === 0;
+  const disabled = empty || pending;
 
   const download = () => {
-    setFailed(false)
-    setPending(true)
+    setFailed(false);
+    setPending(true);
     void (async () => {
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (token === null) {
-          setFailed(true)
-          return
+          setFailed(true);
+          return;
         }
-        await downloadHistoryIcs(token)
+        await downloadHistoryIcs(token);
       } catch (err) {
         // The row is the only surface for this failure — no toast system here —
         // so the console is the only place the cause survives.
-        console.error('History .ics export failed', err)
-        setFailed(true)
+        console.error('History .ics export failed', err);
+        setFailed(true);
       } finally {
-        setPending(false)
+        setPending(false);
       }
-    })()
-  }
+    })();
+  };
 
   const detail = failed
     ? COPY.failed
@@ -81,7 +81,7 @@ export const SaveCalendarRow = ({ count }: { count: number }) => {
       ? COPY.downloading
       : empty
         ? COPY.detailEmpty
-        : COPY.detail(count)
+        : COPY.detail(count);
 
   // No aria-label: it would override the accessible name computed from the
   // visible text, hiding the detail line — which is the only place the
@@ -142,5 +142,5 @@ export const SaveCalendarRow = ({ count }: { count: number }) => {
         {COPY.badge}
       </span>
     </button>
-  )
-}
+  );
+};

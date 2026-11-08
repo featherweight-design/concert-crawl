@@ -3,7 +3,7 @@
 //
 // Ported from design_handoff_event_detail_cta_tooltip/cc-tip.jsx.
 
-import type { TipContent } from './types'
+import type { TipContent } from './types';
 
 export const TIP_CONTENT = {
   // Event Detail: the CTA pair. Going is gated behind Concerts and Watching is
@@ -126,12 +126,12 @@ export const TIP_CONTENT = {
       "Promising anything we can't verify.",
     ],
   },
-} as const satisfies Record<string, TipContent>
+} as const satisfies Record<string, TipContent>;
 
-export type TipKey = keyof typeof TIP_CONTENT
+export type TipKey = keyof typeof TIP_CONTENT;
 
 // Chrome the renderer supplies itself rather than reading off a tip record.
 export const TIP_CHROME_COPY = {
   do: 'Do',
   dont: "Don't",
-} as const
+} as const;

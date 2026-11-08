@@ -1,8 +1,8 @@
-import { formatCost } from './utils'
+import { formatCost } from './utils';
 
 interface CostTextProps {
-  value: number
-  dim?: boolean
+  value: number;
+  dim?: boolean;
 }
 
 export const CostText = ({ value, dim }: CostTextProps) => (
@@ -17,4 +17,4 @@ export const CostText = ({ value, dim }: CostTextProps) => (
   >
     {formatCost(value)}
   </span>
-)
+);

@@ -6,7 +6,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 // Concert Crews (#1226). Four tables and nothing else: crew shows are derived
 // at read time by joining crew_members against the shipped
@@ -30,7 +30,7 @@ export const crews = pgTable('crews', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 // memberCount is NOT stored. It is count(*) over crew_members, read under the
 // row lock that enforces the 12-member cap (D4). A denormalized counter is a
@@ -55,7 +55,7 @@ export const crewMembers = pgTable(
     // Drives "my crews" on every page load.
     userIdx: index('crew_members_user_idx').on(table.userId),
   }),
-)
+);
 
 export const crewInvites = pgTable(
   'crew_invites',
@@ -91,7 +91,7 @@ export const crewInvites = pgTable(
   (table) => ({
     crewIdx: index('crew_invites_crew_idx').on(table.crewId),
   }),
-)
+);
 
 // Presence of a row IS the muted state — unmuting deletes it. No boolean
 // column, which would invite the tri-state (null / true / false) a nullable
@@ -114,13 +114,13 @@ export const crewMutes = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
-export type CrewRow = typeof crews.$inferSelect
-export type NewCrewRow = typeof crews.$inferInsert
-export type CrewMemberRow = typeof crewMembers.$inferSelect
-export type NewCrewMemberRow = typeof crewMembers.$inferInsert
-export type CrewInviteRow = typeof crewInvites.$inferSelect
-export type NewCrewInviteRow = typeof crewInvites.$inferInsert
-export type CrewMuteRow = typeof crewMutes.$inferSelect
-export type NewCrewMuteRow = typeof crewMutes.$inferInsert
+export type CrewRow = typeof crews.$inferSelect;
+export type NewCrewRow = typeof crews.$inferInsert;
+export type CrewMemberRow = typeof crewMembers.$inferSelect;
+export type NewCrewMemberRow = typeof crewMembers.$inferInsert;
+export type CrewInviteRow = typeof crewInvites.$inferSelect;
+export type NewCrewInviteRow = typeof crewInvites.$inferInsert;
+export type CrewMuteRow = typeof crewMutes.$inferSelect;
+export type NewCrewMuteRow = typeof crewMutes.$inferInsert;

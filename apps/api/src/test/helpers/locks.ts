@@ -1,5 +1,5 @@
-import { sql, type SQL } from 'drizzle-orm'
-import { testDb } from './db.js'
+import { sql, type SQL } from 'drizzle-orm';
+import { testDb } from './db.js';
 
 // Deterministic lock-interaction helpers for the price writers (#1107).
 // A "holder" transaction runs on its own pool connection and keeps its locks
@@ -7,51 +7,51 @@ import { testDb } from './db.js'
 // without relying on timing: it polls pg_stat_activity for a backend waiting
 // on a lock instead of racing a timeout.
 
-type HolderTx = Parameters<Parameters<typeof testDb.transaction>[0]>[0]
+type HolderTx = Parameters<Parameters<typeof testDb.transaction>[0]>[0];
 
 export interface LockHolder {
   /** Run another statement inside the holder's open transaction. */
-  run: (statement: SQL) => Promise<void>
+  run: (statement: SQL) => Promise<void>;
   /** Roll the holder back and wait for its connection to be released. */
-  release: () => Promise<void>
+  release: () => Promise<void>;
 }
 
 class HolderRollback extends Error {}
 
 export async function openLockHolder(setup: SQL[]): Promise<LockHolder> {
-  let signalReady!: () => void
-  let signalSetupFailed!: (err: unknown) => void
+  let signalReady!: () => void;
+  let signalSetupFailed!: (err: unknown) => void;
   const ready = new Promise<void>((resolve, reject) => {
-    signalReady = resolve
-    signalSetupFailed = reject
-  })
+    signalReady = resolve;
+    signalSetupFailed = reject;
+  });
   const queue: {
-    statement: SQL
-    done: (err?: unknown) => void
-  }[] = []
-  let wake: (() => void) | undefined
-  let releasing = false
+    statement: SQL;
+    done: (err?: unknown) => void;
+  }[] = [];
+  let wake: (() => void) | undefined;
+  let releasing = false;
 
   const finished = testDb
     .transaction(async (tx: HolderTx) => {
-      for (const statement of setup) await tx.execute(statement)
-      signalReady()
+      for (const statement of setup) await tx.execute(statement);
+      signalReady();
       for (;;) {
-        const next = queue.shift()
+        const next = queue.shift();
         if (next) {
           try {
-            await tx.execute(next.statement)
-            next.done()
+            await tx.execute(next.statement);
+            next.done();
           } catch (err) {
-            next.done(err)
-            throw err
+            next.done(err);
+            throw err;
           }
-          continue
+          continue;
         }
-        if (releasing) throw new HolderRollback()
+        if (releasing) throw new HolderRollback();
         await new Promise<void>((resolve) => {
-          wake = resolve
-        })
+          wake = resolve;
+        });
       }
     })
     // Any rejection lands here: a setup statement failing, a connection or
@@ -60,10 +60,10 @@ export async function openLockHolder(setup: SQL[]): Promise<LockHolder> {
     // opened rejects instead of hanging; once `ready` has resolved the
     // reject is a no-op.
     .catch((err: unknown) => {
-      signalSetupFailed(err)
-    })
+      signalSetupFailed(err);
+    });
 
-  await ready
+  await ready;
 
   return {
     run: (statement) =>
@@ -71,23 +71,23 @@ export async function openLockHolder(setup: SQL[]): Promise<LockHolder> {
         queue.push({
           statement,
           done: (err) => (err === undefined ? resolve() : reject(err)),
-        })
-        wake?.()
+        });
+        wake?.();
       }),
     release: async () => {
-      releasing = true
-      wake?.()
-      await finished
+      releasing = true;
+      wake?.();
+      await finished;
     },
-  }
+  };
 }
 
 export async function countLockWaiters(): Promise<number> {
   const rows = await testDb.execute(
     sql`SELECT count(*)::int AS waiters FROM pg_stat_activity
         WHERE datname = current_database() AND wait_event_type = 'Lock'`,
-  )
-  return Number(rows[0]?.['waiters'] ?? 0)
+  );
+  return Number(rows[0]?.['waiters'] ?? 0);
 }
 
 /**
@@ -98,22 +98,22 @@ export async function countLockWaiters(): Promise<number> {
 export async function observeBlocking<T>(
   action: () => Promise<T>,
 ): Promise<{ blocked: boolean; result: Promise<T> }> {
-  let settled = false
-  const result = action()
+  let settled = false;
+  const result = action();
   const tracked = result.then(
     () => {
-      settled = true
+      settled = true;
     },
     () => {
-      settled = true
+      settled = true;
     },
-  )
-  void tracked
+  );
+  void tracked;
   while (!settled) {
-    if ((await countLockWaiters()) > 0) return { blocked: true, result }
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    if ((await countLockWaiters()) > 0) return { blocked: true, result };
+    await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  return { blocked: false, result }
+  return { blocked: false, result };
 }
 
 /**
@@ -127,11 +127,11 @@ export async function withLockHolder<T>(
   setup: SQL[],
   body: (holder: LockHolder) => Promise<T>,
 ): Promise<T> {
-  const holder = await openLockHolder(setup)
+  const holder = await openLockHolder(setup);
   try {
-    return await body(holder)
+    return await body(holder);
   } finally {
-    await holder.release()
+    await holder.release();
   }
 }
 
@@ -144,19 +144,19 @@ export async function waitForLockWaiter(
   pending: Promise<unknown>,
   maxMs = 60_000,
 ): Promise<boolean> {
-  let settled = false
+  let settled = false;
   void pending.then(
     () => {
-      settled = true
+      settled = true;
     },
     () => {
-      settled = true
+      settled = true;
     },
-  )
-  const start = Date.now()
+  );
+  const start = Date.now();
   while (!settled && Date.now() - start <= maxMs) {
-    if ((await countLockWaiters()) > 0) return true
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    if ((await countLockWaiters()) > 0) return true;
+    await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  return false
+  return false;
 }

@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 // Per-user push preferences (#971). One row per user; created lazily on first
 // PATCH from /v1/me/notification-preferences (GET is side-effect-free — returns
@@ -44,9 +44,9 @@ export const userNotificationPreferences = pgTable(
       .notNull()
       .defaultNow(),
   },
-)
+);
 
 export type UserNotificationPreferences =
-  typeof userNotificationPreferences.$inferSelect
+  typeof userNotificationPreferences.$inferSelect;
 export type NewUserNotificationPreferences =
-  typeof userNotificationPreferences.$inferInsert
+  typeof userNotificationPreferences.$inferInsert;

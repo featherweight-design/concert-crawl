@@ -1,47 +1,47 @@
-'use client'
+'use client';
 
 import {
   ConfidenceBar,
   RelTime,
   StatusBadge,
-} from '@/components/admin/primitives'
-import { LifecycleBadge } from '@/components/admin/events/editor/LifecycleBadge'
-import { VerifyMark } from '@/components/admin/events/editor/VerifyMark'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EventRowMenu, type EventRowActions } from './EventRowMenu'
-import { type AllEvent } from './types'
+} from '@/components/admin/primitives';
+import { LifecycleBadge } from '@/components/admin/events/editor/LifecycleBadge';
+import { VerifyMark } from '@/components/admin/events/editor/VerifyMark';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EventRowMenu, type EventRowActions } from './EventRowMenu';
+import { type AllEvent } from './types';
 
 // Discriminated union so `selectable` can't be enabled without the toggle
 // handler — that combination used to render checkboxes that were no-ops.
 type SelectionProps =
   | {
-      selectable: true
-      selectedIds: ReadonlySet<string>
-      onToggleSelected: (id: string) => void
+      selectable: true;
+      selectedIds: ReadonlySet<string>;
+      onToggleSelected: (id: string) => void;
     }
   | {
-      selectable?: false
-      selectedIds?: undefined
-      onToggleSelected?: undefined
-    }
+      selectable?: false;
+      selectedIds?: undefined;
+      onToggleSelected?: undefined;
+    };
 
 export type EventsMobileListProps = {
-  events: ReadonlyArray<AllEvent>
-  onRowClick: (id: string) => void
-  rowActions?: EventRowActions
-} & SelectionProps
+  events: ReadonlyArray<AllEvent>;
+  onRowClick: (id: string) => void;
+  rowActions?: EventRowActions;
+} & SelectionProps;
 
 const formatTime = (time: string | null): string | null => {
-  if (!time) return null
-  const [hh, mm] = time.split(':')
-  const hours = Number.parseInt(hh ?? '0', 10)
-  const minutes = mm ?? '00'
-  const meridiem = hours >= 12 ? 'PM' : 'AM'
-  const display = hours % 12 || 12
-  return `${display}:${minutes} ${meridiem}`
-}
+  if (!time) return null;
+  const [hh, mm] = time.split(':');
+  const hours = Number.parseInt(hh ?? '0', 10);
+  const minutes = mm ?? '00';
+  const meridiem = hours >= 12 ? 'PM' : 'AM';
+  const display = hours % 12 || 12;
+  return `${display}:${minutes} ${meridiem}`;
+};
 
-const VENUE_FALLBACK = '—'
+const VENUE_FALLBACK = '—';
 
 const EventCard = ({
   event,
@@ -51,16 +51,16 @@ const EventCard = ({
   isSelected,
   onToggleSelected,
 }: {
-  event: AllEvent
-  onClick: (id: string) => void
-  rowActions?: EventRowActions
-  selectable?: boolean
-  isSelected?: boolean
-  onToggleSelected?: (id: string) => void
+  event: AllEvent;
+  onClick: (id: string) => void;
+  rowActions?: EventRowActions;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggleSelected?: (id: string) => void;
 }) => {
-  const timeLabel = formatTime(event.showTime)
+  const timeLabel = formatTime(event.showTime);
   const artist =
-    event.artist && event.artist !== event.title ? event.artist : null
+    event.artist && event.artist !== event.title ? event.artist : null;
   return (
     <div
       style={{
@@ -205,11 +205,11 @@ const EventCard = ({
         </div>
       </button>
     </div>
-  )
-}
+  );
+};
 
 export const EventsMobileList = (props: EventsMobileListProps) => {
-  const { events, onRowClick, rowActions } = props
+  const { events, onRowClick, rowActions } = props;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {events.map((event) => (
@@ -228,5 +228,5 @@ export const EventsMobileList = (props: EventsMobileListProps) => {
         />
       ))}
     </div>
-  )
-}
+  );
+};

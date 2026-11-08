@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
-import { EmptyState } from '@/components/consumer/empty-state'
-import { CREWS_COPY } from '@/components/consumer/crews'
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry'
+import { EmptyState } from '@/components/consumer/empty-state';
+import { CREWS_COPY } from '@/components/consumer/crews';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 export default function CrewError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-  const onRetry = useErrorBoundaryRetry(reset)
+  const onRetry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
-    console.error('[crews] crew home boundary', error)
-  }, [error])
+    console.error('[crews] crew home boundary', error);
+  }, [error]);
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col items-center gap-3 px-4 pb-10 pt-5">
@@ -47,5 +47,5 @@ export default function CrewError({
         {CREWS_COPY.net.retry}
       </button>
     </div>
-  )
+  );
 }

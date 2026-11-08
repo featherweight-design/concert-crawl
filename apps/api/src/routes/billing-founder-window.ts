@@ -9,19 +9,19 @@
 // write path can never disagree about window state. Cached in-process for
 // 10s — the scarcity rail polls, and per-request DB reads are unnecessary.
 
-import { Hono } from 'hono'
-import { eq } from 'drizzle-orm'
-import { db, founderWindow } from '@concert-crawl/db'
-import type { FounderWindowView } from '@concert-crawl/types'
-import { apiLogger } from '../lib/logger.js'
+import { Hono } from 'hono';
+import { eq } from 'drizzle-orm';
+import { db, founderWindow } from '@concert-crawl/db';
+import type { FounderWindowView } from '@concert-crawl/types';
+import { apiLogger } from '../lib/logger.js';
 
-const CACHE_TTL_MS = 10_000
+const CACHE_TTL_MS = 10_000;
 
 export interface FounderWindowRow {
-  opensAt: Date | null
-  closesAt: Date | null
-  seatsTotal: number
-  seatsRemaining: number
+  opensAt: Date | null;
+  closesAt: Date | null;
+  seatsTotal: number;
+  seatsRemaining: number;
 }
 
 /**
@@ -34,16 +34,16 @@ export const resolveFounderWindowView = (
   now: Date,
 ): FounderWindowView => {
   if (row.opensAt === null || row.opensAt.getTime() > now.getTime()) {
-    return { state: 'pre-launch', seatsTotal: row.seatsTotal, closesAt: null }
+    return { state: 'pre-launch', seatsTotal: row.seatsTotal, closesAt: null };
   }
-  const closesAtIso = row.closesAt === null ? null : row.closesAt.toISOString()
+  const closesAtIso = row.closesAt === null ? null : row.closesAt.toISOString();
   if (row.closesAt !== null && row.closesAt.getTime() <= now.getTime()) {
     return {
       state: 'closed',
       seatsTotal: row.seatsTotal,
       seatsRemaining: row.seatsRemaining,
       closesAt: closesAtIso,
-    }
+    };
   }
   if (row.seatsRemaining <= 0) {
     return {
@@ -51,33 +51,33 @@ export const resolveFounderWindowView = (
       seatsTotal: row.seatsTotal,
       seatsRemaining: 0,
       closesAt: closesAtIso,
-    }
+    };
   }
   return {
     state: 'open',
     seatsTotal: row.seatsTotal,
     seatsRemaining: row.seatsRemaining,
     closesAt: closesAtIso,
-  }
-}
+  };
+};
 
 export interface FounderWindowRouterOptions {
   // Tests pass 0 so every request re-reads the DB.
-  cacheTtlMs?: number
+  cacheTtlMs?: number;
 }
 
 export const createFounderWindowRouter = (
   options: FounderWindowRouterOptions = {},
 ): Hono => {
-  const cacheTtlMs = options.cacheTtlMs ?? CACHE_TTL_MS
-  const founderWindowRouter = new Hono()
+  const cacheTtlMs = options.cacheTtlMs ?? CACHE_TTL_MS;
+  const founderWindowRouter = new Hono();
 
-  let cached: { at: number; view: FounderWindowView } | null = null
+  let cached: { at: number; view: FounderWindowView } | null = null;
 
   founderWindowRouter.get('/founder-window', async (ctx) => {
-    const now = new Date()
+    const now = new Date();
     if (cached !== null && now.getTime() - cached.at < cacheTtlMs) {
-      return ctx.json({ success: true, data: cached.view })
+      return ctx.json({ success: true, data: cached.view });
     }
 
     try {
@@ -85,19 +85,22 @@ export const createFounderWindowRouter = (
         .select()
         .from(founderWindow)
         .where(eq(founderWindow.id, 1))
-        .limit(1)
+        .limit(1);
       if (!windowRow) {
-        apiLogger.error({}, 'founder-window: singleton row missing')
-        return ctx.json({ success: false, error: 'Internal server error' }, 500)
+        apiLogger.error({}, 'founder-window: singleton row missing');
+        return ctx.json(
+          { success: false, error: 'Internal server error' },
+          500,
+        );
       }
-      const view = resolveFounderWindowView(windowRow, now)
-      cached = { at: now.getTime(), view }
-      return ctx.json({ success: true, data: view })
+      const view = resolveFounderWindowView(windowRow, now);
+      cached = { at: now.getTime(), view };
+      return ctx.json({ success: true, data: view });
     } catch (err) {
-      apiLogger.error({ err }, 'founder-window: read failed')
-      return ctx.json({ success: false, error: 'Internal server error' }, 500)
+      apiLogger.error({ err }, 'founder-window: read failed');
+      return ctx.json({ success: false, error: 'Internal server error' }, 500);
     }
-  })
+  });
 
-  return founderWindowRouter
-}
+  return founderWindowRouter;
+};

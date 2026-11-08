@@ -27,22 +27,22 @@
  * here — see `prune-artists`.
  */
 
-import { sql } from 'drizzle-orm'
-import type { Database } from '../client.js'
+import { sql } from 'drizzle-orm';
+import type { Database } from '../client.js';
 
 export interface RepairArtistNamesResult {
   /** Rows whose billing contradicts their stored name, as of the read. */
-  candidates: number
+  candidates: number;
   /**
    * Rows actually rewritten. Zero on a dry run. The write re-derives the
    * predicate rather than replaying the ids it read, so a concurrent crawl can
    * leave this below `candidates`.
    */
-  repaired: number
+  repaired: number;
   /** Up to 25 candidates, for eyeballing before an apply run. */
-  sample: { slug: string; from: string; to: string; kind: RepairKind }[]
+  sample: { slug: string; from: string; to: string; kind: RepairKind }[];
   /** Candidates by repair kind, so an apply decision can weigh the two classes separately. */
-  byKind: Record<string, number>
+  byKind: Record<string, number>;
 }
 
 /**
@@ -51,17 +51,17 @@ export interface RepairArtistNamesResult {
  * shorten is corroborated by the venue naming the act on its own, while a
  * recase is only ever as good as the venue's shift key.
  */
-type RepairKind = 'recase' | 'shorten'
+type RepairKind = 'recase' | 'shorten';
 
 interface RepairRow extends Record<string, unknown> {
-  id: string
-  slug: string
-  current_name: string
-  billed_name: string
-  kind: RepairKind
+  id: string;
+  slug: string;
+  current_name: string;
+  billed_name: string;
+  kind: RepairKind;
 }
 
-const SAMPLE_SIZE = 25
+const SAMPLE_SIZE = 25;
 
 /**
  * The billing is only usable when the event names exactly one act.
@@ -77,7 +77,7 @@ const SINGLE_ACT_BILL = sql`
   AND cardinality(events.headliners) = 1
   AND events.headliners[1] IS NOT NULL
   AND btrim(events.headliners[1]) <> ''
-`
+`;
 
 /**
  * `true` when the stored name is the billed name with a suffix on the end.
@@ -90,7 +90,7 @@ const SINGLE_ACT_BILL = sql`
 const NAME_EXTENDS_BILLING = sql`
   left(lower(artists.name), length(lower(btrim(events.headliners[1]))))
     = lower(btrim(events.headliners[1]))
-`
+`;
 
 /**
  * The safety property: the repair only ever shortens or re-cases, never
@@ -109,7 +109,7 @@ const CORROBORATED = sql`
     lower(btrim(events.headliners[1])) = lower(artists.name)
     OR ${NAME_EXTENDS_BILLING}
   )
-`
+`;
 
 /**
  * One billing per artist, chosen the way `backfillArtists` chooses one: most
@@ -151,7 +151,7 @@ const CANDIDATES = sql`
   SELECT id, slug, current_name, billed_name, kind
   FROM ranked
   WHERE rank = 1
-`
+`;
 
 export async function repairArtistNames(
   database: Database,
@@ -160,23 +160,23 @@ export async function repairArtistNames(
   const found = await database.execute<RepairRow>(sql`
     ${CANDIDATES}
     ORDER BY current_name ASC
-  `)
+  `);
 
-  const rows = [...found]
+  const rows = [...found];
   const sample = rows.slice(0, SAMPLE_SIZE).map((row) => ({
     slug: row.slug,
     from: row.current_name,
     to: row.billed_name,
     kind: row.kind,
-  }))
+  }));
 
   const byKind = rows.reduce<Record<string, number>>((tally, row) => {
-    tally[row.kind] = (tally[row.kind] ?? 0) + 1
-    return tally
-  }, {})
+    tally[row.kind] = (tally[row.kind] ?? 0) + 1;
+    return tally;
+  }, {});
 
   if (options.dryRun || rows.length === 0) {
-    return { candidates: rows.length, repaired: 0, sample, byKind }
+    return { candidates: rows.length, repaired: 0, sample, byKind };
   }
 
   // Re-derived rather than written from the ids read above: a concurrent crawl
@@ -190,12 +190,12 @@ export async function repairArtistNames(
     WHERE artists.id = repair.id
       AND artists.name <> repair.billed_name
     RETURNING artists.id
-  `)
+  `);
 
   return {
     candidates: rows.length,
     repaired: [...written].length,
     sample,
     byKind,
-  }
+  };
 }

@@ -6,7 +6,7 @@
 
 // Tied to --fg so it lightens on dark themes and darkens on Light, and leaves
 // --accent alone: a skeleton is never brand presence.
-const SWEEP_ANIMATION = 'dlSweep 1500ms cubic-bezier(0.4,0,0.2,1) infinite'
+const SWEEP_ANIMATION = 'dlSweep 1500ms cubic-bezier(0.4,0,0.2,1) infinite';
 
 export const SweepOverlay = () => (
   <div
@@ -19,4 +19,4 @@ export const SweepOverlay = () => (
       animation: SWEEP_ANIMATION,
     }}
   />
-)
+);

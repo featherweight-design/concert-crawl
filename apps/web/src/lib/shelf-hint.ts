@@ -12,14 +12,14 @@
 // shelf's vertical footprint. A stale or forged value costs at most one
 // wrongly-sized skeleton for a single paint; the real shelf still gates on
 // the entitlement and the API still enforces it server-side.
-export const SHELF_HINT_COOKIE = 'cc_taste_shelf'
+export const SHELF_HINT_COOKIE = 'cc_taste_shelf';
 
-const SHELF_HINT_SHOW = '1'
-const SHELF_HINT_HIDE = '0'
+const SHELF_HINT_SHOW = '1';
+const SHELF_HINT_HIDE = '0';
 
 // Long-lived: the underlying fact (has premium + linked Spotify) changes on
 // the order of months, and a wrong value self-heals on the next Browse load.
-const SHELF_HINT_MAX_AGE = 60 * 60 * 24 * 30
+const SHELF_HINT_MAX_AGE = 60 * 60 * 24 * 30;
 
 // The value carries the Clerk user id it was resolved for. One browser can
 // hold sessions for several accounts (sign out → sign in as someone else),
@@ -31,7 +31,7 @@ const SHELF_HINT_MAX_AGE = 60 * 60 * 24 * 30
 // value and inject cookie attributes. Clerk ids don't contain those today —
 // this keeps that from being load-bearing.
 const shelfHintValue = (userId: string, shouldShow: boolean) =>
-  `${encodeURIComponent(userId)}:${shouldShow ? SHELF_HINT_SHOW : SHELF_HINT_HIDE}`
+  `${encodeURIComponent(userId)}:${shouldShow ? SHELF_HINT_SHOW : SHELF_HINT_HIDE}`;
 
 // True only when the cookie was written for THIS user and says "show".
 // Anything else — absent, another account's, malformed — under-reserves,
@@ -39,10 +39,10 @@ const shelfHintValue = (userId: string, shouldShow: boolean) =>
 export const shouldReserveShelf = (
   cookieValue: string | undefined,
   userId: string | null,
-): boolean => userId !== null && cookieValue === shelfHintValue(userId, true)
+): boolean => userId !== null && cookieValue === shelfHintValue(userId, true);
 
 export const writeShelfHint = (userId: string, shouldShow: boolean): void => {
-  const attrs = `path=/; max-age=${SHELF_HINT_MAX_AGE}; samesite=lax`
-  const secure = window.location.protocol === 'https:' ? '; secure' : ''
-  document.cookie = `${SHELF_HINT_COOKIE}=${shelfHintValue(userId, shouldShow)}; ${attrs}${secure}`
-}
+  const attrs = `path=/; max-age=${SHELF_HINT_MAX_AGE}; samesite=lax`;
+  const secure = window.location.protocol === 'https:' ? '; secure' : '';
+  document.cookie = `${SHELF_HINT_COOKIE}=${shelfHintValue(userId, shouldShow)}; ${attrs}${secure}`;
+};

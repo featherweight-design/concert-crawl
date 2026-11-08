@@ -1,26 +1,26 @@
 // Integration tests for GET /v1/email/unsubscribe — the signed one-click
 // opt-out for the digest family (#763 spec §8.2) and the product family
 // (#967). No auth (email links have to work logged-out).
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm';
 import {
   db,
   userNotificationPreferences,
   userSpotifyConnections,
-} from '@concert-crawl/db'
-import { createApp } from '../app.js'
-import { testDb } from '../test/helpers/db.js'
-import { clearTables } from '../test/helpers/seed.js'
-import { buildUnsubscribeToken } from '../lib/email-unsubscribe.js'
+} from '@concert-crawl/db';
+import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
+import { clearTables } from '../test/helpers/seed.js';
+import { buildUnsubscribeToken } from '../lib/email-unsubscribe.js';
 
-const app = createApp()
+const app = createApp();
 
 const seedConnection = async (userId: string): Promise<void> => {
   await testDb.insert(userSpotifyConnections).values({
@@ -28,190 +28,190 @@ const seedConnection = async (userId: string): Promise<void> => {
     spotifyUserId: `spotify_${userId}`,
     status: 'connected',
     digestEnabled: true,
-  })
-}
+  });
+};
 
 const getDigestEnabled = async (userId: string): Promise<boolean | null> => {
   const rows = await testDb
     .select({ digestEnabled: userSpotifyConnections.digestEnabled })
     .from(userSpotifyConnections)
-    .where(eq(userSpotifyConnections.userId, userId))
-  return rows[0]?.digestEnabled ?? null
-}
+    .where(eq(userSpotifyConnections.userId, userId));
+  return rows[0]?.digestEnabled ?? null;
+};
 
 describe('GET /v1/email/unsubscribe — integration', () => {
   beforeEach(async () => {
-    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = 'integration-secret'
-    await clearTables()
-  })
+    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = 'integration-secret';
+    await clearTables();
+  });
 
   afterEach(() => {
-    delete process.env['EMAIL_UNSUBSCRIBE_SECRET']
-  })
+    delete process.env['EMAIL_UNSUBSCRIBE_SECRET'];
+  });
 
   it('flips digestEnabled off with a valid token and confirms in HTML', async () => {
-    await seedConnection('user_unsub_1')
-    const token = buildUnsubscribeToken('user_unsub_1', 'digest')
+    await seedConnection('user_unsub_1');
+    const token = buildUnsubscribeToken('user_unsub_1', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_1&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(200)
-    expect(res.headers.get('content-type')).toContain('text/html')
-    const html = await res.text()
-    expect(html).toContain('weekly digest')
-    expect(await getDigestEnabled('user_unsub_1')).toBe(false)
-  })
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    expect(html).toContain('weekly digest');
+    expect(await getDigestEnabled('user_unsub_1')).toBe(false);
+  });
 
   it('is idempotent — second click still succeeds', async () => {
-    await seedConnection('user_unsub_2')
-    const token = buildUnsubscribeToken('user_unsub_2', 'digest')
-    const url = `/v1/email/unsubscribe?uid=user_unsub_2&family=digest&token=${token}`
-    expect((await app.request(url)).status).toBe(200)
-    expect((await app.request(url)).status).toBe(200)
-    expect(await getDigestEnabled('user_unsub_2')).toBe(false)
-  })
+    await seedConnection('user_unsub_2');
+    const token = buildUnsubscribeToken('user_unsub_2', 'digest');
+    const url = `/v1/email/unsubscribe?uid=user_unsub_2&family=digest&token=${token}`;
+    expect((await app.request(url)).status).toBe(200);
+    expect((await app.request(url)).status).toBe(200);
+    expect(await getDigestEnabled('user_unsub_2')).toBe(false);
+  });
 
   // The generalized digest reads user_notification_preferences, so writing
   // only the connection column would leave the link visibly broken for a
   // follower who never connected Spotify.
   it('turns weekly_digest_enabled off for a user with no connection', async () => {
-    const token = buildUnsubscribeToken('user_native_unsub', 'digest')
+    const token = buildUnsubscribeToken('user_native_unsub', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_native_unsub&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const rows = await testDb
       .select()
       .from(userNotificationPreferences)
-      .where(eq(userNotificationPreferences.userId, 'user_native_unsub'))
-    expect(rows[0]?.weeklyDigestEnabled).toBe(false)
+      .where(eq(userNotificationPreferences.userId, 'user_native_unsub'));
+    expect(rows[0]?.weeklyDigestEnabled).toBe(false);
     // Untouched defaults must survive the upsert.
-    expect(rows[0]?.artistAlertsEnabled).toBe(true)
-  })
+    expect(rows[0]?.artistAlertsEnabled).toBe(true);
+  });
 
   it('succeeds without leaking whether a connection exists', async () => {
-    const token = buildUnsubscribeToken('user_no_conn', 'digest')
+    const token = buildUnsubscribeToken('user_no_conn', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_no_conn&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(200)
-  })
+    );
+    expect(res.status).toBe(200);
+  });
 
   it('rejects a bad token and leaves digestEnabled on', async () => {
-    await seedConnection('user_unsub_3')
+    await seedConnection('user_unsub_3');
     const res = await app.request(
       '/v1/email/unsubscribe?uid=user_unsub_3&family=digest&token=deadbeef',
-    )
-    expect(res.status).toBe(400)
-    expect(await getDigestEnabled('user_unsub_3')).toBe(true)
-  })
+    );
+    expect(res.status).toBe(400);
+    expect(await getDigestEnabled('user_unsub_3')).toBe(true);
+  });
 
   it('rejects a token issued for another user', async () => {
-    await seedConnection('user_unsub_4')
-    const token = buildUnsubscribeToken('user_someone_else', 'digest')
+    await seedConnection('user_unsub_4');
+    const token = buildUnsubscribeToken('user_someone_else', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_4&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(400)
-    expect(await getDigestEnabled('user_unsub_4')).toBe(true)
-  })
+    );
+    expect(res.status).toBe(400);
+    expect(await getDigestEnabled('user_unsub_4')).toBe(true);
+  });
 
   it('rejects a stale token after secret rotation', async () => {
-    await seedConnection('user_unsub_5')
-    const stale = buildUnsubscribeToken('user_unsub_5', 'digest')
-    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = 'rotated-secret'
+    await seedConnection('user_unsub_5');
+    const stale = buildUnsubscribeToken('user_unsub_5', 'digest');
+    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = 'rotated-secret';
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_5&family=digest&token=${stale}`,
-    )
-    expect(res.status).toBe(400)
-    expect(await getDigestEnabled('user_unsub_5')).toBe(true)
-  })
+    );
+    expect(res.status).toBe(400);
+    expect(await getDigestEnabled('user_unsub_5')).toBe(true);
+  });
 
   it('rejects an unknown family with a 400 HTML page', async () => {
-    const token = buildUnsubscribeToken('user_unsub_6', 'digest')
+    const token = buildUnsubscribeToken('user_unsub_6', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_6&family=billing&token=${token}`,
-    )
-    expect(res.status).toBe(400)
-    expect(res.headers.get('content-type')).toContain('text/html')
-    expect(await res.text()).toContain('didn’t work')
-  })
+    );
+    expect(res.status).toBe(400);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    expect(await res.text()).toContain('didn’t work');
+  });
 
   it('rejects missing params with a 400 HTML page', async () => {
-    const res = await app.request('/v1/email/unsubscribe?family=digest')
-    expect(res.status).toBe(400)
-    expect(res.headers.get('content-type')).toContain('text/html')
-    expect(await res.text()).toContain('didn’t work')
-  })
+    const res = await app.request('/v1/email/unsubscribe?family=digest');
+    expect(res.status).toBe(400);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    expect(await res.text()).toContain('didn’t work');
+  });
 
   it('returns 503 when EMAIL_UNSUBSCRIBE_SECRET is not configured', async () => {
-    await seedConnection('user_unsub_7')
-    const token = buildUnsubscribeToken('user_unsub_7', 'digest')
-    delete process.env['EMAIL_UNSUBSCRIBE_SECRET']
+    await seedConnection('user_unsub_7');
+    const token = buildUnsubscribeToken('user_unsub_7', 'digest');
+    delete process.env['EMAIL_UNSUBSCRIBE_SECRET'];
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_7&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(503)
-    expect(await getDigestEnabled('user_unsub_7')).toBe(true)
-  })
+    );
+    expect(res.status).toBe(503);
+    expect(await getDigestEnabled('user_unsub_7')).toBe(true);
+  });
 
   it('renders the HTML error shell when the DB update throws', async () => {
-    await seedConnection('user_unsub_db')
-    const token = buildUnsubscribeToken('user_unsub_db', 'digest')
+    await seedConnection('user_unsub_db');
+    const token = buildUnsubscribeToken('user_unsub_db', 'digest');
     const updateSpy = vi.spyOn(db, 'update').mockImplementationOnce(() => {
-      throw new Error('db down')
-    })
+      throw new Error('db down');
+    });
     try {
       const res = await app.request(
         `/v1/email/unsubscribe?uid=user_unsub_db&family=digest&token=${token}`,
-      )
-      expect(res.status).toBe(500)
-      expect(res.headers.get('content-type')).toContain('text/html')
-      expect(await res.text()).toContain('Something went wrong')
+      );
+      expect(res.status).toBe(500);
+      expect(res.headers.get('content-type')).toContain('text/html');
+      expect(await res.text()).toContain('Something went wrong');
     } finally {
-      updateSpy.mockRestore()
+      updateSpy.mockRestore();
     }
-  })
+  });
 
   it('returns 503 when EMAIL_UNSUBSCRIBE_SECRET is set but empty', async () => {
-    await seedConnection('user_unsub_8')
-    const token = buildUnsubscribeToken('user_unsub_8', 'digest')
-    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = ''
+    await seedConnection('user_unsub_8');
+    const token = buildUnsubscribeToken('user_unsub_8', 'digest');
+    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = '';
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_8&family=digest&token=${token}`,
-    )
-    expect(res.status).toBe(503)
-    expect(await getDigestEnabled('user_unsub_8')).toBe(true)
-  })
+    );
+    expect(res.status).toBe(503);
+    expect(await getDigestEnabled('user_unsub_8')).toBe(true);
+  });
 
   it('turns product_emails_enabled off and says what still arrives', async () => {
-    const token = buildUnsubscribeToken('user_product_1', 'product')
+    const token = buildUnsubscribeToken('user_product_1', 'product');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_product_1&family=product&token=${token}`,
-    )
-    expect(res.status).toBe(200)
-    expect(await res.text()).toContain('Receipts and billing notices')
+    );
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('Receipts and billing notices');
     const rows = await testDb
       .select()
       .from(userNotificationPreferences)
-      .where(eq(userNotificationPreferences.userId, 'user_product_1'))
-    expect(rows[0]?.productEmailsEnabled).toBe(false)
+      .where(eq(userNotificationPreferences.userId, 'user_product_1'));
+    expect(rows[0]?.productEmailsEnabled).toBe(false);
     // The product opt-out must not silently take the digest with it.
-    expect(rows[0]?.weeklyDigestEnabled).toBe(true)
-  })
+    expect(rows[0]?.weeklyDigestEnabled).toBe(true);
+  });
 
   // The token is bound to the family, so a digest footer link cannot be
   // replayed to switch product emails off, or the reverse.
   it('rejects a digest token replayed against the product family', async () => {
-    const token = buildUnsubscribeToken('user_product_2', 'digest')
+    const token = buildUnsubscribeToken('user_product_2', 'digest');
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_product_2&family=product&token=${token}`,
-    )
-    expect(res.status).toBe(400)
+    );
+    expect(res.status).toBe(400);
     const rows = await testDb
       .select()
       .from(userNotificationPreferences)
-      .where(eq(userNotificationPreferences.userId, 'user_product_2'))
-    expect(rows).toHaveLength(0)
-  })
-})
+      .where(eq(userNotificationPreferences.userId, 'user_product_2'));
+    expect(rows).toHaveLength(0);
+  });
+});

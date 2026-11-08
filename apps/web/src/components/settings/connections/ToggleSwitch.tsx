@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
 // Accessible switch (role="switch", 40×24) for the Connections card's
 // auto-watch preference (#763 PR 5). Button element = native Enter/Space
 // activation; visual state mirrors the design handoff toggle.
 
 interface ToggleSwitchProps {
-  checked: boolean
-  onChange: (next: boolean) => void
-  ariaLabel: string
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  ariaLabel: string;
   /**
    * Id of the row's body line. `aria-label` replaces the visible title in the
    * accessible name, which leaves the body line unannounced; pointing at it
    * here is the only way a screen reader gets what the switch actually does.
    */
-  ariaDescribedBy?: string
-  disabled?: boolean
+  ariaDescribedBy?: string;
+  disabled?: boolean;
 }
 
 export const ToggleSwitch = ({
@@ -49,4 +49,4 @@ export const ToggleSwitch = ({
       }}
     />
   </button>
-)
+);

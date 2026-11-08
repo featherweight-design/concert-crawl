@@ -1,16 +1,16 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 interface GenreChipsProps {
-  genres: string[] | null
-  className?: string
-  maxChips?: number
+  genres: string[] | null;
+  className?: string;
+  maxChips?: number;
 }
 
 export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
-  if (!genres || genres.length === 0) return null
+  if (!genres || genres.length === 0) return null;
 
   const chips =
-    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres
+    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres;
 
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>
@@ -28,5 +28,5 @@ export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
         </span>
       ))}
     </div>
-  )
+  );
 }

@@ -17,24 +17,24 @@ Marks: ✅ reachable · ⚠️ type present, route or plumbing incomplete · ❌
 
 ## The surface PR 3 shipped
 
-| Endpoint | Gating |
-| --- | --- |
-| `GET /v1/events?following=1` | `requireFeature('following')`; 401 anon, 403 `{code:'entitlement_required'}` |
-| `GET /v1/me/artist-follows` | **Ungated by design** — a downgraded user must still see who they follow |
-| `POST /v1/me/artist-follows/bulk` | `requireFeature('following')`, 1–50 slugs, per-slug result |
-| `GET /v1/search/artists?q=` | `following: boolean` per result; **`q` is required** |
-| `GET /v1/artists/:slug` | `following: boolean \| null` |
+| Endpoint                          | Gating                                                                       |
+| --------------------------------- | ---------------------------------------------------------------------------- |
+| `GET /v1/events?following=1`      | `requireFeature('following')`; 401 anon, 403 `{code:'entitlement_required'}` |
+| `GET /v1/me/artist-follows`       | **Ungated by design** — a downgraded user must still see who they follow     |
+| `POST /v1/me/artist-follows/bulk` | `requireFeature('following')`, 1–50 slugs, per-slug result                   |
+| `GET /v1/search/artists?q=`       | `following: boolean` per result; **`q` is required**                         |
+| `GET /v1/artists/:slug`           | `following: boolean \| null`                                                 |
 
 ---
 
 ## PR 4 — scope chip
 
-| State | Type | Route | Runtime | Mark |
-| --- | --- | --- | --- | --- |
-| `off` | ✅ | ✅ | ✅ | ✅ |
-| `on` | ⚠️ | ✅ | ✅ | ⚠️ |
-| `locked` | ✅ | ✅ | ✅ | ✅ |
-| `absent` | ✅ | ✅ | ⚠️ | ⚠️ |
+| State    | Type | Route | Runtime | Mark |
+| -------- | ---- | ----- | ------- | ---- |
+| `off`    | ✅   | ✅    | ✅      | ✅   |
+| `on`     | ⚠️   | ✅    | ✅      | ⚠️   |
+| `locked` | ✅   | ✅    | ✅      | ✅   |
+| `absent` | ✅   | ✅    | ⚠️      | ⚠️   |
 
 **`on` — ⚠️ type gap.** `apps/api/src/routes/events.ts:230,257,455` computes and returns
 `followingApplied`, but `EventsListResponse` (`packages/types/src/index.ts:865`) does not
@@ -67,7 +67,7 @@ Unresolved in the plan: a free user with zero follows qualifies for both.
 
 **`locked` wins. `absent` applies only to entitled users with zero follows.**
 
-Reason: a non-entitled user's follow count is *necessarily* zero, because following is the
+Reason: a non-entitled user's follow count is _necessarily_ zero, because following is the
 thing they cannot do. If `absent` were evaluated first it would swallow `locked` entirely,
 `locked` would be unreachable for its whole audience, and the paywall's entry point on browse
 would never render — a 🚫 manufactured by the precedence order itself. Evaluate entitlement,
@@ -77,11 +77,11 @@ then count.
 
 ## PR 4 — shelf
 
-| Mode | Type | Route | Runtime | Mark |
-| --- | --- | --- | --- | --- |
-| `zero` (starter shelf) | ❌ | ❌ | 🚫 | 🚫 |
-| `some` | ✅ | ✅ | ⚠️ | ⚠️ |
-| `spotify` | ✅ | ✅ | ⚠️ | ⚠️ |
+| Mode                   | Type | Route | Runtime | Mark |
+| ---------------------- | ---- | ----- | ------- | ---- |
+| `zero` (starter shelf) | ❌   | ❌    | 🚫      | 🚫   |
+| `some`                 | ✅   | ✅    | ⚠️      | ⚠️   |
+| `spotify`              | ✅   | ✅    | ⚠️      | ⚠️   |
 
 **`some` / `spotify` — ⚠️, same plumbing gap as `absent`.** `GET /v1/me/artist-follows`
 returns everything both modes need: `FollowedArtist` carries `name`, `slug`, `photoUrl`,
@@ -129,8 +129,8 @@ authored attributes). Order by **count of upcoming consumer-visible Denver shows
 soonest date asc, then name asc for determinism.
 
 That is a popularity proxy drawn from our own data rather than Spotify's, and it is the
-better signal for this product anyway: the shelf is recruiting follows for *shows you can go
-to*, not for global fame. The endpoint returns a candidate pool; the plan's "shuffled per
+better signal for this product anyway: the shelf is recruiting follows for _shows you can go
+to_, not for global fame. The endpoint returns a candidate pool; the plan's "shuffled per
 session" shuffle stays client-side, so the ordering picks the pool rather than the display
 order.
 
@@ -138,12 +138,12 @@ order.
 
 ## Actions taken before the PR 4 build
 
-| # | Action | Where |
-| --- | --- | --- |
-| 1 | Add `followingApplied?: boolean` to `EventsListResponse` | `packages/types/src/index.ts` |
-| 2 | Add `GET /v1/artists/suggestions?limit=` (D2, D3) + integration tests | `apps/api/src/routes/artists-public.ts` |
-| 3 | Add `lib/following.ts`; SSR-seed the follow list once on browse | `apps/web/src/lib/`, `events/page.tsx` |
-| 4 | Chip precedence: entitlement first, then count (D1) | PR 4 chip |
+| #   | Action                                                                | Where                                   |
+| --- | --------------------------------------------------------------------- | --------------------------------------- |
+| 1   | Add `followingApplied?: boolean` to `EventsListResponse`              | `packages/types/src/index.ts`           |
+| 2   | Add `GET /v1/artists/suggestions?limit=` (D2, D3) + integration tests | `apps/api/src/routes/artists-public.ts` |
+| 3   | Add `lib/following.ts`; SSR-seed the follow list once on browse       | `apps/web/src/lib/`, `events/page.tsx`  |
+| 4   | Chip precedence: entitlement first, then count (D1)                   | PR 4 chip                               |
 
 No item is escalated. D1 is settled by reachability rather than taste, and D2/D3 move work
 that was already in the plan to the PR that first needs it.

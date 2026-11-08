@@ -1,4 +1,4 @@
-import type { Vendor } from '@concert-crawl/types'
+import type { Vendor } from '@concert-crawl/types';
 
 // Hosts → vendor enum value (the same Pascal-cased strings used in the
 // submission_vendor pgEnum + the Vendor type in @concert-crawl/types).
@@ -11,7 +11,7 @@ export const KNOWN_VENDOR_HOSTS: ReadonlyMap<string, Vendor> = new Map([
   ['seatgeek.com', 'SeatGeek'],
   ['dice.fm', 'DICE'],
   ['eventbrite.com', 'Eventbrite'],
-])
+]);
 
 // Resale-marketplace hosts. Kept narrow — only the largest ones whose presence
 // is unambiguous evidence of resale, not a price-comparison aggregator that
@@ -21,14 +21,14 @@ export const KNOWN_RESALE_HOSTS: ReadonlySet<string> = new Set([
   'vividseats.com',
   'viagogo.com',
   'ticketnetwork.com',
-])
+]);
 
 export function vendorForHost(host: string | null): Vendor | null {
-  if (host == null) return null
-  return KNOWN_VENDOR_HOSTS.get(host) ?? null
+  if (host == null) return null;
+  return KNOWN_VENDOR_HOSTS.get(host) ?? null;
 }
 
 export function isResaleHost(host: string | null): boolean {
-  if (host == null) return false
-  return KNOWN_RESALE_HOSTS.has(host)
+  if (host == null) return false;
+  return KNOWN_RESALE_HOSTS.has(host);
 }

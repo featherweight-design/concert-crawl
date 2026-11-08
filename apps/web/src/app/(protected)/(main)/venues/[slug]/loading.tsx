@@ -45,7 +45,7 @@ function VenueEventRowSkeleton({ delay }: { delay: number }) {
         />
       </div>
     </div>
-  )
+  );
 }
 
 export default function VenueLoading() {
@@ -167,5 +167,5 @@ export default function VenueLoading() {
         </div>
       </div>
     </>
-  )
+  );
 }

@@ -1,79 +1,79 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
-import { events, notifications, priceSubmissions } from '@concert-crawl/db'
-import { testDb } from '../test/helpers/db.js'
-import { fanoutPriceDrop } from '../lib/price-drop.js'
-import { observeBlocking, withLockHolder } from '../test/helpers/locks.js'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
+import { events, notifications, priceSubmissions } from '@concert-crawl/db';
+import { testDb } from '../test/helpers/db.js';
+import { fanoutPriceDrop } from '../lib/price-drop.js';
+import { observeBlocking, withLockHolder } from '../test/helpers/locks.js';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../app.js'
+import { createApp } from '../app.js';
 import {
   clearTables,
   seedEvent,
   seedVenue,
   seedPriceSubmission,
   seedUserEvent,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(userId = 'user_abc123'): void {
   authState.current = {
     userId,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
-  let eventId: string
-  let submissionId: string
-  const SUBMITTER = 'user_submitter'
-  const CONFIRMER = 'user_confirmer'
+  let eventId: string;
+  let submissionId: string;
+  const SUBMITTER = 'user_submitter';
+  const CONFIRMER = 'user_confirmer';
 
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    eventId = event.id
-    const submission = await seedPriceSubmission(eventId, SUBMITTER)
-    submissionId = submission.id
-  })
+    clearAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    eventId = event.id;
+    const submission = await seedPriceSubmission(eventId, SUBMITTER);
+    submissionId = submission.id;
+  });
 
   const confirmUrl = () =>
-    `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`
+    `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`;
 
-  const confirmBody = { method: 'same-vendor' }
+  const confirmBody = { method: 'same-vendor' };
 
   it('returns 401 without auth', async () => {
     const res = await app.request(confirmUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 422 for invalid method', async () => {
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     const res = await app.request(confirmUrl(), {
       method: 'POST',
       headers: {
@@ -81,15 +81,18 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify({ method: 'invalid-method' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('returns 404 when submission belongs to a different event', async () => {
-    setAuth(CONFIRMER)
-    const venue2 = await seedVenue({ name: 'Other Venue', slug: 'other-venue' })
-    const event2 = await seedEvent(venue2.id)
-    const wrongUrl = `/v1/events/${event2.id}/price-submissions/${submissionId}/confirm`
+    setAuth(CONFIRMER);
+    const venue2 = await seedVenue({
+      name: 'Other Venue',
+      slug: 'other-venue',
+    });
+    const event2 = await seedEvent(venue2.id);
+    const wrongUrl = `/v1/events/${event2.id}/price-submissions/${submissionId}/confirm`;
     const res = await app.request(wrongUrl, {
       method: 'POST',
       headers: {
@@ -97,9 +100,9 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('returns 404 when the event is hidden from consumers', async () => {
     // Regression test for Copilot review on PR #705: confirm flow must treat
@@ -107,17 +110,17 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     // mutate a non-public event's prices.
     const hiddenVenue = await seedVenue({
       slug: `venue-hidden-${Date.now()}`,
-    })
+    });
     const hiddenEvent = await seedEvent(hiddenVenue.id, {
       artist: 'Hidden Artist',
       hiddenFromConsumer: true,
-    })
+    });
     const hiddenSubmission = await seedPriceSubmission(
       hiddenEvent.id,
       'user_hidden_submitter',
-    )
+    );
 
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     const res = await app.request(
       `/v1/events/${hiddenEvent.id}/price-submissions/${hiddenSubmission.id}/confirm`,
       {
@@ -128,12 +131,12 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         },
         body: JSON.stringify(confirmBody),
       },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('returns 403 when user tries to confirm their own submission', async () => {
-    setAuth(SUBMITTER)
+    setAuth(SUBMITTER);
     const res = await app.request(confirmUrl(), {
       method: 'POST',
       headers: {
@@ -141,9 +144,9 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(403)
-  })
+    });
+    expect(res.status).toBe(403);
+  });
 
   it('bumps updatedAt even when the row stays pending (freshness signal)', async () => {
     // Regression test for Copilot review on PR #705: updatedAt must move on
@@ -151,24 +154,24 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     // it as a freshness signal and to match /v1/submissions/:id/confirm.
     const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
       .toISOString()
-      .slice(0, 10)
+      .slice(0, 10);
     const imminentEvent = await seedEvent(
       (await seedVenue({ slug: `venue-updatedat-${Date.now()}` })).id,
       { date: imminentDate, artist: 'UpdatedAt Artist' },
-    )
+    );
     const imminentSubmission = await seedPriceSubmission(
       imminentEvent.id,
       'user_updatedat_submitter',
-    )
-    const beforeUpdatedAt = imminentSubmission.updatedAt
+    );
+    const beforeUpdatedAt = imminentSubmission.updatedAt;
 
     // Wait long enough that a now() bump is observable in the millisecond
     // precision the tests use.
     await new Promise<void>((resolve) => {
-      setTimeout(resolve, 25)
-    })
+      setTimeout(resolve, 25);
+    });
 
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     const res = await app.request(
       `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`,
       {
@@ -179,23 +182,23 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         },
         body: JSON.stringify(confirmBody),
       },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { submissionStatus: string }
-    }
-    expect(body.data.submissionStatus).toBe('pending')
+      success: boolean;
+      data: { submissionStatus: string };
+    };
+    expect(body.data.submissionStatus).toBe('pending');
 
     const reloaded = await testDb
       .select({ updatedAt: priceSubmissions.updatedAt })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, imminentSubmission.id))
-      .limit(1)
+      .limit(1);
     expect(reloaded[0]!.updatedAt.getTime()).toBeGreaterThan(
       beforeUpdatedAt.getTime(),
-    )
-  })
+    );
+  });
 
   it('confirms successfully and stays pending when below the imminent-event threshold', async () => {
     // 1/2 confirmation model: the submitter is observation #1, so a single
@@ -204,18 +207,18 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     // event (threshold = 3, so submitter + 1 confirm = 2 < 3 = pending).
     const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
       .toISOString()
-      .slice(0, 10)
+      .slice(0, 10);
     const imminentEvent = await seedEvent(
       (await seedVenue({ slug: `venue-imminent-${Date.now()}` })).id,
       { date: imminentDate, artist: 'Imminent Artist' },
-    )
+    );
     const imminentSubmission = await seedPriceSubmission(
       imminentEvent.id,
       'user_imminent_submitter',
-    )
-    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+    );
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`;
 
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     const res = await app.request(imminentUrl, {
       method: 'POST',
       headers: {
@@ -223,27 +226,27 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        confirmed: boolean
-        submissionStatus: string
-        confirmsCount: number
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.confirmed).toBe(true)
-    expect(body.data.submissionStatus).toBe('pending')
-    expect(body.data.confirmsCount).toBe(1)
-  })
+        confirmed: boolean;
+        submissionStatus: string;
+        confirmsCount: number;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.confirmed).toBe(true);
+    expect(body.data.submissionStatus).toBe('pending');
+    expect(body.data.confirmsCount).toBe(1);
+  });
 
   it('promotes after one non-submitter confirm on a non-imminent event', async () => {
     // The default seedEvent date is far past, so confirmsRequired = 2. With
     // the submitter as observation #1, a single non-submitter confirm meets
     // the threshold and promotes the row to corroborated.
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     const res = await app.request(confirmUrl(), {
       method: 'POST',
       headers: {
@@ -251,21 +254,21 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        confirmed: boolean
-        submissionStatus: string
-        confirmsCount: number
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.confirmed).toBe(true)
-    expect(body.data.submissionStatus).toBe('corroborated')
-    expect(body.data.confirmsCount).toBe(1)
-  })
+        confirmed: boolean;
+        submissionStatus: string;
+        confirmsCount: number;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.confirmed).toBe(true);
+    expect(body.data.submissionStatus).toBe('corroborated');
+    expect(body.data.confirmsCount).toBe(1);
+  });
 
   it('returns 409 on duplicate confirm (imminent event, still pending after one confirm)', async () => {
     // Under the 1/2 model the default non-imminent event promotes on the first
@@ -273,18 +276,18 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
     // events (where one confirm leaves the row at 2/3 = pending).
     const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
       .toISOString()
-      .slice(0, 10)
+      .slice(0, 10);
     const imminentEvent = await seedEvent(
       (await seedVenue({ slug: `venue-duplicate-${Date.now()}` })).id,
       { date: imminentDate, artist: 'Duplicate-Confirm Artist' },
-    )
+    );
     const imminentSubmission = await seedPriceSubmission(
       imminentEvent.id,
       'user_duplicate_submitter',
-    )
-    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+    );
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`;
 
-    setAuth(CONFIRMER)
+    setAuth(CONFIRMER);
     await app.request(imminentUrl, {
       method: 'POST',
       headers: {
@@ -292,7 +295,7 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
+    });
     const res = await app.request(imminentUrl, {
       method: 'POST',
       headers: {
@@ -300,35 +303,35 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(confirmBody),
-    })
-    expect(res.status).toBe(409)
-  })
+    });
+    expect(res.status).toBe(409);
+  });
 
   it('promotes when total observations (submitter + confirms) meets the imminent threshold', async () => {
-    const { SP_POLICY } = await import('@concert-crawl/types')
+    const { SP_POLICY } = await import('@concert-crawl/types');
 
     const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
       .toISOString()
-      .slice(0, 10)
+      .slice(0, 10);
     const imminentVenue = await seedVenue({
       slug: `venue-promote-${Date.now()}`,
-    })
+    });
     const imminentEvent = await seedEvent(imminentVenue.id, {
       date: imminentDate,
       artist: 'Imminent Promotion Artist',
-    })
+    });
     const imminentSubmission = await seedPriceSubmission(
       imminentEvent.id,
       'user_promote_submitter',
-    )
-    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`
+    );
+    const imminentUrl = `/v1/events/${imminentEvent.id}/price-submissions/${imminentSubmission.id}/confirm`;
 
     // confirmsRequiredImminent counts total observations. Submitter = 1, so
     // we need (confirmsRequiredImminent - 1) non-submitter confirms.
-    const confirmsNeeded = SP_POLICY.confirmsRequiredImminent - 1
+    const confirmsNeeded = SP_POLICY.confirmsRequiredImminent - 1;
 
     for (let idx = 0; idx < confirmsNeeded; idx++) {
-      setAuth(`user_confirmer_${idx}`)
+      setAuth(`user_confirmer_${idx}`);
       const res = await app.request(imminentUrl, {
         method: 'POST',
         headers: {
@@ -336,29 +339,29 @@ describe('POST /v1/events/:id/price-submissions/:submissionId/confirm', () => {
           Authorization: 'Bearer test-token',
         },
         body: JSON.stringify(confirmBody),
-      })
-      expect(res.status).toBe(200)
+      });
+      expect(res.status).toBe(200);
       const body = (await res.json()) as {
-        success: boolean
-        data: { submissionStatus: string; confirmsCount: number }
-      }
+        success: boolean;
+        data: { submissionStatus: string; confirmsCount: number };
+      };
       if (idx < confirmsNeeded - 1) {
-        expect(body.data.submissionStatus).toBe('pending')
+        expect(body.data.submissionStatus).toBe('pending');
       } else {
-        expect(body.data.submissionStatus).toBe('corroborated')
-        expect(body.data.confirmsCount).toBe(confirmsNeeded)
+        expect(body.data.submissionStatus).toBe('corroborated');
+        expect(body.data.confirmsCount).toBe(confirmsNeeded);
       }
     }
-  })
-})
+  });
+});
 
 describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
-  const SUBMITTER = 'user_drop_submitter'
+  const SUBMITTER = 'user_drop_submitter';
 
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   // The default seedEvent date is in the past, so confirmsRequired = 2 and a
   // single non-submitter confirm promotes the submission to corroborated.
@@ -367,7 +370,7 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
     eventId: string,
     submissionId: string,
   ): Promise<Response> {
-    setAuth(userId)
+    setAuth(userId);
     return app.request(
       `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`,
       {
@@ -378,7 +381,7 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
         },
         body: JSON.stringify({ method: 'same-vendor' }),
       },
-    )
+    );
   }
 
   async function pricedropRows(): Promise<
@@ -391,30 +394,30 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
         body: notifications.body,
       })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.pricedrop'))
+      .where(eq(notifications.category, 'watch.pricedrop'));
   }
 
   it('fires one watch.pricedrop per watcher when the promoted price is strictly lower', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
-    const WATCHER = 'user_confirm_drop_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' });
+    const WATCHER = 'user_confirm_drop_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
     await seedUserEvent('user_confirm_drop_going', event.id, {
       status: 'going',
-    })
+    });
     await seedUserEvent('user_confirm_drop_interested', event.id, {
       status: 'interested',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_1', event.id, submission.id)
-    expect(res.status).toBe(200)
+    const res = await confirmAs('user_confirm_1', event.id, submission.id);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { submissionStatus: string }
-    }
-    expect(body.data.submissionStatus).toBe('corroborated')
+      data: { submissionStatus: string };
+    };
+    expect(body.data.submissionStatus).toBe('corroborated');
 
     const [updatedEvent] = await testDb
       .select({
@@ -423,28 +426,28 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
       })
       .from(events)
       .where(eq(events.id, event.id))
-      .limit(1)
-    expect(updatedEvent?.ticketPriceMin).toBe('32.00')
-    expect(updatedEvent?.priceSource).toBe('community')
+      .limit(1);
+    expect(updatedEvent?.ticketPriceMin).toBe('32.00');
+    expect(updatedEvent?.priceSource).toBe('community');
 
-    const rows = await pricedropRows()
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-    expect(rows[0]?.title).toMatch(/\$32/)
-    expect(rows[0]?.body).toMatch(/\$48/)
-  })
+    const rows = await pricedropRows();
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+    expect(rows[0]?.title).toMatch(/\$32/);
+    expect(rows[0]?.body).toMatch(/\$48/);
+  });
 
   it('a replayed fan-out of the same drop writes nothing (#1311)', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
-    const WATCHER = 'user_confirm_replay_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' });
+    const WATCHER = 'user_confirm_replay_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_replay', event.id, submission.id)
-    expect(res.status).toBe(200)
-    expect(await pricedropRows()).toHaveLength(1)
+    const res = await confirmAs('user_confirm_replay', event.id, submission.id);
+    expect(res.status).toBe(200);
+    expect(await pricedropRows()).toHaveLength(1);
 
     // Replay the exact fan-out the route ran: same drop, same marker built
     // from the promotion's committed updated_at.
@@ -452,145 +455,145 @@ describe('confirm promotion: watch.pricedrop fan-out (#1107)', () => {
       .select({ updatedAt: priceSubmissions.updatedAt })
       .from(priceSubmissions)
       .where(eq(priceSubmissions.id, submission.id))
-      .limit(1)
-    if (!promoted) throw new Error('promoted submission missing')
-    const marker = `submission:${submission.id}:${promoted.updatedAt.toISOString()}`
+      .limit(1);
+    if (!promoted) throw new Error('promoted submission missing');
+    const marker = `submission:${submission.id}:${promoted.updatedAt.toISOString()}`;
     const drop = {
       eventId: event.id,
       oldPriceMin: '48.00',
       newPriceMin: '32.00',
-    }
+    };
     await Promise.all([
       fanoutPriceDrop(drop, marker),
       fanoutPriceDrop(drop, marker),
-    ])
+    ]);
 
-    const rows = await pricedropRows()
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
+    const rows = await pricedropRows();
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
 
   it('does not fan out again on a further confirm after promotion', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' });
     await seedUserEvent('user_confirm_repeat_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
-    })
+    });
 
-    const first = await confirmAs('user_confirm_a', event.id, submission.id)
-    expect(first.status).toBe(200)
-    const second = await confirmAs('user_confirm_b', event.id, submission.id)
+    const first = await confirmAs('user_confirm_a', event.id, submission.id);
+    expect(first.status).toBe(200);
+    const second = await confirmAs('user_confirm_b', event.id, submission.id);
     // Already corroborated, so the confirm is refused before any write.
-    expect(second.status).toBe(400)
+    expect(second.status).toBe(400);
 
-    expect(await pricedropRows()).toHaveLength(1)
-  })
+    expect(await pricedropRows()).toHaveLength(1);
+  });
 
   it('is not blocked by a foreign-key KEY SHARE lock on the event (overlapping dispute deadlock guard)', async () => {
     // An overlapping dispute (submissions.ts) inserts a counter whose FK
     // check holds KEY SHARE on the event, then waits on the submission row
     // this confirm has updated. A FOR UPDATE event pre-read here would wait
     // on that KEY SHARE: a deadlock. FOR NO KEY UPDATE does not conflict.
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '48' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '48' });
     await seedUserEvent('user_confirm_ks_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
-    })
+    });
     const { blocked, result } = await withLockHolder(
       [sql`SELECT id FROM events WHERE id = ${event.id} FOR KEY SHARE`],
       () =>
         observeBlocking(() =>
           confirmAs('user_confirm_ks', event.id, submission.id),
         ),
-    )
-    const res = await result
-    expect(blocked).toBe(false)
-    expect(res.status).toBe(200)
-    expect(await pricedropRows()).toHaveLength(1)
-  })
+    );
+    const res = await result;
+    expect(blocked).toBe(false);
+    expect(res.status).toBe(200);
+    expect(await pricedropRows()).toHaveLength(1);
+  });
 
   it('does not fire when the promoted price equals the current event price', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '35' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '35' });
     await seedUserEvent('user_confirm_equal_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '35',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_eq', event.id, submission.id)
-    expect(res.status).toBe(200)
-    expect(await pricedropRows()).toHaveLength(0)
-  })
+    const res = await confirmAs('user_confirm_eq', event.id, submission.id);
+    expect(res.status).toBe(200);
+    expect(await pricedropRows()).toHaveLength(0);
+  });
 
   it('does not fire when the promoted price is higher than the current event price', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { ticketPriceMin: '30' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { ticketPriceMin: '30' });
     await seedUserEvent('user_confirm_higher_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '40',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_hi', event.id, submission.id)
-    expect(res.status).toBe(200)
-    expect(await pricedropRows()).toHaveLength(0)
-  })
+    const res = await confirmAs('user_confirm_hi', event.id, submission.id);
+    expect(res.status).toBe(200);
+    expect(await pricedropRows()).toHaveLength(0);
+  });
 
   it('does not fire when the event had no previous price', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
     await seedUserEvent('user_confirm_first_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '25',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_first', event.id, submission.id)
-    expect(res.status).toBe(200)
+    const res = await confirmAs('user_confirm_first', event.id, submission.id);
+    expect(res.status).toBe(200);
 
     const [updatedEvent] = await testDb
       .select({ ticketPriceMin: events.ticketPriceMin })
       .from(events)
       .where(eq(events.id, event.id))
-      .limit(1)
-    expect(updatedEvent?.ticketPriceMin).toBe('25.00')
-    expect(await pricedropRows()).toHaveLength(0)
-  })
+      .limit(1);
+    expect(updatedEvent?.ticketPriceMin).toBe('25.00');
+    expect(await pricedropRows()).toHaveLength(0);
+  });
 
   it('does not fire while the submission stays pending below threshold', async () => {
     const imminentDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000)
       .toISOString()
-      .slice(0, 10)
-    const venue = await seedVenue()
+      .slice(0, 10);
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: imminentDate,
       ticketPriceMin: '48',
-    })
+    });
     await seedUserEvent('user_confirm_pending_watcher', event.id, {
       status: 'watching',
-    })
+    });
     const submission = await seedPriceSubmission(event.id, SUBMITTER, {
       priceMin: '32',
-    })
+    });
 
-    const res = await confirmAs('user_confirm_p', event.id, submission.id)
-    expect(res.status).toBe(200)
+    const res = await confirmAs('user_confirm_p', event.id, submission.id);
+    expect(res.status).toBe(200);
 
     const [unchanged] = await testDb
       .select({ ticketPriceMin: events.ticketPriceMin })
       .from(events)
       .where(eq(events.id, event.id))
-      .limit(1)
-    expect(unchanged?.ticketPriceMin).toBe('48.00')
-    expect(await pricedropRows()).toHaveLength(0)
-  })
-})
+      .limit(1);
+    expect(unchanged?.ticketPriceMin).toBe('48.00');
+    expect(await pricedropRows()).toHaveLength(0);
+  });
+});

@@ -5,11 +5,11 @@
 // treatment instead of forking a second empty-state look, and adds the handoff's
 // dashed stub badge above it.
 
-import { EmptyState } from '@/components/consumer/empty-state'
-import { StubStamp } from '@/components/consumer/going/StubStamp'
-import { HISTORY_COPY } from './definitions/copy'
+import { EmptyState } from '@/components/consumer/empty-state';
+import { StubStamp } from '@/components/consumer/going/StubStamp';
+import { HISTORY_COPY } from './definitions/copy';
 
-const COPY = HISTORY_COPY.empty
+const COPY = HISTORY_COPY.empty;
 
 export const HistoryEmpty = () => (
   <div className="flex flex-col items-center">
@@ -27,4 +27,4 @@ export const HistoryEmpty = () => (
       primaryCta={{ label: COPY.cta, href: '/events' }}
     />
   </div>
-)
+);

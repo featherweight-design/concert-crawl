@@ -6,4 +6,4 @@ export const LANDING_POSTER_COPY = {
     `${artist} at ${venue}, ${dateShort}. See the show`,
   goToPoster: (position: number) => `Go to poster ${position}`,
   nextPoster: 'Next poster',
-} as const
+} as const;

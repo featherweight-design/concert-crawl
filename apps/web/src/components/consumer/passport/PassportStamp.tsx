@@ -1,15 +1,15 @@
-import React from 'react'
-import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArtPrint'
-import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes'
-import type { AttendedShow } from '@/lib/passport/stats'
-import { passportRotation, stampDateParts } from '@/lib/passport/stamp'
+import React from 'react';
+import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArtPrint';
+import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes';
+import type { AttendedShow } from '@/lib/passport/stats';
+import { passportRotation, stampDateParts } from '@/lib/passport/stamp';
 
 export interface PassportStampProps {
-  show: AttendedShow
-  cfg: PassportModeConfig
+  show: AttendedShow;
+  cfg: PassportModeConfig;
   /** Explicit pixel size — satori has no percentage-sized root. */
-  width: number
-  height: number
+  width: number;
+  height: number;
 }
 
 /**
@@ -25,7 +25,7 @@ export const PassportStamp = ({
   width,
   height,
 }: PassportStampProps) => {
-  const punch = stampDateParts(show.date)
+  const punch = stampDateParts(show.date);
 
   return (
     <div
@@ -115,5 +115,5 @@ export const PassportStamp = ({
         {show.artist}
       </div>
     </div>
-  )
-}
+  );
+};

@@ -1,88 +1,88 @@
-import React from 'react'
+import React from 'react';
 
 // ── Types ──────────────────────────────────────────────────────
-type Scale = 'hero' | 'tile' | 'micro'
-type Kind = 'artist' | 'venue'
+type Scale = 'hero' | 'tile' | 'micro';
+type Kind = 'artist' | 'venue';
 
 interface Palette {
-  id: string
-  name: string
-  bg: string
-  primary: string
-  secondary: string
-  ink: string
+  id: string;
+  name: string;
+  bg: string;
+  primary: string;
+  secondary: string;
+  ink: string;
 }
 
 interface TemplateArgs {
-  rng: () => number
-  hash: number
-  palette: Palette
-  scale: Scale
-  kind: Kind
+  rng: () => number;
+  hash: number;
+  palette: Palette;
+  scale: Scale;
+  kind: Kind;
 }
 
 interface IaTemplate {
-  id: string
-  label: string
-  render: (args: TemplateArgs) => React.ReactElement
-  kinds: Kind[]
+  id: string;
+  label: string;
+  render: (args: TemplateArgs) => React.ReactElement;
+  kinds: Kind[];
 }
 
 export interface IdentityArtProps {
-  name: string
-  kind?: Kind
-  scale?: Scale
+  name: string;
+  kind?: Kind;
+  scale?: Scale;
   // `number | string` so callers can pass a CSS length such as "100%".
-  width?: number | string
-  height?: number | string
-  grain?: number
-  templateOverride?: string
-  paletteOverride?: string
-  rotateOverride?: 0 | 1 | 2 | 3
-  className?: string
-  style?: React.CSSProperties
-  'aria-label'?: string
+  width?: number | string;
+  height?: number | string;
+  grain?: number;
+  templateOverride?: string;
+  paletteOverride?: string;
+  rotateOverride?: 0 | 1 | 2 | 3;
+  className?: string;
+  style?: React.CSSProperties;
+  'aria-label'?: string;
 }
 
 // ── Hash ──────────────────────────────────────────────────────
 export const ia_hashName = (name: string, namespace: string): number => {
-  let hash = 0x811c9dc5 >>> 0
-  const str = (namespace || 'x') + ':' + (name || '')
+  let hash = 0x811c9dc5 >>> 0;
+  const str = (namespace || 'x') + ':' + (name || '');
   for (let idx = 0; idx < str.length; idx++) {
-    hash = (hash ^ str.charCodeAt(idx)) >>> 0
-    hash = Math.imul(hash, 0x01000193) >>> 0
+    hash = (hash ^ str.charCodeAt(idx)) >>> 0;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return hash >>> 0
-}
+  return hash >>> 0;
+};
 
 // Exported so the satori-safe <IdentityArtPrint /> can reproduce identical
 // geometry from the same hash rather than duplicating the generator and
 // drifting from it.
 export const ia_rngFromHash = (hash: number): (() => number) => {
-  let state = (hash || 1) >>> 0
+  let state = (hash || 1) >>> 0;
   return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0
-    return state / 0xffffffff
-  }
-}
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+};
 
 export const ia_pick = <T,>(rng: () => number, arr: T[]): T =>
-  arr[Math.floor(rng() * arr.length) % arr.length]!
+  arr[Math.floor(rng() * arr.length) % arr.length]!;
 
 // ── Perceived luminance ────────────────────────────────────────
 export const ia_isDark = (hex: string): boolean => {
-  if (!hex) return false
-  const match = String(hex).match(/^#([0-9a-f]{6})$/i)
-  if (!match) return false
-  const num = parseInt(match[1]!, 16)
-  const rr = (num >> 16) & 255
-  const gg = (num >> 8) & 255
-  const bb = num & 255
-  return rr * 0.299 + gg * 0.587 + bb * 0.114 < 128
-}
+  if (!hex) return false;
+  const match = String(hex).match(/^#([0-9a-f]{6})$/i);
+  if (!match) return false;
+  const num = parseInt(match[1]!, 16);
+  const rr = (num >> 16) & 255;
+  const gg = (num >> 8) & 255;
+  const bb = num & 255;
+  return rr * 0.299 + gg * 0.587 + bb * 0.114 < 128;
+};
 
 const ia_blend = (palette: Palette): React.CSSProperties['mixBlendMode'] =>
-  ia_isDark(palette.bg) ? 'screen' : 'multiply'
+  ia_isDark(palette.bg) ? 'screen' : 'multiply';
 
 // ── Palettes ──────────────────────────────────────────────────
 export const IA_PALETTES: Palette[] = [
@@ -150,21 +150,21 @@ export const IA_PALETTES: Palette[] = [
     secondary: '#FF7E5A',
     ink: '#191418',
   },
-]
+];
 
 // ── Initials ──────────────────────────────────────────────────
 export const ia_getInitials = (name: string, max = 2): string => {
-  if (!name) return '??'
+  if (!name) return '??';
   const cleaned = String(name)
     .replace(/[^A-Za-z0-9 &]/g, '')
-    .trim()
-  if (!cleaned) return '??'
-  const stop = /^(the|and|of|for|a|an|&|to|in|on|at)$/i
-  const words = cleaned.split(/\s+/).filter((ww) => ww && !stop.test(ww))
-  if (words.length === 0) return cleaned.slice(0, max).toUpperCase()
-  if (words.length === 1) return words[0]!.slice(0, max).toUpperCase()
-  return (words[0]![0]! + words[1]![0]!).toUpperCase()
-}
+    .trim();
+  if (!cleaned) return '??';
+  const stop = /^(the|and|of|for|a|an|&|to|in|on|at)$/i;
+  const words = cleaned.split(/\s+/).filter((ww) => ww && !stop.test(ww));
+  if (words.length === 0) return cleaned.slice(0, max).toUpperCase();
+  if (words.length === 1) return words[0]!.slice(0, max).toUpperCase();
+  return (words[0]![0]! + words[1]![0]!).toUpperCase();
+};
 
 // ── Templates ─────────────────────────────────────────────────
 
@@ -174,21 +174,21 @@ const tpl_mesh = ({
   palette,
   scale,
 }: TemplateArgs): React.ReactElement => {
-  const blobCount = scale === 'hero' ? 5 : scale === 'tile' ? 4 : 3
+  const blobCount = scale === 'hero' ? 5 : scale === 'tile' ? 4 : 3;
   const blobs = Array.from({ length: blobCount }, (_, idx) => ({
     cx: 60 + rng() * 280,
     cy: 60 + rng() * 280,
     rr: 100 + rng() * 160,
     fill: idx % 2 === 0 ? palette.primary : palette.secondary,
     key: idx,
-  }))
-  const blend = ia_blend(palette)
+  }));
+  const blend = ia_blend(palette);
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
       <g style={{ mixBlendMode: blend }}>
         {blobs.map((blob) => {
-          const gid = `mg-${hash.toString(36)}-${blob.key}-${Math.round(blob.cx)}-${Math.round(blob.cy)}`
+          const gid = `mg-${hash.toString(36)}-${blob.key}-${Math.round(blob.cx)}-${Math.round(blob.cy)}`;
           return (
             <g key={blob.key}>
               <defs>
@@ -205,28 +205,28 @@ const tpl_mesh = ({
                 fill={`url(#${gid})`}
               />
             </g>
-          )
+          );
         })}
       </g>
     </g>
-  )
-}
+  );
+};
 
 const tpl_stripes = ({
   rng,
   palette,
   scale,
 }: TemplateArgs): React.ReactElement => {
-  const angle = ia_pick(rng, [0, 30, 45, 60, 90, 120, 135])
-  const stripeCount = scale === 'hero' ? 8 : scale === 'tile' ? 6 : 4
-  const stripeW = 400 / stripeCount
-  const offsetX = 6
-  const offsetY = 4
-  const widthMul = 0.55 + rng() * 0.25
+  const angle = ia_pick(rng, [0, 30, 45, 60, 90, 120, 135]);
+  const stripeCount = scale === 'hero' ? 8 : scale === 'tile' ? 6 : 4;
+  const stripeW = 400 / stripeCount;
+  const offsetX = 6;
+  const offsetY = 4;
+  const widthMul = 0.55 + rng() * 0.25;
   const stripes = Array.from({ length: stripeCount }, (_, idx) => idx)
     .filter((idx) => idx % 2 === 0)
-    .map((idx) => ({ xx: idx * stripeW, ww: stripeW * widthMul, key: idx }))
-  const blend = ia_blend(palette)
+    .map((idx) => ({ xx: idx * stripeW, ww: stripeW * widthMul, key: idx }));
+  const blend = ia_blend(palette);
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -260,8 +260,8 @@ const tpl_stripes = ({
         </g>
       </g>
     </g>
-  )
-}
+  );
+};
 
 const tpl_concentric = ({
   rng,
@@ -274,16 +274,16 @@ const tpl_concentric = ({
     { cx: 80, cy: 80 },
     { cx: 320, cy: 320 },
     { cx: 200, cy: 200 },
-  ])
-  const ringCount = scale === 'hero' ? 12 : scale === 'tile' ? 8 : 5
-  const stride = 28 + rng() * 14
-  const baseStroke = scale === 'hero' ? 6 : 9
+  ]);
+  const ringCount = scale === 'hero' ? 12 : scale === 'tile' ? 8 : 5;
+  const stride = 28 + rng() * 14;
+  const baseStroke = scale === 'hero' ? 6 : 9;
   const rings = Array.from({ length: ringCount }, (_, idx) => ({
     rr: 30 + idx * stride,
     sw: baseStroke + (idx % 2 === 0 ? 0 : 2),
     key: idx,
-  }))
-  const blend = ia_blend(palette)
+  }));
+  const blend = ia_blend(palette);
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -314,8 +314,8 @@ const tpl_concentric = ({
         ))}
       </g>
     </g>
-  )
-}
+  );
+};
 
 const tpl_halftone = ({
   rng,
@@ -327,25 +327,25 @@ const tpl_halftone = ({
     { cx: 400, cy: 400 },
     { cx: 0, cy: 0 },
     { cx: 400, cy: 0 },
-  ]
-  const corner = corners[Math.floor(rng() * 4)]!
-  const massR = 320 + rng() * 80
-  const cellSize = scale === 'hero' ? 16 : scale === 'tile' ? 22 : 32
-  const cells = Math.ceil(400 / cellSize)
-  const dots: { xx: number; yy: number; rr: number; key: string }[] = []
+  ];
+  const corner = corners[Math.floor(rng() * 4)]!;
+  const massR = 320 + rng() * 80;
+  const cellSize = scale === 'hero' ? 16 : scale === 'tile' ? 22 : 32;
+  const cells = Math.ceil(400 / cellSize);
+  const dots: { xx: number; yy: number; rr: number; key: string }[] = [];
   for (let yi = 0; yi < cells; yi++) {
     for (let xi = 0; xi < cells; xi++) {
-      const xx = xi * cellSize + cellSize / 2
-      const yy = yi * cellSize + cellSize / 2
-      const dx = (xx - corner.cx) / 400
-      const dy = (yy - corner.cy) / 400
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const rNorm = Math.min(1, Math.max(0, dist * 0.85))
-      const dotR = rNorm * (cellSize * 0.48)
-      if (dotR > 0.4) dots.push({ xx, yy, rr: dotR, key: `${xi}-${yi}` })
+      const xx = xi * cellSize + cellSize / 2;
+      const yy = yi * cellSize + cellSize / 2;
+      const dx = (xx - corner.cx) / 400;
+      const dy = (yy - corner.cy) / 400;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const rNorm = Math.min(1, Math.max(0, dist * 0.85));
+      const dotR = rNorm * (cellSize * 0.48);
+      if (dotR > 0.4) dots.push({ xx, yy, rr: dotR, key: `${xi}-${yi}` });
     }
   }
-  const blend = ia_blend(palette)
+  const blend = ia_blend(palette);
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -369,49 +369,51 @@ const tpl_halftone = ({
         ))}
       </g>
     </g>
-  )
-}
+  );
+};
 
 const tpl_blueprint = ({
   rng,
   palette,
   scale,
 }: TemplateArgs): React.ReactElement => {
-  const gridStep = scale === 'hero' ? 20 : scale === 'tile' ? 32 : 48
+  const gridStep = scale === 'hero' ? 20 : scale === 'tile' ? 32 : 48;
   const lightLines: {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    key: string
-  }[] = []
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    key: string;
+  }[] = [];
   const heavyLines: {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    key: string
-  }[] = []
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    key: string;
+  }[] = [];
   for (let vv = gridStep; vv < 400; vv += gridStep) {
-    lightLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vl${vv}` })
-    lightLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hl${vv}` })
+    lightLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vl${vv}` });
+    lightLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hl${vv}` });
   }
   for (let vv = gridStep * 5; vv < 400; vv += gridStep * 5) {
-    heavyLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vh${vv}` })
-    heavyLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hh${vv}` })
+    heavyLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vh${vv}` });
+    heavyLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hh${vv}` });
   }
-  const fpW = 180 + rng() * 100
-  const fpH = 140 + rng() * 90
-  const fpX = (400 - fpW) / 2 + (rng() - 0.5) * 40
-  const fpY = (400 - fpH) / 2 + (rng() - 0.5) * 40
-  const stageR = Math.min(fpW, fpH) * (0.18 + rng() * 0.1)
-  const stageCx = fpX + fpW * (0.4 + rng() * 0.2)
-  const stageCy = fpY + fpH * (0.6 + rng() * 0.25)
-  const sweepAngle = ia_pick(rng, [-25, -15, 15, 25])
-  const isLight = !ia_isDark(palette.bg)
-  const gridStroke = isLight ? 'rgba(25,20,24,0.18)' : 'rgba(241,230,213,0.18)'
-  const heavyStroke = isLight ? 'rgba(25,20,24,0.32)' : 'rgba(241,230,213,0.32)'
-  const blend = ia_blend(palette)
+  const fpW = 180 + rng() * 100;
+  const fpH = 140 + rng() * 90;
+  const fpX = (400 - fpW) / 2 + (rng() - 0.5) * 40;
+  const fpY = (400 - fpH) / 2 + (rng() - 0.5) * 40;
+  const stageR = Math.min(fpW, fpH) * (0.18 + rng() * 0.1);
+  const stageCx = fpX + fpW * (0.4 + rng() * 0.2);
+  const stageCy = fpY + fpH * (0.6 + rng() * 0.25);
+  const sweepAngle = ia_pick(rng, [-25, -15, 15, 25]);
+  const isLight = !ia_isDark(palette.bg);
+  const gridStroke = isLight ? 'rgba(25,20,24,0.18)' : 'rgba(241,230,213,0.18)';
+  const heavyStroke = isLight
+    ? 'rgba(25,20,24,0.32)'
+    : 'rgba(241,230,213,0.32)';
+  const blend = ia_blend(palette);
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -510,8 +512,8 @@ const tpl_blueprint = ({
         )}
       </g>
     </g>
-  )
-}
+  );
+};
 
 export const IA_TEMPLATES: IaTemplate[] = [
   { id: 'mesh', label: 'Mesh', render: tpl_mesh, kinds: ['artist', 'venue'] },
@@ -539,27 +541,27 @@ export const IA_TEMPLATES: IaTemplate[] = [
     render: tpl_blueprint,
     kinds: ['venue'],
   },
-]
+];
 
 const ia_templatesFor = (kind: Kind): IaTemplate[] =>
-  IA_TEMPLATES.filter((tpl) => tpl.kinds.includes(kind))
+  IA_TEMPLATES.filter((tpl) => tpl.kinds.includes(kind));
 
 // ── Identity resolver (pure — no React) ───────────────────────
 export const identityFor = (
   name: string,
   kind: Kind,
   opts: {
-    templateOverride?: string
-    paletteOverride?: string
-    scale?: Scale
+    templateOverride?: string;
+    paletteOverride?: string;
+    scale?: Scale;
   } = {},
 ) => {
-  const ns = kind === 'venue' ? 'venue' : 'artist'
-  const hash = ia_hashName(name, ns)
-  const tplPool = ia_templatesFor(kind)
-  const tplIdx = (hash >>> 0) % tplPool.length
-  const palIdx = (hash >>> 8) % IA_PALETTES.length
-  const rotate = (hash >>> 16) & 3
+  const ns = kind === 'venue' ? 'venue' : 'artist';
+  const hash = ia_hashName(name, ns);
+  const tplPool = ia_templatesFor(kind);
+  const tplIdx = (hash >>> 0) % tplPool.length;
+  const palIdx = (hash >>> 8) % IA_PALETTES.length;
+  const rotate = (hash >>> 16) & 3;
   // Mesh is a gradient field with no geometry to resolve into, so a hero-sized
   // one is just a bigger gradient (#1525 D2). The substitution is deliberately
   // NOT conditioned on scale: a name has to resolve to one template on every
@@ -567,29 +569,29 @@ export const identityFor = (
   // artwork for the same artist. It advances to its neighbour rather than
   // leaving the pool, which keeps every other name's template index untouched.
   const resolvedIdx =
-    tplPool[tplIdx]?.id === 'mesh' ? (tplIdx + 1) % tplPool.length : tplIdx
+    tplPool[tplIdx]?.id === 'mesh' ? (tplIdx + 1) % tplPool.length : tplIdx;
   const template = opts.templateOverride
     ? (IA_TEMPLATES.find((tpl) => tpl.id === opts.templateOverride) ??
       tplPool[resolvedIdx]!)
-    : tplPool[resolvedIdx]!
+    : tplPool[resolvedIdx]!;
   const palette = opts.paletteOverride
     ? (IA_PALETTES.find((pal) => pal.id === opts.paletteOverride) ??
       IA_PALETTES[palIdx]!)
-    : IA_PALETTES[palIdx]!
-  return { hash, template, palette, rotate, kind }
-}
+    : IA_PALETTES[palIdx]!;
+  return { hash, template, palette, rotate, kind };
+};
 
 // ── Grain overlay ──────────────────────────────────────────────
 const ia_grainBg = (strength: number): string => {
-  const tt = Math.max(0, Math.min(1, strength))
-  if (tt <= 0.001) return 'none'
+  const tt = Math.max(0, Math.min(1, strength));
+  if (tt <= 0.001) return 'none';
   const svg =
     `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'>` +
     `<filter id='n'><feTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' stitchTiles='stitch'/>` +
     `<feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 ${tt} 0'/></filter>` +
-    `<rect width='100%' height='100%' filter='url(#n)'/></svg>`
-  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
-}
+    `<rect width='100%' height='100%' filter='url(#n)'/></svg>`;
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+};
 
 // ── <IdentityArt /> ────────────────────────────────────────────
 export const IdentityArt = ({
@@ -610,18 +612,18 @@ export const IdentityArt = ({
     ...(templateOverride !== undefined && { templateOverride }),
     ...(paletteOverride !== undefined && { paletteOverride }),
     scale,
-  })
-  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
-  const rng = ia_rngFromHash(resolved.hash)
+  });
+  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4;
+  const rng = ia_rngFromHash(resolved.hash);
   const tpl = resolved.template.render({
     rng,
     hash: resolved.hash,
     palette: resolved.palette,
     scale,
     kind,
-  })
-  const grainUrl = ia_grainBg(grain)
-  const isLightPaper = !ia_isDark(resolved.palette.bg)
+  });
+  const grainUrl = ia_grainBg(grain);
+  const isLightPaper = !ia_isDark(resolved.palette.bg);
 
   return (
     <div
@@ -672,5 +674,5 @@ export const IdentityArt = ({
         }}
       />
     </div>
-  )
-}
+  );
+};

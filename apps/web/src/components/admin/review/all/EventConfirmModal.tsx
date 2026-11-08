@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton, AdminDialog } from '@/components/admin/primitives'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton, AdminDialog } from '@/components/admin/primitives';
 
-type ConfirmKind = 'delete' | 'non-concert' | 'mark-as-concert'
+type ConfirmKind = 'delete' | 'non-concert' | 'mark-as-concert';
 
 // Only the four identity fields are read for rendering — keeping the prop
 // structural lets non-AllEvent callers (the editor's DangerZone) reuse
 // this modal without round-tripping through the table row shape.
 export interface EventConfirmEvent {
-  title: string
-  venueName: string | null
-  date: string
-  showTime: string | null
+  title: string;
+  venueName: string | null;
+  date: string;
+  showTime: string | null;
 }
 
 export interface EventConfirmModalProps {
-  kind: ConfirmKind
-  event: EventConfirmEvent
-  onCancel: () => void
-  onConfirm: () => void
-  pending?: boolean
+  kind: ConfirmKind;
+  event: EventConfirmEvent;
+  onCancel: () => void;
+  onConfirm: () => void;
+  pending?: boolean;
 }
 
-const COPY = ADMIN_COPY.review.allEvents
-const COPY_CLASSIFICATION = ADMIN_COPY.editor.classification
+const COPY = ADMIN_COPY.review.allEvents;
+const COPY_CLASSIFICATION = ADMIN_COPY.editor.classification;
 
 export const EventConfirmModal = ({
   kind,
@@ -33,18 +33,18 @@ export const EventConfirmModal = ({
   onConfirm,
   pending = false,
 }: EventConfirmModalProps) => {
-  const isDelete = kind === 'delete'
-  const isMarkAsConcert = kind === 'mark-as-concert'
+  const isDelete = kind === 'delete';
+  const isMarkAsConcert = kind === 'mark-as-concert';
   const copy = isDelete
     ? COPY.deleteConfirm
     : isMarkAsConcert
       ? COPY_CLASSIFICATION.markAsConcertConfirm
-      : COPY.nonConcertConfirm
+      : COPY.nonConcertConfirm;
   const accent = isDelete
     ? 'var(--danger)'
     : isMarkAsConcert
       ? 'var(--success)'
-      : 'var(--warning)'
+      : 'var(--warning)';
   return (
     <AdminDialog
       accent={accent}
@@ -101,5 +101,5 @@ export const EventConfirmModal = ({
         {copy.body}
       </div>
     </AdminDialog>
-  )
-}
+  );
+};

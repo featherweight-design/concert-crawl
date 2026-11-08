@@ -1,8 +1,8 @@
-'use client'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+'use client';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-import React, { useState, useTransition, useEffect } from 'react'
-import Link from 'next/link'
+import React, { useState, useTransition, useEffect } from 'react';
+import Link from 'next/link';
 import {
   ExternalLink,
   ChevronRight,
@@ -10,9 +10,9 @@ import {
   ShieldOff,
   Play,
   Pause,
-} from 'lucide-react'
-import type { VenueWithEventCount } from '@concert-crawl/types'
-import type { ExtractionStrategy } from '@concert-crawl/types'
+} from 'lucide-react';
+import type { VenueWithEventCount } from '@concert-crawl/types';
+import type { ExtractionStrategy } from '@concert-crawl/types';
 import {
   AdminButton,
   AdminTable,
@@ -22,26 +22,26 @@ import {
   TD,
   StatusBadge,
   RelTime,
-} from '@/components/admin/primitives'
-import { VenueQuickView } from '@/components/admin/VenueQuickView'
+} from '@/components/admin/primitives';
+import { VenueQuickView } from '@/components/admin/VenueQuickView';
 import {
   bulkVerifyVenues,
   bulkUnverifyVenues,
   bulkActivateVenues,
   bulkDeactivateVenues,
-} from '@/lib/actions/venues'
+} from '@/lib/actions/venues';
 import {
   deriveVenueStatus,
   venueHealthPercent,
   type VenueStatus,
-} from '@/lib/admin/venue-status'
-import { deriveBulkVisibility } from './venue-table-bulk'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants'
-import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
+} from '@/lib/admin/venue-status';
+import { deriveBulkVisibility } from './venue-table-bulk';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants';
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
 
 function sourceUrl(url: string): string {
-  return url.replace(/^https?:\/\//, '')
+  return url.replace(/^https?:\/\//, '');
 }
 
 const STATUS_BADGE_KIND: Record<VenueStatus, 'success' | 'warning' | 'danger'> =
@@ -49,75 +49,75 @@ const STATUS_BADGE_KIND: Record<VenueStatus, 'success' | 'warning' | 'danger'> =
     active: 'success',
     paused: 'warning',
     blocked: 'danger',
-  }
+  };
 
 function strategyLabel(strategy: ExtractionStrategy | null): string {
-  if (strategy === 'structured_data') return 'structured'
-  if (strategy === 'llm') return 'llm'
-  if (strategy === 'manual') return 'manual'
-  return 'auto'
+  if (strategy === 'structured_data') return 'structured';
+  if (strategy === 'llm') return 'llm';
+  if (strategy === 'manual') return 'manual';
+  return 'auto';
 }
 
 function strategyKind(
   strategy: ExtractionStrategy | null,
 ): 'signal' | 'accent' | 'neutral' {
-  if (strategy === 'structured_data') return 'signal'
-  if (strategy === 'llm') return 'accent'
-  return 'neutral'
+  if (strategy === 'structured_data') return 'signal';
+  if (strategy === 'llm') return 'accent';
+  return 'neutral';
 }
 
 interface Props {
-  venues: VenueWithEventCount[]
+  venues: VenueWithEventCount[];
 }
 
 export function VenueTableClient({ venues }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [isPending, startTransition] = useTransition()
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia(ADMIN_MOBILE_VIEWPORT_QUERY)
-    setIsMobile(mq.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia(ADMIN_MOBILE_VIEWPORT_QUERY);
+    setIsMobile(mq.matches);
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   function toggleExpand(id: string) {
-    setExpandedId((prev) => (prev === id ? null : id))
+    setExpandedId((prev) => (prev === id ? null : id));
   }
 
-  const allSelected = venues.length > 0 && selected.size === venues.length
-  const someSelected = selected.size > 0
+  const allSelected = venues.length > 0 && selected.size === venues.length;
+  const someSelected = selected.size > 0;
 
-  const selectedVenues = venues.filter((venue) => selected.has(venue.id))
+  const selectedVenues = venues.filter((venue) => selected.has(venue.id));
   const { showVerify, showUnverify, showActivate, showDeactivate } =
-    deriveBulkVisibility(selectedVenues)
+    deriveBulkVisibility(selectedVenues);
 
   function toggleAll() {
     if (allSelected) {
-      setSelected(new Set())
+      setSelected(new Set());
     } else {
-      setSelected(new Set(venues.map((venue) => venue.id)))
+      setSelected(new Set(venues.map((venue) => venue.id)));
     }
   }
 
   function toggleOne(id: string) {
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function runBulkAction(action: (ids: string[]) => Promise<void>) {
-    const ids = Array.from(selected)
+    const ids = Array.from(selected);
     startTransition(async () => {
-      await action(ids)
-      setSelected(new Set())
-    })
+      await action(ids);
+      setSelected(new Set());
+    });
   }
 
   if (isMobile) {
@@ -134,7 +134,7 @@ export function VenueTableClient({ venues }: Props) {
         >
           {ADMIN_COPY.venueTableClient.empty}
         </div>
-      )
+      );
     }
 
     return (
@@ -147,8 +147,8 @@ export function VenueTableClient({ venues }: Props) {
         }}
       >
         {venues.map((venue) => {
-          const status = deriveVenueStatus(venue)
-          const isExpanded = expandedId === venue.id
+          const status = deriveVenueStatus(venue);
+          const isExpanded = expandedId === venue.id;
 
           return (
             <div
@@ -248,10 +248,10 @@ export function VenueTableClient({ venues }: Props) {
                 </div>
               )}
             </div>
-          )
+          );
         })}
       </div>
-    )
+    );
   }
 
   return (
@@ -391,11 +391,11 @@ export function VenueTableClient({ venues }: Props) {
             </tr>
           )}
           {venues.map((venue) => {
-            const status = deriveVenueStatus(venue)
-            const health = venueHealthPercent(venue)
-            const isExpanded = expandedId === venue.id
+            const status = deriveVenueStatus(venue);
+            const health = venueHealthPercent(venue);
+            const isExpanded = expandedId === venue.id;
             const hasError =
-              venue.consecutiveFailures > 0 || venue.blockedAt !== null
+              venue.consecutiveFailures > 0 || venue.blockedAt !== null;
 
             return (
               <React.Fragment key={venue.id}>
@@ -596,10 +596,10 @@ export function VenueTableClient({ venues }: Props) {
                   </tr>
                 )}
               </React.Fragment>
-            )
+            );
           })}
         </tbody>
       </AdminTable>
     </div>
-  )
+  );
 }

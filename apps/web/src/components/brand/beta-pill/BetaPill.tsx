@@ -1,4 +1,4 @@
-import { LANDING_COPY } from '@/app/_components/definitions/copy'
+import { LANDING_COPY } from '@/app/_components/definitions/copy';
 
 export function BetaPill() {
   return (
@@ -31,5 +31,5 @@ export function BetaPill() {
       />
       {LANDING_COPY.betaPill.label}
     </span>
-  )
+  );
 }

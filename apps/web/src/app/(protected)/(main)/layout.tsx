@@ -1,17 +1,17 @@
-import { AppHeader } from '@/components/consumer/app-header'
-import { AccountMenuProvider } from '@/components/consumer/user-menu'
-import { SearchPaletteProvider } from '@/components/consumer/search-palette/SearchPaletteProvider'
-import { BottomNav } from '@/components/consumer/bottom-nav'
-import { InstallSlot } from '@/components/pwa/InstallSlot'
-import { OfflinePill } from '@/components/pwa/OfflinePill'
-import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay'
-import { PendingTierPicker } from '@/components/consumer/tier-picker/PendingTierPicker'
-import { Suspense } from 'react'
+import { AppHeader } from '@/components/consumer/app-header';
+import { AccountMenuProvider } from '@/components/consumer/user-menu';
+import { SearchPaletteProvider } from '@/components/consumer/search-palette/SearchPaletteProvider';
+import { BottomNav } from '@/components/consumer/bottom-nav';
+import { InstallSlot } from '@/components/pwa/InstallSlot';
+import { OfflinePill } from '@/components/pwa/OfflinePill';
+import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay';
+import { PendingTierPicker } from '@/components/consumer/tier-picker/PendingTierPicker';
+import { Suspense } from 'react';
 
 export default function MainLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     // overflow-x-clip lives on this in-flow block that wraps all page chrome —
@@ -55,5 +55,5 @@ export default function MainLayout({
         </SearchPaletteProvider>
       </AccountMenuProvider>
     </div>
-  )
+  );
 }

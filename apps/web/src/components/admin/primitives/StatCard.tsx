@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import * as LucideIcons from 'lucide-react'
-import type { StatusKind } from './utils'
-import { KIND_COLORS } from './utils'
+import * as LucideIcons from 'lucide-react';
+import type { StatusKind } from './utils';
+import { KIND_COLORS } from './utils';
 
 interface StatCardProps {
-  label: string
-  value: string
-  unit?: string
-  hint?: string
-  trend?: { dir: 'up' | 'down'; text: string; good: boolean }
-  kind?: StatusKind
-  iconName: string
-  mono?: boolean
-  noChip?: boolean
-  footer?: React.ReactNode
-  onClick?: () => void
+  label: string;
+  value: string;
+  unit?: string;
+  hint?: string;
+  trend?: { dir: 'up' | 'down'; text: string; good: boolean };
+  kind?: StatusKind;
+  iconName: string;
+  mono?: boolean;
+  noChip?: boolean;
+  footer?: React.ReactNode;
+  onClick?: () => void;
   /**
    * Tighten the value's font-size for cards that render an atypically long
    * numeric string — e.g. LLM Cost Today ($0.3113 wraps mid-value on narrow
    * tiles at the default clamp). Affects only the value; label/unit/trend
    * stay put (#1078).
    */
-  compact?: boolean
+  compact?: boolean;
 }
 
 export const StatCard = ({
@@ -44,8 +44,8 @@ export const StatCard = ({
       string,
       React.ComponentType<{ size: number; color: string }>
     >
-  )[iconName]
-  const colors = KIND_COLORS[kind]
+  )[iconName];
+  const colors = KIND_COLORS[kind];
 
   return (
     <div
@@ -188,5 +188,5 @@ export const StatCard = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

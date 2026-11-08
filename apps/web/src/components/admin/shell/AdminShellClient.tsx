@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
-import * as LucideIcons from 'lucide-react'
-import { Menu } from 'lucide-react'
-import { AdminSidebar } from './AdminSidebar'
-import { AdminTopbar } from './AdminTopbar'
-import { MobileBottomBar } from './MobileBottomBar'
-import { MobileDrawer } from './MobileDrawer'
-import { AppSwitcher } from './AppSwitcher'
-import { NAV_V2 } from './nav'
-import { PageTitleProvider, usePageTitle } from './PageTitleContext'
+import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
+import * as LucideIcons from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { AdminSidebar } from './AdminSidebar';
+import { AdminTopbar } from './AdminTopbar';
+import { MobileBottomBar } from './MobileBottomBar';
+import { MobileDrawer } from './MobileDrawer';
+import { AppSwitcher } from './AppSwitcher';
+import { NAV_V2 } from './nav';
+import { PageTitleProvider, usePageTitle } from './PageTitleContext';
 
-const MOBILE_BREAKPOINT = 720
+const MOBILE_BREAKPOINT = 720;
 
 interface AdminShellClientProps {
-  badgeCounts: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
-  children: React.ReactNode
+  badgeCounts: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
+  children: React.ReactNode;
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -26,19 +26,19 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 const MobileTopbar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
-  const { pageTitle } = usePageTitle()
-  const pathname = usePathname()
+  const { pageTitle } = usePageTitle();
+  const pathname = usePathname();
   const activeItem = NAV_V2.find(
     (item) =>
       pathname === item.href ||
       (item.href !== '/admin' && pathname.startsWith(item.href)),
-  )
-  const title = pageTitle ?? activeItem?.label ?? 'Admin'
+  );
+  const title = pageTitle ?? activeItem?.label ?? 'Admin';
 
   return (
     <header
@@ -95,8 +95,8 @@ const MobileTopbar = ({ onMenuOpen }: { onMenuOpen: () => void }) => {
       </div>
       <AppSwitcher size="sm" />
     </header>
-  )
-}
+  );
+};
 
 const ShellInner = ({
   badgeCounts,
@@ -104,7 +104,7 @@ const ShellInner = ({
   isMobile,
   children,
 }: AdminShellClientProps & { isMobile: boolean }) => {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (isMobile) {
     return (
@@ -139,7 +139,7 @@ const ShellInner = ({
           user={user}
         />
       </div>
-    )
+    );
   }
 
   return (
@@ -173,25 +173,25 @@ const ShellInner = ({
         </main>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export const AdminShellClient = ({
   badgeCounts,
   user,
   children,
 }: AdminShellClientProps) => {
-  const [isMobile, setIsMobile] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
-    const update = () => setIsMobile(mq.matches)
-    update()
-    mq.addEventListener('change', update)
-    return () => mq.removeEventListener('change', update)
-  }, [])
+    setMounted(true);
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   if (!mounted) {
     return (
@@ -205,7 +205,7 @@ export const AdminShellClient = ({
         <div style={{ width: 240, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>{children}</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -214,5 +214,5 @@ export const AdminShellClient = ({
         {children}
       </ShellInner>
     </PageTitleProvider>
-  )
-}
+  );
+};

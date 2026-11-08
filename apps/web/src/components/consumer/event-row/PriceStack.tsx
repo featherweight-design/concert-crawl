@@ -1,16 +1,16 @@
-import type React from 'react'
-import { EVENT_ROW_COPY as copy } from './definitions/copy'
-import { formatDollars } from '@/components/consumer/definitions/lib'
-import { RowMetaChip } from './RowMetaChip'
-import { SURFACES, type RowSurface } from './definitions/surfaces'
-import { deltaClass } from './lib/price-delta'
-import { resolveRowStatus } from './lib/row-status'
-import type { EventRowShow } from './lib/row-model'
+import type React from 'react';
+import { EVENT_ROW_COPY as copy } from './definitions/copy';
+import { formatDollars } from '@/components/consumer/definitions/lib';
+import { RowMetaChip } from './RowMetaChip';
+import { SURFACES, type RowSurface } from './definitions/surfaces';
+import { deltaClass } from './lib/price-delta';
+import { resolveRowStatus } from './lib/row-status';
+import type { EventRowShow } from './lib/row-model';
 
 interface PriceStackProps {
-  show: EventRowShow
-  surface: RowSurface
-  narrow: boolean
+  show: EventRowShow;
+  surface: RowSurface;
+  narrow: boolean;
 }
 
 const DeltaArrow = ({ up }: { up: boolean }) => (
@@ -31,7 +31,7 @@ const DeltaArrow = ({ up }: { up: boolean }) => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 /**
  * The price reads the same on every surface. Only the delta is surface-gated,
@@ -40,9 +40,9 @@ const DeltaArrow = ({ up }: { up: boolean }) => (
  * saved anything.
  */
 export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
-  const minWidth = narrow ? 56 : 78
-  const amountSize = narrow ? 15 : 16.5
-  const status = resolveRowStatus(show.lifecycle, show.status)
+  const minWidth = narrow ? 56 : 78;
+  const amountSize = narrow ? 15 : 16.5;
+  const status = resolveRowStatus(show.lifecycle, show.status);
 
   const slot = (children: React.ReactNode) => (
     <div
@@ -51,7 +51,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     >
       {children}
     </div>
-  )
+  );
 
   // Cancelled and postponed take the price slot rather than a meta chip, and
   // that is why they can never be dropped: the slot sits outside the chip
@@ -66,7 +66,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
           tone="warn"
         />
       </span>,
-    )
+    );
   }
 
   if (status === 'postponed') {
@@ -78,7 +78,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
           tone="strong"
         />
       </span>,
-    )
+    );
   }
 
   // Rule 2's one exemption: sold out takes the price slot outright rather than
@@ -89,7 +89,7 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
       <span data-testid="row-sold-out">
         <RowMetaChip label={copy.price.soldOut} tone="warn" />
       </span>,
-    )
+    );
   }
 
   if (show.price === null) {
@@ -104,14 +104,14 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
       >
         {copy.price.tba}
       </span>,
-    )
+    );
   }
 
   const delta =
     SURFACES[surface].showsDelta && show.saved !== null
       ? show.price.amount - show.saved.price
-      : null
-  const cls = delta === null ? null : deltaClass(delta)
+      : null;
+  const cls = delta === null ? null : deltaClass(delta);
 
   return slot(
     <div className="flex flex-col items-end" style={{ gap: 2 }}>
@@ -206,5 +206,5 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
         </span>
       )}
     </div>,
-  )
-}
+  );
+};

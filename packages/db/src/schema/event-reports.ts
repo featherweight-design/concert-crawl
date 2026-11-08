@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
-import { events } from './events.js'
+import { pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { events } from './events.js';
 
 export const eventReports = pgTable('event_reports', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -23,7 +23,7 @@ export const eventReports = pgTable('event_reports', {
     'promoted' | 'rejected' | 'needs-more-info'
   >(),
   adminNote: varchar('admin_note', { length: 500 }),
-})
+});
 
-export type EventReport = typeof eventReports.$inferSelect
-export type NewEventReport = typeof eventReports.$inferInsert
+export type EventReport = typeof eventReports.$inferSelect;
+export type NewEventReport = typeof eventReports.$inferInsert;

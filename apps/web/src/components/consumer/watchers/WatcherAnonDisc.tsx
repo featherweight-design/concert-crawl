@@ -1,7 +1,7 @@
 interface WatcherAnonDiscProps {
-  size?: number
+  size?: number;
   /** Colour the 2px separator ring is drawn in — matches the backdrop. */
-  ring?: string
+  ring?: string;
 }
 
 /**
@@ -42,4 +42,4 @@ export const WatcherAnonDisc = ({
       }}
     />
   </div>
-)
+);

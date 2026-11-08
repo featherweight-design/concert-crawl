@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
-import { STORAGE_STATE_PATH } from './src/fixtures/auth'
+import { STORAGE_STATE_PATH } from './src/fixtures/auth';
 
 export default defineConfig({
   testDir: './src/e2e',
@@ -25,4 +25,4 @@ export default defineConfig({
   ],
   timeout: 30_000,
   expect: { timeout: 5_000 },
-})
+});

@@ -1,17 +1,17 @@
-import type { EventWatcher } from '@concert-crawl/types'
-import { Avatar } from '@/components/settings/Avatar'
-import { watcherInitial, watcherTone } from '@/lib/watchers'
-import { WatcherAnonDisc } from './WatcherAnonDisc'
+import type { EventWatcher } from '@concert-crawl/types';
+import { Avatar } from '@/components/settings/Avatar';
+import { watcherInitial, watcherTone } from '@/lib/watchers';
+import { WatcherAnonDisc } from './WatcherAnonDisc';
 
 interface WatcherAvatarStackProps {
-  watchers: EventWatcher[]
+  watchers: EventWatcher[];
   /** Handle-less discs to pad with when nobody in the crawl has a handle. */
-  anonymousDiscs?: number
+  anonymousDiscs?: number;
   /** Everyone not represented by a disc, shown as a +N chip. */
-  overflow?: number
-  size?: number
+  overflow?: number;
+  size?: number;
   /** Colour the 2px separator ring is drawn in — matches the backdrop. */
-  ring?: string
+  ring?: string;
 }
 
 /**
@@ -26,9 +26,9 @@ export const WatcherAvatarStack = ({
   size = 24,
   ring = 'var(--bg)',
 }: WatcherAvatarStackProps) => {
-  const overlap = Math.round(size * 0.3)
-  const ringShadow = `0 0 0 2px ${ring}`
-  const discCount = watchers.length + anonymousDiscs
+  const overlap = Math.round(size * 0.3);
+  const ringShadow = `0 0 0 2px ${ring}`;
+  const discCount = watchers.length + anonymousDiscs;
 
   return (
     <div className="flex items-center">
@@ -94,5 +94,5 @@ export const WatcherAvatarStack = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

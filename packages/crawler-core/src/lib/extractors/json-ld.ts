@@ -1,22 +1,22 @@
-import { reportFailure } from '@concert-crawl/logger'
+import { reportFailure } from '@concert-crawl/logger';
 import {
   DEFAULT_TIME_ZONE,
   extractDateOnly,
   extractTimeOnly,
   validateTimeZone,
-} from './datetime.js'
-import type { NormalizedEvent } from '../../types.js'
-import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
-import { stripDescriptionHtml } from '../strip-description-html.js'
+} from './datetime.js';
+import type { NormalizedEvent } from '../../types.js';
+import { normalizeSupportingArtists } from '../normalize-supporting-artists.js';
+import { stripDescriptionHtml } from '../strip-description-html.js';
 
-const EVENT_TYPES = new Set(['Event', 'MusicEvent'])
+const EVENT_TYPES = new Set(['Event', 'MusicEvent']);
 
 function isEvent(obj: Record<string, unknown>): boolean {
-  const type = obj['@type']
-  if (typeof type === 'string') return EVENT_TYPES.has(type)
+  const type = obj['@type'];
+  if (typeof type === 'string') return EVENT_TYPES.has(type);
   if (Array.isArray(type))
-    return type.some((t) => typeof t === 'string' && EVENT_TYPES.has(t))
-  return false
+    return type.some((t) => typeof t === 'string' && EVENT_TYPES.has(t));
+  return false;
 }
 
 // JSON-LD is untrusted source data, so read `name` via runtime narrowing
@@ -24,27 +24,27 @@ function isEvent(obj: Record<string, unknown>): boolean {
 // they never become an empty artist or supporting-artist entry.
 function performerName(value: unknown): string | undefined {
   if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed.length > 0 ? trimmed : undefined
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
   if (value && typeof value === 'object' && 'name' in value) {
-    const name = value.name
+    const name = value.name;
     if (typeof name === 'string') {
-      const trimmed = name.trim()
-      return trimmed.length > 0 ? trimmed : undefined
+      const trimmed = name.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
     }
   }
-  return undefined
+  return undefined;
 }
 
 function getPerformerNames(performer: unknown): string[] {
-  const items = Array.isArray(performer) ? performer : [performer]
-  const names: string[] = []
+  const items = Array.isArray(performer) ? performer : [performer];
+  const names: string[] = [];
   for (const item of items) {
-    const name = performerName(item)
-    if (name !== undefined) names.push(name)
+    const name = performerName(item);
+    if (name !== undefined) names.push(name);
   }
-  return names
+  return names;
 }
 
 // schema.org `Offer.url` is the actual purchase/checkout link, distinct from
@@ -57,24 +57,24 @@ function getPerformerNames(performer: unknown): string[] {
 // every event that way, so without unwrapping it all 41 of its events arrive
 // with no ticket link at all.
 function getOfferUrl(offers: unknown): string | undefined {
-  const items = Array.isArray(offers) ? offers : [offers]
+  const items = Array.isArray(offers) ? offers : [offers];
   for (const item of items) {
-    if (!item || typeof item !== 'object') continue
+    if (!item || typeof item !== 'object') continue;
 
     if ('url' in item) {
-      const url = item.url
+      const url = item.url;
       if (typeof url === 'string') {
-        const trimmed = url.trim()
-        if (trimmed.length > 0) return trimmed
+        const trimmed = url.trim();
+        if (trimmed.length > 0) return trimmed;
       }
     }
 
     if ('offers' in item) {
-      const nested = getOfferUrl(item.offers)
-      if (nested !== undefined) return nested
+      const nested = getOfferUrl(item.offers);
+      if (nested !== undefined) return nested;
     }
   }
-  return undefined
+  return undefined;
 }
 
 function mapToNormalizedEvent(
@@ -82,21 +82,21 @@ function mapToNormalizedEvent(
   sourceUrl: string,
   timeZone: string,
 ): NormalizedEvent | null {
-  const name = obj['name']
-  const startDate = obj['startDate']
+  const name = obj['name'];
+  const startDate = obj['startDate'];
 
-  if (typeof name !== 'string' || typeof startDate !== 'string') return null
+  if (typeof name !== 'string' || typeof startDate !== 'string') return null;
 
-  const performerNames = getPerformerNames(obj['performer'])
+  const performerNames = getPerformerNames(obj['performer']);
   // `name` is still the display string when the listing names no performer,
   // but it is NOT recorded as an observation — that coalesce is what put 80
   // event titles into the artists projection.
-  const artist = performerNames[0] ?? name
+  const artist = performerNames[0] ?? name;
   // schema.org `performer[]` is one flat list with no billing emphasis, so the
   // only honest reading is "first is the headliner, rest are openers". Reported
   // as the split the observation contract asks for rather than flattened —
   // flattening would let `deriveArtists()` read the openers as co-headliners.
-  const observedPerformers = performerNames.slice(0, 1)
+  const observedPerformers = performerNames.slice(0, 1);
   // Some venues list the headliner more than once in `performer[]` (or repeat
   // it after the openers). `slice(1)` alone would keep those duplicates and
   // surface the headliner as its own supporting act. Route through the shared
@@ -104,8 +104,8 @@ function mapToNormalizedEvent(
   const supportingArtists = normalizeSupportingArtists(
     artist,
     performerNames.slice(1),
-  )
-  const date = extractDateOnly(startDate, timeZone)
+  );
+  const date = extractDateOnly(startDate, timeZone);
   if (date === undefined) {
     reportFailure({
       event: 'json-ld.invalid_start_date',
@@ -113,33 +113,33 @@ function mapToNormalizedEvent(
       sourceUrl,
       name,
       startDate,
-    })
-    return null
+    });
+    return null;
   }
-  const showTime = extractTimeOnly(startDate, timeZone)
+  const showTime = extractTimeOnly(startDate, timeZone);
   const doorsTime =
     typeof obj['doorTime'] === 'string'
       ? extractTimeOnly(obj['doorTime'], timeZone)
-      : undefined
+      : undefined;
   // `Event.url` is the event's own detail page; `offers.url` is the real
   // purchase link. Prefer the purchase link for `ticketUrl`, but fall back to
   // the detail page when a venue exposes no offer URL (many don't) so existing
   // JSON-LD venues keep a working ticket link.
-  const detailUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
-  const ticketUrl = getOfferUrl(obj['offers']) ?? detailUrl
+  const detailUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined;
+  const ticketUrl = getOfferUrl(obj['offers']) ?? detailUrl;
   // Always capture the detail page as `eventUrl` — the "Get tickets" fallback
   // so a listing without a direct purchase link still deep-links to the
   // specific event page rather than the venue's generic index (#1152).
-  const eventUrl = detailUrl
+  const eventUrl = detailUrl;
   // schema.org `Event.description` is commonly populated with HTML from
   // the venue's CMS (RHP, Squarespace, etc.). Strip at the extractor
   // boundary so the DB stores plain text and the consumer surface stays
   // a safe no-escape read (#827).
   const rawDescription =
-    typeof obj['description'] === 'string' ? obj['description'] : undefined
+    typeof obj['description'] === 'string' ? obj['description'] : undefined;
   const description = rawDescription
     ? stripDescriptionHtml(rawDescription) || undefined
-    : undefined
+    : undefined;
 
   const event: NormalizedEvent = {
     title: name,
@@ -154,14 +154,14 @@ function mapToNormalizedEvent(
     date,
     sourceUrl,
     confidence: 1.0,
-  }
-  if (supportingArtists.length > 0) event.supportingArtists = supportingArtists
-  if (doorsTime !== undefined) event.doorsTime = doorsTime
-  if (showTime !== undefined) event.showTime = showTime
-  if (ticketUrl !== undefined) event.ticketUrl = ticketUrl
-  if (eventUrl !== undefined) event.eventUrl = eventUrl
-  if (description !== undefined) event.description = description
-  return event
+  };
+  if (supportingArtists.length > 0) event.supportingArtists = supportingArtists;
+  if (doorsTime !== undefined) event.doorsTime = doorsTime;
+  if (showTime !== undefined) event.showTime = showTime;
+  if (ticketUrl !== undefined) event.ticketUrl = ticketUrl;
+  if (eventUrl !== undefined) event.eventUrl = eventUrl;
+  if (description !== undefined) event.description = description;
+  return event;
 }
 
 function extractEventsFromParsed(
@@ -169,41 +169,41 @@ function extractEventsFromParsed(
   sourceUrl: string,
   timeZone: string,
 ): NormalizedEvent[] {
-  const events: NormalizedEvent[] = []
+  const events: NormalizedEvent[] = [];
 
-  if (!parsed || typeof parsed !== 'object') return events
+  if (!parsed || typeof parsed !== 'object') return events;
 
   if (Array.isArray(parsed)) {
     for (const item of parsed) {
-      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone))
+      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone));
     }
-    return events
+    return events;
   }
 
-  const obj = parsed as Record<string, unknown>
+  const obj = parsed as Record<string, unknown>;
 
   // Handle @graph
   if ('@graph' in obj && Array.isArray(obj['@graph'])) {
     for (const item of obj['@graph']) {
-      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone))
+      events.push(...extractEventsFromParsed(item, sourceUrl, timeZone));
     }
-    return events
+    return events;
   }
 
   if (isEvent(obj)) {
-    const event = mapToNormalizedEvent(obj, sourceUrl, timeZone)
-    if (event) events.push(event)
+    const event = mapToNormalizedEvent(obj, sourceUrl, timeZone);
+    if (event) events.push(event);
   }
 
-  return events
+  return events;
 }
 
 function nextNonWhitespaceChar(json: string, from: number): string | undefined {
   for (let i = from; i < json.length; i++) {
-    const ch = json[i]!
-    if (!/\s/.test(ch)) return ch
+    const ch = json[i]!;
+    if (!/\s/.test(ch)) return ch;
   }
-  return undefined
+  return undefined;
 }
 
 // Venue CMSs that interpolate event titles straight into JSON-LD emit
@@ -213,30 +213,30 @@ function nextNonWhitespaceChar(json: string, from: number): string | undefined {
 // closes a string when the next non-whitespace character is `,` `:` `}` `]`
 // or end-of-input; anything else means the title itself contained it.
 function escapeUnescapedQuotes(json: string): string {
-  let out = ''
-  let inString = false
+  let out = '';
+  let inString = false;
 
   for (let i = 0; i < json.length; i++) {
-    const ch = json[i]!
+    const ch = json[i]!;
 
     if (inString && ch === '\\') {
-      out += ch + (json[i + 1] ?? '')
-      i++
-      continue
+      out += ch + (json[i + 1] ?? '');
+      i++;
+      continue;
     }
 
     if (ch !== '"') {
-      out += ch
-      continue
+      out += ch;
+      continue;
     }
 
     if (!inString) {
-      inString = true
-      out += ch
-      continue
+      inString = true;
+      out += ch;
+      continue;
     }
 
-    const next = nextNonWhitespaceChar(json, i + 1)
+    const next = nextNonWhitespaceChar(json, i + 1);
     if (
       next === undefined ||
       next === ',' ||
@@ -244,14 +244,14 @@ function escapeUnescapedQuotes(json: string): string {
       next === '}' ||
       next === ']'
     ) {
-      inString = false
-      out += ch
+      inString = false;
+      out += ch;
     } else {
-      out += '\\"'
+      out += '\\"';
     }
   }
 
-  return out
+  return out;
 }
 
 export function extractJsonLd(
@@ -263,26 +263,26 @@ export function extractJsonLd(
     timeZone,
     sourceUrl,
     'json-ld.invalid_timezone',
-  )
-  const events: NormalizedEvent[] = []
+  );
+  const events: NormalizedEvent[] = [];
   const scriptRegex =
-    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
 
-  let match: RegExpExecArray | null
+  let match: RegExpExecArray | null;
   while ((match = scriptRegex.exec(html)) !== null) {
-    const content = match[1]
-    if (!content) continue
+    const content = match[1];
+    if (!content) continue;
 
-    let parsed: unknown
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(content)
+      parsed = JSON.parse(content);
     } catch (err) {
       // A block that fails outright would otherwise be skipped silently: the
       // page still yields events from its sibling blocks, so the cascade sees
       // a successful structured-data extraction and never escalates to the
       // LLM. Attempt a repair before giving the event up.
       try {
-        parsed = JSON.parse(escapeUnescapedQuotes(content))
+        parsed = JSON.parse(escapeUnescapedQuotes(content));
         // warn, not log: a repaired block means the venue is emitting
         // malformed structured data, which is worth filtering and alerting
         // on even though the event itself was recovered.
@@ -293,7 +293,7 @@ export function extractJsonLd(
             sourceUrl,
             error: err instanceof Error ? err.message : String(err),
           }),
-        )
+        );
       } catch (repairErr) {
         // Include both parse errors so Sentry issues are actionable. Without
         // them the event groups by sourceUrl alone and gives no clue what
@@ -308,14 +308,14 @@ export function extractJsonLd(
           error: err instanceof Error ? err.message : String(err),
           repairError:
             repairErr instanceof Error ? repairErr.message : String(repairErr),
-        })
-        continue
+        });
+        continue;
       }
     }
 
     events.push(
       ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
-    )
+    );
   }
 
   console.log(
@@ -324,6 +324,6 @@ export function extractJsonLd(
       sourceUrl,
       count: events.length,
     }),
-  )
-  return events
+  );
+  return events;
 }

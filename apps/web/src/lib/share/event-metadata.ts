@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
+import type { Metadata } from 'next';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
-import { posterImageUrl } from '@/lib/share/destinations'
-import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event'
-import { absoluteUrl } from '@/lib/share/site-origin'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
+import { posterImageUrl } from '@/lib/share/destinations';
+import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event';
+import { absoluteUrl } from '@/lib/share/site-origin';
 
 /** Substitute `{name}` placeholders in a copy template. */
 export const fill = (
@@ -14,7 +14,7 @@ export const fill = (
   Object.entries(values).reduce(
     (text, [key, value]) => text.replaceAll(`{${key}}`, value),
     template,
-  )
+  );
 
 /**
  * The URL a search engine should treat as *the* page for an event.
@@ -27,7 +27,7 @@ export const fill = (
  * indexed result is the thin page that bounces a signed-in reader somewhere
  * else.
  */
-export const eventCanonicalPath = (id: string): string => `/events/${id}`
+export const eventCanonicalPath = (id: string): string => `/events/${id}`;
 
 /**
  * Open Graph, Twitter and canonical metadata for one event, shared by both
@@ -48,21 +48,21 @@ export const eventShareMetadata = (
   event: PosterSource,
   ownPath: string,
 ): Metadata => {
-  const poster = toPosterEvent(event)
+  const poster = toPosterEvent(event);
   const values = {
     artist: poster.artist,
     venue: poster.venue,
     city: poster.city,
     date: poster.dateShort,
-  }
-  const { og } = CONSUMER_COPY.share
-  const title = fill(og.titleTemplate, values)
-  const description = fill(og.descriptionTemplate, values)
+  };
+  const { og } = CONSUMER_COPY.share;
+  const title = fill(og.titleTemplate, values);
+  const description = fill(og.descriptionTemplate, values);
   // Absolute, because a relative OG image is ignored by every crawler — they
   // fetch it with no page context to resolve it against.
   const image = absoluteUrl(
     posterImageUrl({ eventId: event.id, ratio: 'link' }),
-  )
+  );
 
   return {
     title,
@@ -88,5 +88,5 @@ export const eventShareMetadata = (
       description,
       images: [image],
     },
-  }
-}
+  };
+};

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm';
 import {
   index,
   integer,
@@ -10,9 +10,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { ARTIST_FOLLOW_SOURCES } from '@concert-crawl/types'
-import { events } from './events.js'
+} from 'drizzle-orm/pg-core';
+import { ARTIST_FOLLOW_SOURCES } from '@concert-crawl/types';
+import { events } from './events.js';
 
 /**
  * `watching` is the only value application code writes.
@@ -27,13 +27,13 @@ export const userEventStatusEnum = pgEnum('user_event_status', [
   'going',
   'interested',
   'watching',
-])
+]);
 export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'bug',
   'idea',
   'praise',
   'other',
-])
+]);
 
 export const feedbackStatusEnum = pgEnum('feedback_status', [
   'unread',
@@ -42,7 +42,7 @@ export const feedbackStatusEnum = pgEnum('feedback_status', [
   'issue_opened',
   'resolved',
   'archived',
-])
+]);
 
 export const userEvents = pgTable(
   'user_events',
@@ -74,7 +74,7 @@ export const userEvents = pgTable(
       .on(table.userId, table.attendingAt)
       .where(sql`${table.attendingAt} IS NOT NULL`),
   }),
-)
+);
 
 // Declared from the shared tuple in @concert-crawl/types so the DB enum and
 // the `ArtistFollowSource` API contract cannot drift. Same values, same order
@@ -82,7 +82,7 @@ export const userEvents = pgTable(
 export const artistFollowSourceEnum = pgEnum(
   'artist_follow_source',
   ARTIST_FOLLOW_SOURCES,
-)
+);
 
 export const userArtistFollows = pgTable(
   'user_artist_follows',
@@ -125,7 +125,7 @@ export const userArtistFollows = pgTable(
       'user_artist_follows_user_canonical_name_idx',
     ).on(table.userId, table.canonicalName),
   }),
-)
+);
 
 export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -144,4 +144,4 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});

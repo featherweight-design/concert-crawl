@@ -48,8 +48,8 @@
 - [ ] **Step 1: Failing tests.**
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { validateManifest } from './manifest-types.js'
+import { describe, it, expect } from 'vitest';
+import { validateManifest } from './manifest-types.js';
 
 describe('validateManifest', () => {
   it('accepts a well-formed manifest', () => {
@@ -58,29 +58,29 @@ describe('validateManifest', () => {
         { id: 'a', path: '/a', tags: ['consumer'], auth: 'none' },
         { id: 'b', path: '/b', tags: ['admin'], auth: 'admin' },
       ]),
-    ).not.toThrow()
-  })
+    ).not.toThrow();
+  });
   it('rejects duplicate route ids', () => {
     expect(() =>
       validateManifest([
         { id: 'a', path: '/a', tags: ['consumer'], auth: 'none' },
         { id: 'a', path: '/a2', tags: ['consumer'], auth: 'none' },
       ]),
-    ).toThrow(/duplicate route id/i)
-  })
+    ).toThrow(/duplicate route id/i);
+  });
   it('rejects empty tags', () => {
     expect(() =>
       validateManifest([{ id: 'a', path: '/a', tags: [], auth: 'none' }]),
-    ).toThrow(/at least one tag/i)
-  })
+    ).toThrow(/at least one tag/i);
+  });
   it('rejects unknown tag values', () => {
     expect(() =>
       validateManifest([
         { id: 'a', path: '/a', tags: ['marketing'], auth: 'none' },
       ]),
-    ).toThrow()
-  })
-})
+    ).toThrow();
+  });
+});
 ```
 
 - [ ] **Step 2: Implement types + `validateManifest`.** Use Zod for shape (`z.object({...})`), then post-process for uniqueness. Do NOT ship a barrel file — import types directly.
@@ -142,13 +142,13 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 - Create: `apps/e2e/vitest.config.ts` — a package-local Vitest config so the audit unit tests can run (the existing e2e package has no Vitest today):
 
   ```ts
-  import { defineConfig } from 'vitest/config'
+  import { defineConfig } from 'vitest/config';
   export default defineConfig({
     test: {
       environment: 'jsdom',
       include: ['src/audit/**/*.test.ts'],
     },
-  })
+  });
   ```
 
 - Modify: `apps/e2e/package.json` — add `vitest` and `jsdom` to `devDependencies` (jsdom is already at `apps/web/package.json:49` at `^29.1.1`; match that pin) and add a `"test:audit": "vitest run"` script.
@@ -164,18 +164,18 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 - [ ] **Step 1: Failing tests.** Run under the new `apps/e2e/vitest.config.ts` (`environment: 'jsdom'`) via `pnpm --filter e2e test:audit`. Construct crafted HTMLs inside the jsdom document:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { collectHeuristicsScript } from './heuristics.js'
+import { describe, it, expect } from 'vitest';
+import { collectHeuristicsScript } from './heuristics.js';
 
 // jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are
 // 0 by default. `runInDom` stubs each from inline styles so the heuristic
 // script (which reads real layout metrics in production) sees meaningful
 // values. Extract to apps/e2e/src/audit/test-helpers.ts if reused.
-const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
+const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0;
 const runInDom = (html: string, vw: number) => {
-  document.body.innerHTML = html
-  const de = document.documentElement
-  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
+  document.body.innerHTML = html;
+  const de = document.documentElement;
+  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true });
   Object.defineProperty(de, 'scrollWidth', {
     configurable: true,
     get: () =>
@@ -183,18 +183,18 @@ const runInDom = (html: string, vw: number) => {
         (max, el) => Math.max(max, px(el.style.left) + px(el.style.width)),
         vw,
       ),
-  })
+  });
   // Save + restore so per-test prototype mutation doesn't bleed into
   // sibling tests via Vitest's shared JS environment.
-  const originalRect = Element.prototype.getBoundingClientRect
+  const originalRect = Element.prototype.getBoundingClientRect;
   Element.prototype.getBoundingClientRect = function () {
-    const el = this as HTMLElement
+    const el = this as HTMLElement;
     const [l, t, w, h] = [
       px(el.style.left),
       px(el.style.top),
       px(el.style.width),
       px(el.style.height),
-    ]
+    ];
     return Object.assign(Object.create(null), {
       left: l,
       top: t,
@@ -205,60 +205,60 @@ const runInDom = (html: string, vw: number) => {
       x: l,
       y: t,
       toJSON: () => ({}),
-    }) as DOMRect
-  }
+    }) as DOMRect;
+  };
   try {
     // eslint-disable-next-line no-new-func
-    return new Function(`return (${collectHeuristicsScript})(${vw})`)()
+    return new Function(`return (${collectHeuristicsScript})(${vw})`)();
   } finally {
-    Element.prototype.getBoundingClientRect = originalRect
+    Element.prototype.getBoundingClientRect = originalRect;
   }
-}
+};
 
 describe('collectHeuristicsScript', () => {
   it('flags horizontal overflow', () => {
     const snap = runInDom(
       '<div style="width: 2000px; height: 10px"></div>',
       320,
-    )
-    expect(snap.hasHorizontalScroll).toBe(true)
-  })
+    );
+    expect(snap.hasHorizontalScroll).toBe(true);
+  });
   it('lists offscreen elements past the viewport right edge', () => {
     const snap = runInDom(
       '<div id="x" style="position: absolute; left: 500px; width: 100px; height: 100px"></div>',
       320,
-    )
+    );
     expect(snap.offscreenElements.some((e) => e.selector.includes('#x'))).toBe(
       true,
-    )
-  })
+    );
+  });
   it('flags tap targets smaller than 32x32', () => {
     const snap = runInDom(
       '<button id="tiny" style="width: 20px; height: 20px"></button>',
       320,
-    )
+    );
     expect(snap.smallTapTargets.some((t) => t.selector.includes('#tiny'))).toBe(
       true,
-    )
-  })
+    );
+  });
   it('does not flag 32x32 or larger tap targets', () => {
     const snap = runInDom(
       '<button id="ok" style="width: 40px; height: 40px"></button>',
       320,
-    )
-    expect(snap.smallTapTargets).toEqual([])
-  })
+    );
+    expect(snap.smallTapTargets).toEqual([]);
+  });
   it('flags images with naturalWidth 0', () => {
     const snap = runInDom(
       '<img src="broken.png" data-natural-width="0" />',
       320,
-    )
+    );
     // Test hook: our script reads Element#naturalWidth on <img>; in DOM
     // fixtures we can't paint an image, so the script also honors
     // data-natural-width for testability.
-    expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1)
-  })
-})
+    expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1);
+  });
+});
 ```
 
 - [ ] **Step 2: Implement `collectHeuristicsScript`** as a function that runs entirely inside the page (no imports). The function reads `document.documentElement.scrollWidth > document.documentElement.clientWidth`, enumerates elements via `document.querySelectorAll('*')` and skips those with `display: none`, computes `getBoundingClientRect()` for each, and returns the four arrays. For images: narrow with `img instanceof HTMLImageElement && img.naturalWidth === 0`, OR `img.getAttribute('data-natural-width') === '0'` (the data-* check is only used to make tests deterministic under jsdom — jsdom doesn't paint images so `naturalWidth` isn't reliable; documented inline).
@@ -299,8 +299,8 @@ git commit -m "feat(audit): DOM heuristics — overflow, offscreen, tap targets,
 - [ ] **Step 1: Failing tests for pure helpers.**
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { filterManifest, outputPathFor } from './sweep-helpers.js'
+import { describe, it, expect } from 'vitest';
+import { filterManifest, outputPathFor } from './sweep-helpers.js';
 
 describe('filterManifest', () => {
   const manifest = [
@@ -312,21 +312,21 @@ describe('filterManifest', () => {
       tags: ['consumer', 'admin'] as const,
       auth: 'user' as const,
     },
-  ]
+  ];
   it('returns everything when no tags given', () => {
     expect(filterManifest(manifest, undefined).map((r) => r.id)).toEqual([
       'a',
       'b',
       'c',
-    ])
-  })
+    ]);
+  });
   it('filters by admin tag', () => {
     expect(filterManifest(manifest, ['admin']).map((r) => r.id)).toEqual([
       'b',
       'c',
-    ])
-  })
-})
+    ]);
+  });
+});
 
 describe('outputPathFor', () => {
   it('builds the canonical filename', () => {
@@ -340,9 +340,9 @@ describe('outputPathFor', () => {
       ),
     ).toBe(
       'audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png',
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 - [ ] **Step 2: Implement the two helpers.** Verify tests pass.
@@ -353,19 +353,19 @@ describe('outputPathFor', () => {
 export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
   const baseUrl =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
-    'https://staging.concertcrawl.app'
+    'https://staging.concertcrawl.app';
   const runId =
-    args.runId ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-  const routes = filterManifest(manifest, args.tags)
+    args.runId ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const routes = filterManifest(manifest, args.tags);
   const viewports = [
     { label: '320x568', width: 320, height: 568 },
     { label: '390x844', width: 390, height: 844 },
     { label: '1440x900', width: 1440, height: 900 },
-  ]
-  const errors: SweepResult['errors'] = []
-  let captures = 0
+  ];
+  const errors: SweepResult['errors'] = [];
+  let captures = 0;
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch();
   try {
     for (const route of routes) {
       const storageState =
@@ -373,26 +373,26 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
           ? undefined
           : route.auth === 'admin'
             ? '.auth/audit-admin.json'
-            : '.auth/audit-user.json'
+            : '.auth/audit-user.json';
       for (const vp of viewports) {
         const context = await browser.newContext({
           viewport: { width: vp.width, height: vp.height },
           reducedMotion: 'reduce',
           storageState,
           baseURL: baseUrl,
-        })
-        const page = await context.newPage()
+        });
+        const page = await context.newPage();
         try {
-          await page.goto(route.path, { waitUntil: 'networkidle' })
-          await page.evaluate(() => document.fonts.ready)
-          await captureState(runId, route.id, 'default', vp, page)
-          captures++
+          await page.goto(route.path, { waitUntil: 'networkidle' });
+          await page.evaluate(() => document.fonts.ready);
+          await captureState(runId, route.id, 'default', vp, page);
+          captures++;
           for (const interaction of route.interactions ?? []) {
             try {
-              await interaction.run(page)
-              await page.waitForLoadState('networkidle')
-              await captureState(runId, route.id, interaction.id, vp, page)
-              captures++
+              await interaction.run(page);
+              await page.waitForLoadState('networkidle');
+              await captureState(runId, route.id, interaction.id, vp, page);
+              captures++;
             } catch (err) {
               // Selector drift or missing state — capture as-is + record.
               // Counts toward `captures` so the PR-close math stays honest
@@ -404,27 +404,31 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
                 `${interaction.id}__stale`,
                 vp,
                 page,
-              )
-              captures++
+              );
+              captures++;
               errors.push({
                 routeId: route.id,
                 kind: 'interaction',
                 message: String(err),
-              })
+              });
             }
           }
         } catch (err) {
-          errors.push({ routeId: route.id, kind: 'load', message: String(err) })
+          errors.push({
+            routeId: route.id,
+            kind: 'load',
+            message: String(err),
+          });
         } finally {
-          await context.close()
+          await context.close();
         }
       }
     }
   } finally {
-    await browser.close()
+    await browser.close();
   }
-  return { runId, captures, errors }
-}
+  return { runId, captures, errors };
+};
 ```
 
 `captureState` writes both `<path>.png` (full-page) and `<path>.json` (heuristic snapshot). Ensure the output dir exists with `fs.mkdirSync(..., { recursive: true })`.

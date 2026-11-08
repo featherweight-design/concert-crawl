@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { SubmissionItem } from './SubmissionItem'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
-import type { UserSubmissionItem } from '@concert-crawl/types'
+import { useState } from 'react';
+import { SubmissionItem } from './SubmissionItem';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { SUBMISSION_CAP_MOBILE } from './definitions/constants';
+import type { UserSubmissionItem } from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface MySubmissionsListProps {
-  submissions: UserSubmissionItem[]
-  totalCount: number
-  cap?: number
+  submissions: UserSubmissionItem[];
+  totalCount: number;
+  cap?: number;
 }
 
 export function MySubmissionsList({
@@ -19,10 +19,10 @@ export function MySubmissionsList({
   totalCount,
   cap = SUBMISSION_CAP_MOBILE,
 }: MySubmissionsListProps) {
-  const [showAll, setShowAll] = useState(false)
+  const [showAll, setShowAll] = useState(false);
 
-  const visible = submissions.slice(0, showAll ? submissions.length : cap)
-  const hasMore = submissions.length > cap && !showAll
+  const visible = submissions.slice(0, showAll ? submissions.length : cap);
+  const hasMore = submissions.length > cap && !showAll;
 
   if (visible.length === 0) {
     return (
@@ -39,7 +39,7 @@ export function MySubmissionsList({
           </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -69,5 +69,5 @@ export function MySubmissionsList({
         </button>
       )}
     </div>
-  )
+  );
 }

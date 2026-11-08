@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useState, useCallback, useEffect } from 'react'
-import Link from 'next/link'
-import { LandingPoster } from './LandingPoster'
-import type { LandingShow } from './LandingPoster'
-import { LANDING_POSTER_COPY } from './definitions/copy'
+import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
+import { LandingPoster } from './LandingPoster';
+import type { LandingShow } from './LandingPoster';
+import { LANDING_POSTER_COPY } from './definitions/copy';
 
 // Link chrome for the top poster in the stack. Hover/focus/press states need
 // real CSS pseudo-classes, and the lift has to compose with the inline stack
@@ -79,68 +79,68 @@ const LP_LINK_CSS = `
     transform: none;
   }
 }
-`
+`;
 
 function lpShuffle<T>(arr: T[]): T[] {
-  const out = arr.slice()
+  const out = arr.slice();
   for (let ii = out.length - 1; ii > 0; ii--) {
-    const jj = Math.floor(Math.random() * (ii + 1))
-    const tmp = out[ii]!
-    out[ii] = out[jj]!
-    out[jj] = tmp
+    const jj = Math.floor(Math.random() * (ii + 1));
+    const tmp = out[ii]!;
+    out[ii] = out[jj]!;
+    out[jj] = tmp;
   }
-  return out
+  return out;
 }
 
 // ── LPStack ───────────────────────────────────────────────────────
 
 interface LPStackProps {
-  shows: LandingShow[]
-  width: number
-  height: number
-  intervalMs?: number
+  shows: LandingShow[];
+  width: number;
+  height: number;
+  intervalMs?: number;
 }
 
 function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
-  const [idx, setIdx] = useState(0)
-  const [phase, setPhase] = useState<'rest' | 'advancing'>('rest')
+  const [idx, setIdx] = useState(0);
+  const [phase, setPhase] = useState<'rest' | 'advancing'>('rest');
 
   const advance = useCallback(() => {
-    if (phase !== 'rest') return
-    setPhase('advancing')
+    if (phase !== 'rest') return;
+    setPhase('advancing');
     setTimeout(() => {
-      setIdx((prev) => (prev + 1) % shows.length)
-      setPhase('rest')
-    }, 900)
-  }, [phase, shows.length])
+      setIdx((prev) => (prev + 1) % shows.length);
+      setPhase('rest');
+    }, 900);
+  }, [phase, shows.length]);
 
   useEffect(() => {
-    if (shows.length < 2) return
-    const timer = setTimeout(advance, intervalMs)
-    return () => clearTimeout(timer)
-  }, [advance, idx, intervalMs, shows.length])
+    if (shows.length < 2) return;
+    const timer = setTimeout(advance, intervalMs);
+    return () => clearTimeout(timer);
+  }, [advance, idx, intervalMs, shows.length]);
 
-  if (!shows.length) return null
+  if (!shows.length) return null;
 
-  const off = width * 0.04
+  const off = width * 0.04;
   const layers = [
     { xx: 0, yy: 0, rr: -1.5, scale: 1, opacity: 1 },
     { xx: off, yy: off * 0.7, rr: 3.5, scale: 0.985, opacity: 1 },
     { xx: -off * 0.8, yy: off * 1.4, rr: -5, scale: 0.97, opacity: 1 },
     { xx: off * 0.4, yy: off * 2.4, rr: 1.0, scale: 0.94, opacity: 0 },
-  ] as const
+  ] as const;
 
-  const padX = Math.max(28, Math.round(width * 0.14))
-  const padY = Math.max(36, Math.round(width * 0.18))
-  const stageW = width + padX * 2
-  const stageH = height + padY * 2
+  const padX = Math.max(28, Math.round(width * 0.14));
+  const padY = Math.max(36, Math.round(width * 0.18));
+  const stageW = width + padX * 2;
+  const stageH = height + padY * 2;
 
   const order: LandingShow[] = [
     shows[idx % shows.length]!,
     shows[(idx + 1) % shows.length]!,
     shows[(idx + 2) % shows.length]!,
     shows[(idx + 3) % shows.length]!,
-  ]
+  ];
 
   return (
     <div
@@ -153,32 +153,32 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
     >
       <style>{LP_LINK_CSS}</style>
       {([0, 1, 2, 3] as const).map((ii) => {
-        const layer = layers[ii]
-        const isTop = ii === 0
-        const isMid = ii === 1
-        const isBottom = ii === 2
-        const isOnDeck = ii === 3
+        const layer = layers[ii];
+        const isTop = ii === 0;
+        const isMid = ii === 1;
+        const isBottom = ii === 2;
+        const isOnDeck = ii === 3;
 
-        let transform: string
-        let opacity: number
+        let transform: string;
+        let opacity: number;
 
         if (phase === 'advancing') {
           if (isTop) {
-            transform = `translate(${layer.xx - width * 0.06}px, ${layer.yy - height * 0.14}px) rotate(${layer.rr - 10}deg) scale(${layer.scale * 1.03})`
-            opacity = 0
+            transform = `translate(${layer.xx - width * 0.06}px, ${layer.yy - height * 0.14}px) rotate(${layer.rr - 10}deg) scale(${layer.scale * 1.03})`;
+            opacity = 0;
           } else if (isMid) {
-            transform = `translate(${layers[0].xx}px, ${layers[0].yy}px) rotate(${layers[0].rr}deg) scale(${layers[0].scale})`
-            opacity = 1
+            transform = `translate(${layers[0].xx}px, ${layers[0].yy}px) rotate(${layers[0].rr}deg) scale(${layers[0].scale})`;
+            opacity = 1;
           } else if (isBottom) {
-            transform = `translate(${layers[1].xx}px, ${layers[1].yy}px) rotate(${layers[1].rr}deg) scale(${layers[1].scale})`
-            opacity = 1
+            transform = `translate(${layers[1].xx}px, ${layers[1].yy}px) rotate(${layers[1].rr}deg) scale(${layers[1].scale})`;
+            opacity = 1;
           } else {
-            transform = `translate(${layers[2].xx}px, ${layers[2].yy}px) rotate(${layers[2].rr}deg) scale(${layers[2].scale})`
-            opacity = 1
+            transform = `translate(${layers[2].xx}px, ${layers[2].yy}px) rotate(${layers[2].rr}deg) scale(${layers[2].scale})`;
+            opacity = 1;
           }
         } else {
-          transform = `translate(${layer.xx}px, ${layer.yy}px) rotate(${layer.rr}deg) scale(${layer.scale})`
-          opacity = layer.opacity
+          transform = `translate(${layer.xx}px, ${layer.yy}px) rotate(${layer.rr}deg) scale(${layer.scale})`;
+          opacity = layer.opacity;
         }
 
         const brightnessFilter = isOnDeck
@@ -187,12 +187,12 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
             ? 'brightness(0.92)'
             : isMid
               ? 'brightness(0.96)'
-              : 'none'
+              : 'none';
 
-        const show = order[ii]!
+        const show = order[ii]!;
         const poster = (
           <LandingPoster show={show} width={width} height={height} />
-        )
+        );
 
         return (
           <div
@@ -247,7 +247,7 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
               </button>
             )}
           </div>
-        )
+        );
       })}
 
       {shows.length > 1 && (
@@ -263,7 +263,7 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
           }}
         >
           {shows.map((_, dotIdx) => {
-            const isActive = dotIdx === idx % shows.length
+            const isActive = dotIdx === idx % shows.length;
             return (
               // The stage itself is inert now, so the pager is the only manual
               // advance — it has to be a real button to be keyboard reachable.
@@ -273,8 +273,8 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                 aria-label={LANDING_POSTER_COPY.goToPoster(dotIdx + 1)}
                 aria-current={isActive || undefined}
                 onClick={() => {
-                  if (isActive || phase !== 'rest') return
-                  setIdx(dotIdx)
+                  if (isActive || phase !== 'rest') return;
+                  setIdx(dotIdx);
                 }}
                 style={{
                   all: 'unset',
@@ -299,42 +299,42 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                   transition: 'width 0.3s',
                 }}
               />
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── LPTicker ──────────────────────────────────────────────────────
 
 interface LPTickerProps {
-  shows: LandingShow[]
-  width: number
-  height: number
-  durationMs?: number
+  shows: LandingShow[];
+  width: number;
+  height: number;
+  durationMs?: number;
 }
 
 function LPTicker({ shows, width, height, durationMs = 6000 }: LPTickerProps) {
-  const [tick, setTick] = useState(0)
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setTick((xx) => xx + 1), durationMs)
-    return () => clearInterval(timer)
-  }, [durationMs])
+    const timer = setInterval(() => setTick((xx) => xx + 1), durationMs);
+    return () => clearInterval(timer);
+  }, [durationMs]);
 
-  const nn = Math.max(shows.length, 4)
-  const cards: LandingShow[] = []
+  const nn = Math.max(shows.length, 4);
+  const cards: LandingShow[] = [];
   for (let ii = 0; ii < nn + 1; ii++) {
-    cards.push(shows[(tick + ii) % shows.length]!)
+    cards.push(shows[(tick + ii) % shows.length]!);
   }
 
-  const gap = Math.round(width * 0.06)
-  const cardW = width
-  const stripW = (cardW + gap) * cards.length
-  const padY = Math.round(width * 0.1)
-  const stageH = height + padY * 2
+  const gap = Math.round(width * 0.06);
+  const cardW = width;
+  const stripW = (cardW + gap) * cards.length;
+  const padY = Math.round(width * 0.1);
+  const stageH = height + padY * 2;
 
   return (
     <div
@@ -380,17 +380,17 @@ function LPTicker({ shows, width, height, durationMs = 6000 }: LPTickerProps) {
         }
       `}</style>
     </div>
-  )
+  );
 }
 
 // ── LPWall ────────────────────────────────────────────────────────
 
 interface LPWallProps {
-  shows: LandingShow[]
-  width: number
-  height: number
-  columnHeight?: number
-  durationMs?: number
+  shows: LandingShow[];
+  width: number;
+  height: number;
+  columnHeight?: number;
+  durationMs?: number;
 }
 
 function LPWall({
@@ -400,10 +400,10 @@ function LPWall({
   columnHeight,
   durationMs = 22000,
 }: LPWallProps) {
-  const deck = [...shows, ...shows]
-  const gap = Math.round(width * 0.08)
-  const tileH = height
-  const colH = columnHeight ?? (tileH + gap) * shows.length
+  const deck = [...shows, ...shows];
+  const gap = Math.round(width * 0.08);
+  const tileH = height;
+  const colH = columnHeight ?? (tileH + gap) * shows.length;
 
   return (
     <div
@@ -446,17 +446,17 @@ function LPWall({
         }
       `}</style>
     </div>
-  )
+  );
 }
 
 // ── LandingPosterAnimation ────────────────────────────────────────
 
 interface LandingPosterAnimationProps {
-  mode?: 'stack' | 'ticker' | 'wall'
-  shows?: LandingShow[]
-  width?: number
-  height?: number
-  intervalMs?: number
+  mode?: 'stack' | 'ticker' | 'wall';
+  shows?: LandingShow[];
+  width?: number;
+  height?: number;
+  intervalMs?: number;
 }
 
 export function LandingPosterAnimation({
@@ -466,14 +466,14 @@ export function LandingPosterAnimation({
   height,
   intervalMs = 5200,
 }: LandingPosterAnimationProps) {
-  const hh = height ?? Math.round(width * 1.38)
-  const [ordered, setOrdered] = useState<LandingShow[]>(shows)
+  const hh = height ?? Math.round(width * 1.38);
+  const [ordered, setOrdered] = useState<LandingShow[]>(shows);
 
   useEffect(() => {
-    setOrdered(lpShuffle(shows))
-  }, [shows])
+    setOrdered(lpShuffle(shows));
+  }, [shows]);
 
-  if (!ordered.length) return null
+  if (!ordered.length) return null;
 
   if (mode === 'ticker') {
     return (
@@ -483,7 +483,7 @@ export function LandingPosterAnimation({
         height={hh}
         durationMs={intervalMs * 1.15}
       />
-    )
+    );
   }
   if (mode === 'wall') {
     return (
@@ -493,7 +493,7 @@ export function LandingPosterAnimation({
         height={hh}
         durationMs={intervalMs * 4}
       />
-    )
+    );
   }
   return (
     <LPStack
@@ -502,5 +502,5 @@ export function LandingPosterAnimation({
       height={hh}
       intervalMs={intervalMs}
     />
-  )
+  );
 }

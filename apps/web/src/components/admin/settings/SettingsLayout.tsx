@@ -1,8 +1,8 @@
 // apps/web/src/components/admin/settings/SettingsLayout.tsx
 interface SettingsLayoutProps {
-  heading: string
-  description?: string
-  children: React.ReactNode
+  heading: string;
+  description?: string;
+  children: React.ReactNode;
 }
 
 export function SettingsLayout({
@@ -20,5 +20,5 @@ export function SettingsLayout({
       </div>
       {children}
     </section>
-  )
+  );
 }

@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry'
+import { useEffect } from 'react';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 export default function AdminError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-  const retry = useErrorBoundaryRetry(reset)
+  const retry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
-    console.error('[admin] page error:', error)
-  }, [error])
+    console.error('[admin] page error:', error);
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-3 p-6">
@@ -44,5 +44,5 @@ export default function AdminError({
         Try again
       </button>
     </div>
-  )
+  );
 }

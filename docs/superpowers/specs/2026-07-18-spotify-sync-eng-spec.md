@@ -81,7 +81,7 @@ export const spotifyConnectionStatusEnum = pgEnum('spotify_connection_status', [
   'connected', // healthy
   'error', // last sync failed (Spotify 5xx / rate limit) — retry next cycle
   'revoked', // grant gone (external revoke or Clerk token failure) — banner + purge
-])
+]);
 
 export const userSpotifyConnections = pgTable(
   'user_spotify_connections',
@@ -108,7 +108,7 @@ export const userSpotifyConnections = pgTable(
       table.userId,
     ),
   }),
-)
+);
 ```
 
 Notes:
@@ -178,7 +178,7 @@ export const pushSubscriptions = pgTable(
     ),
     userIdIdx: index('push_subscriptions_user_id_idx').on(table.userId),
   }),
-)
+);
 ```
 
 One row per user-device pair. `410 Gone`/`404` responses soft-disable (set `disabledAt`); a later successful re-subscribe from the same endpoint clears it.
@@ -208,7 +208,7 @@ export const spotifyAlertLog = pgTable(
       table.kind,
     ),
   }),
-)
+);
 ```
 
 A crawler re-crawl that updates an existing event never re-alerts: fan-out only runs for _inserted_ rows, and this log makes even that idempotent across crashes.

@@ -1,26 +1,26 @@
-import { History, Flame } from 'lucide-react'
-import type { PopularEvent } from '../../../lib/search/useSearch'
-import { Panel } from '../image-slot'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { History, Flame } from 'lucide-react';
+import type { PopularEvent } from '../../../lib/search/useSearch';
+import { Panel } from '../image-slot';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.search
+const copy = CONSUMER_COPY.search;
 
 function formatDayLabel(dateStr: string): string {
   // Append T00:00:00 to force local-timezone parsing — bare YYYY-MM-DD
   // parses as UTC midnight, which shifts the displayed day for negative offsets.
-  const date = new Date(`${dateStr}T00:00:00`)
+  const date = new Date(`${dateStr}T00:00:00`);
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-  })
+  });
 }
 
 interface SearchDefaultStateProps {
-  recentSearches: string[]
-  popularEvents: PopularEvent[]
-  onPickQuery: (query: string) => void
-  onPickEvent: (type: 'artist', value: string) => void
+  recentSearches: string[];
+  popularEvents: PopularEvent[];
+  onPickQuery: (query: string) => void;
+  onPickEvent: (type: 'artist', value: string) => void;
 }
 
 function SectionHeader({
@@ -28,9 +28,9 @@ function SectionHeader({
   label,
   accent = false,
 }: {
-  icon: React.ReactNode
-  label: string
-  accent?: boolean
+  icon: React.ReactNode;
+  label: string;
+  accent?: boolean;
 }) {
   return (
     <div
@@ -62,7 +62,7 @@ function SectionHeader({
         {label}
       </span>
     </div>
-  )
+  );
 }
 
 export function SearchDefaultState({
@@ -215,5 +215,5 @@ export function SearchDefaultState({
         </>
       )}
     </div>
-  )
+  );
 }

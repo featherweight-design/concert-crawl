@@ -2,10 +2,10 @@ import {
   PP_MODES,
   PASSPORT_PRINT_MODE,
   PASSPORT_PRINT_SCALE,
-} from '@/components/consumer/passport/definitions/modes'
-import { isThemeName, resolveThemeTokens } from '@/lib/share/theme-tokens'
-import { DENVER_TIME_ZONE, localDateString } from '@/lib/time'
-import type { ThemeName } from '@/theme/themes'
+} from '@/components/consumer/passport/definitions/modes';
+import { isThemeName, resolveThemeTokens } from '@/lib/share/theme-tokens';
+import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
+import type { ThemeName } from '@/theme/themes';
 
 /**
  * Input validation for the passport PNG route, kept out of the route file for
@@ -20,13 +20,13 @@ import type { ThemeName } from '@/theme/themes'
  * rather than a silent fall back to square: guessing produces a card at
  * dimensions the caller did not ask for.
  */
-export const PASSPORT_RATIOS = ['square'] as const
-export type PassportRatio = (typeof PASSPORT_RATIOS)[number]
+export const PASSPORT_RATIOS = ['square'] as const;
+export type PassportRatio = (typeof PASSPORT_RATIOS)[number];
 
 export const isPassportRatio = (
   candidate: string,
 ): candidate is PassportRatio =>
-  PASSPORT_RATIOS.some((ratio) => ratio === candidate)
+  PASSPORT_RATIOS.some((ratio) => ratio === candidate);
 
 /**
  * The output size of the PNG — the design size times the device-pixel
@@ -41,14 +41,14 @@ export const PASSPORT_DIMENSIONS: Record<
     width: PP_MODES[PASSPORT_PRINT_MODE].width * PASSPORT_PRINT_SCALE,
     height: PP_MODES[PASSPORT_PRINT_MODE].height * PASSPORT_PRINT_SCALE,
   },
-}
+};
 
 /**
  * A personal card must never land in a shared cache. `private` keeps it out of
  * every CDN and proxy between us and the reader; the five minutes are for the
  * browser that just rendered a preview and is about to download the same PNG.
  */
-export const PASSPORT_CACHE_CONTROL = 'private, max-age=300'
+export const PASSPORT_CACHE_CONTROL = 'private, max-age=300';
 
 /**
  * `private` keeps the card out of shared caches but says nothing about the
@@ -57,7 +57,7 @@ export const PASSPORT_CACHE_CONTROL = 'private, max-age=300'
  * five minutes were up. Varying on the session cookie keeps the cache without
  * that reuse.
  */
-export const PASSPORT_VARY = 'Cookie'
+export const PASSPORT_VARY = 'Cookie';
 
 /**
  * The year printed on the card header, in Mountain Time.
@@ -68,7 +68,7 @@ export const PASSPORT_VARY = 'Cookie'
  * `localDateString` helper the rest of the app uses rather than a second idiom.
  */
 export const passportYear = (): number =>
-  Number(localDateString(DENVER_TIME_ZONE).slice(0, 4))
+  Number(localDateString(DENVER_TIME_ZONE).slice(0, 4));
 
 /**
  * The theme is a soft fallback where the ratio is a hard reject — the ratio
@@ -77,8 +77,8 @@ export const passportYear = (): number =>
  * with `?theme=` overriding it for the preview picker.
  */
 export const resolvePassportTheme = (params: {
-  theme?: string | undefined
-  profileTheme?: string | undefined
+  theme?: string | undefined;
+  profileTheme?: string | undefined;
 }): { theme: ThemeName; tokens: Record<string, string> } => {
   // An unrecognised `?theme=` falls back to the stored profile theme, not
   // straight to the default — passing the two joined would silently demote a
@@ -86,6 +86,6 @@ export const resolvePassportTheme = (params: {
   const override =
     params.theme !== undefined && isThemeName(params.theme)
       ? params.theme
-      : undefined
-  return resolveThemeTokens(override ?? params.profileTheme)
-}
+      : undefined;
+  return resolveThemeTokens(override ?? params.profileTheme);
+};

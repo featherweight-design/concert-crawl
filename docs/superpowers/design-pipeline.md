@@ -75,7 +75,7 @@ Both tracks converge on the same plan-PR-and-review step. Track 2 designs go thr
 ## Cadence rules
 
 - **A ticket that needs Design input gets a tracker row, not just a label.** Standing rule (Hugh, 2026-08-04). Opening an issue that asks Design to decide something means two steps: label it `type: design`, **and** add a row to `docs/superpowers/design-pipeline-status.md` — under 🕰️ Backlog, not left sitting in the ⏳ untriaged inbox, which `design-status` does not report. The second step is the one that matters — the `design-status` skill parses that file section by section and **never queries GitHub labels**, so a correctly-labelled ticket with no row simply does not exist as far as the pipeline is concerned. Judge by the fix rather than the label: if answering the ticket means deciding a missing affordance, a placement, or a new surface, it is design work even when it was filed as `bug` or `polish`. This fires most often inside `epic-run` and `complete-and-ship`, which spin out design questions as a side effect of building — fold the tracker row into the branch already in flight rather than opening a PR just for it.
-- **No WIP limit on design tickets.** Hugh wants Design throughput high so the roadmap stays predictable and eng work doesn't block on design. Instead, track *throughput* (designs merged per week) as a health signal — if backpressure shows up, revisit.
+- **No WIP limit on design tickets.** Hugh wants Design throughput high so the roadmap stays predictable and eng work doesn't block on design. Instead, track _throughput_ (designs merged per week) as a health signal — if backpressure shows up, revisit.
 - **Plan PR review exit criteria:** the merge bar lives in the fwd `pr-review` skill (`~/.claude/fwd/skills/pr-review/SKILL.md`). A plan PR is a doc PR: no review round; the author reads their own diff, fixes it, and merges on green CI.
 - **Plan PRs live in `docs/superpowers/plans/`.** Keep after the feature ships — they make valuable session-start context.
 - **Traceability chain:** design ticket → design handoff folder → plan PR → implementation PR(s). All cross-linked in PR bodies and GH issue references.
@@ -92,7 +92,7 @@ Two rules follow:
 1. **Copy changes go to the copy-writer persona** (`~/.claude/fwd/skills/copy-review/SKILL.md`), never back to Design. A wrong, stale, or off-voice string never justifies a design round.
 2. **Design's copy gets a copy-review pass before it is implemented.** Strings in a handoff are a draft input to copy review, not a locked artifact. Where the review calls for changes, **make them in place with the copy-writer persona** — do not return the handoff to Design for wording.
 
-This narrows the "open questions go back to Design" rule: open *product* questions still do, open *wording* questions do not. Where copy length forces a layout change, the layout question is Design's and the words stay the copy-writer's.
+This narrows the "open questions go back to Design" rule: open _product_ questions still do, open _wording_ questions do not. Where copy length forces a layout change, the layout question is Design's and the words stay the copy-writer's.
 
 Adopted 2026-08-05, after the #1226 Concert Crews entitlement flip (Supporter rather than Premium) invalidated four strings in `crew-copy.jsx` and the proposed remedy was to block the build PR on a Design round. That is the copy-writer's work.
 
@@ -104,24 +104,24 @@ The gate between design handoff and plan PR. Audits a design folder against seve
 
 ### Audit dimensions
 
-| Dimension | What we check |
-|-----------|---------------|
-| 🗺️ **Scope clarity** | Boundary defined? Non-goals stated? Open questions logged? |
-| 🎭 **State coverage** | Loading / error / empty / auth states? Edge cases? Mobile + desktop parity per `feedback_mobile_desktop_parity.md`? |
-| 🔌 **Data contract** | Backend exists to support this? Schema / endpoint gaps? Props / types clear? Per `feedback_api_contract_before_ui.md` — every named state must be reachable. |
-| 🧱 **Codebase fit** | Uses `var(--*)` tokens? Leverages existing components? Follows `definitions/copy.ts` / `definitions/constants.ts` conventions? Arrow functions, no single-char vars, etc. |
-| ♿ **Cross-cutting** | A11y addressed? Performance implications? Analytics / telemetry expectations? |
-| ⏰ **Drift from reality** | Was this designed before major changes (Vercel/Neon migration, schema changes, new admin patterns, beta feedback)? Referenced files / components still accurate? |
-| 📝 **Decision log** | Key decisions documented in the handoff README? Locked vs. tentative clearly marked? |
+| Dimension                 | What we check                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🗺️ **Scope clarity**      | Boundary defined? Non-goals stated? Open questions logged?                                                                                                                |
+| 🎭 **State coverage**     | Loading / error / empty / auth states? Edge cases? Mobile + desktop parity per `feedback_mobile_desktop_parity.md`?                                                       |
+| 🔌 **Data contract**      | Backend exists to support this? Schema / endpoint gaps? Props / types clear? Per `feedback_api_contract_before_ui.md` — every named state must be reachable.              |
+| 🧱 **Codebase fit**       | Uses `var(--*)` tokens? Leverages existing components? Follows `definitions/copy.ts` / `definitions/constants.ts` conventions? Arrow functions, no single-char vars, etc. |
+| ♿ **Cross-cutting**      | A11y addressed? Performance implications? Analytics / telemetry expectations?                                                                                             |
+| ⏰ **Drift from reality** | Was this designed before major changes (Vercel/Neon migration, schema changes, new admin patterns, beta feedback)? Referenced files / components still accurate?          |
+| 📝 **Decision log**       | Key decisions documented in the handoff README? Locked vs. tentative clearly marked?                                                                                      |
 
 ### Verdicts
 
-| Verdict | Meaning | Next step |
-|---------|---------|-----------|
-| ✅ **Green** | Ready as-is | Move to plan PR |
-| 🟡 **Yellow** | Ready with eng-side clarifications | Plan PR addresses gaps in implementation notes |
-| 🟠 **Orange** | Small Design round-trip needed | Open `type: design` addendum ticket, light scope |
-| 🔴 **Red** | Significant gaps | Open new design ticket, full Track 2 workshop |
+| Verdict       | Meaning                            | Next step                                        |
+| ------------- | ---------------------------------- | ------------------------------------------------ |
+| ✅ **Green**  | Ready as-is                        | Move to plan PR                                  |
+| 🟡 **Yellow** | Ready with eng-side clarifications | Plan PR addresses gaps in implementation notes   |
+| 🟠 **Orange** | Small Design round-trip needed     | Open `type: design` addendum ticket, light scope |
+| 🔴 **Red**    | Significant gaps                   | Open new design ticket, full Track 2 workshop    |
 
 ### Output: READINESS.md
 
@@ -144,10 +144,12 @@ One paragraph: what's ready, what's not, what we're doing about it.
 ## Per-dimension findings
 
 ### 🗺️ Scope clarity
+
 - [✅/🟡/🟠/🔴] <observation>
 - ...
 
 ### 🎭 State coverage
+
 ...
 
 (repeat for all seven dimensions)
@@ -228,16 +230,16 @@ No solution language. No "decisions needed" section.>
 
 ## Roles & artifacts
 
-| Role | Artifact | Lives at |
-|------|----------|----------|
-| Hugh + me workshop | Design ticket | GitHub Issues |
-| Design produces | Design handoff folder + README | `design/design_handoff_X/` |
-| Hugh + me audit | Readiness Review | `design/design_handoff_X/READINESS.md` |
-| Copy-writer persona audits | Copy review of the handoff's strings — findings applied in place, never returned to Design | Build PR (see "Who owns copy") |
-| Hugh + me workshop | Implementation plan | `docs/superpowers/plans/<feature>.md` (plan PR) |
-| Hugh + me review | Review of the plan PR diff | GitHub PR |
-| Eng builds | Implementation PR(s) | GitHub PR — references plan PR |
-| Eng adds | Changelog entry | `apps/web/src/lib/definitions/releases.ts` (same branch as impl PR) |
+| Role                       | Artifact                                                                                   | Lives at                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Hugh + me workshop         | Design ticket                                                                              | GitHub Issues                                                       |
+| Design produces            | Design handoff folder + README                                                             | `design/design_handoff_X/`                                          |
+| Hugh + me audit            | Readiness Review                                                                           | `design/design_handoff_X/READINESS.md`                              |
+| Copy-writer persona audits | Copy review of the handoff's strings — findings applied in place, never returned to Design | Build PR (see "Who owns copy")                                      |
+| Hugh + me workshop         | Implementation plan                                                                        | `docs/superpowers/plans/<feature>.md` (plan PR)                     |
+| Hugh + me review           | Review of the plan PR diff                                                                 | GitHub PR                                                           |
+| Eng builds                 | Implementation PR(s)                                                                       | GitHub PR — references plan PR                                      |
+| Eng adds                   | Changelog entry                                                                            | `apps/web/src/lib/definitions/releases.ts` (same branch as impl PR) |
 
 ---
 
@@ -246,6 +248,7 @@ No solution language. No "decisions needed" section.>
 Living state — moves to `project_design_pipeline.md` memory after this initial setup; this section will be removed once the pipeline is steady-state.
 
 **Track 1 (designs done, build pending):**
+
 - 404 page (pilot — Beta wk 2)
 - Admin Venue Form API fields (#506)
 - Price source + multi-tier (#641 + #644 — eng sign-off 6/17)
@@ -254,10 +257,12 @@ Living state — moves to `project_design_pipeline.md` memory after this initial
 - Shareable cards (Beta wk 5)
 
 **Track 2 (need design — open tickets):**
+
 - #642 Calendar month/week jump picker
 - #643 Supporting artists separators
 
 **Tickets to open (Beta gap features):**
+
 - Who else is watching
 - Spotify sync (Beta wk 7 — heavy brainstorm)
 - Venue first-timer guide

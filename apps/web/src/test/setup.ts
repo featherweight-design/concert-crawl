@@ -7,5 +7,5 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     observe() {}
     unobserve() {}
     disconnect() {}
-  }
+  };
 }

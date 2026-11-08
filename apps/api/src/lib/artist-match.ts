@@ -30,36 +30,36 @@
 import {
   canonicalizeArtist,
   normalizeArtistName,
-} from '@concert-crawl/crawler-core/canonical'
-import type { SpotifyCandidateSnapshot } from '@concert-crawl/db'
+} from '@concert-crawl/crawler-core/canonical';
+import type { SpotifyCandidateSnapshot } from '@concert-crawl/db';
 import type {
   SpotifyArtistCandidate,
   SpotifySearch,
-} from './spotify-app-client.js'
+} from './spotify-app-client.js';
 
 /** Minimum confidence for a `matched` verdict. 1.0 = exact canonical equality. */
-export const ARTIST_MATCH_MIN_CONFIDENCE = 1.0
+export const ARTIST_MATCH_MIN_CONFIDENCE = 1.0;
 
 /** Score awarded to an exact canonical-name equality. */
-const EXACT_MATCH_CONFIDENCE = 1.0
+const EXACT_MATCH_CONFIDENCE = 1.0;
 
-export type ArtistMatchStatus = 'matched' | 'ambiguous' | 'no_match'
+export type ArtistMatchStatus = 'matched' | 'ambiguous' | 'no_match';
 
 export interface ArtistMatchResult {
-  status: ArtistMatchStatus
-  spotifyArtistId: string | null
-  confidence: number | null
-  photoUrl: string | null
+  status: ArtistMatchStatus;
+  spotifyArtistId: string | null;
+  confidence: number | null;
+  photoUrl: string | null;
   /**
    * Every distinct candidate the search returned, in Spotify's own order.
    * Surfaced so the caller can snapshot a search it has already paid for —
    * the matcher itself still decides on exact canonical equality alone.
    */
-  candidates: SpotifyCandidateSnapshot[]
+  candidates: SpotifyCandidateSnapshot[];
 }
 
 export interface ArtistMatchDeps {
-  search: SpotifySearch
+  search: SpotifySearch;
 }
 
 /** Trim a search hit to the fields the picker renders. */
@@ -73,19 +73,19 @@ export const toCandidateSnapshot = (
   // claim Spotify lists no genres. Only a genre-hydrated snapshot may say that.
   genres: candidate.genres.length > 0 ? candidate.genres : null,
   spotifyUrl: candidate.spotifyUrl,
-})
+});
 
 /** Spotify can echo one artist across a rescored result; keep first occurrences. */
 export const dedupeCandidates = (
   candidates: SpotifyArtistCandidate[],
 ): SpotifyArtistCandidate[] => {
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   return candidates.filter((candidate) => {
-    if (seen.has(candidate.id)) return false
-    seen.add(candidate.id)
-    return true
-  })
-}
+    if (seen.has(candidate.id)) return false;
+    seen.add(candidate.id);
+    return true;
+  });
+};
 
 const unresolved = (
   status: ArtistMatchStatus,
@@ -96,7 +96,7 @@ const unresolved = (
   confidence: null,
   photoUrl: null,
   candidates,
-})
+});
 
 /**
  * Resolve a canonical artist name to a Spotify artist identity.
@@ -115,8 +115,8 @@ export const matchArtist = async (
   deps: ArtistMatchDeps,
   billedName?: string,
 ): Promise<ArtistMatchResult> => {
-  const candidates = dedupeCandidates(await deps.search(canonicalName))
-  const snapshot = candidates.map(toCandidateSnapshot)
+  const candidates = dedupeCandidates(await deps.search(canonicalName));
+  const snapshot = candidates.map(toCandidateSnapshot);
 
   // Tier 0 — the full billing, compared before anything is truncated.
   //
@@ -130,12 +130,12 @@ export const matchArtist = async (
   // silent unless exactly one candidate matches, which keeps a genuine co-bill
   // like "Ziggy Marley & Stephen Marley" (no candidate carries that name)
   // ambiguous rather than resolving it to one of the two acts.
-  const billed = normalizeArtistName(billedName ?? '').trim()
+  const billed = normalizeArtistName(billedName ?? '').trim();
   if (billed !== '') {
     const fullNameHits = candidates.filter(
       (candidate) => normalizeArtistName(candidate.name).trim() === billed,
-    )
-    const soleHit = fullNameHits.length === 1 ? fullNameHits[0] : undefined
+    );
+    const soleHit = fullNameHits.length === 1 ? fullNameHits[0] : undefined;
     if (soleHit !== undefined) {
       return {
         status: 'matched',
@@ -143,7 +143,7 @@ export const matchArtist = async (
         confidence: EXACT_MATCH_CONFIDENCE,
         photoUrl: soleHit.images[0]?.url ?? null,
         candidates: snapshot,
-      }
+      };
     }
   }
 
@@ -156,15 +156,15 @@ export const matchArtist = async (
       canonicalizeArtist(candidate.name) === canonicalName
         ? EXACT_MATCH_CONFIDENCE
         : 0,
-  }))
+  }));
   const exact = scored
     .filter((entry) => entry.confidence >= ARTIST_MATCH_MIN_CONFIDENCE)
-    .map((entry) => entry.candidate)
+    .map((entry) => entry.candidate);
 
   // Distinctness is by id, not by name — two rows for one artist are one
   // artist, not an ambiguity. `candidates` is already deduped by id, so this
   // is just a count of the exact hits.
-  if (exact.length === 0) return unresolved('no_match', snapshot)
+  if (exact.length === 0) return unresolved('no_match', snapshot);
 
   // Several artists share a name, so the tie needs breaking on something other
   // than the name. A press photo is the only signal Spotify still exposes, and
@@ -175,14 +175,14 @@ export const matchArtist = async (
   // It only decides when exactly one candidate carries one. Two photographed
   // namesakes is a real ambiguity, and picking between them would put a
   // stranger's press photo on a public artist page.
-  const photographed = exact.filter((candidate) => candidate.images.length > 0)
+  const photographed = exact.filter((candidate) => candidate.images.length > 0);
   const winner =
     exact.length === 1
       ? exact[0]
       : photographed.length === 1
         ? photographed[0]
-        : undefined
-  if (winner === undefined) return unresolved('ambiguous', snapshot)
+        : undefined;
+  if (winner === undefined) return unresolved('ambiguous', snapshot);
 
   return {
     status: 'matched',
@@ -190,5 +190,5 @@ export const matchArtist = async (
     confidence: EXACT_MATCH_CONFIDENCE,
     photoUrl: winner.images[0]?.url ?? null,
     candidates: snapshot,
-  }
-}
+  };
+};

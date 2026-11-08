@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 import {
   AdminTable,
   THead,
@@ -10,14 +10,14 @@ import {
   StatusBadge,
   RelTime,
   CostText,
-} from '@/components/admin/primitives'
-import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
-import { formatStrategy } from './lib/dashboard'
-import type { CrawlStatusRow } from './lib/dashboard'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
+import { formatStrategy } from './lib/dashboard';
+import type { CrawlStatusRow } from './lib/dashboard';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <AdminTable>
@@ -67,5 +67,5 @@ export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
         ))}
       </tbody>
     </AdminTable>
-  )
+  );
 }

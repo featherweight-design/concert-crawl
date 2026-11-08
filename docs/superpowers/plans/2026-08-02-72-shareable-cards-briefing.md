@@ -21,12 +21,12 @@ The handoff `.jsx` files are **read-only references**. Nothing in them ships.
 
 The plan was written 2026-07-27. #794, #70 and #1225 have merged since and moved the ground under it.
 
-| Plan claims | Reality on `origin/main` | Consequence |
-| --- | --- | --- |
-| `middleware.ts` has one `isAlwaysPublic` matcher that #794 will broaden; three-step collision mitigation needed (plan lines 83–93) | PR #1254 **split the file into two matchers**. `isAlwaysPublic` = `/`, `/auth/code`, `/sign-in`, `/api/webhooks`, `/api/pwa/icon`, `/legal`, `/changelog`. `isPublicOnceLaunched` = `/events`, `/venues`, `/artists`, `/search`, `/watching`, `/onboarding`, `/sign-up`, gated on `NEXT_PUBLIC_PUBLIC_BROWSE === 'true'` | No merge conflict remains. **Ignore the mitigation list entirely.** PR-0 is choosing between two matchers, not appending to one. See Launch gating. |
-| "There is no `attending_at` column" (plan line 97); PR-4/PR-5 blocked on #70 | `userEvents.attendingAt` exists (`packages/db/src/schema/social.ts:60`), partial index and all. #70 merged 2026-07-31 | **PR-4/PR-5 are unblocked.** |
-| Task 16 Step 1 selects `user_events.status = 'going'` | Dead value. `social.ts:17-28`: attendance moved to `attendingAt`, `going` is derived from `attending_at IS NOT NULL`, **migration 0065 nulls out every remaining `going` row**, enum values retained but unreachable — *"Do not reintroduce writes to them."* | As written, **PR-5 ships a permanently empty Passport** that passes fixture-based tests. Select on `attendingAt IS NOT NULL`. Verify against a seeded DB, not fixtures. |
-| `ENTITLEMENTS_MATRIX['concert-history'].supporter = 'paywall-on-tap'`; drift needs a Hugh call (plan lines 99–103) | PR #1225 (2026-07-29) set it to `'visible-active'` (`packages/entitlements/src/index.ts:64-71`). The matrix now agrees with both handoffs | **Resolved. No escalation.** PR-5 still calls `canUseFeature(state, 'concert-history')` and hardcodes no tier — that part of the plan stands. |
+| Plan claims                                                                                                                        | Reality on `origin/main`                                                                                                                                                                                                                                                                                                 | Consequence                                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `middleware.ts` has one `isAlwaysPublic` matcher that #794 will broaden; three-step collision mitigation needed (plan lines 83–93) | PR #1254 **split the file into two matchers**. `isAlwaysPublic` = `/`, `/auth/code`, `/sign-in`, `/api/webhooks`, `/api/pwa/icon`, `/legal`, `/changelog`. `isPublicOnceLaunched` = `/events`, `/venues`, `/artists`, `/search`, `/watching`, `/onboarding`, `/sign-up`, gated on `NEXT_PUBLIC_PUBLIC_BROWSE === 'true'` | No merge conflict remains. **Ignore the mitigation list entirely.** PR-0 is choosing between two matchers, not appending to one. See Launch gating.                     |
+| "There is no `attending_at` column" (plan line 97); PR-4/PR-5 blocked on #70                                                       | `userEvents.attendingAt` exists (`packages/db/src/schema/social.ts:60`), partial index and all. #70 merged 2026-07-31                                                                                                                                                                                                    | **PR-4/PR-5 are unblocked.**                                                                                                                                            |
+| Task 16 Step 1 selects `user_events.status = 'going'`                                                                              | Dead value. `social.ts:17-28`: attendance moved to `attendingAt`, `going` is derived from `attending_at IS NOT NULL`, **migration 0065 nulls out every remaining `going` row**, enum values retained but unreachable — _"Do not reintroduce writes to them."_                                                            | As written, **PR-5 ships a permanently empty Passport** that passes fixture-based tests. Select on `attendingAt IS NOT NULL`. Verify against a seeded DB, not fixtures. |
+| `ENTITLEMENTS_MATRIX['concert-history'].supporter = 'paywall-on-tap'`; drift needs a Hugh call (plan lines 99–103)                 | PR #1225 (2026-07-29) set it to `'visible-active'` (`packages/entitlements/src/index.ts:64-71`). The matrix now agrees with both handoffs                                                                                                                                                                                | **Resolved. No escalation.** PR-5 still calls `canUseFeature(state, 'concert-history')` and hardcodes no tier — that part of the plan stands.                           |
 
 Also verified, and **not** stale:
 
@@ -39,7 +39,7 @@ Also verified, and **not** stale:
 
 ## Risk shape — **content/data-driven, with a copy/IA tail**
 
-The poster and passport are rendered *from crawled event data* into an immutable PNG that gets sent to people outside the product. Two consequences drive where to over-invest:
+The poster and passport are rendered _from crawled event data_ into an immutable PNG that gets sent to people outside the product. Two consequences drive where to over-invest:
 
 1. **The long tail is the risk, not the happy path.** A 40-character artist name, a null venue city, a missing price block, an artist name that is a single emoji, a 9-word co-headliner string — each produces a broken card that we cannot recall once it is in someone's iMessage thread. **Gate 2 runs with deliberately ugly fixtures drawn from real prod rows**, not clean ones.
 2. **Satori is not a browser.** The whole `IdentityArtPrint` exercise exists because `mixBlendMode`, `backdropFilter`, `maskImage` and `feTurbulence` all silently no-op or drop layers. A dropped layer does not throw — it renders a plainer card. The render-through tests (plan Task 4 Step 6, Task 7 Step 10) are the only thing standing between us and that, so they are not optional and must assert more than "non-empty buffer" where they can.
@@ -54,7 +54,7 @@ Gate 6 does not fire — this epic creates no records in response to events. Gat
 
 **Why**, so edge cases can be judged rather than looked up: Concert Crawl is in private beta until the Aug 18–22 window, and `main` auto-deploys to prod with no human gate between merge and public exposure. Putting a browse vertical into `isAlwaysPublic` is precisely what made a private-beta product publicly readable in #794 — the inline comment on `/artists` says so in as many words. #1115 (`/artists`) and #764 (`/venues`) both chose `isPublicOnceLaunched`.
 
-**The cost is near zero pre-launch.** The middleware early-returns for signed-in users, so during private beta the sharer gets the entire feature: share pill, sheet, live PNG preview, Save image, Copy link. Only a *signed-out recipient's* landing is dark, and only until the flag flips.
+**The cost is near zero pre-launch.** The middleware early-returns for signed-in users, so during private beta the sharer gets the entire feature: share pill, sheet, live PNG preview, Save image, Copy link. Only a _signed-out recipient's_ landing is dark, and only until the flag flips.
 
 **The cost that is real, stated honestly:** OG unfurls cannot be verified in prod before launch, because a crawler carries no session and will be redirected. Verify them on staging with the flag on, and put "paste a real `/e/` link into iMessage and Slack" on the launch-day runbook rather than claiming it is covered.
 
@@ -76,7 +76,7 @@ Three states a recipient can land in that the plan does not address.
 
 ### 2. Past event → **renders, with the ticket CTA suppressed**
 
-A poster is frequently shared *after* the show — that is the memento case, and it is the Passport's whole premise. `/e/:id` renders a past event normally. But `Get Tickets` on a show that has happened is a link to a dead vendor page, so it is suppressed for past events on the public mirror, matching the sold-out disabled treatment the plan already specifies in PR-0 Task 2 Step 3.
+A poster is frequently shared _after_ the show — that is the memento case, and it is the Passport's whole premise. `/e/:id` renders a past event normally. But `Get Tickets` on a show that has happened is a link to a dead vendor page, so it is suppressed for past events on the public mirror, matching the sold-out disabled treatment the plan already specifies in PR-0 Task 2 Step 3.
 
 ### 3. Recipient wants in, pre-launch → **`/sign-in`, never `/sign-up`**
 
@@ -111,7 +111,7 @@ Run locally with `NEXT_PUBLIC_PUBLIC_BROWSE` toggled per journey; re-run A and C
 2. `PassportTeaser` renders with real stats — **not zeroes**. Zeroes here is the `status='going'` regression resurfacing.
 3. Follow "See your Passport →", confirm the compact 320×500 card, 3×3 wall, `+N more` at exactly 10 shows.
 4. Share → 1080×1080 renders; `Cache-Control` is `private`.
-5. **Reverse:** un-mark *I'm going* on one show. Stats decrement, stamp disappears.
+5. **Reverse:** un-mark _I'm going_ on one show. Stats decrement, stamp disappears.
 6. **Repeat:** re-mark it. The stamp returns. Anything keyed by `eventId` rather than `userEventId` fails here (Defect Class 13).
 7. **Resume:** reload; open in a second session. Same card.
 8. As a **Free** user, `/history` gates via `canUseFeature` — no Supporter chip on the unlocked surface (Defect Class 11).

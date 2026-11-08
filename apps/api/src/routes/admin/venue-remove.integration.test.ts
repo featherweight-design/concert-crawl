@@ -1,22 +1,22 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface TestAuth {
-  userId: string
-  sessionClaims: { metadata?: { role?: string } }
+  userId: string;
+  sessionClaims: { metadata?: { role?: string } };
 }
 
 const { authState } = vi.hoisted(() => {
-  const state: { current: TestAuth | null } = { current: null }
-  return { authState: state }
-})
+  const state: { current: TestAuth | null } = { current: null };
+  return { authState: state };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../../app.js'
+import { createApp } from '../../app.js';
 import {
   clearTables,
   seedArtist,
@@ -26,8 +26,8 @@ import {
   seedSubmissionConfirm,
   seedUserEvent,
   seedVenue,
-} from '../../test/helpers/seed.js'
-import { testDb } from '../../test/helpers/db.js'
+} from '../../test/helpers/seed.js';
+import { testDb } from '../../test/helpers/db.js';
 import {
   auditLog,
   events,
@@ -36,14 +36,14 @@ import {
   submissionConfirms,
   userEvents,
   venues,
-} from '@concert-crawl/db'
-import { desc, eq } from 'drizzle-orm'
-import { updateEventPrice } from '@concert-crawl/price-pipeline'
+} from '@concert-crawl/db';
+import { desc, eq } from 'drizzle-orm';
+import { updateEventPrice } from '@concert-crawl/price-pipeline';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(role: 'admin' | 'user', userId = 'test-admin-1'): void {
-  authState.current = { userId, sessionClaims: { metadata: { role } } }
+  authState.current = { userId, sessionClaims: { metadata: { role } } };
 }
 
 const remove = (venueId: string, body: unknown): Promise<Response> =>
@@ -51,91 +51,93 @@ const remove = (venueId: string, body: unknown): Promise<Response> =>
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  })
+  });
 
 async function seedPricedVenue(slug: string) {
-  const venue = await seedVenue({ name: slug, slug })
+  const venue = await seedVenue({ name: slug, slug });
   const event = await seedEvent(venue.id, {
     artist: `${slug} artist`,
     ticketPriceMin: '25',
     ticketPriceMax: '40',
     priceSource: 'community',
-  })
+  });
   const original = await seedPriceSubmission(event.id, 'user_submitter', {
     status: 'corroborated',
-  })
+  });
   // A price check on the original: the self-reference must not block the
   // delete.
   const counter = await seedPriceSubmission(event.id, 'user_checker', {
     disputedSubmissionId: original.id,
     tier: 'VIP',
-  })
-  await seedSubmissionConfirm(original.id, 'user_confirmer')
-  await seedUserEvent('user_watcher', event.id, { savedPrice: '30' })
+  });
+  await seedSubmissionConfirm(original.id, 'user_confirmer');
+  await seedUserEvent('user_watcher', event.id, { savedPrice: '30' });
   await seedNotification({
     userId: 'user_watcher',
     category: 'watch.pricedrop',
     title: 'Price drop: $40 to $25',
     actionUrl: `/events/${event.id}`,
-  })
+  });
   // Not a price notice: stays.
   await seedNotification({
     userId: 'user_watcher',
     category: 'watch.cancelled',
     actionUrl: `/events/${event.id}`,
-  })
-  return { venue, event, original, counter }
+  });
+  return { venue, event, original, counter };
 }
 
 describe('admin venue removal', () => {
   beforeEach(async () => {
-    authState.current = null
-    await clearTables()
-  })
+    authState.current = null;
+    await clearTables();
+  });
 
   it('requires an admin role', async () => {
-    setAuth('user')
-    const { venue } = await seedPricedVenue('church')
-    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(403)
+    setAuth('user');
+    const { venue } = await seedPricedVenue('church');
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(
+      403,
+    );
     const [row] = await testDb
       .select({ active: venues.active })
       .from(venues)
-      .where(eq(venues.id, venue.id))
-    expect(row?.active).toBe(true)
-  })
+      .where(eq(venues.id, venue.id));
+    expect(row?.active).toBe(true);
+  });
 
   it('requires a reason', async () => {
-    setAuth('admin')
-    const { venue } = await seedPricedVenue('church')
-    expect((await remove(venue.id, { reason: '  ' })).status).toBe(400)
-  })
+    setAuth('admin');
+    const { venue } = await seedPricedVenue('church');
+    expect((await remove(venue.id, { reason: '  ' })).status).toBe(400);
+  });
 
   it('returns 404 for an unknown venue', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const res = await remove('00000000-0000-4000-8000-000000000000', {
       reason: 'venue asked',
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('hides the shows, stops crawling, deletes every price and keeps the events', async () => {
-    setAuth('admin')
-    const { venue, event } = await seedPricedVenue('church')
+    setAuth('admin');
+    const { venue, event } = await seedPricedVenue('church');
 
-    const res = await remove(venue.id, { reason: 'venue emailed 2026-10-28' })
-    expect(res.status).toBe(200)
+    const res = await remove(venue.id, { reason: 'venue emailed 2026-10-28' });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { submissionsDeleted: number; eventPricesCleared: number }
-    }
-    expect(body.data.submissionsDeleted).toBe(2)
-    expect(body.data.eventPricesCleared).toBe(1)
+      data: { submissionsDeleted: number; eventPricesCleared: number };
+    };
+    expect(body.data.submissionsDeleted).toBe(2);
+    expect(body.data.eventPricesCleared).toBe(1);
 
     const [venueRow] = await testDb
       .select({ active: venues.active, crawlPausedAt: venues.crawlPausedAt })
       .from(venues)
-      .where(eq(venues.id, venue.id))
-    expect(venueRow?.active).toBe(false)
-    expect(venueRow?.crawlPausedAt).toBeInstanceOf(Date)
+      .where(eq(venues.id, venue.id));
+    expect(venueRow?.active).toBe(false);
+    expect(venueRow?.crawlPausedAt).toBeInstanceOf(Date);
 
     const [eventRow] = await testDb
       .select({
@@ -144,38 +146,38 @@ describe('admin venue removal', () => {
         source: events.priceSource,
       })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(eventRow).toEqual({ min: null, max: null, source: null })
+      .where(eq(events.id, event.id));
+    expect(eventRow).toEqual({ min: null, max: null, source: null });
 
     expect(
       await testDb
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.eventId, event.id)),
-    ).toHaveLength(0)
-    expect(await testDb.select().from(submissionConfirms)).toHaveLength(0)
+    ).toHaveLength(0);
+    expect(await testDb.select().from(submissionConfirms)).toHaveLength(0);
 
     // The event row and users' Watching entries survive, without the price
     // snapshot the entry captured.
     const watching = await testDb
       .select({ savedPrice: userEvents.savedPrice })
       .from(userEvents)
-      .where(eq(userEvents.eventId, event.id))
-    expect(watching).toEqual([{ savedPrice: null }])
+      .where(eq(userEvents.eventId, event.id));
+    expect(watching).toEqual([{ savedPrice: null }]);
 
     const left = await testDb
       .select({ category: notifications.category })
       .from(notifications)
-      .where(eq(notifications.actionUrl, `/events/${event.id}`))
-    expect(left).toEqual([{ category: 'watch.cancelled' }])
+      .where(eq(notifications.actionUrl, `/events/${event.id}`));
+    expect(left).toEqual([{ category: 'watch.cancelled' }]);
 
     const [audit] = await testDb
       .select()
       .from(auditLog)
       .orderBy(desc(auditLog.createdAt))
-      .limit(1)
-    expect(audit?.action).toBe('venue.remove')
-    expect(audit?.targetId).toBe(venue.id)
+      .limit(1);
+    expect(audit?.action).toBe('venue.remove');
+    expect(audit?.targetId).toBe(venue.id);
     expect(audit?.metadata).toMatchObject({
       reason: 'venue emailed 2026-10-28',
       wasActive: true,
@@ -184,141 +186,149 @@ describe('admin venue removal', () => {
       eventPricesCleared: 1,
       savedPricesCleared: 1,
       notificationsDeleted: 1,
-    })
+    });
     expect(
       await testDb
         .select()
         .from(auditLog)
         .where(eq(auditLog.action, 'venue.remove')),
-    ).toHaveLength(1)
-  })
+    ).toHaveLength(1);
+  });
 
   it("takes the venue's past shows off the artist page, and activation brings them back", async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Church', slug: 'church' })
-    await seedArtist({ name: 'Past Band' })
-    await seedEvent(venue.id, { artist: 'Past Band', date: '2025-06-01' })
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Church', slug: 'church' });
+    await seedArtist({ name: 'Past Band' });
+    await seedEvent(venue.id, { artist: 'Past Band', date: '2025-06-01' });
     const pastShows = async () => {
-      const res = await app.request('/v1/artists/past-band')
-      expect(res.status).toBe(200)
-      const body = (await res.json()) as { data: { past: unknown[] } }
-      return body.data.past
-    }
-    expect(await pastShows()).toHaveLength(1)
+      const res = await app.request('/v1/artists/past-band');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { past: unknown[] } };
+      return body.data.past;
+    };
+    expect(await pastShows()).toHaveLength(1);
 
-    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
-    expect(await pastShows()).toHaveLength(0)
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(
+      200,
+    );
+    expect(await pastShows()).toHaveLength(0);
 
     const reactivate = await app.request(`/v1/admin/venues/${venue.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: true }),
-    })
-    expect(reactivate.status).toBe(200)
-    expect(await pastShows()).toHaveLength(1)
-  })
+    });
+    expect(reactivate.status).toBe(200);
+    expect(await pastShows()).toHaveLength(1);
+  });
 
   it('makes a pipeline write wait out an uncommitted removal', async () => {
-    const venue = await seedVenue({ name: 'Church', slug: 'church' })
-    const event = await seedEvent(venue.id)
-    let written = false
-    let write: Promise<void> | undefined
+    const venue = await seedVenue({ name: 'Church', slug: 'church' });
+    const event = await seedEvent(venue.id);
+    let written = false;
+    let write: Promise<void> | undefined;
 
     await testDb.transaction(async (tx) => {
       await tx
         .update(venues)
         .set({ active: false, crawlPausedAt: new Date() })
-        .where(eq(venues.id, venue.id))
+        .where(eq(venues.id, venue.id));
       // A second connection: the pipeline's own pool.
       write = updateEventPrice(event.id, {
         priceMin: 20,
         priceMax: 30,
         source: 'structured_data',
       }).then(() => {
-        written = true
-      })
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      expect(written).toBe(false)
-    })
-    await write
+        written = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(written).toBe(false);
+    });
+    await write;
 
     const [row] = await testDb
       .select({ min: events.ticketPriceMin })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(row?.min).toBeNull()
-  })
+      .where(eq(events.id, event.id));
+    expect(row?.min).toBeNull();
+  });
 
   it('stops an in-flight price pipeline from refilling a removed venue', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Church', slug: 'church' })
-    const event = await seedEvent(venue.id)
-    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Church', slug: 'church' });
+    const event = await seedEvent(venue.id);
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(
+      200,
+    );
 
     await updateEventPrice(event.id, {
       priceMin: 20,
       priceMax: 30,
       source: 'structured_data',
-    })
+    });
 
     const [row] = await testDb
       .select({ min: events.ticketPriceMin })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(row?.min).toBeNull()
-  })
+      .where(eq(events.id, event.id));
+    expect(row?.min).toBeNull();
+  });
 
   it('leaves other venues untouched', async () => {
-    setAuth('admin')
-    const { venue } = await seedPricedVenue('church')
-    const other = await seedPricedVenue('bluebird')
+    setAuth('admin');
+    const { venue } = await seedPricedVenue('church');
+    const other = await seedPricedVenue('bluebird');
 
-    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(
+      200,
+    );
 
     const [otherVenue] = await testDb
       .select({ active: venues.active, crawlPausedAt: venues.crawlPausedAt })
       .from(venues)
-      .where(eq(venues.id, other.venue.id))
-    expect(otherVenue).toEqual({ active: true, crawlPausedAt: null })
+      .where(eq(venues.id, other.venue.id));
+    expect(otherVenue).toEqual({ active: true, crawlPausedAt: null });
     const [otherEvent] = await testDb
       .select({ min: events.ticketPriceMin })
       .from(events)
-      .where(eq(events.id, other.event.id))
-    expect(otherEvent?.min).toBe('25.00')
+      .where(eq(events.id, other.event.id));
+    expect(otherEvent?.min).toBe('25.00');
     expect(
       await testDb
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.eventId, other.event.id)),
-    ).toHaveLength(2)
-  })
+    ).toHaveLength(2);
+  });
 
   it('keeps the original pause time when the venue was already paused', async () => {
-    setAuth('admin')
-    const { venue } = await seedPricedVenue('church')
-    const pausedAt = new Date('2026-10-01T00:00:00Z')
+    setAuth('admin');
+    const { venue } = await seedPricedVenue('church');
+    const pausedAt = new Date('2026-10-01T00:00:00Z');
     await testDb
       .update(venues)
       .set({ crawlPausedAt: pausedAt })
-      .where(eq(venues.id, venue.id))
+      .where(eq(venues.id, venue.id));
 
-    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(200)
+    expect((await remove(venue.id, { reason: 'venue asked' })).status).toBe(
+      200,
+    );
 
     const [row] = await testDb
       .select({ crawlPausedAt: venues.crawlPausedAt })
       .from(venues)
-      .where(eq(venues.id, venue.id))
-    expect(row?.crawlPausedAt?.toISOString()).toBe(pausedAt.toISOString())
-  })
-})
+      .where(eq(venues.id, venue.id));
+    expect(row?.crawlPausedAt?.toISOString()).toBe(pausedAt.toISOString());
+  });
+});
 
 describe('prices on an inactive venue', () => {
   const asUser = (userId: string) => {
     authState.current = {
       userId,
       sessionClaims: { metadata: { role: 'user' } },
-    }
-  }
+    };
+  };
   const post = (path: string, body: unknown) =>
     app.request(path, {
       method: 'POST',
@@ -327,67 +337,67 @@ describe('prices on an inactive venue', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(body),
-    })
+    });
 
-  let eventId: string
-  let submissionId: string
+  let eventId: string;
+  let submissionId: string;
 
   beforeEach(async () => {
-    authState.current = null
-    await clearTables()
-    const venue = await seedVenue({ active: false })
-    const event = await seedEvent(venue.id)
-    eventId = event.id
-    submissionId = (await seedPriceSubmission(eventId, 'user_submitter')).id
-  })
+    authState.current = null;
+    await clearTables();
+    const venue = await seedVenue({ active: false });
+    const event = await seedEvent(venue.id);
+    eventId = event.id;
+    submissionId = (await seedPriceSubmission(eventId, 'user_submitter')).id;
+  });
 
   it('refuses a single price submission', async () => {
-    asUser('user_new')
+    asUser('user_new');
     const res = await post(`/v1/events/${eventId}/price-submissions`, {
       priceMin: 35,
       tier: 'GA',
       vendor: 'Ticketmaster',
       howFound: 'bought_myself',
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('refuses a batch price submission', async () => {
-    asUser('user_new')
+    asUser('user_new');
     const res = await post(`/v1/events/${eventId}/price-submissions/batch`, {
       vendor: 'VenueBoxOffice',
       howFound: 'at_the_venue',
       sourceCategory: 'boxoffice',
       tiers: [{ tier: 'GA', priceMin: 45 }],
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('refuses a confirm', async () => {
-    asUser('user_confirmer')
+    asUser('user_confirmer');
     const res = await post(
       `/v1/events/${eventId}/price-submissions/${submissionId}/confirm`,
       { method: 'same-vendor' },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('refuses a confirm through the legacy submissions route', async () => {
-    asUser('user_confirmer')
-    const res = await post(`/v1/submissions/${submissionId}/confirm`, {})
-    expect(res.status).toBe(404)
-  })
+    asUser('user_confirmer');
+    const res = await post(`/v1/submissions/${submissionId}/confirm`, {});
+    expect(res.status).toBe(404);
+  });
 
   it('refuses a price check through the legacy submissions route', async () => {
-    asUser('user_checker')
+    asUser('user_checker');
     const res = await post(`/v1/submissions/${submissionId}/dispute`, {
       floor: 20,
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it("refuses an edit to the submitter's own price", async () => {
-    asUser('user_submitter')
+    asUser('user_submitter');
     const res = await app.request(`/v1/submissions/${submissionId}`, {
       method: 'PATCH',
       headers: {
@@ -395,16 +405,16 @@ describe('prices on an inactive venue', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify({ floor: 20 }),
-    })
-    expect(res.status).toBe(404)
-  })
+    });
+    expect(res.status).toBe(404);
+  });
 
   it('still lets the submitter delete their own price', async () => {
-    asUser('user_submitter')
+    asUser('user_submitter');
     const res = await app.request(`/v1/submissions/${submissionId}`, {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test-token' },
-    })
-    expect(res.status).toBeLessThan(300)
-  })
-})
+    });
+    expect(res.status).toBeLessThan(300);
+  });
+});

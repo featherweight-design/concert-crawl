@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useCallback, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
-import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowUpDown, Check, ExternalLink, X } from 'lucide-react'
-import { apiClient, ApiError } from '@/lib/api'
+import { useCallback, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, ArrowUpDown, Check, ExternalLink, X } from 'lucide-react';
+import { apiClient, ApiError } from '@/lib/api';
 import {
   Panel,
   AdminButton,
@@ -18,27 +18,27 @@ import {
   TR,
   TH,
   TD,
-} from '@/components/admin/primitives'
-import { type StatusKind } from '@/components/admin/primitives/utils'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
-import { formatPriceRange } from '@/components/admin/review/lib/format-price-range'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
-import { isAuthError } from './lib/is-auth-error'
-import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
+} from '@/components/admin/primitives';
+import { type StatusKind } from '@/components/admin/primitives/utils';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { BulkActionDock } from '@/components/admin/review/BulkActionDock';
+import { formatPriceRange } from '@/components/admin/review/lib/format-price-range';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
+import { isAuthError } from './lib/is-auth-error';
+import { reviewQueryKeys } from '@/lib/queries/use-admin-review';
 import {
   adminPriceSubmissionsKey,
   useAdminPriceSubmissions,
   type PriceSubmissionHistoryRow,
   type PriceSubmissionStatus,
-} from '@/lib/queries/use-admin-price-submissions'
+} from '@/lib/queries/use-admin-price-submissions';
 
-const COPY = ADMIN_COPY.submissionsHistory
+const COPY = ADMIN_COPY.submissionsHistory;
 
 type StatusFilter =
-  'all' | 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-type SortKey = 'date' | 'event' | 'user'
-type SortDir = 'asc' | 'desc'
+  'all' | 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+type SortKey = 'date' | 'event' | 'user';
+type SortDir = 'asc' | 'desc';
 
 const FILTER_ORDER: ReadonlyArray<StatusFilter> = [
   'all',
@@ -47,7 +47,7 @@ const FILTER_ORDER: ReadonlyArray<StatusFilter> = [
   'disputed',
   'stale',
   'archived',
-]
+];
 
 const STATUS_KIND: Record<PriceSubmissionStatus, StatusKind> = {
   pending: 'warning',
@@ -55,20 +55,20 @@ const STATUS_KIND: Record<PriceSubmissionStatus, StatusKind> = {
   disputed: 'danger',
   stale: 'neutral',
   archived: 'neutral',
-}
+};
 
 function statusLabel(status: PriceSubmissionStatus): string {
-  return COPY.statusLabels[status]
+  return COPY.statusLabels[status];
 }
 
 function formatPrice(min: string | null, max: string | null): string {
-  if (!min) return '—'
-  return formatPriceRange(min, max)
+  if (!min) return '—';
+  return formatPriceRange(min, max);
 }
 
 function userDisplay(userId: string | null): string {
-  if (!userId) return COPY.anonUser
-  return userId.slice(0, 12)
+  if (!userId) return COPY.anonUser;
+  return userId.slice(0, 12);
 }
 
 function compareRows(
@@ -77,29 +77,29 @@ function compareRows(
   sortKey: SortKey,
   sortDir: SortDir,
 ): number {
-  let result = 0
+  let result = 0;
   if (sortKey === 'event') {
-    result = (left.eventTitle ?? '').localeCompare(right.eventTitle ?? '')
+    result = (left.eventTitle ?? '').localeCompare(right.eventTitle ?? '');
   } else if (sortKey === 'user') {
-    result = (left.userId ?? '').localeCompare(right.userId ?? '')
+    result = (left.userId ?? '').localeCompare(right.userId ?? '');
   }
   // Stable tiebreak (also the primary key for the date sort): compare
   // createdAt ascending (oldest first) in the base order — the sortDir
   // inversion below flips it — then id so equal timestamps never swap.
-  if (result === 0) result = left.createdAt.localeCompare(right.createdAt)
-  if (result === 0) result = left.id.localeCompare(right.id)
-  return sortDir === 'asc' ? result : -result
+  if (result === 0) result = left.createdAt.localeCompare(right.createdAt);
+  if (result === 0) result = left.id.localeCompare(right.id);
+  return sortDir === 'asc' ? result : -result;
 }
 
 interface PricesSubmissionsClientProps {
-  initialSubmissions: PriceSubmissionHistoryRow[]
-  initialTotal: number
+  initialSubmissions: PriceSubmissionHistoryRow[];
+  initialTotal: number;
   /**
    * Mounted inside the Review tab shell, which already renders the page's
    * heading and owns navigation — so the standalone back link and section
    * head are suppressed rather than stacked under Review's own.
    */
-  embedded?: boolean
+  embedded?: boolean;
 }
 
 export const PricesSubmissionsClient = ({
@@ -107,18 +107,18 @@ export const PricesSubmissionsClient = ({
   initialTotal,
   embedded = false,
 }: PricesSubmissionsClientProps) => {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
-  const submissionsQuery = useAdminPriceSubmissions(initialSubmissions)
-  const rows = submissionsQuery.data ?? initialSubmissions
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const submissionsQuery = useAdminPriceSubmissions(initialSubmissions);
+  const rows = submissionsQuery.data ?? initialSubmissions;
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   const filtered = useMemo(
     () =>
@@ -126,85 +126,85 @@ export const PricesSubmissionsClient = ({
         ? rows
         : rows.filter((row) => row.status === statusFilter),
     [rows, statusFilter],
-  )
+  );
 
   const sorted = useMemo(
     () => [...filtered].sort((aa, bb) => compareRows(aa, bb, sortKey, sortDir)),
     [filtered, sortKey, sortDir],
-  )
+  );
 
-  const total = sorted.length
+  const total = sorted.length;
   const pageRows = useMemo(
     () => sorted.slice((page - 1) * pageSize, page * pageSize),
     [sorted, page, pageSize],
-  )
+  );
 
   // Only pending rows are actionable — resolved rows are read-only history.
   const pendingPageIds = useMemo(
     () =>
       pageRows.filter((row) => row.status === 'pending').map((row) => row.id),
     [pageRows],
-  )
+  );
   const allPendingSelected =
-    pendingPageIds.length > 0 && pendingPageIds.every((id) => selected.has(id))
+    pendingPageIds.length > 0 && pendingPageIds.every((id) => selected.has(id));
 
-  const resetToFirstPage = useCallback(() => setPage(1), [])
+  const resetToFirstPage = useCallback(() => setPage(1), []);
 
   const onFilterChange = useCallback(
     (next: StatusFilter) => {
-      setStatusFilter(next)
-      setSelected(new Set())
-      resetToFirstPage()
+      setStatusFilter(next);
+      setSelected(new Set());
+      resetToFirstPage();
     },
     [resetToFirstPage],
-  )
+  );
 
   const onSort = useCallback(
     (key: SortKey) => {
       setSortKey((prevKey) => {
         if (prevKey === key) {
-          setSortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'))
-          return prevKey
+          setSortDir((prevDir) => (prevDir === 'asc' ? 'desc' : 'asc'));
+          return prevKey;
         }
         // New column defaults to descending for date, ascending otherwise.
-        setSortDir(key === 'date' ? 'desc' : 'asc')
-        return key
-      })
-      resetToFirstPage()
+        setSortDir(key === 'date' ? 'desc' : 'asc');
+        return key;
+      });
+      resetToFirstPage();
     },
     [resetToFirstPage],
-  )
+  );
 
   const toggleRow = useCallback((id: string) => {
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const toggleAllPending = useCallback(() => {
     setSelected((prev) => {
-      const next = new Set(prev)
-      const shouldClear = pendingPageIds.every((id) => next.has(id))
+      const next = new Set(prev);
+      const shouldClear = pendingPageIds.every((id) => next.has(id));
       for (const id of pendingPageIds) {
-        if (shouldClear) next.delete(id)
-        else next.add(id)
+        if (shouldClear) next.delete(id);
+        else next.add(id);
       }
-      return next
-    })
-  }, [pendingPageIds])
+      return next;
+    });
+  }, [pendingPageIds]);
 
   const patchStatus = useCallback(
     async (ids: string[], status: 'corroborated' | 'disputed') => {
-      if (ids.length === 0) return
-      setError(null)
+      if (ids.length === 0) return;
+      setError(null);
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (!token) {
-          setError(COPY.authError)
-          return
+          setError(COPY.authError);
+          return;
         }
         // allSettled (not all) so every PATCH finishes before we touch the
         // cache — Promise.all would reject on the first failure while other
@@ -215,69 +215,69 @@ export const PricesSubmissionsClient = ({
               status,
             }),
           ),
-        )
+        );
         const rejected = results.find(
           (result): result is PromiseRejectedResult =>
             result.status === 'rejected',
-        )
+        );
         if (rejected) {
-          const reason = rejected.reason
+          const reason = rejected.reason;
           const message =
             reason instanceof ApiError
               ? reason.message
-              : 'Failed to update submission.'
-          console.error('patchStatus error:', reason)
-          setError(message)
+              : 'Failed to update submission.';
+          console.error('patchStatus error:', reason);
+          setError(message);
           // A partial bulk failure may have applied some PATCHes server-side,
           // so resync the cache with server truth rather than trusting the
           // pre-failure optimistic view.
           void queryClient.invalidateQueries({
             queryKey: adminPriceSubmissionsKey,
-          })
+          });
           void queryClient.invalidateQueries({
             queryKey: reviewQueryKeys.counts,
-          })
-          return
+          });
+          return;
         }
         // Optimistic: flip the affected rows in the cached full set so the
         // table + badges update without waiting on the refetch below.
-        const idSet = new Set(ids)
+        const idSet = new Set(ids);
         queryClient.setQueryData<PriceSubmissionHistoryRow[]>(
           adminPriceSubmissionsKey,
           (prev) =>
             prev?.map((row) => (idSet.has(row.id) ? { ...row, status } : row)),
-        )
+        );
         setSelected((prev) => {
-          const next = new Set(prev)
-          for (const id of ids) next.delete(id)
-          return next
-        })
+          const next = new Set(prev);
+          for (const id of ids) next.delete(id);
+          return next;
+        });
         void queryClient.invalidateQueries({
           queryKey: adminPriceSubmissionsKey,
-        })
+        });
         void queryClient.invalidateQueries({
           queryKey: reviewQueryKeys.counts,
-        })
+        });
       } catch (patchErr) {
         const message =
           patchErr instanceof ApiError
             ? patchErr.message
-            : 'Failed to update submission.'
-        console.error('patchStatus error:', patchErr)
-        setError(message)
+            : 'Failed to update submission.';
+        console.error('patchStatus error:', patchErr);
+        setError(message);
         // A partial bulk failure may have applied some PATCHes server-side,
         // so resync the cache with server truth rather than trusting the
         // pre-failure optimistic view.
         void queryClient.invalidateQueries({
           queryKey: adminPriceSubmissionsKey,
-        })
+        });
         void queryClient.invalidateQueries({
           queryKey: reviewQueryKeys.counts,
-        })
+        });
       }
     },
     [getToken, queryClient],
-  )
+  );
 
   const selectedPendingIds = useMemo(
     () =>
@@ -285,11 +285,11 @@ export const PricesSubmissionsClient = ({
         .filter((row) => selected.has(row.id) && row.status === 'pending')
         .map((row) => row.id),
     [rows, selected],
-  )
+  );
 
   // True only transiently while the hook is still walking offsets to load
   // the full set (SSR seeds the first page; initialTotal is the server count).
-  const truncated = rows.length < initialTotal
+  const truncated = rows.length < initialTotal;
 
   // A PATCH failure (`error`) takes precedence over a background load
   // failure — both need surfacing so a transient API error can't masquerade
@@ -298,8 +298,8 @@ export const PricesSubmissionsClient = ({
     ? isAuthError(submissionsQuery.error)
       ? COPY.authError
       : COPY.loadError
-    : null
-  const bannerMessage = error ?? queryErrorMessage
+    : null;
+  const bannerMessage = error ?? queryErrorMessage;
 
   const sectionHead = (
     <SectionHead
@@ -307,7 +307,7 @@ export const PricesSubmissionsClient = ({
       title={COPY.title}
       subtitle={COPY.subtitle}
     />
-  )
+  );
 
   const backLink = (
     <Link
@@ -326,12 +326,12 @@ export const PricesSubmissionsClient = ({
       <ArrowLeft size={14} />
       {COPY.backLink}
     </Link>
-  )
+  );
 
   const filterRail = (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
       {FILTER_ORDER.map((key) => {
-        const active = statusFilter === key
+        const active = statusFilter === key;
         return (
           <button
             key={key}
@@ -355,13 +355,13 @@ export const PricesSubmissionsClient = ({
           >
             {COPY.filters[key]}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 
   const sortButton = (key: SortKey, label: string) => {
-    const active = sortKey === key
+    const active = sortKey === key;
     return (
       <button
         type="button"
@@ -388,8 +388,8 @@ export const PricesSubmissionsClient = ({
         <ArrowUpDown size={11} />
         {active && (sortDir === 'asc' ? '↑' : '↓')}
       </button>
-    )
-  }
+    );
+  };
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -411,7 +411,7 @@ export const PricesSubmissionsClient = ({
             : COPY.countBadge(total)}
       </span>
     </span>
-  )
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -489,8 +489,8 @@ export const PricesSubmissionsClient = ({
                     ? [row.eventTitle, row.venueName, row.eventDate]
                         .filter(Boolean)
                         .join(' · ')
-                    : `${row.eventId.slice(0, 8)}…`
-                  const isPending = row.status === 'pending'
+                    : `${row.eventId.slice(0, 8)}…`;
+                  const isPending = row.status === 'pending';
                   return (
                     <TR key={row.id}>
                       <TD width={40}>
@@ -596,7 +596,7 @@ export const PricesSubmissionsClient = ({
                         )}
                       </TD>
                     </TR>
-                  )
+                  );
                 })}
               </tbody>
             </AdminTable>
@@ -606,8 +606,8 @@ export const PricesSubmissionsClient = ({
               total={total}
               onPageChange={setPage}
               onPageSizeChange={(next) => {
-                setPageSize(next)
-                resetToFirstPage()
+                setPageSize(next);
+                resetToFirstPage();
               }}
               loading={submissionsQuery.isFetching}
               itemLabel={COPY.itemLabel}
@@ -624,5 +624,5 @@ export const PricesSubmissionsClient = ({
         />
       )}
     </div>
-  )
-}
+  );
+};

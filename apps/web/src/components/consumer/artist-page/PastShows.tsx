@@ -1,14 +1,14 @@
-import type { ArtistPastShow } from '@concert-crawl/types'
-import React from 'react'
+import type { ArtistPastShow } from '@concert-crawl/types';
+import React from 'react';
 
-import { CRAWL_SINCE } from './definitions/constants'
-import { ARTIST_COPY } from './definitions/copy'
-import { fmtDate } from './DateStamp'
-import { SectionHead } from './SectionHead'
+import { CRAWL_SINCE } from './definitions/constants';
+import { ARTIST_COPY } from './definitions/copy';
+import { fmtDate } from './DateStamp';
+import { SectionHead } from './SectionHead';
 
 interface PastShowsProps {
-  name: string
-  past: ArtistPastShow[]
+  name: string;
+  past: ArtistPastShow[];
 }
 
 /**
@@ -18,7 +18,7 @@ interface PastShowsProps {
  * the crawl saw.
  */
 export const PastShows = ({ name, past }: PastShowsProps) => {
-  if (!past.length) return null
+  if (!past.length) return null;
 
   return (
     <section aria-label={ARTIST_COPY.pastListAria(name)}>
@@ -28,7 +28,7 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
       />
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {past.map((show, index) => {
-          const { mon, day } = fmtDate(show.iso)
+          const { mon, day } = fmtDate(show.iso);
           return (
             <li
               key={show.eventId}
@@ -69,7 +69,7 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
                 {show.venue}
               </span>
             </li>
-          )
+          );
         })}
       </ul>
       <p
@@ -85,5 +85,5 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
         {ARTIST_COPY.pastNote(CRAWL_SINCE)}
       </p>
     </section>
-  )
-}
+  );
+};

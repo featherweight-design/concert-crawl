@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One attended night (#70), ported from
 // design_handoff_concert_history/history-screens.jsx:119-187.
@@ -8,25 +8,25 @@
 // There is no remove affordance — past attendance isn't editable in v1
 // (handoff §Deliberate exclusions).
 
-import Link from 'next/link'
-import type { HistoryShow } from '@concert-crawl/types'
-import { Panel } from '@/components/consumer/image-slot'
-import { StubStamp } from '@/components/consumer/going/StubStamp'
-import { HISTORY_COPY } from './definitions/copy'
+import Link from 'next/link';
+import type { HistoryShow } from '@concert-crawl/types';
+import { Panel } from '@/components/consumer/image-slot';
+import { StubStamp } from '@/components/consumer/going/StubStamp';
+import { HISTORY_COPY } from './definitions/copy';
 
-export type HistoryDensity = 'compact' | 'cozy' | 'roomy'
+export type HistoryDensity = 'compact' | 'cozy' | 'roomy';
 
 const DENSITY_CONFIG: Record<
   HistoryDensity,
   {
-    artSize: number
-    padY: number
-    padL: number
-    padR: number
-    gap: number
-    titleSize: number
-    metaSize: number
-    stubSize: number
+    artSize: number;
+    padY: number;
+    padL: number;
+    padR: number;
+    gap: number;
+    titleSize: number;
+    metaSize: number;
+    stubSize: number;
   }
 > = {
   compact: {
@@ -59,22 +59,22 @@ const DENSITY_CONFIG: Record<
     metaSize: 12,
     stubSize: 32,
   },
-}
+};
 
 export const HistoryItem = ({
   show,
   density,
 }: {
-  show: HistoryShow
-  density: HistoryDensity
+  show: HistoryShow;
+  density: HistoryDensity;
 }) => {
-  const cfg = DENSITY_CONFIG[density]
+  const cfg = DENSITY_CONFIG[density];
 
   // dateLabel and showTime arrive pre-formatted in Mountain Time — the API
   // treats date presentation as data on this surface.
   const meta = [show.venueName, show.dateLabel, show.showTime]
     .filter((part): part is string => Boolean(part))
-    .join(' · ')
+    .join(' · ');
 
   const detail =
     density === 'roomy'
@@ -84,7 +84,7 @@ export const HistoryItem = ({
             ? HISTORY_COPY.item.paid(show.priceFinal)
             : null,
         ].filter((part): part is string => Boolean(part))
-      : []
+      : [];
 
   return (
     <Link
@@ -160,5 +160,5 @@ export const HistoryItem = ({
         <StubStamp artist={show.artist} size={cfg.stubSize} />
       </span>
     </Link>
-  )
-}
+  );
+};

@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core'
+import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 /**
  * Durable backing store for the API's request rate limits (#528). One row per
@@ -29,6 +29,6 @@ export const rateLimitBuckets = pgTable(
     // Account deletion removes a user's buckets by user_id.
     userIdIdx: index('rate_limit_buckets_user_id_idx').on(table.userId),
   }),
-)
+);
 
-export type RateLimitBucketRow = typeof rateLimitBuckets.$inferSelect
+export type RateLimitBucketRow = typeof rateLimitBuckets.$inferSelect;

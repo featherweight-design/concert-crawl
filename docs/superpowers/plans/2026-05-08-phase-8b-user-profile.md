@@ -13,47 +13,50 @@
 ## File map
 
 ### New files
-| Path | Purpose |
-|---|---|
-| `packages/db/src/schema/user-profiles.ts` | `user_profiles` Drizzle table |
-| `apps/api/src/routes/users.ts` | All `/v1/users/*` routes |
-| `apps/api/src/routes/users.integration.test.ts` | Integration tests for users routes |
-| `apps/web/src/lib/api/users.ts` | Typed fetch wrappers for users API |
-| `apps/web/src/app/(protected)/me/page.tsx` | `/me` server page (composes SettingsRoute / SettingsRouteDesktop) |
-| `apps/web/src/app/(protected)/me/edit/page.tsx` | `/me/edit` server page (EditProfileForm wrapper) |
-| `apps/web/src/app/(protected)/me/actions.ts` | Server actions: updateProfile, deleteAccount |
-| `apps/web/src/components/settings/definitions/copy.ts` | All UI strings for settings |
-| `apps/web/src/components/settings/definitions/constants.ts` | RESERVED_HANDLES, AVATAR_COLORS, HANDLE_REGEX |
-| `apps/web/src/components/settings/Avatar.tsx` | Monogram disc — letter on tinted circle |
-| `apps/web/src/components/settings/ProfileEntryAvatar.tsx` | 36px tap-target wrapping Avatar; links to /me |
-| `apps/web/src/components/settings/ProfileHero.tsx` | Avatar + handle/anon label + role chip + city |
-| `apps/web/src/components/settings/PlanCard.tsx` | Subscription card (founder/paid/trial/past-due states) |
-| `apps/web/src/components/settings/ThemePickerInline.tsx` | Three-swatch row with mini live previews |
-| `apps/web/src/components/settings/StatusPill.tsx` | confirmed / pending / disputed chip |
-| `apps/web/src/components/settings/SubmissionItem.tsx` | Single submission row |
-| `apps/web/src/components/settings/MySubmissionsList.tsx` | Capped list + "See all N →" overflow link |
-| `apps/web/src/components/settings/DangerZone.tsx` | Sign-out + delete account row pair |
-| `apps/web/src/components/settings/DeleteAccountSheet.tsx` | Bottom-sheet with DELETE-typed gate |
-| `apps/web/src/components/settings/EditProfileForm.tsx` | Handle / city / avatar color form with validation |
-| `apps/web/src/components/settings/SettingsRoute.tsx` | Mobile hub — stacked sections |
-| `apps/web/src/components/settings/SettingsRouteDesktop.tsx` | Desktop sidebar (240px) + panel |
+
+| Path                                                        | Purpose                                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/db/src/schema/user-profiles.ts`                   | `user_profiles` Drizzle table                                     |
+| `apps/api/src/routes/users.ts`                              | All `/v1/users/*` routes                                          |
+| `apps/api/src/routes/users.integration.test.ts`             | Integration tests for users routes                                |
+| `apps/web/src/lib/api/users.ts`                             | Typed fetch wrappers for users API                                |
+| `apps/web/src/app/(protected)/me/page.tsx`                  | `/me` server page (composes SettingsRoute / SettingsRouteDesktop) |
+| `apps/web/src/app/(protected)/me/edit/page.tsx`             | `/me/edit` server page (EditProfileForm wrapper)                  |
+| `apps/web/src/app/(protected)/me/actions.ts`                | Server actions: updateProfile, deleteAccount                      |
+| `apps/web/src/components/settings/definitions/copy.ts`      | All UI strings for settings                                       |
+| `apps/web/src/components/settings/definitions/constants.ts` | RESERVED_HANDLES, AVATAR_COLORS, HANDLE_REGEX                     |
+| `apps/web/src/components/settings/Avatar.tsx`               | Monogram disc — letter on tinted circle                           |
+| `apps/web/src/components/settings/ProfileEntryAvatar.tsx`   | 36px tap-target wrapping Avatar; links to /me                     |
+| `apps/web/src/components/settings/ProfileHero.tsx`          | Avatar + handle/anon label + role chip + city                     |
+| `apps/web/src/components/settings/PlanCard.tsx`             | Subscription card (founder/paid/trial/past-due states)            |
+| `apps/web/src/components/settings/ThemePickerInline.tsx`    | Three-swatch row with mini live previews                          |
+| `apps/web/src/components/settings/StatusPill.tsx`           | confirmed / pending / disputed chip                               |
+| `apps/web/src/components/settings/SubmissionItem.tsx`       | Single submission row                                             |
+| `apps/web/src/components/settings/MySubmissionsList.tsx`    | Capped list + "See all N →" overflow link                         |
+| `apps/web/src/components/settings/DangerZone.tsx`           | Sign-out + delete account row pair                                |
+| `apps/web/src/components/settings/DeleteAccountSheet.tsx`   | Bottom-sheet with DELETE-typed gate                               |
+| `apps/web/src/components/settings/EditProfileForm.tsx`      | Handle / city / avatar color form with validation                 |
+| `apps/web/src/components/settings/SettingsRoute.tsx`        | Mobile hub — stacked sections                                     |
+| `apps/web/src/components/settings/SettingsRouteDesktop.tsx` | Desktop sidebar (240px) + panel                                   |
 
 ### Modified files
-| Path | Change |
-|---|---|
-| `packages/db/src/schema/index.ts` | Export `userProfiles` |
-| `packages/db/src/schema/prices.ts` | Make `userId` nullable (expand migration for delete-account) |
-| `packages/types/src/index.ts` | Add `UserProfile`, `UserPlan`, `SubmissionDisplay` types |
-| `apps/api/src/routes/index.ts` | Register `usersRouter` |
-| `apps/api/src/test/helpers/seed.ts` | Add `seedUserProfile`, add `user_profiles` to `clearTables` |
-| `apps/web/src/components/consumer/app-header/UserAvatar.tsx` | Add "Settings" link to dropdown |
-| `apps/web/src/components/consumer/app-header/AppHeader.tsx` | Show `ProfileEntryAvatar` on mobile bar |
+
+| Path                                                         | Change                                                       |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `packages/db/src/schema/index.ts`                            | Export `userProfiles`                                        |
+| `packages/db/src/schema/prices.ts`                           | Make `userId` nullable (expand migration for delete-account) |
+| `packages/types/src/index.ts`                                | Add `UserProfile`, `UserPlan`, `SubmissionDisplay` types     |
+| `apps/api/src/routes/index.ts`                               | Register `usersRouter`                                       |
+| `apps/api/src/test/helpers/seed.ts`                          | Add `seedUserProfile`, add `user_profiles` to `clearTables`  |
+| `apps/web/src/components/consumer/app-header/UserAvatar.tsx` | Add "Settings" link to dropdown                              |
+| `apps/web/src/components/consumer/app-header/AppHeader.tsx`  | Show `ProfileEntryAvatar` on mobile bar                      |
 
 ---
 
 ## Task 1: DB schema — user_profiles + nullable userId migration
 
 **Files:**
+
 - Create: `packages/db/src/schema/user-profiles.ts`
 - Modify: `packages/db/src/schema/index.ts`
 - Modify: `packages/db/src/schema/prices.ts`
@@ -62,16 +65,20 @@
 
 ```typescript
 // packages/db/src/schema/user-profiles.ts
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const avatarColorEnum = pgEnum('avatar_color', [
   'signal',
   'accent',
   'success',
   'warning',
-])
+]);
 
-export const userThemeEnum = pgEnum('user_theme', ['electric', 'jade', 'light'])
+export const userThemeEnum = pgEnum('user_theme', [
+  'electric',
+  'jade',
+  'light',
+]);
 
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -80,24 +87,30 @@ export const userProfiles = pgTable('user_profiles', {
   city: text('city'),
   avatarColor: avatarColorEnum('avatar_color'),
   theme: userThemeEnum('theme').notNull().default('electric'),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
-export type UserProfile = typeof userProfiles.$inferSelect
-export type NewUserProfile = typeof userProfiles.$inferInsert
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type NewUserProfile = typeof userProfiles.$inferInsert;
 ```
 
 - [ ] **Step 2: Export from schema index**
 
 In `packages/db/src/schema/index.ts`, add:
+
 ```typescript
-export * from './user-profiles.js'
+export * from './user-profiles.js';
 ```
 
 - [ ] **Step 3: Make price_submissions.userId nullable**
 
 In `packages/db/src/schema/prices.ts`, change:
+
 ```typescript
 // Before:
 userId: text('user_id').notNull(),
@@ -113,6 +126,7 @@ pnpm --filter @concert-crawl/db drizzle-kit generate
 ```
 
 Inspect the generated migration file — it should contain:
+
 - `CREATE TYPE "avatar_color" AS ENUM(...)`
 - `CREATE TYPE "user_theme" AS ENUM(...)`
 - `CREATE TABLE "user_profiles" (...)`
@@ -138,6 +152,7 @@ git commit -m "feat: add user_profiles schema and make price_submissions.user_id
 ## Task 2: Shared types
 
 **Files:**
+
 - Modify: `packages/types/src/index.ts`
 
 - [ ] **Step 1: Add UserProfile, UserPlan, SubmissionDisplay types**
@@ -146,50 +161,50 @@ Append to `packages/types/src/index.ts`:
 
 ```typescript
 // Avatar color token keys — survive theme switches
-export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning'
+export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning';
 
 // User-selectable theme
-export type UserTheme = 'electric' | 'jade' | 'light'
+export type UserTheme = 'electric' | 'jade' | 'light';
 
 // Plan state — founder is the beta default; paid/trial/past-due are post-beta
-export type UserPlan = 'founder' | 'paid' | 'trial' | 'past-due'
+export type UserPlan = 'founder' | 'paid' | 'trial' | 'past-due';
 
 // User-facing role — separate from auth Role (admin/sub_admin/user)
-export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff'
+export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff';
 
 // Submission status as shown in the UI (mapped from DB enum)
-export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed'
+export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed';
 
 // Full user profile as returned by GET /v1/users/me
 export interface UserProfileResponse {
-  id: string                      // Clerk user ID
-  email: string                   // from Clerk
-  handle: string | null
-  city: string | null
-  avatarColor: AvatarColor | null
-  theme: UserTheme
-  plan: UserPlan
-  displayRole: DisplayRole
-  joined: string                  // formatted "Apr 2026"
-  submissionCount: number
+  id: string; // Clerk user ID
+  email: string; // from Clerk
+  handle: string | null;
+  city: string | null;
+  avatarColor: AvatarColor | null;
+  theme: UserTheme;
+  plan: UserPlan;
+  displayRole: DisplayRole;
+  joined: string; // formatted "Apr 2026"
+  submissionCount: number;
 }
 
 // Single submission row as returned by GET /v1/users/me/submissions
 export interface UserSubmissionItem {
-  id: string
-  eventId: string
-  artist: string
-  venue: string
-  date: string                    // ISO YYYY-MM-DD
-  priceMin: number                // cents (integer)
-  priceMax: number | null
-  status: SubmissionDisplayStatus
+  id: string;
+  eventId: string;
+  artist: string;
+  venue: string;
+  date: string; // ISO YYYY-MM-DD
+  priceMin: number; // cents (integer)
+  priceMax: number | null;
+  status: SubmissionDisplayStatus;
 }
 
 // Handle availability check response
 export interface HandleAvailabilityResponse {
-  available: boolean
-  reason?: 'taken' | 'reserved'
+  available: boolean;
+  reason?: 'taken' | 'reserved';
 }
 ```
 
@@ -213,12 +228,14 @@ git commit -m "feat: add UserProfile, UserPlan, SubmissionDisplay shared types"
 ## Task 3: API routes — users
 
 **Files:**
+
 - Create: `apps/api/src/routes/users.ts`
 - Modify: `apps/api/src/routes/index.ts`
 
 **Context:** Study the price-submissions route (`apps/api/src/routes/price-submissions.ts`) for the established Hono + Clerk + Drizzle pattern. All routes require auth (401 if missing). The `getAuth` import comes from `@hono/clerk-auth`.
 
 **Plan derivation logic:**
+
 - If `subscriptions` row exists with `founder = true` → `'founder'`
 - If `subscriptions` row exists with `tier = 'premium'` and `status = 'active'` → `'paid'`
 - If `subscriptions` row exists with `tier = 'premium'` and `status = 'past_due'` → `'past-due'`
@@ -234,78 +251,127 @@ git commit -m "feat: add UserProfile, UserPlan, SubmissionDisplay shared types"
 
 ```typescript
 // apps/api/src/routes/users.ts
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, count } from 'drizzle-orm'
-import { z } from 'zod'
-import { zValidator } from '@hono/zod-validator'
-import { db } from '../lib/db.js'
-import { userProfiles, priceSubmissions, subscriptions, events, venues } from '@concert-crawl/db'
-import { clerkClient } from '@clerk/nextjs/server'
-import type { UserPlan, DisplayRole, SubmissionDisplayStatus, UserProfileResponse, UserSubmissionItem, HandleAvailabilityResponse } from '@concert-crawl/types'
-import { apiLogger } from '../lib/logger.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { eq, count } from 'drizzle-orm';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+import { db } from '../lib/db.js';
+import {
+  userProfiles,
+  priceSubmissions,
+  subscriptions,
+  events,
+  venues,
+} from '@concert-crawl/db';
+import { clerkClient } from '@clerk/nextjs/server';
+import type {
+  UserPlan,
+  DisplayRole,
+  SubmissionDisplayStatus,
+  UserProfileResponse,
+  UserSubmissionItem,
+  HandleAvailabilityResponse,
+} from '@concert-crawl/types';
+import { apiLogger } from '../lib/logger.js';
 
-export const usersRouter = new Hono()
+export const usersRouter = new Hono();
 
-usersRouter.use('*', clerkMiddleware())
+usersRouter.use('*', clerkMiddleware());
 
 const RESERVED_HANDLES = new Set([
-  'admin', 'support', 'help', 'settings', 'me', 'api', 'auth',
-  'staff', 'crew', 'artist', 'fan', 'null', 'anonymous', 'everyone',
-  'all', 'new', 'create', 'edit', 'delete', 'error', 'login', 'logout',
-  'signup', 'signin', 'index', 'home', 'about', 'contact', 'concertcrawl',
-  'denver', 'mod', 'moderator', 'system', 'bot',
-])
+  'admin',
+  'support',
+  'help',
+  'settings',
+  'me',
+  'api',
+  'auth',
+  'staff',
+  'crew',
+  'artist',
+  'fan',
+  'null',
+  'anonymous',
+  'everyone',
+  'all',
+  'new',
+  'create',
+  'edit',
+  'delete',
+  'error',
+  'login',
+  'logout',
+  'signup',
+  'signin',
+  'index',
+  'home',
+  'about',
+  'contact',
+  'concertcrawl',
+  'denver',
+  'mod',
+  'moderator',
+  'system',
+  'bot',
+]);
 
-const HANDLE_REGEX = /^[a-z0-9_]+$/
+const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
-function derivePlan(sub: { founder: boolean; tier: string; status: string } | undefined): UserPlan {
-  if (!sub) return 'founder'
-  if (sub.founder) return 'founder'
-  if (sub.tier === 'premium' && sub.status === 'active') return 'paid'
-  if (sub.tier === 'premium' && sub.status === 'past_due') return 'past-due'
-  return 'founder'
+function derivePlan(
+  sub: { founder: boolean; tier: string; status: string } | undefined,
+): UserPlan {
+  if (!sub) return 'founder';
+  if (sub.founder) return 'founder';
+  if (sub.tier === 'premium' && sub.status === 'active') return 'paid';
+  if (sub.tier === 'premium' && sub.status === 'past_due') return 'past-due';
+  return 'founder';
 }
 
 function mapStatus(dbStatus: string): SubmissionDisplayStatus {
-  if (dbStatus === 'corroborated') return 'confirmed'
-  if (dbStatus === 'disputed') return 'disputed'
-  return 'pending'
+  if (dbStatus === 'corroborated') return 'confirmed';
+  if (dbStatus === 'disputed') return 'disputed';
+  return 'pending';
 }
 
 function formatJoined(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 // GET /v1/users/me
 usersRouter.get('/me', async (ctx) => {
-  const auth = getAuth(ctx)
-  if (!auth?.userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const clerkUser = await clerkClient().users.getUser(auth.userId)
+  const clerkUser = await clerkClient().users.getUser(auth.userId);
 
   const [profile] = await db
     .select()
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
   const [sub] = await db
-    .select({ founder: subscriptions.founder, tier: subscriptions.tier, status: subscriptions.status })
+    .select({
+      founder: subscriptions.founder,
+      tier: subscriptions.tier,
+      status: subscriptions.status,
+    })
     .from(subscriptions)
     .where(eq(subscriptions.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
   const [submissionCountRow] = await db
     .select({ value: count() })
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.userId, auth.userId))
+    .where(eq(priceSubmissions.userId, auth.userId));
 
-  const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
-  const authRole = (clerkUser.publicMetadata as { role?: string }).role
+  const email = clerkUser.emailAddresses[0]?.emailAddress ?? '';
+  const authRole = (clerkUser.publicMetadata as { role?: string }).role;
 
   const displayRole: DisplayRole =
-    authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan'
+    authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan';
 
   const response: UserProfileResponse = {
     id: auth.userId,
@@ -316,60 +382,73 @@ usersRouter.get('/me', async (ctx) => {
     theme: profile?.theme ?? 'electric',
     plan: derivePlan(sub),
     displayRole,
-    joined: formatJoined(clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date()),
+    joined: formatJoined(
+      clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date(),
+    ),
     submissionCount: submissionCountRow?.value ?? 0,
-  }
+  };
 
-  return ctx.json({ success: true, data: response })
-})
+  return ctx.json({ success: true, data: response });
+});
 
 // PATCH /v1/users/me
 const patchSchema = z.object({
   handle: z.string().min(3).max(20).regex(HANDLE_REGEX).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
-  avatarColor: z.enum(['signal', 'accent', 'success', 'warning']).nullable().optional(),
+  avatarColor: z
+    .enum(['signal', 'accent', 'success', 'warning'])
+    .nullable()
+    .optional(),
   theme: z.enum(['electric', 'jade', 'light']).optional(),
-})
+});
 
 usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
-  const auth = getAuth(ctx)
-  if (!auth?.userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const body = ctx.req.valid('json')
+  const body = ctx.req.valid('json');
 
   if (body.handle !== undefined && body.handle !== null) {
     if (RESERVED_HANDLES.has(body.handle)) {
-      return ctx.json({ success: false, error: 'Handle is reserved', code: 'reserved' }, 422)
+      return ctx.json(
+        { success: false, error: 'Handle is reserved', code: 'reserved' },
+        422,
+      );
     }
     const [existing] = await db
       .select({ id: userProfiles.id })
       .from(userProfiles)
       .where(eq(userProfiles.handle, body.handle))
-      .limit(1)
+      .limit(1);
     if (existing) {
-      return ctx.json({ success: false, error: 'Handle is taken', code: 'taken' }, 409)
+      return ctx.json(
+        { success: false, error: 'Handle is taken', code: 'taken' },
+        409,
+      );
     }
   }
 
   const updateValues: Partial<typeof userProfiles.$inferInsert> = {
     updatedAt: new Date(),
-  }
-  if (body.handle !== undefined) updateValues.handle = body.handle
-  if (body.city !== undefined) updateValues.city = body.city
-  if (body.avatarColor !== undefined) updateValues.avatarColor = body.avatarColor
-  if (body.theme !== undefined) updateValues.theme = body.theme
+  };
+  if (body.handle !== undefined) updateValues.handle = body.handle;
+  if (body.city !== undefined) updateValues.city = body.city;
+  if (body.avatarColor !== undefined)
+    updateValues.avatarColor = body.avatarColor;
+  if (body.theme !== undefined) updateValues.theme = body.theme;
 
   const [existing] = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
   if (existing) {
     await db
       .update(userProfiles)
       .set(updateValues)
-      .where(eq(userProfiles.userId, auth.userId))
+      .where(eq(userProfiles.userId, auth.userId));
   } else {
     await db.insert(userProfiles).values({
       userId: auth.userId,
@@ -377,16 +456,17 @@ usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
       city: body.city ?? null,
       avatarColor: body.avatarColor ?? null,
       theme: body.theme ?? 'electric',
-    })
+    });
   }
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});
 
 // GET /v1/users/me/submissions
 usersRouter.get('/me/submissions', async (ctx) => {
-  const auth = getAuth(ctx)
-  if (!auth?.userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   const rows = await db
     .select({
@@ -403,7 +483,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .leftJoin(events, eq(priceSubmissions.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(eq(priceSubmissions.userId, auth.userId))
-    .orderBy(priceSubmissions.createdAt)
+    .orderBy(priceSubmissions.createdAt);
 
   const data: UserSubmissionItem[] = rows.map((row) => ({
     id: row.id,
@@ -414,59 +494,77 @@ usersRouter.get('/me/submissions', async (ctx) => {
     priceMin: Math.round(parseFloat(row.priceMin) * 100),
     priceMax: row.priceMax ? Math.round(parseFloat(row.priceMax) * 100) : null,
     status: mapStatus(row.status ?? 'pending'),
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // GET /v1/users/handle-availability
 usersRouter.get('/handle-availability', async (ctx) => {
-  const auth = getAuth(ctx)
-  if (!auth?.userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const handle = ctx.req.query('handle')
+  const handle = ctx.req.query('handle');
   if (!handle || handle.length < 3 || !HANDLE_REGEX.test(handle)) {
-    return ctx.json({ success: true, data: { available: false, reason: 'invalid' } as HandleAvailabilityResponse })
+    return ctx.json({
+      success: true,
+      data: {
+        available: false,
+        reason: 'invalid',
+      } as HandleAvailabilityResponse,
+    });
   }
 
   if (RESERVED_HANDLES.has(handle)) {
-    return ctx.json({ success: true, data: { available: false, reason: 'reserved' } as HandleAvailabilityResponse })
+    return ctx.json({
+      success: true,
+      data: {
+        available: false,
+        reason: 'reserved',
+      } as HandleAvailabilityResponse,
+    });
   }
 
   const [existing] = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
     .where(eq(userProfiles.handle, handle))
-    .limit(1)
+    .limit(1);
 
-  return ctx.json({ success: true, data: { available: !existing } as HandleAvailabilityResponse })
-})
+  return ctx.json({
+    success: true,
+    data: { available: !existing } as HandleAvailabilityResponse,
+  });
+});
 
 // DELETE /v1/users/me — delete account
 usersRouter.delete('/me', async (ctx) => {
-  const auth = getAuth(ctx)
-  if (!auth?.userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const auth = getAuth(ctx);
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   // Anonymize this user's submissions — preserve corroboration counts
   await db
     .update(priceSubmissions)
     .set({ userId: null })
-    .where(eq(priceSubmissions.userId, auth.userId))
+    .where(eq(priceSubmissions.userId, auth.userId));
 
   // Delete profile record
-  await db
-    .delete(userProfiles)
-    .where(eq(userProfiles.userId, auth.userId))
+  await db.delete(userProfiles).where(eq(userProfiles.userId, auth.userId));
 
   // Delete from Clerk (throws if already deleted)
   try {
-    await clerkClient().users.deleteUser(auth.userId)
+    await clerkClient().users.deleteUser(auth.userId);
   } catch (err) {
-    apiLogger.warn({ err, userId: auth.userId }, 'Clerk user delete failed — already deleted or not found')
+    apiLogger.warn(
+      { err, userId: auth.userId },
+      'Clerk user delete failed — already deleted or not found',
+    );
   }
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});
 ```
 
 **Important:** Check the import path for `clerkClient` — in the existing codebase it may be `import { clerkClient } from '@clerk/backend'` or similar. Check `apps/api/src/routes/admin/users.ts` if it exists, or the Clerk Hono docs, to confirm the correct import. If the api app doesn't have Clerk's Node SDK, install `@clerk/backend` via `pnpm --filter @concert-crawl/api add @clerk/backend`.
@@ -474,12 +572,13 @@ usersRouter.delete('/me', async (ctx) => {
 - [ ] **Step 2: Register in route index**
 
 In `apps/api/src/routes/index.ts`:
+
 ```typescript
-import { usersRouter } from './users.js'
+import { usersRouter } from './users.js';
 // ...
 export function registerRoutes(app: Hono) {
   // existing routes...
-  app.route('/v1/users', usersRouter)
+  app.route('/v1/users', usersRouter);
 }
 ```
 
@@ -503,6 +602,7 @@ git commit -m "feat: add /v1/users/* API routes (me, submissions, handle-availab
 ## Task 4: API seed helpers + integration tests
 
 **Files:**
+
 - Modify: `apps/api/src/test/helpers/seed.ts`
 - Create: `apps/api/src/routes/users.integration.test.ts`
 
@@ -511,13 +611,13 @@ git commit -m "feat: add /v1/users/* API routes (me, submissions, handle-availab
 In `apps/api/src/test/helpers/seed.ts`:
 
 ```typescript
-import { userProfiles } from '@concert-crawl/db'
+import { userProfiles } from '@concert-crawl/db';
 // Add to imports
 
 export async function clearTables(): Promise<void> {
   await testDb.execute(
     sql`TRUNCATE events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, price_submissions, user_profiles RESTART IDENTITY CASCADE`,
-  )
+  );
 }
 
 export async function seedUserProfile(
@@ -532,9 +632,9 @@ export async function seedUserProfile(
       theme: 'electric',
       ...overrides,
     })
-    .returning()
-  if (!profile) throw new Error('seedUserProfile: insert returned no rows')
-  return profile
+    .returning();
+  if (!profile) throw new Error('seedUserProfile: insert returned no rows');
+  return profile;
 }
 ```
 
@@ -542,21 +642,22 @@ export async function seedUserProfile(
 
 ```typescript
 // apps/api/src/routes/users.integration.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
-  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) => next(),
+  clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
+    next(),
   getAuth: () => authState.current,
-}))
+}));
 
 // Mock Clerk client — deleteUser and getUser
 vi.mock('@clerk/nextjs/server', () => ({
@@ -570,180 +671,219 @@ vi.mock('@clerk/nextjs/server', () => ({
       deleteUser: vi.fn().mockResolvedValue({}),
     },
   }),
-}))
+}));
 
-import { createApp } from '../app.js'
+import { createApp } from '../app.js';
 import {
   clearTables,
   seedVenue,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(userId = 'user_test123'): void {
   authState.current = {
     userId,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 describe('GET /v1/users/me', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('returns 401 without auth', async () => {
-    const res = await app.request('/v1/users/me')
-    expect(res.status).toBe(401)
-  })
+    const res = await app.request('/v1/users/me');
+    expect(res.status).toBe(401);
+  });
 
   it('returns profile with defaults when no profile row exists', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: { handle: null; theme: string; plan: string } }
-    expect(body.success).toBe(true)
-    expect(body.data.handle).toBeNull()
-    expect(body.data.theme).toBe('electric')
-    expect(body.data.plan).toBe('founder')
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { handle: null; theme: string; plan: string };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.handle).toBeNull();
+    expect(body.data.theme).toBe('electric');
+    expect(body.data.plan).toBe('founder');
+  });
 
   it('returns saved handle when profile exists', async () => {
-    setAuth()
-    await seedUserProfile('user_test123', { handle: 'testuser' })
+    setAuth();
+    await seedUserProfile('user_test123', { handle: 'testuser' });
     const res = await app.request('/v1/users/me', {
       headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as { success: boolean; data: { handle: string } }
-    expect(body.data.handle).toBe('testuser')
-  })
-})
+    });
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { handle: string };
+    };
+    expect(body.data.handle).toBe('testuser');
+  });
+});
 
 describe('PATCH /v1/users/me', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('returns 401 without auth', async () => {
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ handle: 'myhandle' }),
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('creates a profile with handle', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test',
+      },
       body: JSON.stringify({ handle: 'myhandle' }),
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   it('rejects reserved handles with 422', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test',
+      },
       body: JSON.stringify({ handle: 'admin' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects taken handles with 409', async () => {
-    setAuth('user_other')
-    await seedUserProfile('user_other', { handle: 'taken' })
-    setAuth('user_test123')
+    setAuth('user_other');
+    await seedUserProfile('user_other', { handle: 'taken' });
+    setAuth('user_test123');
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test',
+      },
       body: JSON.stringify({ handle: 'taken' }),
-    })
-    expect(res.status).toBe(409)
-  })
-})
+    });
+    expect(res.status).toBe(409);
+  });
+});
 
 describe('GET /v1/users/me/submissions', () => {
   it('returns user submissions with display status', async () => {
-    setAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    await seedPriceSubmission(event.id, 'user_test123', { status: 'corroborated', priceMin: '40' })
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123', {
+      status: 'corroborated',
+      priceMin: '40',
+    });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as { success: boolean; data: Array<{ status: string; priceMin: number }> }
-    expect(body.success).toBe(true)
-    expect(body.data[0]?.status).toBe('confirmed')
-    expect(body.data[0]?.priceMin).toBe(4000)
-  })
-})
+    });
+    const body = (await res.json()) as {
+      success: boolean;
+      data: Array<{ status: string; priceMin: number }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data[0]?.status).toBe('confirmed');
+    expect(body.data[0]?.priceMin).toBe(4000);
+  });
+});
 
 describe('GET /v1/users/handle-availability', () => {
   beforeEach(async () => {
-    setAuth()
-    await clearTables()
-  })
+    setAuth();
+    await clearTables();
+  });
 
   it('returns available: true for free handle', async () => {
-    const res = await app.request('/v1/users/handle-availability?handle=freehandle', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as { success: boolean; data: { available: boolean } }
-    expect(body.data.available).toBe(true)
-  })
+    const res = await app.request(
+      '/v1/users/handle-availability?handle=freehandle',
+      {
+        headers: { Authorization: 'Bearer test' },
+      },
+    );
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { available: boolean };
+    };
+    expect(body.data.available).toBe(true);
+  });
 
   it('returns available: false for reserved word', async () => {
-    const res = await app.request('/v1/users/handle-availability?handle=admin', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as { success: boolean; data: { available: boolean; reason: string } }
-    expect(body.data.available).toBe(false)
-    expect(body.data.reason).toBe('reserved')
-  })
+    const res = await app.request(
+      '/v1/users/handle-availability?handle=admin',
+      {
+        headers: { Authorization: 'Bearer test' },
+      },
+    );
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { available: boolean; reason: string };
+    };
+    expect(body.data.available).toBe(false);
+    expect(body.data.reason).toBe('reserved');
+  });
 
   it('returns available: false for taken handle', async () => {
-    await seedUserProfile('user_other2', { handle: 'takenone' })
-    const res = await app.request('/v1/users/handle-availability?handle=takenone', {
-      headers: { Authorization: 'Bearer test' },
-    })
-    const body = (await res.json()) as { success: boolean; data: { available: boolean } }
-    expect(body.data.available).toBe(false)
-  })
-})
+    await seedUserProfile('user_other2', { handle: 'takenone' });
+    const res = await app.request(
+      '/v1/users/handle-availability?handle=takenone',
+      {
+        headers: { Authorization: 'Bearer test' },
+      },
+    );
+    const body = (await res.json()) as {
+      success: boolean;
+      data: { available: boolean };
+    };
+    expect(body.data.available).toBe(false);
+  });
+});
 
 describe('DELETE /v1/users/me', () => {
   it('anonymizes submissions and deletes profile', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    await seedPriceSubmission(event.id, 'user_test123')
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123');
 
     const res = await app.request('/v1/users/me', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
-  })
-})
+    });
+    expect(res.status).toBe(200);
+  });
+});
 ```
 
 - [ ] **Step 3: Run tests to verify they fail**
@@ -774,6 +914,7 @@ git commit -m "test: add integration tests for /v1/users/* routes"
 ## Task 5: Web API client
 
 **Files:**
+
 - Create: `apps/web/src/lib/api/users.ts`
 
 **Context:** Check `apps/web/src/lib/api/` for existing API client patterns (e.g., events.ts). The base URL comes from `process.env.NEXT_PUBLIC_API_URL`. Auth tokens are passed via `getToken()` from Clerk.
@@ -786,9 +927,9 @@ import type {
   UserProfileResponse,
   UserSubmissionItem,
   HandleAvailabilityResponse,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 async function apiFetch<T>(
   path: string,
@@ -802,55 +943,65 @@ async function apiFetch<T>(
       Authorization: `Bearer ${token}`,
       ...(init?.headers ?? {}),
     },
-  })
+  });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw Object.assign(new Error(body.error ?? res.statusText), { status: res.status })
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw Object.assign(new Error(body.error ?? res.statusText), {
+      status: res.status,
+    });
   }
-  return res.json() as Promise<T>
+  return res.json() as Promise<T>;
 }
 
 export async function fetchMe(token: string): Promise<UserProfileResponse> {
-  const data = await apiFetch<{ success: true; data: UserProfileResponse }>('/v1/users/me', token)
-  return data.data
+  const data = await apiFetch<{ success: true; data: UserProfileResponse }>(
+    '/v1/users/me',
+    token,
+  );
+  return data.data;
 }
 
 export async function patchMe(
   token: string,
   updates: {
-    handle?: string | null
-    city?: string | null
-    avatarColor?: 'signal' | 'accent' | 'success' | 'warning' | null
-    theme?: 'electric' | 'jade' | 'light'
+    handle?: string | null;
+    city?: string | null;
+    avatarColor?: 'signal' | 'accent' | 'success' | 'warning' | null;
+    theme?: 'electric' | 'jade' | 'light';
   },
 ): Promise<void> {
   await apiFetch('/v1/users/me', token, {
     method: 'PATCH',
     body: JSON.stringify(updates),
-  })
+  });
 }
 
-export async function fetchMySubmissions(token: string): Promise<UserSubmissionItem[]> {
+export async function fetchMySubmissions(
+  token: string,
+): Promise<UserSubmissionItem[]> {
   const data = await apiFetch<{ success: true; data: UserSubmissionItem[] }>(
     '/v1/users/me/submissions',
     token,
-  )
-  return data.data
+  );
+  return data.data;
 }
 
 export async function checkHandleAvailability(
   token: string,
   handle: string,
 ): Promise<HandleAvailabilityResponse> {
-  const data = await apiFetch<{ success: true; data: HandleAvailabilityResponse }>(
+  const data = await apiFetch<{
+    success: true;
+    data: HandleAvailabilityResponse;
+  }>(
     `/v1/users/handle-availability?handle=${encodeURIComponent(handle)}`,
     token,
-  )
-  return data.data
+  );
+  return data.data;
 }
 
 export async function deleteAccount(token: string): Promise<void> {
-  await apiFetch('/v1/users/me', token, { method: 'DELETE' })
+  await apiFetch('/v1/users/me', token, { method: 'DELETE' });
 }
 ```
 
@@ -872,6 +1023,7 @@ git commit -m "feat: add web API client for /v1/users/* endpoints"
 ## Task 6: Settings constants and copy
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/definitions/constants.ts`
 - Create: `apps/web/src/components/settings/definitions/copy.ts`
 
@@ -879,21 +1031,55 @@ git commit -m "feat: add web API client for /v1/users/* endpoints"
 
 ```typescript
 // apps/web/src/components/settings/definitions/constants.ts
-import type { AvatarColor } from '@concert-crawl/types'
+import type { AvatarColor } from '@concert-crawl/types';
 
-export const HANDLE_REGEX = /^[a-z0-9_]+$/
+export const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
 export const RESERVED_HANDLES = new Set([
-  'admin', 'support', 'help', 'settings', 'me', 'api', 'auth',
-  'staff', 'crew', 'artist', 'fan', 'null', 'anonymous', 'everyone',
-  'all', 'new', 'create', 'edit', 'delete', 'error', 'login', 'logout',
-  'signup', 'signin', 'index', 'home', 'about', 'contact', 'concertcrawl',
-  'denver', 'mod', 'moderator', 'system', 'bot',
-])
+  'admin',
+  'support',
+  'help',
+  'settings',
+  'me',
+  'api',
+  'auth',
+  'staff',
+  'crew',
+  'artist',
+  'fan',
+  'null',
+  'anonymous',
+  'everyone',
+  'all',
+  'new',
+  'create',
+  'edit',
+  'delete',
+  'error',
+  'login',
+  'logout',
+  'signup',
+  'signin',
+  'index',
+  'home',
+  'about',
+  'contact',
+  'concertcrawl',
+  'denver',
+  'mod',
+  'moderator',
+  'system',
+  'bot',
+]);
 
-export const AVATAR_COLORS: AvatarColor[] = ['signal', 'accent', 'success', 'warning']
+export const AVATAR_COLORS: AvatarColor[] = [
+  'signal',
+  'accent',
+  'success',
+  'warning',
+];
 
-export const SUBMISSION_CAP_MOBILE = 3
+export const SUBMISSION_CAP_MOBILE = 3;
 ```
 
 - [ ] **Step 2: Create copy**
@@ -974,6 +1160,7 @@ git commit -m "feat: settings constants and copy"
 ## Task 7: Avatar component
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/Avatar.tsx`
 - Create: `apps/web/src/components/settings/ProfileEntryAvatar.tsx`
 
@@ -985,13 +1172,13 @@ The avatar is a circle. If the user has a handle: first letter of handle, on a d
 
 ```tsx
 // apps/web/src/components/settings/Avatar.tsx
-import type { AvatarColor } from '@concert-crawl/types'
+import type { AvatarColor } from '@concert-crawl/types';
 
 interface AvatarProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
-  size?: number
-  className?: string
+  handle: string | null;
+  avatarColor: AvatarColor | null;
+  size?: number;
+  className?: string;
 }
 
 const COLOR_VAR: Record<AvatarColor, string> = {
@@ -999,14 +1186,19 @@ const COLOR_VAR: Record<AvatarColor, string> = {
   accent: 'var(--accent)',
   success: 'var(--success)',
   warning: 'var(--warning)',
-}
+};
 
-export function Avatar({ handle, avatarColor, size = 56, className }: AvatarProps) {
-  const letter = handle ? handle.charAt(0).toUpperCase() : '?'
-  const isAnonymous = !handle
+export function Avatar({
+  handle,
+  avatarColor,
+  size = 56,
+  className,
+}: AvatarProps) {
+  const letter = handle ? handle.charAt(0).toUpperCase() : '?';
+  const isAnonymous = !handle;
 
-  const bgColor = avatarColor ? COLOR_VAR[avatarColor] : undefined
-  const fontSize = Math.round(size * 0.4)
+  const bgColor = avatarColor ? COLOR_VAR[avatarColor] : undefined;
+  const fontSize = Math.round(size * 0.4);
 
   return (
     <div
@@ -1019,7 +1211,9 @@ export function Avatar({ handle, avatarColor, size = 56, className }: AvatarProp
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        background: isAnonymous ? 'transparent' : (bgColor ?? 'var(--surface-2)'),
+        background: isAnonymous
+          ? 'transparent'
+          : (bgColor ?? 'var(--surface-2)'),
         border: isAnonymous ? '2px dashed var(--fg-subtle)' : 'none',
         color: isAnonymous ? 'var(--fg-subtle)' : 'var(--bg)',
         fontSize,
@@ -1031,7 +1225,7 @@ export function Avatar({ handle, avatarColor, size = 56, className }: AvatarProp
     >
       {letter}
     </div>
-  )
+  );
 }
 ```
 
@@ -1041,16 +1235,19 @@ A 36px tap-target linking to `/me`. Shows the Avatar at 36px.
 
 ```tsx
 // apps/web/src/components/settings/ProfileEntryAvatar.tsx
-import Link from 'next/link'
-import { Avatar } from './Avatar'
-import type { AvatarColor } from '@concert-crawl/types'
+import Link from 'next/link';
+import { Avatar } from './Avatar';
+import type { AvatarColor } from '@concert-crawl/types';
 
 interface ProfileEntryAvatarProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
+  handle: string | null;
+  avatarColor: AvatarColor | null;
 }
 
-export function ProfileEntryAvatar({ handle, avatarColor }: ProfileEntryAvatarProps) {
+export function ProfileEntryAvatar({
+  handle,
+  avatarColor,
+}: ProfileEntryAvatarProps) {
   return (
     <Link
       href="/me"
@@ -1059,7 +1256,7 @@ export function ProfileEntryAvatar({ handle, avatarColor }: ProfileEntryAvatarPr
     >
       <Avatar handle={handle} avatarColor={avatarColor} size={36} />
     </Link>
-  )
+  );
 }
 ```
 
@@ -1075,6 +1272,7 @@ git commit -m "feat: Avatar (monogram disc) and ProfileEntryAvatar components"
 ## Task 8: ProfileHero component
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/ProfileHero.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<ProfileHero>`. The hero shows the large avatar, handle (or "anonymous fan" label), role chip, and city. Tapping navigates to `/me/edit`.
@@ -1083,17 +1281,17 @@ git commit -m "feat: Avatar (monogram disc) and ProfileEntryAvatar components"
 
 ```tsx
 // apps/web/src/components/settings/ProfileHero.tsx
-import Link from 'next/link'
-import { Avatar } from './Avatar'
-import { SETTINGS_COPY } from './definitions/copy'
-import type { AvatarColor, DisplayRole } from '@concert-crawl/types'
+import Link from 'next/link';
+import { Avatar } from './Avatar';
+import { SETTINGS_COPY } from './definitions/copy';
+import type { AvatarColor, DisplayRole } from '@concert-crawl/types';
 
 interface ProfileHeroProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
-  displayRole: DisplayRole
-  city: string | null
-  joined: string
+  handle: string | null;
+  avatarColor: AvatarColor | null;
+  displayRole: DisplayRole;
+  city: string | null;
+  joined: string;
 }
 
 const ROLE_LABEL: Record<DisplayRole, string> = {
@@ -1101,9 +1299,15 @@ const ROLE_LABEL: Record<DisplayRole, string> = {
   crew: 'crew',
   artist: 'artist',
   staff: 'staff',
-}
+};
 
-export function ProfileHero({ handle, avatarColor, displayRole, city, joined }: ProfileHeroProps) {
+export function ProfileHero({
+  handle,
+  avatarColor,
+  displayRole,
+  city,
+  joined,
+}: ProfileHeroProps) {
   return (
     <Link
       href="/me/edit"
@@ -1129,15 +1333,13 @@ export function ProfileHero({ handle, avatarColor, displayRole, city, joined }: 
           >
             {ROLE_LABEL[displayRole]}
           </span>
-          {city && (
-            <span className="text-[13px] text-fg-subtle">{city}</span>
-          )}
+          {city && <span className="text-[13px] text-fg-subtle">{city}</span>}
         </div>
 
         <span className="text-[12px] text-fg-subtle">Since {joined}</span>
       </div>
     </Link>
-  )
+  );
 }
 ```
 
@@ -1153,6 +1355,7 @@ git commit -m "feat: ProfileHero component"
 ## Task 9: PlanCard component
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/PlanCard.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<PlanCard>`. Four states: `founder` (accent border + radial wash, celebratory), `paid` (plain), `trial` (days remaining countdown), `past-due` (warning tone, "Update billing" CTA). Design shows the Founder card as the default for beta.
@@ -1161,12 +1364,12 @@ git commit -m "feat: ProfileHero component"
 
 ```tsx
 // apps/web/src/components/settings/PlanCard.tsx
-import { SETTINGS_COPY } from './definitions/copy'
-import type { UserPlan } from '@concert-crawl/types'
+import { SETTINGS_COPY } from './definitions/copy';
+import type { UserPlan } from '@concert-crawl/types';
 
 interface PlanCardProps {
-  plan: UserPlan
-  trialDaysRemaining?: number
+  plan: UserPlan;
+  trialDaysRemaining?: number;
 }
 
 export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
@@ -1197,20 +1400,26 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (plan === 'past-due') {
     return (
       <div
         className="rounded-2xl border p-5"
-        style={{ borderColor: 'var(--warning)', background: 'var(--surface-1)' }}
+        style={{
+          borderColor: 'var(--warning)',
+          background: 'var(--surface-1)',
+        }}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
             <span
               className="text-[11px] font-bold uppercase tracking-[0.08em]"
-              style={{ color: 'var(--warning)', fontFamily: 'var(--font-mono)' }}
+              style={{
+                color: 'var(--warning)',
+                fontFamily: 'var(--font-mono)',
+              }}
             >
               {SETTINGS_COPY.planCard.pastDue.badge}
             </span>
@@ -1226,7 +1435,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
           </span>
         </div>
       </div>
-    )
+    );
   }
 
   if (plan === 'trial') {
@@ -1247,7 +1456,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
           </span>
         </div>
       </div>
-    )
+    );
   }
 
   // paid
@@ -1271,7 +1480,7 @@ export function PlanCard({ plan, trialDaysRemaining }: PlanCardProps) {
         </span>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1287,6 +1496,7 @@ git commit -m "feat: PlanCard component (founder/paid/trial/past-due)"
 ## Task 10: ThemePickerInline component
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/ThemePickerInline.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<ThemePickerInline>`. Three swatches side-by-side, each is a mini artboard preview using real tokens. Tapping a swatch applies the theme immediately (calls `setTheme()` from the existing `useTheme()` hook) and persists server-side via the `patchMe` API call.
@@ -1295,29 +1505,33 @@ The mini-preview shows three colored dots representing `--bg`, `--signal`, `--ac
 
 ```tsx
 // apps/web/src/components/settings/ThemePickerInline.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useTheme } from '@/theme/ThemeProvider'
-import { THEMES, type ThemeName } from '@/theme/themes'
-import { patchMe } from '@/lib/api/users'
-import { useAuth } from '@clerk/nextjs'
+import { useState } from 'react';
+import { useTheme } from '@/theme/ThemeProvider';
+import { THEMES, type ThemeName } from '@/theme/themes';
+import { patchMe } from '@/lib/api/users';
+import { useAuth } from '@clerk/nextjs';
 
 const THEME_LABELS: Record<ThemeName, string> = {
   electric: 'Electric',
   jade: 'Jade',
   light: 'Light',
-}
+};
 
-function ThemeSwatch({ themeName, isActive, onSelect }: {
-  themeName: ThemeName
-  isActive: boolean
-  onSelect: () => void
+function ThemeSwatch({
+  themeName,
+  isActive,
+  onSelect,
+}: {
+  themeName: ThemeName;
+  isActive: boolean;
+  onSelect: () => void;
 }) {
-  const tokens = THEMES[themeName]
-  const bg = tokens['bg'] as string
-  const signal = tokens['signal'] as string
-  const accent = tokens['accent'] as string
+  const tokens = THEMES[themeName];
+  const bg = tokens['bg'] as string;
+  const signal = tokens['signal'] as string;
+  const accent = tokens['accent'] as string;
 
   return (
     <button
@@ -1336,12 +1550,20 @@ function ThemeSwatch({ themeName, isActive, onSelect }: {
         className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg"
         style={{ background: bg, border: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <div className="h-2.5 w-2.5 rounded-full" style={{ background: signal }} />
-        <div className="h-2.5 w-2.5 rounded-full" style={{ background: accent }} />
+        <div
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ background: signal }}
+        />
+        <div
+          className="h-2.5 w-2.5 rounded-full"
+          style={{ background: accent }}
+        />
       </div>
-      <span className="text-[12px] font-medium text-fg-muted">{THEME_LABELS[themeName]}</span>
+      <span className="text-[12px] font-medium text-fg-muted">
+        {THEME_LABELS[themeName]}
+      </span>
     </button>
-  )
+  );
 }
 ```
 
@@ -1350,18 +1572,18 @@ function ThemeSwatch({ themeName, isActive, onSelect }: {
 ```tsx
 // (continuing ThemePickerInline.tsx after the ThemeSwatch component)
 export function ThemePickerInline() {
-  const { theme, setTheme } = useTheme()
-  const { getToken } = useAuth()
-  const [saving, setSaving] = useState(false)
+  const { theme, setTheme } = useTheme();
+  const { getToken } = useAuth();
+  const [saving, setSaving] = useState(false);
 
   async function handleSelect(themeName: ThemeName) {
-    setTheme(themeName)
-    setSaving(true)
+    setTheme(themeName);
+    setSaving(true);
     try {
-      const token = await getToken()
-      if (token) await patchMe(token, { theme: themeName })
+      const token = await getToken();
+      if (token) await patchMe(token, { theme: themeName });
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -1381,7 +1603,7 @@ export function ThemePickerInline() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1407,6 +1629,7 @@ git commit -m "feat: ThemePickerInline — three-swatch row with server theme pe
 ## Task 11: StatusPill, SubmissionItem, MySubmissionsList
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/StatusPill.tsx`
 - Create: `apps/web/src/components/settings/SubmissionItem.tsx`
 - Create: `apps/web/src/components/settings/MySubmissionsList.tsx`
@@ -1417,20 +1640,23 @@ git commit -m "feat: ThemePickerInline — three-swatch row with server theme pe
 
 ```tsx
 // apps/web/src/components/settings/StatusPill.tsx
-import type { SubmissionDisplayStatus } from '@concert-crawl/types'
+import type { SubmissionDisplayStatus } from '@concert-crawl/types';
 
 interface StatusPillProps {
-  status: SubmissionDisplayStatus
+  status: SubmissionDisplayStatus;
 }
 
-const STATUS_STYLE: Record<SubmissionDisplayStatus, { label: string; color: string }> = {
+const STATUS_STYLE: Record<
+  SubmissionDisplayStatus,
+  { label: string; color: string }
+> = {
   confirmed: { label: 'confirmed', color: 'var(--success)' },
   pending: { label: 'pending', color: 'var(--fg-subtle)' },
   disputed: { label: 'disputed', color: 'var(--warning)' },
-}
+};
 
 export function StatusPill({ status }: StatusPillProps) {
-  const { label, color } = STATUS_STYLE[status]
+  const { label, color } = STATUS_STYLE[status];
   return (
     <span
       className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]"
@@ -1443,7 +1669,7 @@ export function StatusPill({ status }: StatusPillProps) {
     >
       {label}
     </span>
-  )
+  );
 }
 ```
 
@@ -1451,27 +1677,27 @@ export function StatusPill({ status }: StatusPillProps) {
 
 ```tsx
 // apps/web/src/components/settings/SubmissionItem.tsx
-import Link from 'next/link'
-import { StatusPill } from './StatusPill'
-import type { UserSubmissionItem } from '@concert-crawl/types'
+import Link from 'next/link';
+import { StatusPill } from './StatusPill';
+import type { UserSubmissionItem } from '@concert-crawl/types';
 
 interface SubmissionItemProps {
-  submission: UserSubmissionItem
+  submission: UserSubmissionItem;
 }
 
 function formatPrice(cents: number): string {
-  return `$${Math.round(cents / 100)}`
+  return `$${Math.round(cents / 100)}`;
 }
 
 function formatDate(iso: string): string {
-  const date = new Date(iso + 'T00:00:00')
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const date = new Date(iso + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export function SubmissionItem({ submission }: SubmissionItemProps) {
   const priceRange = submission.priceMax
     ? `${formatPrice(submission.priceMin)}–${formatPrice(submission.priceMax)}`
-    : formatPrice(submission.priceMin)
+    : formatPrice(submission.priceMin);
 
   return (
     <Link
@@ -1496,7 +1722,7 @@ export function SubmissionItem({ submission }: SubmissionItemProps) {
         <StatusPill status={submission.status} />
       </div>
     </Link>
-  )
+  );
 }
 ```
 
@@ -1504,16 +1730,16 @@ export function SubmissionItem({ submission }: SubmissionItemProps) {
 
 ```tsx
 // apps/web/src/components/settings/MySubmissionsList.tsx
-import Link from 'next/link'
-import { SubmissionItem } from './SubmissionItem'
-import { SETTINGS_COPY } from './definitions/copy'
-import { SUBMISSION_CAP_MOBILE } from './definitions/constants'
-import type { UserSubmissionItem } from '@concert-crawl/types'
+import Link from 'next/link';
+import { SubmissionItem } from './SubmissionItem';
+import { SETTINGS_COPY } from './definitions/copy';
+import { SUBMISSION_CAP_MOBILE } from './definitions/constants';
+import type { UserSubmissionItem } from '@concert-crawl/types';
 
 interface MySubmissionsListProps {
-  submissions: UserSubmissionItem[]
-  totalCount: number
-  cap?: number
+  submissions: UserSubmissionItem[];
+  totalCount: number;
+  cap?: number;
 }
 
 export function MySubmissionsList({
@@ -1521,8 +1747,8 @@ export function MySubmissionsList({
   totalCount,
   cap = SUBMISSION_CAP_MOBILE,
 }: MySubmissionsListProps) {
-  const visible = submissions.slice(0, cap)
-  const hasMore = totalCount > cap
+  const visible = submissions.slice(0, cap);
+  const hasMore = totalCount > cap;
 
   return (
     <div className="flex flex-col gap-1">
@@ -1530,7 +1756,9 @@ export function MySubmissionsList({
         {SETTINGS_COPY.submissionsSection}
       </span>
       {visible.length === 0 ? (
-        <p className="px-4 py-3 text-[13px] text-fg-muted">No submissions yet.</p>
+        <p className="px-4 py-3 text-[13px] text-fg-muted">
+          No submissions yet.
+        </p>
       ) : (
         <div className="flex flex-col">
           {visible.map((sub) => (
@@ -1547,7 +1775,7 @@ export function MySubmissionsList({
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1563,6 +1791,7 @@ git commit -m "feat: StatusPill, SubmissionItem, MySubmissionsList components"
 ## Task 12: DangerZone + DeleteAccountSheet
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/DeleteAccountSheet.tsx`
 - Create: `apps/web/src/components/settings/DangerZone.tsx`
 
@@ -1572,50 +1801,50 @@ git commit -m "feat: StatusPill, SubmissionItem, MySubmissionsList components"
 
 ```tsx
 // apps/web/src/components/settings/DeleteAccountSheet.tsx
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { useAuth, useClerk } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { deleteAccount } from '@/lib/api/users'
-import { SETTINGS_COPY } from './definitions/copy'
+import { useState, useRef, useEffect } from 'react';
+import { useAuth, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { deleteAccount } from '@/lib/api/users';
+import { SETTINGS_COPY } from './definitions/copy';
 
 interface DeleteAccountSheetProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
-  const [inputValue, setInputValue] = useState('')
-  const [loading, setLoading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const { getToken } = useAuth()
-  const { signOut } = useClerk()
-  const router = useRouter()
+  const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { getToken } = useAuth();
+  const { signOut } = useClerk();
+  const router = useRouter();
 
-  const isArmed = inputValue === 'DELETE'
+  const isArmed = inputValue === 'DELETE';
 
   useEffect(() => {
     if (open) {
-      setInputValue('')
-      setTimeout(() => inputRef.current?.focus(), 100)
+      setInputValue('');
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open])
+  }, [open]);
 
   async function handleDelete() {
-    if (!isArmed || loading) return
-    setLoading(true)
+    if (!isArmed || loading) return;
+    setLoading(true);
     try {
-      const token = await getToken()
-      if (token) await deleteAccount(token)
-      await signOut()
-      router.push('/')
+      const token = await getToken();
+      if (token) await deleteAccount(token);
+      await signOut();
+      router.push('/');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <>
@@ -1637,10 +1866,7 @@ export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
         {/* Drag handle */}
         <div className="mx-auto h-1 w-10 rounded-full bg-border" />
 
-        <h2
-          id="delete-sheet-title"
-          className="text-[18px] font-bold text-fg"
-        >
+        <h2 id="delete-sheet-title" className="text-[18px] font-bold text-fg">
           {SETTINGS_COPY.dangerZone.deleteSheetTitle}
         </h2>
 
@@ -1670,13 +1896,15 @@ export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
             color: isArmed ? 'white' : 'var(--fg-muted)',
           }}
         >
-          {loading ? 'Deleting…' : isArmed
-            ? SETTINGS_COPY.dangerZone.deleteButtonArmed
-            : SETTINGS_COPY.dangerZone.deleteButtonDisabled}
+          {loading
+            ? 'Deleting…'
+            : isArmed
+              ? SETTINGS_COPY.dangerZone.deleteButtonArmed
+              : SETTINGS_COPY.dangerZone.deleteButtonDisabled}
         </button>
       </div>
     </>
-  )
+  );
 }
 ```
 
@@ -1684,16 +1912,16 @@ export function DeleteAccountSheet({ open, onClose }: DeleteAccountSheetProps) {
 
 ```tsx
 // apps/web/src/components/settings/DangerZone.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useClerk } from '@clerk/nextjs'
-import { DeleteAccountSheet } from './DeleteAccountSheet'
-import { SETTINGS_COPY } from './definitions/copy'
+import { useState } from 'react';
+import { useClerk } from '@clerk/nextjs';
+import { DeleteAccountSheet } from './DeleteAccountSheet';
+import { SETTINGS_COPY } from './definitions/copy';
 
 export function DangerZone() {
-  const { signOut } = useClerk()
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const { signOut } = useClerk();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <>
@@ -1716,7 +1944,10 @@ export function DangerZone() {
           onClick={() => setSheetOpen(true)}
           className="flex cursor-pointer flex-col gap-0.5 rounded-xl px-4 py-3 text-left transition-colors hover:bg-surface-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger"
         >
-          <span className="text-[14px] font-semibold" style={{ color: 'var(--danger)' }}>
+          <span
+            className="text-[14px] font-semibold"
+            style={{ color: 'var(--danger)' }}
+          >
             {SETTINGS_COPY.dangerZone.deleteAccount}
           </span>
           <span className="text-[12px] text-fg-muted">
@@ -1725,9 +1956,12 @@ export function DangerZone() {
         </button>
       </div>
 
-      <DeleteAccountSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      <DeleteAccountSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+      />
     </>
-  )
+  );
 }
 ```
 
@@ -1743,6 +1977,7 @@ git commit -m "feat: DangerZone + DeleteAccountSheet with DELETE-typed gate"
 ## Task 13: EditProfileForm
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/EditProfileForm.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<EditProfileRoute>`. Fields: handle, city, avatar color picker. Real-time client validation + debounced server availability check (300ms). Save disables on error or while saving. "Going anonymous" callout only when editing an existing handle (not on first pick).
@@ -1751,32 +1986,32 @@ git commit -m "feat: DangerZone + DeleteAccountSheet with DELETE-typed gate"
 
 ```tsx
 // apps/web/src/components/settings/EditProfileForm.tsx
-'use client'
+'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { patchMe, checkHandleAvailability } from '@/lib/api/users'
-import { Avatar } from './Avatar'
-import { SETTINGS_COPY } from './definitions/copy'
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { patchMe, checkHandleAvailability } from '@/lib/api/users';
+import { Avatar } from './Avatar';
+import { SETTINGS_COPY } from './definitions/copy';
 import {
   HANDLE_REGEX,
   RESERVED_HANDLES,
   AVATAR_COLORS,
-} from './definitions/constants'
-import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types'
+} from './definitions/constants';
+import type { AvatarColor, UserProfileResponse } from '@concert-crawl/types';
 
 interface EditProfileFormProps {
-  profile: UserProfileResponse
+  profile: UserProfileResponse;
 }
 
-type HandleError = 'tooShort' | 'invalidChars' | 'reserved' | 'taken' | null
+type HandleError = 'tooShort' | 'invalidChars' | 'reserved' | 'taken' | null;
 
 function validateHandleLocal(handle: string): HandleError {
-  if (handle.length > 0 && handle.length < 3) return 'tooShort'
-  if (handle.length > 0 && !HANDLE_REGEX.test(handle)) return 'invalidChars'
-  if (handle.length >= 3 && RESERVED_HANDLES.has(handle)) return 'reserved'
-  return null
+  if (handle.length > 0 && handle.length < 3) return 'tooShort';
+  if (handle.length > 0 && !HANDLE_REGEX.test(handle)) return 'invalidChars';
+  if (handle.length >= 3 && RESERVED_HANDLES.has(handle)) return 'reserved';
+  return null;
 }
 
 const COLOR_VAR: Record<AvatarColor, string> = {
@@ -1784,79 +2019,84 @@ const COLOR_VAR: Record<AvatarColor, string> = {
   accent: 'var(--accent)',
   success: 'var(--success)',
   warning: 'var(--warning)',
-}
+};
 
 export function EditProfileForm({ profile }: EditProfileFormProps) {
-  const router = useRouter()
-  const { getToken } = useAuth()
+  const router = useRouter();
+  const { getToken } = useAuth();
 
-  const [handle, setHandle] = useState(profile.handle ?? '')
-  const [city, setCity] = useState(profile.city ?? '')
-  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(profile.avatarColor)
-  const [handleError, setHandleError] = useState<HandleError>(null)
-  const [saving, setSaving] = useState(false)
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [handle, setHandle] = useState(profile.handle ?? '');
+  const [city, setCity] = useState(profile.city ?? '');
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(
+    profile.avatarColor,
+  );
+  const [handleError, setHandleError] = useState<HandleError>(null);
+  const [saving, setSaving] = useState(false);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hadHandleBefore = profile.handle !== null
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hadHandleBefore = profile.handle !== null;
 
-  const checkAvailability = useCallback(async (value: string) => {
-    if (value === profile.handle) return // unchanged
-    setCheckingAvailability(true)
-    try {
-      const token = await getToken()
-      if (!token) return
-      const result = await checkHandleAvailability(token, value)
-      if (!result.available) {
-        setHandleError(result.reason === 'reserved' ? 'reserved' : 'taken')
-      } else {
-        setHandleError(null)
+  const checkAvailability = useCallback(
+    async (value: string) => {
+      if (value === profile.handle) return; // unchanged
+      setCheckingAvailability(true);
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const result = await checkHandleAvailability(token, value);
+        if (!result.available) {
+          setHandleError(result.reason === 'reserved' ? 'reserved' : 'taken');
+        } else {
+          setHandleError(null);
+        }
+      } finally {
+        setCheckingAvailability(false);
       }
-    } finally {
-      setCheckingAvailability(false)
-    }
-  }, [getToken, profile.handle])
+    },
+    [getToken, profile.handle],
+  );
 
   function handleHandleChange(value: string) {
-    const normalized = value.toLowerCase()
-    setHandle(normalized)
+    const normalized = value.toLowerCase();
+    setHandle(normalized);
 
-    const localError = validateHandleLocal(normalized)
-    setHandleError(localError)
+    const localError = validateHandleLocal(normalized);
+    setHandleError(localError);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!localError && normalized.length >= 3) {
       debounceRef.current = setTimeout(() => {
-        void checkAvailability(normalized)
-      }, 300)
+        void checkAvailability(normalized);
+      }, 300);
     }
   }
 
   useEffect(() => {
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [])
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
-  const isGoingAnonymous = hadHandleBefore && handle === ''
-  const hasError = handleError !== null
-  const isSaveDisabled = hasError || saving || checkingAvailability
+  const isGoingAnonymous = hadHandleBefore && handle === '';
+  const hasError = handleError !== null;
+  const isSaveDisabled = hasError || saving || checkingAvailability;
 
   async function handleSave() {
-    if (isSaveDisabled) return
-    setSaving(true)
+    if (isSaveDisabled) return;
+    setSaving(true);
     try {
-      const token = await getToken()
-      if (!token) return
+      const token = await getToken();
+      if (!token) return;
       await patchMe(token, {
         handle: handle === '' ? null : handle,
         city: city === '' ? null : city,
         avatarColor,
-      })
-      router.push('/me')
-      router.refresh()
+      });
+      router.push('/me');
+      router.refresh();
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -1872,7 +2112,10 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
       {/* Handle field */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-semibold text-fg" htmlFor="handle-input">
+        <label
+          className="text-[13px] font-semibold text-fg"
+          htmlFor="handle-input"
+        >
           Handle
         </label>
         <div className="relative">
@@ -1899,7 +2142,9 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
           </span>
         )}
         {!handleError && !isGoingAnonymous && (
-          <span className="text-[12px] text-fg-subtle">{SETTINGS_COPY.handleHint}</span>
+          <span className="text-[12px] text-fg-subtle">
+            {SETTINGS_COPY.handleHint}
+          </span>
         )}
         {isGoingAnonymous && (
           <div
@@ -1913,7 +2158,10 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
 
       {/* City field */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-semibold text-fg" htmlFor="city-input">
+        <label
+          className="text-[13px] font-semibold text-fg"
+          htmlFor="city-input"
+        >
           City
         </label>
         <input
@@ -1925,7 +2173,9 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
           maxLength={100}
           className="w-full rounded-xl border border-border bg-surface-1 px-4 py-3 text-[14px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
         />
-        <span className="text-[12px] text-fg-subtle">{SETTINGS_COPY.cityHint}</span>
+        <span className="text-[12px] text-fg-subtle">
+          {SETTINGS_COPY.cityHint}
+        </span>
       </div>
 
       {/* Avatar color picker */}
@@ -1933,7 +2183,7 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
         <span className="text-[13px] font-semibold text-fg">Avatar color</span>
         <div className="flex gap-3">
           {AVATAR_COLORS.map((color) => {
-            const isSelected = avatarColor === color
+            const isSelected = avatarColor === color;
             return (
               <button
                 key={color}
@@ -1944,11 +2194,13 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
                 className="relative h-8 w-8 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                 style={{
                   background: COLOR_VAR[color],
-                  outline: isSelected ? `3px solid ${COLOR_VAR[color]}` : '3px solid transparent',
+                  outline: isSelected
+                    ? `3px solid ${COLOR_VAR[color]}`
+                    : '3px solid transparent',
                   outlineOffset: '3px',
                 }}
               />
-            )
+            );
           })}
         </div>
       </div>
@@ -1959,12 +2211,15 @@ export function EditProfileForm({ profile }: EditProfileFormProps) {
         onClick={() => void handleSave()}
         disabled={isSaveDisabled}
         className="rounded-xl py-3.5 text-[15px] font-bold text-bg transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-        style={{ background: isSaveDisabled ? 'var(--surface-2)' : 'var(--signal)', color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--bg)' }}
+        style={{
+          background: isSaveDisabled ? 'var(--surface-2)' : 'var(--signal)',
+          color: isSaveDisabled ? 'var(--fg-muted)' : 'var(--bg)',
+        }}
       >
         {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -1986,6 +2241,7 @@ git commit -m "feat: EditProfileForm — handle/city/avatar with debounced avail
 ## Task 14: SettingsRoute (mobile hub)
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/SettingsRoute.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<SettingsRoute>`. Stacked sections on mobile. Sections: ProfileHero → PlanCard → Appearance (ThemePickerInline) → Submissions (MySubmissionsList) → Account (Email/Password link-outs) → Danger zone.
@@ -1994,17 +2250,20 @@ git commit -m "feat: EditProfileForm — handle/city/avatar with debounced avail
 
 ```tsx
 // apps/web/src/components/settings/SettingsRoute.tsx
-import { ProfileHero } from './ProfileHero'
-import { PlanCard } from './PlanCard'
-import { ThemePickerInline } from './ThemePickerInline'
-import { MySubmissionsList } from './MySubmissionsList'
-import { DangerZone } from './DangerZone'
-import { SETTINGS_COPY } from './definitions/copy'
-import type { UserProfileResponse, UserSubmissionItem } from '@concert-crawl/types'
+import { ProfileHero } from './ProfileHero';
+import { PlanCard } from './PlanCard';
+import { ThemePickerInline } from './ThemePickerInline';
+import { MySubmissionsList } from './MySubmissionsList';
+import { DangerZone } from './DangerZone';
+import { SETTINGS_COPY } from './definitions/copy';
+import type {
+  UserProfileResponse,
+  UserSubmissionItem,
+} from '@concert-crawl/types';
 
 interface SettingsRouteProps {
-  profile: UserProfileResponse
-  submissions: UserSubmissionItem[]
+  profile: UserProfileResponse;
+  submissions: UserSubmissionItem[];
 }
 
 export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
@@ -2056,7 +2315,9 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         </div>
         {/* Password — link-out to Clerk */}
         <div className="flex items-center justify-between px-5 py-3">
-          <span className="text-[14px] text-fg">{SETTINGS_COPY.passwordRow}</span>
+          <span className="text-[14px] text-fg">
+            {SETTINGS_COPY.passwordRow}
+          </span>
           <a
             href="https://accounts.clerk.dev/user"
             target="_blank"
@@ -2068,8 +2329,12 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         </div>
         {/* Saved shows — stub */}
         <div className="flex items-center justify-between px-5 py-3 opacity-50">
-          <span className="text-[14px] text-fg">{SETTINGS_COPY.watchlistRow}</span>
-          <span className="text-[13px] text-fg-subtle">{SETTINGS_COPY.watchlistComingSoon}</span>
+          <span className="text-[14px] text-fg">
+            {SETTINGS_COPY.watchlistRow}
+          </span>
+          <span className="text-[13px] text-fg-subtle">
+            {SETTINGS_COPY.watchlistComingSoon}
+          </span>
         </div>
       </div>
 
@@ -2080,7 +2345,7 @@ export function SettingsRoute({ profile, submissions }: SettingsRouteProps) {
         <DangerZone />
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -2096,37 +2361,42 @@ git commit -m "feat: SettingsRoute — mobile hub composing all settings section
 ## Task 15: SettingsRouteDesktop
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/SettingsRouteDesktop.tsx`
 
 **Visual reference:** `profile-settings-screens.jsx` — `<SettingsRouteDesktop>`. Left rail (240px) with nav sections: Profile, Plan, Appearance, Submissions, Account, Danger zone. Right panel renders the selected section's content. This is a client component (manages selected section state).
 
 **Desktop nav sections and their panels:**
 
-| Section | Panel content |
-|---|---|
-| Profile | ProfileHero (larger) + anonymous callout if no handle |
-| Plan | PlanCard |
-| Appearance | ThemePickerInline |
-| Submissions | MySubmissionsList (no cap — show all) |
-| Account | Email row + Password row |
-| Danger zone | DangerZone |
+| Section     | Panel content                                         |
+| ----------- | ----------------------------------------------------- |
+| Profile     | ProfileHero (larger) + anonymous callout if no handle |
+| Plan        | PlanCard                                              |
+| Appearance  | ThemePickerInline                                     |
+| Submissions | MySubmissionsList (no cap — show all)                 |
+| Account     | Email row + Password row                              |
+| Danger zone | DangerZone                                            |
 
 - [ ] **Step 1: Implement SettingsRouteDesktop**
 
 ```tsx
 // apps/web/src/components/settings/SettingsRouteDesktop.tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ProfileHero } from './ProfileHero'
-import { PlanCard } from './PlanCard'
-import { ThemePickerInline } from './ThemePickerInline'
-import { MySubmissionsList } from './MySubmissionsList'
-import { DangerZone } from './DangerZone'
-import { SETTINGS_COPY } from './definitions/copy'
-import type { UserProfileResponse, UserSubmissionItem } from '@concert-crawl/types'
+import { useState } from 'react';
+import { ProfileHero } from './ProfileHero';
+import { PlanCard } from './PlanCard';
+import { ThemePickerInline } from './ThemePickerInline';
+import { MySubmissionsList } from './MySubmissionsList';
+import { DangerZone } from './DangerZone';
+import { SETTINGS_COPY } from './definitions/copy';
+import type {
+  UserProfileResponse,
+  UserSubmissionItem,
+} from '@concert-crawl/types';
 
-type NavSection = 'profile' | 'plan' | 'appearance' | 'submissions' | 'account' | 'danger'
+type NavSection =
+  'profile' | 'plan' | 'appearance' | 'submissions' | 'account' | 'danger';
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: 'Profile' },
@@ -2135,15 +2405,18 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'submissions', label: 'My submissions' },
   { key: 'account', label: 'Account' },
   { key: 'danger', label: 'Danger zone' },
-]
+];
 
 interface SettingsRouteDesktopProps {
-  profile: UserProfileResponse
-  submissions: UserSubmissionItem[]
+  profile: UserProfileResponse;
+  submissions: UserSubmissionItem[];
 }
 
-export function SettingsRouteDesktop({ profile, submissions }: SettingsRouteDesktopProps) {
-  const [activeSection, setActiveSection] = useState<NavSection>('profile')
+export function SettingsRouteDesktop({
+  profile,
+  submissions,
+}: SettingsRouteDesktopProps) {
+  const [activeSection, setActiveSection] = useState<NavSection>('profile');
 
   return (
     <div className="flex min-h-screen">
@@ -2157,7 +2430,8 @@ export function SettingsRouteDesktop({ profile, submissions }: SettingsRouteDesk
               onClick={() => setActiveSection(key)}
               className="cursor-pointer rounded-xl px-4 py-2.5 text-left text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
               style={{
-                background: activeSection === key ? 'var(--surface-2)' : 'transparent',
+                background:
+                  activeSection === key ? 'var(--surface-2)' : 'transparent',
                 color: activeSection === key ? 'var(--fg)' : 'var(--fg-muted)',
                 fontWeight: activeSection === key ? 700 : 500,
               }}
@@ -2220,12 +2494,18 @@ export function SettingsRouteDesktop({ profile, submissions }: SettingsRouteDesk
             <h2 className="text-[18px] font-bold text-fg">Account</h2>
             <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface-1">
               <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-[14px] font-medium text-fg">{SETTINGS_COPY.emailRow}</span>
-                <span className="text-[13px] text-fg-muted">{profile.email}</span>
+                <span className="text-[14px] font-medium text-fg">
+                  {SETTINGS_COPY.emailRow}
+                </span>
+                <span className="text-[13px] text-fg-muted">
+                  {profile.email}
+                </span>
               </div>
               <div className="h-px bg-border mx-5" />
               <div className="flex items-center justify-between px-5 py-3.5">
-                <span className="text-[14px] font-medium text-fg">{SETTINGS_COPY.passwordRow}</span>
+                <span className="text-[14px] font-medium text-fg">
+                  {SETTINGS_COPY.passwordRow}
+                </span>
                 <a
                   href="https://accounts.clerk.dev/user"
                   target="_blank"
@@ -2237,8 +2517,12 @@ export function SettingsRouteDesktop({ profile, submissions }: SettingsRouteDesk
               </div>
               <div className="h-px bg-border mx-5" />
               <div className="flex items-center justify-between px-5 py-3.5 opacity-50">
-                <span className="text-[14px] font-medium text-fg">{SETTINGS_COPY.watchlistRow}</span>
-                <span className="text-[13px] text-fg-subtle">{SETTINGS_COPY.watchlistComingSoon}</span>
+                <span className="text-[14px] font-medium text-fg">
+                  {SETTINGS_COPY.watchlistRow}
+                </span>
+                <span className="text-[13px] text-fg-subtle">
+                  {SETTINGS_COPY.watchlistComingSoon}
+                </span>
               </div>
             </div>
           </div>
@@ -2252,7 +2536,7 @@ export function SettingsRouteDesktop({ profile, submissions }: SettingsRouteDesk
         )}
       </main>
     </div>
-  )
+  );
 }
 ```
 
@@ -2268,6 +2552,7 @@ git commit -m "feat: SettingsRouteDesktop — sidebar+panel layout"
 ## Task 16: Server actions + /me and /me/edit pages
 
 **Files:**
+
 - Create: `apps/web/src/app/(protected)/me/actions.ts`
 - Create: `apps/web/src/app/(protected)/me/page.tsx`
 - Create: `apps/web/src/app/(protected)/me/edit/page.tsx`
@@ -2282,23 +2567,23 @@ Look at an existing protected server component (e.g., `apps/web/src/app/(protect
 
 ```tsx
 // apps/web/src/app/(protected)/me/page.tsx
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
-import { fetchMe, fetchMySubmissions } from '@/lib/api/users'
-import { SettingsRoute } from '@/components/settings/SettingsRoute'
-import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop'
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { fetchMe, fetchMySubmissions } from '@/lib/api/users';
+import { SettingsRoute } from '@/components/settings/SettingsRoute';
+import { SettingsRouteDesktop } from '@/components/settings/SettingsRouteDesktop';
 
-export const metadata = { title: 'Settings — Concert Crawl' }
+export const metadata = { title: 'Settings — Concert Crawl' };
 
 export default async function MePage() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) redirect('/sign-in')
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) redirect('/sign-in');
 
   const [profile, submissions] = await Promise.all([
     fetchMe(token),
     fetchMySubmissions(token),
-  ])
+  ]);
 
   // Sync theme: if profile theme differs from what the client has, ThemePickerInline
   // will reflect it after hydration. Full cross-device sync happens on /me load.
@@ -2314,7 +2599,7 @@ export default async function MePage() {
         <SettingsRouteDesktop profile={profile} submissions={submissions} />
       </div>
     </>
-  )
+  );
 }
 ```
 
@@ -2322,20 +2607,20 @@ export default async function MePage() {
 
 ```tsx
 // apps/web/src/app/(protected)/me/edit/page.tsx
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { fetchMe } from '@/lib/api/users'
-import { EditProfileForm } from '@/components/settings/EditProfileForm'
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { fetchMe } from '@/lib/api/users';
+import { EditProfileForm } from '@/components/settings/EditProfileForm';
 
-export const metadata = { title: 'Edit profile — Concert Crawl' }
+export const metadata = { title: 'Edit profile — Concert Crawl' };
 
 export default async function EditProfilePage() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) redirect('/sign-in')
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) redirect('/sign-in');
 
-  const profile = await fetchMe(token)
+  const profile = await fetchMe(token);
 
   return (
     <div className="mx-auto max-w-md">
@@ -2353,7 +2638,7 @@ export default async function EditProfilePage() {
 
       <EditProfileForm profile={profile} />
     </div>
-  )
+  );
 }
 ```
 
@@ -2375,6 +2660,7 @@ git commit -m "feat: /me and /me/edit routes — server-fetched profile + edit f
 ## Task 17: Nav integration — UserAvatar dropdown + mobile top bar
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/app-header/UserAvatar.tsx`
 - Modify: `apps/web/src/components/consumer/app-header/AppHeader.tsx`
 
@@ -2404,37 +2690,37 @@ Create a thin client wrapper that fetches profile on mount:
 
 ```tsx
 // apps/web/src/components/consumer/app-header/MobileProfileEntry.tsx
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { fetchMe } from '@/lib/api/users'
-import { ProfileEntryAvatar } from '@/components/settings/ProfileEntryAvatar'
-import type { UserProfileResponse } from '@concert-crawl/types'
+import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { fetchMe } from '@/lib/api/users';
+import { ProfileEntryAvatar } from '@/components/settings/ProfileEntryAvatar';
+import type { UserProfileResponse } from '@concert-crawl/types';
 
 export function MobileProfileEntry() {
-  const { getToken } = useAuth()
-  const [profile, setProfile] = useState<UserProfileResponse | null>(null)
+  const { getToken } = useAuth();
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const token = await getToken()
-      if (!token) return
+      const token = await getToken();
+      if (!token) return;
       try {
-        const data = await fetchMe(token)
-        setProfile(data)
+        const data = await fetchMe(token);
+        setProfile(data);
       } catch {
         // silently fall back to anonymous avatar
       }
-    })()
-  }, [getToken])
+    })();
+  }, [getToken]);
 
   return (
     <ProfileEntryAvatar
       handle={profile?.handle ?? null}
       avatarColor={profile?.avatarColor ?? null}
     />
-  )
+  );
 }
 ```
 
@@ -2475,6 +2761,7 @@ git commit -m "feat: add Settings link to UserAvatar dropdown, mobile ProfileEnt
 **Goal:** When the user opens `/me`, the theme in their profile is applied to the browser — enabling cross-device theme sync. The `SettingsRoute` and `SettingsRouteDesktop` already receive `profile.theme`. We need a small client component that applies it on mount if it differs from the current active theme.
 
 **Files:**
+
 - Create: `apps/web/src/components/settings/ThemeSync.tsx`
 - Modify: `apps/web/src/app/(protected)/me/page.tsx`
 
@@ -2482,28 +2769,28 @@ git commit -m "feat: add Settings link to UserAvatar dropdown, mobile ProfileEnt
 
 ```tsx
 // apps/web/src/components/settings/ThemeSync.tsx
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useTheme } from '@/theme/ThemeProvider'
-import type { UserTheme } from '@concert-crawl/types'
+import { useEffect } from 'react';
+import { useTheme } from '@/theme/ThemeProvider';
+import type { UserTheme } from '@concert-crawl/types';
 
 interface ThemeSyncProps {
-  serverTheme: UserTheme
+  serverTheme: UserTheme;
 }
 
 export function ThemeSync({ serverTheme }: ThemeSyncProps) {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (theme !== serverTheme) {
-      setTheme(serverTheme)
+      setTheme(serverTheme);
     }
-  // Only run on mount — serverTheme is stable for this page load
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Only run on mount — serverTheme is stable for this page load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  return null
+  return null;
 }
 ```
 
@@ -2512,7 +2799,7 @@ export function ThemeSync({ serverTheme }: ThemeSyncProps) {
 In `apps/web/src/app/(protected)/me/page.tsx`, import and render `<ThemeSync serverTheme={profile.theme} />` above the layout divs:
 
 ```tsx
-import { ThemeSync } from '@/components/settings/ThemeSync'
+import { ThemeSync } from '@/components/settings/ThemeSync';
 // ...
 return (
   <>
@@ -2520,7 +2807,7 @@ return (
     {/* Mobile */}
     ...
   </>
-)
+);
 ```
 
 - [ ] **Step 3: Commit**
@@ -2574,33 +2861,34 @@ git commit -m "fix: quality gate fixes for phase-8b user profile"
 
 After writing this plan, I verified coverage against the README:
 
-| Requirement | Task |
-|---|---|
-| Anonymous-by-default (null handle → "anonymous fan") | Task 7 (Avatar `?` disc), Task 8 (ProfileHero label), Task 13 (EditProfileForm going-anonymous callout) |
-| Handle: opt-in, retroactive attribution | Task 1 (user_profiles.handle), Task 3 (PATCH), Task 13 (EditProfileForm) |
-| Handle validation: regex, length, reserved | Task 6 (constants), Task 13 (EditProfileForm), Task 3 (API server-side) |
-| Handle availability: debounce 300ms | Task 13 (EditProfileForm debounce) |
-| Avatar: letter on tinted disc, 4 color swatches | Task 7 (Avatar), Task 13 (color picker) |
-| Anonymous avatar: dashed `?` disc | Task 7 (Avatar) |
-| Plan model: founder / paid / trial / past-due | Task 9 (PlanCard), Task 3 (API derivePlan) |
-| Founder card: accent border + radial wash + italic | Task 9 (PlanCard founder state) |
-| Theme picker: 3 swatches, live mini-previews | Task 10 (ThemePickerInline) |
-| Theme persistence server-side | Task 1 (schema), Task 3 (PATCH), Task 10 (ThemePickerInline patchMe), Task 18 (ThemeSync) |
-| My submissions: status pills, capped at 3 mobile | Task 11 (all three components) |
-| Status mapping: corroborated→confirmed, stale→pending | Task 3 (mapStatus), Task 11 (StatusPill) |
-| Delete account: DELETE-typed gate | Task 12 (DeleteAccountSheet) |
-| Delete account: anonymize submissions | Task 3 (DELETE /v1/users/me), Task 1 (nullable userId migration) |
-| Sign out: snarky copy | Task 6 (copy.ts), Task 12 (DangerZone) |
-| Email/Password: link-outs to Clerk hosted UI | Task 14 (SettingsRoute), Task 15 (SettingsRouteDesktop) |
-| Saved/Watching: stub row ("coming soon") | Task 14, Task 15 |
-| Mobile hub layout | Task 14 (SettingsRoute) |
-| Desktop sidebar+panel layout | Task 15 (SettingsRouteDesktop) |
-| ProfileEntryAvatar: 36px entry in top bar and bottom nav | Task 7, Task 17 |
-| UserAvatar dropdown: "Settings" link | Task 17 |
-| Bottom nav /me tab | Already wired (bottom nav has href: '/me') — verify in Task 17 |
-| Anonymous explanation callout | Task 6 (copy), Task 15 (desktop profile panel) |
+| Requirement                                              | Task                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Anonymous-by-default (null handle → "anonymous fan")     | Task 7 (Avatar `?` disc), Task 8 (ProfileHero label), Task 13 (EditProfileForm going-anonymous callout) |
+| Handle: opt-in, retroactive attribution                  | Task 1 (user_profiles.handle), Task 3 (PATCH), Task 13 (EditProfileForm)                                |
+| Handle validation: regex, length, reserved               | Task 6 (constants), Task 13 (EditProfileForm), Task 3 (API server-side)                                 |
+| Handle availability: debounce 300ms                      | Task 13 (EditProfileForm debounce)                                                                      |
+| Avatar: letter on tinted disc, 4 color swatches          | Task 7 (Avatar), Task 13 (color picker)                                                                 |
+| Anonymous avatar: dashed `?` disc                        | Task 7 (Avatar)                                                                                         |
+| Plan model: founder / paid / trial / past-due            | Task 9 (PlanCard), Task 3 (API derivePlan)                                                              |
+| Founder card: accent border + radial wash + italic       | Task 9 (PlanCard founder state)                                                                         |
+| Theme picker: 3 swatches, live mini-previews             | Task 10 (ThemePickerInline)                                                                             |
+| Theme persistence server-side                            | Task 1 (schema), Task 3 (PATCH), Task 10 (ThemePickerInline patchMe), Task 18 (ThemeSync)               |
+| My submissions: status pills, capped at 3 mobile         | Task 11 (all three components)                                                                          |
+| Status mapping: corroborated→confirmed, stale→pending    | Task 3 (mapStatus), Task 11 (StatusPill)                                                                |
+| Delete account: DELETE-typed gate                        | Task 12 (DeleteAccountSheet)                                                                            |
+| Delete account: anonymize submissions                    | Task 3 (DELETE /v1/users/me), Task 1 (nullable userId migration)                                        |
+| Sign out: snarky copy                                    | Task 6 (copy.ts), Task 12 (DangerZone)                                                                  |
+| Email/Password: link-outs to Clerk hosted UI             | Task 14 (SettingsRoute), Task 15 (SettingsRouteDesktop)                                                 |
+| Saved/Watching: stub row ("coming soon")                 | Task 14, Task 15                                                                                        |
+| Mobile hub layout                                        | Task 14 (SettingsRoute)                                                                                 |
+| Desktop sidebar+panel layout                             | Task 15 (SettingsRouteDesktop)                                                                          |
+| ProfileEntryAvatar: 36px entry in top bar and bottom nav | Task 7, Task 17                                                                                         |
+| UserAvatar dropdown: "Settings" link                     | Task 17                                                                                                 |
+| Bottom nav /me tab                                       | Already wired (bottom nav has href: '/me') — verify in Task 17                                          |
+| Anonymous explanation callout                            | Task 6 (copy), Task 15 (desktop profile panel)                                                          |
 
 **Items explicitly deferred (per user instructions):**
+
 - Photo upload — design explicitly says "no upload ever"; handle-letter avatar is final
 - Notification dot on avatar — design says removed deliberately; no notification stream yet
 - Saved/Watching list — Phase 9; only stub row included

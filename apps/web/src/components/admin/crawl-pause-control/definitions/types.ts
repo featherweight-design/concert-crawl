@@ -1,4 +1,4 @@
 export interface CrawlPauseControlProps {
-  venueId: string
-  crawlPausedAt: string | null
+  venueId: string;
+  crawlPausedAt: string | null;
 }

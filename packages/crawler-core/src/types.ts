@@ -1,5 +1,5 @@
 export interface NormalizedEvent {
-  title: string
+  title: string;
   /**
    * EXACT verbatim copy of the source listing's headline string, byte-for-byte
    * unmodified. The LLM extractor in particular tends to strip listing
@@ -10,14 +10,14 @@ export interface NormalizedEvent {
    * structured-data and platform-JSON extractors — they never decorate.
    * See issue #826.
    */
-  rawTitle: string
+  rawTitle: string;
   /**
    * The event's DISPLAY string, and nothing more. It is what the calendar row
    * reads and it feeds `canonical_artist`, the live dedup key, so it is always
    * a non-empty string even for a bingo night. It is NOT a claim that a
    * performer was identified — read `observedPerformers` for that.
    */
-  artist: string
+  artist: string;
   /**
    * Performer names the SOURCE actually stated as headlining, verbatim and in
    * billing order, before any derivation. Empty means the listing named
@@ -38,12 +38,12 @@ export interface NormalizedEvent {
    * co-headliner sets come from, and why the split is carried on the
    * observation rather than flattened into one list.
    */
-  observedPerformers: string[]
+  observedPerformers: string[];
   /**
    * Opening / supporting acts the SOURCE stated, in billing order, excluding
    * everything in `observedPerformers`. Same rules: verbatim, never the title.
    */
-  observedSupportingArtists: string[]
+  observedSupportingArtists: string[];
   /**
    * Every act headlining the bill, in billing order. Populated by
    * `deriveArtists()` from `observedPerformers`, and empty when the event
@@ -63,13 +63,13 @@ export interface NormalizedEvent {
    * whatever is already stored rather than persisting the blank, so a
    * transient Haiku failure cannot erase a correct bill.
    */
-  headliners?: string[] | null
-  supportingArtists?: string[] | null
-  tourName?: string | null
-  date: string
-  doorsTime?: string
-  showTime?: string
-  ticketUrl?: string
+  headliners?: string[] | null;
+  supportingArtists?: string[] | null;
+  tourName?: string | null;
+  date: string;
+  doorsTime?: string;
+  showTime?: string;
+  ticketUrl?: string;
   /**
    * The per-event detail page URL on the source venue site (e.g.
    * `https://www.redrocksonline.com/events/griz-1489047/`). Distinct from
@@ -79,23 +79,23 @@ export interface NormalizedEvent {
    * generic events index (#1152). Deriving the deeper AXS purchase URL from
    * this slug is a follow-up (#1153).
    */
-  eventUrl?: string
-  description?: string
-  imageUrl?: string
-  sourceUrl: string
-  confidence: number
-  isConcert?: boolean
-  reviewNeeded?: boolean
+  eventUrl?: string;
+  description?: string;
+  imageUrl?: string;
+  sourceUrl: string;
+  confidence: number;
+  isConcert?: boolean;
+  reviewNeeded?: boolean;
 }
 
 export interface TokenUsage {
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens: number
-  cacheWriteTokens: number
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
 }
 
 export interface LLMResult {
-  events: NormalizedEvent[]
-  usage: TokenUsage
+  events: NormalizedEvent[];
+  usage: TokenUsage;
 }

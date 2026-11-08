@@ -6,17 +6,17 @@
  * spec names, so a 320px row keeps the name legible instead of ellipsising it
  * down to two characters beside a "Follow" label.
  */
-export const SEARCH_FOLLOW_ICON_ONLY_QUERY = '(max-width: 359px)'
+export const SEARCH_FOLLOW_ICON_ONLY_QUERY = '(max-width: 359px)';
 
 /**
  * Where the results list becomes the two-column desktop layout (list plus
  * explainer rail) and the follow controls step up from `sm` to `md`. Keyed to
  * Tailwind's `md:`, which is what the grid classes below use.
  */
-export const SEARCH_DESKTOP_QUERY = '(min-width: 768px)'
+export const SEARCH_DESKTOP_QUERY = '(min-width: 768px)';
 
 /** The rail column width. Locked by the handoff's `minmax(0,1fr) 320px`. */
-export const SEARCH_RAIL_WIDTH = 320
+export const SEARCH_RAIL_WIDTH = 320;
 
 /**
  * The search field's box, shared rather than matched.
@@ -40,6 +40,6 @@ export const SEARCH_FIELD_BOX = {
   borderRadius: 12,
   background: 'var(--surface-2)',
   border: '1px solid var(--border)',
-} as const
+} as const;
 
-export const SEARCH_FIELD_FONT_SIZE = 16
+export const SEARCH_FIELD_FONT_SIZE = 16;

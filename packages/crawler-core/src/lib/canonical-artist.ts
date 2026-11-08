@@ -14,4 +14,4 @@ export {
   canonicalizeArtist,
   canonicalizeSupporting,
   normalizeArtistName,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';

@@ -1,20 +1,20 @@
-import { KIND_COLORS, type StatusKind } from './utils'
+import { KIND_COLORS, type StatusKind } from './utils';
 
 interface StatusBadgeProps {
-  kind?: StatusKind
-  variant?: 'soft' | 'outline' | 'mono'
+  kind?: StatusKind;
+  variant?: 'soft' | 'outline' | 'mono';
   /**
    * Orthogonal mono-font flag. When true, applies mono-font sizing
    * regardless of variant — this lets a caller combine `variant="outline"`
    * with mono typography (e.g. the Missing tab's "missed N sweeps" chip).
    */
-  mono?: boolean
-  dot?: boolean
-  children: React.ReactNode
+  mono?: boolean;
+  dot?: boolean;
+  children: React.ReactNode;
   /**
    * Forwarded to the rendered span for mouse-hover context. Optional.
    */
-  title?: string
+  title?: string;
   /**
    * Forwarded to the rendered span. Optional. We deliberately don't
    * override the implicit role — adding role="img" on a text badge
@@ -25,7 +25,7 @@ interface StatusBadgeProps {
    * named accessibility semantics (e.g. role="status") rather than
    * misrepresent the element as an image.
    */
-  'aria-label'?: string
+  'aria-label'?: string;
 }
 
 export const StatusBadge = ({
@@ -37,9 +37,9 @@ export const StatusBadge = ({
   title,
   'aria-label': ariaLabel,
 }: StatusBadgeProps) => {
-  const colors = KIND_COLORS[kind]
-  const isMono = variant === 'mono' || mono
-  const isOutline = variant === 'outline'
+  const colors = KIND_COLORS[kind];
+  const isMono = variant === 'mono' || mono;
+  const isOutline = variant === 'outline';
 
   return (
     <span
@@ -79,5 +79,5 @@ export const StatusBadge = ({
       )}
       {children}
     </span>
-  )
-}
+  );
+};

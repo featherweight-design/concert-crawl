@@ -26,14 +26,14 @@ A scenario for both at once: a user scrolls the browse list. Row one has a gig p
 
 **Where this lives.** Six image slots across the consumer app:
 
-| Slot | Shape | Sources it will draw from |
-|---|---|---|
-| `EventRow` tile — browse list | Square, 44–56px responsive | venue artwork → artist portrait → placeholder |
-| `SmallEventRow` tile | Square, 40px | same |
-| `HeroEventCard` | 16:9, 180px tall | same |
-| Event detail hero | Full-bleed, 300px tall | same |
-| Artist page hero (`ArtistPlate`) | Full-bleed hero | artist portrait → placeholder |
-| Artist search result avatar | Circular, 40px | artist portrait → placeholder |
+| Slot                             | Shape                      | Sources it will draw from                     |
+| -------------------------------- | -------------------------- | --------------------------------------------- |
+| `EventRow` tile — browse list    | Square, 44–56px responsive | venue artwork → artist portrait → placeholder |
+| `SmallEventRow` tile             | Square, 40px               | same                                          |
+| `HeroEventCard`                  | 16:9, 180px tall           | same                                          |
+| Event detail hero                | Full-bleed, 300px tall     | same                                          |
+| Artist page hero (`ArtistPlate`) | Full-bleed hero            | artist portrait → placeholder                 |
+| Artist search result avatar      | Circular, 40px             | artist portrait → placeholder                 |
 
 **Related shipped features.** The artist page (#1115) and the Event Row System — the row's meta budget and drop ladder already govern what text survives at 320px, and imagery must not disturb that. The browse list, event detail page, and search results are all live surfaces with existing layouts; this is a treatment change inside existing slots, not a re-layout.
 

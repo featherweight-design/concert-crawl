@@ -61,10 +61,10 @@ export const watchNotificationCopy = {
       return {
         title: `Tickets for ${artistAtVenue} just dropped.`,
         body: 'Cheaper than we last saw. Grab them before they go.',
-      }
+      };
     }
-    const newPrice = formatWholeDollar(prices.newPriceMin)
-    const oldPrice = formatWholeDollar(prices.oldPriceMin)
+    const newPrice = formatWholeDollar(prices.newPriceMin);
+    const oldPrice = formatWholeDollar(prices.oldPriceMin);
     return {
       title: `${newPrice} tickets for ${artistAtVenue} just went on sale.`,
       // Body copy lifted verbatim from the handoff mock
@@ -74,9 +74,9 @@ export const watchNotificationCopy = {
       // notifying about, so the claim is accurate for the flow that fires
       // this copy.
       body: `Down from ${oldPrice}. Cheapest we've seen for this one.`,
-    }
+    };
   },
-} as const
+} as const;
 
 // Format a decimal ticketPrice ('32.00' | '32.5' | '32') as '$32'. The
 // events.ticketPriceMin column is `numeric(10,2)` and comes back as a
@@ -86,7 +86,7 @@ export const watchNotificationCopy = {
 // $32.50 minimum stays as "$32" instead of rounding UP to "$33" and
 // misrepresenting the actual price on offer.
 const formatWholeDollar = (raw: string): string => {
-  const num = Number.parseFloat(raw)
-  if (Number.isNaN(num)) return `$${raw}`
-  return `$${Math.floor(num)}`
-}
+  const num = Number.parseFloat(raw);
+  if (Number.isNaN(num)) return `$${raw}`;
+  return `$${Math.floor(num)}`;
+};

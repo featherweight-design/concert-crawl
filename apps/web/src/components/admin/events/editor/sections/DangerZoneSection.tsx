@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import { GitMerge, Trash2 } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton } from '@/components/admin/primitives'
-import { EditSection } from '../EditSection'
+import { GitMerge, Trash2 } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton } from '@/components/admin/primitives';
+import { EditSection } from '../EditSection';
 
 export interface DangerZoneSectionProps {
-  onMerge: () => void
-  onDelete: () => void
-  disabled?: boolean
+  onMerge: () => void;
+  onDelete: () => void;
+  disabled?: boolean;
 }
 
-const COPY = ADMIN_COPY.editor.dangerZone
+const COPY = ADMIN_COPY.editor.dangerZone;
 
 export const DangerZoneSection = ({
   onMerge,
@@ -65,4 +65,4 @@ export const DangerZoneSection = ({
       </div>
     </div>
   </EditSection>
-)
+);

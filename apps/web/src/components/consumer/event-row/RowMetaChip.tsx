@@ -1,5 +1,5 @@
-import { forwardRef, type ReactNode } from 'react'
-import { EVENT_ROW_COPY } from './definitions/copy'
+import { forwardRef, type ReactNode } from 'react';
+import { EVENT_ROW_COPY } from './definitions/copy';
 
 /**
  * The row's only chip. Five ad-hoc pills used to compete on size, radius and
@@ -7,7 +7,7 @@ import { EVENT_ROW_COPY } from './definitions/copy'
  * radius, type and spacing are fixed here; tone is the only variable.
  */
 
-export type ChipTone = 'neutral' | 'strong' | 'warn' | 'signal'
+export type ChipTone = 'neutral' | 'strong' | 'warn' | 'signal';
 
 // Every tone sits on the same surface and differs only in its foreground and
 // border, so the four read as one family under all nine themes rather than as
@@ -40,20 +40,20 @@ const TONE: Record<
     background: 'color-mix(in oklch, var(--signal) 9%, transparent)',
     border: 'color-mix(in oklch, var(--signal) 42%, transparent)',
   },
-}
+};
 
 export interface RowMetaChipProps {
-  label: string
-  tone?: ChipTone
+  label: string;
+  tone?: ChipTone;
   /** Replaces the visible label for screen readers, rather than adding to it. */
-  srLabel?: string | undefined
-  hidden?: boolean | undefined
+  srLabel?: string | undefined;
+  hidden?: boolean | undefined;
   /** Leading glyph. Trims the left padding so the mark sits on the same rhythm. */
-  icon?: ReactNode
+  icon?: ReactNode;
   /** Rendered after a dimmed separator. Absent when the caller collapsed the pair. */
-  secondaryLabel?: string | undefined
+  secondaryLabel?: string | undefined;
   /** Read after the label, for meaning the visible chip stopped carrying. */
-  srSuffix?: string | undefined
+  srSuffix?: string | undefined;
 }
 
 export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
@@ -69,7 +69,7 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
     },
     ref,
   ) {
-    const { color, background, border } = TONE[tone]
+    const { color, background, border } = TONE[tone];
     return (
       <span
         ref={ref}
@@ -109,6 +109,6 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
           <span className="sr-only">{srSuffix}</span>
         ) : null}
       </span>
-    )
+    );
   },
-)
+);

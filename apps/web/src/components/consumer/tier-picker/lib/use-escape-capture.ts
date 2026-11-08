@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 // Failure/challenge surfaces need Escape to dismiss back to the picker —
 // NOT close the whole sheet. ModalShell listens for Escape on the document
@@ -10,14 +10,14 @@ export const useEscapeCapture = (
   onEscape: () => void,
 ): void => {
   useEffect(() => {
-    if (!active) return
+    if (!active) return;
     const onKeyDown = (keyEvent: KeyboardEvent) => {
-      if (keyEvent.key !== 'Escape') return
-      keyEvent.stopPropagation()
-      keyEvent.preventDefault()
-      onEscape()
-    }
-    document.addEventListener('keydown', onKeyDown, true)
-    return () => document.removeEventListener('keydown', onKeyDown, true)
-  }, [active, onEscape])
-}
+      if (keyEvent.key !== 'Escape') return;
+      keyEvent.stopPropagation();
+      keyEvent.preventDefault();
+      onEscape();
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [active, onEscape]);
+};

@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/hono/node'
+import * as Sentry from '@sentry/hono/node';
 
 // Attach the Clerk user to the current request's Sentry scope. Without this,
 // every event arrives with a null user id, so an authenticated request can't be
@@ -7,5 +7,5 @@ import * as Sentry from '@sentry/hono/node'
 // integration) is used rather than the global scope so concurrent requests can't
 // overwrite each other's user.
 export function setSentryUser(userId: string): void {
-  Sentry.getIsolationScope().setUser({ id: userId })
+  Sentry.getIsolationScope().setUser({ id: userId });
 }

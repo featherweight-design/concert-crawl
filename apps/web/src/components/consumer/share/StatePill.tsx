@@ -1,6 +1,6 @@
-import React from 'react'
-import { ia_isDark } from '@/components/consumer/identity-art/IdentityArt'
-import { posterStateLabel, type PosterState } from '@/lib/share/taglines'
+import React from 'react';
+import { ia_isDark } from '@/components/consumer/identity-art/IdentityArt';
+import { posterStateLabel, type PosterState } from '@/lib/share/taglines';
 
 /**
  * The pill at the top-left of the poster's bottom block: `GOING`, `SOLD OUT`,
@@ -21,19 +21,19 @@ import { posterStateLabel, type PosterState } from '@/lib/share/taglines'
  * The state itself is carried by the label, never by colour alone.
  */
 export interface StatePillProps {
-  state: PosterState
+  state: PosterState;
   /** `↓ $12` for a price drop; when null the pill falls back to the label. */
-  dropLabel: string | null
+  dropLabel: string | null;
   /** Theme accent — the pill's fill. */
-  accent: string
-  fontSize: number
-  paddingY: number
-  paddingX: number
+  accent: string;
+  fontSize: number;
+  paddingY: number;
+  paddingX: number;
 }
 
 /** Accents run from `#9B5CFF` to `#ECDCC4`, so the text colour has to follow. */
 const inkOn = (accent: string): string =>
-  ia_isDark(accent) ? '#FFFFFF' : '#191418'
+  ia_isDark(accent) ? '#FFFFFF' : '#191418';
 
 export const StatePill = ({
   state,
@@ -43,7 +43,7 @@ export const StatePill = ({
   paddingY,
   paddingX,
 }: StatePillProps) => {
-  const foreground = inkOn(accent)
+  const foreground = inkOn(accent);
   return (
     <div
       style={{
@@ -74,5 +74,5 @@ export const StatePill = ({
       />
       {dropLabel ?? posterStateLabel(state)}
     </div>
-  )
-}
+  );
+};

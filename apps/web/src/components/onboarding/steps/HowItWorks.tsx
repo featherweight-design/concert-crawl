@@ -1,17 +1,17 @@
-import React from 'react'
-import { Eyebrow, StepHeading, Lede } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import React from 'react';
+import { Eyebrow, StepHeading, Lede } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.howItWorks
+const copy = ONBOARDING_COPY.howItWorks;
 
 const SOURCE_COLORS: Record<string, string> = {
   primary: 'var(--fg-muted)',
   community: 'var(--signal)',
   resale: 'var(--warning)',
-}
+};
 
 function PriceSourceChip({ label, kind }: { label: string; kind: string }) {
-  const color = SOURCE_COLORS[kind] ?? 'var(--fg-muted)'
+  const color = SOURCE_COLORS[kind] ?? 'var(--fg-muted)';
   return (
     <span
       style={{
@@ -32,7 +32,7 @@ function PriceSourceChip({ label, kind }: { label: string; kind: string }) {
     >
       {label}
     </span>
-  )
+  );
 }
 
 function PriceSourcesList() {
@@ -80,7 +80,7 @@ function PriceSourcesList() {
         {copy.noPrice}
       </span>
     </div>
-  )
+  );
 }
 
 export function HowItWorks() {
@@ -159,5 +159,5 @@ export function HowItWorks() {
         ))}
       </div>
     </div>
-  )
+  );
 }

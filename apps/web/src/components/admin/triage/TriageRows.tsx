@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The two row types and the strip that heads them.
 //
@@ -8,44 +8,44 @@
 // order (Refresh → faults in order → queues in order) short enough to be
 // usable with a keyboard.
 
-import Link from 'next/link'
+import Link from 'next/link';
 
-import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time'
+import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
 
-import { ADMIN_COPY } from '../definitions/copy'
-import { MonoLabel } from '../primitives'
-import { EvidenceBars } from './EvidenceBars'
+import { ADMIN_COPY } from '../definitions/copy';
+import { MonoLabel } from '../primitives';
+import { EvidenceBars } from './EvidenceBars';
 import {
   CONDITION_META,
   GLYPH_ICONS,
   QUEUE_GLYPH,
   sevTint,
   type TriageGlyph,
-} from './definitions/meta'
-import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles'
+} from './definitions/meta';
+import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles';
 import type {
   AcknowledgedFault,
   TriageFault,
   TriageQueue,
-} from './definitions/types'
-import { faultHref, queueHref } from './lib/deep-links'
-import { evidenceLines } from './lib/evidence-lines'
+} from './definitions/types';
+import { faultHref, queueHref } from './lib/deep-links';
+import { evidenceLines } from './lib/evidence-lines';
 
-const TRIAGE = ADMIN_COPY.triage
+const TRIAGE = ADMIN_COPY.triage;
 
 const SR = ({ children }: { children: React.ReactNode }) => (
   <span style={SR_ONLY}>{children}</span>
-)
+);
 
 // ---------------------------------------------------------------- TierStrip
 
 interface TierStripProps {
-  label: string
-  count: number
+  label: string;
+  count: number;
   /** Severity ink. Omitted on the queues strip, which is not a severity. */
-  ink?: string
+  ink?: string;
   /** Suppresses the top border on the first strip in the panel body. */
-  first?: boolean
+  first?: boolean;
 }
 
 export const TierStrip = ({ label, count, ink, first }: TierStripProps) => (
@@ -73,7 +73,7 @@ export const TierStrip = ({ label, count, ink, first }: TierStripProps) => (
       <MonoLabel color="var(--fg-subtle)">{count}</MonoLabel>
     </span>
   </div>
-)
+);
 
 // --------------------------------------------------------------- ActionLink
 
@@ -83,10 +83,10 @@ const ActionLink = ({
   label,
   compact,
 }: {
-  label: string
-  compact: boolean
+  label: string;
+  compact: boolean;
 }) => {
-  const Chevron = GLYPH_ICONS.chevR
+  const Chevron = GLYPH_ICONS.chevR;
   return (
     <span
       aria-hidden="true"
@@ -108,8 +108,8 @@ const ActionLink = ({
       {label}
       <Chevron size={12} strokeWidth={2.1} />
     </span>
-  )
-}
+  );
+};
 
 // ------------------------------------------------------------- GlyphTile
 
@@ -117,10 +117,10 @@ const GlyphTile = ({
   glyph,
   ink,
 }: {
-  glyph: TriageGlyph
-  ink: { ink: string; fill: string; edge: string }
+  glyph: TriageGlyph;
+  ink: { ink: string; fill: string; edge: string };
 }) => {
-  const Icon = GLYPH_ICONS[glyph]
+  const Icon = GLYPH_ICONS[glyph];
   return (
     <span
       aria-hidden="true"
@@ -139,8 +139,8 @@ const GlyphTile = ({
     >
       <Icon size={15} strokeWidth={1.7} />
     </span>
-  )
-}
+  );
+};
 
 // ------------------------------------------------------------ Persistence
 
@@ -151,23 +151,23 @@ const persistenceValueStyle = {
   color: 'var(--fg-muted)',
   fontVariantNumeric: 'tabular-nums',
   letterSpacing: '0.01em',
-} as const
+} as const;
 
 // ---------------------------------------------------------------- FaultRow
 
 interface FaultRowProps {
-  fault: TriageFault
-  compact: boolean
+  fault: TriageFault;
+  compact: boolean;
   /** True in the banded presentation, where line 3 is dropped on mobile. */
-  dense: boolean
+  dense: boolean;
 }
 
 export const FaultRow = ({ fault, compact, dense }: FaultRowProps) => {
-  const { band, venue, dur } = fault
-  const tint = sevTint(band)
-  const meta = CONDITION_META[fault.condition]
-  const condition = TRIAGE.conditions[fault.condition]
-  const lines = evidenceLines(fault)
+  const { band, venue, dur } = fault;
+  const tint = sevTint(band);
+  const meta = CONDITION_META[fault.condition];
+  const condition = TRIAGE.conditions[fault.condition];
+  const lines = evidenceLines(fault);
 
   const label = TRIAGE.a11y.rowLabel(
     venue,
@@ -175,7 +175,7 @@ export const FaultRow = ({ fault, compact, dense }: FaultRowProps) => {
     lines.stat,
     dur,
     band,
-  )
+  );
 
   return (
     <Link
@@ -334,8 +334,8 @@ export const FaultRow = ({ fault, compact, dense }: FaultRowProps) => {
         </span>
       )}
     </Link>
-  )
-}
+  );
+};
 
 // ---------------------------------------------------------------- QueueRow
 
@@ -343,12 +343,12 @@ export const QueueRow = ({
   queue,
   compact,
 }: {
-  queue: TriageQueue
-  compact: boolean
+  queue: TriageQueue;
+  compact: boolean;
 }) => {
-  const copy = TRIAGE.queues[queue.kind]
-  const title = copy.title(queue.count)
-  const Icon = GLYPH_ICONS[QUEUE_GLYPH[queue.kind]]
+  const copy = TRIAGE.queues[queue.kind];
+  const title = copy.title(queue.count);
+  const Icon = GLYPH_ICONS[QUEUE_GLYPH[queue.kind]];
 
   return (
     <Link
@@ -416,13 +416,13 @@ export const QueueRow = ({
 
       <ActionLink label={TRIAGE.actions[queue.action]} compact={compact} />
     </Link>
-  )
-}
+  );
+};
 
 // ------------------------------------------------------- ExpectedStrip
 
-export const EXPECTED_TOGGLE_ID = 'triage-expected-toggle'
-export const EXPECTED_REGION_ID = 'triage-expected-rows'
+export const EXPECTED_TOGGLE_ID = 'triage-expected-toggle';
+export const EXPECTED_REGION_ID = 'triage-expected-rows';
 
 /**
  * The acknowledged tier. Unlike `TierStrip` this one is a control, because
@@ -434,9 +434,9 @@ export const ExpectedStrip = ({
   open,
   onToggle,
 }: {
-  count: number
-  open: boolean
-  onToggle: () => void
+  count: number;
+  open: boolean;
+  onToggle: () => void;
 }) => (
   // A button takes phrasing content only, so the heading wraps the control
   // rather than sitting inside it — the WAI-ARIA disclosure pattern.
@@ -483,7 +483,7 @@ export const ExpectedStrip = ({
       </span>
     </button>
   </h3>
-)
+);
 
 // -------------------------------------------------------- AcknowledgedRow
 
@@ -497,12 +497,12 @@ export const AcknowledgedRow = ({
   fault,
   compact,
 }: {
-  fault: AcknowledgedFault
-  compact: boolean
+  fault: AcknowledgedFault;
+  compact: boolean;
 }) => {
-  const { venue, acknowledgement } = fault
-  const condition = TRIAGE.conditions[fault.condition]
-  const Check = GLYPH_ICONS.check
+  const { venue, acknowledgement } = fault;
+  const condition = TRIAGE.conditions[fault.condition];
+  const Check = GLYPH_ICONS.check;
 
   return (
     <Link
@@ -610,5 +610,5 @@ export const AcknowledgedRow = ({
         </span>
       </span>
     </Link>
-  )
-}
+  );
+};

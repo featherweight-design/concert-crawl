@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { Eye, EyeOff, Flag } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton, StatusBadge } from '@/components/admin/primitives'
-import { EditField } from '../EditField'
-import { EditSection } from '../EditSection'
+import { Eye, EyeOff, Flag } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton, StatusBadge } from '@/components/admin/primitives';
+import { EditField } from '../EditField';
+import { EditSection } from '../EditSection';
 
 export interface ClassificationSectionProps {
-  genre: string[] | null
-  hiddenFromConsumer: boolean
-  isConcertReviewNeeded: boolean
-  onMarkNonConcert: () => void
-  onMarkAsConcert: () => void
-  disabled?: boolean
+  genre: string[] | null;
+  hiddenFromConsumer: boolean;
+  isConcertReviewNeeded: boolean;
+  onMarkNonConcert: () => void;
+  onMarkAsConcert: () => void;
+  disabled?: boolean;
 }
 
 export const ClassificationSection = ({
@@ -23,8 +23,8 @@ export const ClassificationSection = ({
   onMarkAsConcert,
   disabled = false,
 }: ClassificationSectionProps) => {
-  const { sections, fields, classification } = ADMIN_COPY.editor
-  const tags = genre ?? []
+  const { sections, fields, classification } = ADMIN_COPY.editor;
+  const tags = genre ?? [];
   return (
     <EditSection
       number={sections.classificationNumber}
@@ -160,5 +160,5 @@ export const ClassificationSection = ({
         </div>
       </div>
     </EditSection>
-  )
-}
+  );
+};

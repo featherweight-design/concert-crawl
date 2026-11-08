@@ -16,16 +16,16 @@
 
 // Relative source import (not package barrel) so this runs against a clean
 // checkout without a prior crawler-core build. tsx resolves .js → .ts source.
-import { extractWithLlm } from '../packages/crawler-core/src/lib/extractors/llm.js'
+import { extractWithLlm } from '../packages/crawler-core/src/lib/extractors/llm.js';
 
 interface EvalCase {
-  rawTitle: string
-  expectedArtist: string
-  expectedSupporting: string[]
+  rawTitle: string;
+  expectedArtist: string;
+  expectedSupporting: string[];
   // Expected tourName routing. Omit (or null) means "no tour named" — the
   // extractor must return a null/empty tourName. A string means the tour
   // subtitle must be routed here (not into supportingArtists).
-  expectedTourName?: string | null
+  expectedTourName?: string | null;
 }
 
 // Each case is a real (or realistic) run-on billing pulled from the prod
@@ -100,17 +100,17 @@ const CASES: EvalCase[] = [
     expectedSupporting: [],
     expectedTourName: 'Comatose 20 Years, Still Screaming Tour',
   },
-]
+];
 
 function normalize(name: string): string {
-  return name.trim().toLowerCase()
+  return name.trim().toLowerCase();
 }
 
 function arraysMatch(actual: string[], expected: string[]): boolean {
-  if (actual.length !== expected.length) return false
+  if (actual.length !== expected.length) return false;
   return actual.every(
     (val, idx) => normalize(val) === normalize(expected[idx] ?? ''),
-  )
+  );
 }
 
 // Tour names vary in punctuation/casing across model runs (e.g. apostrophes
@@ -121,7 +121,7 @@ function normalizeTour(name: string): string {
     .toLowerCase()
     .replace(/['’]/g, '')
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+    .trim();
 }
 
 function tourNameMatches(
@@ -129,9 +129,9 @@ function tourNameMatches(
   expected: string | null | undefined,
 ): boolean {
   if (expected == null || expected === '') {
-    return actual == null || actual === ''
+    return actual == null || actual === '';
   }
-  return actual != null && normalizeTour(actual) === normalizeTour(expected)
+  return actual != null && normalizeTour(actual) === normalizeTour(expected);
 }
 
 function buildHtml(cases: EvalCase[]): string {
@@ -144,88 +144,88 @@ function buildHtml(cases: EvalCase[]): string {
       // the card dates line up with the extractor prompt's "today" (also
       // UTC, via toISOString), avoiding local-vs-UTC drift that could push
       // the first card onto "today" and risk it being dropped as not-upcoming.
-      const now = new Date()
+      const now = new Date();
       const eventDate = new Date(
         Date.UTC(
           now.getUTCFullYear(),
           now.getUTCMonth(),
           now.getUTCDate() + idx + 1,
         ),
-      )
-      const iso = eventDate.toISOString().slice(0, 10)
+      );
+      const iso = eventDate.toISOString().slice(0, 10);
       const human = eventDate.toLocaleDateString('en-US', {
         timeZone: 'UTC',
         month: 'long',
         day: 'numeric',
         year: 'numeric',
-      })
+      });
       return `
         <article class="event">
           <h2 class="event-title">${testCase.rawTitle}</h2>
           <time datetime="${iso}">${human}</time>
           <a href="https://example.com/tickets/${idx}">Tickets</a>
-        </article>`
+        </article>`;
     })
-    .join('\n')
-  return `<!doctype html><html><body><main id="events">${cards}</main></body></html>`
+    .join('\n');
+  return `<!doctype html><html><body><main id="events">${cards}</main></body></html>`;
 }
 
 async function main(): Promise<void> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.error(
       'ANTHROPIC_API_KEY not set. Run: set -a; source apps/crawler/.env.local; set +a',
-    )
-    process.exit(2)
+    );
+    process.exit(2);
   }
 
-  const html = buildHtml(CASES)
-  const { events } = await extractWithLlm(html, 'https://example.com/events')
+  const html = buildHtml(CASES);
+  const { events } = await extractWithLlm(html, 'https://example.com/events');
 
-  const byRaw = new Map<string, (typeof events)[number]>()
+  const byRaw = new Map<string, (typeof events)[number]>();
   for (const evt of events) {
-    byRaw.set(normalize(evt.rawTitle), evt)
+    byRaw.set(normalize(evt.rawTitle), evt);
     // Also index on title in case the model cleaned rawTitle.
-    byRaw.set(normalize(evt.title), evt)
+    byRaw.set(normalize(evt.title), evt);
   }
 
-  let failures = 0
+  let failures = 0;
   for (const testCase of CASES) {
     const found =
       byRaw.get(normalize(testCase.rawTitle)) ??
       events.find((evt) =>
         normalize(evt.artist).startsWith(normalize(testCase.expectedArtist)),
-      )
+      );
 
     if (!found) {
-      failures += 1
-      console.log(`FAIL  ${testCase.rawTitle}\n      not extracted`)
-      continue
+      failures += 1;
+      console.log(`FAIL  ${testCase.rawTitle}\n      not extracted`);
+      continue;
     }
 
-    const supporting = found.supportingArtists ?? []
+    const supporting = found.supportingArtists ?? [];
     const artistOk =
-      normalize(found.artist) === normalize(testCase.expectedArtist)
-    const supportingOk = arraysMatch(supporting, testCase.expectedSupporting)
-    const tourOk = tourNameMatches(found.tourName, testCase.expectedTourName)
+      normalize(found.artist) === normalize(testCase.expectedArtist);
+    const supportingOk = arraysMatch(supporting, testCase.expectedSupporting);
+    const tourOk = tourNameMatches(found.tourName, testCase.expectedTourName);
 
     if (artistOk && supportingOk && tourOk) {
-      console.log(`PASS  ${testCase.rawTitle}`)
+      console.log(`PASS  ${testCase.rawTitle}`);
     } else {
-      failures += 1
+      failures += 1;
       console.log(
         `FAIL  ${testCase.rawTitle}\n` +
           `      artist    exp="${testCase.expectedArtist}" got="${found.artist}"\n` +
           `      openers   exp=[${testCase.expectedSupporting.join(', ')}] got=[${supporting.join(', ')}]\n` +
           `      tourName  exp="${testCase.expectedTourName ?? ''}" got="${found.tourName ?? ''}"`,
-      )
+      );
     }
   }
 
-  console.log(`\n${CASES.length - failures}/${CASES.length} passed`)
-  if (failures > 0) process.exit(1)
+  console.log(`\n${CASES.length - failures}/${CASES.length} passed`);
+  if (failures > 0) process.exit(1);
 }
 
 main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+  console.error(err);
+  process.exit(1);
+});

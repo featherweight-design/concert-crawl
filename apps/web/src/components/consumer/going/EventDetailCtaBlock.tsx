@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The Event Detail commit block, from design_handoff_event_detail_cta_tooltip
 // /event-cta-v2.jsx:328-379 (CommitBlockV2, Direction D).
@@ -14,61 +14,61 @@ import {
   useState,
   type CSSProperties,
   type ReactNode,
-} from 'react'
-import { useRouter } from 'next/navigation'
-import type { EventDetailResponse, PickerEntry } from '@concert-crawl/types'
-import { ApiError } from '@/lib/api'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { CCTip } from '@/components/ui/cc-tip'
-import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay'
-import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton'
-import { goingStateFor } from './lib/cta-state'
-import { GOING_COPY } from './definitions/copy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+} from 'react';
+import { useRouter } from 'next/navigation';
+import type { EventDetailResponse, PickerEntry } from '@concert-crawl/types';
+import { ApiError } from '@/lib/api';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useAttendingToggle } from '@/lib/queries/use-attending-toggle';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { CCTip } from '@/components/ui/cc-tip';
+import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay';
+import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton';
+import { goingStateFor } from './lib/cta-state';
+import { GOING_COPY } from './definitions/copy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 // Structurally narrowed to the fields this row actually reads, so an
 // EventDetailResponse satisfies it without dragging the whole payload into
 // tests.
 // Stands in for the server's attendingAt only while an optimistic commit is in
 // flight. Never displayed — goingStateFor reads presence, not value.
-const OPTIMISTIC_STAMP = 'optimistic'
+const OPTIMISTIC_STAMP = 'optimistic';
 
 export type GoingCtaEvent = Pick<
   EventDetailResponse,
   'id' | 'artist' | 'date' | 'status' | 'attendingAt'
-> & { venue: Pick<EventDetailResponse['venue'], 'timezone'> }
+> & { venue: Pick<EventDetailResponse['venue'], 'timezone'> };
 
 export const EventDetailCtaBlock = ({
   event,
   scaRegion,
   children,
 }: {
-  event: GoingCtaEvent
-  scaRegion: boolean
+  event: GoingCtaEvent;
+  scaRegion: boolean;
   /** The Watch strip. Rendered inside the card, and on its own whenever the
    *  commitment half is suppressed — watching a show never depends on Going. */
-  children?: ReactNode
+  children?: ReactNode;
 }) => {
-  const router = useRouter()
-  const { isLoading, active, surface } = useEntitlement('concert-history')
-  const { data: planState } = usePlanState()
-  const toggle = useAttendingToggle()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
+  const router = useRouter();
+  const { isLoading, active, surface } = useEntitlement('concert-history');
+  const { data: planState } = usePlanState();
+  const toggle = useAttendingToggle();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
   // Holds the *intent* that failed, not just that something did. The error
   // button can't re-derive it: the `error` treatment reports as off, so a
   // failed release would retry as a mark-going no-op. `null` means no failure.
-  const [failedIntent, setFailedIntent] = useState<boolean | null>(null)
+  const [failedIntent, setFailedIntent] = useState<boolean | null>(null);
   // Event Detail is server-rendered, so the committed state only arrives on the
   // router.refresh() round-trip. Holding the tapped value locally lets the
   // button answer the tap immediately instead of sitting inert for a network
   // hop. `null` means "no pending override — trust the server".
-  const [optimisticGoing, setOptimisticGoing] = useState<boolean | null>(null)
+  const [optimisticGoing, setOptimisticGoing] = useState<boolean | null>(null);
 
-  const serverGoing = event.attendingAt !== null
+  const serverGoing = event.attendingAt !== null;
 
   // Retire the override only when a refresh actually delivers new server state
   // that agrees with it. Clearing on the mutation callback would drop it before
@@ -76,21 +76,21 @@ export const EventDetailCtaBlock = ({
   // value alone isn't enough either: toggle twice before the first refresh lands
   // and the second override already matches the stale server value, so it would
   // clear early and let the first refresh flash the wrong state.
-  const lastServerGoing = useRef(serverGoing)
+  const lastServerGoing = useRef(serverGoing);
   useEffect(() => {
-    const changed = lastServerGoing.current !== serverGoing
-    lastServerGoing.current = serverGoing
+    const changed = lastServerGoing.current !== serverGoing;
+    lastServerGoing.current = serverGoing;
     if (changed && serverGoing === optimisticGoing) {
-      setOptimisticGoing(null)
+      setOptimisticGoing(null);
     }
-  }, [serverGoing, optimisticGoing])
+  }, [serverGoing, optimisticGoing]);
 
   // A cancelled show has no night to commit to, matching the API's history
   // filter, which excludes cancelled events outright. The strip still renders:
   // watching is free and ungated, so suppressing the commitment must never take
   // the eye down with it.
   if (event.status === 'cancelled') {
-    return <>{children}</>
+    return <>{children}</>;
   }
 
   // goingStateFor only reads attendingAt for presence, but the past-yes label
@@ -100,49 +100,49 @@ export const EventDetailCtaBlock = ({
       ? event.attendingAt
       : optimisticGoing
         ? (event.attendingAt ?? OPTIMISTIC_STAMP)
-        : null
+        : null;
 
   const serverState = goingStateFor({
     date: event.date,
     attendingAt,
     timezone: event.venue.timezone,
-  })
+  });
 
   // Past rows are read-only displays of something that already happened and have
   // nothing left to sell, so neither gate touches them. Among the rest `locked`
   // outranks `error`: a locked tap routes to the upgrade path and never retries
   // anything, so offering a retry the button can't honour would lie.
-  const isPast = serverState === 'past-yes' || serverState === 'past-no'
+  const isPast = serverState === 'past-yes' || serverState === 'past-no';
   const state = isPast
     ? serverState
     : !active
       ? 'locked'
       : failedIntent !== null
         ? 'error'
-        : serverState
+        : serverState;
 
   const openUpgrade = () => {
     // Signed out this is a reach for Concerts, not the taste paywall —
     // the entry keys the gate's copy as well as the funnel dimension.
     setPickerEntry(
       surface === 'tier-picker-on-tap' ? 'logged-out-going' : 'paywall',
-    )
-    setPickerOpen(true)
-  }
+    );
+    setPickerOpen(true);
+  };
 
   const onChange = (tapped: boolean) => {
     // A retry replays the intent that failed rather than whatever the error
     // treatment itself reports.
     const going =
-      state === 'error' && failedIntent !== null ? failedIntent : tapped
+      state === 'error' && failedIntent !== null ? failedIntent : tapped;
     if (!active) {
       // Locked: the button is the discovery surface for the perk, so a tap
       // routes to the upgrade path instead of mutating anything.
-      openUpgrade()
-      return
+      openUpgrade();
+      return;
     }
-    setFailedIntent(null)
-    setOptimisticGoing(going)
+    setFailedIntent(null);
+    setOptimisticGoing(going);
     toggle.mutate(
       { eventId: event.id, going },
       {
@@ -150,26 +150,26 @@ export const EventDetailCtaBlock = ({
         // via a refresh — the same pattern EventDetailClient uses elsewhere.
         onSuccess: () => router.refresh(),
         onError: (err) => {
-          setOptimisticGoing(null)
+          setOptimisticGoing(null);
           // A stale client entitlement can lose a race with server-side
           // enforcement. The API brands that 403, so route to the same upgrade
           // path a locked tap takes instead of showing a generic failure.
           if (err instanceof ApiError && err.code === 'entitlement_required') {
-            openUpgrade()
-            return
+            openUpgrade();
+            return;
           }
-          setFailedIntent(going)
+          setFailedIntent(going);
         },
       },
-    )
-  }
+    );
+  };
 
   const supportLine: CSSProperties = {
     fontFamily: 'var(--font-mono)',
     fontSize: 10.5,
     fontWeight: 600,
     letterSpacing: '0.03em',
-  }
+  };
 
   return (
     <div
@@ -275,5 +275,5 @@ export const EventDetailCtaBlock = ({
         entry={pickerEntry}
       />
     </div>
-  )
-}
+  );
+};

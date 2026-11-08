@@ -1,38 +1,38 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import Link from 'next/link'
-import { bucketMembersFor } from '@concert-crawl/types'
-import { cn } from '@/lib/utils'
-import { EventImage } from '../event-image'
-import { SupportingLine } from '@/components/consumer/event-title-block'
-import { RowTitleLine } from './RowTitleLine'
-import { WhenWhere } from './WhenWhere'
-import { MetaRow } from './MetaRow'
-import { PriceStack } from './PriceStack'
-import { EVENT_ROW_COPY as copy } from './definitions/copy'
-import { SURFACES, type RowSurface } from './definitions/surfaces'
-import { rowMin } from './definitions/row-min'
-import { rowChips, chipBudget } from './lib/row-chips'
-import { isStruck, resolveRowStatus } from './lib/row-status'
-import type { EventRowShow } from './lib/row-model'
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import { bucketMembersFor } from '@concert-crawl/types';
+import { cn } from '@/lib/utils';
+import { EventImage } from '../event-image';
+import { SupportingLine } from '@/components/consumer/event-title-block';
+import { RowTitleLine } from './RowTitleLine';
+import { WhenWhere } from './WhenWhere';
+import { MetaRow } from './MetaRow';
+import { PriceStack } from './PriceStack';
+import { EVENT_ROW_COPY as copy } from './definitions/copy';
+import { SURFACES, type RowSurface } from './definitions/surfaces';
+import { rowMin } from './definitions/row-min';
+import { rowChips, chipBudget } from './lib/row-chips';
+import { isStruck, resolveRowStatus } from './lib/row-status';
+import type { EventRowShow } from './lib/row-model';
 
-const NARROW_AT = 360
+const NARROW_AT = 360;
 
 interface EventRowProps {
-  show: EventRowShow
-  surface: RowSurface
+  show: EventRowShow;
+  surface: RowSurface;
   /** Outside the four-line contract and outside the chip budget. */
-  footer?: ReactNode
+  footer?: ReactNode;
   /** The surface's own row action, rendered in the gutter. */
-  action?: ReactNode
+  action?: ReactNode;
   /**
    * The active Vibe filter, so the genre the reader filtered on leads its chip.
    * Only Browse has one; every other surface passes nothing and gets no
    * reorder, which is the safe answer rather than a guessed one.
    */
-  filterVibe?: string | undefined
-  className?: string
+  filterVibe?: string | undefined;
+  className?: string;
 }
 
 export const EventRow = ({
@@ -43,39 +43,39 @@ export const EventRow = ({
   filterVibe,
   className,
 }: EventRowProps) => {
-  const rowRef = useRef<HTMLDivElement>(null)
-  const [narrow, setNarrow] = useState(false)
-  const config = SURFACES[surface]
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(false);
+  const config = SURFACES[surface];
 
   // Measured, not passed in. A caller-supplied `narrow` flag is what clipped
   // the 390 Watching list, which never passed one.
   useEffect(() => {
-    const row = rowRef.current
-    if (!row) return
+    const row = rowRef.current;
+    if (!row) return;
     const remeasure = () => {
-      const { width } = row.getBoundingClientRect()
+      const { width } = row.getBoundingClientRect();
       // A zero width is an unlaid-out row, not a 0px one. Reading it as narrow
       // is how a row in a layout-less environment gets stuck at 44px art.
-      if (width <= 0) return
-      setNarrow(width <= NARROW_AT)
-    }
-    remeasure()
+      if (width <= 0) return;
+      setNarrow(width <= NARROW_AT);
+    };
+    remeasure();
     // The first pass is what the row actually needs; live remeasurement is an
     // enhancement, so a runtime without ResizeObserver renders rather than
     // throws.
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(remeasure)
-    observer.observe(row)
-    return () => observer.disconnect()
-  }, [])
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, []);
 
-  const artSize = narrow ? 44 : 56
-  const hasSupportLine = config.showsSupports && show.supports.length > 0
+  const artSize = narrow ? 44 : 56;
+  const hasSupportLine = config.showsSupports && show.supports.length > 0;
   // Resolved once here rather than inside the chip builder, so the taxonomy
   // stays out of a module whose whole job is turning a show into chip data.
-  const chips = rowChips(show, surface, bucketMembersFor(filterVibe))
-  const status = resolveRowStatus(show.lifecycle, show.status)
-  const struck = isStruck(status)
+  const chips = rowChips(show, surface, bucketMembersFor(filterVibe));
+  const status = resolveRowStatus(show.lifecycle, show.status);
+  const struck = isStruck(status);
 
   return (
     <div
@@ -207,5 +207,5 @@ export const EventRow = ({
       </div>
       {footer}
     </div>
-  )
-}
+  );
+};

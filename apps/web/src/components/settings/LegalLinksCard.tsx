@@ -1,11 +1,11 @@
-import Link from 'next/link'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface LegalLinksCardProps {
   /** Desktop panels run one step wider than the mobile sheet. */
-  variant: 'mobile' | 'desktop'
+  variant: 'mobile' | 'desktop';
 }
 
 const LegalLinkRow = ({
@@ -13,9 +13,9 @@ const LegalLinkRow = ({
   href,
   insetClass,
 }: {
-  label: string
-  href: string
-  insetClass: string
+  label: string;
+  href: string;
+  insetClass: string;
 }) => (
   <Link
     href={href}
@@ -57,15 +57,15 @@ const LegalLinkRow = ({
       />
     </svg>
   </Link>
-)
+);
 
 /**
  * Signed in, the user menu drops its Terms/Privacy rows, so this is the only
  * path to our own documents outside the paid checkout panel.
  */
 export const LegalLinksCard = ({ variant }: LegalLinksCardProps) => {
-  const insetClass = variant === 'mobile' ? 'px-4' : 'px-5'
-  const dividerClass = variant === 'mobile' ? 'mx-4' : 'mx-5'
+  const insetClass = variant === 'mobile' ? 'px-4' : 'px-5';
+  const dividerClass = variant === 'mobile' ? 'mx-4' : 'mx-5';
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-surface-1">
@@ -81,5 +81,5 @@ export const LegalLinksCard = ({ variant }: LegalLinksCardProps) => {
         insetClass={insetClass}
       />
     </div>
-  )
-}
+  );
+};

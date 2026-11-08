@@ -1,16 +1,16 @@
-import type { CrewMemberPreview } from '@concert-crawl/types'
+import type { CrewMemberPreview } from '@concert-crawl/types';
 
-import { CREWS_COPY } from './definitions/copy'
+import { CREWS_COPY } from './definitions/copy';
 
 const initialFor = (handle: string): string =>
   handle
     .replace(/[^a-z0-9]/gi, '')
     .slice(0, 1)
-    .toUpperCase()
+    .toUpperCase();
 
 interface MemberDotProps {
-  member: CrewMemberPreview
-  size: number
+  member: CrewMemberPreview;
+  size: number;
 }
 
 /**
@@ -19,8 +19,8 @@ interface MemberDotProps {
  * don't know what to call them yet" (the #762 contract).
  */
 export const MemberDot = ({ member, size }: MemberDotProps) => {
-  const named = member.handle !== null && member.handle !== ''
-  const tone = member.avatarColor ?? 'signal'
+  const named = member.handle !== null && member.handle !== '';
+  const tone = member.avatarColor ?? 'signal';
 
   // The initial comes from another reader's handle, and a link around the dot
   // would hand it to analytics autocapture as nested span text.
@@ -62,20 +62,20 @@ export const MemberDot = ({ member, size }: MemberDotProps) => {
         />
       )}
     </span>
-  )
-}
+  );
+};
 
 interface MemberClusterProps {
-  members: CrewMemberPreview[]
-  memberCount: number
-  size: number
-  max: number
+  members: CrewMemberPreview[];
+  memberCount: number;
+  size: number;
+  max: number;
   /**
    * What the count means on this surface. The same cluster stands for the whole
    * roster on the crews list and for the people going on a show row, and
    * announcing "5 members" over a going cluster names the wrong set.
    */
-  label?: (count: number) => string
+  label?: (count: number) => string;
 }
 
 export const MemberCluster = ({
@@ -85,10 +85,10 @@ export const MemberCluster = ({
   max,
   label = CREWS_COPY.list.memberCount,
 }: MemberClusterProps) => {
-  const shown = members.slice(0, max)
+  const shown = members.slice(0, max);
   // Count, not the preview length: the API caps `members` at five, so a crew
   // of nine must still say nine.
-  const extra = memberCount - shown.length
+  const extra = memberCount - shown.length;
 
   return (
     // `isolation: isolate` is load-bearing. The overlapping dots need z-index
@@ -144,5 +144,5 @@ export const MemberCluster = ({
         </span>
       )}
     </span>
-  )
-}
+  );
+};

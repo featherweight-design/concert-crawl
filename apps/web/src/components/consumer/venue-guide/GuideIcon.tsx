@@ -1,8 +1,8 @@
-import type { GuideChipKey } from '@concert-crawl/types'
+import type { GuideChipKey } from '@concert-crawl/types';
 
 interface GuideIconProps {
-  chipType: GuideChipKey
-  size?: number
+  chipType: GuideChipKey;
+  size?: number;
 }
 
 // Lucide-style 24×24 line glyphs, one per v1 chip key. Ported verbatim from the
@@ -55,7 +55,7 @@ const PATHS: Record<GuideChipKey, React.ReactNode> = {
       <circle cx="15" cy="13.7" r=".6" fill="currentColor" stroke="none" />
     </>
   ),
-}
+};
 
 export const GuideIcon = ({ chipType, size = 16 }: GuideIconProps) => (
   <svg
@@ -72,4 +72,4 @@ export const GuideIcon = ({ chipType, size = 16 }: GuideIconProps) => (
   >
     {PATHS[chipType]}
   </svg>
-)
+);

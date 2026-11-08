@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { REPORTING_COPY } from './definitions/copy'
+import { REPORTING_COPY } from './definitions/copy';
 
-const copy = REPORTING_COPY.reportFooterLink
+const copy = REPORTING_COPY.reportFooterLink;
 
 const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
   'sold-out': 'sold out',
   cancelled: 'cancelled',
   postponed: 'postponed',
-}
+};
 
 export interface ReportFooterLinkProps {
-  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
-  onOpen: () => void
+  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed';
+  onOpen: () => void;
   /**
    * Announces the sign-up gate to assistive tech without drawing it (#1247).
    * The row is unchanged visually and still opens on tap; ReportSheet swaps
    * itself for the tier picker once it is open.
    */
-  signedOut?: boolean
+  signedOut?: boolean;
 }
 
 export const ReportFooterLink = ({
@@ -26,11 +26,11 @@ export const ReportFooterLink = ({
   onOpen,
   signedOut = false,
 }: ReportFooterLinkProps) => {
-  const hasStatus = liveStatus !== null
-  const title = hasStatus ? copy.titleHasStatus : copy.title
+  const hasStatus = liveStatus !== null;
+  const title = hasStatus ? copy.titleHasStatus : copy.title;
   const subtitle = hasStatus
     ? copy.subtitleHasStatus(STATUS_LABELS[liveStatus])
-    : copy.subtitle
+    : copy.subtitle;
 
   return (
     <div
@@ -138,5 +138,5 @@ export const ReportFooterLink = ({
         {copy.bottomNote}
       </p>
     </div>
-  )
-}
+  );
+};

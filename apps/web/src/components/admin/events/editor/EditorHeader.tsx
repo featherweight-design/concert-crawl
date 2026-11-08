@@ -1,45 +1,45 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
-import { AdminButton, MonoLabel } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { LifecycleBadge, type LifecycleStatus } from './LifecycleBadge'
-import { VerifyMark } from './VerifyMark'
+import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+import { AdminButton, MonoLabel } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { LifecycleBadge, type LifecycleStatus } from './LifecycleBadge';
+import { VerifyMark } from './VerifyMark';
 
 export interface EditorHeaderEvent {
-  id: string
-  title: string
-  venueName: string | null
-  date: string
-  showTime: string | null
-  status: LifecycleStatus
-  verified: boolean
+  id: string;
+  title: string;
+  venueName: string | null;
+  date: string;
+  showTime: string | null;
+  status: LifecycleStatus;
+  verified: boolean;
 }
 
 export interface EditorHeaderProps {
-  event: EditorHeaderEvent
-  viewDetailHref?: string
+  event: EditorHeaderEvent;
+  viewDetailHref?: string;
 }
 
 const formatDate = (yyyyMmDd: string): string => {
-  const parsed = new Date(yyyyMmDd + 'T12:00:00Z')
+  const parsed = new Date(yyyyMmDd + 'T12:00:00Z');
   return parsed.toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 
 const formatTime = (showTime: string | null): string => {
-  if (!showTime) return ''
-  const [hh, mm] = showTime.split(':')
-  const hours = parseInt(hh ?? '0', 10)
-  const minutes = mm ?? '00'
-  const meridiem = hours >= 12 ? 'PM' : 'AM'
-  const display = hours % 12 || 12
-  return `${display}:${minutes} ${meridiem}`
-}
+  if (!showTime) return '';
+  const [hh, mm] = showTime.split(':');
+  const hours = parseInt(hh ?? '0', 10);
+  const minutes = mm ?? '00';
+  const meridiem = hours >= 12 ? 'PM' : 'AM';
+  const display = hours % 12 || 12;
+  return `${display}:${minutes} ${meridiem}`;
+};
 
 export const EditorHeader = ({ event, viewDetailHref }: EditorHeaderProps) => {
   const subline = [
@@ -48,7 +48,7 @@ export const EditorHeader = ({ event, viewDetailHref }: EditorHeaderProps) => {
     formatTime(event.showTime),
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(' · ');
 
   return (
     <div
@@ -118,5 +118,5 @@ export const EditorHeader = ({ event, viewDetailHref }: EditorHeaderProps) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};

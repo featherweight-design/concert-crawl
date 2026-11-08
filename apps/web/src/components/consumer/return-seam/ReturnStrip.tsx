@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { Eye } from 'lucide-react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Eye } from 'lucide-react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.returnSeam
+const copy = CONSUMER_COPY.returnSeam;
 
-const VISIBLE_MS = 6000
+const VISIBLE_MS = 6000;
 
 interface ReturnStripProps {
   /** Null when the pending action could not be replayed — renders nothing. */
-  artist: string | null
-  href: string
+  artist: string | null;
+  href: string;
 }
 
 /**
@@ -25,14 +25,14 @@ interface ReturnStripProps {
  * chrome and need a dismiss nobody wants), and not fixed or sticky.
  */
 export const ReturnStrip = ({ artist, href }: ReturnStripProps) => {
-  const [visible, setVisible] = useState(true)
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), VISIBLE_MS)
-    return () => clearTimeout(timer)
-  }, [])
+    const timer = setTimeout(() => setVisible(false), VISIBLE_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!artist || !visible) return null
+  if (!artist || !visible) return null;
 
   return (
     <div
@@ -103,5 +103,5 @@ export const ReturnStrip = ({ artist, href }: ReturnStripProps) => {
         {copy.viewLink}
       </Link>
     </div>
-  )
-}
+  );
+};

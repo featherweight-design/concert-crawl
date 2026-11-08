@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
+import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 // Vitest config for tests at the repo root (currently: scripts/**/*.test.ts).
 //
@@ -17,7 +17,7 @@ import path from 'node:path'
 // cleanly; no alias needed. Mirrors packages/crawler-core/vitest.config.ts
 // pattern.
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
@@ -40,4 +40,4 @@ export default defineConfig({
     environment: 'node',
     include: ['scripts/**/*.test.ts'],
   },
-})
+});

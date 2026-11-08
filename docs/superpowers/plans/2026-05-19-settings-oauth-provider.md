@@ -16,16 +16,17 @@
 
 ## File Map
 
-| File | Action | Purpose |
-|---|---|---|
-| `apps/web/src/components/settings/AccountManagementRow.tsx` | Modify | Add connected account rows + Clerk footnote |
-| `apps/web/src/components/settings/AccountManagementRow.test.tsx` | Create | Tests for OAuth row rendering |
+| File                                                             | Action | Purpose                                     |
+| ---------------------------------------------------------------- | ------ | ------------------------------------------- |
+| `apps/web/src/components/settings/AccountManagementRow.tsx`      | Modify | Add connected account rows + Clerk footnote |
+| `apps/web/src/components/settings/AccountManagementRow.test.tsx` | Create | Tests for OAuth row rendering               |
 
 ---
 
 ## Task 1: Add connected account rows and Clerk footnote
 
 **Files:**
+
 - Modify: `apps/web/src/components/settings/AccountManagementRow.tsx`
 - Create: `apps/web/src/components/settings/AccountManagementRow.test.tsx`
 
@@ -34,29 +35,33 @@
 Create `apps/web/src/components/settings/AccountManagementRow.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { AccountManagementRow } from './AccountManagementRow'
+import { render, screen } from '@testing-library/react';
+import { AccountManagementRow } from './AccountManagementRow';
 
-const mockUseClerk = vi.fn(() => ({ openUserProfile: vi.fn() }))
-const mockUseUser = vi.fn()
+const mockUseClerk = vi.fn(() => ({ openUserProfile: vi.fn() }));
+const mockUseUser = vi.fn();
 
 vi.mock('@clerk/nextjs', () => ({
   useClerk: () => mockUseClerk(),
   useUser: () => mockUseUser(),
-}))
+}));
 
 describe('AccountManagementRow', () => {
   it('shows email row', () => {
-    mockUseUser.mockReturnValue({ user: { passwordEnabled: false, externalAccounts: [] } })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByText('test@example.com')).toBeInTheDocument()
-  })
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: false, externalAccounts: [] },
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.getByText('test@example.com')).toBeInTheDocument();
+  });
 
   it('shows no connected accounts section when externalAccounts is empty', () => {
-    mockUseUser.mockReturnValue({ user: { passwordEnabled: false, externalAccounts: [] } })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.queryByText('Connected Account')).not.toBeInTheDocument()
-  })
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: false, externalAccounts: [] },
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.queryByText('Connected Account')).not.toBeInTheDocument();
+  });
 
   it('shows connected account row for oauth_google', () => {
     mockUseUser.mockReturnValue({
@@ -64,11 +69,11 @@ describe('AccountManagementRow', () => {
         passwordEnabled: false,
         externalAccounts: [{ provider: 'oauth_google' }],
       },
-    })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByText('Connected Account')).toBeInTheDocument()
-    expect(screen.getByText('Google')).toBeInTheDocument()
-  })
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.getByText('Connected Account')).toBeInTheDocument();
+    expect(screen.getByText('Google')).toBeInTheDocument();
+  });
 
   it('shows connected account row for oauth_spotify', () => {
     mockUseUser.mockReturnValue({
@@ -76,10 +81,10 @@ describe('AccountManagementRow', () => {
         passwordEnabled: false,
         externalAccounts: [{ provider: 'oauth_spotify' }],
       },
-    })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByText('Spotify')).toBeInTheDocument()
-  })
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.getByText('Spotify')).toBeInTheDocument();
+  });
 
   it('shows multiple connected accounts', () => {
     mockUseUser.mockReturnValue({
@@ -90,24 +95,30 @@ describe('AccountManagementRow', () => {
           { provider: 'oauth_spotify' },
         ],
       },
-    })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByText('Google')).toBeInTheDocument()
-    expect(screen.getByText('Spotify')).toBeInTheDocument()
-  })
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.getByText('Google')).toBeInTheDocument();
+    expect(screen.getByText('Spotify')).toBeInTheDocument();
+  });
 
   it('renders Clerk privacy footnote', () => {
-    mockUseUser.mockReturnValue({ user: { passwordEnabled: false, externalAccounts: [] } })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByRole('link', { name: /privacy policy/i })).toBeInTheDocument()
-  })
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: false, externalAccounts: [] },
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(
+      screen.getByRole('link', { name: /privacy policy/i }),
+    ).toBeInTheDocument();
+  });
 
   it('still shows password row when passwordEnabled is true', () => {
-    mockUseUser.mockReturnValue({ user: { passwordEnabled: true, externalAccounts: [] } })
-    render(<AccountManagementRow email="test@example.com" />)
-    expect(screen.getByText(/password/i)).toBeInTheDocument()
-  })
-})
+    mockUseUser.mockReturnValue({
+      user: { passwordEnabled: true, externalAccounts: [] },
+    });
+    render(<AccountManagementRow email="test@example.com" />);
+    expect(screen.getByText(/password/i)).toBeInTheDocument();
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -127,7 +138,7 @@ function providerDisplayName(provider: string): string {
   return provider
     .replace(/^oauth_/, '')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 ```
 
@@ -136,25 +147,25 @@ function providerDisplayName(provider: string): string {
 Replace the full content of `apps/web/src/components/settings/AccountManagementRow.tsx` with:
 
 ```tsx
-'use client'
+'use client';
 
-import { useClerk, useUser } from '@clerk/nextjs'
-import { SETTINGS_COPY } from './definitions/copy'
+import { useClerk, useUser } from '@clerk/nextjs';
+import { SETTINGS_COPY } from './definitions/copy';
 
 interface AccountManagementRowProps {
-  email: string
+  email: string;
 }
 
 function providerDisplayName(provider: string): string {
   return provider
     .replace(/^oauth_/, '')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export function AccountManagementRow({ email }: AccountManagementRowProps) {
-  const { openUserProfile } = useClerk()
-  const { user } = useUser()
+  const { openUserProfile } = useClerk();
+  const { user } = useUser();
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -169,8 +180,22 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
             aria-hidden
             className="shrink-0 text-fg-muted"
           >
-            <rect x="2.5" y="3.5" width="11" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
-            <path d="M3 5l5 4 5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <rect
+              x="2.5"
+              y="3.5"
+              width="11"
+              height="9"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+            />
+            <path
+              d="M3 5l5 4 5-4"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <span className="flex-1 text-[14px] font-medium text-fg">
             {SETTINGS_COPY.emailRow}
@@ -191,10 +216,33 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
                 aria-hidden
                 className="shrink-0 text-fg-muted"
               >
-                <circle cx="4" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                <circle cx="12" cy="4" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M6.5 7l3-2M6.5 9l3 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <circle
+                  cx="4"
+                  cy="8"
+                  r="2.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <circle
+                  cx="12"
+                  cy="4"
+                  r="2.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="2.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M6.5 7l3-2M6.5 9l3 2"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
               </svg>
               <span className="flex-1 text-[14px] font-medium text-fg">
                 {SETTINGS_COPY.connectedAccountRow}
@@ -219,8 +267,21 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
                 aria-hidden
                 className="shrink-0 text-fg-muted"
               >
-                <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4" />
-                <path d="M5.5 7V5.5a2.5 2.5 0 015 0V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <rect
+                  x="3"
+                  y="7"
+                  width="10"
+                  height="7"
+                  rx="1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                />
+                <path
+                  d="M5.5 7V5.5a2.5 2.5 0 015 0V7"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
               </svg>
               <span className="flex-1 text-[14px] font-medium text-fg">
                 {SETTINGS_COPY.passwordRow}
@@ -241,7 +302,11 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
       {/* Clerk attribution */}
       <p
         className="text-fg-subtle"
-        style={{ fontFamily: 'var(--font-mono)', fontSize: '9px', letterSpacing: '0.04em' }}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '9px',
+          letterSpacing: '0.04em',
+        }}
       >
         Sign-in credentials and connected accounts are managed by Clerk.{' '}
         <a
@@ -254,7 +319,7 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
         </a>
       </p>
     </div>
-  )
+  );
 }
 ```
 
@@ -314,11 +379,13 @@ pnpm dev
 ```
 
 Sign in with an OAuth account (Google/Spotify) and check `/me`:
+
 - Connected Account row appears below the email row showing the provider name
 - Password row is absent (OAuth users don't have one)
 - Clerk footnote with "Privacy Policy →" link appears below the card
 
 Sign in with email/password and check `/me`:
+
 - No Connected Account row
 - Password row and Manage button still present
 - Footnote still appears

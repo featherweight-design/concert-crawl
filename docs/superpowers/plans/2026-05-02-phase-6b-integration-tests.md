@@ -41,7 +41,7 @@
 - [ ] **Step 1: Create `apps/api/vitest.integration.ts`**
 
 ```ts
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -65,7 +65,7 @@ export default defineConfig({
         'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
     },
   },
-})
+});
 ```
 
 - [ ] **Step 2: Add scripts to `apps/api/package.json`**
@@ -98,35 +98,35 @@ Expected: `No test files found` or similar — no failures.
 The globalSetup runs in the main Vitest process (not a worker) and receives the raw `DATABASE_URL_TEST` env var from the shell. It runs migrations so the test DB schema is current before any tests execute.
 
 ```ts
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import postgres from 'postgres'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Path from apps/api/src/test/setup/ → repo root → packages/db/migrations
 const MIGRATIONS_FOLDER = path.resolve(
   __dirname,
   '../../../../../packages/db/migrations',
-)
+);
 
 export async function setup(): Promise<void> {
   const testDbUrl =
     process.env['DATABASE_URL_TEST'] ??
-    'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
+    'postgresql://postgres:postgres@localhost:5433/concert_crawl_test';
 
-  console.log('[test] Running migrations on test DB...')
+  console.log('[test] Running migrations on test DB...');
 
-  const client = postgres(testDbUrl, { max: 1 })
-  const db = drizzle(client)
+  const client = postgres(testDbUrl, { max: 1 });
+  const db = drizzle(client);
 
-  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
+  await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
 
-  await client.end()
+  await client.end();
 
-  console.log('[test] Migrations complete.')
+  console.log('[test] Migrations complete.');
 }
 
 export async function teardown(): Promise<void> {
@@ -180,15 +180,15 @@ git commit -m "test: add vitest integration config and global migration setup"
 The `@concert-crawl/db` singleton reads `DATABASE_URL` at module init time. In integration test workers, `DATABASE_URL` is overridden to `DATABASE_URL_TEST` via the Vitest config `env` option — so `db` from `@concert-crawl/db` automatically connects to the test DB. Re-export it for clarity.
 
 ```ts
-export { db as testDb } from '@concert-crawl/db'
+export { db as testDb } from '@concert-crawl/db';
 ```
 
 - [ ] **Step 2: Create `apps/api/src/test/helpers/seed.ts`**
 
 ```ts
-import { sql } from 'drizzle-orm'
-import { events, venues } from '@concert-crawl/db'
-import { testDb } from './db.js'
+import { sql } from 'drizzle-orm';
+import { events, venues } from '@concert-crawl/db';
+import { testDb } from './db.js';
 
 /**
  * Truncate all core tables before each test.
@@ -198,7 +198,7 @@ import { testDb } from './db.js'
 export async function clearTables(): Promise<void> {
   await testDb.execute(
     sql`TRUNCATE events, venues, crawl_runs, audit_log, invite_codes, user_roles RESTART IDENTITY CASCADE`,
-  )
+  );
 }
 
 export async function seedVenue(
@@ -218,10 +218,10 @@ export async function seedVenue(
       verified: true,
       ...overrides,
     })
-    .returning()
+    .returning();
 
-  if (!venue) throw new Error('seedVenue: insert returned no rows')
-  return venue
+  if (!venue) throw new Error('seedVenue: insert returned no rows');
+  return venue;
 }
 
 export async function seedEvent(
@@ -240,10 +240,10 @@ export async function seedEvent(
       confidence: 1.0,
       ...overrides,
     })
-    .returning()
+    .returning();
 
-  if (!event) throw new Error('seedEvent: insert returned no rows')
-  return event
+  if (!event) throw new Error('seedEvent: insert returned no rows');
+  return event;
 }
 ```
 
@@ -271,7 +271,7 @@ This is the simplest test — it proves the whole integration test setup works e
 Create `apps/api/src/routes/health.integration.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock Clerk auth — health endpoint doesn't require auth but other
 // routes loaded by createApp do. This prevents Clerk from making real API calls.
@@ -279,26 +279,26 @@ vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { createApp } from '../app.js'
-import { clearTables } from '../test/helpers/seed.js'
+import { createApp } from '../app.js';
+import { clearTables } from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 describe('GET /v1/health — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns 200 with status ok', async () => {
-    const res = await app.request('/v1/health')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/health');
+    expect(res.status).toBe(200);
 
-    const body = await res.json()
-    expect(body).toMatchObject({ status: 'ok' })
-  })
-})
+    const body = await res.json();
+    expect(body).toMatchObject({ status: 'ok' });
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails (no DB connected yet)**
@@ -330,77 +330,77 @@ git commit -m "test: add health endpoint integration test"
 - [ ] **Step 1: Write the test**
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { createApp } from '../app.js'
-import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { createApp } from '../app.js';
+import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 describe('GET /v1/venues — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns an empty list when no venues exist', async () => {
-    const res = await app.request('/v1/venues')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.venues).toHaveLength(0)
-  })
+    const res = await app.request('/v1/venues');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.venues).toHaveLength(0);
+  });
 
   it('returns only active venues', async () => {
-    await seedVenue({ slug: 'active-venue', active: true })
-    await seedVenue({ slug: 'inactive-venue', active: false })
+    await seedVenue({ slug: 'active-venue', active: true });
+    await seedVenue({ slug: 'inactive-venue', active: false });
 
-    const res = await app.request('/v1/venues')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.venues).toHaveLength(1)
-    expect(body.venues[0].slug).toBe('active-venue')
-  })
+    const res = await app.request('/v1/venues');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.venues).toHaveLength(1);
+    expect(body.venues[0].slug).toBe('active-venue');
+  });
 
   it('returns multiple active venues', async () => {
-    await seedVenue({ slug: 'venue-a', name: 'Venue A' })
-    await seedVenue({ slug: 'venue-b', name: 'Venue B' })
+    await seedVenue({ slug: 'venue-a', name: 'Venue A' });
+    await seedVenue({ slug: 'venue-b', name: 'Venue B' });
 
-    const res = await app.request('/v1/venues')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.venues).toHaveLength(2)
-  })
-})
+    const res = await app.request('/v1/venues');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.venues).toHaveLength(2);
+  });
+});
 
 describe('GET /v1/venues/:slug — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns venue by slug', async () => {
     const venue = await seedVenue({
       slug: 'larimer-lounge',
       name: 'Larimer Lounge',
-    })
-    await seedEvent(venue.id)
+    });
+    await seedEvent(venue.id);
 
-    const res = await app.request('/v1/venues/larimer-lounge')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.venue.name).toBe('Larimer Lounge')
-    expect(body.venue.slug).toBe('larimer-lounge')
-  })
+    const res = await app.request('/v1/venues/larimer-lounge');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.venue.name).toBe('Larimer Lounge');
+    expect(body.venue.slug).toBe('larimer-lounge');
+  });
 
   it('returns 404 for unknown slug', async () => {
-    const res = await app.request('/v1/venues/does-not-exist')
-    expect(res.status).toBe(404)
-  })
-})
+    const res = await app.request('/v1/venues/does-not-exist');
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 2: Run integration tests**
@@ -430,115 +430,115 @@ git commit -m "test: add venues-public integration tests"
 - [ ] **Step 1: Write the test**
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { createApp } from '../app.js'
-import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { createApp } from '../app.js';
+import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 describe('GET /v1/events — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns empty list when no events exist', async () => {
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.events).toHaveLength(0)
-  })
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events).toHaveLength(0);
+  });
 
   it('returns events with venue data', async () => {
     const venue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird',
-    })
-    await seedEvent(venue.id, { title: 'Rock Night', artist: 'The Rocks' })
+    });
+    await seedEvent(venue.id, { title: 'Rock Night', artist: 'The Rocks' });
 
-    const res = await app.request('/v1/events')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.events).toHaveLength(1)
-    expect(body.events[0].title).toBe('Rock Night')
-    expect(body.events[0].artist).toBe('The Rocks')
+    const res = await app.request('/v1/events');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].title).toBe('Rock Night');
+    expect(body.events[0].artist).toBe('The Rocks');
     // Venue join should be present
-    expect(body.events[0].venue?.name).toBe('Bluebird Theater')
-  })
+    expect(body.events[0].venue?.name).toBe('Bluebird Theater');
+  });
 
   it('filters by venueId query param', async () => {
-    const venueA = await seedVenue({ slug: 'venue-a' })
-    const venueB = await seedVenue({ slug: 'venue-b' })
-    await seedEvent(venueA.id, { title: 'Show at A' })
-    await seedEvent(venueB.id, { title: 'Show at B' })
+    const venueA = await seedVenue({ slug: 'venue-a' });
+    const venueB = await seedVenue({ slug: 'venue-b' });
+    await seedEvent(venueA.id, { title: 'Show at A' });
+    await seedEvent(venueB.id, { title: 'Show at B' });
 
-    const res = await app.request(`/v1/events?venueId=${venueA.id}`)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.events).toHaveLength(1)
-    expect(body.events[0].title).toBe('Show at A')
-  })
+    const res = await app.request(`/v1/events?venueId=${venueA.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].title).toBe('Show at A');
+  });
 
   it('filters by startDate query param', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Past Show',
       date: new Date('2026-01-01T20:00:00Z'),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Future Show',
       date: new Date('2026-12-01T20:00:00Z'),
-    })
+    });
 
-    const res = await app.request('/v1/events?startDate=2026-06-01')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.events).toHaveLength(1)
-    expect(body.events[0].title).toBe('Future Show')
-  })
+    const res = await app.request('/v1/events?startDate=2026-06-01');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events).toHaveLength(1);
+    expect(body.events[0].title).toBe('Future Show');
+  });
 
   it('respects the limit query param', async () => {
-    const venue = await seedVenue()
-    await seedEvent(venue.id, { title: 'Show 1' })
-    await seedEvent(venue.id, { title: 'Show 2' })
-    await seedEvent(venue.id, { title: 'Show 3' })
+    const venue = await seedVenue();
+    await seedEvent(venue.id, { title: 'Show 1' });
+    await seedEvent(venue.id, { title: 'Show 2' });
+    await seedEvent(venue.id, { title: 'Show 3' });
 
-    const res = await app.request('/v1/events?limit=2')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.events).toHaveLength(2)
-  })
-})
+    const res = await app.request('/v1/events?limit=2');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.events).toHaveLength(2);
+  });
+});
 
 describe('GET /v1/events/:id — integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns an event by id', async () => {
-    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' })
-    const event = await seedEvent(venue.id, { title: 'Jazz Night' })
+    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' });
+    const event = await seedEvent(venue.id, { title: 'Jazz Night' });
 
-    const res = await app.request(`/v1/events/${event.id}`)
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.event.title).toBe('Jazz Night')
-    expect(body.event.venue?.name).toBe('Ogden Theatre')
-  })
+    const res = await app.request(`/v1/events/${event.id}`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.event.title).toBe('Jazz Night');
+    expect(body.event.venue?.name).toBe('Ogden Theatre');
+  });
 
   it('returns 404 for unknown id', async () => {
     const res = await app.request(
       '/v1/events/00000000-0000-0000-0000-000000000000',
-    )
-    expect(res.status).toBe(404)
-  })
-})
+    );
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 - [ ] **Step 2: Run integration tests**
@@ -570,87 +570,87 @@ This tests the RBAC layer against real DB data — the most valuable integration
 - [ ] **Step 1: Write the test**
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // vi.hoisted creates the shared auth state before any module imports.
 // Each test configures authState.current to control what getAuth() returns.
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../../app.js'
-import { clearTables, seedVenue } from '../../test/helpers/seed.js'
+import { createApp } from '../../app.js';
+import { clearTables, seedVenue } from '../../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(role: 'admin' | 'sub_admin' | 'user'): void {
   authState.current = {
     userId: 'test-user-1',
     sessionClaims: { metadata: { role } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 describe('GET /v1/admin/venues — integration', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('returns 401 when unauthenticated', async () => {
-    const res = await app.request('/v1/admin/venues')
-    expect(res.status).toBe(401)
-  })
+    const res = await app.request('/v1/admin/venues');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 403 when authenticated as a regular user', async () => {
-    setAuth('user')
-    const res = await app.request('/v1/admin/venues')
-    expect(res.status).toBe(403)
-  })
+    setAuth('user');
+    const res = await app.request('/v1/admin/venues');
+    expect(res.status).toBe(403);
+  });
 
   it('returns 200 and venue list when authenticated as admin', async () => {
-    setAuth('admin')
-    await seedVenue({ name: 'Admin Venue', slug: 'admin-venue' })
+    setAuth('admin');
+    await seedVenue({ name: 'Admin Venue', slug: 'admin-venue' });
 
-    const res = await app.request('/v1/admin/venues')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.venues).toHaveLength(1)
-    expect(body.venues[0].name).toBe('Admin Venue')
-  })
+    const res = await app.request('/v1/admin/venues');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.venues).toHaveLength(1);
+    expect(body.venues[0].name).toBe('Admin Venue');
+  });
 
   it('returns all venues including inactive ones for admin', async () => {
-    setAuth('admin')
-    await seedVenue({ slug: 'active-venue', active: true })
-    await seedVenue({ slug: 'inactive-venue', active: false })
+    setAuth('admin');
+    await seedVenue({ slug: 'active-venue', active: true });
+    await seedVenue({ slug: 'inactive-venue', active: false });
 
-    const res = await app.request('/v1/admin/venues')
-    expect(res.status).toBe(200)
-    const body = await res.json()
+    const res = await app.request('/v1/admin/venues');
+    expect(res.status).toBe(200);
+    const body = await res.json();
     // Admin endpoint should return all venues, not filter by active
-    expect(body.venues).toHaveLength(2)
-  })
-})
+    expect(body.venues).toHaveLength(2);
+  });
+});
 
 describe('POST /v1/admin/venues — integration', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('returns 401 when unauthenticated', async () => {
     const res = await app.request('/v1/admin/venues', {
@@ -661,22 +661,22 @@ describe('POST /v1/admin/venues — integration', () => {
         slug: 'new-venue',
         websiteUrl: 'https://example.com',
       }),
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 400 on missing required fields', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const res = await app.request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Incomplete Venue' }), // missing slug, websiteUrl
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('creates a venue and returns 201', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const res = await app.request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -688,14 +688,14 @@ describe('POST /v1/admin/venues — integration', () => {
         state: 'CO',
         timezone: 'America/Denver',
       }),
-    })
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.venue.name).toBe('Red Rocks Amphitheatre')
-    expect(body.venue.slug).toBe('red-rocks')
-    expect(body.venue.id).toBeDefined()
-  })
-})
+    });
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.venue.name).toBe('Red Rocks Amphitheatre');
+    expect(body.venue.slug).toBe('red-rocks');
+    expect(body.venue.id).toBeDefined();
+  });
+});
 ```
 
 - [ ] **Step 2: Run all integration tests**

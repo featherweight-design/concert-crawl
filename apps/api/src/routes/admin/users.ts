@@ -1,9 +1,9 @@
-import { Hono } from 'hono'
-import { getAuth } from '@hono/clerk-auth'
-import { z } from 'zod'
-import { zValidator } from '@hono/zod-validator'
-import { createClerkClient } from '@clerk/backend'
-import { desc, eq, sql } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { getAuth } from '@hono/clerk-auth';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
+import { createClerkClient } from '@clerk/backend';
+import { desc, eq, sql } from 'drizzle-orm';
 import {
   db,
   events,
@@ -13,50 +13,50 @@ import {
   userEvents,
   userProfiles,
   venues,
-} from '@concert-crawl/db'
-import type { AdminVariables } from './index.js'
+} from '@concert-crawl/db';
+import type { AdminVariables } from './index.js';
 import type {
   AdminUserDetail,
   AdminUserFeedbackItem,
   AdminUserTrackedEventItem,
   Role,
-} from '@concert-crawl/types'
-import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types'
-import { isClerkNotFound } from '../../lib/clerk-errors.js'
+} from '@concert-crawl/types';
+import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types';
+import { isClerkNotFound } from '../../lib/clerk-errors.js';
 
-const userIdParamSchema = z.object({ userId: z.string().min(1).max(255) })
+const userIdParamSchema = z.object({ userId: z.string().min(1).max(255) });
 
-const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
-const clerkClient = createClerkClient({ secretKey })
+const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
+const clerkClient = createClerkClient({ secretKey });
 
-const ASSIGNABLE_ROLES: readonly Role[] = ['admin', 'promoter', 'beta', 'user']
+const ASSIGNABLE_ROLES: readonly Role[] = ['admin', 'promoter', 'beta', 'user'];
 
 const patchRoleSchema = z.object({
   role: z.enum(['admin', 'promoter', 'beta', 'user']),
-})
+});
 
-export const usersAdminRouter = new Hono<AdminVariables>()
+export const usersAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/users — list all Clerk users with their current role
 usersAdminRouter.get('/', async (ctx) => {
-  const limitParam = ctx.req.query('limit')
-  const offsetParam = ctx.req.query('offset')
-  const query = ctx.req.query('query') ?? ''
+  const limitParam = ctx.req.query('limit');
+  const offsetParam = ctx.req.query('offset');
+  const query = ctx.req.query('query') ?? '';
 
-  const limit = Math.min(Number(limitParam) || 50, 100)
-  const offset = Number(offsetParam) || 0
+  const limit = Math.min(Number(limitParam) || 50, 100);
+  const offset = Number(offsetParam) || 0;
 
   const listParams = {
     limit,
     offset,
     orderBy: '-created_at' as const,
     ...(query ? { query } : {}),
-  }
-  const result = await clerkClient.users.getUserList(listParams)
+  };
+  const result = await clerkClient.users.getUserList(listParams);
 
   const data = result.data.map((user) => {
-    const rawRole = (user.publicMetadata as { role?: unknown }).role
-    const role: Role = isRole(rawRole) ? rawRole : 'user'
+    const rawRole = (user.publicMetadata as { role?: unknown }).role;
+    const role: Role = isRole(rawRole) ? rawRole : 'user';
     return {
       id: user.id,
       email: user.emailAddresses[0]?.emailAddress ?? '',
@@ -66,11 +66,11 @@ usersAdminRouter.get('/', async (ctx) => {
         null,
       role,
       createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
-    }
-  })
+    };
+  });
 
-  return ctx.json({ success: true, data: { data, total: result.totalCount } })
-})
+  return ctx.json({ success: true, data: { data, total: result.totalCount } });
+});
 
 // GET /v1/admin/users/:userId — full detail for one user: identity (Clerk +
 // profile), feedback history, and watchlist. Backs the "View @user" jump from
@@ -80,27 +80,27 @@ usersAdminRouter.get(
   '/:userId',
   zValidator('param', userIdParamSchema),
   async (ctx) => {
-    const { userId } = ctx.req.valid('param')
+    const { userId } = ctx.req.valid('param');
 
     // Clerk is the identity source of truth; a deleted account can still be
     // referenced by old feedback rows, so tolerate a missing Clerk record.
     let clerkUser: Awaited<
       ReturnType<typeof clerkClient.users.getUser>
-    > | null = null
+    > | null = null;
     try {
-      clerkUser = await clerkClient.users.getUser(userId)
+      clerkUser = await clerkClient.users.getUser(userId);
     } catch (err) {
       // Rethrow anything but a confirmed 404 so transient Clerk failures
       // surface as a 5xx (via app.onError) instead of a false "deleted account".
-      if (!isClerkNotFound(err)) throw err
-      clerkUser = null
+      if (!isClerkNotFound(err)) throw err;
+      clerkUser = null;
     }
 
     const [profile] = await db
       .select()
       .from(userProfiles)
       .where(eq(userProfiles.userId, userId))
-      .limit(1)
+      .limit(1);
 
     // Cheap existence signals first: counts, profile, and Clerk decide the
     // 404 before we pay for the two 100-row list+join queries below. The four
@@ -127,12 +127,12 @@ usersAdminRouter.get(
         .select({ value: sql<number>`count(*)::int` })
         .from(userArtistFollows)
         .where(eq(userArtistFollows.userId, userId)),
-    ])
+    ]);
 
-    const feedbackTotal = feedbackCountRow?.value ?? 0
-    const trackedEventsTotal = trackedEventsCountRow?.value ?? 0
-    const priceTotal = priceCountRow?.value ?? 0
-    const artistTotal = artistCountRow?.value ?? 0
+    const feedbackTotal = feedbackCountRow?.value ?? 0;
+    const trackedEventsTotal = trackedEventsCountRow?.value ?? 0;
+    const priceTotal = priceCountRow?.value ?? 0;
+    const artistTotal = artistCountRow?.value ?? 0;
 
     // 404 only when the id maps to nothing at all — no Clerk record, no
     // profile, and no activity of any kind — so a bad URL renders notFound()
@@ -145,7 +145,7 @@ usersAdminRouter.get(
       priceTotal === 0 &&
       artistTotal === 0
     ) {
-      return ctx.json({ success: false, error: 'User not found' }, 404)
+      return ctx.json({ success: false, error: 'User not found' }, 404);
     }
 
     // Totals above stay accurate past this display limit; the lists only run
@@ -182,20 +182,20 @@ usersAdminRouter.get(
         .where(eq(userEvents.userId, userId))
         .orderBy(desc(userEvents.createdAt))
         .limit(100),
-    ])
+    ]);
 
     const publicMeta = clerkUser?.publicMetadata as
-      { role?: unknown; handle?: unknown } | undefined
-    const rawRole = publicMeta?.role
+      { role?: unknown; handle?: unknown } | undefined;
+    const rawRole = publicMeta?.role;
     // A live Clerk account with no explicit role is a plain 'user' (matching
     // the list endpoint); null is reserved for deleted/missing Clerk records.
     const role: Role | null = isRole(rawRole)
       ? rawRole
       : clerkUser
         ? 'user'
-        : null
-    const rawHandle = publicMeta?.handle
-    const clerkHandle = typeof rawHandle === 'string' ? rawHandle : null
+        : null;
+    const rawHandle = publicMeta?.handle;
+    const clerkHandle = typeof rawHandle === 'string' ? rawHandle : null;
 
     const feedbackHistory: AdminUserFeedbackItem[] = feedbackRows.map(
       (row) => ({
@@ -207,7 +207,7 @@ usersAdminRouter.get(
         issueUrl: row.issueUrl,
         createdAt: row.createdAt.toISOString(),
       }),
-    )
+    );
 
     const trackedEvents: AdminUserTrackedEventItem[] = trackedEventRows.map(
       (row) => ({
@@ -219,7 +219,7 @@ usersAdminRouter.get(
         attendingAt: row.attendingAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
       }),
-    )
+    );
 
     // A Clerk account can hold several addresses; surface the primary one
     // rather than whichever happens to sit at index 0.
@@ -228,7 +228,7 @@ usersAdminRouter.get(
         (address) => address.id === clerkUser.primaryEmailAddressId,
       )?.emailAddress ??
       clerkUser?.emailAddresses[0]?.emailAddress ??
-      null
+      null;
 
     const data: AdminUserDetail = {
       id: userId,
@@ -250,29 +250,29 @@ usersAdminRouter.get(
       },
       feedback: feedbackHistory,
       trackedEvents,
-    }
+    };
 
-    return ctx.json({ success: true, data })
+    return ctx.json({ success: true, data });
   },
-)
+);
 
 // PATCH /v1/admin/users/:id/role — assign a role to a Clerk user
 usersAdminRouter.patch(
   '/:id/role',
   zValidator('json', patchRoleSchema),
   async (ctx) => {
-    const auth = getAuth(ctx)
-    const targetUserId = ctx.req.param('id')
-    const { role } = ctx.req.valid('json')
+    const auth = getAuth(ctx);
+    const targetUserId = ctx.req.param('id');
+    const { role } = ctx.req.valid('json');
 
     if (!ASSIGNABLE_ROLES.includes(role)) {
-      return ctx.json({ success: false, error: 'Invalid role' }, 400)
+      return ctx.json({ success: false, error: 'Invalid role' }, 400);
     }
 
     // Prevent self-demotion from admin (safety guard)
     if (auth?.userId === targetUserId) {
-      const self = await clerkClient.users.getUser(targetUserId)
-      const currentRole = (self.publicMetadata as { role?: unknown }).role
+      const self = await clerkClient.users.getUser(targetUserId);
+      const currentRole = (self.publicMetadata as { role?: unknown }).role;
       if (
         currentRole === 'admin' &&
         ROLE_HIERARCHY.indexOf(role) < ROLE_HIERARCHY.indexOf('admin')
@@ -280,19 +280,19 @@ usersAdminRouter.patch(
         return ctx.json(
           { success: false, error: 'Cannot demote your own admin account' },
           403,
-        )
+        );
       }
     }
 
     await clerkClient.users.updateUserMetadata(targetUserId, {
       publicMetadata: { role },
-    })
+    });
 
-    ctx.set('auditAction', 'user.role.update')
-    ctx.set('auditTargetId', targetUserId)
-    ctx.set('auditActorId', auth?.userId ?? 'unknown')
-    ctx.set('auditMeta', { role })
+    ctx.set('auditAction', 'user.role.update');
+    ctx.set('auditTargetId', targetUserId);
+    ctx.set('auditActorId', auth?.userId ?? 'unknown');
+    ctx.set('auditMeta', { role });
 
-    return ctx.json({ success: true })
+    return ctx.json({ success: true });
   },
-)
+);

@@ -1,26 +1,26 @@
-'use client'
+'use client';
 
-import { Eye, Flag, RefreshCw, Trash2, X } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton } from '@/components/admin/primitives'
+import { Eye, Flag, RefreshCw, Trash2, X } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton } from '@/components/admin/primitives';
 
-const COPY = ADMIN_COPY.review.allEvents.bulkDock
+const COPY = ADMIN_COPY.review.allEvents.bulkDock;
 
 export interface BulkDockProps {
-  count: number
-  onUnverify: () => void
-  onMarkNonConcert: () => void
-  onMarkAsConcert: () => void
+  count: number;
+  onUnverify: () => void;
+  onMarkNonConcert: () => void;
+  onMarkAsConcert: () => void;
   // Mark-as-concert only makes sense for hidden rows. Parent computes this
   // from the selection — true when every selected row visible on the
   // current page has hiddenFromConsumer=true. When false, the button stays
   // visible but disabled; a visible caption renders below the dock
   // explaining why (visible-text, not a title-tooltip — keyboard/touch/SR
   // accessible per PR #802 R3 precedent). (#809; #814 review round 1)
-  canMarkAsConcert: boolean
-  onDelete: () => void
-  onClear: () => void
-  pending?: boolean
+  canMarkAsConcert: boolean;
+  onDelete: () => void;
+  onClear: () => void;
+  pending?: boolean;
 }
 
 export const BulkDock = ({
@@ -33,9 +33,9 @@ export const BulkDock = ({
   onClear,
   pending = false,
 }: BulkDockProps) => {
-  if (count === 0) return null
-  const markAsConcertDisabled = pending || !canMarkAsConcert
-  const captionId = 'bulk-dock-mark-as-concert-caption'
+  if (count === 0) return null;
+  const markAsConcertDisabled = pending || !canMarkAsConcert;
+  const captionId = 'bulk-dock-mark-as-concert-caption';
   return (
     <div
       role="region"
@@ -169,5 +169,5 @@ export const BulkDock = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

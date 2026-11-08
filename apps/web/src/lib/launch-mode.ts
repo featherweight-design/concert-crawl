@@ -15,4 +15,4 @@
  * an unannounced public launch. See #794.
  */
 export const isPublicBrowseEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_PUBLIC_BROWSE === 'true'
+  process.env.NEXT_PUBLIC_PUBLIC_BROWSE === 'true';

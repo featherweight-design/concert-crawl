@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
 // Shared CTA button — one visual system across the desktop card and the
 // mobile accordion (design handoff TierCtaButton).
 
-import { useEffect, useRef } from 'react'
-import { tierShell, stampColor } from './lib/tier-shell'
-import type { TierCta, TierKey } from './definitions/types'
+import { useEffect, useRef } from 'react';
+import { tierShell, stampColor } from './lib/tier-shell';
+import type { TierCta, TierKey } from './definitions/types';
 
 interface TierCtaButtonProps {
-  tierKey: TierKey
-  cta: TierCta
-  onSelect: (tierKey: TierKey, cta: TierCta) => void
+  tierKey: TierKey;
+  cta: TierCta;
+  onSelect: (tierKey: TierKey, cta: TierCta) => void;
   /** Focus on mount — the failure-surface dismiss returns focus here. */
-  autoFocus?: boolean
+  autoFocus?: boolean;
 }
 
 export const TierCtaButton = ({
@@ -21,12 +21,12 @@ export const TierCtaButton = ({
   onSelect,
   autoFocus = false,
 }: TierCtaButtonProps) => {
-  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
-    if (autoFocus) buttonRef.current?.focus()
-  }, [autoFocus])
-  const shell = tierShell(tierKey)
-  const stamp = stampColor(shell)
+    if (autoFocus) buttonRef.current?.focus();
+  }, [autoFocus]);
+  const shell = tierShell(tierKey);
+  const stamp = stampColor(shell);
 
   const background =
     cta.tone === 'signal'
@@ -35,7 +35,7 @@ export const TierCtaButton = ({
         ? 'linear-gradient(135deg, var(--signal), color-mix(in oklch, var(--accent) 60%, var(--signal)))'
         : cta.tone === 'current'
           ? 'var(--surface-2)'
-          : 'transparent'
+          : 'transparent';
   const color =
     cta.tone === 'signal' || cta.tone === 'founder'
       ? 'var(--fg-on-accent)'
@@ -43,7 +43,7 @@ export const TierCtaButton = ({
         ? 'var(--fg)'
         : cta.tone === 'ghost-accent'
           ? 'var(--accent)'
-          : 'var(--fg-muted)'
+          : 'var(--fg-muted)';
   const border =
     cta.tone === 'current'
       ? `1px solid ${stamp}`
@@ -51,7 +51,7 @@ export const TierCtaButton = ({
         ? '1px solid color-mix(in oklch, var(--accent) 50%, var(--border-strong))'
         : cta.tone === 'ghost'
           ? '1px solid var(--border)'
-          : '1px solid transparent'
+          : '1px solid transparent';
 
   return (
     <button
@@ -103,5 +103,5 @@ export const TierCtaButton = ({
       )}
       <span>{cta.label}</span>
     </button>
-  )
-}
+  );
+};

@@ -1,7 +1,7 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { httpUrl } from '../../lib/url-schema.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { httpUrl } from '../../lib/url-schema.js';
 import {
   and,
   asc,
@@ -16,7 +16,7 @@ import {
   or,
   sql,
   type SQL,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   auditLog,
   db,
@@ -27,20 +27,20 @@ import {
   priceSubmissions,
   userEvents,
   venues,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   fanoutWatchNotification,
   WATCH_CATEGORY_FROM_REPORT_STATUS,
-} from '@concert-crawl/push'
-import { getAuthUser } from '../../middleware/auth.js'
-import type { AdminVariables } from './index.js'
-import { classifyMissing } from './lib/classify-missing.js'
+} from '@concert-crawl/push';
+import { getAuthUser } from '../../middleware/auth.js';
+import type { AdminVariables } from './index.js';
+import { classifyMissing } from './lib/classify-missing.js';
 import {
   movedCandidateExpr,
   parseMovedCandidate,
-} from './lib/moved-candidate.js'
+} from './lib/moved-candidate.js';
 
-const eventIdSchema = z.object({ id: z.string().uuid() })
+const eventIdSchema = z.object({ id: z.string().uuid() });
 
 // Returns the SQL fragment that derives `isSoldOut`: true when an event has a
 // promoted+resolved sold-out event_report. Built lazily inside handlers so the
@@ -53,7 +53,7 @@ function isSoldOutExpr() {
       AND r.status = 'sold-out'
       AND r.resolved_at IS NOT NULL
       AND r.resolution = 'promoted'
-  )`
+  )`;
 }
 
 const MISSING_DATA_FLAGS = [
@@ -61,14 +61,14 @@ const MISSING_DATA_FLAGS = [
   'no-show-time',
   'no-genre',
   'no-doors-time',
-] as const
-type MissingDataFlag = (typeof MISSING_DATA_FLAGS)[number]
-const MISSING_DATA_FLAG_SET = new Set<MissingDataFlag>(MISSING_DATA_FLAGS)
+] as const;
+type MissingDataFlag = (typeof MISSING_DATA_FLAGS)[number];
+const MISSING_DATA_FLAG_SET = new Set<MissingDataFlag>(MISSING_DATA_FLAGS);
 
 const isMissingDataFlag = (val: string): val is MissingDataFlag =>
-  MISSING_DATA_FLAG_SET.has(val as MissingDataFlag)
+  MISSING_DATA_FLAG_SET.has(val as MissingDataFlag);
 
-const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/
+const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
 
 const csvStrings = z
   .string()
@@ -80,30 +80,30 @@ const csvStrings = z
           .split(',')
           .map((tag) => tag.trim())
           .filter((tag) => tag.length > 0),
-  )
+  );
 
 const csvMissingFlags = z
   .string()
   .optional()
   .transform((val, ctx) => {
-    if (val === undefined || val === '') return [] as MissingDataFlag[]
+    if (val === undefined || val === '') return [] as MissingDataFlag[];
     const items = val
       .split(',')
       .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0)
-    const valid: MissingDataFlag[] = []
+      .filter((tag) => tag.length > 0);
+    const valid: MissingDataFlag[] = [];
     for (const item of items) {
       if (!isMissingDataFlag(item)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Invalid missingData flag: ${item}`,
-        })
-        return z.NEVER
+        });
+        return z.NEVER;
       }
-      valid.push(item)
+      valid.push(item);
     }
-    return valid
-  })
+    return valid;
+  });
 
 const listQuerySchema = z.object({
   // Opt-in count flag for the new pagination component. When true, the
@@ -147,9 +147,9 @@ const listQuerySchema = z.object({
   missingData: csvMissingFlags,
   limit: z.coerce.number().int().min(1).max(500).default(50),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
-type EventsListView = z.infer<typeof listQuerySchema>['view']
+type EventsListView = z.infer<typeof listQuerySchema>['view'];
 
 const viewClauses = (view: EventsListView): SQL[] => {
   switch (view) {
@@ -157,15 +157,15 @@ const viewClauses = (view: EventsListView): SQL[] => {
       return [
         eq(events.hiddenFromConsumer, true),
         eq(events.isConcertReviewNeeded, true),
-      ]
+      ];
     case 'non-concert':
-      return [eq(events.hiddenFromConsumer, true)]
+      return [eq(events.hiddenFromConsumer, true)];
     case undefined:
-      return []
+      return [];
   }
-}
+};
 
-export const eventsAdminRouter = new Hono<AdminVariables>()
+export const eventsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/events/count — returns unverified + verified counts for badges/filter rail
 eventsAdminRouter.get('/count', async (ctx) => {
@@ -182,7 +182,7 @@ eventsAdminRouter.get('/count', async (ctx) => {
       .where(eq(events.verified, true))
       .limit(1)
       .offset(0),
-  ])
+  ]);
 
   return ctx.json({
     success: true,
@@ -190,25 +190,25 @@ eventsAdminRouter.get('/count', async (ctx) => {
       pending: pendingResult[0]?.total ?? 0,
       approved: approvedResult[0]?.total ?? 0,
     },
-  })
-})
+  });
+});
 
 // PATCH /v1/admin/events/reports/:reportId/resolve — admin resolve a fan event report
 const resolveReportSchema = z.object({
   resolution: z.enum(['promoted', 'rejected', 'needs-more-info']),
   adminNote: z.string().max(500).optional(),
-})
+});
 
 eventsAdminRouter.patch(
   '/reports/:reportId/resolve',
   zValidator('json', resolveReportSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { reportId } = ctx.req.param()
-    const { resolution, adminNote } = ctx.req.valid('json')
+    const { reportId } = ctx.req.param();
+    const { resolution, adminNote } = ctx.req.valid('json');
 
     const [report] = await db
       .select({
@@ -219,14 +219,17 @@ eventsAdminRouter.patch(
       })
       .from(eventReports)
       .where(eq(eventReports.id, reportId))
-      .limit(1)
+      .limit(1);
 
     if (!report) {
-      return ctx.json({ success: false, error: 'Report not found' }, 404)
+      return ctx.json({ success: false, error: 'Report not found' }, 404);
     }
 
     if (report.resolvedAt != null) {
-      return ctx.json({ success: false, error: 'Report already resolved' }, 400)
+      return ctx.json(
+        { success: false, error: 'Report already resolved' },
+        400,
+      );
     }
 
     // Pre-state check: does promoting this report actually flip user-visible
@@ -234,15 +237,15 @@ eventsAdminRouter.patch(
     // compares against whether another live promoted sold-out already exists.
     // Fan-out only fires on real transitions so duplicate confirmed reports
     // don't re-spam watchers.
-    let isRealTransition = false
+    let isRealTransition = false;
     if (resolution === 'promoted') {
       if (report.status === 'cancelled' || report.status === 'postponed') {
         const [eventRow] = await db
           .select({ status: events.status })
           .from(events)
           .where(eq(events.id, report.eventId))
-          .limit(1)
-        isRealTransition = eventRow?.status !== report.status
+          .limit(1);
+        isRealTransition = eventRow?.status !== report.status;
       } else if (report.status === 'sold-out') {
         // Excludes the current report because we haven't run the update
         // below yet — its resolution is still null, so the resolution=
@@ -258,8 +261,8 @@ eventsAdminRouter.patch(
               eq(eventReports.resolution, 'promoted'),
             ),
           )
-          .limit(1)
-        isRealTransition = existing.length === 0
+          .limit(1);
+        isRealTransition = existing.length === 0;
       }
     }
 
@@ -271,7 +274,7 @@ eventsAdminRouter.patch(
         adminNote: adminNote ?? null,
       })
       .where(eq(eventReports.id, reportId))
-      .returning()
+      .returning();
 
     // If promoted and report maps to an event status — update the event
     if (resolution === 'promoted') {
@@ -279,7 +282,7 @@ eventsAdminRouter.patch(
         await db
           .update(events)
           .set({ status: report.status })
-          .where(eq(events.id, report.eventId))
+          .where(eq(events.id, report.eventId));
       }
 
       // #1064: fan out watch notifications to every user watching this event.
@@ -308,19 +311,19 @@ eventsAdminRouter.patch(
             // both paths notifies once.
             transition: `report:${reportId}`,
           },
-        )
+        );
       }
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'event.report.resolve')
-    ctx.set('auditTargetId', reportId)
-    ctx.set('auditActorId', actor.userId)
-    ctx.set('auditMeta', { resolution, adminNote: adminNote ?? null })
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'event.report.resolve');
+    ctx.set('auditTargetId', reportId);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', { resolution, adminNote: adminNote ?? null });
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // GET /v1/admin/events?verified=false&limit=50&offset=0
 // GET /v1/admin/events?missing=true — filter to events the crawler stopped
@@ -347,11 +350,11 @@ eventsAdminRouter.get(
       missingData,
       limit,
       offset,
-    } = ctx.req.valid('query')
+    } = ctx.req.valid('query');
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
 
     // Build query as two separate branches because the order-by and where
     // shape differ — keeping them inline (rather than mutating a builder)
@@ -382,7 +385,7 @@ eventsAdminRouter.get(
         isSoldOut: isSoldOutExpr(),
       })
       .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id))
+      .leftJoin(venues, eq(events.venueId, venues.id));
 
     // Missing branch needs three per-row signals computed over the FULL venue
     // data (not the current page): whether a live sibling still covers this show,
@@ -457,22 +460,22 @@ eventsAdminRouter.get(
         movedCandidate: movedCandidateExpr(today),
       })
       .from(events)
-      .leftJoin(venues, eq(events.venueId, venues.id))
+      .leftJoin(venues, eq(events.venueId, venues.id));
 
     // Strip the internal classification signals from the API response and
     // expose only `classification` (derived) + `clusterCount` (kept).
     const withClassification = <
       TRow extends {
-        date: string
-        venueHorizon: string | null
-        hasLiveSibling: boolean
-        movedCandidate: unknown
+        date: string;
+        venueHorizon: string | null;
+        hasLiveSibling: boolean;
+        movedCandidate: unknown;
       },
     >(
       rows: TRow[],
     ) =>
       rows.map(({ venueHorizon, hasLiveSibling, movedCandidate, ...row }) => {
-        const moved = parseMovedCandidate(movedCandidate)
+        const moved = parseMovedCandidate(movedCandidate);
         return {
           ...row,
           classification: classifyMissing({
@@ -485,19 +488,19 @@ eventsAdminRouter.get(
           // the confirm step can name the show it is about to merge onto
           // without a second request per row.
           movedCandidate: moved,
-        }
-      })
+        };
+      });
 
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
-    const queryLike = query ? `%${query}%` : null
+    const queryLike = query ? `%${query}%` : null;
     const searchClause = queryLike
       ? or(
           ilike(events.title, queryLike),
           ilike(events.artist, queryLike),
           ilike(venues.name, queryLike),
         )
-      : undefined
+      : undefined;
 
     const genreClause =
       genre.length > 0
@@ -505,30 +508,30 @@ eventsAdminRouter.get(
             genre.map((tag) => sql`${tag}`),
             sql`, `,
           )}]::text[]`
-        : undefined
+        : undefined;
 
     const missingDataClauses = missingData.map((flag) => {
       switch (flag) {
         case 'no-price':
-          return isNull(events.ticketPriceMin)
+          return isNull(events.ticketPriceMin);
         case 'no-show-time':
-          return isNull(events.showTime)
+          return isNull(events.showTime);
         case 'no-genre':
           return or(
             isNull(events.genre),
             sql`coalesce(cardinality(${events.genre}), 0) = 0`,
-          )
+          );
         case 'no-doors-time':
-          return isNull(events.doorsTime)
+          return isNull(events.doorsTime);
       }
-    })
+    });
 
     // dateFrom defaults to today when not provided — preserves the legacy
     // "show upcoming only" behavior for callers that don't opt in to past
     // events. dateTo is open-ended unless caller supplies it.
-    const effectiveDateFrom = dateFrom ?? today
-    const dateFromClause = gte(events.date, effectiveDateFrom)
-    const dateToClause = dateTo ? lte(events.date, dateTo) : undefined
+    const effectiveDateFrom = dateFrom ?? today;
+    const dateFromClause = gte(events.date, effectiveDateFrom);
+    const dateToClause = dateTo ? lte(events.date, dateTo) : undefined;
 
     // Same WHERE shape used for both the row fetch and the count(*) query
     // when count=true. Pulling it out as a single expression guarantees the
@@ -553,7 +556,7 @@ eventsAdminRouter.get(
           searchClause,
           genreClause,
           ...missingDataClauses,
-        )
+        );
 
     // Keep the two branches fully separate so Drizzle's inferred types narrow
     // correctly for withClassification (which requires venueHorizon +
@@ -563,36 +566,36 @@ eventsAdminRouter.get(
         .where(whereClause)
         .orderBy(asc(events.date), desc(events.firstMissingAt))
         .limit(limit)
-        .offset(offset)
+        .offset(offset);
 
       if (!count) {
-        const rows = await missingQuery
-        return ctx.json({ success: true, data: withClassification(rows) })
+        const rows = await missingQuery;
+        return ctx.json({ success: true, data: withClassification(rows) });
       }
 
       const countQuery = db
         .select({ total: sql<number>`count(*)::int` })
         .from(events)
         .leftJoin(venues, eq(events.venueId, venues.id))
-        .where(whereClause)
+        .where(whereClause);
 
-      const [rows, countResult] = await Promise.all([missingQuery, countQuery])
-      const total = countResult[0]?.total ?? 0
+      const [rows, countResult] = await Promise.all([missingQuery, countQuery]);
+      const total = countResult[0]?.total ?? 0;
       return ctx.json({
         success: true,
         data: { rows: withClassification(rows), total },
-      })
+      });
     }
 
     const rowsPromise = baseSelect
       .where(whereClause)
       .orderBy(asc(events.date), desc(events.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     if (!count) {
-      const rows = await rowsPromise
-      return ctx.json({ success: true, data: rows })
+      const rows = await rowsPromise;
+      return ctx.json({ success: true, data: rows });
     }
 
     // count=true: parallelize the row fetch and the count so the extra query
@@ -603,13 +606,13 @@ eventsAdminRouter.get(
       .select({ total: sql<number>`count(*)::int` })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(whereClause)
+      .where(whereClause);
 
-    const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
-    const total = countResult[0]?.total ?? 0
-    return ctx.json({ success: true, data: { rows, total } })
+    const [rows, countResult] = await Promise.all([rowsPromise, countQuery]);
+    const total = countResult[0]?.total ?? 0;
+    return ctx.json({ success: true, data: { rows, total } });
   },
-)
+);
 
 // POST /v1/admin/events/bulk-auto-approve — approve all unverified events above a confidence threshold
 // Used as a one-time backfill after the auto-approve threshold was introduced in the crawler.
@@ -622,7 +625,7 @@ eventsAdminRouter.post(
     }),
   ),
   async (ctx) => {
-    const { confidenceThreshold } = ctx.req.valid('json')
+    const { confidenceThreshold } = ctx.req.valid('json');
 
     const updated = await db
       .update(events)
@@ -633,45 +636,45 @@ eventsAdminRouter.post(
           gte(events.confidenceScore, String(confidenceThreshold)),
         ),
       )
-      .returning({ ok: sql<number>`1` })
+      .returning({ ok: sql<number>`1` });
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'event.bulk_auto_approve')
-    ctx.set('auditActorId', actor.userId)
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'event.bulk_auto_approve');
+    ctx.set('auditActorId', actor.userId);
     ctx.set('auditMeta', {
       count: updated.length,
       confidenceThreshold,
-    })
+    });
 
-    return ctx.json({ success: true, data: { approved: updated.length } })
+    return ctx.json({ success: true, data: { approved: updated.length } });
   },
-)
+);
 
 // PATCH /v1/admin/events/:id/verify — approve an event (set verified=true)
 eventsAdminRouter.patch(
   '/:id/verify',
   zValidator('param', eventIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [updated] = await db
       .update(events)
       .set({ verified: true, updatedAt: new Date() })
       .where(eq(events.id, id))
-      .returning()
+      .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'event.verify')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'event.verify');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // GET /v1/admin/events/:id — single event for the admin editor surface.
 // Same projection as the list endpoint so the editor can hydrate every
@@ -680,7 +683,7 @@ eventsAdminRouter.get(
   '/:id',
   zValidator('param', eventIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [row] = await db
       .select({
@@ -714,15 +717,15 @@ eventsAdminRouter.get(
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
       .where(eq(events.id, id))
-      .limit(1)
+      .limit(1);
 
     if (!row) {
-      return ctx.json({ success: false, error: 'Not found' } as const, 404)
+      return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }
 
-    return ctx.json({ success: true, data: row } as const)
+    return ctx.json({ success: true, data: row } as const);
   },
-)
+);
 
 // PATCH /v1/admin/events/:id — partial update (verified, status, content fields)
 eventsAdminRouter.patch(
@@ -755,8 +758,8 @@ eventsAdminRouter.patch(
         .nullable()
         .optional()
         .transform((value) => {
-          if (value === null || value === undefined) return value
-          return value === '' ? null : value
+          if (value === null || value === undefined) return value;
+          return value === '' ? null : value;
         }),
       // Admin "Dismiss" on the Missing tab — clears the stale-event flag
       // so the row falls out of the ?missing=true filter. The crawler
@@ -769,14 +772,14 @@ eventsAdminRouter.patch(
     }),
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const body = ctx.req.valid('json')
+    const { id } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
 
     // Only bother with the transactional pre-state lock when the PATCH
     // actually touches status or date — every other field is edit-only
     // and doesn't need a serialize gate.
     const touchesTransitionField =
-      typeof body.status === 'string' || typeof body.date === 'string'
+      typeof body.status === 'string' || typeof body.date === 'string';
 
     // #1107: read pre-state + write inside a transaction so two concurrent
     // PATCHes can't both observe the same pre-state and fan out twice.
@@ -784,22 +787,22 @@ eventsAdminRouter.patch(
     // transaction that actually observed the transition; a losing PATCH
     // sees the new state and computes category=null.
     const result = await db.transaction(async (tx) => {
-      let preUpdate: { status: string; date: string } | undefined
+      let preUpdate: { status: string; date: string } | undefined;
       if (touchesTransitionField) {
         const rows = await tx
           .select({ status: events.status, date: events.date })
           .from(events)
           .where(eq(events.id, id))
           .for('update')
-          .limit(1)
-        preUpdate = rows[0]
+          .limit(1);
+        preUpdate = rows[0];
       }
 
       const [updated] = await tx
         .update(events)
         .set({ ...body, updatedAt: new Date() })
         .where(eq(events.id, id))
-        .returning()
+        .returning();
 
       // Watch-update fan-out category — computed inside the tx against the
       // locked pre-state row. Fires AFTER commit.
@@ -813,14 +816,14 @@ eventsAdminRouter.patch(
       // (the show is on a different night), so we treat both as
       // watch.postponed. If both a status flip AND a date change land in the
       // same PATCH, we still fan out only once — status transitions win.
-      let category: 'watch.cancelled' | 'watch.postponed' | null = null
+      let category: 'watch.cancelled' | 'watch.postponed' | null = null;
       if (preUpdate && updated) {
         if (
           typeof body.status === 'string' &&
           body.status !== preUpdate.status
         ) {
-          if (body.status === 'cancelled') category = 'watch.cancelled'
-          else if (body.status === 'postponed') category = 'watch.postponed'
+          if (body.status === 'cancelled') category = 'watch.cancelled';
+          else if (body.status === 'postponed') category = 'watch.postponed';
         } else if (
           typeof body.date === 'string' &&
           body.date !== preUpdate.date &&
@@ -829,21 +832,21 @@ eventsAdminRouter.patch(
           // already got the cancel notification.
           preUpdate.status !== 'cancelled'
         ) {
-          category = 'watch.postponed'
+          category = 'watch.postponed';
         }
       }
 
-      return { updated, category }
-    })
+      return { updated, category };
+    });
 
     if (!result.updated) {
-      return ctx.json({ success: false, error: 'Not found' } as const, 404)
+      return ctx.json({ success: false, error: 'Not found' } as const, 404);
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'event.update')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'event.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
 
     if (result.category) {
       await fanoutWatchNotification(
@@ -862,12 +865,12 @@ eventsAdminRouter.patch(
           // names this one write: a later genuine flip commits a new value.
           transition: `patch:${result.updated.updatedAt.toISOString()}`,
         },
-      )
+      );
     }
 
-    return ctx.json({ success: true, data: result.updated } as const)
+    return ctx.json({ success: true, data: result.updated } as const);
   },
-)
+);
 
 // DELETE /v1/admin/events/:id — remove an event from the catalog.
 // PR 6 loosened the original "unverified-only" guard: admins can delete
@@ -876,26 +879,26 @@ eventsAdminRouter.delete(
   '/:id',
   zValidator('param', eventIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [deleted] = await db
       .delete(events)
       .where(eq(events.id, id))
-      .returning()
+      .returning();
 
     if (!deleted) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'event.delete')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
-    ctx.set('auditMeta', { wasVerified: deleted.verified })
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'event.delete');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', { wasVerified: deleted.verified });
 
-    return ctx.json({ success: true })
+    return ctx.json({ success: true });
   },
-)
+);
 
 // POST /v1/admin/events/:id/sold-out — admin-authored sold-out event_report,
 // auto-promoted on creation. Idempotent: if an active promoted sold-out report
@@ -907,30 +910,30 @@ const markSoldOutSchema = z.object({
     .default('other'),
   evidenceUrl: httpUrl(500).optional(),
   note: z.string().max(280).optional(),
-})
+});
 
 eventsAdminRouter.post(
   '/:id/sold-out',
   zValidator('param', eventIdSchema),
   zValidator('json', markSoldOutSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { evidenceMethod, evidenceUrl, note } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { id } = ctx.req.valid('param');
+    const { evidenceMethod, evidenceUrl, note } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     // Verify the event exists before authoring a report against it.
     const [eventRow] = await db
       .select({ id: events.id })
       .from(events)
       .where(eq(events.id, id))
-      .limit(1)
+      .limit(1);
 
     if (!eventRow) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
     // Idempotency check: if an active promoted sold-out report already exists,
@@ -956,23 +959,23 @@ eventsAdminRouter.post(
             eq(eventReports.resolution, 'promoted'),
           ),
         )
-        .limit(1)
+        .limit(1);
 
-    const [existing] = await fetchExisting()
+    const [existing] = await fetchExisting();
 
     if (existing) {
       // Audit even on the idempotent path so admin actions are always traceable.
-      ctx.set('auditAction', 'event.sold_out.mark')
-      ctx.set('auditTargetId', id)
-      ctx.set('auditActorId', actor.userId)
+      ctx.set('auditAction', 'event.sold_out.mark');
+      ctx.set('auditTargetId', id);
+      ctx.set('auditActorId', actor.userId);
       ctx.set('auditMeta', {
         reportId: existing.id,
         idempotent: true,
-      })
-      return ctx.json({ success: true, data: existing }, 200)
+      });
+      return ctx.json({ success: true, data: existing }, 200);
     }
 
-    let created: typeof eventReports.$inferSelect | undefined
+    let created: typeof eventReports.$inferSelect | undefined;
     try {
       const inserted = await db
         .insert(eventReports)
@@ -987,8 +990,8 @@ eventsAdminRouter.post(
           resolution: 'promoted',
           adminNote: 'admin-authored — auto-promoted on creation',
         })
-        .returning()
-      created = inserted[0]
+        .returning();
+      created = inserted[0];
     } catch (err) {
       // Unique-violation from the partial index = another concurrent POST won
       // the race. Treat as idempotent: re-query and return that row at 200.
@@ -997,30 +1000,30 @@ eventsAdminRouter.post(
         'code' in err &&
         (err as { code?: string }).code === '23505'
       ) {
-        const [winner] = await fetchExisting()
+        const [winner] = await fetchExisting();
         if (winner) {
-          ctx.set('auditAction', 'event.sold_out.mark')
-          ctx.set('auditTargetId', id)
-          ctx.set('auditActorId', actor.userId)
+          ctx.set('auditAction', 'event.sold_out.mark');
+          ctx.set('auditTargetId', id);
+          ctx.set('auditActorId', actor.userId);
           ctx.set('auditMeta', {
             reportId: winner.id,
             idempotent: true,
             raceLost: true,
-          })
-          return ctx.json({ success: true, data: winner }, 200)
+          });
+          return ctx.json({ success: true, data: winner }, 200);
         }
       }
-      throw err
+      throw err;
     }
 
-    ctx.set('auditAction', 'event.sold_out.mark')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditAction', 'event.sold_out.mark');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
     ctx.set('auditMeta', {
       reportId: created?.id ?? null,
       evidenceMethod,
       evidenceUrl: evidenceUrl ?? null,
-    })
+    });
 
     // #1064: fan out watch.soldout to every user watching this event. Only on
     // the freshly-created path — the idempotent early-return above already
@@ -1045,12 +1048,12 @@ eventsAdminRouter.post(
           // new report, so a second genuine sell-out notifies again.
           transition: `report:${created.id}`,
         },
-      )
+      );
     }
 
-    return ctx.json({ success: true, data: created }, 201)
+    return ctx.json({ success: true, data: created }, 201);
   },
-)
+);
 
 // POST /v1/admin/events/:id/available — inverse of Mark Sold Out. Dismisses
 // the active promoted sold-out report. The row is preserved (resolution flipped
@@ -1058,20 +1061,20 @@ eventsAdminRouter.post(
 // active sold-out report exists.
 const markAvailableSchema = z.object({
   note: z.string().max(500).optional(),
-})
+});
 
 eventsAdminRouter.post(
   '/:id/available',
   zValidator('param', eventIdSchema),
   zValidator('json', markAvailableSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { note } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { id } = ctx.req.valid('param');
+    const { note } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     // Verify the event exists — return 404 for unknown IDs so this endpoint
     // doesn't masquerade a bogus call as a successful no-op (matches the
@@ -1080,10 +1083,10 @@ eventsAdminRouter.post(
       .select({ id: events.id })
       .from(events)
       .where(eq(events.id, id))
-      .limit(1)
+      .limit(1);
 
     if (!eventRow) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
     // Clear ALL active promoted sold-out reports for this event. Migration 0032
@@ -1105,16 +1108,16 @@ eventsAdminRouter.post(
           eq(eventReports.resolution, 'promoted'),
         ),
       )
-      .returning({ id: eventReports.id })
+      .returning({ id: eventReports.id });
 
     // 204 either way (idempotent no-op when nothing was active). Audit only
     // when we actually cleared something — admin action with no DB effect
     // doesn't earn an audit row.
     if (cleared.length > 0) {
-      ctx.set('auditAction', 'event.sold_out.clear')
-      ctx.set('auditTargetId', id)
-      ctx.set('auditActorId', actor.userId)
-      ctx.set('auditMeta', { reportIds: cleared.map((row) => row.id) })
+      ctx.set('auditAction', 'event.sold_out.clear');
+      ctx.set('auditTargetId', id);
+      ctx.set('auditActorId', actor.userId);
+      ctx.set('auditMeta', { reportIds: cleared.map((row) => row.id) });
 
       // #1064: fan out watch.backonsale to every user watching this event.
       // Only when we actually flipped state — a no-op call didn't change
@@ -1138,25 +1141,25 @@ eventsAdminRouter.post(
             .sort()
             .join(',')}`,
         },
-      )
+      );
     }
 
-    return ctx.body(null, 204)
+    return ctx.body(null, 204);
   },
-)
+);
 
 // PR 10 — bulk endpoints. Each action audit-logs once per affected event so
 // the audit log mirrors per-row admin actions (lets compliance reconstruct
 // who touched which event without parsing a single batched meta blob).
-const BULK_MAX = 100
+const BULK_MAX = 100;
 
 const bulkIdsSchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(BULK_MAX),
-})
+});
 
 const bulkDeleteSchema = bulkIdsSchema.extend({
   confirmation: z.literal('DELETE'),
-})
+});
 
 // POST /v1/admin/events/bulk/unverify — send a list of events back to review.
 // Mutation + per-event audit inserts run inside a single transaction so the
@@ -1165,19 +1168,19 @@ eventsAdminRouter.post(
   '/bulk/unverify',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { ids } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { ids } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
       const updated = await tx
         .update(events)
         .set({ verified: false, updatedAt: new Date() })
         .where(inArray(events.id, ids))
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (updated.length > 0) {
         await tx.insert(auditLog).values(
           updated.map((row) => ({
@@ -1186,14 +1189,14 @@ eventsAdminRouter.post(
             targetId: row.id,
             metadata: null,
           })),
-        )
+        );
       }
-      return updated.length
-    })
+      return updated.length;
+    });
 
-    return ctx.json({ success: true, data: { count } })
+    return ctx.json({ success: true, data: { count } });
   },
-)
+);
 
 // POST /v1/admin/events/bulk/mark-non-concert — set hiddenFromConsumer=true.
 //
@@ -1205,12 +1208,12 @@ eventsAdminRouter.post(
   '/bulk/mark-non-concert',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { ids } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { ids } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
       const updated = await tx
@@ -1219,7 +1222,7 @@ eventsAdminRouter.post(
         .where(
           and(inArray(events.id, ids), eq(events.hiddenFromConsumer, false)),
         )
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (updated.length > 0) {
         await tx.insert(auditLog).values(
           updated.map((row) => ({
@@ -1228,14 +1231,14 @@ eventsAdminRouter.post(
             targetId: row.id,
             metadata: null,
           })),
-        )
+        );
       }
-      return updated.length
-    })
+      return updated.length;
+    });
 
-    return ctx.json({ success: true, data: { count } })
+    return ctx.json({ success: true, data: { count } });
   },
-)
+);
 
 // POST /v1/admin/events/bulk/mark-as-concert — set hiddenFromConsumer=false
 // (the inverse of bulk/mark-non-concert; surfaced via the classification
@@ -1254,12 +1257,12 @@ eventsAdminRouter.post(
   '/bulk/mark-as-concert',
   zValidator('json', bulkIdsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { ids } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { ids } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
       const updated = await tx
@@ -1268,7 +1271,7 @@ eventsAdminRouter.post(
         .where(
           and(inArray(events.id, ids), eq(events.hiddenFromConsumer, true)),
         )
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (updated.length > 0) {
         await tx.insert(auditLog).values(
           updated.map((row) => ({
@@ -1277,32 +1280,32 @@ eventsAdminRouter.post(
             targetId: row.id,
             metadata: null,
           })),
-        )
+        );
       }
-      return updated.length
-    })
+      return updated.length;
+    });
 
-    return ctx.json({ success: true, data: { count } })
+    return ctx.json({ success: true, data: { count } });
   },
-)
+);
 
 // POST /v1/admin/events/bulk/delete — permanent removal with typed-DELETE gate.
 eventsAdminRouter.post(
   '/bulk/delete',
   zValidator('json', bulkDeleteSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { ids } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { ids } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     const count = await db.transaction(async (tx) => {
       const deleted = await tx
         .delete(events)
         .where(inArray(events.id, ids))
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (deleted.length > 0) {
         await tx.insert(auditLog).values(
           deleted.map((row) => ({
@@ -1311,14 +1314,14 @@ eventsAdminRouter.post(
             targetId: row.id,
             metadata: null,
           })),
-        )
+        );
       }
-      return deleted.length
-    })
+      return deleted.length;
+    });
 
-    return ctx.json({ success: true, data: { count } })
+    return ctx.json({ success: true, data: { count } });
   },
-)
+);
 
 const mergeSchema = z.object({
   targetId: z.string().uuid(),
@@ -1344,7 +1347,7 @@ const mergeSchema = z.object({
   suggestion: z
     .object({ reason: z.union([z.literal('date'), z.literal('venue')]) })
     .nullish(),
-})
+});
 
 // POST /v1/admin/events/:id/merge — fold a source event into a target event,
 // moving every user-side reference (watchlist rows, sold-out/cancelled reports,
@@ -1363,19 +1366,19 @@ eventsAdminRouter.post(
   zValidator('param', eventIdSchema),
   zValidator('json', mergeSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid input' }, 422)
+      return ctx.json({ success: false, error: 'Invalid input' }, 422);
     }
   }),
   async (ctx) => {
-    const { id: sourceId } = ctx.req.valid('param')
-    const { targetId, notifyWatchers, suggestion } = ctx.req.valid('json')
-    const actor = getAuthUser(ctx)
+    const { id: sourceId } = ctx.req.valid('param');
+    const { targetId, notifyWatchers, suggestion } = ctx.req.valid('json');
+    const actor = getAuthUser(ctx);
 
     if (sourceId === targetId) {
       return ctx.json(
         { success: false, error: 'Source and target must differ' },
         422,
-      )
+      );
     }
 
     // Pre-flight existence checks return 404 with a clear message before we
@@ -1392,14 +1395,14 @@ eventsAdminRouter.post(
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(or(eq(events.id, sourceId), eq(events.id, targetId)))
-    const source = both.find((row) => row.id === sourceId)
-    const target = both.find((row) => row.id === targetId)
+      .where(or(eq(events.id, sourceId), eq(events.id, targetId)));
+    const source = both.find((row) => row.id === sourceId);
+    const target = both.find((row) => row.id === targetId);
     if (!source) {
-      return ctx.json({ success: false, error: 'Source event not found' }, 404)
+      return ctx.json({ success: false, error: 'Source event not found' }, 404);
     }
     if (!target) {
-      return ctx.json({ success: false, error: 'Target event not found' }, 404)
+      return ctx.json({ success: false, error: 'Target event not found' }, 404);
     }
 
     const merged = await db.transaction(async (tx) => {
@@ -1415,7 +1418,7 @@ eventsAdminRouter.post(
             eq(userEvents.eventId, sourceId),
             eq(userEvents.status, 'watching'),
           ),
-        )
+        );
 
       // user_events: drop conflicting source rows (target wins) before moving
       // the rest. Doing the delete inside the same transaction means a partial
@@ -1450,7 +1453,7 @@ eventsAdminRouter.post(
             )`,
           ),
         )
-        .returning({ id: userEvents.id })
+        .returning({ id: userEvents.id });
 
       const droppedUserEvents = await tx
         .delete(userEvents)
@@ -1464,31 +1467,31 @@ eventsAdminRouter.post(
             )`,
           ),
         )
-        .returning({ id: userEvents.id })
+        .returning({ id: userEvents.id });
 
       const movedUserEvents = await tx
         .update(userEvents)
         .set({ eventId: targetId })
         .where(eq(userEvents.eventId, sourceId))
-        .returning({ id: userEvents.id })
+        .returning({ id: userEvents.id });
 
       const movedReports = await tx
         .update(eventReports)
         .set({ eventId: targetId })
         .where(eq(eventReports.eventId, sourceId))
-        .returning({ id: eventReports.id })
+        .returning({ id: eventReports.id });
 
       const movedSubmissions = await tx
         .update(priceSubmissions)
         .set({ eventId: targetId, updatedAt: new Date() })
         .where(eq(priceSubmissions.eventId, sourceId))
-        .returning({ id: priceSubmissions.id })
+        .returning({ id: priceSubmissions.id });
 
       const movedLogs = await tx
         .update(priceRetrievalLog)
         .set({ eventId: targetId })
         .where(eq(priceRetrievalLog.eventId, sourceId))
-        .returning({ id: priceRetrievalLog.id })
+        .returning({ id: priceRetrievalLog.id });
 
       // With every reference moved, deleting the source row is safe — there's
       // nothing left to cascade. Doing this last means a failure earlier in
@@ -1502,9 +1505,9 @@ eventsAdminRouter.post(
       const deletedSource = await tx
         .delete(events)
         .where(eq(events.id, sourceId))
-        .returning({ id: events.id })
+        .returning({ id: events.id });
       if (deletedSource.length === 0) {
-        throw new Error('Source event disappeared mid-merge')
+        throw new Error('Source event disappeared mid-merge');
       }
 
       const counts = {
@@ -1514,7 +1517,7 @@ eventsAdminRouter.post(
         reportsMoved: movedReports.length,
         submissionsMoved: movedSubmissions.length,
         priceLogsMoved: movedLogs.length,
-      }
+      };
 
       await tx.insert(auditLog).values({
         actorId: actor.userId,
@@ -1526,14 +1529,14 @@ eventsAdminRouter.post(
           suggestion: suggestion ?? null,
           notifyWatchers,
         },
-      })
+      });
 
       return {
         counts,
         movedWatcherIds: movedWatchers.map((row) => row.userId),
-      }
-    })
-    const referencesMoved = merged.counts
+      };
+    });
+    const referencesMoved = merged.counts;
 
     // After commit, mirroring the PATCH call site: the fan-out is best-effort
     // by contract and never throws, so it must not sit inside the transaction
@@ -1551,7 +1554,7 @@ eventsAdminRouter.post(
       const relocated =
         source.venueId !== target.venueId
           ? { fromVenueName: source.venueName }
-          : null
+          : null;
       await fanoutWatchNotification(
         { db, notifications, userEvents, events, venues },
         {
@@ -1565,12 +1568,12 @@ eventsAdminRouter.post(
           // distinguishes an absent key from an explicitly-undefined one.
           ...(relocated ? { relocated } : {}),
         },
-      )
+      );
     }
 
     return ctx.json({
       success: true,
       data: { mergedInto: targetId, referencesMoved },
-    })
+    });
   },
-)
+);

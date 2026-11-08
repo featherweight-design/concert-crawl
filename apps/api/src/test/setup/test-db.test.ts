@@ -1,37 +1,37 @@
-import { describe, it, expect } from 'vitest'
-import { resolveTestDbName, sanitizeWorktreeName } from './test-db'
+import { describe, it, expect } from 'vitest';
+import { resolveTestDbName, sanitizeWorktreeName } from './test-db';
 
 describe('sanitizeWorktreeName', () => {
   it('lowercases and replaces non [a-z0-9_] with underscore', () => {
-    expect(sanitizeWorktreeName('feat/Bar-Baz')).toBe('feat_bar_baz')
-  })
-})
+    expect(sanitizeWorktreeName('feat/Bar-Baz')).toBe('feat_bar_baz');
+  });
+});
 
 describe('resolveTestDbName', () => {
   it('returns base name for the main repo path', () => {
     expect(resolveTestDbName('/Users/huey/Projects/concert-crawl')).toBe(
       'concert_crawl_test',
-    )
-  })
+    );
+  });
 
   it('derives a suffixed name from a worktree path', () => {
     expect(
       resolveTestDbName(
         '/Users/huey/Projects/concert-crawl/.worktrees/fix-foo',
       ),
-    ).toBe('concert_crawl_test__fix_foo')
-  })
+    ).toBe('concert_crawl_test__fix_foo');
+  });
 
   it('gives nested worktree roots distinct names', () => {
     expect(
       resolveTestDbName(
         '/Users/huey/Projects/concert-crawl/.worktrees/feat/foo',
       ),
-    ).toBe('concert_crawl_test__feat_foo')
+    ).toBe('concert_crawl_test__feat_foo');
     expect(
       resolveTestDbName(
         '/Users/huey/Projects/concert-crawl/.worktrees/feat/bar',
       ),
-    ).toBe('concert_crawl_test__feat_bar')
-  })
-})
+    ).toBe('concert_crawl_test__feat_bar');
+  });
+});

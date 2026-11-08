@@ -18,9 +18,9 @@
 // The error taxonomy is reused from ./spotify.js so callers handle one set of
 // failures. Every response crosses a system boundary and is Zod-validated —
 // no `as` casts.
-import { z } from 'zod'
-import { apiLogger } from './logger.js'
-import { httpUrl } from './url-schema.js'
+import { z } from 'zod';
+import { apiLogger } from './logger.js';
+import { httpUrl } from './url-schema.js';
 import {
   fetchWithTimeout,
   MAX_RETRY_AFTER_MS,
@@ -28,33 +28,33 @@ import {
   SpotifyApiError,
   SpotifyAuthError,
   SpotifyRateLimitError,
-} from './spotify.js'
+} from './spotify.js';
 
-const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
-const SPOTIFY_API_BASE = 'https://api.spotify.com/v1'
+const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
+const SPOTIFY_API_BASE = 'https://api.spotify.com/v1';
 
 /**
  * Refresh this many ms before the token's stated expiry. A request in flight
  * when the token flips must not 401, so the cached token is treated as stale
  * one minute early.
  */
-const TOKEN_EXPIRY_SKEW_MS = 60_000
+const TOKEN_EXPIRY_SKEW_MS = 60_000;
 
 /** Candidates per search. The matcher only accepts exact canonical hits, so a
  * deep page adds nothing — it just widens the ambiguity surface. */
-const SEARCH_LIMIT = 10
+const SEARCH_LIMIT = 10;
 
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   expires_in: z.number().positive(),
-})
+});
 
 // Both URLs below reach a browser — the image as an `src`, the profile link as
 // an `href` — so they get the scheme guard rather than a bare non-empty string.
 // `.catch()` degrades a bad value to null instead of failing the whole
 // candidate: an unrenderable link is not a reason to hide an artist from the
 // match queue.
-const artistImageSchema = z.object({ url: httpUrl() }).nullable().catch(null)
+const artistImageSchema = z.object({ url: httpUrl() }).nullable().catch(null);
 
 const searchArtistSchema = z.object({
   id: z.string().min(1),
@@ -64,11 +64,11 @@ const searchArtistSchema = z.object({
   // two identically-named artists apart. The matcher ignores it.
   genres: z.array(z.string()).nullish(),
   external_urls: z.object({ spotify: httpUrl() }).nullable().catch(null),
-})
+});
 
 const searchResponseSchema = z.object({
   artists: z.object({ items: z.array(searchArtistSchema) }),
-})
+});
 
 // `GET /artists/{id}` returns a full artist object, carrying the `genres`
 // that `/search`'s simplified objects omit.
@@ -88,33 +88,35 @@ const searchResponseSchema = z.object({
 const artistDetailResponseSchema = z.object({
   id: z.string().min(1),
   genres: z.array(z.string()).nullish(),
-})
+});
 
 /** The fields a full artist object adds over a search result. */
 export interface ArtistDetail {
-  genres: string[]
+  genres: string[];
 }
 
 export interface SpotifyArtistCandidate {
-  id: string
-  name: string
-  images: { url: string }[]
-  genres: string[]
-  spotifyUrl: string | null
+  id: string;
+  name: string;
+  images: { url: string }[];
+  genres: string[];
+  spotifyUrl: string | null;
 }
 
 /** The matcher's only dependency on Spotify — injected so artist-match.ts
  * stays a pure function of its inputs. */
-export type SpotifySearch = (query: string) => Promise<SpotifyArtistCandidate[]>
+export type SpotifySearch = (
+  query: string,
+) => Promise<SpotifyArtistCandidate[]>;
 
 export interface SpotifyAppClientOptions {
-  fetchFn?: typeof fetch
-  sleepFn?: (ms: number) => Promise<void>
-  now?: () => number
+  fetchFn?: typeof fetch;
+  sleepFn?: (ms: number) => Promise<void>;
+  now?: () => number;
 }
 
 export interface SpotifyAppClient {
-  searchArtists: SpotifySearch
+  searchArtists: SpotifySearch;
   /**
    * Genres by artist id, for ids already in hand. `/search` returns simplified
    * artist objects carrying none, so the admin candidate picker (#1345)
@@ -126,56 +128,56 @@ export interface SpotifyAppClient {
    * Costs one call per id — see `artistDetailResponseSchema` for why the batch
    * endpoint is unavailable. Only the picker calls this, at human pace.
    */
-  fetchArtistDetails(artistIds: string[]): Promise<Map<string, ArtistDetail>>
+  fetchArtistDetails(artistIds: string[]): Promise<Map<string, ArtistDetail>>;
   /** Total HTTP calls issued, token mint included — for cost bookkeeping. */
-  getCallCount(): number
+  getCallCount(): number;
 }
 
 interface CachedToken {
-  token: string
+  token: string;
   /** Epoch ms after which the cached token must be re-minted. */
-  expiresAtMs: number
+  expiresAtMs: number;
 }
 
 // Process-lifetime cache. The match job is a short-lived process handling a
 // batch, so one mint per run is the norm.
-let cachedToken: CachedToken | null = null
+let cachedToken: CachedToken | null = null;
 
 // Counts token mints that actually hit the network, so a client built on a
 // cached token doesn't claim an HTTP call it never made.
-let tokenMintCount = 0
+let tokenMintCount = 0;
 
 /** Test seam — drops the in-process token cache. */
 export const resetAppTokenCache = (): void => {
-  cachedToken = null
-}
+  cachedToken = null;
+};
 
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
+    setTimeout(resolve, ms);
+  });
 
 const readCredentials = (): {
-  clientId: string
-  clientSecret: string
+  clientId: string;
+  clientSecret: string;
 } | null => {
   const parsed = z
     .object({
       SPOTIFY_CLIENT_ID: z.string().min(1),
       SPOTIFY_CLIENT_SECRET: z.string().min(1),
     })
-    .safeParse(process.env)
-  if (!parsed.success) return null
+    .safeParse(process.env);
+  if (!parsed.success) return null;
   return {
     clientId: parsed.data.SPOTIFY_CLIENT_ID,
     clientSecret: parsed.data.SPOTIFY_CLIENT_SECRET,
-  }
-}
+  };
+};
 
 /** True when both app-token credentials are present. Callers use this to log
  * "skipped, unconfigured" rather than "failed". */
 export const hasSpotifyAppCredentials = (): boolean =>
-  readCredentials() !== null
+  readCredentials() !== null;
 
 /**
  * Mint (or reuse) a client-credentials app token.
@@ -187,19 +189,19 @@ export const hasSpotifyAppCredentials = (): boolean =>
 export const getAppToken = async (
   options: SpotifyAppClientOptions = {},
 ): Promise<string | null> => {
-  const credentials = readCredentials()
-  if (credentials === null) return null
+  const credentials = readCredentials();
+  if (credentials === null) return null;
 
-  const fetchFn = options.fetchFn ?? fetch
-  const now = options.now ?? Date.now
+  const fetchFn = options.fetchFn ?? fetch;
+  const now = options.now ?? Date.now;
 
   if (cachedToken !== null && now() < cachedToken.expiresAtMs) {
-    return cachedToken.token
+    return cachedToken.token;
   }
 
   const basic = Buffer.from(
     `${credentials.clientId}:${credentials.clientSecret}`,
-  ).toString('base64')
+  ).toString('base64');
 
   const response = await fetchWithTimeout(fetchFn, SPOTIFY_TOKEN_URL, {
     method: 'POST',
@@ -208,7 +210,7 @@ export const getAppToken = async (
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  })
+  });
 
   if (
     response.status === 400 ||
@@ -217,32 +219,32 @@ export const getAppToken = async (
   ) {
     throw new SpotifyAuthError(
       `Spotify rejected the client credentials (${response.status})`,
-    )
+    );
   }
 
   if (!response.ok) {
     throw new SpotifyApiError(
       `Spotify token request failed (${response.status})`,
       response.status,
-    )
+    );
   }
 
-  const body: unknown = await response.json()
-  const parsed = tokenResponseSchema.safeParse(body)
+  const body: unknown = await response.json();
+  const parsed = tokenResponseSchema.safeParse(body);
   if (!parsed.success) {
     throw new SpotifyApiError(
       'Spotify returned an unexpected token response shape',
       200,
-    )
+    );
   }
 
-  tokenMintCount += 1
+  tokenMintCount += 1;
   cachedToken = {
     token: parsed.data.access_token,
     expiresAtMs: now() + parsed.data.expires_in * 1000 - TOKEN_EXPIRY_SKEW_MS,
-  }
-  return cachedToken.token
-}
+  };
+  return cachedToken.token;
+};
 
 /**
  * Build an app-token Spotify client, or `null` when the credentials are
@@ -252,30 +254,30 @@ export const getAppToken = async (
 export const createSpotifyAppClient = async (
   options: SpotifyAppClientOptions = {},
 ): Promise<SpotifyAppClient | null> => {
-  const mintsBefore = tokenMintCount
-  const token = await getAppToken(options)
-  if (token === null) return null
+  const mintsBefore = tokenMintCount;
+  const token = await getAppToken(options);
+  if (token === null) return null;
 
-  const fetchFn = options.fetchFn ?? fetch
-  const sleepFn = options.sleepFn ?? defaultSleep
+  const fetchFn = options.fetchFn ?? fetch;
+  const sleepFn = options.sleepFn ?? defaultSleep;
   // 1 when this call minted a fresh token, 0 when it reused a cached one.
-  let callCount = tokenMintCount - mintsBefore
+  let callCount = tokenMintCount - mintsBefore;
 
   const requestJson = async (
     path: string,
     retried = false,
   ): Promise<unknown> => {
-    callCount += 1
+    callCount += 1;
     const response = await fetchWithTimeout(
       fetchFn,
       `${SPOTIFY_API_BASE}${path}`,
       { headers: { Authorization: `Bearer ${token}` } },
-    )
+    );
 
     if (response.status === 401 || response.status === 403) {
       throw new SpotifyAuthError(
         `Spotify rejected the app token (${response.status}) for ${path}`,
-      )
+      );
     }
 
     if (response.status === 429) {
@@ -285,40 +287,40 @@ export const createSpotifyAppClient = async (
         // the current one is what an operator needs to plan around.
         throw new SpotifyRateLimitError(
           `Spotify rate limit persisted after retry for ${path}, now asking for ${Math.ceil(parseRetryAfterMs(response.headers.get('Retry-After')) / 1000)}s`,
-        )
+        );
       }
-      const waitMs = parseRetryAfterMs(response.headers.get('Retry-After'))
+      const waitMs = parseRetryAfterMs(response.headers.get('Retry-After'));
       if (waitMs > MAX_RETRY_AFTER_MS) {
         throw new SpotifyRateLimitError(
           // Ceil, not round: a 60_001ms wait must not print as "60s cooldown,
           // over the 60s ceiling".
           `Spotify asked for a ${Math.ceil(waitMs / 1000)}s cooldown for ${path}, over the ${MAX_RETRY_AFTER_MS / 1000}s ceiling`,
-        )
+        );
       }
-      await sleepFn(waitMs)
-      return requestJson(path, true)
+      await sleepFn(waitMs);
+      return requestJson(path, true);
     }
 
     if (!response.ok) {
       throw new SpotifyApiError(
         `Spotify request failed (${response.status}) for ${path}`,
         response.status,
-      )
+      );
     }
 
-    const body: unknown = await response.json()
-    return body
-  }
+    const body: unknown = await response.json();
+    return body;
+  };
 
   const searchArtists: SpotifySearch = async (query) => {
-    const path = `/search?q=${encodeURIComponent(query)}&type=artist&limit=${SEARCH_LIMIT}`
-    const body = await requestJson(path)
-    const parsed = searchResponseSchema.safeParse(body)
+    const path = `/search?q=${encodeURIComponent(query)}&type=artist&limit=${SEARCH_LIMIT}`;
+    const body = await requestJson(path);
+    const parsed = searchResponseSchema.safeParse(body);
     if (!parsed.success) {
       throw new SpotifyApiError(
         `Spotify returned an unexpected search response shape for ${path}`,
         200,
-      )
+      );
     }
     return parsed.data.artists.items.map((item) => ({
       id: item.id,
@@ -326,21 +328,21 @@ export const createSpotifyAppClient = async (
       images: (item.images ?? []).filter((image) => image !== null),
       genres: item.genres ?? [],
       spotifyUrl: item.external_urls?.spotify ?? null,
-    }))
-  }
+    }));
+  };
 
   const fetchArtistDetails = async (
     artistIds: string[],
   ): Promise<Map<string, ArtistDetail>> => {
-    const detailsById = new Map<string, ArtistDetail>()
+    const detailsById = new Map<string, ArtistDetail>();
 
     // Serial, not `Promise.all`: a burst of parallel requests is what trips
     // Spotify's rate limiter, and `requestJson`'s 429 retry sleeps the whole
     // client. The picker waits on ten quick calls once, at human pace.
     for (const artistId of artistIds) {
-      let body: unknown
+      let body: unknown;
       try {
-        body = await requestJson(`/artists/${encodeURIComponent(artistId)}`)
+        body = await requestJson(`/artists/${encodeURIComponent(artistId)}`);
       } catch (err) {
         // One id Spotify cannot resolve must not cost the other nine their
         // hydration. Omitting it leaves the candidate's genres null, which the
@@ -351,24 +353,24 @@ export const createSpotifyAppClient = async (
           apiLogger.warn(
             { err, artistId },
             'Spotify could not resolve an artist id — leaving its details unhydrated',
-          )
-          continue
+          );
+          continue;
         }
-        throw err
+        throw err;
       }
 
-      const parsed = artistDetailResponseSchema.safeParse(body)
+      const parsed = artistDetailResponseSchema.safeParse(body);
       if (!parsed.success) {
         throw new SpotifyApiError(
           'Spotify returned an unexpected artist response shape',
           200,
-        )
+        );
       }
 
-      detailsById.set(parsed.data.id, { genres: parsed.data.genres ?? [] })
+      detailsById.set(parsed.data.id, { genres: parsed.data.genres ?? [] });
     }
-    return detailsById
-  }
+    return detailsById;
+  };
 
-  return { searchArtists, fetchArtistDetails, getCallCount: () => callCount }
-}
+  return { searchArtists, fetchArtistDetails, getCallCount: () => callCount };
+};

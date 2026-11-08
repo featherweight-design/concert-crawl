@@ -1,43 +1,43 @@
-'use client'
+'use client';
 
-import { useEffect, useId, useState } from 'react'
-import type { CrewMember } from '@concert-crawl/types'
+import { useEffect, useId, useState } from 'react';
+import type { CrewMember } from '@concert-crawl/types';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { MemberDot } from './MemberCluster'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { MemberDot } from './MemberCluster';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 /**
  * The five destructive shapes. `handoff` and `last` are never chosen by the
  * client: they are what the leave call's typed 409 code resolves to, so the
  * client and the server cannot disagree about whether a handoff is required.
  */
-export type ConfirmKind = 'leave' | 'remove' | 'delete' | 'handoff' | 'last'
+export type ConfirmKind = 'leave' | 'remove' | 'delete' | 'handoff' | 'last';
 
 interface LeaveConfirmProps {
-  kind: ConfirmKind | null
-  onClose: () => void
-  crewName: string
-  crewId: string
-  patchSalt: number
+  kind: ConfirmKind | null;
+  onClose: () => void;
+  crewName: string;
+  crewId: string;
+  patchSalt: number;
   /** Only meaningful for `remove`. */
-  target: CrewMember | null
+  target: CrewMember | null;
   /** Candidates for `handoff` — everyone but you. */
-  members: CrewMember[]
+  members: CrewMember[];
   /** `newKeeperId` is passed only on the handoff kind. */
-  onConfirm: (newKeeperId?: string) => Promise<void>
+  onConfirm: (newKeeperId?: string) => Promise<void>;
   /** The `last` kind's escape hatch: invite someone instead of deleting. */
-  onInvite: () => void
+  onInvite: () => void;
 }
 
 interface Body {
-  title: string
-  body: string
-  cta: string
-  danger: boolean
+  title: string;
+  body: string;
+  cta: string;
+  danger: boolean;
 }
 
 const bodyFor = (
@@ -52,21 +52,21 @@ const bodyFor = (
         body: COPY.confirm.leaveBody,
         cta: COPY.confirm.leaveCta,
         danger: true,
-      }
+      };
     case 'remove':
       return {
         title: COPY.confirm.removeTitle(targetLabel),
         body: COPY.confirm.removeBody,
         cta: COPY.confirm.removeCta,
         danger: true,
-      }
+      };
     case 'delete':
       return {
         title: COPY.confirm.deleteTitle(crewName),
         body: COPY.confirm.deleteBody,
         cta: COPY.confirm.deleteCta,
         danger: true,
-      }
+      };
     case 'handoff':
       return {
         title: COPY.confirm.handoffTitle,
@@ -75,16 +75,16 @@ const bodyFor = (
         // Passing the crew on is not destructive; it is the step that makes
         // leaving possible.
         danger: false,
-      }
+      };
     case 'last':
       return {
         title: COPY.confirm.lastOneTitle(crewName),
         body: COPY.confirm.lastOneBody,
         cta: COPY.confirm.lastOneCta,
         danger: true,
-      }
+      };
   }
-}
+};
 
 export const LeaveConfirm = ({
   kind,
@@ -97,44 +97,44 @@ export const LeaveConfirm = ({
   onConfirm,
   onInvite,
 }: LeaveConfirmProps) => {
-  const titleId = useId()
-  const bodyId = useId()
-  const [picked, setPicked] = useState<string | null>(null)
-  const [working, setWorking] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const titleId = useId();
+  const bodyId = useId();
+  const [picked, setPicked] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // Resets on every kind change, not just on close: a keeper's `leave` comes
   // back 409 and swaps the kind to `handoff` or `last` without unmounting, so
   // leaving `working` set would disable the confirm the swap just opened.
   useEffect(() => {
-    setPicked(null)
-    setWorking(false)
-    setFailed(false)
-  }, [kind])
+    setPicked(null);
+    setWorking(false);
+    setFailed(false);
+  }, [kind]);
 
-  if (kind === null) return null
+  if (kind === null) return null;
 
   const targetLabel =
     target?.handle !== null && target?.handle !== undefined && target.handle
       ? target.handle
-      : COPY.roster.noHandle
-  const copy = bodyFor(kind, crewName, targetLabel)
-  const blocked = kind === 'handoff' && picked === null
+      : COPY.roster.noHandle;
+  const copy = bodyFor(kind, crewName, targetLabel);
+  const blocked = kind === 'handoff' && picked === null;
 
   const onSubmit = async () => {
-    if (working || blocked) return
-    setWorking(true)
-    setFailed(false)
+    if (working || blocked) return;
+    setWorking(true);
+    setFailed(false);
     try {
       await onConfirm(
         kind === 'handoff' && picked !== null ? picked : undefined,
-      )
+      );
     } catch (err) {
-      console.error('LeaveConfirm: the action did not go through', err)
-      setFailed(true)
-      setWorking(false)
+      console.error('LeaveConfirm: the action did not go through', err);
+      setFailed(true);
+      setWorking(false);
     }
-  }
+  };
 
   return (
     <ModalShell
@@ -207,7 +207,7 @@ export const LeaveConfirm = ({
             className="flex flex-col"
           >
             {members.map((member) => {
-              const named = member.handle !== null && member.handle !== ''
+              const named = member.handle !== null && member.handle !== '';
               return (
                 // The handle is skipped by analytics (`ph-no-capture`); a
                 // tap elsewhere on the row still records the pick, named by
@@ -244,7 +244,7 @@ export const LeaveConfirm = ({
                       : COPY.roster.noHandle}
                   </span>
                 </label>
-              )
+              );
             })}
           </div>
         )}
@@ -316,5 +316,5 @@ export const LeaveConfirm = ({
         </div>
       </div>
     </ModalShell>
-  )
-}
+  );
+};

@@ -112,11 +112,11 @@ Fourteen tasks. Each ends with an independently testable deliverable + commit:
 ```ts
 // glyphs.tsx
 export interface TierMarkProps {
-  kind: 'boxoffice' | 'resale' | 'community'
-  glyph?: boolean
-  children: React.ReactNode
+  kind: 'boxoffice' | 'resale' | 'community';
+  glyph?: boolean;
+  children: React.ReactNode;
 }
-export const TierMark: (props: TierMarkProps) => JSX.Element
+export const TierMark: (props: TierMarkProps) => JSX.Element;
 ```
 
 **Copy additions** (`apps/web/src/components/consumer/definitions/copy.ts` — extend the `CONSUMER_COPY` const literal):
@@ -238,19 +238,19 @@ const TIER_COLOR = {
   boxoffice: 'oklch(0.66 0.14 78)',
   resale: 'oklch(0.65 0.20 25)',
   community: 'oklch(0.62 0.12 240)',
-} as const
+} as const;
 
 const TIER_MARK_STAR_PATH =
-  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z'
+  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z';
 
 export interface TierMarkProps {
-  kind: 'boxoffice' | 'resale' | 'community'
-  glyph?: boolean
-  children: React.ReactNode
+  kind: 'boxoffice' | 'resale' | 'community';
+  glyph?: boolean;
+  children: React.ReactNode;
 }
 
 export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
-  const color = TIER_COLOR[kind]
+  const color = TIER_COLOR[kind];
   return (
     <span
       style={{
@@ -285,8 +285,8 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
       )}
       {children}
     </span>
-  )
-}
+  );
+};
 ```
 
 **TDD steps:**
@@ -316,34 +316,34 @@ export const TierMark = ({ kind, glyph = false, children }: TierMarkProps) => {
 **Interfaces produced:**
 
 ```ts
-export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale'
+export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale';
 
 export interface ProvenanceCTAProps {
-  kind: ProvenanceCTAKind
-  vendor: string
-  href: string
-  outline?: boolean
+  kind: ProvenanceCTAKind;
+  vendor: string;
+  href: string;
+  outline?: boolean;
 }
 ```
 
 **Implementation skeleton:**
 
 ```tsx
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.priceRegion.provenance
-const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)'
-const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)'
+const copy = CONSUMER_COPY.priceRegion.provenance;
+const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)';
+const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)';
 
-export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale'
+export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale';
 
 export interface ProvenanceCTAProps {
-  kind: ProvenanceCTAKind
-  vendor: string
-  href: string
-  outline?: boolean
+  kind: ProvenanceCTAKind;
+  vendor: string;
+  href: string;
+  outline?: boolean;
 }
 
 export const ProvenanceCTA = ({
@@ -352,29 +352,29 @@ export const ProvenanceCTA = ({
   href,
   outline = false,
 }: ProvenanceCTAProps) => {
-  const isResale = kind === 'resale'
-  const label = isResale ? copy.seeResale : copy.getTickets
+  const isResale = kind === 'resale';
+  const label = isResale ? copy.seeResale : copy.getTickets;
   const caption =
     kind === 'boxoffice'
       ? copy.captionBoxoffice(vendor)
       : kind === 'primary'
         ? copy.captionPrimary(vendor)
-        : copy.captionResale(vendor)
+        : copy.captionResale(vendor);
   const ariaLabel =
     kind === 'boxoffice'
       ? copy.ariaLabelBoxoffice(vendor)
       : kind === 'primary'
         ? copy.ariaLabelPrimary(vendor)
-        : copy.ariaLabelResale(vendor)
+        : copy.ariaLabelResale(vendor);
   const dotColor =
     kind === 'boxoffice'
       ? TIER_COLOR_BOXOFFICE
       : kind === 'resale'
         ? TIER_COLOR_RESALE
-        : 'var(--fg-subtle)'
+        : 'var(--fg-subtle)';
   const captionColor = isResale
     ? `color-mix(in oklab, ${TIER_COLOR_RESALE} 92%, var(--fg-muted))`
-    : 'var(--fg-muted)'
+    : 'var(--fg-muted)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -434,8 +434,8 @@ export const ProvenanceCTA = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};
 ```
 
 **TDD steps:**
@@ -449,8 +449,8 @@ export const ProvenanceCTA = ({
 - [ ] **Step 2**: Run failing tests. Implement `ProvenanceCTA.tsx` per snippet. Re-run tests; expect green.
 - [ ] **Step 3**: Add to barrel `apps/web/src/components/consumer/price-region/index.ts`:
   ```ts
-  export { ProvenanceCTA } from './ProvenanceCTA'
-  export type { ProvenanceCTAKind, ProvenanceCTAProps } from './ProvenanceCTA'
+  export { ProvenanceCTA } from './ProvenanceCTA';
+  export type { ProvenanceCTAKind, ProvenanceCTAProps } from './ProvenanceCTA';
   ```
 - [ ] **Step 4**: `pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web test ProvenanceCTA`.
 - [ ] **Step 5**: Commit: `feat(consumer): add ProvenanceCTA — honest outbound ticket button`.
@@ -469,22 +469,22 @@ export const ProvenanceCTA = ({
 
 **Property table reference:** §1 (lines 52–214) for `FaceValueCard`; Appendix A.1 for `ContributeFaceValueCard`.
 
-**Locked decision callout (§9 Q1):** `ContributeFaceValueCard` is a NEW, SEPARATE component — NOT a variant of `FaceValueCard`. Per the addendum: *"it is NOT a FaceValueCard anymore — what survives is the contribution half."* Do not model it as `FaceValueCard variant='sold-out-degraded'`. The `sold-out-degraded` variant is removed from `FaceValueCardProps` below; the props now only carry `'default' | 'no-price'`.
+**Locked decision callout (§9 Q1):** `ContributeFaceValueCard` is a NEW, SEPARATE component — NOT a variant of `FaceValueCard`. Per the addendum: _"it is NOT a FaceValueCard anymore — what survives is the contribution half."_ Do not model it as `FaceValueCard variant='sold-out-degraded'`. The `sold-out-degraded` variant is removed from `FaceValueCardProps` below; the props now only carry `'default' | 'no-price'`.
 
 **Interfaces produced:**
 
 ```ts
 export interface FaceValueCardProps {
-  variant: 'default' | 'no-price'
-  resaleVendor: string
-  resaleRange?: string // e.g. "$110–180"
-  onAddPrice: () => void
+  variant: 'default' | 'no-price';
+  resaleVendor: string;
+  resaleRange?: string; // e.g. "$110–180"
+  onAddPrice: () => void;
 }
 
 // ContributeFaceValueCard — NEW component per §9 Q1 lock + Appendix A.1.
 // Renders one ghost box-office row, no resale row, no outbound CTA.
 export interface ContributeFaceValueCardProps {
-  onAddPrice: () => void
+  onAddPrice: () => void;
 }
 ```
 
@@ -493,25 +493,25 @@ export interface ContributeFaceValueCardProps {
 The two-row ladder with `ghost` flag drives the box-office row. Use a local `LadderRow` helper inside the file (per property table lines 75–172):
 
 ```tsx
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { StarGlyph, Eyebrow } from '@/components/consumer/glyphs'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { StarGlyph, Eyebrow } from '@/components/consumer/glyphs';
 
-const copy = CONSUMER_COPY.priceRegion.faceValue
-const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)'
-const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)'
+const copy = CONSUMER_COPY.priceRegion.faceValue;
+const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)';
+const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)';
 
 interface LadderRowProps {
-  kind: 'resale' | 'boxoffice'
-  label: string
-  sub: string
-  right: string
-  ghost: boolean
+  kind: 'resale' | 'boxoffice';
+  label: string;
+  sub: string;
+  right: string;
+  ghost: boolean;
 }
 
 const LadderRow = ({ kind, label, sub, right, ghost }: LadderRowProps) => {
-  const color = kind === 'boxoffice' ? TIER_COLOR_BOXOFFICE : TIER_COLOR_RESALE
+  const color = kind === 'boxoffice' ? TIER_COLOR_BOXOFFICE : TIER_COLOR_RESALE;
   return (
     <div
       style={{
@@ -606,14 +606,14 @@ const LadderRow = ({ kind, label, sub, right, ghost }: LadderRowProps) => {
         {right}
       </div>
     </div>
-  )
-}
+  );
+};
 
 export interface FaceValueCardProps {
-  variant: 'default' | 'no-price'
-  resaleVendor: string
-  resaleRange?: string
-  onAddPrice: () => void
+  variant: 'default' | 'no-price';
+  resaleVendor: string;
+  resaleRange?: string;
+  onAddPrice: () => void;
 }
 
 export const FaceValueCard = ({
@@ -623,10 +623,10 @@ export const FaceValueCard = ({
   onAddPrice,
 }: FaceValueCardProps) => {
   const headline =
-    variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault
+    variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault;
   const ctaLabel =
-    variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault
-  const resaleRight = resaleRange ?? copy.ladderResaleRightFallback
+    variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault;
+  const resaleRight = resaleRange ?? copy.ladderResaleRightFallback;
 
   return (
     <div
@@ -682,7 +682,9 @@ export const FaceValueCard = ({
           right={resaleRight}
           ghost={false}
         />
-        <div style={{ height: 1, background: 'var(--border)', margin: '0 14px' }} />
+        <div
+          style={{ height: 1, background: 'var(--border)', margin: '0 14px' }}
+        />
         <LadderRow
           kind="boxoffice"
           label={copy.ladderBoxofficeLabel}
@@ -748,8 +750,8 @@ export const FaceValueCard = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 ```
 
 **TDD steps:**
@@ -788,37 +790,37 @@ export const FaceValueCard = ({
 
 ```ts
 export interface AltSourceRowProps {
-  source: string
-  kind: 'boxoffice' | 'resale' | 'community'
-  price: number
+  source: string;
+  kind: 'boxoffice' | 'resale' | 'community';
+  price: number;
 }
 ```
 
 **Implementation:**
 
 ```tsx
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const TIER_COLOR = {
   boxoffice: 'oklch(0.66 0.14 78)',
   resale: 'oklch(0.65 0.20 25)',
   community: 'oklch(0.62 0.12 240)',
-} as const
+} as const;
 
 const KIND_LABEL = {
   boxoffice: 'box office',
   resale: 'resale',
   community: 'community',
-} as const
+} as const;
 
 export interface AltSourceRowProps {
-  source: string
-  kind: 'boxoffice' | 'resale' | 'community'
-  price: number
+  source: string;
+  kind: 'boxoffice' | 'resale' | 'community';
+  price: number;
 }
 
 export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
-  const color = TIER_COLOR[kind]
+  const color = TIER_COLOR[kind];
   return (
     <div
       style={{
@@ -869,11 +871,12 @@ export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
           color: 'var(--fg-muted)',
         }}
       >
-        {CONSUMER_COPY.priceRegion.altSourceRow.pricePrefix}{price}
+        {CONSUMER_COPY.priceRegion.altSourceRow.pricePrefix}
+        {price}
       </span>
     </div>
-  )
-}
+  );
+};
 ```
 
 **TDD steps:**
@@ -901,43 +904,43 @@ export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
 **Interfaces produced:**
 
 ```ts
-import type { TierAlternateRowProps } from '@/components/consumer/multi-tier/TierAlternateRow'
+import type { TierAlternateRowProps } from '@/components/consumer/multi-tier/TierAlternateRow';
 
 export interface MultiSourceMultiTierCardProps {
-  headlineTier: string
-  headlinePrice: number
-  headlineVendor: string
+  headlineTier: string;
+  headlinePrice: number;
+  headlineVendor: string;
   crossSource: {
-    source: string
-    kind: 'boxoffice' | 'resale' | 'community'
-    price: number
-  }
-  otherTiers: ReadonlyArray<TierAlternateRowProps>
+    source: string;
+    kind: 'boxoffice' | 'resale' | 'community';
+    price: number;
+  };
+  otherTiers: ReadonlyArray<TierAlternateRowProps>;
 }
 ```
 
 **Implementation skeleton** (cite §6 lines 125–159):
 
 ```tsx
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
-import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow'
-import { AltSourceRow } from './AltSourceRow'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
+import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow';
+import { AltSourceRow } from './AltSourceRow';
 
-const copy = CONSUMER_COPY.priceRegion.multiSource
+const copy = CONSUMER_COPY.priceRegion.multiSource;
 
 export interface MultiSourceMultiTierCardProps {
-  headlineTier: string
-  headlinePrice: number
-  headlineVendor: string
+  headlineTier: string;
+  headlinePrice: number;
+  headlineVendor: string;
   crossSource: {
-    source: string
-    kind: 'boxoffice' | 'resale' | 'community'
-    price: number
-  }
-  otherTiers: ReadonlyArray<React.ComponentProps<typeof TierAlternateRow>>
+    source: string;
+    kind: 'boxoffice' | 'resale' | 'community';
+    price: number;
+  };
+  otherTiers: ReadonlyArray<React.ComponentProps<typeof TierAlternateRow>>;
 }
 
 export const MultiSourceMultiTierCard = ({
@@ -1033,7 +1036,7 @@ export const MultiSourceMultiTierCard = ({
       </div>
     )}
   </div>
-)
+);
 ```
 
 **TDD steps:**
@@ -1078,24 +1081,24 @@ export const MultiSourceMultiTierCard = ({
 //
 // Cross-reference: apps/api/src/lib/price-aggregation/pick-tier-headline.ts.
 
-import type { TierPriceBlock } from '@concert-crawl/types'
+import type { TierPriceBlock } from '@concert-crawl/types';
 
-export type BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale' | null
+export type BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale' | null;
 
 export interface BrowseHeadline {
-  price: number
-  kind: BrowseHeadlineKind
+  price: number;
+  kind: BrowseHeadlineKind;
 }
 
 export function pickBrowseHeadline(
   priceByTier: ReadonlyArray<TierPriceBlock> | null | undefined,
-): BrowseHeadline | null
+): BrowseHeadline | null;
 
 // MTListChip.tsx
 export interface MTListChipProps {
-  price: number
-  kind: BrowseHeadlineKind
-  from?: boolean
+  price: number;
+  kind: BrowseHeadlineKind;
+  from?: boolean;
 }
 ```
 
@@ -1104,28 +1107,28 @@ export interface MTListChipProps {
 The consumer helper consumes pre-aggregated data — `priceByTier` is already sorted by entry price ASC by `aggregateByTier`, and within each block the API's `pick-tier-headline.ts` has already collapsed candidates into a single headline (or null) using trust → price → observedAt ordering. The helper here just (a) walks tiers in price-ASC order to find the first one with a non-null headline, and (b) maps `sourceCategory` to the chip's `kind` vocabulary.
 
 ```ts
-import type { TierPriceBlock, SourceCategory } from '@concert-crawl/types'
+import type { TierPriceBlock, SourceCategory } from '@concert-crawl/types';
 
-export type BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale' | null
+export type BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale' | null;
 
 export interface BrowseHeadline {
-  price: number
-  kind: BrowseHeadlineKind
+  price: number;
+  kind: BrowseHeadlineKind;
 }
 
 function kindFromCategory(category: SourceCategory | null): BrowseHeadlineKind {
-  if (category === 'boxoffice') return 'boxoffice'
-  if (category === 'resale') return 'resale'
-  if (category === 'standard') return 'community'
-  return null
+  if (category === 'boxoffice') return 'boxoffice';
+  if (category === 'resale') return 'resale';
+  if (category === 'standard') return 'community';
+  return null;
 }
 
 function adaptBlock(block: TierPriceBlock): BrowseHeadline | null {
-  if (block.headline === null) return null
+  if (block.headline === null) return null;
   return {
     price: parseFloat(block.headline.priceMin),
     kind: kindFromCategory(block.headline.sourceCategory),
-  }
+  };
 }
 
 // Pick the cheapest tier with any price data.
@@ -1135,12 +1138,12 @@ function adaptBlock(block: TierPriceBlock): BrowseHeadline | null {
 export function pickBrowseHeadline(
   priceByTier: ReadonlyArray<TierPriceBlock> | null | undefined,
 ): BrowseHeadline | null {
-  if (priceByTier == null || priceByTier.length === 0) return null
+  if (priceByTier == null || priceByTier.length === 0) return null;
   for (const block of priceByTier) {
-    const headline = adaptBlock(block)
-    if (headline !== null) return headline
+    const headline = adaptBlock(block);
+    if (headline !== null) return headline;
   }
-  return null
+  return null;
 }
 ```
 
@@ -1151,33 +1154,33 @@ export function pickBrowseHeadline(
 Note: `kind='resale'` is materially different from `kind='boxoffice'` / `kind='community'` — it has coral-tinted background + border, a 7px gap (vs. 6px on other variants), and an ALWAYS-PRESENT mono `"resale"` tag appended after the price. The tag is NON-NEGOTIABLE per the design addendum and must never be conditionally hidden. Add copy key `mtListChip.resaleTag` (value `'resale'`) to `CONSUMER_COPY` as part of this task.
 
 ```tsx
-import { StarGlyph } from '@/components/consumer/glyphs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { StarGlyph } from '@/components/consumer/glyphs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const GOLD = 'oklch(0.66 0.14 78)'
-const AZURE = 'oklch(0.62 0.12 240)'
-const RESALE = 'oklch(0.65 0.20 25)'
+const GOLD = 'oklch(0.66 0.14 78)';
+const AZURE = 'oklch(0.62 0.12 240)';
+const RESALE = 'oklch(0.65 0.20 25)';
 
-export type MTListChipKind = 'boxoffice' | 'community' | 'resale' | null
+export type MTListChipKind = 'boxoffice' | 'community' | 'resale' | null;
 
 export interface MTListChipProps {
-  price: number
-  kind: MTListChipKind
-  from?: boolean
+  price: number;
+  kind: MTListChipKind;
+  from?: boolean;
 }
 
 const colorFor = (kind: MTListChipKind): string => {
-  if (kind === 'boxoffice') return GOLD
-  if (kind === 'community') return 'var(--fg)'
-  if (kind === 'resale') return RESALE
-  return 'var(--fg-muted)'
-}
+  if (kind === 'boxoffice') return GOLD;
+  if (kind === 'community') return 'var(--fg)';
+  if (kind === 'resale') return RESALE;
+  return 'var(--fg-muted)';
+};
 
 export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
-  const color = colorFor(kind)
+  const color = colorFor(kind);
   const text = from
     ? `${CONSUMER_COPY.priceRegion.mtListChip.fromPrefix} $${price}`
-    : `$${price}`
+    : `$${price}`;
 
   // kind='resale' — Appendix A.3 locked spec: coral chrome + always-present resale tag.
   if (kind === 'resale') {
@@ -1230,7 +1233,7 @@ export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
           {CONSUMER_COPY.priceRegion.mtListChip.resaleTag}
         </span>
       </span>
-    )
+    );
   }
 
   return (
@@ -1259,8 +1262,8 @@ export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
         {text}
       </span>
     </span>
-  )
-}
+  );
+};
 ```
 
 **TDD steps:**
@@ -1299,43 +1302,43 @@ export const MTListChip = ({ price, kind, from = true }: MTListChipProps) => {
 **Interfaces produced:**
 
 ```ts
-import type { Tier, SourceCategory } from '@concert-crawl/types'
+import type { Tier, SourceCategory } from '@concert-crawl/types';
 
 export interface MTAddTierSuccessProps {
-  submittedTier: Tier
-  submittedPrice: number
-  submittedSourceCategory: SourceCategory
-  remainingTiers: ReadonlyArray<Tier>
-  onAddTier: (tier: Tier) => void
-  onDone: () => void
+  submittedTier: Tier;
+  submittedPrice: number;
+  submittedSourceCategory: SourceCategory;
+  remainingTiers: ReadonlyArray<Tier>;
+  onAddTier: (tier: Tier) => void;
+  onDone: () => void;
 }
 ```
 
 **Implementation (key snippets per §5):**
 
 ```tsx
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { CheckGlyph, Eyebrow } from '@/components/consumer/glyphs'
-import type { Tier, SourceCategory } from '@concert-crawl/types'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CheckGlyph, Eyebrow } from '@/components/consumer/glyphs';
+import type { Tier, SourceCategory } from '@concert-crawl/types';
 
-const copy = CONSUMER_COPY.priceRegion.addTierSuccess
-const AZURE = 'oklch(0.62 0.12 240)'
+const copy = CONSUMER_COPY.priceRegion.addTierSuccess;
+const AZURE = 'oklch(0.62 0.12 240)';
 
 const SOURCE_LABEL = {
   boxoffice: 'box office',
   standard: 'standard',
   resale: 'resale',
-} as const
+} as const;
 
 export interface MTAddTierSuccessProps {
-  submittedTier: Tier
-  submittedPrice: number
-  submittedSourceCategory: SourceCategory
-  remainingTiers: ReadonlyArray<Tier>
-  onAddTier: (tier: Tier) => void
-  onDone: () => void
+  submittedTier: Tier;
+  submittedPrice: number;
+  submittedSourceCategory: SourceCategory;
+  remainingTiers: ReadonlyArray<Tier>;
+  onAddTier: (tier: Tier) => void;
+  onDone: () => void;
 }
 
 export const MTAddTierSuccess = ({
@@ -1478,7 +1481,7 @@ export const MTAddTierSuccess = ({
       {copy.doneButton}
     </button>
   </div>
-)
+);
 ```
 
 **Locked decision callout (§9 Q4-eng):** `remainingTiers` is driven by client-side session state — "tiers I just submitted in this session" — NOT by re-fetching `priceByTier` after success. Re-fetch causes flicker; the rare two-device race is recoverable on next page load. This component just renders the `remainingTiers` array it's handed; the orchestrator (Task 9) is responsible for filtering against session state.
@@ -1509,31 +1512,54 @@ export const MTAddTierSuccess = ({
 **Interfaces produced:**
 
 ```ts
-import type { EventDetailResponse, TierPriceBlock, TicketLink, Tier } from '@concert-crawl/types'
+import type {
+  EventDetailResponse,
+  TierPriceBlock,
+  TicketLink,
+  Tier,
+} from '@concert-crawl/types';
 
 export type PriceRegionDecision =
   | { kind: 'noop' } // server-rendered PriceDisplay handles it
-  | { kind: 'sold-out-resale'; resaleLink: TicketLink; faceValueResaleVendor: string; faceValueResaleRange?: string }
+  | {
+      kind: 'sold-out-resale';
+      resaleLink: TicketLink;
+      faceValueResaleVendor: string;
+      faceValueResaleRange?: string;
+    }
   | { kind: 'sold-out-contribute' } // LOCKED §9 Q1 — render ContributeFaceValueCard + SoldOutPriceCard variant='no-listing'
-  | { kind: 'no-price-resale'; resaleLink: TicketLink; faceValueResaleVendor: string }
+  | {
+      kind: 'no-price-resale';
+      resaleLink: TicketLink;
+      faceValueResaleVendor: string;
+    }
   | { kind: 'no-price-empty' } // LOCKED §9 Q2-eng — fall through to legacy NoPriceCard, no FaceValueCard
-  | { kind: 'resale-headline'; priceByTier: TierPriceBlock[]; faceValueResaleVendor: string }
-    // STATE #3 — at least one tier's headline is resale AND there is no
-    // boxoffice alternate in that tier. Render shipped MultiTierLiveCard
-    // (with the new kind='resale' enum value — see Modify list) AND a
-    // show-level FaceValueCard underneath inviting box-office contribution.
-  | { kind: 'multi-source-mixed'; entryBlock: TierPriceBlock; crossSourceAlt: TierPriceBlock['alternates'][number]; otherTiers: TierPriceBlock[] }
+  | {
+      kind: 'resale-headline';
+      priceByTier: TierPriceBlock[];
+      faceValueResaleVendor: string;
+    }
+  // STATE #3 — at least one tier's headline is resale AND there is no
+  // boxoffice alternate in that tier. Render shipped MultiTierLiveCard
+  // (with the new kind='resale' enum value — see Modify list) AND a
+  // show-level FaceValueCard underneath inviting box-office contribution.
+  | {
+      kind: 'multi-source-mixed';
+      entryBlock: TierPriceBlock;
+      crossSourceAlt: TierPriceBlock['alternates'][number];
+      otherTiers: TierPriceBlock[];
+    }
   | { kind: 'multi-tier-shipped'; priceByTier: TierPriceBlock[] } // routes to MultiTierLiveCard / MixedTierCard / TwoPendingStack
-  | { kind: 'legacy' } // priceByTier null → existing flat-field code path
+  | { kind: 'legacy' }; // priceByTier null → existing flat-field code path
 
 export interface PriceRegionInput {
   event: Pick<
     EventDetailResponse,
     'priceByTier' | 'priceStatus' | 'status' | 'ticketLinks' | 'priceVendor'
-  >
+  >;
 }
 
-export function decidePriceRegion(input: PriceRegionInput): PriceRegionDecision
+export function decidePriceRegion(input: PriceRegionInput): PriceRegionDecision;
 ```
 
 **Discriminant rename:** the `'sold-out-degraded'` discriminant from the original plan is renamed to `'sold-out-contribute'` to match the Q1-locked `ContributeFaceValueCard` component. The semantics are unchanged but the new name surfaces the contribution-only nature of the state (vs. a degraded comparison card).
@@ -1541,55 +1567,63 @@ export function decidePriceRegion(input: PriceRegionInput): PriceRegionDecision
 **Decision logic (mirrors property table §8 states 1–13):**
 
 ```ts
-export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecision {
-  const blocks = event.priceByTier ?? null
+export function decidePriceRegion({
+  event,
+}: PriceRegionInput): PriceRegionDecision {
+  const blocks = event.priceByTier ?? null;
 
   // Sold-out priority — even when priceByTier exists, sold-out trumps.
   if (event.priceStatus === 'soldout' || event.status === 'soldout') {
-    const resaleLink = event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+    const resaleLink =
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
     if (resaleLink === null) {
       // LOCKED §9 Q1 — render ContributeFaceValueCard (single ghost box-office
       // row + signal CTA, no resale row, no outbound ProvenanceCTA) alongside
       // SoldOutPriceCard variant='no-listing'. See property table Appendix A.1
       // + A.2.
-      return { kind: 'sold-out-contribute' }
+      return { kind: 'sold-out-contribute' };
     }
     return {
       kind: 'sold-out-resale',
       resaleLink,
       faceValueResaleVendor: resaleLink.vendor ?? 'Resale',
-    }
+    };
   }
 
   // No priceByTier → defer to legacy flat-field logic in EventDetailClient.
   if (blocks === null || blocks.length === 0) {
-    const resaleLink = event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+    const resaleLink =
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
     if (resaleLink !== null) {
       return {
         kind: 'no-price-resale',
         resaleLink,
         faceValueResaleVendor: resaleLink.vendor ?? 'Resale',
-      }
+      };
     }
     // LOCKED §9 Q2-eng — no resale link AND no priceByTier. Fall through to
     // the existing community-handoff card (NoPriceCard). NO FaceValueCard —
     // pedagogy collapses without a resale anchor.
-    return { kind: 'no-price-empty' }
+    return { kind: 'no-price-empty' };
   }
 
   // Multi-source mixed: the cheapest tier has BOTH a corroborated headline
   // AND a resale alternate in the same tier.
-  const entryBlock = blocks[0]
+  const entryBlock = blocks[0];
   if (entryBlock?.headline) {
     const crossSourceAlt =
-      entryBlock.alternates.find((alt) => alt.sourceCategory === 'resale') ?? null
-    if (crossSourceAlt !== null && entryBlock.headline.sourceCategory === 'boxoffice') {
+      entryBlock.alternates.find((alt) => alt.sourceCategory === 'resale') ??
+      null;
+    if (
+      crossSourceAlt !== null &&
+      entryBlock.headline.sourceCategory === 'boxoffice'
+    ) {
       return {
         kind: 'multi-source-mixed',
         entryBlock,
         crossSourceAlt,
         otherTiers: blocks.slice(1),
-      }
+      };
     }
   }
 
@@ -1600,26 +1634,26 @@ export function decidePriceRegion({ event }: PriceRegionInput): PriceRegionDecis
   // headline alongside.
   const hasResaleHeadline = blocks.some(
     (block) => block.headline?.sourceCategory === 'resale',
-  )
+  );
   const hasNonResaleHeadline = blocks.some(
     (block) =>
       block.headline !== null &&
       block.headline.sourceCategory !== null &&
       block.headline.sourceCategory !== 'resale',
-  )
+  );
   if (hasResaleHeadline && !hasNonResaleHeadline) {
     const resaleBlock = blocks.find(
       (block) => block.headline?.sourceCategory === 'resale',
-    )
+    );
     return {
       kind: 'resale-headline',
       priceByTier: blocks,
       faceValueResaleVendor: resaleBlock?.headline?.vendor ?? 'Resale',
-    }
+    };
   }
 
   // Default — let MultiTierLiveCard / MixedTierCard / TwoPendingStack handle it.
-  return { kind: 'multi-tier-shipped', priceByTier: blocks }
+  return { kind: 'multi-tier-shipped', priceByTier: blocks };
 }
 ```
 
@@ -1828,18 +1862,18 @@ Per the Q3 lock, the `PendingCardB` footer link is REPLACED (not silently hidden
 
 Pointer styling (LOCKED — copy verbatim from Appendix A.4):
 
-| Property | Value |
-|----------|-------|
-| display | `inline-flex` |
-| align-items | `center` |
-| gap | `6px` |
-| text-decoration | `none` |
-| font-family | `'JetBrains Mono', monospace` |
-| font-size | `10px` |
-| color | `oklch(0.65 0.20 25)` (coral — NOT muted, NOT `var(--fg-subtle)`) |
-| letter-spacing | `0.04em` |
-| text-transform | `uppercase` |
-| font-weight | `700` |
+| Property        | Value                                                             |
+| --------------- | ----------------------------------------------------------------- |
+| display         | `inline-flex`                                                     |
+| align-items     | `center`                                                          |
+| gap             | `6px`                                                             |
+| text-decoration | `none`                                                            |
+| font-family     | `'JetBrains Mono', monospace`                                     |
+| font-size       | `10px`                                                            |
+| color           | `oklch(0.65 0.20 25)` (coral — NOT muted, NOT `var(--fg-subtle)`) |
+| letter-spacing  | `0.04em`                                                          |
+| text-transform  | `uppercase`                                                       |
+| font-weight     | `700`                                                             |
 
 Coral dot prefix: 5×5, border-radius 50%, background `oklch(0.65 0.20 25)`.
 
@@ -1853,10 +1887,10 @@ At the orchestrator, compute the pointer per tier:
 
 ```tsx
 const counterPointerFor = (tier: string): { href: string } | null => {
-  const block = event.priceByTier?.find((blk) => blk.tier === tier)
-  if (block?.counterSubmission == null) return null
-  return { href: `#counter-${block.counterSubmission.id}` }
-}
+  const block = event.priceByTier?.find((blk) => blk.tier === tier);
+  if (block?.counterSubmission == null) return null;
+  return { href: `#counter-${block.counterSubmission.id}` };
+};
 ```
 
 And pass `counterPointer={counterPointerFor(sub.tier)}` to each `<PendingCardB>` render. For the legacy `event.counterSubmission !== null` case (single-tier), the existing `DisputedPriceCard` branch already renders the counter card; the swap just wires the pointer to its anchor.
@@ -1866,26 +1900,28 @@ And pass `counterPointer={counterPointerFor(sub.tier)}` to each `<PendingCardB>`
 `event.counterSubmission.lastAdminActionKind === 'defer'` triggers a quiet pill on the counter card. Add a `lastAdminActionKind?: 'defer' | null` prop to `DisputedPriceCard`. When `'defer'`, render a small pill near the card header:
 
 ```tsx
-{lastAdminActionKind === 'defer' && (
-  <span
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 4,
-      padding: '2px 8px',
-      borderRadius: 999,
-      background: 'color-mix(in oklab, var(--warning) 10%, transparent)',
-      color: 'var(--warning)',
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: 9,
-      letterSpacing: '0.06em',
-      textTransform: 'uppercase',
-      fontWeight: 700,
-    }}
-  >
-    {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
-  </span>
-)}
+{
+  lastAdminActionKind === 'defer' && (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '2px 8px',
+        borderRadius: 999,
+        background: 'color-mix(in oklab, var(--warning) 10%, transparent)',
+        color: 'var(--warning)',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 9,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        fontWeight: 700,
+      }}
+    >
+      {CONSUMER_COPY.priceRegion.adminDeferPillLabel}
+    </span>
+  );
+}
 ```
 
 **TDD steps:**

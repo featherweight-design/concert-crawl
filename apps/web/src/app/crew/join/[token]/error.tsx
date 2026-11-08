@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 import {
   BrowseInstead,
@@ -11,8 +11,8 @@ import {
   InviteShell,
   InviteTitle,
   primaryButtonStyle,
-} from '@/components/consumer/crews'
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry'
+} from '@/components/consumer/crews';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
 /**
  * Our failure, stated as ours. Deliberately not the expired or retired dead
@@ -22,14 +22,14 @@ export default function CrewJoinError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-  const onRetry = useErrorBoundaryRetry(reset)
+  const onRetry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
-    console.error('[crews] invite landing boundary', error)
-  }, [error])
+    console.error('[crews] invite landing boundary', error);
+  }, [error]);
 
   return (
     <InviteShell>
@@ -53,5 +53,5 @@ export default function CrewJoinError({
         <BrowseInstead />
       </div>
     </InviteShell>
-  )
+  );
 }

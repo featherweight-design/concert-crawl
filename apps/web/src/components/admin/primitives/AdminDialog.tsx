@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useRef, type ReactNode } from 'react'
-import { useDialogKeyboard } from './useDialogKeyboard'
+import { useRef, type ReactNode } from 'react';
+import { useDialogKeyboard } from './useDialogKeyboard';
 
 export interface AdminDialogProps {
   /**
@@ -10,24 +10,24 @@ export interface AdminDialogProps {
    * use is open (danger, warning, signal, and a derived accent in the bulk
    * flows, which picks its colour from the action).
    */
-  accent: string
+  accent: string;
   /** Announced name. Usually the heading, but the two differ where the heading is a node. */
-  label: string
-  eyebrow: string
-  heading: ReactNode
+  label: string;
+  eyebrow: string;
+  heading: ReactNode;
   /** Panel width in px. Existing dialogs run 400 to 560. */
-  width?: number
+  width?: number;
   /**
    * False while a request is in flight: the scrim stops dismissing and
    * Escape goes inert, because the work has already been committed and
    * "cancelling" it would be a lie.
    */
-  dismissible?: boolean
-  onDismiss: () => void
+  dismissible?: boolean;
+  onDismiss: () => void;
   /** Body content, inside the padded head block. */
-  children: ReactNode
+  children: ReactNode;
   /** Action row. Callers own their own buttons; this is not a fixed pair. */
-  footer: ReactNode
+  footer: ReactNode;
 }
 
 /**
@@ -57,8 +57,8 @@ export const AdminDialog = ({
   children,
   footer,
 }: AdminDialogProps) => {
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onDismiss, { dismissible })
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onDismiss, { dismissible });
 
   return (
     <div
@@ -76,8 +76,8 @@ export const AdminDialog = ({
         padding: 24,
       }}
       onClick={(evt) => {
-        if (!dismissible) return
-        if (evt.target === evt.currentTarget) onDismiss()
+        if (!dismissible) return;
+        if (evt.target === evt.currentTarget) onDismiss();
       }}
     >
       <div
@@ -138,5 +138,5 @@ export const AdminDialog = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

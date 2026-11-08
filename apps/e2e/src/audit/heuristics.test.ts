@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { collectHeuristicsScript } from './heuristics.js'
-import type { HeuristicSnapshot } from './heuristics.js'
+import { describe, it, expect } from 'vitest';
+import { collectHeuristicsScript } from './heuristics.js';
+import type { HeuristicSnapshot } from './heuristics.js';
 
 // jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are
 // 0 by default. `runInDom` stubs each from inline styles so the heuristic
 // script (which reads real layout metrics in production) sees meaningful
 // values. Extract to apps/e2e/src/audit/test-helpers.ts if reused.
-const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
+const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0;
 const runInDom = (html: string, vw: number): HeuristicSnapshot => {
-  document.body.innerHTML = html
-  const de = document.documentElement
+  document.body.innerHTML = html;
+  const de = document.documentElement;
 
   // Save the ORIGINAL property descriptors for documentElement layout
   // properties so we can restore them in finally. Vitest's jsdom
@@ -19,12 +19,12 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
   const originalClientWidthDesc = Object.getOwnPropertyDescriptor(
     de,
     'clientWidth',
-  )
+  );
   const originalScrollWidthDesc = Object.getOwnPropertyDescriptor(
     de,
     'scrollWidth',
-  )
-  const originalRect = Element.prototype.getBoundingClientRect
+  );
+  const originalRect = Element.prototype.getBoundingClientRect;
 
   // Per-element clientWidth/scrollWidth stubs for the container-overflow
   // heuristic. jsdom reports 0 for both on every element; we source them from
@@ -35,25 +35,25 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
   const originalProtoClientWidth = Object.getOwnPropertyDescriptor(
     Element.prototype,
     'clientWidth',
-  )
+  );
   const originalProtoScrollWidth = Object.getOwnPropertyDescriptor(
     Element.prototype,
     'scrollWidth',
-  )
+  );
   Object.defineProperty(Element.prototype, 'clientWidth', {
     configurable: true,
     get(this: Element): number {
-      return px(this.getAttribute('data-client-width') ?? undefined)
+      return px(this.getAttribute('data-client-width') ?? undefined);
     },
-  })
+  });
   Object.defineProperty(Element.prototype, 'scrollWidth', {
     configurable: true,
     get(this: Element): number {
-      return px(this.getAttribute('data-scroll-width') ?? undefined)
+      return px(this.getAttribute('data-scroll-width') ?? undefined);
     },
-  })
+  });
 
-  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
+  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true });
   Object.defineProperty(de, 'scrollWidth', {
     configurable: true,
     get: () =>
@@ -62,7 +62,7 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
           Math.max(max, px(elem.style.left) + px(elem.style.width)),
         vw,
       ),
-  })
+  });
 
   // `this: HTMLElement` typed parameter removes the previous
   // `this as HTMLElement` value cast — all our fixtures use HTMLElements,
@@ -76,53 +76,53 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
       px(this.style.top),
       px(this.style.width),
       px(this.style.height),
-    ]
-    return new DOMRect(l, t, w, h)
-  }
+    ];
+    return new DOMRect(l, t, w, h);
+  };
   try {
     // eslint-disable-next-line no-new-func
     const result: unknown = new Function(
       `return (${collectHeuristicsScript})(${vw})`,
-    )()
-    assertHeuristicSnapshot(result)
-    return result
+    )();
+    assertHeuristicSnapshot(result);
+    return result;
   } finally {
     // Restore all three mutations. If the original descriptor was
     // undefined (jsdom's built-in accessor, not our defineProperty
     // override), delete our override; otherwise reinstate the original.
     if (originalClientWidthDesc) {
-      Object.defineProperty(de, 'clientWidth', originalClientWidthDesc)
+      Object.defineProperty(de, 'clientWidth', originalClientWidthDesc);
     } else {
       // Reflect.deleteProperty handles configurable:true accessor deletion
       // correctly under strict-mode Vitest.
-      Reflect.deleteProperty(de, 'clientWidth')
+      Reflect.deleteProperty(de, 'clientWidth');
     }
     if (originalScrollWidthDesc) {
-      Object.defineProperty(de, 'scrollWidth', originalScrollWidthDesc)
+      Object.defineProperty(de, 'scrollWidth', originalScrollWidthDesc);
     } else {
-      Reflect.deleteProperty(de, 'scrollWidth')
+      Reflect.deleteProperty(de, 'scrollWidth');
     }
     if (originalProtoClientWidth) {
       Object.defineProperty(
         Element.prototype,
         'clientWidth',
         originalProtoClientWidth,
-      )
+      );
     } else {
-      Reflect.deleteProperty(Element.prototype, 'clientWidth')
+      Reflect.deleteProperty(Element.prototype, 'clientWidth');
     }
     if (originalProtoScrollWidth) {
       Object.defineProperty(
         Element.prototype,
         'scrollWidth',
         originalProtoScrollWidth,
-      )
+      );
     } else {
-      Reflect.deleteProperty(Element.prototype, 'scrollWidth')
+      Reflect.deleteProperty(Element.prototype, 'scrollWidth');
     }
-    Element.prototype.getBoundingClientRect = originalRect
+    Element.prototype.getBoundingClientRect = originalRect;
   }
-}
+};
 
 // Runtime shape check for the value coming out of `new Function(...)()`.
 // Replaces `as HeuristicSnapshot` on the harness return so a script that
@@ -138,31 +138,31 @@ function assertHeuristicSnapshot(
   if (typeof value !== 'object' || value === null) {
     throw new Error(
       `assertHeuristicSnapshot: expected object, got ${String(value)}`,
-    )
+    );
   }
   if (
     !('hasHorizontalScroll' in value) ||
     typeof value.hasHorizontalScroll !== 'boolean'
   ) {
-    throw new Error('assertHeuristicSnapshot: hasHorizontalScroll not boolean')
+    throw new Error('assertHeuristicSnapshot: hasHorizontalScroll not boolean');
   }
   if (
     !('offscreenElements' in value) ||
     !Array.isArray(value.offscreenElements)
   ) {
-    throw new Error('assertHeuristicSnapshot: offscreenElements not array')
+    throw new Error('assertHeuristicSnapshot: offscreenElements not array');
   }
   if (!('smallTapTargets' in value) || !Array.isArray(value.smallTapTargets)) {
-    throw new Error('assertHeuristicSnapshot: smallTapTargets not array')
+    throw new Error('assertHeuristicSnapshot: smallTapTargets not array');
   }
   if (!('brokenImages' in value) || !Array.isArray(value.brokenImages)) {
-    throw new Error('assertHeuristicSnapshot: brokenImages not array')
+    throw new Error('assertHeuristicSnapshot: brokenImages not array');
   }
   if (
     !('overflowingContainers' in value) ||
     !Array.isArray(value.overflowingContainers)
   ) {
-    throw new Error('assertHeuristicSnapshot: overflowingContainers not array')
+    throw new Error('assertHeuristicSnapshot: overflowingContainers not array');
   }
   if (
     !('contentDensity' in value) ||
@@ -175,7 +175,7 @@ function assertHeuristicSnapshot(
   ) {
     throw new Error(
       'assertHeuristicSnapshot: contentDensity fields not numbers',
-    )
+    );
   }
 }
 
@@ -184,69 +184,72 @@ describe('collectHeuristicsScript', () => {
     const snap = runInDom(
       '<div style="width: 2000px; height: 10px"></div>',
       320,
-    )
-    expect(snap.hasHorizontalScroll).toBe(true)
-  })
+    );
+    expect(snap.hasHorizontalScroll).toBe(true);
+  });
   it('lists offscreen elements past the viewport right edge', () => {
     const snap = runInDom(
       '<div id="x" style="position: absolute; left: 500px; width: 100px; height: 100px"></div>',
       320,
-    )
+    );
     expect(
       snap.offscreenElements.some((entry) => entry.selector.includes('#x')),
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
   it('flags tap targets smaller than 32x32', () => {
     const snap = runInDom(
       '<button id="tiny" style="width: 20px; height: 20px"></button>',
       320,
-    )
+    );
     expect(
       snap.smallTapTargets.some((target) => target.selector.includes('#tiny')),
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
   it('does not flag 32x32 or larger tap targets', () => {
     const snap = runInDom(
       '<button id="ok" style="width: 40px; height: 40px"></button>',
       320,
-    )
-    expect(snap.smallTapTargets).toEqual([])
-  })
+    );
+    expect(snap.smallTapTargets).toEqual([]);
+  });
   it('flags images with naturalWidth 0', () => {
     const snap = runInDom(
       '<img src="broken.png" data-natural-width="0" />',
       320,
-    )
+    );
     // Test hook: our script reads Element#naturalWidth on <img>; in DOM
     // fixtures we can't paint an image, so the script also honors
     // data-natural-width for testability.
-    expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1)
-  })
+    expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1);
+  });
   it('does NOT flag jsdom images without the data-natural-width marker', () => {
     // Regression guard: naturalWidth is 0 for every <img> under jsdom
     // (images never load). Without gating on img.complete the previous
     // implementation flagged every image as broken. This test proves the
     // gate works — a plain <img> with no data attribute must be silent.
-    const snap = runInDom('<img src="ok.png" />', 320)
-    expect(snap.brokenImages).toEqual([])
-  })
+    const snap = runInDom('<img src="ok.png" />', 320);
+    expect(snap.brokenImages).toEqual([]);
+  });
   it('counts direct children of <main> for contentDensity', () => {
-    const snap = runInDom('<main><div></div><div></div></main>', 320)
-    expect(snap.contentDensity.mainChildren).toBe(2)
-  })
+    const snap = runInDom('<main><div></div><div></div></main>', 320);
+    expect(snap.contentDensity.mainChildren).toBe(2);
+  });
   it('reports 0 mainChildren when no <main> element exists', () => {
-    const snap = runInDom('<div><p>no main here</p></div>', 320)
-    expect(snap.contentDensity.mainChildren).toBe(0)
-  })
+    const snap = runInDom('<div><p>no main here</p></div>', 320);
+    expect(snap.contentDensity.mainChildren).toBe(0);
+  });
   it('counts body elements independent of <main>, so main-less pages still register', () => {
     // A page can render real content with no <main> landmark (this app's
     // consumer detail pages do exactly that). bodyElements is the markup-
     // agnostic signal the sweep's insufficientData gate keys off.
-    const snap = runInDom('<div><section><p>a</p><p>b</p></section></div>', 320)
-    expect(snap.contentDensity.mainChildren).toBe(0)
+    const snap = runInDom(
+      '<div><section><p>a</p><p>b</p></section></div>',
+      320,
+    );
+    expect(snap.contentDensity.mainChildren).toBe(0);
     // div + section + 2 p = 4 elements under <body>.
-    expect(snap.contentDensity.bodyElements).toBe(4)
-  })
+    expect(snap.contentDensity.bodyElements).toBe(4);
+  });
   it('flags container-relative overflow (scrollWidth > clientWidth) inside the viewport', () => {
     // The card is only 200px wide and fully within a 320px viewport, so
     // neither hasHorizontalScroll nor offscreenElements fires — but its
@@ -258,47 +261,47 @@ describe('collectHeuristicsScript', () => {
     const snap = runInDom(
       '<div id="card" style="width: 200px" data-client-width="200" data-scroll-width="500"></div>',
       320,
-    )
-    expect(snap.hasHorizontalScroll).toBe(false)
-    expect(snap.offscreenElements).toEqual([])
+    );
+    expect(snap.hasHorizontalScroll).toBe(false);
+    expect(snap.offscreenElements).toEqual([]);
     expect(
       snap.overflowingContainers.some((entry) =>
         entry.selector.includes('#card'),
       ),
-    ).toBe(true)
-  })
+    ).toBe(true);
+  });
   it('does not flag an element whose content fits its own box', () => {
     const snap = runInDom(
       '<div id="fits" style="width: 200px" data-client-width="200" data-scroll-width="200"></div>',
       320,
-    )
-    expect(snap.overflowingContainers).toEqual([])
-  })
+    );
+    expect(snap.overflowingContainers).toEqual([]);
+  });
   it('does not flag sub-pixel overflow within tolerance', () => {
     const snap = runInDom(
       '<div id="rounding" style="width: 200px" data-client-width="200" data-scroll-width="201"></div>',
       320,
-    )
-    expect(snap.overflowingContainers).toEqual([])
-  })
+    );
+    expect(snap.overflowingContainers).toEqual([]);
+  });
   it('does not flag the <body> root even when its own content overflows', () => {
     // Document-level horizontal overflow is hasHorizontalScroll's job (check
     // 1); the container list must not double-report the <html>/<body> roots.
     // The prototype clientWidth/scrollWidth stubs read these off body itself.
-    document.body.setAttribute('data-client-width', '200')
-    document.body.setAttribute('data-scroll-width', '800')
+    document.body.setAttribute('data-client-width', '200');
+    document.body.setAttribute('data-scroll-width', '800');
     try {
-      const snap = runInDom('<div id="inner">x</div>', 320)
+      const snap = runInDom('<div id="inner">x</div>', 320);
       expect(
         snap.overflowingContainers.some((entry) =>
           entry.selector.includes('body'),
         ),
-      ).toBe(false)
+      ).toBe(false);
     } finally {
-      document.body.removeAttribute('data-client-width')
-      document.body.removeAttribute('data-scroll-width')
+      document.body.removeAttribute('data-client-width');
+      document.body.removeAttribute('data-scroll-width');
     }
-  })
+  });
   it('excludes intentional scrollers (overflow-x: auto/scroll)', () => {
     // Carousels, code blocks, and other deliberately-scrollable regions
     // legitimately have scrollWidth > clientWidth. The overflow-x exclusion
@@ -306,23 +309,23 @@ describe('collectHeuristicsScript', () => {
     const snap = runInDom(
       '<div id="carousel" style="overflow-x: auto; width: 200px" data-client-width="200" data-scroll-width="900"></div>',
       320,
-    )
+    );
     expect(
       snap.overflowingContainers.some((entry) =>
         entry.selector.includes('#carousel'),
       ),
-    ).toBe(false)
-  })
+    ).toBe(false);
+  });
   it('reports the measured scroll/client widths on flagged containers', () => {
     const snap = runInDom(
       '<div id="wide" style="width: 200px" data-client-width="200" data-scroll-width="500"></div>',
       320,
-    )
+    );
     const entry = snap.overflowingContainers.find((row) =>
       row.selector.includes('#wide'),
-    )
-    expect(entry).toBeDefined()
-    expect(entry!.scrollWidthPx).toBe(500)
-    expect(entry!.clientWidthPx).toBe(200)
-  })
-})
+    );
+    expect(entry).toBeDefined();
+    expect(entry!.scrollWidthPx).toBe(500);
+    expect(entry!.clientWidthPx).toBe(200);
+  });
+});

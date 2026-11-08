@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { eventReports } from './event-reports.js'
+import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { eventReports } from './event-reports.js';
 
 export const eventReportConfirms = pgTable(
   'event_report_confirms',
@@ -19,7 +19,7 @@ export const eventReportConfirms = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
-export type EventReportConfirm = typeof eventReportConfirms.$inferSelect
-export type NewEventReportConfirm = typeof eventReportConfirms.$inferInsert
+export type EventReportConfirm = typeof eventReportConfirms.$inferSelect;
+export type NewEventReportConfirm = typeof eventReportConfirms.$inferInsert;

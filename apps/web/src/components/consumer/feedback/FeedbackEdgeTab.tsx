@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { FeedbackModal } from './FeedbackModal'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState } from 'react';
+import { FeedbackModal } from './FeedbackModal';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 export function FeedbackEdgeTab() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   return (
     <>
@@ -60,5 +60,5 @@ export function FeedbackEdgeTab() {
 
       <FeedbackModal open={open} onClose={() => setOpen(false)} />
     </>
-  )
+  );
 }

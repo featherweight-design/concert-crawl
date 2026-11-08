@@ -23,19 +23,19 @@
  */
 
 export interface CrossVenueCandidate {
-  id: string
-  slug: string
-  name: string
+  id: string;
+  slug: string;
+  name: string;
 }
 
 export interface CrossVenueMatch {
   /** Null when the marker named a venue we don't have in the DB. */
-  matchedVenueId: string | null
+  matchedVenueId: string | null;
   /** Null when the marker named a venue we don't have in the DB. */
-  matchedVenueSlug: string | null
+  matchedVenueSlug: string | null;
   /** The candidate's seeded name, or the verbatim marker text when unknown. */
-  matchedVenueName: string
-  reason: CrossVenueReason
+  matchedVenueName: string;
+  reason: CrossVenueReason;
 }
 
 /**
@@ -43,7 +43,7 @@ export interface CrossVenueMatch {
  * `ticket-url` — the marker named a venue we don't crawl, and the ticket URL
  * independently names that same venue. See issue #1286.
  */
-export type CrossVenueReason = 'known-venue' | 'ticket-url'
+export type CrossVenueReason = 'known-venue' | 'ticket-url';
 
 // Matches " AT <name>" or " @ <name>" near the end of the title.
 //
@@ -57,7 +57,7 @@ export type CrossVenueReason = 'known-venue' | 'ticket-url'
 //
 // We require the marker to be preceded by whitespace and followed by whitespace,
 // which keeps incidental "at" inside other words from matching.
-const AT_MARKER = /\s(?:at|@)\s+(.+?)\s*$/i
+const AT_MARKER = /\s(?:at|@)\s+(.+?)\s*$/i;
 
 // Common Denver venue suffixes. Stripped from BOTH the candidate name and
 // the marker text so "AT RED ROCKS" matches the seed value
@@ -66,11 +66,11 @@ const AT_MARKER = /\s(?:at|@)\s+(.+?)\s*$/i
 // Arena, Lounge). Keep this conservative — wider stripping risks
 // false positives.
 const VENUE_SUFFIX =
-  /\s+(amphitheatre|amphitheater|theatre|theater|ballroom|hall|auditorium|arena|lounge)$/i
+  /\s+(amphitheatre|amphitheater|theatre|theater|ballroom|hall|auditorium|arena|lounge)$/i;
 
 // Leading "The " is also dropped because some venues are seeded with it
 // ("The Fillmore Auditorium") and some event titles drop it ("AT FILLMORE").
-const THE_PREFIX = /^the\s+/i
+const THE_PREFIX = /^the\s+/i;
 
 // Collapses a string to lowercase alphanumerics. Ticket vendors slugify venue
 // names inconsistently — Etix renders "Cervantes' Masterpiece Ballroom" as
@@ -78,7 +78,7 @@ const THE_PREFIX = /^the\s+/i
 // it — so neither raw substring nor hyphen-slug comparison is reliable.
 // Alphanumeric-only comparison survives every punctuation scheme we've seen.
 function alphanumeric(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
 /**
@@ -96,25 +96,25 @@ function alphanumeric(value: string): string {
  * segment, which is often the one naming the venue.
  * Returns '' when there is no path, which never corroborates.
  */
-const AUTHORITY_PREFIX = /^([a-z][a-z0-9+.-]*:)?\/\//i
+const AUTHORITY_PREFIX = /^([a-z][a-z0-9+.-]*:)?\/\//i;
 
 function ticketPath(url: string): string {
-  const withoutQuery = url.split(/[?#]/)[0] ?? ''
-  if (!AUTHORITY_PREFIX.test(withoutQuery)) return withoutQuery
+  const withoutQuery = url.split(/[?#]/)[0] ?? '';
+  if (!AUTHORITY_PREFIX.test(withoutQuery)) return withoutQuery;
 
-  const withoutAuthority = withoutQuery.replace(AUTHORITY_PREFIX, '')
-  const pathStart = withoutAuthority.indexOf('/')
-  return pathStart === -1 ? '' : withoutAuthority.slice(pathStart)
+  const withoutAuthority = withoutQuery.replace(AUTHORITY_PREFIX, '');
+  const pathStart = withoutAuthority.indexOf('/');
+  return pathStart === -1 ? '' : withoutAuthority.slice(pathStart);
 }
 
 // Shortest source-venue token we'll trust for URL corroboration. Below this,
 // incidental substring hits get too likely.
-const MIN_SOURCE_TOKEN_LENGTH = 4
+const MIN_SOURCE_TOKEN_LENGTH = 4;
 
 // Alphanumeric characters of the marker that must appear in the URL residue.
 // Long enough that an incidental hit is implausible, short enough to survive a
 // vendor truncating the venue name.
-const MIN_MARKER_PREFIX_LENGTH = 10
+const MIN_MARKER_PREFIX_LENGTH = 10;
 
 /**
  * The source venue's distinguishing first word, alphanumeric-only — the token
@@ -129,8 +129,8 @@ const MIN_MARKER_PREFIX_LENGTH = 10
  * fail to drop), never false positives (a legitimate row we wrongly drop).
  */
 function sourceVenueToken(sourceVenueName: string): string {
-  const [firstWord] = normalizeVenueName(sourceVenueName).split(/\s+/)
-  return alphanumeric(firstWord ?? '')
+  const [firstWord] = normalizeVenueName(sourceVenueName).split(/\s+/);
+  return alphanumeric(firstWord ?? '');
 }
 
 /**
@@ -151,7 +151,7 @@ export function normalizeVenueName(name: string): string {
     .toLowerCase()
     .replace(THE_PREFIX, '')
     .replace(VENUE_SUFFIX, '')
-    .trim()
+    .trim();
 }
 
 /**
@@ -174,39 +174,39 @@ export function normalizeVenueName(name: string): string {
  *   - no candidate matches AND the ticket URL doesn't corroborate the marker
  */
 export function detectCrossVenuePresale(args: {
-  title: string
-  sourceVenueId: string
-  sourceVenueName: string
-  ticketUrl?: string | null | undefined
-  candidates: CrossVenueCandidate[]
+  title: string;
+  sourceVenueId: string;
+  sourceVenueName: string;
+  ticketUrl?: string | null | undefined;
+  candidates: CrossVenueCandidate[];
 }): CrossVenueMatch | null {
-  const { title, sourceVenueId, sourceVenueName, ticketUrl, candidates } = args
+  const { title, sourceVenueId, sourceVenueName, ticketUrl, candidates } = args;
 
-  const markerMatch = AT_MARKER.exec(title)
-  if (!markerMatch) return null
+  const markerMatch = AT_MARKER.exec(title);
+  if (!markerMatch) return null;
 
-  const markerText = markerMatch[1]?.trim()
-  if (!markerText) return null
+  const markerText = markerMatch[1]?.trim();
+  if (!markerText) return null;
 
-  const markerFull = markerText.toLowerCase()
-  const markerShort = normalizeVenueName(markerText)
+  const markerFull = markerText.toLowerCase();
+  const markerShort = normalizeVenueName(markerText);
   // Punctuation-insensitive form. Apostrophes in particular are unstable
   // across sources: the seed stores "Cervantes' Masterpiece Ballroom" with a
   // straight U+0027, while a feed's `&#8217;` decodes to a curly U+2019, and
   // neither the full nor the suffix-stripped comparison survives that swap.
   // Collapsing to alphanumerics is the same tactic the ticket-URL path
   // already uses for vendor slugs (#1338).
-  const markerAlnum = alphanumeric(markerText)
+  const markerAlnum = alphanumeric(markerText);
 
   for (const candidate of candidates) {
-    const candidateFull = candidate.name.trim().toLowerCase()
-    const candidateShort = normalizeVenueName(candidate.name)
-    const candidateAlnum = alphanumeric(candidate.name)
-    const candidateShortAlnum = alphanumeric(candidateShort)
-    if (candidateFull.length === 0) continue
+    const candidateFull = candidate.name.trim().toLowerCase();
+    const candidateShort = normalizeVenueName(candidate.name);
+    const candidateAlnum = alphanumeric(candidate.name);
+    const candidateShortAlnum = alphanumeric(candidateShort);
+    if (candidateFull.length === 0) continue;
     // Don't fall through to substring matching on an empty short form —
     // "" is a substring of every string, which would match every venue.
-    if (candidateShort.length === 0) continue
+    if (candidateShort.length === 0) continue;
 
     const matchesName =
       markerFull === candidateFull ||
@@ -219,22 +219,22 @@ export function detectCrossVenuePresale(args: {
       // collapse to '' and match every marker.
       (candidateAlnum.length > 0 && markerAlnum.includes(candidateAlnum)) ||
       (candidateShortAlnum.length > 0 &&
-        markerAlnum.includes(candidateShortAlnum))
+        markerAlnum.includes(candidateShortAlnum));
 
-    if (!matchesName) continue
+    if (!matchesName) continue;
 
     // Self-venue: the title legitimately names its own host venue. Don't skip.
-    if (candidate.id === sourceVenueId) return null
+    if (candidate.id === sourceVenueId) return null;
 
     return {
       matchedVenueId: candidate.id,
       matchedVenueSlug: candidate.slug,
       matchedVenueName: candidate.name,
       reason: 'known-venue',
-    }
+    };
   }
 
-  return detectViaTicketUrl({ title, markerText, sourceVenueName, ticketUrl })
+  return detectViaTicketUrl({ title, markerText, sourceVenueName, ticketUrl });
 }
 
 /**
@@ -256,47 +256,47 @@ export function detectCrossVenuePresale(args: {
  * city leave a residue that corroborates nothing, and we correctly keep the row.
  */
 function detectViaTicketUrl(args: {
-  title: string
-  markerText: string
-  sourceVenueName: string
-  ticketUrl?: string | null | undefined
+  title: string;
+  markerText: string;
+  sourceVenueName: string;
+  ticketUrl?: string | null | undefined;
 }): CrossVenueMatch | null {
-  const { title, markerText, sourceVenueName, ticketUrl } = args
+  const { title, markerText, sourceVenueName, ticketUrl } = args;
 
-  if (!ticketUrl) return null
+  if (!ticketUrl) return null;
 
-  const token = sourceVenueToken(sourceVenueName)
-  if (token.length < MIN_SOURCE_TOKEN_LENGTH) return null
+  const token = sourceVenueToken(sourceVenueName);
+  if (token.length < MIN_SOURCE_TOKEN_LENGTH) return null;
 
   // The marker names the source venue, so the title isn't pointing elsewhere
   // regardless of what the URL says.
-  const markerAlnum = alphanumeric(markerText)
-  if (markerAlnum.includes(token)) return null
+  const markerAlnum = alphanumeric(markerText);
+  if (markerAlnum.includes(token)) return null;
 
-  const pathAlnum = alphanumeric(ticketPath(ticketUrl))
+  const pathAlnum = alphanumeric(ticketPath(ticketUrl));
 
   // The URL names the source venue — it's saying the show is right here.
-  if (pathAlnum.includes(token)) return null
+  if (pathAlnum.includes(token)) return null;
 
   // Everything in the path that isn't the title. Vendors truncate long titles,
   // in which case nothing is removed and the residue is the whole path — still
   // safe, because the marker then has to survive the prefix test below against
   // a string that already failed to contain the source venue.
-  const residue = pathAlnum.split(alphanumeric(title)).join('')
+  const residue = pathAlnum.split(alphanumeric(title)).join('');
 
   // Compare on a prefix, not the whole marker: Etix renders
   // "TWO RIVERS PARK, GLENWOOD SPRINGS" as just `two-rivers-park`, so requiring
   // the full marker would miss it. The prefix must be long enough that an
   // incidental hit is implausible — markers shorter than this can't be
   // corroborated at all, which drops "…At Once Tour" and "…(Pre-Fest at Ratio)".
-  if (markerAlnum.length < MIN_MARKER_PREFIX_LENGTH) return null
+  if (markerAlnum.length < MIN_MARKER_PREFIX_LENGTH) return null;
   if (!residue.includes(markerAlnum.slice(0, MIN_MARKER_PREFIX_LENGTH)))
-    return null
+    return null;
 
   return {
     matchedVenueId: null,
     matchedVenueSlug: null,
     matchedVenueName: markerText,
     reason: 'ticket-url',
-  }
+  };
 }

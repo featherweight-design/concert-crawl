@@ -32,41 +32,41 @@
  * All random draws go through deps.rng — never Math.random().
  */
 
-import { CREW_MEMBER_CAP } from '../../../packages/types/src/crew.js'
+import { CREW_MEMBER_CAP } from '../../../packages/types/src/crew.js';
 import {
   crews,
   crewInvites,
   crewMembers,
   crewMutes,
   userEvents,
-} from '../../../packages/db/src/schema/index.js'
-import { SEEDED_CREW_IDS } from '../fixture-users.js'
-import type { DrizzleWriteDb } from '../sync-venues.js'
-import type { createRng } from '../seeded-rng.js'
+} from '../../../packages/db/src/schema/index.js';
+import { SEEDED_CREW_IDS } from '../fixture-users.js';
+import type { DrizzleWriteDb } from '../sync-venues.js';
+import type { createRng } from '../seeded-rng.js';
 
 export type CrewsDeps = {
-  staging: DrizzleWriteDb
+  staging: DrizzleWriteDb;
   /** Profile-only accounts, reused as crew members. */
-  crowdUserIds: readonly string[]
-  ownerUserId: string
-  eventIds: readonly string[]
-  pastEventIds: readonly string[]
+  crowdUserIds: readonly string[];
+  ownerUserId: string;
+  eventIds: readonly string[];
+  pastEventIds: readonly string[];
   /**
    * Events the watcher-crowd generator already wrote crowd rows for. Reused
    * here they would collide on the (user_id, event_id) unique index and abort
    * the whole run.
    */
-  excludeEventIds: readonly string[]
-  rng: ReturnType<typeof createRng>
-}
+  excludeEventIds: readonly string[];
+  rng: ReturnType<typeof createRng>;
+};
 
 export type CrewsResult = {
-  insertedCrews: number
-  insertedMembers: number
-  insertedInvites: number
-  insertedMutes: number
-  insertedUserEvents: number
-}
+  insertedCrews: number;
+  insertedMembers: number;
+  insertedInvites: number;
+  insertedMutes: number;
+  insertedUserEvents: number;
+};
 
 /**
  * Invite tokens, fixed so the live link can be pasted into a staging browser
@@ -78,13 +78,13 @@ export const SEEDED_INVITE_TOKENS = {
   live: 'seedLIVEkeep',
   expired: 'seedEXPIkeep',
   revoked: 'seedREVOkeep',
-} as const
+} as const;
 
 /** Members in the muted crew, over and above the owner. */
-const MUTED_CREW_OTHERS = 4
+const MUTED_CREW_OTHERS = 4;
 
 /** Members in the keeper crew, over and above the owner. */
-const KEEPER_CREW_OTHERS = 3
+const KEEPER_CREW_OTHERS = 3;
 
 /**
  * Crowd accounts needed to cut all three slices disjointly. Below this the
@@ -92,15 +92,15 @@ const KEEPER_CREW_OTHERS = 3
  * large, which is the one shape it exists to guarantee.
  */
 const REQUIRED_CROWD_SIZE =
-  KEEPER_CREW_OTHERS + (CREW_MEMBER_CAP - 1) + MUTED_CREW_OTHERS
+  KEEPER_CREW_OTHERS + (CREW_MEMBER_CAP - 1) + MUTED_CREW_OTHERS;
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How far back the earliest join sits. Every seeded member joins within an hour
  * of the last, so this only has to exceed the total roster size in hours.
  */
-const JOIN_WINDOW_MS = 30 * DAY_MS
+const JOIN_WINDOW_MS = 30 * DAY_MS;
 
 export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
   const {
@@ -111,7 +111,7 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     pastEventIds,
     excludeEventIds,
     rng,
-  } = deps
+  } = deps;
 
   const empty: CrewsResult = {
     insertedCrews: 0,
@@ -119,32 +119,32 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     insertedInvites: 0,
     insertedMutes: 0,
     insertedUserEvents: 0,
-  }
+  };
 
-  if (crowdUserIds.length < REQUIRED_CROWD_SIZE) return empty
+  if (crowdUserIds.length < REQUIRED_CROWD_SIZE) return empty;
 
   // Anchored to UTC midnight rather than the clock, so re-seeding twice in a
   // day writes byte-identical rows — the same-seed contract every sibling
   // generator keeps via a fixed epoch. A fixed epoch is wrong here because the
   // live invite has to still be live whenever the seeder is next run.
-  const now = new Date().setUTCHours(0, 0, 0, 0)
+  const now = new Date().setUTCHours(0, 0, 0, 0);
 
   // Draw disjoint slices so no account lands in two crews with a stale handle
   // in one of them. The head of the crowd pool is where the handle-less
   // accounts live, so the keeper crew takes from there on purpose.
-  const keeperMembers = crowdUserIds.slice(0, KEEPER_CREW_OTHERS)
+  const keeperMembers = crowdUserIds.slice(0, KEEPER_CREW_OTHERS);
   const atCapMembers = crowdUserIds.slice(
     KEEPER_CREW_OTHERS,
     KEEPER_CREW_OTHERS + CREW_MEMBER_CAP - 1,
-  )
+  );
   const mutedMembers = crowdUserIds.slice(
     KEEPER_CREW_OTHERS + CREW_MEMBER_CAP - 1,
     KEEPER_CREW_OTHERS + CREW_MEMBER_CAP - 1 + MUTED_CREW_OTHERS,
-  )
+  );
 
   // Every slice above is full, guaranteed by the REQUIRED_CROWD_SIZE guard.
-  const atCapKeeperId = atCapMembers[0]!
-  const mutedKeeperId = mutedMembers[0]!
+  const atCapKeeperId = atCapMembers[0]!;
+  const mutedKeeperId = mutedMembers[0]!;
 
   const crewRows = [
     {
@@ -171,45 +171,45 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
       keeperId: mutedKeeperId,
       patchSalt: rng.int(0, 999),
     },
-  ]
+  ];
 
-  await staging.insert(crews).values(crewRows)
+  await staging.insert(crews).values(crewRows);
 
   // joinedAt is staggered so the roster has a stable, meaningful order rather
   // than rows landing on the same defaultNow() and sorting arbitrarily. It
   // counts UP from a month back, because the roster route orders by
   // `asc(joinedAt)` — counting down would seat the founding owner last and
   // label him the newest joiner in every crew.
-  let joinOffset = 0
+  let joinOffset = 0;
   const joinedAt = (): Date =>
-    new Date(now - JOIN_WINDOW_MS + (joinOffset += 3600_000))
+    new Date(now - JOIN_WINDOW_MS + (joinOffset += 3600_000));
 
-  const memberRows: { crewId: string; userId: string; joinedAt: Date }[] = []
+  const memberRows: { crewId: string; userId: string; joinedAt: Date }[] = [];
   const addMembers = (crewId: string, userIds: readonly string[]): void => {
     for (const userId of userIds) {
-      memberRows.push({ crewId, userId, joinedAt: joinedAt() })
+      memberRows.push({ crewId, userId, joinedAt: joinedAt() });
     }
-  }
+  };
 
   // The owner is in all four, because a crew he cannot open is not a fixture.
-  addMembers(SEEDED_CREW_IDS.atCap, [ownerUserId, ...atCapMembers.slice(1)])
-  addMembers(SEEDED_CREW_IDS.keeper, [ownerUserId, ...keeperMembers])
-  addMembers(SEEDED_CREW_IDS.solo, [ownerUserId])
-  addMembers(SEEDED_CREW_IDS.muted, [ownerUserId, ...mutedMembers.slice(1)])
+  addMembers(SEEDED_CREW_IDS.atCap, [ownerUserId, ...atCapMembers.slice(1)]);
+  addMembers(SEEDED_CREW_IDS.keeper, [ownerUserId, ...keeperMembers]);
+  addMembers(SEEDED_CREW_IDS.solo, [ownerUserId]);
+  addMembers(SEEDED_CREW_IDS.muted, [ownerUserId, ...mutedMembers.slice(1)]);
 
   // Both keepers were skipped by the slice(1) calls above.
   memberRows.push({
     crewId: SEEDED_CREW_IDS.atCap,
     userId: atCapKeeperId,
     joinedAt: joinedAt(),
-  })
+  });
   memberRows.push({
     crewId: SEEDED_CREW_IDS.muted,
     userId: mutedKeeperId,
     joinedAt: joinedAt(),
-  })
+  });
 
-  await staging.insert(crewMembers).values(memberRows)
+  await staging.insert(crewMembers).values(memberRows);
 
   // Three invites on the keeper crew: the live one the sheet re-displays, plus
   // an expired and a revoked one. Only the live one may ever be handed out, so
@@ -239,30 +239,30 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
       revokedAt: new Date(now - 2 * DAY_MS),
       revokedBy: ownerUserId,
     },
-  ]
+  ];
 
-  await staging.insert(crewInvites).values(inviteRows)
+  await staging.insert(crewInvites).values(inviteRows);
 
-  const muteRows = [{ crewId: SEEDED_CREW_IDS.muted, userId: ownerUserId }]
-  await staging.insert(crewMutes).values(muteRows)
+  const muteRows = [{ crewId: SEEDED_CREW_IDS.muted, userId: ownerUserId }];
+  await staging.insert(crewMutes).values(muteRows);
 
   // ---------------------------------------------------------------------
   // Crew shows, seeded exactly on the tense boundary.
   // ---------------------------------------------------------------------
 
-  const excluded = new Set(excludeEventIds)
-  const pastSet = new Set(pastEventIds)
-  const usablePast = pastEventIds.filter((id) => !excluded.has(id))
+  const excluded = new Set(excludeEventIds);
+  const pastSet = new Set(pastEventIds);
+  const usablePast = pastEventIds.filter((id) => !excluded.has(id));
   const usableUpcoming = eventIds.filter(
     (id) => !excluded.has(id) && !pastSet.has(id),
-  )
+  );
 
   const attendanceRows: {
-    userId: string
-    eventId: string
-    status: 'watching' | null
-    attendingAt: Date
-  }[] = []
+    userId: string;
+    eventId: string;
+    status: 'watching' | null;
+    attendingAt: Date;
+  }[] = [];
 
   /**
    * `status` carries the Watching relationship and is independent of going:
@@ -280,31 +280,31 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
         eventId,
         status,
         attendingAt: new Date(now - DAY_MS),
-      })
+      });
     }
-  }
+  };
 
-  const watcher = { userId: keeperMembers[0]!, status: 'watching' as const }
-  const attendingOnly = { userId: keeperMembers[1]!, status: null }
+  const watcher = { userId: keeperMembers[0]!, status: 'watching' as const };
+  const attendingOnly = { userId: keeperMembers[1]!, status: null };
 
   // Upcoming needs >= 1 going, so one member is the boundary and must render.
-  const upcomingOne = usableUpcoming[0]
-  if (upcomingOne) markGoing(upcomingOne, [watcher])
+  const upcomingOne = usableUpcoming[0];
+  if (upcomingOne) markGoing(upcomingOne, [watcher]);
 
   // Past needs >= 2. One member is BELOW the boundary and must not render —
   // this is the row that catches a `>= 1` where the predicate wants `>= 2`.
-  const pastOne = usablePast[0]
-  if (pastOne) markGoing(pastOne, [watcher])
+  const pastOne = usablePast[0];
+  if (pastOne) markGoing(pastOne, [watcher]);
 
   // Two members is the past boundary and must render. The second is
   // attending-only on purpose: if the derivation ever required a Watching
   // relationship, this show would silently fall back under the boundary, and
   // an all-watching fixture would hide that.
-  const pastTwo = usablePast[1]
-  if (pastTwo) markGoing(pastTwo, [watcher, attendingOnly])
+  const pastTwo = usablePast[1];
+  if (pastTwo) markGoing(pastTwo, [watcher, attendingOnly]);
 
   if (attendanceRows.length > 0) {
-    await staging.insert(userEvents).values(attendanceRows)
+    await staging.insert(userEvents).values(attendanceRows);
   }
 
   return {
@@ -313,5 +313,5 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     insertedInvites: inviteRows.length,
     insertedMutes: muteRows.length,
     insertedUserEvents: attendanceRows.length,
-  }
-}
+  };
+};

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The admin dashboard's "Needs attention" panel (#1215).
 //
@@ -11,12 +11,12 @@
 // sort. Re-sorting here would let the panel and the API disagree about which
 // fault is worst, and the API is the one with the data to decide.
 
-import { RefreshCw } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { RefreshCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState, useTransition } from 'react';
 
-import { ADMIN_COPY } from '../definitions/copy'
-import { AdminButton, MonoLabel, Panel, StatusBadge } from '../primitives'
+import { ADMIN_COPY } from '../definitions/copy';
+import { AdminButton, MonoLabel, Panel, StatusBadge } from '../primitives';
 import {
   AcknowledgedRow,
   EXPECTED_REGION_ID,
@@ -25,13 +25,13 @@ import {
   FaultRow,
   QueueRow,
   TierStrip,
-} from './TriageRows'
-import { BAND_KEYS, DENSE_AT, GLYPH_ICONS, SEVERITY } from './definitions/meta'
-import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles'
-import type { TriageBand, TriageData, TriageFault } from './definitions/types'
-import { useIsCompact } from './lib/use-is-compact'
+} from './TriageRows';
+import { BAND_KEYS, DENSE_AT, GLYPH_ICONS, SEVERITY } from './definitions/meta';
+import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles';
+import type { TriageBand, TriageData, TriageFault } from './definitions/types';
+import { useIsCompact } from './lib/use-is-compact';
 
-const TRIAGE = ADMIN_COPY.triage
+const TRIAGE = ADMIN_COPY.triage;
 
 interface TriagePanelProps {
   /**
@@ -40,9 +40,9 @@ interface TriagePanelProps {
    * the dashboard's other fetches re-throw and one bad health check should
    * not take the whole admin page to `error.tsx`.
    */
-  data: TriageData | null
+  data: TriageData | null;
   /** Fault count at which the panel switches to banded presentation. */
-  denseAt?: number
+  denseAt?: number;
 }
 
 // -------------------------------------------------------------- sub-pieces
@@ -52,11 +52,11 @@ const CheckTile = ({
   iconSize,
   bordered,
 }: {
-  size: number
-  iconSize: number
-  bordered: boolean
+  size: number;
+  iconSize: number;
+  bordered: boolean;
 }) => {
-  const Check = GLYPH_ICONS.check
+  const Check = GLYPH_ICONS.check;
   return (
     <span
       aria-hidden="true"
@@ -78,8 +78,8 @@ const CheckTile = ({
     >
       <Check size={iconSize} strokeWidth={2.2} />
     </span>
-  )
-}
+  );
+};
 
 const ModelNote = () => (
   <p
@@ -95,7 +95,7 @@ const ModelNote = () => (
   >
     {TRIAGE.model}
   </p>
-)
+);
 
 const FaultsClearStrip = ({ venues, at }: { venues: number; at: string }) => (
   <div
@@ -119,7 +119,7 @@ const FaultsClearStrip = ({ venues, at }: { venues: number; at: string }) => (
       {TRIAGE.empty.faultsClearStrip(venues, at)}
     </span>
   </div>
-)
+);
 
 const TriageEmpty = ({
   venues,
@@ -128,11 +128,11 @@ const TriageEmpty = ({
   next,
   compact,
 }: {
-  venues: number
-  at: string
-  events: number
-  next: string
-  compact: boolean
+  venues: number;
+  at: string;
+  events: number;
+  next: string;
+  compact: boolean;
 }) => (
   <div
     style={{
@@ -180,7 +180,7 @@ const TriageEmpty = ({
       </div>
     </div>
   </div>
-)
+);
 
 const Degraded = () => (
   <div style={{ padding: '20px 18px' }}>
@@ -211,16 +211,16 @@ const Degraded = () => (
       {TRIAGE.degraded.body}
     </p>
   </div>
-)
+);
 
 const SummaryBadge = ({
   faultCount,
   queueTotal,
   topBand,
 }: {
-  faultCount: number
-  queueTotal: number
-  topBand: TriageBand | null
+  faultCount: number;
+  queueTotal: number;
+  topBand: TriageBand | null;
 }) => {
   // Branch on the fault count alone. Keying this on `topBand` too would let a
   // bandless fault fall through to the queue or all-clear badge, captioning a
@@ -232,56 +232,56 @@ const SummaryBadge = ({
         ? 'warning'
         : topBand === 'suspect'
           ? 'accent'
-          : 'danger'
+          : 'danger';
     return (
       <StatusBadge kind={kind} mono>
         {TRIAGE.panel.faultCount(faultCount)}
       </StatusBadge>
-    )
+    );
   }
   if (queueTotal > 0) {
     return (
       <StatusBadge kind="neutral" mono>
         {TRIAGE.panel.queueCount(queueTotal)}
       </StatusBadge>
-    )
+    );
   }
   return (
     <StatusBadge kind="success" mono dot>
       {TRIAGE.panel.allClear}
     </StatusBadge>
-  )
-}
+  );
+};
 
 // ------------------------------------------------------------------- panel
 
 export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
-  const compact = useIsCompact()
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const compact = useIsCompact();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const refresh = () => {
     // `router.refresh()` re-runs the dashboard server component, which
     // re-fetches triage on the server. Wrapping it in a transition is what
     // makes `isPending` a real "checking…" signal rather than a fake timer.
-    startTransition(() => router.refresh())
-  }
+    startTransition(() => router.refresh());
+  };
 
-  const [expectedOpen, setExpectedOpen] = useState(false)
+  const [expectedOpen, setExpectedOpen] = useState(false);
 
-  const faults: TriageFault[] = data?.faults ?? []
-  const acknowledged = data?.acknowledged ?? []
-  const queues = data?.queues ?? []
-  const queueTotal = queues.reduce((sum, queue) => sum + queue.count, 0)
+  const faults: TriageFault[] = data?.faults ?? [];
+  const acknowledged = data?.acknowledged ?? [];
+  const queues = data?.queues ?? [];
+  const queueTotal = queues.reduce((sum, queue) => sum + queue.count, 0);
   // Read off the wire, not re-derived from the condition — the API decides
   // which band a condition lands in and may move one without a UI deploy.
-  const topBand: TriageBand | null = faults[0]?.band ?? null
-  const dense = faults.length >= denseAt
+  const topBand: TriageBand | null = faults[0]?.band ?? null;
+  const dense = faults.length >= denseAt;
   // Acknowledged faults count against the empty state. "Nothing's broken"
   // over three faults someone marked expected is the reassuring-but-wrong
   // summary this panel was built to replace.
   const nothing =
-    faults.length === 0 && queues.length === 0 && acknowledged.length === 0
+    faults.length === 0 && queues.length === 0 && acknowledged.length === 0;
 
   // `isPending` is checked first so a refresh that follows a degraded fetch
   // still announces "checking". With `data === null` ahead of it the live
@@ -291,7 +291,7 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
     ? TRIAGE.a11y.checking
     : data === null
       ? TRIAGE.a11y.degraded
-      : TRIAGE.a11y.announce(faults.length, queueTotal, acknowledged.length)
+      : TRIAGE.a11y.announce(faults.length, queueTotal, acknowledged.length);
 
   const header = (
     <div
@@ -317,11 +317,11 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
         />
       )}
     </div>
-  )
+  );
 
   const refreshLabel = isPending
     ? TRIAGE.panel.refreshing
-    : TRIAGE.panel.refresh
+    : TRIAGE.panel.refresh;
 
   const action = (
     <div
@@ -356,11 +356,11 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
         {compact ? <span style={SR_ONLY}>{refreshLabel}</span> : refreshLabel}
       </AdminButton>
     </div>
-  )
+  );
 
   const rows = (fault: TriageFault) => (
     <FaultRow key={fault.id} fault={fault} compact={compact} dense={dense} />
-  )
+  );
 
   return (
     <Panel title={header} action={action} padding={0}>
@@ -398,7 +398,7 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
           {BAND_KEYS.filter((band) =>
             faults.some((fault) => fault.band === band),
           ).map((band, index) => {
-            const inBand = faults.filter((fault) => fault.band === band)
+            const inBand = faults.filter((fault) => fault.band === band);
             return (
               <div key={band}>
                 <TierStrip
@@ -409,7 +409,7 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
                 />
                 {inBand.map(rows)}
               </div>
-            )
+            );
           })}
           <ModelNote />
         </>
@@ -458,5 +458,5 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
         </>
       )}
     </Panel>
-  )
-}
+  );
+};

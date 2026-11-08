@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { getCachedEvents, getCachedVenues } from '../cached-content'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { getCachedEvents, getCachedVenues } from '../cached-content';
 
 // Fake CacheStorage that seeds named caches with fixed responses. We implement
 // the full Cache interface (stubbing the methods we don't exercise) so no
 // `as unknown as Cache` cast is needed at the mock boundary.
-type CacheEntry = { url: string; body: unknown }
+type CacheEntry = { url: string; body: unknown };
 
 const makeCache = (entries: CacheEntry[]): Cache => ({
   keys: async () => entries.map((entry) => new Request(entry.url)),
@@ -16,12 +16,12 @@ const makeCache = (entries: CacheEntry[]): Cache => ({
         ? request
         : request instanceof URL
           ? request.href
-          : request.url
-    const entry = entries.find((row) => row.url === url)
-    if (!entry) return undefined
+          : request.url;
+    const entry = entries.find((row) => row.url === url);
+    if (!entry) return undefined;
     return new Response(JSON.stringify(entry.body), {
       headers: { 'content-type': 'application/json' },
-    })
+    });
   },
   // Stubs for the methods we don't test — return the correct types so the
   // structural check passes without any `as` cast at the caller.
@@ -30,7 +30,7 @@ const makeCache = (entries: CacheEntry[]): Cache => ({
   delete: async () => false,
   matchAll: async () => [],
   put: async () => undefined,
-})
+});
 
 const makeCacheStorage = (
   caches: Record<string, CacheEntry[]>,
@@ -38,48 +38,48 @@ const makeCacheStorage = (
   keys: async () => Object.keys(caches),
   has: async (name: string) => name in caches,
   open: async (name: string) => {
-    caches[name] ||= []
-    return makeCache(caches[name])
+    caches[name] ||= [];
+    return makeCache(caches[name]);
   },
   delete: async () => true,
   match: async () => undefined,
-})
+});
 
 // Real API envelope shapes copied verbatim from apps/api/src/routes/events.ts
 // and venues-public.ts. Keep in sync with those routes.
 const eventsResponse = (rows: unknown[]) => ({
   success: true,
   data: { data: rows },
-})
-const venuesResponse = (rows: unknown[]) => ({ success: true, data: rows })
+});
+const venuesResponse = (rows: unknown[]) => ({ success: true, data: rows });
 
 const sampleEvent = {
   id: 'evt-1',
   title: 'Amyl at the Roxy',
   date: '2026-08-14',
   venue: { name: 'The Roxy', slug: 'the-roxy' },
-}
+};
 
 const sampleVenue = {
   id: 'ven-1',
   name: 'The Roxy',
   slug: 'the-roxy',
-}
+};
 
 beforeEach(() => {
-  vi.stubGlobal('caches', undefined)
-})
+  vi.stubGlobal('caches', undefined);
+});
 
 describe('cached-content', () => {
   it('returns [] when Cache Storage is unavailable', async () => {
-    expect(await getCachedEvents()).toEqual([])
-    expect(await getCachedVenues()).toEqual([])
-  })
+    expect(await getCachedEvents()).toEqual([]);
+    expect(await getCachedVenues()).toEqual([]);
+  });
 
   it('returns [] when the named cache does not exist', async () => {
-    vi.stubGlobal('caches', makeCacheStorage({ 'other-cache': [] }))
-    expect(await getCachedEvents()).toEqual([])
-  })
+    vi.stubGlobal('caches', makeCacheStorage({ 'other-cache': [] }));
+    expect(await getCachedEvents()).toEqual([]);
+  });
 
   it('returns [] when the cache exists but has no matching URL', async () => {
     vi.stubGlobal(
@@ -92,9 +92,9 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    expect(await getCachedEvents()).toEqual([])
-  })
+    );
+    expect(await getCachedEvents()).toEqual([]);
+  });
 
   it('reads the real Hono events envelope { success, data: { data: [...] } }', async () => {
     vi.stubGlobal(
@@ -107,12 +107,12 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    const events = await getCachedEvents()
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Amyl at the Roxy')
-    expect(events[0]?.venue.name).toBe('The Roxy')
-  })
+    );
+    const events = await getCachedEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Amyl at the Roxy');
+    expect(events[0]?.venue.name).toBe('The Roxy');
+  });
 
   it('reads the real Hono venues envelope { success, data: [...] }', async () => {
     vi.stubGlobal(
@@ -125,11 +125,11 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    const venues = await getCachedVenues()
-    expect(venues).toHaveLength(1)
-    expect(venues[0]?.name).toBe('The Roxy')
-  })
+    );
+    const venues = await getCachedVenues();
+    expect(venues).toHaveLength(1);
+    expect(venues[0]?.name).toBe('The Roxy');
+  });
 
   it('falls back to legacy plain-array envelopes', async () => {
     // Stale cached response from an earlier API version.
@@ -143,9 +143,9 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    expect(await getCachedEvents()).toHaveLength(1)
-  })
+    );
+    expect(await getCachedEvents()).toHaveLength(1);
+  });
 
   it('keeps scanning when the first matching cache entry has zero validated rows', async () => {
     // Query-string variants of the same pathname produce multiple cache
@@ -165,11 +165,11 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    const events = await getCachedEvents()
-    expect(events).toHaveLength(1)
-    expect(events[0]?.title).toBe('Amyl at the Roxy')
-  })
+    );
+    const events = await getCachedEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.title).toBe('Amyl at the Roxy');
+  });
 
   it('skips detail-route cache entries', async () => {
     vi.stubGlobal(
@@ -182,7 +182,7 @@ describe('cached-content', () => {
           },
         ],
       }),
-    )
-    expect(await getCachedEvents()).toEqual([])
-  })
-})
+    );
+    expect(await getCachedEvents()).toEqual([]);
+  });
+});

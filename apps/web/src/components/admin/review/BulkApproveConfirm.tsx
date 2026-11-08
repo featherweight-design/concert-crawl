@@ -1,55 +1,55 @@
-'use client'
+'use client';
 
-import { useRef } from 'react'
+import { useRef } from 'react';
 import {
   MonoLabel,
   AdminButton,
   ConfidenceBar,
   useDialogKeyboard,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 interface BulkApproveConfirmProps {
-  events: EventFlag[]
-  onConfirm: () => void
-  onCancel: () => void
+  events: EventFlag[];
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
-const PREVIEW_LIMIT = 5
+const PREVIEW_LIMIT = 5;
 
 export const BulkApproveConfirm = ({
   events,
   onConfirm,
   onCancel,
 }: BulkApproveConfirmProps) => {
-  const previewEvents = events.slice(0, PREVIEW_LIMIT)
-  const extraCount = events.length - PREVIEW_LIMIT
+  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const extraCount = events.length - PREVIEW_LIMIT;
 
   // Hook rather than AdminDialog: this panel's chrome is genuinely its own —
   // aria-labelledby over aria-label, a shadowed border with no accent rule,
   // and a preview list that sits outside the head block. Forcing it into the
   // shared chrome would be a restyle wearing a refactor's clothes. It already
   // had Escape; what it lacked was focus containment and restore.
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onCancel)
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onCancel);
 
   return (
     /* Overlay / scrim */
@@ -197,5 +197,5 @@ export const BulkApproveConfirm = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

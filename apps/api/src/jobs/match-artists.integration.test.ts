@@ -1,28 +1,28 @@
 // Integration tests for the Spotify identity-match job (#1115, plan PR-C
 // Task 9, Step 24). Spotify is stubbed at the client boundary; the DB is real
 // (per-worktree test DB), so every verdict is asserted against actual rows.
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { asc, eq } from 'drizzle-orm'
-import { artists } from '@concert-crawl/db'
-import { testDb } from '../test/helpers/db.js'
-import { apiLogger } from '../lib/logger.js'
-import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { asc, eq } from 'drizzle-orm';
+import { artists } from '@concert-crawl/db';
+import { testDb } from '../test/helpers/db.js';
+import { apiLogger } from '../lib/logger.js';
+import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js';
 import {
   AMBIGUOUS_RECHECK_DAYS,
   MATCH_BATCH_SIZE,
   NO_MATCH_RETRY_DAYS,
   PHOTO_REFETCH_DAYS,
   runMatchArtists,
-} from './match-artists.js'
-import type { SpotifyAppClient } from '../lib/spotify-app-client.js'
-import { SpotifyRateLimitError, SpotifyTimeoutError } from '../lib/spotify.js'
+} from './match-artists.js';
+import type { SpotifyAppClient } from '../lib/spotify-app-client.js';
+import { SpotifyRateLimitError, SpotifyTimeoutError } from '../lib/spotify.js';
 
-const NOW = new Date('2026-08-01T12:00:00Z')
-const DAY_MS = 24 * 60 * 60 * 1000
+const NOW = new Date('2026-08-01T12:00:00Z');
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const stubClient = (
   searchArtists: SpotifyAppClient['searchArtists'],
-): SpotifyAppClient => ({ searchArtists, getCallCount: () => 1 })
+): SpotifyAppClient => ({ searchArtists, getCallCount: () => 1 });
 
 const seedArtist = async (
   values: Partial<typeof artists.$inferInsert> & { canonicalName: string },
@@ -34,30 +34,30 @@ const seedArtist = async (
       slug: values.canonicalName.replace(/[^a-z0-9]+/g, '-'),
       ...values,
     })
-    .returning({ id: artists.id })
-  if (!row) throw new Error('seed failed')
-  return row.id
-}
+    .returning({ id: artists.id });
+  if (!row) throw new Error('seed failed');
+  return row.id;
+};
 
 const readArtist = async (id: string) => {
-  const [row] = await testDb.select().from(artists).where(eq(artists.id, id))
-  return row
-}
+  const [row] = await testDb.select().from(artists).where(eq(artists.id, id));
+  return row;
+};
 
 describe('runMatchArtists', () => {
   beforeEach(async () => {
-    await testDb.delete(artists)
-  })
+    await testDb.delete(artists);
+  });
 
   it('no-ops when the app-token client is unavailable (credentials unset)', async () => {
-    const id = await seedArtist({ canonicalName: 'khruangbin' })
+    const id = await seedArtist({ canonicalName: 'khruangbin' });
 
-    const summary = await runMatchArtists({ client: null, now: () => NOW })
+    const summary = await runMatchArtists({ client: null, now: () => NOW });
 
-    expect(summary.skipped).toBe('unconfigured')
-    expect(summary.considered).toBe(0)
-    expect((await readArtist(id))?.matchStatus).toBe('unmatched')
-  })
+    expect(summary.skipped).toBe('unconfigured');
+    expect(summary.considered).toBe(0);
+    expect((await readArtist(id))?.matchStatus).toBe('unmatched');
+  });
 
   // The whole point of the tombstone: a human ruled there is no act here, so
   // the job must not search the name again, and must not flip the row back to
@@ -67,25 +67,25 @@ describe('runMatchArtists', () => {
     const id = await seedArtist({
       canonicalName: 'bass bingo night',
       matchStatus: 'not_an_artist',
-    })
-    const searchArtists = vi.fn()
+    });
+    const searchArtists = vi.fn();
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(searchArtists),
-    })
+    });
 
-    expect(summary.considered).toBe(0)
-    expect(searchArtists).not.toHaveBeenCalled()
-    const row = await readArtist(id)
-    expect(row?.matchStatus).toBe('not_an_artist')
-    expect(row?.matchCheckedAt).toBeNull()
-  })
+    expect(summary.considered).toBe(0);
+    expect(searchArtists).not.toHaveBeenCalled();
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('not_an_artist');
+    expect(row?.matchCheckedAt).toBeNull();
+  });
 
   it('writes matched / ambiguous / no_match verdicts and stamps matchCheckedAt', async () => {
-    const matchedId = await seedArtist({ canonicalName: 'khruangbin' })
-    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })
-    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' })
+    const matchedId = await seedArtist({ canonicalName: 'khruangbin' });
+    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' });
+    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' });
 
     const summary = await runMatchArtists({
       now: () => NOW,
@@ -99,7 +99,7 @@ describe('runMatchArtists', () => {
               genres: [],
               spotifyUrl: null,
             },
-          ]
+          ];
         }
         if (query === 'nirvana') {
           return [
@@ -117,11 +117,11 @@ describe('runMatchArtists', () => {
               genres: [],
               spotifyUrl: null,
             },
-          ]
+          ];
         }
-        return []
+        return [];
       }),
-    })
+    });
 
     expect(summary).toMatchObject({
       skipped: null,
@@ -131,28 +131,28 @@ describe('runMatchArtists', () => {
       noMatch: 1,
       failures: 0,
       abortedReason: null,
-    })
+    });
 
-    const matched = await readArtist(matchedId)
-    expect(matched?.matchStatus).toBe('matched')
-    expect(matched?.spotifyArtistId).toBe('sp_khru')
-    expect(matched?.matchConfidence).toBe('1.000')
-    expect(matched?.photoUrl).toBe('https://i.scdn.co/image/khru')
-    expect(matched?.photoFetchedAt).toEqual(NOW)
-    expect(matched?.matchCheckedAt).toEqual(NOW)
+    const matched = await readArtist(matchedId);
+    expect(matched?.matchStatus).toBe('matched');
+    expect(matched?.spotifyArtistId).toBe('sp_khru');
+    expect(matched?.matchConfidence).toBe('1.000');
+    expect(matched?.photoUrl).toBe('https://i.scdn.co/image/khru');
+    expect(matched?.photoFetchedAt).toEqual(NOW);
+    expect(matched?.matchCheckedAt).toEqual(NOW);
 
-    const ambiguous = await readArtist(ambiguousId)
-    expect(ambiguous?.matchStatus).toBe('ambiguous')
-    expect(ambiguous?.spotifyArtistId).toBeNull()
-    expect(ambiguous?.matchCheckedAt).toEqual(NOW)
+    const ambiguous = await readArtist(ambiguousId);
+    expect(ambiguous?.matchStatus).toBe('ambiguous');
+    expect(ambiguous?.spotifyArtistId).toBeNull();
+    expect(ambiguous?.matchCheckedAt).toEqual(NOW);
 
-    expect((await readArtist(noMatchId))?.matchStatus).toBe('no_match')
-  })
+    expect((await readArtist(noMatchId))?.matchStatus).toBe('no_match');
+  });
 
   // #1525 — the picker opens on this instead of re-running the same search.
   it('snapshots the candidate list on every verdict, unhydrated', async () => {
-    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })
-    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' })
+    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' });
+    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' });
 
     await runMatchArtists({
       now: () => NOW,
@@ -176,9 +176,9 @@ describe('runMatchArtists', () => {
             ]
           : [],
       ),
-    })
+    });
 
-    const ambiguous = await readArtist(ambiguousId)
+    const ambiguous = await readArtist(ambiguousId);
     expect(ambiguous?.spotifyCandidates).toEqual([
       {
         id: 'sp_a',
@@ -196,105 +196,105 @@ describe('runMatchArtists', () => {
         genres: null,
         spotifyUrl: null,
       },
-    ])
-    expect(ambiguous?.spotifyCandidatesFetchedAt).toEqual(NOW)
+    ]);
+    expect(ambiguous?.spotifyCandidatesFetchedAt).toEqual(NOW);
 
     // An empty search is still an answer: the picker should show "nothing
     // found" from cache rather than paying to rediscover it.
-    const noMatch = await readArtist(noMatchId)
-    expect(noMatch?.spotifyCandidates).toEqual([])
-    expect(noMatch?.spotifyCandidatesFetchedAt).toEqual(NOW)
-  })
+    const noMatch = await readArtist(noMatchId);
+    expect(noMatch?.spotifyCandidates).toEqual([]);
+    expect(noMatch?.spotifyCandidatesFetchedAt).toEqual(NOW);
+  });
 
   it('selects oldest-checked rows first and caps at the batch size', async () => {
-    const never = await seedArtist({ canonicalName: 'never checked' })
+    const never = await seedArtist({ canonicalName: 'never checked' });
     await seedArtist({
       canonicalName: 'recently checked',
       matchCheckedAt: new Date(NOW.getTime() - 1000),
-    })
+    });
 
-    const seen: string[] = []
+    const seen: string[] = [];
     const summary = await runMatchArtists({
       batchSize: 1,
       now: () => NOW,
       client: stubClient(async (query) => {
-        seen.push(query)
-        return []
+        seen.push(query);
+        return [];
       }),
-    })
+    });
 
-    expect(summary.considered).toBe(1)
-    expect(seen).toEqual(['never checked'])
-    expect((await readArtist(never))?.matchStatus).toBe('no_match')
-  })
+    expect(summary.considered).toBe(1);
+    expect(seen).toEqual(['never checked']);
+    expect((await readArtist(never))?.matchStatus).toBe('no_match');
+  });
 
   it('aborts the batch on a rate limit, leaving remaining rows unmatched', async () => {
-    await seedArtist({ canonicalName: 'aaa first' })
-    await seedArtist({ canonicalName: 'bbb second' })
+    await seedArtist({ canonicalName: 'aaa first' });
+    await seedArtist({ canonicalName: 'bbb second' });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new SpotifyRateLimitError()
+        throw new SpotifyRateLimitError();
       }),
-    })
+    });
 
-    expect(summary.abortedReason).toBe('rate_limit')
-    expect(summary.considered).toBe(0)
-    const rows = await testDb.select().from(artists).orderBy(asc(artists.name))
+    expect(summary.abortedReason).toBe('rate_limit');
+    expect(summary.considered).toBe(0);
+    const rows = await testDb.select().from(artists).orderBy(asc(artists.name));
     expect(rows.map((row) => row.matchStatus)).toEqual([
       'unmatched',
       'unmatched',
-    ])
-    expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true)
-  })
+    ]);
+    expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true);
+  });
 
   it('logs the rate-limit error itself, not just the artist id', async () => {
-    await seedArtist({ canonicalName: 'aaa first' })
-    const warn = vi.spyOn(apiLogger, 'warn')
+    await seedArtist({ canonicalName: 'aaa first' });
+    const warn = vi.spyOn(apiLogger, 'warn');
 
     await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new SpotifyRateLimitError('Spotify asked for a 3600s cooldown')
+        throw new SpotifyRateLimitError('Spotify asked for a 3600s cooldown');
       }),
-    })
+    });
 
     // The error message carries Spotify's Retry-After. Dropping it leaves an
     // operator with no way to tell a 60s cooldown from an all-day one.
     const logged = warn.mock.calls.find(
       ([context]) =>
         typeof context === 'object' && context !== null && 'err' in context,
-    )
+    );
     expect(logged?.[0]).toMatchObject({
       err: { message: 'Spotify asked for a 3600s cooldown' },
-    })
-    warn.mockRestore()
-  })
+    });
+    warn.mockRestore();
+  });
 
   it('aborts the batch on a Spotify timeout rather than retrying every row', async () => {
-    await seedArtist({ canonicalName: 'aaa first' })
-    await seedArtist({ canonicalName: 'bbb second' })
-    let searches = 0
+    await seedArtist({ canonicalName: 'aaa first' });
+    await seedArtist({ canonicalName: 'bbb second' });
+    let searches = 0;
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        searches += 1
-        throw new SpotifyTimeoutError()
+        searches += 1;
+        throw new SpotifyTimeoutError();
       }),
-    })
+    });
 
-    expect(summary.abortedReason).toBe('timeout')
-    expect(summary.considered).toBe(0)
-    expect(searches).toBe(1)
-    const rows = await testDb.select().from(artists).orderBy(asc(artists.name))
+    expect(summary.abortedReason).toBe('timeout');
+    expect(summary.considered).toBe(0);
+    expect(searches).toBe(1);
+    const rows = await testDb.select().from(artists).orderBy(asc(artists.name));
     expect(rows.map((row) => row.matchStatus)).toEqual([
       'unmatched',
       'unmatched',
-    ])
-    expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true)
-  })
+    ]);
+    expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true);
+  });
 
   it(`re-fetches photos older than ${PHOTO_REFETCH_DAYS} days`, async () => {
     const staleId = await seedArtist({
@@ -305,14 +305,14 @@ describe('runMatchArtists', () => {
       photoFetchedAt: new Date(
         NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
     const freshId = await seedArtist({
       canonicalName: 'the beatles',
       matchStatus: 'matched',
       spotifyArtistId: 'sp_beatles',
       photoUrl: 'https://i.scdn.co/image/fresh',
       photoFetchedAt: new Date(NOW.getTime() - DAY_MS),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
@@ -325,16 +325,16 @@ describe('runMatchArtists', () => {
           spotifyUrl: null,
         },
       ]),
-    })
+    });
 
-    expect(summary.photosRefreshed).toBe(1)
+    expect(summary.photosRefreshed).toBe(1);
     expect((await readArtist(staleId))?.photoUrl).toBe(
       'https://i.scdn.co/image/renewed',
-    )
+    );
     expect((await readArtist(freshId))?.photoUrl).toBe(
       'https://i.scdn.co/image/fresh',
-    )
-  })
+    );
+  });
 
   it('never downgrades an established identity when a re-search stops resolving', async () => {
     const staleId = await seedArtist({
@@ -345,23 +345,23 @@ describe('runMatchArtists', () => {
       photoFetchedAt: new Date(
         NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => []),
-    })
+    });
 
-    const row = await readArtist(staleId)
-    expect(row?.matchStatus).toBe('matched')
-    expect(row?.spotifyArtistId).toBe('sp_khru')
-    expect(row?.photoUrl).toBe('https://i.scdn.co/image/expired')
-    expect(row?.matchCheckedAt).toEqual(NOW)
+    const row = await readArtist(staleId);
+    expect(row?.matchStatus).toBe('matched');
+    expect(row?.spotifyArtistId).toBe('sp_khru');
+    expect(row?.photoUrl).toBe('https://i.scdn.co/image/expired');
+    expect(row?.matchCheckedAt).toEqual(NOW);
     // The verdict is held back; the snapshot is not. It means "what the last
     // search returned", and a matched row is no exception.
-    expect(row?.spotifyCandidates).toEqual([])
-    expect(row?.spotifyCandidatesFetchedAt).toEqual(NOW)
-  })
+    expect(row?.spotifyCandidates).toEqual([]);
+    expect(row?.spotifyCandidatesFetchedAt).toEqual(NOW);
+  });
 
   it(`retries a no_match row checked over ${NO_MATCH_RETRY_DAYS} days ago`, async () => {
     const staleId = await seedArtist({
@@ -370,7 +370,7 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (NO_MATCH_RETRY_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
@@ -383,16 +383,16 @@ describe('runMatchArtists', () => {
           spotifyUrl: null,
         },
       ]),
-    })
+    });
 
     // A retry that resolves is a new identity, not a photo refresh.
-    expect(summary).toMatchObject({ considered: 1, matched: 1 })
-    const row = await readArtist(staleId)
-    expect(row?.matchStatus).toBe('matched')
-    expect(row?.spotifyArtistId).toBe('sp_khru')
-    expect(row?.photoUrl).toBe('https://i.scdn.co/image/khru')
-    expect(row?.matchCheckedAt).toEqual(NOW)
-  })
+    expect(summary).toMatchObject({ considered: 1, matched: 1 });
+    const row = await readArtist(staleId);
+    expect(row?.matchStatus).toBe('matched');
+    expect(row?.spotifyArtistId).toBe('sp_khru');
+    expect(row?.photoUrl).toBe('https://i.scdn.co/image/khru');
+    expect(row?.matchCheckedAt).toEqual(NOW);
+  });
 
   it('leaves a recently checked no_match row alone', async () => {
     const freshId = await seedArtist({
@@ -401,18 +401,18 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (NO_MATCH_RETRY_DAYS - 1) * DAY_MS,
       ),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new Error('Spotify must not be asked about a fresh no_match')
+        throw new Error('Spotify must not be asked about a fresh no_match');
       }),
-    })
+    });
 
-    expect(summary.considered).toBe(0)
-    expect((await readArtist(freshId))?.matchStatus).toBe('no_match')
-  })
+    expect(summary.considered).toBe(0);
+    expect((await readArtist(freshId))?.matchStatus).toBe('no_match');
+  });
 
   it(`re-checks an ambiguous row checked over ${AMBIGUOUS_RECHECK_DAYS} days ago`, async () => {
     const staleId = await seedArtist({
@@ -421,7 +421,7 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     // The tie itself is unchanged by re-asking, but the catalogue under it is
     // not: one of the same-named acts gaining a release resolves the row.
@@ -436,14 +436,14 @@ describe('runMatchArtists', () => {
           spotifyUrl: null,
         },
       ]),
-    })
+    });
 
-    expect(summary).toMatchObject({ considered: 1, matched: 1 })
-    const row = await readArtist(staleId)
-    expect(row?.matchStatus).toBe('matched')
-    expect(row?.spotifyArtistId).toBe('sp_nirvana')
-    expect(row?.matchAttempts).toBe(0)
-  })
+    expect(summary).toMatchObject({ considered: 1, matched: 1 });
+    const row = await readArtist(staleId);
+    expect(row?.matchStatus).toBe('matched');
+    expect(row?.spotifyArtistId).toBe('sp_nirvana');
+    expect(row?.matchAttempts).toBe(0);
+  });
 
   it('leaves a recently checked ambiguous row alone', async () => {
     const freshId = await seedArtist({
@@ -452,18 +452,20 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS - 1) * DAY_MS,
       ),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new Error('Spotify must not be asked about a fresh ambiguous row')
+        throw new Error(
+          'Spotify must not be asked about a fresh ambiguous row',
+        );
       }),
-    })
+    });
 
-    expect(summary.considered).toBe(0)
-    expect((await readArtist(freshId))?.matchStatus).toBe('ambiguous')
-  })
+    expect(summary.considered).toBe(0);
+    expect((await readArtist(freshId))?.matchStatus).toBe('ambiguous');
+  });
 
   it(`stops re-checking an ambiguous row at ${MATCH_ATTEMPT_LIMIT} attempts`, async () => {
     // Without the budget this cadence would be permanent: a row whose tie no
@@ -473,20 +475,20 @@ describe('runMatchArtists', () => {
       matchStatus: 'ambiguous',
       matchAttempts: MATCH_ATTEMPT_LIMIT,
       matchCheckedAt: new Date(NOW.getTime() - 365 * DAY_MS),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new Error('Spotify must not be asked about an exhausted row')
+        throw new Error('Spotify must not be asked about an exhausted row');
       }),
-    })
+    });
 
-    expect(summary.considered).toBe(0)
-    const row = await readArtist(spentId)
-    expect(row?.matchStatus).toBe('ambiguous')
-    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT)
-  })
+    expect(summary.considered).toBe(0);
+    const row = await readArtist(spentId);
+    expect(row?.matchStatus).toBe('ambiguous');
+    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT);
+  });
 
   it('spends an attempt when a re-check reproduces the tie', async () => {
     const staleId = await seedArtist({
@@ -496,7 +498,7 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
@@ -516,24 +518,24 @@ describe('runMatchArtists', () => {
           spotifyUrl: null,
         },
       ]),
-    })
+    });
 
-    expect(summary).toMatchObject({ considered: 1, ambiguous: 1 })
-    const row = await readArtist(staleId)
-    expect(row?.matchStatus).toBe('ambiguous')
-    expect(row?.matchAttempts).toBe(2)
-    expect(row?.matchCheckedAt).toEqual(NOW)
-  })
+    expect(summary).toMatchObject({ considered: 1, ambiguous: 1 });
+    const row = await readArtist(staleId);
+    expect(row?.matchStatus).toBe('ambiguous');
+    expect(row?.matchAttempts).toBe(2);
+    expect(row?.matchCheckedAt).toEqual(NOW);
+  });
 
   it('counts a fruitless verdict against the row and clears it on a match', async () => {
-    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' })
-    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })
+    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' });
+    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' });
     // Carries a used-up budget from earlier runs; resolving must wipe it, or a
     // row that flips back to no_match later would start one strike from the end.
     const resolvesId = await seedArtist({
       canonicalName: 'khruangbin',
       matchAttempts: MATCH_ATTEMPT_LIMIT - 1,
-    })
+    });
 
     await runMatchArtists({
       now: () => NOW,
@@ -547,7 +549,7 @@ describe('runMatchArtists', () => {
               genres: [],
               spotifyUrl: null,
             },
-          ]
+          ];
         }
         if (query === 'nirvana') {
           return [
@@ -565,16 +567,16 @@ describe('runMatchArtists', () => {
               genres: [],
               spotifyUrl: null,
             },
-          ]
+          ];
         }
-        return []
+        return [];
       }),
-    })
+    });
 
-    expect((await readArtist(noMatchId))?.matchAttempts).toBe(1)
-    expect((await readArtist(ambiguousId))?.matchAttempts).toBe(1)
-    expect((await readArtist(resolvesId))?.matchAttempts).toBe(0)
-  })
+    expect((await readArtist(noMatchId))?.matchAttempts).toBe(1);
+    expect((await readArtist(ambiguousId))?.matchAttempts).toBe(1);
+    expect((await readArtist(resolvesId))?.matchAttempts).toBe(0);
+  });
 
   it(`stops retrying a no_match row at ${MATCH_ATTEMPT_LIMIT} attempts`, async () => {
     const exhaustedId = await seedArtist({
@@ -584,20 +586,20 @@ describe('runMatchArtists', () => {
       matchCheckedAt: new Date(
         NOW.getTime() - (NO_MATCH_RETRY_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new Error('Spotify must not be asked about an exhausted row')
+        throw new Error('Spotify must not be asked about an exhausted row');
       }),
-    })
+    });
 
-    expect(summary.considered).toBe(0)
-    const row = await readArtist(exhaustedId)
-    expect(row?.matchStatus).toBe('no_match')
-    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT)
-  })
+    expect(summary.considered).toBe(0);
+    const row = await readArtist(exhaustedId);
+    expect(row?.matchStatus).toBe('no_match');
+    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT);
+  });
 
   // The budget is for identity work. A matched row whose photo keeps failing to
   // re-resolve still needs its next refresh, so the refresh path must not spend
@@ -611,34 +613,34 @@ describe('runMatchArtists', () => {
       photoFetchedAt: new Date(
         NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
       ),
-    })
+    });
 
     await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => []),
-    })
+    });
 
-    expect((await readArtist(staleId))?.matchAttempts).toBe(0)
-  })
+    expect((await readArtist(staleId))?.matchAttempts).toBe(0);
+  });
 
   it('logs and continues past a single-row failure', async () => {
-    await seedArtist({ canonicalName: 'aaa boom' })
-    const okId = await seedArtist({ canonicalName: 'bbb fine' })
+    await seedArtist({ canonicalName: 'aaa boom' });
+    const okId = await seedArtist({ canonicalName: 'bbb fine' });
 
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async (query) => {
-        if (query === 'aaa boom') throw new Error('transient')
-        return []
+        if (query === 'aaa boom') throw new Error('transient');
+        return [];
       }),
-    })
+    });
 
-    expect(summary.failures).toBe(1)
-    expect(summary.noMatch).toBe(1)
-    expect((await readArtist(okId))?.matchStatus).toBe('no_match')
-  })
+    expect(summary.failures).toBe(1);
+    expect(summary.noMatch).toBe(1);
+    expect((await readArtist(okId))?.matchStatus).toBe('no_match');
+  });
 
   it('defaults the batch size to the exported constant', () => {
-    expect(MATCH_BATCH_SIZE).toBeGreaterThan(0)
-  })
-})
+    expect(MATCH_BATCH_SIZE).toBeGreaterThan(0);
+  });
+});

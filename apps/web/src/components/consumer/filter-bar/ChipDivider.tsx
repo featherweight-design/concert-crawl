@@ -19,4 +19,4 @@ export const ChipDivider = () => (
       margin: '0 2px',
     }}
   />
-)
+);

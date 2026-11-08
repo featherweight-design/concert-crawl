@@ -5,13 +5,13 @@ import type {
   CrewShow,
   SourceCategory,
   WatchingShow,
-} from '@concert-crawl/types'
-import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline'
+} from '@concert-crawl/types';
+import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline';
 import {
   formatEventDate,
   formatShowTime,
   venueShort,
-} from '@/components/consumer/definitions/lib'
+} from '@/components/consumer/definitions/lib';
 
 /**
  * The one shape every surface's row renders from. Adapters normalize an API
@@ -22,23 +22,23 @@ import {
  */
 
 export interface RowPrice {
-  amount: number
+  amount: number;
   /** The cheapest tier, not the only one — the row prefixes "from". */
-  isFloor: boolean
+  isFloor: boolean;
   /** null is a crawled price with no corroborated submission: no chip. */
-  source: SourceCategory | null
-  observedAt: string | null
+  source: SourceCategory | null;
+  observedAt: string | null;
   /**
    * A submitted price nobody has corroborated yet, shown because a number the
    * reader can sanity-check beats "tba". The row marks it; it never renders
    * bare alongside confirmed prices in the same column.
    */
-  isPending: boolean
+  isPending: boolean;
 }
 
 export interface RowSavedPrice {
-  at: string
-  price: number
+  at: string;
+  price: number;
 }
 
 /**
@@ -47,40 +47,40 @@ export interface RowSavedPrice {
  * job (locked decision 5). Handle-less members are counted and never named.
  */
 export interface RowCrewGoing {
-  count: number
-  names: string[]
+  count: number;
+  names: string[];
 }
 
 export interface EventRowShow {
-  id: string
-  headliner: string
+  id: string;
+  headliner: string;
   /** The API's `title`, used only when the headliner split never ran. */
-  fallbackTitle: string
-  supports: string[]
-  tourName: string | null
-  imageUrl: string | null
+  fallbackTitle: string;
+  supports: string[];
+  tourName: string | null;
+  imageUrl: string | null;
   /** Second choice behind `imageUrl`. Null on payloads that omit the join. */
-  artistPhotoUrl: string | null
-  venueName: string
-  venueSlug: string
+  artistPhotoUrl: string | null;
+  venueName: string;
+  venueSlug: string;
   /** "Sat, Aug 15". Line 3 shortens it in place rather than reformatting. */
-  dateLabel: string
-  timeLabel: string | null
-  price: RowPrice | null
+  dateLabel: string;
+  timeLabel: string | null;
+  price: RowPrice | null;
   /** Watching only. */
-  saved: RowSavedPrice | null
-  genres: string[]
-  isFollowed: boolean
-  isWatching: boolean
+  saved: RowSavedPrice | null;
+  genres: string[];
+  isFollowed: boolean;
+  isWatching: boolean;
   /** null on every surface that has no crew context to state. */
-  crewGoing: RowCrewGoing | null
+  crewGoing: RowCrewGoing | null;
   /**
    * The price's own state. Separate from `lifecycle` because they are
    * different axes: a cancelled show can also be sold out, and only the
    * lifecycle is a property of the event itself.
    */
-  status: 'live' | 'soldout' | 'presale'
-  lifecycle: EventStatus
+  status: 'live' | 'soldout' | 'presale';
+  lifecycle: EventStatus;
 }
 
 export function fromWatchingShow(show: WatchingShow): EventRowShow {
@@ -131,18 +131,18 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     isWatching: false,
     status: show.watchStatus,
     lifecycle: show.eventStatus,
-  }
+  };
 }
 
 export function fromEventWithVenue(
   event: EventWithVenue,
   options: { isWatching?: boolean; crewGoing?: RowCrewGoing | null } = {},
 ): EventRowShow {
-  const headline = pickBrowseHeadline(event.priceByTier)
+  const headline = pickBrowseHeadline(event.priceByTier);
   // The legacy scalar is the fallback for rows whose payload omits priceByTier.
   // It carries no provenance and no observation time, so it renders bare.
   const legacyAmount =
-    event.ticketPriceMin != null ? parseFloat(event.ticketPriceMin) : null
+    event.ticketPriceMin != null ? parseFloat(event.ticketPriceMin) : null;
 
   const price: RowPrice | null =
     headline !== null
@@ -161,7 +161,7 @@ export function fromEventWithVenue(
             observedAt: null,
             isPending: false,
           }
-        : null
+        : null;
 
   return {
     id: event.id,
@@ -191,7 +191,7 @@ export function fromEventWithVenue(
     // until a surface that knows better says otherwise.
     status: 'live',
     lifecycle: event.status,
-  }
+  };
 }
 
 /**
@@ -252,7 +252,7 @@ export function fromArtistShow(
     isWatching: false,
     status: 'live',
     lifecycle: show.status,
-  }
+  };
 }
 
 /**
@@ -296,5 +296,5 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',
-  }
+  };
 }

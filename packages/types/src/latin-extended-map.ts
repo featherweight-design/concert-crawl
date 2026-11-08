@@ -39,7 +39,7 @@ export const LATIN_EXTENDED_SINGLE: Record<string, string> = {
   ð: 'd',
   Đ: 'D', // Croatian / Serbian d-with-stroke (distinct code point from Ð)
   đ: 'd',
-}
+};
 
 /**
  * Characters whose replacement is more than one character. These MUST be
@@ -58,7 +58,7 @@ export const LATIN_EXTENDED_MULTI: Record<string, string> = {
   ẞ: 'SS',
   Þ: 'TH', // Icelandic thorn
   þ: 'th',
-}
+};
 
 /**
  * The full map consumed by `canonicalizeArtist` / `canonicalizeTitle`.
@@ -66,7 +66,7 @@ export const LATIN_EXTENDED_MULTI: Record<string, string> = {
 export const LATIN_EXTENDED_MAP: Record<string, string> = {
   ...LATIN_EXTENDED_SINGLE,
   ...LATIN_EXTENDED_MULTI,
-}
+};
 
 /**
  * Character class used by the regex that consumes LATIN_EXTENDED_MAP. Derived
@@ -77,7 +77,7 @@ export const LATIN_EXTENDED_MAP: Record<string, string> = {
 export const LATIN_EXTENDED_REGEX = new RegExp(
   `[${Object.keys(LATIN_EXTENDED_MAP).join('')}]`,
   'g',
-)
+);
 
 /**
  * `from` argument for the Postgres `translate()` call — the 1→1 keys, in
@@ -85,7 +85,7 @@ export const LATIN_EXTENDED_REGEX = new RegExp(
  */
 export const LATIN_EXTENDED_TRANSLATE_FROM = Object.keys(
   LATIN_EXTENDED_SINGLE,
-).join('')
+).join('');
 
 /**
  * `to` argument for the Postgres `translate()` call. Positionally aligned
@@ -93,7 +93,7 @@ export const LATIN_EXTENDED_TRANSLATE_FROM = Object.keys(
  */
 export const LATIN_EXTENDED_TRANSLATE_TO = Object.values(
   LATIN_EXTENDED_SINGLE,
-).join('')
+).join('');
 
 /**
  * Builds the SQL expression that applies the whole map to `expr`. The 1→N
@@ -106,9 +106,9 @@ export const LATIN_EXTENDED_TRANSLATE_TO = Object.values(
  * substitution can reintroduce a character another substitution consumes.
  */
 export function latinExtendedSql(expr: string): string {
-  let sql = expr
+  let sql = expr;
   for (const [char, replacement] of Object.entries(LATIN_EXTENDED_MULTI)) {
-    sql = `replace(${sql}, '${char}', '${replacement}')`
+    sql = `replace(${sql}, '${char}', '${replacement}')`;
   }
-  return `translate(${sql}, '${LATIN_EXTENDED_TRANSLATE_FROM}', '${LATIN_EXTENDED_TRANSLATE_TO}')`
+  return `translate(${sql}, '${LATIN_EXTENDED_TRANSLATE_FROM}', '${LATIN_EXTENDED_TRANSLATE_TO}')`;
 }

@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { Inbox, AlertCircle, Flag, SquarePen, Check, X } from 'lucide-react'
-import { MonoLabel } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Inbox, AlertCircle, Flag, SquarePen, Check, X } from 'lucide-react';
+import { MonoLabel } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export type FeedbackStatusFilter =
   | 'all'
@@ -11,32 +11,32 @@ export type FeedbackStatusFilter =
   | 'flagged'
   | 'issue_opened'
   | 'resolved'
-  | 'archived'
+  | 'archived';
 
 interface StatusCounts {
-  all: number
-  unread: number
-  read: number
-  flagged: number
-  issue_opened: number
-  resolved: number
-  archived: number
+  all: number;
+  unread: number;
+  read: number;
+  flagged: number;
+  issue_opened: number;
+  resolved: number;
+  archived: number;
 }
 
-export type FeedbackSource = 'feedback_surface' | 'sentry' | 'email'
+export type FeedbackSource = 'feedback_surface' | 'sentry' | 'email';
 
 interface FeedbackFilterRailProps {
-  active: FeedbackStatusFilter
-  counts: StatusCounts
-  onChange: (filter: FeedbackStatusFilter) => void
-  activeSources?: Set<FeedbackSource>
-  onSourceToggle?: (source: FeedbackSource) => void
+  active: FeedbackStatusFilter;
+  counts: StatusCounts;
+  onChange: (filter: FeedbackStatusFilter) => void;
+  activeSources?: Set<FeedbackSource>;
+  onSourceToggle?: (source: FeedbackSource) => void;
 }
 
 const STATUS_ITEMS: {
-  value: FeedbackStatusFilter
-  label: string
-  Icon: React.ComponentType<{ size: number; color: string }>
+  value: FeedbackStatusFilter;
+  label: string;
+  Icon: React.ComponentType<{ size: number; color: string }>;
 }[] = [
   {
     value: 'all',
@@ -68,12 +68,12 @@ const STATUS_ITEMS: {
     label: ADMIN_COPY.feedback.filterRail.statusItems.archived,
     Icon: X,
   },
-]
+];
 
 const SOURCE_ITEMS: {
-  value: FeedbackSource
-  label: string
-  soon: boolean
+  value: FeedbackSource;
+  label: string;
+  soon: boolean;
 }[] = [
   {
     value: 'feedback_surface',
@@ -90,7 +90,7 @@ const SOURCE_ITEMS: {
     label: ADMIN_COPY.feedback.filterRail.sourceItems.email,
     soon: true,
   },
-]
+];
 
 export function FeedbackFilterRail({
   active,
@@ -119,9 +119,9 @@ export function FeedbackFilterRail({
       </div>
 
       {STATUS_ITEMS.map((item) => {
-        const isActive = active === item.value
-        const count = counts[item.value]
-        const iconColor = isActive ? 'var(--fg)' : 'var(--fg-muted)'
+        const isActive = active === item.value;
+        const count = counts[item.value];
+        const iconColor = isActive ? 'var(--fg)' : 'var(--fg-muted)';
         return (
           <button
             key={item.value}
@@ -177,7 +177,7 @@ export function FeedbackFilterRail({
               </span>
             )}
           </button>
-        )
+        );
       })}
 
       <div
@@ -195,7 +195,7 @@ export function FeedbackFilterRail({
       {SOURCE_ITEMS.map((src) => {
         const isChecked = activeSources
           ? activeSources.has(src.value)
-          : src.value === 'feedback_surface'
+          : src.value === 'feedback_surface';
         return (
           <label
             key={src.value}
@@ -219,7 +219,7 @@ export function FeedbackFilterRail({
               disabled={src.soon}
               onChange={() => {
                 if (!src.soon && onSourceToggle) {
-                  onSourceToggle(src.value)
+                  onSourceToggle(src.value);
                 }
               }}
               style={{
@@ -248,8 +248,8 @@ export function FeedbackFilterRail({
               </span>
             )}
           </label>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

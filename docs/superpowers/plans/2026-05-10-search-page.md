@@ -55,23 +55,23 @@ it('searches by venue name', async () => {
   const venue = await seedVenue({
     name: 'Bluebird Theater',
     slug: 'bluebird-theater',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Rock Night',
     artist: 'Test Band',
     date: '2027-06-01',
-  })
+  });
 
-  const res = await app.request('/v1/events?search=Bluebird')
-  expect(res.status).toBe(200)
+  const res = await app.request('/v1/events?search=Bluebird');
+  expect(res.status).toBe(200);
   const body = (await res.json()) as {
-    success: boolean
-    data: { data: { title: string }[]; total: number }
-  }
-  expect(body.data.data).toHaveLength(1)
-  expect(body.data.data[0]?.title).toBe('Rock Night')
-  expect(body.data.total).toBe(1)
-})
+    success: boolean;
+    data: { data: { title: string }[]; total: number };
+  };
+  expect(body.data.data).toHaveLength(1);
+  expect(body.data.data[0]?.title).toBe('Rock Night');
+  expect(body.data.total).toBe(1);
+});
 ```
 
 - [ ] **Step 2: Run the test to confirm it fails**
@@ -95,8 +95,8 @@ if (search) {
     ilike(events.title, `%${search}%`),
     ilike(events.artist, `%${search}%`),
     ilike(venues.name, `%${search}%`),
-  )
-  if (searchCondition) conditions.push(searchCondition)
+  );
+  if (searchCondition) conditions.push(searchCondition);
 }
 ```
 
@@ -107,7 +107,7 @@ const countResult = await db
   .select({ total: count() })
   .from(events)
   .innerJoin(venues, eq(events.venueId, venues.id))
-  .where(where)
+  .where(where);
 ```
 
 - [ ] **Step 4: Run the test to confirm it passes**
@@ -149,109 +149,109 @@ git commit -m "feat(api): extend events search to match venue name"
 Create `apps/api/src/routes/search.integration.test.ts`:
 
 ```ts
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => null,
-}))
+}));
 
-import { createApp } from '../app.js'
+import { createApp } from '../app.js';
 import {
   clearTables,
   seedVenue,
   seedEvent,
   seedUserEvent,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 describe('GET /v1/search/popular', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns 200 without auth', async () => {
-    const res = await app.request('/v1/search/popular')
-    expect(res.status).toBe(200)
-  })
+    const res = await app.request('/v1/search/popular');
+    expect(res.status).toBe(200);
+  });
 
   it('returns top 5 upcoming events ordered by watcher count descending', async () => {
-    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
 
     const eventA = await seedEvent(venue.id, {
       title: 'Show A',
       artist: 'Artist A',
       date: '2027-06-01',
-    })
+    });
     const eventB = await seedEvent(venue.id, {
       title: 'Show B',
       artist: 'Artist B',
       date: '2027-06-02',
-    })
+    });
     const eventC = await seedEvent(venue.id, {
       title: 'Show C',
       artist: 'Artist C',
       date: '2027-06-03',
-    })
+    });
 
     // eventC gets 3 watchers, eventA gets 1
-    await seedUserEvent('user-1', eventC.id, { status: 'watching' })
-    await seedUserEvent('user-2', eventC.id, { status: 'watching' })
-    await seedUserEvent('user-3', eventC.id, { status: 'watching' })
-    await seedUserEvent('user-4', eventA.id, { status: 'watching' })
+    await seedUserEvent('user-1', eventC.id, { status: 'watching' });
+    await seedUserEvent('user-2', eventC.id, { status: 'watching' });
+    await seedUserEvent('user-3', eventC.id, { status: 'watching' });
+    await seedUserEvent('user-4', eventA.id, { status: 'watching' });
 
-    const res = await app.request('/v1/search/popular')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/search/popular');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        title: string
-        watcherCount: number
-        venue: { name: string; slug: string }
-      }[]
-    }
+        title: string;
+        watcherCount: number;
+        venue: { name: string; slug: string };
+      }[];
+    };
 
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(3)
-    expect(body.data[0]?.title).toBe('Show C')
-    expect(body.data[0]?.watcherCount).toBe(3)
-    expect(body.data[1]?.title).toBe('Show A')
-    expect(body.data[0]?.venue.name).toBe('Globe Hall')
-    expect(body.data[0]?.venue.slug).toBe('globe-hall')
-  })
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(3);
+    expect(body.data[0]?.title).toBe('Show C');
+    expect(body.data[0]?.watcherCount).toBe(3);
+    expect(body.data[1]?.title).toBe('Show A');
+    expect(body.data[0]?.venue.name).toBe('Globe Hall');
+    expect(body.data[0]?.venue.slug).toBe('globe-hall');
+  });
 
   it('falls back to soonest events when no watchers exist', async () => {
-    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
-    await seedEvent(venue.id, { title: 'Show A', date: '2027-06-01' })
-    await seedEvent(venue.id, { title: 'Show B', date: '2027-06-02' })
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
+    await seedEvent(venue.id, { title: 'Show A', date: '2027-06-01' });
+    await seedEvent(venue.id, { title: 'Show B', date: '2027-06-02' });
 
-    const res = await app.request('/v1/search/popular')
+    const res = await app.request('/v1/search/popular');
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string; watcherCount: number }[]
-    }
+      success: boolean;
+      data: { title: string; watcherCount: number }[];
+    };
 
-    expect(body.data).toHaveLength(2)
-    expect(body.data[0]?.watcherCount).toBe(0)
-    expect(body.data[0]?.title).toBe('Show A') // soonest first
-  })
+    expect(body.data).toHaveLength(2);
+    expect(body.data[0]?.watcherCount).toBe(0);
+    expect(body.data[0]?.title).toBe('Show A'); // soonest first
+  });
 
   it('returns at most 5 results', async () => {
-    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
+    const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' });
     for (let idx = 0; idx < 8; idx++) {
       await seedEvent(venue.id, {
         title: `Show ${idx}`,
         date: `2027-06-0${idx + 1}`,
-      })
+      });
     }
 
-    const res = await app.request('/v1/search/popular')
-    const body = (await res.json()) as { success: boolean; data: unknown[] }
-    expect(body.data).toHaveLength(5)
-  })
-})
+    const res = await app.request('/v1/search/popular');
+    const body = (await res.json()) as { success: boolean; data: unknown[] };
+    expect(body.data).toHaveLength(5);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to confirm it fails**
@@ -267,18 +267,18 @@ Expected: FAIL — route does not exist yet (404).
 Create `apps/api/src/routes/search.ts`:
 
 ```ts
-import { Hono } from 'hono'
-import { db, events, userEvents, venues } from '@concert-crawl/db'
-import { and, asc, count, desc, eq, gte, sql } from 'drizzle-orm'
-import { todayInTimezone } from '../lib/time.js'
+import { Hono } from 'hono';
+import { db, events, userEvents, venues } from '@concert-crawl/db';
+import { and, asc, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { todayInTimezone } from '../lib/time.js';
 
-export const searchRouter = new Hono()
+export const searchRouter = new Hono();
 
 // GET /v1/search/popular — top 5 upcoming events by watcher count, no auth required
 searchRouter.get('/popular', async (ctx) => {
-  const today = todayInTimezone('UTC')
+  const today = todayInTimezone('UTC');
 
-  const watcherCount = sql<number>`cast(count(${userEvents.id}) as int)`
+  const watcherCount = sql<number>`cast(count(${userEvents.id}) as int)`;
 
   const rows = await db
     .select({
@@ -300,7 +300,7 @@ searchRouter.get('/popular', async (ctx) => {
     .where(and(eq(events.status, 'upcoming'), gte(events.date, today)))
     .groupBy(events.id, venues.name, venues.slug)
     .orderBy(desc(watcherCount), asc(events.date))
-    .limit(5)
+    .limit(5);
 
   const data = rows.map((row) => ({
     id: row.id,
@@ -310,10 +310,10 @@ searchRouter.get('/popular', async (ctx) => {
     ticketPriceMin: row.ticketPriceMin,
     watcherCount: row.watcherCount,
     venue: { name: row.venueName, slug: row.venueSlug },
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 ```
 
 - [ ] **Step 4: Register the router in `apps/api/src/routes/index.ts`**
@@ -321,9 +321,9 @@ searchRouter.get('/popular', async (ctx) => {
 Add the import and registration alongside the existing routes:
 
 ```ts
-import { searchRouter } from './search.js'
+import { searchRouter } from './search.js';
 // ... inside registerRoutes:
-app.route('/v1/search', searchRouter)
+app.route('/v1/search', searchRouter);
 ```
 
 - [ ] **Step 5: Run the tests to confirm they pass**
@@ -400,16 +400,16 @@ Create `apps/web/src/lib/search/useSearch.test.ts`:
 ```ts
 // @vitest-environment jsdom
 
-import { renderHook, act } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mockPush = vi.fn()
+const mockPush = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
-}))
+}));
 
-import { useSearch } from './useSearch'
+import { useSearch } from './useSearch';
 
 const POPULAR_RESPONSE = {
   success: true,
@@ -424,7 +424,7 @@ const POPULAR_RESPONSE = {
       venue: { name: 'Globe Hall', slug: 'globe-hall' },
     },
   ],
-}
+};
 
 const EVENTS_RESPONSE = {
   success: true,
@@ -450,204 +450,206 @@ const EVENTS_RESPONSE = {
       },
     ],
   },
-}
+};
 
 beforeEach(() => {
-  vi.useFakeTimers()
-  localStorage.clear()
-  mockPush.mockReset()
+  vi.useFakeTimers();
+  localStorage.clear();
+  mockPush.mockReset();
 
   global.fetch = vi.fn().mockImplementation((url: string) => {
     if ((url as string).includes('/v1/search/popular')) {
-      return Promise.resolve({ json: async () => POPULAR_RESPONSE } as Response)
+      return Promise.resolve({
+        json: async () => POPULAR_RESPONSE,
+      } as Response);
     }
-    return Promise.resolve({ json: async () => EVENTS_RESPONSE } as Response)
-  })
-})
+    return Promise.resolve({ json: async () => EVENTS_RESPONSE } as Response);
+  });
+});
 
 afterEach(() => {
-  vi.useRealTimers()
-})
+  vi.useRealTimers();
+});
 
 describe('useSearch — popular events', () => {
   it('fetches popular events on mount', async () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     await act(async () => {
-      await Promise.resolve() // flush the fetch promise
-    })
+      await Promise.resolve(); // flush the fetch promise
+    });
 
-    expect(result.current.popularEvents).toHaveLength(1)
-    expect(result.current.popularEvents[0]?.artist).toBe('Artist A')
-  })
-})
+    expect(result.current.popularEvents).toHaveLength(1);
+    expect(result.current.popularEvents[0]?.artist).toBe('Artist A');
+  });
+});
 
 describe('useSearch — debounce', () => {
   it('does not fetch events before 300ms', () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('rad')
-    })
+      result.current.setQuery('rad');
+    });
 
     expect(fetch).not.toHaveBeenCalledWith(
       expect.stringContaining('search=rad'),
       expect.anything(),
-    )
-  })
+    );
+  });
 
   it('fetches events after 300ms debounce', async () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('rad')
-    })
+      result.current.setQuery('rad');
+    });
 
     await act(async () => {
-      vi.advanceTimersByTime(300)
-      await Promise.resolve()
-    })
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
 
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('search=rad'))
-  })
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('search=rad'));
+  });
 
   it('derives artist results with earliest next show', async () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('Radiohead')
-    })
+      result.current.setQuery('Radiohead');
+    });
 
     await act(async () => {
-      vi.advanceTimersByTime(300)
-      await Promise.resolve()
-    })
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
 
     // Radiohead appears once, deduplicated with earliest date
     const artists = result.current.artistResults.filter(
       (a) => a.name === 'Radiohead',
-    )
-    expect(artists).toHaveLength(1)
-    expect(artists[0]?.nextDate).toBe('2027-06-01')
-  })
+    );
+    expect(artists).toHaveLength(1);
+    expect(artists[0]?.nextDate).toBe('2027-06-01');
+  });
 
   it('derives venue results with show count', async () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('Red Rocks')
-    })
+      result.current.setQuery('Red Rocks');
+    });
 
     await act(async () => {
-      vi.advanceTimersByTime(300)
-      await Promise.resolve()
-    })
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
 
     const redRocks = result.current.venueResults.find(
       (v) => v.slug === 'red-rocks',
-    )
-    expect(redRocks?.showCount).toBe(2) // two Radiohead nights
-  })
-})
+    );
+    expect(redRocks?.showCount).toBe(2); // two Radiohead nights
+  });
+});
 
 describe('useSearch — clearQuery', () => {
   it('resets query and results', async () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('rad')
-    })
+      result.current.setQuery('rad');
+    });
     await act(async () => {
-      vi.advanceTimersByTime(300)
-      await Promise.resolve()
-    })
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
 
     act(() => {
-      result.current.clearQuery()
-    })
+      result.current.clearQuery();
+    });
 
-    expect(result.current.query).toBe('')
-    expect(result.current.artistResults).toHaveLength(0)
-    expect(result.current.venueResults).toHaveLength(0)
-  })
-})
+    expect(result.current.query).toBe('');
+    expect(result.current.artistResults).toHaveLength(0);
+    expect(result.current.venueResults).toHaveLength(0);
+  });
+});
 
 describe('useSearch — recent searches', () => {
   it('reads recent searches from localStorage on init', () => {
     localStorage.setItem(
       'cc_recent_searches',
       JSON.stringify(['godspeed you', 'bluebird']),
-    )
-    const { result } = renderHook(() => useSearch())
-    expect(result.current.recentSearches).toEqual(['godspeed you', 'bluebird'])
-  })
+    );
+    const { result } = renderHook(() => useSearch());
+    expect(result.current.recentSearches).toEqual(['godspeed you', 'bluebird']);
+  });
 
   it('persists query to localStorage on navigateTo', () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('radiohead')
-    })
+      result.current.setQuery('radiohead');
+    });
     act(() => {
-      result.current.navigateTo('artist', 'Radiohead')
-    })
+      result.current.navigateTo('artist', 'Radiohead');
+    });
 
     const stored = JSON.parse(
       localStorage.getItem('cc_recent_searches') ?? '[]',
-    ) as string[]
-    expect(stored[0]).toBe('radiohead')
-  })
+    ) as string[];
+    expect(stored[0]).toBe('radiohead');
+  });
 
   it('evicts oldest when more than 5 recent searches', () => {
     localStorage.setItem(
       'cc_recent_searches',
       JSON.stringify(['one', 'two', 'three', 'four', 'five']),
-    )
-    const { result } = renderHook(() => useSearch())
+    );
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('six')
-    })
+      result.current.setQuery('six');
+    });
     act(() => {
-      result.current.navigateTo('artist', 'Someone')
-    })
+      result.current.navigateTo('artist', 'Someone');
+    });
 
     const stored = JSON.parse(
       localStorage.getItem('cc_recent_searches') ?? '[]',
-    ) as string[]
-    expect(stored).toHaveLength(5)
-    expect(stored[0]).toBe('six')
-    expect(stored).not.toContain('five')
-  })
-})
+    ) as string[];
+    expect(stored).toHaveLength(5);
+    expect(stored[0]).toBe('six');
+    expect(stored).not.toContain('five');
+  });
+});
 
 describe('useSearch — navigateTo', () => {
   it('navigates to events search for artist', () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('radiohead')
-    })
+      result.current.setQuery('radiohead');
+    });
     act(() => {
-      result.current.navigateTo('artist', 'Radiohead')
-    })
+      result.current.navigateTo('artist', 'Radiohead');
+    });
 
-    expect(mockPush).toHaveBeenCalledWith('/events?search=Radiohead')
-  })
+    expect(mockPush).toHaveBeenCalledWith('/events?search=Radiohead');
+  });
 
   it('navigates to venue page for venue', () => {
-    const { result } = renderHook(() => useSearch())
+    const { result } = renderHook(() => useSearch());
 
     act(() => {
-      result.current.setQuery('bluebird')
-    })
+      result.current.setQuery('bluebird');
+    });
     act(() => {
-      result.current.navigateTo('venue', { slug: 'bluebird-theater' })
-    })
+      result.current.navigateTo('venue', { slug: 'bluebird-theater' });
+    });
 
-    expect(mockPush).toHaveBeenCalledWith('/venues/bluebird-theater')
-  })
-})
+    expect(mockPush).toHaveBeenCalledWith('/venues/bluebird-theater');
+  });
+});
 ```
 
 - [ ] **Step 2: Run the tests to confirm they fail**
@@ -663,130 +665,130 @@ Expected: FAIL — `useSearch` not found.
 Create `apps/web/src/lib/search/useSearch.ts`:
 
 ```ts
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? ''
-const RECENT_KEY = 'cc_recent_searches'
-const MAX_RECENT = 5
-const DEBOUNCE_MS = 300
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const RECENT_KEY = 'cc_recent_searches';
+const MAX_RECENT = 5;
+const DEBOUNCE_MS = 300;
 
 export interface ArtistResult {
-  name: string
-  nextDate: string
-  venueShort: string
+  name: string;
+  nextDate: string;
+  venueShort: string;
 }
 
 export interface VenueResult {
-  name: string
-  slug: string
-  showCount: number
+  name: string;
+  slug: string;
+  showCount: number;
 }
 
 export interface PopularEvent {
-  id: string
-  title: string
-  artist: string
-  date: string
-  ticketPriceMin: string | null
-  watcherCount: number
-  venue: { name: string; slug: string }
+  id: string;
+  title: string;
+  artist: string;
+  date: string;
+  ticketPriceMin: string | null;
+  watcherCount: number;
+  venue: { name: string; slug: string };
 }
 
 interface EventRow {
-  artist: string
-  date: string
-  title: string
-  venue: { name: string; slug: string }
+  artist: string;
+  date: string;
+  title: string;
+  venue: { name: string; slug: string };
 }
 
 function readRecent(): string[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(RECENT_KEY)
-    return raw ? (JSON.parse(raw) as string[]) : []
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
-    return []
+    return [];
   }
 }
 
 function writeRecent(searches: string[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(RECENT_KEY, JSON.stringify(searches))
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(RECENT_KEY, JSON.stringify(searches));
 }
 
 function addToRecent(query: string, current: string[]): string[] {
-  const filtered = current.filter((s) => s !== query)
-  return [query, ...filtered].slice(0, MAX_RECENT)
+  const filtered = current.filter((s) => s !== query);
+  return [query, ...filtered].slice(0, MAX_RECENT);
 }
 
 function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
-  const map = new Map<string, ArtistResult>()
+  const map = new Map<string, ArtistResult>();
   for (const row of rows) {
-    const existing = map.get(row.artist)
+    const existing = map.get(row.artist);
     if (!existing || row.date < existing.nextDate) {
       map.set(row.artist, {
         name: row.artist,
         nextDate: row.date,
         venueShort: row.venue.name,
-      })
+      });
     }
   }
-  return Array.from(map.values())
+  return Array.from(map.values());
 }
 
 function deriveVenueResults(rows: EventRow[]): VenueResult[] {
-  const map = new Map<string, VenueResult>()
+  const map = new Map<string, VenueResult>();
   for (const row of rows) {
-    const existing = map.get(row.venue.slug)
+    const existing = map.get(row.venue.slug);
     if (existing) {
-      existing.showCount += 1
+      existing.showCount += 1;
     } else {
       map.set(row.venue.slug, {
         name: row.venue.name,
         slug: row.venue.slug,
         showCount: 1,
-      })
+      });
     }
   }
-  return Array.from(map.values())
+  return Array.from(map.values());
 }
 
 export function useSearch() {
-  const router = useRouter()
-  const [query, setQuery] = useState('')
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
-  const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([])
-  const [artistResults, setArtistResults] = useState<ArtistResult[]>([])
-  const [venueResults, setVenueResults] = useState<VenueResult[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router = useRouter();
+  const [query, setQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([]);
+  const [artistResults, setArtistResults] = useState<ArtistResult[]>([]);
+  const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setRecentSearches(readRecent())
+    setRecentSearches(readRecent());
 
     fetch(`${API_URL}/v1/search/popular`)
       .then((res) => res.json())
       .then((body: { success: boolean; data: PopularEvent[] }) => {
-        if (body.success) setPopularEvents(body.data)
+        if (body.success) setPopularEvents(body.data);
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    const trimmed = query.trim()
+    const trimmed = query.trim();
     if (!trimmed) {
-      setArtistResults([])
-      setVenueResults([])
-      setIsLoading(false)
-      return
+      setArtistResults([]);
+      setVenueResults([]);
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     debounceRef.current = setTimeout(() => {
       fetch(
         `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
@@ -794,39 +796,39 @@ export function useSearch() {
         .then((res) => res.json())
         .then((body: { success: boolean; data: { data: EventRow[] } }) => {
           if (body.success) {
-            setArtistResults(deriveArtistResults(body.data.data))
-            setVenueResults(deriveVenueResults(body.data.data))
+            setArtistResults(deriveArtistResults(body.data.data));
+            setVenueResults(deriveVenueResults(body.data.data));
           }
         })
         .catch(() => {})
-        .finally(() => setIsLoading(false))
-    }, DEBOUNCE_MS)
+        .finally(() => setIsLoading(false));
+    }, DEBOUNCE_MS);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-    }
-  }, [query])
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
 
   const clearQuery = useCallback(() => {
-    setQuery('')
-    setArtistResults([])
-    setVenueResults([])
-  }, [])
+    setQuery('');
+    setArtistResults([]);
+    setVenueResults([]);
+  }, []);
 
   const navigateTo = useCallback(
     (type: 'artist' | 'venue', value: string | { slug: string }) => {
-      const updated = addToRecent(query, recentSearches)
-      setRecentSearches(updated)
-      writeRecent(updated)
+      const updated = addToRecent(query, recentSearches);
+      setRecentSearches(updated);
+      writeRecent(updated);
 
       if (type === 'artist' && typeof value === 'string') {
-        router.push(`/events?search=${encodeURIComponent(value)}`)
+        router.push(`/events?search=${encodeURIComponent(value)}`);
       } else if (type === 'venue' && typeof value === 'object') {
-        router.push(`/venues/${value.slug}`)
+        router.push(`/venues/${value.slug}`);
       }
     },
     [query, recentSearches, router],
-  )
+  );
 
   return {
     query,
@@ -838,7 +840,7 @@ export function useSearch() {
     venueResults,
     isLoading,
     navigateTo,
-  }
+  };
 }
 ```
 
@@ -1006,18 +1008,18 @@ Expected: FAIL — modules not found.
 Create `apps/web/src/components/consumer/search/SearchBar.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import { Search, X, ArrowLeft } from 'lucide-react'
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, X, ArrowLeft } from 'lucide-react';
 
 interface SearchBarProps {
-  value: string
-  onChange: (val: string) => void
-  onClear: () => void
-  showBack?: boolean
-  autoFocus?: boolean
+  value: string;
+  onChange: (val: string) => void;
+  onClear: () => void;
+  showBack?: boolean;
+  autoFocus?: boolean;
 }
 
 export function SearchBar({
@@ -1027,12 +1029,12 @@ export function SearchBar({
   showBack = false,
   autoFocus = false,
 }: SearchBarProps) {
-  const router = useRouter()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus()
-  }, [autoFocus])
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   return (
     <div
@@ -1126,7 +1128,7 @@ export function SearchBar({
         )}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1135,14 +1137,14 @@ export function SearchBar({
 Create `apps/web/src/components/consumer/search/SearchDefaultState.tsx`:
 
 ```tsx
-import { History, Flame } from 'lucide-react'
-import type { PopularEvent } from '../../../lib/search/useSearch'
+import { History, Flame } from 'lucide-react';
+import type { PopularEvent } from '../../../lib/search/useSearch';
 
 interface SearchDefaultStateProps {
-  recentSearches: string[]
-  popularEvents: PopularEvent[]
-  onPickQuery: (query: string) => void
-  onPickEvent: (type: 'artist', value: string) => void
+  recentSearches: string[];
+  popularEvents: PopularEvent[];
+  onPickQuery: (query: string) => void;
+  onPickEvent: (type: 'artist', value: string) => void;
 }
 
 function SectionHeader({
@@ -1150,9 +1152,9 @@ function SectionHeader({
   label,
   accent = false,
 }: {
-  icon: React.ReactNode
-  label: string
-  accent?: boolean
+  icon: React.ReactNode;
+  label: string;
+  accent?: boolean;
 }) {
   return (
     <div
@@ -1184,7 +1186,7 @@ function SectionHeader({
         {label}
       </span>
     </div>
-  )
+  );
 }
 
 export function SearchDefaultState({
@@ -1319,7 +1321,7 @@ export function SearchDefaultState({
         </>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1330,16 +1332,16 @@ Note: you'll need to add `import React from 'react'` at the top (or ensure the t
 Create `apps/web/src/components/consumer/search/SearchResultsState.tsx`:
 
 ```tsx
-import { MapPin, User } from 'lucide-react'
-import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
+import { MapPin, User } from 'lucide-react';
+import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
 
 interface SearchResultsStateProps {
-  artistResults: ArtistResult[]
-  venueResults: VenueResult[]
+  artistResults: ArtistResult[];
+  venueResults: VenueResult[];
   onNavigateTo: (
     type: 'artist' | 'venue',
     value: string | { slug: string },
-  ) => void
+  ) => void;
 }
 
 function SectionHeader({ label }: { label: string }) {
@@ -1358,13 +1360,13 @@ function SectionHeader({ label }: { label: string }) {
         {label}
       </span>
     </div>
-  )
+  );
 }
 
 function Divider() {
   return (
     <div style={{ height: 1, background: 'var(--border)', marginLeft: 68 }} />
-  )
+  );
 }
 
 export function SearchResultsState({
@@ -1512,7 +1514,7 @@ export function SearchResultsState({
         </>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1521,11 +1523,11 @@ export function SearchResultsState({
 Create `apps/web/src/components/consumer/search/SearchEmptyState.tsx`:
 
 ```tsx
-import { EmptyState } from '../empty-state/EmptyState'
-import { copy } from '../definitions/copy'
+import { EmptyState } from '../empty-state/EmptyState';
+import { copy } from '../definitions/copy';
 
 interface SearchEmptyStateProps {
-  query: string
+  query: string;
 }
 
 export function SearchEmptyState({ query }: SearchEmptyStateProps) {
@@ -1538,7 +1540,7 @@ export function SearchEmptyState({ query }: SearchEmptyStateProps) {
       body={copy.searchNoResultsBody}
       primaryCta={{ label: copy.searchNoResultsCta, href: '/events' }}
     />
-  )
+  );
 }
 ```
 
@@ -1578,13 +1580,13 @@ git commit -m "feat(web): build mobile search page components"
 Create `apps/web/src/app/(protected)/search/page.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useSearch } from '../../../lib/search/useSearch'
-import { SearchBar } from '../../../components/consumer/search/SearchBar'
-import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState'
-import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState'
-import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState'
+import { useSearch } from '../../../lib/search/useSearch';
+import { SearchBar } from '../../../components/consumer/search/SearchBar';
+import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState';
+import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState';
+import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState';
 
 export default function SearchPage() {
   const {
@@ -1596,9 +1598,9 @@ export default function SearchPage() {
     artistResults,
     venueResults,
     navigateTo,
-  } = useSearch()
+  } = useSearch();
 
-  const hasResults = artistResults.length > 0 || venueResults.length > 0
+  const hasResults = artistResults.length > 0 || venueResults.length > 0;
 
   return (
     <div
@@ -1639,7 +1641,7 @@ export default function SearchPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1778,81 +1780,81 @@ Expected: FAIL — module not found.
 Create `apps/web/src/components/consumer/search-palette/SearchPalette.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
-import { useSearch } from '../../../lib/search/useSearch'
-import { SearchDefaultState } from '../search/SearchDefaultState'
-import { SearchResultsState } from '../search/SearchResultsState'
-import { SearchEmptyState } from '../search/SearchEmptyState'
+import { useEffect, useRef, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { useSearch } from '../../../lib/search/useSearch';
+import { SearchDefaultState } from '../search/SearchDefaultState';
+import { SearchResultsState } from '../search/SearchResultsState';
+import { SearchEmptyState } from '../search/SearchEmptyState';
 
 interface SearchPaletteProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 export function SearchPalette({ open, onClose }: SearchPaletteProps) {
-  const search = useSearch()
-  const [selectedIdx, setSelectedIdx] = useState(-1)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const search = useSearch();
+  const [selectedIdx, setSelectedIdx] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset selection when query changes
   useEffect(() => {
-    setSelectedIdx(-1)
-  }, [search.query])
+    setSelectedIdx(-1);
+  }, [search.query]);
 
   // Autofocus on open
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 0)
+      setTimeout(() => inputRef.current?.focus(), 0);
     } else {
-      search.clearQuery()
+      search.clearQuery();
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    const allResults = [...search.artistResults, ...search.venueResults]
+    const allResults = [...search.artistResults, ...search.venueResults];
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onClose()
+        onClose();
       } else if (event.key === 'ArrowDown') {
-        event.preventDefault()
-        setSelectedIdx((prev) => Math.min(prev + 1, allResults.length - 1))
+        event.preventDefault();
+        setSelectedIdx((prev) => Math.min(prev + 1, allResults.length - 1));
       } else if (event.key === 'ArrowUp') {
-        event.preventDefault()
-        setSelectedIdx((prev) => Math.max(prev - 1, -1))
+        event.preventDefault();
+        setSelectedIdx((prev) => Math.max(prev - 1, -1));
       } else if (event.key === 'Enter' && selectedIdx >= 0) {
-        event.preventDefault()
-        const artistCount = search.artistResults.length
+        event.preventDefault();
+        const artistCount = search.artistResults.length;
         if (selectedIdx < artistCount) {
-          const artist = search.artistResults[selectedIdx]
+          const artist = search.artistResults[selectedIdx];
           if (artist) {
-            search.navigateTo('artist', artist.name)
-            onClose()
+            search.navigateTo('artist', artist.name);
+            onClose();
           }
         } else {
-          const venue = search.venueResults[selectedIdx - artistCount]
+          const venue = search.venueResults[selectedIdx - artistCount];
           if (venue) {
-            search.navigateTo('venue', { slug: venue.slug })
-            onClose()
+            search.navigateTo('venue', { slug: venue.slug });
+            onClose();
           }
         }
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, selectedIdx, search, onClose])
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, selectedIdx, search, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
   const hasResults =
-    search.artistResults.length > 0 || search.venueResults.length > 0
+    search.artistResults.length > 0 || search.venueResults.length > 0;
 
   return (
     <div
@@ -1966,8 +1968,8 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
               artistResults={search.artistResults}
               venueResults={search.venueResults}
               onNavigateTo={(type, value) => {
-                search.navigateTo(type, value)
-                onClose()
+                search.navigateTo(type, value);
+                onClose();
               }}
             />
           )}
@@ -2014,7 +2016,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 const kbdStyle: React.CSSProperties = {
@@ -2025,7 +2027,7 @@ const kbdStyle: React.CSSProperties = {
   color: 'var(--fg-muted)',
   fontFamily: 'var(--font-mono)',
   fontSize: 10,
-}
+};
 ```
 
 - [ ] **Step 4: Run the tests**
@@ -2064,39 +2066,39 @@ git commit -m "feat(web): build SearchPalette desktop command palette"
 Replace the entire contents of `apps/web/src/components/consumer/app-header/AppHeader.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Search } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { ThemeToggle } from '../theme-toggle'
-import { CCMark } from '../cc-mark'
-import { UserMenu } from '../user-menu'
-import { MobileProfileEntry } from './MobileProfileEntry'
-import { SearchPalette } from '../search-palette/SearchPalette'
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ThemeToggle } from '../theme-toggle';
+import { CCMark } from '../cc-mark';
+import { UserMenu } from '../user-menu';
+import { MobileProfileEntry } from './MobileProfileEntry';
+import { SearchPalette } from '../search-palette/SearchPalette';
 
 const NAV_TABS = [
   { label: 'Browse', href: '/events' },
   { label: 'Search', href: '/search' },
   { label: 'Watching', href: '/watching' },
-] as const
+] as const;
 
 export function AppHeader() {
-  const [paletteOpen, setPaletteOpen] = useState(false)
-  const pathname = usePathname()
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault()
-        setPaletteOpen((prev) => !prev)
+        event.preventDefault();
+        setPaletteOpen((prev) => !prev);
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <>
@@ -2143,7 +2145,7 @@ export function AppHeader() {
 
             <nav className="flex gap-1 overflow-x-auto">
               {NAV_TABS.map((tab) => {
-                const isActive = pathname.startsWith(tab.href)
+                const isActive = pathname.startsWith(tab.href);
                 return (
                   <Link
                     key={tab.href}
@@ -2157,7 +2159,7 @@ export function AppHeader() {
                   >
                     {tab.label}
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
@@ -2190,7 +2192,7 @@ export function AppHeader() {
 
       <SearchPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </>
-  )
+  );
 }
 ```
 

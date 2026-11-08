@@ -21,21 +21,21 @@ Every row below was checked against the repo at `origin/main` = `004fea2e`
 (`chore(release): 1.181.0`) on 2026-08-02. **Four of them contradict the plan** —
 the plan is five days stale on a fast-moving repo.
 
-| Claim | Verified state | Consequence |
-|---|---|---|
-| Next migration index is **0064** (plan line 25) | ❌ **Wrong.** Head is `0067_drop_inbox_reads`, `when` = `1785974400000`. `0064` was taken by #70's `0064_user_events_attending_at`. | **Use `0068_venue_first_timer_guide.sql`, `idx: 68`, `when: 1786060800000`.** |
-| Seed lives at `packages/db/src/seed.ts` (plan line 324) | ❌ **Wrong.** It is `packages/db/seed.ts` (`db:seed` = `tsx seed.ts`). | Task 3 edits `packages/db/seed.ts`. |
-| `user_events.attending_at` unbuilt; PR-4 blocked on #70 | ✅ **Now live.** `packages/db/src/schema/social.ts:60` — `attendingAt: timestamp('attending_at', { withTimezone: true })`. Partial index on `(userId, attendingAt) WHERE attending_at IS NOT NULL`. | **PR-4 is unblocked.** Read PRs [#1236](https://github.com/HartiganHM/concert-crawl/pull/1236) + [#1239](https://github.com/HartiganHM/concert-crawl/pull/1239) for the shipped read contract before writing Task 14 — do not build from the plan's contract sketch. |
-| `status = 'going'` is part of the attendance model | ❌ **Retired** in [#1250](https://github.com/HartiganHM/concert-crawl/pull/1250) (`0065_user_events_retire_going_status`). Attendance is `attending_at IS NOT NULL` and nothing else. | PR-4's `EXISTS` predicate keys on `attending_at` only. Never reference a `going` status column. |
-| #794 made `/venues/[slug]` public (plan lines 146-151) | 🟡 **Partly.** `/venues(.*)` is in `isPublicOnceLaunched` (`apps/web/src/middleware.ts:41`), **not** `isAlwaysPublic`. It goes public only when `NEXT_PUBLIC_PUBLIC_BROWSE === 'true'`, which **defaults to false** and is build-time inlined (flipping it needs a redeploy, not just a dashboard change). | See Launch gating. The anonymous branch is real code on a real route, but it is walked locally by setting the flag in the worktree `.env.local`, **not** by assuming prod is open. |
-| `MapPlaceholder` has exactly one call site | ✅ Confirmed. `venues/[slug]/page.tsx:7` (import) and `:224` (mount); the only other hits are its own directory. | Task 11 Step 1 deletes the directory with the mount, as written. |
-| `VenueDetailsClient.tsx` is huge | ✅ 2717 lines. `admin/venues.ts` 915 lines. `venues-public.ts` 309. | The plan's separate-file discipline holds — do not inline the block or the routes. |
-| `venue_guide_chips` / `insider_tip` / `guide_published_at` exist | ✅ Confirmed absent. Nothing to expand around. | PR-1 creates all three. |
+| Claim                                                            | Verified state                                                                                                                                                                                                                                                                                             | Consequence                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Next migration index is **0064** (plan line 25)                  | ❌ **Wrong.** Head is `0067_drop_inbox_reads`, `when` = `1785974400000`. `0064` was taken by #70's `0064_user_events_attending_at`.                                                                                                                                                                        | **Use `0068_venue_first_timer_guide.sql`, `idx: 68`, `when: 1786060800000`.**                                                                                                                                                                                        |
+| Seed lives at `packages/db/src/seed.ts` (plan line 324)          | ❌ **Wrong.** It is `packages/db/seed.ts` (`db:seed` = `tsx seed.ts`).                                                                                                                                                                                                                                     | Task 3 edits `packages/db/seed.ts`.                                                                                                                                                                                                                                  |
+| `user_events.attending_at` unbuilt; PR-4 blocked on #70          | ✅ **Now live.** `packages/db/src/schema/social.ts:60` — `attendingAt: timestamp('attending_at', { withTimezone: true })`. Partial index on `(userId, attendingAt) WHERE attending_at IS NOT NULL`.                                                                                                        | **PR-4 is unblocked.** Read PRs [#1236](https://github.com/HartiganHM/concert-crawl/pull/1236) + [#1239](https://github.com/HartiganHM/concert-crawl/pull/1239) for the shipped read contract before writing Task 14 — do not build from the plan's contract sketch. |
+| `status = 'going'` is part of the attendance model               | ❌ **Retired** in [#1250](https://github.com/HartiganHM/concert-crawl/pull/1250) (`0065_user_events_retire_going_status`). Attendance is `attending_at IS NOT NULL` and nothing else.                                                                                                                      | PR-4's `EXISTS` predicate keys on `attending_at` only. Never reference a `going` status column.                                                                                                                                                                      |
+| #794 made `/venues/[slug]` public (plan lines 146-151)           | 🟡 **Partly.** `/venues(.*)` is in `isPublicOnceLaunched` (`apps/web/src/middleware.ts:41`), **not** `isAlwaysPublic`. It goes public only when `NEXT_PUBLIC_PUBLIC_BROWSE === 'true'`, which **defaults to false** and is build-time inlined (flipping it needs a redeploy, not just a dashboard change). | See Launch gating. The anonymous branch is real code on a real route, but it is walked locally by setting the flag in the worktree `.env.local`, **not** by assuming prod is open.                                                                                   |
+| `MapPlaceholder` has exactly one call site                       | ✅ Confirmed. `venues/[slug]/page.tsx:7` (import) and `:224` (mount); the only other hits are its own directory.                                                                                                                                                                                           | Task 11 Step 1 deletes the directory with the mount, as written.                                                                                                                                                                                                     |
+| `VenueDetailsClient.tsx` is huge                                 | ✅ 2717 lines. `admin/venues.ts` 915 lines. `venues-public.ts` 309.                                                                                                                                                                                                                                        | The plan's separate-file discipline holds — do not inline the block or the routes.                                                                                                                                                                                   |
+| `venue_guide_chips` / `insider_tip` / `guide_published_at` exist | ✅ Confirmed absent. Nothing to expand around.                                                                                                                                                                                                                                                             | PR-1 creates all three.                                                                                                                                                                                                                                              |
 
 Local services: Postgres via `docker compose up -d`. **Integration tests need no
 DB setup.** Per CLAUDE.md, `apps/api/src/test/setup/global-setup.ts` derives
 `concert_crawl_test__<worktree>` from the worktree directory and auto-creates and
-migrates it on first run. `DATABASE_URL_TEST` is an *override* (CI sets it per
+migrates it on first run. `DATABASE_URL_TEST` is an _override_ (CI sets it per
 job) — do not set it by hand in a worktree, and do not invent a database name;
 doing so bypasses the isolation this convention exists to provide. Post-run
 pruning drops these automatically via `pnpm worktree:prune <branch>`.
@@ -54,7 +54,7 @@ Where the bugs will actually come from, in order:
    epic ships ~20 new user-facing strings onto a page that already has a hero,
    a Directions row, a stats row and an About section. Defect-class row 8
    ("does it say something the adjacent UI does not already say?") accounted for
-   7 of the last 22 leaked bugs, and this is a guide — copy *is* the feature.
+   7 of the last 22 leaked bugs, and this is a guide — copy _is_ the feature.
    The cold-eyes review is the highest-value hour of this run.
 2. **The long tail of authored content.** Chip bodies are free text up to 400
    chars, authored by a human, rendered into a fixed grid. A 400-character
@@ -74,8 +74,8 @@ Not a risk here: performance, concurrency, fan-out, data volume.
 **Verdict: gated, twice over — and both launch gates are already in place. No PR
 in this plan opens either one.**
 
-(The epic-run template offers three shapes: *reachable on merge*, *gated behind a
-named flag*, or *dark until a runbook step*. This epic is the second, doubled.)
+(The epic-run template offers three shapes: _reachable on merge_, _gated behind a
+named flag_, or _dark until a runbook step_. This epic is the second, doubled.)
 
 **Launch gate 1 — content.** The consumer endpoint returns a guide only when
 `venues.guide_published_at IS NOT NULL`. On merge of PR-3, every venue in prod
@@ -92,8 +92,8 @@ fails closed on typo or absence, and is inlined at build time. **This run does
 not touch it, does not add it to any `.env`, and does not ask for it to be
 flipped.** Public launch is #794's runbook and Hugh's call (target Aug 18–22).
 
-**Which PR makes the vertical live:** none. PR-3 makes it *buildable*; the first
-admin publish makes it *live*, one venue at a time.
+**Which PR makes the vertical live:** none. PR-3 makes it _buildable_; the first
+admin publish makes it _live_, one venue at a time.
 
 **Release notes:** PR-3 and PR-4 add `releases.ts` entries per the plan. These
 are safe to land unheld — `/changelog` is already in `isAlwaysPublic`
@@ -105,17 +105,17 @@ saw yesterday. No entry is held back.
 
 ## Off-happy-path homes — REQUIRED
 
-| New state | Where it lives in the IA | How the user reaches it | Reversible? |
-|---|---|---|---|
-| **Draft guide** — chips + tip saved, `guide_published_at` NULL | `VenueGuideBlock` on `/admin/venues/[id]` | Admin nav → Venues → venue → guide block | ✅ Keep editing, or Publish |
-| **Published guide** — `guide_published_at` set | Same block (badge shows live), consumer venue page | Same | ✅ **via the Unpublish action added below** — see the amendment |
-| **Publish-blocked** — accessibility empty, publish attempted | Validation banner inside the block, `aria-invalid` on the field | Press Publish with accessibility blank | ✅ Fill the field or flip the placeholder toggle |
-| **Honest placeholder** — accessibility marked undocumented | Accessibility field, toggle on; consumer shows `NOT DOCUMENTED` row | Flip "Can't document yet" | ✅ Flip the toggle back |
-| **Selected-but-blank chip** — picker on, body empty | Client-side only, in-session | Select a chip, type nothing | ✅ Discarded on save by design (plan §2); reload shows it unselected |
-| **Thin guide** — accessibility only, no tip | Consumer venue page, `StillGathering` cluster | Publish with one chip | ✅ Author more chips |
-| **Returner** — viewer has attended this venue | Collapsed accordion on the venue page, inline peer | Mark "I'm going" on a past show at that venue | ✅ Accordion opens in one gesture; un-going restores first-timer |
-| **Anonymous** — signed-out visitor | Identical to signed-in first-timer (brief Q7) | Only once `NEXT_PUBLIC_PUBLIC_BROWSE=true` | n/a — read-only |
-| **No guide** — venue never published | Nothing renders; venue page as it is today | Any unpublished venue | n/a |
+| New state                                                      | Where it lives in the IA                                            | How the user reaches it                       | Reversible?                                                          |
+| -------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
+| **Draft guide** — chips + tip saved, `guide_published_at` NULL | `VenueGuideBlock` on `/admin/venues/[id]`                           | Admin nav → Venues → venue → guide block      | ✅ Keep editing, or Publish                                          |
+| **Published guide** — `guide_published_at` set                 | Same block (badge shows live), consumer venue page                  | Same                                          | ✅ **via the Unpublish action added below** — see the amendment      |
+| **Publish-blocked** — accessibility empty, publish attempted   | Validation banner inside the block, `aria-invalid` on the field     | Press Publish with accessibility blank        | ✅ Fill the field or flip the placeholder toggle                     |
+| **Honest placeholder** — accessibility marked undocumented     | Accessibility field, toggle on; consumer shows `NOT DOCUMENTED` row | Flip "Can't document yet"                     | ✅ Flip the toggle back                                              |
+| **Selected-but-blank chip** — picker on, body empty            | Client-side only, in-session                                        | Select a chip, type nothing                   | ✅ Discarded on save by design (plan §2); reload shows it unselected |
+| **Thin guide** — accessibility only, no tip                    | Consumer venue page, `StillGathering` cluster                       | Publish with one chip                         | ✅ Author more chips                                                 |
+| **Returner** — viewer has attended this venue                  | Collapsed accordion on the venue page, inline peer                  | Mark "I'm going" on a past show at that venue | ✅ Accordion opens in one gesture; un-going restores first-timer     |
+| **Anonymous** — signed-out visitor                             | Identical to signed-in first-timer (brief Q7)                       | Only once `NEXT_PUBLIC_PUBLIC_BROWSE=true`    | n/a — read-only                                                      |
+| **No guide** — venue never published                           | Nothing renders; venue page as it is today                          | Any unpublished venue                         | n/a                                                                  |
 
 No row created an orphan: this feature adds **no new route and no new IA
 location**. Every state renders inline on `/venues/[slug]`, `/events/[id]`, or
@@ -178,7 +178,7 @@ Entry: `/admin/venues/[id]` for a venue with no guide.
 8. **Publish guide** → 200; badge shows live; audit row `venue.guide.publish`.
 
 **Reverse:** Unpublish → confirm → guide gone from the consumer page, chips still in admin. Flip accessibility to "Can't document yet" → badge reads **Publishable · access marked undocumented**. Deselect a chip → its body leaves the save payload.
-**Repeat:** publish → unpublish → publish again. The second publish must set a *fresh* timestamp and re-derive the gate server-side, not trust the client badge.
+**Repeat:** publish → unpublish → publish again. The second publish must set a _fresh_ timestamp and re-derive the gate server-side, not trust the client badge.
 **Resume:** reload mid-edit with unsaved changes — nothing is persisted, and that is correct; confirm no crash and no half-written chip row.
 
 ### Journey B — First-timer reads a populated guide (PR-3)
@@ -191,7 +191,7 @@ Entry: `/venues/<populated-slug>`, signed in, no attendance anywhere.
 4. Inside the section: **insider tip first**, then accessibility (`★ ALWAYS HERE`), then remaining chips in `GUIDE_CHIP_ORDER`.
 5. Chips are a 2-column grid at `sm:` and up, single column at 320/390. No horizontal overflow at 320.
 
-**Reverse:** n/a (read-only) — instead, unpublish in admin and confirm callout *and* section both vanish and the page reads exactly as it did pre-#764.
+**Reverse:** n/a (read-only) — instead, unpublish in admin and confirm callout _and_ section both vanish and the page reads exactly as it did pre-#764.
 **Repeat:** reload twice; the callout must fire every time — there is no dismissal and no `localStorage` key anywhere in this feature. **If a dismissal is ever added, defect-class row 13 applies and it keys off nothing that outlives the guide.**
 **Resume:** deep-link straight to `/venues/<slug>#ft-guide` in a fresh tab — the anchor must land with the section in view (`scroll-margin-top` set), not under a sticky header.
 
@@ -232,10 +232,10 @@ Entry: signed-in user with an `attending_at` row on a past event at this venue.
 
 **Reverse:** remove the attendance (un-go) → callout returns, accordion disappears. This is the pass that catches an attendance predicate cached at the wrong layer.
 **Repeat:** go → un-go → go again. The state must track attendance every time; nothing about the accordion may be sticky or dismissal-keyed.
-**Resume:** open the same venue in a second browser session as the same user — returner state must follow the *user*, not the tab. Then open it signed out → first-timer, because `viewerHasAttended` is `null` and null must resolve to first-timer, never to a claim of `false`.
+**Resume:** open the same venue in a second browser session as the same user — returner state must follow the _user_, not the tab. Then open it signed out → first-timer, because `viewerHasAttended` is `null` and null must resolve to first-timer, never to a claim of `false`.
 
 **Mutation-feedback sub-check (defect-class row 12):** the venue page is
-server-rendered. Journey E's reverse pass is driven by a mutation on a *different*
+server-rendered. Journey E's reverse pass is driven by a mutation on a _different_
 page (`/history` or the event page). Throttle the network and confirm the venue
 page reflects the change on next navigation without a stale-HTML flash.
 
@@ -250,7 +250,7 @@ page reflects the change on next navigation without a stale-HTML flash.
 - **Backfilling or seeding guide content into production.** The vertical is
   meant to ship dark. If a "let's publish one venue so it's not empty" impulse
   arises, that is a product decision and it stops here.
-- **Any change to Watching / Get Tickets / attendance behavior.** PR-4 *reads*
+- **Any change to Watching / Get Tickets / attendance behavior.** PR-4 _reads_
   `attending_at`; it never writes it.
 
 ## Notify-and-proceed

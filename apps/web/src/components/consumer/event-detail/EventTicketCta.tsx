@@ -10,11 +10,11 @@
 // `href` must already be `isSafeHttpUrl`-filtered by the caller: ticketUrl and
 // eventUrl are crawler-derived and untrusted, so a compromised venue page must
 // not be able to put a javascript:/data: target here (#1152).
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-import { ExternalLinkIcon } from './InfoRow'
+import { ExternalLinkIcon } from './InfoRow';
 
-const copy = CONSUMER_COPY.eventDetail
+const copy = CONSUMER_COPY.eventDetail;
 
 const disabledStyle = {
   all: 'unset',
@@ -33,18 +33,18 @@ const disabledStyle = {
   fontWeight: 700,
   fontSize: 14,
   letterSpacing: '-0.005em',
-} satisfies React.CSSProperties
+} satisfies React.CSSProperties;
 
 interface EventTicketCtaProps {
   /** True when the show is sold out — takes precedence over any link. */
-  soldOut: boolean
+  soldOut: boolean;
   /** Already-validated http(s) destination, or null when we have none. */
-  href: string | null
+  href: string | null;
   /**
    * Whether `href` points at a ticket/event page rather than the venue's
    * homepage. Only changes the label.
    */
-  hasDirectLink: boolean
+  hasDirectLink: boolean;
 }
 
 export const EventTicketCta = ({
@@ -62,7 +62,7 @@ export const EventTicketCta = ({
       >
         {copy.soldOut}
       </button>
-    )
+    );
   }
 
   if (href) {
@@ -85,7 +85,7 @@ export const EventTicketCta = ({
         {hasDirectLink ? copy.getTickets : copy.visitVenueWebsite}
         <ExternalLinkIcon />
       </a>
-    )
+    );
   }
 
   return (
@@ -97,5 +97,5 @@ export const EventTicketCta = ({
     >
       {copy.noTicketsAvailable}
     </button>
-  )
-}
+  );
+};

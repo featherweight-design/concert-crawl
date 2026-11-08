@@ -16,27 +16,28 @@
 
 ## File Map
 
-| File | Action | Purpose |
-|---|---|---|
-| `packages/db/src/schema/venues.ts` | Modify | Add capacity, venueType, about columns |
-| `packages/db/migrations/0024_venue_profile_fields.sql` | Create | Migration SQL |
-| `packages/db/migrations/meta/_journal.json` | Modify | Register migration |
-| `packages/db/seed.ts` | Modify | Seed capacity/type/about for 5 venues |
-| `packages/types/src/index.ts` | Modify | Add new fields to VenuePublic |
-| `apps/api/package.json` | Modify | Add @anthropic-ai/sdk dependency |
-| `apps/api/src/routes/venues-public.ts` | Modify | Expose new fields in list + detail endpoints |
-| `apps/api/src/routes/admin/venues.ts` | Modify | Add generate-about endpoint + schema fields |
-| `apps/web/src/components/consumer/venue-profile/StatPill.tsx` | Create | Stat pill UI primitive |
-| `apps/web/src/app/(protected)/venues/[slug]/page.tsx` | Modify | Add chip, stats row, about section |
-| `apps/web/src/app/(protected)/venues/page.tsx` | Create | Venues index page |
-| `apps/web/src/components/consumer/app-header/AppHeader.tsx` | Modify | Add Venues nav tab; replace mobile search with Venues |
-| `apps/web/src/components/admin/VenueDetailsClient.tsx` | Modify | Add capacity/type/about fields + Generate button |
+| File                                                          | Action | Purpose                                               |
+| ------------------------------------------------------------- | ------ | ----------------------------------------------------- |
+| `packages/db/src/schema/venues.ts`                            | Modify | Add capacity, venueType, about columns                |
+| `packages/db/migrations/0024_venue_profile_fields.sql`        | Create | Migration SQL                                         |
+| `packages/db/migrations/meta/_journal.json`                   | Modify | Register migration                                    |
+| `packages/db/seed.ts`                                         | Modify | Seed capacity/type/about for 5 venues                 |
+| `packages/types/src/index.ts`                                 | Modify | Add new fields to VenuePublic                         |
+| `apps/api/package.json`                                       | Modify | Add @anthropic-ai/sdk dependency                      |
+| `apps/api/src/routes/venues-public.ts`                        | Modify | Expose new fields in list + detail endpoints          |
+| `apps/api/src/routes/admin/venues.ts`                         | Modify | Add generate-about endpoint + schema fields           |
+| `apps/web/src/components/consumer/venue-profile/StatPill.tsx` | Create | Stat pill UI primitive                                |
+| `apps/web/src/app/(protected)/venues/[slug]/page.tsx`         | Modify | Add chip, stats row, about section                    |
+| `apps/web/src/app/(protected)/venues/page.tsx`                | Create | Venues index page                                     |
+| `apps/web/src/components/consumer/app-header/AppHeader.tsx`   | Modify | Add Venues nav tab; replace mobile search with Venues |
+| `apps/web/src/components/admin/VenueDetailsClient.tsx`        | Modify | Add capacity/type/about fields + Generate button      |
 
 ---
 
 ## Task 1: Schema — add capacity, venueType, about to venues
 
 **Files:**
+
 - Modify: `packages/db/src/schema/venues.ts`
 - Create: `packages/db/migrations/0024_venue_profile_fields.sql`
 - Modify: `packages/db/migrations/meta/_journal.json`
@@ -167,7 +168,7 @@ export const SEED_VENUES: NewVenue[] = [
     capacity: 550,
     venueType: 'Theater',
     about:
-      'A converted movie house on Colfax that has been one of Denver\'s best small music venues for decades. Intimate, loud, and always a good time — around 550 capacity means you are never far from the stage.',
+      "A converted movie house on Colfax that has been one of Denver's best small music venues for decades. Intimate, loud, and always a good time — around 550 capacity means you are never far from the stage.",
   },
   {
     name: 'Gothic Theatre',
@@ -182,9 +183,9 @@ export const SEED_VENUES: NewVenue[] = [
     capacity: 1100,
     venueType: 'Theater',
     about:
-      'South Broadway\'s anchor venue in Englewood, the Gothic has been the right size for the right acts since the early 2000s. Around 1,100 capacity, all-ages friendly, and reliably good bookings across rock and alternative.',
+      "South Broadway's anchor venue in Englewood, the Gothic has been the right size for the right acts since the early 2000s. Around 1,100 capacity, all-ages friendly, and reliably good bookings across rock and alternative.",
   },
-]
+];
 ```
 
 - [ ] **Step 7: Commit**
@@ -202,6 +203,7 @@ git commit -m "feat(db): add capacity, venue_type, about columns to venues"
 ## Task 2: Types — extend VenuePublic
 
 **Files:**
+
 - Modify: `packages/types/src/index.ts`
 
 - [ ] **Step 1: Write a failing type test**
@@ -223,11 +225,11 @@ it('VenuePublic includes profile fields', () => {
     capacity: null,
     venueType: null,
     about: null,
-  }
-  expect(venue.capacity).toBeNull()
-  expect(venue.venueType).toBeNull()
-  expect(venue.about).toBeNull()
-})
+  };
+  expect(venue.capacity).toBeNull();
+  expect(venue.venueType).toBeNull();
+  expect(venue.about).toBeNull();
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -244,18 +246,18 @@ Open `packages/types/src/index.ts`. Find `VenuePublic` (around line 298) and add
 
 ```ts
 export interface VenuePublic {
-  id: string
-  name: string
-  slug: string
-  city: string
-  timezone: string
-  websiteUrl: string
-  active: boolean
-  verified: boolean
-  address: string | null
-  capacity: number | null
-  venueType: string | null
-  about: string | null
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  timezone: string;
+  websiteUrl: string;
+  active: boolean;
+  verified: boolean;
+  address: string | null;
+  capacity: number | null;
+  venueType: string | null;
+  about: string | null;
 }
 ```
 
@@ -279,6 +281,7 @@ git commit -m "feat(types): add capacity, venueType, about to VenuePublic"
 ## Task 3: Public API — expose new fields
 
 **Files:**
+
 - Modify: `apps/api/src/routes/venues-public.ts`
 
 - [ ] **Step 1: Write a failing integration test**
@@ -287,25 +290,25 @@ Open `apps/api/src/routes/events.integration.test.ts` or create `apps/api/src/ro
 
 ```ts
 it('GET /v1/venues returns capacity, venueType, about', async () => {
-  const res = await app.request('/v1/venues')
-  const body = await res.json()
-  expect(res.status).toBe(200)
-  expect(body.success).toBe(true)
-  const venue = body.data[0]
-  expect(Object.keys(venue)).toContain('capacity')
-  expect(Object.keys(venue)).toContain('venueType')
-  expect(Object.keys(venue)).toContain('about')
-})
+  const res = await app.request('/v1/venues');
+  const body = await res.json();
+  expect(res.status).toBe(200);
+  expect(body.success).toBe(true);
+  const venue = body.data[0];
+  expect(Object.keys(venue)).toContain('capacity');
+  expect(Object.keys(venue)).toContain('venueType');
+  expect(Object.keys(venue)).toContain('about');
+});
 
 it('GET /v1/venues/:slug returns capacity, venueType, about', async () => {
-  const res = await app.request('/v1/venues/red-rocks-amphitheatre')
-  const body = await res.json()
-  expect(res.status).toBe(200)
-  const { venue } = body.data
-  expect(Object.keys(venue)).toContain('capacity')
-  expect(Object.keys(venue)).toContain('venueType')
-  expect(Object.keys(venue)).toContain('about')
-})
+  const res = await app.request('/v1/venues/red-rocks-amphitheatre');
+  const body = await res.json();
+  expect(res.status).toBe(200);
+  const { venue } = body.data;
+  expect(Object.keys(venue)).toContain('capacity');
+  expect(Object.keys(venue)).toContain('venueType');
+  expect(Object.keys(venue)).toContain('about');
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -338,7 +341,7 @@ const rows = await db
   })
   .from(venues)
   .where(eq(venues.active, true))
-  .orderBy(asc(venues.name))
+  .orderBy(asc(venues.name));
 ```
 
 - [ ] **Step 4: Update the detail endpoint projection**
@@ -362,7 +365,7 @@ const [venue] = await db
     about: venues.about,
   })
   .from(venues)
-  .where(eq(venues.slug, slug))
+  .where(eq(venues.slug, slug));
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -386,6 +389,7 @@ git commit -m "feat(api): expose capacity, venueType, about in public venue endp
 ## Task 4: Admin API — generate-about endpoint + schema fields
 
 **Files:**
+
 - Modify: `apps/api/package.json`
 - Modify: `apps/api/src/routes/admin/venues.ts`
 
@@ -407,29 +411,33 @@ pnpm install
 
 Create `apps/api/src/routes/admin/venues.test.ts`:
 
-```ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import Anthropic from '@anthropic-ai/sdk'
+````ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import Anthropic from '@anthropic-ai/sdk';
 
-vi.mock('@anthropic-ai/sdk')
+vi.mock('@anthropic-ai/sdk');
 
 describe('generateVenueProfile', () => {
   it('strips markdown and parses JSON from Haiku response', () => {
-    const raw = '```json\n{"capacity":9525,"venueType":"Amphitheater","about":"Great venue."}\n```'
-    const cleaned = raw.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
-    const parsed = JSON.parse(cleaned)
-    expect(parsed.capacity).toBe(9525)
-    expect(parsed.venueType).toBe('Amphitheater')
-    expect(parsed.about).toBe('Great venue.')
-  })
+    const raw =
+      '```json\n{"capacity":9525,"venueType":"Amphitheater","about":"Great venue."}\n```';
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/m, '')
+      .replace(/\s*```\s*$/m, '')
+      .trim();
+    const parsed = JSON.parse(cleaned);
+    expect(parsed.capacity).toBe(9525);
+    expect(parsed.venueType).toBe('Amphitheater');
+    expect(parsed.about).toBe('Great venue.');
+  });
 
   it('returns null capacity when Haiku returns null', () => {
-    const raw = '{"capacity":null,"venueType":"Bar","about":"Small bar."}'
-    const parsed = JSON.parse(raw)
-    expect(parsed.capacity).toBeNull()
-  })
-})
-```
+    const raw = '{"capacity":null,"venueType":"Bar","about":"Small bar."}';
+    const parsed = JSON.parse(raw);
+    expect(parsed.capacity).toBeNull();
+  });
+});
+````
 
 - [ ] **Step 3: Run test to verify it fails**
 
@@ -444,35 +452,39 @@ Expected: FAIL — `generateVenueProfile` not implemented yet.
 Open `apps/api/src/routes/admin/venues.ts`. Add the import at the top:
 
 ```ts
-import Anthropic from '@anthropic-ai/sdk'
-import { z } from 'zod'
+import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
 ```
 
 (Zod is already imported; add Anthropic.) Then add the endpoint before the `DELETE` handler:
 
-```ts
+````ts
 const generateResponseSchema = z.object({
   capacity: z.number().int().positive().nullable(),
   venueType: z.string().min(1).max(100),
   about: z.string().min(10).max(500),
-})
+});
 
 // POST /v1/admin/venues/:id/generate-about — LLM-generate capacity/type/about
 venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
-  const { id } = ctx.req.param()
+  const { id } = ctx.req.param();
 
   const [venue] = await db
-    .select({ name: venues.name, address: venues.address, venueType: venues.venueType })
+    .select({
+      name: venues.name,
+      address: venues.address,
+      venueType: venues.venueType,
+    })
     .from(venues)
-    .where(eq(venues.id, id))
+    .where(eq(venues.id, id));
 
   if (!venue) {
-    return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
-  const anthropic = new Anthropic()
+  const anthropic = new Anthropic();
 
-  let rawText: string
+  let rawText: string;
   try {
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -494,35 +506,50 @@ Return a JSON object with exactly these fields:
 Respond with only valid JSON, no markdown fences.`,
         },
       ],
-    })
+    });
 
-    const block = message.content[0]
+    const block = message.content[0];
     if (block.type !== 'text') {
-      return ctx.json({ success: false, error: 'Unexpected Haiku response type' }, 502)
+      return ctx.json(
+        { success: false, error: 'Unexpected Haiku response type' },
+        502,
+      );
     }
-    rawText = block.text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
+    rawText = block.text
+      .replace(/^```(?:json)?\s*/m, '')
+      .replace(/\s*```\s*$/m, '')
+      .trim();
   } catch (err) {
-    apiLogger.error({ err }, 'generate-about: Anthropic call failed')
-    return ctx.json({ success: false, error: 'LLM service unavailable' }, 503)
+    apiLogger.error({ err }, 'generate-about: Anthropic call failed');
+    return ctx.json({ success: false, error: 'LLM service unavailable' }, 503);
   }
 
-  let parsed: unknown
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(rawText)
+    parsed = JSON.parse(rawText);
   } catch {
-    apiLogger.warn({ rawText }, 'generate-about: invalid JSON from Haiku')
-    return ctx.json({ success: false, error: 'LLM returned unparseable response' }, 502)
+    apiLogger.warn({ rawText }, 'generate-about: invalid JSON from Haiku');
+    return ctx.json(
+      { success: false, error: 'LLM returned unparseable response' },
+      502,
+    );
   }
 
-  const result = generateResponseSchema.safeParse(parsed)
+  const result = generateResponseSchema.safeParse(parsed);
   if (!result.success) {
-    apiLogger.warn({ parsed, issues: result.error.issues }, 'generate-about: schema validation failed')
-    return ctx.json({ success: false, error: 'LLM response did not match expected shape' }, 502)
+    apiLogger.warn(
+      { parsed, issues: result.error.issues },
+      'generate-about: schema validation failed',
+    );
+    return ctx.json(
+      { success: false, error: 'LLM response did not match expected shape' },
+      502,
+    );
   }
 
-  return ctx.json({ success: true, data: result.data })
-})
-```
+  return ctx.json({ success: true, data: result.data });
+});
+````
 
 - [ ] **Step 5: Extend createVenueSchema and updateVenueSchema**
 
@@ -559,6 +586,7 @@ git commit -m "feat(api): add generate-about endpoint and venue profile fields t
 ## Task 5: StatPill component + venue profile page redesign
 
 **Files:**
+
 - Create: `apps/web/src/components/consumer/venue-profile/StatPill.tsx`
 - Modify: `apps/web/src/app/(protected)/venues/[slug]/page.tsx`
 
@@ -568,9 +596,9 @@ Create `apps/web/src/components/consumer/venue-profile/StatPill.tsx`:
 
 ```tsx
 interface StatPillProps {
-  label: string
-  value: string
-  signal?: boolean
+  label: string;
+  value: string;
+  signal?: boolean;
 }
 
 export function StatPill({ label, value, signal = false }: StatPillProps) {
@@ -598,7 +626,7 @@ export function StatPill({ label, value, signal = false }: StatPillProps) {
         {value}
       </span>
     </div>
-  )
+  );
 }
 ```
 
@@ -607,22 +635,25 @@ export function StatPill({ label, value, signal = false }: StatPillProps) {
 Open `apps/web/src/app/(protected)/venues/[slug]/page.tsx`. Make the following changes:
 
 Add `StatPill` to imports:
+
 ```tsx
-import { StatPill } from '@/components/consumer/venue-profile/StatPill'
+import { StatPill } from '@/components/consumer/venue-profile/StatPill';
 ```
 
 After the `{ venue, upcomingEvents } = result` destructure, add a helper:
+
 ```tsx
-const hasStats = venue.capacity != null || venue.venueType != null
+const hasStats = venue.capacity != null || venue.venueType != null;
 ```
 
 Replace the content area (starting from `{/* Venue name */}`) with the updated layout:
 
 ```tsx
-{/* Content */}
+{
+  /* Content */
+}
 <div className="relative -mt-5 flex-1 pb-10">
   <div className="mx-auto w-full max-w-[880px] px-[18px] sm:px-8">
-
     {/* Type chip */}
     {venue.venueType && (
       <div className="mb-2 flex flex-wrap gap-[5px]">
@@ -682,8 +713,19 @@ Replace the content area (starting from `{/* Venue name */}`) with the updated l
         }}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-          <path d="M7 1l5.5 5.5L7 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M12.5 6.5H5a3.5 3.5 0 00-3.5 3.5v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path
+            d="M7 1l5.5 5.5L7 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M12.5 6.5H5a3.5 3.5 0 00-3.5 3.5v1"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
         </svg>
         Directions
       </a>
@@ -707,10 +749,7 @@ Replace the content area (starting from `{/* Venue name */}`) with the updated l
           value={`${upcomingEvents.length} show${upcomingEvents.length !== 1 ? 's' : ''}`}
           signal
         />
-        <StatPill
-          label="Type"
-          value={venue.venueType ?? '—'}
-        />
+        <StatPill label="Type" value={venue.venueType ?? '—'} />
       </div>
     )}
 
@@ -771,7 +810,7 @@ Replace the content area (starting from `{/* Venue name */}`) with the updated l
       )}
     </div>
   </div>
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Typecheck**
@@ -795,6 +834,7 @@ git commit -m "feat(web): venue profile redesign — type chip, stats row, about
 ## Task 6: Venues index page
 
 **Files:**
+
 - Create: `apps/web/src/app/(protected)/venues/page.tsx`
 
 - [ ] **Step 1: Create the venues index page**
@@ -802,28 +842,28 @@ git commit -m "feat(web): venue profile redesign — type chip, stats row, about
 Create `apps/web/src/app/(protected)/venues/page.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import type { VenuePublic } from '@concert-crawl/types'
-import { publicApiClient, apiClient } from '@/lib/api'
-import { AppHeader } from '@/components/consumer/app-header'
-import { SectionHeader } from '@/components/consumer/section-header'
-import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server';
+import type { VenuePublic } from '@concert-crawl/types';
+import { publicApiClient, apiClient } from '@/lib/api';
+import { AppHeader } from '@/components/consumer/app-header';
+import { SectionHeader } from '@/components/consumer/section-header';
+import Link from 'next/link';
 
 async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
   try {
     if (token) {
-      return await apiClient.get<VenuePublic[]>('/v1/venues', token)
+      return await apiClient.get<VenuePublic[]>('/v1/venues', token);
     }
-    return await publicApiClient.get<VenuePublic[]>('/v1/venues')
+    return await publicApiClient.get<VenuePublic[]>('/v1/venues');
   } catch {
-    return []
+    return [];
   }
 }
 
 export default async function VenuesPage() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  const venues = await fetchVenues(token)
+  const { getToken } = await auth();
+  const token = await getToken();
+  const venues = await fetchVenues(token);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
@@ -861,7 +901,11 @@ export default async function VenuesPage() {
                     </span>
                     <span
                       className="text-fg-subtle"
-                      style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', letterSpacing: '0.03em' }}
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '10px',
+                        letterSpacing: '0.03em',
+                      }}
                     >
                       {venue.city}
                     </span>
@@ -881,8 +925,21 @@ export default async function VenuesPage() {
                       {venue.venueType}
                     </span>
                   )}
-                  <svg width="6" height="10" viewBox="0 0 6 10" fill="none" aria-hidden className="shrink-0 text-fg-subtle">
-                    <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    width="6"
+                    height="10"
+                    viewBox="0 0 6 10"
+                    fill="none"
+                    aria-hidden
+                    className="shrink-0 text-fg-subtle"
+                  >
+                    <path
+                      d="M1 1l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                 </Link>
               </div>
@@ -891,7 +948,7 @@ export default async function VenuesPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -915,6 +972,7 @@ git commit -m "feat(web): add venues index page"
 ## Task 7: Navigation — add Venues tab
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/app-header/AppHeader.tsx`
 
 - [ ] **Step 1: Write a failing test**
@@ -922,15 +980,17 @@ git commit -m "feat(web): add venues index page"
 Open `apps/web/src/components/consumer/app-header/AppHeader.test.tsx` (create if it doesn't exist):
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { AppHeader } from './AppHeader'
+import { render, screen } from '@testing-library/react';
+import { AppHeader } from './AppHeader';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/events' }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/events' }));
 
 it('renders Venues nav tab', () => {
-  render(<AppHeader />)
-  expect(screen.getAllByRole('link', { name: /venues/i }).length).toBeGreaterThan(0)
-})
+  render(<AppHeader />);
+  expect(
+    screen.getAllByRole('link', { name: /venues/i }).length,
+  ).toBeGreaterThan(0);
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -952,35 +1012,39 @@ const NAV_TABS = [
   { label: 'Browse', href: '/events' },
   { label: 'Venues', href: '/venues' },
   { label: 'Watching', href: '/watching' },
-] as const
+] as const;
 ```
 
 Add `MapPin` to the lucide-react import at the top of the file:
 
 ```ts
-import { Search, MapPin } from 'lucide-react'
+import { Search, MapPin } from 'lucide-react';
 ```
 
 In the mobile bar section, replace the search `<Link>`:
 
 ```tsx
-{/* Replace this: */}
+{
+  /* Replace this: */
+}
 <Link
   href="/search"
   aria-label="Search"
   className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
 >
   <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
-</Link>
+</Link>;
 
-{/* With this: */}
+{
+  /* With this: */
+}
 <Link
   href="/venues"
   aria-label="Venues"
   className="flex h-9 w-9 items-center justify-center rounded-full border border-border-strong"
 >
   <MapPin size={16} className="text-fg-muted" strokeWidth={1.5} />
-</Link>
+</Link>;
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1012,6 +1076,7 @@ git commit -m "feat(web): add Venues to nav — desktop tab and mobile icon"
 ## Task 8: Admin venue form — capacity, type, about + Generate button
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/VenueDetailsClient.tsx`
 
 - [ ] **Step 1: Locate the form fields in VenueDetailsClient**
@@ -1023,30 +1088,30 @@ Search `VenueDetailsClient.tsx` for the `address` field input — the new fields
 In `VenueDetailsClient.tsx`, after the address field, add a `useState` hook for generate loading/error state at the top of the component (alongside other state declarations):
 
 ```tsx
-const [generateLoading, setGenerateLoading] = useState(false)
-const [generateError, setGenerateError] = useState<string | null>(null)
+const [generateLoading, setGenerateLoading] = useState(false);
+const [generateError, setGenerateError] = useState<string | null>(null);
 ```
 
 Add a `generateProfile` handler (alongside other handlers in the component):
 
 ```tsx
 async function generateProfile() {
-  setGenerateLoading(true)
-  setGenerateError(null)
+  setGenerateLoading(true);
+  setGenerateError(null);
   try {
     const res = await fetch(`/api/admin/venues/${venue.id}/generate-about`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${await getToken()}` },
-    })
-    const body = await res.json()
-    if (!body.success) throw new Error(body.error ?? 'Generation failed')
-    if (body.data.capacity != null) setCapacity(String(body.data.capacity))
-    setVenueType(body.data.venueType)
-    setAbout(body.data.about)
+    });
+    const body = await res.json();
+    if (!body.success) throw new Error(body.error ?? 'Generation failed');
+    if (body.data.capacity != null) setCapacity(String(body.data.capacity));
+    setVenueType(body.data.venueType);
+    setAbout(body.data.about);
   } catch (err) {
-    setGenerateError(err instanceof Error ? err.message : 'Generation failed')
+    setGenerateError(err instanceof Error ? err.message : 'Generation failed');
   } finally {
-    setGenerateLoading(false)
+    setGenerateLoading(false);
   }
 }
 ```
@@ -1054,17 +1119,17 @@ async function generateProfile() {
 Note: `getToken` is available via `useAuth()` from Clerk — add it to the existing Clerk imports if not present. Check for `useAuth` import and add it:
 
 ```tsx
-import { useAuth } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs';
 // then inside component:
-const { getToken } = useAuth()
+const { getToken } = useAuth();
 ```
 
 Add local state for the three new fields (alongside existing field state):
 
 ```tsx
-const [capacity, setCapacity] = useState(String(venue.capacity ?? ''))
-const [venueType, setVenueType] = useState(venue.venueType ?? '')
-const [about, setAbout] = useState(venue.about ?? '')
+const [capacity, setCapacity] = useState(String(venue.capacity ?? ''));
+const [venueType, setVenueType] = useState(venue.venueType ?? '');
+const [about, setAbout] = useState(venue.about ?? '');
 ```
 
 Include the new fields in the existing `updateVenue` call payload (find where the form submit calls `updateVenue` and add):
@@ -1078,7 +1143,9 @@ about: about !== '' ? about : null,
 Add the form fields in the JSX (after the address field):
 
 ```tsx
-{/* Capacity */}
+{
+  /* Capacity */
+}
 <div className="flex flex-col gap-1">
   <MonoLabel>Capacity</MonoLabel>
   <input
@@ -1088,9 +1155,11 @@ Add the form fields in the JSX (after the address field):
     placeholder="e.g. 9525"
     className="w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-[13px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
   />
-</div>
+</div>;
 
-{/* Venue Type */}
+{
+  /* Venue Type */
+}
 <div className="flex flex-col gap-1">
   <MonoLabel>Venue Type</MonoLabel>
   <input
@@ -1110,9 +1179,11 @@ Add the form fields in the JSX (after the address field):
     <option value="Ballroom" />
     <option value="Bar" />
   </datalist>
-</div>
+</div>;
 
-{/* About */}
+{
+  /* About */
+}
 <div className="flex flex-col gap-1">
   <div className="flex items-center justify-between">
     <MonoLabel>About</MonoLabel>
@@ -1134,11 +1205,14 @@ Add the form fields in the JSX (after the address field):
     className="w-full resize-none rounded-lg border border-border bg-surface-1 px-3 py-2 text-[13px] text-fg placeholder:text-fg-subtle focus:border-border-focus focus:outline-none"
   />
   {generateError && (
-    <p className="text-[11px] text-danger" style={{ fontFamily: 'var(--font-mono)' }}>
+    <p
+      className="text-[11px] text-danger"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
       {generateError}
     </p>
   )}
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Typecheck**
@@ -1175,6 +1249,7 @@ pnpm dev
 ```
 
 Check:
+
 - `/venues` — index page loads, shows venue list with type chips
 - `/venues/red-rocks-amphitheatre` — type chip, stats row (capacity/upcoming/type), about section, map still in place
 - Desktop nav — Browse / Venues / Watching tabs present, active state correct

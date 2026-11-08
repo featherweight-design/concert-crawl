@@ -3,13 +3,22 @@
    Never import this file outside the admin route group. */
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes admin-skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
 .admin-skeleton {
@@ -18,7 +27,7 @@
   animation: admin-skeleton-pulse 1.6s ease-in-out infinite;
 }
 
-[data-admin-theme="light"] {
+[data-admin-theme='light'] {
   --bg: #f7f5f0;
   --bg-elevated: #ffffff;
   --surface-1: #f0ede5;
@@ -48,7 +57,7 @@
   --shadow-lg: 0 12px 32px rgba(31, 29, 24, 0.16);
 }
 
-[data-admin-theme="electric"] {
+[data-admin-theme='electric'] {
   --bg: #070a1a;
   --bg-elevated: #0e1226;
   --surface-1: #11162e;
@@ -74,7 +83,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="jade"] {
+[data-admin-theme='jade'] {
   --bg: #06201f;
   --bg-elevated: #0a2a28;
   --surface-1: #0e3331;
@@ -100,7 +109,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="pulse"] {
+[data-admin-theme='pulse'] {
   --bg: #050008;
   --bg-elevated: #0c0314;
   --surface-1: #11041b;
@@ -126,7 +135,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="forge"] {
+[data-admin-theme='forge'] {
   --bg: #060403;
   --bg-elevated: #100c0a;
   --surface-1: #171210;
@@ -152,7 +161,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="bluenote"] {
+[data-admin-theme='bluenote'] {
   --bg: #0e0a1f;
   --bg-elevated: #150f2a;
   --surface-1: #1c1538;
@@ -178,7 +187,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="drip"] {
+[data-admin-theme='drip'] {
   --bg: #000000;
   --bg-elevated: #0a0a0a;
   --surface-1: #111111;
@@ -204,7 +213,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="cedar"] {
+[data-admin-theme='cedar'] {
   --bg: #10201a;
   --bg-elevated: #162a22;
   --surface-1: #1b342b;
@@ -230,7 +239,7 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
-[data-admin-theme="gloss"] {
+[data-admin-theme='gloss'] {
   --bg: #0f0810;
   --bg-elevated: #170f1a;
   --surface-1: #1e1521;

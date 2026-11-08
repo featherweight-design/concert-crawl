@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { rerollPatch } from '@/lib/crews'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { rerollPatch } from '@/lib/crews';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface RerollSheetProps {
-  open: boolean
-  onClose: () => void
-  crewId: string
-  patchSalt: number
-  onApplied: (patchSalt: number) => void
+  open: boolean;
+  onClose: () => void;
+  crewId: string;
+  patchSalt: number;
+  onApplied: (patchSalt: number) => void;
 }
 
 /**
@@ -33,39 +33,39 @@ export const RerollSheet = ({
   patchSalt,
   onApplied,
 }: RerollSheetProps) => {
-  const { getToken } = useAuth()
-  const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const { getToken } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (open) return
-    setSaving(false)
-    setFailed(false)
-  }, [open])
+    if (open) return;
+    setSaving(false);
+    setFailed(false);
+  }, [open]);
 
   const onApply = async () => {
-    if (saving) return
-    setSaving(true)
-    setFailed(false)
+    if (saving) return;
+    setSaving(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      const crew = await rerollPatch(token, crewId)
-      onApplied(crew.patchSalt)
-      onClose()
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      const crew = await rerollPatch(token, crewId);
+      onApplied(crew.patchSalt);
+      onClose();
     } catch (err) {
-      console.error('RerollSheet: could not pull a new patch', err)
-      setFailed(true)
-      setSaving(false)
+      console.error('RerollSheet: could not pull a new patch', err);
+      setFailed(true);
+      setSaving(false);
     }
-  }
+  };
 
   const label: React.CSSProperties = {
     fontFamily: 'var(--font-mono)',
     fontSize: 9,
     fontWeight: 700,
     letterSpacing: '0.14em',
-  }
+  };
 
   return (
     <ModalShell
@@ -192,5 +192,5 @@ export const RerollSheet = ({
         </div>
       </div>
     </ModalShell>
-  )
-}
+  );
+};

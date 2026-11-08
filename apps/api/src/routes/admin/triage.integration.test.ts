@@ -1,71 +1,71 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface TestAuth {
-  userId: string
-  sessionClaims: { metadata?: { role?: string } }
+  userId: string;
+  sessionClaims: { metadata?: { role?: string } };
 }
 
 const { authState } = vi.hoisted(() => {
-  const state: { current: TestAuth | null } = { current: null }
-  return { authState: state }
-})
+  const state: { current: TestAuth | null } = { current: null };
+  return { authState: state };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../../app.js'
+import { createApp } from '../../app.js';
 import {
   clearTables,
   seedEvent,
   seedPriceSubmission,
   seedVenue,
-} from '../../test/helpers/seed.js'
-import { testDb } from '../../test/helpers/db.js'
-import { crawlRuns } from '@concert-crawl/db'
+} from '../../test/helpers/seed.js';
+import { testDb } from '../../test/helpers/db.js';
+import { crawlRuns } from '@concert-crawl/db';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(role: 'admin' | 'user'): void {
   authState.current = {
     userId: 'test-admin-1',
     sessionClaims: { metadata: { role } },
-  }
+  };
 }
 
 interface TriageFaultRow {
-  id: string
-  venueId: string
-  venue: string
-  condition: string
-  band: string
-  persistedSince: string
-  days: number
-  dur: string
-  crawlRunId: string | null
-  evidence: Record<string, unknown>
+  id: string;
+  venueId: string;
+  venue: string;
+  condition: string;
+  band: string;
+  persistedSince: string;
+  days: number;
+  dur: string;
+  crawlRunId: string | null;
+  evidence: Record<string, unknown>;
 }
 
 interface TriageBody {
-  success: boolean
+  success: boolean;
   data: {
-    faults: TriageFaultRow[]
-    queues: { kind: string; count: number; breakdown: string }[]
-    sweep: { venues: number; at: string; events: number; next: string }
-  }
+    faults: TriageFaultRow[];
+    queues: { kind: string; count: number; breakdown: string }[];
+    sweep: { venues: number; at: string; events: number; next: string };
+  };
 }
 
 async function fetchTriage(): Promise<TriageBody['data']> {
-  const res = await app.request('/v1/admin/triage')
-  expect(res.status).toBe(200)
-  const body: TriageBody = await res.json()
-  expect(body.success).toBe(true)
-  return body.data
+  const res = await app.request('/v1/admin/triage');
+  expect(res.status).toBe(200);
+  const body: TriageBody = await res.json();
+  expect(body.success).toBe(true);
+  return body.data;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Seed crawl runs oldest-first, one per day, with the newest landing a day
@@ -75,10 +75,10 @@ async function seedRuns(
   venueId: string,
   rows: Partial<typeof crawlRuns.$inferInsert>[],
 ): Promise<(typeof crawlRuns.$inferSelect)[]> {
-  const inserted: (typeof crawlRuns.$inferSelect)[] = []
-  const total = rows.length
+  const inserted: (typeof crawlRuns.$inferSelect)[] = [];
+  const total = rows.length;
   for (let index = 0; index < total; index += 1) {
-    const row = rows[index]!
+    const row = rows[index]!;
     const [created] = await testDb
       .insert(crawlRuns)
       .values({
@@ -89,11 +89,11 @@ async function seedRuns(
         createdAt: new Date(Date.now() - (total - index) * DAY_MS),
         ...row,
       })
-      .returning()
-    if (!created) throw new Error('seedRuns: insert returned no rows')
-    inserted.push(created)
+      .returning();
+    if (!created) throw new Error('seedRuns: insert returned no rows');
+    inserted.push(created);
   }
-  return inserted
+  return inserted;
 }
 
 /**
@@ -110,7 +110,7 @@ const baselineRuns = (
     status: 'success' as const,
     eventsFound: eventsUsable + (index % 3),
     eventsUsable,
-  }))
+  }));
 
 /** Runs with a dead-flat `eventsFound` — the pinned-count fingerprint. */
 const flatRuns = (
@@ -121,109 +121,109 @@ const flatRuns = (
     status: 'success' as const,
     eventsFound,
     eventsUsable: eventsFound,
-  }))
+  }));
 
 describe('GET /v1/admin/triage', () => {
   beforeEach(async () => {
-    authState.current = null
-    await clearTables()
-  })
+    authState.current = null;
+    await clearTables();
+  });
 
   it('requires an admin role', async () => {
-    setAuth('user')
-    const res = await app.request('/v1/admin/triage')
-    expect(res.status).toBe(403)
-  })
+    setAuth('user');
+    const res = await app.request('/v1/admin/triage');
+    expect(res.status).toBe(403);
+  });
 
   it('returns the all-clear shape when nothing is wrong', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Healthy Hall', slug: 'healthy' })
-    await seedRuns(venue.id, baselineRuns(8, 12))
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Healthy Hall', slug: 'healthy' });
+    await seedRuns(venue.id, baselineRuns(8, 12));
 
-    const data = await fetchTriage()
-    expect(data.faults).toEqual([])
-    expect(data.queues).toEqual([])
-    expect(data.sweep.venues).toBe(1)
-    expect(data.sweep.next).toMatch(/AM|PM/)
-  })
+    const data = await fetchTriage();
+    expect(data.faults).toEqual([]);
+    expect(data.queues).toEqual([]);
+    expect(data.sweep.venues).toBe(1);
+    expect(data.sweep.next).toMatch(/AM|PM/);
+  });
 
   // ── The #624 regression ───────────────────────────────────────────
   // Bluebird: a run that SUCCEEDED and returned 2 events against a 7-run
   // baseline of ~12. Neither venue.status nor blockedAt moved, which is why
   // the old panel showed nothing for weeks.
   it('surfaces a successful run that returned far fewer events than baseline', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const venue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird',
-    })
+    });
     await seedRuns(venue.id, [
       ...baselineRuns(7, 12),
       { status: 'success', eventsFound: 2, eventsUsable: 2 },
-    ])
+    ]);
 
-    const data = await fetchTriage()
-    const fault = data.faults.find((row) => row.condition === 'wentDark')
+    const data = await fetchTriage();
+    const fault = data.faults.find((row) => row.condition === 'wentDark');
 
-    expect(fault).toBeDefined()
-    expect(fault?.venue).toBe('Bluebird Theater')
-    expect(fault?.band).toBe('loss')
-    expect(fault?.evidence['count']).toBe(2)
-    expect(fault?.evidence['baselineCount']).toBe(12)
+    expect(fault).toBeDefined();
+    expect(fault?.venue).toBe('Bluebird Theater');
+    expect(fault?.band).toBe('loss');
+    expect(fault?.evidence['count']).toBe(2);
+    expect(fault?.evidence['baselineCount']).toBe(12);
     // Interpolated from SOFT_DROP_RATIO (0.3), not the handoff's assumed -60.
-    expect(fault?.evidence['threshold']).toBe(-70)
-    expect(fault?.evidence['window']).toBe(7)
+    expect(fault?.evidence['threshold']).toBe(-70);
+    expect(fault?.evidence['window']).toBe(7);
     // Oldest-to-newest micro-chart: the flat baseline, then the cliff.
-    const series = fault?.evidence['series']
-    expect(Array.isArray(series)).toBe(true)
-    expect(series).toEqual([12, 12, 12, 12, 12, 12, 2])
-  })
+    const series = fault?.evidence['series'];
+    expect(Array.isArray(series)).toBe(true);
+    expect(series).toEqual([12, 12, 12, 12, 12, 12, 2]);
+  });
 
   it('clears the went-dark row once a healthy run lands', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const venue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird',
-    })
+    });
     await seedRuns(venue.id, [
       ...baselineRuns(7, 12),
       { status: 'success', eventsFound: 2, eventsUsable: 2 },
-    ])
-    expect((await fetchTriage()).faults).toHaveLength(1)
+    ]);
+    expect((await fetchTriage()).faults).toHaveLength(1);
 
     await testDb.insert(crawlRuns).values({
       venueId: venue.id,
       status: 'success',
       eventsFound: 13,
       eventsUsable: 13,
-    })
+    });
 
-    expect((await fetchTriage()).faults).toEqual([])
-  })
+    expect((await fetchTriage()).faults).toEqual([]);
+  });
 
   it('dates the went-dark row from the first run in the unbroken streak', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const venue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird',
-    })
+    });
     await seedRuns(venue.id, [
       ...baselineRuns(7, 12),
       { status: 'success', eventsFound: 1, eventsUsable: 1 },
       { status: 'success', eventsFound: 2, eventsUsable: 2 },
       { status: 'success', eventsFound: 0, eventsUsable: 0 },
-    ])
+    ]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('wentDark')
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('wentDark');
     // Three consecutive dark runs, one per day: the streak reaches back ~3 days.
-    expect(fault?.days).toBeGreaterThan(2.5)
-    expect(fault?.dur).toBe('3d')
-  })
+    expect(fault?.days).toBeGreaterThan(2.5);
+    expect(fault?.dur).toBe('3d');
+  });
 
   it('does not widen the baseline to partial-status runs', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Partial Palace', slug: 'partial' })
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Partial Palace', slug: 'partial' });
     // Three healthy runs, then three zero-usable 'partial' runs (#1165), then
     // a run that returned 2. If partial rows entered the baseline, the average
     // would collapse to ~6 and the drop would read as within tolerance.
@@ -235,23 +235,23 @@ describe('GET /v1/admin/triage', () => {
         eventsUsable: 0,
       })),
       { status: 'success', eventsFound: 2, eventsUsable: 2 },
-    ])
+    ]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('wentDark')
-    expect(fault?.evidence['baselineCount']).toBe(12)
-  })
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('wentDark');
+    expect(fault?.evidence['baselineCount']).toBe(12);
+  });
 
   // ── blocked ───────────────────────────────────────────────────────
   it('surfaces a blocked venue and clears it when the block lifts', async () => {
-    setAuth('admin')
-    const blockedAt = new Date(Date.now() - 12 * DAY_MS)
+    setAuth('admin');
+    const blockedAt = new Date(Date.now() - 12 * DAY_MS);
     const venue = await seedVenue({
       name: 'Red Rocks',
       slug: 'red-rocks',
       blockedAt,
       consecutiveFailures: 9,
-    })
+    });
     await seedRuns(venue.id, [
       { status: 'success', eventsFound: 20, eventsUsable: 20 },
       {
@@ -260,45 +260,45 @@ describe('GET /v1/admin/triage', () => {
         eventsFound: 0,
         eventsUsable: 0,
       },
-    ])
+    ]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('blocked')
-    expect(fault?.band).toBe('hard')
-    expect(fault?.dur).toBe('12d')
-    expect(fault?.evidence['status']).toBe(403)
-    expect(fault?.evidence['refusals']).toBe(9)
-    expect(fault?.evidence['lastSuccess']).toMatch(/\w{3} \d+/)
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('blocked');
+    expect(fault?.band).toBe('hard');
+    expect(fault?.dur).toBe('12d');
+    expect(fault?.evidence['status']).toBe(403);
+    expect(fault?.evidence['refusals']).toBe(9);
+    expect(fault?.evidence['lastSuccess']).toMatch(/\w{3} \d+/);
 
     // Lifting the block is not on its own a recovery — the last run still
     // failed, so the venue drops from `blocked` to `failed`. It clears only
     // once a run actually succeeds.
-    const { venues: venuesTable } = await import('@concert-crawl/db')
-    const { eq: eqVenue } = await import('drizzle-orm')
+    const { venues: venuesTable } = await import('@concert-crawl/db');
+    const { eq: eqVenue } = await import('drizzle-orm');
     await testDb
       .update(venuesTable)
       .set({ blockedAt: null, consecutiveFailures: 0 })
-      .where(eqVenue(venuesTable.id, venue.id))
-    expect((await fetchTriage()).faults[0]?.condition).toBe('failed')
+      .where(eqVenue(venuesTable.id, venue.id));
+    expect((await fetchTriage()).faults[0]?.condition).toBe('failed');
 
     await testDb.insert(crawlRuns).values({
       venueId: venue.id,
       status: 'success',
       eventsFound: 21,
       eventsUsable: 21,
-    })
-    expect((await fetchTriage()).faults).toEqual([])
-  })
+    });
+    expect((await fetchTriage()).faults).toEqual([]);
+  });
 
   // ── crawl failing ─────────────────────────────────────────────────
   it('surfaces a failing crawl and clears it on the next success', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const venue = await seedVenue({
       name: 'Marquis Theater',
       slug: 'marquis',
       consecutiveFailures: 2,
       active: false,
-    })
+    });
     await seedRuns(venue.id, [
       { status: 'success', eventsFound: 8, eventsUsable: 8 },
       {
@@ -313,52 +313,52 @@ describe('GET /v1/admin/triage', () => {
         eventsUsable: 0,
         errorMessage: 'Navigation timeout of 30000ms exceeded',
       },
-    ])
+    ]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('failed')
-    expect(fault?.band).toBe('hard')
-    expect(fault?.evidence['failures']).toBe(2)
-    expect(fault?.evidence['errorClass']).toBe('timeout')
-    expect(fault?.evidence['pauseAt']).toBe(3)
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('failed');
+    expect(fault?.band).toBe('hard');
+    expect(fault?.evidence['failures']).toBe(2);
+    expect(fault?.evidence['errorClass']).toBe('timeout');
+    expect(fault?.evidence['pauseAt']).toBe(3);
     // Two consecutive failures, one per day.
-    expect(fault?.dur).toBe('2d')
+    expect(fault?.dur).toBe('2d');
 
     await testDb.insert(crawlRuns).values({
       venueId: venue.id,
       status: 'success',
       eventsFound: 8,
       eventsUsable: 8,
-    })
-    expect((await fetchTriage()).faults).toEqual([])
-  })
+    });
+    expect((await fetchTriage()).faults).toEqual([]);
+  });
 
   // ── ceiling ───────────────────────────────────────────────────────
   it('surfaces a pinned event count and clears it when the count moves', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Gothic Theatre', slug: 'gothic' })
-    await seedRuns(venue.id, [...flatRuns(3, 34), ...flatRuns(5, 20)])
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Gothic Theatre', slug: 'gothic' });
+    await seedRuns(venue.id, [...flatRuns(3, 34), ...flatRuns(5, 20)]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('ceiling')
-    expect(fault?.band).toBe('suspect')
-    expect(fault?.evidence['kind']).toBe('pinned_count')
-    expect(fault?.evidence['count']).toBe(20)
-    expect(fault?.evidence['runs']).toBe(5)
-    expect(fault?.evidence['was']).toBe(34)
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('ceiling');
+    expect(fault?.band).toBe('suspect');
+    expect(fault?.evidence['kind']).toBe('pinned_count');
+    expect(fault?.evidence['count']).toBe(20);
+    expect(fault?.evidence['runs']).toBe(5);
+    expect(fault?.evidence['was']).toBe(34);
 
     await testDb.insert(crawlRuns).values({
       venueId: venue.id,
       status: 'success',
       eventsFound: 27,
       eventsUsable: 27,
-    })
-    expect((await fetchTriage()).faults).toEqual([])
-  })
+    });
+    expect((await fetchTriage()).faults).toEqual([]);
+  });
 
   it('surfaces a shrinking announcement horizon with its own evidence', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' })
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' });
     await seedRuns(venue.id, [
       {
         status: 'success',
@@ -384,28 +384,28 @@ describe('GET /v1/admin/triage', () => {
         eventsUsable: 25,
         furthestEventDate: '2026-08-12',
       },
-    ])
+    ]);
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('ceiling')
-    expect(fault?.evidence['kind']).toBe('horizon_shrank')
-    expect(fault?.evidence['furthest']).toBe('2026-08-12')
-    expect(fault?.evidence['best']).toBe('2026-12-01')
-    expect(fault?.evidence['shrankDays']).toBeGreaterThan(30)
-  })
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('ceiling');
+    expect(fault?.evidence['kind']).toBe('horizon_shrank');
+    expect(fault?.evidence['furthest']).toBe('2026-08-12');
+    expect(fault?.evidence['best']).toBe('2026-12-01');
+    expect(fault?.evidence['shrankDays']).toBeGreaterThan(30);
+  });
 
   // ── coverage gap ──────────────────────────────────────────────────
   it('surfaces a URL coverage gap as the COVERED figure and clears on repair', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: "Cervantes'", slug: 'cervantes' })
-    await seedRuns(venue.id, baselineRuns(4, 14))
+    setAuth('admin');
+    const venue = await seedVenue({ name: "Cervantes'", slug: 'cervantes' });
+    await seedRuns(venue.id, baselineRuns(4, 14));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
-    const uncovered: string[] = []
+    });
+    const uncovered: string[] = [];
     for (let index = 0; index < 14; index += 1) {
-      const withLink = index < 9
+      const withLink = index < 9;
       const event = await seedEvent(venue.id, {
         artist: `Artist ${index}`,
         title: `Show ${index}`,
@@ -413,55 +413,55 @@ describe('GET /v1/admin/triage', () => {
         status: 'upcoming',
         ticketUrl: withLink ? 'https://tickets.example.com/x' : null,
         eventUrl: null,
-      })
-      if (!withLink) uncovered.push(event.id)
+      });
+      if (!withLink) uncovered.push(event.id);
     }
 
-    const [fault] = (await fetchTriage()).faults
-    expect(fault?.condition).toBe('coverage')
-    expect(fault?.band).toBe('loss')
+    const [fault] = (await fetchTriage()).faults;
+    expect(fault?.condition).toBe('coverage');
+    expect(fault?.band).toBe('loss');
     // 14 upcoming, 5 uncovered → the evidence line states the 9 that work.
-    expect(fault?.evidence['matched']).toBe(9)
-    expect(fault?.evidence['expected']).toBe(14)
-    expect(fault?.evidence['uncovered']).toBe(5)
+    expect(fault?.evidence['matched']).toBe(9);
+    expect(fault?.evidence['expected']).toBe(14);
+    expect(fault?.evidence['uncovered']).toBe(5);
     // The copy layer interpolates this into "last fully covered Jul 12"; nothing has
     // recorded a last-covered date yet, so it must be present and null rather
     // than absent — an absent key renders "undefined" in the panel.
-    expect(fault?.evidence).toHaveProperty('wasWhen', null)
+    expect(fault?.evidence).toHaveProperty('wasWhen', null);
 
-    const { venues: venuesTable } = await import('@concert-crawl/db')
-    const { eq } = await import('drizzle-orm')
+    const { venues: venuesTable } = await import('@concert-crawl/db');
+    const { eq } = await import('drizzle-orm');
     await testDb
       .update(venuesTable)
       .set({ lastUrlCoverageOkAt: new Date('2026-07-12T18:00:00Z') })
-      .where(eq(venuesTable.id, venue.id))
-    const [dated] = (await fetchTriage()).faults
-    expect(dated?.evidence['wasWhen']).toBe('Jul 12')
+      .where(eq(venuesTable.id, venue.id));
+    const [dated] = (await fetchTriage()).faults;
+    expect(dated?.evidence['wasWhen']).toBe('Jul 12');
 
-    const { events: eventsTable } = await import('@concert-crawl/db')
-    const { inArray } = await import('drizzle-orm')
+    const { events: eventsTable } = await import('@concert-crawl/db');
+    const { inArray } = await import('drizzle-orm');
     await testDb
       .update(eventsTable)
       .set({ ticketUrl: 'https://tickets.example.com/fixed' })
-      .where(inArray(eventsTable.id, uncovered))
+      .where(inArray(eventsTable.id, uncovered));
 
-    expect((await fetchTriage()).faults).toEqual([])
-  })
+    expect((await fetchTriage()).faults).toEqual([]);
+  });
 
   // ── ordering + queues ─────────────────────────────────────────────
   it('orders faults by severity band then persistence, server-side', async () => {
-    setAuth('admin')
-    const dark = await seedVenue({ name: 'Dark Venue', slug: 'dark' })
+    setAuth('admin');
+    const dark = await seedVenue({ name: 'Dark Venue', slug: 'dark' });
     await seedRuns(dark.id, [
       ...baselineRuns(7, 12),
       { status: 'success', eventsFound: 1, eventsUsable: 1 },
-    ])
+    ]);
 
     const blocked = await seedVenue({
       name: 'Blocked Venue',
       slug: 'blocked',
       blockedAt: new Date(Date.now() - 2 * DAY_MS),
-    })
+    });
     await seedRuns(blocked.id, [
       {
         status: 'failed',
@@ -469,185 +469,185 @@ describe('GET /v1/admin/triage', () => {
         eventsFound: 0,
         eventsUsable: 0,
       },
-    ])
+    ]);
 
-    const pinned = await seedVenue({ name: 'Pinned Venue', slug: 'pinned' })
-    await seedRuns(pinned.id, [...flatRuns(3, 34), ...flatRuns(5, 20)])
+    const pinned = await seedVenue({ name: 'Pinned Venue', slug: 'pinned' });
+    await seedRuns(pinned.id, [...flatRuns(3, 34), ...flatRuns(5, 20)]);
 
-    const data = await fetchTriage()
+    const data = await fetchTriage();
     expect(data.faults.map((row) => row.band)).toEqual([
       'hard',
       'loss',
       'suspect',
-    ])
-  })
+    ]);
+  });
 
   it('reports the review queues with a breakdown', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Queue Venue', slug: 'queue' })
-    await seedRuns(venue.id, baselineRuns(4, 12))
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Queue Venue', slug: 'queue' });
+    await seedRuns(venue.id, baselineRuns(4, 12));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     for (let index = 0; index < 3; index += 1) {
       await seedEvent(venue.id, {
         artist: `Flagged ${index}`,
         title: `Flagged ${index}`,
         date: tomorrow,
         verified: false,
-      })
+      });
     }
 
-    const data = await fetchTriage()
-    const flags = data.queues.find((queue) => queue.kind === 'eventFlags')
-    expect(flags?.count).toBe(3)
-    expect(flags?.breakdown).toContain('Queue Venue 3')
-  })
+    const data = await fetchTriage();
+    const flags = data.queues.find((queue) => queue.kind === 'eventFlags');
+    expect(flags?.count).toBe(3);
+    expect(flags?.breakdown).toContain('Queue Venue 3');
+  });
 
   // Only `slug` is unique on venues, so two venues can legitimately share a
   // name. Grouping the breakdown by name merged their counts into one row.
   it('keeps two venues sharing a name as separate breakdown rows', async () => {
-    setAuth('admin')
-    const first = await seedVenue({ name: 'The Marquis', slug: 'marquis-a' })
-    const second = await seedVenue({ name: 'The Marquis', slug: 'marquis-b' })
-    await seedRuns(first.id, baselineRuns(4, 12))
-    await seedRuns(second.id, baselineRuns(4, 12))
+    setAuth('admin');
+    const first = await seedVenue({ name: 'The Marquis', slug: 'marquis-a' });
+    const second = await seedVenue({ name: 'The Marquis', slug: 'marquis-b' });
+    await seedRuns(first.id, baselineRuns(4, 12));
+    await seedRuns(second.id, baselineRuns(4, 12));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     for (let index = 0; index < 3; index += 1) {
       await seedEvent(first.id, {
         artist: `First ${index}`,
         title: `First ${index}`,
         date: tomorrow,
         verified: false,
-      })
+      });
     }
     await seedEvent(second.id, {
       artist: 'Second 0',
       title: 'Second 0',
       date: tomorrow,
       verified: false,
-    })
+    });
 
-    const data = await fetchTriage()
-    const flags = data.queues.find((queue) => queue.kind === 'eventFlags')
-    expect(flags?.count).toBe(4)
+    const data = await fetchTriage();
+    const flags = data.queues.find((queue) => queue.kind === 'eventFlags');
+    expect(flags?.count).toBe(4);
     // Merged, this would read "The Marquis 4" once.
-    expect(flags?.breakdown).toContain('The Marquis 3')
-    expect(flags?.breakdown).toContain('The Marquis 1')
-  })
+    expect(flags?.breakdown).toContain('The Marquis 3');
+    expect(flags?.breakdown).toContain('The Marquis 1');
+  });
 
   // Each breakdown line is a venue, so the "N more" tail collapses venues. A
   // remainder derived from the event total instead would read "6 more" here.
   it('counts the breakdown remainder in venues, not flagged events', async () => {
-    setAuth('admin')
+    setAuth('admin');
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     // Four venues, descending flag counts, so the fourth is the one collapsed.
-    const counts = [9, 8, 7, 6]
+    const counts = [9, 8, 7, 6];
     for (let venueIndex = 0; venueIndex < counts.length; venueIndex += 1) {
       const venue = await seedVenue({
         name: `Tail Venue ${venueIndex}`,
         slug: `tail-${venueIndex}`,
-      })
-      await seedRuns(venue.id, baselineRuns(4, 12))
+      });
+      await seedRuns(venue.id, baselineRuns(4, 12));
       for (let index = 0; index < counts[venueIndex]!; index += 1) {
         await seedEvent(venue.id, {
           artist: `Tail ${venueIndex}-${index}`,
           title: `Tail ${venueIndex}-${index}`,
           date: tomorrow,
           verified: false,
-        })
+        });
       }
     }
 
     const flags = (await fetchTriage()).queues.find(
       (queue) => queue.kind === 'eventFlags',
-    )
-    expect(flags?.count).toBe(30)
-    expect(flags?.breakdown).toContain('1 more')
-    expect(flags?.breakdown).not.toContain('6 more')
-  })
+    );
+    expect(flags?.count).toBe(30);
+    expect(flags?.breakdown).toContain('1 more');
+    expect(flags?.breakdown).not.toContain('6 more');
+  });
   // The price queue's `${artist} @ ${venueName}` breakdown was the one queue
   // shape with no end-to-end proof — the panel renders the string verbatim,
   // so a wrong join here surfaces as wrong copy with nothing to catch it.
   it('reports the price submissions queue with an artist @ venue breakdown', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' })
-    await seedRuns(venue.id, baselineRuns(4, 12))
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' });
+    await seedRuns(venue.id, baselineRuns(4, 12));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     const event = await seedEvent(venue.id, {
       artist: 'Khruangbin',
       title: 'Khruangbin',
       date: tomorrow,
-    })
-    await seedPriceSubmission(event.id, 'user-price-1')
+    });
+    await seedPriceSubmission(event.id, 'user-price-1');
 
     const prices = (await fetchTriage()).queues.find(
       (queue) => queue.kind === 'priceSubmissions',
-    )
-    expect(prices?.count).toBe(1)
-    expect(prices?.breakdown).toBe('Khruangbin @ Ogden Theatre')
-  })
+    );
+    expect(prices?.count).toBe(1);
+    expect(prices?.breakdown).toBe('Khruangbin @ Ogden Theatre');
+  });
 
   // Only three names are listed before the tail collapses, and the remainder
   // counts submissions rather than venues — this queue's rows are one line per
   // submission, unlike the event-flag queue's one line per venue.
   it('collapses the price queue tail past three submissions', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Larimer Lounge', slug: 'larimer' })
-    await seedRuns(venue.id, baselineRuns(4, 12))
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Larimer Lounge', slug: 'larimer' });
+    await seedRuns(venue.id, baselineRuns(4, 12));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     for (let index = 0; index < 5; index += 1) {
       const event = await seedEvent(venue.id, {
         artist: `Artist ${index}`,
         title: `Artist ${index}`,
         date: tomorrow,
-      })
-      await seedPriceSubmission(event.id, `user-price-${index}`)
+      });
+      await seedPriceSubmission(event.id, `user-price-${index}`);
     }
 
     const prices = (await fetchTriage()).queues.find(
       (queue) => queue.kind === 'priceSubmissions',
-    )
-    expect(prices?.count).toBe(5)
-    expect(prices?.breakdown).toContain('2 more')
-    expect(prices?.breakdown).toContain('@ Larimer Lounge')
-  })
+    );
+    expect(prices?.count).toBe(5);
+    expect(prices?.breakdown).toContain('2 more');
+    expect(prices?.breakdown).toContain('@ Larimer Lounge');
+  });
 
   // A dispute is a child submission; counting it would double-report the
   // parent price it contests.
   it('leaves disputes out of the price submissions queue', async () => {
-    setAuth('admin')
-    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird-q' })
-    await seedRuns(venue.id, baselineRuns(4, 12))
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird-q' });
+    await seedRuns(venue.id, baselineRuns(4, 12));
 
     const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     const event = await seedEvent(venue.id, {
       artist: 'Wednesday',
       title: 'Wednesday',
       date: tomorrow,
-    })
-    const original = await seedPriceSubmission(event.id, 'user-price-orig')
+    });
+    const original = await seedPriceSubmission(event.id, 'user-price-orig');
     await seedPriceSubmission(event.id, 'user-price-disputer', {
       disputedSubmissionId: original.id,
-    })
+    });
 
     const prices = (await fetchTriage()).queues.find(
       (queue) => queue.kind === 'priceSubmissions',
-    )
-    expect(prices?.count).toBe(1)
-  })
-})
+    );
+    expect(prices?.count).toBe(1);
+  });
+});

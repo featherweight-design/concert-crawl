@@ -6,17 +6,17 @@
  */
 export function isLocalConnectionString(connectionString: string): boolean {
   try {
-    const { hostname } = new URL(connectionString)
+    const { hostname } = new URL(connectionString);
     return (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname === '[::1]'
-    )
+    );
   } catch {
     return (
       connectionString.includes('localhost') ||
       connectionString.includes('127.0.0.1')
-    )
+    );
   }
 }
 
@@ -41,13 +41,13 @@ export function isLocalConnectionString(connectionString: string): boolean {
  * client misconfiguration, and the 300s default is correct for traffic this
  * thin.
  */
-const NEON_SUSPEND_SECONDS = 300
+const NEON_SUSPEND_SECONDS = 300;
 
 /** Close a socket that has gone unused for this long. Must stay below
  * {@link MAX_LIFETIME_SECONDS}, which is itself below
  * {@link NEON_SUSPEND_SECONDS} — that ordering is the whole fix, and
  * `pool-options.test.ts` asserts it rather than trusting the comment. */
-const IDLE_TIMEOUT_SECONDS = 60
+const IDLE_TIMEOUT_SECONDS = 60;
 
 /**
  * Absolute cap on socket age, replacing postgres.js's random 30–60 minutes.
@@ -62,7 +62,7 @@ const IDLE_TIMEOUT_SECONDS = 60
  * Reconnecting every few minutes costs a handshake against a compute that is
  * already cold-starting on a five-minute cycle, which is no cost at all.
  */
-const MAX_LIFETIME_SECONDS = 240
+const MAX_LIFETIME_SECONDS = 240;
 
 /**
  * Default pool size: postgres.js's own default, so an unset `DB_POOL_MAX`
@@ -70,7 +70,7 @@ const MAX_LIFETIME_SECONDS = 240
  * host runs many small instances at once, each with its own pool, and sets a
  * lower value so the total stays well inside the Neon pooler's limits.
  */
-export const DEFAULT_POOL_MAX = 10
+export const DEFAULT_POOL_MAX = 10;
 
 /**
  * Parse `DB_POOL_MAX`. Anything other than a positive integer falls back to
@@ -78,19 +78,19 @@ export const DEFAULT_POOL_MAX = 10
  * boot, and the default is the size every host ran with before the var existed.
  */
 export function parsePoolMax(raw: string | undefined): number {
-  if (raw === undefined) return DEFAULT_POOL_MAX
-  const trimmed = raw.trim()
-  if (!/^[1-9]\d*$/.test(trimmed)) return DEFAULT_POOL_MAX
-  return Number(trimmed)
+  if (raw === undefined) return DEFAULT_POOL_MAX;
+  const trimmed = raw.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) return DEFAULT_POOL_MAX;
+  return Number(trimmed);
 }
 
 export type PoolOptions = {
-  prepare: false
-  ssl: 'require' | false
-  idle_timeout: number
-  max_lifetime: number
-  max: number
-}
+  prepare: false;
+  ssl: 'require' | false;
+  idle_timeout: number;
+  max_lifetime: number;
+  max: number;
+};
 
 /**
  * Connection options for the long-lived query pool, derived from the
@@ -109,10 +109,10 @@ export function poolOptions(
     idle_timeout: IDLE_TIMEOUT_SECONDS,
     max_lifetime: MAX_LIFETIME_SECONDS,
     max: parsePoolMax(poolMax),
-  }
+  };
 }
 
 /** Exported for the tests that pin the ordering, not for callers. */
 export const POOL_TIMEOUT_BOUNDS = {
   neonSuspendSeconds: NEON_SUSPEND_SECONDS,
-} as const
+} as const;

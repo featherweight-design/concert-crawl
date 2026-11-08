@@ -1,7 +1,7 @@
-import { cookies } from 'next/headers'
-import { auth } from '@clerk/nextjs/server'
-import { DiscoveryShelfSkeleton } from '@/components/consumer/spotify/DiscoveryShelfSkeleton'
-import { SHELF_HINT_COOKIE, shouldReserveShelf } from '@/lib/shelf-hint'
+import { cookies } from 'next/headers';
+import { auth } from '@clerk/nextjs/server';
+import { DiscoveryShelfSkeleton } from '@/components/consumer/spotify/DiscoveryShelfSkeleton';
+import { SHELF_HINT_COOKIE, shouldReserveShelf } from '@/lib/shelf-hint';
 
 function EventCardSkeleton({ delay }: { delay: number }) {
   return (
@@ -90,7 +90,7 @@ function EventCardSkeleton({ delay }: { delay: number }) {
         }}
       />
     </div>
-  )
+  );
 }
 
 function DateGroupSkeleton({
@@ -98,9 +98,9 @@ function DateGroupSkeleton({
   cardCount,
   baseDelay,
 }: {
-  headerWidth: number
-  cardCount: number
-  baseDelay: number
+  headerWidth: number;
+  cardCount: number;
+  baseDelay: number;
 }) {
   return (
     <section>
@@ -143,7 +143,7 @@ function DateGroupSkeleton({
         ))}
       </div>
     </section>
-  )
+  );
 }
 
 // Reads the shelf hint cookie so the fallback reserves the "Based on your
@@ -158,11 +158,11 @@ function DateGroupSkeleton({
 // entry's loading boundary for up to 5 minutes. Reading a cookie here costs
 // no extra round-trip and no delayed first paint.
 export default async function EventsLoading() {
-  const [cookieStore, { userId }] = await Promise.all([cookies(), auth()])
+  const [cookieStore, { userId }] = await Promise.all([cookies(), auth()]);
   const reserveShelf = shouldReserveShelf(
     cookieStore.get(SHELF_HINT_COOKIE)?.value,
     userId,
-  )
+  );
 
   return (
     <>
@@ -247,5 +247,5 @@ export default async function EventsLoading() {
         </div>
       </main>
     </>
-  )
+  );
 }

@@ -1,17 +1,17 @@
-import type { VenuePublic } from '@concert-crawl/types'
+import type { VenuePublic } from '@concert-crawl/types';
 
-export type VenueFilterKey = 'sort' | 'capacity' | 'distance'
+export type VenueFilterKey = 'sort' | 'capacity' | 'distance';
 
 export interface VenueFilterOption {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 export interface VenueFilterDef {
-  label: string
-  placeholder: string
-  alwaysOn?: boolean
-  options: VenueFilterOption[]
+  label: string;
+  placeholder: string;
+  alwaysOn?: boolean;
+  options: VenueFilterOption[];
 }
 
 export const VENUE_FILTER_DEFS: Record<VenueFilterKey, VenueFilterDef> = {
@@ -48,25 +48,25 @@ export const VENUE_FILTER_DEFS: Record<VenueFilterKey, VenueFilterDef> = {
       { value: 'far', label: 'Day trip (15+ mi)' },
     ],
   },
-}
+};
 
 export const VENUE_FILTER_ORDER: VenueFilterKey[] = [
   'sort',
   'capacity',
   'distance',
-]
+];
 
 export interface VenueFilterState {
-  sort: string
-  capacity: string | null
-  distance: string | null
+  sort: string;
+  capacity: string | null;
+  distance: string | null;
 }
 
 export const VENUE_FILTER_DEFAULT: VenueFilterState = {
   sort: 'upcoming',
   capacity: null,
   distance: null,
-}
+};
 
 // Haversine distance in miles between two lat/lng points
 export function haversineDistance(
@@ -75,100 +75,100 @@ export function haversineDistance(
   lat2: number,
   lng2: number,
 ): number {
-  const earthRadiusMiles = 3958.8
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLng = ((lng2 - lng1) * Math.PI) / 180
-  const sinDLat = Math.sin(dLat / 2)
-  const sinDLng = Math.sin(dLng / 2)
+  const earthRadiusMiles = 3958.8;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
   const aa =
     sinDLat * sinDLat +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       sinDLng *
-      sinDLng
-  return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
+      sinDLng;
+  return earthRadiusMiles * 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
 }
 
 // LoDo centroid fallback (used when geolocation is denied)
-export const LODO_LAT = 39.7508
-export const LODO_LNG = -104.9997
+export const LODO_LAT = 39.7508;
+export const LODO_LNG = -104.9997;
 
 export function fmtDistance(miles: number): string {
-  return miles < 10 ? `${miles.toFixed(1)} mi` : `${Math.round(miles)} mi`
+  return miles < 10 ? `${miles.toFixed(1)} mi` : `${Math.round(miles)} mi`;
 }
 
 export function fmtNum(num: number): string {
-  return num.toLocaleString('en-US')
+  return num.toLocaleString('en-US');
 }
 
 export function venueChipLabel(
   key: VenueFilterKey,
   value: string | null,
 ): string {
-  const def = VENUE_FILTER_DEFS[key]
-  if (!value) return def.placeholder
+  const def = VENUE_FILTER_DEFS[key];
+  if (!value) return def.placeholder;
   return (
     def.options.find((opt) => opt.value === value)?.label ?? def.placeholder
-  )
+  );
 }
 
-export type VenueWithDistance = VenuePublic & { distanceMi: number }
+export type VenueWithDistance = VenuePublic & { distanceMi: number };
 
 export function applyVenueFilters(
   venues: VenueWithDistance[],
   state: VenueFilterState,
 ): VenueWithDistance[] {
-  let out = venues
+  let out = venues;
 
   if (state.capacity) {
     out = out.filter((venue) => {
-      const cap = venue.capacity ?? 0
+      const cap = venue.capacity ?? 0;
       switch (state.capacity) {
         case 'intimate':
-          return cap < 500
+          return cap < 500;
         case 'club':
-          return cap >= 500 && cap < 1500
+          return cap >= 500 && cap < 1500;
         case 'mid':
-          return cap >= 1500 && cap < 4000
+          return cap >= 1500 && cap < 4000;
         case 'large':
-          return cap >= 4000 && cap < 10000
+          return cap >= 4000 && cap < 10000;
         case 'arena':
-          return cap >= 10000
+          return cap >= 10000;
         default:
-          return true
+          return true;
       }
-    })
+    });
   }
 
   if (state.distance) {
     out = out.filter((venue) => {
       switch (state.distance) {
         case 'walking':
-          return venue.distanceMi < 1
+          return venue.distanceMi < 1;
         case 'near':
-          return venue.distanceMi < 5
+          return venue.distanceMi < 5;
         case 'metro':
-          return venue.distanceMi < 15
+          return venue.distanceMi < 15;
         case 'far':
-          return venue.distanceMi >= 15
+          return venue.distanceMi >= 15;
         default:
-          return true
+          return true;
       }
-    })
+    });
   }
 
   return [...out].sort((aa, bb) => {
     switch (state.sort) {
       case 'distance':
-        return aa.distanceMi - bb.distanceMi
+        return aa.distanceMi - bb.distanceMi;
       case 'cap-desc':
-        return (bb.capacity ?? 0) - (aa.capacity ?? 0)
+        return (bb.capacity ?? 0) - (aa.capacity ?? 0);
       case 'cap-asc':
-        return (aa.capacity ?? 0) - (bb.capacity ?? 0)
+        return (aa.capacity ?? 0) - (bb.capacity ?? 0);
       case 'alpha':
-        return aa.name.localeCompare(bb.name)
+        return aa.name.localeCompare(bb.name);
       default:
-        return bb.upcomingCount - aa.upcomingCount
+        return bb.upcomingCount - aa.upcomingCount;
     }
-  })
+  });
 }

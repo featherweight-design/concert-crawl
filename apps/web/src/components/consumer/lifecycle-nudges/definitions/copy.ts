@@ -28,4 +28,4 @@ export const LIFECYCLE_NUDGES_COPY = {
     dismissAria: 'Dismiss payment notice',
     regionAria: 'Payment notice',
   },
-} as const
+} as const;

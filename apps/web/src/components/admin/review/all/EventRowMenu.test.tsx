@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { EventRowMenu, type EventRowActions } from './EventRowMenu'
-import { type AllEvent } from './types'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { EventRowMenu, type EventRowActions } from './EventRowMenu';
+import { type AllEvent } from './types';
 
 const baseEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   id: 'evt-1',
@@ -27,7 +27,7 @@ const baseEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   hiddenFromConsumer: false,
   isConcertReviewNeeded: false,
   ...overrides,
-})
+});
 
 const emptyActions = (): EventRowActions => ({
   onViewDetail: vi.fn(),
@@ -41,11 +41,11 @@ const emptyActions = (): EventRowActions => ({
   onMarkAvailable: vi.fn(),
   onRequestMarkNonConcert: vi.fn(),
   onRequestDelete: vi.fn(),
-})
+});
 
 const openMenu = () => {
-  fireEvent.click(screen.getByLabelText('Row actions'))
-}
+  fireEvent.click(screen.getByLabelText('Row actions'));
+};
 
 describe('EventRowMenu', () => {
   it('opens the menu on trigger click and shows Verify for unverified events', () => {
@@ -54,13 +54,13 @@ describe('EventRowMenu', () => {
         event={baseEvent({ verified: false })}
         actions={emptyActions()}
       />,
-    )
-    openMenu()
-    expect(screen.getByRole('menuitem', { name: 'Verify' })).toBeTruthy()
+    );
+    openMenu();
+    expect(screen.getByRole('menuitem', { name: 'Verify' })).toBeTruthy();
     expect(
       screen.queryByRole('menuitem', { name: 'Send back to review' }),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('swaps Verify for Send back to review when the event is verified', () => {
     render(
@@ -68,13 +68,13 @@ describe('EventRowMenu', () => {
         event={baseEvent({ verified: true })}
         actions={emptyActions()}
       />,
-    )
-    openMenu()
+    );
+    openMenu();
     expect(
       screen.getByRole('menuitem', { name: 'Send back to review' }),
-    ).toBeTruthy()
-    expect(screen.queryByRole('menuitem', { name: 'Verify' })).toBeNull()
-  })
+    ).toBeTruthy();
+    expect(screen.queryByRole('menuitem', { name: 'Verify' })).toBeNull();
+  });
 
   it('shows Mark sold out when the event is available', () => {
     render(
@@ -82,48 +82,52 @@ describe('EventRowMenu', () => {
         event={baseEvent({ isSoldOut: false })}
         actions={emptyActions()}
       />,
-    )
-    openMenu()
-    expect(screen.getByRole('menuitem', { name: 'Mark sold out' })).toBeTruthy()
-  })
+    );
+    openMenu();
+    expect(
+      screen.getByRole('menuitem', { name: 'Mark sold out' }),
+    ).toBeTruthy();
+  });
 
   it('swaps to Mark available when the event is sold out', () => {
-    cleanup()
+    cleanup();
     render(
       <EventRowMenu
         event={baseEvent({ isSoldOut: true })}
         actions={emptyActions()}
       />,
-    )
-    openMenu()
+    );
+    openMenu();
     expect(
       screen.getByRole('menuitem', { name: 'Mark available' }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('hides Mark upcoming when the event is already upcoming', () => {
-    render(<EventRowMenu event={baseEvent()} actions={emptyActions()} />)
-    openMenu()
-    expect(screen.queryByRole('menuitem', { name: 'Mark upcoming' })).toBeNull()
-  })
+    render(<EventRowMenu event={baseEvent()} actions={emptyActions()} />);
+    openMenu();
+    expect(
+      screen.queryByRole('menuitem', { name: 'Mark upcoming' }),
+    ).toBeNull();
+  });
 
   it('invokes onRequestDelete when Delete is clicked', () => {
-    const actions = emptyActions()
+    const actions = emptyActions();
     render(
       <EventRowMenu event={baseEvent({ id: 'evt-99' })} actions={actions} />,
-    )
-    openMenu()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }))
+    );
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }));
     expect(actions.onRequestDelete).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'evt-99' }),
-    )
-  })
+    );
+  });
 
   it('invokes onRequestMarkNonConcert when Mark non-concert is clicked', () => {
-    const actions = emptyActions()
-    render(<EventRowMenu event={baseEvent()} actions={actions} />)
-    openMenu()
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark non-concert' }))
-    expect(actions.onRequestMarkNonConcert).toHaveBeenCalled()
-  })
-})
+    const actions = emptyActions();
+    render(<EventRowMenu event={baseEvent()} actions={actions} />);
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Mark non-concert' }));
+    expect(actions.onRequestMarkNonConcert).toHaveBeenCalled();
+  });
+});

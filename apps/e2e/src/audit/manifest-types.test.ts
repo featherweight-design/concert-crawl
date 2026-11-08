@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { validateManifest } from './manifest-types.js'
+import { describe, it, expect } from 'vitest';
+import { validateManifest } from './manifest-types.js';
 
 describe('validateManifest', () => {
   it('accepts a well-formed manifest', () => {
@@ -8,28 +8,28 @@ describe('validateManifest', () => {
         { id: 'a', path: '/a', tags: ['consumer'], auth: 'none' },
         { id: 'b', path: '/b', tags: ['admin'], auth: 'admin' },
       ]),
-    ).not.toThrow()
-  })
+    ).not.toThrow();
+  });
   it('rejects duplicate route ids', () => {
     expect(() =>
       validateManifest([
         { id: 'a', path: '/a', tags: ['consumer'], auth: 'none' },
         { id: 'a', path: '/a2', tags: ['consumer'], auth: 'none' },
       ]),
-    ).toThrow(/duplicate route id/i)
-  })
+    ).toThrow(/duplicate route id/i);
+  });
   it('rejects empty tags', () => {
     expect(() =>
       validateManifest([{ id: 'a', path: '/a', tags: [], auth: 'none' }]),
-    ).toThrow(/at least one tag/i)
-  })
+    ).toThrow(/at least one tag/i);
+  });
   it('rejects unknown tag values', () => {
     expect(() =>
       validateManifest([
         { id: 'a', path: '/a', tags: ['marketing'], auth: 'none' },
       ]),
-    ).toThrow()
-  })
+    ).toThrow();
+  });
   it('rejects route ids containing path-unsafe characters', () => {
     // route.id ends up in output filenames — `/`, `..`, or backslash would
     // escape audit-output/<runId>/. Regression guard.
@@ -37,13 +37,13 @@ describe('validateManifest', () => {
       validateManifest([
         { id: 'admin/feedback', path: '/x', tags: ['admin'], auth: 'admin' },
       ]),
-    ).toThrow(/path-safe/i)
+    ).toThrow(/path-safe/i);
     expect(() =>
       validateManifest([
         { id: '..', path: '/x', tags: ['admin'], auth: 'admin' },
       ]),
-    ).toThrow(/path-safe/i)
-  })
+    ).toThrow(/path-safe/i);
+  });
   it('rejects absolute URLs in route.path', () => {
     // route.path is passed to page.goto — an absolute URL would silently
     // escape the PLAYWRIGHT_AUDIT_BASE_URL host scope.
@@ -56,8 +56,8 @@ describe('validateManifest', () => {
           auth: 'admin',
         },
       ]),
-    ).toThrow(/same-origin path/i)
-  })
+    ).toThrow(/same-origin path/i);
+  });
   it('rejects protocol-relative URLs in route.path (`//host/x`)', () => {
     // Regression guard: page.goto('//evil.com') with baseURL set escapes
     // to evil.com's origin. The leading `/` alone isn't enough — must
@@ -71,8 +71,8 @@ describe('validateManifest', () => {
           auth: 'admin',
         },
       ]),
-    ).toThrow(/same-origin path/i)
-  })
+    ).toThrow(/same-origin path/i);
+  });
   it('rejects interactions that are not an array (common config typo)', () => {
     // Regression guard: a manifest entry that writes
     // `interactions: someObject` (not wrapped in `[]`) was previously
@@ -88,6 +88,6 @@ describe('validateManifest', () => {
           interactions: { id: 'x', description: 'x', run: async () => {} },
         },
       ]),
-    ).toThrow(/interactions must be an array/i)
-  })
-})
+    ).toThrow(/interactions must be an array/i);
+  });
+});

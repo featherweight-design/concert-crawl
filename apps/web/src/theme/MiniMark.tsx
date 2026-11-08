@@ -6,14 +6,14 @@ const DOT_POSITIONS: [number, number][] = [
   [30, 22],
   [34, 18],
   [14, 32],
-]
+];
 
 export function MiniMark({
   tokens,
   size = 22,
 }: {
-  tokens: Record<string, string>
-  size?: number
+  tokens: Record<string, string>;
+  size?: number;
 }) {
   return (
     <svg
@@ -38,5 +38,5 @@ export function MiniMark({
         />
       ))}
     </svg>
-  )
+  );
 }

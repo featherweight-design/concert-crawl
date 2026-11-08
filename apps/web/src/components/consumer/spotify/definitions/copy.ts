@@ -8,10 +8,10 @@
 // Oxford-comma list join for the detail attribution strip: "X", "X and Y",
 // "X, Y, and Z".
 const formatArtistList = (artists: readonly string[]): string => {
-  if (artists.length <= 1) return artists[0] ?? ''
-  if (artists.length === 2) return `${artists[0]} and ${artists[1]}`
-  return `${artists.slice(0, -1).join(', ')}, and ${artists[artists.length - 1]}`
-}
+  if (artists.length <= 1) return artists[0] ?? '';
+  if (artists.length === 2) return `${artists[0]} and ${artists[1]}`;
+  return `${artists.slice(0, -1).join(', ')}, and ${artists[artists.length - 1]}`;
+};
 
 export const SPOTIFY_COPY = {
   connectEntry: {
@@ -326,4 +326,4 @@ export const SPOTIFY_COPY = {
       },
     },
   },
-} as const
+} as const;

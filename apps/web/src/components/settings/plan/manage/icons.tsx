@@ -2,7 +2,7 @@
 // docs/superpowers/design-tables/lifecycle-manage.md (a design-review agent
 // checks these attribute-by-attribute).
 
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
 
 export const MANAGE_ICONS: Record<
   'swap' | 'leave' | 'card' | 'receipt' | 'mail' | 'globe',
@@ -97,7 +97,7 @@ export const MANAGE_ICONS: Record<
       />
     </svg>
   ),
-}
+};
 
 /** Trailing chevron on the in-app manage rows. */
 export const RowChevron = () => (
@@ -117,4 +117,4 @@ export const RowChevron = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);

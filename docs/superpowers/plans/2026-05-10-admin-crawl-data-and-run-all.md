@@ -135,7 +135,7 @@ await db.insert(crawlRuns).values({
   llmCostUsd: result.llmCostUsd ?? null, // <-- add
   errorMessage,
   durationMs,
-})
+});
 ```
 
 The `result.eventsUpdated` and `result.llmCostUsd` values must come from the crawl result object. If they don't exist yet:
@@ -229,7 +229,7 @@ const dbRuns = await db.select({
   durationMs: crawlRuns.durationMs,
   llmCostUsd: crawlRuns.llmCostUsd, // <-- add
   createdAt: crawlRuns.createdAt,
-})
+});
 ```
 
 Also add to the `GET /v1/admin/crawl/runs/:id` single-run select:
@@ -238,7 +238,7 @@ Also add to the `GET /v1/admin/crawl/runs/:id` single-run select:
 const [crawlRun] = await db
   .select() // already selects all columns, so new columns are auto-included
   .from(crawlRuns)
-  .where(eq(crawlRuns.id, id))
+  .where(eq(crawlRuns.id, id));
 ```
 
 `select()` with no args selects all columns, so this route is already covered.
@@ -253,22 +253,22 @@ crawlAdminRouter.post('/', async (ctx) => {
   const activeVenues = await db
     .select({ id: venues.id })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(and(eq(venues.active, true), eq(venues.verified, true)));
 
   if (activeVenues.length === 0) {
-    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } })
+    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } });
   }
 
-  const actor = getAuthUser(ctx).userId
+  const actor = getAuthUser(ctx).userId;
   const inserted = await db
     .insert(crawlTriggers)
     .values(
       activeVenues.map((venue) => ({ venueId: venue.id, triggeredBy: actor })),
     )
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
 
-  ctx.set('auditAction', 'crawl.trigger_all')
-  ctx.set('auditActorId', actor)
+  ctx.set('auditAction', 'crawl.trigger_all');
+  ctx.set('auditActorId', actor);
 
   return ctx.json(
     {
@@ -279,8 +279,8 @@ crawlAdminRouter.post('/', async (ctx) => {
       },
     },
     202,
-  )
-})
+  );
+});
 ```
 
 Note: `and` must be imported from `drizzle-orm` — add it to the existing import.
@@ -292,61 +292,69 @@ In `crawl.test.ts`, add a new describe block:
 ```typescript
 describe('POST /v1/admin/crawl (bulk)', () => {
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/crawl', { method: 'POST' })
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 403 for non-admin users', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { metadata: { role: 'user' } },
-    })
-    const res = await createApp().request('/v1/admin/crawl', { method: 'POST' })
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    });
+    expect(res.status).toBe(403);
+  });
 
   it('returns 202 with empty triggerIds when no active venues', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'admin_123',
       sessionClaims: { metadata: { role: 'admin' } },
-    })
-    const { db } = await import('@concert-crawl/db')
-    vi.mocked(db.select().from().where).mockResolvedValueOnce([])
-    const res = await createApp().request('/v1/admin/crawl', { method: 'POST' })
-    expect(res.status).toBe(202)
+    });
+    const { db } = await import('@concert-crawl/db');
+    vi.mocked(db.select().from().where).mockResolvedValueOnce([]);
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    });
+    expect(res.status).toBe(202);
     const body = (await res.json()) as {
-      success: boolean
-      data: { triggerIds: string[]; count: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.count).toBe(0)
-    expect(body.data.triggerIds).toEqual([])
-  })
+      success: boolean;
+      data: { triggerIds: string[]; count: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.count).toBe(0);
+    expect(body.data.triggerIds).toEqual([]);
+  });
 
   it('returns 202 with triggerIds for all active venues', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'admin_123',
       sessionClaims: { metadata: { role: 'admin' } },
-    })
-    const { db } = await import('@concert-crawl/db')
+    });
+    const { db } = await import('@concert-crawl/db');
     vi.mocked(db.select().from().where).mockResolvedValueOnce([
       { id: VENUE_ID },
-    ])
+    ]);
     vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
       { id: TRIGGER_ID, venueId: VENUE_ID },
-    ])
-    const res = await createApp().request('/v1/admin/crawl', { method: 'POST' })
-    expect(res.status).toBe(202)
+    ]);
+    const res = await createApp().request('/v1/admin/crawl', {
+      method: 'POST',
+    });
+    expect(res.status).toBe(202);
     const body = (await res.json()) as {
-      success: boolean
-      data: { triggerIds: string[]; count: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.count).toBe(1)
-    expect(body.data.triggerIds).toContain(TRIGGER_ID)
-  })
-})
+      success: boolean;
+      data: { triggerIds: string[]; count: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.count).toBe(1);
+    expect(body.data.triggerIds).toContain(TRIGGER_ID);
+  });
+});
 ```
 
 - [ ] **Step 4: Run API tests**
@@ -378,21 +386,21 @@ Find the `CrawlRun` interface and add the field:
 
 ```typescript
 export interface CrawlRun {
-  id: string
-  venueId: string
-  status: CrawlStatus | 'in_progress'
-  httpStatusCode: number | null
-  robotsTxtBlocked: string | null
-  extractionStrategyUsed: string | null
-  eventsFound: number
-  eventsInserted: number
-  eventsUpdated: number // <-- add
-  errorMessage: string | null
-  durationMs: number | null
-  createdAt: string
-  llmCostUsd?: number | null
-  venueName?: string | null
-  startedAt?: string | null
+  id: string;
+  venueId: string;
+  status: CrawlStatus | 'in_progress';
+  httpStatusCode: number | null;
+  robotsTxtBlocked: string | null;
+  extractionStrategyUsed: string | null;
+  eventsFound: number;
+  eventsInserted: number;
+  eventsUpdated: number; // <-- add
+  errorMessage: string | null;
+  durationMs: number | null;
+  createdAt: string;
+  llmCostUsd?: number | null;
+  venueName?: string | null;
+  startedAt?: string | null;
 }
 ```
 
@@ -422,23 +430,23 @@ git commit -m "feat(types): add eventsUpdated to CrawlRun interface"
 - [ ] **Step 1: Create the bulk trigger Next.js route**
 
 ```typescript
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
-import { isRole } from '@concert-crawl/types'
+import { auth } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { isRole } from '@concert-crawl/types';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export async function POST() {
-  const { getToken, sessionClaims } = await auth()
-  const token = await getToken()
+  const { getToken, sessionClaims } = await auth();
+  const token = await getToken();
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const role = isRole(sessionClaims?.metadata?.role)
     ? sessionClaims.metadata.role
-    : null
+    : null;
   if (role !== 'admin') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const upstream = await fetch(`${API_URL}/v1/admin/crawl`, {
@@ -447,10 +455,10 @@ export async function POST() {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-  })
+  });
 
-  const body = await upstream.json()
-  return NextResponse.json(body, { status: upstream.status })
+  const body = await upstream.json();
+  return NextResponse.json(body, { status: upstream.status });
 }
 ```
 
@@ -488,11 +496,11 @@ In `apps/web/src/app/(protected)/admin/crawl/crawl-stats.ts`, add:
 export function formatLlmCostHint(
   runs: { llmCostUsd?: number | null }[],
 ): string {
-  const llmRuns = runs.filter((run) => (run.llmCostUsd ?? 0) > 0)
-  if (llmRuns.length === 0) return ''
-  const total = llmRuns.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0)
-  const avg = total / llmRuns.length
-  return `${llmRuns.length} LLM run${llmRuns.length > 1 ? 's' : ''} · $${avg.toFixed(2)} avg`
+  const llmRuns = runs.filter((run) => (run.llmCostUsd ?? 0) > 0);
+  if (llmRuns.length === 0) return '';
+  const total = llmRuns.reduce((sum, run) => sum + (run.llmCostUsd ?? 0), 0);
+  const avg = total / llmRuns.length;
+  return `${llmRuns.length} LLM run${llmRuns.length > 1 ? 's' : ''} · $${avg.toFixed(2)} avg`;
 }
 
 /**
@@ -500,9 +508,9 @@ export function formatLlmCostHint(
  * e.g. 0.003 → "$0.003" instead of "$0.00"
  */
 export function formatCostValue(usd: number): string {
-  if (usd === 0) return '$0.00'
-  if (usd < 0.01) return `$${usd.toFixed(3)}`
-  return `$${usd.toFixed(2)}`
+  if (usd === 0) return '$0.00';
+  if (usd < 0.01) return `$${usd.toFixed(3)}`;
+  return `$${usd.toFixed(2)}`;
 }
 
 /**
@@ -511,14 +519,14 @@ export function formatCostValue(usd: number): string {
 export function formatEventsBreakdown(
   runs: { eventsInserted: number; eventsUpdated: number }[],
 ): string {
-  const newCount = runs.reduce((sum, run) => sum + run.eventsInserted, 0)
-  const updatedCount = runs.reduce((sum, run) => sum + run.eventsUpdated, 0)
+  const newCount = runs.reduce((sum, run) => sum + run.eventsInserted, 0);
+  const updatedCount = runs.reduce((sum, run) => sum + run.eventsUpdated, 0);
   return [
     newCount > 0 ? `${newCount} new` : null,
     updatedCount > 0 ? `${updatedCount} updated` : null,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(' · ');
 }
 ```
 
@@ -531,55 +539,55 @@ import {
   formatLlmCostHint,
   formatCostValue,
   formatEventsBreakdown,
-} from './crawl-stats'
+} from './crawl-stats';
 
 describe('formatLlmCostHint', () => {
   it('returns empty string when no LLM runs', () => {
     expect(formatLlmCostHint([{ llmCostUsd: null }, { llmCostUsd: 0 }])).toBe(
       '',
-    )
-  })
+    );
+  });
 
   it('returns hint with count and avg for LLM runs', () => {
     expect(formatLlmCostHint([{ llmCostUsd: 0.3 }, { llmCostUsd: 0.6 }])).toBe(
       '2 LLM runs · $0.45 avg',
-    )
-  })
-})
+    );
+  });
+});
 
 describe('formatCostValue', () => {
   it('shows $0.00 when cost is exactly zero', () => {
-    expect(formatCostValue(0)).toBe('$0.00')
-  })
+    expect(formatCostValue(0)).toBe('$0.00');
+  });
 
   it('shows 3 decimal places when cost is sub-cent', () => {
-    expect(formatCostValue(0.003)).toBe('$0.003')
-  })
+    expect(formatCostValue(0.003)).toBe('$0.003');
+  });
 
   it('shows 2 decimal places for normal costs', () => {
-    expect(formatCostValue(0.6)).toBe('$0.60')
-  })
-})
+    expect(formatCostValue(0.6)).toBe('$0.60');
+  });
+});
 
 describe('formatEventsBreakdown', () => {
   it('returns empty string when both counts are zero', () => {
     expect(
       formatEventsBreakdown([{ eventsInserted: 0, eventsUpdated: 0 }]),
-    ).toBe('')
-  })
+    ).toBe('');
+  });
 
   it('returns full breakdown when both are non-zero', () => {
     expect(
       formatEventsBreakdown([{ eventsInserted: 11, eventsUpdated: 41 }]),
-    ).toBe('11 new · 41 updated')
-  })
+    ).toBe('11 new · 41 updated');
+  });
 
   it('returns only new when updated is zero', () => {
     expect(
       formatEventsBreakdown([{ eventsInserted: 5, eventsUpdated: 0 }]),
-    ).toBe('5 new')
-  })
-})
+    ).toBe('5 new');
+  });
+});
 ```
 
 - [ ] **Step 3: Run tests to confirm they pass**
@@ -658,31 +666,31 @@ For simplicity: remove the button from `page.tsx`'s header and re-add it inside 
 - [ ] **Step 1: Add Run all state to CrawlSplitView**
 
 ```typescript
-type RunAllState = 'idle' | 'triggering' | 'queued' | 'error'
-const [runAllState, setRunAllState] = useState<RunAllState>('idle')
-const [runAllError, setRunAllError] = useState<string | null>(null)
-const [runAllCount, setRunAllCount] = useState<number>(0)
+type RunAllState = 'idle' | 'triggering' | 'queued' | 'error';
+const [runAllState, setRunAllState] = useState<RunAllState>('idle');
+const [runAllError, setRunAllError] = useState<string | null>(null);
+const [runAllCount, setRunAllCount] = useState<number>(0);
 
 async function handleRunAll() {
-  setRunAllState('triggering')
-  setRunAllError(null)
+  setRunAllState('triggering');
+  setRunAllError(null);
   try {
-    const res = await fetch('/api/admin/crawl', { method: 'POST' })
+    const res = await fetch('/api/admin/crawl', { method: 'POST' });
     if (!res.ok) {
-      const rawBody: unknown = await res.json().catch(() => ({}))
-      throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`))
+      const rawBody: unknown = await res.json().catch(() => ({}));
+      throw new Error(extractErrorMessage(rawBody, `HTTP ${res.status}`));
     }
     const body = (await res.json()) as {
-      success: boolean
-      data: { count: number }
-    }
-    setRunAllCount(body.success ? body.data.count : 0)
-    setRunAllState('queued')
+      success: boolean;
+      data: { count: number };
+    };
+    setRunAllCount(body.success ? body.data.count : 0);
+    setRunAllState('queued');
   } catch (err) {
-    setRunAllState('error')
+    setRunAllState('error');
     setRunAllError(
       err instanceof Error ? err.message : 'Failed to trigger all crawls',
-    )
+    );
   }
 }
 ```

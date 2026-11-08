@@ -132,7 +132,7 @@ Field-level diff (showing exactly which fields changed) is deferred to a future 
 // Event hash field order is fixed — changing it invalidates all stored hashes
 sourceHash = sha256(
   `${title}|${artist}|${date}|${doorsTime ?? ''}|${showTime ?? ''}`,
-)
+);
 ```
 
 ---

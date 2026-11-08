@@ -1,27 +1,27 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, eq, desc, asc, inArray, isNull } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, eq, desc, asc, inArray, isNull } from 'drizzle-orm';
 import {
   db,
   venues,
   crawlRuns,
   crawlTriggers,
   notifications,
-} from '@concert-crawl/db'
-import type { ActiveCrawlAlert } from '@concert-crawl/types'
-import { createLogger } from '@concert-crawl/logger'
-import { getAuthUser } from '../../middleware/auth.js'
-import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js'
-import type { AdminVariables } from './index.js'
+} from '@concert-crawl/db';
+import type { ActiveCrawlAlert } from '@concert-crawl/types';
+import { createLogger } from '@concert-crawl/logger';
+import { getAuthUser } from '../../middleware/auth.js';
+import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
+import type { AdminVariables } from './index.js';
 
-const logger = createLogger('admin:crawl')
+const logger = createLogger('admin:crawl');
 
 const venueIdSchema = z.object({
   venueId: z.string().uuid('venueId must be a UUID'),
-})
-const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
-const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
+});
+const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') });
+const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') });
 
 // Optional trigger body. Both crawl-trigger endpoints historically take no
 // body (the admin UI posts nothing), so we tolerate an empty/absent body and
@@ -30,7 +30,7 @@ const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 // legacy rows whose listings are unchanged (e.g. backfilling supportingArtists).
 const triggerBodySchema = z.object({
   force: z.boolean().optional().default(false),
-})
+});
 
 // Parse force from the request body without requiring one. The admin UI (and
 // the Next.js proxy routes) POST no body — often with a `Content-Type:
@@ -40,29 +40,29 @@ const triggerBodySchema = z.object({
 // — is a caller/proxy bug worth surfacing: we warn (house rule: every catch
 // logs) and still default to false rather than 400-ing the trigger.
 async function parseForce(ctx: {
-  req: { text: () => Promise<string> }
+  req: { text: () => Promise<string> };
 }): Promise<boolean> {
-  const body = (await ctx.req.text()).trim()
-  if (body === '') return false
-  let raw: unknown
+  const body = (await ctx.req.text()).trim();
+  if (body === '') return false;
+  let raw: unknown;
   try {
-    raw = JSON.parse(body)
+    raw = JSON.parse(body);
   } catch (err: unknown) {
     logger.warn(
       { err },
       'crawl trigger: malformed JSON body — defaulting force=false',
-    )
-    return false
+    );
+    return false;
   }
-  const result = triggerBodySchema.safeParse(raw)
+  const result = triggerBodySchema.safeParse(raw);
   if (!result.success) {
     logger.warn(
       { issues: result.error.issues },
       'crawl trigger: body failed schema validation — defaulting force=false',
-    )
-    return false
+    );
+    return false;
   }
-  return result.data.force
+  return result.data.force;
 }
 
 // Subset of notification.metadata shape this route cares about (#804).
@@ -89,7 +89,7 @@ const alertMetadataSchema = z.object({
   severity: z.enum(['went_dark', 'dropped_sharply']).nullish().catch(undefined),
   kind: z.enum(['horizon_shrank', 'pinned_count']).nullish().catch(undefined),
   coverage: z.enum(['no_coverage', 'partial_gap']).nullish().catch(undefined),
-})
+});
 
 // Cap the unread-notification scan. The list endpoint defaults to 10 runs
 // per page; surfacing alerts for those rows never needs more than a few
@@ -101,23 +101,23 @@ const alertMetadataSchema = z.object({
 // end of the scan and make the "Show alerts only" filter look stale.
 // We bump the cap in that mode — the cost is amortized because we'd be
 // reading the rows anyway to satisfy the filter.
-const ACTIVE_ALERT_SCAN_LIMIT_DEFAULT = 500
-const ACTIVE_ALERT_SCAN_LIMIT_FILTERED = 5000
+const ACTIVE_ALERT_SCAN_LIMIT_DEFAULT = 500;
+const ACTIVE_ALERT_SCAN_LIMIT_FILTERED = 5000;
 
 function parseAlertMetadata(
   raw: string | null,
 ): z.infer<typeof alertMetadataSchema> | null {
-  if (!raw) return null
+  if (!raw) return null;
   try {
-    const parsed: unknown = JSON.parse(raw)
-    const result = alertMetadataSchema.safeParse(parsed)
-    return result.success ? result.data : null
+    const parsed: unknown = JSON.parse(raw);
+    const result = alertMetadataSchema.safeParse(parsed);
+    return result.success ? result.data : null;
   } catch {
-    return null
+    return null;
   }
 }
 
-export const crawlAdminRouter = new Hono<AdminVariables>()
+export const crawlAdminRouter = new Hono<AdminVariables>();
 
 // POST /v1/admin/crawl — queue crawl triggers for all active + verified venues
 // that have not blocked us. A blocked venue is re-tried only by a person
@@ -133,14 +133,14 @@ crawlAdminRouter.post('/', async (ctx) => {
         isNull(venues.blockedAt),
         isNull(venues.crawlPausedAt),
       ),
-    )
+    );
 
   if (activeVenues.length === 0) {
-    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202)
+    return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202);
   }
 
-  const force = await parseForce(ctx)
-  const actor = getAuthUser(ctx).userId
+  const force = await parseForce(ctx);
+  const actor = getAuthUser(ctx).userId;
   const inserted = await db
     .insert(crawlTriggers)
     .values(
@@ -150,15 +150,15 @@ crawlAdminRouter.post('/', async (ctx) => {
         force,
       })),
     )
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
 
-  ctx.set('auditAction', 'crawl.trigger_all')
-  ctx.set('auditActorId', actor)
+  ctx.set('auditAction', 'crawl.trigger_all');
+  ctx.set('auditActorId', actor);
 
   // One dispatch: its run drains the rows one by one (up to the triggers
   // workflow's cap and time budget). Runs after the response; a failed
   // dispatch leaves the rows for the next daily run.
-  dispatchCrawlerInBackground()
+  dispatchCrawlerInBackground();
 
   return ctx.json(
     {
@@ -169,89 +169,92 @@ crawlAdminRouter.post('/', async (ctx) => {
       },
     },
     202,
-  )
-})
+  );
+});
 
 // POST /v1/admin/crawl/:venueId — queue a crawl trigger and wake the crawler
 crawlAdminRouter.post(
   '/:venueId',
   zValidator('param', venueIdSchema),
   async (ctx) => {
-    const { venueId } = ctx.req.valid('param')
+    const { venueId } = ctx.req.valid('param');
 
-    const [venue] = await db.select().from(venues).where(eq(venues.id, venueId))
+    const [venue] = await db
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venueId));
 
     if (!venue) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
     if (!venue.active || !venue.verified) {
       return ctx.json(
         { success: false, error: 'Venue must be active and verified to crawl' },
         400,
-      )
+      );
     }
 
-    const force = await parseForce(ctx)
+    const force = await parseForce(ctx);
     const inserted = await db
       .insert(crawlTriggers)
       .values({ venueId, triggeredBy: getAuthUser(ctx).userId, force })
-      .returning()
+      .returning();
 
-    const trigger = inserted[0]
+    const trigger = inserted[0];
     if (!trigger) {
       return ctx.json(
         { success: false, error: 'Failed to create crawl trigger' },
         500,
-      )
+      );
     }
 
-    ctx.set('auditAction', 'crawl.trigger')
-    ctx.set('auditTargetId', venueId)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'crawl.trigger');
+    ctx.set('auditTargetId', venueId);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
 
-    dispatchCrawlerInBackground()
+    dispatchCrawlerInBackground();
 
-    return ctx.json({ success: true, data: { triggerId: trigger.id } }, 202)
+    return ctx.json({ success: true, data: { triggerId: trigger.id } }, 202);
   },
-)
+);
 
 // GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID
 crawlAdminRouter.get(
   '/triggers/:id',
   zValidator('param', triggerIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
     const [trigger] = await db
       .select()
       .from(crawlTriggers)
-      .where(eq(crawlTriggers.id, id))
+      .where(eq(crawlTriggers.id, id));
     if (!trigger) {
-      return ctx.json({ success: false, error: 'Trigger not found' }, 404)
+      return ctx.json({ success: false, error: 'Trigger not found' }, 404);
     }
-    return ctx.json({ success: true, data: trigger })
+    return ctx.json({ success: true, data: trigger });
   },
-)
+);
 
 // GET /v1/admin/crawl/runs/:id — poll a single crawl run by ID
 crawlAdminRouter.get(
   '/runs/:id',
   zValidator('param', crawlRunIdSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     const [crawlRun] = await db
       .select()
       .from(crawlRuns)
-      .where(eq(crawlRuns.id, id))
+      .where(eq(crawlRuns.id, id));
 
     if (!crawlRun) {
-      return ctx.json({ success: false, error: 'Crawl run not found' }, 404)
+      return ctx.json({ success: false, error: 'Crawl run not found' }, 404);
     }
 
-    return ctx.json({ success: true, data: crawlRun })
+    return ctx.json({ success: true, data: crawlRun });
   },
-)
+);
 
 // GET /v1/admin/crawl/runs?venueId=:id&limit=10&hasAlert=true — list crawl
 // runs (optionally filtered by venue and/or to only those with an active
@@ -265,13 +268,13 @@ const listQuerySchema = z.object({
     .union([z.literal('true'), z.literal('false')])
     .optional()
     .transform((value) => value === 'true'),
-})
+});
 
 crawlAdminRouter.get(
   '/runs',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { venueId, limit, hasAlert } = ctx.req.valid('query')
+    const { venueId, limit, hasAlert } = ctx.req.valid('query');
 
     // Scan unread admin_alert notifications first. When hasAlert=true
     // the alert set determines which crawl_runs to return; when
@@ -312,22 +315,22 @@ crawlAdminRouter.get(
         hasAlert
           ? ACTIVE_ALERT_SCAN_LIMIT_FILTERED
           : ACTIVE_ALERT_SCAN_LIMIT_DEFAULT,
-      )
+      );
     // Defensive guard: anything other than a row array (unexpected DB
     // driver state, a test mock that didn't override this path) collapses
     // to "no alerts" rather than throwing and 500-ing the whole list.
-    const candidateAlerts = Array.isArray(rawAlerts) ? rawAlerts : []
+    const candidateAlerts = Array.isArray(rawAlerts) ? rawAlerts : [];
 
     // Pre-build the runId → ActiveCrawlAlert map. We do this before fetching
     // crawl_runs because when hasAlert=true we use this map to scope the
     // crawl_runs query — otherwise `hasAlert=true&limit=10` could return an
     // empty list even when older runs have unread alerts, because they fell
     // outside the first 10 rows by createdAt.
-    const alertsByRunId = new Map<string, ActiveCrawlAlert>()
+    const alertsByRunId = new Map<string, ActiveCrawlAlert>();
     for (const alert of candidateAlerts) {
-      const meta = parseAlertMetadata(alert.metadata)
-      if (!meta?.crawlRunId) continue
-      const category = alert.category as ActiveCrawlAlert['category']
+      const meta = parseAlertMetadata(alert.metadata);
+      if (!meta?.crawlRunId) continue;
+      const category = alert.category as ActiveCrawlAlert['category'];
       // First match wins; multiple unread alerts on the same row would be
       // unusual and the operator's clearing one is enough to retest.
       if (!alertsByRunId.has(meta.crawlRunId)) {
@@ -349,7 +352,7 @@ crawlAdminRouter.get(
             category === 'crawl.url_coverage_gap' && meta.coverage
               ? meta.coverage
               : null,
-        })
+        });
       }
     }
 
@@ -357,17 +360,17 @@ crawlAdminRouter.get(
     // have an unread alert. This makes the "Show alerts only" filter look
     // back beyond the natural top-N window — a venue alerted three days
     // ago is still surfaced even if many newer runs have happened since.
-    const alertedRunIds = Array.from(alertsByRunId.keys())
+    const alertedRunIds = Array.from(alertsByRunId.keys());
     const whereClauses = [
       venueId !== undefined ? eq(crawlRuns.venueId, venueId) : undefined,
       hasAlert ? inArray(crawlRuns.id, alertedRunIds) : undefined,
-    ].filter((clause): clause is NonNullable<typeof clause> => Boolean(clause))
+    ].filter((clause): clause is NonNullable<typeof clause> => Boolean(clause));
 
     // hasAlert=true with no matching ids → short-circuit; the inArray with
     // an empty array would be invalid SQL on some drivers and we already
     // know the answer is "no rows".
     if (hasAlert && alertedRunIds.length === 0) {
-      return ctx.json({ success: true, data: [] })
+      return ctx.json({ success: true, data: [] });
     }
 
     const dbRuns = await db
@@ -391,16 +394,16 @@ crawlAdminRouter.get(
       .leftJoin(venues, eq(crawlRuns.venueId, venues.id))
       .where(whereClauses.length > 0 ? and(...whereClauses) : undefined)
       .orderBy(desc(crawlRuns.createdAt))
-      .limit(limit)
+      .limit(limit);
 
     const data = dbRuns.map((run) => ({
       ...run,
       activeAlert: alertsByRunId.get(run.id) ?? null,
-    }))
+    }));
 
-    return ctx.json({ success: true, data })
+    return ctx.json({ success: true, data });
   },
-)
+);
 
 // GET /v1/admin/crawl/status — all venues with their most recent crawl run
 crawlAdminRouter.get('/status', async (ctx) => {
@@ -420,9 +423,9 @@ crawlAdminRouter.get('/status', async (ctx) => {
       extractionStrategy: venues.extractionStrategy,
     })
     .from(venues)
-    .orderBy(asc(venues.name))
+    .orderBy(asc(venues.name));
 
-  const venueIds = venueList.map((venue) => venue.id)
+  const venueIds = venueList.map((venue) => venue.id);
 
   const latestRuns =
     venueIds.length > 0
@@ -444,14 +447,14 @@ crawlAdminRouter.get('/status', async (ctx) => {
           .from(crawlRuns)
           .where(inArray(crawlRuns.venueId, venueIds))
           .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
-      : []
+      : [];
 
-  const runsByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]))
+  const runsByVenueId = new Map(latestRuns.map((run) => [run.venueId, run]));
 
   const data = venueList.map((venue) => {
-    const lastRun = runsByVenueId.get(venue.id) ?? null
-    return { ...venue, lastRun }
-  })
+    const lastRun = runsByVenueId.get(venue.id) ?? null;
+    return { ...venue, lastRun };
+  });
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});

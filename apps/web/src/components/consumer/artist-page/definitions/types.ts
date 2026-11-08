@@ -1,4 +1,4 @@
-import type { ArtistShow } from '@concert-crawl/types'
+import type { ArtistShow } from '@concert-crawl/types';
 
 /**
  * One rendered row in the upcoming list. `groupShows` collapses a residency
@@ -8,16 +8,16 @@ import type { ArtistShow } from '@concert-crawl/types'
 export type ShowItem =
   | ({ kind: 'one' } & ArtistShow)
   | {
-      kind: 'run'
-      venue: string
-      venueSlug: string
-      city: string | null
-      shows: ArtistShow[]
-    }
+      kind: 'run';
+      venue: string;
+      venueSlug: string;
+      city: string | null;
+      shows: ArtistShow[];
+    };
 
 /** How many shows an item stands for. A run stands for all of its nights. */
 export const showsInItem = (item: ShowItem): number =>
-  item.kind === 'run' ? item.shows.length : 1
+  item.kind === 'run' ? item.shows.length : 1;
 
 /**
  * The first date an item occupies, used for chronological ordering. A run is
@@ -25,4 +25,4 @@ export const showsInItem = (item: ShowItem): number =>
  * `noUncheckedIndexedAccess` — it sorts such an item first and harms nothing.
  */
 export const firstIso = (item: ShowItem): string =>
-  item.kind === 'run' ? (item.shows[0]?.iso ?? '') : item.iso
+  item.kind === 'run' ? (item.shows[0]?.iso ?? '') : item.iso;

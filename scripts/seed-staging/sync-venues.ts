@@ -14,43 +14,43 @@
  * populated map and downstream FK counts become realistic.
  */
 
-import { inArray } from 'drizzle-orm'
-import { venues } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
+import { inArray } from 'drizzle-orm';
+import { venues } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
 
-import type { Database as DrizzleWriteDb } from '@concert-crawl/db'
+import type { Database as DrizzleWriteDb } from '@concert-crawl/db';
 
 // Re-export the staging write-client type so downstream tasks can import it
 // from a single shared location.
-export type { DrizzleWriteDb }
+export type { DrizzleWriteDb };
 
 /**
  * A read-only map from prod venue uuid → staging venue uuid.
  * Exported so Tasks 3–5 can import the type:
  *   import type { IdMap } from './sync-venues.js'
  */
-export type IdMap = ReadonlyMap<string, string>
+export type IdMap = ReadonlyMap<string, string>;
 
 export async function syncVenues(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
 }): Promise<{ scanned: number; processed: number; venueIdMap: IdMap }> {
-  const { prod, staging, dryRun } = deps
+  const { prod, staging, dryRun } = deps;
 
   // 1. Read all venues from prod.
-  const prodRows = await prod.select((db) => db.select().from(venues))
+  const prodRows = await prod.select((db) => db.select().from(venues));
 
-  const scanned = prodRows.length
+  const scanned = prodRows.length;
   // `processed` counts rows we attempted to upsert (or, in dry-run, would attempt).
   // Not the same as rows that actually changed in staging — Drizzle's ON CONFLICT
   // UPDATE fires even when incoming values match stored ones. Naming this
   // `upserted` misleads operators into reading it as a change count.
-  let processed = 0
+  let processed = 0;
 
   for (const row of prodRows) {
     if (!dryRun) {
-      const { id: _prodId, ...rowWithoutId } = row
+      const { id: _prodId, ...rowWithoutId } = row;
       await staging
         .insert(venues)
         .values(rowWithoutId)
@@ -93,36 +93,36 @@ export async function syncVenues(deps: {
             debugCaptureHtml: row.debugCaptureHtml,
             updatedAt: row.updatedAt,
           },
-        })
+        });
     }
-    processed++
+    processed++;
   }
 
   // 2. Re-select staging ids keyed by slug to build the venueIdMap.
   //    This is a read-only SELECT — safe in both commit and dry-run modes.
-  const prodSlugs = prodRows.map((row) => row.slug)
+  const prodSlugs = prodRows.map((row) => row.slug);
   const stagingRows =
     prodSlugs.length > 0
       ? await staging
           .select({ id: venues.id, slug: venues.slug })
           .from(venues)
           .where(inArray(venues.slug, prodSlugs))
-      : []
+      : [];
 
   // Build a slug → staging-id lookup.
-  const slugToStagingId = new Map<string, string>()
+  const slugToStagingId = new Map<string, string>();
   for (const stagingRow of stagingRows) {
-    slugToStagingId.set(stagingRow.slug, stagingRow.id)
+    slugToStagingId.set(stagingRow.slug, stagingRow.id);
   }
 
   // Map prod-uuid → staging-uuid.
-  const venueIdMap = new Map<string, string>()
+  const venueIdMap = new Map<string, string>();
   for (const prodRow of prodRows) {
-    const stagingId = slugToStagingId.get(prodRow.slug)
+    const stagingId = slugToStagingId.get(prodRow.slug);
     if (stagingId !== undefined) {
-      venueIdMap.set(prodRow.id, stagingId)
+      venueIdMap.set(prodRow.id, stagingId);
     }
   }
 
-  return { scanned, processed, venueIdMap }
+  return { scanned, processed, venueIdMap };
 }

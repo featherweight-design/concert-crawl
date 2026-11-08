@@ -27,14 +27,14 @@ The bar is both: **cohesive as a visual system** (all venues feel like siblings)
 
 ## 3. Locked decisions
 
-| # | Decision | Rationale |
-|---|---|---|
-| 1 | **Hybrid template + per-venue signature for v1.** Artist collaboration is on the table (Hugh's stated openness). Bespoke fully-illustrated is v2 (#1128). | Balances the designer-quality bar with production feasibility for ~20–50 venues. Hybrid means the base scales via a repeatable treatment recipe; the per-venue signature carries the artist's touch. |
-| 2 | **Facade / exterior signature** is the recognizability anchor. | Most photo-referenceable (existing venue photos + Google Street View). Most literal on the ticket's "what it looks like" frame. Fallback for venues without a signature facade is a deliberate Design call. |
-| 3 | **Photo base + illustrated overlay** is the v1 technique. Fully illustrated from photo reference is v2 (#1128). | Base scales via the treatment recipe; overlay carries the per-venue signature the artist owns. Directly matches Q1's "template + signature" lock. |
-| 4 | **Theme-independent.** One image per venue works across all 3 themes (Electric / Jade / Light). | Simplest production, cleanest venue identity (Bluebird looks like Bluebird everywhere). Design constrains the palette to read against all 3 theme backgrounds. |
-| 5 | **One source per venue** with safe-zone composition + per-venue focal-point coordinate. | Downstream surfaces use `object-position` set to the focal point to crop to any aspect ratio without cutting the signature detail. One artist-produced piece per venue; aspect-ratio problem solved at the code layer. |
-| 6 | **System pattern + venue mark** for the fallback (venues without a bespoke image yet). | Cohesive with the visual DNA even before the specific art ships. Honest — reads as "placeholder" without feeling broken. No infra dependency. |
+| #   | Decision                                                                                                                                                  | Rationale                                                                                                                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Hybrid template + per-venue signature for v1.** Artist collaboration is on the table (Hugh's stated openness). Bespoke fully-illustrated is v2 (#1128). | Balances the designer-quality bar with production feasibility for ~20–50 venues. Hybrid means the base scales via a repeatable treatment recipe; the per-venue signature carries the artist's touch.                   |
+| 2   | **Facade / exterior signature** is the recognizability anchor.                                                                                            | Most photo-referenceable (existing venue photos + Google Street View). Most literal on the ticket's "what it looks like" frame. Fallback for venues without a signature facade is a deliberate Design call.            |
+| 3   | **Photo base + illustrated overlay** is the v1 technique. Fully illustrated from photo reference is v2 (#1128).                                           | Base scales via the treatment recipe; overlay carries the per-venue signature the artist owns. Directly matches Q1's "template + signature" lock.                                                                      |
+| 4   | **Theme-independent.** One image per venue works across all 3 themes (Electric / Jade / Light).                                                           | Simplest production, cleanest venue identity (Bluebird looks like Bluebird everywhere). Design constrains the palette to read against all 3 theme backgrounds.                                                         |
+| 5   | **One source per venue** with safe-zone composition + per-venue focal-point coordinate.                                                                   | Downstream surfaces use `object-position` set to the focal point to crop to any aspect ratio without cutting the signature detail. One artist-produced piece per venue; aspect-ratio problem solved at the code layer. |
+| 6   | **System pattern + venue mark** for the fallback (venues without a bespoke image yet).                                                                    | Cohesive with the visual DNA even before the specific art ships. Honest — reads as "placeholder" without feeling broken. No infra dependency.                                                                          |
 
 ## 4. What Design will produce
 
@@ -66,18 +66,18 @@ The bar is both: **cohesive as a visual system** (all venues feel like siblings)
 
 ## 6. What's NOT in this brief (out of scope)
 
-| Excluded | Owner / where handled |
-|---|---|
-| Fully illustrated per-venue imagery (photo-reference-only, no photo base) | [#1128](https://github.com/HartiganHM/concert-crawl/issues/1128) — v2 of this ticket. Blocked on v1 shipping + artist relationship. |
-| Interior mood / atmosphere imagery | Not v1 — facade is the anchor per Q2. Could be a future direction. |
-| Iconic-detail-only compositions (marquee close-ups as a systematic approach) | Not v1. If a venue's facade IS the iconic detail, that's fine, but not systematic. |
-| Video / motion | Not v1 — still images only. |
-| Interior room shots / multi-shot galleries | Not this ticket. |
-| User-uploaded venue photos | Out of scope for private beta trust posture. |
-| Multiple aspect-native variants per venue | Rejected in Q5 in favor of one source + focal-point. Possible v2 elevation. |
-| Theme-tinted / theme-variant imagery | Rejected in Q4. |
-| Auto-generated photo-base fallback via Street View ingest | Rejected in Q6 for infra dependency. Possible v2 nicety. |
-| Retiring / redesigning the surrounding surfaces | Venue index / detail hero / event card / share card layouts stay as-is; this ticket only changes what fills the image slot. |
+| Excluded                                                                     | Owner / where handled                                                                                                               |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Fully illustrated per-venue imagery (photo-reference-only, no photo base)    | [#1128](https://github.com/HartiganHM/concert-crawl/issues/1128) — v2 of this ticket. Blocked on v1 shipping + artist relationship. |
+| Interior mood / atmosphere imagery                                           | Not v1 — facade is the anchor per Q2. Could be a future direction.                                                                  |
+| Iconic-detail-only compositions (marquee close-ups as a systematic approach) | Not v1. If a venue's facade IS the iconic detail, that's fine, but not systematic.                                                  |
+| Video / motion                                                               | Not v1 — still images only.                                                                                                         |
+| Interior room shots / multi-shot galleries                                   | Not this ticket.                                                                                                                    |
+| User-uploaded venue photos                                                   | Out of scope for private beta trust posture.                                                                                        |
+| Multiple aspect-native variants per venue                                    | Rejected in Q5 in favor of one source + focal-point. Possible v2 elevation.                                                         |
+| Theme-tinted / theme-variant imagery                                         | Rejected in Q4.                                                                                                                     |
+| Auto-generated photo-base fallback via Street View ingest                    | Rejected in Q6 for infra dependency. Possible v2 nicety.                                                                            |
+| Retiring / redesigning the surrounding surfaces                              | Venue index / detail hero / event card / share card layouts stay as-is; this ticket only changes what fills the image slot.         |
 
 ## 7. Decisions inherited
 
@@ -121,20 +121,20 @@ Track 2 design ticket per [design-pipeline.md](../design-pipeline.md). After Cla
 
 ## 10. Amendment — 2026-07-20 Path A pivot
 
-**Trigger:** Claude Design's initial handoff (`design/design_handoff_venue_imagery/`) landed 🔴 Red. The system-level thinking (riso treatment recipe, safe-zone composition, overlay grammar, theme-independence) was coherent, but the AI-drawn samples of both facade bases and overlay marks read as placeholder-grade rather than shippable-grade. Hugh's read: *"they just feel like cheap illustrations and the illustrations I'm looking for can't be done by AI."* Full verdict rationale: `design/design_handoff_venue_imagery/READINESS.md`.
+**Trigger:** Claude Design's initial handoff (`design/design_handoff_venue_imagery/`) landed 🔴 Red. The system-level thinking (riso treatment recipe, safe-zone composition, overlay grammar, theme-independence) was coherent, but the AI-drawn samples of both facade bases and overlay marks read as placeholder-grade rather than shippable-grade. Hugh's read: _"they just feel like cheap illustrations and the illustrations I'm looking for can't be done by AI."_ Full verdict rationale: `design/design_handoff_venue_imagery/READINESS.md`.
 
 **What changes:**
 
-| Section | Before amendment | After amendment |
-|---|---|---|
-| **Q3 lock** (§3 row 3) | "Photo base + illustrated overlay for v1; fully illustrated is v2 (#1128)." | **"Human-commissioned illustration from photo reference, v1 direct."** The AI-assisted iteration is skipped entirely — no photo-base treatment recipe, no overlay-vocab-as-stand-in step. Illustrator produces the finished per-venue art directly. |
+| Section                         | Before amendment                                                                                                                                                                   | After amendment                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Q3 lock** (§3 row 3)          | "Photo base + illustrated overlay for v1; fully illustrated is v2 (#1128)."                                                                                                        | **"Human-commissioned illustration from photo reference, v1 direct."** The AI-assisted iteration is skipped entirely — no photo-base treatment recipe, no overlay-vocab-as-stand-in step. Illustrator produces the finished per-venue art directly.                                                                                                      |
 | **§4 What Design will produce** | Photo treatment recipe + illustrated overlay language + AI-drawn samples + safe-zone template + fallback pattern + alt text voice + palette envelope + artist collaboration brief. | **Design's role narrows.** No more AI-drawn samples. Design still owns: safe-zone template (Q5 lock), fallback pattern (Q6 lock), alt text voice pattern, palette envelope, and the **artist-brief document** that the commissioning workflow uses to onboard illustrators. Everything else Design would have generated is now the illustrator's output. |
-| **#1128 (v2 follow-up)** | Was scoped as "fully illustrated from photo reference." | **Superseded by this amendment** — the v1 scope now covers what #1128 was going to. #1128 to be closed as-superseded when this amendment merges. |
-| **Path forward** | Design produces handoff → Readiness Review → 🟢 → eng-planning. | **Hugh drives illustrator engagement offline** using `docs/runbooks/commissioning-illustrators.md`. Ticket sits in 🚦 Paused until first illustrator work lands. Then: illustrator's output becomes the handoff → eng-plan wires it in (venue-table fields, asset storage, fallback rendering per Q5 + Q6 unchanged). |
+| **#1128 (v2 follow-up)**        | Was scoped as "fully illustrated from photo reference."                                                                                                                            | **Superseded by this amendment** — the v1 scope now covers what #1128 was going to. #1128 to be closed as-superseded when this amendment merges.                                                                                                                                                                                                         |
+| **Path forward**                | Design produces handoff → Readiness Review → 🟢 → eng-planning.                                                                                                                    | **Hugh drives illustrator engagement offline** using `docs/runbooks/commissioning-illustrators.md`. Ticket sits in 🚦 Paused until first illustrator work lands. Then: illustrator's output becomes the handoff → eng-plan wires it in (venue-table fields, asset storage, fallback rendering per Q5 + Q6 unchanged).                                    |
 
 **What DOESN'T change:**
 
-- **Q1 spirit** — hybrid template + per-venue signature *approach* still holds, but the "template" is now defined by the illustrator's style guide (produced in commission Phase 1), not a code-executed treatment recipe.
+- **Q1 spirit** — hybrid template + per-venue signature _approach_ still holds, but the "template" is now defined by the illustrator's style guide (produced in commission Phase 1), not a code-executed treatment recipe.
 - **Q2 lock** — facade / exterior signature is still the recognizability anchor.
 - **Q4 lock** — theme-independent, one image per venue works across all 3 themes.
 - **Q5 lock** — one source per venue with safe-zone + focal-point coordinate. Illustrator delivers to this spec; eng data model (`image_url`, `focal_x`, `focal_y`) is unchanged.

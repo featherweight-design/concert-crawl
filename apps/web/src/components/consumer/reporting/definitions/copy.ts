@@ -200,4 +200,4 @@ export const REPORTING_COPY = {
     reportedBy: (handle: string) => `@${handle}`,
     reportedAnonymously: 'Anonymous',
   },
-} as const
+} as const;

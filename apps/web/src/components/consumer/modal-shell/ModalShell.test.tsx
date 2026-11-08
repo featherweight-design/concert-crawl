@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ModalShell } from './ModalShell'
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ModalShell } from './ModalShell';
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -18,10 +18,10 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
-const Header = () => <div>Modal Header</div>
+const Header = () => <div>Modal Header</div>;
 
 describe('ModalShell', () => {
   // Triggers sit inside clipping and transformed ancestors — the filter rail
@@ -34,11 +34,11 @@ describe('ModalShell', () => {
           <div>Content</div>
         </ModalShell>
       </div>,
-    )
-    const dialog = screen.getByRole('dialog')
-    expect(container.contains(dialog)).toBe(false)
-    expect(dialog.parentElement).toBe(document.body)
-  })
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(container.contains(dialog)).toBe(false);
+    expect(dialog.parentElement).toBe(document.body);
+  });
 
   it('renders nothing when closed', () => {
     render(
@@ -50,9 +50,9 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
+    );
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
 
   it('renders dialog with header and children when open', () => {
     render(
@@ -64,11 +64,11 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByText('Content')).toBeTruthy()
-    expect(screen.getByText('Modal Header')).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByText('Content')).toBeTruthy();
+    expect(screen.getByText('Modal Header')).toBeTruthy();
+  });
 
   it('applies role and labelledby/describedby overrides, dropping aria-label', () => {
     render(
@@ -83,16 +83,16 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    const dialog = screen.getByRole('alertdialog')
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(dialog.getAttribute('aria-label')).toBeNull()
-    expect(dialog.getAttribute('aria-labelledby')).toBe('headline-id')
-    expect(dialog.getAttribute('aria-describedby')).toBe('body-id')
-  })
+    );
+    const dialog = screen.getByRole('alertdialog');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(dialog.getAttribute('aria-label')).toBeNull();
+    expect(dialog.getAttribute('aria-labelledby')).toBe('headline-id');
+    expect(dialog.getAttribute('aria-describedby')).toBe('body-id');
+  });
 
   it('calls onClose when Escape key is pressed', () => {
-    const onClose = vi.fn()
+    const onClose = vi.fn();
     render(
       <ModalShell
         open={true}
@@ -102,13 +102,13 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
+    );
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('calls onClose when scrim is clicked', () => {
-    const onClose = vi.fn()
+    const onClose = vi.fn();
     render(
       <ModalShell
         open={true}
@@ -118,22 +118,22 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    fireEvent.click(screen.getByTestId('modal-scrim'))
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
+    );
+    fireEvent.click(screen.getByTestId('modal-scrim'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('renders no header band when header is omitted', () => {
     render(
       <ModalShell open={true} onClose={vi.fn()} ariaLabel="Test">
         <div>Content</div>
       </ModalShell>,
-    )
-    const dialog = screen.getByRole('dialog')
+    );
+    const dialog = screen.getByRole('dialog');
     // Only the content wrapper — no empty header container above it.
-    expect(dialog.children).toHaveLength(1)
-    expect(screen.getByText('Content')).toBeTruthy()
-  })
+    expect(dialog.children).toHaveLength(1);
+    expect(screen.getByText('Content')).toBeTruthy();
+  });
 
   it('renders footer when provided', () => {
     render(
@@ -146,9 +146,9 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy();
+  });
 
   it('renders no footer section when footer prop is omitted', () => {
     render(
@@ -160,10 +160,10 @@ describe('ModalShell', () => {
       >
         <div>Content</div>
       </ModalShell>,
-    )
-    expect(screen.queryByRole('button')).toBeNull()
-  })
-})
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+});
 
 // `aria-modal` tells a screen reader the rest of the page is inert; it does
 // nothing to the keyboard, so Tab used to walk straight out behind the scrim.
@@ -173,43 +173,43 @@ describe('ModalShell focus containment', () => {
       <button>First</button>
       <button>Last</button>
     </ModalShell>
-  )
+  );
 
   it('moves focus to the dialog rather than leaving it on the trigger', () => {
-    render(<TwoControls />)
-    expect(document.activeElement).toBe(screen.getByRole('dialog'))
-  })
+    render(<TwoControls />);
+    expect(document.activeElement).toBe(screen.getByRole('dialog'));
+  });
 
   it('wraps Tab from the last control back to the first', () => {
-    render(<TwoControls />)
-    screen.getByRole('button', { name: 'Last' }).focus()
-    fireEvent.keyDown(document, { key: 'Tab' })
+    render(<TwoControls />);
+    screen.getByRole('button', { name: 'Last' }).focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: 'First' }),
-    )
-  })
+    );
+  });
 
   it('wraps Shift+Tab from the first control to the last', () => {
-    render(<TwoControls />)
-    screen.getByRole('button', { name: 'First' }).focus()
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    render(<TwoControls />);
+    screen.getByRole('button', { name: 'First' }).focus();
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: 'Last' }),
-    )
-  })
+    );
+  });
 
   it('wraps Shift+Tab off the dialog itself to the last control', () => {
-    render(<TwoControls />)
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    render(<TwoControls />);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: 'Last' }),
-    )
-  })
+    );
+  });
 
   it('hides the scrim from assistive tech and from the tab order', () => {
-    render(<TwoControls />)
-    const scrim = screen.getByTestId('modal-scrim')
-    expect(scrim.getAttribute('aria-hidden')).toBe('true')
-    expect(scrim.tabIndex).toBe(-1)
-  })
-})
+    render(<TwoControls />);
+    const scrim = screen.getByTestId('modal-scrim');
+    expect(scrim.getAttribute('aria-hidden')).toBe('true');
+    expect(scrim.tabIndex).toBe(-1);
+  });
+});

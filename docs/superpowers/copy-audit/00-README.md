@@ -11,15 +11,15 @@ Related: #1278.
 
 ## Slices
 
-| # | Report | Surface | Strings |
-|---|---|---|---|
-| 01 | [`01-consumer-core.md`](01-consumer-core.md) | `consumer/copy.ts`, `lib/copy.ts` | ~700 |
-| 02 | [`02-monetization-artist.md`](02-monetization-artist.md) | tier-picker, going, spotify, artist-page | ~397 |
-| 03 | [`03-notifications-pwa.md`](03-notifications-pwa.md) | notifications, lifecycle-nudges, reporting, back-chip, PWA, onboarding | 243 |
-| 04 | [`04-settings-auth-brand.md`](04-settings-auth-brand.md) | settings/plan, plan/manage, settings/notifications, auth/code, app shell, landing poster | ~219 |
-| 05 | [`05-emails.md`](05-emails.md) | all 16 transactional email templates (20 rendered variants) | 118 |
-| 06 | [`06-releases-push-jsx.md`](06-releases-push-jsx.md) | `releases.ts`, push, Spotify fan-out, hardcoded-JSX sweep | 15 + sweep |
-| 07 | [`07-history.md`](07-history.md) | concert history | 36 |
+| #   | Report                                                   | Surface                                                                                  | Strings    |
+| --- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------- |
+| 01  | [`01-consumer-core.md`](01-consumer-core.md)             | `consumer/copy.ts`, `lib/copy.ts`                                                        | ~700       |
+| 02  | [`02-monetization-artist.md`](02-monetization-artist.md) | tier-picker, going, spotify, artist-page                                                 | ~397       |
+| 03  | [`03-notifications-pwa.md`](03-notifications-pwa.md)     | notifications, lifecycle-nudges, reporting, back-chip, PWA, onboarding                   | 243        |
+| 04  | [`04-settings-auth-brand.md`](04-settings-auth-brand.md) | settings/plan, plan/manage, settings/notifications, auth/code, app shell, landing poster | ~219       |
+| 05  | [`05-emails.md`](05-emails.md)                           | all 16 transactional email templates (20 rendered variants)                              | 118        |
+| 06  | [`06-releases-push-jsx.md`](06-releases-push-jsx.md)     | `releases.ts`, push, Spotify fan-out, hardcoded-JSX sweep                                | 15 + sweep |
+| 07  | [`07-history.md`](07-history.md)                         | concert history                                                                          | 36         |
 
 **~1,728 customer-facing strings enumerated.** Complete, not sampled.
 
@@ -31,16 +31,16 @@ CLAUDE.md exempts it from the consumer design pipeline. If we ever want an admin
 
 ## Combined verdict tally
 
-| Verdict | Count | Meaning |
-|---|---|---|
-| **KEEP** | ~1,536 | Earns its place. 89% of everything enumerated. |
-| **TIGHTEN** | 128 | Right idea, too many words or a banned character. |
-| **CUT** | 35 | Delete. The screen still explains itself. |
-| **RENAME** | 19 | Vocabulary violation (rule 10). |
-| **TOOLTIP** | 6 | Useful but hideable. Parked until the tooltip designs land. |
-| **STALE** | 1 | Accurate when written; the product shipped past it. |
-| **DEAD** | 1 | No reachable render site. |
-| **DEFECT** | 1 | Words are right, plumbing is wrong. |
+| Verdict     | Count  | Meaning                                                     |
+| ----------- | ------ | ----------------------------------------------------------- |
+| **KEEP**    | ~1,536 | Earns its place. 89% of everything enumerated.              |
+| **TIGHTEN** | 128    | Right idea, too many words or a banned character.           |
+| **CUT**     | 35     | Delete. The screen still explains itself.                   |
+| **RENAME**  | 19     | Vocabulary violation (rule 10).                             |
+| **TOOLTIP** | 6      | Useful but hideable. Parked until the tooltip designs land. |
+| **STALE**   | 1      | Accurate when written; the product shipped past it.         |
+| **DEAD**    | 1      | No reachable render site.                                   |
+| **DEFECT**  | 1      | Words are right, plumbing is wrong.                         |
 
 **191 findings.** Of those, roughly **half are mechanical** (em-dash removal, terminal punctuation, a
 banned synonym) and half are editorial judgment calls. The mechanical half can ship as one low-risk PR;
@@ -56,14 +56,14 @@ The 89% KEEP rate is the headline. This codebase is not over-written. The proble
 
 **~399 em-dash characters in customer-facing copy** (excluding admin's 117):
 
-| Where | Count | Verdict |
-|---|---|---|
-| `releases.ts` | 72 chars / 66 lines | **Frozen record. Do not touch.** House style applies to new entries only. |
-| `consumer/copy.ts` | 89 | In scope |
-| Email templates | 49 lines / 13 files | In scope |
-| `settings/plan/copy.ts` | 37 | 12 are the `——` punchlines, locked by a design table |
-| tier-picker / spotify | 30 each | In scope, several locked |
-| Everything else | ~93 | In scope |
+| Where                   | Count               | Verdict                                                                   |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------- |
+| `releases.ts`           | 72 chars / 66 lines | **Frozen record. Do not touch.** House style applies to new entries only. |
+| `consumer/copy.ts`      | 89                  | In scope                                                                  |
+| Email templates         | 49 lines / 13 files | In scope                                                                  |
+| `settings/plan/copy.ts` | 37                  | 12 are the `——` punchlines, locked by a design table                      |
+| tier-picker / spotify   | 30 each             | In scope, several locked                                                  |
+| Everything else         | ~93                 | In scope                                                                  |
 
 Rule 4 exempts code comments, JSDoc, tests, specs, plans, and PR bodies. It also forbids a repo-wide
 sweep PR: untouched neighbours stay untouched. So this is not one commit, it is a per-surface job that
@@ -78,7 +78,7 @@ Obligation-class copy (`CHANGES_DISCLOSURE_COPY`, the cancel takeover subhead) a
 #780 design table**, so fixing them in code alone means they recur the next time a handoff regenerates.
 This needs an upstream fix in the design table, not a code edit.
 
-`watchingEmptyBody` says *"Add a show to **follow** it"* — follow is the artist verb, never the show verb.
+`watchingEmptyBody` says _"Add a show to **follow** it"_ — follow is the artist verb, never the show verb.
 
 `releases.ts:707` carries the same drift, but it is a frozen record and stays.
 
@@ -102,18 +102,18 @@ Every row was re-verified against `origin/main` before filing, which changed two
 `welcome-paid` casing row turned out to be a **non-defect**, and `renderTextShell` affects five
 templates rather than four. The audit slices still carry the original, pre-verification wording.
 
-| Finding | Where | Issue | Severity |
-|---|---|---|---|
-| `renderTextShell` takes no `note` param. It is used by five templates; four of them lose a `footerRow` note in plain text (`spotify-digest` compensates by passing the note through its own body) | emails | [#1386](https://github.com/HartiganHM/concert-crawl/issues/1386) | high |
-| `history.locked.body` promises "a calendar feed you can subscribe to"; the API ships a point-in-time `.ics` download | history | [#1388](https://github.com/HartiganHM/concert-crawl/issues/1388) | high |
-| `MANAGE_SHEET_COPY.subtitle` advertises "pause it"; `ManageSheet.tsx` offers no pause | settings | [#1389](https://github.com/HartiganHM/concert-crawl/issues/1389) | high, **needs a design-table call** |
-| `EvidenceForm` says "3 confirms", a hardcoded footer ~400px below says "Live after 2 fan confirms" | reporting | [#1390](https://github.com/HartiganHM/concert-crawl/issues/1390) | medium |
-| `watchingEmptyBody` calls price alerts "Soon" while `WatchZone.tsx:51` renders them as a live promise | consumer | [#1391](https://github.com/HartiganHM/concert-crawl/issues/1391) | medium |
-| Onboarding's "Not yet" list still advertises Notifications and Artist following as missing | onboarding | [#1393](https://github.com/HartiganHM/concert-crawl/issues/1393) | medium |
-| HTML / plain-text drift: paraphrased digest, reordered receipt rows, duplicated price promise | emails | [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394) | medium |
-| `PassportTeaser` renders the `—` genre placeholder that `HistoryHeader` deliberately hides | history | [#1395](https://github.com/HartiganHM/concert-crawl/issues/1395) | low-medium |
-| `feedback.modal.statusRail.success*` unreachable, plus a fabricated `ERR · 503` on every failure | consumer | [#1396](https://github.com/HartiganHM/concert-crawl/issues/1396) | low |
-| `detailEmpty` is unreachable (rail never mounts at count 0) | history | [#1397](https://github.com/HartiganHM/concert-crawl/issues/1397) | low |
+| Finding                                                                                                                                                                                           | Where      | Issue                                                            | Severity                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------- | ----------------------------------- |
+| `renderTextShell` takes no `note` param. It is used by five templates; four of them lose a `footerRow` note in plain text (`spotify-digest` compensates by passing the note through its own body) | emails     | [#1386](https://github.com/HartiganHM/concert-crawl/issues/1386) | high                                |
+| `history.locked.body` promises "a calendar feed you can subscribe to"; the API ships a point-in-time `.ics` download                                                                              | history    | [#1388](https://github.com/HartiganHM/concert-crawl/issues/1388) | high                                |
+| `MANAGE_SHEET_COPY.subtitle` advertises "pause it"; `ManageSheet.tsx` offers no pause                                                                                                             | settings   | [#1389](https://github.com/HartiganHM/concert-crawl/issues/1389) | high, **needs a design-table call** |
+| `EvidenceForm` says "3 confirms", a hardcoded footer ~400px below says "Live after 2 fan confirms"                                                                                                | reporting  | [#1390](https://github.com/HartiganHM/concert-crawl/issues/1390) | medium                              |
+| `watchingEmptyBody` calls price alerts "Soon" while `WatchZone.tsx:51` renders them as a live promise                                                                                             | consumer   | [#1391](https://github.com/HartiganHM/concert-crawl/issues/1391) | medium                              |
+| Onboarding's "Not yet" list still advertises Notifications and Artist following as missing                                                                                                        | onboarding | [#1393](https://github.com/HartiganHM/concert-crawl/issues/1393) | medium                              |
+| HTML / plain-text drift: paraphrased digest, reordered receipt rows, duplicated price promise                                                                                                     | emails     | [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394) | medium                              |
+| `PassportTeaser` renders the `—` genre placeholder that `HistoryHeader` deliberately hides                                                                                                        | history    | [#1395](https://github.com/HartiganHM/concert-crawl/issues/1395) | low-medium                          |
+| `feedback.modal.statusRail.success*` unreachable, plus a fabricated `ERR · 503` on every failure                                                                                                  | consumer   | [#1396](https://github.com/HartiganHM/concert-crawl/issues/1396) | low                                 |
+| `detailEmpty` is unreachable (rail never mounts at count 0)                                                                                                                                       | history    | [#1397](https://github.com/HartiganHM/concert-crawl/issues/1397) | low                                 |
 
 #### Withdrawn: `welcome-paid.ts` eyebrow casing
 
@@ -133,12 +133,12 @@ The email slice flagged 11 HTML/plain-text disagreements. Only four are real, tr
 **124 actionable customer-facing strings live inline in `.tsx` instead of a `definitions/copy.ts`**, against
 the CLAUDE.md rule. Not a copy-quality list; a convention list.
 
-| Area | Count |
-|---|---|
-| `components/settings/*` | 45 |
-| `app/legal/*` (terms 21, privacy 13, beta 10) | 44 |
-| `components/consumer/*` non-hero | 21 |
-| Everything else | 14 |
+| Area                                          | Count |
+| --------------------------------------------- | ----- |
+| `components/settings/*`                       | 45    |
+| `app/legal/*` (terms 21, privacy 13, beta 10) | 44    |
+| `components/consumer/*` non-hero              | 21    |
+| Everything else                               | 14    |
 
 A further 45 in release-note hero art are Data class (fictional ticket-stub artwork) and are **not** violations.
 

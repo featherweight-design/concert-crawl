@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import {
   chooseLevel,
   shortenDate,
   type WhenWhereWidths,
   type WhenWhereLevel,
-} from './lib/when-where'
-import { whenWhereUnits, type RowSurface } from './definitions/surfaces'
-import { EVENT_ROW_COPY } from './definitions/copy'
+} from './lib/when-where';
+import { whenWhereUnits, type RowSurface } from './definitions/surfaces';
+import { EVENT_ROW_COPY } from './definitions/copy';
 
-const SEPARATOR = EVENT_ROW_COPY.glyphs.separator
-const GAP = 5
+const SEPARATOR = EVENT_ROW_COPY.glyphs.separator;
+const GAP = 5;
 
 // The measured span sits outside the rendered line, so it inherits none of the
 // line's typography. Every property that changes a glyph's advance width has to
@@ -23,21 +23,21 @@ const typeAt = (narrow: boolean) =>
     fontFamily: 'var(--font-mono)',
     fontSize: narrow ? 11 : 11.5,
     letterSpacing: '0.02em',
-  }) as const
+  }) as const;
 
 interface WhenWhereProps {
-  surface: RowSurface
-  dateLabel: string
-  timeLabel: string | null
-  venueName: string
-  venueSlug: string
-  narrow: boolean
+  surface: RowSurface;
+  dateLabel: string;
+  timeLabel: string | null;
+  venueName: string;
+  venueSlug: string;
+  narrow: boolean;
   /**
    * The one strike a cancelled or postponed row carries. It lands on the date
    * and the time only, because they are what stopped being true. The venue
    * still exists, and striking a linked place name reads as a broken link.
    */
-  struck?: boolean
+  struck?: boolean;
 }
 
 // A decoration rather than a colour swap, so the strike never borrows
@@ -49,7 +49,7 @@ const STRIKE = {
   textDecoration: 'line-through',
   textDecorationThickness: 1,
   opacity: 0.8,
-} as const
+} as const;
 
 /**
  * Line 3. The units it renders come from the surface (Rule 1); the level it
@@ -69,15 +69,15 @@ export const WhenWhere = ({
   narrow,
   struck = false,
 }: WhenWhereProps) => {
-  const TYPE = typeAt(narrow)
-  const boxRef = useRef<HTMLParagraphElement>(null)
-  const measureRef = useRef<HTMLSpanElement>(null)
-  const [level, setLevel] = useState<WhenWhereLevel>(0)
+  const TYPE = typeAt(narrow);
+  const boxRef = useRef<HTMLParagraphElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [level, setLevel] = useState<WhenWhereLevel>(0);
 
-  const rendered = whenWhereUnits(surface)
-  const showsDateUnit = rendered.includes('date')
-  const showsTimeUnit = rendered.includes('time') && timeLabel !== null
-  const showsVenueUnit = rendered.includes('venue')
+  const rendered = whenWhereUnits(surface);
+  const showsDateUnit = rendered.includes('date');
+  const showsTimeUnit = rendered.includes('time') && timeLabel !== null;
+  const showsVenueUnit = rendered.includes('venue');
   // Memoised so the measure effect can depend on the unit set itself rather
   // than on three loose booleans it has to keep in sync by hand.
   const units = useMemo(
@@ -87,49 +87,49 @@ export const WhenWhere = ({
       showsVenue: showsVenueUnit,
     }),
     [showsDateUnit, showsTimeUnit, showsVenueUnit],
-  )
-  const shortDate = shortenDate(dateLabel)
+  );
+  const shortDate = shortenDate(dateLabel);
 
   useEffect(() => {
-    const box = boxRef.current
-    const measure = measureRef.current
-    if (!box || !measure) return
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure) return;
 
     const remeasure = () => {
       const [full, short, time, separator] = Array.from(measure.children).map(
         (child) => child.getBoundingClientRect().width,
-      )
+      );
       const widths: WhenWhereWidths = {
         fullDate: full ?? 0,
         shortDate: short ?? 0,
         time: time ?? 0,
         // The separator unit is the glyph plus the flex gap on each side of it.
         separator: (separator ?? 0) + GAP * 2,
-      }
-      setLevel(chooseLevel(widths, box.getBoundingClientRect().width, units))
-    }
+      };
+      setLevel(chooseLevel(widths, box.getBoundingClientRect().width, units));
+    };
 
-    remeasure()
+    remeasure();
     // The first pass is what the row actually needs; live remeasurement is an
     // enhancement, so a runtime without ResizeObserver renders rather than
     // throws.
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(remeasure)
-    observer.observe(box)
-    return () => observer.disconnect()
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(box);
+    return () => observer.disconnect();
     // The measured strings, the unit set and the type size are the only inputs
     // to the level. The venue name is not among them: it is the one unit
     // allowed to ellipsis, so its width never moves the ladder.
-  }, [dateLabel, timeLabel, units, narrow])
+  }, [dateLabel, timeLabel, units, narrow]);
 
-  const showsVenue = showsVenueUnit && level < 2
-  const showsTime = showsTimeUnit && level < 3
-  const dateText = level >= 1 ? shortDate : dateLabel
+  const showsVenue = showsVenueUnit && level < 2;
+  const showsTime = showsTimeUnit && level < 3;
+  const dateText = level >= 1 ? shortDate : dateLabel;
 
   // Each part carries its own stable key: the list shrinks and grows as the
   // level changes, so an index key would let React reuse the venue's node for
   // the time.
-  const parts: { key: string; node: React.ReactNode; struck: boolean }[] = []
+  const parts: { key: string; node: React.ReactNode; struck: boolean }[] = [];
   if (showsDateUnit) {
     // Date and time never shrink; the venue is the only unit allowed to
     // ellipsis, because losing the date is the bug this system exists to fix.
@@ -141,7 +141,7 @@ export const WhenWhere = ({
         </span>
       ),
       struck,
-    })
+    });
   }
   if (showsTime) {
     parts.push({
@@ -152,7 +152,7 @@ export const WhenWhere = ({
         </span>
       ),
       struck,
-    })
+    });
   }
   if (showsVenue) {
     parts.push({
@@ -167,7 +167,7 @@ export const WhenWhere = ({
           {venueName}
         </Link>
       ),
-    })
+    });
   }
 
   const line = (
@@ -209,7 +209,7 @@ export const WhenWhere = ({
         </React.Fragment>
       ))}
     </p>
-  )
+  );
 
   return (
     <>
@@ -251,5 +251,5 @@ export const WhenWhere = ({
         </span>
       </span>
     </>
-  )
-}
+  );
+};

@@ -100,7 +100,7 @@ waitlistEntries = pgTable('waitlist_entries', {
   email: varchar({ length: 255 }).notNull().unique(),
   ip: varchar({ length: 45 }),
   createdAt: timestamp().notNull().defaultNow(),
-})
+});
 ```
 
 ### API endpoint

@@ -1,21 +1,21 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { db, giftedComps, inviteCodes } from '@concert-crawl/db'
-import { isGiftLive } from '@concert-crawl/entitlements'
-import { and, eq, gt, isNull, or } from 'drizzle-orm'
-import { apiLogger } from '../../lib/logger.js'
-import { clerkAuth, requireAuth, getAuthUser } from '../../middleware/auth.js'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { db, giftedComps, inviteCodes } from '@concert-crawl/db';
+import { isGiftLive } from '@concert-crawl/entitlements';
+import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { apiLogger } from '../../lib/logger.js';
+import { clerkAuth, requireAuth, getAuthUser } from '../../middleware/auth.js';
 
 const redeemSchema = z.object({
   code: z.string().regex(/^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/),
-})
+});
 
 // `gifted_comps.grantedBy` is an admin Clerk ID everywhere else — an audit
 // trail for who gave what. A code redemption has no admin behind it, so it
 // records the funnel instead. Nothing surfaces this to a reader: the gift
 // emails deliberately do not name a granter (billing-daily.ts, #910).
-const BETA_GRANTED_BY = 'system:invite-code'
+const BETA_GRANTED_BY = 'system:invite-code';
 
 /**
  * Premium for the beta cohort, granted when the code is claimed.
@@ -54,7 +54,7 @@ const grantBetaComp = async (
       expiresAt: null,
       redeemedAt: now,
     })
-    .onConflictDoNothing({ target: giftedComps.userId })
+    .onConflictDoNothing({ target: giftedComps.userId });
 
   // Read back rather than assume the insert landed. `onConflictDoNothing`
   // returns nothing either way, and the row already there may be REVOKED — in
@@ -67,9 +67,9 @@ const grantBetaComp = async (
     })
     .from(giftedComps)
     .where(eq(giftedComps.userId, userId))
-    .limit(1)
-  return isGiftLive(comp ?? null, now)
-}
+    .limit(1);
+  return isGiftLive(comp ?? null, now);
+};
 
 /**
  * Sets the Clerk entitlement mirror, the JWT-fast path `loadPlanContext` reads
@@ -86,43 +86,43 @@ const grantBetaComp = async (
  * noise rather than a wrong entitlement.
  */
 const mirrorBetaComp = async (userId: string): Promise<void> => {
-  const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+  const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
   if (!clerkSecretKey) {
     apiLogger.warn(
       { userId },
       'redeem-code: CLERK_SECRET_KEY not set — gift mirror skipped',
-    )
-    return
+    );
+    return;
   }
   try {
     // Lazy import for the same reason the revoke path uses one: a redemption
     // that grants nothing new should not pay for the Clerk client.
-    const { createClerkClient } = await import('@clerk/backend')
-    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
+    const { createClerkClient } = await import('@clerk/backend');
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
     await clerkClient.users.updateUserMetadata(userId, {
       publicMetadata: { plan: 'premium_gifted' },
-    })
+    });
   } catch (err) {
     apiLogger.error(
       { err, userId },
       'redeem-code: gift mirror write failed — the comp stands; the mirror is corrected by the next admin gifting flow',
-    )
+    );
   }
-}
+};
 
-export const redeemCodeRouter = new Hono().use(clerkAuth).use(requireAuth)
+export const redeemCodeRouter = new Hono().use(clerkAuth).use(requireAuth);
 
 redeemCodeRouter.post('/', zValidator('json', redeemSchema), async (ctx) => {
-  const { userId } = getAuthUser(ctx)
-  const { code } = ctx.req.valid('json')
+  const { userId } = getAuthUser(ctx);
+  const { code } = ctx.req.valid('json');
 
   const [invite] = await db
     .select()
     .from(inviteCodes)
-    .where(eq(inviteCodes.code, code))
+    .where(eq(inviteCodes.code, code));
 
   if (!invite) {
-    return ctx.json({ success: false, error: 'notfound' }, 404)
+    return ctx.json({ success: false, error: 'notfound' }, 404);
   }
 
   // Idempotent: already redeemed by this user. The grant runs here too, but
@@ -134,23 +134,23 @@ redeemCodeRouter.post('/', zValidator('json', redeemSchema), async (ctx) => {
   // the first successful redemption and cannot be re-minted for a code that
   // already has a `used_by`. Those accounts need the backfill in the PR body.
   if (invite.usedBy === userId) {
-    const live = await grantBetaComp(db, userId, new Date())
-    if (live) await mirrorBetaComp(userId)
-    return ctx.json({ ok: true })
+    const live = await grantBetaComp(db, userId, new Date());
+    if (live) await mirrorBetaComp(userId);
+    return ctx.json({ ok: true });
   }
 
   // Already used by someone else
   if (invite.usedBy) {
-    return ctx.json({ success: false, error: 'used' }, 409)
+    return ctx.json({ success: false, error: 'used' }, 409);
   }
 
   if (invite.revokedAt) {
-    return ctx.json({ success: false, error: 'revoked' }, 410)
+    return ctx.json({ success: false, error: 'revoked' }, 410);
   }
 
-  const now = new Date()
+  const now = new Date();
   if (invite.expiresAt && invite.expiresAt < now) {
-    return ctx.json({ success: false, error: 'expired' }, 410)
+    return ctx.json({ success: false, error: 'expired' }, 410);
   }
 
   // One transaction, because the claim and the grant are one act. Split, a
@@ -174,16 +174,16 @@ redeemCodeRouter.post('/', zValidator('json', redeemSchema), async (ctx) => {
           or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
         ),
       )
-      .returning({ id: inviteCodes.id })
+      .returning({ id: inviteCodes.id });
 
-    if (updated.length === 0) return { claimed: false, live: false }
+    if (updated.length === 0) return { claimed: false, live: false };
 
-    const live = await grantBetaComp(tx, userId, now)
-    return { claimed: true, live }
-  })
+    const live = await grantBetaComp(tx, userId, now);
+    return { claimed: true, live };
+  });
 
   if (!claimed.claimed) {
-    return ctx.json({ success: false, error: 'used' }, 409)
+    return ctx.json({ success: false, error: 'used' }, 409);
   }
 
   // Outside the transaction: Clerk is a third-party write that cannot be
@@ -194,7 +194,7 @@ redeemCodeRouter.post('/', zValidator('json', redeemSchema), async (ctx) => {
   // respects, and mirroring unconditionally would put Clerk back to
   // `premium_gifted` over a row that derives `free` — a disagreement no later
   // read repairs, with the JWT-fast path on the wrong side of it.
-  if (claimed.live) await mirrorBetaComp(userId)
+  if (claimed.live) await mirrorBetaComp(userId);
 
-  return ctx.json({ ok: true })
-})
+  return ctx.json({ ok: true });
+});

@@ -49,30 +49,30 @@
 
 ```ts
 // scripts/seed-staging/prod-readonly-client.test.ts
-import { describe, it, expect } from 'vitest'
-import { openProdReadonly } from './prod-readonly-client.js'
+import { describe, it, expect } from 'vitest';
+import { openProdReadonly } from './prod-readonly-client.js';
 
 describe('openProdReadonly', () => {
   it('throws if the url is empty', () => {
-    expect(() => openProdReadonly('')).toThrow(/NEON_PROD_DIRECT/i)
-  })
+    expect(() => openProdReadonly('')).toThrow(/NEON_PROD_DIRECT/i);
+  });
 
   it('exposes select but not insert/update/delete on the returned surface', async () => {
     const client = openProdReadonly(
       'postgres://user:pw@example/db?sslmode=require',
-    )
+    );
     try {
-      expect(typeof client.select).toBe('function')
-      expect(typeof client.close).toBe('function')
-      expect('insert' in client).toBe(false)
-      expect('update' in client).toBe(false)
-      expect('delete' in client).toBe(false)
+      expect(typeof client.select).toBe('function');
+      expect(typeof client.close).toBe('function');
+      expect('insert' in client).toBe(false);
+      expect('update' in client).toBe(false);
+      expect('delete' in client).toBe(false);
     } finally {
       // Close in finally so a leaked connection doesn't hang Vitest.
-      await client.close()
+      await client.close();
     }
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail.**
@@ -114,8 +114,8 @@ Test the pure logic: given a fixed list of "prod rows" (constructed manually), c
 
 ```ts
 // scripts/seed-staging/sync-venues.test.ts
-import { describe, it, expect, vi } from 'vitest'
-import { syncVenues } from './sync-venues.js'
+import { describe, it, expect, vi } from 'vitest';
+import { syncVenues } from './sync-venues.js';
 
 describe('syncVenues', () => {
   const rows = [
@@ -131,43 +131,43 @@ describe('syncVenues', () => {
       name: 'Bluebird Theater',
       websiteUrl: 'https://…',
     },
-  ]
+  ];
   const prod = {
     select: vi.fn(async (fn) => fn({ select: () => ({ from: () => rows }) })),
     close: vi.fn(),
-  }
+  };
   const stagingFor = (upsertSpy: ReturnType<typeof vi.fn>) => ({
     insert: () => ({
       values: (r: unknown) => ({ onConflictDoUpdate: () => upsertSpy(r) }),
     }),
-  })
+  });
 
   it('upserts one row per prod venue', async () => {
-    const upsertSpy = vi.fn().mockResolvedValue([])
+    const upsertSpy = vi.fn().mockResolvedValue([]);
     const result = await syncVenues({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: false,
-    })
-    expect(upsertSpy).toHaveBeenCalledTimes(2)
-    expect(result.upserted).toBe(2)
-  })
+    });
+    expect(upsertSpy).toHaveBeenCalledTimes(2);
+    expect(result.upserted).toBe(2);
+  });
 
   it('makes no writes when dryRun is true', async () => {
-    const upsertSpy = vi.fn()
+    const upsertSpy = vi.fn();
     const result = await syncVenues({
       prod: prod as any,
       staging: stagingFor(upsertSpy) as any,
       dryRun: true,
-    })
-    expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result.scanned).toBe(2)
-    expect(result.upserted).toBe(0)
+    });
+    expect(upsertSpy).not.toHaveBeenCalled();
+    expect(result.scanned).toBe(2);
+    expect(result.upserted).toBe(0);
     // Dry-run still builds venueIdMap via a read-only SELECT against
     // staging — the size mirrors whatever the mock staging returns.
-    expect(result.venueIdMap).toBeInstanceOf(Map)
-  })
-})
+    expect(result.venueIdMap).toBeInstanceOf(Map);
+  });
+});
 ```
 
 - [ ] **Step 2: Implement `syncVenues`.**
@@ -205,29 +205,29 @@ Test `rollingWindow` (pure): given `now = 2026-07-12T18:00Z`, `fromDate === '202
 
 ```ts
 // scripts/seed-staging/sync-events.test.ts
-import { describe, it, expect, vi } from 'vitest'
-import { rollingWindow } from './sync-events-helpers.js'
-import { syncEvents } from './sync-events.js'
+import { describe, it, expect, vi } from 'vitest';
+import { rollingWindow } from './sync-events-helpers.js';
+import { syncEvents } from './sync-events.js';
 
 describe('rollingWindow', () => {
   it('returns fromDate 30 days before now', () => {
     expect(rollingWindow(new Date('2026-07-12T18:00:00Z'))).toEqual({
       fromDate: '2026-06-12',
-    })
-  })
+    });
+  });
   it('returns the same fromDate for a midnight-UTC input as for the same day', () => {
     expect(rollingWindow(new Date('2026-07-12T00:00:00Z')).fromDate).toBe(
       '2026-06-12',
-    )
-  })
-})
+    );
+  });
+});
 
 describe('syncEvents', () => {
   it('splits upserts by status: upcoming → update, cancelled/postponed → nothing', async () => {
     // …spies for insert(events).values().onConflictDoUpdate() and .onConflictDoNothing()…
     // Assert counts by status.
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 2: Implement `rollingWindow` in the `-helpers.ts` file.**
@@ -296,20 +296,20 @@ git commit -m "feat(seed-staging): sync price retrieval log rows (venue/vendor o
 - [ ] **Step 1: Write failing tests for `parseArgs` and `assertWriteHostNotProd`.**
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   parseArgs,
   assertWriteHostNotProd,
-} from './sync-prod-public-data-helpers.js'
+} from './sync-prod-public-data-helpers.js';
 
 describe('parseArgs', () => {
   it('defaults dryRun to false', () => {
-    expect(parseArgs(['tsx', 'x.ts'])).toEqual({ dryRun: false })
-  })
+    expect(parseArgs(['tsx', 'x.ts'])).toEqual({ dryRun: false });
+  });
   it('flips dryRun to true when --dry-run is passed', () => {
-    expect(parseArgs(['tsx', 'x.ts', '--dry-run'])).toEqual({ dryRun: true })
-  })
-})
+    expect(parseArgs(['tsx', 'x.ts', '--dry-run'])).toEqual({ dryRun: true });
+  });
+});
 
 describe('assertWriteHostNotProd', () => {
   it('throws if write host matches prod host', () => {
@@ -318,17 +318,17 @@ describe('assertWriteHostNotProd', () => {
         'postgres://u:p@ep-prod.us-east-2.aws.neon.tech/db',
         'postgres://u:p@ep-prod.us-east-2.aws.neon.tech/db',
       ),
-    ).toThrow(/refusing to write to prod/i)
-  })
+    ).toThrow(/refusing to write to prod/i);
+  });
   it('passes when hosts differ', () => {
     expect(() =>
       assertWriteHostNotProd(
         'postgres://u:p@ep-prod.us-east-2.aws.neon.tech/db',
         'postgres://u:p@ep-staging.us-east-2.aws.neon.tech/db',
       ),
-    ).not.toThrow()
-  })
-})
+    ).not.toThrow();
+  });
+});
 ```
 
 - [ ] **Step 2: Implement helpers.**
@@ -383,49 +383,49 @@ git commit -m "feat(seed-staging): CLI entry with write-host guard and dry-run"
 - [ ] **Step 1: Write failing tests for `createRng`.**
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { createRng } from './seeded-rng.js'
+import { describe, it, expect } from 'vitest';
+import { createRng } from './seeded-rng.js';
 
 describe('createRng', () => {
   it('produces identical streams from the same seed', () => {
-    const rng1 = createRng(42)
-    const rng2 = createRng(42)
-    const stream1 = Array.from({ length: 100 }, () => rng1.next())
-    const stream2 = Array.from({ length: 100 }, () => rng2.next())
-    expect(stream1).toEqual(stream2)
-  })
+    const rng1 = createRng(42);
+    const rng2 = createRng(42);
+    const stream1 = Array.from({ length: 100 }, () => rng1.next());
+    const stream2 = Array.from({ length: 100 }, () => rng2.next());
+    expect(stream1).toEqual(stream2);
+  });
   it('int is inclusive of both bounds', () => {
-    const rng = createRng(1)
-    const samples = Array.from({ length: 5000 }, () => rng.int(0, 3))
-    expect(new Set(samples)).toEqual(new Set([0, 1, 2, 3]))
-  })
+    const rng = createRng(1);
+    const samples = Array.from({ length: 5000 }, () => rng.int(0, 3));
+    expect(new Set(samples)).toEqual(new Set([0, 1, 2, 3]));
+  });
   it('pick returns an element from the array', () => {
-    const rng = createRng(7)
-    const arr = ['a', 'b', 'c'] as const
-    expect(arr).toContain(rng.pick(arr))
-  })
-})
+    const rng = createRng(7);
+    const arr = ['a', 'b', 'c'] as const;
+    expect(arr).toContain(rng.pick(arr));
+  });
+});
 ```
 
 - [ ] **Step 2: Implement `createRng`.** Mulberry32:
 
 ```ts
 export const createRng = (seed: number) => {
-  let state = seed >>> 0
+  let state = seed >>> 0;
   const next = () => {
-    state |= 0
-    state = (state + 0x6d2b79f5) | 0
-    let t = Math.imul(state ^ (state >>> 15), 1 | state)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
   return {
     next,
     int: (min: number, max: number) =>
       Math.floor(next() * (max - min + 1)) + min,
     pick: <T>(arr: readonly T[]): T => arr[Math.floor(next() * arr.length)]!,
-  }
-}
+  };
+};
 ```
 
 - [ ] **Step 3: Create the fixture-users file.**
@@ -443,11 +443,11 @@ export const FIXTURE_USER_IDS = [
   'user_2fixture_charlie',
   'user_2fixture_delta',
   'user_2fixture_echo',
-] as const
+] as const;
 
-export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
+export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number];
 
-export const FIXTURE_SEED = 202607_12
+export const FIXTURE_SEED = 202607_12;
 ```
 
 - [ ] **Step 4: Verify tests pass.**

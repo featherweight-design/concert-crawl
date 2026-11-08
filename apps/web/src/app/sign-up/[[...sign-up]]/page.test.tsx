@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 
 // Stand-in for Clerk's <SignUp /> — we only care that the page passes
 // `forceRedirectUrl="/auth/complete"` so the invite cookie is consumed
@@ -14,7 +14,7 @@ vi.mock('@clerk/nextjs', () => ({
       data-force-redirect-url={forceRedirectUrl}
     />
   ),
-}))
+}));
 
 const renderPage = async (
   searchParams: Record<string, string | string[] | undefined>,
@@ -23,52 +23,52 @@ const renderPage = async (
   // before the page module resolves `@clerk/nextjs` — matches the
   // convention used by other page-level tests in this repo
   // (e.g. app/page.test.ts, admin/events/[id]/edit/page.test.tsx).
-  const { default: SignUpPage } = await import('./page')
-  render(await SignUpPage({ searchParams: Promise.resolve(searchParams) }))
+  const { default: SignUpPage } = await import('./page');
+  render(await SignUpPage({ searchParams: Promise.resolve(searchParams) }));
   return screen
     .getByTestId('clerk-signup')
-    .getAttribute('data-force-redirect-url')
-}
+    .getAttribute('data-force-redirect-url');
+};
 
 describe('SignUpPage (#1113)', () => {
   it('routes Clerk sign-up through /auth/complete so the invite cookie gets consumed', async () => {
     // Without this prop, Clerk's default post-signup destination is `/`
     // and `/v1/auth/redeem-code` never runs — the invite row stays
     // unclaimed even for successful signups.
-    expect(await renderPage({})).toBe('/auth/complete')
-  })
+    expect(await renderPage({})).toBe('/auth/complete');
+  });
 
   it('forwards a safe redirect_url so the caller keeps its destination', async () => {
     // forceRedirectUrl outranks Clerk's own redirect_url param, so a caller
     // that appends one is dropped unless the page forwards it by hand.
     expect(await renderPage({ redirect_url: '/e/abc' })).toBe(
       '/auth/complete?return=%2Fe%2Fabc',
-    )
-  })
+    );
+  });
 
   it('drops an off-origin redirect_url rather than forwarding it', async () => {
     expect(await renderPage({ redirect_url: 'https://evil.test/x' })).toBe(
       '/auth/complete',
-    )
-  })
+    );
+  });
 
   it('forwards a chosen tier alongside the destination (#1284)', async () => {
     expect(await renderPage({ redirect_url: '/e/abc', tier: 'premium' })).toBe(
       '/auth/complete?return=%2Fe%2Fabc&tier=premium',
-    )
-  })
+    );
+  });
 
   it('forwards a chosen tier with no destination of its own (#1284)', async () => {
     expect(await renderPage({ tier: 'supporter' })).toBe(
       '/auth/complete?tier=supporter',
-    )
-  })
+    );
+  });
 
   it('drops a tier that is not one of ours (#1284)', async () => {
     // The param is visitor-editable, and it decides which card opens on the
     // far side. An unknown value opens nothing rather than a guess.
     expect(await renderPage({ redirect_url: '/e/abc', tier: 'platinum' })).toBe(
       '/auth/complete?return=%2Fe%2Fabc',
-    )
-  })
-})
+    );
+  });
+});

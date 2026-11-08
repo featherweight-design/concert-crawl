@@ -1,147 +1,154 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import type { WatchingShow } from '@concert-crawl/types'
-import { useWatching } from '@/lib/queries/use-watching'
-import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
-import { WatchingRow } from './WatchingRow'
-import { WatchingEmpty } from './WatchingEmpty'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs'
+import { useState, useCallback } from 'react';
+import type { WatchingShow } from '@concert-crawl/types';
+import { useWatching } from '@/lib/queries/use-watching';
+import { useWatchToggle } from '@/lib/queries/use-watch-toggle';
+import { WatchingRow } from './WatchingRow';
+import { WatchingEmpty } from './WatchingEmpty';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
 
-const COPY = CONSUMER_COPY.watching
+const COPY = CONSUMER_COPY.watching;
 
 interface WatchingContentProps {
-  initialShows: WatchingShow[]
+  initialShows: WatchingShow[];
 }
 
 function countChanges(shows: WatchingShow[]): {
-  drops: number
-  spikes: number
-  soldOut: number
+  drops: number;
+  spikes: number;
+  soldOut: number;
 } {
-  let drops = 0
-  let spikes = 0
-  let soldOut = 0
+  let drops = 0;
+  let spikes = 0;
+  let soldOut = 0;
   for (const show of shows) {
     if (show.watchStatus === 'soldout') {
-      soldOut++
+      soldOut++;
     } else if (
       show.savedPrice !== null &&
       show.currentPrice !== null &&
       show.currentPrice - show.savedPrice <= -2
     ) {
-      drops++
+      drops++;
     } else if (
       show.savedPrice !== null &&
       show.currentPrice !== null &&
       show.currentPrice - show.savedPrice >= 2
     ) {
-      spikes++
+      spikes++;
     }
   }
-  return { drops, spikes, soldOut }
+  return { drops, spikes, soldOut };
 }
 
 type DateBucket =
-  'tonight' | 'thisWeek' | 'nextWeek' | { month: string; year: number }
+  'tonight' | 'thisWeek' | 'nextWeek' | { month: string; year: number };
 
 function classifyDate(dateStr: string): DateBucket {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const showDate = new Date(`${dateStr}T00:00:00`)
-  showDate.setHours(0, 0, 0, 0)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const showDate = new Date(`${dateStr}T00:00:00`);
+  showDate.setHours(0, 0, 0, 0);
   const daysUntil = Math.round(
     (showDate.getTime() - today.getTime()) / 86400000,
-  )
-  if (daysUntil === 0) return 'tonight'
-  if (daysUntil < 7) return 'thisWeek'
-  if (daysUntil < 14) return 'nextWeek'
-  const date = new Date(`${dateStr}T00:00:00`)
+  );
+  if (daysUntil === 0) return 'tonight';
+  if (daysUntil < 7) return 'thisWeek';
+  if (daysUntil < 14) return 'nextWeek';
+  const date = new Date(`${dateStr}T00:00:00`);
   return {
     month: date.toLocaleDateString('en-US', { month: 'long' }),
     year: date.getFullYear(),
-  }
+  };
 }
 
 function bucketKey(bucket: DateBucket): string {
-  if (bucket === 'tonight') return 'tonight'
-  if (bucket === 'thisWeek') return 'thisWeek'
-  if (bucket === 'nextWeek') return 'nextWeek'
-  return `${bucket.month}-${bucket.year}`
+  if (bucket === 'tonight') return 'tonight';
+  if (bucket === 'thisWeek') return 'thisWeek';
+  if (bucket === 'nextWeek') return 'nextWeek';
+  return `${bucket.month}-${bucket.year}`;
 }
 
 function bucketLabel(bucket: DateBucket): string {
-  if (bucket === 'tonight') return COPY.watchingContent.bucketTonight
-  if (bucket === 'thisWeek') return COPY.watchingContent.bucketThisWeek
-  if (bucket === 'nextWeek') return COPY.watchingContent.bucketNextWeek
-  return bucket.month
+  if (bucket === 'tonight') return COPY.watchingContent.bucketTonight;
+  if (bucket === 'thisWeek') return COPY.watchingContent.bucketThisWeek;
+  if (bucket === 'nextWeek') return COPY.watchingContent.bucketNextWeek;
+  return bucket.month;
 }
 
 interface GroupedShows {
-  bucket: DateBucket
-  key: string
-  label: string
-  shows: WatchingShow[]
+  bucket: DateBucket;
+  key: string;
+  label: string;
+  shows: WatchingShow[];
 }
 
 function groupShows(shows: WatchingShow[]): GroupedShows[] {
-  const bucketMap = new Map<string, GroupedShows>()
-  const bucketOrder: string[] = []
+  const bucketMap = new Map<string, GroupedShows>();
+  const bucketOrder: string[] = [];
   for (const show of shows) {
-    const bucket = classifyDate(show.date)
-    const key = bucketKey(bucket)
+    const bucket = classifyDate(show.date);
+    const key = bucketKey(bucket);
     if (!bucketMap.has(key)) {
-      bucketMap.set(key, { bucket, key, label: bucketLabel(bucket), shows: [] })
-      bucketOrder.push(key)
+      bucketMap.set(key, {
+        bucket,
+        key,
+        label: bucketLabel(bucket),
+        shows: [],
+      });
+      bucketOrder.push(key);
     }
-    bucketMap.get(key)!.shows.push(show)
+    bucketMap.get(key)!.shows.push(show);
   }
-  return bucketOrder.map((key) => bucketMap.get(key)!)
+  return bucketOrder.map((key) => bucketMap.get(key)!);
 }
 
 export function WatchingContent({ initialShows }: WatchingContentProps) {
-  const { data: cachedShows } = useWatching({ initialData: initialShows })
-  const toggle = useWatchToggle()
-  const shows = cachedShows ?? initialShows
+  const { data: cachedShows } = useWatching({ initialData: initialShows });
+  const toggle = useWatchToggle();
+  const shows = cachedShows ?? initialShows;
 
   const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(
     new Set(),
-  )
-  const displayedShows = shows.filter((sv) => !pendingRemoveIds.has(sv.eventId))
+  );
+  const displayedShows = shows.filter(
+    (sv) => !pendingRemoveIds.has(sv.eventId),
+  );
 
   const handleRemove = useCallback(
     (userEventId: string) => {
-      const show = shows.find((sv) => sv.userEventId === userEventId)
-      if (!show || pendingRemoveIds.has(show.eventId)) return
-      setPendingRemoveIds((prev) => new Set([...prev, show.eventId]))
+      const show = shows.find((sv) => sv.userEventId === userEventId);
+      if (!show || pendingRemoveIds.has(show.eventId)) return;
+      setPendingRemoveIds((prev) => new Set([...prev, show.eventId]));
       toggle.mutate(show.eventId, {
         onSettled: () => {
           setPendingRemoveIds((prev) => {
-            const next = new Set(prev)
-            next.delete(show.eventId)
-            return next
-          })
+            const next = new Set(prev);
+            next.delete(show.eventId);
+            return next;
+          });
         },
-      })
+      });
     },
     [shows, toggle],
-  )
+  );
 
-  const { drops, spikes, soldOut } = countChanges(displayedShows)
-  const groups = groupShows(displayedShows)
+  const { drops, spikes, soldOut } = countChanges(displayedShows);
+  const groups = groupShows(displayedShows);
 
   const changeSummary = () => {
-    const parts: string[] = []
+    const parts: string[] = [];
     if (drops > 0)
-      parts.push(`${drops} ${COPY.watchingContent.priceSummaryDropped}`)
+      parts.push(`${drops} ${COPY.watchingContent.priceSummaryDropped}`);
     if (spikes > 0)
-      parts.push(`${spikes} ${COPY.watchingContent.priceSummaryUp}`)
+      parts.push(`${spikes} ${COPY.watchingContent.priceSummaryUp}`);
     if (soldOut > 0)
-      parts.push(`${soldOut} ${COPY.watchingContent.priceSummarySoldOut}`)
-    if (parts.length === 0) return COPY.watchingContent.priceSummaryHeld
-    return parts.join(' · ')
-  }
+      parts.push(`${soldOut} ${COPY.watchingContent.priceSummarySoldOut}`);
+    if (parts.length === 0) return COPY.watchingContent.priceSummaryHeld;
+    return parts.join(' · ');
+  };
 
   return (
     <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
@@ -241,5 +248,5 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
         </div>
       )}
     </main>
-  )
+  );
 }

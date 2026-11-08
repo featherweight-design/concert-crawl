@@ -1,18 +1,18 @@
-import { EmptyState } from '../empty-state/EmptyState'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { EmptyState } from '../empty-state/EmptyState';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface SearchEmptyStateProps {
-  query: string
-  onCtaClick?: () => void
+  query: string;
+  onCtaClick?: () => void;
 }
 
 export function SearchEmptyState({ query, onCtaClick }: SearchEmptyStateProps) {
-  const trimmedQuery = query.trim()
+  const trimmedQuery = query.trim();
   const title = trimmedQuery
     ? `No results for "${trimmedQuery}".`
-    : copy.searchNoResultsTitle
+    : copy.searchNoResultsTitle;
 
   return (
     <EmptyState
@@ -27,5 +27,5 @@ export function SearchEmptyState({ query, onCtaClick }: SearchEmptyStateProps) {
         ...(onCtaClick ? { onClick: onCtaClick } : {}),
       }}
     />
-  )
+  );
 }

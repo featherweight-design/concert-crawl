@@ -1,17 +1,17 @@
-import { and, eq, isNotNull, lt } from 'drizzle-orm'
-import { db, events, auditLog } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
+import { and, eq, isNotNull, lt } from 'drizzle-orm';
+import { db, events, auditLog } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('stale-event-sweep')
+const logger = createLogger('stale-event-sweep');
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long a row may sit unseen on the venue page before the sweep cancels it.
  * Two weeks is long enough to ride out a run of failed crawls and short enough
  * that the row clears before the venue rebooks the slot.
  */
-export const STALE_EVENT_CANCEL_DAYS = 14
+export const STALE_EVENT_CANCEL_DAYS = 14;
 
 /**
  * `audit_log.actor_id` is a plain text column with no FK to Clerk, so a
@@ -19,12 +19,12 @@ export const STALE_EVENT_CANCEL_DAYS = 14
  * tells the admin Missing tab this was an automatic cancellation rather than a
  * human one.
  */
-export const STALE_SWEEP_ACTOR_ID = 'system:stale-event-sweep'
+export const STALE_SWEEP_ACTOR_ID = 'system:stale-event-sweep';
 
-export const STALE_SWEEP_AUDIT_ACTION = 'event.auto_cancel.stale'
+export const STALE_SWEEP_AUDIT_ACTION = 'event.auto_cancel.stale';
 
 interface SweepResult {
-  cancelled: number
+  cancelled: number;
 }
 
 /**
@@ -40,7 +40,7 @@ interface SweepResult {
 export async function sweepStaleEvents(
   now: Date = new Date(),
 ): Promise<SweepResult> {
-  const cutoff = new Date(now.getTime() - STALE_EVENT_CANCEL_DAYS * DAY_MS)
+  const cutoff = new Date(now.getTime() - STALE_EVENT_CANCEL_DAYS * DAY_MS);
 
   // One transaction so a cancellation can never commit without the audit row
   // that explains it — an unexplained `cancelled` row is indistinguishable from
@@ -56,7 +56,7 @@ export async function sweepStaleEvents(
           lt(events.firstMissingAt, cutoff),
         ),
       )
-      .returning({ id: events.id, firstMissingAt: events.firstMissingAt })
+      .returning({ id: events.id, firstMissingAt: events.firstMissingAt });
 
     if (rows.length > 0) {
       await tx.insert(auditLog).values(
@@ -69,17 +69,17 @@ export async function sweepStaleEvents(
             thresholdDays: STALE_EVENT_CANCEL_DAYS,
           },
         })),
-      )
+      );
     }
 
-    return rows
-  })
+    return rows;
+  });
 
   // Logged even at zero so the nightly run leaves proof it happened.
   logger.info(
     { cancelled: cancelled.length, cutoff: cutoff.toISOString() },
     'Stale event sweep complete',
-  )
+  );
 
-  return { cancelled: cancelled.length }
+  return { cancelled: cancelled.length };
 }

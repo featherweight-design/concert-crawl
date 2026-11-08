@@ -8,7 +8,7 @@
 // This keeps default-deny airtight: a future non-ID route like
 // /v1/events/search or /v1/events/recommended won't accidentally become
 // cacheable just because it's one segment deep.
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
 const PUBLIC_API_PATTERNS: readonly RegExp[] = [
   // Event list + fixed public collections
@@ -23,16 +23,16 @@ const PUBLIC_API_PATTERNS: readonly RegExp[] = [
   // venues router exposes no non-public single-segment subresources).
   /^\/v1\/venues$/,
   /^\/v1\/venues\/[^/]+$/,
-]
+];
 
 export const isPublicCacheableApi = (url: URL): boolean =>
-  PUBLIC_API_PATTERNS.some((pattern) => pattern.test(url.pathname))
+  PUBLIC_API_PATTERNS.some((pattern) => pattern.test(url.pathname));
 
 // The production API's origins. The Render origin was dropped when the Render
 // service was retired (2026-11-07).
 export const PRODUCTION_API_ORIGINS: readonly string[] = [
   'https://api.concertcrawl.app',
-]
+];
 
 // Whether a request goes to the API: the origin this build was configured
 // with, or one of the production API's origins.
@@ -40,7 +40,7 @@ export const isApiOrigin = (
   origin: string,
   configuredOrigin: string,
 ): boolean =>
-  origin === configuredOrigin || PRODUCTION_API_ORIGINS.includes(origin)
+  origin === configuredOrigin || PRODUCTION_API_ORIGINS.includes(origin);
 
 // Documents and RSC payloads get the same default-deny treatment, for a second
 // reason on top of privacy: a cached page is served without the middleware ever
@@ -66,24 +66,24 @@ const ALWAYS_CACHEABLE_PAGES: readonly RegExp[] = [
   /^\/$/,
   /^\/legal(\/.*)?$/,
   /^\/changelog(\/.*)?$/,
-]
+];
 
 const CACHEABLE_PAGES_ONCE_LAUNCHED: readonly RegExp[] = [
   /^\/events(\/.*)?$/,
   /^\/venues(\/.*)?$/,
   /^\/artists(\/.*)?$/,
   /^\/e\/[^/]+$/,
-]
+];
 
 export const isPublicCacheableDocument = (
   url: URL,
   launched: boolean,
 ): boolean => {
-  const { pathname } = url
+  const { pathname } = url;
   if (ALWAYS_CACHEABLE_PAGES.some((pattern) => pattern.test(pathname)))
-    return true
+    return true;
   return (
     launched &&
     CACHEABLE_PAGES_ONCE_LAUNCHED.some((pattern) => pattern.test(pathname))
-  )
-}
+  );
+};

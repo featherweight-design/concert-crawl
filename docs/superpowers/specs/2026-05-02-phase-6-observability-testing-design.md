@@ -93,7 +93,7 @@ Child logger per request: `logger.child({ requestId })` — propagated via Hono 
 `src/instrument.ts` — must be the first import in `src/index.ts` (Node.js `--import` flag in `package.json` dev/start scripts, or top-of-file import since it's CJS-compatible):
 
 ```ts
-import * as Sentry from '@sentry/node'
+import * as Sentry from '@sentry/node';
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -101,16 +101,16 @@ Sentry.init({
   // 10% sample rate — Sentry's built-in tracing handles distributed traces.
   // No separate OTEL SDK needed.
   tracesSampleRate: 0.1,
-})
+});
 ```
 
 Hono error handler in `app.ts`:
 
 ```ts
 app.onError((err, c) => {
-  Sentry.captureException(err, { extra: { requestId: c.get('requestId') } })
-  return c.json({ error: 'Internal server error' }, 500)
-})
+  Sentry.captureException(err, { extra: { requestId: c.get('requestId') } });
+  return c.json({ error: 'Internal server error' }, 500);
+});
 ```
 
 Catch blocks in route handlers: add `Sentry.captureException(err)` before `logger.error(err)`.
@@ -172,7 +172,7 @@ apps/api/
 `vitest.integration.ts`:
 
 ```ts
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
@@ -181,7 +181,7 @@ export default defineConfig({
     testMatch: ['**/*.integration.test.ts'],
     poolOptions: { forks: { singleFork: true } }, // avoid parallel DB conflicts
   },
-})
+});
 ```
 
 `global-setup.ts` runs `drizzle-kit migrate` against `DATABASE_URL_TEST`. If migration fails, suite aborts with a clear message.
@@ -195,7 +195,7 @@ Clerk middleware is mocked at the Hono app level — same `vi.mock('@hono/clerk-
 ```ts
 // test helper
 function makeAuthHeaders(role: Role = 'user') {
-  return { 'x-test-user-id': 'test-user-1', 'x-test-role': role }
+  return { 'x-test-user-id': 'test-user-1', 'x-test-role': role };
 }
 ```
 
@@ -320,7 +320,7 @@ export default defineConfig({
   globalSetup: './src/fixtures/auth.ts',
   retries: 2,
   timeout: 30_000,
-})
+});
 ```
 
 `playwright.smoke.config.ts` (prod smoke):
@@ -332,7 +332,7 @@ export default defineConfig({
   use: { screenshot: 'only-on-failure' },
   retries: 1,
   timeout: 15_000,
-})
+});
 ```
 
 ### E2E Test Scenarios (staging)

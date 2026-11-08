@@ -63,19 +63,19 @@ The existing `GET /v1/admin/events?missing=true` endpoint (line 143-202 of event
 
 ```ts
 type AdminMissingEvent = {
-  id: string
-  title: string
-  artist: string | null
-  date: string // 'YYYY-MM-DD' (event date)
-  showTime: string | null // 'HH:MM' or null
-  doorsTime: string | null
-  status: 'upcoming' | 'cancelled' | 'postponed'
-  lastSeenAt: string | null // ISO timestamp
-  firstMissingAt: string | null // ISO timestamp — always present for ?missing=true rows
-  venueId: string
-  venueName: string | null
-  isSoldOut: boolean
-}
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string; // 'YYYY-MM-DD' (event date)
+  showTime: string | null; // 'HH:MM' or null
+  doorsTime: string | null;
+  status: 'upcoming' | 'cancelled' | 'postponed';
+  lastSeenAt: string | null; // ISO timestamp
+  firstMissingAt: string | null; // ISO timestamp — always present for ?missing=true rows
+  venueId: string;
+  venueName: string | null;
+  isSoldOut: boolean;
+};
 ```
 
 No GET-side backend change is required for PR 2.
@@ -156,19 +156,19 @@ it('PATCH /:id clears firstMissingAt when given firstMissingAt: null', async () 
       verified: true,
       status: 'upcoming',
     })
-    .returning()
-  expect(seeded.firstMissingAt).not.toBeNull()
+    .returning();
+  expect(seeded.firstMissingAt).not.toBeNull();
 
   const res = await testApp.request(`/v1/admin/events/${seeded.id}`, {
     method: 'PATCH',
     headers: adminAuthHeaders(),
     body: JSON.stringify({ firstMissingAt: null }),
-  })
-  expect(res.status).toBe(200)
-  const payload = await res.json()
-  expect(payload.success).toBe(true)
-  expect(payload.data.firstMissingAt).toBeNull()
-})
+  });
+  expect(res.status).toBe(200);
+  const payload = await res.json();
+  expect(payload.success).toBe(true);
+  expect(payload.data.firstMissingAt).toBeNull();
+});
 
 it('PATCH /:id transitions status from upcoming to postponed', async () => {
   const [seeded] = await testDb
@@ -182,17 +182,17 @@ it('PATCH /:id transitions status from upcoming to postponed', async () => {
       verified: true,
       status: 'upcoming',
     })
-    .returning()
+    .returning();
 
   const res = await testApp.request(`/v1/admin/events/${seeded.id}`, {
     method: 'PATCH',
     headers: adminAuthHeaders(),
     body: JSON.stringify({ status: 'postponed' }),
-  })
-  expect(res.status).toBe(200)
-  const payload = await res.json()
-  expect(payload.data.status).toBe('postponed')
-})
+  });
+  expect(res.status).toBe(200);
+  const payload = await res.json();
+  expect(payload.data.status).toBe('postponed');
+});
 
 it('PATCH /:id transitions status to cancelled', async () => {
   const [seeded] = await testDb
@@ -206,17 +206,17 @@ it('PATCH /:id transitions status to cancelled', async () => {
       verified: true,
       status: 'upcoming',
     })
-    .returning()
+    .returning();
 
   const res = await testApp.request(`/v1/admin/events/${seeded.id}`, {
     method: 'PATCH',
     headers: adminAuthHeaders(),
     body: JSON.stringify({ status: 'cancelled' }),
-  })
-  expect(res.status).toBe(200)
-  const payload = await res.json()
-  expect(payload.data.status).toBe('cancelled')
-})
+  });
+  expect(res.status).toBe(200);
+  const payload = await res.json();
+  expect(payload.data.status).toBe('cancelled');
+});
 ```
 
 **Note on test infra:** The integration test file already imports `testDb`, `testApp`, `adminAuthHeaders`, `TEST_VENUE_ID`. Verify by reading the top 50 lines of the file first; if it uses slightly different helper names, adapt the test to match.
@@ -329,46 +329,46 @@ git commit -m "feat(admin): add Missing tab + missing-from-crawl copy strings"
   export const computeMissedSweeps: (
     firstMissingAtIso: string,
     nowIso: string,
-  ) => number
-  export const formatLastSeen: (iso: string | null) => string
+  ) => number;
+  export const formatLastSeen: (iso: string | null) => string;
   ```
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
 // apps/web/src/lib/admin/missing.test.ts
-import { describe, it, expect } from 'vitest'
-import { computeMissedSweeps, formatLastSeen } from './missing'
+import { describe, it, expect } from 'vitest';
+import { computeMissedSweeps, formatLastSeen } from './missing';
 
 describe('computeMissedSweeps', () => {
   it('returns the count of full days between firstMissingAt and now', () => {
     expect(
       computeMissedSweeps('2026-06-12T03:00:00Z', '2026-06-16T03:00:00Z'),
-    ).toBe(4)
-  })
+    ).toBe(4);
+  });
 
   it('floors to at least 1 when the gap is shorter than a day', () => {
     expect(
       computeMissedSweeps('2026-06-16T02:00:00Z', '2026-06-16T05:00:00Z'),
-    ).toBe(1)
-  })
+    ).toBe(1);
+  });
 
   it('never returns 0 or negative even if firstMissingAt is in the future', () => {
     expect(
       computeMissedSweeps('2026-06-20T03:00:00Z', '2026-06-16T03:00:00Z'),
-    ).toBe(1)
-  })
-})
+    ).toBe(1);
+  });
+});
 
 describe('formatLastSeen', () => {
   it('formats an ISO timestamp as MMM D (Mountain Time)', () => {
-    expect(formatLastSeen('2026-06-12T20:00:00Z')).toBe('Jun 12')
-  })
+    expect(formatLastSeen('2026-06-12T20:00:00Z')).toBe('Jun 12');
+  });
 
   it('returns an em-dash when given null', () => {
-    expect(formatLastSeen(null)).toBe('—')
-  })
-})
+    expect(formatLastSeen(null)).toBe('—');
+  });
+});
 ```
 
 - [ ] **Step 2: Run, expect failure**
@@ -380,7 +380,7 @@ Expected: FAIL (module missing).
 
 ```ts
 // apps/web/src/lib/admin/missing.ts
-const MS_PER_DAY = 1000 * 60 * 60 * 24
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 /**
  * Number of daily sweeps an admin should believe the event has been missing.
@@ -391,24 +391,24 @@ export const computeMissedSweeps = (
   firstMissingAtIso: string,
   nowIso: string,
 ): number => {
-  const firstMs = new Date(firstMissingAtIso).getTime()
-  const nowMs = new Date(nowIso).getTime()
-  const days = Math.floor((nowMs - firstMs) / MS_PER_DAY)
-  return Math.max(1, days)
-}
+  const firstMs = new Date(firstMissingAtIso).getTime();
+  const nowMs = new Date(nowIso).getTime();
+  const days = Math.floor((nowMs - firstMs) / MS_PER_DAY);
+  return Math.max(1, days);
+};
 
 /**
  * Last-seen ISO timestamp formatted as e.g. "Jun 12" (Denver-local).
  */
 export const formatLastSeen = (iso: string | null): string => {
-  if (iso === null) return '—'
-  const date = new Date(iso)
+  if (iso === null) return '—';
+  const date = new Date(iso);
   return date.toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 ```
 
 - [ ] **Step 4: Run, verify pass**
@@ -439,9 +439,9 @@ git commit -m "feat(admin): add missing-tab helpers (computeMissedSweeps, format
 
   ```ts
   export interface MissingChipsProps {
-    missedCount: number
+    missedCount: number;
   }
-  export const MissingChips: (props: MissingChipsProps) => JSX.Element
+  export const MissingChips: (props: MissingChipsProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Write the failing test**
@@ -450,29 +450,29 @@ git commit -m "feat(admin): add missing-tab helpers (computeMissedSweeps, format
 // apps/web/src/components/admin/review/missing/MissingChips.test.tsx
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MissingChips } from './MissingChips'
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MissingChips } from './MissingChips';
 
 describe('MissingChips', () => {
   it('renders pluralised missed-sweep label and the cadence label', () => {
-    render(<MissingChips missedCount={3} />)
-    expect(screen.getByText('missed 3 sweeps')).toBeTruthy()
-    expect(screen.getByText('expected daily')).toBeTruthy()
-  })
+    render(<MissingChips missedCount={3} />);
+    expect(screen.getByText('missed 3 sweeps')).toBeTruthy();
+    expect(screen.getByText('expected daily')).toBeTruthy();
+  });
 
   it('uses singular label when missed count is 1', () => {
-    render(<MissingChips missedCount={1} />)
-    expect(screen.getByText('missed 1 sweep')).toBeTruthy()
-  })
+    render(<MissingChips missedCount={1} />);
+    expect(screen.getByText('missed 1 sweep')).toBeTruthy();
+  });
 
   it('escalates the missed chip kind to danger at >= 4', () => {
-    const { container } = render(<MissingChips missedCount={4} />)
+    const { container } = render(<MissingChips missedCount={4} />);
     // The danger-kind StatusBadge sets data-kind="danger" on its root element.
-    const dangerChip = container.querySelector('[data-kind="danger"]')
-    expect(dangerChip).not.toBeNull()
-  })
-})
+    const dangerChip = container.querySelector('[data-kind="danger"]');
+    expect(dangerChip).not.toBeNull();
+  });
+});
 ```
 
 - [ ] **Step 2: Confirm `StatusBadge` exposes `data-kind`**
@@ -486,17 +486,17 @@ Expected: if `StatusBadge` doesn't already render `data-kind`, find an alternati
 
 ```tsx
 // apps/web/src/components/admin/review/missing/MissingChips.tsx
-'use client'
+'use client';
 
-import { StatusBadge } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { StatusBadge } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface MissingChipsProps {
-  missedCount: number
+  missedCount: number;
 }
 
 export const MissingChips = ({ missedCount }: MissingChipsProps) => {
-  const missedKind = missedCount >= 4 ? 'danger' : 'warning'
+  const missedKind = missedCount >= 4 ? 'danger' : 'warning';
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       <StatusBadge kind={missedKind} variant="outline">
@@ -506,8 +506,8 @@ export const MissingChips = ({ missedCount }: MissingChipsProps) => {
         {ADMIN_COPY.review.missing.chipCadence}
       </StatusBadge>
     </div>
-  )
-}
+  );
+};
 ```
 
 (If the existing `StatusBadge` doesn't accept a `mono` prop, omit it. The design source uses `mono` but our primitive may not. Verify with: `grep -n "StatusBadge" apps/web/src/components/admin/primitives/*.tsx | head -5`.)
@@ -540,14 +540,14 @@ git commit -m "feat(admin): add MissingChips primitive (missed-sweep + cadence c
 
   ```ts
   export interface MissingRowMenuProps {
-    eventId: string
-    onMarkPostponed: (id: string) => void
-    onMarkCancelled: (id: string) => void
-    onDismiss: (id: string) => void
-    stacked?: boolean
-    disabled?: boolean
+    eventId: string;
+    onMarkPostponed: (id: string) => void;
+    onMarkCancelled: (id: string) => void;
+    onDismiss: (id: string) => void;
+    stacked?: boolean;
+    disabled?: boolean;
   }
-  export const MissingRowMenu: (props: MissingRowMenuProps) => JSX.Element
+  export const MissingRowMenu: (props: MissingRowMenuProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Write the failing test**
@@ -556,9 +556,9 @@ git commit -m "feat(admin): add MissingChips primitive (missed-sweep + cadence c
 // apps/web/src/components/admin/review/missing/MissingRowMenu.test.tsx
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { MissingRowMenu } from './MissingRowMenu'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MissingRowMenu } from './MissingRowMenu';
 
 describe('MissingRowMenu', () => {
   it('renders three labeled buttons', () => {
@@ -569,16 +569,16 @@ describe('MissingRowMenu', () => {
         onMarkCancelled={() => {}}
         onDismiss={() => {}}
       />,
-    )
-    expect(screen.getByRole('button', { name: /Postponed/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Cancelled/ })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Dismiss/ })).toBeTruthy()
-  })
+    );
+    expect(screen.getByRole('button', { name: /Postponed/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Cancelled/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Dismiss/ })).toBeTruthy();
+  });
 
   it('calls the matching handler with the eventId on click', () => {
-    const onMarkPostponed = vi.fn()
-    const onMarkCancelled = vi.fn()
-    const onDismiss = vi.fn()
+    const onMarkPostponed = vi.fn();
+    const onMarkCancelled = vi.fn();
+    const onDismiss = vi.fn();
     render(
       <MissingRowMenu
         eventId="evt-42"
@@ -586,14 +586,14 @@ describe('MissingRowMenu', () => {
         onMarkCancelled={onMarkCancelled}
         onDismiss={onDismiss}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Postponed/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Cancelled/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }))
-    expect(onMarkPostponed).toHaveBeenCalledWith('evt-42')
-    expect(onMarkCancelled).toHaveBeenCalledWith('evt-42')
-    expect(onDismiss).toHaveBeenCalledWith('evt-42')
-  })
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Postponed/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Cancelled/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }));
+    expect(onMarkPostponed).toHaveBeenCalledWith('evt-42');
+    expect(onMarkCancelled).toHaveBeenCalledWith('evt-42');
+    expect(onDismiss).toHaveBeenCalledWith('evt-42');
+  });
 
   it('disables all buttons when disabled=true', () => {
     render(
@@ -604,14 +604,14 @@ describe('MissingRowMenu', () => {
         onDismiss={() => {}}
         disabled
       />,
-    )
+    );
     expect(
       screen
         .getByRole('button', { name: /Postponed/ })
         .hasAttribute('disabled'),
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run, expect failure**
@@ -631,19 +631,19 @@ Expected: see whether it supports `variant`, `size`, `fullWidth`, `disabled`, an
 
 ```tsx
 // apps/web/src/components/admin/review/missing/MissingRowMenu.tsx
-'use client'
+'use client';
 
-import { Pause, X, Check } from 'lucide-react'
-import { AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Pause, X, Check } from 'lucide-react';
+import { AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface MissingRowMenuProps {
-  eventId: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  stacked?: boolean
-  disabled?: boolean
+  eventId: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  stacked?: boolean;
+  disabled?: boolean;
 }
 
 export const MissingRowMenu = ({
@@ -693,7 +693,7 @@ export const MissingRowMenu = ({
       {ADMIN_COPY.review.missing.actionDismiss}
     </AdminButton>
   </div>
-)
+);
 ```
 
 If `AdminButton` doesn't accept children + icon together (some primitives only allow one or the other), adapt: use `icon` prop if supported, or wrap label + icon in a span.
@@ -725,74 +725,74 @@ git commit -m "feat(admin): add MissingRowMenu (Postponed/Cancelled/Dismiss butt
 
   ```ts
   export interface MissingRowEvent {
-    id: string
-    title: string
-    venueName: string | null
-    date: string
-    showTime: string | null
-    lastSeenAt: string | null
-    firstMissingAt: string // non-null for rows shown here
+    id: string;
+    title: string;
+    venueName: string | null;
+    date: string;
+    showTime: string | null;
+    lastSeenAt: string | null;
+    firstMissingAt: string; // non-null for rows shown here
   }
 
   export interface MissingRowProps {
-    event: MissingRowEvent
-    nowIso: string
-    onMarkPostponed: (id: string) => void
-    onMarkCancelled: (id: string) => void
-    onDismiss: (id: string) => void
-    pending?: boolean
+    event: MissingRowEvent;
+    nowIso: string;
+    onMarkPostponed: (id: string) => void;
+    onMarkCancelled: (id: string) => void;
+    onDismiss: (id: string) => void;
+    pending?: boolean;
   }
-  export const MissingRow: (props: MissingRowProps) => JSX.Element
+  export const MissingRow: (props: MissingRowProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Implement**
 
 ```tsx
 // apps/web/src/components/admin/review/missing/MissingRow.tsx
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing'
-import { MissingChips } from './MissingChips'
-import { MissingRowMenu } from './MissingRowMenu'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing';
+import { MissingChips } from './MissingChips';
+import { MissingRowMenu } from './MissingRowMenu';
 
 export interface MissingRowEvent {
-  id: string
-  title: string
-  venueName: string | null
-  date: string
-  showTime: string | null
-  lastSeenAt: string | null
-  firstMissingAt: string
+  id: string;
+  title: string;
+  venueName: string | null;
+  date: string;
+  showTime: string | null;
+  lastSeenAt: string | null;
+  firstMissingAt: string;
 }
 
 export interface MissingRowProps {
-  event: MissingRowEvent
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  pending?: boolean
+  event: MissingRowEvent;
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  pending?: boolean;
 }
 
 const formatDate = (date: string): string => {
-  const parsed = new Date(date + 'T12:00:00')
+  const parsed = new Date(date + 'T12:00:00');
   return parsed.toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 
 const formatTime = (showTime: string | null): string => {
-  if (!showTime) return ''
-  const [hh, mm] = showTime.split(':')
-  const hours = parseInt(hh ?? '0', 10)
-  const minutes = mm ?? '00'
-  const meridiem = hours >= 12 ? 'PM' : 'AM'
-  const display = hours % 12 || 12
-  return ` ${display}:${minutes} ${meridiem}`
-}
+  if (!showTime) return '';
+  const [hh, mm] = showTime.split(':');
+  const hours = parseInt(hh ?? '0', 10);
+  const minutes = mm ?? '00';
+  const meridiem = hours >= 12 ? 'PM' : 'AM';
+  const display = hours % 12 || 12;
+  return ` ${display}:${minutes} ${meridiem}`;
+};
 
 export const MissingRow = ({
   event,
@@ -802,7 +802,7 @@ export const MissingRow = ({
   onDismiss,
   pending = false,
 }: MissingRowProps) => {
-  const missed = computeMissedSweeps(event.firstMissingAt, nowIso)
+  const missed = computeMissedSweeps(event.firstMissingAt, nowIso);
   return (
     <div
       style={{
@@ -901,8 +901,8 @@ export const MissingRow = ({
         disabled={pending}
       />
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Typecheck**
@@ -932,34 +932,34 @@ git commit -m "feat(admin): add MissingRow desktop composition"
 
   ```ts
   export interface MissingTableProps {
-    events: MissingRowEvent[]
-    nowIso: string
-    onMarkPostponed: (id: string) => void
-    onMarkCancelled: (id: string) => void
-    onDismiss: (id: string) => void
-    pendingIds: ReadonlySet<string>
+    events: MissingRowEvent[];
+    nowIso: string;
+    onMarkPostponed: (id: string) => void;
+    onMarkCancelled: (id: string) => void;
+    onDismiss: (id: string) => void;
+    pendingIds: ReadonlySet<string>;
   }
-  export const MissingTable: (props: MissingTableProps) => JSX.Element
+  export const MissingTable: (props: MissingTableProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Implement**
 
 ```tsx
 // apps/web/src/components/admin/review/missing/MissingTable.tsx
-'use client'
+'use client';
 
-import { AlertTriangle, Check } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { StatusBadge } from '@/components/admin/primitives'
-import { MissingRow, type MissingRowEvent } from './MissingRow'
+import { AlertTriangle, Check } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { StatusBadge } from '@/components/admin/primitives';
+import { MissingRow, type MissingRowEvent } from './MissingRow';
 
 export interface MissingTableProps {
-  events: MissingRowEvent[]
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  pendingIds: ReadonlySet<string>
+  events: MissingRowEvent[];
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  pendingIds: ReadonlySet<string>;
 }
 
 export const MissingTable = ({
@@ -1020,7 +1020,7 @@ export const MissingTable = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -1097,8 +1097,8 @@ export const MissingTable = ({
         />
       ))}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Typecheck**
@@ -1128,14 +1128,14 @@ git commit -m "feat(admin): add MissingTable desktop list (banner + rows + empty
 
   ```ts
   export interface MissingMobileProps {
-    events: MissingRowEvent[]
-    nowIso: string
-    onMarkPostponed: (id: string) => void
-    onMarkCancelled: (id: string) => void
-    onDismiss: (id: string) => void
-    pendingIds: ReadonlySet<string>
+    events: MissingRowEvent[];
+    nowIso: string;
+    onMarkPostponed: (id: string) => void;
+    onMarkCancelled: (id: string) => void;
+    onDismiss: (id: string) => void;
+    pendingIds: ReadonlySet<string>;
   }
-  export const MissingMobile: (props: MissingMobileProps) => JSX.Element
+  export const MissingMobile: (props: MissingMobileProps) => JSX.Element;
   ```
 
   (`MissingRowEvent` is re-exported from `./MissingRow`.)
@@ -1144,32 +1144,32 @@ git commit -m "feat(admin): add MissingTable desktop list (banner + rows + empty
 
 ```tsx
 // apps/web/src/components/admin/review/missing/MissingMobile.tsx
-'use client'
+'use client';
 
-import { AlertTriangle, Check } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing'
-import { MissingChips } from './MissingChips'
-import { MissingRowMenu } from './MissingRowMenu'
-import { type MissingRowEvent } from './MissingRow'
+import { AlertTriangle, Check } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { computeMissedSweeps, formatLastSeen } from '@/lib/admin/missing';
+import { MissingChips } from './MissingChips';
+import { MissingRowMenu } from './MissingRowMenu';
+import { type MissingRowEvent } from './MissingRow';
 
 export interface MissingMobileProps {
-  events: MissingRowEvent[]
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  pendingIds: ReadonlySet<string>
+  events: MissingRowEvent[];
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  pendingIds: ReadonlySet<string>;
 }
 
 const formatDate = (date: string): string => {
-  const parsed = new Date(date + 'T12:00:00')
+  const parsed = new Date(date + 'T12:00:00');
   return parsed.toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 
 export const MissingMobile = ({
   events,
@@ -1231,7 +1231,7 @@ export const MissingMobile = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -1261,8 +1261,8 @@ export const MissingMobile = ({
         </span>
       </div>
       {events.map((event) => {
-        const missed = computeMissedSweeps(event.firstMissingAt, nowIso)
-        const pending = pendingIds.has(event.id)
+        const missed = computeMissedSweeps(event.firstMissingAt, nowIso);
+        const pending = pendingIds.has(event.id);
         return (
           <div
             key={event.id}
@@ -1341,11 +1341,11 @@ export const MissingMobile = ({
               disabled={pending}
             />
           </div>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Typecheck**
@@ -1375,13 +1375,15 @@ git commit -m "feat(admin): add MissingMobile card list for /admin/review mobile
 - Produces:
   ```ts
   export interface MissingTabContentProps {
-    events: MissingRowEvent[]
-    isDesktop: boolean
-    onMarkPostponed: (id: string) => Promise<void>
-    onMarkCancelled: (id: string) => Promise<void>
-    onDismiss: (id: string) => Promise<void>
+    events: MissingRowEvent[];
+    isDesktop: boolean;
+    onMarkPostponed: (id: string) => Promise<void>;
+    onMarkCancelled: (id: string) => Promise<void>;
+    onDismiss: (id: string) => Promise<void>;
   }
-  export const MissingTabContent: (props: MissingTabContentProps) => JSX.Element
+  export const MissingTabContent: (
+    props: MissingTabContentProps,
+  ) => JSX.Element;
   ```
 
 This component is a presentational orchestrator: the _parent_ (`ReviewPageClient`) owns the missing-events list state and async action handlers; this component renders desktop OR mobile and manages a local `pendingIds` set for optimistic disable-on-click. Optimistic _remove_ of the row from the list happens in the parent (after `await` resolves on the handler, parent does `setMissingEvents(prev => prev.filter(...))`).
@@ -1392,12 +1394,12 @@ This component is a presentational orchestrator: the _parent_ (`ReviewPageClient
 // apps/web/src/components/admin/review/_tabs/MissingTabContent.test.tsx
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MissingTabContent } from './MissingTabContent'
-import { type MissingRowEvent } from '../missing/MissingRow'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MissingTabContent } from './MissingTabContent';
+import { type MissingRowEvent } from '../missing/MissingRow';
 
-const NOW = '2026-06-16T03:00:00Z'
+const NOW = '2026-06-16T03:00:00Z';
 
 const SAMPLE: MissingRowEvent[] = [
   {
@@ -1409,7 +1411,7 @@ const SAMPLE: MissingRowEvent[] = [
     lastSeenAt: '2026-06-12T03:00:00Z',
     firstMissingAt: '2026-06-13T03:00:00Z',
   },
-]
+];
 
 describe('MissingTabContent', () => {
   it('renders the desktop table when isDesktop=true', () => {
@@ -1422,10 +1424,10 @@ describe('MissingTabContent', () => {
         onMarkCancelled={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('Lord Huron')).toBeTruthy()
-    expect(screen.getByText('Missing from crawl')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Lord Huron')).toBeTruthy();
+    expect(screen.getByText('Missing from crawl')).toBeTruthy();
+  });
 
   it('renders the mobile card list when isDesktop=false', () => {
     render(
@@ -1437,18 +1439,18 @@ describe('MissingTabContent', () => {
         onMarkCancelled={async () => {}}
         onDismiss={async () => {}}
       />,
-    )
-    expect(screen.getByText('Lord Huron')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Lord Huron')).toBeTruthy();
+  });
 
   it('disables the row while a dismiss action is pending', async () => {
-    let resolveDismiss: (() => void) | null = null
+    let resolveDismiss: (() => void) | null = null;
     const onDismiss = vi.fn(
       () =>
         new Promise<void>((resolve) => {
-          resolveDismiss = resolve
+          resolveDismiss = resolve;
         }),
-    )
+    );
     render(
       <MissingTabContent
         events={SAMPLE}
@@ -1458,37 +1460,37 @@ describe('MissingTabContent', () => {
         onMarkCancelled={async () => {}}
         onDismiss={onDismiss}
       />,
-    )
-    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }))
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Dismiss/ }));
     await waitFor(() => {
-      expect(onDismiss).toHaveBeenCalledWith('evt-1')
-    })
+      expect(onDismiss).toHaveBeenCalledWith('evt-1');
+    });
     expect(
       screen.getByRole('button', { name: /Dismiss/ }).hasAttribute('disabled'),
-    ).toBe(true)
-    resolveDismiss?.()
-  })
-})
+    ).toBe(true);
+    resolveDismiss?.();
+  });
+});
 ```
 
 - [ ] **Step 2: Implement**
 
 ```tsx
 // apps/web/src/components/admin/review/_tabs/MissingTabContent.tsx
-'use client'
+'use client';
 
-import { useCallback, useState } from 'react'
-import { MissingTable } from '../missing/MissingTable'
-import { MissingMobile } from '../missing/MissingMobile'
-import { type MissingRowEvent } from '../missing/MissingRow'
+import { useCallback, useState } from 'react';
+import { MissingTable } from '../missing/MissingTable';
+import { MissingMobile } from '../missing/MissingMobile';
+import { type MissingRowEvent } from '../missing/MissingRow';
 
 export interface MissingTabContentProps {
-  events: MissingRowEvent[]
-  isDesktop: boolean
-  nowIso: string
-  onMarkPostponed: (id: string) => Promise<void>
-  onMarkCancelled: (id: string) => Promise<void>
-  onDismiss: (id: string) => Promise<void>
+  events: MissingRowEvent[];
+  isDesktop: boolean;
+  nowIso: string;
+  onMarkPostponed: (id: string) => Promise<void>;
+  onMarkCancelled: (id: string) => Promise<void>;
+  onDismiss: (id: string) => Promise<void>;
 }
 
 export const MissingTabContent = ({
@@ -1499,25 +1501,25 @@ export const MissingTabContent = ({
   onMarkCancelled,
   onDismiss,
 }: MissingTabContentProps) => {
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
   const wrap = useCallback(
     (handler: (id: string) => Promise<void>) => (id: string) => {
-      setPendingIds((prev) => new Set(prev).add(id))
+      setPendingIds((prev) => new Set(prev).add(id));
       void handler(id).finally(() => {
         setPendingIds((prev) => {
-          const next = new Set(prev)
-          next.delete(id)
-          return next
-        })
-      })
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      });
     },
     [],
-  )
+  );
 
-  const wrappedPostponed = wrap(onMarkPostponed)
-  const wrappedCancelled = wrap(onMarkCancelled)
-  const wrappedDismiss = wrap(onDismiss)
+  const wrappedPostponed = wrap(onMarkPostponed);
+  const wrappedCancelled = wrap(onMarkCancelled);
+  const wrappedDismiss = wrap(onDismiss);
 
   if (isDesktop) {
     return (
@@ -1529,7 +1531,7 @@ export const MissingTabContent = ({
         onDismiss={wrappedDismiss}
         pendingIds={pendingIds}
       />
-    )
+    );
   }
   return (
     <MissingMobile
@@ -1540,8 +1542,8 @@ export const MissingTabContent = ({
       onDismiss={wrappedDismiss}
       pendingIds={pendingIds}
     />
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 3: Run tests**
@@ -1575,14 +1577,14 @@ This is the integration task — both desktop and mobile gain the Missing tab. C
 - [ ] **Step 1: Extend `ReviewTabKey` and validators in `ReviewPageClient.tsx`**
 
 ```tsx
-type ReviewTabKey = 'event-flags' | 'prices' | 'missing' | 'all-events'
+type ReviewTabKey = 'event-flags' | 'prices' | 'missing' | 'all-events';
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
   'prices',
   'missing',
   'all-events',
-])
+]);
 ```
 
 The `resolveTabFromSearchParams` helper needs no change (still defaults to `event-flags`).
@@ -1592,62 +1594,62 @@ The `resolveTabFromSearchParams` helper needs no change (still defaults to `even
 Inside `ReviewPageClient`, near the other lazy-fetched state (alongside `priceEvents`), add:
 
 ```tsx
-const [missingEvents, setMissingEvents] = useState<MissingRowEvent[]>([])
-const [missingLoaded, setMissingLoaded] = useState(false)
+const [missingEvents, setMissingEvents] = useState<MissingRowEvent[]>([]);
+const [missingLoaded, setMissingLoaded] = useState(false);
 
 const fetchMissingEvents = useCallback(async () => {
   try {
-    const token = await getToken()
-    if (!token) return
+    const token = await getToken();
+    if (!token) return;
     const rows = await apiClient.get<MissingRowEvent[]>(
       '/v1/admin/events?missing=true&limit=200',
       token,
-    )
-    setMissingEvents(rows)
+    );
+    setMissingEvents(rows);
   } catch (err) {
-    console.error('Failed to load missing events', err)
+    console.error('Failed to load missing events', err);
   } finally {
-    setMissingLoaded(true)
+    setMissingLoaded(true);
   }
-}, [getToken])
+}, [getToken]);
 
 // Lazy-fetch on first activation of the missing tab.
 useEffect(() => {
   if (activeTab === 'missing' && !missingLoaded) {
-    void fetchMissingEvents()
+    void fetchMissingEvents();
   }
-}, [activeTab, missingLoaded, fetchMissingEvents])
+}, [activeTab, missingLoaded, fetchMissingEvents]);
 
 const patchMissingEvent = useCallback(
   async (id: string, body: Record<string, unknown>): Promise<void> => {
-    const token = await getToken()
-    if (!token) return
-    await apiClient.patch(`/v1/admin/events/${id}`, token, body)
-    setMissingEvents((prev) => prev.filter((ev) => ev.id !== id))
-    router.refresh()
+    const token = await getToken();
+    if (!token) return;
+    await apiClient.patch(`/v1/admin/events/${id}`, token, body);
+    setMissingEvents((prev) => prev.filter((ev) => ev.id !== id));
+    router.refresh();
   },
   [getToken, router],
-)
+);
 
 const markMissingPostponed = useCallback(
   (id: string) => patchMissingEvent(id, { status: 'postponed' }),
   [patchMissingEvent],
-)
+);
 const markMissingCancelled = useCallback(
   (id: string) => patchMissingEvent(id, { status: 'cancelled' }),
   [patchMissingEvent],
-)
+);
 const dismissMissing = useCallback(
   (id: string) => patchMissingEvent(id, { firstMissingAt: null }),
   [patchMissingEvent],
-)
+);
 ```
 
 You'll need to add `MissingTabContent`, `type MissingRowEvent` to imports:
 
 ```tsx
-import { MissingTabContent } from './_tabs/MissingTabContent'
-import { type MissingRowEvent } from './missing/MissingRow'
+import { MissingTabContent } from './_tabs/MissingTabContent';
+import { type MissingRowEvent } from './missing/MissingRow';
 ```
 
 - [ ] **Step 3: Add the Missing tab descriptor + render**
@@ -1675,7 +1677,7 @@ const tabs: ReadonlyArray<ReviewTabDescriptor> = [
     kind: 'danger',
   },
   { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
-]
+];
 ```
 
 Add the render branch alongside the other `activeTab === ...` branches:
@@ -1691,7 +1693,7 @@ Add the render branch alongside the other `activeTab === ...` branches:
       onMarkCancelled={markMissingCancelled}
       onDismiss={dismissMissing}
     />
-  )
+  );
 }
 ```
 
@@ -1714,15 +1716,15 @@ In the existing mobile branch, the props bag handed to `<AdminReviewMobile/>` al
 Update the props interface:
 
 ```tsx
-import { MissingMobile } from './missing/MissingMobile'
-import { type MissingRowEvent } from './missing/MissingRow'
+import { MissingMobile } from './missing/MissingMobile';
+import { type MissingRowEvent } from './missing/MissingRow';
 
 interface AdminReviewMobileProps {
   /* …existing props… */
-  missingEvents: MissingRowEvent[]
-  onMarkMissingPostponed: (id: string) => Promise<void>
-  onMarkMissingCancelled: (id: string) => Promise<void>
-  onDismissMissing: (id: string) => Promise<void>
+  missingEvents: MissingRowEvent[];
+  onMarkMissingPostponed: (id: string) => Promise<void>;
+  onMarkMissingCancelled: (id: string) => Promise<void>;
+  onDismissMissing: (id: string) => Promise<void>;
 }
 ```
 
@@ -1745,7 +1747,7 @@ const TABS_CONFIG = [
     label: ADMIN_COPY.review.tabs.missing,
     count: missingEvents.length,
   },
-] as const
+] as const;
 ```
 
 (Adjust to match the existing inline structure if it's not extracted.)
@@ -1771,15 +1773,15 @@ Add the rendered body for `missing`. Route mobile through `MissingTabContent` (s
         onDismiss={onDismissMissing}
       />
     </div>
-  )
+  );
 }
 ```
 
 Update the imports at the top of `AdminReviewMobile.tsx`:
 
 ```tsx
-import { MissingTabContent } from './_tabs/MissingTabContent'
-import { type MissingRowEvent } from './missing/MissingRow'
+import { MissingTabContent } from './_tabs/MissingTabContent';
+import { type MissingRowEvent } from './missing/MissingRow';
 ```
 
 (`MissingMobile` is no longer imported here — `MissingTabContent` already wraps it. Drop the direct import.)

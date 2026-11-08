@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
-import { isVisibleWithin } from '../fixtures/presence'
+import { isVisibleWithin } from '../fixtures/presence';
 
 /**
  * Resolve an event id from the browse page. TEST_EVENT_ID used to be read from
@@ -9,23 +9,23 @@ import { isVisibleWithin } from '../fixtures/presence'
  * every environment — the specs never ran against a real event.
  */
 const resolveEventId = async (page: Page): Promise<string | null> => {
-  await page.goto('/events')
+  await page.goto('/events');
   const firstRowLink = page
     .locator('[data-testid="event-row"] a.event-row-stretch')
-    .first()
+    .first();
 
   // `isVisible()` is a non-waiting probe: it samples the DOM once and returns
   // false immediately. /events renders its rows client-side after the RSC
   // payload resolves, so a bare isVisible() call reports "no events" on a
   // staging environment that does in fact have events, and every price spec
   // then skips. Wait explicitly, and treat only a genuine timeout as empty.
-  if (!(await isVisibleWithin(firstRowLink, 15_000))) return null
+  if (!(await isVisibleWithin(firstRowLink, 15_000))) return null;
 
-  const href = await firstRowLink.getAttribute('href')
-  if (href === null) return null
-  const match = /\/events\/([^/?#]+)/.exec(href)
-  return match?.[1] ?? null
-}
+  const href = await firstRowLink.getAttribute('href');
+  if (href === null) return null;
+  const match = /\/events\/([^/?#]+)/.exec(href);
+  return match?.[1] ?? null;
+};
 
 /**
  * This file used to hold four tests that could neither pass nor fail. Two
@@ -47,13 +47,13 @@ test.describe('Price Transparency v2', () => {
   test('opens the price submission modal from event detail', async ({
     page,
   }) => {
-    const eventId = await resolveEventId(page)
+    const eventId = await resolveEventId(page);
     if (eventId === null) {
-      test.skip(true, 'No events on this environment — nothing to price')
-      return
+      test.skip(true, 'No events on this environment — nothing to price');
+      return;
     }
 
-    await page.goto(`/events/${eventId}`)
+    await page.goto(`/events/${eventId}`);
 
     // Two CTAs open the same modal and which one renders depends on the event:
     // PriceDisplay's "Submit a price" on an event with no listed price,
@@ -62,7 +62,7 @@ test.describe('Price Transparency v2', () => {
     await page
       .getByRole('button', { name: /Submit (a|another) price/ })
       .first()
-      .click()
+      .click();
 
     // The dialog's accessible name, not a state-specific string: the modal
     // opens into the form, the already-submitted card or the tier picker
@@ -70,6 +70,6 @@ test.describe('Price Transparency v2', () => {
     // three are a pass for "the CTA opens the modal".
     await expect(
       page.getByRole('dialog', { name: 'Submit price' }),
-    ).toBeVisible({ timeout: 15_000 })
-  })
-})
+    ).toBeVisible({ timeout: 15_000 });
+  });
+});

@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
 // Connected fine, but zero of the user's artists have a Denver date yet
 // (#763 PR 5, spotify-states.jsx mock). Primary flips auto-watch on so the
 // first future match surfaces; secondary just browses.
 
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { StateBody, StateGlyphDisc } from './StateBody'
-import { SignalButton, TextButton } from './SpotifyButtons'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { StateBody, StateGlyphDisc } from './StateBody';
+import { SignalButton, TextButton } from './SpotifyButtons';
 
-const COPY = SPOTIFY_COPY.emptyDenverMatch
+const COPY = SPOTIFY_COPY.emptyDenverMatch;
 
 interface EmptyDenverMatchModalProps {
-  open: boolean
-  artistCount: number
-  onWatch: () => void
-  onBrowse: () => void
-  onClose: () => void
+  open: boolean;
+  artistCount: number;
+  onWatch: () => void;
+  onBrowse: () => void;
+  onClose: () => void;
 }
 
 export const EmptyDenverMatchModal = ({
@@ -50,4 +50,4 @@ export const EmptyDenverMatchModal = ({
       body={COPY.body(artistCount)}
     />
   </ModalShell>
-)
+);

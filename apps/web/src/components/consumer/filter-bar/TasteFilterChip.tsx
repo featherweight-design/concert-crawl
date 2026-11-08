@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // "Following" taste-filter toggle chip — leads the FilterBar chip row
 // (#763 PR 7, taste-filter.jsx mock). Three states:
@@ -10,18 +10,18 @@
 // Renders nothing while the entitlement is still resolving — never flash a
 // locked treatment at a paying user.
 
-import { useEffect, useState } from 'react'
-import type { PickerEntry } from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TasteUpsellSheet } from './TasteUpsellSheet'
-import { ChipDivider } from './ChipDivider'
+import { useEffect, useState } from 'react';
+import type { PickerEntry } from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TasteUpsellSheet } from './TasteUpsellSheet';
+import { ChipDivider } from './ChipDivider';
 
-const COPY = SPOTIFY_COPY.tasteFilter
+const COPY = SPOTIFY_COPY.tasteFilter;
 
 const LockGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
@@ -41,14 +41,14 @@ const LockGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 interface TasteFilterChipProps {
-  active: boolean
-  onToggle: (next: boolean) => void
+  active: boolean;
+  onToggle: (next: boolean) => void;
   // Server-resolved SCA-region boolean, forwarded to the tier picker's
   // checkout legal block (monetization spec §1.7).
-  scaRegion: boolean
+  scaRegion: boolean;
 }
 
 export const TasteFilterChip = ({
@@ -56,29 +56,29 @@ export const TasteFilterChip = ({
   onToggle,
   scaRegion,
 }: TasteFilterChipProps) => {
-  const { isLoading, surface } = useEntitlement('spotify-sync')
-  const { data: planState } = usePlanState()
-  const [upsellOpen, setUpsellOpen] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
+  const { isLoading, surface } = useEntitlement('spotify-sync');
+  const { data: planState } = usePlanState();
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall');
 
-  const resolved = !isLoading && surface !== null
-  const usable = resolved && surface === 'visible-active'
+  const resolved = !isLoading && surface !== null;
+  const usable = resolved && surface === 'visible-active';
   // 'hidden' means no affordance at all, not a locked one — it is what a
   // flagged-off release resolves to, and a locked chip would advertise a
   // feature nobody can buy yet.
-  const shown = resolved && surface !== 'hidden'
+  const shown = resolved && surface !== 'hidden';
 
   // Entitlement lapsed (downgrade / session change) with filterTaste=1 still
   // in the URL: the locked chip can't toggle and Clear-all excludes taste, so
   // release the stale param here rather than strand rejected taste fetches.
   useEffect(() => {
-    if (resolved && !usable && active) onToggle(false)
-  }, [resolved, usable, active, onToggle])
+    if (resolved && !usable && active) onToggle(false);
+  }, [resolved, usable, active, onToggle]);
 
   // Hold rendering while the plan resolves — no locked flash — and render
   // nothing at all for a hidden surface.
-  if (!shown) return null
+  if (!shown) return null;
 
   if (usable) {
     return (
@@ -109,19 +109,19 @@ export const TasteFilterChip = ({
         </button>
         <ChipDivider />
       </>
-    )
+    );
   }
 
   const onLockedTap = () => {
     if (surface === 'tier-picker-on-tap') {
       // Logged-out: straight to the tier picker.
-      setPickerEntry('logged-out-paywall')
-      setPickerOpen(true)
-      return
+      setPickerEntry('logged-out-paywall');
+      setPickerOpen(true);
+      return;
     }
     // Free / supporter: the taste upsell first.
-    setUpsellOpen(true)
-  }
+    setUpsellOpen(true);
+  };
 
   return (
     <>
@@ -149,9 +149,9 @@ export const TasteFilterChip = ({
         open={upsellOpen}
         onClose={() => setUpsellOpen(false)}
         onSeePlans={() => {
-          setUpsellOpen(false)
-          setPickerEntry('paywall')
-          setPickerOpen(true)
+          setUpsellOpen(false);
+          setPickerEntry('paywall');
+          setPickerOpen(true);
         }}
       />
       <TierPickerSheet
@@ -162,5 +162,5 @@ export const TasteFilterChip = ({
         entry={pickerEntry}
       />
     </>
-  )
-}
+  );
+};

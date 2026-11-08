@@ -1,27 +1,27 @@
-import Link from 'next/link'
-import type { EventWithVenue, Event } from '@concert-crawl/types'
-import { EventImage } from '../event-image'
-import { formatShowTime } from '../definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import type { EventWithVenue, Event } from '@concert-crawl/types';
+import { EventImage } from '../event-image';
+import { formatShowTime } from '../definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.smallEventRow
+const copy = CONSUMER_COPY.smallEventRow;
 
 interface SmallEventRowProps {
-  event: EventWithVenue | Event
-  date: string
-  showVenue?: boolean
+  event: EventWithVenue | Event;
+  date: string;
+  showVenue?: boolean;
 }
 
 function getVenueName(event: EventWithVenue | Event): string | null {
-  if ('venue' in event && event.venue) return event.venue.name
-  return null
+  if ('venue' in event && event.venue) return event.venue.name;
+  return null;
 }
 
 // The bare `Event` shape has no artist join, so callers passing one get the
 // venue image or IdentityArt exactly as before.
 function getArtistPhotoUrl(event: EventWithVenue | Event): string | null {
-  if ('artistPhotoUrl' in event) return event.artistPhotoUrl ?? null
-  return null
+  if ('artistPhotoUrl' in event) return event.artistPhotoUrl ?? null;
+  return null;
 }
 
 export function SmallEventRow({
@@ -29,17 +29,17 @@ export function SmallEventRow({
   date,
   showVenue = true,
 }: SmallEventRowProps) {
-  const showTime = formatShowTime(event.showTime)
-  const venueName = getVenueName(event)
+  const showTime = formatShowTime(event.showTime);
+  const venueName = getVenueName(event);
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
-      : null
+      : null;
 
-  const metaParts: string[] = []
-  if (showVenue && venueName) metaParts.push(venueName)
-  metaParts.push(date)
-  if (showTime) metaParts.push(showTime)
+  const metaParts: string[] = [];
+  if (showVenue && venueName) metaParts.push(venueName);
+  metaParts.push(date);
+  if (showTime) metaParts.push(showTime);
 
   return (
     <Link
@@ -95,5 +95,5 @@ export function SmallEventRow({
         )}
       </div>
     </Link>
-  )
+  );
 }

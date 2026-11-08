@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import React from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs'
-import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow'
-import { displayVendor } from '@/components/consumer/vendor-display'
-import { AltSourceRow } from './AltSourceRow'
+import React from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { Eyebrow, PendingTrustPill } from '@/components/consumer/glyphs';
+import { TierAlternateRow } from '@/components/consumer/multi-tier/TierAlternateRow';
+import { displayVendor } from '@/components/consumer/vendor-display';
+import { AltSourceRow } from './AltSourceRow';
 
-const copy = CONSUMER_COPY.priceRegion.multiSource
+const copy = CONSUMER_COPY.priceRegion.multiSource;
 
 export interface MultiSourceMultiTierCardProps {
-  headlineTier: string
-  headlinePrice: number
-  headlineVendor: string
+  headlineTier: string;
+  headlinePrice: number;
+  headlineVendor: string;
   crossSource: {
-    source: string
-    kind: 'boxoffice' | 'resale' | 'community'
-    price: number
-  }
-  otherTiers: ReadonlyArray<React.ComponentProps<typeof TierAlternateRow>>
+    source: string;
+    kind: 'boxoffice' | 'resale' | 'community';
+    price: number;
+  };
+  otherTiers: ReadonlyArray<React.ComponentProps<typeof TierAlternateRow>>;
 }
 
 export const MultiSourceMultiTierCard = ({
@@ -114,4 +114,4 @@ export const MultiSourceMultiTierCard = ({
       </div>
     )}
   </div>
-)
+);

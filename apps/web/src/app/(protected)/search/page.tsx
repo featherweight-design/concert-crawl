@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useSearch } from '../../../lib/search/useSearch'
-import { SearchBar } from '../../../components/consumer/search/SearchBar'
-import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState'
-import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState'
-import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState'
-import { SearchLoadingState } from '../../../components/consumer/search/SearchLoadingState'
+import { useSearch } from '../../../lib/search/useSearch';
+import { SearchBar } from '../../../components/consumer/search/SearchBar';
+import { SearchDefaultState } from '../../../components/consumer/search/SearchDefaultState';
+import { SearchResultsState } from '../../../components/consumer/search/SearchResultsState';
+import { SearchEmptyState } from '../../../components/consumer/search/SearchEmptyState';
+import { SearchLoadingState } from '../../../components/consumer/search/SearchLoadingState';
 
 export default function SearchPage() {
   const {
@@ -19,12 +19,12 @@ export default function SearchPage() {
     venueResults,
     isLoading,
     navigateTo,
-  } = useSearch()
+  } = useSearch();
 
   const hasResults =
     artistPageResults.length > 0 ||
     artistResults.length > 0 ||
-    venueResults.length > 0
+    venueResults.length > 0;
 
   return (
     <div
@@ -68,5 +68,5 @@ export default function SearchPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

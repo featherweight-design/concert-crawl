@@ -8,13 +8,13 @@
 // list." is one fact in two type sizes, and the headline is the layer that
 // survives that collision.
 
-import Link from 'next/link'
-import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
-import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants'
-import { GlyphPlus } from './Glyphs'
+import Link from 'next/link';
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink';
+import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
+import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants';
+import { GlyphPlus } from './Glyphs';
 
-const COPY = MY_SHOWS_ARTISTS_COPY.empty
+const COPY = MY_SHOWS_ARTISTS_COPY.empty;
 
 const buttonBase = {
   display: 'inline-flex',
@@ -26,10 +26,10 @@ const buttonBase = {
   fontFamily: 'Inter, system-ui, sans-serif',
   letterSpacing: '-0.01em',
   textDecoration: 'none',
-} as const
+} as const;
 
 const PRIMARY_CLASS =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
 
 const primaryStyle = {
   ...buttonBase,
@@ -38,13 +38,13 @@ const primaryStyle = {
   border: '1px solid var(--signal)',
   fontWeight: 800,
   fontSize: 14.5,
-} as const
+} as const;
 
 interface ArtistsEmptyProps {
   /** Signed in, plan cannot follow. Swaps the primary move for one that works. */
-  locked: boolean
+  locked: boolean;
   /** The desktop layout, which is wider and lays the CTAs side by side. */
-  desktop?: boolean
+  desktop?: boolean;
 }
 
 export const ArtistsEmpty = ({
@@ -143,4 +143,4 @@ export const ArtistsEmpty = ({
       </Link>
     </div>
   </div>
-)
+);

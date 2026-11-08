@@ -134,6 +134,7 @@ The single biggest plan-blocker. Hybrid synth: Claude drafts by synthesizing the
 - Analytics events for the monetization funnel (PostHog or similar)
 
 **Hugh's critical calls during draft:**
+
 1. Schema shape — singleton `founder_window` table vs. config-table row
 2. Customer portal pattern — Stripe-hosted vs. embedded
 3. Founder counter atomicity verification — agree on the WHERE-clause approach above
@@ -149,6 +150,7 @@ The single biggest plan-blocker. Hybrid synth: Claude drafts by synthesizing the
 Builds the bones. No user-visible changes; all behind feature gates.
 
 **PR 2.1 — Schema expand (1 PR)**
+
 - Add `subscription_tier` enum values (expand only — keep `free`/`premium`, add `supporter`/`founder`)
 - Create `founder_window` config table (seed row with `opens_at = NULL`, `seats_total = 100`, `seats_remaining = 100`, `window_days = 30`)
 - Create `subscription_event` audit table
@@ -156,6 +158,7 @@ Builds the bones. No user-visible changes; all behind feature gates.
 - Migration tested staging-first per the staging/prod auto-deploy in #786
 
 **PR 2.2 — Stripe SDK install + env vars + checkout endpoint skeleton (1 PR)**
+
 - SDK installed
 - `.env.example` updated for `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `POST /v1/billing/checkout-session` endpoint — accepts tier, returns Stripe checkout URL
@@ -164,6 +167,7 @@ Builds the bones. No user-visible changes; all behind feature gates.
 - Founder window decrement logic wired (atomic claim SQL)
 
 **PR 2.3 — Webhook handler + customer portal endpoint + idempotency (1 PR)**
+
 - `POST /v1/webhooks/stripe` with signature verification
 - Webhook events handled: `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.deleted`, `customer.subscription.updated`, `checkout.session.expired`, `payment_intent.payment_failed`
 - Each handler writes to `subscription_event` for audit
@@ -178,6 +182,7 @@ Builds the bones. No user-visible changes; all behind feature gates.
 `derivePlan` rewrite + the UI surfaces from #781 (tier picker + entitlements matrix).
 
 **PR 3.1 — `derivePlan` rewrite + entitlements helper (1 PR)**
+
 - `derivePlan` reads from `subscription_tier` + Clerk `publicMetadata.premium_gifted` flag
 - Returns one of 6 values (`free`, `supporter`, `premium`, `founder`, `gifted`, `logged-out`)
 - `hasFeature(plan, feature)` pure function backed by the entitlements matrix (`packages/entitlements` or similar)
@@ -185,6 +190,7 @@ Builds the bones. No user-visible changes; all behind feature gates.
 - No UI changes — pure logic + tests
 
 **PR 3.2 — Tier picker UI (1 PR — #781 handoff implementation)**
+
 - Implement the locked tier picker from `design/design_handoff_monetization_tier_states/`
 - Founder tier card variants: pre-launch ("Opens at public launch") vs. live countdown vs. closed
 - Price-promise microcopy line (per #782)
@@ -192,12 +198,14 @@ Builds the bones. No user-visible changes; all behind feature gates.
 - Mobile + desktop parity
 
 **PR 3.3 — Entitlement gating across consumer surfaces (1 PR)**
+
 - Audit existing consumer surfaces (event detail, browse, watching, history) for hard-coded premium/free assumptions
 - Replace with `hasFeature(plan, feature)` calls
 - Concert history + calendar export gated to paid tiers
 - Watching free for all (per locked decision)
 
 **PR 3.4 — Settings/plan page (1 PR — #780 partial — current plan card section)**
+
 - "Your plan" surface in settings with current-tier card + manage subscription CTA → Stripe portal
 - Per-tier card content matching the locked #781 + #780 matrix
 - Past-due variant (per #782) rendered when applicable
@@ -209,6 +217,7 @@ Builds the bones. No user-visible changes; all behind feature gates.
 The biggest phase by surface count.
 
 **PR 4.1 — Payment surface (1 PR — #780/#781 handoff)**
+
 - Stripe Elements integration on the embedded payment surface
 - Above-CTA legal block (per #782 microcopy)
 - Bottom mono rail (per #782 microcopy)
@@ -216,17 +225,20 @@ The biggest phase by surface count.
 - Mobile sheet + desktop modal parity
 
 **PR 4.2 — Lifecycle takeover + day-13 banner (1 PR — #780 handoff)**
+
 - Trial-end takeover (auto-route to `/settings/plan`)
 - Day-13 banner with per-trial-expiry single-fire state predicate
 - Founder post-claim "Founder #N of 100" takeover
 
-**PR 4.3 — Past-due Plan card variant + dismissible top-of-app banner (1 PR — #782 handoff)** *(parallelizable with 4.4)*
+**PR 4.3 — Past-due Plan card variant + dismissible top-of-app banner (1 PR — #782 handoff)** _(parallelizable with 4.4)_
+
 - Plan card warning variant
 - Top-of-app banner with per-session dismiss state (per #782 predicate)
 - Suppressed during active payment flow
 - Stripe portal CTA for "Update card"
 
-**PR 4.4 — Failure surfaces (1 PR — #782 handoff)** *(parallelizable with 4.3)*
+**PR 4.4 — Failure surfaces (1 PR — #782 handoff)** _(parallelizable with 4.3)_
+
 - 5 payment failure surfaces (insufficient_funds, expired_or_incorrect_card, issuer_declined, fraud_block, network_timeout)
 - 3DS + SCA challenge mount chrome
 - `decline_code` → category mapping (from #775)
@@ -234,6 +246,7 @@ The biggest phase by surface count.
 - Mobile sheet + desktop modal parity, full a11y annotation pass
 
 **PR 4.5 — Cancel / downgrade / upgrade flows (1 PR — #780 handoff)**
+
 - In-app cancel flow with grandfather-forever messaging
 - Downgrade pathways (Premium → Supporter, etc.)
 - Upgrade pathways with prorated billing handling
@@ -246,6 +259,7 @@ The biggest phase by surface count.
 Per #783. Can run in parallel with Phase 4 if Resend infra is folded into #775 and shipped in Phase 2.
 
 **PR 5.1 — Resend sender domain + template scaffolding (1 PR)**
+
 - Sender domain configured (DNS records, DKIM/SPF/DMARC)
 - Resend SDK wired in `apps/api`
 - Template registration scaffolding (HTML + plain-text fallback)
@@ -253,6 +267,7 @@ Per #783. Can run in parallel with Phase 4 if Resend infra is folded into #775 a
 - Email-only palette constants
 
 **PR 5.2 — Welcome + receipt + lifecycle templates (1 PR)**
+
 - `welcome_paid` (3 tier variants — Premium/Supporter/Founder)
 - `welcome_gifted`
 - `renewal_receipt_monthly` with tax-record block + extensible template vars (`{charge_date}`, `{customer_id}`, `{stripe_receipt_url}`)
@@ -260,6 +275,7 @@ Per #783. Can run in parallel with Phase 4 if Resend infra is folded into #775 a
 - All voice + format locks per #783
 
 **PR 5.3 — Dunning + reminder + win-back templates (1 PR)**
+
 - `dunning_1_card_declined` (Day 0)
 - `dunning_2_still_declined` (Day 3–4)
 - `dunning_3_final_warning` (Day 7)
@@ -273,17 +289,20 @@ Per #783. Can run in parallel with Phase 4 if Resend infra is folded into #775 a
 ### Phase 6: Admin + analytics + launch prep (3 PRs)
 
 **PR 6.1 — Admin Founder-window control + admin dashboard tile (1 PR)**
+
 - Admin UI surface to flip `opens_at` (with confirmation modal — single click cannot launch the world)
 - Admin tile: seats remaining, window state, recent claims
 - Audit log entry for `opens_at` flip
 - Read-only "simulate claim" button for pre-launch testing (per the mechanism above)
 
 **PR 6.2 — Analytics + monetization funnel events (1 PR)**
+
 - Analytics stack confirmed in #775 (PostHog is referenced in the beta-to-launch plan but not yet wired — #775 either ships PostHog setup as a precursor PR or scopes monetization events against whatever stack is current)
 - Events: `tier_card_view`, `checkout_started`, `checkout_completed`, `payment_failed`, `cancel_started`, `cancel_completed`, `founder_window_view`, `founder_claim_attempted`, `founder_claim_succeeded`
 - Funnel dashboard config
 
 **PR 6.3 — Launch day runbook + smoke test (1 PR)**
+
 - Runbook at `docs/runbooks/monetization-launch.md`
 - Pre-launch checklist (verify Stripe webhooks reachable, sender domain reputation OK, seat count = 100, opens_at = NULL)
 - Launch-day SQL command (the `UPDATE founder_window SET opens_at = NOW()` plus audit log)
@@ -297,6 +316,7 @@ Per #783. Can run in parallel with Phase 4 if Resend infra is folded into #775 a
 Not a PR — an operational sequence. Run when Hugh decides we go.
 
 **T-7 days:**
+
 - Final staging full E2E walk
 - Litmus email render check on the latest templates
 - Stripe webhook reachability confirmed (live mode)
@@ -304,42 +324,45 @@ Not a PR — an operational sequence. Run when Hugh decides we go.
 - Founder seat count = 100 verified in prod DB
 
 **T-1 day:**
+
 - Communications drafted (the announcement that triggers user awareness of the Founder window)
 - On-call rotation confirmed for the first 48 hours
 
 **T-0 (launch):**
+
 1. Hugh runs the admin UI flip OR the SQL command from the runbook (single action, audit-logged)
 2. Post-launch smoke test fires automatically (or Hugh runs it)
 3. Watch the funnel dashboard for the first ~50 minutes
 4. If anything looks wrong, rollback procedure: SQL to set `opens_at = NULL` — Founder UI reverts to pre-launch state, no further claims accepted
 
 **T+1 day:**
+
 - Verify first ~24 hours of charges settled
 - Verify dunning timer accuracy on the first batch of declined cards
 - Read the first batch of Sentry / Vercel logs for hot paths
 
 ## Rollback strategy
 
-| Failure mode | Rollback |
-|---|---|
-| Stripe webhook missing events | Replay from Stripe dashboard; idempotency table prevents duplicate processing |
-| Wrong tier granted to user | Manual fix in admin UI + audit log entry; rollback via re-deriving plan after correction |
-| Founder seats undercounted | Compare `seats_remaining` against actual successful `checkout.session.completed` events with Founder price; admin SQL to reconcile |
-| Founder window opened by mistake | `UPDATE founder_window SET opens_at = NULL` — UI reverts, server gate fires; any claims already in progress complete via Stripe but no new ones accepted |
-| Schema migration breaks deploy | Expand/contract pattern means we always have a backout — revert the deploy, no destructive changes ever |
-| Email rendering broken | Resend templates are version-controlled in the API repo; hotfix + redeploy. Worst case: pause non-critical templates (winback first, then card_expiring, then dunning_2/3) via a kill-switch column on `email_template_config` |
-| Past-due banner showing for wrong users | Predicate eval is read-only; ship a hotfix to the predicate. No data needs rollback |
+| Failure mode                            | Rollback                                                                                                                                                                                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stripe webhook missing events           | Replay from Stripe dashboard; idempotency table prevents duplicate processing                                                                                                                                                  |
+| Wrong tier granted to user              | Manual fix in admin UI + audit log entry; rollback via re-deriving plan after correction                                                                                                                                       |
+| Founder seats undercounted              | Compare `seats_remaining` against actual successful `checkout.session.completed` events with Founder price; admin SQL to reconcile                                                                                             |
+| Founder window opened by mistake        | `UPDATE founder_window SET opens_at = NULL` — UI reverts, server gate fires; any claims already in progress complete via Stripe but no new ones accepted                                                                       |
+| Schema migration breaks deploy          | Expand/contract pattern means we always have a backout — revert the deploy, no destructive changes ever                                                                                                                        |
+| Email rendering broken                  | Resend templates are version-controlled in the API repo; hotfix + redeploy. Worst case: pause non-critical templates (winback first, then card_expiring, then dunning_2/3) via a kill-switch column on `email_template_config` |
+| Past-due banner showing for wrong users | Predicate eval is read-only; ship a hotfix to the predicate. No data needs rollback                                                                                                                                            |
 
 ## Human checkpoints
 
-| Checkpoint | When | What Hugh decides |
-|---|---|---|
-| Phase 0 close | Now | Resolve #849 (fold/separate); confirm Stripe live-mode readiness |
-| Phase 1 mid-spec | During #775 draft | Schema shape, portal pattern, idempotency strategy, atomicity verification |
-| Phase 3 design review | Per PR | Verify token-color use across all 9 themes + design-review skill output |
-| Phase 5 voice review | PR 5.2 + 5.3 | Read every template's subject + body; confirm voice locks |
-| Phase 6 runbook sign-off | Before Phase 7 | Walk the runbook end-to-end on staging |
-| Phase 7 launch trigger | T-0 | The actual `opens_at` flip — Hugh's call, Hugh's hand on the keyboard |
+| Checkpoint               | When              | What Hugh decides                                                          |
+| ------------------------ | ----------------- | -------------------------------------------------------------------------- |
+| Phase 0 close            | Now               | Resolve #849 (fold/separate); confirm Stripe live-mode readiness           |
+| Phase 1 mid-spec         | During #775 draft | Schema shape, portal pattern, idempotency strategy, atomicity verification |
+| Phase 3 design review    | Per PR            | Verify token-color use across all 9 themes + design-review skill output    |
+| Phase 5 voice review     | PR 5.2 + 5.3      | Read every template's subject + body; confirm voice locks                  |
+| Phase 6 runbook sign-off | Before Phase 7    | Walk the runbook end-to-end on staging                                     |
+| Phase 7 launch trigger   | T-0               | The actual `opens_at` flip — Hugh's call, Hugh's hand on the keyboard      |
 
 ## What this plan does NOT cover
 

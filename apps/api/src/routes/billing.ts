@@ -9,8 +9,8 @@
 // writes here are the founder atomic seat claim and subscription_events
 // audit rows.
 
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import {
   and,
   eq,
@@ -22,26 +22,26 @@ import {
   lte,
   or,
   sql,
-} from 'drizzle-orm'
-import { z } from 'zod'
+} from 'drizzle-orm';
+import { z } from 'zod';
 import {
   db,
   founderWindow,
   giftedComps,
   subscriptions,
   subscriptionEvents,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import type {
   BillingStripeClient,
   StripeSubscriptionCreateResult,
-} from '../lib/stripe.js'
-import { apiLogger } from '../lib/logger.js'
+} from '../lib/stripe.js';
+import { apiLogger } from '../lib/logger.js';
 
 const checkoutBodySchema = z.object({
   tier: z.enum(['supporter', 'premium', 'founder']),
-})
+});
 
-type CheckoutTier = z.infer<typeof checkoutBodySchema>['tier']
+type CheckoutTier = z.infer<typeof checkoutBodySchema>['tier'];
 
 // Server code resolves prices by lookup_key, never hard-coded price IDs
 // (spec §1.2 — IDs differ across test/live mode).
@@ -49,25 +49,25 @@ const TIER_LOOKUP_KEYS: Record<CheckoutTier, string> = {
   supporter: 'supporter_monthly',
   premium: 'premium_monthly',
   founder: 'founder_monthly',
-}
+};
 
 // Statuses that block a new checkout (spec §1.4 — use change-tier instead).
 const LIVE_SUBSCRIPTION_STATUSES: readonly string[] = [
   'active',
   'trialing',
   'past_due',
-]
+];
 
 export type FounderGateFailure = {
-  ok: false
-  status: 403 | 410
+  ok: false;
+  status: 403 | 410;
   code:
     | 'founder_window_not_open'
     | 'founder_window_closed'
-    | 'founder_seats_exhausted'
-}
+    | 'founder_seats_exhausted';
+};
 
-export type FounderGateResult = { ok: true } | FounderGateFailure
+export type FounderGateResult = { ok: true } | FounderGateFailure;
 
 /**
  * Founder-only gates (spec §3.3), evaluated before any Stripe call. A
@@ -76,32 +76,32 @@ export type FounderGateResult = { ok: true } | FounderGateFailure
  */
 export const evaluateFounderGates = (
   window: {
-    opensAt: Date | null
-    closesAt: Date | null
-    seatsRemaining: number
+    opensAt: Date | null;
+    closesAt: Date | null;
+    seatsRemaining: number;
   },
   now: Date,
 ): FounderGateResult => {
   if (window.opensAt === null || window.opensAt.getTime() > now.getTime()) {
-    return { ok: false, status: 403, code: 'founder_window_not_open' }
+    return { ok: false, status: 403, code: 'founder_window_not_open' };
   }
   // <= matches the atomic claim's gt(closesAt, now): a request exactly at
   // the boundary is closed here rather than failing the claim with a
   // misleading founder_seats_exhausted.
   if (window.closesAt !== null && window.closesAt.getTime() <= now.getTime()) {
-    return { ok: false, status: 410, code: 'founder_window_closed' }
+    return { ok: false, status: 410, code: 'founder_window_closed' };
   }
   if (window.seatsRemaining <= 0) {
-    return { ok: false, status: 410, code: 'founder_seats_exhausted' }
+    return { ok: false, status: 410, code: 'founder_seats_exhausted' };
   }
-  return { ok: true }
-}
+  return { ok: true };
+};
 
 const GATE_MESSAGES: Record<FounderGateFailure['code'], string> = {
   founder_window_not_open: 'The founder window is not open yet',
   founder_window_closed: 'The founder window has closed',
   founder_seats_exhausted: 'All founder seats have been claimed',
-}
+};
 
 /**
  * Narrows the expanded latest_invoice union to the PaymentIntent client
@@ -111,37 +111,37 @@ const GATE_MESSAGES: Record<FounderGateFailure['code'], string> = {
 export const resolveClientSecret = (
   subscription: StripeSubscriptionCreateResult,
 ): string | null => {
-  const invoice = subscription.latest_invoice
-  if (typeof invoice !== 'object' || invoice === null) return null
-  const confirmationSecret = invoice.confirmation_secret
+  const invoice = subscription.latest_invoice;
+  if (typeof invoice !== 'object' || invoice === null) return null;
+  const confirmationSecret = invoice.confirmation_secret;
   if (typeof confirmationSecret !== 'object' || confirmationSecret === null) {
-    return null
+    return null;
   }
-  const clientSecret = confirmationSecret.client_secret
-  return typeof clientSecret === 'string' ? clientSecret : null
-}
+  const clientSecret = confirmationSecret.client_secret;
+  return typeof clientSecret === 'string' ? clientSecret : null;
+};
 
 export const createBillingRouter = (
   getStripe: () => BillingStripeClient,
 ): Hono => {
-  const billingRouter = new Hono()
+  const billingRouter = new Hono();
 
-  billingRouter.use('*', clerkMiddleware())
+  billingRouter.use('*', clerkMiddleware());
 
   billingRouter.post('/checkout-session', async (ctx) => {
-    const authInfo = getAuth(ctx)
+    const authInfo = getAuth(ctx);
     if (!authInfo?.userId) {
-      return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+      return ctx.json({ success: false, error: 'Unauthorized' }, 401);
     }
-    const userId = authInfo.userId
+    const userId = authInfo.userId;
 
-    let rawBody: unknown = null
+    let rawBody: unknown = null;
     try {
-      rawBody = await ctx.req.json()
+      rawBody = await ctx.req.json();
     } catch (err) {
-      apiLogger.warn({ err, userId }, 'checkout-session: unparseable body')
+      apiLogger.warn({ err, userId }, 'checkout-session: unparseable body');
     }
-    const parsedBody = checkoutBodySchema.safeParse(rawBody)
+    const parsedBody = checkoutBodySchema.safeParse(rawBody);
     if (!parsedBody.success) {
       return ctx.json(
         {
@@ -150,35 +150,38 @@ export const createBillingRouter = (
           error: "Body must be { tier: 'supporter' | 'premium' | 'founder' }",
         },
         400,
-      )
+      );
     }
-    const { tier } = parsedBody.data
-    const now = new Date()
+    const { tier } = parsedBody.data;
+    const now = new Date();
 
     // Founder gates run FIRST (spec §1.4/§3.3) — read-only singleton check
     // before the 409 checks and before any Stripe call.
-    let seatsTotal = 0
+    let seatsTotal = 0;
     if (tier === 'founder') {
       const [windowRow] = await db
         .select()
         .from(founderWindow)
         .where(eq(founderWindow.id, 1))
-        .limit(1)
+        .limit(1);
       if (!windowRow) {
         apiLogger.error(
           { userId },
           'checkout-session: founder_window singleton row missing',
-        )
-        return ctx.json({ success: false, error: 'Internal server error' }, 500)
+        );
+        return ctx.json(
+          { success: false, error: 'Internal server error' },
+          500,
+        );
       }
-      const gate = evaluateFounderGates(windowRow, now)
+      const gate = evaluateFounderGates(windowRow, now);
       if (!gate.ok) {
         return ctx.json(
           { success: false, code: gate.code, error: GATE_MESSAGES[gate.code] },
           gate.status,
-        )
+        );
       }
-      seatsTotal = windowRow.seatsTotal
+      seatsTotal = windowRow.seatsTotal;
     }
 
     // 409 — an active/trialing/past_due subscription must go through
@@ -191,7 +194,7 @@ export const createBillingRouter = (
       })
       .from(subscriptions)
       .where(eq(subscriptions.userId, userId))
-      .limit(1)
+      .limit(1);
     if (
       existingSubscription &&
       LIVE_SUBSCRIPTION_STATUSES.includes(existingSubscription.status)
@@ -204,7 +207,7 @@ export const createBillingRouter = (
             'You already have an active subscription — use change-tier instead',
         },
         409,
-      )
+      );
     }
 
     // 409 — gifted users already have Premium; checkout is not for them.
@@ -218,7 +221,7 @@ export const createBillingRouter = (
           or(isNull(giftedComps.expiresAt), gt(giftedComps.expiresAt, now)),
         ),
       )
-      .limit(1)
+      .limit(1);
     if (activeGift) {
       return ctx.json(
         {
@@ -227,7 +230,7 @@ export const createBillingRouter = (
           error: 'Your account already has gifted Premium access',
         },
         409,
-      )
+      );
     }
 
     // 409 — one pending founder claim per user. Without this, repeated
@@ -246,11 +249,11 @@ export const createBillingRouter = (
               'founder_seat_restored',
             ]),
           ),
-        )
+        );
       const claims = claimEvents.filter(
         (event) => event.type === 'founder_claimed',
-      ).length
-      const restores = claimEvents.length - claims
+      ).length;
+      const restores = claimEvents.length - claims;
       if (claims > restores) {
         return ctx.json(
           {
@@ -260,14 +263,14 @@ export const createBillingRouter = (
               'You already have a founder checkout in progress — finish or abandon it first',
           },
           409,
-        )
+        );
       }
     }
 
     // Founder atomic claim (spec §3.1) — single guarded UPDATE, before
     // subscription creation. An empty result means the seat race was lost
     // between the gate check and the decrement.
-    let founderSeatNumber: number | null = null
+    let founderSeatNumber: number | null = null;
     if (tier === 'founder') {
       const claimed = await db
         .update(founderWindow)
@@ -281,8 +284,8 @@ export const createBillingRouter = (
             gt(founderWindow.closesAt, now),
           ),
         )
-        .returning({ seatsRemaining: founderWindow.seatsRemaining })
-      const claimedRow = claimed[0]
+        .returning({ seatsRemaining: founderWindow.seatsRemaining });
+      const claimedRow = claimed[0];
       if (!claimedRow) {
         return ctx.json(
           {
@@ -291,15 +294,15 @@ export const createBillingRouter = (
             error: GATE_MESSAGES.founder_seats_exhausted,
           },
           410,
-        )
+        );
       }
-      founderSeatNumber = seatsTotal - claimedRow.seatsRemaining
+      founderSeatNumber = seatsTotal - claimedRow.seatsRemaining;
     }
 
     // NULL until Stripe subscription creation succeeds — the catch below
     // must NOT restore the founder seat once the incomplete subscription
     // exists (it holds the seat; §3.2 restoration paths reconcile it).
-    let createdSubscription: StripeSubscriptionCreateResult | null = null
+    let createdSubscription: StripeSubscriptionCreateResult | null = null;
     try {
       // Inside the try so a failed audit insert restores the claimed seat.
       if (founderSeatNumber !== null) {
@@ -307,38 +310,38 @@ export const createBillingRouter = (
           userId,
           type: 'founder_claimed',
           metadata: { seatNumber: founderSeatNumber },
-        })
+        });
       }
 
-      const stripe = getStripe()
+      const stripe = getStripe();
 
       // Ensure a Stripe customer — reuse the ID from any prior subscription
       // row; the incomplete subscription created below holds the seat.
-      let stripeCustomerId = existingSubscription?.stripeCustomerId ?? null
+      let stripeCustomerId = existingSubscription?.stripeCustomerId ?? null;
       if (stripeCustomerId === null) {
         const customer = await stripe.customers.create({
           metadata: { userId },
-        })
-        stripeCustomerId = customer.id
+        });
+        stripeCustomerId = customer.id;
       }
 
-      const lookupKey = TIER_LOOKUP_KEYS[tier]
+      const lookupKey = TIER_LOOKUP_KEYS[tier];
       const priceList = await stripe.prices.list({
         lookup_keys: [lookupKey],
         active: true,
-      })
+      });
       if (priceList.data.length > 1) {
         // Multiple active prices on one lookup_key means Stripe state has
         // drifted — charging an arbitrary data[0] risks incorrect billing.
         throw new Error(
           `Multiple active Stripe prices for lookup_key "${lookupKey}" — resolve the duplicate in the Stripe dashboard`,
-        )
+        );
       }
-      const price = priceList.data[0]
+      const price = priceList.data[0];
       if (!price) {
         throw new Error(
           `No active Stripe price for lookup_key "${lookupKey}" — run scripts/stripe-provision.ts`,
-        )
+        );
       }
 
       createdSubscription = await stripe.subscriptions.create({
@@ -356,13 +359,13 @@ export const createBillingRouter = (
             ? { founderSeatNumber: String(founderSeatNumber) }
             : {}),
         },
-      })
+      });
 
-      const clientSecret = resolveClientSecret(createdSubscription)
+      const clientSecret = resolveClientSecret(createdSubscription);
       if (clientSecret === null) {
         throw new Error(
           'Stripe subscription create returned no confirmation client secret',
-        )
+        );
       }
 
       // Best-effort audit — the checkout already succeeded, so a failed
@@ -372,12 +375,12 @@ export const createBillingRouter = (
           userId,
           type: 'checkout_started',
           metadata: { tier, subscriptionId: createdSubscription.id },
-        })
+        });
       } catch (auditErr) {
         apiLogger.error(
           { err: auditErr, userId, tier },
           'checkout-session: checkout_started audit insert failed',
-        )
+        );
       }
 
       return ctx.json({
@@ -387,12 +390,12 @@ export const createBillingRouter = (
           subscriptionId: createdSubscription.id,
           founderSeatNumber,
         },
-      })
+      });
     } catch (err) {
       apiLogger.error(
         { err, userId, tier },
         'checkout-session: Stripe checkout failed',
-      )
+      );
       // A claimed founder seat must not leak when Stripe fails after the
       // claim — restore it (guarded so seats never exceed seatsTotal).
       // Never restore once the incomplete subscription exists: it holds the
@@ -405,7 +408,7 @@ export const createBillingRouter = (
             subscriptionId: createdSubscription.id,
           },
           'checkout-session: post-create failure — seat held by incomplete subscription',
-        )
+        );
       }
       if (founderSeatNumber !== null && createdSubscription === null) {
         try {
@@ -417,7 +420,7 @@ export const createBillingRouter = (
                 eq(founderWindow.id, 1),
                 lt(founderWindow.seatsRemaining, founderWindow.seatsTotal),
               ),
-            )
+            );
           await db.insert(subscriptionEvents).values({
             userId,
             type: 'founder_seat_restored',
@@ -425,20 +428,20 @@ export const createBillingRouter = (
               seatNumber: founderSeatNumber,
               reason: 'checkout_failure',
             },
-          })
+          });
         } catch (restoreErr) {
           apiLogger.error(
             { err: restoreErr, userId, seatNumber: founderSeatNumber },
             'checkout-session: founder seat restore failed',
-          )
+          );
         }
       }
       return ctx.json(
         { success: false, error: 'Failed to start checkout' },
         500,
-      )
+      );
     }
-  })
+  });
 
-  return billingRouter
-}
+  return billingRouter;
+};
