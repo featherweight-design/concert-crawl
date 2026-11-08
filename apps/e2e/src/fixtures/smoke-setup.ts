@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/node';
-import { SENTRY_DATA_COLLECTION } from '@concert-crawl/types';
+import { SENTRY_PRIVACY_OPTIONS } from '@concert-crawl/types/sentry';
 import { chromium, type FullConfig } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
@@ -30,8 +30,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       // See apps/api/src/instrument.ts — local runs never send, so dev noise
       // cannot bury real production errors.
       enabled: environment !== 'local',
-      dataCollection: SENTRY_DATA_COLLECTION,
-      attachStacktrace: false,
+      ...SENTRY_PRIVACY_OPTIONS,
       initialScope: {
         tags: { source: 'smoke-test' },
       },

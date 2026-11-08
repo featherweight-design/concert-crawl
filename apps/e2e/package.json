@@ -13,7 +13,6 @@
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@playwright/test": "^1.64.1",
-    "@sentry/node": "^11.11.0",
     "@types/node": "^26.6.6",
     "jsdom": "^30.1.3",
     "typescript": "^5.0.0",
@@ -21,6 +20,7 @@
     "zod": "^3.22.0"
   },
   "dependencies": {
-    "@concert-crawl/types": "workspace:*"
+    "@concert-crawl/types": "workspace:*",
+    "@sentry/node": "^11.11.0"
   }
 }

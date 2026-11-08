@@ -184,6 +184,12 @@ jobs:
         if: steps.wait_for_live.outputs.should_smoke == 'true'
         run: pnpm install --frozen-lockfile
 
+      # The smoke reporter imports @concert-crawl/types/sentry, which resolves
+      # to the package's built dist.
+      - name: Build @concert-crawl/types
+        if: steps.wait_for_live.outputs.should_smoke == 'true'
+        run: pnpm --filter @concert-crawl/types build
+
       - name: Cache Playwright browsers
         if: steps.wait_for_live.outputs.should_smoke == 'true'
         uses: actions/cache@v6

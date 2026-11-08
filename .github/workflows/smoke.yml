@@ -37,6 +37,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The smoke reporter imports @concert-crawl/types/sentry, which resolves
+      # to the package's built dist.
+      - name: Build @concert-crawl/types
+        run: pnpm --filter @concert-crawl/types build
+
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:
