@@ -76,8 +76,6 @@ import { parseGenreRows } from '../lib/parse-genre-rows.js';
 import { releaseWatch } from '../lib/user-events.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = idSchema;
-
 const listEventsSchema = z.object({
   from: z
     .string()
@@ -585,7 +583,7 @@ function markViewerScoped(ctx: Context, isAuthed: boolean): void {
 // GET /v1/events/:id — single event with venue and watching count
 eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const rawId = ctx.req.param('id');
-  const parsed = uuidSchema.safeParse(rawId);
+  const parsed = idSchema.safeParse(rawId);
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   const id = parsed.data;
@@ -1196,7 +1194,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 // same panel, minus the per-row watch state.
 eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
   const rawId = ctx.req.param('id');
-  const parsed = uuidSchema.safeParse(rawId);
+  const parsed = idSchema.safeParse(rawId);
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   const eventId = parsed.data;
@@ -1327,7 +1325,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
 // this). The response is viewer-specific — the caller is excluded from their own
 // roster — so it must never land in a shared cache.
 eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
-  const parsed = uuidSchema.safeParse(ctx.req.param('id'));
+  const parsed = idSchema.safeParse(ctx.req.param('id'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Event not found' }, 404);
   const eventId = parsed.data;
@@ -1366,7 +1364,7 @@ eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   const rawId = ctx.req.param('id');
-  const parsed = uuidSchema.safeParse(rawId);
+  const parsed = idSchema.safeParse(rawId);
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
 
@@ -1414,7 +1412,7 @@ eventsRouter.delete('/:id/watch', clerkMiddleware(), async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   const rawId = ctx.req.param('id');
-  const parsed = uuidSchema.safeParse(rawId);
+  const parsed = idSchema.safeParse(rawId);
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
 

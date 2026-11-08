@@ -55,7 +55,6 @@ import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js';
 import { notifyCrewMembershipChange } from '../lib/crew-notifications.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = idSchema;
 const nameSchema = z.string().trim().min(1).max(40);
 
 const createBodySchema = z.object({
@@ -63,7 +62,7 @@ const createBodySchema = z.object({
   // patch is seeded from the id, so a server-minted id would make the preview
   // a lie. Safe because the id is not a capability — the invite token is
   // (plan D2).
-  id: uuidSchema.optional(),
+  id: idSchema.optional(),
   name: nameSchema,
 });
 
@@ -295,7 +294,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   const userId = authInfo.userId;
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
   const crewId = parsed.data;
@@ -366,7 +365,7 @@ crewsRouter.get('/event-going/:eventId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('eventId'));
+  const parsed = idSchema.safeParse(ctx.req.param('eventId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
 
@@ -385,7 +384,7 @@ crewsRouter.get('/:crewId/shows', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   const userId = authInfo.userId;
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -455,7 +454,7 @@ crewsRouter.patch('/:crewId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const idParsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const idParsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!idParsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -491,7 +490,7 @@ crewsRouter.post('/:crewId/patch/reroll', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -519,7 +518,7 @@ crewsRouter.delete('/:crewId/members/:memberId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -577,7 +576,7 @@ crewsRouter.delete('/:crewId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -601,7 +600,7 @@ crewsRouter.post('/:crewId/leave', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   const userId = authInfo.userId;
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
   const crewId = parsed.data;
@@ -668,7 +667,7 @@ crewsRouter.post('/:crewId/handoff', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const idParsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const idParsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!idParsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -727,7 +726,7 @@ crewsRouter.put('/:crewId/mute', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -751,7 +750,7 @@ crewsRouter.delete('/:crewId/mute', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -825,7 +824,7 @@ crewsRouter.post('/:crewId/invites', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   const userId = authInfo.userId;
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
   const crewId = parsed.data;
@@ -880,7 +879,7 @@ crewsRouter.get('/:crewId/invites/current', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
@@ -913,11 +912,11 @@ crewsRouter.post('/:crewId/invites/:inviteId/revoke', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'));
+  const parsed = idSchema.safeParse(ctx.req.param('crewId'));
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400);
 
-  const inviteParsed = uuidSchema.safeParse(ctx.req.param('inviteId'));
+  const inviteParsed = idSchema.safeParse(ctx.req.param('inviteId'));
   if (!inviteParsed.success)
     return ctx.json({ success: false, error: 'Invalid invite ID' }, 400);
 
