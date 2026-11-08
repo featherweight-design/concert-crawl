@@ -1,4 +1,4 @@
-import type { DataCollection } from '@sentry/core';
+import type { DataCollection, ResolvedDataCollection } from '@sentry/core';
 
 /**
  * The privacy options every `Sentry.init` spreads in (web client, server and
@@ -13,8 +13,9 @@ import type { DataCollection } from '@sentry/core';
  * (`apps/web/src/lib/sentry-redact.ts`, `apps/api/src/lib/sentry-scrub.ts`)
  * are the second line, for what a captured error still carries.
  *
- * `satisfies Required<...>` fails the build when a Sentry release adds a
- * switch this block does not set. `frameContextLines` is left at its default:
+ * The `satisfies` clause fails the build when a Sentry release adds a switch,
+ * top-level or inside the graphQL, genAI and mcp groups, that this block does
+ * not set. `frameContextLines` is left at its default:
  * it is the count of our own source lines shown around a stack frame, not
  * collected data.
  *
@@ -34,7 +35,8 @@ const dataCollection = {
   databaseQueryData: false,
   queues: false,
   stackFrameVariables: false,
-} satisfies Required<Omit<DataCollection, 'frameContextLines'>>;
+} satisfies Omit<ResolvedDataCollection, 'frameContextLines' | 'httpHeaders'> &
+  Required<Pick<DataCollection, 'httpHeaders'>>;
 
 function deepFreeze<T extends object>(value: T): T {
   for (const child of Object.values(value)) {

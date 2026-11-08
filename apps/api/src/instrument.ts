@@ -14,8 +14,8 @@ Sentry.init({
   // none of which say anything about deployed health. Reporting them buries
   // real production errors and burns quota, so local never sends.
   enabled: environment !== 'local',
-  // Errors only: no tracing, no default personal data, no stack traces on
-  // messages (see the constant).
+  // No tracing, no default personal data, no stack traces on messages (see
+  // the constant). Sentry.logger calls still send logs.
   ...SENTRY_PRIVACY_OPTIONS,
   beforeSend: scrubEvent,
 });

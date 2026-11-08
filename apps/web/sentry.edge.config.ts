@@ -11,8 +11,8 @@ Sentry.init({
   // See apps/api/src/instrument.ts — local runs never send, so dev noise
   // cannot bury real production errors.
   enabled: environment !== 'local',
-  // Errors only: no tracing, no default personal data, no stack traces on
-  // messages (see the constant).
+  // No tracing, no default personal data, no stack traces on messages (see
+  // the constant). Sentry.logger calls still send logs.
   ...SENTRY_PRIVACY_OPTIONS,
   beforeBreadcrumb,
   beforeSend,

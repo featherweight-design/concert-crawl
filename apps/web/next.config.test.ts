@@ -6,7 +6,7 @@ const { serwistInit } = vi.hoisted(() => ({
 }));
 
 vi.mock('@serwist/next', () => ({ default: serwistInit }));
-vi.mock('@sentry/nextjs', () => ({
+vi.mock('@sentry/nextjs/config', () => ({
   withSentryConfig: (config: unknown) => config,
 }));
 
