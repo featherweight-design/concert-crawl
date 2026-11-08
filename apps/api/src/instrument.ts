@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/hono/node';
-import { SENTRY_DATA_COLLECTION } from '@concert-crawl/types';
+import { SENTRY_PRIVACY_OPTIONS } from '@concert-crawl/types/sentry';
 import { scrubEvent } from './lib/sentry-scrub.js';
 
 // `||` rather than `??`: a variable that exists but is blank must still read
@@ -14,10 +14,8 @@ Sentry.init({
   // none of which say anything about deployed health. Reporting them buries
   // real production errors and burns quota, so local never sends.
   enabled: environment !== 'local',
-  // Errors only: no tracing, and no default personal data (see the constant).
-  dataCollection: SENTRY_DATA_COLLECTION,
-  // Keep captureMessage grouping as it was: Sentry 11 attaches a stack trace
-  // to every message by default, which would split existing issues.
-  attachStacktrace: false,
+  // Errors only: no tracing, no default personal data, no stack traces on
+  // messages (see the constant).
+  ...SENTRY_PRIVACY_OPTIONS,
   beforeSend: scrubEvent,
 });

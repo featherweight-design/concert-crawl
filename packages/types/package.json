@@ -8,6 +8,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./sentry": {
+      "import": "./dist/sentry-data-collection.js",
+      "types": "./dist/sentry-data-collection.d.ts"
     }
   },
   "scripts": {

@@ -1,8 +1,10 @@
 import type { DataCollection } from '@sentry/core';
 
 /**
- * The one `dataCollection` block every `Sentry.init` passes (web client,
- * server and edge, the API, the crawler and the e2e smoke reporter).
+ * The privacy options every `Sentry.init` spreads in (web client, server and
+ * edge, the API, the crawler and the e2e smoke reporter). Imported through the
+ * `@concert-crawl/types/sentry` subpath so the browser bundle does not pull in
+ * the whole types barrel.
  *
  * Sentry 11 replaced `sendDefaultPii` with `dataCollection`, and when the
  * option is unset it collects everything: user info, cookies, headers, HTTP
@@ -15,8 +17,12 @@ import type { DataCollection } from '@sentry/core';
  * switch this block does not set. `frameContextLines` is left at its default:
  * it is the count of our own source lines shown around a stack frame, not
  * collected data.
+ *
+ * `attachStacktrace: false` keeps captureMessage grouping as it was: Sentry 11
+ * attaches a stack trace to every message by default, which would split
+ * existing issues.
  */
-export const SENTRY_DATA_COLLECTION = Object.freeze({
+const dataCollection = {
   userInfo: false,
   cookies: false,
   httpHeaders: false,
@@ -28,4 +34,16 @@ export const SENTRY_DATA_COLLECTION = Object.freeze({
   databaseQueryData: false,
   queues: false,
   stackFrameVariables: false,
-} satisfies Required<Omit<DataCollection, 'frameContextLines'>>);
+} satisfies Required<Omit<DataCollection, 'frameContextLines'>>;
+
+function deepFreeze<T extends object>(value: T): T {
+  for (const child of Object.values(value)) {
+    if (child !== null && typeof child === 'object') deepFreeze(child);
+  }
+  return Object.freeze(value);
+}
+
+export const SENTRY_PRIVACY_OPTIONS = deepFreeze({
+  dataCollection,
+  attachStacktrace: false,
+});
