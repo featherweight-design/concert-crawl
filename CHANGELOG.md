@@ -1,3 +1,11 @@
+## [1.304.3](https://github.com/featherweight-design/concert-crawl/compare/v1.304.2...v1.304.3) (2026-11-08)
+
+
+### Bug Fixes
+
+* **config:** keep consistent-type-imports strict over the kit ([3db6766](https://github.com/featherweight-design/concert-crawl/commit/3db6766d34e0ad2e349f94274cb773bbc7729af3))
+* **config:** keep no-unreachable on under the kit presets ([c2cafed](https://github.com/featherweight-design/concert-crawl/commit/c2cafed0c26d5292e7810bb77747aef3a9b50c8a))
+
 ## [1.304.2](https://github.com/featherweight-design/concert-crawl/compare/v1.304.1...v1.304.2) (2026-11-01)
 
 
