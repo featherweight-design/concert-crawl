@@ -9,6 +9,14 @@ on:
 permissions: read-all
 
 jobs:
+  # The fwd-stack baseline: declared majors, the Node pin and pnpm checked
+  # against the kit's baseline.json. Warn mode annotates and passes; it is not
+  # a required check.
+  baseline:
+    uses: featherweight-design/fwd-stack/.github/workflows/baseline.yml@main
+    with:
+      mode: warn
+
   security-audit:
     name: Security audit
     runs-on: ubuntu-latest
