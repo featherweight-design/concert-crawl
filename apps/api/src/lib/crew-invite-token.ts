@@ -31,7 +31,7 @@ export const generateCrewInviteToken = (): string =>
  * base64url only. Bounds what reaches the DB and rejects the obvious probes
  * before a query runs. Zod rather than a hand-rolled predicate because every
  * Hono boundary here validates with Zod, path params included — see
- * `uuidSchema` in routes/crews.ts.
+ * `idSchema` (lib/id-schema.ts), which routes/crews.ts uses.
  */
 export const crewInviteTokenSchema = z
   .string()

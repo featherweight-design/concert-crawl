@@ -20,8 +20,6 @@ import {
 } from '../lib/event-billing.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = idSchema;
-
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
 // auth is the only requirement.
@@ -140,7 +138,7 @@ watchingRouter.put('/:eventId', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   const eventIdRaw = ctx.req.param('eventId');
-  const parsed = uuidSchema.safeParse(eventIdRaw);
+  const parsed = idSchema.safeParse(eventIdRaw);
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
   }

@@ -5,8 +5,6 @@ import { STALE_AFTER_MS } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = idSchema;
-
 export const priceSubmissionStillAccurateRouter = new Hono();
 
 // The event must be reachable the same way event detail reaches it: not
@@ -44,11 +42,11 @@ priceSubmissionStillAccurateRouter.post(
   clerkAuth,
   requireAuth,
   async (ctx) => {
-    const parsedEventId = uuidSchema.safeParse(ctx.req.param('id'));
+    const parsedEventId = idSchema.safeParse(ctx.req.param('id'));
     if (!parsedEventId.success) {
       return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
     }
-    const parsedSubmissionId = uuidSchema.safeParse(
+    const parsedSubmissionId = idSchema.safeParse(
       ctx.req.param('submissionId'),
     );
     if (!parsedSubmissionId.success) {

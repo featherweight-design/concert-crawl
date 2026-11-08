@@ -11,8 +11,6 @@ import { releaseAttendance } from '../lib/user-events.js';
 import { notifyCrewGoing } from '../lib/crew-notifications.js';
 import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = idSchema;
-
 // Returns null rather than throwing: this runs AFTER the attendance write has
 // committed, so a transient read failure must not turn an action that already
 // landed into a 500. The caller falls back to its own timestamp, which differs
@@ -55,7 +53,7 @@ attendingRouter.put('/:eventId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('eventId'));
+  const parsed = idSchema.safeParse(ctx.req.param('eventId'));
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
   }
@@ -158,7 +156,7 @@ attendingRouter.delete('/:eventId', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const parsed = uuidSchema.safeParse(ctx.req.param('eventId'));
+  const parsed = idSchema.safeParse(ctx.req.param('eventId'));
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
   }

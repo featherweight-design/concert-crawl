@@ -23,11 +23,10 @@ export const submissionsRouter = new Hono();
 // `price_submissions.id` is a uuid column, so an unparseable `:id` reaches
 // Postgres as a cast error and surfaces as a 500 rather than the 404 the caller
 // deserves. Every handler here takes the same param, so every one needs this.
-const submissionIdSchema = idSchema;
 
 // GET /v1/submissions/:id
 submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
+  const parsedId = idSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
     return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
@@ -90,7 +89,7 @@ function selectOnActiveVenue(id: string) {
 
 // POST /v1/submissions/:id/confirm
 submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
+  const parsedId = idSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
     return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
@@ -177,7 +176,7 @@ submissionsRouter.post(
       );
   }),
   async (ctx) => {
-    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
+    const parsedId = idSchema.safeParse(ctx.req.param('id'));
     if (!parsedId.success) {
       return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
     }
@@ -329,7 +328,7 @@ submissionsRouter.patch(
       );
   }),
   async (ctx) => {
-    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
+    const parsedId = idSchema.safeParse(ctx.req.param('id'));
     if (!parsedId.success) {
       return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
     }
@@ -386,7 +385,7 @@ submissionsRouter.patch(
 
 // DELETE /v1/submissions/:id
 submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
+  const parsedId = idSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
     return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
