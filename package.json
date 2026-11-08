@@ -61,7 +61,7 @@
       "js-cookie": "^3.0.7",
       "postcss": "^8.5.14",
       "@semantic-release/github>undici": "^7.28.0",
-      "vite": "^6.4.3"
+      "vite": "^6.4.5"
     },
     "onlyBuiltDependencies": [
       "@clerk/shared",
