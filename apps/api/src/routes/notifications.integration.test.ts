@@ -72,7 +72,7 @@ const listBodySchema = z.object({
         actionUrl: z.string().nullable(),
         readAt: z.string().nullable(),
         createdAt: z.string(),
-        metadata: z.record(z.unknown()).nullable(),
+        metadata: z.record(z.string(), z.unknown()).nullable(),
       }),
     ),
     unreadCount: z.number(),

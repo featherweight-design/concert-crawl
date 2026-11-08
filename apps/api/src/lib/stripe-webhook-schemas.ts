@@ -12,7 +12,7 @@ const stripeIdSchema = z
   .union([z.string(), z.object({ id: z.string() })])
   .transform((value) => (typeof value === 'string' ? value : value.id));
 
-const metadataSchema = z.record(z.string()).nullish();
+const metadataSchema = z.record(z.string(), z.string()).nullish();
 
 // Subscription items carry the price + period bounds. The current_period_*
 // fields moved off the subscription onto the item in the 2025 basil release,

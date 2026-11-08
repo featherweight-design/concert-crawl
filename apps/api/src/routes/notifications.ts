@@ -98,7 +98,7 @@ const decodeCursor = (
   return { createdAtText, id };
 };
 
-const metadataSchema = z.record(z.unknown());
+const metadataSchema = z.record(z.string(), z.unknown());
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
