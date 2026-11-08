@@ -304,7 +304,7 @@ describe('NotifItem', () => {
     expect(row.getAttribute('style')).toContain(
       'border-left: 2px solid var(--success)',
     )
-    expect(row).toHaveStyle({ background: 'var(--surface-1)' })
+    expect(row.getAttribute('style')).toContain('background: var(--surface-1)')
     const title = within(row).getByText(/The price for Geese/)
     expect(title).toHaveStyle({ fontWeight: '700' })
     expect(row.getAttribute('aria-label')).toContain('. Unread')
@@ -322,7 +322,7 @@ describe('NotifItem', () => {
     expect(row.getAttribute('style')).toContain(
       'border-left: 2px solid transparent',
     )
-    expect(row).toHaveStyle({ background: 'transparent' })
+    expect(row.getAttribute('style')).toContain('background: transparent')
     expect(within(row).getByText(/The price for Geese/)).toHaveStyle({
       fontWeight: '600',
     })
