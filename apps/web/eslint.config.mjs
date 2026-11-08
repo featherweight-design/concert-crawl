@@ -36,6 +36,8 @@ export default [
     rules: {
       'no-unused-vars': 'off',
       'no-undef': 'off',
+      // eslint-recommended turns this off; tsc does not report it by default.
+      'no-unreachable': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
