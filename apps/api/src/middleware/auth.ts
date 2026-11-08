@@ -1,6 +1,5 @@
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import type { Context, MiddlewareHandler, Next } from 'hono';
-import { setSentryUser } from '../lib/sentry-user.js';
 
 // Initialize Clerk middleware — verifies JWT from Authorization: Bearer <token>
 export const clerkAuth = clerkMiddleware();
@@ -32,8 +31,6 @@ export const serviceOrClerkAuth: MiddlewareHandler = async (
   if (!auth?.userId) {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   }
-
-  setSentryUser(auth.userId);
   await next();
 };
 
@@ -55,8 +52,6 @@ export const requireAuth: MiddlewareHandler = async (
   if (!auth?.userId) {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   }
-
-  setSentryUser(auth.userId);
   await next();
 };
 
@@ -75,6 +70,5 @@ export function getAuthUser(ctx: Context): { userId: string } {
 export function getAuthOptional(ctx: Context): { userId: string } | null {
   const auth = getAuth(ctx);
   if (!auth?.userId) return null;
-  setSentryUser(auth.userId);
   return { userId: auth.userId };
 }

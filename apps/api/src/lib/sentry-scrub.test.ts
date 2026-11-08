@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ErrorEvent } from '@sentry/hono/node';
-import { scrubEvent, scrubRequestBody } from './sentry-scrub.js';
+import {
+  redactInviteTokens,
+  scrubEvent,
+  scrubRequestBody,
+} from './sentry-scrub.js';
 
 describe('scrubRequestBody', () => {
   it('redacts email fields', () => {
@@ -48,5 +52,36 @@ describe('scrubEvent', () => {
   it('passes through events with no request body', () => {
     const event: ErrorEvent = { type: undefined };
     expect(scrubEvent(event)).toBe(event);
+  });
+
+  it('drops the user from every event', () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      user: { id: 'user_2abc', ip_address: '203.0.113.7' },
+    };
+    expect(scrubEvent(event).user).toBeUndefined();
+  });
+
+  it('redacts a crew invite token from the request URL and transaction', () => {
+    const event: ErrorEvent = {
+      type: undefined,
+      request: {
+        url: 'https://api.example.com/v1/crew-invites/tok_secret?x=1',
+      },
+      transaction: 'GET /v1/crew-invites/tok_secret',
+    };
+    const scrubbed = scrubEvent(event);
+    expect(scrubbed.request?.url).toBe(
+      'https://api.example.com/v1/crew-invites/[Redacted]?x=1',
+    );
+    expect(scrubbed.transaction).toBe('GET /v1/crew-invites/[Redacted]');
+  });
+});
+
+describe('redactInviteTokens', () => {
+  it('leaves URLs without an invite token untouched', () => {
+    expect(redactInviteTokens('/v1/crews/123/members')).toBe(
+      '/v1/crews/123/members',
+    );
   });
 });
