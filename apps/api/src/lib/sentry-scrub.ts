@@ -1,10 +1,11 @@
 import type { ErrorEvent, EventHint } from '@sentry/hono/node';
 
-// Sentry's Hono integration records request bodies. That is deliberately kept —
-// it is what let us identify a scanner's injection payloads after the fact — but
-// some bodies carry PII (waitlist/invite emails) or bearer-equivalent secrets
-// (the signed unsubscribe token). Those values are replaced before the event
-// leaves the process.
+// Since Sentry 11 the SDK captures no request bodies (`httpBodies: []` in
+// SENTRY_PRIVACY_OPTIONS, from @concert-crawl/types/sentry), which ends the
+// scanner-payload visibility bodies used to give. This scrubber stays as the
+// second line: if a body ever reaches an event, PII (waitlist/invite emails)
+// and bearer-equivalent secrets (the signed unsubscribe token) are replaced
+// before it leaves the process.
 const SENSITIVE_KEY = /email|token|password|secret|apikey|authorization/i;
 
 const REDACTED = '[Redacted]';
