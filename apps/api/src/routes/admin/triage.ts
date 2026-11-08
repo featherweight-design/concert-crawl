@@ -36,6 +36,7 @@ import {
   type TriageFault,
   type TriageRunRow,
 } from './lib/triage.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 const logger = createLogger('admin:triage');
 
@@ -55,13 +56,13 @@ const QUEUE_BREAKDOWN_LIMIT = 3;
 
 const faultBaseSchema = z.object({
   id: z.string(),
-  venueId: z.string().uuid(),
+  venueId: idSchema,
   venue: z.string(),
   band: z.enum(['hard', 'loss', 'suspect']),
   persistedSince: z.string(),
   days: z.number(),
   dur: z.string(),
-  crawlRunId: z.string().uuid().nullable(),
+  crawlRunId: idSchema.nullable(),
 });
 
 const faultSchema = z.discriminatedUnion('condition', [
@@ -189,8 +190,8 @@ const parseEvidenceKind = (
 // baseline, throwing takes the whole dashboard down.
 
 const runRowSchema = z.object({
-  id: z.string().uuid(),
-  venue_id: z.string().uuid(),
+  id: idSchema,
+  venue_id: idSchema,
   status: z.enum(['success', 'failed', 'partial', 'skipped']),
   http_status_code: z.number().int().nullable(),
   error_message: z.string().nullable(),

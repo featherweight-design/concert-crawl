@@ -11,6 +11,7 @@ import {
   userNotificationPreferences,
 } from '@concert-crawl/db';
 import { apiLogger } from '../lib/logger.js';
+import { idSchema } from '../lib/id-schema.js';
 
 export const mePushRouter = new Hono();
 
@@ -123,7 +124,7 @@ mePushRouter.delete('/push/subscriptions/:id', async (ctx) => {
   const authInfo = getAuth(ctx);
   const userId = authInfo?.userId ?? null;
   if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401);
-  const idParam = z.string().uuid().safeParse(ctx.req.param('id'));
+  const idParam = idSchema.safeParse(ctx.req.param('id'));
   if (!idParam.success) {
     return ctx.json({ success: false, error: 'Invalid subscription id' }, 400);
   }

@@ -14,6 +14,7 @@ import { createLogger } from '@concert-crawl/logger';
 import { getAuthUser } from '../../middleware/auth.js';
 import { dispatchCrawlerInBackground } from '../../lib/crawler-dispatch.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 const logger = createLogger('admin:crawl');
 
@@ -85,7 +86,7 @@ async function parseForce(ctx: {
 // the went-dark enum above — a shared key would fail the enum on every
 // coverage row and collapse the discriminator to undefined.
 const alertMetadataSchema = z.object({
-  crawlRunId: z.string().uuid().optional(),
+  crawlRunId: idSchema.optional(),
   severity: z.enum(['went_dark', 'dropped_sharply']).nullish().catch(undefined),
   kind: z.enum(['horizon_shrank', 'pinned_count']).nullish().catch(undefined),
   coverage: z.enum(['no_coverage', 'partial_gap']).nullish().catch(undefined),
@@ -262,7 +263,7 @@ crawlAdminRouter.get(
 // #804's "find suspicious runs quickly" workflow without forcing operators
 // to scan the full list.
 const listQuerySchema = z.object({
-  venueId: z.string().uuid().optional(),
+  venueId: idSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(10),
   hasAlert: z
     .union([z.literal('true'), z.literal('false')])

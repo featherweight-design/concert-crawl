@@ -74,8 +74,9 @@ import { loadPlanState } from '../lib/plan.js';
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 import { parseGenreRows } from '../lib/parse-genre-rows.js';
 import { releaseWatch } from '../lib/user-events.js';
+import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = idSchema;
 
 const listEventsSchema = z.object({
   from: z

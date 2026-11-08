@@ -39,8 +39,9 @@ import {
   movedCandidateExpr,
   parseMovedCandidate,
 } from './lib/moved-candidate.js';
+import { idSchema } from '../../lib/id-schema.js';
 
-const eventIdSchema = z.object({ id: z.string().uuid() });
+const eventIdSchema = z.object({ id: idSchema });
 
 // Returns the SQL fragment that derives `isSoldOut`: true when an event has a
 // promoted+resolved sold-out event_report. Built lazily inside handlers so the
@@ -1154,7 +1155,7 @@ eventsAdminRouter.post(
 const BULK_MAX = 100;
 
 const bulkIdsSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(BULK_MAX),
+  ids: z.array(idSchema).min(1).max(BULK_MAX),
 });
 
 const bulkDeleteSchema = bulkIdsSchema.extend({
@@ -1324,7 +1325,7 @@ eventsAdminRouter.post(
 );
 
 const mergeSchema = z.object({
-  targetId: z.string().uuid(),
+  targetId: idSchema,
   /**
    * Fire the watch-update fan-out on the target after the merge commits.
    * Defaults to false because an ordinary de-duplication merge must stay

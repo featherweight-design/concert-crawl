@@ -2,7 +2,6 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { and, eq, isNull } from 'drizzle-orm';
-import { z } from 'zod';
 import { db, userEvents, events } from '@concert-crawl/db';
 import type { AttendingToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
@@ -10,8 +9,9 @@ import { requireFeature } from '../middleware/entitlement.js';
 import type { EntitlementVariables } from '../middleware/entitlement.js';
 import { releaseAttendance } from '../lib/user-events.js';
 import { notifyCrewGoing } from '../lib/crew-notifications.js';
+import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = idSchema;
 
 // Returns null rather than throwing: this runs AFTER the attendance write has
 // committed, so a transient read failure must not turn an action that already

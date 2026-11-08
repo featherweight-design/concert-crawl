@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { sql, type SQL } from 'drizzle-orm';
 import { events } from '@concert-crawl/db';
 import { type MovedReason } from '@concert-crawl/types';
+import { idSchema } from '../../../lib/id-schema.js';
 
 /**
  * How far a reschedule may land from the original date, in days, for the
@@ -40,7 +41,7 @@ export const MOVED_ANNOUNCE_GAP_HOURS = 24;
 export const MOVED_REPLACEMENT_WINDOW_DAYS = 14;
 
 const movedCandidateSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
   reason: z.union([z.literal('date'), z.literal('venue')]),
   title: z.string(),
   date: z.string(),

@@ -53,8 +53,9 @@ import {
 } from '../lib/crew-invite-token.js';
 import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js';
 import { notifyCrewMembershipChange } from '../lib/crew-notifications.js';
+import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = idSchema;
 const nameSchema = z.string().trim().min(1).max(40);
 
 const createBodySchema = z.object({

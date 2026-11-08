@@ -16,13 +16,14 @@ import {
 } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
+import { idSchema } from '../lib/id-schema.js';
 
 export const submissionsRouter = new Hono();
 
 // `price_submissions.id` is a uuid column, so an unparseable `:id` reaches
 // Postgres as a cast error and surfaces as a 500 rather than the 404 the caller
 // deserves. Every handler here takes the same param, so every one needs this.
-const submissionIdSchema = z.string().uuid();
+const submissionIdSchema = idSchema;
 
 // GET /v1/submissions/:id
 submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {

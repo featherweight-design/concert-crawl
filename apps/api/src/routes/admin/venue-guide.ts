@@ -15,6 +15,7 @@ import {
 } from '@concert-crawl/types';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 // #764 admin authoring surface for the venue first-timer guide.
 //
@@ -82,7 +83,7 @@ export const saveGuideSchema = z
     });
   });
 
-const venueIdParamSchema = z.object({ id: z.string().uuid() });
+const venueIdParamSchema = z.object({ id: idSchema });
 
 /**
  * Hono cannot infer the parent's `:id` through the mount, so `zValidator('param')`
