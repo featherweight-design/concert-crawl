@@ -23,7 +23,7 @@
     "@concert-crawl/config": "workspace:*",
     "@sentry/core": "^11.11.0",
     "typescript": "^5.0.0",
-    "vite": "^6.0.0",
+    "vite": "^6.4.5",
     "vitest": "^5.1.0"
   }
 }
