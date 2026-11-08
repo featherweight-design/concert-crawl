@@ -57,7 +57,7 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
 };
 
 const SingleResultSchema = z.object({
-  eventId: z.string().uuid(),
+  eventId: z.guid(),
   genres: z.array(z.string().min(1)).min(1).max(3),
 });
 

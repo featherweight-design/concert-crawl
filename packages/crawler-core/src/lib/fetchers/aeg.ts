@@ -87,7 +87,7 @@ const AegEventSchema = z
     // size code OR an empty array when no media exists. Accept either
     // shape; the picker treats both as "no usable image".
     media: z
-      .union([z.record(AegMediaItemSchema), z.array(z.unknown())])
+      .union([z.record(z.string(), AegMediaItemSchema), z.array(z.unknown())])
       .optional(),
   })
   .passthrough();
