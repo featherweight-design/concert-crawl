@@ -41,16 +41,19 @@ The chevron should be the same size and color as the current trailing one (`shri
 ### #389 + Venue page responsiveness
 
 In `venues/[slug]/page.tsx`, the content wrapper currently has:
+
 ```
 className="relative -mt-5 flex-1 px-[18px] pb-10"
 ```
 
 Change to:
+
 ```
 className="relative -mt-5 flex-1 px-[18px] pb-10 sm:px-8"
 ```
 
 And wrap the inner content (everything inside the content div) with a centered max-width container:
+
 ```
 <div className="mx-auto max-w-[880px]">
   {/* venue name, city/directions, stats, shows, map */}
@@ -63,9 +66,9 @@ This matches EventDetail's `max-w-[880px] mx-auto px-[18px] sm:px-8` pattern exa
 
 ## Files Changed
 
-| File | Changes |
-|------|---------|
-| `apps/web/src/app/(protected)/events/[id]/page.tsx` | Delete desktop breadcrumb div; remove `sm:hidden` from back button; move InfoRow chevron inline |
+| File                                                  | Changes                                                                                                                                         |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/app/(protected)/events/[id]/page.tsx`   | Delete desktop breadcrumb div; remove `sm:hidden` from back button; move InfoRow chevron inline                                                 |
 | `apps/web/src/app/(protected)/venues/[slug]/page.tsx` | Delete desktop breadcrumb div; remove `sm:hidden` from back button; add `max-w-[880px] mx-auto` inner wrapper; add `sm:px-8` to content padding |
 
 ---

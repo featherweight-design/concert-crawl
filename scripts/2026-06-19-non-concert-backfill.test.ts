@@ -1,9 +1,9 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildBatches,
   formatCsvRow,
   type EventForClassification,
-} from './2026-06-19-non-concert-backfill-helpers.js'
+} from './2026-06-19-non-concert-backfill-helpers.js';
 
 describe('non-concert-backfill — buildBatches', () => {
   it('splits events into batches of the configured size', () => {
@@ -15,13 +15,13 @@ describe('non-concert-backfill — buildBatches', () => {
       date: '2026-08-01',
       venueName: 'Test Venue',
       currentHidden: false,
-    }))
-    const batches = buildBatches(events, 25)
-    expect(batches).toHaveLength(3) // 25 + 25 + 3
-    expect(batches[0]).toHaveLength(25)
-    expect(batches[1]).toHaveLength(25)
-    expect(batches[2]).toHaveLength(3)
-  })
+    }));
+    const batches = buildBatches(events, 25);
+    expect(batches).toHaveLength(3); // 25 + 25 + 3
+    expect(batches[0]).toHaveLength(25);
+    expect(batches[1]).toHaveLength(25);
+    expect(batches[2]).toHaveLength(3);
+  });
 
   it('returns single batch when input fits in one batch', () => {
     const events = Array.from({ length: 10 }, (_, idx) => ({
@@ -32,16 +32,16 @@ describe('non-concert-backfill — buildBatches', () => {
       date: '2026-08-01',
       venueName: 'V',
       currentHidden: false,
-    }))
-    const batches = buildBatches(events, 25)
-    expect(batches).toHaveLength(1)
-    expect(batches[0]).toHaveLength(10)
-  })
+    }));
+    const batches = buildBatches(events, 25);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(10);
+  });
 
   it('returns empty array for empty input', () => {
-    expect(buildBatches([], 25)).toEqual([])
-  })
-})
+    expect(buildBatches([], 25)).toEqual([]);
+  });
+});
 
 describe('non-concert-backfill — formatCsvRow', () => {
   it('quotes fields containing commas', () => {
@@ -54,9 +54,9 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: true,
       wouldChange: false,
-    })
-    expect(row).toContain('"Show, with, commas"')
-  })
+    });
+    expect(row).toContain('"Show, with, commas"');
+  });
 
   it('escapes embedded double quotes by doubling them (RFC 4180)', () => {
     const row = formatCsvRow({
@@ -68,9 +68,9 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: true,
       wouldChange: false,
-    })
-    expect(row).toContain('"Show ""with"" quotes"')
-  })
+    });
+    expect(row).toContain('"Show ""with"" quotes"');
+  });
 
   it('marks wouldChange=true when currentHidden differs from llmIsConcert', () => {
     // currentHidden=false + llmIsConcert=false → would change (hide)
@@ -83,27 +83,27 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: false,
       wouldChange: true,
-    })
-    expect(row).toContain(',true\n')
-  })
-})
+    });
+    expect(row).toContain(',true\n');
+  });
+});
 
 // classifyBatch tests — mock the Anthropic SDK so we exercise the response
 // parsing without making real API calls. Pattern mirrors
 // packages/crawler-core/src/lib/extractors/llm.test.ts.
 
-const mockCreate = vi.fn()
+const mockCreate = vi.fn();
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(
     class {
-      messages = { create: mockCreate }
+      messages = { create: mockCreate };
     },
   ),
-}))
+}));
 
 // Dynamic import after vi.mock hoist so the mocked SDK is in scope when
 // the script module's top-level imports run.
-const { classifyBatch } = await import('./2026-06-19-non-concert-backfill.js')
+const { classifyBatch } = await import('./2026-06-19-non-concert-backfill.js');
 
 function makeBatch(): EventForClassification[] {
   return [
@@ -125,7 +125,7 @@ function makeBatch(): EventForClassification[] {
       venueName: 'Venue 2',
       currentHidden: false,
     },
-  ]
+  ];
 }
 
 function makeToolResponse(input: unknown, toolName = 'classify_events') {
@@ -138,7 +138,7 @@ function makeToolResponse(input: unknown, toolName = 'classify_events') {
         input,
       },
     ],
-  }
+  };
 }
 
 describe('non-concert-backfill — classifyBatch', () => {
@@ -150,7 +150,7 @@ describe('non-concert-backfill — classifyBatch', () => {
           { eventId: 'evt-2', isConcert: false },
         ],
       }),
-    )
+    );
 
     // The Anthropic constructor is mocked; passing any object satisfies
     // the type at runtime because the mock class accepts no args.
@@ -158,91 +158,91 @@ describe('non-concert-backfill — classifyBatch', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       new (await import('@anthropic-ai/sdk')).default() as any,
       makeBatch(),
-    )
+    );
 
     expect(result).toEqual([
       { eventId: 'evt-1', isConcert: true },
       { eventId: 'evt-2', isConcert: false },
-    ])
-  })
+    ]);
+  });
 
   it('throws when no tool_use block is returned', async () => {
     mockCreate.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'no tool use' }],
-    })
+    });
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/classify_events tool_use block/)
-  })
+    ).rejects.toThrow(/classify_events tool_use block/);
+  });
 
   it('throws when tool_use block name does not match (regression for unverified-tool-name)', async () => {
     mockCreate.mockResolvedValueOnce(
       makeToolResponse({ classifications: [] }, 'some_other_tool'),
-    )
+    );
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/classify_events tool_use block/)
-  })
+    ).rejects.toThrow(/classify_events tool_use block/);
+  });
 
   it('throws when tool_use input is not an object', async () => {
-    mockCreate.mockResolvedValueOnce(makeToolResponse('not an object'))
+    mockCreate.mockResolvedValueOnce(makeToolResponse('not an object'));
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/tool_use input was not an object/)
-  })
+    ).rejects.toThrow(/tool_use input was not an object/);
+  });
 
   it('throws when classifications field is not an array', async () => {
     mockCreate.mockResolvedValueOnce(
       makeToolResponse({ classifications: 'not-an-array' }),
-    )
+    );
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/classifications was not an array/)
-  })
+    ).rejects.toThrow(/classifications was not an array/);
+  });
 
   it('throws when a classification entry is missing required fields', async () => {
     mockCreate.mockResolvedValueOnce(
       makeToolResponse({
         classifications: [{ eventId: 'evt-1' }], // missing isConcert
       }),
-    )
+    );
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/Malformed classification entry/)
-  })
+    ).rejects.toThrow(/Malformed classification entry/);
+  });
 
   it('throws when a classification entry has wrong field types', async () => {
     mockCreate.mockResolvedValueOnce(
       makeToolResponse({
         classifications: [{ eventId: 123, isConcert: 'yes' }],
       }),
-    )
+    );
     await expect(
       classifyBatch(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         new (await import('@anthropic-ai/sdk')).default() as any,
         makeBatch(),
       ),
-    ).rejects.toThrow(/wrong types/)
-  })
-})
+    ).rejects.toThrow(/wrong types/);
+  });
+});

@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import type { SubmissionWithMeta } from '@concert-crawl/types'
-import { confirmPriceSubmission } from '@/lib/events'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import type { SubmissionWithMeta } from '@concert-crawl/types';
+import { confirmPriceSubmission } from '@/lib/events';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface SubmissionListProps {
-  submissions: SubmissionWithMeta[]
-  eventId: string
-  currentUserId: string | null
+  submissions: SubmissionWithMeta[];
+  eventId: string;
+  currentUserId: string | null;
 }
 
 function SubmissionCard({
@@ -22,24 +22,24 @@ function SubmissionCard({
   onConfirm,
   isConfirming,
 }: {
-  submission: SubmissionWithMeta
-  eventId: string
-  currentUserId: string | null
-  onConfirm: (id: string) => void
-  isConfirming: boolean
+  submission: SubmissionWithMeta;
+  eventId: string;
+  currentUserId: string | null;
+  onConfirm: (id: string) => void;
+  isConfirming: boolean;
 }) {
-  const router = useRouter()
-  const isOwn = currentUserId != null && submission.userId === currentUserId
-  const isPending = submission.status === 'pending'
-  const isCorroborated = submission.status === 'corroborated'
+  const router = useRouter();
+  const isOwn = currentUserId != null && submission.userId === currentUserId;
+  const isPending = submission.status === 'pending';
+  const isCorroborated = submission.status === 'corroborated';
 
   const timeAgo = (() => {
-    const diff = Date.now() - new Date(submission.createdAt).getTime()
-    const hrs = Math.floor(diff / 3600000)
-    if (hrs < 1) return 'just now'
-    if (hrs < 24) return `${hrs}h ago`
-    return `${Math.floor(hrs / 24)}d ago`
-  })()
+    const diff = Date.now() - new Date(submission.createdAt).getTime();
+    const hrs = Math.floor(diff / 3600000);
+    if (hrs < 1) return 'just now';
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  })();
 
   return (
     <div
@@ -107,7 +107,7 @@ function SubmissionCard({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export function SubmissionList({
@@ -115,21 +115,21 @@ export function SubmissionList({
   eventId,
   currentUserId,
 }: SubmissionListProps) {
-  const { getToken } = useAuth()
-  const [localSubmissions, setLocalSubmissions] = useState(submissions)
-  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const { getToken } = useAuth();
+  const [localSubmissions, setLocalSubmissions] = useState(submissions);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   async function handleConfirm(submissionId: string) {
-    setConfirmingId(submissionId)
+    setConfirmingId(submissionId);
     try {
-      const token = await getToken()
-      if (!token) return
+      const token = await getToken();
+      if (!token) return;
       const result = await confirmPriceSubmission(
         eventId,
         submissionId,
         'same-vendor',
         token,
-      )
+      );
       setLocalSubmissions((prev) =>
         prev.map((sub) =>
           sub.id === submissionId
@@ -141,11 +141,11 @@ export function SubmissionList({
               }
             : sub,
         ),
-      )
+      );
     } catch {
       // swallow — submission list will show stale data until next refresh
     } finally {
-      setConfirmingId(null)
+      setConfirmingId(null);
     }
   }
 
@@ -167,5 +167,5 @@ export function SubmissionList({
         </p>
       )}
     </div>
-  )
+  );
 }

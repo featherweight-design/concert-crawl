@@ -1,8 +1,8 @@
-import Link from 'next/link'
+import Link from 'next/link';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.notFound
+const copy = CONSUMER_COPY.notFound;
 
 /**
  * The app's ordinary 404, extracted so a route that sits outside the app shell
@@ -67,4 +67,4 @@ export const NotFoundSurface = () => (
       {copy.browseButton}
     </Link>
   </main>
-)
+);

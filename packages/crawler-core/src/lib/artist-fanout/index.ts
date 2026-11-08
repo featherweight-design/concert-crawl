@@ -36,7 +36,7 @@
 // than detached because both crawler entrypoints hard-exit via
 // process.exit(0), which would sever a floating promise mid-flight (the same
 // #649 lesson as the crawl-failure emails).
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import {
   db,
   events,
@@ -49,23 +49,23 @@ import {
   userEvents,
   userNotificationPreferences,
   venues,
-} from '@concert-crawl/db'
-import { canUseFeature, derivePlanState } from '@concert-crawl/entitlements'
-import { createLogger } from '@concert-crawl/logger'
+} from '@concert-crawl/db';
+import { canUseFeature, derivePlanState } from '@concert-crawl/entitlements';
+import { createLogger } from '@concert-crawl/logger';
 import {
   sendPushForNotification,
   type SendPushInput,
-} from '@concert-crawl/push'
-import type { PlanState } from '@concert-crawl/types'
-import { z } from 'zod'
-import { newShowDateLabel, newShowCopy } from './definitions/copy.js'
+} from '@concert-crawl/push';
+import type { PlanState } from '@concert-crawl/types';
+import { z } from 'zod';
+import { newShowDateLabel, newShowCopy } from './definitions/copy.js';
 
-const fanoutLogger = createLogger('artist-fanout')
+const fanoutLogger = createLogger('artist-fanout');
 
-const NEW_SHOW_CATEGORY = 'artist.new_show'
+const NEW_SHOW_CATEGORY = 'artist.new_show';
 
 // Clerk publicMetadata is untyped at the boundary — parsed, never cast.
-const publicMetadataSchema = z.object({ role: z.string().optional() })
+const publicMetadataSchema = z.object({ role: z.string().optional() });
 
 // Role fetch for role-comped plan derivation. Optional by design: the
 // crawler carries CLERK_SECRET_KEY (from its GitHub environment) only so
@@ -73,22 +73,22 @@ const publicMetadataSchema = z.object({ role: z.string().optional() })
 // and DB rows still decide paid plans — same fallback the weekly digest
 // uses.
 const fetchClerkRole = async (userId: string): Promise<string | undefined> => {
-  const secretKey = process.env['CLERK_SECRET_KEY']
-  if (secretKey === undefined || secretKey.length === 0) return undefined
+  const secretKey = process.env['CLERK_SECRET_KEY'];
+  if (secretKey === undefined || secretKey.length === 0) return undefined;
   try {
-    const { createClerkClient } = await import('@clerk/backend')
-    const clerk = createClerkClient({ secretKey })
-    const user = await clerk.users.getUser(userId)
-    const parsed = publicMetadataSchema.safeParse(user.publicMetadata)
-    return parsed.success ? parsed.data.role : undefined
+    const { createClerkClient } = await import('@clerk/backend');
+    const clerk = createClerkClient({ secretKey });
+    const user = await clerk.users.getUser(userId);
+    const parsed = publicMetadataSchema.safeParse(user.publicMetadata);
+    return parsed.success ? parsed.data.role : undefined;
   } catch (err) {
     fanoutLogger.warn(
       { err, userId },
       'artist-fanout: Clerk role fetch failed — deriving plan without it',
-    )
-    return undefined
+    );
+    return undefined;
   }
-}
+};
 
 // Same derivation inputs as apps/api's loadPlanContext, queried locally so
 // the crawler never imports API code (the whole point of moving
@@ -123,7 +123,7 @@ const loadPlanStateForUser = async (
       .where(eq(userBilling.userId, userId))
       .limit(1),
     getRole(userId),
-  ])
+  ]);
   return derivePlanState({
     userId,
     role,
@@ -131,29 +131,29 @@ const loadPlanStateForUser = async (
     subscription: subRow ?? null,
     billing: billingRow ?? null,
     now,
-  })
-}
+  });
+};
 
 export interface ArtistFanoutDeps {
   // Injectable for tests; production uses the real Web Push sender.
-  sendPush?: (input: SendPushInput) => Promise<unknown>
+  sendPush?: (input: SendPushInput) => Promise<unknown>;
   // Injectable for tests; production lazily fetches the Clerk role.
-  getRole?: (userId: string) => Promise<string | undefined>
-  now?: Date
+  getRole?: (userId: string) => Promise<string | undefined>;
+  now?: Date;
 }
 
 export interface ArtistFanoutSummary {
-  newEvents: number
-  matchedPairs: number
-  autoWatched: number
-  pushesClaimed: number
+  newEvents: number;
+  matchedPairs: number;
+  autoWatched: number;
+  pushesClaimed: number;
   // Claims vs. sends: the gap between these two is the batching, and it is the
   // only way to prove from a prod log that coalescing happened. ATTEMPTED is
   // the honest word — send-push resolves whether or not anything reached a
   // device (master toggle off, no subscriptions), so this is a count of
   // batches handed to the push pipeline, not of notifications anyone saw.
-  pushBatchesAttempted: number
-  failures: number
+  pushBatchesAttempted: number;
+  failures: number;
 }
 
 const EMPTY_SUMMARY: ArtistFanoutSummary = {
@@ -163,23 +163,23 @@ const EMPTY_SUMMARY: ArtistFanoutSummary = {
   pushesClaimed: 0,
   pushBatchesAttempted: 0,
   failures: 0,
-}
+};
 
 interface MatchedConnection {
-  userId: string
-  canonicalName: string
-  autoWatch: boolean
-  pushEnabled: boolean
+  userId: string;
+  canonicalName: string;
+  autoWatch: boolean;
+  pushEnabled: boolean;
 }
 
 // One claimed (user, event) push, held until the run ends so a user's whole
 // crawl can be delivered as a single notification.
 interface PendingPush {
-  eventId: string
-  artist: string
-  venueName: string
-  dateLabel: string
-  autoWatch: boolean
+  eventId: string;
+  artist: string;
+  venueName: string;
+  dateLabel: string;
+  autoWatch: boolean;
 }
 
 // Attempt to claim the (user, event, kind) ledger row. True = this call owns
@@ -193,9 +193,9 @@ const claimAlert = async (
     .insert(spotifyAlertLog)
     .values({ userId, eventId, kind })
     .onConflictDoNothing()
-    .returning({ id: spotifyAlertLog.id })
-  return claimed.length > 0
-}
+    .returning({ id: spotifyAlertLog.id });
+  return claimed.length > 0;
+};
 
 // One user's whole run, as one notification. A single claimed show keeps the
 // design-locked single-show copy verbatim; two or more collapse.
@@ -203,8 +203,8 @@ const buildDelivery = (
   userId: string,
   pending: PendingPush[],
 ): SendPushInput | null => {
-  const [first] = pending
-  if (first === undefined) return null
+  const [first] = pending;
+  if (first === undefined) return null;
   if (pending.length === 1) {
     return {
       userId,
@@ -217,10 +217,10 @@ const buildDelivery = (
       // Stable tag so a duplicate delivery for the same event coalesces into
       // one OS notification.
       tag: `artist-new-show-${first.eventId}`,
-    }
+    };
   }
-  const artists = new Set(pending.map((push) => push.artist))
-  const autoWatch = pending.every((push) => push.autoWatch)
+  const artists = new Set(pending.map((push) => push.artist));
+  const autoWatch = pending.every((push) => push.autoWatch);
   return {
     userId,
     category: NEW_SHOW_CATEGORY,
@@ -237,18 +237,18 @@ const buildDelivery = (
     // opens whichever list its body just named.
     actionUrl: autoWatch ? '/watching' : '/following',
     tag: 'artist-new-show-batch',
-  }
-}
+  };
+};
 
 export async function runArtistFanout(
   insertedEventIds: string[],
   deps: ArtistFanoutDeps = {},
 ): Promise<ArtistFanoutSummary> {
-  if (insertedEventIds.length === 0) return { ...EMPTY_SUMMARY }
+  if (insertedEventIds.length === 0) return { ...EMPTY_SUMMARY };
 
-  const sendPush = deps.sendPush ?? sendPushForNotification
-  const getRole = deps.getRole ?? fetchClerkRole
-  const now = deps.now ?? new Date()
+  const sendPush = deps.sendPush ?? sendPushForNotification;
+  const getRole = deps.getRole ?? fetchClerkRole;
+  const now = deps.now ?? new Date();
 
   // Consumer-visible new events only — a hidden or already-cancelled insert
   // never alerts anyone.
@@ -269,12 +269,12 @@ export async function runArtistFanout(
         eq(events.status, 'upcoming'),
         eq(events.hiddenFromConsumer, false),
       ),
-    )
+    );
 
   const summary: ArtistFanoutSummary = {
     ...EMPTY_SUMMARY,
     newEvents: newEvents.length,
-  }
+  };
 
   // One batched candidate query for the whole crawl (§9.1 canonical match),
   // then pure in-memory per-event overlap — no per-event queries. EVERY follow
@@ -287,8 +287,8 @@ export async function runArtistFanout(
         ...(event.canonicalSupporting ?? []),
       ]),
     ),
-  ].filter((name) => name.length > 0)
-  if (allCanonicalNames.length === 0) return summary
+  ].filter((name) => name.length > 0);
+  if (allCanonicalNames.length === 0) return summary;
 
   const candidates: MatchedConnection[] = await db
     .selectDistinct({
@@ -311,44 +311,44 @@ export async function runArtistFanout(
       userNotificationPreferences,
       eq(userNotificationPreferences.userId, userArtistFollows.userId),
     )
-    .where(inArray(userArtistFollows.canonicalName, allCanonicalNames))
-  if (candidates.length === 0) return summary
+    .where(inArray(userArtistFollows.canonicalName, allCanonicalNames));
+  if (candidates.length === 0) return summary;
 
-  const usersByCanonical = new Map<string, MatchedConnection[]>()
+  const usersByCanonical = new Map<string, MatchedConnection[]>();
   for (const candidate of candidates) {
-    const list = usersByCanonical.get(candidate.canonicalName) ?? []
-    list.push(candidate)
-    usersByCanonical.set(candidate.canonicalName, list)
+    const list = usersByCanonical.get(candidate.canonicalName) ?? [];
+    list.push(candidate);
+    usersByCanonical.set(candidate.canonicalName, list);
   }
 
   // Plan derivation is per-user (not per-pair) — cached promise so a user
   // matched by several new events costs one derivation.
-  const planCache = new Map<string, Promise<PlanState>>()
+  const planCache = new Map<string, Promise<PlanState>>();
   const planFor = (userId: string): Promise<PlanState> => {
-    let cached = planCache.get(userId)
+    let cached = planCache.get(userId);
     if (!cached) {
-      cached = loadPlanStateForUser(userId, getRole, now)
-      planCache.set(userId, cached)
+      cached = loadPlanStateForUser(userId, getRole, now);
+      planCache.set(userId, cached);
     }
-    return cached
-  }
+    return cached;
+  };
 
-  const pendingByUser = new Map<string, PendingPush[]>()
+  const pendingByUser = new Map<string, PendingPush[]>();
 
   for (const event of newEvents) {
     const eventCanonicals = [
       ...(event.canonicalArtist !== null ? [event.canonicalArtist] : []),
       ...(event.canonicalSupporting ?? []),
-    ]
-    const matchedByUser = new Map<string, MatchedConnection>()
+    ];
+    const matchedByUser = new Map<string, MatchedConnection>();
     for (const canonical of eventCanonicals) {
       for (const candidate of usersByCanonical.get(canonical) ?? []) {
-        matchedByUser.set(candidate.userId, candidate)
+        matchedByUser.set(candidate.userId, candidate);
       }
     }
 
     for (const connection of matchedByUser.values()) {
-      summary.matchedPairs += 1
+      summary.matchedPairs += 1;
       // Per-pair isolation: one user's failure never halts the fan-out.
       try {
         if (connection.autoWatch) {
@@ -356,7 +356,7 @@ export async function runArtistFanout(
             connection.userId,
             event.id,
             'auto_watch',
-          )
+          );
           if (claimed) {
             // onConflictDoNothing on the (user, event) unique index — an
             // existing going/interested/watching row is never overwritten.
@@ -367,13 +367,13 @@ export async function runArtistFanout(
                 eventId: event.id,
                 status: 'watching',
               })
-              .onConflictDoNothing()
-            summary.autoWatched += 1
+              .onConflictDoNothing();
+            summary.autoWatched += 1;
           }
         }
 
         if (connection.pushEnabled) {
-          const planState = await planFor(connection.userId)
+          const planState = await planFor(connection.userId);
           // Gated on `following`, not `spotify-sync` — the alert belongs to
           // the follow that earned it, whatever source created it.
           if (canUseFeature(planState, 'following')) {
@@ -381,9 +381,9 @@ export async function runArtistFanout(
               connection.userId,
               event.id,
               'push',
-            )
+            );
             if (claimed) {
-              const dateLabel = newShowDateLabel(event.date)
+              const dateLabel = newShowDateLabel(event.date);
               // The TRAY row stays per event — it is a list, and collapsing
               // it would lose the per-show deep link. Only delivery batches.
               await db.insert(notifications).values({
@@ -396,26 +396,26 @@ export async function runArtistFanout(
                   : newShowCopy.highlightBody(event.venueName, dateLabel),
                 actionUrl: `/events/${event.id}`,
                 metadata: JSON.stringify({ eventId: event.id }),
-              })
-              const pending = pendingByUser.get(connection.userId) ?? []
+              });
+              const pending = pendingByUser.get(connection.userId) ?? [];
               pending.push({
                 eventId: event.id,
                 artist: event.artist,
                 venueName: event.venueName,
                 dateLabel,
                 autoWatch: connection.autoWatch,
-              })
-              pendingByUser.set(connection.userId, pending)
-              summary.pushesClaimed += 1
+              });
+              pendingByUser.set(connection.userId, pending);
+              summary.pushesClaimed += 1;
             }
           }
         }
       } catch (err) {
-        summary.failures += 1
+        summary.failures += 1;
         fanoutLogger.error(
           { err, userId: connection.userId, eventId: event.id },
           'artist-fanout: user/event pair failed',
-        )
+        );
       }
     }
   }
@@ -423,21 +423,21 @@ export async function runArtistFanout(
   // Flush once per user, AWAITED — both crawler entrypoints process.exit(0),
   // which would sever a detached delivery mid-flight (#649).
   for (const [userId, pending] of pendingByUser) {
-    const delivery = buildDelivery(userId, pending)
-    if (delivery === null) continue
+    const delivery = buildDelivery(userId, pending);
+    if (delivery === null) continue;
     try {
-      await sendPush(delivery)
-      summary.pushBatchesAttempted += 1
+      await sendPush(delivery);
+      summary.pushBatchesAttempted += 1;
     } catch (err) {
-      summary.failures += 1
+      summary.failures += 1;
       fanoutLogger.error(
         { err, userId, pendingCount: pending.length },
         'artist-fanout: batched push delivery failed',
-      )
+      );
     }
   }
 
-  return summary
+  return summary;
 }
 
 // Crawler-facing wrapper: never throws (a fan-out bug can never fail a
@@ -447,16 +447,16 @@ export async function runArtistFanoutSafely(
   deps: ArtistFanoutDeps = {},
 ): Promise<ArtistFanoutSummary | null> {
   try {
-    const summary = await runArtistFanout(insertedEventIds, deps)
+    const summary = await runArtistFanout(insertedEventIds, deps);
     if (summary.newEvents > 0) {
-      fanoutLogger.info({ summary }, 'artist-fanout: run complete')
+      fanoutLogger.info({ summary }, 'artist-fanout: run complete');
     }
-    return summary
+    return summary;
   } catch (err) {
     fanoutLogger.error(
       { err, insertedCount: insertedEventIds.length },
       'artist-fanout: run failed — crawl unaffected',
-    )
-    return null
+    );
+    return null;
   }
 }

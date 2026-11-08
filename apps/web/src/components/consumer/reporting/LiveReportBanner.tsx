@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { REPORT_TOKENS } from './reportTokens'
-import { REPORTING_COPY } from './definitions/copy'
+import { REPORT_TOKENS } from './reportTokens';
+import { REPORTING_COPY } from './definitions/copy';
 
-const copy = REPORTING_COPY.liveReportBanner
+const copy = REPORTING_COPY.liveReportBanner;
 
 // ── Helper ────────────────────────────────────────────────────────
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 // ── Glyphs (16×16) ────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ const CancelledGlyph16 = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const PostponedGlyph16 = () => (
   <svg
@@ -59,7 +59,7 @@ const PostponedGlyph16 = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const SoldOutGlyph16 = () => (
   <svg
@@ -84,23 +84,23 @@ const SoldOutGlyph16 = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
-type LiveReportStatus = 'sold-out' | 'cancelled' | 'postponed'
+type LiveReportStatus = 'sold-out' | 'cancelled' | 'postponed';
 
 const GLYPHS_16: Record<LiveReportStatus, () => React.JSX.Element> = {
   cancelled: CancelledGlyph16,
   postponed: PostponedGlyph16,
   'sold-out': SoldOutGlyph16,
-}
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface LiveReportBannerProps {
-  status: LiveReportStatus
-  promotedAt: string // ISO
-  confirmCount?: number
-  reporter?: { handle: string; url: string } | null
+  status: LiveReportStatus;
+  promotedAt: string; // ISO
+  confirmCount?: number;
+  reporter?: { handle: string; url: string } | null;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -111,19 +111,19 @@ export const LiveReportBanner = ({
   confirmCount,
   reporter,
 }: LiveReportBannerProps) => {
-  const token = REPORT_TOKENS[status]
-  const Glyph = GLYPHS_16[status]
-  const timeAgo = formatTimeAgo(promotedAt)
+  const token = REPORT_TOKENS[status];
+  const Glyph = GLYPHS_16[status];
+  const timeAgo = formatTimeAgo(promotedAt);
 
-  const headline = copy.headlines[status]
+  const headline = copy.headlines[status];
 
   const subLabel = (() => {
-    const confirms = confirmCount ?? 0
+    const confirms = confirmCount ?? 0;
     if (reporter != null) {
-      return copy.reportedBy(reporter.handle, confirms, timeAgo)
+      return copy.reportedBy(reporter.handle, confirms, timeAgo);
     }
-    return copy.reportedAnonymous(confirms, timeAgo)
-  })()
+    return copy.reportedAnonymous(confirms, timeAgo);
+  })();
 
   return (
     <div
@@ -182,5 +182,5 @@ export const LiveReportBanner = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};

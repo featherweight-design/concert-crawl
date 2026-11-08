@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import React, { useId, useMemo, useState } from 'react'
-import { usePathname, useSearchParams } from 'next/navigation'
+import React, { useId, useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
 
-import { ARTIST_COPY } from './definitions/copy'
-import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants'
+import { ARTIST_COPY } from './definitions/copy';
+import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants';
 
 export interface FollowButtonProps {
   /** Artist name — used only to build the accessible name. */
-  name: string
-  following: boolean
-  signedOut: boolean
+  name: string;
+  following: boolean;
+  signedOut: boolean;
   /**
    * Signed in, the plan does not carry `following`, and there is no existing
    * follow to undo. Never `disabled` — a locked tap is how the upgrade gets
@@ -23,29 +23,29 @@ export interface FollowButtonProps {
    * never while `following` is true (a downgraded user must be able to
    * unfollow — eng spec §3.2).
    */
-  locked?: boolean
+  locked?: boolean;
   /**
    * A key of `NF_FOLLOW_SIZES`, so the size table stays the only place a
    * density is defined. The keys name placement: `primary` is the artist
    * page's hero bar, `rowWide` a desktop row, `row` every mobile row and the
    * sticky sub-header, `badge` the label-less circle on art.
    */
-  size?: 'badge' | 'row' | 'rowWide' | 'primary'
+  size?: 'badge' | 'row' | 'rowWide' | 'primary';
   /**
    * Visual weight. `quiet` is an outline; `loud` is the filled `--signal`
    * pill, and there is at most ONE of those per screen (R3 rule 1). Quiet is
    * the default precisely so a new call site cannot add a second one by
    * omission.
    */
-  tone?: 'quiet' | 'loud'
+  tone?: 'quiet' | 'loud';
   /** Stretch to the container's width. Independent of `size`. */
-  full?: boolean
+  full?: boolean;
   /**
    * Drop the label and render a square glyph button. Permitted only in the
    * narrow breakpoint the spec names (under 360px); the accessible name still
    * carries the artist, so nothing is lost to a screen reader.
    */
-  iconOnly?: boolean
+  iconOnly?: boolean;
   /**
    * Signed-in activation. Never called while signed out or locked. The caller
    * owns optimism — `useArtistFollow` flips its own state before the request
@@ -53,7 +53,7 @@ export interface FollowButtonProps {
    * can legitimately come back still-following when a Spotify sync also holds
    * the row. A second override in here could not see that and would strand.
    */
-  onToggle: () => void
+  onToggle: () => void;
   /**
    * Locked activation — opens the parent's TierPickerSheet. Required, not
    * optional: `locked` is a runtime boolean, so a missing handler would make a
@@ -61,7 +61,7 @@ export interface FollowButtonProps {
    * where the upgrade gets offered. The upcoming search, bill-block and shelf
    * call sites are why this is a type error rather than a convention.
    */
-  onLockedTap: () => void
+  onLockedTap: () => void;
 }
 
 /**
@@ -94,49 +94,49 @@ export const FollowButton = ({
   onToggle,
   onLockedTap,
 }: FollowButtonProps) => {
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // useId, not a module counter: a bill can put four of these on one screen,
   // and a colliding id would aim every gate sentence at one node. The colons
   // React emits are legal in an id but not in a CSS selector, so they go.
-  const gateId = `nf-gate-${useId().replace(/:/g, '')}`
+  const gateId = `nf-gate-${useId().replace(/:/g, '')}`;
 
   // The query is part of where they were, so the hand-back returns them to the
   // state they left rather than to the bare route.
   const returnTo = useMemo(() => {
-    const search = searchParams.toString()
-    return search ? `${pathname}?${search}` : pathname
-  }, [pathname, searchParams])
+    const search = searchParams.toString();
+    return search ? `${pathname}?${search}` : pathname;
+  }, [pathname, searchParams]);
 
   const signUpHref = useMemo(() => {
-    const tour = new URLSearchParams({ return: returnTo, label: name })
-    return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`
-  }, [returnTo, name])
+    const tour = new URLSearchParams({ return: returnTo, label: name });
+    return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`;
+  }, [returnTo, name]);
 
   // Signed out we draw the at-rest skin, never the following one — there is no
   // relationship to render for a visitor who has no account. Locked likewise:
   // a plan that cannot follow cannot be following.
-  const active = !signedOut && !locked && following
+  const active = !signedOut && !locked && following;
 
   const onClick = () => {
     if (signedOut) {
-      setPickerOpen(true)
-      return
+      setPickerOpen(true);
+      return;
     }
     if (locked) {
-      onLockedTap()
-      return
+      onLockedTap();
+      return;
     }
-    onToggle()
-  }
+    onToggle();
+  };
 
-  const geometry = NF_FOLLOW_SIZES[size]
+  const geometry = NF_FOLLOW_SIZES[size];
   // `badge` has no label to drop, so it is square by definition.
-  const square = iconOnly || size === 'badge'
+  const square = iconOnly || size === 'badge';
 
-  const loud = tone === 'loud'
+  const loud = tone === 'loud';
 
   // Locked keeps `--fg`, not the muted colour the prototype drew: at quiet
   // weight the only thing left separating "you can do this" from "you cannot
@@ -167,7 +167,7 @@ export const FollowButton = ({
           border: active
             ? '1px solid color-mix(in oklab, var(--signal) 55%, transparent)'
             : '1px solid var(--border-strong)',
-        }
+        };
 
   const style: React.CSSProperties = {
     all: 'unset',
@@ -202,7 +202,7 @@ export const FollowButton = ({
     // A square: the glyph has nothing beside it, so the horizontal padding
     // would only make a lopsided pill.
     ...(square ? { minWidth: geometry.height, width: geometry.height } : {}),
-  }
+  };
 
   // The pill shrank; the target did not. Grown symmetrically on both axes, so
   // a square control lands at 44 × 44. A labelled one is already wider than 44,
@@ -210,16 +210,16 @@ export const FollowButton = ({
   // edge whatever the width. Anything interactive placed beside one of these
   // needs at least that much clearance, which is why every row that carries a
   // Follow gives it a gap rather than butting a second control against it.
-  const grow = Math.max(0, (NF_TAP_MIN - geometry.height) / 2)
+  const grow = Math.max(0, (NF_TAP_MIN - geometry.height) / 2);
 
   // Locked keeps idle's accessible name; the gate sentence carries the truth.
   const ariaLabel = signedOut
     ? ARTIST_COPY.followSignedOutAria(name)
     : active
       ? ARTIST_COPY.followingAria(name)
-      : ARTIST_COPY.followAria(name)
+      : ARTIST_COPY.followAria(name);
 
-  const glyph = geometry.glyph
+  const glyph = geometry.glyph;
 
   return (
     <>
@@ -326,5 +326,5 @@ export const FollowButton = ({
         />
       )}
     </>
-  )
-}
+  );
+};

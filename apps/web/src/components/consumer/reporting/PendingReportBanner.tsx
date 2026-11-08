@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { REPORTING_COPY } from './definitions/copy'
-import { REPORT_TOKENS } from './reportTokens'
-import { CheckGlyph, LockGlyph } from '../glyphs'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+import { REPORTING_COPY } from './definitions/copy';
+import { REPORT_TOKENS } from './reportTokens';
+import { CheckGlyph, LockGlyph } from '../glyphs';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 // ── Kind glyphs at 14×14 ──────────────────────────────────────────
 
@@ -22,7 +22,7 @@ const CancelledGlyph14 = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const PostponedGlyph14 = () => (
   <svg
@@ -48,7 +48,7 @@ const PostponedGlyph14 = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const LinkChainIcon = () => (
   <svg
@@ -67,44 +67,44 @@ const LinkChainIcon = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
-const copy = REPORTING_COPY.pendingReportBanner
+const copy = REPORTING_COPY.pendingReportBanner;
 
 // ── Helper ────────────────────────────────────────────────────────
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 const EVIDENCE_METHOD_LABELS: Record<string, string> = {
   bought_myself: 'First-hand',
   saw_listing: 'Saw listing',
   venue_site: 'Venue site',
   other: 'Other',
-}
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface PendingReportBannerProps {
-  kind: 'cancelled' | 'postponed'
-  confirms: number
-  needed: number
-  view: 'other' | 'reporter' | 'self-locked'
-  reportedAt: string // ISO
-  evidenceMethod?: string
-  evidenceUrl?: string | null
-  reporter: { handle: string; url: string } | null
-  onConfirm: () => void
-  onWithdraw: () => void
-  onEdit: () => void
-  onAddEvidence: () => void
-  onSawDifferent: () => void
+  kind: 'cancelled' | 'postponed';
+  confirms: number;
+  needed: number;
+  view: 'other' | 'reporter' | 'self-locked';
+  reportedAt: string; // ISO
+  evidenceMethod?: string;
+  evidenceUrl?: string | null;
+  reporter: { handle: string; url: string } | null;
+  onConfirm: () => void;
+  onWithdraw: () => void;
+  onEdit: () => void;
+  onAddEvidence: () => void;
+  onSawDifferent: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -123,21 +123,21 @@ export const PendingReportBanner = ({
   onAddEvidence,
   onSawDifferent,
 }: PendingReportBannerProps) => {
-  const tokens = REPORT_TOKENS[kind]
-  const timeAgo = formatTimeAgo(reportedAt)
-  const isReporter = view === 'reporter' || view === 'self-locked'
+  const tokens = REPORT_TOKENS[kind];
+  const timeAgo = formatTimeAgo(reportedAt);
+  const isReporter = view === 'reporter' || view === 'self-locked';
 
   const badgeLabel =
-    kind === 'cancelled' ? copy.cancelledBadge : copy.postponedBadge
+    kind === 'cancelled' ? copy.cancelledBadge : copy.postponedBadge;
 
   const leadText =
-    kind === 'cancelled' ? copy.cancelledLead : copy.postponedLead
+    kind === 'cancelled' ? copy.cancelledLead : copy.postponedLead;
 
   const evidenceLabel = evidenceUrl
     ? evidenceUrl
     : evidenceMethod
       ? (EVIDENCE_METHOD_LABELS[evidenceMethod] ?? evidenceMethod)
-      : null
+      : null;
 
   return (
     <div
@@ -472,5 +472,5 @@ export const PendingReportBanner = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

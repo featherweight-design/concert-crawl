@@ -1,7 +1,7 @@
-import React from 'react'
-import { identityFor, ia_isDark, ia_pick, ia_rngFromHash } from './IdentityArt'
-import { blendOver, rgba, type BlendMode } from './print-color'
-import { PRINT_GRAIN_PNG, PRINT_GRAIN_TILE_PX } from './print-grain'
+import React from 'react';
+import { identityFor, ia_isDark, ia_pick, ia_rngFromHash } from './IdentityArt';
+import { blendOver, rgba, type BlendMode } from './print-color';
+import { PRINT_GRAIN_PNG, PRINT_GRAIN_TILE_PX } from './print-grain';
 
 // ── Why this file exists ───────────────────────────────────────────
 // <IdentityArt /> is a browser component. Satori — the renderer behind
@@ -14,28 +14,28 @@ import { PRINT_GRAIN_PNG, PRINT_GRAIN_TILE_PX } from './print-grain'
 // geometry. The determinism test in __tests__ is the contract that keeps the
 // in-app preview honest about what actually gets sent.
 
-export type PrintKind = 'artist' | 'venue'
-export type PrintScale = 'hero' | 'tile' | 'micro'
+export type PrintKind = 'artist' | 'venue';
+export type PrintScale = 'hero' | 'tile' | 'micro';
 
-type Identity = ReturnType<typeof identityFor>
-type Palette = Identity['palette']
+type Identity = ReturnType<typeof identityFor>;
+type Palette = Identity['palette'];
 
-const PRINT_VIEWPORT = 400
+const PRINT_VIEWPORT = 400;
 
 export interface IdentityArtPrintProps {
-  name: string
+  name: string;
   /** There is no `'event'` kind — both surfaces key off the artist. */
-  kind?: PrintKind
-  scale?: PrintScale
+  kind?: PrintKind;
+  scale?: PrintScale;
   /** Explicit pixel size. Satori has no percentage-sized root. */
-  width: number
-  height: number
+  width: number;
+  height: number;
   /** `0` omits the grain layer entirely. */
-  grain?: number
-  templateOverride?: string
-  paletteOverride?: string
-  rotateOverride?: 0 | 1 | 2 | 3
-  style?: React.CSSProperties
+  grain?: number;
+  templateOverride?: string;
+  paletteOverride?: string;
+  rotateOverride?: 0 | 1 | 2 | 3;
+  style?: React.CSSProperties;
 }
 
 // ── Identity resolution (shared with the on-screen component) ──────
@@ -49,18 +49,18 @@ export const printIdentityFor = (
   name: string,
   kind: PrintKind,
   opts: {
-    templateOverride?: string
-    paletteOverride?: string
-    scale?: PrintScale
+    templateOverride?: string;
+    paletteOverride?: string;
+    scale?: PrintScale;
   } = {},
-): Identity => identityFor(name, kind, opts)
+): Identity => identityFor(name, kind, opts);
 
 export interface PrintInk {
-  mode: BlendMode
+  mode: BlendMode;
   /** `palette.primary` pre-composited over `palette.bg`. */
-  primary: string
+  primary: string;
   /** `palette.secondary` pre-composited over `palette.bg`. */
-  secondary: string
+  secondary: string;
 }
 
 /**
@@ -72,20 +72,20 @@ export interface PrintInk {
  * overlap, the print output is very slightly flatter than the screen version.
  */
 export const printInkFor = (palette: Palette): PrintInk => {
-  const mode: BlendMode = ia_isDark(palette.bg) ? 'screen' : 'multiply'
+  const mode: BlendMode = ia_isDark(palette.bg) ? 'screen' : 'multiply';
   return {
     mode,
     primary: blendOver(palette.primary, palette.bg, mode),
     secondary: blendOver(palette.secondary, palette.bg, mode),
-  }
-}
+  };
+};
 
 interface PrintTemplateArgs {
-  rng: () => number
-  hash: number
-  palette: Palette
-  ink: PrintInk
-  scale: PrintScale
+  rng: () => number;
+  hash: number;
+  palette: Palette;
+  ink: PrintInk;
+  scale: PrintScale;
 }
 
 // ── Templates (flattened) ──────────────────────────────────────────
@@ -94,11 +94,11 @@ interface PrintTemplateArgs {
 // betting the whole layer on: if it were dropped, the blobs would silently
 // vanish and the poster would just look plainer. Stepped rings reproduce the
 // falloff with primitives that cannot be dropped.
-const RADIAL_STEPS = 8
+const RADIAL_STEPS = 8;
 // Constant per-ring alpha, stacked outside-in. Cumulative coverage lands near
 // 0.86 at the centre and 0.63 at 60% radius, which tracks the screen
 // gradient's 0.95 / 0.55 / 0 falloff closely enough to read as the same blob.
-const RADIAL_STEP_ALPHA = 0.22
+const RADIAL_STEP_ALPHA = 0.22;
 
 const printMesh = ({
   rng,
@@ -106,14 +106,14 @@ const printMesh = ({
   ink,
   scale,
 }: PrintTemplateArgs): React.ReactElement => {
-  const blobCount = scale === 'hero' ? 5 : scale === 'tile' ? 4 : 3
+  const blobCount = scale === 'hero' ? 5 : scale === 'tile' ? 4 : 3;
   const blobs = Array.from({ length: blobCount }, (_, idx) => ({
     cx: 60 + rng() * 280,
     cy: 60 + rng() * 280,
     rr: 100 + rng() * 160,
     fill: idx % 2 === 0 ? ink.primary : ink.secondary,
     key: idx,
-  }))
+  }));
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -132,8 +132,8 @@ const printMesh = ({
         </g>
       ))}
     </g>
-  )
-}
+  );
+};
 
 const printStripes = ({
   rng,
@@ -141,13 +141,13 @@ const printStripes = ({
   ink,
   scale,
 }: PrintTemplateArgs): React.ReactElement => {
-  const angle = ia_pick(rng, [0, 30, 45, 60, 90, 120, 135])
-  const stripeCount = scale === 'hero' ? 8 : scale === 'tile' ? 6 : 4
-  const stripeW = 400 / stripeCount
-  const widthMul = 0.55 + rng() * 0.25
+  const angle = ia_pick(rng, [0, 30, 45, 60, 90, 120, 135]);
+  const stripeCount = scale === 'hero' ? 8 : scale === 'tile' ? 6 : 4;
+  const stripeW = 400 / stripeCount;
+  const widthMul = 0.55 + rng() * 0.25;
   const stripes = Array.from({ length: stripeCount }, (_, idx) => idx)
     .filter((idx) => idx % 2 === 0)
-    .map((idx) => ({ xx: idx * stripeW, ww: stripeW * widthMul, key: idx }))
+    .map((idx) => ({ xx: idx * stripeW, ww: stripeW * widthMul, key: idx }));
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -176,8 +176,8 @@ const printStripes = ({
         ))}
       </g>
     </g>
-  )
-}
+  );
+};
 
 const printConcentric = ({
   rng,
@@ -191,15 +191,15 @@ const printConcentric = ({
     { cx: 80, cy: 80 },
     { cx: 320, cy: 320 },
     { cx: 200, cy: 200 },
-  ])
-  const ringCount = scale === 'hero' ? 12 : scale === 'tile' ? 8 : 5
-  const stride = 28 + rng() * 14
-  const baseStroke = scale === 'hero' ? 6 : 9
+  ]);
+  const ringCount = scale === 'hero' ? 12 : scale === 'tile' ? 8 : 5;
+  const stride = 28 + rng() * 14;
+  const baseStroke = scale === 'hero' ? 6 : 9;
   const rings = Array.from({ length: ringCount }, (_, idx) => ({
     rr: 30 + idx * stride,
     sw: baseStroke + (idx % 2 === 0 ? 0 : 2),
     key: idx,
-  }))
+  }));
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -228,8 +228,8 @@ const printConcentric = ({
         />
       ))}
     </g>
-  )
-}
+  );
+};
 
 const printHalftone = ({
   rng,
@@ -242,24 +242,24 @@ const printHalftone = ({
     { cx: 400, cy: 400 },
     { cx: 0, cy: 0 },
     { cx: 400, cy: 0 },
-  ]
+  ];
   // `ia_pick` consumes exactly one rng() draw and, for a four-member array,
   // selects identically to the screen template's `Math.floor(rng() * 4)`.
-  const corner = ia_pick(rng, corners)
-  const massR = 320 + rng() * 80
-  const cellSize = scale === 'hero' ? 16 : scale === 'tile' ? 22 : 32
-  const cells = Math.ceil(400 / cellSize)
-  const dots: { xx: number; yy: number; rr: number; key: string }[] = []
+  const corner = ia_pick(rng, corners);
+  const massR = 320 + rng() * 80;
+  const cellSize = scale === 'hero' ? 16 : scale === 'tile' ? 22 : 32;
+  const cells = Math.ceil(400 / cellSize);
+  const dots: { xx: number; yy: number; rr: number; key: string }[] = [];
   for (let yi = 0; yi < cells; yi++) {
     for (let xi = 0; xi < cells; xi++) {
-      const xx = xi * cellSize + cellSize / 2
-      const yy = yi * cellSize + cellSize / 2
-      const dx = (xx - corner.cx) / 400
-      const dy = (yy - corner.cy) / 400
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      const rNorm = Math.min(1, Math.max(0, dist * 0.85))
-      const dotR = rNorm * (cellSize * 0.48)
-      if (dotR > 0.4) dots.push({ xx, yy, rr: dotR, key: `${xi}-${yi}` })
+      const xx = xi * cellSize + cellSize / 2;
+      const yy = yi * cellSize + cellSize / 2;
+      const dx = (xx - corner.cx) / 400;
+      const dy = (yy - corner.cy) / 400;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const rNorm = Math.min(1, Math.max(0, dist * 0.85));
+      const dotR = rNorm * (cellSize * 0.48);
+      if (dotR > 0.4) dots.push({ xx, yy, rr: dotR, key: `${xi}-${yi}` });
     }
   }
   return (
@@ -276,8 +276,8 @@ const printHalftone = ({
         />
       ))}
     </g>
-  )
-}
+  );
+};
 
 const printBlueprint = ({
   rng,
@@ -285,40 +285,42 @@ const printBlueprint = ({
   ink,
   scale,
 }: PrintTemplateArgs): React.ReactElement => {
-  const gridStep = scale === 'hero' ? 20 : scale === 'tile' ? 32 : 48
+  const gridStep = scale === 'hero' ? 20 : scale === 'tile' ? 32 : 48;
   const lightLines: {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    key: string
-  }[] = []
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    key: string;
+  }[] = [];
   const heavyLines: {
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    key: string
-  }[] = []
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    key: string;
+  }[] = [];
   for (let vv = gridStep; vv < 400; vv += gridStep) {
-    lightLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vl${vv}` })
-    lightLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hl${vv}` })
+    lightLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vl${vv}` });
+    lightLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hl${vv}` });
   }
   for (let vv = gridStep * 5; vv < 400; vv += gridStep * 5) {
-    heavyLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vh${vv}` })
-    heavyLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hh${vv}` })
+    heavyLines.push({ x1: vv, y1: 0, x2: vv, y2: 400, key: `vh${vv}` });
+    heavyLines.push({ x1: 0, y1: vv, x2: 400, y2: vv, key: `hh${vv}` });
   }
-  const fpW = 180 + rng() * 100
-  const fpH = 140 + rng() * 90
-  const fpX = (400 - fpW) / 2 + (rng() - 0.5) * 40
-  const fpY = (400 - fpH) / 2 + (rng() - 0.5) * 40
-  const stageR = Math.min(fpW, fpH) * (0.18 + rng() * 0.1)
-  const stageCx = fpX + fpW * (0.4 + rng() * 0.2)
-  const stageCy = fpY + fpH * (0.6 + rng() * 0.25)
-  const sweepAngle = ia_pick(rng, [-25, -15, 15, 25])
-  const isLight = !ia_isDark(palette.bg)
-  const gridStroke = isLight ? 'rgba(25,20,24,0.18)' : 'rgba(241,230,213,0.18)'
-  const heavyStroke = isLight ? 'rgba(25,20,24,0.32)' : 'rgba(241,230,213,0.32)'
+  const fpW = 180 + rng() * 100;
+  const fpH = 140 + rng() * 90;
+  const fpX = (400 - fpW) / 2 + (rng() - 0.5) * 40;
+  const fpY = (400 - fpH) / 2 + (rng() - 0.5) * 40;
+  const stageR = Math.min(fpW, fpH) * (0.18 + rng() * 0.1);
+  const stageCx = fpX + fpW * (0.4 + rng() * 0.2);
+  const stageCy = fpY + fpH * (0.6 + rng() * 0.25);
+  const sweepAngle = ia_pick(rng, [-25, -15, 15, 25]);
+  const isLight = !ia_isDark(palette.bg);
+  const gridStroke = isLight ? 'rgba(25,20,24,0.18)' : 'rgba(241,230,213,0.18)';
+  const heavyStroke = isLight
+    ? 'rgba(25,20,24,0.32)'
+    : 'rgba(241,230,213,0.32)';
   return (
     <g>
       <rect x="0" y="0" width="400" height="400" fill={palette.bg} />
@@ -412,8 +414,8 @@ const printBlueprint = ({
         </g>
       )}
     </g>
-  )
-}
+  );
+};
 
 const PRINT_TEMPLATES: Record<
   string,
@@ -424,7 +426,7 @@ const PRINT_TEMPLATES: Record<
   concentric: printConcentric,
   halftone: printHalftone,
   blueprint: printBlueprint,
-}
+};
 
 // ── Grain ──────────────────────────────────────────────────────────
 
@@ -434,9 +436,9 @@ const PRINT_TEMPLATES: Record<
  * opacity alone, so the visual weight matches at the default `grain = 0.1`.
  */
 export const printGrainOpacity = (grain: number, palette: Palette): number => {
-  const strength = Math.max(0, Math.min(1, grain))
-  return strength * (ia_isDark(palette.bg) ? 0.55 : 0.85)
-}
+  const strength = Math.max(0, Math.min(1, grain));
+  return strength * (ia_isDark(palette.bg) ? 0.55 : 0.85);
+};
 
 /**
  * Satori has no `preserveAspectRatio="slice"`, so the cover crop is computed
@@ -449,13 +451,13 @@ export const printCoverViewBox = (width: number, height: number): string => {
     width / PRINT_VIEWPORT,
     height / PRINT_VIEWPORT,
     Number.EPSILON,
-  )
-  const vbW = Math.min(PRINT_VIEWPORT, width / scale)
-  const vbH = Math.min(PRINT_VIEWPORT, height / scale)
-  const minX = (PRINT_VIEWPORT - vbW) / 2
-  const minY = (PRINT_VIEWPORT - vbH) / 2
-  return `${minX} ${minY} ${vbW} ${vbH}`
-}
+  );
+  const vbW = Math.min(PRINT_VIEWPORT, width / scale);
+  const vbH = Math.min(PRINT_VIEWPORT, height / scale);
+  const minX = (PRINT_VIEWPORT - vbW) / 2;
+  const minY = (PRINT_VIEWPORT - vbH) / 2;
+  return `${minX} ${minY} ${vbW} ${vbH}`;
+};
 
 // ── <IdentityArtPrint /> ───────────────────────────────────────────
 
@@ -475,20 +477,20 @@ export const IdentityArtPrint = ({
     ...(templateOverride !== undefined && { templateOverride }),
     ...(paletteOverride !== undefined && { paletteOverride }),
     scale,
-  })
-  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
-  const rng = ia_rngFromHash(resolved.hash)
-  const ink = printInkFor(resolved.palette)
-  const render = PRINT_TEMPLATES[resolved.template.id] ?? printMesh
+  });
+  const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4;
+  const rng = ia_rngFromHash(resolved.hash);
+  const ink = printInkFor(resolved.palette);
+  const render = PRINT_TEMPLATES[resolved.template.id] ?? printMesh;
   const artwork = render({
     rng,
     hash: resolved.hash,
     palette: resolved.palette,
     ink,
     scale,
-  })
+  });
 
-  const grainOpacity = printGrainOpacity(grain, resolved.palette)
+  const grainOpacity = printGrainOpacity(grain, resolved.palette);
 
   return (
     <div
@@ -540,5 +542,5 @@ export const IdentityArtPrint = ({
         }}
       />
     </div>
-  )
-}
+  );
+};

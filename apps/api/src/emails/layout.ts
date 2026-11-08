@@ -7,24 +7,24 @@
 // through to the inline single-column layout). Atoms live in atoms.ts;
 // templates supply subject, preheader, and the composed body rows.
 
-import { EMAIL_FONT, EMAIL_MONO, ME } from './palette.js'
+import { EMAIL_FONT, EMAIL_MONO, ME } from './palette.js';
 
 // Environment-specific web origin, same convention as app.ts CORS and the
 // billing portal return_url — staging/local emails must not link prod.
 const webOrigin = (): string =>
-  process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'
+  process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000';
 
 // The web app's user settings live under /me, driven by a ?section= query
 // param (see SettingsRouteDesktop NavSection: profile|plan|appearance|
 // submissions|account|danger). There is no dedicated email-preferences route
 // yet, so the notification links land on the settings home; see follow-up
 // issue for the missing unsubscribe UI.
-export const notificationsUrl = (): string => `${webOrigin()}/me`
-export const planUrl = (): string => `${webOrigin()}/me?section=plan`
-export const profileUrl = (): string => `${webOrigin()}/me?section=profile`
-export const appUrl = (): string => webOrigin()
+export const notificationsUrl = (): string => `${webOrigin()}/me`;
+export const planUrl = (): string => `${webOrigin()}/me?section=plan`;
+export const profileUrl = (): string => `${webOrigin()}/me?section=profile`;
+export const appUrl = (): string => webOrigin();
 
-export const LEGAL_LINE = 'Concert Crawl · Denver, CO'
+export const LEGAL_LINE = 'Concert Crawl · Denver, CO';
 
 // Preheaders + section copy carry template vars (gifter names, tier labels) —
 // escape so injected markup can't break the shell or smuggle links.
@@ -34,11 +34,11 @@ export const escapeHtml = (value: string): string =>
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
+    .replaceAll("'", '&#39;');
 
 interface EmailShellInput {
-  preheader: string
-  bodyRows: string
+  preheader: string;
+  bodyRows: string;
 }
 
 // bodyRows is a concatenation of `<tr>` strings (from atoms.ts) dropped
@@ -70,30 +70,30 @@ ${bodyRows}
 </tr>
 </table>
 </body>
-</html>`
+</html>`;
 
 // 'digest' (#763 spec §8.2) and 'product' (#967) both carry a signed one-click
 // unsubscribe URL in place of the Settings link, supplied by the template via
 // `unsubscribeUrl`. 'billing' has no opt-out: receipts and dunning are
 // transactional and stop only when the subscription does.
-export type EmailFamily = 'billing' | 'product' | 'digest'
+export type EmailFamily = 'billing' | 'product' | 'digest';
 
 export const familyUnsubscribeLabel = (family: EmailFamily): string =>
   family === 'digest'
     ? 'Turn off the weekly digest'
-    : `Turn off ${family} emails`
+    : `Turn off ${family} emails`;
 
 interface TextShellInput {
-  body: string
-  family: EmailFamily
-  showManage: boolean
-  unsubscribeUrl?: string
+  body: string;
+  family: EmailFamily;
+  showManage: boolean;
+  unsubscribeUrl?: string;
   // The same note the HTML footerRow carries (often the reply-to-us line).
   // Plain-text readers dropped it until #1386.
-  note?: string
+  note?: string;
 }
 
-const TEXT_RULE = '----------------------------------------'
+const TEXT_RULE = '----------------------------------------';
 
 // Plain-text footer mirrors the HTML EmFooter contract: per-family
 // unsubscribe first, all-settings second, manage-subscription only where a
@@ -114,9 +114,9 @@ export const renderTextShell = ({
     `All email settings:       ${notificationsUrl()}`,
     ...(showManage ? [`Manage subscription:      ${planUrl()}`] : []),
     LEGAL_LINE,
-  ]
-  return lines.join('\n')
-}
+  ];
+  return lines.join('\n');
+};
 
 // Re-exported so atoms.ts and templates share the exact font stacks.
-export { EMAIL_FONT, EMAIL_MONO, ME }
+export { EMAIL_FONT, EMAIL_MONO, ME };

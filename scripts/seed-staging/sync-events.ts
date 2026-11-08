@@ -18,53 +18,53 @@
  * always references live upcoming events.
  */
 
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { events } from '../../packages/db/src/schema/index.js'
-import { rollingWindow } from './sync-events-helpers.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { IdMap, DrizzleWriteDb } from './sync-venues.js'
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { events } from '../../packages/db/src/schema/index.js';
+import { rollingWindow } from './sync-events-helpers.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { IdMap, DrizzleWriteDb } from './sync-venues.js';
 
 export async function syncEvents(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
-  now: Date
-  venueIdMap: IdMap
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
+  now: Date;
+  venueIdMap: IdMap;
 }): Promise<{ scanned: number; processed: number; eventIdMap: IdMap }> {
-  const { prod, staging, dryRun, now, venueIdMap } = deps
+  const { prod, staging, dryRun, now, venueIdMap } = deps;
 
-  const { fromDate } = rollingWindow(now)
+  const { fromDate } = rollingWindow(now);
 
   // 1. Read events from prod within the rolling window.
   const prodRows = await prod.select((db) =>
     db.select().from(events).where(gte(events.date, fromDate)),
-  )
+  );
 
-  const scanned = prodRows.length
+  const scanned = prodRows.length;
   // `processed` counts rows we attempted to upsert (or would attempt in
   // dry-run) — NOT rows that actually changed in staging. Drizzle's
   // ON CONFLICT UPDATE path fires even when incoming values match stored
   // ones, so calling this `upserted` misleads operators into reading it
   // as a change count.
-  let processed = 0
-  let skippedMissingVenue = 0
+  let processed = 0;
+  let skippedMissingVenue = 0;
 
   // Cap per-row skip warnings to avoid flooding logs on fresh staging DBs
   // (empty venueIdMap → every row skipped). The aggregate summary at the
   // end still reports the total count.
-  const MAX_SKIP_WARNINGS = 5
-  let skipWarningsEmitted = 0
+  const MAX_SKIP_WARNINGS = 5;
+  let skipWarningsEmitted = 0;
   const warnSkip = (msg: string): void => {
     if (skipWarningsEmitted < MAX_SKIP_WARNINGS) {
-      console.warn(msg)
-      skipWarningsEmitted++
+      console.warn(msg);
+      skipWarningsEmitted++;
       if (skipWarningsEmitted === MAX_SKIP_WARNINGS) {
         console.warn(
           `[sync-events] (further per-row skip warnings suppressed — see aggregate summary at end)`,
-        )
+        );
       }
     }
-  }
+  };
 
   for (const row of prodRows) {
     // FK translation: every row must have a staging venue id.
@@ -73,23 +73,23 @@ export async function syncEvents(deps: {
     if (row.venueId === null) {
       warnSkip(
         `[sync-events] skipping event ${row.id} ("${row.title}") — venueId is null`,
-      )
-      skippedMissingVenue++
-      continue
+      );
+      skippedMissingVenue++;
+      continue;
     }
 
-    const stagingVenueId = venueIdMap.get(row.venueId)
+    const stagingVenueId = venueIdMap.get(row.venueId);
     if (stagingVenueId === undefined) {
       warnSkip(
         `[sync-events] skipping event ${row.id} ("${row.title}") — prod venueId ${row.venueId} not in venueIdMap (venue not synced)`,
-      )
-      skippedMissingVenue++
-      continue
+      );
+      skippedMissingVenue++;
+      continue;
     }
 
     if (!dryRun) {
-      const { id: _prodId, ...rowRest } = row
-      const rowToInsert = { ...rowRest, venueId: stagingVenueId }
+      const { id: _prodId, ...rowRest } = row;
+      const rowToInsert = { ...rowRest, venueId: stagingVenueId };
 
       if (row.status === 'upcoming') {
         // Partial UNIQUE index (#0057): (venue_id, date, canonical_artist,
@@ -146,7 +146,7 @@ export async function syncEvents(deps: {
               updatedAt: sql`excluded.updated_at`,
               verified: sql`excluded.verified`,
             },
-          })
+          });
       } else {
         // Cancelled/postponed: no valid partial UNIQUE target. Look up by
         // (venue_id, date, canonical_title) scoped to the SAME status — the
@@ -165,36 +165,36 @@ export async function syncEvents(deps: {
               eq(events.status, row.status),
             ),
           )
-          .limit(1)
+          .limit(1);
         if (existing.length > 0) {
           // Full mirror: update every mutable column. Strip `createdAt`
           // (codebase convention: created_at is immutable — see the admin
           // events route and the crawler upsert; the upcoming-row upsert
           // path above also omits it from `set`).
           const { createdAt: _immutableCreatedAt, ...updateFields } =
-            rowToInsert
+            rowToInsert;
           await staging
             .update(events)
             .set(updateFields)
-            .where(eq(events.id, existing[0].id))
+            .where(eq(events.id, existing[0].id));
         } else {
           // Plain INSERT — no ON CONFLICT clause because no UNIQUE index applies
           // to cancelled/postponed rows (the partial UNIQUE covers upcoming only,
           // and the row's natural key was just checked by the SELECT above).
           // A stale `.onConflictDoNothing()` here would only signal protection
           // that doesn't exist.
-          await staging.insert(events).values(rowToInsert)
+          await staging.insert(events).values(rowToInsert);
         }
       }
     }
 
-    processed++
+    processed++;
   }
 
   if (skippedMissingVenue > 0) {
     console.warn(
       `[sync-events] skipped ${skippedMissingVenue} row(s) due to missing FK parent in venueIdMap`,
-    )
+    );
   }
 
   // 2. Build eventIdMap via a re-select of upcoming rows only.
@@ -209,21 +209,21 @@ export async function syncEvents(deps: {
   // Collect the (venue_id, date, canonical_title) tuples that were processed (or
   // would have been processed in dry-run) — limited to upcoming rows with a valid
   // staging venue id so the WHERE clause stays sane.
-  const upcomingRows = prodRows.filter((row) => row.status === 'upcoming')
+  const upcomingRows = prodRows.filter((row) => row.status === 'upcoming');
 
   // For each upcoming prod row we need the staging venue id to match against
   // what staging actually stored.
-  const stagingVenueIds: string[] = []
+  const stagingVenueIds: string[] = [];
   for (const row of upcomingRows) {
-    if (row.venueId === null) continue
-    const stagingVenueId = venueIdMap.get(row.venueId)
+    if (row.venueId === null) continue;
+    const stagingVenueId = venueIdMap.get(row.venueId);
     if (stagingVenueId !== undefined) {
-      stagingVenueIds.push(stagingVenueId)
+      stagingVenueIds.push(stagingVenueId);
     }
   }
 
   // Dedupe to avoid bloating the inArray param list when many events share a venue.
-  const uniqueStagingVenueIds = [...new Set(stagingVenueIds)]
+  const uniqueStagingVenueIds = [...new Set(stagingVenueIds)];
 
   // Re-select from staging to obtain the authoritative (id, venue_id, date, canonical_title).
   const stagingEventRows =
@@ -243,16 +243,16 @@ export async function syncEvents(deps: {
               gte(events.date, fromDate),
             ),
           )
-      : []
+      : [];
 
   // Build a (staging-venue-id + date + canonical-title) → staging-event-id lookup.
   const stagingKey = (
     venueId: string | null,
     date: string,
     canonicalTitle: string,
-  ) => `${venueId ?? ''}|${date}|${canonicalTitle}`
+  ) => `${venueId ?? ''}|${date}|${canonicalTitle}`;
 
-  const stagingKeyToId = new Map<string, string>()
+  const stagingKeyToId = new Map<string, string>();
   for (const stagingRow of stagingEventRows) {
     stagingKeyToId.set(
       stagingKey(
@@ -261,22 +261,26 @@ export async function syncEvents(deps: {
         stagingRow.canonicalTitle,
       ),
       stagingRow.id,
-    )
+    );
   }
 
   // Map prod-event-id → staging-event-id for upcoming rows.
-  const eventIdMap = new Map<string, string>()
+  const eventIdMap = new Map<string, string>();
   for (const prodRow of upcomingRows) {
-    if (prodRow.venueId === null) continue
-    const stagingVenueId = venueIdMap.get(prodRow.venueId)
-    if (stagingVenueId === undefined) continue
+    if (prodRow.venueId === null) continue;
+    const stagingVenueId = venueIdMap.get(prodRow.venueId);
+    if (stagingVenueId === undefined) continue;
 
-    const key = stagingKey(stagingVenueId, prodRow.date, prodRow.canonicalTitle)
-    const stagingId = stagingKeyToId.get(key)
+    const key = stagingKey(
+      stagingVenueId,
+      prodRow.date,
+      prodRow.canonicalTitle,
+    );
+    const stagingId = stagingKeyToId.get(key);
     if (stagingId !== undefined) {
-      eventIdMap.set(prodRow.id, stagingId)
+      eventIdMap.set(prodRow.id, stagingId);
     }
   }
 
-  return { scanned, processed, eventIdMap }
+  return { scanned, processed, eventIdMap };
 }

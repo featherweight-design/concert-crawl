@@ -4,16 +4,16 @@
 // stays readable, and a screen reader hears sentence case rather than spelling
 // out what it takes for an acronym.
 
-import type { CSSProperties, ElementType, ReactNode } from 'react'
+import type { CSSProperties, ElementType, ReactNode } from 'react';
 
 interface MonoProps {
-  children: ReactNode
+  children: ReactNode;
   /** Defaults to a span; group headings pass `h2`. */
-  as?: ElementType
-  size?: number
-  color?: string
-  ls?: string
-  style?: CSSProperties
+  as?: ElementType;
+  size?: number;
+  color?: string;
+  ls?: string;
+  style?: CSSProperties;
 }
 
 export const Mono = ({
@@ -39,4 +39,4 @@ export const Mono = ({
   >
     {children}
   </Tag>
-)
+);

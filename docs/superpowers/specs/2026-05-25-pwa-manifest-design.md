@@ -19,17 +19,17 @@ Three new files following Next.js App Router conventions — consistent with the
 Next.js App Router manifest file, automatically served at `/manifest.json`.
 
 ```ts
-name: 'Concert Crawl'
-short_name: 'Concert Crawl'
-description: 'Denver concert calendar — find shows at your favorite venues.'
-start_url: '/'
-display: 'standalone'
-background_color: '#070A1A' // Electric theme bg
-theme_color: '#070A1A' // matches viewport.themeColor in layout.tsx
+name: 'Concert Crawl';
+short_name: 'Concert Crawl';
+description: 'Denver concert calendar — find shows at your favorite venues.';
+start_url: '/';
+display: 'standalone';
+background_color: '#070A1A'; // Electric theme bg
+theme_color: '#070A1A'; // matches viewport.themeColor in layout.tsx
 icons: [
   { src: '/api/pwa/icon-192', sizes: '192x192', type: 'image/png' },
   { src: '/api/pwa/icon-512', sizes: '512x512', type: 'image/png' },
-]
+];
 ```
 
 `start_url: "/"` is relative — resolves correctly on any domain (staging.concertcrawl.app, concertcrawl.app) without hardcoding.

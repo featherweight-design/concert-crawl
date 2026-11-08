@@ -24,37 +24,37 @@ Create `apps/web/src/components/consumer/GenreChips.test.tsx`:
 ```tsx
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { GenreChips } from './GenreChips'
+import React from 'react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { GenreChips } from './GenreChips';
 
 describe('GenreChips', () => {
   it('renders a chip for each genres', () => {
-    render(<GenreChips genres={['pop', 'jazz']} />)
-    expect(screen.getByText('pop')).toBeTruthy()
-    expect(screen.getByText('jazz')).toBeTruthy()
-  })
+    render(<GenreChips genres={['pop', 'jazz']} />);
+    expect(screen.getByText('pop')).toBeTruthy();
+    expect(screen.getByText('jazz')).toBeTruthy();
+  });
 
   it('renders nothing when genres is null', () => {
-    const { container } = render(<GenreChips genres={null} />)
-    expect(container.firstChild).toBeNull()
-  })
+    const { container } = render(<GenreChips genres={null} />);
+    expect(container.firstChild).toBeNull();
+  });
 
   it('renders nothing when genres is an empty array', () => {
-    const { container } = render(<GenreChips genres={[]} />)
-    expect(container.firstChild).toBeNull()
-  })
+    const { container } = render(<GenreChips genres={[]} />);
+    expect(container.firstChild).toBeNull();
+  });
 
   it('applies className to the container', () => {
     const { container } = render(
       <GenreChips genres={['rock']} className="mt-2" />,
-    )
+    );
     expect(
       (container.firstChild as HTMLElement).classList.contains('mt-2'),
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to confirm it fails**
@@ -70,19 +70,19 @@ Expected: FAIL — `GenreChips` is not defined.
 Create `apps/web/src/components/consumer/GenreChips.tsx`:
 
 ```tsx
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 interface GenreChipsProps {
-  genres: string[] | null
-  className?: string
-  maxChips?: number
+  genres: string[] | null;
+  className?: string;
+  maxChips?: number;
 }
 
 export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
-  if (!genres || genres.length === 0) return null
+  if (!genres || genres.length === 0) return null;
 
   const chips =
-    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres
+    maxChips != null ? genres.slice(0, Math.max(1, maxChips)) : genres;
 
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>
@@ -100,7 +100,7 @@ export function GenreChips({ genres, className, maxChips }: GenreChipsProps) {
         </span>
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -150,7 +150,7 @@ In `HeroEventCard.tsx`, replace lines 107–123:
         </span>
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -165,7 +165,7 @@ With:
 Add to the imports at the top of `HeroEventCard.tsx` (after the existing local imports):
 
 ```tsx
-import { GenreChips } from '../GenreChips'
+import { GenreChips } from '../GenreChips';
 ```
 
 - [ ] **Step 3: Verify no type errors**
@@ -216,7 +216,7 @@ In `apps/web/src/app/(protected)/events/[id]/page.tsx`, replace lines 168–184:
         </span>
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -226,7 +226,7 @@ With:
 {
   /* Genre chips */
 }
-;<GenreChips genres={event.genre} className="mb-2" />
+<GenreChips genres={event.genre} className="mb-2" />;
 ```
 
 - [ ] **Step 2: Add the import**
@@ -234,7 +234,7 @@ With:
 Add to the imports at the top of `page.tsx`:
 
 ```tsx
-import { GenreChips } from '@/components/consumer/GenreChips'
+import { GenreChips } from '@/components/consumer/GenreChips';
 ```
 
 - [ ] **Step 3: Verify no type errors**
@@ -265,7 +265,7 @@ git commit -m "refactor(consumer): use GenreChips in event detail page"
 Add to the imports at the top of `EventCard.tsx` (after the existing local imports):
 
 ```tsx
-import { GenreChips } from '../GenreChips'
+import { GenreChips } from '../GenreChips';
 ```
 
 - [ ] **Step 2: Add `GenreChips` below the venue + time line**
@@ -276,7 +276,7 @@ In `EventCard.tsx`, the info column ends at line 184 with the closing `</div>` a
 {
   /* Info */
 }
-;<div className="flex min-w-0 flex-1 flex-col">
+<div className="flex min-w-0 flex-1 flex-col">
   {isCancelled || isPostponed ? (
     <div className="flex items-center gap-2">
       <Link
@@ -326,7 +326,7 @@ In `EventCard.tsx`, the info column ends at line 184 with the closing `</div>` a
     )}
   </p>
   <GenreChips genres={event.genre} className="mt-1" maxChips={3} />
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Verify no type errors**

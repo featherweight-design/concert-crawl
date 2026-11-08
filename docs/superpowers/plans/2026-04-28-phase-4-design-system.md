@@ -54,7 +54,7 @@
 
 ```ts
 // apps/web/src/theme/themes.ts
-export type ThemeName = 'electric' | 'jade' | 'light'
+export type ThemeName = 'electric' | 'jade' | 'light';
 
 const electric: Record<string, string> = {
   bg: '#070A1A',
@@ -81,7 +81,7 @@ const electric: Record<string, string> = {
   'overlay-press': 'rgba(122,230,255,0.16)',
   scrim: 'rgba(7,10,26,0.72)',
   'image-tint': 'rgba(7,10,26,0.20)',
-}
+};
 
 const jade: Record<string, string> = {
   bg: '#06201F',
@@ -108,7 +108,7 @@ const jade: Record<string, string> = {
   'overlay-press': 'rgba(31,255,194,0.16)',
   scrim: 'rgba(6,32,31,0.72)',
   'image-tint': 'rgba(6,32,31,0.20)',
-}
+};
 
 const light: Record<string, string> = {
   bg: '#FAFCFF',
@@ -135,21 +135,21 @@ const light: Record<string, string> = {
   'overlay-press': 'rgba(7,10,26,0.08)',
   scrim: 'rgba(7,10,26,0.40)',
   'image-tint': 'transparent',
-}
+};
 
 export const THEMES: Record<ThemeName, Record<string, string>> = {
   electric,
   jade,
   light,
-}
+};
 ```
 
 - [ ] **Step 2: Create themes.test.ts**
 
 ```ts
 // apps/web/src/theme/themes.test.ts
-import { describe, it, expect } from 'vitest'
-import { THEMES, type ThemeName } from './themes'
+import { describe, it, expect } from 'vitest';
+import { THEMES, type ThemeName } from './themes';
 
 const REQUIRED_TOKENS = [
   'bg',
@@ -176,32 +176,34 @@ const REQUIRED_TOKENS = [
   'overlay-press',
   'scrim',
   'image-tint',
-] as const
+] as const;
 
-const THEME_NAMES: ThemeName[] = ['electric', 'jade', 'light']
+const THEME_NAMES: ThemeName[] = ['electric', 'jade', 'light'];
 
 describe('THEMES', () => {
   it('exports exactly three themes', () => {
-    expect(Object.keys(THEMES).sort()).toEqual([...THEME_NAMES].sort())
-  })
+    expect(Object.keys(THEMES).sort()).toEqual([...THEME_NAMES].sort());
+  });
 
   for (const name of THEME_NAMES) {
     describe(`theme: ${name}`, () => {
       it('contains every required token', () => {
         for (const token of REQUIRED_TOKENS) {
-          expect(THEMES[name], `missing token --${token}`).toHaveProperty(token)
+          expect(THEMES[name], `missing token --${token}`).toHaveProperty(
+            token,
+          );
         }
-      })
+      });
 
       it('has no undefined or empty token values', () => {
         for (const [token, value] of Object.entries(THEMES[name])) {
-          expect(typeof value, `--${token} is not a string`).toBe('string')
-          expect(value.length, `--${token} is empty`).toBeGreaterThan(0)
+          expect(typeof value, `--${token} is not a string`).toBe('string');
+          expect(value.length, `--${token} is empty`).toBeGreaterThan(0);
         }
-      })
-    })
+      });
+    });
   }
-})
+});
 ```
 
 - [ ] **Step 3: Run test — expect PASS**
@@ -230,15 +232,15 @@ git commit -m "feat: add theme token source of truth (THEMES + ThemeName)"
 
 ```ts
 // apps/web/src/theme/apply-theme.ts
-import { THEMES, type ThemeName } from './themes'
+import { THEMES, type ThemeName } from './themes';
 
 export function applyTheme(name: ThemeName): void {
-  const tokens = THEMES[name]
-  const root = document.documentElement
+  const tokens = THEMES[name];
+  const root = document.documentElement;
   for (const [k, v] of Object.entries(tokens)) {
-    root.style.setProperty(`--${k}`, v)
+    root.style.setProperty(`--${k}`, v);
   }
-  root.setAttribute('data-theme', name)
+  root.setAttribute('data-theme', name);
 }
 ```
 
@@ -249,40 +251,42 @@ The `// @vitest-environment jsdom` directive at the top of the file overrides th
 ```ts
 // @vitest-environment jsdom
 // apps/web/src/theme/apply-theme.test.ts
-import { describe, it, expect, beforeEach } from 'vitest'
-import { applyTheme } from './apply-theme'
-import { THEMES } from './themes'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { applyTheme } from './apply-theme';
+import { THEMES } from './themes';
 
 describe('applyTheme', () => {
   beforeEach(() => {
-    document.documentElement.removeAttribute('data-theme')
-    document.documentElement.style.cssText = ''
-  })
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.style.cssText = '';
+  });
 
   it('sets data-theme attribute on <html>', () => {
-    applyTheme('electric')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('electric')
-  })
+    applyTheme('electric');
+    expect(document.documentElement.getAttribute('data-theme')).toBe(
+      'electric',
+    );
+  });
 
   it('writes all CSS custom properties for the chosen theme', () => {
-    applyTheme('jade')
+    applyTheme('jade');
     for (const [key, value] of Object.entries(THEMES.jade)) {
       expect(
         document.documentElement.style.getPropertyValue(`--${key}`),
         `--${key} not set`,
-      ).toBe(value)
+      ).toBe(value);
     }
-  })
+  });
 
   it('overwrites the previous theme when called again', () => {
-    applyTheme('electric')
-    applyTheme('light')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    applyTheme('electric');
+    applyTheme('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
     expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
       THEMES.light.bg,
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 - [ ] **Step 3: Run test — expect PASS**
@@ -315,51 +319,51 @@ No component test: `@testing-library/react` is not installed. The pure-function 
 
 ```tsx
 // apps/web/src/theme/ThemeProvider.tsx
-'use client'
+'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { applyTheme } from './apply-theme'
-import type { ThemeName } from './themes'
+import { createContext, useContext, useEffect, useState } from 'react';
+import { applyTheme } from './apply-theme';
+import type { ThemeName } from './themes';
 
-const VALID_THEMES: ThemeName[] = ['electric', 'jade', 'light']
+const VALID_THEMES: ThemeName[] = ['electric', 'jade', 'light'];
 
 function isThemeName(v: string | null): v is ThemeName {
-  return VALID_THEMES.includes(v as ThemeName)
+  return VALID_THEMES.includes(v as ThemeName);
 }
 
 interface ThemeContextValue {
-  theme: ThemeName
-  setTheme: (t: ThemeName) => void
+  theme: ThemeName;
+  setTheme: (t: ThemeName) => void;
 }
 
-const ThemeContext = createContext<ThemeContextValue | null>(null)
+const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeName>('electric')
+  const [theme, setThemeState] = useState<ThemeName>('electric');
 
   useEffect(() => {
-    const attr = document.documentElement.getAttribute('data-theme')
-    if (isThemeName(attr)) setThemeState(attr)
-  }, [])
+    const attr = document.documentElement.getAttribute('data-theme');
+    if (isThemeName(attr)) setThemeState(attr);
+  }, []);
 
   function setTheme(t: ThemeName) {
-    applyTheme(t)
-    localStorage.setItem('cc-theme', t)
-    setThemeState(t)
+    applyTheme(t);
+    localStorage.setItem('cc-theme', t);
+    setThemeState(t);
   }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
-  )
+  );
 }
 
 export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext)
+  const ctx = useContext(ThemeContext);
   if (ctx === null)
-    throw new Error('useTheme must be used within ThemeProvider')
-  return ctx
+    throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
 }
 ```
 
@@ -367,9 +371,9 @@ export function useTheme(): ThemeContextValue {
 
 ```ts
 // apps/web/src/theme/index.ts
-export { ThemeProvider, useTheme } from './ThemeProvider'
-export { applyTheme } from './apply-theme'
-export { THEMES, type ThemeName } from './themes'
+export { ThemeProvider, useTheme } from './ThemeProvider';
+export { applyTheme } from './apply-theme';
+export { THEMES, type ThemeName } from './themes';
 ```
 
 - [ ] **Step 3: TypeScript check**
@@ -475,7 +479,7 @@ Remove `darkMode: ['class']`. Strip all shadcn HSL color aliases. Add token colo
 
 ```ts
 // apps/web/tailwind.config.ts
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
@@ -518,9 +522,9 @@ const config: Config = {
     },
   },
   plugins: [],
-}
+};
 
-export default config
+export default config;
 ```
 
 - [ ] **Step 3: Update layout.tsx**
@@ -529,25 +533,25 @@ Replace Geist with Inter + JetBrains Mono. Add the blocking inline script. Wrap 
 
 ```tsx
 // apps/web/src/app/layout.tsx
-import type { Metadata, Viewport } from 'next'
-import { ClerkProvider } from '@clerk/nextjs'
-import './globals.css'
-import { Inter, JetBrains_Mono } from 'next/font/google'
-import { ThemeProvider } from '@/theme'
-import { THEMES } from '@/theme/themes'
-import { cn } from '@/lib/utils'
+import type { Metadata, Viewport } from 'next';
+import { ClerkProvider } from '@clerk/nextjs';
+import './globals.css';
+import { Inter, JetBrains_Mono } from 'next/font/google';
+import { ThemeProvider } from '@/theme';
+import { THEMES } from '@/theme/themes';
+import { cn } from '@/lib/utils';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-ui',
   weight: ['400', '500', '600', '700', '800', '900'],
-})
+});
 
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600'],
-})
+});
 
 const themeScript = `
   (function() {
@@ -560,22 +564,22 @@ const themeScript = `
     Object.keys(tokens).forEach(function(k) { root.style.setProperty('--' + k, tokens[k]); });
     root.setAttribute('data-theme', theme);
   })();
-`
+`;
 
 export const metadata: Metadata = {
   title: 'Concert Crawl',
   description: 'Denver concert calendar — find shows at your favorite venues.',
   manifest: '/manifest.json',
-}
+};
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: '#000000',
-}
+};
 
 interface RootLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
@@ -595,7 +599,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }
 ```
 
@@ -605,11 +609,11 @@ Replace all shadcn token class names. Remove all `dark:` variants. Tokens are he
 
 ```tsx
 // apps/web/src/components/ui/badge.tsx
-import { mergeProps } from '@base-ui/react/merge-props'
-import { useRender } from '@base-ui/react/use-render'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { mergeProps } from '@base-ui/react/merge-props';
+import { useRender } from '@base-ui/react/use-render';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
   'group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-border-focus focus-visible:ring-[3px] focus-visible:ring-border-focus has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-danger aria-invalid:ring-[color-mix(in_srgb,var(--danger)_20%,transparent)] [&>svg]:pointer-events-none [&>svg]:size-3!',
@@ -630,7 +634,7 @@ const badgeVariants = cva(
       variant: 'default',
     },
   },
-)
+);
 
 function Badge({
   className,
@@ -651,20 +655,20 @@ function Badge({
       slot: 'badge',
       variant,
     },
-  })
+  });
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };
 ```
 
 - [ ] **Step 5: Update button.tsx**
 
 ```tsx
 // apps/web/src/components/ui/button.tsx
-import { Button as ButtonPrimitive } from '@base-ui/react/button'
-import { cva, type VariantProps } from 'class-variance-authority'
+import { Button as ButtonPrimitive } from '@base-ui/react/button';
+import { cva, type VariantProps } from 'class-variance-authority';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-border-focus focus-visible:ring-3 focus-visible:ring-border-focus active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger aria-invalid:ring-3 aria-invalid:ring-[color-mix(in_srgb,var(--danger)_20%,transparent)] [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -701,7 +705,7 @@ const buttonVariants = cva(
       size: 'default',
     },
   },
-)
+);
 
 function Button({
   className,
@@ -715,10 +719,10 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
-  )
+  );
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants };
 ```
 
 - [ ] **Step 6: Update card.tsx**
@@ -731,9 +735,9 @@ Mapping applied:
 
 ```tsx
 // apps/web/src/components/ui/card.tsx
-import * as React from 'react'
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Card({
   className,
@@ -750,7 +754,7 @@ function Card({
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
@@ -763,7 +767,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
@@ -776,7 +780,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
@@ -786,7 +790,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('text-sm text-fg-muted', className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
@@ -799,7 +803,7 @@ function CardAction({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
@@ -809,7 +813,7 @@ function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
       className={cn('px-4 group-data-[size=sm]/card:px-3', className)}
       {...props}
     />
-  )
+  );
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
@@ -822,7 +826,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -833,7 +837,7 @@ export {
   CardAction,
   CardDescription,
   CardContent,
-}
+};
 ```
 
 - [ ] **Step 7: Update input.tsx**
@@ -849,10 +853,10 @@ Mapping applied:
 
 ```tsx
 // apps/web/src/components/ui/input.tsx
-import * as React from 'react'
-import { Input as InputPrimitive } from '@base-ui/react/input'
+import * as React from 'react';
+import { Input as InputPrimitive } from '@base-ui/react/input';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
   return (
@@ -865,10 +869,10 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Input }
+export { Input };
 ```
 
 - [ ] **Step 8: Update table.tsx**
@@ -882,11 +886,11 @@ Mapping applied:
 
 ```tsx
 // apps/web/src/components/ui/table.tsx
-'use client'
+'use client';
 
-import * as React from 'react'
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
@@ -900,7 +904,7 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
         {...props}
       />
     </div>
-  )
+  );
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
@@ -910,7 +914,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
       className={cn('[&_tr]:border-b', className)}
       {...props}
     />
-  )
+  );
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
@@ -920,7 +924,7 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
       className={cn('[&_tr:last-child]:border-0', className)}
       {...props}
     />
-  )
+  );
 }
 
 function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
@@ -933,7 +937,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
@@ -946,7 +950,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
@@ -959,7 +963,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
@@ -972,7 +976,7 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TableCaption({
@@ -985,7 +989,7 @@ function TableCaption({
       className={cn('mt-4 text-sm text-fg-muted', className)}
       {...props}
     />
-  )
+  );
 }
 
 export {
@@ -997,7 +1001,7 @@ export {
   TableRow,
   TableCell,
   TableCaption,
-}
+};
 ```
 
 - [ ] **Step 9: Update admin/layout.tsx**
@@ -1013,23 +1017,23 @@ Changes:
 
 ```tsx
 // apps/web/src/app/(protected)/admin/layout.tsx
-import { requireAdminUser } from '@/lib/auth'
-import { UserButton } from '@clerk/nextjs'
-import Link from 'next/link'
+import { requireAdminUser } from '@/lib/auth';
+import { UserButton } from '@clerk/nextjs';
+import Link from 'next/link';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/venues', label: 'Venues' },
   { href: '/admin/invite-codes', label: 'Invite Codes' },
   { href: '/admin/settings', label: 'Settings' },
-]
+];
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  await requireAdminUser()
+  await requireAdminUser();
 
   return (
     <div className="flex min-h-screen">
@@ -1054,7 +1058,7 @@ export default async function AdminLayout({
       </aside>
       <main className="flex-1 p-8">{children}</main>
     </div>
-  )
+  );
 }
 ```
 
@@ -1068,20 +1072,20 @@ Changes:
 
 ```tsx
 // apps/web/src/app/(protected)/admin/error.tsx
-'use client'
+'use client';
 
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 export default function AdminError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[admin] page error:', error)
-  }, [error])
+    console.error('[admin] page error:', error);
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-3 p-6">
@@ -1104,7 +1108,7 @@ export default function AdminError({
         Try again
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -1168,9 +1172,9 @@ git commit -m "feat: atomic cutover to CSS variable token system (Phase 4)"
 ```tsx
 // apps/web/src/components/admin/settings/SettingsLayout.tsx
 interface SettingsLayoutProps {
-  heading: string
-  description?: string
-  children: React.ReactNode
+  heading: string;
+  description?: string;
+  children: React.ReactNode;
 }
 
 export function SettingsLayout({
@@ -1188,7 +1192,7 @@ export function SettingsLayout({
       </div>
       {children}
     </section>
-  )
+  );
 }
 ```
 
@@ -1198,26 +1202,26 @@ Each card shows three color swatches (`--bg`, `--signal`, `--accent`) using inli
 
 ```tsx
 // apps/web/src/components/admin/ThemePicker.tsx
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
-import { THEMES, type ThemeName } from '@/theme/themes'
-import { useTheme } from '@/theme'
+import { cn } from '@/lib/utils';
+import { THEMES, type ThemeName } from '@/theme/themes';
+import { useTheme } from '@/theme';
 
 const THEME_LABELS: Record<ThemeName, string> = {
   electric: 'Electric',
   jade: 'Jade',
   light: 'Light',
-}
+};
 
 export function ThemePicker() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="flex flex-wrap gap-3">
       {(Object.keys(THEMES) as ThemeName[]).map((name) => {
-        const tokens = THEMES[name]
-        const isSelected = theme === name
+        const tokens = THEMES[name];
+        const isSelected = theme === name;
 
         return (
           <button
@@ -1249,10 +1253,10 @@ export function ThemePicker() {
               {THEME_LABELS[name]}
             </span>
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 ```
 
@@ -1260,8 +1264,8 @@ export function ThemePicker() {
 
 ```tsx
 // apps/web/src/components/admin/settings/AppearanceSection.tsx
-import { SettingsLayout } from './SettingsLayout'
-import { ThemePicker } from '@/components/admin/ThemePicker'
+import { SettingsLayout } from './SettingsLayout';
+import { ThemePicker } from '@/components/admin/ThemePicker';
 
 export function AppearanceSection() {
   return (
@@ -1271,7 +1275,7 @@ export function AppearanceSection() {
     >
       <ThemePicker />
     </SettingsLayout>
-  )
+  );
 }
 ```
 
@@ -1281,11 +1285,11 @@ Auth guard uses `requireAdminUser()` from `@/lib/auth` (not `requireRole` direct
 
 ```tsx
 // apps/web/src/app/(protected)/admin/settings/page.tsx
-import { requireAdminUser } from '@/lib/auth'
-import { AppearanceSection } from '@/components/admin/settings/AppearanceSection'
+import { requireAdminUser } from '@/lib/auth';
+import { AppearanceSection } from '@/components/admin/settings/AppearanceSection';
 
 export default async function SettingsPage() {
-  await requireAdminUser()
+  await requireAdminUser();
 
   return (
     <div className="max-w-2xl">
@@ -1294,7 +1298,7 @@ export default async function SettingsPage() {
         <AppearanceSection />
       </div>
     </div>
-  )
+  );
 }
 ```
 

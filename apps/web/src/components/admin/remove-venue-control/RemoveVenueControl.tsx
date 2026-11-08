@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { useId, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { Trash2 } from 'lucide-react'
-import { AdminButton, AdminDialog } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { removeVenue } from '@/lib/actions/venues'
-import type { RemoveVenueControlProps } from './definitions/types'
+import { useId, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
+import { AdminButton, AdminDialog } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { removeVenue } from '@/lib/actions/venues';
+import type { RemoveVenueControlProps } from './definitions/types';
 
-const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.remove
+const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.remove;
 
 /**
  * Honours a venue's removal request, the one /bot promises within 30 days.
@@ -21,42 +21,42 @@ export const RemoveVenueControl = ({
   venueName,
   removed,
 }: RemoveVenueControlProps) => {
-  const router = useRouter()
-  const reasonId = useId()
-  const typedId = useId()
-  const [open, setOpen] = useState(false)
-  const [reason, setReason] = useState('')
-  const [typed, setTyped] = useState('')
-  const [failed, setFailed] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const reasonId = useId();
+  const typedId = useId();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [typed, setTyped] = useState('');
+  const [failed, setFailed] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const trimmedReason = reason.trim()
-  const armed = typed.trim() === venueName.trim() && trimmedReason !== ''
+  const trimmedReason = reason.trim();
+  const armed = typed.trim() === venueName.trim() && trimmedReason !== '';
 
   const close = () => {
-    if (isPending) return
-    setOpen(false)
-    setReason('')
-    setTyped('')
-    setFailed(false)
-  }
+    if (isPending) return;
+    setOpen(false);
+    setReason('');
+    setTyped('');
+    setFailed(false);
+  };
 
   const confirm = () => {
-    if (!armed) return
-    setFailed(false)
+    if (!armed) return;
+    setFailed(false);
     startTransition(async () => {
       try {
-        await removeVenue(venueId, trimmedReason)
-        setOpen(false)
-        setReason('')
-        setTyped('')
-        router.refresh()
+        await removeVenue(venueId, trimmedReason);
+        setOpen(false);
+        setReason('');
+        setTyped('');
+        router.refresh();
       } catch (err) {
-        console.error('Venue removal failed', { venueId, err })
-        setFailed(true)
+        console.error('Venue removal failed', { venueId, err });
+        setFailed(true);
       }
-    })
-  }
+    });
+  };
 
   const fieldStyle = {
     width: '100%',
@@ -67,13 +67,13 @@ export const RemoveVenueControl = ({
     color: 'var(--fg)',
     // 16px or iOS Safari zooms the page when the field takes focus.
     fontSize: 16,
-  }
+  };
   const labelStyle = {
     display: 'block',
     fontSize: 12,
     color: 'var(--fg-muted)',
     marginBottom: 6,
-  }
+  };
 
   return (
     <div
@@ -198,5 +198,5 @@ export const RemoveVenueControl = ({
         </AdminDialog>
       )}
     </div>
-  )
-}
+  );
+};

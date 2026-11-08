@@ -3,11 +3,13 @@
 **Purpose:** engaging a human illustrator/designer for bespoke visual work when AI-generated illustration doesn't hit the quality bar. Written when Concert Crawl pivoted #1114 (per-venue imagery) from AI-assisted to human-commissioned, but structured to be reusable for any future bespoke visual commission (event posters, marketing art, illustrated features, etc.).
 
 **When to use this doc:**
+
 - You're commissioning original illustration work and Fiverr/generic freelance marketplaces feel wrong for the visual quality you need
 - The project is Concert Crawl-sized (~small-to-medium spend, ~20–50 pieces)
 - You want editorial-grade or gig-poster-grade output, not template/vector work
 
 **When NOT to use this doc:**
+
 - You need one-off vector work (logos, icons) — Fiverr/99designs are actually fine for that
 - You need a full-time in-house designer — different playbook (job posting, portfolio review, contracts, salary)
 
@@ -15,7 +17,7 @@
 
 ## 1. Why Fiverr / Upwork usually aren't the right venue
 
-Fiverr and Upwork optimize for high-volume, low-price, template-shaped creative work. Signal-to-noise is terrible for editorial or illustration work at a real quality bar. The platforms select for illustrators whose business model is *volume at low margin* — which is misaligned with commissioning ~20–50 unique pieces at a quality bar that would land on a considered product page.
+Fiverr and Upwork optimize for high-volume, low-price, template-shaped creative work. Signal-to-noise is terrible for editorial or illustration work at a real quality bar. The platforms select for illustrators whose business model is _volume at low margin_ — which is misaligned with commissioning ~20–50 unique pieces at a quality bar that would land on a considered product page.
 
 Skip both unless you're commissioning something genuinely templatable (product mockups, spot vector illustrations, standard iconography).
 
@@ -31,7 +33,7 @@ Skip both unless you're commissioning something genuinely templatable (product m
 
 ### 🎯 Gig-poster-specific (closest fit to Concert Crawl's existing riso/poster DNA)
 
-- **[Flatstock](https://americanposterinstitute.com/flatstock)** — the American Poster Institute's touring show of poster artists. Their roster is *the* concentrated pool of gig-poster illustrators. Any recent show's exhibitor list is a curated shortlist of ~100 poster artists who take commissions.
+- **[Flatstock](https://americanposterinstitute.com/flatstock)** — the American Poster Institute's touring show of poster artists. Their roster is _the_ concentrated pool of gig-poster illustrators. Any recent show's exhibitor list is a curated shortlist of ~100 poster artists who take commissions.
 - **[r/gigposters](https://reddit.com/r/gigposters)** — active poster-artist community; many post work and openly take commissions. Lower-friction to reach out via Reddit DM.
 - **Instagram tags:** `#gigposter`, `#screenprint`, `#risoprint` — visual-first browsing. Shortlist by "I like this specific style" then check bio for commission availability.
 
@@ -56,10 +58,10 @@ Skip both unless you're commissioning something genuinely templatable (product m
 
 Two portfolio filters that matter more than any others:
 
-1. **Can they draw the subject well?** For Concert Crawl-style venue imagery: can they draw buildings? Many illustrators are character-forward and mediocre at architecture. For a different subject (concert crowds, portraits, etc.) the muscle you're checking for changes but the principle holds — the illustrator's *existing* portfolio should already demonstrate the specific competence you need.
+1. **Can they draw the subject well?** For Concert Crawl-style venue imagery: can they draw buildings? Many illustrators are character-forward and mediocre at architecture. For a different subject (concert crowds, portraits, etc.) the muscle you're checking for changes but the principle holds — the illustrator's _existing_ portfolio should already demonstrate the specific competence you need.
 2. **Have they done a coherent series?** N pieces that feel like siblings requires demonstrated series-work muscle. City map books, hotel/restaurant chain art, sports team collections, album series — these are the portfolio pieces that prove the illustrator can hold a style across many outputs.
 
-**One-shot tip:** find 3–4 people whose *existing work* looks like what you'd want the finished pieces to look like. Don't brief style abstractly; commission from illustrators whose native style already fits. Trying to bend an illustrator away from their default style is expensive and often unsuccessful.
+**One-shot tip:** find 3–4 people whose _existing work_ looks like what you'd want the finished pieces to look like. Don't brief style abstractly; commission from illustrators whose native style already fits. Trying to bend an illustrator away from their default style is expensive and often unsuccessful.
 
 ---
 
@@ -80,12 +82,12 @@ Skip any AI-generated reference material unless you're explicitly saying "here's
 
 De-risks the money spend and gives clean cut-points.
 
-| Phase | What | Deliverable | Ballpark cost |
-|---|---|---|---|
-| **1. Style exploration** | 2–3 style directions × 1–2 sample pieces each | Style guide + samples | $500–1,500 total |
-| **2. Locked style** | 1 refined sample in the chosen direction + iteration | Final template + 1 piece at production quality | $200–500 |
-| **3. Batch execution** | Remaining pieces at a per-piece rate | Final art + source files | $100–300 per piece (varies by illustrator tier + complexity) |
-| **4. Retainer (optional)** | Same per-piece rate for new work as it's needed | Ongoing | Per-piece |
+| Phase                      | What                                                 | Deliverable                                    | Ballpark cost                                                |
+| -------------------------- | ---------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------ |
+| **1. Style exploration**   | 2–3 style directions × 1–2 sample pieces each        | Style guide + samples                          | $500–1,500 total                                             |
+| **2. Locked style**        | 1 refined sample in the chosen direction + iteration | Final template + 1 piece at production quality | $200–500                                                     |
+| **3. Batch execution**     | Remaining pieces at a per-piece rate                 | Final art + source files                       | $100–300 per piece (varies by illustrator tier + complexity) |
+| **4. Retainer (optional)** | Same per-piece rate for new work as it's needed      | Ongoing                                        | Per-piece                                                    |
 
 Phase 1 lets you cut cleanly if the first illustrator doesn't hit — you're out ~$1K, not ~$10K. If Phase 1 lands well, Phase 2 formalizes; if Phase 2 lands well, Phase 3 executes the full batch.
 
@@ -106,18 +108,18 @@ For Concert Crawl scale: **work-for-hire is the recommended posture** unless the
 
 ## 7. Practical first move — the cold-outreach outline
 
-Draft a **1-page project outline** you can DM to 5–10 illustrators for a *"would you be interested + rough per-piece rate?"* touch. Response data is cheap; commitment isn't required from either side.
+Draft a **1-page project outline** you can DM to 5–10 illustrators for a _"would you be interested + rough per-piece rate?"_ touch. Response data is cheap; commitment isn't required from either side.
 
 The outline needs:
 
 - 2-sentence what-it-is
 - Subject count (e.g., ~20–50 pieces)
-- Style direction (be honest: *"we're figuring it out"* is fine; naming reference styles helps)
+- Style direction (be honest: _"we're figuring it out"_ is fine; naming reference styles helps)
 - Commission structure you're proposing (3-phase above)
 - Rights posture (work-for-hire)
 - Reference to existing brand context (for Concert Crawl: link the gig-poster / shareable-card work as visual DNA)
 - Rough timeline
-- *"reply with rate + a couple portfolio examples of relevant series work"*
+- _"reply with rate + a couple portfolio examples of relevant series work"_
 
 Send to 5–10 illustrators. Expect ~30–50% response rate. Shortlist to 2–3 real conversations. Commit Phase 1 spend to one.
 

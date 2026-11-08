@@ -4,8 +4,8 @@
 // 404 instead. It only actually was that inside `(protected)/(main)`; this
 // route sits outside the app shell, where `notFound()` fell through to Next's
 // unstyled default with no chrome and no way back.
-import { NotFoundSurface } from '@/components/consumer/not-found-surface'
+import { NotFoundSurface } from '@/components/consumer/not-found-surface';
 
-const NotFound = () => <NotFoundSurface />
+const NotFound = () => <NotFoundSurface />;
 
-export default NotFound
+export default NotFound;

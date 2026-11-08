@@ -5,22 +5,22 @@
 // renders Next's bare built-in 404 as someone's very first contact with the
 // product. A shared link outlives the show it points at, so this page is not a
 // rare edge case.
-import Link from 'next/link'
-import React from 'react'
+import Link from 'next/link';
+import React from 'react';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { isPublicBrowseEnabled } from '@/lib/launch-mode'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 
-const copy = CONSUMER_COPY.publicEvent
+const copy = CONSUMER_COPY.publicEvent;
 
 const PublicEventNotFound = () => {
   // The CTA target is launch-mode-dependent. /events is only public once the
   // launch flag is on; sending a signed-out visitor there before launch bounces
   // them straight to /sign-in, which is a second dead end on top of the first.
   // The landing page is always public, so that is the pre-launch destination.
-  const launched = isPublicBrowseEnabled()
-  const href = launched ? '/events' : '/'
-  const label = launched ? copy.notFoundBrowseButton : copy.notFoundHomeButton
+  const launched = isPublicBrowseEnabled();
+  const href = launched ? '/events' : '/';
+  const label = launched ? copy.notFoundBrowseButton : copy.notFoundHomeButton;
 
   return (
     <main
@@ -78,7 +78,7 @@ const PublicEventNotFound = () => {
         {label}
       </Link>
     </main>
-  )
-}
+  );
+};
 
-export default PublicEventNotFound
+export default PublicEventNotFound;

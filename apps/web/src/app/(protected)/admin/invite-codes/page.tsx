@@ -1,6 +1,6 @@
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import type { InviteCode } from '@concert-crawl/types'
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import type { InviteCode } from '@concert-crawl/types';
 import {
   SectionHead,
   StatCard,
@@ -11,19 +11,19 @@ import {
   TH,
   TD,
   StatusBadge,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
-import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
+import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked'
+type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked';
 
 const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
   active: 'signal',
   redeemed: 'success',
   expired: 'neutral',
   revoked: 'danger',
-}
+};
 
 // #1084 — `usedBy` is the authoritative signal that a code has been
 // redeemed (the redemption route in `apps/api/src/routes/auth/redeem-code.ts`
@@ -32,36 +32,36 @@ const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
 // classifies those as active AND leaves the Redeemed column blank even
 // though the code is spoken-for.
 function deriveStatus(code: InviteCode): DerivedStatus {
-  if (code.revokedAt != null) return 'revoked'
-  if (code.usedBy != null || code.usedAt != null) return 'redeemed'
+  if (code.revokedAt != null) return 'revoked';
+  if (code.usedBy != null || code.usedAt != null) return 'redeemed';
   if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
-    return 'expired'
-  return 'active'
+    return 'expired';
+  return 'active';
 }
 
 export default async function AdminInviteCodesPage() {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
   const codes = await apiClient
     .get<InviteCode[]>('/v1/admin/invite-codes', token)
     .catch((err: unknown) => {
       throw new Error(
         `Failed to load invite codes: ${err instanceof Error ? err.message : String(err)}`,
-      )
-    })
+      );
+    });
 
   const outstanding = codes.filter(
     (code) => deriveStatus(code) === 'active',
-  ).length
+  ).length;
   const redeemed = codes.filter(
     (code) => deriveStatus(code) === 'redeemed',
-  ).length
+  ).length;
   const revoked = codes.filter(
     (code) => deriveStatus(code) === 'revoked',
-  ).length
+  ).length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -117,7 +117,7 @@ export default async function AdminInviteCodesPage() {
           </THead>
           <tbody>
             {codes.map((code) => {
-              const status = deriveStatus(code)
+              const status = deriveStatus(code);
               return (
                 <TR key={code.id}>
                   <TD>
@@ -173,11 +173,11 @@ export default async function AdminInviteCodesPage() {
                     </span>
                   </TD>
                 </TR>
-              )
+              );
             })}
           </tbody>
         </AdminTable>
       </Panel>
     </div>
-  )
+  );
 }

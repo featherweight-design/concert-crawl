@@ -16,51 +16,51 @@
  * per prod chip. The aggregate count is always reported.
  */
 
-import { venueGuideChips } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { IdMap, DrizzleWriteDb } from './sync-venues.js'
+import { venueGuideChips } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { IdMap, DrizzleWriteDb } from './sync-venues.js';
 
-const MAX_SKIP_WARNINGS = 5
+const MAX_SKIP_WARNINGS = 5;
 
 export async function syncVenueGuideChips(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
-  venueIdMap: IdMap
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
+  venueIdMap: IdMap;
 }): Promise<{ scanned: number; processed: number; skippedMissingFk: number }> {
-  const { prod, staging, dryRun, venueIdMap } = deps
+  const { prod, staging, dryRun, venueIdMap } = deps;
 
-  const prodRows = await prod.select((db) => db.select().from(venueGuideChips))
+  const prodRows = await prod.select((db) => db.select().from(venueGuideChips));
 
-  const scanned = prodRows.length
-  let processed = 0
-  let skippedMissingFk = 0
-  let skipWarningsEmitted = 0
+  const scanned = prodRows.length;
+  let processed = 0;
+  let skippedMissingFk = 0;
+  let skipWarningsEmitted = 0;
 
   const warnSkip = (msg: string): void => {
     if (skipWarningsEmitted < MAX_SKIP_WARNINGS) {
-      console.warn(msg)
-      skipWarningsEmitted++
+      console.warn(msg);
+      skipWarningsEmitted++;
       if (skipWarningsEmitted === MAX_SKIP_WARNINGS) {
         console.warn(
           '[sync-venue-guide-chips] (further per-row skip warnings suppressed — see aggregate summary at end)',
-        )
+        );
       }
     }
-  }
+  };
 
   for (const row of prodRows) {
-    const stagingVenueId = venueIdMap.get(row.venueId)
+    const stagingVenueId = venueIdMap.get(row.venueId);
     if (stagingVenueId === undefined) {
       warnSkip(
         `[sync-venue-guide-chips] skipping chip ${row.id} — prod venueId ${row.venueId} not in venueIdMap`,
-      )
-      skippedMissingFk++
-      continue
+      );
+      skippedMissingFk++;
+      continue;
     }
 
     if (!dryRun) {
-      const { id: _prodId, venueId: _prodVenueId, ...rest } = row
+      const { id: _prodId, venueId: _prodVenueId, ...rest } = row;
       await staging
         .insert(venueGuideChips)
         .values({ ...rest, venueId: stagingVenueId })
@@ -71,16 +71,16 @@ export async function syncVenueGuideChips(deps: {
             isPlaceholder: row.isPlaceholder,
             updatedAt: row.updatedAt,
           },
-        })
+        });
     }
-    processed++
+    processed++;
   }
 
   if (skippedMissingFk > 0) {
     console.warn(
       `[sync-venue-guide-chips] skipped ${skippedMissingFk} row(s) due to missing FK parent (venueId not in venueIdMap)`,
-    )
+    );
   }
 
-  return { scanned, processed, skippedMissingFk }
+  return { scanned, processed, skippedMissingFk };
 }

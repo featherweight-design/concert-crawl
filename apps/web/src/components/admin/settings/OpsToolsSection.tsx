@@ -1,101 +1,101 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { apiClient } from '@/lib/api'
-import { SettingsLayout } from './SettingsLayout'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { apiClient } from '@/lib/api';
+import { SettingsLayout } from './SettingsLayout';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 type TestEmailResult =
   | { sent: true; resendId: string | null }
   | {
-      sent: false
-      reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed'
-      error?: unknown
-    }
+      sent: false;
+      reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed';
+      error?: unknown;
+    };
 
-type TestEmailGroup = 'Customer' | 'Operational'
+type TestEmailGroup = 'Customer' | 'Operational';
 
 interface TestEmailOption {
-  key: string
-  label: string
-  group: TestEmailGroup
+  key: string;
+  label: string;
+  group: TestEmailGroup;
 }
 
-const GROUP_ORDER: readonly TestEmailGroup[] = ['Customer', 'Operational']
+const GROUP_ORDER: readonly TestEmailGroup[] = ['Customer', 'Operational'];
 
 type Status =
   | { kind: 'idle' }
   | { kind: 'pending' }
   | { kind: 'done'; result: TestEmailResult }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string };
 
-const COPY = ADMIN_COPY.settings.opsTools
+const COPY = ADMIN_COPY.settings.opsTools;
 
 export function OpsToolsSection() {
-  const { getToken, isLoaded } = useAuth()
-  const [status, setStatus] = useState<Status>({ kind: 'idle' })
-  const [options, setOptions] = useState<TestEmailOption[] | null>(null)
-  const [optionsFailed, setOptionsFailed] = useState(false)
-  const [selectedKey, setSelectedKey] = useState('admin_alert')
+  const { getToken, isLoaded } = useAuth();
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const [options, setOptions] = useState<TestEmailOption[] | null>(null);
+  const [optionsFailed, setOptionsFailed] = useState(false);
+  const [selectedKey, setSelectedKey] = useState('admin_alert');
 
   useEffect(() => {
     // Wait for Clerk before treating a null token as a failure — otherwise a
     // transient pre-hydration null would strand the picker in the error state
     // for the rest of the session. The effect re-runs once isLoaded flips true.
-    if (!isLoaded) return
-    let cancelled = false
+    if (!isLoaded) return;
+    let cancelled = false;
     const loadOptions = async () => {
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (!token) {
-          if (!cancelled) setOptionsFailed(true)
-          return
+          if (!cancelled) setOptionsFailed(true);
+          return;
         }
         const data = await apiClient.get<TestEmailOption[]>(
           '/v1/admin/notifications/test-email/options',
           token,
-        )
-        if (cancelled) return
+        );
+        if (cancelled) return;
         // Clear any prior failure so a later successful fetch (effect rerun,
         // re-auth) leaves the picker in its normal state, not the fallback.
-        setOptionsFailed(false)
-        setOptions(data)
-        if (data[0]) setSelectedKey(data[0].key)
+        setOptionsFailed(false);
+        setOptions(data);
+        if (data[0]) setSelectedKey(data[0].key);
       } catch {
-        if (!cancelled) setOptionsFailed(true)
+        if (!cancelled) setOptionsFailed(true);
       }
-    }
-    void loadOptions()
+    };
+    void loadOptions();
     return () => {
-      cancelled = true
-    }
-  }, [getToken, isLoaded])
+      cancelled = true;
+    };
+  }, [getToken, isLoaded]);
 
   const submitTest = async () => {
-    setStatus({ kind: 'pending' })
+    setStatus({ kind: 'pending' });
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setStatus({ kind: 'error', message: COPY.testEmail.notAuthenticated })
-        return
+        setStatus({ kind: 'error', message: COPY.testEmail.notAuthenticated });
+        return;
       }
       const data = await apiClient.post<TestEmailResult>(
         '/v1/admin/notifications/test-email',
         token,
         { emailKey: selectedKey },
-      )
-      setStatus({ kind: 'done', result: data })
+      );
+      setStatus({ kind: 'done', result: data });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setStatus({ kind: 'error', message })
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus({ kind: 'error', message });
     }
-  }
+  };
 
   const groupedOptions = GROUP_ORDER.map((group) => ({
     group,
     items: (options ?? []).filter((opt) => opt.group === group),
-  })).filter((section) => section.items.length > 0)
+  })).filter((section) => section.items.length > 0);
 
   return (
     <SettingsLayout heading={COPY.heading} description={COPY.description}>
@@ -178,22 +178,22 @@ export function OpsToolsSection() {
         )}
       </div>
     </SettingsLayout>
-  )
+  );
 }
 
 function reasonLabel(
   reason: 'missing_api_key' | 'missing_admin_email' | 'send_failed',
 ): string {
-  if (reason === 'missing_api_key') return COPY.testEmail.reasons.missingApiKey
+  if (reason === 'missing_api_key') return COPY.testEmail.reasons.missingApiKey;
   if (reason === 'missing_admin_email')
-    return COPY.testEmail.reasons.missingAdminEmail
-  return COPY.testEmail.reasons.sendFailed
+    return COPY.testEmail.reasons.missingAdminEmail;
+  return COPY.testEmail.reasons.sendFailed;
 }
 
 function formatError(err: unknown): string {
   try {
-    return JSON.stringify(err, null, 2)
+    return JSON.stringify(err, null, 2);
   } catch {
-    return String(err)
+    return String(err);
   }
 }

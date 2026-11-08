@@ -13,42 +13,42 @@
 // would fail typecheck here rather than render blank. Rows the parser did not
 // recognise never reach this function at all.
 
-import { ADMIN_COPY } from '../../definitions/copy'
-import type { TriageFault } from '../definitions/types'
+import { ADMIN_COPY } from '../../definitions/copy';
+import type { TriageFault } from '../definitions/types';
 
-const EV = ADMIN_COPY.triage.evidence
+const EV = ADMIN_COPY.triage.evidence;
 
 export interface EvidenceLines {
-  stat: string
-  detail: string
+  stat: string;
+  detail: string;
   /**
    * Present only for the two conditions whose evidence is a trend rather
    * than a single reading. Production emits between one and seven entries —
    * a venue that has only been crawled twice yields a two-bar chart, and the
    * chart must survive that.
    */
-  series?: number[]
+  series?: number[];
 }
 
 export const evidenceLines = (fault: TriageFault): EvidenceLines => {
   switch (fault.condition) {
     case 'blocked': {
-      const { status, refusals, lastSuccess } = fault.evidence
+      const { status, refusals, lastSuccess } = fault.evidence;
       return {
         stat: EV.blockedStat(status),
         detail: EV.blockedDetail(refusals, lastSuccess),
-      }
+      };
     }
     case 'failed': {
-      const { failures, errorClass, pauseAt } = fault.evidence
+      const { failures, errorClass, pauseAt } = fault.evidence;
       return {
         stat: EV.failedStat(failures),
         detail: EV.failedDetail(errorClass, pauseAt),
-      }
+      };
     }
     case 'wentDark': {
       const { count, baselineCount, avg, pct, threshold, series } =
-        fault.evidence
+        fault.evidence;
       return {
         stat: EV.wentDarkStat(baselineCount, count),
         // The window is the number of runs actually plotted, not the
@@ -56,30 +56,30 @@ export const evidenceLines = (fault: TriageFault): EvidenceLines => {
         // must not be described as having a seven-run average.
         detail: EV.wentDarkDetail(pct, series.length, avg, threshold),
         series,
-      }
+      };
     }
     case 'ceiling': {
       const { kind, count, runs, was, wasWhen, furthest, best, shrankDays } =
-        fault.evidence
+        fault.evidence;
       if (kind === 'horizon_shrank') {
         return {
           stat: EV.ceilingHorizonStat(furthest, count),
           detail: EV.ceilingHorizonDetail(shrankDays, best),
           series: fault.evidence.series,
-        }
+        };
       }
       return {
         stat: EV.ceilingPinnedStat(count),
         detail: EV.ceilingPinnedDetail(runs, was, wasWhen),
         series: fault.evidence.series,
-      }
+      };
     }
     case 'coverage': {
-      const { matched, expected, uncovered, wasWhen } = fault.evidence
+      const { matched, expected, uncovered, wasWhen } = fault.evidence;
       return {
         stat: EV.coverageStat(matched, expected),
         detail: EV.coverageDetail(uncovered, wasWhen),
-      }
+      };
     }
   }
-}
+};

@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
-import { SMOKE_STORAGE_STATE_PATH } from './src/fixtures/auth'
+import { SMOKE_STORAGE_STATE_PATH } from './src/fixtures/auth';
 
 export default defineConfig({
   testDir: './src/smoke',
@@ -24,4 +24,4 @@ export default defineConfig({
   ],
   timeout: 15_000,
   expect: { timeout: 5_000 },
-})
+});

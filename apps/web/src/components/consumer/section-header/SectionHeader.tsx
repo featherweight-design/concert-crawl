@@ -1,6 +1,6 @@
 interface SectionHeaderProps {
-  title: string
-  count?: string
+  title: string;
+  count?: string;
 }
 
 export function SectionHeader({ title, count }: SectionHeaderProps) {
@@ -27,5 +27,5 @@ export function SectionHeader({ title, count }: SectionHeaderProps) {
         </span>
       )}
     </div>
-  )
+  );
 }

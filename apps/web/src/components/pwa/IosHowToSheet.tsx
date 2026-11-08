@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { BottomSheet } from './BottomSheet'
-import { INSTALL_COPY } from './definitions/copy'
+import { BottomSheet } from './BottomSheet';
+import { INSTALL_COPY } from './definitions/copy';
 
 interface IosHowToSheetProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 const StepIcon = ({ icon }: { icon: string }) => {
@@ -34,7 +34,7 @@ const StepIcon = ({ icon }: { icon: string }) => {
           strokeLinecap="round"
         />
       </svg>
-    )
+    );
   }
   if (icon === 'plus') {
     return (
@@ -61,7 +61,7 @@ const StepIcon = ({ icon }: { icon: string }) => {
           strokeLinecap="round"
         />
       </svg>
-    )
+    );
   }
   return (
     <svg
@@ -78,8 +78,8 @@ const StepIcon = ({ icon }: { icon: string }) => {
         strokeLinejoin="round"
       />
     </svg>
-  )
-}
+  );
+};
 
 export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
   <BottomSheet open={open} onClose={onClose} title={INSTALL_COPY.sheet.title}>
@@ -120,4 +120,4 @@ export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
       <p className="text-xs text-fg-subtle">{INSTALL_COPY.dismissNote}</p>
     </div>
   </BottomSheet>
-)
+);

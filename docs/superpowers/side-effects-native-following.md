@@ -96,7 +96,7 @@ real and provisioned in both environments.
 Native follows enter the digest behind a flag:
 
 ```ts
-NATIVE_DIGEST_ENABLED === '1'
+NATIVE_DIGEST_ENABLED === '1';
 ```
 
 **That variable is unset in staging and unset in prod.** Unset is falsy, so today

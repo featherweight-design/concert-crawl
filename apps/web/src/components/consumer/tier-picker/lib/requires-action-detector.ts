@@ -11,8 +11,8 @@
 /** The slice of the Stripe client we need — keeps tests mock-light. */
 export interface RequiresActionStripe {
   retrievePaymentIntent(clientSecret: string): Promise<{
-    paymentIntent?: { status: string } | undefined
-  }>
+    paymentIntent?: { status: string } | undefined;
+  }>;
 }
 
 /**
@@ -26,31 +26,31 @@ export const watchForRequiresAction = (
   onRequiresAction: () => void,
   intervalMs: number,
 ): (() => void) => {
-  let stopped = false
-  let inFlight = false
+  let stopped = false;
+  let inFlight = false;
 
   const timer = setInterval(() => {
-    if (stopped || inFlight) return
-    inFlight = true
+    if (stopped || inFlight) return;
+    inFlight = true;
     void (async () => {
       try {
-        const result = await stripe.retrievePaymentIntent(clientSecret)
-        if (stopped) return
+        const result = await stripe.retrievePaymentIntent(clientSecret);
+        if (stopped) return;
         if (result.paymentIntent?.status === 'requires_action') {
-          stopped = true
-          clearInterval(timer)
-          onRequiresAction()
+          stopped = true;
+          clearInterval(timer);
+          onRequiresAction();
         }
       } catch (err) {
-        console.error('tier-picker: requires-action poll failed', err)
+        console.error('tier-picker: requires-action poll failed', err);
       } finally {
-        inFlight = false
+        inFlight = false;
       }
-    })()
-  }, intervalMs)
+    })();
+  }, intervalMs);
 
   return () => {
-    stopped = true
-    clearInterval(timer)
-  }
-}
+    stopped = true;
+    clearInterval(timer);
+  };
+};

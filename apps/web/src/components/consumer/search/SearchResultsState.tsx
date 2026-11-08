@@ -1,56 +1,56 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { MapPin, Mic2, User } from 'lucide-react'
-import { useAuth } from '@clerk/nextjs'
-import type { ArtistSearchResult, PickerEntry } from '@concert-crawl/types'
-import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery'
-import { ArtistResultRow } from './ArtistResultRow'
+import { useState } from 'react';
+import { MapPin, Mic2, User } from 'lucide-react';
+import { useAuth } from '@clerk/nextjs';
+import type { ArtistSearchResult, PickerEntry } from '@concert-crawl/types';
+import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { ArtistResultRow } from './ArtistResultRow';
 import {
   SEARCH_DESKTOP_QUERY,
   SEARCH_FOLLOW_ICON_ONLY_QUERY,
   SEARCH_RAIL_WIDTH,
-} from './definitions/constants'
+} from './definitions/constants';
 
-const copy = CONSUMER_COPY.search
+const copy = CONSUMER_COPY.search;
 
 interface SearchResultsStateProps {
-  artistResults: ArtistResult[]
+  artistResults: ArtistResult[];
   /**
    * #1115 PR-G — artists that have their own page. Rendered as its own section
    * above the event-derived rows; optional so callers that predate the endpoint
    * (and the tests for them) keep working unchanged.
    */
-  artistPageResults?: ArtistSearchResult[]
-  venueResults: VenueResult[]
-  venueFirst?: boolean
+  artistPageResults?: ArtistSearchResult[];
+  venueResults: VenueResult[];
+  venueFirst?: boolean;
   /**
    * Render the desktop explainer rail beside the results (native following,
    * PR 5). Opt-in because the same component draws the command palette's
    * dropdown, which is 560px of overlay with no room for a second column.
    */
-  withExplainerRail?: boolean
-  selectedIdx?: number
-  onHover?: (idx: number) => void
+  withExplainerRail?: boolean;
+  selectedIdx?: number;
+  onHover?: (idx: number) => void;
   onNavigateTo: (
     type: 'artist' | 'artistPage' | 'venue',
     value: string | { slug: string; matchingEventId?: string },
-  ) => void
+  ) => void;
 }
 
 function SectionHeader({
   icon,
   label,
 }: {
-  icon?: React.ReactNode
-  label: string
+  icon?: React.ReactNode;
+  label: string;
 }) {
   return (
     <div
@@ -79,13 +79,13 @@ function SectionHeader({
         {label}
       </span>
     </div>
-  )
+  );
 }
 
 function Divider() {
   return (
     <div style={{ height: 1, background: 'var(--border)', marginLeft: 68 }} />
-  )
+  );
 }
 
 // #1115 PR-G, extended by native following PR 5. Deliberately not folded into
@@ -105,27 +105,27 @@ function ArtistPageSection({
   onHover,
   onNavigateTo,
 }: {
-  artistPageResults: ArtistSearchResult[]
-  selectedIdx: number
-  baseIdx: number
-  showDivider: boolean
-  onHover?: (idx: number) => void
-  onNavigateTo: (type: 'artistPage', value: { slug: string }) => void
+  artistPageResults: ArtistSearchResult[];
+  selectedIdx: number;
+  baseIdx: number;
+  showDivider: boolean;
+  onHover?: (idx: number) => void;
+  onNavigateTo: (type: 'artistPage', value: { slug: string }) => void;
 }) {
-  const { isSignedIn } = useAuth()
-  const { surface } = useEntitlement('following')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY)
-  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY)
+  const { isSignedIn } = useAuth();
+  const { surface } = useEntitlement('following');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY);
+  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
   // A logged-out tap gets the sign-up pitch; a signed-in locked tap gets the
   // paywall. `surface` is what the entitlements matrix routes on, so the entry
   // is read from it rather than from `isSignedIn` alone.
   const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
-  if (artistPageResults.length === 0) return null
+  if (artistPageResults.length === 0) return null;
   return (
     <>
       <SectionHeader
@@ -133,8 +133,8 @@ function ArtistPageSection({
         label={`${copy.artistPagesSectionPrefix} · ${artistPageResults.length}`}
       />
       {artistPageResults.map((artist, idx) => {
-        const itemIdx = baseIdx + idx
-        const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {}
+        const itemIdx = baseIdx + idx;
+        const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {};
         return (
           <div key={artist.slug}>
             {idx > 0 && <Divider />}
@@ -153,7 +153,7 @@ function ArtistPageSection({
               iconOnly={iconOnly}
             />
           </div>
-        )
+        );
       })}
       {showDivider && <div style={{ height: 16 }} />}
       <TierPickerSheet
@@ -166,7 +166,7 @@ function ArtistPageSection({
         entry={pickerEntry}
       />
     </>
-  )
+  );
 }
 
 /**
@@ -224,7 +224,7 @@ function ExplainerRail() {
         {FOLLOWING_COPY.searchRailNoDates}
       </p>
     </aside>
-  )
+  );
 }
 
 /**
@@ -250,7 +250,7 @@ function ExplainerFootnote() {
     >
       {FOLLOWING_COPY.searchRailBody}
     </p>
-  )
+  );
 }
 
 function ArtistSection({
@@ -261,14 +261,14 @@ function ArtistSection({
   onHover,
   onNavigateTo,
 }: {
-  artistResults: ArtistResult[]
-  selectedIdx: number
-  baseIdx: number
-  showDivider: boolean
-  onHover?: (idx: number) => void
-  onNavigateTo: (type: 'artist', value: string) => void
+  artistResults: ArtistResult[];
+  selectedIdx: number;
+  baseIdx: number;
+  showDivider: boolean;
+  onHover?: (idx: number) => void;
+  onNavigateTo: (type: 'artist', value: string) => void;
 }) {
-  if (artistResults.length === 0) return null
+  if (artistResults.length === 0) return null;
   return (
     <>
       <SectionHeader
@@ -276,7 +276,7 @@ function ArtistSection({
         label={`${copy.artistsSectionPrefix} · ${artistResults.length}`}
       />
       {artistResults.map((artist, idx) => {
-        const itemIdx = baseIdx + idx
+        const itemIdx = baseIdx + idx;
         return (
           <div key={artist.name}>
             {idx > 0 && <Divider />}
@@ -341,11 +341,11 @@ function ArtistSection({
               </div>
             </button>
           </div>
-        )
+        );
       })}
       {showDivider && <div style={{ height: 16 }} />}
     </>
-  )
+  );
 }
 
 function VenueSection({
@@ -356,17 +356,17 @@ function VenueSection({
   onHover,
   onNavigateTo,
 }: {
-  venueResults: VenueResult[]
-  selectedIdx: number
-  baseIdx: number
-  showDivider: boolean
-  onHover?: (idx: number) => void
+  venueResults: VenueResult[];
+  selectedIdx: number;
+  baseIdx: number;
+  showDivider: boolean;
+  onHover?: (idx: number) => void;
   onNavigateTo: (
     type: 'venue',
     value: { slug: string; matchingEventId?: string },
-  ) => void
+  ) => void;
 }) {
-  if (venueResults.length === 0) return null
+  if (venueResults.length === 0) return null;
   return (
     <>
       <SectionHeader
@@ -374,7 +374,7 @@ function VenueSection({
         label={`${copy.venuesSectionPrefix} · ${venueResults.length}`}
       />
       {venueResults.map((venue, idx) => {
-        const itemIdx = baseIdx + idx
+        const itemIdx = baseIdx + idx;
         return (
           <div key={venue.slug}>
             {idx > 0 && <Divider />}
@@ -447,11 +447,11 @@ function VenueSection({
               </div>
             </button>
           </div>
-        )
+        );
       })}
       {showDivider && <div style={{ height: 16 }} />}
     </>
-  )
+  );
 }
 
 export function SearchResultsState({
@@ -464,22 +464,22 @@ export function SearchResultsState({
   onHover,
   onNavigateTo,
 }: SearchResultsStateProps) {
-  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY)
+  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY);
 
   // The explanation is owed whenever the list has artist rows to explain. With
   // none there is nothing to say, and an empty second column would just narrow
   // the shows. Only the SHAPE forks on viewport: a rail beside, a footnote below.
-  const explain = withExplainerRail && artistPageResults.length > 0
-  const showRail = explain && isDesktop
+  const explain = withExplainerRail && artistPageResults.length > 0;
+  const showRail = explain && isDesktop;
 
   // Artist pages always sit first and occupy keyboard indices 0..n-1, so the
   // venue/artist bases below shift by that count. `venueFirst` still decides
   // the order of the two event-derived sections beneath them.
-  const pageCount = artistPageResults.length
-  const venueBaseIdx = pageCount + (venueFirst ? 0 : artistResults.length)
-  const artistBaseIdx = pageCount + (venueFirst ? venueResults.length : 0)
+  const pageCount = artistPageResults.length;
+  const venueBaseIdx = pageCount + (venueFirst ? 0 : artistResults.length);
+  const artistBaseIdx = pageCount + (venueFirst ? venueResults.length : 0);
 
-  const hoverProp = onHover ? { onHover } : {}
+  const hoverProp = onHover ? { onHover } : {};
 
   const results = (
     <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
@@ -532,9 +532,9 @@ export function SearchResultsState({
       )}
       {explain && !isDesktop && <ExplainerFootnote />}
     </div>
-  )
+  );
 
-  if (!showRail) return results
+  if (!showRail) return results;
 
   return (
     <div
@@ -551,5 +551,5 @@ export function SearchResultsState({
       {results}
       <ExplainerRail />
     </div>
-  )
+  );
 }

@@ -136,7 +136,7 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
       />
     </svg>
   ),
-}
+};
 ```
 
 - [ ] Add `NAV_ICONS` constant above the component
@@ -147,7 +147,7 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
 {
   /* Sidebar user card */
 }
-;<div
+<div
   className="mb-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5"
   style={{ background: 'var(--surface-1)' }}
 >
@@ -164,7 +164,7 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
     </span>
     <CredChip cred={profile.cred} size="sm" />
   </div>
-</div>
+</div>;
 ```
 
 - [ ] Update nav button render to include icon:
@@ -291,7 +291,7 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -361,7 +361,7 @@ if (plan === 'founder') {
         </span>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -379,7 +379,7 @@ if (plan === 'founder') {
       </div>
       <PlanCard plan={profile.plan} />
     </div>
-  )
+  );
 }
 ```
 
@@ -414,7 +414,7 @@ if (plan === 'founder') {
         cap={submissions.length}
       />
     </div>
-  )
+  );
 }
 ```
 
@@ -423,7 +423,7 @@ Where `confirmedCount` is computed as:
 ```tsx
 const confirmedCount = submissions.filter(
   (s) => s.status === 'confirmed',
-).length
+).length;
 ```
 
 - [ ] Add same subtitle to mobile `SettingsRoute` submissions section label
@@ -447,7 +447,7 @@ const confirmedCount = submissions.filter(
 {
   /* Email row */
 }
-;<div className="flex items-center gap-3 px-5 py-3.5">
+<div className="flex items-center gap-3 px-5 py-3.5">
   <svg
     width="15"
     height="15"
@@ -487,11 +487,11 @@ const confirmedCount = submissions.filter(
       strokeLinejoin="round"
     />
   </svg>
-</div>
+</div>;
 {
   /* Password row */
 }
-;<div className="flex items-center gap-3 px-5 py-3.5">
+<div className="flex items-center gap-3 px-5 py-3.5">
   <svg
     width="15"
     height="15"
@@ -528,7 +528,7 @@ const confirmedCount = submissions.filter(
   >
     Clerk →
   </a>
-</div>
+</div>;
 ```
 
 - [ ] Update `SettingsRouteDesktop` and `SettingsRoute` account sections accordingly
@@ -550,7 +550,7 @@ const confirmedCount = submissions.filter(
         {/* password row */}
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -676,7 +676,7 @@ dangerZone: {
       </div>
       <DangerZone />
     </div>
-  )
+  );
 }
 ```
 
@@ -696,24 +696,24 @@ Update the component interface:
 
 ```tsx
 interface DeleteAccountSheetProps {
-  open: boolean
-  onClose: () => void
-  handle?: string | null
-  submissionCount?: number
+  open: boolean;
+  onClose: () => void;
+  handle?: string | null;
+  submissionCount?: number;
 }
 ```
 
 - [ ] Detect desktop in the same pattern as ThemePickerInline (useEffect + matchMedia):
 
 ```tsx
-const [isDesktop, setIsDesktop] = useState(false)
+const [isDesktop, setIsDesktop] = useState(false);
 useEffect(() => {
-  const mql = window.matchMedia('(min-width: 640px)')
-  setIsDesktop(mql.matches)
-  const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches)
-  mql.addEventListener('change', handler)
-  return () => mql.removeEventListener('change', handler)
-}, [])
+  const mql = window.matchMedia('(min-width: 640px)');
+  setIsDesktop(mql.matches);
+  const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches);
+  mql.addEventListener('change', handler);
+  return () => mql.removeEventListener('change', handler);
+}, []);
 ```
 
 - [ ] Desktop dialog markup (sm+):
@@ -772,8 +772,8 @@ useEffect(() => {
 
 ```tsx
 interface DangerZoneProps {
-  handle?: string | null
-  submissionCount?: number
+  handle?: string | null;
+  submissionCount?: number;
 }
 ```
 
@@ -795,7 +795,7 @@ interface DangerZoneProps {
 {
   /* Mobile header */
 }
-;<div className="flex items-center justify-between border-b border-border px-4 py-3.5">
+<div className="flex items-center justify-between border-b border-border px-4 py-3.5">
   <Link
     href="/events"
     className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
@@ -805,7 +805,7 @@ interface DangerZoneProps {
   </Link>
   <span className="text-[16px] font-extrabold text-fg">Settings</span>
   <div className="w-[52px]" /> {/* spacer to center title */}
-</div>
+</div>;
 ```
 
 - [ ] Wrap entire return in a fragment and add the header before the flex column
@@ -816,7 +816,7 @@ interface DangerZoneProps {
 {
   /* Appearance section label */
 }
-;<div className="flex items-center justify-between px-4">
+<div className="flex items-center justify-between px-4">
   <span
     className="text-[12px] font-bold uppercase tracking-[0.08em] text-fg-muted"
     style={{ fontFamily: 'var(--font-mono)' }}
@@ -829,7 +829,7 @@ interface DangerZoneProps {
   >
     tap to switch
   </span>
-</div>
+</div>;
 ```
 
 - [ ] Import `Link` from `next/link` if not present
@@ -933,7 +933,7 @@ export function BottomNav() {
       </div>
       <ThemePickerInline />
     </div>
-  )
+  );
 }
 ```
 

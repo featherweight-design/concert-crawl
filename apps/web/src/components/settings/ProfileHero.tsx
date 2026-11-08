@@ -1,20 +1,20 @@
-import Link from 'next/link'
-import { Avatar } from './Avatar'
-import { CredChip } from './CredChip'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import type { AvatarColor, DisplayRole, RoleBadge } from '@concert-crawl/types'
+import Link from 'next/link';
+import { Avatar } from './Avatar';
+import { CredChip } from './CredChip';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import type { AvatarColor, DisplayRole, RoleBadge } from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface ProfileHeroProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
-  displayRole: DisplayRole
-  roleBadge: RoleBadge | null
-  city: string | null
-  joined: string
-  cred: number
-  dense?: boolean
+  handle: string | null;
+  avatarColor: AvatarColor | null;
+  displayRole: DisplayRole;
+  roleBadge: RoleBadge | null;
+  city: string | null;
+  joined: string;
+  cred: number;
+  dense?: boolean;
 }
 
 const DISPLAY_ROLE_LABEL: Record<DisplayRole, string> = {
@@ -22,20 +22,20 @@ const DISPLAY_ROLE_LABEL: Record<DisplayRole, string> = {
   crew: 'crew',
   artist: 'artist',
   staff: 'staff',
-}
+};
 
 // Per monetization design handoff — neutral surface, colored dot, fg-muted text
 const ROLE_BADGE_DOT: Record<RoleBadge, string> = {
   admin: 'var(--warning)',
   promoter: 'var(--accent)',
   beta: 'var(--signal)',
-}
+};
 
 const ROLE_BADGE_LABEL: Record<RoleBadge, string> = {
   admin: 'Admin',
   promoter: 'Promoter',
   beta: 'Beta',
-}
+};
 
 export function ProfileHero({
   handle,
@@ -47,13 +47,13 @@ export function ProfileHero({
   cred,
   dense = false,
 }: ProfileHeroProps) {
-  const isAnon = !handle
-  const avatarSize = dense ? 56 : 68
+  const isAnon = !handle;
+  const avatarSize = dense ? 56 : 68;
 
   // roleBadge takes precedence; show displayRole badge only for crew/artist (not fan/staff)
-  const showRoleBadge = roleBadge !== null
+  const showRoleBadge = roleBadge !== null;
   const showDisplayBadge =
-    !showRoleBadge && displayRole !== 'fan' && displayRole !== 'staff'
+    !showRoleBadge && displayRole !== 'fan' && displayRole !== 'staff';
 
   return (
     <div className="flex flex-col gap-3">
@@ -194,5 +194,5 @@ export function ProfileHero({
         </Link>
       )}
     </div>
-  )
+  );
 }

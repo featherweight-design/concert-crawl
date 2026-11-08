@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Settings ▸ Connections panel (#763 PR 5) — resolves the Spotify connection
 // query into the designed states:
@@ -8,27 +8,27 @@
 //   revoked      → "unlinked on Spotify's side" state + Reconnect
 // Shared by the mobile settings route and the desktop panel switcher.
 
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import type { SpotifyConnectionResponse } from '@concert-crawl/types'
-import { OAuthHandoffSheet } from '@/components/consumer/spotify/OAuthHandoffSheet'
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { SpotifyConnectionResponse } from '@concert-crawl/types';
+import { OAuthHandoffSheet } from '@/components/consumer/spotify/OAuthHandoffSheet';
 import {
   StateBody,
   StateGlyphDisc,
-} from '@/components/consumer/spotify/StateBody'
+} from '@/components/consumer/spotify/StateBody';
 import {
   SignalButton,
   TextButton,
-} from '@/components/consumer/spotify/SpotifyButtons'
-import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+} from '@/components/consumer/spotify/SpotifyButtons';
+import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 import {
   spotifyConnectionQueryKeyBase,
   useSpotifyConnection,
-} from '@/lib/queries/use-spotify-connection'
-import { spotifyConnectEnabled } from '@/lib/spotify'
-import { ConnectEntryCard } from './ConnectEntryCard'
-import { ConnectedCard } from './ConnectedCard'
+} from '@/lib/queries/use-spotify-connection';
+import { spotifyConnectEnabled } from '@/lib/spotify';
+import { ConnectEntryCard } from './ConnectEntryCard';
+import { ConnectedCard } from './ConnectedCard';
 
 // Danger "flatline" glyph for the token-refresh failure (handoff mock).
 const LostThreadGlyph = () => (
@@ -47,7 +47,7 @@ const LostThreadGlyph = () => (
       opacity="0.5"
     />
   </svg>
-)
+);
 
 // Severed-link glyph for the external-revoke state (handoff mock).
 const CutLinkGlyph = () => (
@@ -65,21 +65,21 @@ const CutLinkGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const BrokenState = ({
   kind,
   onReconnect,
   onDismiss,
 }: {
-  kind: 'error' | 'revoked'
-  onReconnect: () => void
-  onDismiss: () => void
+  kind: 'error' | 'revoked';
+  onReconnect: () => void;
+  onDismiss: () => void;
 }) => {
   const copy =
     kind === 'error'
       ? SPOTIFY_COPY.failTokenRefresh
-      : SPOTIFY_COPY.failExternalRevoke
+      : SPOTIFY_COPY.failExternalRevoke;
   return (
     <div className="flex flex-col items-center rounded-2xl border border-border bg-surface-1 px-5 py-7">
       <StateBody
@@ -105,13 +105,13 @@ const BrokenState = ({
         <TextButton onClick={onDismiss}>{copy.secondaryCta}</TextButton>
       </StateBody>
     </div>
-  )
-}
+  );
+};
 
 const Notice = ({
   copy,
 }: {
-  copy: { head: string; sub: string; regionAria: string }
+  copy: { head: string; sub: string; regionAria: string };
 }) => {
   return (
     <section
@@ -123,8 +123,8 @@ const Notice = ({
         {copy.sub}
       </span>
     </section>
-  )
-}
+  );
+};
 
 const resolveContent = (
   data: SpotifyConnectionResponse | undefined,
@@ -139,7 +139,7 @@ const resolveContent = (
         aria-hidden
         className="h-[180px] animate-pulse rounded-2xl border border-border bg-surface-1"
       />
-    )
+    );
   }
   if (data?.status === 'disconnected') {
     // With the flag off this is the common case, so it cannot render nothing:
@@ -148,7 +148,7 @@ const resolveContent = (
       <ConnectEntryCard onConnect={openHandoff} />
     ) : (
       <Notice copy={SPOTIFY_COPY.connectUnavailable} />
-    )
+    );
   }
   if (!data) {
     // Query errored, so the status is unknown — this user may well be
@@ -162,15 +162,15 @@ const resolveContent = (
       <ConnectEntryCard onConnect={openHandoff} />
     ) : (
       <Notice copy={SPOTIFY_COPY.statusUnavailable} />
-    )
+    );
   }
   if (data.status === 'connected') {
-    return <ConnectedCard connection={data} />
+    return <ConnectedCard connection={data} />;
   }
   // The secondary dismiss ("Not now" / "Leave it unlinked") collapses the
   // full state card to the handoff's compact in-settings banner variant.
   if (brokenCollapsed) {
-    return <SpotifyStatusBanner />
+    return <SpotifyStatusBanner />;
   }
   return (
     <BrokenState
@@ -178,14 +178,14 @@ const resolveContent = (
       onReconnect={openHandoff}
       onDismiss={collapseBroken}
     />
-  )
-}
+  );
+};
 
 export const ConnectionsPanel = () => {
-  const { data, isPending } = useSpotifyConnection()
-  const queryClient = useQueryClient()
-  const [handoffOpen, setHandoffOpen] = useState(false)
-  const [brokenCollapsed, setBrokenCollapsed] = useState(false)
+  const { data, isPending } = useSpotifyConnection();
+  const queryClient = useQueryClient();
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const [brokenCollapsed, setBrokenCollapsed] = useState(false);
 
   return (
     <div className="flex flex-col">
@@ -199,14 +199,14 @@ export const ConnectionsPanel = () => {
       <OAuthHandoffSheet
         open={handoffOpen}
         onClose={() => {
-          setHandoffOpen(false)
+          setHandoffOpen(false);
           // A cancelled/failed handoff changes nothing server-side, but a
           // stale cache after tab-switching is cheap to guard against.
           void queryClient.invalidateQueries({
             queryKey: spotifyConnectionQueryKeyBase,
-          })
+          });
         }}
       />
     </div>
-  )
-}
+  );
+};

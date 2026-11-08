@@ -9,18 +9,18 @@
  * All random draws go through deps.rng — never Math.random().
  */
 
-import { notifications } from '../../../packages/db/src/schema/index.js'
-import type { DrizzleWriteDb } from '../sync-venues.js'
-import type { createRng } from '../seeded-rng.js'
+import { notifications } from '../../../packages/db/src/schema/index.js';
+import type { DrizzleWriteDb } from '../sync-venues.js';
+import type { createRng } from '../seeded-rng.js';
 
 export type GeneratorDeps = {
-  staging: DrizzleWriteDb
-  fixtureUserIds: readonly string[]
-  eventIds: readonly string[]
-  rng: ReturnType<typeof createRng>
-}
+  staging: DrizzleWriteDb;
+  fixtureUserIds: readonly string[];
+  eventIds: readonly string[];
+  rng: ReturnType<typeof createRng>;
+};
 
-export type GenResult = { inserted: number }
+export type GenResult = { inserted: number };
 
 const ADMIN_ALERT_CATEGORIES = [
   'crawl.failed',
@@ -28,14 +28,14 @@ const ADMIN_ALERT_CATEGORIES = [
   'crawl.blocked',
   'submission.dispute',
   'feedback.flagged',
-] as const
+] as const;
 
 const USER_NOTIFICATION_CATEGORIES = [
   'price.corroborated',
   'price.disputed',
   'event.reminder',
   'event.update',
-] as const
+] as const;
 
 const SHORT_TITLES = [
   'Crawl failed for Red Rocks',
@@ -44,7 +44,7 @@ const SHORT_TITLES = [
   'Event updated',
   'Submission disputed',
   'Crawl low confidence',
-] as const
+] as const;
 
 const SHORT_BODIES = [
   'The crawler encountered an error. Check the admin panel for details.',
@@ -53,27 +53,27 @@ const SHORT_BODIES = [
   'An event you are watching has been updated.',
   'Your submission has been disputed — review it in your account.',
   'The crawl completed with low confidence. Manual review may be needed.',
-] as const
+] as const;
 
 /** Long title (>80 chars) for layout stress testing. */
 const LONG_TITLE =
-  'Crawl failure detected at Red Rocks Amphitheatre — three consecutive errors, venue temporarily paused'
+  'Crawl failure detected at Red Rocks Amphitheatre — three consecutive errors, venue temporarily paused';
 
 /** Long body for layout stress testing. */
 const LONG_BODY =
-  'The automated crawler encountered a series of consecutive failures while attempting to index the upcoming events at Red Rocks Amphitheatre. The venue has been temporarily paused from the crawl schedule to prevent further rate-limit exposure. Please review the crawl log in the admin panel, verify the venue configuration, and resume the crawl once the issue is resolved. If the venue has changed its web structure, a selector update or LLM extraction fallback may be required.'
+  'The automated crawler encountered a series of consecutive failures while attempting to index the upcoming events at Red Rocks Amphitheatre. The venue has been temporarily paused from the crawl schedule to prevent further rate-limit exposure. Please review the crawl log in the admin panel, verify the venue configuration, and resume the crawl once the issue is resolved. If the venue has changed its web structure, a selector update or LLM extraction fallback may be required.';
 
 /** A fixed past timestamp used for "read" notifications. */
-const READ_AT = new Date('2026-07-01T10:00:00.000Z')
+const READ_AT = new Date('2026-07-01T10:00:00.000Z');
 
 export const generateNotifications = async (
   deps: GeneratorDeps,
 ): Promise<GenResult> => {
-  const { staging, fixtureUserIds, rng } = deps
+  const { staging, fixtureUserIds, rng } = deps;
 
-  type NotificationRow = typeof notifications.$inferInsert
+  type NotificationRow = typeof notifications.$inferInsert;
 
-  const rows: NotificationRow[] = []
+  const rows: NotificationRow[] = [];
 
   // --- Pinned rows: guarantee both type enum values appear ---
 
@@ -91,7 +91,7 @@ export const generateNotifications = async (
     body: rng.pick(SHORT_BODIES),
     actionUrl: 'https://concertcrawl.app/admin/crawl-log',
     readAt: null,
-  })
+  });
 
   // 2. user_notification — read
   rows.push({
@@ -102,7 +102,7 @@ export const generateNotifications = async (
     body: rng.pick(SHORT_BODIES),
     actionUrl: null,
     readAt: READ_AT,
-  })
+  });
 
   // --- Per fixture user: one long-title/body notification + one short ---
   for (const userId of fixtureUserIds) {
@@ -115,19 +115,19 @@ export const generateNotifications = async (
       body: LONG_BODY,
       actionUrl: 'https://concertcrawl.app/admin/venues',
       readAt: null,
-    })
+    });
 
     // Short row with randomized read state. Derive category from the chosen
     // type so pairings stay coherent (admin_alert → admin categories only,
     // user_notification → user categories only). Independent picks would
     // produce nonsense like an admin_alert with category 'watch.reminder'
     // which confuses admin views that switch on category.
-    const isRead = rng.int(0, 1) === 1
-    const shortType = rng.pick(['admin_alert', 'user_notification'] as const)
+    const isRead = rng.int(0, 1) === 1;
+    const shortType = rng.pick(['admin_alert', 'user_notification'] as const);
     const shortCategory =
       shortType === 'admin_alert'
         ? rng.pick(ADMIN_ALERT_CATEGORIES)
-        : rng.pick(USER_NOTIFICATION_CATEGORIES)
+        : rng.pick(USER_NOTIFICATION_CATEGORIES);
     rows.push({
       userId,
       type: shortType,
@@ -136,12 +136,12 @@ export const generateNotifications = async (
       body: rng.pick(SHORT_BODIES),
       actionUrl: null,
       readAt: isRead ? READ_AT : null,
-    })
+    });
   }
 
   // --- Additional admin_alerts for volume (all attributed to fixture users
   //     for cleanup-catchability — see the pinned admin_alert comment above)
-  const extraAlertCount = rng.int(2, 4)
+  const extraAlertCount = rng.int(2, 4);
   for (let idx = 0; idx < extraAlertCount; idx++) {
     rows.push({
       userId: rng.pick(fixtureUserIds),
@@ -151,10 +151,10 @@ export const generateNotifications = async (
       body: rng.pick(SHORT_BODIES),
       actionUrl: 'https://concertcrawl.app/admin',
       readAt: rng.int(0, 1) === 1 ? READ_AT : null,
-    })
+    });
   }
 
-  await staging.insert(notifications).values(rows)
+  await staging.insert(notifications).values(rows);
 
-  return { inserted: rows.length }
-}
+  return { inserted: rows.length };
+};

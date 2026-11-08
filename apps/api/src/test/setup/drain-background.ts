@@ -1,5 +1,5 @@
-import { afterAll, afterEach, beforeAll, vi } from 'vitest'
-import { drainBackgroundTasks } from '../../lib/background-tasks.js'
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import { drainBackgroundTasks } from '../../lib/background-tasks.js';
 
 // Integration tests drive the API in-memory via `app.request`, so no test needs
 // real outbound HTTP. Background tasks, however, do: `detectTicketVendor` fetches
@@ -15,17 +15,17 @@ beforeAll(() => {
     Promise.reject(
       new Error('Network access is disabled in integration tests'),
     ),
-  )
-})
+  );
+});
 
 afterAll(() => {
-  vi.unstubAllGlobals()
-})
+  vi.unstubAllGlobals();
+});
 
 // Route handlers kick off fire-and-forget work (vendor detection, price
 // pipelines, invite emails) that continues after the response is sent. Awaiting
 // every in-flight task after each test guarantees no background DB write commits
 // during a later test's setup window — the cross-file pollution behind #941.
 afterEach(async () => {
-  await drainBackgroundTasks()
-})
+  await drainBackgroundTasks();
+});

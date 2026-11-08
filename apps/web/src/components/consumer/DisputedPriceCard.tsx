@@ -1,68 +1,68 @@
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { CounterSubmitSheet } from './CounterSubmitSheet'
+import { useState, useCallback } from 'react';
+import { CounterSubmitSheet } from './CounterSubmitSheet';
 import {
   ArrowGlyph,
   Eyebrow,
   PendingTrustPill,
-} from '@/components/consumer/glyphs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from '@/components/consumer/glyphs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.disputedPriceCard
+const copy = CONSUMER_COPY.disputedPriceCard;
 
 // ── Helper ────────────────────────────────────────────────────────
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface DisputedPriceCardProps {
   // Live price (current corroborated price)
-  floor: number
-  ceiling?: number
-  tier: string
-  vendor: string
-  kind: 'community' | 'boxoffice'
-  submitter: { handle: string } | null
-  liveSubmittedAt: string
-  confirmsCount: number
+  floor: number;
+  ceiling?: number;
+  tier: string;
+  vendor: string;
+  kind: 'community' | 'boxoffice';
+  submitter: { handle: string } | null;
+  liveSubmittedAt: string;
+  confirmsCount: number;
 
   // The pending counter-submission
-  disputer: { handle: string } | null
-  disputeFloor: number
-  disputeCeiling?: number
-  disputedAt: string // ISO date
+  disputer: { handle: string } | null;
+  disputeFloor: number;
+  disputeCeiling?: number;
+  disputedAt: string; // ISO date
 
   // The counter-submission ID — used as the deep-link anchor target for the
   // coral CounterPointerLink rendered inside PendingCardB.
-  counterSubmissionId?: string | null
+  counterSubmissionId?: string | null;
 
   // Engagement-signal pill. When 'defer', a quiet warning chip near the
   // dashed update strip surfaces CONSUMER_COPY.priceRegion.adminDeferPillLabel
   // ("Admin requested more info"). Sourced from
   // EventDetailResponse.counterSubmission.lastAdminActionKind.
-  lastAdminActionKind?: 'defer' | null
+  lastAdminActionKind?: 'defer' | null;
 
   // For CounterSubmitSheet
-  eventId: string
-  disputedSubmissionId: string
+  eventId: string;
+  disputedSubmissionId: string;
 
   /**
    * Announces the sign-up gate to assistive tech without drawing it (#1247).
    * The button is unchanged visually and still opens CounterSubmitSheet, which
    * swaps itself for the tier picker when there is no session.
    */
-  signedOut?: boolean
+  signedOut?: boolean;
 
-  onUpdateSuccess?: () => void
+  onUpdateSuccess?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -87,22 +87,22 @@ export const DisputedPriceCard = ({
   signedOut = false,
   onUpdateSuccess,
 }: DisputedPriceCardProps) => {
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   const handleOpenSheet = useCallback(() => {
-    setIsSheetOpen(true)
-  }, [])
+    setIsSheetOpen(true);
+  }, []);
 
   const handleCloseSheet = useCallback(() => {
-    setIsSheetOpen(false)
-  }, [])
+    setIsSheetOpen(false);
+  }, []);
 
   const handleSuccess = useCallback(() => {
-    setIsSheetOpen(false)
-    onUpdateSuccess?.()
-  }, [onUpdateSuccess])
+    setIsSheetOpen(false);
+    onUpdateSuccess?.();
+  }, [onUpdateSuccess]);
 
-  const timeAgo = formatTimeAgo(disputedAt)
+  const timeAgo = formatTimeAgo(disputedAt);
 
   // Build the attribution text
   const attributionText = disputer
@@ -111,18 +111,18 @@ export const DisputedPriceCard = ({
       : `@${disputer.handle} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
     : disputeCeiling != null
       ? `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor}–$${disputeCeiling} · ${timeAgo}`
-      : `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`
+      : `${copy.strip.anonymousLabel} ${copy.strip.sawVerb} $${disputeFloor} · ${timeAgo}`;
 
   // Build the live price headline
   const headlineStr =
     ceiling != null
       ? `$${Math.round(floor)}–$${Math.round(ceiling)}`
-      : `$${Math.round(floor)}`
+      : `$${Math.round(floor)}`;
 
   // Anchor target for the coral CounterPointerLink rendered inside
   // PendingCardB. Falls back to the disputed parent ID if the counter ID
   // wasn't passed — keeps the anchor non-broken for legacy callers.
-  const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`
+  const anchorId = `counter-${counterSubmissionId ?? disputedSubmissionId}`;
 
   return (
     <>
@@ -404,5 +404,5 @@ export const DisputedPriceCard = ({
         onSuccess={handleSuccess}
       />
     </>
-  )
-}
+  );
+};

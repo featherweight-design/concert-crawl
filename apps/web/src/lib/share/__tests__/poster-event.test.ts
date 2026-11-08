@@ -1,10 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   posterDropLabel,
   posterStateFor,
   toPosterEvent,
   type PosterSource,
-} from '@/lib/share/poster-event'
+} from '@/lib/share/poster-event';
 
 const source: PosterSource = {
   id: '11111111-2222-4333-8444-555555555555',
@@ -19,12 +19,12 @@ const source: PosterSource = {
   ticketPriceMin: null,
   ticketPriceOpenedAt: null,
   priceStatus: 'live',
-}
+};
 
 describe('posterStateFor', () => {
   it('defaults to going', () => {
-    expect(posterStateFor(source)).toBe('going')
-  })
+    expect(posterStateFor(source)).toBe('going');
+  });
 
   it('reads a drop from the opening price', () => {
     expect(
@@ -33,8 +33,8 @@ describe('posterStateFor', () => {
         ticketPriceMin: '28.00',
         ticketPriceOpenedAt: 40,
       }),
-    ).toBe('drop')
-  })
+    ).toBe('drop');
+  });
 
   it('does not call a price rise a drop', () => {
     expect(
@@ -43,8 +43,8 @@ describe('posterStateFor', () => {
         ticketPriceMin: '55.00',
         ticketPriceOpenedAt: 40,
       }),
-    ).toBe('going')
-  })
+    ).toBe('going');
+  });
 
   it('lets sold out win over a drop', () => {
     // A poster for a gone show that reads "price dropped" is actively
@@ -56,8 +56,8 @@ describe('posterStateFor', () => {
         ticketPriceMin: '28.00',
         ticketPriceOpenedAt: 40,
       }),
-    ).toBe('soldout')
-  })
+    ).toBe('soldout');
+  });
 
   it('ignores an unparseable price rather than guessing', () => {
     expect(
@@ -66,40 +66,40 @@ describe('posterStateFor', () => {
         ticketPriceMin: 'free',
         ticketPriceOpenedAt: 40,
       }),
-    ).toBe('going')
-  })
-})
+    ).toBe('going');
+  });
+});
 
 describe('posterDropLabel', () => {
   it('rounds the saving to whole dollars', () => {
     expect(
       posterDropLabel({ ticketPriceMin: '27.60', ticketPriceOpenedAt: 40 }),
-    ).toBe('↓ $12')
-  })
+    ).toBe('↓ $12');
+  });
 
   it('is null for every non-drop', () => {
-    expect(posterDropLabel(source)).toBeNull()
+    expect(posterDropLabel(source)).toBeNull();
     expect(
       posterDropLabel({ ticketPriceMin: '55.00', ticketPriceOpenedAt: 40 }),
-    ).toBeNull()
-  })
-})
+    ).toBeNull();
+  });
+});
 
 describe('toPosterEvent', () => {
   it('maps an event onto the poster model', () => {
-    const poster = toPosterEvent(source)
-    expect(poster.artist).toBe('Snakebite Revival')
-    expect(poster.venue).toBe('Bluebird Theater')
-    expect(poster.city).toBe('Denver')
-    expect(poster.state).toBe('going')
-    expect(poster.dropLabel).toBeNull()
-  })
+    const poster = toPosterEvent(source);
+    expect(poster.artist).toBe('Snakebite Revival');
+    expect(poster.venue).toBe('Bluebird Theater');
+    expect(poster.city).toBe('Denver');
+    expect(poster.state).toBe('going');
+    expect(poster.dropLabel).toBeNull();
+  });
 
   it('sets the date stamp in caps, in the venue timezone', () => {
-    expect(toPosterEvent(source).dateShort).toBe('SAT, MAR 14')
-  })
+    expect(toPosterEvent(source).dateShort).toBe('SAT, MAR 14');
+  });
 
   it('carries a null show time through rather than inventing one', () => {
-    expect(toPosterEvent({ ...source, showTime: null }).showTime).toBeNull()
-  })
-})
+    expect(toPosterEvent({ ...source, showTime: null }).showTime).toBeNull();
+  });
+});

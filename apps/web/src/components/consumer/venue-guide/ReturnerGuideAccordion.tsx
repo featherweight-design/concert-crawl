@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useId, useRef, useState } from 'react'
-import type { VenueGuideChip } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '../definitions/copy'
+import { useId, useRef, useState } from 'react';
+import type { VenueGuideChip } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '../definitions/copy';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 /** Topics named in the collapsed strip before it falls back to `+N`. */
-const PREVIEW_CHIP_COUNT = 3
+const PREVIEW_CHIP_COUNT = 3;
 
 interface ReturnerGuideAccordionProps {
   /** Authored chips in display order — accessibility first. */
-  chips: VenueGuideChip[]
-  children: React.ReactNode
+  chips: VenueGuideChip[];
+  children: React.ReactNode;
 }
 
 /**
@@ -24,14 +24,14 @@ export const ReturnerGuideAccordion = ({
   chips,
   children,
 }: ReturnerGuideAccordionProps) => {
-  const [open, setOpen] = useState(false)
-  const summaryId = useId()
-  const toggleRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false);
+  const summaryId = useId();
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   const previewLabels = chips
     .slice(0, PREVIEW_CHIP_COUNT)
-    .map((chip) => copy.chipLabels[chip.chipType])
-  const extraCount = Math.max(chips.length - PREVIEW_CHIP_COUNT, 0)
+    .map((chip) => copy.chipLabels[chip.chipType]);
+  const extraCount = Math.max(chips.length - PREVIEW_CHIP_COUNT, 0);
 
   return (
     <div
@@ -139,12 +139,12 @@ export const ReturnerGuideAccordion = ({
           <button
             type="button"
             onClick={() => {
-              setOpen(false)
+              setOpen(false);
               // This button unmounts on the same click, so focus would be left
               // on a removed node. Hand it back to the header toggle, which is
               // both the thing that re-opens the guide and where a sighted
               // user's attention lands after the collapse.
-              toggleRef.current?.focus()
+              toggleRef.current?.focus();
             }}
             className="mt-3 flex w-full cursor-pointer items-center justify-center"
             style={{
@@ -163,5 +163,5 @@ export const ReturnerGuideAccordion = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

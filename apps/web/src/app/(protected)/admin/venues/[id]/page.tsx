@@ -1,53 +1,53 @@
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types'
-import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient'
-import { notFound } from 'next/navigation'
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import type { VenueGuide, VenueWithCrawlHealth } from '@concert-crawl/types';
+import { VenueDetailsClient } from '@/components/admin/VenueDetailsClient';
+import { notFound } from 'next/navigation';
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 const EMPTY_GUIDE: VenueGuide = {
   chips: [],
   insiderTip: null,
   publishedAt: null,
-}
+};
 
 export default async function VenueDetailPage({ params }: Props) {
-  await requireAdminUser()
-  const { id } = await params
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { id } = await params;
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
-  let venue: VenueWithCrawlHealth
+  let venue: VenueWithCrawlHealth;
   try {
     venue = await apiClient.get<VenueWithCrawlHealth>(
       `/v1/admin/venues/${id}`,
       token,
-    )
+    );
   } catch {
-    notFound()
+    notFound();
   }
 
   // #764 — a guide fetch failure must not take down the whole venue page. It
   // MUST, however, disable authoring: the empty fallback is indistinguishable
   // from a genuinely empty guide, and saving it would send `chips: []`, which
   // the PUT handler treats as "delete every chip for this venue".
-  let guide: VenueGuide = EMPTY_GUIDE
-  let guideLoadFailed = false
+  let guide: VenueGuide = EMPTY_GUIDE;
+  let guideLoadFailed = false;
   try {
     guide = await apiClient.get<VenueGuide>(
       `/v1/admin/venues/${id}/guide`,
       token,
-    )
+    );
   } catch (err: unknown) {
-    guideLoadFailed = true
+    guideLoadFailed = true;
     console.error('VenueDetailPage: could not load the first-timer guide', {
       id,
       err,
-    })
+    });
   }
 
   return (
@@ -56,5 +56,5 @@ export default async function VenueDetailPage({ params }: Props) {
       guide={guide}
       guideLoadFailed={guideLoadFailed}
     />
-  )
+  );
 }

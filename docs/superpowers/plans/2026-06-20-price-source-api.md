@@ -80,57 +80,57 @@ Seven tasks. Each ends with an independently testable deliverable + commit:
 
   ```ts
   export interface TierHeadline {
-    submissionId: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    sourceCategory: SourceCategory | null
-    submitterHandle: string | null
-    observedAt: string
-    approvedAt: string
-    approvalKind: 'admin' | 'fan'
-    confirmsCount: number
+    submissionId: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    sourceCategory: SourceCategory | null;
+    submitterHandle: string | null;
+    observedAt: string;
+    approvedAt: string;
+    approvalKind: 'admin' | 'fan';
+    confirmsCount: number;
   }
 
   export interface TierAlternate {
-    submissionId: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    sourceCategory: SourceCategory | null
+    submissionId: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    sourceCategory: SourceCategory | null;
   }
 
   export interface TierPending {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    howFound: HowFound
-    sourceCategory: SourceCategory | null
-    note: string | null
-    submitterHandle: string | null
-    submittedAt: string
-    confirmsCount: number
-    confirmsNeeded: number
-    isSubmitter: boolean
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    howFound: HowFound;
+    sourceCategory: SourceCategory | null;
+    note: string | null;
+    submitterHandle: string | null;
+    submittedAt: string;
+    confirmsCount: number;
+    confirmsNeeded: number;
+    isSubmitter: boolean;
   }
 
   export interface TierCounter {
-    id: string
-    parentSubmissionId: string
-    floor: number
-    ceiling?: number
-    submitter: { handle: string } | null
-    submittedAt: string
+    id: string;
+    parentSubmissionId: string;
+    floor: number;
+    ceiling?: number;
+    submitter: { handle: string } | null;
+    submittedAt: string;
   }
 
   export interface TierPriceBlock {
-    tier: Tier
-    headline: TierHeadline | null
-    alternates: TierAlternate[]
-    pending: TierPending[]
-    counterSubmission: TierCounter | null
-    reports: number
+    tier: Tier;
+    headline: TierHeadline | null;
+    alternates: TierAlternate[];
+    pending: TierPending[];
+    counterSubmission: TierCounter | null;
+    reports: number;
   }
   ```
 
@@ -164,57 +164,57 @@ And add the new exports above `EventDetailResponse`:
 
 ```ts
 export interface TierHeadline {
-  submissionId: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  submitterHandle: string | null
-  observedAt: string
-  approvedAt: string
-  approvalKind: 'admin' | 'fan'
-  confirmsCount: number
+  submissionId: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  submitterHandle: string | null;
+  observedAt: string;
+  approvedAt: string;
+  approvalKind: 'admin' | 'fan';
+  confirmsCount: number;
 }
 
 export interface TierAlternate {
-  submissionId: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
+  submissionId: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
 }
 
 export interface TierPending {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  note: string | null
-  submitterHandle: string | null
-  submittedAt: string
-  confirmsCount: number
-  confirmsNeeded: number
-  isSubmitter: boolean
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  note: string | null;
+  submitterHandle: string | null;
+  submittedAt: string;
+  confirmsCount: number;
+  confirmsNeeded: number;
+  isSubmitter: boolean;
 }
 
 export interface TierCounter {
-  id: string
-  parentSubmissionId: string
-  floor: number
-  ceiling?: number
-  submitter: { handle: string } | null
-  submittedAt: string
+  id: string;
+  parentSubmissionId: string;
+  floor: number;
+  ceiling?: number;
+  submitter: { handle: string } | null;
+  submittedAt: string;
 }
 
 export interface TierPriceBlock {
-  tier: Tier
-  headline: TierHeadline | null
-  alternates: TierAlternate[]
-  pending: TierPending[]
-  counterSubmission: TierCounter | null
-  reports: number
+  tier: Tier;
+  headline: TierHeadline | null;
+  alternates: TierAlternate[];
+  pending: TierPending[];
+  counterSubmission: TierCounter | null;
+  reports: number;
 }
 ```
 
@@ -251,17 +251,17 @@ git commit -m "feat(types): add TierPriceBlock + priceByTier to EventDetailRespo
 
   ```ts
   export interface TierRow {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    sourceCategory: SourceCategory | null
-    userId: string | null
-    createdAt: Date
-    updatedAt: Date
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    sourceCategory: SourceCategory | null;
+    userId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }
 
-  export function pickTierHeadline(rows: readonly TierRow[]): TierRow | null
+  export function pickTierHeadline(rows: readonly TierRow[]): TierRow | null;
   ```
 
   Behavior:
@@ -274,8 +274,8 @@ git commit -m "feat(types): add TierPriceBlock + priceByTier to EventDetailRespo
 Create `apps/api/src/lib/price-aggregation/pick-tier-headline.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
+import { describe, expect, it } from 'vitest';
+import { pickTierHeadline, type TierRow } from './pick-tier-headline.js';
 
 const row = (overrides: Partial<TierRow>): TierRow => ({
   id: overrides.id ?? 'row-1',
@@ -286,83 +286,83 @@ const row = (overrides: Partial<TierRow>): TierRow => ({
   userId: overrides.userId ?? 'user-1',
   createdAt: overrides.createdAt ?? new Date('2026-06-01T00:00:00Z'),
   updatedAt: overrides.updatedAt ?? new Date('2026-06-01T00:00:00Z'),
-})
+});
 
 describe('pickTierHeadline', () => {
   it('returns null for empty input', () => {
-    expect(pickTierHeadline([])).toBeNull()
-  })
+    expect(pickTierHeadline([])).toBeNull();
+  });
 
   it('prefers boxoffice over standard regardless of price', () => {
     const standardCheap = row({
       id: 'std',
       sourceCategory: 'standard',
       priceMin: '15',
-    })
+    });
     const boxoffice = row({
       id: 'bo',
       sourceCategory: 'boxoffice',
       vendor: 'VenueBoxOffice',
       priceMin: '40',
-    })
-    expect(pickTierHeadline([standardCheap, boxoffice])?.id).toBe('bo')
-  })
+    });
+    expect(pickTierHeadline([standardCheap, boxoffice])?.id).toBe('bo');
+  });
 
   it('prefers standard over resale regardless of price', () => {
     const resaleCheap = row({
       id: 'resale',
       sourceCategory: 'resale',
       priceMin: '20',
-    })
+    });
     const standardExpensive = row({
       id: 'std',
       sourceCategory: 'standard',
       priceMin: '45',
-    })
-    expect(pickTierHeadline([resaleCheap, standardExpensive])?.id).toBe('std')
-  })
+    });
+    expect(pickTierHeadline([resaleCheap, standardExpensive])?.id).toBe('std');
+  });
 
   it('among same source-category, prefers lower priceMin', () => {
-    const cheaper = row({ id: 'cheap', priceMin: '25' })
-    const pricier = row({ id: 'pricey', priceMin: '40' })
-    expect(pickTierHeadline([pricier, cheaper])?.id).toBe('cheap')
-  })
+    const cheaper = row({ id: 'cheap', priceMin: '25' });
+    const pricier = row({ id: 'pricey', priceMin: '40' });
+    expect(pickTierHeadline([pricier, cheaper])?.id).toBe('cheap');
+  });
 
   it('tie-breaks equal priceMin by newest updatedAt', () => {
     const older = row({
       id: 'old',
       priceMin: '30',
       updatedAt: new Date('2026-06-01T00:00:00Z'),
-    })
+    });
     const newer = row({
       id: 'new',
       priceMin: '30',
       updatedAt: new Date('2026-06-15T00:00:00Z'),
-    })
-    expect(pickTierHeadline([older, newer])?.id).toBe('new')
-  })
+    });
+    expect(pickTierHeadline([older, newer])?.id).toBe('new');
+  });
 
   it('treats null source-category as standard (trust = 1)', () => {
     const nullSource = row({
       id: 'null-src',
       sourceCategory: null,
       priceMin: '25',
-    })
+    });
     const resale = row({
       id: 'resale',
       sourceCategory: 'resale',
       priceMin: '15',
-    })
-    expect(pickTierHeadline([nullSource, resale])?.id).toBe('null-src')
-  })
+    });
+    expect(pickTierHeadline([nullSource, resale])?.id).toBe('null-src');
+  });
 
   it('handles parseFloat comparison correctly for string priceMin', () => {
-    const nine = row({ id: 'nine', priceMin: '9' })
-    const ten = row({ id: 'ten', priceMin: '10' })
+    const nine = row({ id: 'nine', priceMin: '9' });
+    const ten = row({ id: 'ten', priceMin: '10' });
     // 10 > 9 numerically, so 'nine' should win — naive string sort would put '10' first
-    expect(pickTierHeadline([ten, nine])?.id).toBe('nine')
-  })
-})
+    expect(pickTierHeadline([ten, nine])?.id).toBe('nine');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -378,17 +378,17 @@ Expected: FAIL (cannot find module `./pick-tier-headline.js`).
 Create `apps/api/src/lib/price-aggregation/pick-tier-headline.ts`:
 
 ```typescript
-import type { SourceCategory, Vendor } from '@concert-crawl/types'
+import type { SourceCategory, Vendor } from '@concert-crawl/types';
 
 export interface TierRow {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  userId: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  userId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Trust order: boxoffice leads (face value, exempt from staleness per the
@@ -396,9 +396,9 @@ export interface TierRow {
 // Null source_category is treated as standard so legacy rows don't get
 // demoted below resale.
 function trustRank(category: SourceCategory | null): number {
-  if (category === 'boxoffice') return 0
-  if (category === 'resale') return 2
-  return 1
+  if (category === 'boxoffice') return 0;
+  if (category === 'resale') return 2;
+  return 1;
 }
 
 // Pick the leading row for a single tier. Sort order:
@@ -406,16 +406,16 @@ function trustRank(category: SourceCategory | null): number {
 //   2. parseFloat(priceMin) ascending (cheapest face value wins ties within trust)
 //   3. updatedAt descending (newest corroboration wins ties on price)
 export function pickTierHeadline(rows: readonly TierRow[]): TierRow | null {
-  if (rows.length === 0) return null
+  if (rows.length === 0) return null;
   const sorted = [...rows].sort((left, right) => {
     const trustDelta =
-      trustRank(left.sourceCategory) - trustRank(right.sourceCategory)
-    if (trustDelta !== 0) return trustDelta
-    const priceDelta = parseFloat(left.priceMin) - parseFloat(right.priceMin)
-    if (priceDelta !== 0) return priceDelta
-    return right.updatedAt.getTime() - left.updatedAt.getTime()
-  })
-  return sorted[0] ?? null
+      trustRank(left.sourceCategory) - trustRank(right.sourceCategory);
+    if (trustDelta !== 0) return trustDelta;
+    const priceDelta = parseFloat(left.priceMin) - parseFloat(right.priceMin);
+    if (priceDelta !== 0) return priceDelta;
+    return right.updatedAt.getTime() - left.updatedAt.getTime();
+  });
+  return sorted[0] ?? null;
 }
 ```
 
@@ -454,45 +454,47 @@ git commit -m "feat(api): add pickTierHeadline helper for per-tier price aggrega
 
   ```ts
   export interface CorroboratedTierRow extends TierRow {
-    tier: Tier
-    confirmsCount: number
+    tier: Tier;
+    confirmsCount: number;
   }
 
   export interface PendingTierRow {
-    id: string
-    priceMin: string
-    priceMax: string | null
-    vendor: Vendor
-    sourceCategory: SourceCategory | null
-    howFound: HowFound
-    note: string | null
-    userId: string | null
-    tier: Tier
-    createdAt: Date
-    confirmsCount: number
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    vendor: Vendor;
+    sourceCategory: SourceCategory | null;
+    howFound: HowFound;
+    note: string | null;
+    userId: string | null;
+    tier: Tier;
+    createdAt: Date;
+    confirmsCount: number;
   }
 
   export interface CounterTierRow {
-    id: string
-    parentSubmissionId: string
-    tier: Tier
-    priceMin: string
-    priceMax: string | null
-    userId: string | null
-    createdAt: Date
+    id: string;
+    parentSubmissionId: string;
+    tier: Tier;
+    priceMin: string;
+    priceMax: string | null;
+    userId: string | null;
+    createdAt: Date;
   }
 
   export interface AggregateByTierInput {
-    corroborated: readonly CorroboratedTierRow[]
-    pending: readonly PendingTierRow[]
-    counters: readonly CounterTierRow[]
-    handles: ReadonlyMap<string, string> // userId → handle
-    reportsByTier: ReadonlyMap<Tier, number> // tier → total submission count
-    confirmsNeeded: number
-    viewerUserId: string | null
+    corroborated: readonly CorroboratedTierRow[];
+    pending: readonly PendingTierRow[];
+    counters: readonly CounterTierRow[];
+    handles: ReadonlyMap<string, string>; // userId → handle
+    reportsByTier: ReadonlyMap<Tier, number>; // tier → total submission count
+    confirmsNeeded: number;
+    viewerUserId: string | null;
   }
 
-  export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[]
+  export function aggregateByTier(
+    input: AggregateByTierInput,
+  ): TierPriceBlock[];
   ```
 
   Behavior:
@@ -513,13 +515,13 @@ git commit -m "feat(api): add pickTierHeadline helper for per-tier price aggrega
 Create `apps/api/src/lib/price-aggregation/aggregate-by-tier.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   aggregateByTier,
   type AggregateByTierInput,
   type CorroboratedTierRow,
   type PendingTierRow,
-} from './aggregate-by-tier.js'
+} from './aggregate-by-tier.js';
 
 const corrob = (
   overrides: Partial<CorroboratedTierRow>,
@@ -534,7 +536,7 @@ const corrob = (
   createdAt: overrides.createdAt ?? new Date('2026-06-01T00:00:00Z'),
   updatedAt: overrides.updatedAt ?? new Date('2026-06-02T00:00:00Z'),
   confirmsCount: overrides.confirmsCount ?? 1,
-})
+});
 
 const pendingRow = (overrides: Partial<PendingTierRow>): PendingTierRow => ({
   id: overrides.id ?? 'pending-1',
@@ -548,7 +550,7 @@ const pendingRow = (overrides: Partial<PendingTierRow>): PendingTierRow => ({
   userId: overrides.userId ?? 'submitter-2',
   createdAt: overrides.createdAt ?? new Date('2026-06-10T00:00:00Z'),
   confirmsCount: overrides.confirmsCount ?? 0,
-})
+});
 
 const baseInput: AggregateByTierInput = {
   corroborated: [],
@@ -558,12 +560,12 @@ const baseInput: AggregateByTierInput = {
   reportsByTier: new Map(),
   confirmsNeeded: 2,
   viewerUserId: null,
-}
+};
 
 describe('aggregateByTier', () => {
   it('returns empty array when no submissions exist', () => {
-    expect(aggregateByTier(baseInput)).toEqual([])
-  })
+    expect(aggregateByTier(baseInput)).toEqual([]);
+  });
 
   it('emits one block per tier with the cheapest headline first', () => {
     const blocks = aggregateByTier({
@@ -576,11 +578,11 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks).toHaveLength(2)
-    expect(blocks[0]?.tier).toBe('GA')
-    expect(blocks[1]?.tier).toBe('VIP')
-  })
+    });
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]?.tier).toBe('GA');
+    expect(blocks[1]?.tier).toBe('VIP');
+  });
 
   it('boxoffice wins over standard within same tier', () => {
     const blocks = aggregateByTier({
@@ -601,11 +603,11 @@ describe('aggregateByTier', () => {
         }),
       ],
       reportsByTier: new Map([['GA', 2]]),
-    })
-    expect(blocks[0]?.headline?.submissionId).toBe('bo')
-    expect(blocks[0]?.alternates).toHaveLength(1)
-    expect(blocks[0]?.alternates[0]?.submissionId).toBe('std')
-  })
+    });
+    expect(blocks[0]?.headline?.submissionId).toBe('bo');
+    expect(blocks[0]?.alternates).toHaveLength(1);
+    expect(blocks[0]?.alternates[0]?.submissionId).toBe('std');
+  });
 
   it('resolves submitter handle via the handles map', () => {
     const blocks = aggregateByTier({
@@ -613,9 +615,9 @@ describe('aggregateByTier', () => {
       corroborated: [corrob({ id: 'ga', userId: 'user-1' })],
       handles: new Map([['user-1', 'price-watcher']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.headline?.submitterHandle).toBe('price-watcher')
-  })
+    });
+    expect(blocks[0]?.headline?.submitterHandle).toBe('price-watcher');
+  });
 
   it('sets approvalKind to fan when confirmsCount > 0, admin otherwise', () => {
     const blocks = aggregateByTier({
@@ -628,12 +630,12 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    const ga = blocks.find((block) => block.tier === 'GA')
-    const vip = blocks.find((block) => block.tier === 'VIP')
-    expect(ga?.headline?.approvalKind).toBe('fan')
-    expect(vip?.headline?.approvalKind).toBe('admin')
-  })
+    });
+    const ga = blocks.find((block) => block.tier === 'GA');
+    const vip = blocks.find((block) => block.tier === 'VIP');
+    expect(ga?.headline?.approvalKind).toBe('fan');
+    expect(vip?.headline?.approvalKind).toBe('admin');
+  });
 
   it('emits pending rows per tier with confirmsNeeded threaded through', () => {
     const blocks = aggregateByTier({
@@ -647,12 +649,14 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks.find((block) => block.tier === 'GA')?.pending).toHaveLength(1)
+    });
+    expect(blocks.find((block) => block.tier === 'GA')?.pending).toHaveLength(
+      1,
+    );
     expect(
       blocks.find((block) => block.tier === 'GA')?.pending[0]?.confirmsNeeded,
-    ).toBe(3)
-  })
+    ).toBe(3);
+  });
 
   it('marks isSubmitter true when pending row userId matches viewer', () => {
     const blocks = aggregateByTier({
@@ -660,12 +664,12 @@ describe('aggregateByTier', () => {
       pending: [pendingRow({ id: 'pen', tier: 'GA', userId: 'viewer-1' })],
       viewerUserId: 'viewer-1',
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.pending[0]?.isSubmitter).toBe(true)
-  })
+    });
+    expect(blocks[0]?.pending[0]?.isSubmitter).toBe(true);
+  });
 
   it('attaches counter-submission to its parent tier', () => {
-    const headline = corrob({ id: 'head', tier: 'GA' })
+    const headline = corrob({ id: 'head', tier: 'GA' });
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [headline],
@@ -682,12 +686,12 @@ describe('aggregateByTier', () => {
       ],
       handles: new Map([['challenger', 'fan-2']]),
       reportsByTier: new Map([['GA', 1]]),
-    })
-    expect(blocks[0]?.counterSubmission?.id).toBe('counter-1')
-    expect(blocks[0]?.counterSubmission?.parentSubmissionId).toBe('head')
-    expect(blocks[0]?.counterSubmission?.floor).toBe(20)
-    expect(blocks[0]?.counterSubmission?.submitter?.handle).toBe('fan-2')
-  })
+    });
+    expect(blocks[0]?.counterSubmission?.id).toBe('counter-1');
+    expect(blocks[0]?.counterSubmission?.parentSubmissionId).toBe('head');
+    expect(blocks[0]?.counterSubmission?.floor).toBe(20);
+    expect(blocks[0]?.counterSubmission?.submitter?.handle).toBe('fan-2');
+  });
 
   it('includes pending-only tiers after corroborated-headline tiers', () => {
     const blocks = aggregateByTier({
@@ -698,28 +702,28 @@ describe('aggregateByTier', () => {
         ['GA', 1],
         ['VIP', 1],
       ]),
-    })
-    expect(blocks.map((block) => block.tier)).toEqual(['GA', 'VIP'])
-  })
+    });
+    expect(blocks.map((block) => block.tier)).toEqual(['GA', 'VIP']);
+  });
 
   it('surfaces reports count from the input map', () => {
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [corrob({ id: 'ga', tier: 'GA' })],
       reportsByTier: new Map([['GA', 5]]),
-    })
-    expect(blocks[0]?.reports).toBe(5)
-  })
+    });
+    expect(blocks[0]?.reports).toBe(5);
+  });
 
   it('defaults reports to 0 when tier missing from map', () => {
     const blocks = aggregateByTier({
       ...baseInput,
       corroborated: [corrob({ id: 'ga', tier: 'GA' })],
       reportsByTier: new Map(),
-    })
-    expect(blocks[0]?.reports).toBe(0)
-  })
-})
+    });
+    expect(blocks[0]?.reports).toBe(0);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -745,61 +749,61 @@ import type {
   TierPending,
   TierPriceBlock,
   Vendor,
-} from '@concert-crawl/types'
-import { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
+} from '@concert-crawl/types';
+import { pickTierHeadline, type TierRow } from './pick-tier-headline.js';
 
 export interface CorroboratedTierRow extends TierRow {
-  tier: Tier
-  confirmsCount: number
+  tier: Tier;
+  confirmsCount: number;
 }
 
 export interface PendingTierRow {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  howFound: HowFound
-  note: string | null
-  userId: string | null
-  tier: Tier
-  createdAt: Date
-  confirmsCount: number
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  howFound: HowFound;
+  note: string | null;
+  userId: string | null;
+  tier: Tier;
+  createdAt: Date;
+  confirmsCount: number;
 }
 
 export interface CounterTierRow {
-  id: string
-  parentSubmissionId: string
-  tier: Tier
-  priceMin: string
-  priceMax: string | null
-  userId: string | null
-  createdAt: Date
+  id: string;
+  parentSubmissionId: string;
+  tier: Tier;
+  priceMin: string;
+  priceMax: string | null;
+  userId: string | null;
+  createdAt: Date;
 }
 
 export interface AggregateByTierInput {
-  corroborated: readonly CorroboratedTierRow[]
-  pending: readonly PendingTierRow[]
-  counters: readonly CounterTierRow[]
-  handles: ReadonlyMap<string, string>
-  reportsByTier: ReadonlyMap<Tier, number>
-  confirmsNeeded: number
-  viewerUserId: string | null
+  corroborated: readonly CorroboratedTierRow[];
+  pending: readonly PendingTierRow[];
+  counters: readonly CounterTierRow[];
+  handles: ReadonlyMap<string, string>;
+  reportsByTier: ReadonlyMap<Tier, number>;
+  confirmsNeeded: number;
+  viewerUserId: string | null;
 }
 
 function groupByTier<RowType extends { tier: Tier }>(
   rows: readonly RowType[],
 ): Map<Tier, RowType[]> {
-  const map = new Map<Tier, RowType[]>()
+  const map = new Map<Tier, RowType[]>();
   for (const row of rows) {
-    const existing = map.get(row.tier)
+    const existing = map.get(row.tier);
     if (existing) {
-      existing.push(row)
+      existing.push(row);
     } else {
-      map.set(row.tier, [row])
+      map.set(row.tier, [row]);
     }
   }
-  return map
+  return map;
 }
 
 function buildHeadline(
@@ -818,7 +822,7 @@ function buildHeadline(
     approvedAt: row.updatedAt.toISOString(),
     approvalKind: row.confirmsCount > 0 ? 'fan' : 'admin',
     confirmsCount: row.confirmsCount,
-  }
+  };
 }
 
 function buildAlternate(row: CorroboratedTierRow): TierAlternate {
@@ -828,7 +832,7 @@ function buildAlternate(row: CorroboratedTierRow): TierAlternate {
     priceMax: row.priceMax,
     vendor: row.vendor,
     sourceCategory: row.sourceCategory,
-  }
+  };
 }
 
 function buildPending(
@@ -851,15 +855,15 @@ function buildPending(
     confirmsCount: row.confirmsCount,
     confirmsNeeded,
     isSubmitter: row.userId !== null && row.userId === viewerUserId,
-  }
+  };
 }
 
 function buildCounter(
   row: CounterTierRow,
   handles: ReadonlyMap<string, string>,
 ): TierCounter {
-  const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
-  const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
+  const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null;
+  const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null;
   return {
     id: row.id,
     parentSubmissionId: row.parentSubmissionId,
@@ -867,7 +871,7 @@ function buildCounter(
     ...(ceiling !== null ? { ceiling } : {}),
     submitter: handle !== null ? { handle } : null,
     submittedAt: row.createdAt.toISOString(),
-  }
+  };
 }
 
 // Pending order within a tier: VenueBoxOffice first, then newest first. Mirrors
@@ -875,11 +879,11 @@ function buildCounter(
 // migrates off the flat pendingSubmissions field.
 function sortPending(rows: readonly PendingTierRow[]): PendingTierRow[] {
   return [...rows].sort((left, right) => {
-    const leftBoxOffice = left.vendor === 'VenueBoxOffice' ? 0 : 1
-    const rightBoxOffice = right.vendor === 'VenueBoxOffice' ? 0 : 1
-    if (leftBoxOffice !== rightBoxOffice) return leftBoxOffice - rightBoxOffice
-    return right.createdAt.getTime() - left.createdAt.getTime()
-  })
+    const leftBoxOffice = left.vendor === 'VenueBoxOffice' ? 0 : 1;
+    const rightBoxOffice = right.vendor === 'VenueBoxOffice' ? 0 : 1;
+    if (leftBoxOffice !== rightBoxOffice) return leftBoxOffice - rightBoxOffice;
+    return right.createdAt.getTime() - left.createdAt.getTime();
+  });
 }
 
 // Tier display order: tiers with a corroborated headline first (sorted by
@@ -887,19 +891,19 @@ function sortPending(rows: readonly PendingTierRow[]): PendingTierRow[] {
 // Tiers with no submissions at all are omitted.
 function sortBlocks(blocks: TierPriceBlock[]): TierPriceBlock[] {
   return [...blocks].sort((left, right) => {
-    const leftHasHead = left.headline !== null
-    const rightHasHead = right.headline !== null
-    if (leftHasHead !== rightHasHead) return leftHasHead ? -1 : 1
+    const leftHasHead = left.headline !== null;
+    const rightHasHead = right.headline !== null;
+    if (leftHasHead !== rightHasHead) return leftHasHead ? -1 : 1;
     if (leftHasHead && rightHasHead) {
       return (
         parseFloat(left.headline!.priceMin) -
         parseFloat(right.headline!.priceMin)
-      )
+      );
     }
-    const leftCheapestPending = left.pending[0]?.priceMin ?? '0'
-    const rightCheapestPending = right.pending[0]?.priceMin ?? '0'
-    return parseFloat(leftCheapestPending) - parseFloat(rightCheapestPending)
-  })
+    const leftCheapestPending = left.pending[0]?.priceMin ?? '0';
+    const rightCheapestPending = right.pending[0]?.priceMin ?? '0';
+    return parseFloat(leftCheapestPending) - parseFloat(rightCheapestPending);
+  });
 }
 
 export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
@@ -911,24 +915,24 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
     reportsByTier,
     confirmsNeeded,
     viewerUserId,
-  } = input
+  } = input;
 
-  const corrobByTier = groupByTier(corroborated)
-  const pendingByTier = groupByTier(pending)
+  const corrobByTier = groupByTier(corroborated);
+  const pendingByTier = groupByTier(pending);
 
-  const allTiers = new Set<Tier>()
-  for (const tier of corrobByTier.keys()) allTiers.add(tier)
-  for (const tier of pendingByTier.keys()) allTiers.add(tier)
+  const allTiers = new Set<Tier>();
+  for (const tier of corrobByTier.keys()) allTiers.add(tier);
+  for (const tier of pendingByTier.keys()) allTiers.add(tier);
 
-  const blocks: TierPriceBlock[] = []
+  const blocks: TierPriceBlock[] = [];
   for (const tier of allTiers) {
-    const corrobRows = corrobByTier.get(tier) ?? []
-    const pendingRows = pendingByTier.get(tier) ?? []
+    const corrobRows = corrobByTier.get(tier) ?? [];
+    const pendingRows = pendingByTier.get(tier) ?? [];
 
-    const head = pickTierHeadline(corrobRows)
+    const head = pickTierHeadline(corrobRows);
     const alternates = corrobRows
       .filter((row) => head === null || row.id !== head.id)
-      .map(buildAlternate)
+      .map(buildAlternate);
 
     const headline = head
       ? buildHeadline(
@@ -938,13 +942,13 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
           corrobRows.find((row) => row.id === head.id) ?? null,
           handles,
         )
-      : null
+      : null;
 
     const counter = head
       ? counters.find(
           (row) => row.tier === tier && row.parentSubmissionId === head.id,
         )
-      : undefined
+      : undefined;
 
     blocks.push({
       tier,
@@ -961,10 +965,10 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
       ),
       counterSubmission: counter ? buildCounter(counter, handles) : null,
       reports: reportsByTier.get(tier) ?? 0,
-    })
+    });
   }
 
-  return sortBlocks(blocks)
+  return sortBlocks(blocks);
 }
 ```
 
@@ -977,8 +981,8 @@ export {
   type CorroboratedTierRow,
   type CounterTierRow,
   type PendingTierRow,
-} from './aggregate-by-tier.js'
-export { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
+} from './aggregate-by-tier.js';
+export { pickTierHeadline, type TierRow } from './pick-tier-headline.js';
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -1020,16 +1024,16 @@ Append to `apps/api/src/routes/events.integration.test.ts` (inside the `GET /v1/
 
 ```typescript
 it('includes priceByTier with per-tier headline + alternates + pending', async () => {
-  const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall-pbt' })
+  const venue = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall-pbt' });
   const event = await seedEvent(venue.id, {
     date: '2027-06-01',
     priceSource: 'community',
-  })
+  });
 
   const profileA = await seedUserProfile('user-a', {
     handle: 'price-watcher',
-  })
-  const profileB = await seedUserProfile('user-b', { handle: 'fan-two' })
+  });
+  const profileB = await seedUserProfile('user-b', { handle: 'fan-two' });
 
   // Corroborated GA box-office at $40
   await seedPriceSubmission(event.id, profileA.userId, {
@@ -1039,7 +1043,7 @@ it('includes priceByTier with per-tier headline + alternates + pending', async (
     sourceCategory: 'boxoffice',
     priceMin: '40',
     status: 'corroborated',
-  })
+  });
   // Corroborated GA standard alternate at $50
   await seedPriceSubmission(event.id, profileB.userId, {
     tier: 'GA',
@@ -1047,7 +1051,7 @@ it('includes priceByTier with per-tier headline + alternates + pending', async (
     sourceCategory: 'standard',
     priceMin: '50',
     status: 'corroborated',
-  })
+  });
   // Pending VIP at $120
   await seedPriceSubmission(event.id, profileA.userId, {
     tier: 'VIP',
@@ -1055,46 +1059,46 @@ it('includes priceByTier with per-tier headline + alternates + pending', async (
     sourceCategory: 'standard',
     priceMin: '120',
     status: 'pending',
-  })
+  });
 
-  const res = await app.request(`/v1/events/${event.id}`)
-  expect(res.status).toBe(200)
+  const res = await app.request(`/v1/events/${event.id}`);
+  expect(res.status).toBe(200);
   const body = (await res.json()) as {
     data: {
       priceByTier: Array<{
-        tier: string
-        headline: { submissionId: string; priceMin: string } | null
-        alternates: Array<{ priceMin: string }>
-        pending: Array<{ priceMin: string }>
-        reports: number
-      }>
-    }
-  }
+        tier: string;
+        headline: { submissionId: string; priceMin: string } | null;
+        alternates: Array<{ priceMin: string }>;
+        pending: Array<{ priceMin: string }>;
+        reports: number;
+      }>;
+    };
+  };
 
-  expect(body.data.priceByTier).toHaveLength(2)
-  const [gaBlock, vipBlock] = body.data.priceByTier
-  expect(gaBlock?.tier).toBe('GA')
-  expect(gaBlock?.headline?.priceMin).toBe('40') // boxoffice leads
-  expect(gaBlock?.alternates).toHaveLength(1)
-  expect(gaBlock?.alternates[0]?.priceMin).toBe('50')
-  expect(gaBlock?.reports).toBe(2)
-  expect(vipBlock?.tier).toBe('VIP')
-  expect(vipBlock?.headline).toBeNull()
-  expect(vipBlock?.pending).toHaveLength(1)
-  expect(vipBlock?.pending[0]?.priceMin).toBe('120')
-  expect(vipBlock?.reports).toBe(1)
-})
+  expect(body.data.priceByTier).toHaveLength(2);
+  const [gaBlock, vipBlock] = body.data.priceByTier;
+  expect(gaBlock?.tier).toBe('GA');
+  expect(gaBlock?.headline?.priceMin).toBe('40'); // boxoffice leads
+  expect(gaBlock?.alternates).toHaveLength(1);
+  expect(gaBlock?.alternates[0]?.priceMin).toBe('50');
+  expect(gaBlock?.reports).toBe(2);
+  expect(vipBlock?.tier).toBe('VIP');
+  expect(vipBlock?.headline).toBeNull();
+  expect(vipBlock?.pending).toHaveLength(1);
+  expect(vipBlock?.pending[0]?.priceMin).toBe('120');
+  expect(vipBlock?.reports).toBe(1);
+});
 
 it('priceByTier is empty array when event has no submissions', async () => {
-  const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
+  const venue = await seedVenue({ name: 'Empty Venue', slug: 'empty-venue' });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
 
-  const res = await app.request(`/v1/events/${event.id}`)
+  const res = await app.request(`/v1/events/${event.id}`);
   const body = (await res.json()) as {
-    data: { priceByTier: unknown[] }
-  }
-  expect(body.data.priceByTier).toEqual([])
-})
+    data: { priceByTier: unknown[] };
+  };
+  expect(body.data.priceByTier).toEqual([]);
+});
 ```
 
 The `seedUserProfile` helper must accept a string userId. Verify the signature in `apps/api/src/test/helpers/seed.ts` and adjust the test if the helper signature differs.
@@ -1114,7 +1118,7 @@ In `apps/api/src/routes/events.ts`, after the existing pending-submissions block
 First, add the import at the top of the file:
 
 ```typescript
-import { aggregateByTier } from '../lib/price-aggregation/index.js'
+import { aggregateByTier } from '../lib/price-aggregation/index.js';
 ```
 
 Replace the existing `if (row.priceSource === 'community') { ... }` and pending-gate blocks with a unified aggregation that builds three datasets:
@@ -1152,7 +1156,7 @@ const corroboratedRows = await db
       eq(priceSubmissions.eventId, id),
       eq(priceSubmissions.status, 'corroborated'),
     ),
-  )
+  );
 
 const pendingRows = await db
   .select({
@@ -1174,10 +1178,10 @@ const pendingRows = await db
       eq(priceSubmissions.eventId, id),
       eq(priceSubmissions.status, 'pending'),
     ),
-  )
+  );
 
 // Counter-submissions = pending rows that point at a corroborated parent.
-const corroboratedIds = new Set(corroboratedRows.map((row) => row.id))
+const corroboratedIds = new Set(corroboratedRows.map((row) => row.id));
 const counterRows = pendingRows
   .filter(
     (row) =>
@@ -1192,7 +1196,7 @@ const counterRows = pendingRows
     priceMax: row.priceMax,
     userId: row.userId,
     createdAt: row.createdAt,
-  }))
+  }));
 
 // True pending = pending rows that are NOT counters (counters are surfaced
 // via the headline's counterSubmission field, not the tier's pending list).
@@ -1200,7 +1204,7 @@ const truePendingRows = pendingRows.filter(
   (row) =>
     row.disputedSubmissionId === null ||
     !corroboratedIds.has(row.disputedSubmissionId),
-)
+);
 
 // Batch handle lookups across every userId surfaced in any block.
 const allUserIds = Array.from(
@@ -1211,15 +1215,15 @@ const allUserIds = Array.from(
       ...counterRows.map((row) => row.userId),
     ].filter((uid): uid is string => uid !== null),
   ),
-)
-const handles = new Map<string, string>()
+);
+const handles = new Map<string, string>();
 if (allUserIds.length > 0) {
   const profiles = await db
     .select({ userId: userProfiles.userId, handle: userProfiles.handle })
     .from(userProfiles)
-    .where(inArray(userProfiles.userId, allUserIds))
+    .where(inArray(userProfiles.userId, allUserIds));
   for (const profile of profiles) {
-    if (profile.handle !== null) handles.set(profile.userId, profile.handle)
+    if (profile.handle !== null) handles.set(profile.userId, profile.handle);
   }
 }
 
@@ -1227,8 +1231,8 @@ if (allUserIds.length > 0) {
 const allSubIds = [
   ...corroboratedRows.map((row) => row.id),
   ...truePendingRows.map((row) => row.id),
-]
-const confirmsBySubmissionId = new Map<string, number>()
+];
+const confirmsBySubmissionId = new Map<string, number>();
 if (allSubIds.length > 0) {
   const confirmCounts = await db
     .select({
@@ -1237,9 +1241,9 @@ if (allSubIds.length > 0) {
     })
     .from(submissionConfirms)
     .where(inArray(submissionConfirms.submissionId, allSubIds))
-    .groupBy(submissionConfirms.submissionId)
+    .groupBy(submissionConfirms.submissionId);
   for (const confirm of confirmCounts) {
-    confirmsBySubmissionId.set(confirm.submissionId, confirm.total)
+    confirmsBySubmissionId.set(confirm.submissionId, confirm.total);
   }
 }
 
@@ -1253,10 +1257,10 @@ const reportRowsByTier = await db
   })
   .from(priceSubmissions)
   .where(eq(priceSubmissions.eventId, id))
-  .groupBy(priceSubmissions.tier)
-const reportsByTier = new Map<Tier, number>()
+  .groupBy(priceSubmissions.tier);
+const reportsByTier = new Map<Tier, number>();
 for (const reportRow of reportRowsByTier) {
-  reportsByTier.set(reportRow.tier, reportRow.total)
+  reportsByTier.set(reportRow.tier, reportRow.total);
 }
 
 const confirmsNeeded = isImminentEvent(
@@ -1264,7 +1268,7 @@ const confirmsNeeded = isImminentEvent(
   SP_POLICY.imminentThresholdDays,
 )
   ? SP_POLICY.confirmsRequiredImminent
-  : SP_POLICY.confirmsRequired
+  : SP_POLICY.confirmsRequired;
 
 const priceByTier = aggregateByTier({
   corroborated: corroboratedRows.map((row) => ({
@@ -1289,7 +1293,7 @@ const priceByTier = aggregateByTier({
   reportsByTier,
   confirmsNeeded,
   viewerUserId: authInfo?.userId ?? null,
-})
+});
 ```
 
 Then keep the existing flat-field derivation (`priceVendor`, `priceSubmitterHandle`, `priceObservedAt`, `priceApprovalKind`, `priceApprovedAt`, `priceAlternates`, `priceConfirmsCount`, `counterSubmission`) so PR 4 has the migration buffer. **The flat derivation must be left intact** — re-derive from `corroboratedRows`/`truePendingRows` instead of running a second query, but the produced shape is unchanged.
@@ -1316,13 +1320,13 @@ return ctx.json({
     priceByTier,
     soldOutReport,
   },
-})
+});
 ```
 
 Required imports already in the file: `Tier` is not yet imported — add to the existing `import { ... } from '@concert-crawl/types'` line:
 
 ```typescript
-import { SP_POLICY, type Tier } from '@concert-crawl/types'
+import { SP_POLICY, type Tier } from '@concert-crawl/types';
 ```
 
 - [ ] **Step 4: Run integration test to verify it passes**
@@ -1370,19 +1374,19 @@ Append to `apps/api/src/routes/events.integration.test.ts`:
 
 ```typescript
 it('pendingSubmissions is populated even when a corroborated price exists', async () => {
-  const venue = await seedVenue({ name: 'Test', slug: 'pending-always' })
+  const venue = await seedVenue({ name: 'Test', slug: 'pending-always' });
   const event = await seedEvent(venue.id, {
     date: '2027-06-01',
     ticketPriceMin: '30',
     priceSource: 'community',
-  })
+  });
 
   const profileA = await seedUserProfile('user-corrob', {
     handle: 'corrob-fan',
-  })
+  });
   const profileB = await seedUserProfile('user-pending', {
     handle: 'pending-fan',
-  })
+  });
 
   // Corroborated GA at $30 — historically would suppress pendingSubmissions
   await seedPriceSubmission(event.id, profileA.userId, {
@@ -1391,7 +1395,7 @@ it('pendingSubmissions is populated even when a corroborated price exists', asyn
     sourceCategory: 'standard',
     priceMin: '30',
     status: 'corroborated',
-  })
+  });
   // Pending VIP at $90 — a different tier, should always surface
   await seedPriceSubmission(event.id, profileB.userId, {
     tier: 'VIP',
@@ -1399,18 +1403,18 @@ it('pendingSubmissions is populated even when a corroborated price exists', asyn
     sourceCategory: 'standard',
     priceMin: '90',
     status: 'pending',
-  })
+  });
 
-  const res = await app.request(`/v1/events/${event.id}`)
+  const res = await app.request(`/v1/events/${event.id}`);
   const body = (await res.json()) as {
     data: {
-      pendingSubmissions: Array<{ tier: string; priceMin: string }> | null
-    }
-  }
-  expect(body.data.pendingSubmissions).not.toBeNull()
-  expect(body.data.pendingSubmissions).toHaveLength(1)
-  expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP')
-})
+      pendingSubmissions: Array<{ tier: string; priceMin: string }> | null;
+    };
+  };
+  expect(body.data.pendingSubmissions).not.toBeNull();
+  expect(body.data.pendingSubmissions).toHaveLength(1);
+  expect(body.data.pendingSubmissions?.[0]?.tier).toBe('VIP');
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1439,29 +1443,29 @@ Replace with an unconditional pending-population block. The simplest path: now t
 // alongside corroborated ones, so the gate hid legitimately distinct price
 // claims.
 let pendingSubmissions: Array<{
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
-  note: string | null
-  submitterHandle: string | null
-  submittedAt: string
-  confirmsCount: number
-  confirmsNeeded: number
-  isSubmitter: boolean
-}> | null = null
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: 'boxoffice' | 'standard' | 'resale' | null;
+  note: string | null;
+  submitterHandle: string | null;
+  submittedAt: string;
+  confirmsCount: number;
+  confirmsNeeded: number;
+  isSubmitter: boolean;
+}> | null = null;
 
 if (truePendingRows.length > 0) {
   // Reuse the same VenueBoxOffice-first ordering as before.
   const ordered = [...truePendingRows].sort((left, right) => {
-    const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1
-    const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1
-    if (leftBox !== rightBox) return leftBox - rightBox
-    return right.createdAt.getTime() - left.createdAt.getTime()
-  })
+    const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1;
+    const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1;
+    if (leftBox !== rightBox) return leftBox - rightBox;
+    return right.createdAt.getTime() - left.createdAt.getTime();
+  });
   pendingSubmissions = ordered.map((sub) => ({
     id: sub.id,
     priceMin: sub.priceMin,
@@ -1477,7 +1481,7 @@ if (truePendingRows.length > 0) {
     confirmsCount: confirmsBySubmissionId.get(sub.id) ?? 0,
     confirmsNeeded,
     isSubmitter: sub.userId === authInfo?.userId,
-  }))
+  }));
 }
 ```
 
@@ -1538,13 +1542,13 @@ Append a new test to `apps/api/src/routes/submissions.integration.test.ts` (insi
 
 ```typescript
 it('inherits vendor from parent when dispute body omits it', async () => {
-  const venue = await seedVenue({ name: 'Test', slug: 'dispute-inherit' })
-  const event = await seedEvent(venue.id, { date: '2027-06-01' })
+  const venue = await seedVenue({ name: 'Test', slug: 'dispute-inherit' });
+  const event = await seedEvent(venue.id, { date: '2027-06-01' });
 
-  const submitter = await seedUserProfile('submitter', { handle: 'sub' })
+  const submitter = await seedUserProfile('submitter', { handle: 'sub' });
   const challenger = await seedUserProfile('challenger', {
     handle: 'chal',
-  })
+  });
 
   const parent = await seedPriceSubmission(event.id, submitter.userId, {
     tier: 'GA',
@@ -1552,7 +1556,7 @@ it('inherits vendor from parent when dispute body omits it', async () => {
     sourceCategory: 'standard',
     priceMin: '40',
     status: 'corroborated',
-  })
+  });
 
   // Dispute body omits vendor — server must inherit AXS from parent.
   const res = await app.request(`/v1/submissions/${parent.id}/dispute`, {
@@ -1562,18 +1566,18 @@ it('inherits vendor from parent when dispute body omits it', async () => {
       authorization: makeAuthHeader(challenger.userId),
     },
     body: JSON.stringify({ floor: 35 }),
-  })
+  });
 
-  expect(res.status).toBe(201)
+  expect(res.status).toBe(201);
   const body = (await res.json()) as {
-    success: boolean
-    data: { vendor: string; tier: string; sourceCategory: string | null }
-  }
-  expect(body.success).toBe(true)
-  expect(body.data.vendor).toBe('AXS')
-  expect(body.data.tier).toBe('GA')
-  expect(body.data.sourceCategory).toBe('standard')
-})
+    success: boolean;
+    data: { vendor: string; tier: string; sourceCategory: string | null };
+  };
+  expect(body.success).toBe(true);
+  expect(body.data.vendor).toBe('AXS');
+  expect(body.data.tier).toBe('GA');
+  expect(body.data.sourceCategory).toBe('standard');
+});
 ```
 
 (Adapt `makeAuthHeader` to whatever the existing dispute tests use for authenticating as a non-parent user — check the file for the existing pattern.)
@@ -1607,7 +1611,7 @@ const disputeBodySchema = z
   .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
     message: "Ceiling can't be below floor.",
     path: ['ceiling'],
-  })
+  });
 ```
 
 Change `vendor` to `.optional()`:
@@ -1634,21 +1638,21 @@ const disputeBodySchema = z
   .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
     message: "Ceiling can't be below floor.",
     path: ['ceiling'],
-  })
+  });
 ```
 
 And in the dispute handler, replace:
 
 ```typescript
-const { floor, ceiling, vendor } = ctx.req.valid('json')
+const { floor, ceiling, vendor } = ctx.req.valid('json');
 ```
 
 …with the inheriting version (after `parent` has been loaded):
 
 ```typescript
-const { floor, ceiling, vendor: vendorOverride } = ctx.req.valid('json')
+const { floor, ceiling, vendor: vendorOverride } = ctx.req.valid('json');
 // ...later, after `if (!parent) { ... }` and the self-dispute guard:
-const vendor = vendorOverride ?? parent.vendor
+const vendor = vendorOverride ?? parent.vendor;
 ```
 
 Move the `vendor` declaration so it lands between the parent-load and the `db.transaction(...)` call. The transaction insert continues to read `vendor` from this resolved value — no further changes needed.

@@ -14,7 +14,7 @@
 
 The review page is an **SSR server component** that fetches initial data before rendering:
 
-- **Initial data (above-the-fold):** 
+- **Initial data (above-the-fold):**
   - Unverified event flags: `GET /v1/admin/events?verified=false&limit=20` → `EventFlag[]`
   - Pending price submissions: `GET /v1/admin/prices/submissions` → `PriceSubmission[]`
   - Tab counts: `GET /v1/admin/review/counts` → `{ eventFlags, prices, missing }`
@@ -25,28 +25,29 @@ The review page is an **SSR server component** that fetches initial data before 
 
 **PendingSubmissionsPanel** (`apps/web/src/components/admin/review/PendingSubmissionsPanel.tsx:29–200`) renders submissions in a grid:
 
-| Column | Field(s) | Format |
-|--------|----------|--------|
+| Column            | Field(s)                                                     | Format                                     |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------ |
 | Event info + user | `eventTitle`, `venueName`, `eventDate`, `userHandle`, `note` | Title · venue · date, clickable ticket URL |
-| Price | `priceMin`, `priceMax` | `$100` or `$100–$200` |
-| Time | `createdAt` | Relative time ("5m ago") via `RelTime` |
-| Actions | `id` | Approve (✓), Deny (✗) buttons |
+| Price             | `priceMin`, `priceMax`                                       | `$100` or `$100–$200`                      |
+| Time              | `createdAt`                                                  | Relative time ("5m ago") via `RelTime`     |
+| Actions           | `id`                                                         | Approve (✓), Deny (✗) buttons              |
 
 **Fields in PriceSubmission interface** (`apps/web/src/components/admin/review/ReviewPageClient.tsx:40–53`):
+
 ```typescript
 interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string | null
-  priceMax: string | null
-  note?: string | null
-  status: string
-  createdAt: string
-  eventTitle: string | null
-  eventDate: string | null
-  ticketUrl: string | null
-  venueName: string | null
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string | null;
+  priceMax: string | null;
+  note?: string | null;
+  status: string;
+  createdAt: string;
+  eventTitle: string | null;
+  eventDate: string | null;
+  ticketUrl: string | null;
+  venueName: string | null;
 }
 ```
 
@@ -55,6 +56,7 @@ interface PriceSubmission {
 ### Approve/Reject Flow
 
 Handlers are passed as props to `PendingSubmissionsPanel`:
+
 - `onApprove(id)` → `PATCH /v1/admin/prices/submissions/:id` with `{ status: 'corroborated' }`
 - `onDeny(id)` → `PATCH /v1/admin/prices/submissions/:id` with `{ status: 'disputed' | 'stale' }`
 
@@ -99,6 +101,7 @@ AdminLayout (server component)
 **Location:** `apps/web/src/components/admin/shell/nav.ts` (15–75)
 
 Current routes (in order):
+
 1. Dashboard (`/admin`)
 2. Venues (`/admin/venues`)
 3. Crawl (`/admin/crawl`) — badge: danger
@@ -115,8 +118,9 @@ To add a new admin page (e.g., contest-review):
 1. Create route file: `apps/web/src/app/(protected)/admin/contests/page.tsx`
    - Import `requireAdminUser()` at top
    - Use `AdminLayout` will wrap it automatically
-   
+
 2. Add nav entry to `NAV_V2` in `nav.ts`:
+
    ```typescript
    {
      key: 'contests',
@@ -131,6 +135,7 @@ To add a new admin page (e.g., contest-review):
 3. Badge count is dynamic. The spec extends the existing `/v1/admin/review/counts` endpoint (mounted in `apps/api/src/routes/admin/index.ts` — grep for `'/review/counts'` to find the current handler) to add a `priceContests` field. `apps/web/src/app/(protected)/admin/layout.tsx` already fetches that endpoint via `apiClient.get<ReviewCounts>('/v1/admin/review/counts', token)` — but does NOT auto-pick-up new fields: the sidebar's `pendingReview` total is an explicit sum of `eventFlags + prices + missing` (~lines 58–61). To make the new tab's count roll up into the sidebar badge, this PR extends BOTH the `ReviewCounts` shape (to include `priceContests`) AND the `pendingReview` sum in `layout.tsx`. Do NOT add a separate `/contests/counts` endpoint.
 
 **All admin routes inherit:**
+
 - Clerk auth middleware
 - Admin role check
 - Theme provider
@@ -145,6 +150,7 @@ To add a new admin page (e.g., contest-review):
 ### PATCH `/v1/admin/prices/submissions/:id`
 
 **Schema:**
+
 ```typescript
 {
   status: enum['corroborated', 'disputed', 'stale']
@@ -152,6 +158,7 @@ To add a new admin page (e.g., contest-review):
 ```
 
 **Transaction Logic:**
+
 1. Lock-for-update fetch: `SELECT id, status, userId, eventId, priceMin, priceMax FROM price_submissions WHERE id = :id`
 2. Update status → new value
 3. If `status === 'corroborated'` AND was not already corroborated:
@@ -160,24 +167,28 @@ To add a new admin page (e.g., contest-review):
 4. Return updated row
 
 **Audit fields set** (grep `auditAction` in `prices.ts` for the current location):
+
 ```typescript
-ctx.set('auditActorId', getAuthUser(ctx).userId)
-ctx.set('auditAction', 'price.submission.update')
-ctx.set('auditTargetId', id)
+ctx.set('auditActorId', getAuthUser(ctx).userId);
+ctx.set('auditAction', 'price.submission.update');
+ctx.set('auditTargetId', id);
 ```
 
 **Status transitions allowed:**
+
 - `pending` → `corroborated`, `disputed`, `stale`
 - **No atomicity for parent+challenger rows** — this endpoint only modifies one row at a time
 
 ### Related Price-Submission Endpoints
 
 **GET `/v1/admin/prices/submissions`** (195–243)
+
 - Query params: `count` (true→ pagination), `status` (pending|all), `limit`, `offset`
 - Returns: Array of submissions with event/venue context
 - Default: `status=pending` (ongoing review queue only)
 
 **POST `/v1/admin/prices/submissions`** (370–422)
+
 - Admin manually enters a price (corroborated tier GA)
 - Payload: `eventId, priceMin, priceMax, vendor, howFound`
 - Writes to `price_submissions` with status='corroborated' immediately
@@ -185,6 +196,7 @@ ctx.set('auditTargetId', id)
 - Audit: `price.submission.admin_add`
 
 **POST `/v1/admin/prices/pipeline/:eventId`** (426–475)
+
 - On-demand price pipeline run
 - Returns 202 + message "Pipeline started"
 - Audit: `price.pipeline.run`
@@ -192,6 +204,7 @@ ctx.set('auditTargetId', id)
 ### No Existing Contest-Resolution Endpoints
 
 The prices API does **not** have:
+
 - A bulk operation for resolving contests
 - Parent+challenger atomicity
 - Parent submission marking with contest outcomes
@@ -230,19 +243,19 @@ priceSubmissions = pgTable('price_submissions', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 ### Key Fields for Contests
 
-| Field | Type | Purpose |
-|-------|------|---------|
-| `disputedSubmissionId` | UUID fk | Parent submission being disputed; NULL if this is the parent |
-| `status` | enum | pending, corroborated, disputed, stale |
-| `corroborationCount` | int | Number of users who confirmed this price (submitter counts as #1) |
-| `note` | varchar(280) | Submitter-provided free-text on submission insert (content-moderated server-side). Distinct from admin's archive reason — that lands on the new `archived_reason` column added in migration 0041. |
-| `tier` | enum | GA, Reserved, VIP, Pit, Lawn |
-| `vendor` | enum | AXS, Ticketmaster, SeatGeek, DICE, Eventbrite, VenueBoxOffice |
+| Field                  | Type         | Purpose                                                                                                                                                                                           |
+| ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `disputedSubmissionId` | UUID fk      | Parent submission being disputed; NULL if this is the parent                                                                                                                                      |
+| `status`               | enum         | pending, corroborated, disputed, stale                                                                                                                                                            |
+| `corroborationCount`   | int          | Number of users who confirmed this price (submitter counts as #1)                                                                                                                                 |
+| `note`                 | varchar(280) | Submitter-provided free-text on submission insert (content-moderated server-side). Distinct from admin's archive reason — that lands on the new `archived_reason` column added in migration 0041. |
+| `tier`                 | enum         | GA, Reserved, VIP, Pit, Lawn                                                                                                                                                                      |
+| `vendor`               | enum         | AXS, Ticketmaster, SeatGeek, DICE, Eventbrite, VenueBoxOffice                                                                                                                                     |
 
 ### Status Enum
 
@@ -264,16 +277,15 @@ submissionConfirms = pgTable('submission_confirms', {
     .notNull()
     .references(() => priceSubmissions.id, { onDelete: 'cascade' }),
   userId: text('user_id').notNull(),
-  method: text('method')
-    .notNull()
-    .default('same-vendor'),
+  method: text('method').notNull().default('same-vendor'),
   confirmedAt: timestamp('confirmed_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 Constraints:
+
 - Unique on `(submissionId, userId)` — one confirm per user per submission
 - `method` values: `same-vendor`, `other-vendor`, `box-office`
 
@@ -299,7 +311,7 @@ auditLog = pgTable('audit_log', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 ### Middleware Pattern
@@ -310,15 +322,15 @@ All admin routes write audit logs automatically via **post-response middleware**
 
 ```typescript
 adminRouter.use('*', async (ctx, next) => {
-  await next()
+  await next();
 
   // Only write audit log for mutating requests (non-GET/HEAD/OPTIONS)
-  if (['GET', 'HEAD', 'OPTIONS'].includes(ctx.req.method)) return
+  if (['GET', 'HEAD', 'OPTIONS'].includes(ctx.req.method)) return;
 
-  const action = ctx.get('auditAction')
-  const targetId = ctx.get('auditTargetId')
-  const actorId = ctx.get('auditActorId')
-  const auditMeta = ctx.get('auditMeta') ?? null
+  const action = ctx.get('auditAction');
+  const targetId = ctx.get('auditTargetId');
+  const actorId = ctx.get('auditActorId');
+  const auditMeta = ctx.get('auditMeta') ?? null;
 
   if (action && actorId) {
     try {
@@ -327,32 +339,39 @@ adminRouter.use('*', async (ctx, next) => {
         action,
         targetId: targetId ?? null,
         metadata: auditMeta,
-      })
+      });
     } catch (error) {
-      console.error('Failed to write admin audit log', { actorId, action, targetId, error })
+      console.error('Failed to write admin audit log', {
+        actorId,
+        action,
+        targetId,
+        error,
+      });
     }
   }
-})
+});
 ```
 
 **To write an audit entry, set context vars before returning:**
 
 ```typescript
-ctx.set('auditActorId', userId)           // Required
-ctx.set('auditAction', 'entity.action')   // Required (e.g., 'price.submission.update')
-ctx.set('auditTargetId', resourceId)      // Optional
-ctx.set('auditMeta', { reason, before, after }) // Optional
-return ctx.json({ success: true, data })
+ctx.set('auditActorId', userId); // Required
+ctx.set('auditAction', 'entity.action'); // Required (e.g., 'price.submission.update')
+ctx.set('auditTargetId', resourceId); // Optional
+ctx.set('auditMeta', { reason, before, after }); // Optional
+return ctx.json({ success: true, data });
 ```
 
 ### Existing Action Types
 
 **Price endpoints:**
+
 - `price.submission.update` (approve/reject) — line 325 in prices.ts
 - `price.submission.admin_add` (admin manual entry) — line 418 in prices.ts
 - `price.pipeline.run` (on-demand pipeline) — line 468 in prices.ts
 
 **Event endpoints:**
+
 - `event.report.resolve` (resolve event status report)
 - `event.bulk_auto_approve` (batch event approval)
 - `event.verify` (verify event)
@@ -364,16 +383,16 @@ return ctx.json({ success: true, data })
 For contest-review endpoints, follow the same pattern:
 
 ```typescript
-ctx.set('auditActorId', adminUser.userId)
-ctx.set('auditAction', 'contest.resolve') // or 'contest.approve_parent', etc.
-ctx.set('auditTargetId', parentSubmissionId)
+ctx.set('auditActorId', adminUser.userId);
+ctx.set('auditAction', 'contest.resolve'); // or 'contest.approve_parent', etc.
+ctx.set('auditTargetId', parentSubmissionId);
 ctx.set('auditMeta', {
   parentId: parentSubmissionId,
   challengerId: challengerSubmissionId,
   resolution: 'parent_wins' | 'challenger_wins',
   parentBefore: { status, price },
   parentAfter: { status, price },
-})
+});
 ```
 
 ---
@@ -386,20 +405,20 @@ ctx.set('auditMeta', {
 
 ```typescript
 export interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  disputedSubmissionId: string | null
-  status: 'pending' | 'corroborated' | 'disputed' | 'stale'
-  corroborationCount: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  disputedSubmissionId: string | null;
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale';
+  corroborationCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 ```
 
@@ -415,9 +434,10 @@ export interface PriceSubmission {
 ### Type Location
 
 - **DB-inferred types** defined in `packages/db/src/schema/prices.ts` (lines 121–126):
+
   ```typescript
-  export type PriceSubmission = typeof priceSubmissions.$inferSelect
-  export type NewPriceSubmission = typeof priceSubmissions.$inferInsert
+  export type PriceSubmission = typeof priceSubmissions.$inferSelect;
+  export type NewPriceSubmission = typeof priceSubmissions.$inferInsert;
   ```
 
 - **Shared API types** in `packages/types/src/index.ts` — this is what consumers/API handlers use
@@ -434,7 +454,7 @@ Both should stay in sync. The shared type is the contract; if DB schema changes,
 
 - **Purpose:** Consumer UI for disputing a corroborated price
 - **Input:** A `PriceSubmission` object + `eventId`
-- **Form fields:** 
+- **Form fields:**
   - Floor (required): $1–$2,000
   - Ceiling (optional): $1–$2,000, must be ≥ floor
   - Vendor (required): 6 choices (AXS, Ticketmaster, etc.)
@@ -494,22 +514,23 @@ Event Detail Page
    - Handler: `PATCH /v1/admin/prices/submissions/:id` with `{ status: 'corroborated' }`
 
 2. **Server-side transaction** (`apps/api/src/routes/admin/prices.ts:258–330`):
+
    ```
    BEGIN TRANSACTION
-     SELECT id, status, userId, eventId, priceMin, priceMax FROM price_submissions 
+     SELECT id, status, userId, eventId, priceMin, priceMax FROM price_submissions
        WHERE id = :id FOR UPDATE
-     
-     UPDATE price_submissions 
+
+     UPDATE price_submissions
        SET status = 'corroborated', updated_at = NOW()
        WHERE id = :id
        RETURNING *
-     
+
      IF status was 'pending' (not already corroborated):
-       UPDATE user_roles 
-         SET price_cred_score = price_cred_score + 1 
+       UPDATE user_roles
+         SET price_cred_score = price_cred_score + 1
          WHERE user_id = :userId
-       
-       UPDATE events 
+
+       UPDATE events
          SET ticket_price_min = :priceMin, ticket_price_max = :priceMax, price_source = 'community'
          WHERE id = :eventId
    COMMIT
@@ -545,12 +566,14 @@ Event Detail Page
 The recon couldn't determine the following; the bridging spec will need to resolve:
 
 ### 1. Contest Queue Visibility
+
 - **Gap:** How does admin discover "there's a pending dispute on this submission"?
 - **Current:** Disputes exist in DB but don't surface to the review page yet
 - **Need:** New tab or filter on `/admin/review` to show disputed submissions + pending counter-submissions? Or separate `/admin/contests` route?
 - **Open:** Count endpoint — does `GET /v1/admin/review/counts` include a `disputes` or `contests` field?
 
 ### 2. Parent+Challenger Atomicity on Resolution
+
 - **Gap:** When admin approves the parent, what happens to the challenger submission?
 - **Options:**
   - Auto-reject the challenger?
@@ -559,6 +582,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - **Current:** PATCH endpoint only touches one row; no parent+challenger logic exists yet
 
 ### 3. UI Layout for Contest Display
+
 - **Gap:** How are parent + challenger shown together on the review page?
 - **Options:**
   - Expandable row showing parent + all disputed children?
@@ -567,6 +591,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - **Current:** PendingSubmissionsPanel shows flat list of submissions; no grouping
 
 ### 4. Admin Actions on Disputes
+
 - **Gap:** What are the possible admin outcomes?
 - **Options:**
   - Approve parent (reject challenger)?
@@ -577,6 +602,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - **Current:** Code supports corroborated/disputed/stale; no special contest outcomes
 
 ### 5. Counter-Submission Creation Today
+
 - **Resolved:** There are two distinct write paths with subtly different behavior:
   - **`POST /v1/submissions/:id/dispute`** (DisputeForm.tsx:87). No explicit `parent.status` check, BUT it flips the parent to `disputed` in the same transaction as the child insert (`apps/api/src/routes/submissions.ts:174–177`). Effectively initial-dispute path.
   - **`POST /v1/events/:eventId/price-submissions`** with `disputedSubmissionId` in body (CounterSubmitSheet.tsx:163). Server explicitly requires the referenced parent to have `status === 'corroborated'` (`apps/api/src/routes/price-submissions.ts:189`) and does NOT flip the parent — so today this is a SECOND initial-dispute path that leaves the parent's status field stuck on `corroborated` even though a pending counter exists against it. There is no codepath today that actually creates a "counter against an already-disputed parent" — the route name on CounterSubmitSheet is somewhat aspirational.
@@ -586,27 +612,32 @@ The recon couldn't determine the following; the bridging spec will need to resol
   - **Parent-flip consistency**: spec §4.6 also requires the `price-submissions.ts` route to flip the parent to `disputed` in the same transaction (matches the existing `submissions.ts` behavior), so the admin queue + consumer headline stay in agreement regardless of creation route. Even with that fix, the admin queue query is keyed off the pending counter row (`disputed_submission_id IS NOT NULL AND status='pending'`), not parent status — so legacy in-flight contests created before this PR (where parent may still be on `corroborated`) are still discoverable.
 
 ### 6. Partial Indexes for Contest Queries
+
 - **Gap:** DB has no indexed query for "all disputed submissions" or "submissions with disputed_submission_id IS NOT NULL"
 - **Current:** Schema only has basic indexes on event_id, created_at, status
 - **Impact:** Contest queue queries may be slow without optimization
 - **Need:** Should the migration include a partial index on `WHERE status = 'disputed'` or `WHERE disputed_submission_id IS NOT NULL`?
 
 ### 7. Audit Log Metadata for Contests
+
 - **Gap:** What metadata should be captured when resolving a contest?
 - **Current:** `price.submission.update` action doesn't include parent/child context
 - **Need:** Define `auditMeta` schema for contest-specific actions (e.g., `{ parentId, challengerId, resolution, reason }`)
 
 ### 8. Cred/Points for Dispute Winners
+
 - **Gap:** If a challenger's price is approved, should they gain cred?
 - **Current:** Only corroborated parents award +1 cred to submitter (line 301–304 in prices.ts)
 - **Need:** Define cred rules for contest outcomes (winner gets +2? Both get +1 for participation?)
 
 ### 9. Consumer Notification on Contest Outcome
+
 - **Gap:** When admin resolves a dispute, should the parent submitter and challenger both be notified?
 - **Current:** No notification triggers in existing code
 - **Need:** Notification policy for contest outcomes (admin action → user email/in-app alert?)
 
 ### 10. Bulk Contest Operations
+
 - **Gap:** Can admin resolve multiple contests at once (like bulk event approval)?
 - **Current:** PATCH endpoint only touches one row
 - **Need:** Design for bulk/batch contest resolution (if needed)
@@ -616,6 +647,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 ## Summary
 
 **Shipped admin conventions:**
+
 - ✅ Auth gate: `requireAdminUser()`
 - ✅ Layout: AdminShell + sidebar + responsive
 - ✅ Nav structure: Flat list, badge counts, two sections (operations / account)
@@ -624,6 +656,7 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - ✅ Audit log: Context vars → automatic insertion, post-response middleware
 
 **Contest data model available:**
+
 - ✅ `priceSubmissions.disputedSubmissionId` (FK to parent)
 - ✅ `priceSubmissions.status` enum (pending, corroborated, disputed, stale)
 - ✅ `priceSubmissions.corroborationCount` (observer count)
@@ -632,12 +665,14 @@ The recon couldn't determine the following; the bridging spec will need to resol
 - ⚠️ No contest-specific status values (relying on generic enum)
 
 **Admin API surface:**
+
 - ✅ `PATCH /v1/admin/prices/submissions/:id` — approve/reject
 - ✅ `GET /v1/admin/prices/submissions` — paginated queue
 - ⚠️ No contest-resolution endpoints yet
 - ⚠️ No parent+challenger atomicity
 
 **Consumer dispute flow exists:**
+
 - ✅ DisputeForm (floor/ceiling/vendor)
 - ✅ `POST /v1/submissions/:id/dispute` endpoint (creates disputed child)
 - ✅ Parent marked as status='disputed' automatically
@@ -646,10 +681,10 @@ The recon couldn't determine the following; the bridging spec will need to resol
 ---
 
 **Next step:** Spec author should use this reconnaissance to design:
+
 1. Contest queue visibility on admin/review (new tab? modal? separate route?)
 2. Parent+challenger atomicity rules (what happens on admin approval?)
 3. Admin outcome types (parent-wins? challenger-wins? merge?)
 4. Audit metadata schema for contest actions
 5. Notification policy for outcomes
 6. DB indexes for performance
-

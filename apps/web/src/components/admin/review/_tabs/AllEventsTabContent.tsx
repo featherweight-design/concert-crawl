@@ -1,62 +1,62 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
-import { ApiError } from '@/lib/api'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { Pagination } from '@/components/admin/primitives'
+import { useCallback, useEffect, useState } from 'react';
+import { ApiError } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { Pagination } from '@/components/admin/primitives';
 import {
   REVIEW_ALL_EVENTS_PAGE_SIZE,
   useInvalidateReviewQueries,
   useReviewAllEvents,
-} from '@/lib/queries/use-admin-review'
-import { EventsTable } from '../all/EventsTable'
-import { EventsMobileList } from '../all/EventsMobileList'
-import { EventsFilterBar } from '../all/EventsFilterBar'
-import { EventConfirmModal } from '../all/EventConfirmModal'
-import { BulkDock } from '../all/BulkDock'
-import { BulkDeleteConfirm } from '../all/BulkDeleteConfirm'
-import { BulkConfirmModal } from '../all/BulkConfirmModal'
-import { type EventRowActions } from '../all/EventRowMenu'
+} from '@/lib/queries/use-admin-review';
+import { EventsTable } from '../all/EventsTable';
+import { EventsMobileList } from '../all/EventsMobileList';
+import { EventsFilterBar } from '../all/EventsFilterBar';
+import { EventConfirmModal } from '../all/EventConfirmModal';
+import { BulkDock } from '../all/BulkDock';
+import { BulkDeleteConfirm } from '../all/BulkDeleteConfirm';
+import { BulkConfirmModal } from '../all/BulkConfirmModal';
+import { type EventRowActions } from '../all/EventRowMenu';
 import {
   EMPTY_FILTERS,
   filtersToFetchQuery,
   type AllEventsFilters,
   type AllEventsView,
   type PaginationState,
-} from '../all/filters'
-import { type AllEvent } from '../all/types'
+} from '../all/filters';
+import { type AllEvent } from '../all/types';
 
 export interface AllEventsApi {
-  verify: (event: AllEvent) => Promise<void>
-  unverify: (event: AllEvent) => Promise<void>
+  verify: (event: AllEvent) => Promise<void>;
+  unverify: (event: AllEvent) => Promise<void>;
   setStatus: (
     event: AllEvent,
     status: 'upcoming' | 'cancelled' | 'postponed',
-  ) => Promise<void>
-  markSoldOut: (event: AllEvent) => Promise<void>
-  markAvailable: (event: AllEvent) => Promise<void>
-  markNonConcert: (event: AllEvent) => Promise<void>
-  deleteEvent: (event: AllEvent) => Promise<void>
-  bulkUnverify: (ids: string[]) => Promise<void>
-  bulkMarkNonConcert: (ids: string[]) => Promise<void>
-  bulkMarkAsConcert: (ids: string[]) => Promise<void>
-  bulkDelete: (ids: string[]) => Promise<void>
+  ) => Promise<void>;
+  markSoldOut: (event: AllEvent) => Promise<void>;
+  markAvailable: (event: AllEvent) => Promise<void>;
+  markNonConcert: (event: AllEvent) => Promise<void>;
+  deleteEvent: (event: AllEvent) => Promise<void>;
+  bulkUnverify: (ids: string[]) => Promise<void>;
+  bulkMarkNonConcert: (ids: string[]) => Promise<void>;
+  bulkMarkAsConcert: (ids: string[]) => Promise<void>;
+  bulkDelete: (ids: string[]) => Promise<void>;
 }
 
-type BulkKind = 'unverify' | 'non-concert' | 'mark-as-concert' | 'delete'
+type BulkKind = 'unverify' | 'non-concert' | 'mark-as-concert' | 'delete';
 
-const BULK_COPY = ADMIN_COPY.review.allEvents
+const BULK_COPY = ADMIN_COPY.review.allEvents;
 
 export interface AllEventsTabContentProps {
-  isDesktop: boolean
-  onRowClick: (id: string) => void
-  onEdit?: (event: AllEvent) => void
-  onViewDetail?: (event: AllEvent) => void
-  api?: AllEventsApi
-  filters?: AllEventsFilters
-  onFiltersChange?: (next: AllEventsFilters) => void
-  pagination?: PaginationState
-  onPaginationChange?: (next: PaginationState) => void
+  isDesktop: boolean;
+  onRowClick: (id: string) => void;
+  onEdit?: (event: AllEvent) => void;
+  onViewDetail?: (event: AllEvent) => void;
+  api?: AllEventsApi;
+  filters?: AllEventsFilters;
+  onFiltersChange?: (next: AllEventsFilters) => void;
+  pagination?: PaginationState;
+  onPaginationChange?: (next: PaginationState) => void;
 }
 
 const Skeleton = () => (
@@ -85,13 +85,13 @@ const Skeleton = () => (
       />
     ))}
   </div>
-)
+);
 
 const VIEW_EMPTY_HEADINGS: Record<Exclude<AllEventsView, 'all'>, string> = {
   'hidden-flagged-for-review':
     ADMIN_COPY.review.allEvents.filters.flaggedChipEmpty,
   'non-concert': ADMIN_COPY.review.allEvents.filters.nonConcertChipEmpty,
-}
+};
 
 const EmptyState = ({ view }: { view: AllEventsView }) => (
   <div
@@ -129,14 +129,14 @@ const EmptyState = ({ view }: { view: AllEventsView }) => (
       </div>
     )}
   </div>
-)
+);
 
-const noopFiltersChange = (_next: AllEventsFilters): void => undefined
-const noopPaginationChange = (_next: PaginationState): void => undefined
+const noopFiltersChange = (_next: AllEventsFilters): void => undefined;
+const noopPaginationChange = (_next: PaginationState): void => undefined;
 const DEFAULT_PAGINATION: PaginationState = {
   page: 1,
   pageSize: REVIEW_ALL_EVENTS_PAGE_SIZE,
-}
+};
 
 export const AllEventsTabContent = ({
   isDesktop,
@@ -151,34 +151,34 @@ export const AllEventsTabContent = ({
 }: AllEventsTabContentProps) => {
   // Local error state for mutation failures (network errors from the `api`
   // prop). Fetch errors come straight out of `useQuery` below.
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{
-    kind: 'delete' | 'non-concert'
-    event: AllEvent
-  } | null>(null)
-  const [confirmPending, setConfirmPending] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [bulkConfirm, setBulkConfirm] = useState<BulkKind | null>(null)
-  const [bulkPending, setBulkPending] = useState(false)
+    kind: 'delete' | 'non-concert';
+    event: AllEvent;
+  } | null>(null);
+  const [confirmPending, setConfirmPending] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState<BulkKind | null>(null);
+  const [bulkPending, setBulkPending] = useState(false);
 
-  const query = useReviewAllEvents(filters, pagination)
-  const invalidate = useInvalidateReviewQueries()
+  const query = useReviewAllEvents(filters, pagination);
+  const invalidate = useInvalidateReviewQueries();
 
-  const events: AllEvent[] = query.data?.rows ?? []
-  const total = query.data?.total ?? 0
+  const events: AllEvent[] = query.data?.rows ?? [];
+  const total = query.data?.total ?? 0;
 
   // Filter changes (vs page changes) clear the selection — selections are
   // keyed by id, so they survive paging but can't span a re-filtered set.
   // The pagination component, by contrast, only changes `pagination.page` /
   // `pagination.pageSize` and leaves the filter fingerprint untouched.
-  const filterQuery = filtersToFetchQuery(filters)
+  const filterQuery = filtersToFetchQuery(filters);
   useEffect(() => {
-    setSelectedIds(new Set())
+    setSelectedIds(new Set());
     // Stale mutation errors from the previous filter set don't apply to the
     // new dataset — clear them so a successful filter change doesn't leave
     // an unrelated banner up.
-    setActionError(null)
-  }, [filterQuery])
+    setActionError(null);
+  }, [filterQuery]);
 
   // Filter changes forward straight to `onFiltersChange`. Resetting the
   // pager to page 1 is the parent's responsibility — ReviewPageClient
@@ -187,145 +187,145 @@ export const AllEventsTabContent = ({
   // that, Pagination's clamp-sync effect catches it on the next render.
   const onFilterUpdate = useCallback(
     (next: AllEventsFilters) => {
-      onFiltersChange(next)
+      onFiltersChange(next);
     },
     [onFiltersChange],
-  )
+  );
 
   const refresh = useCallback(() => {
-    setSelectedIds(new Set())
-    void invalidate.allEvents()
-  }, [invalidate])
+    setSelectedIds(new Set());
+    void invalidate.allEvents();
+  }, [invalidate]);
 
   const toggleSelected = useCallback((id: string) => {
     setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const toggleAll = useCallback(
     (nextAll: boolean) => {
-      if (nextAll) setSelectedIds(new Set(events.map((event) => event.id)))
-      else setSelectedIds(new Set())
+      if (nextAll) setSelectedIds(new Set(events.map((event) => event.id)));
+      else setSelectedIds(new Set());
     },
     [events],
-  )
+  );
 
-  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const runApi = useCallback(
     async (fn: () => Promise<void>): Promise<void> => {
-      setActionError(null)
+      setActionError(null);
       try {
-        await fn()
-        refresh()
+        await fn();
+        refresh();
       } catch (apiErr) {
         const message =
           apiErr instanceof ApiError
             ? apiErr.message
-            : 'Failed to apply the change.'
-        console.error('AllEventsTabContent action error:', apiErr)
-        setActionError(message)
+            : 'Failed to apply the change.';
+        console.error('AllEventsTabContent action error:', apiErr);
+        setActionError(message);
       }
     },
     [refresh],
-  )
+  );
 
   const rowActions: EventRowActions = {
     onViewDetail: (event) => onViewDetail?.(event),
     onEdit: (event) => onEdit?.(event),
     onVerify: (event) => {
-      if (api) void runApi(() => api.verify(event))
+      if (api) void runApi(() => api.verify(event));
     },
     onSendBackToReview: (event) => {
-      if (api) void runApi(() => api.unverify(event))
+      if (api) void runApi(() => api.unverify(event));
     },
     onMarkPostponed: (event) => {
-      if (api) void runApi(() => api.setStatus(event, 'postponed'))
+      if (api) void runApi(() => api.setStatus(event, 'postponed'));
     },
     onMarkCancelled: (event) => {
-      if (api) void runApi(() => api.setStatus(event, 'cancelled'))
+      if (api) void runApi(() => api.setStatus(event, 'cancelled'));
     },
     onMarkUpcoming: (event) => {
-      if (api) void runApi(() => api.setStatus(event, 'upcoming'))
+      if (api) void runApi(() => api.setStatus(event, 'upcoming'));
     },
     onMarkSoldOut: (event) => {
-      if (api) void runApi(() => api.markSoldOut(event))
+      if (api) void runApi(() => api.markSoldOut(event));
     },
     onMarkAvailable: (event) => {
-      if (api) void runApi(() => api.markAvailable(event))
+      if (api) void runApi(() => api.markAvailable(event));
     },
     onRequestMarkNonConcert: (event) =>
       setPendingConfirm({ kind: 'non-concert', event }),
     onRequestDelete: (event) => setPendingConfirm({ kind: 'delete', event }),
-  }
+  };
 
   const handleConfirm = useCallback(async () => {
     if (!pendingConfirm || !api) {
-      setPendingConfirm(null)
-      return
+      setPendingConfirm(null);
+      return;
     }
-    setConfirmPending(true)
+    setConfirmPending(true);
     try {
       if (pendingConfirm.kind === 'delete') {
-        await api.deleteEvent(pendingConfirm.event)
+        await api.deleteEvent(pendingConfirm.event);
       } else {
-        await api.markNonConcert(pendingConfirm.event)
+        await api.markNonConcert(pendingConfirm.event);
       }
-      setPendingConfirm(null)
-      refresh()
+      setPendingConfirm(null);
+      refresh();
     } catch (confirmErr) {
       const message =
         confirmErr instanceof ApiError
           ? confirmErr.message
-          : 'Failed to apply the change.'
-      console.error('AllEventsTabContent confirm error:', confirmErr)
-      setActionError(message)
+          : 'Failed to apply the change.';
+      console.error('AllEventsTabContent confirm error:', confirmErr);
+      setActionError(message);
     } finally {
-      setConfirmPending(false)
+      setConfirmPending(false);
     }
-  }, [api, pendingConfirm, refresh])
+  }, [api, pendingConfirm, refresh]);
 
   const handleBulkConfirm = useCallback(async () => {
     if (!bulkConfirm || !api) {
-      setBulkConfirm(null)
-      return
+      setBulkConfirm(null);
+      return;
     }
-    const ids = Array.from(selectedIds)
+    const ids = Array.from(selectedIds);
     if (ids.length === 0) {
-      setBulkConfirm(null)
-      return
+      setBulkConfirm(null);
+      return;
     }
-    setBulkPending(true)
+    setBulkPending(true);
     try {
-      if (bulkConfirm === 'delete') await api.bulkDelete(ids)
-      else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids)
+      if (bulkConfirm === 'delete') await api.bulkDelete(ids);
+      else if (bulkConfirm === 'non-concert') await api.bulkMarkNonConcert(ids);
       else if (bulkConfirm === 'mark-as-concert')
-        await api.bulkMarkAsConcert(ids)
-      else await api.bulkUnverify(ids)
-      setBulkConfirm(null)
-      refresh()
+        await api.bulkMarkAsConcert(ids);
+      else await api.bulkUnverify(ids);
+      setBulkConfirm(null);
+      refresh();
     } catch (bulkErr) {
       const message =
         bulkErr instanceof ApiError
           ? bulkErr.message
-          : 'Failed to apply the change.'
-      console.error('AllEventsTabContent bulk error:', bulkErr)
-      setActionError(message)
+          : 'Failed to apply the change.';
+      console.error('AllEventsTabContent bulk error:', bulkErr);
+      setActionError(message);
       // Close the modal on failure — the page-level banner sits behind the
       // scrim, so leaving the modal up hides the failure from the admin.
-      setBulkConfirm(null)
+      setBulkConfirm(null);
     } finally {
-      setBulkPending(false)
+      setBulkPending(false);
     }
-  }, [api, bulkConfirm, refresh, selectedIds])
+  }, [api, bulkConfirm, refresh, selectedIds]);
 
   const filterBar = (
     <EventsFilterBar filters={filters} onChange={onFilterUpdate} />
-  )
+  );
 
   const confirmModal = pendingConfirm && (
     <EventConfirmModal
@@ -335,10 +335,10 @@ export const AllEventsTabContent = ({
       onCancel={() => setPendingConfirm(null)}
       onConfirm={handleConfirm}
     />
-  )
+  );
 
-  const selectionCount = selectedIds.size
-  const bulkEnabled = Boolean(api)
+  const selectionCount = selectedIds.size;
+  const bulkEnabled = Boolean(api);
   // Mark-as-concert only applies to hidden rows. selectedIds survives
   // pagination (selections persist across pages), so we only check the
   // selected rows we can see — if any visible row is selected, disable.
@@ -350,10 +350,10 @@ export const AllEventsTabContent = ({
   // (#809; #814 review rounds 1 + 2)
   const selectedEventsOnPage = events.filter((event) =>
     selectedIds.has(event.id),
-  )
+  );
   const canMarkAsConcert =
     selectionCount > 0 &&
-    selectedEventsOnPage.every((event) => event.hiddenFromConsumer === true)
+    selectedEventsOnPage.every((event) => event.hiddenFromConsumer === true);
 
   const bulkDock = bulkEnabled && (
     <BulkDock
@@ -366,7 +366,7 @@ export const AllEventsTabContent = ({
       onDelete={() => setBulkConfirm('delete')}
       onClear={clearSelection}
     />
-  )
+  );
 
   const bulkModal =
     bulkConfirm === 'delete' ? (
@@ -406,7 +406,7 @@ export const AllEventsTabContent = ({
         onCancel={() => setBulkConfirm(null)}
         onConfirm={handleBulkConfirm}
       />
-    ) : null
+    ) : null;
 
   // Show the skeleton on the very first load only. Subsequent filter changes
   // re-use TanStack's cached pages and only show fresh data when it arrives,
@@ -417,15 +417,15 @@ export const AllEventsTabContent = ({
         {filterBar}
         <Skeleton />
       </div>
-    )
+    );
 
   const fetchErrorMessage =
     query.error instanceof ApiError
       ? query.error.message
       : query.error
         ? 'Failed to load events.'
-        : null
-  const errorMessage = actionError ?? fetchErrorMessage
+        : null;
+  const errorMessage = actionError ?? fetchErrorMessage;
 
   const errorBanner = errorMessage && (
     <div
@@ -440,7 +440,7 @@ export const AllEventsTabContent = ({
     >
       {errorMessage}
     </div>
-  )
+  );
 
   // Only the absence-of-error empty case is a true "no events" state — a
   // failed fetch leaves events=[] too, but the admin needs to see the error
@@ -456,7 +456,7 @@ export const AllEventsTabContent = ({
         {filterBar}
         <EmptyState view={filters.view} />
       </div>
-    )
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -510,5 +510,5 @@ export const AllEventsTabContent = ({
       {confirmModal}
       {bulkModal}
     </div>
-  )
-}
+  );
+};

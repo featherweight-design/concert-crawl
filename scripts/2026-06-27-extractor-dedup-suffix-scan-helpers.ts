@@ -60,7 +60,7 @@
 //
 // Operator on the query is `~*` (case-insensitive POSIX regex
 // match).
-export const SQL_PREFILTER_REGEX = String.raw`\m([^[:space:]]+)[[:space:]]+\1[[:space:]]*$`
+export const SQL_PREFILTER_REGEX = String.raw`\m([^[:space:]]+)[[:space:]]+\1[[:space:]]*$`;
 
 // Backup-table schema, used by the script on first --apply
 // (PR #853 R8). PRIMARY KEY on `event_id` guarantees at most one
@@ -72,7 +72,7 @@ export const BACKUP_TABLE_DDL = `CREATE TABLE IF NOT EXISTS events_851_backup (
       title_before text NOT NULL,
       title_after text NOT NULL,
       snapshotted_at timestamptz NOT NULL DEFAULT now()
-    )`
+    )`;
 
 // Idempotent self-heal for tables created by pre-R8 runs of this
 // script (which created `events_851_backup` without a PRIMARY KEY).
@@ -90,7 +90,7 @@ export const BACKUP_TABLE_PK_BACKFILL_DDL = `DO $$
           ADD CONSTRAINT events_851_backup_pkey PRIMARY KEY (event_id);
       END IF;
     END
-    $$`
+    $$`;
 
 // Snapshot upsert (PR #853 R8). On a PK conflict, deliberately
 // preserve `title_before` — it captures the pre-script state of the
@@ -104,4 +104,4 @@ export const BACKUP_UPSERT_SQL = `INSERT INTO events_851_backup (event_id, title
               VALUES ($1, $2, $3)
               ON CONFLICT (event_id) DO UPDATE SET
                 title_after = EXCLUDED.title_after,
-                snapshotted_at = now()`
+                snapshotted_at = now()`;

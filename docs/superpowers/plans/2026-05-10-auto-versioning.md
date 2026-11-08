@@ -12,15 +12,15 @@
 
 ## File Map
 
-| Action | File | What changes |
-|--------|------|--------------|
-| Modify | `package.json` | Add `"version": "0.5.0"`, add 7 semantic-release devDependencies |
-| Create | `.releaserc.json` | semantic-release config (branches, plugins) |
-| Create | `.github/workflows/release.yml` | New Release workflow triggered by CI `workflow_run` |
-| Modify | `.github/workflows/deploy-staging.yml` | Change trigger from `push` to `workflow_run` after Release |
-| Modify | `apps/web/next.config.ts` | Import rootPkg, replace hardcoded version string |
-| Modify | `docs/runbooks/production-launch.md` | Update 3 notes about version injection |
-| Modify | `CLAUDE.md` | Record auto-versioning in Phase Sequence + Current Status |
+| Action | File                                   | What changes                                                     |
+| ------ | -------------------------------------- | ---------------------------------------------------------------- |
+| Modify | `package.json`                         | Add `"version": "0.5.0"`, add 7 semantic-release devDependencies |
+| Create | `.releaserc.json`                      | semantic-release config (branches, plugins)                      |
+| Create | `.github/workflows/release.yml`        | New Release workflow triggered by CI `workflow_run`              |
+| Modify | `.github/workflows/deploy-staging.yml` | Change trigger from `push` to `workflow_run` after Release       |
+| Modify | `apps/web/next.config.ts`              | Import rootPkg, replace hardcoded version string                 |
+| Modify | `docs/runbooks/production-launch.md`   | Update 3 notes about version injection                           |
+| Modify | `CLAUDE.md`                            | Record auto-versioning in Phase Sequence + Current Status        |
 
 All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all commands from there.
 
@@ -29,6 +29,7 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
 ## Task 1: Set Root Version and Install semantic-release
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml` (updated by install)
 
@@ -69,9 +70,7 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
       "turbo": "^2.0.0"
     },
     "lint-staged": {
-      "**/*.{ts,tsx,js,json,md}": [
-        "prettier --write"
-      ]
+      "**/*.{ts,tsx,js,json,md}": ["prettier --write"]
     },
     "packageManager": "pnpm@10.33.2",
     "engines": {
@@ -101,6 +100,7 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
 ## Task 2: Create `.releaserc.json`
 
 **Files:**
+
 - Create: `.releaserc.json`
 
 - [ ] **Step 1: Create `.releaserc.json` at repo root**
@@ -145,6 +145,7 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
 ## Task 3: Create `release.yml` GitHub Actions Workflow
 
 **Files:**
+
 - Create: `.github/workflows/release.yml`
 
 - [ ] **Step 1: Create `.github/workflows/release.yml`**
@@ -223,11 +224,13 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
 ## Task 4: Update `deploy-staging.yml` Trigger
 
 **Files:**
+
 - Modify: `.github/workflows/deploy-staging.yml`
 
 - [ ] **Step 1: Replace the `on:` trigger in `.github/workflows/deploy-staging.yml`**
 
   Current file content:
+
   ```yaml
   name: Deploy to Staging
 
@@ -323,6 +326,7 @@ All work is in the worktree at `.worktrees/feat/auto-versioning/`. Run all comma
 ## Task 5: Wire Version Injection in `next.config.ts`
 
 **Files:**
+
 - Modify: `apps/web/next.config.ts`
 
 Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base.json` and inherited by `apps/web/tsconfig.json` — no tsconfig change needed.
@@ -330,9 +334,10 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
 - [ ] **Step 1: Update `apps/web/next.config.ts`**
 
   Current file content:
+
   ```typescript
-  import type { NextConfig } from 'next'
-  import { withSentryConfig } from '@sentry/nextjs'
+  import type { NextConfig } from 'next';
+  import { withSentryConfig } from '@sentry/nextjs';
 
   const config: NextConfig = {
     reactStrictMode: true,
@@ -340,7 +345,7 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
     env: {
       NEXT_PUBLIC_APP_VERSION: `v0.4.2-beta · ${process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'dev'}`,
     },
-  }
+  };
 
   export default withSentryConfig(config, {
     org: 'concert-crawl',
@@ -359,14 +364,15 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
       },
       automaticVercelMonitors: false,
     },
-  })
+  });
   ```
 
   Replace with:
+
   ```typescript
-  import type { NextConfig } from 'next'
-  import { withSentryConfig } from '@sentry/nextjs'
-  import rootPkg from '../../package.json'
+  import type { NextConfig } from 'next';
+  import { withSentryConfig } from '@sentry/nextjs';
+  import rootPkg from '../../package.json';
 
   const config: NextConfig = {
     reactStrictMode: true,
@@ -374,7 +380,7 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
     env: {
       NEXT_PUBLIC_APP_VERSION: `v${rootPkg.version} · ${process.env['RENDER_GIT_COMMIT']?.slice(0, 7) ?? 'dev'}`,
     },
-  }
+  };
 
   export default withSentryConfig(config, {
     org: 'concert-crawl',
@@ -393,7 +399,7 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
       },
       automaticVercelMonitors: false,
     },
-  })
+  });
   ```
 
   **Expected behavior after this change:**
@@ -423,16 +429,19 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
 ## Task 6: Update Production Runbook
 
 **Files:**
+
 - Modify: `docs/runbooks/production-launch.md`
 
 - [ ] **Step 1: Update line 109 (the note under the concert-crawl-web env var table)**
 
   Find this line:
+
   ```
   > `NEXT_PUBLIC_APP_VERSION` is auto-injected at build time from `RENDER_GIT_COMMIT` — no manual setup required.
   ```
 
   Replace with:
+
   ```
   > `NEXT_PUBLIC_APP_VERSION` is auto-injected at build time: the version prefix comes from the `version` field in root `package.json` (bumped automatically by `semantic-release`), and the commit hash suffix comes from `RENDER_GIT_COMMIT`. No manual setup required.
   ```
@@ -440,11 +449,13 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
 - [ ] **Step 2: Update line 178 (the note after Auto-Deploy configuration in Step 5)**
 
   Find this line:
+
   ```
   > A `deploy-production.yml` workflow (mirroring `deploy-staging.yml`) is needed to automate production deploys via GitHub Actions. Until that workflow exists, trigger production deploys manually from the Render dashboard.
   ```
 
   Replace with:
+
   ```
   > A `deploy-production.yml` workflow triggered on the `release: published` GitHub event is needed to automate production deploys. Each merge to `main` that contains a releasable commit (`feat:` or `fix:`) automatically creates a GitHub Release via `release.yml`. Until `deploy-production.yml` exists, trigger production deploys manually from the Render dashboard after a release appears in the GitHub Releases tab.
   ```
@@ -452,11 +463,13 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
 - [ ] **Step 3: Update line 279 (the Notes section)**
 
   Find this line:
+
   ```
   - `NEXT_PUBLIC_APP_VERSION` is injected at build time from `RENDER_GIT_COMMIT` — no manual setup needed
   ```
 
   Replace with:
+
   ```
   - `NEXT_PUBLIC_APP_VERSION` is injected at build time: version prefix from root `package.json` (auto-bumped by `semantic-release`), commit hash suffix from `RENDER_GIT_COMMIT` — no manual setup needed
   ```
@@ -473,6 +486,7 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
 ## Task 7: Update CLAUDE.md
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 - [ ] **Step 1: Add auto-versioning to Current Status bullet list**
@@ -525,10 +539,12 @@ Note: `resolveJsonModule: true` is already set in `packages/config/tsconfig.base
   ## Pipeline flow after this PR
 
   ```
+
   push to main
-    → CI (unchanged)
-    → Release (new — bumps package.json, writes CHANGELOG.md, creates GitHub Release)
-    → Deploy Staging (now triggered by Release completion, not push)
+  → CI (unchanged)
+  → Release (new — bumps package.json, writes CHANGELOG.md, creates GitHub Release)
+  → Deploy Staging (now triggered by Release completion, not push)
+
   ```
 
   ## Post-merge manual step required

@@ -12,7 +12,7 @@
 //
 // Delete this file once jest-dom ships Vitest 5 support: its own augmentation
 // will then collide with this one.
-import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers'
+import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
 
 declare module 'vitest' {
   // Declaration merging needs an interface, and its body is empty because

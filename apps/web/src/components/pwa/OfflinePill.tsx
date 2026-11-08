@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus'
-import { OFFLINE_COPY } from './definitions/copy'
+import { useOnlineStatus } from '@/lib/hooks/useOnlineStatus';
+import { OFFLINE_COPY } from './definitions/copy';
 
 export const OfflinePill = () => {
-  const online = useOnlineStatus()
-  if (online) return null
+  const online = useOnlineStatus();
+  if (online) return null;
 
   // `role=status` + `aria-live=polite` announces the state change without
   // being modal. `aria-label` carries the full sentence — the dot color is
@@ -20,5 +20,5 @@ export const OfflinePill = () => {
       <span aria-hidden="true" className="h-2 w-2 rounded-full bg-warning" />
       {OFFLINE_COPY.pillLabel}
     </div>
-  )
-}
+  );
+};

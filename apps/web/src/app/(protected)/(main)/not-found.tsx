@@ -4,8 +4,8 @@
 // fell through to Next's unstyled default page, outside the app chrome. Living
 // at `(main)` means the nav and theme survive, and all three verticals get the
 // same treatment.
-import { NotFoundSurface } from '@/components/consumer/not-found-surface'
+import { NotFoundSurface } from '@/components/consumer/not-found-surface';
 
-const NotFound = () => <NotFoundSurface />
+const NotFound = () => <NotFoundSurface />;
 
-export default NotFound
+export default NotFound;

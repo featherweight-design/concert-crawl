@@ -47,32 +47,32 @@
  * `HUMAN_RULED_NOT_AN_ARTIST` below.
  */
 
-import { sql } from 'drizzle-orm'
-import type { Database } from '../client.js'
+import { sql } from 'drizzle-orm';
+import type { Database } from '../client.js';
 
 export interface PruneArtistsResult {
   /** Rows the predicate condemns. Equals `deleted` unless this was a dry run. */
-  candidates: number
+  candidates: number;
   /** Rows actually removed. Zero on a dry run. */
-  deleted: number
+  deleted: number;
   /** Up to 25 candidates, for eyeballing before an apply run. */
-  sample: { name: string; slug: string; matchStatus: string }[]
+  sample: { name: string; slug: string; matchStatus: string }[];
   /**
    * Candidates by match status. A 25-row sample cannot answer the question the
    * apply decision actually turns on: how many condemned rows are acts
    * MusicBrainz confirmed, rather than the tour names and bingo nights the
    * reaper exists to clear.
    */
-  byMatchStatus: Record<string, number>
+  byMatchStatus: Record<string, number>;
 }
 
 interface DoomedRow extends Record<string, unknown> {
-  name: string
-  slug: string
-  match_status: string
+  name: string;
+  slug: string;
+  match_status: string;
 }
 
-const SAMPLE_SIZE = 25
+const SAMPLE_SIZE = 25;
 
 /**
  * `true` when no unhidden event bills this artist, as headliner or support.
@@ -108,14 +108,14 @@ const UNREFERENCED = sql`
         )
       )
   )
-`
+`;
 
 /**
  * Shorter than this, a name is a substring of half the corpus rather than
  * evidence of a booking. Four characters clears the initialisms that caused
  * trouble in the production sample without sparing anything real.
  */
-const MIN_BILLING_NAME_LENGTH = 4
+const MIN_BILLING_NAME_LENGTH = 4;
 
 /**
  * `events.date` is the show's local calendar date, so "today" has to be
@@ -125,7 +125,7 @@ const MIN_BILLING_NAME_LENGTH = 4
  * when someone is most likely to be running this by hand. Matches
  * `DENVER_TODAY` in crawler-core and `reconcile-drift-duplicates`.
  */
-const DENVER_TODAY = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
+const DENVER_TODAY = sql`(NOW() AT TIME ZONE 'America/Denver')::date`;
 
 /**
  * `artists.canonical_name` rewritten into the same form `events.canonical_title`
@@ -137,7 +137,7 @@ const DENVER_TODAY = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
  * "Zed's Dead" and "Zeds Dead" collapse, and `canonicalizeArtist` does not. So
  * the name gets that one pass applied to it and the two forms line up.
  */
-const APOSTROPHE_STRIPPED_NAME = sql`regexp_replace(artists.canonical_name, '[''‘’‛]', '', 'g')`
+const APOSTROPHE_STRIPPED_NAME = sql`regexp_replace(artists.canonical_name, '[''‘’‛]', '', 'g')`;
 
 /**
  * `true` when some live upcoming event names this artist in its title, even
@@ -188,7 +188,7 @@ const BILLED_IN_LIVE_TITLE = sql`
       AND strpos(events.canonical_title, ${APOSTROPHE_STRIPPED_NAME}) > 0
       AND length(events.canonical_title) > length(${APOSTROPHE_STRIPPED_NAME})
   )
-`
+`;
 
 /**
  * `true` when a human has already ruled this row is not an act.
@@ -198,14 +198,14 @@ const BILLED_IN_LIVE_TITLE = sql`
  * backfill project the same canonical name again as `unmatched` and put it
  * straight back in the queue the human just cleared it from.
  */
-const HUMAN_RULED_NOT_AN_ARTIST = sql`artists.match_status = 'not_an_artist'`
+const HUMAN_RULED_NOT_AN_ARTIST = sql`artists.match_status = 'not_an_artist'`;
 
 /** Unreferenced by the backfill's reckoning, not billed in a live title, and not tombstoned. */
 const DOOMED = sql`
   ${UNREFERENCED}
   AND NOT ${BILLED_IN_LIVE_TITLE}
   AND NOT ${HUMAN_RULED_NOT_AN_ARTIST}
-`
+`;
 
 export async function pruneArtists(
   database: Database,
@@ -216,22 +216,22 @@ export async function pruneArtists(
     FROM artists
     WHERE ${DOOMED}
     ORDER BY name ASC
-  `)
+  `);
 
-  const rows = [...doomed]
+  const rows = [...doomed];
   const sample = rows.slice(0, SAMPLE_SIZE).map((row) => ({
     name: row.name,
     slug: row.slug,
     matchStatus: row.match_status,
-  }))
+  }));
 
   const byMatchStatus = rows.reduce<Record<string, number>>((tally, row) => {
-    tally[row.match_status] = (tally[row.match_status] ?? 0) + 1
-    return tally
-  }, {})
+    tally[row.match_status] = (tally[row.match_status] ?? 0) + 1;
+    return tally;
+  }, {});
 
   if (options.dryRun || rows.length === 0) {
-    return { candidates: rows.length, deleted: 0, sample, byMatchStatus }
+    return { candidates: rows.length, deleted: 0, sample, byMatchStatus };
   }
 
   // Re-evaluated rather than deleting by the ids read above: a concurrent
@@ -241,12 +241,12 @@ export async function pruneArtists(
     DELETE FROM artists
     WHERE ${DOOMED}
     RETURNING id
-  `)
+  `);
 
   return {
     candidates: rows.length,
     deleted: [...removed].length,
     sample,
     byMatchStatus,
-  }
+  };
 }

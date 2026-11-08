@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { useTransition } from 'react'
-import { cn } from '@/lib/utils'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useTransition } from 'react';
+import { cn } from '@/lib/utils';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface LoadMoreButtonProps {
-  currentOffset: number
-  limit: number
-  total: number
+  currentOffset: number;
+  limit: number;
+  total: number;
 }
 
 export function LoadMoreButton({
@@ -18,23 +18,23 @@ export function LoadMoreButton({
   limit,
   total,
 }: LoadMoreButtonProps) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
-  const nextOffset = currentOffset + limit
-  const hasMore = nextOffset < total
+  const nextOffset = currentOffset + limit;
+  const hasMore = nextOffset < total;
 
-  if (!hasMore) return null
+  if (!hasMore) return null;
 
   const handleLoadMore = () => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('offset', String(nextOffset))
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('offset', String(nextOffset));
     startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    })
-  }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  };
 
   return (
     <div className="flex justify-center pt-2">
@@ -50,5 +50,5 @@ export function LoadMoreButton({
         {isPending ? 'Loading…' : copy.loadMore}
       </button>
     </div>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
 import {
   db,
   events,
   venues,
   userEvents,
   priceSubmissions,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   reconcileDriftDuplicates,
   EVENT_FK_TABLES,
-} from './reconcile-drift-duplicates.js'
+} from './reconcile-drift-duplicates.js';
 
 // Real Postgres (integration vitest config) — the reconcile is pure SQL over
 // temp tables and FK reassignment, which an in-memory mock cannot exercise.
@@ -18,7 +18,7 @@ import {
 async function clearState(): Promise<void> {
   await db.execute(
     sql`TRUNCATE events, venues, user_events, price_submissions RESTART IDENTITY CASCADE`,
-  )
+  );
 }
 
 async function seedVenue(): Promise<string> {
@@ -34,25 +34,25 @@ async function seedVenue(): Promise<string> {
       verified: true,
       crawlMode: 'browser',
     })
-    .returning()
-  if (!venue) throw new Error('venue insert returned no row')
-  return venue.id
+    .returning();
+  if (!venue) throw new Error('venue insert returned no row');
+  return venue.id;
 }
 
 function futureDate(daysFromNow: number): string {
-  const now = new Date()
-  now.setUTCDate(now.getUTCDate() + daysFromNow)
-  return now.toISOString().slice(0, 10)
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + daysFromNow);
+  return now.toISOString().slice(0, 10);
 }
 
 beforeEach(async () => {
-  await clearState()
-})
+  await clearState();
+});
 
 describe('reconcileDriftDuplicates', () => {
   it('reassigns FK rows to the live sibling and deletes the drift orphan', async () => {
-    const venueId = await seedVenue()
-    const date = futureDate(30)
+    const venueId = await seedVenue();
+    const date = futureDate(30);
 
     const [sibling] = await db
       .insert(events)
@@ -67,7 +67,7 @@ describe('reconcileDriftDuplicates', () => {
         canonicalArtist: 'band x',
         firstMissingAt: null,
       })
-      .returning()
+      .returning();
 
     const [orphan] = await db
       .insert(events)
@@ -82,7 +82,7 @@ describe('reconcileDriftDuplicates', () => {
         canonicalArtist: 'band x with support',
         firstMissingAt: new Date(),
       })
-      .returning()
+      .returning();
 
     const [unrelated] = await db
       .insert(events)
@@ -97,10 +97,10 @@ describe('reconcileDriftDuplicates', () => {
         canonicalArtist: 'other act',
         firstMissingAt: new Date(),
       })
-      .returning()
+      .returning();
 
     if (!sibling || !orphan || !unrelated) {
-      throw new Error('event seed returned no row')
+      throw new Error('event seed returned no row');
     }
 
     const [watch] = await db
@@ -110,7 +110,7 @@ describe('reconcileDriftDuplicates', () => {
         eventId: orphan.id,
         status: 'watching',
       })
-      .returning()
+      .returning();
 
     const [submission] = await db
       .insert(priceSubmissions)
@@ -122,41 +122,41 @@ describe('reconcileDriftDuplicates', () => {
         vendor: 'AXS',
         howFound: 'saw_listing',
       })
-      .returning()
+      .returning();
 
-    if (!watch || !submission) throw new Error('FK seed returned no row')
+    if (!watch || !submission) throw new Error('FK seed returned no row');
 
-    const result = await reconcileDriftDuplicates(venueId)
+    const result = await reconcileDriftDuplicates(venueId);
 
-    expect(result.reconciledLosers).toBe(1)
+    expect(result.reconciledLosers).toBe(1);
 
     // Orphan deleted; sibling + unrelated row survive.
     const remaining = await db
       .select({ id: events.id })
       .from(events)
-      .where(eq(events.venueId, venueId))
-    const ids = remaining.map((row) => row.id)
-    expect(ids).toContain(sibling.id)
-    expect(ids).toContain(unrelated.id)
-    expect(ids).not.toContain(orphan.id)
+      .where(eq(events.venueId, venueId));
+    const ids = remaining.map((row) => row.id);
+    expect(ids).toContain(sibling.id);
+    expect(ids).toContain(unrelated.id);
+    expect(ids).not.toContain(orphan.id);
 
     // Watch + price submission now point at the sibling.
     const watchAfter = await db
       .select({ eventId: userEvents.eventId })
       .from(userEvents)
-      .where(eq(userEvents.id, watch.id))
-    expect(watchAfter[0]?.eventId).toBe(sibling.id)
+      .where(eq(userEvents.id, watch.id));
+    expect(watchAfter[0]?.eventId).toBe(sibling.id);
 
     const submissionAfter = await db
       .select({ eventId: priceSubmissions.eventId })
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.id, submission.id))
-    expect(submissionAfter[0]?.eventId).toBe(sibling.id)
-  })
+      .where(eq(priceSubmissions.id, submission.id));
+    expect(submissionAfter[0]?.eventId).toBe(sibling.id);
+  });
 
   it('is a no-op when there are no drift orphans', async () => {
-    const venueId = await seedVenue()
-    const date = futureDate(30)
+    const venueId = await seedVenue();
+    const date = futureDate(30);
 
     await db.insert(events).values({
       venueId,
@@ -168,7 +168,7 @@ describe('reconcileDriftDuplicates', () => {
       canonicalTitle: 'band x live',
       canonicalArtist: 'band x',
       firstMissingAt: null,
-    })
+    });
 
     // Genuinely-gone missing row — no headliner containment with the sibling.
     await db.insert(events).values({
@@ -181,11 +181,11 @@ describe('reconcileDriftDuplicates', () => {
       canonicalTitle: 'departed act',
       canonicalArtist: 'departed act',
       firstMissingAt: new Date(),
-    })
+    });
 
-    const result = await reconcileDriftDuplicates(venueId)
-    expect(result.reconciledLosers).toBe(0)
-  })
+    const result = await reconcileDriftDuplicates(venueId);
+    expect(result.reconciledLosers).toBe(0);
+  });
 
   it('EVENT_FK_TABLES matches every FK table referencing events.id', async () => {
     const rows = await db.execute(sql`
@@ -199,8 +199,8 @@ describe('reconcileDriftDuplicates', () => {
         AND ccu.table_schema = 'public'
         AND ccu.table_name = 'events'
         AND ccu.column_name = 'id'
-    `)
-    const actual = [...rows].map((row) => row.table_name).sort()
-    expect(actual).toEqual([...EVENT_FK_TABLES].sort())
-  })
-})
+    `);
+    const actual = [...rows].map((row) => row.table_name).sort();
+    expect(actual).toEqual([...EVENT_FK_TABLES].sort());
+  });
+});

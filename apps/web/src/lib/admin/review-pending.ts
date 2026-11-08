@@ -1,4 +1,4 @@
-import type { ReviewCounts } from '@/lib/queries/use-admin-review'
+import type { ReviewCounts } from '@/lib/queries/use-admin-review';
 
 // Pending count drives the "X pending" header pill on /admin/review and
 // the mobile subtitle. Includes every triage tab — Event Flags
@@ -8,4 +8,4 @@ import type { ReviewCounts } from '@/lib/queries/use-admin-review'
 // adjudication). All four are work items the admin needs to act on, so
 // they share the "pending" semantic (#711 + #697 lock §18 #1).
 export const computePendingCount = (counts: ReviewCounts): number =>
-  counts.eventFlags + counts.prices + counts.missing + counts.priceContests
+  counts.eventFlags + counts.prices + counts.missing + counts.priceContests;

@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import type { SpotifyTastePicksResponse } from '@concert-crawl/types'
-import { fetchTastePicks } from '@/lib/spotify'
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import type { SpotifyTastePicksResponse } from '@concert-crawl/types';
+import { fetchTastePicks } from '@/lib/spotify';
 
 // Prefix key for invalidation (matches every user's entry).
-export const tastePicksQueryKeyBase = ['spotify-taste-picks'] as const
+export const tastePicksQueryKeyBase = ['spotify-taste-picks'] as const;
 
 // Scoped by userId: the app-level QueryClient outlives sign-in sessions, so
 // an account switch must not surface the previous user's cached picks (same
 // reasoning as spotifyConnectionQueryKey).
 export const tastePicksQueryKey = (userId: string | null | undefined) =>
-  [...tastePicksQueryKeyBase, userId ?? null] as const
+  [...tastePicksQueryKeyBase, userId ?? null] as const;
 
 // "Based on your taste" picks (#763 PR 8). `enabled` is driven by the
 // spotify-sync entitlement so non-premium viewers never hit the gated
@@ -23,7 +23,7 @@ export function useTastePicks(
   enabled: boolean,
   initialData?: SpotifyTastePicksResponse,
 ) {
-  const { getToken, isSignedIn, userId } = useAuth()
+  const { getToken, isSignedIn, userId } = useAuth();
 
   return useQuery({
     queryKey: tastePicksQueryKey(userId),
@@ -32,13 +32,13 @@ export function useTastePicks(
     // unresolved userId could read another user's picks.
     ...(initialData !== undefined && userId != null && { initialData }),
     queryFn: async (): Promise<SpotifyTastePicksResponse> => {
-      const token = await getToken()
+      const token = await getToken();
       // Throw instead of returning a synthetic empty response — with
       // staleTime a cached empty shelf would stick after the token gap.
       if (!token) {
-        throw new Error('Auth token unavailable while fetching taste picks')
+        throw new Error('Auth token unavailable while fetching taste picks');
       }
-      return fetchTastePicks(token)
+      return fetchTastePicks(token);
     },
     // Also gated on userId: while it is transiently unresolved the query
     // would otherwise fetch and cache real picks under the shared `null`
@@ -46,5 +46,5 @@ export function useTastePicks(
     // sign-in sessions).
     enabled: !!isSignedIn && userId != null && enabled,
     staleTime: 5 * 60 * 1000,
-  })
+  });
 }

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Honesty-rail interstitial shown before the Clerk-managed Spotify OAuth
 // redirect (#763 PR 5). "Continue to Spotify" creates the pending external
@@ -6,12 +6,12 @@
 // a Clerk instance without the Spotify provider configured) swaps to the
 // "Spotify's not picking up" state — no crash, nothing linked.
 
-import { useEffect, useRef, useState } from 'react'
-import { useReverification, useUser } from '@clerk/nextjs'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { useEffect, useRef, useState } from 'react';
+import { useReverification, useUser } from '@clerk/nextjs';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
 import {
   clearSpotifyConnectPending,
   consumeSpotifyConnectPending,
@@ -19,104 +19,104 @@ import {
   SPOTIFY_RETURN_PATH,
   startSpotifyConnect,
   type SpotifyExternalAccountParams,
-} from '@/lib/spotify-connect'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { HonestyRail } from './HonestyRail'
-import { NoAnswerGlyph } from './glyphs'
-import { StateBody, StateGlyphDisc } from './StateBody'
-import { SignalButton, TextButton } from './SpotifyButtons'
+} from '@/lib/spotify-connect';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { HonestyRail } from './HonestyRail';
+import { NoAnswerGlyph } from './glyphs';
+import { StateBody, StateGlyphDisc } from './StateBody';
+import { SignalButton, TextButton } from './SpotifyButtons';
 
-const HANDOFF_COPY = SPOTIFY_COPY.oauthHandoff
-const FAIL_COPY = SPOTIFY_COPY.failConnectDown
+const HANDOFF_COPY = SPOTIFY_COPY.oauthHandoff;
+const FAIL_COPY = SPOTIFY_COPY.failConnectDown;
 
-type HandoffPhase = 'rail' | 'error'
+type HandoffPhase = 'rail' | 'error';
 
 interface OAuthHandoffSheetProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 export const OAuthHandoffSheet = ({
   open,
   onClose,
 }: OAuthHandoffSheetProps) => {
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
-  const { user } = useUser()
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
+  const { user } = useUser();
   // Clerk treats createExternalAccount as a sensitive op — on instances with
   // reverification enabled, aged sessions 403 unless the enhanced fetcher
   // shows Clerk's re-auth modal and retries (#763 staging feedback).
   const createSpotifyAccount = useReverification(
     (params: SpotifyExternalAccountParams) => {
       if (!user) {
-        return Promise.reject(new Error('spotify connect: no signed-in user'))
+        return Promise.reject(new Error('spotify connect: no signed-in user'));
       }
-      return user.createExternalAccount(params)
+      return user.createExternalAccount(params);
     },
-  )
-  const [phase, setPhase] = useState<HandoffPhase>('rail')
+  );
+  const [phase, setPhase] = useState<HandoffPhase>('rail');
   // `starting` is tracked apart from the phase so "Try again" can retry from
   // the error state without flashing back to the rail.
-  const [starting, setStarting] = useState(false)
+  const [starting, setStarting] = useState(false);
   // Set when a reload interrupted the connect mid-reverification — the sheet
   // then reopens itself even though the parent's open state was reset.
-  const [resuming, setResuming] = useState(false)
+  const [resuming, setResuming] = useState(false);
   // Dismissing while startSpotifyConnect is in flight must not redirect the
   // user to Spotify once the promise settles — cancel wins.
-  const cancelledRef = useRef(false)
+  const cancelledRef = useRef(false);
 
   const beginHandoff = async () => {
-    if (starting) return
-    cancelledRef.current = false
-    setStarting(true)
-    const redirectUrl = `${window.location.origin}${SPOTIFY_RETURN_PATH}`
+    if (starting) return;
+    cancelledRef.current = false;
+    setStarting(true);
+    const redirectUrl = `${window.location.origin}${SPOTIFY_RETURN_PATH}`;
     // Clerk's reverification flow can reload the page after the user completes
     // an email/OTP factor, orphaning this promise — mark intent first so the
     // remounted sheet resumes the connect (#763 staging feedback).
-    markSpotifyConnectPending()
-    const result = await startSpotifyConnect(createSpotifyAccount, redirectUrl)
+    markSpotifyConnectPending();
+    const result = await startSpotifyConnect(createSpotifyAccount, redirectUrl);
     // Settled without a reload — clear before any navigation so the Spotify
     // return trip (or a cancel/error) never re-fires the connect.
-    clearSpotifyConnectPending()
-    if (cancelledRef.current) return
+    clearSpotifyConnectPending();
+    if (cancelledRef.current) return;
     if (result.status === 'redirect') {
       // Leave `starting` set — the button stays disabled until navigation.
-      window.location.assign(result.url)
-      return
+      window.location.assign(result.url);
+      return;
     }
-    setStarting(false)
+    setStarting(false);
     // Backing out of Clerk's reverification modal is a choice, not a failure.
-    setPhase(result.status === 'cancelled' ? 'rail' : 'error')
-  }
+    setPhase(result.status === 'cancelled' ? 'rail' : 'error');
+  };
 
   // Pick a reload-interrupted connect back up once Clerk has the user again;
   // the freshly verified session goes straight to Spotify's authorize page.
   // Checked at most once per mount — Clerk hands out a fresh user object on
   // re-renders, and a re-fired consume would eat the mark mid-flight.
-  const resumeCheckedRef = useRef(false)
+  const resumeCheckedRef = useRef(false);
   useEffect(() => {
-    if (!user || resumeCheckedRef.current) return
-    resumeCheckedRef.current = true
-    if (!consumeSpotifyConnectPending()) return
-    setResuming(true)
-    void beginHandoff()
+    if (!user || resumeCheckedRef.current) return;
+    resumeCheckedRef.current = true;
+    if (!consumeSpotifyConnectPending()) return;
+    setResuming(true);
+    void beginHandoff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user]);
 
   const close = () => {
-    cancelledRef.current = true
+    cancelledRef.current = true;
     // Cancel wins even across a reverification reload — a lingering mark
     // would auto-resume a connect the user explicitly dismissed.
-    clearSpotifyConnectPending()
-    setPhase('rail')
-    setStarting(false)
-    setResuming(false)
-    onClose()
-  }
+    clearSpotifyConnectPending();
+    setPhase('rail');
+    setStarting(false);
+    setResuming(false);
+    onClose();
+  };
 
   // Below every hook, so a late-landing flag read cannot change the hook
   // count. Defence in depth: every render site is gated already, but this
   // sheet is the door to the OAuth redirect and must never open behind it.
-  if (!spotifyEnabled) return null
+  if (!spotifyEnabled) return null;
 
   const railHeader = (
     <div className="flex items-center justify-center gap-3.5 py-1.5">
@@ -132,7 +132,7 @@ export const OAuthHandoffSheet = ({
       </span>
       <SpotifyLogo size={40} />
     </div>
-  )
+  );
 
   return (
     <ModalShell
@@ -204,5 +204,5 @@ export const OAuthHandoffSheet = ({
         </div>
       )}
     </ModalShell>
-  )
-}
+  );
+};

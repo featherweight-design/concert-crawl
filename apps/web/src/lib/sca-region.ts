@@ -40,7 +40,7 @@ const SCA_REGIONS: ReadonlySet<string> = new Set([
   'NO',
   // UK
   'GB',
-])
+]);
 
 export const isScaRegion = (countryCode: string | null): boolean =>
-  countryCode === null || SCA_REGIONS.has(countryCode.toUpperCase())
+  countryCode === null || SCA_REGIONS.has(countryCode.toUpperCase());

@@ -1,6 +1,6 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties } from 'react';
 
-import { THEMES } from '@/theme/themes'
+import { THEMES } from '@/theme/themes';
 
 /**
  * `applyTheme` writes the active theme's tokens as inline styles on `<html>`,
@@ -19,11 +19,11 @@ import { THEMES } from '@/theme/themes'
  * needs no cast either.
  */
 function buildLightThemeStyle(): CSSProperties {
-  const tokens: Record<`--${string}`, string> = {}
+  const tokens: Record<`--${string}`, string> = {};
   for (const [token, value] of Object.entries(THEMES.light)) {
-    tokens[`--${token}`] = value
+    tokens[`--${token}`] = value;
   }
-  return tokens
+  return tokens;
 }
 
-export const LIGHT_THEME_STYLE = buildLightThemeStyle()
+export const LIGHT_THEME_STYLE = buildLightThemeStyle();

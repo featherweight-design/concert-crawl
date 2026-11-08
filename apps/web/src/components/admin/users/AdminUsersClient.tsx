@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { useState, useTransition, useCallback } from 'react'
-import Link from 'next/link'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useState, useTransition, useCallback } from 'react';
+import Link from 'next/link';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   AdminTable,
   THead,
   TR,
   TH,
   TD,
-} from '@/components/admin/primitives/AdminTable'
-import { updateUserRole } from '@/lib/actions/admin-users'
-import type { Role } from '@concert-crawl/types'
+} from '@/components/admin/primitives/AdminTable';
+import { updateUserRole } from '@/lib/actions/admin-users';
+import type { Role } from '@concert-crawl/types';
 
 export interface AdminUserRow {
-  id: string
-  email: string
-  handle: string | null
-  role: Role
-  createdAt: string | null
+  id: string;
+  email: string;
+  handle: string | null;
+  role: Role;
+  createdAt: string | null;
 }
 
-const ASSIGNABLE_ROLES: Role[] = ['admin', 'promoter', 'beta', 'user']
+const ASSIGNABLE_ROLES: Role[] = ['admin', 'promoter', 'beta', 'user'];
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: 'Admin',
@@ -29,21 +29,21 @@ const ROLE_LABEL: Record<Role, string> = {
   beta: 'Beta',
   sub_admin: 'Staff',
   user: 'Member',
-}
+};
 
 const ROLE_DOT: Partial<Record<Role, string>> = {
   admin: 'var(--warning)',
   promoter: 'var(--accent)',
   beta: 'var(--signal)',
   sub_admin: 'var(--signal)',
-}
+};
 
 function RolePip({ role }: { role: Role }) {
-  const dot = ROLE_DOT[role]
+  const dot = ROLE_DOT[role];
   if (!dot)
     return (
       <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>Member</span>
-    )
+    );
   return (
     <span
       style={{
@@ -77,7 +77,7 @@ function RolePip({ role }: { role: Role }) {
       />
       {ROLE_LABEL[role]}
     </span>
-  )
+  );
 }
 
 // The link's visible text is the email plus, when present, the '@handle'. The
@@ -85,7 +85,7 @@ function RolePip({ role }: { role: Role }) {
 // Name), so include both — not just the handle — and fall back to the email
 // alone when there is no handle.
 function identityLabel(row: AdminUserRow): string {
-  return row.handle ? `${row.email} @${row.handle}` : row.email
+  return row.handle ? `${row.email} @${row.handle}` : row.email;
 }
 
 // Email + handle rendered as a link into the per-user detail page. Kept as a
@@ -96,10 +96,10 @@ const UserIdentityLink = ({
   row,
   variant = 'table',
 }: {
-  row: AdminUserRow
-  variant?: 'table' | 'card'
+  row: AdminUserRow;
+  variant?: 'table' | 'card';
 }) => {
-  const isCard = variant === 'card'
+  const isCard = variant === 'card';
   return (
     <Link
       href={`/admin/users/${row.id}`}
@@ -134,36 +134,36 @@ const UserIdentityLink = ({
         </span>
       )}
     </Link>
-  )
-}
+  );
+};
 
 function RoleSelect({
   userId,
   currentRole,
   onSuccess,
 }: {
-  userId: string
-  currentRole: Role
-  onSuccess: (newRole: Role) => void
+  userId: string;
+  currentRole: Role;
+  onSuccess: (newRole: Role) => void;
 }) {
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = useCallback(
     (newRole: Role) => {
-      if (newRole === currentRole) return
-      setError(null)
+      if (newRole === currentRole) return;
+      setError(null);
       startTransition(async () => {
-        const result = await updateUserRole(userId, newRole)
+        const result = await updateUserRole(userId, newRole);
         if (result.success) {
-          onSuccess(newRole)
+          onSuccess(newRole);
         } else {
-          setError(result.error ?? ADMIN_COPY.users.roleSelect.errorFallback)
+          setError(result.error ?? ADMIN_COPY.users.roleSelect.errorFallback);
         }
-      })
+      });
     },
     [userId, currentRole, onSuccess],
-  )
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -213,7 +213,7 @@ function RoleSelect({
         </span>
       )}
     </div>
-  )
+  );
 }
 
 // ── Mobile card (shown on narrow screens) ────────────────────
@@ -221,8 +221,8 @@ function UserCard({
   row,
   onRoleChange,
 }: {
-  row: AdminUserRow
-  onRoleChange: (id: string, role: Role) => void
+  row: AdminUserRow;
+  onRoleChange: (id: string, role: Role) => void;
 }) {
   return (
     <div
@@ -251,7 +251,7 @@ function UserCard({
         onSuccess={(newRole) => onRoleChange(row.id, newRole)}
       />
     </div>
-  )
+  );
 }
 
 // ── Main client component ────────────────────────────────────
@@ -259,16 +259,16 @@ export function AdminUsersClient({
   initialUsers,
   total,
 }: {
-  initialUsers: AdminUserRow[]
-  total: number
+  initialUsers: AdminUserRow[];
+  total: number;
 }) {
-  const [users, setUsers] = useState(initialUsers)
+  const [users, setUsers] = useState(initialUsers);
 
   const handleRoleChange = useCallback((id: string, newRole: Role) => {
     setUsers((prev) =>
       prev.map((user) => (user.id === id ? { ...user, role: newRole } : user)),
-    )
-  }, [])
+    );
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -371,5 +371,5 @@ export function AdminUsersClient({
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createSpotifyAppClient,
   getAppToken,
   resetAppTokenCache,
-} from './spotify-app-client.js'
-import { SpotifyAuthError, SpotifyRateLimitError } from './spotify.js'
+} from './spotify-app-client.js';
+import { SpotifyAuthError, SpotifyRateLimitError } from './spotify.js';
 
 const tokenResponse = (accessToken: string, expiresIn = 3600): Response =>
   new Response(
@@ -14,125 +14,129 @@ const tokenResponse = (accessToken: string, expiresIn = 3600): Response =>
       expires_in: expiresIn,
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
-  )
+  );
 
 const jsonResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
-  })
+  });
 
 const withCredentials = (): void => {
-  process.env['SPOTIFY_CLIENT_ID'] = 'test-client-id'
-  process.env['SPOTIFY_CLIENT_SECRET'] = 'test-client-secret'
-}
+  process.env['SPOTIFY_CLIENT_ID'] = 'test-client-id';
+  process.env['SPOTIFY_CLIENT_SECRET'] = 'test-client-secret';
+};
 
 describe('getAppToken', () => {
   beforeEach(() => {
-    resetAppTokenCache()
-    delete process.env['SPOTIFY_CLIENT_ID']
-    delete process.env['SPOTIFY_CLIENT_SECRET']
-  })
+    resetAppTokenCache();
+    delete process.env['SPOTIFY_CLIENT_ID'];
+    delete process.env['SPOTIFY_CLIENT_SECRET'];
+  });
 
   it('posts grant_type=client_credentials with a Basic auth header', async () => {
-    withCredentials()
-    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse('t1'))
+    withCredentials();
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(tokenResponse('t1'));
 
-    const token = await getAppToken({ fetchFn })
+    const token = await getAppToken({ fetchFn });
 
-    expect(token).toBe('t1')
-    expect(fetchFn).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchFn.mock.calls[0] ?? []
-    expect(url).toBe('https://accounts.spotify.com/api/token')
-    expect(init?.method).toBe('POST')
-    expect(init?.body).toBe('grant_type=client_credentials')
-    const headers = new Headers(init?.headers)
+    expect(token).toBe('t1');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchFn.mock.calls[0] ?? [];
+    expect(url).toBe('https://accounts.spotify.com/api/token');
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe('grant_type=client_credentials');
+    const headers = new Headers(init?.headers);
     expect(headers.get('Content-Type')).toBe(
       'application/x-www-form-urlencoded',
-    )
+    );
     expect(headers.get('Authorization')).toBe(
       `Basic ${Buffer.from('test-client-id:test-client-secret').toString('base64')}`,
-    )
-  })
+    );
+  });
 
   it('caches the token in-process until expires_in minus the 60s skew', async () => {
-    withCredentials()
-    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(tokenResponse('t1'))
-    let clock = 1_000_000
+    withCredentials();
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(tokenResponse('t1'));
+    let clock = 1_000_000;
 
-    const first = await getAppToken({ fetchFn, now: () => clock })
-    clock += (3600 - 61) * 1000
-    const second = await getAppToken({ fetchFn, now: () => clock })
+    const first = await getAppToken({ fetchFn, now: () => clock });
+    clock += (3600 - 61) * 1000;
+    const second = await getAppToken({ fetchFn, now: () => clock });
 
-    expect(first).toBe('t1')
-    expect(second).toBe('t1')
-    expect(fetchFn).toHaveBeenCalledTimes(1)
-  })
+    expect(first).toBe('t1');
+    expect(second).toBe('t1');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
 
   it('refetches once the cached token passes the skew-adjusted expiry', async () => {
-    withCredentials()
+    withCredentials();
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(tokenResponse('t2'))
-    let clock = 1_000_000
+      .mockResolvedValueOnce(tokenResponse('t2'));
+    let clock = 1_000_000;
 
-    const first = await getAppToken({ fetchFn, now: () => clock })
-    clock += (3600 - 59) * 1000
-    const second = await getAppToken({ fetchFn, now: () => clock })
+    const first = await getAppToken({ fetchFn, now: () => clock });
+    clock += (3600 - 59) * 1000;
+    const second = await getAppToken({ fetchFn, now: () => clock });
 
-    expect(first).toBe('t1')
-    expect(second).toBe('t2')
-    expect(fetchFn).toHaveBeenCalledTimes(2)
-  })
+    expect(first).toBe('t1');
+    expect(second).toBe('t2');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
 
   it('throws SpotifyAuthError when Spotify rejects the credentials', async () => {
-    withCredentials()
+    withCredentials();
     const fetchFn = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(new Response('nope', { status: 401 }))
+      .mockResolvedValue(new Response('nope', { status: 401 }));
 
     await expect(getAppToken({ fetchFn })).rejects.toBeInstanceOf(
       SpotifyAuthError,
-    )
-  })
+    );
+  });
 
   // Step 21 — the PR-C-skipped path. With the credentials unset the whole
   // feature must go quiet, not crash.
   describe('with credentials unset', () => {
     it('returns null without touching the network', async () => {
-      const fetchFn = vi.fn<typeof fetch>()
+      const fetchFn = vi.fn<typeof fetch>();
 
-      const token = await getAppToken({ fetchFn })
+      const token = await getAppToken({ fetchFn });
 
-      expect(token).toBeNull()
-      expect(fetchFn).not.toHaveBeenCalled()
-    })
+      expect(token).toBeNull();
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
 
     it('returns null when only one of the two vars is set', async () => {
-      process.env['SPOTIFY_CLIENT_ID'] = 'test-client-id'
-      const fetchFn = vi.fn<typeof fetch>()
+      process.env['SPOTIFY_CLIENT_ID'] = 'test-client-id';
+      const fetchFn = vi.fn<typeof fetch>();
 
-      expect(await getAppToken({ fetchFn })).toBeNull()
-      expect(fetchFn).not.toHaveBeenCalled()
-    })
+      expect(await getAppToken({ fetchFn })).toBeNull();
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
 
     it('createSpotifyAppClient returns null so every caller no-ops', async () => {
-      const fetchFn = vi.fn<typeof fetch>()
+      const fetchFn = vi.fn<typeof fetch>();
 
-      const client = await createSpotifyAppClient({ fetchFn })
+      const client = await createSpotifyAppClient({ fetchFn });
 
-      expect(client).toBeNull()
-      expect(fetchFn).not.toHaveBeenCalled()
-    })
-  })
-})
+      expect(client).toBeNull();
+      expect(fetchFn).not.toHaveBeenCalled();
+    });
+  });
+});
 
 describe('createSpotifyAppClient().searchArtists', () => {
   beforeEach(() => {
-    resetAppTokenCache()
-    withCredentials()
-  })
+    resetAppTokenCache();
+    withCredentials();
+  });
 
   it('returns Zod-validated artist candidates', async () => {
     const fetchFn = vi
@@ -154,10 +158,10 @@ describe('createSpotifyAppClient().searchArtists', () => {
             ],
           },
         }),
-      )
+      );
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const candidates = await client?.searchArtists('Khruangbin')
+    const client = await createSpotifyAppClient({ fetchFn });
+    const candidates = await client?.searchArtists('Khruangbin');
 
     expect(candidates).toEqual([
       {
@@ -167,10 +171,10 @@ describe('createSpotifyAppClient().searchArtists', () => {
         genres: ['psychedelic soul'],
         spotifyUrl: 'https://open.spotify.com/artist/sp1',
       },
-    ])
-    const searchUrl = fetchFn.mock.calls[1]?.[0]
-    expect(String(searchUrl)).toContain('/search?q=Khruangbin&type=artist')
-  })
+    ]);
+    const searchUrl = fetchFn.mock.calls[1]?.[0];
+    expect(String(searchUrl)).toContain('/search?q=Khruangbin&type=artist');
+  });
 
   it('defaults the fields Spotify omits rather than dropping the candidate', async () => {
     const fetchFn = vi
@@ -178,10 +182,10 @@ describe('createSpotifyAppClient().searchArtists', () => {
       .mockResolvedValueOnce(tokenResponse('t1'))
       .mockResolvedValueOnce(
         jsonResponse({ artists: { items: [{ id: 'sp2', name: 'Nobody' }] } }),
-      )
+      );
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const candidates = await client?.searchArtists('Nobody')
+    const client = await createSpotifyAppClient({ fetchFn });
+    const candidates = await client?.searchArtists('Nobody');
 
     expect(candidates).toEqual([
       {
@@ -191,8 +195,8 @@ describe('createSpotifyAppClient().searchArtists', () => {
         genres: [],
         spotifyUrl: null,
       },
-    ])
-  })
+    ]);
+  });
 
   // Both URLs are rendered by the admin picker — the image as a src, the
   // profile as an href — so a non-http scheme is dropped rather than passed on.
@@ -214,10 +218,10 @@ describe('createSpotifyAppClient().searchArtists', () => {
             ],
           },
         }),
-      )
+      );
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const candidates = await client?.searchArtists('Sketchy')
+    const client = await createSpotifyAppClient({ fetchFn });
+    const candidates = await client?.searchArtists('Sketchy');
 
     expect(candidates).toEqual([
       {
@@ -227,8 +231,8 @@ describe('createSpotifyAppClient().searchArtists', () => {
         genres: [],
         spotifyUrl: null,
       },
-    ])
-  })
+    ]);
+  });
 
   it('surfaces a persistent 429 as SpotifyRateLimitError', async () => {
     const fetchFn = vi
@@ -239,13 +243,13 @@ describe('createSpotifyAppClient().searchArtists', () => {
           status: 429,
           headers: { 'Retry-After': '0' },
         }),
-      )
+      );
 
-    const client = await createSpotifyAppClient({ fetchFn })
+    const client = await createSpotifyAppClient({ fetchFn });
     await expect(client?.searchArtists('Khruangbin')).rejects.toBeInstanceOf(
       SpotifyRateLimitError,
-    )
-  })
+    );
+  });
 
   it('reports the second Retry-After when a 429 persists through the retry', async () => {
     const fetchFn = vi
@@ -262,25 +266,25 @@ describe('createSpotifyAppClient().searchArtists', () => {
           status: 429,
           headers: { 'Retry-After': '900' },
         }),
-      )
+      );
 
     const client = await createSpotifyAppClient({
       fetchFn,
       sleepFn: async () => {},
-    })
+    });
     const failure = await client
       ?.searchArtists('Khruangbin')
-      .catch((err: unknown) => err)
-    expect(failure).toBeInstanceOf(SpotifyRateLimitError)
+      .catch((err: unknown) => err);
+    expect(failure).toBeInstanceOf(SpotifyRateLimitError);
     // Without this the abort says nothing about how long to wait, which is
     // the whole reason an operator reads the log.
     if (failure instanceof SpotifyRateLimitError) {
-      expect(failure.message).toContain('900s')
+      expect(failure.message).toContain('900s');
     }
-  })
+  });
 
   it('aborts rather than sleeping out an hours-long Retry-After', async () => {
-    const sleeps: number[] = []
+    const sleeps: number[] = [];
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
@@ -289,27 +293,27 @@ describe('createSpotifyAppClient().searchArtists', () => {
           status: 429,
           headers: { 'Retry-After': '76000' },
         }),
-      )
+      );
 
     const client = await createSpotifyAppClient({
       fetchFn,
       sleepFn: async (ms) => {
-        sleeps.push(ms)
+        sleeps.push(ms);
       },
-    })
+    });
     await expect(client?.searchArtists('Khruangbin')).rejects.toBeInstanceOf(
       SpotifyRateLimitError,
-    )
+    );
     // Sleeping this out is the silent-hang bug — the job must fail loudly.
-    expect(sleeps).toEqual([])
-  })
-})
+    expect(sleeps).toEqual([]);
+  });
+});
 
 describe('createSpotifyAppClient().fetchArtistDetails', () => {
   beforeEach(() => {
-    resetAppTokenCache()
-    withCredentials()
-  })
+    resetAppTokenCache();
+    withCredentials();
+  });
 
   it('maps genres by id, one request per artist', async () => {
     const fetchFn = vi
@@ -321,33 +325,33 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
           genres: ['psychedelic soul'],
         }),
       )
-      .mockResolvedValueOnce(jsonResponse({ id: 'sp2', genres: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'sp2', genres: [] }));
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const details = await client?.fetchArtistDetails(['sp1', 'sp2'])
+    const client = await createSpotifyAppClient({ fetchFn });
+    const details = await client?.fetchArtistDetails(['sp1', 'sp2']);
 
-    expect(details?.get('sp1')).toEqual({ genres: ['psychedelic soul'] })
-    expect(details?.get('sp2')).toEqual({ genres: [] })
+    expect(details?.get('sp1')).toEqual({ genres: ['psychedelic soul'] });
+    expect(details?.get('sp2')).toEqual({ genres: [] });
     // Token + one per artist. The `/artists?ids=` batch is unavailable to a
     // Development Mode client since Spotify's February 2026 change.
-    expect(fetchFn).toHaveBeenCalledTimes(3)
-    expect(fetchFn.mock.calls[1]?.[0]).toContain('/artists/sp1')
-    expect(fetchFn.mock.calls[2]?.[0]).toContain('/artists/sp2')
-  })
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+    expect(fetchFn.mock.calls[1]?.[0]).toContain('/artists/sp1');
+    expect(fetchFn.mock.calls[2]?.[0]).toContain('/artists/sp2');
+  });
 
   it('never requests the batch endpoint that 403s in prod', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(jsonResponse({ id: 'sp1', genres: [] }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'sp1', genres: [] }));
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    await client?.fetchArtistDetails(['sp1'])
+    const client = await createSpotifyAppClient({ fetchFn });
+    await client?.fetchArtistDetails(['sp1']);
 
     for (const call of fetchFn.mock.calls) {
-      expect(String(call[0])).not.toContain('/artists?ids=')
+      expect(String(call[0])).not.toContain('/artists?ids=');
     }
-  })
+  });
 
   // Spotify's February 2026 change removed `popularity` from the artist object
   // outright. Carrying it back would revive a snapshot field nothing can ever
@@ -359,25 +363,25 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
       .mockResolvedValueOnce(tokenResponse('t1'))
       .mockResolvedValueOnce(
         jsonResponse({ id: 'sp1', genres: [], popularity: 72 }),
-      )
+      );
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const details = await client?.fetchArtistDetails(['sp1'])
+    const client = await createSpotifyAppClient({ fetchFn });
+    const details = await client?.fetchArtistDetails(['sp1']);
 
-    expect(details?.get('sp1')).toEqual({ genres: [] })
-  })
+    expect(details?.get('sp1')).toEqual({ genres: [] });
+  });
 
   it('defaults missing genres to empty', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(jsonResponse({ id: 'sp1' }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'sp1' }));
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const details = await client?.fetchArtistDetails(['sp1'])
+    const client = await createSpotifyAppClient({ fetchFn });
+    const details = await client?.fetchArtistDetails(['sp1']);
 
-    expect(details?.get('sp1')).toEqual({ genres: [] })
-  })
+    expect(details?.get('sp1')).toEqual({ genres: [] });
+  });
 
   it('skips an id Spotify cannot resolve and still hydrates the rest', async () => {
     // One dead id must not cost the other candidates their hydration. The
@@ -387,14 +391,14 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
       .mockResolvedValueOnce(jsonResponse({ error: 'not found' }, 404))
-      .mockResolvedValueOnce(jsonResponse({ id: 'sp2', genres: ['dub'] }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'sp2', genres: ['dub'] }));
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const details = await client?.fetchArtistDetails(['sp_gone', 'sp2'])
+    const client = await createSpotifyAppClient({ fetchFn });
+    const details = await client?.fetchArtistDetails(['sp_gone', 'sp2']);
 
-    expect(details?.has('sp_gone')).toBe(false)
-    expect(details?.get('sp2')).toEqual({ genres: ['dub'] })
-  })
+    expect(details?.has('sp_gone')).toBe(false);
+    expect(details?.get('sp2')).toEqual({ genres: ['dub'] });
+  });
 
   it('aborts the run when Spotify rejects the app token', async () => {
     // A 403 is systemic, not per-id — swallowing it would quietly return an
@@ -402,24 +406,24 @@ describe('createSpotifyAppClient().fetchArtistDetails', () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403));
 
-    const client = await createSpotifyAppClient({ fetchFn })
+    const client = await createSpotifyAppClient({ fetchFn });
 
     await expect(client?.fetchArtistDetails(['sp1', 'sp2'])).rejects.toThrow(
       SpotifyAuthError,
-    )
-  })
+    );
+  });
 
   it('issues no /artists request for an empty id list', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(tokenResponse('t1'));
 
-    const client = await createSpotifyAppClient({ fetchFn })
-    const details = await client?.fetchArtistDetails([])
+    const client = await createSpotifyAppClient({ fetchFn });
+    const details = await client?.fetchArtistDetails([]);
 
-    expect(details?.size).toBe(0)
-    expect(fetchFn).toHaveBeenCalledTimes(1)
-  })
-})
+    expect(details?.size).toBe(0);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+});

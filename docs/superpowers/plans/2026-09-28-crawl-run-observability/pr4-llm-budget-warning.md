@@ -22,14 +22,14 @@
 export function crossedBudgetThreshold(
   spentUsd: number,
   budgetUsd: number,
-): 0.8 | 1 | null
-export async function checkLlmBudget(now?: Date): Promise<void>
+): 0.8 | 1 | null;
+export async function checkLlmBudget(now?: Date): Promise<void>;
 ```
 
 - [ ] **Step 1: Failing tests.** No existing crawler-core unit test mocks `@concert-crawl/db`'s query builders (`event-count-alert` has only an integration test against real Postgres), so this file carries its own mocks. At the top of `llm-budget.test.ts`:
 
 ```ts
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockSelect, mockInsertValues, mockReportFailure, selectQueue } =
   vi.hoisted(() => ({
@@ -38,7 +38,7 @@ const { mockSelect, mockInsertValues, mockReportFailure, selectQueue } =
     mockReportFailure: vi.fn(),
     // Each select().from().where() chain resolves to the next queued array.
     selectQueue: [] as unknown[][],
-  }))
+  }));
 
 vi.mock('@concert-crawl/db', () => ({
   costTracking: {
@@ -53,32 +53,32 @@ vi.mock('@concert-crawl/db', () => ({
   },
   db: {
     select: (...args: unknown[]) => {
-      mockSelect(...args)
+      mockSelect(...args);
       return {
         from: () => ({
           where: () => Promise.resolve(selectQueue.shift() ?? []),
         }),
-      }
+      };
     },
     insert: () => ({
       values: (row: unknown) => {
-        mockInsertValues(row)
-        return Promise.resolve()
+        mockInsertValues(row);
+        return Promise.resolve();
       },
     }),
   },
-}))
-vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }))
+}));
+vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }));
 
 const mockSelectResults = (...results: unknown[][]) => {
-  selectQueue.length = 0
-  selectQueue.push(...results)
-}
+  selectQueue.length = 0;
+  selectQueue.push(...results);
+};
 
 beforeEach(() => {
-  vi.clearAllMocks()
-  selectQueue.length = 0
-})
+  vi.clearAllMocks();
+  selectQueue.length = 0;
+});
 ```
 
 (`drizzle-orm` stays real: `and`/`eq`/`gte`/`inArray`/`sql` only build expressions, which the mock ignores.) Then the tests, pure half first:
@@ -93,48 +93,48 @@ describe('crossedBudgetThreshold', () => {
     [140, 100, 1],
     [5, 0, null],
   ])('spent %d of %d → %s', (spent, budget, expected) => {
-    expect(crossedBudgetThreshold(spent, budget)).toBe(expected)
-  })
-})
+    expect(crossedBudgetThreshold(spent, budget)).toBe(expected);
+  });
+});
 
 describe('checkLlmBudget', () => {
-  const now = new Date('2026-09-28T09:30:00Z')
+  const now = new Date('2026-09-28T09:30:00Z');
 
   it('stays dormant, touching nothing, when the budget is unset', async () => {
-    delete process.env['LLM_MONTHLY_BUDGET_USD']
-    await checkLlmBudget(now)
-    expect(mockSelect).not.toHaveBeenCalled()
-  })
+    delete process.env['LLM_MONTHLY_BUDGET_USD'];
+    await checkLlmBudget(now);
+    expect(mockSelect).not.toHaveBeenCalled();
+  });
 
   it('records the 80% crossing once', async () => {
-    process.env['LLM_MONTHLY_BUDGET_USD'] = '20'
-    mockSelectResults([{ spent: '16.50' }], [])
-    await checkLlmBudget(now)
+    process.env['LLM_MONTHLY_BUDGET_USD'] = '20';
+    mockSelectResults([{ spent: '16.50' }], []);
+    await checkLlmBudget(now);
     expect(mockInsertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         category: 'cost.llm_budget',
         metadata: JSON.stringify({ month: '2026-09', threshold: 0.8 }),
       }),
-    )
-  })
+    );
+  });
 
   it('does not repeat a threshold already recorded this month', async () => {
-    process.env['LLM_MONTHLY_BUDGET_USD'] = '20'
+    process.env['LLM_MONTHLY_BUDGET_USD'] = '20';
     mockSelectResults(
       [{ spent: '17.00' }],
       [{ metadata: JSON.stringify({ month: '2026-09', threshold: 0.8 }) }],
-    )
-    await checkLlmBudget(now)
-    expect(mockInsertValues).not.toHaveBeenCalled()
-  })
+    );
+    await checkLlmBudget(now);
+    expect(mockInsertValues).not.toHaveBeenCalled();
+  });
 
   it('treats a malformed prior row as no prior alert', async () => {
-    process.env['LLM_MONTHLY_BUDGET_USD'] = '20'
-    mockSelectResults([{ spent: '17.00' }], [{ metadata: '{not json' }])
-    await checkLlmBudget(now)
-    expect(mockInsertValues).toHaveBeenCalledTimes(1)
-  })
-})
+    process.env['LLM_MONTHLY_BUDGET_USD'] = '20';
+    mockSelectResults([{ spent: '17.00' }], [{ metadata: '{not json' }]);
+    await checkLlmBudget(now);
+    expect(mockInsertValues).toHaveBeenCalledTimes(1);
+  });
+});
 ```
 
 `mockSelectResults` is defined in the mock block above.
@@ -144,38 +144,38 @@ describe('checkLlmBudget', () => {
 - [ ] **Step 3: Implement.**
 
 ```ts
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { z } from 'zod'
-import { db, costTracking, notifications } from '@concert-crawl/db'
-import { reportFailure } from '@concert-crawl/logger'
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { db, costTracking, notifications } from '@concert-crawl/db';
+import { reportFailure } from '@concert-crawl/logger';
 
 // The services that spend on the Anthropic key (cost_tracking.service).
-const LLM_SERVICES = ['claude', 'genre-tagger']
+const LLM_SERVICES = ['claude', 'genre-tagger'];
 const BudgetMeta = z.object({
   month: z.string(),
   threshold: z.union([z.literal(0.8), z.literal(1)]),
-})
+});
 
 export function crossedBudgetThreshold(
   spentUsd: number,
   budgetUsd: number,
 ): 0.8 | 1 | null {
-  if (!(budgetUsd > 0)) return null
-  const ratio = spentUsd / budgetUsd
-  if (ratio >= 1) return 1
-  if (ratio >= 0.8) return 0.8
-  return null
+  if (!(budgetUsd > 0)) return null;
+  const ratio = spentUsd / budgetUsd;
+  if (ratio >= 1) return 1;
+  if (ratio >= 0.8) return 0.8;
+  return null;
 }
 
 export async function checkLlmBudget(now: Date = new Date()): Promise<void> {
-  const budgetUsd = Number(process.env['LLM_MONTHLY_BUDGET_USD'] ?? '')
-  if (!Number.isFinite(budgetUsd) || budgetUsd <= 0) return // dormant until set
+  const budgetUsd = Number(process.env['LLM_MONTHLY_BUDGET_USD'] ?? '');
+  if (!Number.isFinite(budgetUsd) || budgetUsd <= 0) return; // dormant until set
 
   // Anthropic resets limits at 00:00 UTC on the 1st, so the month is UTC.
   const monthStart = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-  )
-  const month = monthStart.toISOString().slice(0, 7)
+  );
+  const month = monthStart.toISOString().slice(0, 7);
 
   const [row] = await db
     .select({ spent: sql<string>`coalesce(sum(${costTracking.costUsd}), 0)` })
@@ -185,10 +185,10 @@ export async function checkLlmBudget(now: Date = new Date()): Promise<void> {
         inArray(costTracking.service, LLM_SERVICES),
         gte(costTracking.recordedAt, monthStart),
       ),
-    )
-  const spentUsd = Number(row?.spent ?? 0)
-  const threshold = crossedBudgetThreshold(spentUsd, budgetUsd)
-  if (threshold === null) return
+    );
+  const spentUsd = Number(row?.spent ?? 0);
+  const threshold = crossedBudgetThreshold(spentUsd, budgetUsd);
+  if (threshold === null) return;
 
   const prior = await db
     .select({ metadata: notifications.metadata })
@@ -198,32 +198,32 @@ export async function checkLlmBudget(now: Date = new Date()): Promise<void> {
         eq(notifications.category, 'cost.llm_budget'),
         gte(notifications.createdAt, monthStart),
       ),
-    )
+    );
   const alreadySent = prior.some((alert) => {
-    const parsed = BudgetMeta.safeParse(parseJson(alert.metadata))
+    const parsed = BudgetMeta.safeParse(parseJson(alert.metadata));
     return (
       parsed.success &&
       parsed.data.month === month &&
       parsed.data.threshold === threshold
-    )
-  })
-  if (alreadySent) return
+    );
+  });
+  if (alreadySent) return;
 
-  const pct = Math.round(threshold * 100)
+  const pct = Math.round(threshold * 100);
   await db.insert(notifications).values({
     type: 'admin_alert',
     category: 'cost.llm_budget',
     title: `LLM spend at ${pct}% of the monthly budget`,
     body: `$${spentUsd.toFixed(2)} of $${budgetUsd.toFixed(2)} spent in ${month}.`,
     metadata: JSON.stringify({ month, threshold }),
-  })
+  });
   reportFailure({
     event: 'cost.llm_budget',
     severity: threshold === 1 ? 'error' : 'warn',
     spentUsd,
     budgetUsd,
     month,
-  })
+  });
 }
 ```
 
@@ -231,11 +231,11 @@ Beside `BudgetMeta`, a malformed metadata row must read as "no prior alert", nev
 
 ```ts
 function parseJson(text: string | null): unknown {
-  if (text === null) return null
+  if (text === null) return null;
   try {
-    return JSON.parse(text)
+    return JSON.parse(text);
   } catch {
-    return null
+    return null;
   }
 }
 ```

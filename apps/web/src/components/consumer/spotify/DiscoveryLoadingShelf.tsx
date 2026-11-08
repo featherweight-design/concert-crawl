@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // DiscoveryShelf LOADING state (design_handoff_discovery_loading). Fires on
 // the narrow gap: entitled + Spotify-connected + `useTastePicks()` still in
@@ -7,19 +7,19 @@
 // image 116 · body pad 10/11/12 · gap 7) so real picks land with zero shift.
 // Timeout chip after 8s per the handoff — "slow", not "broken".
 
-import { useEffect, useState } from 'react'
-import { SPOTIFY_COPY } from './definitions/copy'
+import { useEffect, useState } from 'react';
+import { SPOTIFY_COPY } from './definitions/copy';
 import {
   ShelfSkeletonCards,
   ShelfSkeletonHeader,
-} from './DiscoveryShelfSkeleton'
+} from './DiscoveryShelfSkeleton';
 
-const LOADING = SPOTIFY_COPY.discovery.loading
+const LOADING = SPOTIFY_COPY.discovery.loading;
 
 // Timeout at 8s per the handoff — flips the shelf from shimmer to a light
 // retry chip. Deliberately shorter than a plausible slow-network fetch so
 // we surface "slow, not broken" before the user gives up scrolling past.
-const TIMEOUT_MS = 8000
+const TIMEOUT_MS = 8000;
 
 const TimeoutRetryChip = ({ onRetry }: { onRetry: () => void }) => (
   <div
@@ -87,7 +87,7 @@ const TimeoutRetryChip = ({ onRetry }: { onRetry: () => void }) => (
       {LOADING.timeout.retryCta}
     </button>
   </div>
-)
+);
 
 export const DiscoveryLoadingShelf = ({
   onRetry,
@@ -95,26 +95,26 @@ export const DiscoveryLoadingShelf = ({
 }: {
   // The refetch trigger for the timeout chip — usually
   // `picksQuery.refetch` from the parent.
-  onRetry: () => void
+  onRetry: () => void;
   // Injectable for tests only; prod uses the design-locked 8s.
-  timeoutMs?: number
+  timeoutMs?: number;
 }) => {
-  const [isTimeout, setIsTimeout] = useState(false)
+  const [isTimeout, setIsTimeout] = useState(false);
   // Bumped on every Retry click so the effect below re-arms the timer.
   // Without this, a Retry that itself hangs would shimmer forever — the
   // effect's [timeoutMs] deps don't re-run on isTimeout state changes.
-  const [retryNonce, setRetryNonce] = useState(0)
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsTimeout(true), timeoutMs)
-    return () => clearTimeout(timer)
-  }, [timeoutMs, retryNonce])
+    const timer = setTimeout(() => setIsTimeout(true), timeoutMs);
+    return () => clearTimeout(timer);
+  }, [timeoutMs, retryNonce]);
 
   const retry = () => {
-    setIsTimeout(false)
-    setRetryNonce((prev) => prev + 1)
-    onRetry()
-  }
+    setIsTimeout(false);
+    setRetryNonce((prev) => prev + 1);
+    onRetry();
+  };
 
   return (
     <section
@@ -130,5 +130,5 @@ export const DiscoveryLoadingShelf = ({
         <ShelfSkeletonCards />
       )}
     </section>
-  )
-}
+  );
+};

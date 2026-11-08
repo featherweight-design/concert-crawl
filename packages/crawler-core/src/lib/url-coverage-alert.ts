@@ -22,11 +22,11 @@
 //
 // Never fails the crawl: advisory detection layered on a run that completed.
 
-import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
-import { db, events, notifications, venues } from '@concert-crawl/db'
-import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
-import { reportFailure } from '@concert-crawl/logger'
-import { evaluateCoverageCondition } from './triage-conditions.js'
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
+import { db, events, notifications, venues } from '@concert-crawl/db';
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events';
+import { reportFailure } from '@concert-crawl/logger';
+import { evaluateCoverageCondition } from './triage-conditions.js';
 
 // Thresholds and the ratio classifier live in triage-conditions.ts so the admin
 // triage read path (#1215) and this write path can never drift. Kept as
@@ -34,43 +34,43 @@ import { evaluateCoverageCondition } from './triage-conditions.js'
 export {
   COVERAGE_MIN_CATALOGUE,
   COVERAGE_GAP_RATIO,
-} from './triage-conditions.js'
+} from './triage-conditions.js';
 
 // Mirrors ALERT_COOLDOWN_DAYS in event-count-alert.ts. Cleared on a healthy
 // run so a venue that recovers and regresses alerts again rather than staying
 // silenced for the rest of the window (the #1174 lesson).
-export const COVERAGE_ALERT_COOLDOWN_DAYS = 7
+export const COVERAGE_ALERT_COOLDOWN_DAYS = 7;
 
-export type CoverageSeverity = 'no_coverage' | 'partial_gap'
+export type CoverageSeverity = 'no_coverage' | 'partial_gap';
 
 export interface UrlCoverageAlertInput {
-  venueId: string
-  venueName: string
-  crawlRunId: string
+  venueId: string;
+  venueName: string;
+  crawlRunId: string;
   /**
    * Rows that survived the downstream guards on this run. Gates the check —
    * see runCheck for why a run that kept nothing is passed over.
    */
-  eventsUsable: number
+  eventsUsable: number;
   /** venues.last_url_coverage_alert_at as of the start of this run. */
-  lastUrlCoverageAlertAt: Date | null
+  lastUrlCoverageAlertAt: Date | null;
   /** Override for tests; defaults to new Date(). */
-  now?: Date
+  now?: Date;
 }
 
 export type CoverageOutcome =
   | {
-      fired: false
+      fired: false;
       reason:
-        'not_healthy' | 'small_catalogue' | 'cooldown' | 'covered' | 'error'
+        'not_healthy' | 'small_catalogue' | 'cooldown' | 'covered' | 'error';
     }
   | {
-      fired: true
-      severity: CoverageSeverity
-      uncoveredCount: number
-      upcomingCount: number
-      uncoveredPercent: number
-    }
+      fired: true;
+      severity: CoverageSeverity;
+      uncoveredCount: number;
+      upcomingCount: number;
+      uncoveredPercent: number;
+    };
 
 /**
  * Check whether the venue's upcoming catalogue has lost its per-event ticket
@@ -84,7 +84,7 @@ export async function checkUrlCoverage(
   input: UrlCoverageAlertInput,
 ): Promise<CoverageOutcome> {
   try {
-    return await runCheck(input)
+    return await runCheck(input);
   } catch (err) {
     reportFailure({
       event: 'crawl.url_coverage_alert.error',
@@ -92,25 +92,25 @@ export async function checkUrlCoverage(
       venueId: input.venueId,
       crawlRunId: input.crawlRunId,
       error: err instanceof Error ? err.message : String(err),
-    })
+    });
     // Distinct from 'covered' so a swallowed failure can't masquerade as a
     // clean result — the integration tests assert 'covered' in two places, and
     // collapsing the error path into it would let a broken query pass them.
-    return { fired: false, reason: 'error' }
+    return { fired: false, reason: 'error' };
   }
 }
 
 async function runCheck(
   input: UrlCoverageAlertInput,
 ): Promise<CoverageOutcome> {
-  const now = input.now ?? new Date()
+  const now = input.now ?? new Date();
 
   // A run that kept nothing is a went-dark incident, and event-count-alert.ts
   // owns it. Classifying it here too would double-notify for one regression —
   // and worse, a dark venue's stale catalogue would read as a coverage gap for
   // as long as it stayed dark, burying the real cause.
   if (input.eventsUsable === 0) {
-    return { fired: false, reason: 'not_healthy' }
+    return { fired: false, reason: 'not_healthy' };
   }
 
   // Consumer-visible upcoming catalogue only. The filters mirror the consumer
@@ -138,10 +138,10 @@ async function runCheck(
           from: sql`(NOW() AT TIME ZONE 'America/Denver')::date`,
         }),
       ),
-    )
+    );
 
-  const upcomingCount = row?.upcomingCount ?? 0
-  const uncoveredCount = row?.uncoveredCount ?? 0
+  const upcomingCount = row?.upcomingCount ?? 0;
+  const uncoveredCount = row?.uncoveredCount ?? 0;
 
   // Stamp completeness ahead of the classifier's early returns. "Fully
   // covered" is a stricter fact than "no gap detected" — the classifier
@@ -169,13 +169,16 @@ async function runCheck(
             lt(venues.lastUrlCoverageOkAt, now),
           ),
         ),
-      )
+      );
   }
 
-  const condition = evaluateCoverageCondition({ upcomingCount, uncoveredCount })
+  const condition = evaluateCoverageCondition({
+    upcomingCount,
+    uncoveredCount,
+  });
 
   if (!condition.detected && condition.reason === 'small_catalogue') {
-    return { fired: false, reason: 'small_catalogue' }
+    return { fired: false, reason: 'small_catalogue' };
   }
 
   if (!condition.detected) {
@@ -194,15 +197,15 @@ async function runCheck(
             eq(venues.id, input.venueId),
             eq(venues.lastUrlCoverageAlertAt, input.lastUrlCoverageAlertAt),
           ),
-        )
+        );
     }
-    return { fired: false, reason: 'covered' }
+    return { fired: false, reason: 'covered' };
   }
 
   if (input.lastUrlCoverageAlertAt) {
-    const cooldownMs = COVERAGE_ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
+    const cooldownMs = COVERAGE_ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
     if (now.getTime() - input.lastUrlCoverageAlertAt.getTime() < cooldownMs) {
-      return { fired: false, reason: 'cooldown' }
+      return { fired: false, reason: 'cooldown' };
     }
   }
 
@@ -210,7 +213,7 @@ async function runCheck(
   // Cervantes shape, and almost always an extraction regression rather than a
   // venue that genuinely stopped publishing links. 'partial_gap' is likelier to
   // be a subset of pages changing shape, so the two get different copy.
-  const { condition: severity, uncoveredPercent } = condition
+  const { condition: severity, uncoveredPercent } = condition;
 
   // Notification insert + cooldown bump in one transaction, matching the two
   // sibling guards. Were these independent statements, a transient failure on
@@ -241,13 +244,13 @@ async function runCheck(
         upcomingCount,
         uncoveredPercent,
       }),
-    })
+    });
 
     await tx
       .update(venues)
       .set({ lastUrlCoverageAlertAt: now, updatedAt: now })
-      .where(eq(venues.id, input.venueId))
-  })
+      .where(eq(venues.id, input.venueId));
+  });
 
   return {
     fired: true,
@@ -255,5 +258,5 @@ async function runCheck(
     uncoveredCount,
     upcomingCount,
     uncoveredPercent,
-  }
+  };
 }

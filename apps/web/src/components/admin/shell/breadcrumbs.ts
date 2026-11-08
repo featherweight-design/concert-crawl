@@ -1,10 +1,10 @@
-import type { NavItem } from './nav'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
+import type { NavItem } from './nav';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
 
 export interface Crumb {
-  label: string
-  href?: string
+  label: string;
+  href?: string;
 }
 
 export function buildBreadcrumbs(
@@ -16,26 +16,26 @@ export function buildBreadcrumbs(
     item.href !== '/admin'
       ? pathname.startsWith(item.href)
       : pathname === '/admin',
-  )
+  );
 
-  if (!section) return [{ label: 'Admin', href: '/admin' }]
+  if (!section) return [{ label: 'Admin', href: '/admin' }];
 
   if (pathname === section.href) {
     const adminCrumb: Crumb =
       pathname === '/admin'
         ? { label: 'Admin' }
-        : { label: 'Admin', href: '/admin' }
-    return [adminCrumb, { label: section.label }]
+        : { label: 'Admin', href: '/admin' };
+    return [adminCrumb, { label: section.label }];
   }
 
-  const sub = pathname.slice(section.href.length).replace(/^\//, '')
-  let subLabel = 'Details'
+  const sub = pathname.slice(section.href.length).replace(/^\//, '');
+  let subLabel = 'Details';
   if (section.key === 'venues' && sub) {
     // Every venues subpath except the robots audit tool is a venue detail page
     // keyed by id, so the id case is the default and the tool is the exception.
     // The tool's crumb reads from its page title so the two cannot drift.
     subLabel =
-      sub === 'robots-audit' ? ADMIN_COPY.robotsAudit.page.title : 'Edit venue'
+      sub === 'robots-audit' ? ADMIN_COPY.robotsAudit.page.title : 'Edit venue';
   }
 
   // Review subpages carry an optional `?from=<tab>` param so the breadcrumb
@@ -45,7 +45,7 @@ export function buildBreadcrumbs(
   const sectionHref =
     section.key === 'review'
       ? reviewHrefFromParam(searchParams?.get('from'))
-      : section.href
+      : section.href;
 
-  return [{ label: section.label, href: sectionHref }, { label: subLabel }]
+  return [{ label: section.label, href: sectionHref }, { label: subLabel }];
 }

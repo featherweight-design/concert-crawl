@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The /passport route body (#85).
 //
@@ -7,41 +7,41 @@
 // the same thing in different words is how two surfaces of one feature start
 // quoting different prices.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { HistoryLocked } from '@/components/consumer/history/HistoryLocked'
-import { PassportCard } from '@/components/consumer/passport/PassportCard'
-import { PassportActions } from '@/components/consumer/passport/PassportActions'
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { HistoryLocked } from '@/components/consumer/history/HistoryLocked';
+import { PassportCard } from '@/components/consumer/passport/PassportCard';
+import { PassportActions } from '@/components/consumer/passport/PassportActions';
 import {
   PP_MODES,
   PASSPORT_PRINT_MODE,
-} from '@/components/consumer/passport/definitions/modes'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { resolveThemeTokens } from '@/lib/share/theme-tokens'
-import { useTheme } from '@/theme'
-import type { AttendedShow } from '@/lib/passport/stats'
+} from '@/components/consumer/passport/definitions/modes';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { resolveThemeTokens } from '@/lib/share/theme-tokens';
+import { useTheme } from '@/theme';
+import type { AttendedShow } from '@/lib/passport/stats';
 
-const COPY = CONSUMER_COPY.passport
+const COPY = CONSUMER_COPY.passport;
 
 /** How wide the preview is allowed to get. The card is square. */
-const PREVIEW_MAX_WIDTH = 420
+const PREVIEW_MAX_WIDTH = 420;
 
 export interface PassportContentProps {
-  shows: AttendedShow[]
-  tokens: Record<string, string>
-  handle: string | null
-  year: number
+  shows: AttendedShow[];
+  tokens: Record<string, string>;
+  handle: string | null;
+  year: number;
   /** The server's verdict from the /v1/history 403. */
-  locked: boolean
-  scaRegion: boolean
+  locked: boolean;
+  scaRegion: boolean;
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
   <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
     {children}
   </main>
-)
+);
 
 export const PassportContent = ({
   shows,
@@ -51,49 +51,49 @@ export const PassportContent = ({
   locked,
   scaRegion,
 }: PassportContentProps) => {
-  const { isLoading, active } = useEntitlement('concert-history')
-  const { theme } = useTheme()
+  const { isLoading, active } = useEntitlement('concert-history');
+  const { theme } = useTheme();
 
   // The server draws the card in the theme stored on the profile; the browser
   // may be sitting in a different one, and the theme the reader can see is the
   // one the card has to match. Deferred to after mount because swapping tokens
   // during hydration would fight the server's markup.
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true)
-  }, [])
-  const liveTokens = mounted ? resolveThemeTokens(theme).tokens : tokens
-  const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`
+    setMounted(true);
+  }, []);
+  const liveTokens = mounted ? resolveThemeTokens(theme).tokens : tokens;
+  const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`;
 
   // The preview is the print card itself, scaled down — not the compact mode.
   // A preview that is a different card is how the reader is shown a 3×3 wall
   // and handed a 4×4 one.
-  const [previewWidth, setPreviewWidth] = useState(PREVIEW_MAX_WIDTH)
-  const observerRef = useRef<ResizeObserver | null>(null)
+  const [previewWidth, setPreviewWidth] = useState(PREVIEW_MAX_WIDTH);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const measureFrame = useCallback((node: HTMLDivElement | null) => {
-    observerRef.current?.disconnect()
-    observerRef.current = null
-    if (node === null) return
-    const measured = node.getBoundingClientRect().width
-    if (measured > 0) setPreviewWidth(measured)
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    if (node === null) return;
+    const measured = node.getBoundingClientRect().width;
+    if (measured > 0) setPreviewWidth(measured);
     // The first measurement is what the preview actually needs; tracking later
     // resizes is an enhancement, so a runtime without ResizeObserver renders
     // rather than throws.
-    if (typeof ResizeObserver === 'undefined') return
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width
-      if (width !== undefined && width > 0) setPreviewWidth(width)
-    })
-    observer.observe(node)
-    observerRef.current = observer
-  }, [])
+      const width = entries[0]?.contentRect.width;
+      if (width !== undefined && width > 0) setPreviewWidth(width);
+    });
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
   useEffect(
     () => () => {
-      observerRef.current?.disconnect()
+      observerRef.current?.disconnect();
     },
     [],
-  )
-  const previewScale = previewWidth / PP_MODES[PASSPORT_PRINT_MODE].width
+  );
+  const previewScale = previewWidth / PP_MODES[PASSPORT_PRINT_MODE].width;
 
   // Server 403 wins outright; the client hook decides for a plan the server
   // hasn't rejected — e.g. a token that downgraded mid-session.
@@ -102,7 +102,7 @@ export const PassportContent = ({
       <Shell>
         <HistoryLocked scaRegion={scaRegion} />
       </Shell>
-    )
+    );
   }
 
   if (shows.length === 0) {
@@ -116,7 +116,7 @@ export const PassportContent = ({
           primaryCta={{ label: COPY.emptyCta, href: '/events' }}
         />
       </Shell>
-    )
+    );
   }
 
   return (
@@ -164,5 +164,5 @@ export const PassportContent = ({
         {mounted && <PassportActions imageUrl={imageUrl} />}
       </div>
     </Shell>
-  )
-}
+  );
+};

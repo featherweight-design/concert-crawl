@@ -12,14 +12,14 @@
  */
 
 export const createRng = (seed: number) => {
-  let state = seed >>> 0
+  let state = seed >>> 0;
   const next = () => {
-    state |= 0
-    state = (state + 0x6d2b79f5) | 0
-    let tt = Math.imul(state ^ (state >>> 15), 1 | state)
-    tt = (tt + Math.imul(tt ^ (tt >>> 7), 61 | tt)) ^ tt
-    return ((tt ^ (tt >>> 14)) >>> 0) / 4294967296
-  }
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let tt = Math.imul(state ^ (state >>> 15), 1 | state);
+    tt = (tt + Math.imul(tt ^ (tt >>> 7), 61 | tt)) ^ tt;
+    return ((tt ^ (tt >>> 14)) >>> 0) / 4294967296;
+  };
   return {
     next,
     int: (min: number, max: number) =>
@@ -30,9 +30,9 @@ export const createRng = (seed: number) => {
       // undefined`, so callers get a silent type-safety hole and downstream
       // inserts would receive undefined. Fail loudly instead.
       if (arr.length === 0) {
-        throw new Error('createRng.pick: cannot pick from an empty array')
+        throw new Error('createRng.pick: cannot pick from an empty array');
       }
-      return arr[Math.floor(next() * arr.length)]!
+      return arr[Math.floor(next() * arr.length)]!;
     },
-  }
-}
+  };
+};

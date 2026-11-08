@@ -7,23 +7,23 @@ import {
   type TierHeadline,
   type TierPriceBlock,
   type Vendor,
-} from '@concert-crawl/types'
-import { aggregateByTier } from './aggregate-by-tier.js'
+} from '@concert-crawl/types';
+import { aggregateByTier } from './aggregate-by-tier.js';
 
 export interface CorroboratedSubmissionRow {
-  id: string
-  eventId: string
-  tier: Tier
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  howFound: HowFound
-  userId: string | null
-  createdAt: Date
-  updatedAt: Date
-  lastSeenAt: Date | null
-  corroborationCount: number
+  id: string;
+  eventId: string;
+  tier: Tier;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  howFound: HowFound;
+  userId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  lastSeenAt: Date | null;
+  corroborationCount: number;
 }
 
 /**
@@ -38,14 +38,14 @@ export interface CorroboratedSubmissionRow {
 export function buildPriceByTierMap(
   rows: CorroboratedSubmissionRow[],
 ): Map<string, TierPriceBlock[]> {
-  const byEvent = new Map<string, CorroboratedSubmissionRow[]>()
+  const byEvent = new Map<string, CorroboratedSubmissionRow[]>();
   for (const sub of rows) {
-    const existing = byEvent.get(sub.eventId)
-    if (existing) existing.push(sub)
-    else byEvent.set(sub.eventId, [sub])
+    const existing = byEvent.get(sub.eventId);
+    if (existing) existing.push(sub);
+    else byEvent.set(sub.eventId, [sub]);
   }
 
-  const result = new Map<string, TierPriceBlock[]>()
+  const result = new Map<string, TierPriceBlock[]>();
   for (const [eventId, subs] of byEvent) {
     result.set(
       eventId,
@@ -79,9 +79,9 @@ export function buildPriceByTierMap(
         confirmsNeeded: SP_POLICY.confirmsRequired,
         viewerUserId: null,
       }),
-    )
+    );
   }
-  return result
+  return result;
 }
 
 /**
@@ -94,8 +94,8 @@ export function resolveDisplayPrice(
   blocks: TierPriceBlock[],
   fallbackScalar: string | null,
 ): string | null {
-  const lowest = lowestHeadlinePrice(blocks)
-  return lowest !== null ? lowest.toFixed(2) : fallbackScalar
+  const lowest = lowestHeadlinePrice(blocks);
+  return lowest !== null ? lowest.toFixed(2) : fallbackScalar;
 }
 
 /**
@@ -107,8 +107,8 @@ export function resolveDisplayPrice(
  * ascending, so the answer is the first block carrying a headline.
  */
 export function lowestHeadlinePrice(blocks: TierPriceBlock[]): number | null {
-  const headline = lowestHeadline(blocks)
-  return headline === null ? null : parseFloat(headline.priceMin)
+  const headline = lowestHeadline(blocks);
+  return headline === null ? null : parseFloat(headline.priceMin);
 }
 
 /**
@@ -119,7 +119,7 @@ export function lowestHeadlinePrice(blocks: TierPriceBlock[]): number | null {
 export function lowestHeadlineObservedAt(
   blocks: TierPriceBlock[],
 ): string | null {
-  return lowestHeadline(blocks)?.observedAt ?? null
+  return lowestHeadline(blocks)?.observedAt ?? null;
 }
 
 /**
@@ -133,7 +133,7 @@ export function lowestHeadlineObservedAt(
 export function lowestHeadlineSourceCategory(
   blocks: TierPriceBlock[],
 ): SourceCategory | null {
-  return lowestHeadline(blocks)?.sourceCategory ?? null
+  return lowestHeadline(blocks)?.sourceCategory ?? null;
 }
 
 function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
@@ -142,8 +142,8 @@ function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
       block.headline != null &&
       Number.isFinite(parseFloat(block.headline.priceMin))
     ) {
-      return block.headline
+      return block.headline;
     }
   }
-  return null
+  return null;
 }

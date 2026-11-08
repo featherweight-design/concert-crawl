@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { Eyebrow } from '@/components/consumer/glyphs'
-import { LadderRow } from './LadderRow'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { Eyebrow } from '@/components/consumer/glyphs';
+import { LadderRow } from './LadderRow';
 
 // Sibling of `FaceValueCard` for property table state #11 (sold-out + no
 // resale + no primary + no boxoffice). Per §9 Q1 lock + Appendix A.1:
@@ -14,10 +14,10 @@ import { LadderRow } from './LadderRow'
 // no outbound CTA. Eyebrow drops the "≠ resale" framing because there's
 // nothing to compare to.
 
-const copy = CONSUMER_COPY.priceRegion.contributeFaceValue
+const copy = CONSUMER_COPY.priceRegion.contributeFaceValue;
 
 export interface ContributeFaceValueCardProps {
-  onAddPrice: () => void
+  onAddPrice: () => void;
 }
 
 export const ContributeFaceValueCard = ({
@@ -135,5 +135,5 @@ export const ContributeFaceValueCard = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -15,24 +15,24 @@
 // Omit --only with --send to send the whole set. This is a dev tool: it is not
 // imported by the app and never runs in prod.
 
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { Resend } from 'resend'
-import type { EmailTemplateKey } from '@concert-crawl/db'
-import { getTemplateRenderer } from './registry.js'
-import type { EmailTemplateVars, RenderedEmail } from './types.js'
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Resend } from 'resend';
+import type { EmailTemplateKey } from '@concert-crawl/db';
+import { getTemplateRenderer } from './registry.js';
+import type { EmailTemplateVars, RenderedEmail } from './types.js';
 
-const FROM = 'Concert Crawl <billing@concertcrawl.app>'
-const REPLY_TO = 'support@concertcrawl.app'
+const FROM = 'Concert Crawl <billing@concertcrawl.app>';
+const REPLY_TO = 'support@concertcrawl.app';
 // Anchor output to the api package dir (../../ from src/emails or dist/emails),
 // not process.cwd(), so previews always land in apps/api/.email-preview/ —
 // which is what .gitignore covers — regardless of where the script is run from.
 const OUTPUT_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
   '../../.email-preview',
-)
-const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview'
+);
+const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview';
 
 // One representative vars set per template — based on the fixtures in
 // src/emails/templates/templates.test.ts so the preview closely tracks what the
@@ -114,31 +114,31 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
     tastePicks: [],
     unsubscribeUrl: null,
   },
-}
+};
 
 // Reads the value after a flag, failing fast if it's missing or is itself
 // another flag — otherwise `--send --only x` would silently send to nobody and
 // `--only` at the end would silently fall back to the whole set.
 const readFlagValue = (argv: string[], idx: number, flag: string): string => {
-  const value = argv[idx + 1]
+  const value = argv[idx + 1];
   if (value === undefined || value.startsWith('--')) {
-    process.stderr.write(`${flag} requires a value.\n`)
-    process.exit(1)
+    process.stderr.write(`${flag} requires a value.\n`);
+    process.exit(1);
   }
-  return value
-}
+  return value;
+};
 
 const parseArgs = (
   argv: string[],
 ): { sendTo: string | null; only: string | null } => {
-  let sendTo: string | null = null
-  let only: string | null = null
+  let sendTo: string | null = null;
+  let only: string | null = null;
   for (let idx = 0; idx < argv.length; idx += 1) {
-    if (argv[idx] === '--send') sendTo = readFlagValue(argv, idx, '--send')
-    if (argv[idx] === '--only') only = readFlagValue(argv, idx, '--only')
+    if (argv[idx] === '--send') sendTo = readFlagValue(argv, idx, '--send');
+    if (argv[idx] === '--only') only = readFlagValue(argv, idx, '--only');
   }
-  return { sendTo, only }
-}
+  return { sendTo, only };
+};
 
 // Minimal HTML-entity escape for values interpolated into the index page —
 // subjects can contain &, <, >, or quotes and would otherwise break the markup.
@@ -148,63 +148,63 @@ const escapeHtml = (value: string): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
+    .replace(/'/g, '&#39;');
 
 const renderOne = <K extends EmailTemplateKey>(
   templateKey: K,
 ): RenderedEmail | null => {
-  const renderer = getTemplateRenderer(templateKey)
-  if (renderer === null) return null
-  return renderer(sampleVars[templateKey])
-}
+  const renderer = getTemplateRenderer(templateKey);
+  if (renderer === null) return null;
+  return renderer(sampleVars[templateKey]);
+};
 
 const writePreviews = (keys: EmailTemplateKey[]): void => {
-  mkdirSync(OUTPUT_DIR, { recursive: true })
-  const indexRows: string[] = []
+  mkdirSync(OUTPUT_DIR, { recursive: true });
+  const indexRows: string[] = [];
   for (const templateKey of keys) {
-    const rendered = renderOne(templateKey)
+    const rendered = renderOne(templateKey);
     if (rendered === null) {
       process.stderr.write(
         `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
-      )
-      process.exitCode = 1
-      continue
+      );
+      process.exitCode = 1;
+      continue;
     }
-    const fileName = `${templateKey}.html`
-    writeFileSync(join(OUTPUT_DIR, fileName), rendered.html, 'utf8')
+    const fileName = `${templateKey}.html`;
+    writeFileSync(join(OUTPUT_DIR, fileName), rendered.html, 'utf8');
     indexRows.push(
       `<li><a href="./${encodeURIComponent(fileName)}">${escapeHtml(templateKey)}</a> — <em>${escapeHtml(rendered.subject)}</em></li>`,
-    )
+    );
   }
   writeFileSync(
     join(OUTPUT_DIR, 'index.html'),
     `<!doctype html><meta charset="utf-8"><title>Email previews</title><h1>Concert Crawl — email previews</h1><ul>${indexRows.join('')}</ul>`,
     'utf8',
-  )
+  );
   process.stdout.write(
     `Rendered ${indexRows.length} templates → ${OUTPUT_DIR}\nOpen ${join(OUTPUT_DIR, 'index.html')} in a browser.\n`,
-  )
-}
+  );
+};
 
 const sendPreviews = async (
   keys: EmailTemplateKey[],
   sendTo: string,
 ): Promise<void> => {
-  const apiKey = process.env.RESEND_API_KEY
+  const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    process.stderr.write('RESEND_API_KEY not set — cannot test-send.\n')
-    process.exitCode = 1
-    return
+    process.stderr.write('RESEND_API_KEY not set — cannot test-send.\n');
+    process.exitCode = 1;
+    return;
   }
-  const resend = new Resend(apiKey)
+  const resend = new Resend(apiKey);
   for (const templateKey of keys) {
-    const rendered = renderOne(templateKey)
+    const rendered = renderOne(templateKey);
     if (rendered === null) {
       process.stderr.write(
         `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
-      )
-      process.exitCode = 1
-      continue
+      );
+      process.exitCode = 1;
+      continue;
     }
     try {
       const response = await resend.emails.send({
@@ -214,41 +214,41 @@ const sendPreviews = async (
         subject: `[preview] ${rendered.subject}`,
         html: rendered.html,
         text: rendered.text,
-      })
+      });
       if (response.error) {
         process.stderr.write(
           `${templateKey}: Resend rejected — ${JSON.stringify(response.error)}\n`,
-        )
-        process.exitCode = 1
-        continue
+        );
+        process.exitCode = 1;
+        continue;
       }
-      process.stdout.write(`${templateKey}: sent → ${sendTo}\n`)
+      process.stdout.write(`${templateKey}: sent → ${sendTo}\n`);
     } catch (err) {
-      process.stderr.write(`${templateKey}: send threw — ${String(err)}\n`)
-      process.exitCode = 1
+      process.stderr.write(`${templateKey}: send threw — ${String(err)}\n`);
+      process.exitCode = 1;
     }
   }
-}
+};
 
 const main = async (): Promise<void> => {
-  const { sendTo, only } = parseArgs(process.argv.slice(2))
-  const allKeys = Object.keys(sampleVars) as EmailTemplateKey[]
+  const { sendTo, only } = parseArgs(process.argv.slice(2));
+  const allKeys = Object.keys(sampleVars) as EmailTemplateKey[];
   const keys =
     only === null
       ? allKeys
-      : allKeys.filter((templateKey) => templateKey === only)
+      : allKeys.filter((templateKey) => templateKey === only);
   if (keys.length === 0) {
     process.stderr.write(
       `Unknown --only template "${only}". Known: ${allKeys.join(', ')}\n`,
-    )
-    process.exitCode = 1
-    return
+    );
+    process.exitCode = 1;
+    return;
   }
   if (sendTo !== null) {
-    await sendPreviews(keys, sendTo)
+    await sendPreviews(keys, sendTo);
   } else {
-    writePreviews(keys)
+    writePreviews(keys);
   }
-}
+};
 
-void main()
+void main();

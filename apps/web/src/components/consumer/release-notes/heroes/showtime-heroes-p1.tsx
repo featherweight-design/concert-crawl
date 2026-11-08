@@ -1,101 +1,101 @@
-'use client'
-import React from 'react'
+'use client';
+import React from 'react';
 import {
   ShowtimeBackdrop,
   ShowtimeEyebrow,
   StubGlyph,
   ShowtimeStub,
   TierGlyph,
-} from './showtime-base'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './showtime-base';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 // ════════════════════════════════════════════════════════════════
 // Internal types
 // ════════════════════════════════════════════════════════════════
 
 interface TierDef {
-  key: 'supporter' | 'premium' | 'founder'
-  name: string
-  priceText: string
-  accent: string
-  accent2?: string
-  pos: { tx: number; rot: number }
-  from: { sx: number; sy: number; srot: number }
-  delay: number
-  founder?: boolean
+  key: 'supporter' | 'premium' | 'founder';
+  name: string;
+  priceText: string;
+  accent: string;
+  accent2?: string;
+  pos: { tx: number; rot: number };
+  from: { sx: number; sy: number; srot: number };
+  delay: number;
+  founder?: boolean;
 }
 
 interface StubDef {
-  tx: number
-  rot: number
-  sx: number
-  sy: number
-  srot: number
-  delay: number
-  accent: string
-  glyph: string
-  year: string
-  current?: boolean
+  tx: number;
+  rot: number;
+  sx: number;
+  sy: number;
+  srot: number;
+  delay: number;
+  accent: string;
+  glyph: string;
+  year: string;
+  current?: boolean;
 }
 
 interface HistoryStubProps {
-  stub: StubDef
+  stub: StubDef;
 }
 
 interface ShowDateDef {
-  date: number
-  accent: string
-  glyph: string
-  delay: number
-  current?: boolean
+  date: number;
+  accent: string;
+  glyph: string;
+  delay: number;
+  current?: boolean;
 }
 
 interface CardDef {
-  tx: number
-  rot: number
-  delay: number
-  palette: { bg: string; primary: string; secondary: string }
-  style: 'stripes' | 'rings' | 'halftone'
-  band: string
-  meta: string
-  main?: boolean
+  tx: number;
+  rot: number;
+  delay: number;
+  palette: { bg: string; primary: string; secondary: string };
+  style: 'stripes' | 'rings' | 'halftone';
+  band: string;
+  meta: string;
+  main?: boolean;
 }
 
 interface ShareCardProps {
-  palette: { bg: string; primary: string; secondary: string }
-  main?: boolean
-  style: 'stripes' | 'rings' | 'halftone'
-  band: string
-  meta: string
+  palette: { bg: string; primary: string; secondary: string };
+  main?: boolean;
+  style: 'stripes' | 'rings' | 'halftone';
+  band: string;
+  meta: string;
 }
 
 interface ShareArtProps {
-  palette: { bg: string; primary: string; secondary: string }
+  palette: { bg: string; primary: string; secondary: string };
 }
 
 interface PriceTagDef {
-  sx: number
-  sy: number
-  val: string
-  src: string
-  accent: string
-  delay: number
-  dur: number
+  sx: number;
+  sy: number;
+  val: string;
+  src: string;
+  accent: string;
+  delay: number;
+  dur: number;
 }
 
 interface BarDef {
-  min: number
-  max: number
-  dur: number
-  offset: number
+  min: number;
+  max: number;
+  dur: number;
+  offset: number;
 }
 
 interface ArtistTagDef {
-  name: string
-  accent: string
-  delay: number
+  name: string;
+  accent: string;
+  delay: number;
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -103,9 +103,9 @@ interface ArtistTagDef {
 // ════════════════════════════════════════════════════════════════
 
 function TierMedallion({ tier }: { tier: TierDef }): React.ReactElement {
-  const isFounder = tier.key === 'founder'
-  const discSize = isFounder ? 134 : 108
-  const haloSize = discSize * 1.6
+  const isFounder = tier.key === 'founder';
+  const discSize = isFounder ? 134 : 108;
+  const haloSize = discSize * 1.6;
 
   return (
     <div
@@ -273,7 +273,7 @@ function TierMedallion({ tier }: { tier: TierDef }): React.ReactElement {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -456,7 +456,7 @@ function HistoryStub({ stub }: HistoryStubProps): React.ReactElement {
         />
       </div>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -467,7 +467,7 @@ function ShareArtStripes({ palette }: ShareArtProps): React.ReactElement {
   return (
     <div style={{ position: 'absolute', inset: 0, display: 'flex' }}>
       {Array.from({ length: 5 }).map((_, idx) => {
-        const isPrimary = idx % 2 === 0
+        const isPrimary = idx % 2 === 0;
         return (
           <div
             key={idx}
@@ -480,10 +480,10 @@ function ShareArtStripes({ palette }: ShareArtProps): React.ReactElement {
               mixBlendMode: 'screen',
             }}
           />
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 function ShareArtRings({ palette }: ShareArtProps): React.ReactElement {
@@ -527,7 +527,7 @@ function ShareArtRings({ palette }: ShareArtProps): React.ReactElement {
         ))}
       </g>
     </svg>
-  )
+  );
 }
 
 function ShareArtHalftone({ palette }: ShareArtProps): React.ReactElement {
@@ -560,12 +560,12 @@ function ShareArtHalftone({ palette }: ShareArtProps): React.ReactElement {
         }
       >
         {Array.from({ length: 30 }).map((_, idx) => {
-          const col = idx % 6
-          const row = Math.floor(idx / 6)
-          const xPos = col * 16 + 10
-          const yPos = row * 16 + 8
-          const dist = Math.sqrt((5 - col) * (5 - col) + row * row)
-          const radius = Math.max(0.8, 4 - dist * 0.55)
+          const col = idx % 6;
+          const row = Math.floor(idx / 6);
+          const xPos = col * 16 + 10;
+          const yPos = row * 16 + 8;
+          const dist = Math.sqrt((5 - col) * (5 - col) + row * row);
+          const radius = Math.max(0.8, 4 - dist * 0.55);
           return (
             <circle
               key={idx}
@@ -575,11 +575,11 @@ function ShareArtHalftone({ palette }: ShareArtProps): React.ReactElement {
               fill={palette.secondary}
               opacity="0.9"
             />
-          )
+          );
         })}
       </svg>
     </>
-  )
+  );
 }
 
 function ShareCard({
@@ -674,7 +674,7 @@ function ShareCard({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -711,7 +711,7 @@ export function TierShowtime(): React.ReactElement {
       from: { sx: 260, sy: -100, srot: 20 },
       delay: 0.25,
     },
-  ]
+  ];
 
   return (
     <div
@@ -776,7 +776,7 @@ export function TierShowtime(): React.ReactElement {
         {COPY.heroes.tiers.pickYourSeat}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -862,7 +862,7 @@ export function HistoryShowtime(): React.ReactElement {
       year: "'26",
       current: true,
     },
-  ]
+  ];
 
   return (
     <div
@@ -964,8 +964,8 @@ export function HistoryShowtime(): React.ReactElement {
 
       {/* stubs cascade */}
       {stubs.map((stub, idx) => {
-        const stubWithX = stub as StubDef & { x: number }
-        const scale = stub.current ? 0.88 : 0.66
+        const stubWithX = stub as StubDef & { x: number };
+        const scale = stub.current ? 0.88 : 0.66;
         return (
           <div
             key={idx}
@@ -996,14 +996,14 @@ export function HistoryShowtime(): React.ReactElement {
           >
             <HistoryStub stub={stub} />
           </div>
-        )
+        );
       })}
 
       <ShowtimeEyebrow dotHue="#7AE6FF">
         {COPY.heroes.history.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1065,7 +1065,7 @@ export function PricesShowtime(): React.ReactElement {
       delay: 2.75,
       dur: 3.4,
     },
-  ]
+  ];
 
   return (
     <div
@@ -1242,7 +1242,7 @@ export function PricesShowtime(): React.ReactElement {
         {COPY.heroes.prices.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1254,7 +1254,7 @@ export function CalendarShowtime(): React.ReactElement {
     { date: 14, accent: '#A075FF', glyph: '○', delay: 0.75 },
     { date: 22, accent: '#FFE36B', glyph: '⬡', delay: 0.95 },
     { date: 27, accent: '#7AE6FF', glyph: '★', delay: 1.2, current: true },
-  ]
+  ];
 
   return (
     <div
@@ -1347,8 +1347,8 @@ export function CalendarShowtime(): React.ReactElement {
             }}
           >
             {Array.from({ length: 28 }).map((_, idx) => {
-              const date = idx + 1
-              const stamp = showDates.find((sd) => sd.date === date)
+              const date = idx + 1;
+              const stamp = showDates.find((sd) => sd.date === date);
               return (
                 <div
                   key={idx}
@@ -1408,7 +1408,7 @@ export function CalendarShowtime(): React.ReactElement {
                     </div>
                   )}
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -1477,7 +1477,7 @@ export function CalendarShowtime(): React.ReactElement {
         {COPY.heroes.calendar.syncEyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1513,7 +1513,7 @@ export function ShareableShowtime(): React.ReactElement {
       meta: 'MISSION BALLROOM · JUN 14',
       main: true,
     },
-  ]
+  ];
 
   return (
     <div
@@ -1608,7 +1608,7 @@ export function ShareableShowtime(): React.ReactElement {
         {COPY.heroes.shareable.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1709,7 +1709,7 @@ export function WatchersShowtime(): React.ReactElement {
         {COPY.heroes.watchers.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1717,17 +1717,17 @@ export function WatchersShowtime(): React.ReactElement {
 // ════════════════════════════════════════════════════════════════
 export function SpotifyShowtime(): React.ReactElement {
   const bars: BarDef[] = Array.from({ length: 14 }).map((_, idx) => {
-    const minVal = 0.2 + Math.abs(Math.sin(idx * 0.8) * 0.18)
-    const maxVal = 0.6 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.4)
-    const dur = 1.8 + Math.abs(Math.sin(idx * 0.42) * 1.4)
-    return { min: minVal, max: maxVal, dur, offset: -idx * 0.18 }
-  })
+    const minVal = 0.2 + Math.abs(Math.sin(idx * 0.8) * 0.18);
+    const maxVal = 0.6 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.4);
+    const dur = 1.8 + Math.abs(Math.sin(idx * 0.42) * 1.4);
+    return { min: minVal, max: maxVal, dur, offset: -idx * 0.18 };
+  });
 
   const artists: ArtistTagDef[] = [
     { name: 'KHRUANGBIN', accent: '#FF7BD4', delay: 0.95 },
     { name: 'PHOEBE BRIDGERS', accent: '#7AE6FF', delay: 1.1 },
     { name: 'ST. VINCENT', accent: '#FFE36B', delay: 1.25 },
-  ]
+  ];
 
   return (
     <div
@@ -1871,7 +1871,7 @@ export function SpotifyShowtime(): React.ReactElement {
         {COPY.heroes.spotify.eyebrow}
       </ShowtimeEyebrow>
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1965,14 +1965,14 @@ export function PassportShowtimeStubs(): React.ReactElement {
       subtitle: 'ADMIT ONE',
       top: true,
     },
-  ]
+  ];
 
   const sparkles = Array.from({ length: 12 }).map((_, idx) => ({
     x: (idx * 47) % 580,
     y: (idx * 71) % 300,
     delay: (idx * 0.23) % 3,
     hue: ['#7AE6FF', '#FFE36B', '#FF7BD4', '#FFFFFF'][idx % 4],
-  }))
+  }));
 
   return (
     <div
@@ -2125,5 +2125,5 @@ export function PassportShowtimeStubs(): React.ReactElement {
         {COPY.heroes.passport.passportEyebrow}
       </div>
     </div>
-  )
+  );
 }

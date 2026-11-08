@@ -17,7 +17,7 @@
 - **Conventional commits:** `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
 - **Every `catch` logs.** Fire-and-forget is a `void` async IIFE.
 - **Customer-facing strings live in a `definitions/copy.ts`**, never inline in a `.tsx`. No em-dashes in copy files.
-- **Locked vocabulary:** Watching is the show-tracking concept and its icon is an **eye**, never a heart. "Price check", never dispute/contest/challenge. Following is a *separate* concept from Watching and must never be used as a synonym for it.
+- **Locked vocabulary:** Watching is the show-tracking concept and its icon is an **eye**, never a heart. "Price check", never dispute/contest/challenge. Following is a _separate_ concept from Watching and must never be used as a synonym for it.
 - **Migration timestamps:** the `when` value in `packages/db/migrations/meta/_journal.json` must exceed every prior entry. The last shipped migration is `0075_latin_extended_canonical` at `when: 1786665600000`.
 - **Expand/contract migrations only.** Never destructive in a single deploy.
 - **`SPOTIFY_SYNC_DRY_RUN` stays at `1`.** Nothing in this plan changes it.
@@ -25,21 +25,21 @@
 
 ## File Structure
 
-| File | Responsibility | Task |
-|---|---|---|
-| `apps/api/src/routes/artist-follows.ts` | Follow/unfollow route. Gains the `following` entitlement gate on POST only. | 1 |
-| `apps/api/src/routes/artist-follows.integration.test.ts` | Route tests, extended for the gate. | 1 |
-| `packages/crawler-core/src/lib/spotify-fanout/index.ts` | Candidate query + delivery loop. Generalized, then renamed. | 2, 3 |
-| `packages/crawler-core/src/lib/artist-fanout/**` | Renamed module (directory, symbols, logger name, copy module). | 3 |
-| `packages/crawler-core/src/index.ts` | Package barrel export. | 3 |
-| `apps/crawler/src/run.ts` | Two call sites of the fan-out entry point. | 3 |
-| `packages/push/src/notification-categories.ts` | The closed Zod category union and push-eligible set. | 4 |
-| `apps/web/src/lib/notifications.ts` | The client's duplicated category list. | 4 |
-| `apps/web/src/components/consumer/notifications/definitions/categories.ts` | Category label, ink, glyph, verb. | 4 |
-| `apps/web/src/components/consumer/notifications/glyphs/index.tsx` | Glyph key rename. | 4 |
-| `packages/db/migrations/0076_artist_new_show_category.sql` | Backfills existing rows to the new category. | 4 |
-| `apps/web/src/components/settings/connections/ConnectionsPanel.tsx` | Hides the Connect entry point when the flag is off. | 5 |
-| `apps/web/src/lib/definitions/releases.ts` | Release note for the user-facing change. | 6 |
+| File                                                                       | Responsibility                                                              | Task |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ---- |
+| `apps/api/src/routes/artist-follows.ts`                                    | Follow/unfollow route. Gains the `following` entitlement gate on POST only. | 1    |
+| `apps/api/src/routes/artist-follows.integration.test.ts`                   | Route tests, extended for the gate.                                         | 1    |
+| `packages/crawler-core/src/lib/spotify-fanout/index.ts`                    | Candidate query + delivery loop. Generalized, then renamed.                 | 2, 3 |
+| `packages/crawler-core/src/lib/artist-fanout/**`                           | Renamed module (directory, symbols, logger name, copy module).              | 3    |
+| `packages/crawler-core/src/index.ts`                                       | Package barrel export.                                                      | 3    |
+| `apps/crawler/src/run.ts`                                                  | Two call sites of the fan-out entry point.                                  | 3    |
+| `packages/push/src/notification-categories.ts`                             | The closed Zod category union and push-eligible set.                        | 4    |
+| `apps/web/src/lib/notifications.ts`                                        | The client's duplicated category list.                                      | 4    |
+| `apps/web/src/components/consumer/notifications/definitions/categories.ts` | Category label, ink, glyph, verb.                                           | 4    |
+| `apps/web/src/components/consumer/notifications/glyphs/index.tsx`          | Glyph key rename.                                                           | 4    |
+| `packages/db/migrations/0076_artist_new_show_category.sql`                 | Backfills existing rows to the new category.                                | 4    |
+| `apps/web/src/components/settings/connections/ConnectionsPanel.tsx`        | Hides the Connect entry point when the flag is off.                         | 5    |
+| `apps/web/src/lib/definitions/releases.ts`                                 | Release note for the user-facing change.                                    | 6    |
 
 **Task order is load-bearing.** Behavior changes (1, 2) land before renames (3, 4) so that a rename diff is never mixed with a logic diff — that combination is what makes a reviewer miss the logic.
 
@@ -52,11 +52,13 @@ The entitlements matrix at `packages/entitlements/src/index.ts` already declares
 DELETE stays ungated: a user who downgrades must always be able to unfollow.
 
 **Files:**
+
 - Modify: `apps/api/src/routes/artist-follows.ts` (the file header comment and the POST route registration; line numbers are omitted deliberately, they drift)
 - Test: `apps/api/src/routes/artist-follows.integration.test.ts`
 - Modify: `apps/api/src/test/helpers/seed.ts` — `clearTables()` must truncate `subscriptions`, or the premium row leaks into later tests.
 
 **Interfaces:**
+
 - Consumes: `requireFeature(feature: PremiumFeature): MiddlewareHandler<{ Variables: EntitlementVariables }>` from `apps/api/src/middleware/entitlement.ts`. It returns `401` when unauthenticated and `403` with `{ success: false, error, code: 'entitlement_required', feature }` when the plan lacks the feature. It must be mounted **after** `clerkMiddleware()`.
 - Produces: nothing new. `POST /v1/artists/:slug/follow` now returns `403` for free and supporter plans.
 
@@ -77,7 +79,7 @@ Copy the seeding shape from `apps/api/src/middleware/entitlement.integration.tes
 which is the reference implementation:
 
 ```ts
-import { subscriptions } from '@concert-crawl/db'
+import { subscriptions } from '@concert-crawl/db';
 
 const seedPremiumPlan = async (userId = USER_ID): Promise<void> => {
   await testDb.insert(subscriptions).values({
@@ -87,8 +89,8 @@ const seedPremiumPlan = async (userId = USER_ID): Promise<void> => {
     tier: 'premium',
     status: 'active',
     currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
-  })
-}
+  });
+};
 ```
 
 Add `subscriptions` to the `clearTables()` truncation, or the premium row leaks
@@ -107,37 +109,37 @@ do not delete any of them — a premium user must still be able to follow, and t
 ```ts
 describe('POST /v1/artists/:slug/follow — entitlement gate', () => {
   it('returns 403 with entitlement_required for a free plan', async () => {
-    const artist = await seedArtist({ name: 'Big Head Todd' })
-    authState.current = { userId: USER_ID }
-    const res = await follow(artist.slug)
-    expect(res.status).toBe(403)
-    const body = await res.json()
-    expect(body.code).toBe('entitlement_required')
-    expect(body.feature).toBe('following')
-    expect(await followRows()).toHaveLength(0)
-  })
+    const artist = await seedArtist({ name: 'Big Head Todd' });
+    authState.current = { userId: USER_ID };
+    const res = await follow(artist.slug);
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.code).toBe('entitlement_required');
+    expect(body.feature).toBe('following');
+    expect(await followRows()).toHaveLength(0);
+  });
 
   it('lets a premium plan follow', async () => {
-    const artist = await seedArtist({ name: 'Big Head Todd' })
-    await seedPremiumPlan()
-    authState.current = { userId: USER_ID }
-    const res = await follow(artist.slug)
-    expect(res.status).toBe(200)
-    expect(await followRows()).toHaveLength(1)
-  })
+    const artist = await seedArtist({ name: 'Big Head Todd' });
+    await seedPremiumPlan();
+    authState.current = { userId: USER_ID };
+    const res = await follow(artist.slug);
+    expect(res.status).toBe(200);
+    expect(await followRows()).toHaveLength(1);
+  });
 
   it('lets a free plan unfollow — DELETE is never gated', async () => {
-    const artist = await seedArtist({ name: 'Big Head Todd' })
-    await seedPremiumPlan()
-    authState.current = { userId: USER_ID }
-    await follow(artist.slug)
-    await testDb.delete(subscriptions)
+    const artist = await seedArtist({ name: 'Big Head Todd' });
+    await seedPremiumPlan();
+    authState.current = { userId: USER_ID };
+    await follow(artist.slug);
+    await testDb.delete(subscriptions);
 
-    const res = await unfollow(artist.slug)
-    expect(res.status).toBe(200)
-    expect(await followRows()).toHaveLength(0)
-  })
-})
+    const res = await unfollow(artist.slug);
+    expect(res.status).toBe(200);
+    expect(await followRows()).toHaveLength(0);
+  });
+});
 ```
 
 The third test deletes the subscription after following, which is the real
@@ -181,7 +183,7 @@ Replace the file's header comment block with:
 Add the import at the top of `apps/api/src/routes/artist-follows.ts`:
 
 ```ts
-import { requireFeature } from '../middleware/entitlement.js'
+import { requireFeature } from '../middleware/entitlement.js';
 ```
 
 Change the POST registration from:
@@ -228,15 +230,17 @@ Two independent things block manual follows today, and both are in one query:
 
 The selected `userId` must come from `user_artist_follows`, the preserved side. Today's inner join makes the two sides interchangeable, so carrying the old select over unchanged silently drops every manual-only user.
 
-Preference defaults for users with no connection row are asymmetric and deliberate: `pushEnabled` true because following *is* the opt-in, `autoWatch` false because following must never silently mutate the Watching list. Apply both as SQL `COALESCE` so no downstream consumer can forget them.
+Preference defaults for users with no connection row are asymmetric and deliberate: `pushEnabled` true because following _is_ the opt-in, `autoWatch` false because following must never silently mutate the Watching list. Apply both as SQL `COALESCE` so no downstream consumer can forget them.
 
 The push gate key also changes from `'spotify-sync'` to `'following'`, so a Premium user with no Spotify connection is no longer excluded from their own notifications.
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/spotify-fanout/index.ts:50-52, 221-239, 300`
 - Test: `packages/crawler-core/src/lib/spotify-fanout/spotify-fanout.integration.test.ts`
 
 **Interfaces:**
+
 - Consumes: `MatchedConnection { userId: string; canonicalName: string; autoWatch: boolean; pushEnabled: boolean }` — unchanged shape, new population rules.
 - Produces: `runSpotifyFanout` / `runSpotifyFanoutSafely` keep their signatures. Task 3 renames them.
 
@@ -249,7 +253,7 @@ They are `seedVenue(name)`, `seedEvent(input)`, `seedFollower(input)`,
 constants are `FREE_USER` and `PREMIUM_USER`.
 
 **`seedFollower` cannot express the case under test.** It inserts a
-`user_spotify_connections` row *and* a `source: 'spotify_followed'` follow, as a
+`user_spotify_connections` row _and_ a `source: 'spotify_followed'` follow, as a
 pair. The whole point of Task 2 is the user who has the second without the first,
 so add a helper alongside it that writes only the follow:
 
@@ -257,8 +261,8 @@ so add a helper alongside it that writes only the follow:
 // A follow with NO connection row — the manual-only user, which seedFollower
 // cannot represent because it always pairs a follow with a connection.
 async function seedManualFollow(input: {
-  userId: string
-  canonicalName: string
+  userId: string;
+  canonicalName: string;
 }): Promise<void> {
   await db.insert(userArtistFollows).values({
     userId: input.userId,
@@ -266,7 +270,7 @@ async function seedManualFollow(input: {
     spotifyArtistId: null,
     source: 'manual',
     canonicalName: input.canonicalName,
-  })
+  });
 }
 ```
 
@@ -277,108 +281,108 @@ Then add the tests. Note the call shape the file uses: `runSpotifyFanout([eventI
 
 ```ts
 const seedShow = async (): Promise<string> => {
-  const venueId = await seedVenue('Fillmore')
+  const venueId = await seedVenue('Fillmore');
   return seedEvent({
     venueId,
     artist: 'Big Head Todd',
     canonicalArtist: 'big head todd',
-  })
-}
+  });
+};
 
 it('notifies a user whose ONLY follow is manual and who has no Spotify connection', async () => {
-  const eventId = await seedShow()
+  const eventId = await seedShow();
   await seedManualFollow({
     userId: PREMIUM_USER,
     canonicalName: 'big head todd',
-  })
-  await seedPremiumSubscription(PREMIUM_USER)
+  });
+  await seedPremiumSubscription(PREMIUM_USER);
 
-  const sendPush = makeSendPush()
+  const sendPush = makeSendPush();
   const summary = await runSpotifyFanout([eventId], {
     sendPush,
     getRole: noRole,
-  })
+  });
 
-  expect(summary.pushesClaimed).toBe(1)
-  expect(sendPush).toHaveBeenCalledTimes(1)
-})
+  expect(summary.pushesClaimed).toBe(1);
+  expect(sendPush).toHaveBeenCalledTimes(1);
+});
 
 it('does not auto-watch a manual follower — autoWatch defaults false', async () => {
-  const eventId = await seedShow()
+  const eventId = await seedShow();
   await seedManualFollow({
     userId: PREMIUM_USER,
     canonicalName: 'big head todd',
-  })
-  await seedPremiumSubscription(PREMIUM_USER)
+  });
+  await seedPremiumSubscription(PREMIUM_USER);
 
   const summary = await runSpotifyFanout([eventId], {
     sendPush: makeSendPush(),
     getRole: noRole,
-  })
+  });
 
-  expect(summary.autoWatched).toBe(0)
+  expect(summary.autoWatched).toBe(0);
   const watching = await db
     .select()
     .from(userEvents)
-    .where(eq(userEvents.userId, PREMIUM_USER))
-  expect(watching).toHaveLength(0)
-})
+    .where(eq(userEvents.userId, PREMIUM_USER));
+  expect(watching).toHaveLength(0);
+});
 
 it('still notifies when the Spotify connection is revoked', async () => {
-  const eventId = await seedShow()
+  const eventId = await seedShow();
   await seedFollower({
     userId: PREMIUM_USER,
     canonicalName: 'big head todd',
     status: 'revoked',
     pushEnabled: true,
-  })
-  await seedPremiumSubscription(PREMIUM_USER)
+  });
+  await seedPremiumSubscription(PREMIUM_USER);
 
   const summary = await runSpotifyFanout([eventId], {
     sendPush: makeSendPush(),
     getRole: noRole,
-  })
+  });
 
-  expect(summary.pushesClaimed).toBe(1)
-})
+  expect(summary.pushesClaimed).toBe(1);
+});
 
 it('sends exactly one push when the same artist is followed manually AND via Spotify', async () => {
-  const eventId = await seedShow()
+  const eventId = await seedShow();
   // seedFollower supplies the connection + the spotify_followed row.
   await seedFollower({
     userId: PREMIUM_USER,
     canonicalName: 'big head todd',
     pushEnabled: true,
-  })
+  });
   await seedManualFollow({
     userId: PREMIUM_USER,
     canonicalName: 'big head todd',
-  })
-  await seedPremiumSubscription(PREMIUM_USER)
+  });
+  await seedPremiumSubscription(PREMIUM_USER);
 
-  const sendPush = makeSendPush()
+  const sendPush = makeSendPush();
   const summary = await runSpotifyFanout([eventId], {
     sendPush,
     getRole: noRole,
-  })
+  });
 
-  expect(summary.pushesClaimed).toBe(1)
-  expect(sendPush).toHaveBeenCalledTimes(1)
-})
+  expect(summary.pushesClaimed).toBe(1);
+  expect(sendPush).toHaveBeenCalledTimes(1);
+});
 
 it('does not push to a free plan — the gate key is now following', async () => {
-  const eventId = await seedShow()
-  await seedManualFollow({ userId: FREE_USER, canonicalName: 'big head todd' })
+  const eventId = await seedShow();
+  await seedManualFollow({ userId: FREE_USER, canonicalName: 'big head todd' });
 
-  const sendPush = makeSendPush()
+  const sendPush = makeSendPush();
   const summary = await runSpotifyFanout([eventId], {
     sendPush,
     getRole: noRole,
-  })
+  });
 
-  expect(summary.pushesClaimed).toBe(0)
-  expect(sendPush).not.toHaveBeenCalled()
-})
+  expect(summary.pushesClaimed).toBe(0);
+  expect(sendPush).not.toHaveBeenCalled();
+});
 ```
 
 The last test is what pins Step 5. Swapping the gate key from `spotify-sync` to
@@ -393,7 +397,7 @@ Expected: the first three FAIL with `pushesClaimed` of `0` (no candidate rows).
 The fourth and fifth may already pass, and for opposite reasons. The fourth
 (dedupe) genuinely passes via `claimAlert` — keep it; it is the regression guard
 against a future contributor reintroducing a parallel native path. The fifth
-(free plan) passes *vacuously*: pre-change there are no candidate rows either
+(free plan) passes _vacuously_: pre-change there are no candidate rows either
 way, so `0` is the right answer for the wrong reason. It only becomes meaningful
 after Step 4, which is exactly when Step 5 could break it.
 
@@ -404,7 +408,7 @@ Remove lines 50–52 of `packages/crawler-core/src/lib/spotify-fanout/index.ts`:
 ```ts
 // Spotify-sourced follows only — manual follows are out of scope for the
 // fan-out, matching the weekly digest's SPOTIFY_FOLLOW_SOURCES.
-const SPOTIFY_FOLLOW_SOURCES = ['spotify_followed', 'spotify_top'] as const
+const SPOTIFY_FOLLOW_SOURCES = ['spotify_followed', 'spotify_top'] as const;
 ```
 
 - [ ] **Step 4: Rewrite the candidate query**
@@ -412,47 +416,47 @@ const SPOTIFY_FOLLOW_SOURCES = ['spotify_followed', 'spotify_top'] as const
 Replace the `const candidates` block (lines 221–239) with:
 
 ```ts
-  // Every follow source fans out, and the connection is OPTIONAL. The join
-  // was an inner join while this was Spotify-only; a LEFT JOIN is what lets a
-  // user with no connection row (the manual-only case) produce candidates at
-  // all.
-  //
-  // userId comes from userArtistFollows — the preserved side. Taking it from
-  // userSpotifyConnections yields null for every manual-only user, which is
-  // the exact bug this change exists to fix.
-  //
-  // status lives in the JOIN condition, not the WHERE clause: in the WHERE it
-  // would filter the null-connection rows straight back out. Here, a revoked
-  // connection simply yields nulls and the user degrades to manual-only
-  // notifications rather than losing them.
-  //
-  // The COALESCE defaults are asymmetric on purpose. pushEnabled defaults ON
-  // because following IS the opt-in — a follow that notifies nothing is the
-  // bug we are fixing. autoWatch defaults OFF because following an artist
-  // must never silently add shows to someone's Watching list. "Both default
-  // true" is the natural wrong guess.
-  const candidates: MatchedConnection[] = await db
-    .selectDistinct({
-      userId: userArtistFollows.userId,
-      canonicalName: userArtistFollows.canonicalName,
-      autoWatch: sql<boolean>`coalesce(${userSpotifyConnections.autoWatch}, false)`,
-      pushEnabled: sql<boolean>`coalesce(${userSpotifyConnections.pushEnabled}, true)`,
-    })
-    .from(userArtistFollows)
-    .leftJoin(
-      userSpotifyConnections,
-      and(
-        eq(userSpotifyConnections.userId, userArtistFollows.userId),
-        ne(userSpotifyConnections.status, 'revoked'),
-      ),
-    )
-    .where(inArray(userArtistFollows.canonicalName, allCanonicalNames))
+// Every follow source fans out, and the connection is OPTIONAL. The join
+// was an inner join while this was Spotify-only; a LEFT JOIN is what lets a
+// user with no connection row (the manual-only case) produce candidates at
+// all.
+//
+// userId comes from userArtistFollows — the preserved side. Taking it from
+// userSpotifyConnections yields null for every manual-only user, which is
+// the exact bug this change exists to fix.
+//
+// status lives in the JOIN condition, not the WHERE clause: in the WHERE it
+// would filter the null-connection rows straight back out. Here, a revoked
+// connection simply yields nulls and the user degrades to manual-only
+// notifications rather than losing them.
+//
+// The COALESCE defaults are asymmetric on purpose. pushEnabled defaults ON
+// because following IS the opt-in — a follow that notifies nothing is the
+// bug we are fixing. autoWatch defaults OFF because following an artist
+// must never silently add shows to someone's Watching list. "Both default
+// true" is the natural wrong guess.
+const candidates: MatchedConnection[] = await db
+  .selectDistinct({
+    userId: userArtistFollows.userId,
+    canonicalName: userArtistFollows.canonicalName,
+    autoWatch: sql<boolean>`coalesce(${userSpotifyConnections.autoWatch}, false)`,
+    pushEnabled: sql<boolean>`coalesce(${userSpotifyConnections.pushEnabled}, true)`,
+  })
+  .from(userArtistFollows)
+  .leftJoin(
+    userSpotifyConnections,
+    and(
+      eq(userSpotifyConnections.userId, userArtistFollows.userId),
+      ne(userSpotifyConnections.status, 'revoked'),
+    ),
+  )
+  .where(inArray(userArtistFollows.canonicalName, allCanonicalNames));
 ```
 
 Add `sql` to the `drizzle-orm` import on line 24:
 
 ```ts
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm';
 ```
 
 - [ ] **Step 5: Change the push entitlement key**
@@ -477,15 +481,15 @@ to:
 On line 210, the comment reads `Connection gate matches the weekly job: any non-revoked row participates.` That is no longer true — there may be no connection at all. Replace that sentence with:
 
 ```ts
-  // ...then pure in-memory per-event overlap — no per-event queries. Every
-  // follow participates; a Spotify connection is optional and only supplies
-  // preferences.
+// ...then pure in-memory per-event overlap — no per-event queries. Every
+// follow participates; a Spotify connection is optional and only supplies
+// preferences.
 ```
 
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `pnpm --filter @concert-crawl/crawler-core test spotify-fanout`
-Expected: PASS, all five new tests plus every pre-existing one. If a pre-existing test that asserted a manual follow is *ignored* now fails, that test encoded the old behavior — update it to the new expectation and say so in the commit body.
+Expected: PASS, all five new tests plus every pre-existing one. If a pre-existing test that asserted a manual follow is _ignored_ now fails, that test encoded the old behavior — update it to the new expectation and say so in the commit body.
 
 - [ ] **Step 8: Typecheck and commit**
 
@@ -502,6 +506,7 @@ git commit -m "feat(crawler): fan out new-show alerts for every follow source"
 Pure rename, no behavior change. Kept separate from Task 2 so a reviewer reads the logic diff without a rename diff on top of it.
 
 **Files:**
+
 - Rename: `packages/crawler-core/src/lib/spotify-fanout/` → `packages/crawler-core/src/lib/artist-fanout/`
 - Rename: `.../spotify-fanout.integration.test.ts` → `.../artist-fanout.integration.test.ts`
 - Modify: `packages/crawler-core/src/index.ts:43-48`
@@ -511,6 +516,7 @@ Pure rename, no behavior change. Kept separate from Task 2 so a reviewer reads t
 - Modify: `apps/api/src/routes/notifications.integration.test.ts:43` (comment path reference)
 
 **Interfaces:**
+
 - Produces: `runArtistFanout(insertedEventIds: string[], deps?: ArtistFanoutDeps): Promise<ArtistFanoutSummary>` and `runArtistFanoutSafely(insertedEventIds: string[], deps?: ArtistFanoutDeps): Promise<ArtistFanoutSummary | null>`. Types `ArtistFanoutDeps` and `ArtistFanoutSummary` keep their existing fields verbatim.
 - Consumes: nothing new.
 
@@ -526,15 +532,15 @@ git mv packages/crawler-core/src/lib/artist-fanout/spotify-fanout.integration.te
 
 In `packages/crawler-core/src/lib/artist-fanout/index.ts`:
 
-| From | To |
-|---|---|
-| `runSpotifyFanout` | `runArtistFanout` |
-| `runSpotifyFanoutSafely` | `runArtistFanoutSafely` |
-| `SpotifyFanoutDeps` | `ArtistFanoutDeps` |
-| `SpotifyFanoutSummary` | `ArtistFanoutSummary` |
-| `createLogger('spotify-fanout')` | `createLogger('artist-fanout')` |
-| log message prefix `spotify-fanout:` | `artist-fanout:` |
-| `spotifyNewShowCopy` | `newShowCopy` |
+| From                                 | To                              |
+| ------------------------------------ | ------------------------------- |
+| `runSpotifyFanout`                   | `runArtistFanout`               |
+| `runSpotifyFanoutSafely`             | `runArtistFanoutSafely`         |
+| `SpotifyFanoutDeps`                  | `ArtistFanoutDeps`              |
+| `SpotifyFanoutSummary`               | `ArtistFanoutSummary`           |
+| `createLogger('spotify-fanout')`     | `createLogger('artist-fanout')` |
+| log message prefix `spotify-fanout:` | `artist-fanout:`                |
+| `spotifyNewShowCopy`                 | `newShowCopy`                   |
 
 In `packages/crawler-core/src/lib/artist-fanout/definitions/copy.ts`, rename the export `spotifyNewShowCopy` → `newShowCopy`. **Do not change any string values** — they are lifted verbatim from a locked design mock and none of them says "Spotify".
 
@@ -582,6 +588,7 @@ git commit -m "refactor(crawler): rename spotify-fanout to artist-fanout"
 Existing rows do **not** disappear after the rename: the API passes unknown categories through deliberately and `categoryFor()` renders them via `CATEGORY_FALLBACK`. What they lose is their label and glyph — real news demoted to a neutral, unrecognised presentation. The backfill exists for that fidelity, not to prevent data loss.
 
 **Files:**
+
 - Modify: `packages/push/src/notification-categories.ts:24, 38, 46-50`
 - Modify: `packages/crawler-core/src/lib/artist-fanout/index.ts` (`NEW_SHOW_CATEGORY`, push `tag`)
 - Modify: `apps/web/src/lib/notifications.ts:33`
@@ -593,6 +600,7 @@ Existing rows do **not** disappear after the rename: the API passes unknown cate
 - Test: `packages/push/src/send-push.test.ts:129,148`, `packages/push/src/watch-fanout.test.ts:259`, `apps/api/src/routes/notifications.integration.test.ts:55,195`, `apps/api/src/lib/prune-notifications.integration.test.ts:36`, `packages/crawler-core/src/lib/artist-fanout/artist-fanout.integration.test.ts:173,177,186`
 
 **Interfaces:**
+
 - Produces: `UserNotificationCategory` union member `'artist.new_show'` replacing `'spotify.new_show'`. Push tag format becomes `artist-new-show-${eventId}`.
 
 - [ ] **Step 1: Write the failing test**
@@ -601,25 +609,29 @@ Add to `packages/crawler-core/src/lib/artist-fanout/artist-fanout.integration.te
 
 ```ts
 it('writes the artist.new_show category and a matching push tag', async () => {
-  const userId = await seedPremiumUser()
-  await seedFollow({ userId, canonicalName: 'big head todd', source: 'manual' })
-  const eventId = await seedNewEvent({ canonicalArtist: 'big head todd' })
+  const userId = await seedPremiumUser();
+  await seedFollow({
+    userId,
+    canonicalName: 'big head todd',
+    source: 'manual',
+  });
+  const eventId = await seedNewEvent({ canonicalArtist: 'big head todd' });
 
-  const sendPush = vi.fn()
-  await runArtistFanout([eventId], { sendPush, getRole })
+  const sendPush = vi.fn();
+  await runArtistFanout([eventId], { sendPush, getRole });
 
   expect(sendPush).toHaveBeenCalledWith(
     expect.objectContaining({
       category: 'artist.new_show',
       tag: `artist-new-show-${eventId}`,
     }),
-  )
+  );
   const [row] = await db
     .select({ category: notifications.category })
     .from(notifications)
-    .where(eq(notifications.userId, userId))
-  expect(row?.category).toBe('artist.new_show')
-})
+    .where(eq(notifications.userId, userId));
+  expect(row?.category).toBe('artist.new_show');
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -651,7 +663,7 @@ concludes the rename was partial.
 In `packages/crawler-core/src/lib/artist-fanout/index.ts`:
 
 ```ts
-const NEW_SHOW_CATEGORY = 'artist.new_show'
+const NEW_SHOW_CATEGORY = 'artist.new_show';
 ```
 
 and the push tag:
@@ -707,13 +719,13 @@ WHERE category = 'spotify.new_show';
 Append to `packages/db/migrations/meta/_journal.json`, after the `0075` entry (note the trailing comma added to `0075`'s closing brace):
 
 ```json
-    {
-      "idx": 76,
-      "version": "7",
-      "when": 1786752000000,
-      "tag": "0076_artist_new_show_category",
-      "breakpoints": true
-    }
+{
+  "idx": 76,
+  "version": "7",
+  "when": 1786752000000,
+  "tag": "0076_artist_new_show_category",
+  "breakpoints": true
+}
 ```
 
 `1786752000000` exceeds `0075`'s `1786665600000` by one day, satisfying the timestamp-ordering rule.
@@ -749,16 +761,18 @@ git commit -m "feat(notifications): rename spotify.new_show to artist.new_show"
 
 ### Task 5: Hide the Spotify Connect entry point behind a flag
 
-The Spotify app is in Development Mode, capped at **5 authenticated users**, currently at 3. Users 6 and beyond hit the worst possible failure: OAuth *succeeds*, the account links, and then every API call returns `403`. It looks like a working connection that does nothing.
+The Spotify app is in Development Mode, capped at **5 authenticated users**, currently at 3. Users 6 and beyond hit the worst possible failure: OAuth _succeeds_, the account links, and then every API call returns `403`. It looks like a working connection that does nothing.
 
 A plain env var is enough here because this is a global on/off. The per-user override — so Hugh keeps the Spotify experience while everyone else gets native — needs the flag system in Project 2 and is explicitly out of scope.
 
 **Files:**
+
 - Modify: `apps/web/src/components/settings/connections/ConnectionsPanel.tsx`
 - Modify: `apps/web/.env.example`
 - Test: `apps/web/src/components/settings/connections/ConnectionsPanel.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED']`. `'1'` shows the entry point; anything else (including unset) hides it.
 - Produces: nothing importable.
 
@@ -773,21 +787,21 @@ regex name matching. `beforeEach` already resets `connectionQuery`.
 
 ```tsx
 it('hides the connect entry card when the flag is off', () => {
-  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
-  connectionQuery = { data: { status: 'disconnected' }, isPending: false }
-  renderPanel()
-  expect(screen.queryByText(SPOTIFY_COPY.connectEntry.pitch)).toBeNull()
-})
+  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0');
+  connectionQuery = { data: { status: 'disconnected' }, isPending: false };
+  renderPanel();
+  expect(screen.queryByText(SPOTIFY_COPY.connectEntry.pitch)).toBeNull();
+});
 
 it('shows the connect entry card when the flag is on', () => {
-  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '1')
-  connectionQuery = { data: { status: 'disconnected' }, isPending: false }
-  renderPanel()
-  expect(screen.getByText(SPOTIFY_COPY.connectEntry.pitch)).toBeTruthy()
-})
+  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '1');
+  connectionQuery = { data: { status: 'disconnected' }, isPending: false };
+  renderPanel();
+  expect(screen.getByText(SPOTIFY_COPY.connectEntry.pitch)).toBeTruthy();
+});
 
 it('still renders the connected card when the flag is off', () => {
-  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
+  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0');
   connectionQuery = {
     data: {
       status: 'connected',
@@ -802,10 +816,10 @@ it('still renders the connected card when the flag is off', () => {
       matchedArtists: [],
     },
     isPending: false,
-  }
-  renderPanel()
-  expect(screen.getByText(SPOTIFY_COPY.connectedCard.linkedPill)).toBeTruthy()
-})
+  };
+  renderPanel();
+  expect(screen.getByText(SPOTIFY_COPY.connectedCard.linkedPill)).toBeTruthy();
+});
 ```
 
 The pre-existing `renders the disconnected entry card` test asserts the same
@@ -817,7 +831,7 @@ its first line rather than deleting it — it still covers the handoff sheet.
 `vi.unstubAllEnvs()` to the existing `beforeEach`. Without it the first test to
 set `'0'` silently sets it for every test after it.
 
-The third and fourth tests are the important ones. The flag closes the *door*, it does not evict the people already inside — an existing connection stays fully manageable, including disconnect.
+The third and fourth tests are the important ones. The flag closes the _door_, it does not evict the people already inside — an existing connection stays fully manageable, including disconnect.
 
 - [ ] **Step 2: Run to verify they fail**
 
@@ -838,15 +852,15 @@ In `ConnectionsPanel.tsx`, add near the top of the module:
 // env var. This never hides an EXISTING connection — those stay manageable,
 // disconnect included.
 const connectEnabled = (): boolean =>
-  process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED'] === '1'
+  process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED'] === '1';
 ```
 
 Then change the entry-card branch. Today it reads:
 
 ```tsx
-  if (!data || data.status === 'disconnected') {
-    return <ConnectEntryCard onConnect={openHandoff} />
-  }
+if (!data || data.status === 'disconnected') {
+  return <ConnectEntryCard onConnect={openHandoff} />;
+}
 ```
 
 `!data` and `disconnected` are **not** interchangeable here, and the flag has to
@@ -858,20 +872,20 @@ disconnect control behind a network blip.
 Split it:
 
 ```tsx
-  if (data?.status === 'disconnected') {
-    return connectEnabled() ? <ConnectEntryCard onConnect={openHandoff} /> : null
-  }
-  if (!data) {
-    // Query errored: status unknown. Connecting is idempotent (the POST returns
-    // the existing connection), so the entry card stays safe HERE — but only
-    // while the flag is on. With the flag off we must not offer a door we
-    // cannot honour, and we must not blank the panel either.
-    return connectEnabled() ? (
-      <ConnectEntryCard onConnect={openHandoff} />
-    ) : (
-      <SpotifyStatusBanner />
-    )
-  }
+if (data?.status === 'disconnected') {
+  return connectEnabled() ? <ConnectEntryCard onConnect={openHandoff} /> : null;
+}
+if (!data) {
+  // Query errored: status unknown. Connecting is idempotent (the POST returns
+  // the existing connection), so the entry card stays safe HERE — but only
+  // while the flag is on. With the flag off we must not offer a door we
+  // cannot honour, and we must not blank the panel either.
+  return connectEnabled() ? (
+    <ConnectEntryCard onConnect={openHandoff} />
+  ) : (
+    <SpotifyStatusBanner />
+  );
+}
 ```
 
 `SpotifyStatusBanner` is already imported in this file and already used as the
@@ -882,11 +896,11 @@ Add a fourth test covering exactly this:
 
 ```tsx
 it('does not blank the panel when the query errors and the flag is off', () => {
-  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
-  connectionQuery = { data: undefined, isPending: false }
-  const { container } = renderPanel()
-  expect(container.textContent).not.toBe('')
-})
+  vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0');
+  connectionQuery = { data: undefined, isPending: false };
+  const { container } = renderPanel();
+  expect(container.textContent).not.toBe('');
+});
 ```
 
 - [ ] **Step 4: Run to verify they pass**
@@ -921,10 +935,12 @@ git commit -m "feat(web): gate the Spotify connect entry point behind an env fla
 This is a meaningful user-facing change — following an artist now actually notifies you — so both artifacts are required by CLAUDE.md.
 
 **Files:**
+
 - Modify: `apps/web/src/lib/definitions/releases.ts`
 - Modify: `docs/superpowers/progress.md`
 
 **Interfaces:**
+
 - Consumes: the existing release entry shape. Read the most recent entry in the file and mirror it exactly rather than inventing fields.
 
 - [ ] **Step 1: Read the newest release entry**

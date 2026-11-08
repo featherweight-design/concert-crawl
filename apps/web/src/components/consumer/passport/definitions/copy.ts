@@ -22,4 +22,4 @@ export const PASSPORT_COPY = {
   footerNoHistory: 'YOUR YEAR IN SHOWS',
   /** Footer tag prefix, e.g. `SINCE MAR 2026`. */
   footerSincePrefix: 'SINCE',
-} as const
+} as const;

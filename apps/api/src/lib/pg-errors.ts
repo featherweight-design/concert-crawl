@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 /**
  * Postgres error code for unique violation.
@@ -7,10 +7,10 @@ import { z } from 'zod'
  * SQLSTATE may live on the top-level error OR on its `cause`. Helpers below
  * check both.
  */
-export const PG_UNIQUE_VIOLATION = '23505' as const
+export const PG_UNIQUE_VIOLATION = '23505' as const;
 
 const PENDING_COUNTER_UNIQUE_INDEX =
-  'price_submissions_pending_counter_unique_idx'
+  'price_submissions_pending_counter_unique_idx';
 
 /**
  * Detect a Postgres unique_violation (SQLSTATE 23505) against the
@@ -24,35 +24,35 @@ const PENDING_COUNTER_UNIQUE_INDEX =
  */
 export function isPendingCounterUniqueViolation(err: unknown): boolean {
   const matches = (candidate: unknown): boolean => {
-    if (typeof candidate !== 'object' || candidate === null) return false
-    const record = candidate as Record<string, unknown>
-    if (record['code'] !== PG_UNIQUE_VIOLATION) return false
-    if (record['constraint_name'] === PENDING_COUNTER_UNIQUE_INDEX) return true
-    if (record['constraint'] === PENDING_COUNTER_UNIQUE_INDEX) return true
-    const message = record['message']
+    if (typeof candidate !== 'object' || candidate === null) return false;
+    const record = candidate as Record<string, unknown>;
+    if (record['code'] !== PG_UNIQUE_VIOLATION) return false;
+    if (record['constraint_name'] === PENDING_COUNTER_UNIQUE_INDEX) return true;
+    if (record['constraint'] === PENDING_COUNTER_UNIQUE_INDEX) return true;
+    const message = record['message'];
     return (
       typeof message === 'string' &&
       message.includes(PENDING_COUNTER_UNIQUE_INDEX)
-    )
-  }
-  if (matches(err)) return true
+    );
+  };
+  if (matches(err)) return true;
   if (err instanceof Error && 'cause' in err) {
-    return matches((err as Error & { cause?: unknown }).cause)
+    return matches((err as Error & { cause?: unknown }).cause);
   }
-  return false
+  return false;
 }
 
 const errorCodeSchema = z.object({
   // A SQLSTATE ('42P01') or a socket code ('ECONNREFUSED'). The pattern keeps
   // anything else, such as a driver that put free text in `code`, out.
   code: z.string().regex(/^[A-Z0-9_]{1,32}$/),
-})
+});
 
-const causeSchema = z.object({ cause: z.unknown() })
+const causeSchema = z.object({ cause: z.unknown() });
 
 export interface SafeDbErrorDescription {
-  errorClass: string
-  code: string | null
+  errorClass: string;
+  code: string | null;
 }
 
 /**
@@ -62,13 +62,13 @@ export interface SafeDbErrorDescription {
  * `cause`, where Drizzle puts the postgres-js error.
  */
 export function describeDbError(err: unknown): SafeDbErrorDescription {
-  const errorClass = err instanceof Error ? err.name : typeof err
-  const ownCode = errorCodeSchema.safeParse(err)
-  if (ownCode.success) return { errorClass, code: ownCode.data.code }
-  const withCause = causeSchema.safeParse(err)
+  const errorClass = err instanceof Error ? err.name : typeof err;
+  const ownCode = errorCodeSchema.safeParse(err);
+  if (ownCode.success) return { errorClass, code: ownCode.data.code };
+  const withCause = causeSchema.safeParse(err);
   if (withCause.success) {
-    const causeCode = errorCodeSchema.safeParse(withCause.data.cause)
-    if (causeCode.success) return { errorClass, code: causeCode.data.code }
+    const causeCode = errorCodeSchema.safeParse(withCause.data.cause);
+    if (causeCode.success) return { errorClass, code: causeCode.data.code };
   }
-  return { errorClass, code: null }
+  return { errorClass, code: null };
 }

@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BottomSheet } from '@/components/pwa/BottomSheet'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { BottomSheet } from '@/components/pwa/BottomSheet';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   DEFAULT_SHARE_RATIO,
   SC_RATIOS,
   SHARE_RATIOS,
   type ShareRatio,
-} from '@/components/consumer/share/definitions/ratios'
+} from '@/components/consumer/share/definitions/ratios';
 import {
   canSystemShare,
   copyLink,
@@ -17,26 +17,26 @@ import {
   publicEventUrl,
   systemShare,
   type ShareCapabilities,
-} from '@/lib/share/destinations'
-import type { PosterEvent } from '@/lib/share/poster-event'
-import { posterStateLabel } from '@/lib/share/taglines'
-import { track } from '@/lib/analytics'
-import { wasServedFromCache } from '@/lib/analytics/resource-cache'
-import { useTheme } from '@/theme/ThemeProvider'
+} from '@/lib/share/destinations';
+import type { PosterEvent } from '@/lib/share/poster-event';
+import { posterStateLabel } from '@/lib/share/taglines';
+import { track } from '@/lib/analytics';
+import { wasServedFromCache } from '@/lib/analytics/resource-cache';
+import { useTheme } from '@/theme/ThemeProvider';
 
-const COPY = CONSUMER_COPY.share
+const COPY = CONSUMER_COPY.share;
 
 export interface ShareSheetProps {
-  open: boolean
-  onClose: () => void
-  event: PosterEvent
+  open: boolean;
+  onClose: () => void;
+  event: PosterEvent;
   /** The sharer's handle, or null for an anonymous poster. */
-  handle: string | null
+  handle: string | null;
   /**
    * Injected so every branch of the destination list is reachable from a test.
    * Defaults to the real `navigator` in the browser.
    */
-  capabilities?: ShareCapabilities
+  capabilities?: ShareCapabilities;
 }
 
 /**
@@ -57,19 +57,19 @@ export const ShareSheet = ({
   handle,
   capabilities,
 }: ShareSheetProps) => {
-  const [ratio, setRatio] = useState<ShareRatio>(DEFAULT_SHARE_RATIO)
-  const [status, setStatus] = useState<string | null>(null)
+  const [ratio, setRatio] = useState<ShareRatio>(DEFAULT_SHARE_RATIO);
+  const [status, setStatus] = useState<string | null>(null);
   // The poster is rendered on demand and takes seconds, so the preview needs a
   // real pending state.
   const [preview, setPreview] = useState<'loading' | 'ready' | 'failed'>(
     'loading',
-  )
+  );
   // Which URL the current `preview` describes. Reset during render rather than
   // in an effect so the new shape is `loading` in the *same* render that
   // changes the src — an effect would let one frame paint the previous
   // outcome first, and a cached image can fire `onLoad` before the effect
   // runs, wiping a result that was correct.
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // The sheet stays mounted while `open` toggles (ShareButton renders it
   // unconditionally), so every piece of state here outlives a close unless it
@@ -77,12 +77,12 @@ export const ShareSheet = ({
   // `ratio` reopens the sheet on whatever shape was picked last; and a stale
   // failure shows the error message before the retry it describes has started.
   useEffect(() => {
-    if (open) return
-    setStatus(null)
-    setRatio(DEFAULT_SHARE_RATIO)
-    setPreview('loading')
-    setPreviewUrl(null)
-  }, [open])
+    if (open) return;
+    setStatus(null);
+    setRatio(DEFAULT_SHARE_RATIO);
+    setPreview('loading');
+    setPreviewUrl(null);
+  }, [open]);
 
   // Memoised because the destination callbacks depend on it: rebuilt every
   // render, it would re-bind `navigator.share` on each keystroke elsewhere in
@@ -104,18 +104,18 @@ export const ShareSheet = ({
             }),
           }),
     [capabilities],
-  )
+  );
 
   // The poster is tinted by whatever theme the app is currently wearing.
   // Without this the route silently falls back to its default and the card a
   // Jade user shares comes back Electric.
-  const { theme } = useTheme()
+  const { theme } = useTheme();
   const imageUrl = posterImageUrl({
     eventId: event.id,
     ratio,
     theme,
     by: handle,
-  })
+  });
   // Every change of `imageUrl` starts a fresh attempt: the `key` below remounts
   // the img and the browser refetches. Returning to a shape that previously
   // settled must therefore show `loading` again, not the outcome of the earlier
@@ -135,45 +135,45 @@ export const ShareSheet = ({
   // outcome first. The condition below is idempotent and self-clearing, so it
   // is safe under Strict Mode and concurrent rendering.
   if (open && previewUrl !== imageUrl) {
-    setPreviewUrl(imageUrl)
-    setPreview('loading')
+    setPreviewUrl(imageUrl);
+    setPreview('loading');
   }
 
-  const origin = typeof window === 'undefined' ? '' : window.location.origin
-  const linkUrl = publicEventUrl(event.id, origin)
-  const title = `${event.artist} · ${event.venue}`
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  const linkUrl = publicEventUrl(event.id, origin);
+  const title = `${event.artist} · ${event.venue}`;
   const altText = COPY.altTemplate
     .replace('{artist}', event.artist)
     .replace('{venue}', event.venue)
     .replace('{date}', event.dateShort)
-    .replace('{state}', posterStateLabel(event.state))
+    .replace('{state}', posterStateLabel(event.state));
 
   const onSystemShare = useCallback(async () => {
     track('share_destination_selected', {
       eventId: event.id,
       destination: 'system',
-    })
+    });
     const outcome = await systemShare(caps, {
       title,
       url: linkUrl,
       imageUrl,
       fileName: posterFileName(event),
-    })
+    });
     if (outcome === 'failed' || outcome === 'unsupported') {
-      setStatus(COPY.shareFailed)
+      setStatus(COPY.shareFailed);
     } else {
-      setStatus(null)
+      setStatus(null);
     }
-  }, [caps, title, linkUrl, imageUrl, event])
+  }, [caps, title, linkUrl, imageUrl, event]);
 
   const onCopyLink = useCallback(async () => {
     track('share_destination_selected', {
       eventId: event.id,
       destination: 'copy-link',
-    })
-    const outcome = await copyLink(caps, linkUrl)
-    setStatus(outcome === 'shared' ? COPY.copyLinkDone : COPY.shareFailed)
-  }, [caps, linkUrl, event.id])
+    });
+    const outcome = await copyLink(caps, linkUrl);
+    setStatus(outcome === 'shared' ? COPY.copyLinkDone : COPY.shareFailed);
+  }, [caps, linkUrl, event.id]);
 
   return (
     <BottomSheet open={open} onClose={onClose} title={COPY.sheetTitle}>
@@ -209,7 +209,7 @@ export const ShareSheet = ({
               src={imageUrl}
               alt={altText}
               onLoad={() => {
-                setPreview('ready')
+                setPreview('ready');
                 // Read the timing entry before React re-renders and the `key`
                 // has any chance to swap the img — the entry is keyed by url,
                 // so a later read could describe a different shape's fetch.
@@ -218,7 +218,7 @@ export const ShareSheet = ({
                   ratio,
                   theme,
                   cacheHit: wasServedFromCache(imageUrl),
-                })
+                });
               }}
               onError={() => setPreview('failed')}
               className={`h-full w-full object-contain ${
@@ -271,7 +271,7 @@ export const ShareSheet = ({
             <button
               type="button"
               onClick={() => {
-                void onSystemShare()
+                void onSystemShare();
               }}
               className="min-h-11 rounded-full bg-accent px-4 text-sm font-medium text-fg-on-accent"
             >
@@ -285,7 +285,7 @@ export const ShareSheet = ({
               track('share_destination_selected', {
                 eventId: event.id,
                 destination: 'save-image',
-              })
+              });
             }}
             className="flex min-h-11 items-center justify-center rounded-full border border-border px-4 text-sm font-medium text-fg"
           >
@@ -294,7 +294,7 @@ export const ShareSheet = ({
           <button
             type="button"
             onClick={() => {
-              void onCopyLink()
+              void onCopyLink();
             }}
             className="min-h-11 rounded-full border border-border px-4 text-sm font-medium text-fg"
           >
@@ -309,5 +309,5 @@ export const ShareSheet = ({
         </p>
       </div>
     </BottomSheet>
-  )
-}
+  );
+};

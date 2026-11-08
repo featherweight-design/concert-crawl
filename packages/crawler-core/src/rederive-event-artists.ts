@@ -33,20 +33,20 @@
  * keeps every row current.
  */
 
-import { asc, eq, gt } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { asc, eq, gt } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
 import {
   CRAWLER_USER_AGENT,
   canonicalizeSupporting,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   deriveArtists,
   wouldAdjudicate,
   type Adjudicator,
-} from './lib/derive-artists.js'
-import { isAiUseAllowed } from './lib/robots.js'
-import { endpointUrl as aegEndpointUrl } from './lib/fetchers/aeg.js'
-import { ENDPOINT as VENUEPILOT_ENDPOINT } from './lib/fetchers/venuepilot.js'
+} from './lib/derive-artists.js';
+import { isAiUseAllowed } from './lib/robots.js';
+import { endpointUrl as aegEndpointUrl } from './lib/fetchers/aeg.js';
+import { ENDPOINT as VENUEPILOT_ENDPOINT } from './lib/fetchers/venuepilot.js';
 
 /** How each row's answer was reached. Counted so a run reports where it went. */
 export type RederiveStrategy =
@@ -69,23 +69,23 @@ export type RederiveStrategy =
    * cannot check every page the row's text came from. Left as it was; the
    * nightly crawl re-derives it with full provenance.
    */
-  | 'provenance-unknown'
+  | 'provenance-unknown';
 
 export interface RederiveChange {
-  eventId: string
-  title: string
-  strategy: RederiveStrategy
-  headliners: string[]
-  supportingArtists: string[]
+  eventId: string;
+  title: string;
+  strategy: RederiveStrategy;
+  headliners: string[];
+  supportingArtists: string[];
   /** True when the verdict was "not a concert" and the row gets hidden. */
-  hides: boolean
+  hides: boolean;
 }
 
 export interface RederiveEventArtistsResult {
   /** Rows read. */
-  scanned: number
+  scanned: number;
   /** Rows the pass reached a verdict for. */
-  derived: number
+  derived: number;
   /**
    * Rows the pass writes — artist columns, the hide flag, or both. A row hidden
    * with the bill it already stored still counts, because it is still a write.
@@ -94,45 +94,45 @@ export interface RederiveEventArtistsResult {
    * of the table does this pass rewrite" is the number the decision to apply
    * turns on, and a sample capped at 25 cannot answer it.
    */
-  updated: number
+  updated: number;
   /** Rows this run newly hid because the verdict was "not a concert". */
-  hidden: number
-  strategies: Record<RederiveStrategy, number>
+  hidden: number;
+  strategies: Record<RederiveStrategy, number>;
   /** Up to 25 changes, for eyeballing before an apply run. */
-  sample: RederiveChange[]
+  sample: RederiveChange[];
 }
 
 export interface RederiveEventArtistsOptions {
-  dryRun: boolean
+  dryRun: boolean;
   /** Injected so the integration test can rule without reaching Anthropic. */
-  adjudicate: Adjudicator
+  adjudicate: Adjudicator;
   /** Cap on rows read. Left undefined, the whole table is walked. */
-  limit?: number | undefined
+  limit?: number | undefined;
   /**
    * Paced between adjudications only — the free paths cost nothing to run
    * flat out. Anthropic's limit is far above this; the interval exists so a
    * pass over the whole table cannot crowd out the live crawl's own calls.
    */
-  adjudicationIntervalMs?: number
-  sleepImpl?: (ms: number) => Promise<void>
+  adjudicationIntervalMs?: number;
+  sleepImpl?: (ms: number) => Promise<void>;
   /** Injected so the test can refuse AI use without fetching robots.txt. */
-  aiUseAllowed?: (url: string) => Promise<boolean>
+  aiUseAllowed?: (url: string) => Promise<boolean>;
 }
 
-const BATCH_SIZE = 500
-const SAMPLE_SIZE = 25
-const DEFAULT_ADJUDICATION_INTERVAL_MS = 250
+const BATCH_SIZE = 500;
+const SAMPLE_SIZE = 25;
+const DEFAULT_ADJUDICATION_INTERVAL_MS = 250;
 
 const sameBill = (stored: string[] | null, next: string[]): boolean =>
   stored !== null &&
   stored.length === next.length &&
-  stored.every((name, i) => name === next[i])
+  stored.every((name, i) => name === next[i]);
 
 interface ProvenanceRow {
-  extractionStrategy: string | null
-  platform: string | null
-  platformVenueId: string | null
-  apiProvider: string | null
+  extractionStrategy: string | null;
+  platform: string | null;
+  platformVenueId: string | null;
+  apiProvider: string | null;
 }
 
 // Which adapter produced the row. The row's own recorded strategy wins, since
@@ -140,11 +140,11 @@ interface ProvenanceRow {
 // none falls back to the venue's current settings.
 const sourceAdapter = (row: ProvenanceRow): string | null => {
   if (row.extractionStrategy?.startsWith('platform:'))
-    return row.extractionStrategy.slice('platform:'.length)
-  if (row.extractionStrategy !== null) return null
-  if (row.apiProvider === 'venuepilot') return 'venuepilot'
-  return row.platform
-}
+    return row.extractionStrategy.slice('platform:'.length);
+  if (row.extractionStrategy !== null) return null;
+  if (row.apiProvider === 'venuepilot') return 'venuepilot';
+  return row.platform;
+};
 
 // Adapters that read a series of pages (Live Nation's sitemap and calendars,
 // detail-page's listing and each event page), following redirects, record
@@ -152,33 +152,33 @@ const sourceAdapter = (row: ProvenanceRow): string | null => {
 // cannot, so it does not adjudicate those rows at all. An AEG row whose
 // venue no longer names the shard it came from is in the same position.
 const provenanceUnknown = (row: ProvenanceRow): boolean => {
-  const adapter = sourceAdapter(row)
-  if (adapter === 'livenation' || adapter === 'detail-page') return true
-  return adapter === 'aeg' && !(row.platform === 'aeg' && row.platformVenueId)
-}
+  const adapter = sourceAdapter(row);
+  if (adapter === 'livenation' || adapter === 'detail-page') return true;
+  return adapter === 'aeg' && !(row.platform === 'aeg' && row.platformVenueId);
+};
 
 // The payload host a platform adapter reads from, when it is not the venue's
 // own site.
 const platformPayloadUrl = (row: ProvenanceRow): string | null => {
-  const adapter = sourceAdapter(row)
-  if (adapter === 'venuepilot') return VENUEPILOT_ENDPOINT
+  const adapter = sourceAdapter(row);
+  if (adapter === 'venuepilot') return VENUEPILOT_ENDPOINT;
   if (adapter === 'aeg' && row.platformVenueId)
-    return aegEndpointUrl(row.platformVenueId)
-  return null
-}
+    return aegEndpointUrl(row.platformVenueId);
+  return null;
+};
 
 const defaultSleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms))
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function rederiveEventArtists(
   options: RederiveEventArtistsOptions,
 ): Promise<RederiveEventArtistsResult> {
   const intervalMs =
-    options.adjudicationIntervalMs ?? DEFAULT_ADJUDICATION_INTERVAL_MS
-  const sleep = options.sleepImpl ?? defaultSleep
+    options.adjudicationIntervalMs ?? DEFAULT_ADJUDICATION_INTERVAL_MS;
+  const sleep = options.sleepImpl ?? defaultSleep;
   const aiUseAllowed =
     options.aiUseAllowed ??
-    ((url: string) => isAiUseAllowed(url, CRAWLER_USER_AGENT))
+    ((url: string) => isAiUseAllowed(url, CRAWLER_USER_AGENT));
   // The same rule the crawl applies before adjudicating: the venue's own site,
   // the page the row came from, and the platform payload it was read from
   // must all allow AI use. Verdicts are cached per origin inside robots.ts,
@@ -187,10 +187,10 @@ export async function rederiveEventArtists(
     urls: readonly (string | null)[],
   ): Promise<boolean> => {
     for (const url of urls) {
-      if (url !== null && !(await aiUseAllowed(url))) return false
+      if (url !== null && !(await aiUseAllowed(url))) return false;
     }
-    return true
-  }
+    return true;
+  };
 
   const strategies: Record<RederiveStrategy, number> = {
     observed: 0,
@@ -199,20 +199,20 @@ export async function rederiveEventArtists(
     'adjudicator-unavailable': 0,
     'ai-use-refused': 0,
     'provenance-unknown': 0,
-  }
-  const sample: RederiveChange[] = []
-  let scanned = 0
-  let derived = 0
-  let updated = 0
-  let hidden = 0
+  };
+  const sample: RederiveChange[] = [];
+  let scanned = 0;
+  let derived = 0;
+  let updated = 0;
+  let hidden = 0;
 
   // Keyset-paginated on id so memory stays bounded and a run interrupted
   // partway resumes predictably rather than re-walking a random slice.
-  let cursor: string | null = null
+  let cursor: string | null = null;
   for (;;) {
     const remaining =
-      options.limit === undefined ? BATCH_SIZE : options.limit - scanned
-    if (remaining <= 0) break
+      options.limit === undefined ? BATCH_SIZE : options.limit - scanned;
+    if (remaining <= 0) break;
 
     const batch = await db
       .select({
@@ -236,13 +236,13 @@ export async function rederiveEventArtists(
       .leftJoin(venues, eq(events.venueId, venues.id))
       .where(cursor === null ? undefined : gt(events.id, cursor))
       .orderBy(asc(events.id))
-      .limit(Math.min(BATCH_SIZE, remaining))
+      .limit(Math.min(BATCH_SIZE, remaining));
 
-    if (batch.length === 0) break
-    cursor = batch[batch.length - 1]!.id
+    if (batch.length === 0) break;
+    cursor = batch[batch.length - 1]!.id;
 
     for (const row of batch) {
-      scanned += 1
+      scanned += 1;
 
       // `artist` is the DISPLAY string. When it merely repeats the title it
       // carries no observation, which is the shape every title-as-artist bug
@@ -252,13 +252,13 @@ export async function rederiveEventArtists(
       const observedPerformers =
         row.artist.trim().toLowerCase() === row.title.trim().toLowerCase()
           ? []
-          : [row.artist]
+          : [row.artist];
       const input = {
         title: row.title,
         ...(row.description === null ? {} : { description: row.description }),
         observedPerformers,
         observedSupportingArtists: row.supportingArtists ?? [],
-      }
+      };
 
       // A row an earlier run already hid with an empty bill is one this run
       // would spend a call to re-confirm. Gated on `wouldAdjudicate` so the
@@ -271,14 +271,14 @@ export async function rederiveEventArtists(
         row.canonicalHeadliners?.length === 0 &&
         wouldAdjudicate(input)
       ) {
-        strategies.settled += 1
-        continue
+        strategies.settled += 1;
+        continue;
       }
 
-      const willAdjudicate = wouldAdjudicate(input)
+      const willAdjudicate = wouldAdjudicate(input);
       if (willAdjudicate && provenanceUnknown(row)) {
-        strategies['provenance-unknown'] += 1
-        continue
+        strategies['provenance-unknown'] += 1;
+        continue;
       }
       if (
         willAdjudicate &&
@@ -288,38 +288,38 @@ export async function rederiveEventArtists(
           platformPayloadUrl(row),
         ]))
       ) {
-        strategies['ai-use-refused'] += 1
-        continue
+        strategies['ai-use-refused'] += 1;
+        continue;
       }
-      if (willAdjudicate && intervalMs > 0) await sleep(intervalMs)
+      if (willAdjudicate && intervalMs > 0) await sleep(intervalMs);
 
-      const result = await deriveArtists(input, options.adjudicate)
+      const result = await deriveArtists(input, options.adjudicate);
 
       // NULL is the ladder reaching no verdict, which only an adjudicator
       // outage produces. Writing it would read as "nobody is billed" and erase
       // a correct stored bill, so the row is left alone for the next run.
       if (result.headliners === null || result.supportingArtists === null) {
-        strategies['adjudicator-unavailable'] += 1
-        continue
+        strategies['adjudicator-unavailable'] += 1;
+        continue;
       }
 
-      derived += 1
+      derived += 1;
       const strategy: RederiveStrategy = result.adjudicated
         ? 'adjudicated'
-        : 'observed'
-      strategies[strategy] += 1
+        : 'observed';
+      strategies[strategy] += 1;
 
       // A verdict of "not a concert" hides the row, matching what the crawler's
       // INSERT path does with the same signal. Only ever set to `true`: an
       // admin's manual hide is never cleared, and neither is a hide this pass
       // made on a previous run.
-      const hides = result.isConcert === false && !row.hiddenFromConsumer
-      if (hides) hidden += 1
+      const hides = result.isConcert === false && !row.hiddenFromConsumer;
+      if (hides) hidden += 1;
 
-      const canonicalHeadliners = canonicalizeSupporting(result.headliners)
+      const canonicalHeadliners = canonicalizeSupporting(result.headliners);
       const canonicalSupporting = canonicalizeSupporting(
         result.supportingArtists,
-      )
+      );
 
       // A row the ladder re-derived to exactly what it already stores needs no
       // write. Without this the pass touches `updated_at` on every row it
@@ -331,8 +331,8 @@ export async function rederiveEventArtists(
         sameBill(row.headliners, result.headliners) &&
         sameBill(row.canonicalHeadliners, canonicalHeadliners) &&
         sameBill(row.supportingArtists, result.supportingArtists) &&
-        sameBill(row.canonicalSupporting, canonicalSupporting)
-      if (unchanged) continue
+        sameBill(row.canonicalSupporting, canonicalSupporting);
+      if (unchanged) continue;
 
       if (sample.length < SAMPLE_SIZE) {
         sample.push({
@@ -342,11 +342,11 @@ export async function rederiveEventArtists(
           headliners: result.headliners,
           supportingArtists: result.supportingArtists,
           hides,
-        })
+        });
       }
 
-      updated += 1
-      if (options.dryRun) continue
+      updated += 1;
+      if (options.dryRun) continue;
 
       // All four artist columns move together. The display arrays are written
       // as well as the canonical ones because the projection reads
@@ -362,9 +362,9 @@ export async function rederiveEventArtists(
           ...(hides ? { hiddenFromConsumer: true } : {}),
           updatedAt: new Date(),
         })
-        .where(eq(events.id, row.id))
+        .where(eq(events.id, row.id));
     }
   }
 
-  return { scanned, derived, updated, hidden, strategies, sample }
+  return { scanned, derived, updated, hidden, strategies, sample };
 }

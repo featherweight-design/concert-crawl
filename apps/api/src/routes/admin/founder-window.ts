@@ -12,20 +12,20 @@
 // claim / reset-test-seats touch ONLY seats_remaining_test (spec §3.4), so
 // pre-launch rehearsal never disturbs the real seat count.
 
-import { Hono } from 'hono'
-import { getAuth } from '@hono/clerk-auth'
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { z } from 'zod'
-import { db, founderWindow, subscriptionEvents } from '@concert-crawl/db'
+import { Hono } from 'hono';
+import { getAuth } from '@hono/clerk-auth';
+import { and, desc, eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { db, founderWindow, subscriptionEvents } from '@concert-crawl/db';
 import type {
   AdminFounderClaim,
   AdminFounderWindow,
-} from '@concert-crawl/types'
-import type { AdminVariables } from './index.js'
-import { resolveFounderWindowView } from '../billing-founder-window.js'
-import { apiLogger } from '../../lib/logger.js'
+} from '@concert-crawl/types';
+import type { AdminVariables } from './index.js';
+import { resolveFounderWindowView } from '../billing-founder-window.js';
+import { apiLogger } from '../../lib/logger.js';
 
-const RECENT_CLAIMS_LIMIT = 20
+const RECENT_CLAIMS_LIMIT = 20;
 
 // founder_claimed metadata carries the 1-based seat number (billing.ts). Parse
 // defensively — the jsonb column is untyped, and older rows may lack it or
@@ -33,16 +33,16 @@ const RECENT_CLAIMS_LIMIT = 20
 // a bad row falls back to null instead of rendering "Seat #0".
 const claimMetadataSchema = z.object({
   seatNumber: z.number().int().positive(),
-})
+});
 
 const readFounderWindowRow = async () => {
   const [row] = await db
     .select()
     .from(founderWindow)
     .where(eq(founderWindow.id, 1))
-    .limit(1)
-  return row
-}
+    .limit(1);
+  return row;
+};
 
 const loadRecentClaims = async (): Promise<AdminFounderClaim[]> => {
   const rows = await db
@@ -54,29 +54,29 @@ const loadRecentClaims = async (): Promise<AdminFounderClaim[]> => {
     .from(subscriptionEvents)
     .where(eq(subscriptionEvents.type, 'founder_claimed'))
     .orderBy(desc(subscriptionEvents.createdAt))
-    .limit(RECENT_CLAIMS_LIMIT)
+    .limit(RECENT_CLAIMS_LIMIT);
 
   return rows.map((row) => {
-    const parsed = claimMetadataSchema.safeParse(row.metadata)
+    const parsed = claimMetadataSchema.safeParse(row.metadata);
     return {
       userId: row.userId,
       seatNumber: parsed.success ? parsed.data.seatNumber : null,
       claimedAt: row.createdAt.toISOString(),
-    }
-  })
-}
+    };
+  });
+};
 
-export const founderWindowAdminRouter = new Hono<AdminVariables>()
+export const founderWindowAdminRouter = new Hono<AdminVariables>();
 
 founderWindowAdminRouter.get('/', async (ctx) => {
-  const row = await readFounderWindowRow()
+  const row = await readFounderWindowRow();
   if (!row) {
-    apiLogger.error({}, 'admin founder-window: singleton row missing')
-    return ctx.json({ success: false, error: 'Internal server error' }, 500)
+    apiLogger.error({}, 'admin founder-window: singleton row missing');
+    return ctx.json({ success: false, error: 'Internal server error' }, 500);
   }
 
-  const view = resolveFounderWindowView(row, new Date())
-  const recentClaims = await loadRecentClaims()
+  const view = resolveFounderWindowView(row, new Date());
+  const recentClaims = await loadRecentClaims();
 
   const data: AdminFounderWindow = {
     state: view.state,
@@ -87,9 +87,9 @@ founderWindowAdminRouter.get('/', async (ctx) => {
     seatsRemaining: row.seatsRemaining,
     seatsRemainingTest: row.seatsRemainingTest,
     recentClaims,
-  }
-  return ctx.json({ success: true, data })
-})
+  };
+  return ctx.json({ success: true, data });
+});
 
 // POST /open — the launch switch. Stamps opens_at with the current
 // application timestamp; closes_at is a generated column and follows
@@ -100,20 +100,20 @@ const ALREADY_OPENED = {
   success: false,
   error: 'The founder window has already been opened',
   code: 'founder_window_already_open',
-} as const
+} as const;
 
 founderWindowAdminRouter.post('/open', async (ctx) => {
-  const auth = getAuth(ctx)
-  const row = await readFounderWindowRow()
+  const auth = getAuth(ctx);
+  const row = await readFounderWindowRow();
   if (!row) {
-    apiLogger.error({}, 'admin founder-window open: singleton row missing')
-    return ctx.json({ success: false, error: 'Internal server error' }, 500)
+    apiLogger.error({}, 'admin founder-window open: singleton row missing');
+    return ctx.json({ success: false, error: 'Internal server error' }, 500);
   }
   if (row.opensAt !== null) {
-    return ctx.json(ALREADY_OPENED, 409)
+    return ctx.json(ALREADY_OPENED, 409);
   }
 
-  const opensAt = new Date()
+  const opensAt = new Date();
   // Guarded UPDATE: `opens_at is null` makes the flip atomic. Check the row
   // count so a request that loses the concurrency race (another opener slipped
   // in between our read and this UPDATE) returns 409 instead of writing a
@@ -122,24 +122,24 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
     .update(founderWindow)
     .set({ opensAt })
     .where(and(eq(founderWindow.id, 1), sql`opens_at is null`))
-    .returning({ id: founderWindow.id })
+    .returning({ id: founderWindow.id });
   if (opened.length === 0) {
-    return ctx.json(ALREADY_OPENED, 409)
+    return ctx.json(ALREADY_OPENED, 409);
   }
 
-  const updated = await readFounderWindowRow()
+  const updated = await readFounderWindowRow();
   if (!updated) {
-    return ctx.json({ success: false, error: 'Internal server error' }, 500)
+    return ctx.json({ success: false, error: 'Internal server error' }, 500);
   }
 
   // Audit the stored timestamp (not the app-clock `opensAt` variable) so the
   // audit entry matches the DB row and the response exactly.
-  const storedOpensAt = updated.opensAt ?? opensAt
-  ctx.set('auditAction', 'founder_window.open')
-  ctx.set('auditTargetId', 'founder_window:1')
-  ctx.set('auditActorId', auth?.userId ?? 'unknown')
-  ctx.set('auditMeta', { opensAt: storedOpensAt.toISOString() })
-  const view = resolveFounderWindowView(updated, new Date())
+  const storedOpensAt = updated.opensAt ?? opensAt;
+  ctx.set('auditAction', 'founder_window.open');
+  ctx.set('auditTargetId', 'founder_window:1');
+  ctx.set('auditActorId', auth?.userId ?? 'unknown');
+  ctx.set('auditMeta', { opensAt: storedOpensAt.toISOString() });
+  const view = resolveFounderWindowView(updated, new Date());
   const data: AdminFounderWindow = {
     state: view.state,
     opensAt: updated.opensAt === null ? null : updated.opensAt.toISOString(),
@@ -149,9 +149,9 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
     seatsRemaining: updated.seatsRemaining,
     seatsRemainingTest: updated.seatsRemainingTest,
     recentClaims: await loadRecentClaims(),
-  }
-  return ctx.json({ success: true, data })
-})
+  };
+  return ctx.json({ success: true, data });
+});
 
 // POST /simulate-claim — decrement the TEST counter only. Guarded
 // `seats_remaining_test > 0` in the UPDATE so concurrent clicks can't drive it
@@ -159,21 +159,21 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
 // singleton row is missing — disambiguated below so a mis-seeded environment
 // surfaces as a 500 instead of a misleading exhaustion 409.
 founderWindowAdminRouter.post('/simulate-claim', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   const updated = await db
     .update(founderWindow)
     .set({ seatsRemainingTest: sql`${founderWindow.seatsRemainingTest} - 1` })
     .where(and(eq(founderWindow.id, 1), sql`seats_remaining_test > 0`))
-    .returning({ seatsRemainingTest: founderWindow.seatsRemainingTest })
+    .returning({ seatsRemainingTest: founderWindow.seatsRemainingTest });
 
   if (updated.length === 0) {
-    const row = await readFounderWindowRow()
+    const row = await readFounderWindowRow();
     if (!row) {
       apiLogger.error(
         {},
         'admin founder-window simulate: singleton row missing',
-      )
-      return ctx.json({ success: false, error: 'Internal server error' }, 500)
+      );
+      return ctx.json({ success: false, error: 'Internal server error' }, 500);
     }
     return ctx.json(
       {
@@ -182,42 +182,42 @@ founderWindowAdminRouter.post('/simulate-claim', async (ctx) => {
         code: 'founder_test_seats_exhausted',
       },
       409,
-    )
+    );
   }
 
-  ctx.set('auditAction', 'founder_window.simulate_claim')
-  ctx.set('auditTargetId', 'founder_window:1')
-  ctx.set('auditActorId', auth?.userId ?? 'unknown')
-  ctx.set('auditMeta', { seatsRemainingTest: updated[0]?.seatsRemainingTest })
+  ctx.set('auditAction', 'founder_window.simulate_claim');
+  ctx.set('auditTargetId', 'founder_window:1');
+  ctx.set('auditActorId', auth?.userId ?? 'unknown');
+  ctx.set('auditMeta', { seatsRemainingTest: updated[0]?.seatsRemainingTest });
 
   return ctx.json({
     success: true,
     data: { seatsRemainingTest: updated[0]?.seatsRemainingTest ?? 0 },
-  })
-})
+  });
+});
 
 // POST /reset-test-seats — restore the TEST counter to seats_total so the
 // simulate-claim rehearsal can be run repeatedly before launch.
 founderWindowAdminRouter.post('/reset-test-seats', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   const updated = await db
     .update(founderWindow)
     .set({ seatsRemainingTest: sql`${founderWindow.seatsTotal}` })
     .where(eq(founderWindow.id, 1))
-    .returning({ seatsRemainingTest: founderWindow.seatsRemainingTest })
+    .returning({ seatsRemainingTest: founderWindow.seatsRemainingTest });
 
   if (updated.length === 0) {
-    apiLogger.error({}, 'admin founder-window reset: singleton row missing')
-    return ctx.json({ success: false, error: 'Internal server error' }, 500)
+    apiLogger.error({}, 'admin founder-window reset: singleton row missing');
+    return ctx.json({ success: false, error: 'Internal server error' }, 500);
   }
 
-  ctx.set('auditAction', 'founder_window.reset_test_seats')
-  ctx.set('auditTargetId', 'founder_window:1')
-  ctx.set('auditActorId', auth?.userId ?? 'unknown')
-  ctx.set('auditMeta', { seatsRemainingTest: updated[0]?.seatsRemainingTest })
+  ctx.set('auditAction', 'founder_window.reset_test_seats');
+  ctx.set('auditTargetId', 'founder_window:1');
+  ctx.set('auditActorId', auth?.userId ?? 'unknown');
+  ctx.set('auditMeta', { seatsRemainingTest: updated[0]?.seatsRemainingTest });
 
   return ctx.json({
     success: true,
     data: { seatsRemainingTest: updated[0]?.seatsRemainingTest ?? 0 },
-  })
-})
+  });
+});

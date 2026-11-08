@@ -11,17 +11,17 @@ export function isImminentEvent(
   eventDate: string | null,
   thresholdDays: number,
 ): boolean {
-  if (!eventDate) return false
-  const [year, month, day] = eventDate.split('-').map(Number)
-  if (year == null || month == null || day == null) return false
-  const eventMs = Date.UTC(year, month - 1, day)
+  if (!eventDate) return false;
+  const [year, month, day] = eventDate.split('-').map(Number);
+  if (year == null || month == null || day == null) return false;
+  const eventMs = Date.UTC(year, month - 1, day);
   const todayMs = Date.UTC(
     new Date().getUTCFullYear(),
     new Date().getUTCMonth(),
     new Date().getUTCDate(),
-  )
-  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24)
-  return diffDays >= 0 && diffDays <= thresholdDays
+  );
+  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24);
+  return diffDays >= 0 && diffDays <= thresholdDays;
 }
 
 /**
@@ -35,15 +35,15 @@ export function todayInTimezone(timezone: string): string {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date())
+  }).formatToParts(new Date());
 
-  const year = parts.find((part) => part.type === 'year')?.value
-  const month = parts.find((part) => part.type === 'month')?.value
-  const day = parts.find((part) => part.type === 'day')?.value
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
 
   if (!year || !month || !day) {
-    throw new Error(`Unable to derive current date for timezone: ${timezone}`)
+    throw new Error(`Unable to derive current date for timezone: ${timezone}`);
   }
 
-  return `${year}-${month}-${day}`
+  return `${year}-${month}-${day}`;
 }

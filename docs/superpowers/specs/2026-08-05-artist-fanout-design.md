@@ -119,10 +119,10 @@ this is easy to carry over unchanged and get silently wrong.
 
 **Preference defaults for users with no connection row** (both null after the LEFT JOIN):
 
-| Preference | Default | Why |
-|---|---|---|
-| `pushEnabled` | `true` | Following *is* the opt-in. A follow that notifies nothing repeats the bug we are fixing. |
-| `autoWatch` | `false` | Following an artist must never silently mutate the user's Watching list. Auto-watch is a distinct, deliberate choice. |
+| Preference    | Default | Why                                                                                                                   |
+| ------------- | ------- | --------------------------------------------------------------------------------------------------------------------- |
+| `pushEnabled` | `true`  | Following _is_ the opt-in. A follow that notifies nothing repeats the bug we are fixing.                              |
+| `autoWatch`   | `false` | Following an artist must never silently mutate the user's Watching list. Auto-watch is a distinct, deliberate choice. |
 
 This asymmetry is intentional. Apply it as a SQL `COALESCE` in the select itself, so the
 candidate rows are already correct and no downstream consumer can forget the defaults.
@@ -162,7 +162,7 @@ change. Expand/contract applies — the reader tolerates both values across the 
 window, which the fallback already gives us for free.
 
 `packages/push/src/notification-categories.ts` deliberately places this category in
-*neither* sub-toggle set. Preserve that; it is load-bearing, and the rename must not
+_neither_ sub-toggle set. Preserve that; it is load-bearing, and the rename must not
 quietly enrol it in a toggle group.
 
 ## 4. Spotify Connect entry point

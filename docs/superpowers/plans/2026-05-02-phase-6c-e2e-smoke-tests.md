@@ -113,7 +113,7 @@ Expected: Chromium binary downloaded (~150MB). Other browsers not needed — we 
 - [ ] **Step 1: Create `apps/e2e/playwright.config.ts`**
 
 ```ts
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './src/e2e',
@@ -141,13 +141,13 @@ export default defineConfig({
   ],
   timeout: 30_000,
   expect: { timeout: 5_000 },
-})
+});
 ```
 
 - [ ] **Step 2: Create `apps/e2e/playwright.smoke.config.ts`**
 
 ```ts
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './src/smoke',
@@ -170,7 +170,7 @@ export default defineConfig({
   ],
   timeout: 15_000,
   expect: { timeout: 5_000 },
-})
+});
 ```
 
 ---
@@ -186,55 +186,55 @@ The globalSetup signs in with the Clerk test user once before any E2E tests run,
 - [ ] **Step 1: Create `apps/e2e/src/fixtures/auth.ts`**
 
 ```ts
-import { chromium, type FullConfig } from '@playwright/test'
-import fs from 'fs'
-import path from 'path'
+import { chromium, type FullConfig } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
-  const email = process.env['E2E_TEST_USER_EMAIL']
-  const password = process.env['E2E_TEST_USER_PASSWORD']
+  const email = process.env['E2E_TEST_USER_EMAIL'];
+  const password = process.env['E2E_TEST_USER_PASSWORD'];
 
   // If credentials aren't provided, skip auth setup.
   // Tests that require auth will fail with a clear redirect error.
   if (!email || !password) {
     console.warn(
       '[e2e] E2E_TEST_USER_EMAIL or E2E_TEST_USER_PASSWORD not set — skipping auth setup.',
-    )
-    return
+    );
+    return;
   }
 
-  const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000'
-  const authDir = path.resolve('apps/e2e/.auth')
-  const authFile = path.join(authDir, 'user.json')
+  const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000';
+  const authDir = path.resolve('apps/e2e/.auth');
+  const authFile = path.join(authDir, 'user.json');
 
-  fs.mkdirSync(authDir, { recursive: true })
+  fs.mkdirSync(authDir, { recursive: true });
 
-  const browser = await chromium.launch()
-  const page = await browser.newPage()
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
 
   try {
     // Navigate to the app — Clerk will redirect to sign-in if needed
-    await page.goto(`${baseURL}/sign-in`)
-    await page.waitForLoadState('networkidle')
+    await page.goto(`${baseURL}/sign-in`);
+    await page.waitForLoadState('networkidle');
 
     // Clerk's default sign-in UI uses these selectors.
     // If the Clerk component version changes these selectors, update here.
-    await page.getByLabel(/email/i).fill(email)
-    await page.getByRole('button', { name: /continue/i }).click()
-    await page.waitForLoadState('networkidle')
+    await page.getByLabel(/email/i).fill(email);
+    await page.getByRole('button', { name: /continue/i }).click();
+    await page.waitForLoadState('networkidle');
 
-    await page.getByLabel(/password/i).fill(password)
-    await page.getByRole('button', { name: /continue|sign in/i }).click()
+    await page.getByLabel(/password/i).fill(password);
+    await page.getByRole('button', { name: /continue|sign in/i }).click();
 
     // Wait for redirect to the app after successful sign-in
     await page.waitForURL((url) => !url.pathname.includes('sign-in'), {
       timeout: 15_000,
-    })
+    });
 
-    await page.context().storageState({ path: authFile })
-    console.log('[e2e] Auth state saved to', authFile)
+    await page.context().storageState({ path: authFile });
+    console.log('[e2e] Auth state saved to', authFile);
   } finally {
-    await browser.close()
+    await browser.close();
   }
 }
 ```
@@ -254,20 +254,20 @@ Verify `apps/e2e/.gitignore` already contains `.auth/` (added in Task 1). The `.
 - [ ] **Step 1: Create `apps/e2e/src/helpers/api.ts`**
 
 ```ts
-import { type APIRequestContext } from '@playwright/test'
+import { type APIRequestContext } from '@playwright/test';
 
 const API_URL =
   process.env['PLAYWRIGHT_API_URL'] ??
   process.env['NEXT_PUBLIC_API_URL'] ??
-  'http://localhost:3001'
+  'http://localhost:3001';
 
 export async function apiGet<T = unknown>(
   request: APIRequestContext,
   path: string,
 ): Promise<{ status: number; body: T }> {
-  const response = await request.get(`${API_URL}${path}`)
-  const body = (await response.json()) as T
-  return { status: response.status(), body }
+  const response = await request.get(`${API_URL}${path}`);
+  const body = (await response.json()) as T;
+  return { status: response.status(), body };
 }
 
 export async function healthCheck(
@@ -277,10 +277,10 @@ export async function healthCheck(
     const { status, body } = await apiGet<{ status: string }>(
       request,
       '/v1/health',
-    )
-    return status === 200 && (body as { status: string }).status === 'ok'
+    );
+    return status === 200 && (body as { status: string }).status === 'ok';
   } catch {
-    return false
+    return false;
   }
 }
 ```
@@ -298,80 +298,80 @@ Smoke tests run against production every hour. They test the public-facing criti
 - [ ] **Step 1: Create `apps/e2e/src/smoke/critical-path.spec.ts`**
 
 ```ts
-import { test, expect } from '@playwright/test'
-import { healthCheck } from '../helpers/api.js'
+import { test, expect } from '@playwright/test';
+import { healthCheck } from '../helpers/api.js';
 
 test.describe('production smoke: app availability', () => {
   test('homepage renders with content', async ({ page }) => {
-    await page.goto('/')
-    await expect(page).toHaveTitle(/concert crawl/i)
+    await page.goto('/');
+    await expect(page).toHaveTitle(/concert crawl/i);
     // The page should render something meaningful — not a blank page or error
-    const heading = page.getByRole('heading').first()
-    await expect(heading).toBeVisible()
-  })
+    const heading = page.getByRole('heading').first();
+    await expect(heading).toBeVisible();
+  });
 
   test('API health endpoint responds', async ({ request }) => {
-    const healthy = await healthCheck(request)
-    expect(healthy).toBe(true)
-  })
-})
+    const healthy = await healthCheck(request);
+    expect(healthy).toBe(true);
+  });
+});
 
 test.describe('production smoke: event data', () => {
   test('browse page loads with at least one event', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
     // If the DB is empty or crawls have failed, this catches it
-    const eventCards = page.locator('[data-testid="event-card"]')
-    await expect(eventCards.first()).toBeVisible({ timeout: 10_000 })
-    const count = await eventCards.count()
-    expect(count).toBeGreaterThan(0)
-  })
+    const eventCards = page.locator('[data-testid="event-card"]');
+    await expect(eventCards.first()).toBeVisible({ timeout: 10_000 });
+    const count = await eventCards.count();
+    expect(count).toBeGreaterThan(0);
+  });
 
   test('venue filter chip produces results', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
     // Click the first venue filter chip
-    const firstChip = page.locator('[data-testid="venue-chip"]').first()
-    const isChipVisible = await firstChip.isVisible()
+    const firstChip = page.locator('[data-testid="venue-chip"]').first();
+    const isChipVisible = await firstChip.isVisible();
 
     if (isChipVisible) {
-      await firstChip.click()
-      await page.waitForLoadState('networkidle')
-      const eventCards = page.locator('[data-testid="event-card"]')
+      await firstChip.click();
+      await page.waitForLoadState('networkidle');
+      const eventCards = page.locator('[data-testid="event-card"]');
       // After filtering, we expect at least 0 results (venue may have no events)
       // The test passes as long as the page doesn't error
       await expect(page.locator('body')).not.toContainText(
         /error|500|unexpected/i,
-      )
+      );
     }
     // If no chips are visible, the test passes — empty state is valid
-  })
-})
+  });
+});
 
 test.describe('production smoke: auth protection', () => {
   test('admin route redirects unauthenticated users', async ({ page }) => {
-    await page.goto('/admin')
+    await page.goto('/admin');
     // Should redirect to sign-in, not show admin content
-    await page.waitForLoadState('networkidle')
-    const url = page.url()
-    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i)
-  })
-})
+    await page.waitForLoadState('networkidle');
+    const url = page.url();
+    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i);
+  });
+});
 
 test.describe('production smoke: known venue', () => {
   test('a seeded venue page loads', async ({ page }) => {
     // Larimer Lounge is in the seed data — verifies data freshness
-    await page.goto('/venues/larimer-lounge')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/venues/larimer-lounge');
+    await page.waitForLoadState('networkidle');
 
     // Should render the venue page, not a 404
-    await expect(page).not.toHaveTitle(/404|not found/i)
-    const h1 = page.getByRole('heading', { level: 1 })
-    await expect(h1).toBeVisible()
-  })
-})
+    await expect(page).not.toHaveTitle(/404|not found/i);
+    const h1 = page.getByRole('heading', { level: 1 });
+    await expect(h1).toBeVisible();
+  });
+});
 ```
 
 Note: `[data-testid="event-card"]` and `[data-testid="venue-chip"]` must be added to the web app components if they don't exist. If these attributes are missing, the smoke test will time out. Check `apps/web/src/components/consumer/` and add `data-testid` attributes where needed before running smoke tests in production.
@@ -414,40 +414,40 @@ git commit -m "test: add smoke test suite (critical path, data freshness, auth p
 - [ ] **Step 1: Create `apps/e2e/src/e2e/browse.spec.ts`**
 
 ```ts
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
 test.describe('browse events page', () => {
   test('loads the browse page with events', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
     // Page title
-    await expect(page).toHaveTitle(/concert crawl/i)
+    await expect(page).toHaveTitle(/concert crawl/i);
 
     // At least one event card visible
-    const firstCard = page.locator('[data-testid="event-card"]').first()
-    await expect(firstCard).toBeVisible()
-  })
+    const firstCard = page.locator('[data-testid="event-card"]').first();
+    await expect(firstCard).toBeVisible();
+  });
 
   test('venue filter chip narrows the event list', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
-    const chipContainer = page.locator('[data-testid="venue-chip"]')
-    const chipCount = await chipContainer.count()
+    const chipContainer = page.locator('[data-testid="venue-chip"]');
+    const chipCount = await chipContainer.count();
     if (chipCount === 0) {
-      test.skip(true, 'No venue chips present on staging — skip filter test')
-      return
+      test.skip(true, 'No venue chips present on staging — skip filter test');
+      return;
     }
 
-    const firstChip = chipContainer.first()
-    const chipLabel = await firstChip.textContent()
+    const firstChip = chipContainer.first();
+    const chipLabel = await firstChip.textContent();
 
-    await firstChip.click()
-    await page.waitForLoadState('networkidle')
+    await firstChip.click();
+    await page.waitForLoadState('networkidle');
 
     // After clicking, the chip should be visually active
-    await expect(firstChip).toHaveAttribute('aria-pressed', 'true')
+    await expect(firstChip).toHaveAttribute('aria-pressed', 'true');
 
     // Events list should still be visible (not errored)
     await expect(page.locator('[data-testid="event-card"]').first())
@@ -456,36 +456,36 @@ test.describe('browse events page', () => {
       })
       .catch(() => {
         // No events for this venue is a valid state — just verify no error page
-      })
+      });
 
-    console.log(`Filtered by venue: ${chipLabel}`)
-  })
+    console.log(`Filtered by venue: ${chipLabel}`);
+  });
 
   test('load more fetches additional events', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
-    const loadMoreButton = page.getByRole('button', { name: /load more/i })
-    const isVisible = await loadMoreButton.isVisible()
+    const loadMoreButton = page.getByRole('button', { name: /load more/i });
+    const isVisible = await loadMoreButton.isVisible();
 
     if (!isVisible) {
       test.skip(
         true,
         'Load More button not visible — fewer events than one page',
-      )
-      return
+      );
+      return;
     }
 
     const initialCount = await page
       .locator('[data-testid="event-card"]')
-      .count()
-    await loadMoreButton.click()
-    await page.waitForLoadState('networkidle')
-    const newCount = await page.locator('[data-testid="event-card"]').count()
+      .count();
+    await loadMoreButton.click();
+    await page.waitForLoadState('networkidle');
+    const newCount = await page.locator('[data-testid="event-card"]').count();
 
-    expect(newCount).toBeGreaterThan(initialCount)
-  })
-})
+    expect(newCount).toBeGreaterThan(initialCount);
+  });
+});
 ```
 
 ---
@@ -500,98 +500,98 @@ test.describe('browse events page', () => {
 - [ ] **Step 1: Create `apps/e2e/src/e2e/event-detail.spec.ts`**
 
 ```ts
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
 test.describe('event detail page', () => {
   test('renders event details from the browse page', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
-    const firstCard = page.locator('[data-testid="event-card"]').first()
-    await expect(firstCard).toBeVisible()
+    const firstCard = page.locator('[data-testid="event-card"]').first();
+    await expect(firstCard).toBeVisible();
 
     // Navigate to the event detail page by clicking the card
-    await firstCard.click()
-    await page.waitForLoadState('networkidle')
+    await firstCard.click();
+    await page.waitForLoadState('networkidle');
 
     // Should be on an event detail URL
-    expect(page.url()).toMatch(/\/events\/[a-z0-9-]+/)
+    expect(page.url()).toMatch(/\/events\/[a-z0-9-]+/);
 
     // Core event data should render
-    const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toBeVisible()
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toBeVisible();
 
     // Venue name should appear somewhere on the page
-    const venueLink = page.locator('[data-testid="event-venue-name"]')
-    await expect(venueLink).toBeVisible()
-  })
+    const venueLink = page.locator('[data-testid="event-venue-name"]');
+    await expect(venueLink).toBeVisible();
+  });
 
   test('back navigation returns to browse', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
-    const firstCard = page.locator('[data-testid="event-card"]').first()
-    await firstCard.click()
-    await page.waitForLoadState('networkidle')
+    const firstCard = page.locator('[data-testid="event-card"]').first();
+    await firstCard.click();
+    await page.waitForLoadState('networkidle');
 
-    await page.goBack()
-    await page.waitForLoadState('networkidle')
+    await page.goBack();
+    await page.waitForLoadState('networkidle');
 
-    expect(page.url()).toMatch(/\/events$/)
-  })
-})
+    expect(page.url()).toMatch(/\/events$/);
+  });
+});
 ```
 
 - [ ] **Step 2: Create `apps/e2e/src/e2e/venue-detail.spec.ts`**
 
 ```ts
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
 test.describe('venue detail page', () => {
   test('renders venue info and event list', async ({ page }) => {
     // Navigate via a venue chip — more realistic than a hardcoded URL
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
-    const venueChip = page.locator('[data-testid="venue-chip"]').first()
-    const isVisible = await venueChip.isVisible()
+    const venueChip = page.locator('[data-testid="venue-chip"]').first();
+    const isVisible = await venueChip.isVisible();
     if (!isVisible) {
       test.skip(
         true,
         'No venue chips on staging — cannot navigate to venue detail',
-      )
-      return
+      );
+      return;
     }
 
     // Click the venue name link to navigate to venue detail
-    const venueLink = page.locator('[data-testid="venue-name-link"]').first()
-    const linkVisible = await venueLink.isVisible()
+    const venueLink = page.locator('[data-testid="venue-name-link"]').first();
+    const linkVisible = await venueLink.isVisible();
     if (!linkVisible) {
-      test.skip(true, 'No venue name link found on browse page')
-      return
+      test.skip(true, 'No venue name link found on browse page');
+      return;
     }
 
-    await venueLink.click()
-    await page.waitForLoadState('networkidle')
+    await venueLink.click();
+    await page.waitForLoadState('networkidle');
 
-    expect(page.url()).toMatch(/\/venues\/[a-z0-9-]+/)
+    expect(page.url()).toMatch(/\/venues\/[a-z0-9-]+/);
 
-    const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toBeVisible()
-  })
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toBeVisible();
+  });
 
   test('Larimer Lounge venue page renders (seed data check)', async ({
     page,
   }) => {
-    await page.goto('/venues/larimer-lounge')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/venues/larimer-lounge');
+    await page.waitForLoadState('networkidle');
 
-    await expect(page).not.toHaveTitle(/404|not found/i)
-    const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toBeVisible()
-    await expect(heading).toContainText(/larimer/i)
-  })
-})
+    await expect(page).not.toHaveTitle(/404|not found/i);
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toBeVisible();
+    await expect(heading).toContainText(/larimer/i);
+  });
+});
 ```
 
 - [ ] **Step 3: Commit**
@@ -612,7 +612,7 @@ git commit -m "test: add browse, event-detail, and venue-detail e2e tests"
 - [ ] **Step 1: Create `apps/e2e/src/e2e/auth.spec.ts`**
 
 ```ts
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
 // Auth tests need to test both authenticated and unauthenticated states.
 // Use a separate browser context without storageState for the unauthenticated tests.
@@ -620,33 +620,33 @@ import { test, expect } from '@playwright/test'
 test.describe('unauthenticated access', () => {
   test('admin route redirects to sign-in', async ({ browser }) => {
     // Create a fresh context without saved auth state
-    const context = await browser.newContext({ storageState: undefined })
-    const page = await context.newPage()
+    const context = await browser.newContext({ storageState: undefined });
+    const page = await context.newPage();
 
-    await page.goto('/admin')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
 
     // Clerk redirects to the sign-in page
-    const url = page.url()
-    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i)
+    const url = page.url();
+    expect(url).toMatch(/sign-in|clerk\.com|accounts\./i);
 
-    await context.close()
-  })
+    await context.close();
+  });
 
   test('public browse page is accessible without auth', async ({ browser }) => {
-    const context = await browser.newContext({ storageState: undefined })
-    const page = await context.newPage()
+    const context = await browser.newContext({ storageState: undefined });
+    const page = await context.newPage();
 
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
     // Should render the events page, not redirect to sign-in
-    await expect(page).toHaveTitle(/concert crawl/i)
-    expect(page.url()).toMatch(/\/events/)
+    await expect(page).toHaveTitle(/concert crawl/i);
+    expect(page.url()).toMatch(/\/events/);
 
-    await context.close()
-  })
-})
+    await context.close();
+  });
+});
 
 test.describe('authenticated access', () => {
   // These tests use the storageState from globalSetup (configured in playwright.config.ts).
@@ -654,14 +654,14 @@ test.describe('authenticated access', () => {
   // may redirect to sign-in (they'll fail with a clear error message).
 
   test('authenticated user can access events page', async ({ page }) => {
-    await page.goto('/events')
-    await page.waitForLoadState('networkidle')
+    await page.goto('/events');
+    await page.waitForLoadState('networkidle');
 
     // Should not be redirected to sign-in
-    expect(page.url()).not.toMatch(/sign-in/)
-    await expect(page).toHaveTitle(/concert crawl/i)
-  })
-})
+    expect(page.url()).not.toMatch(/sign-in/);
+    await expect(page).toHaveTitle(/concert crawl/i);
+  });
+});
 ```
 
 - [ ] **Step 2: Commit**
@@ -832,8 +832,8 @@ jobs:
 Create `apps/e2e/src/fixtures/smoke-setup.ts` — used by the smoke config to initialize Sentry so test failures are captured:
 
 ```ts
-import * as Sentry from '@sentry/node'
-import type { FullConfig } from '@playwright/test'
+import * as Sentry from '@sentry/node';
+import type { FullConfig } from '@playwright/test';
 
 export default async function globalSetup(_config: FullConfig): Promise<void> {
   if (process.env['SENTRY_DSN']) {
@@ -843,8 +843,8 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
       initialScope: {
         tags: { source: 'smoke-test' },
       },
-    })
-    console.log('[smoke] Sentry initialized for failure reporting')
+    });
+    console.log('[smoke] Sentry initialized for failure reporting');
   }
 }
 ```
@@ -852,7 +852,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
 Update `apps/e2e/playwright.smoke.config.ts` to add the `globalSetup`:
 
 ```ts
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './src/smoke',
@@ -875,7 +875,7 @@ export default defineConfig({
   ],
   timeout: 15_000,
   expect: { timeout: 5_000 },
-})
+});
 ```
 
 - [ ] **Step 3: Add GitHub repository secrets and variables**
@@ -883,18 +883,20 @@ export default defineConfig({
 In GitHub → Settings → Secrets and variables → Actions:
 
 **Secrets:**
-| Name | Value |
-|------|-------|
-| `E2E_TEST_USER_EMAIL` | Email of the Clerk test user on staging |
-| `E2E_TEST_USER_PASSWORD` | Password of that user |
-| `SENTRY_DSN_SMOKE` | Sentry DSN for the `concert-crawl-web` project (or a dedicated `concert-crawl-e2e` project) |
+
+| Name                     | Value                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `E2E_TEST_USER_EMAIL`    | Email of the Clerk test user on staging                                                     |
+| `E2E_TEST_USER_PASSWORD` | Password of that user                                                                       |
+| `SENTRY_DSN_SMOKE`       | Sentry DSN for the `concert-crawl-web` project (or a dedicated `concert-crawl-e2e` project) |
 
 **Variables:**
-| Name | Value |
-|------|-------|
-| `STAGING_URL` | `https://concert-crawl-web-staging.onrender.com` |
-| `PROD_URL` | `https://concertcrawl.app` |
-| `PROD_API_URL` | `https://concert-crawl-api.onrender.com` |
+
+| Name           | Value                                            |
+| -------------- | ------------------------------------------------ |
+| `STAGING_URL`  | `https://concert-crawl-web-staging.onrender.com` |
+| `PROD_URL`     | `https://concertcrawl.app`                       |
+| `PROD_API_URL` | `https://concert-crawl-api.onrender.com`         |
 
 - [ ] **Step 4: Commit**
 

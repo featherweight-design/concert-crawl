@@ -46,7 +46,7 @@ export const NOTIFICATIONS_COPY = {
   today: 'Today',
   yesterday: 'Yesterday',
   segments: { shows: 'Shows', alerts: 'Alerts', prices: 'Prices' },
-} as const
+} as const;
 
 /** Where the empty-state CTA sends someone with nothing to catch up on. */
-export const NOTIFICATIONS_EMPTY_ACTION_HREF = '/events'
+export const NOTIFICATIONS_EMPTY_ACTION_HREF = '/events';

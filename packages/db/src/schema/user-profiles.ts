@@ -1,11 +1,11 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const avatarColorEnum = pgEnum('avatar_color', [
   'signal',
   'accent',
   'success',
   'warning',
-])
+]);
 
 export const userThemeEnum = pgEnum('user_theme', [
   'electric',
@@ -17,7 +17,7 @@ export const userThemeEnum = pgEnum('user_theme', [
   'drip',
   'cedar',
   'gloss',
-])
+]);
 
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -43,7 +43,7 @@ export const userProfiles = pgTable('user_profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type UserProfile = typeof userProfiles.$inferSelect
-export type NewUserProfile = typeof userProfiles.$inferInsert
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type NewUserProfile = typeof userProfiles.$inferInsert;

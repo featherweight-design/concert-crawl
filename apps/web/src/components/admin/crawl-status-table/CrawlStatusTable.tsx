@@ -1,41 +1,41 @@
-import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 type LastRun = {
-  id: string
-  status: string
-  createdAt: string
-  eventsFound: number
-  eventsInserted: number
-  errorMessage: string | null
-  extractionStrategyUsed: string | null
-} | null
+  id: string;
+  status: string;
+  createdAt: string;
+  eventsFound: number;
+  eventsInserted: number;
+  errorMessage: string | null;
+  extractionStrategyUsed: string | null;
+} | null;
 
 type VenueCrawlStatus = {
-  id: string
-  name: string
-  active: boolean
-  verified: boolean
-  consecutiveFailures: number
-  blockedAt: string | null
-  lastCrawledAt: string | null
-  lastRun: LastRun
-}
+  id: string;
+  name: string;
+  active: boolean;
+  verified: boolean;
+  consecutiveFailures: number;
+  blockedAt: string | null;
+  lastCrawledAt: string | null;
+  lastRun: LastRun;
+};
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return '—';
   return new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(iso))
+  }).format(new Date(iso));
 }
 
 type Props = {
-  venues: VenueCrawlStatus[]
-}
+  venues: VenueCrawlStatus[];
+};
 
 export const CrawlStatusTable = ({ venues }: Props) => {
   if (venues.length === 0) {
@@ -43,7 +43,7 @@ export const CrawlStatusTable = ({ venues }: Props) => {
       <p className="text-sm text-fg-muted">
         {ADMIN_COPY.crawlStatusTable.empty}
       </p>
-    )
+    );
   }
 
   return (
@@ -124,5 +124,5 @@ export const CrawlStatusTable = ({ venues }: Props) => {
         </tbody>
       </table>
     </div>
-  )
-}
+  );
+};

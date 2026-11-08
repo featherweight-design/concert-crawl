@@ -19,12 +19,12 @@ Before touching the DB, reduce inbound pressure:
 
 You're probably here because of one of these:
 
-| Signal | What it means |
-|---|---|
-| User reports "my watched show disappeared" | A `user_events` reassignment dropped or mis-routed their row |
-| Admin sees an event flagged in inspector that has no recent crawl history | A loser was selected as winner — wrong winner-pick |
-| `first_missing_at` count climbs back into the hundreds | Track A hasn't deployed yet AND the winner row's artist string still drifts |
-| `events_consolidate_608` row count = 0 | The script's SNAPSHOT ran but was never INSERTed (operator ran with empty cluster set — nothing to roll back) |
+| Signal                                                                    | What it means                                                                                                 |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| User reports "my watched show disappeared"                                | A `user_events` reassignment dropped or mis-routed their row                                                  |
+| Admin sees an event flagged in inspector that has no recent crawl history | A loser was selected as winner — wrong winner-pick                                                            |
+| `first_missing_at` count climbs back into the hundreds                    | Track A hasn't deployed yet AND the winner row's artist string still drifts                                   |
+| `events_consolidate_608` row count = 0                                    | The script's SNAPSHOT ran but was never INSERTed (operator ran with empty cluster set — nothing to roll back) |
 
 If the signal is **just** "first_missing_at count climbing again," that's NOT a consolidation problem — it's the Track A gap. Ship Track A; don't roll back.
 

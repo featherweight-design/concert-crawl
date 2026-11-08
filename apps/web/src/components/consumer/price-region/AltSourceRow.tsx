@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const TIER_COLOR = {
   boxoffice: 'oklch(0.66 0.14 78)',
   resale: 'oklch(0.65 0.20 25)',
   community: 'oklch(0.62 0.12 240)',
-} as const
+} as const;
 
-const copy = CONSUMER_COPY.priceRegion.altSourceRow
+const copy = CONSUMER_COPY.priceRegion.altSourceRow;
 
 export interface AltSourceRowProps {
-  source: string
-  kind: 'boxoffice' | 'resale' | 'community'
-  price: number
+  source: string;
+  kind: 'boxoffice' | 'resale' | 'community';
+  price: number;
 }
 
 export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
-  const color = TIER_COLOR[kind]
+  const color = TIER_COLOR[kind];
   return (
     <div
       style={{
@@ -72,5 +72,5 @@ export const AltSourceRow = ({ source, kind, price }: AltSourceRowProps) => {
         {price}
       </span>
     </div>
-  )
-}
+  );
+};

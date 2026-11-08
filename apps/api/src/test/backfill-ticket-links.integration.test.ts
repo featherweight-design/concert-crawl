@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { eq, isNotNull } from 'drizzle-orm'
-import { events, venues } from '@concert-crawl/db'
-import { deriveTicketLinks } from '@concert-crawl/crawler-core'
-import { testDb } from './helpers/db.js'
-import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
+import { beforeEach, describe, expect, it } from 'vitest';
+import { eq, isNotNull } from 'drizzle-orm';
+import { events, venues } from '@concert-crawl/db';
+import { deriveTicketLinks } from '@concert-crawl/crawler-core';
+import { testDb } from './helpers/db.js';
+import { clearTables, seedEvent, seedVenue } from './helpers/seed.js';
 
 // Re-implementation of the apps/crawler backfill CLI loop, kept in the test
 // file so the test runs inside vitest (the CLI uses `process.exit` and
@@ -20,7 +20,7 @@ async function runBackfill(): Promise<void> {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(isNotNull(events.ticketUrl))
+    .where(isNotNull(events.ticketUrl));
 
   for (const row of rows) {
     // Mirror the actual script: empty-string ticketUrl gets normalized to
@@ -28,40 +28,40 @@ async function runBackfill(): Promise<void> {
     // the crawler's normalization shipped don't keep the inconsistent
     // (ticketUrl='', ticketLinks=null) state.
     const normalizedTicketUrl =
-      row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null
+      row.ticketUrl && row.ticketUrl !== '' ? row.ticketUrl : null;
     const ticketLinks = deriveTicketLinks(normalizedTicketUrl, {
       websiteUrl: row.venueWebsiteUrl,
       ticketVendor: row.venueTicketVendor,
-    })
+    });
     await testDb
       .update(events)
       .set({ ticketUrl: normalizedTicketUrl, ticketLinks })
-      .where(eq(events.id, row.eventId))
+      .where(eq(events.id, row.eventId));
   }
 }
 
 describe('backfill-ticket-links integration', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('marks venue-host URLs as boxoffice', async () => {
     const venue = await seedVenue({
       slug: `boxoffice-venue-${Date.now()}`,
       websiteUrl: 'https://www.larimerlounge.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.larimerlounge.com/event/42',
       artist: 'Boxoffice Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
     expect(reloaded?.ticketLinks).toEqual([
       {
@@ -69,26 +69,26 @@ describe('backfill-ticket-links integration', () => {
         vendor: null,
         url: 'https://www.larimerlounge.com/event/42',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks Ticketmaster URLs as primary with vendor Ticketmaster', async () => {
     const venue = await seedVenue({
       slug: `primary-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: 'ticketmaster',
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.ticketmaster.com/event/abc',
       artist: 'Ticketmaster Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
     expect(reloaded?.ticketLinks).toEqual([
       {
@@ -96,77 +96,77 @@ describe('backfill-ticket-links integration', () => {
         vendor: 'Ticketmaster',
         url: 'https://www.ticketmaster.com/event/abc',
       },
-    ])
-  })
+    ]);
+  });
 
   it('marks StubHub URLs as resale', async () => {
     const venue = await seedVenue({
       slug: `resale-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.stubhub.com/show-tickets/event/123',
       artist: 'StubHub Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(reloaded?.ticketLinks?.[0]?.kind).toBe('resale')
-    expect(reloaded?.ticketLinks?.[0]?.vendor).toBeNull()
-  })
+    expect(reloaded?.ticketLinks?.[0]?.kind).toBe('resale');
+    expect(reloaded?.ticketLinks?.[0]?.vendor).toBeNull();
+  });
 
   it('leaves events with null ticketUrl unchanged', async () => {
     const venue = await seedVenue({
       slug: `no-ticket-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: null,
       artist: 'No Ticket Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(reloaded?.ticketLinks).toBeNull()
-  })
+    expect(reloaded?.ticketLinks).toBeNull();
+  });
 
   it('is idempotent — running twice produces the same result', async () => {
     const venue = await seedVenue({
       slug: `idem-venue-${Date.now()}`,
       websiteUrl: 'https://example-venue.com/',
       ticketVendor: 'axs',
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: 'https://www.axs.com/events/xyz',
       artist: 'Idempotency Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
     const [afterFirst] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    await runBackfill()
+    await runBackfill();
     const [afterSecond] = await testDb
       .select({ ticketLinks: events.ticketLinks })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(afterSecond?.ticketLinks).toEqual(afterFirst?.ticketLinks)
-  })
+    expect(afterSecond?.ticketLinks).toEqual(afterFirst?.ticketLinks);
+  });
 
   it('normalizes legacy empty-string ticketUrl to null and writes both columns', async () => {
     // Legacy data could carry ticketUrl='' from before the crawler's
@@ -177,13 +177,13 @@ describe('backfill-ticket-links integration', () => {
       slug: `empty-ticket-${Date.now()}`,
       websiteUrl: 'https://www.larimerlounge.com/',
       ticketVendor: null,
-    })
+    });
     const event = await seedEvent(venue.id, {
       ticketUrl: '',
       artist: 'Empty TicketUrl Test',
-    })
+    });
 
-    await runBackfill()
+    await runBackfill();
 
     const [reloaded] = await testDb
       .select({
@@ -191,9 +191,9 @@ describe('backfill-ticket-links integration', () => {
         ticketLinks: events.ticketLinks,
       })
       .from(events)
-      .where(eq(events.id, event.id))
+      .where(eq(events.id, event.id));
 
-    expect(reloaded?.ticketUrl).toBeNull()
-    expect(reloaded?.ticketLinks).toBeNull()
-  })
-})
+    expect(reloaded?.ticketUrl).toBeNull();
+    expect(reloaded?.ticketLinks).toBeNull();
+  });
+});

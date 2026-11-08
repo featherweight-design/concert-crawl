@@ -17,21 +17,21 @@ The crawler uses Playwright (headless Chromium) for every venue regardless of wh
 
 Plain HTTP sweep of all 12 active staging venues (2026-05-18):
 
-| Venue | HTTP Signal | Mode |
-|---|---|---|
-| Larimer Lounge | 865KB, 103 dates, 424 event links | `http` |
-| Red Rocks Amphitheatre | 738KB, 367 dates, 881 event links | `http` |
-| Cervantes' Masterpiece Ballroom *(inactive)* | 851KB, 120 events confirmed | `http` |
-| Bluebird Theater | Zero event signal | `browser` |
-| Fiddler's Green | Navigation links only | `browser` |
-| Gothic Theatre | Navigation links only | `browser` |
-| Hi-Dive | Navigation links only | `browser` |
-| Levitt Pavilion | Navigation links only | `browser` |
-| Marquis Theater | Navigation links only | `browser` |
-| Mission Ballroom | Zero event signal | `browser` |
-| Ogden Theatre | Zero event signal | `browser` |
-| Summit Music Hall | Navigation links only | `browser` |
-| The Fillmore Auditorium | Navigation links only | `browser` |
+| Venue                                        | HTTP Signal                       | Mode      |
+| -------------------------------------------- | --------------------------------- | --------- |
+| Larimer Lounge                               | 865KB, 103 dates, 424 event links | `http`    |
+| Red Rocks Amphitheatre                       | 738KB, 367 dates, 881 event links | `http`    |
+| Cervantes' Masterpiece Ballroom _(inactive)_ | 851KB, 120 events confirmed       | `http`    |
+| Bluebird Theater                             | Zero event signal                 | `browser` |
+| Fiddler's Green                              | Navigation links only             | `browser` |
+| Gothic Theatre                               | Navigation links only             | `browser` |
+| Hi-Dive                                      | Navigation links only             | `browser` |
+| Levitt Pavilion                              | Navigation links only             | `browser` |
+| Marquis Theater                              | Navigation links only             | `browser` |
+| Mission Ballroom                             | Zero event signal                 | `browser` |
+| Ogden Theatre                                | Zero event signal                 | `browser` |
+| Summit Music Hall                            | Navigation links only             | `browser` |
+| The Fillmore Auditorium                      | Navigation links only             | `browser` |
 
 ---
 
@@ -41,11 +41,11 @@ Plain HTTP sweep of all 12 active staging venues (2026-05-18):
 
 A new nullable `crawl_mode` column on the `venues` table:
 
-| Value | Meaning |
-|---|---|
-| `null` | Auto-detect: try HTTP first, fall back to browser, store the result |
-| `'http'` | Always use plain HTTP fetch — skip Playwright entirely |
-| `'browser'` | Always use Playwright — skip HTTP attempt |
+| Value       | Meaning                                                             |
+| ----------- | ------------------------------------------------------------------- |
+| `null`      | Auto-detect: try HTTP first, fall back to browser, store the result |
+| `'http'`    | Always use plain HTTP fetch — skip Playwright entirely              |
+| `'browser'` | Always use Playwright — skip HTTP attempt                           |
 
 `null` is the default for all existing venues. The system self-heals: after the first successful crawl, the detected mode is stored and subsequent crawls go straight to the right method.
 
@@ -81,15 +81,17 @@ A forced `'http'` venue that returns zero events is recorded as a failed crawl �
 ### Data Layer
 
 **Migration:** Add nullable column to `venues`:
+
 ```sql
 ALTER TABLE venues ADD COLUMN crawl_mode varchar(10) CHECK (crawl_mode IN ('http', 'browser'));
 ```
 
 **Drizzle schema** (`packages/db/src/schema/venues.ts`):
+
 ```ts
 crawlMode: varchar('crawl_mode', { length: 10 })
   .$type<'http' | 'browser'>()
-  .default(sql`NULL`)
+  .default(sql`NULL`);
 ```
 
 **Seed / staging update:** Set `crawl_mode = 'http'` for Larimer Lounge, Red Rocks, and Cervantes (and re-activate Cervantes).
@@ -97,8 +99,9 @@ crawlMode: varchar('crawl_mode', { length: 10 })
 ### API
 
 Add to `updateVenueSchema` in `apps/api/src/routes/admin/venues.ts`:
+
 ```ts
-crawlMode: z.enum(['http', 'browser']).nullable().optional()
+crawlMode: z.enum(['http', 'browser']).nullable().optional();
 ```
 
 Include `crawlMode` in venue SELECT queries so it is returned in all venue responses.

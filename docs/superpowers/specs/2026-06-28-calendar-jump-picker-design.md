@@ -54,13 +54,13 @@ The picker lives in the calendar surface (`CalendarView` / `WeekStrip` header). 
 
 ## What's NOT in this brief
 
-| Concern | Owner |
-|---|---|
-| FilterBar date control redesign / consolidation | Separate ticket if it surfaces as a pattern |
-| Empty-day arrow-navigation skip behavior | [#636](https://github.com/HartiganHM/concert-crawl/issues/636) (handled there) |
-| Fetch-model changes if Design wants event indicators in the grid | Eng follow-up if Design specs event indicators — see "Open for Design to call" |
-| New URL params or routing model | Out of scope — picker uses existing `weekOffset` / `selectedDate` params |
-| Calendar surface beyond the picker (event card rendering, scroll behavior, etc.) | Out of scope — picker is additive only |
+| Concern                                                                          | Owner                                                                          |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| FilterBar date control redesign / consolidation                                  | Separate ticket if it surfaces as a pattern                                    |
+| Empty-day arrow-navigation skip behavior                                         | [#636](https://github.com/HartiganHM/concert-crawl/issues/636) (handled there) |
+| Fetch-model changes if Design wants event indicators in the grid                 | Eng follow-up if Design specs event indicators — see "Open for Design to call" |
+| New URL params or routing model                                                  | Out of scope — picker uses existing `weekOffset` / `selectedDate` params       |
+| Calendar surface beyond the picker (event card rendering, scroll behavior, etc.) | Out of scope — picker is additive only                                         |
 
 ## Open for Design to call
 

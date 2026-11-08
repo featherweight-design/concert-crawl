@@ -13,6 +13,7 @@
 ## Worktree Setup
 
 - [ ] Create worktree and branch:
+
 ```bash
 git worktree add .worktrees/fix/phase-76-complete -b fix/phase-76-complete
 cd .worktrees/fix/phase-76-complete
@@ -27,6 +28,7 @@ All subsequent work is done inside `.worktrees/fix/phase-76-complete/`.
 
 **Affects:** Dashboard, Venues, Invite Codes pages
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/error.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/venues/page.tsx`
@@ -37,20 +39,20 @@ All subsequent work is done inside `.worktrees/fix/phase-76-complete/`.
 Update `apps/web/src/app/(protected)/admin/error.tsx` to show full details in dev:
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 export default function AdminError({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
-    console.error('[admin] page error:', error)
-  }, [error])
+    console.error('[admin] page error:', error);
+  }, [error]);
 
   return (
     <div className="flex flex-col gap-3 p-6">
@@ -58,8 +60,8 @@ export default function AdminError({
         Something went wrong
       </h2>
       <p className="text-sm text-fg-muted">
-        If you were trying to access a restricted page, try signing out and
-        back in to refresh your session. Otherwise, reload and try again.
+        If you were trying to access a restricted page, try signing out and back
+        in to refresh your session. Otherwise, reload and try again.
       </p>
       {process.env.NODE_ENV === 'development' && (
         <pre className="rounded bg-surface-1 p-3 text-xs text-danger overflow-auto max-h-48">
@@ -80,7 +82,7 @@ export default function AdminError({
         Try again
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -94,11 +96,17 @@ Start the dev server (`pnpm dev` from the worktree root) and navigate to `/admin
 Fix in `apps/web/src/app/(protected)/admin/venues/page.tsx`: wrap with a helper.
 
 Add this helper before the component:
+
 ```tsx
 function safeHostname(url: string): string {
-  try { return new URL(url).hostname } catch { return url }
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }
 ```
+
 Then replace all `new URL(venue.websiteUrl).hostname` with `safeHostname(venue.websiteUrl)`.
 
 **Cause B — React 19 rejects a Server Component that passes a function prop to another Server Component without `'use client'`.**
@@ -106,35 +114,44 @@ Then replace all `new URL(venue.websiteUrl).hostname` with `safeHostname(venue.w
 
 **Cause C — Server Action in invite-codes/page.tsx causes module-level evaluation failure.**
 If Next.js 15 strict mode rejects the `'use server'` inline function, extract the action to a separate file. Create `apps/web/src/app/(protected)/admin/invite-codes/actions.ts`:
+
 ```ts
-'use server'
-import { auth } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
-import { apiClient } from '@/lib/api'
+'use server';
+import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
+import { apiClient } from '@/lib/api';
 
 export async function mintInviteCode() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return
-  await apiClient.post('/v1/admin/invite-codes', token, {})
-  revalidatePath('/admin/invite-codes')
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return;
+  await apiClient.post('/v1/admin/invite-codes', token, {});
+  revalidatePath('/admin/invite-codes');
 }
 ```
+
 Then in `invite-codes/page.tsx` replace the inline function with:
+
 ```tsx
-import { mintInviteCode } from './actions'
+import { mintInviteCode } from './actions';
 ```
 
 **Cause D — API error thrown as unhandled rejection.** Wrap each `apiClient.get()` call in the failing pages with try/catch that re-throws a user-readable error:
+
 ```tsx
-const venues = await apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
-  throw new Error(`Failed to load venues: ${err instanceof Error ? err.message : String(err)}`)
-})
+const venues = await apiClient
+  .get<Venue[]>('/v1/admin/venues', token)
+  .catch((err: unknown) => {
+    throw new Error(
+      `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  });
 ```
 
 - [ ] **Step 3: Apply the fix matching the actual error message, run the dev server, verify the page loads**
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/
 git commit -m "fix: surface admin page crash and apply root-cause fix"
@@ -145,6 +162,7 @@ git commit -m "fix: surface admin page crash and apply root-cause fix"
 ## Task 2: Fix Theme Switcher in Settings
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/ThemePicker.tsx`
 - Modify: `apps/web/src/components/admin/shell/AdminThemeProvider.tsx`
 
@@ -157,9 +175,9 @@ Read `apps/web/src/components/admin/shell/AdminThemeProvider.tsx`. It exposes `u
 Replace `apps/web/src/components/admin/ThemePicker.tsx` entirely:
 
 ```tsx
-'use client'
+'use client';
 
-import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider'
+import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider';
 
 const ADMIN_THEMES = [
   {
@@ -176,15 +194,19 @@ const ADMIN_THEMES = [
     signal: '#7ab4ff',
     accent: '#c89bf0',
   },
-]
+];
 
 export function ThemePicker() {
-  const { theme, setTheme } = useAdminTheme()
+  const { theme, setTheme } = useAdminTheme();
 
   return (
-    <div role="radiogroup" aria-label="Admin theme" style={{ display: 'flex', gap: 12 }}>
+    <div
+      role="radiogroup"
+      aria-label="Admin theme"
+      style={{ display: 'flex', gap: 12 }}
+    >
       {ADMIN_THEMES.map((t) => {
-        const isSelected = theme === t.id
+        const isSelected = theme === t.id;
         return (
           <button
             key={t.id}
@@ -208,24 +230,47 @@ export function ThemePicker() {
             }}
           >
             <div style={{ display: 'flex', gap: 6 }}>
-              <span style={{ width: 16, height: 16, borderRadius: '50%', background: t.bg, border: '1px solid rgba(0,0,0,0.15)' }} />
-              <span style={{ width: 16, height: 16, borderRadius: '50%', background: t.signal }} />
-              <span style={{ width: 16, height: 16, borderRadius: '50%', background: t.accent }} />
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: t.bg,
+                  border: '1px solid rgba(0,0,0,0.15)',
+                }}
+              />
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: t.signal,
+                }}
+              />
+              <span
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  background: t.accent,
+                }}
+              />
             </div>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>
               {t.label}
             </span>
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 ```
 
 - [ ] **Step 3: Verify the AdminThemeProvider exports `setTheme`**
 
 Read `AdminThemeProvider.tsx`. If it only exposes `toggle`, add `setTheme`:
+
 ```tsx
 // inside the context value
 setTheme: (newTheme: 'light' | 'dark') => {
@@ -233,11 +278,13 @@ setTheme: (newTheme: 'light' | 'dark') => {
   localStorage.setItem('cc-admin-theme', newTheme)
 },
 ```
+
 Also update the context interface to include `setTheme: (t: 'light' | 'dark') => void`.
 
 - [ ] **Step 4: Test in browser** — Navigate to `/admin/settings`, click Light/Dark, verify the admin UI theme changes and persists on reload.
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/components/admin/ThemePicker.tsx apps/web/src/components/admin/shell/AdminThemeProvider.tsx
 git commit -m "fix: wire admin settings theme picker to admin theme system"
@@ -248,6 +295,7 @@ git commit -m "fix: wire admin settings theme picker to admin theme system"
 ## Task 3: Add Individual Venue Crawl Trigger
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
 The API endpoint `POST /v1/admin/crawl/:venueId` already exists.
@@ -258,22 +306,24 @@ In `CrawlSplitView.tsx`, add state for crawl status and a trigger function. Repl
 
 ```tsx
 // Add near top of component (it already has 'use client')
-const [triggering, setTriggering] = useState<string | null>(null)
-const [triggerError, setTriggerError] = useState<string | null>(null)
+const [triggering, setTriggering] = useState<string | null>(null);
+const [triggerError, setTriggerError] = useState<string | null>(null);
 
 async function handleTrigger(venueId: string) {
-  setTriggering(venueId)
-  setTriggerError(null)
+  setTriggering(venueId);
+  setTriggerError(null);
   try {
-    const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' })
+    const res = await fetch(`/api/admin/crawl/${venueId}`, { method: 'POST' });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.error ?? `HTTP ${res.status}`)
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? `HTTP ${res.status}`);
     }
   } catch (err) {
-    setTriggerError(err instanceof Error ? err.message : 'Crawl trigger failed')
+    setTriggerError(
+      err instanceof Error ? err.message : 'Crawl trigger failed',
+    );
   } finally {
-    setTriggering(null)
+    setTriggering(null);
   }
 }
 ```
@@ -285,22 +335,22 @@ async function handleTrigger(venueId: string) {
 Create `apps/web/src/app/api/admin/crawl/[venueId]/route.ts`:
 
 ```ts
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ venueId: string }> },
 ) {
-  const { getToken } = await auth()
-  const token = await getToken()
+  const { getToken } = await auth();
+  const token = await getToken();
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { venueId } = await params
+  const { venueId } = await params;
 
   const upstream = await fetch(`${API_URL}/v1/admin/crawl/${venueId}`, {
     method: 'POST',
@@ -308,10 +358,10 @@ export async function POST(
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-  })
+  });
 
-  const body = await upstream.json()
-  return NextResponse.json(body, { status: upstream.status })
+  const body = await upstream.json();
+  return NextResponse.json(body, { status: upstream.status });
 }
 ```
 
@@ -348,24 +398,30 @@ Inside the `{selected ? (…) : (…)}` branch in `CrawlSplitView.tsx`, update t
 ```
 
 Add an error display below the vitals grid:
+
 ```tsx
-{triggerError && (
-  <div style={{
-    marginTop: 8,
-    padding: '8px 10px',
-    borderRadius: 6,
-    background: 'rgba(184,56,26,0.08)',
-    color: 'var(--danger)',
-    fontSize: 12,
-  }}>
-    {triggerError}
-  </div>
-)}
+{
+  triggerError && (
+    <div
+      style={{
+        marginTop: 8,
+        padding: '8px 10px',
+        borderRadius: 6,
+        background: 'rgba(184,56,26,0.08)',
+        color: 'var(--danger)',
+        fontSize: 12,
+      }}
+    >
+      {triggerError}
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Test** — Navigate to `/admin/crawl`, select a venue, click "Re-crawl". Verify no 401/404 appears in console. (Actual crawl may take time; a success toast or status update is out of scope for this task.)
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/app/api/admin/crawl/ apps/web/src/components/admin/crawl/CrawlSplitView.tsx
 git commit -m "feat: add per-venue crawl trigger button to crawl inspector"
@@ -376,6 +432,7 @@ git commit -m "feat: add per-venue crawl trigger button to crawl inspector"
 ## Task 4: Fix Admin Sidebar Logo + ADMIN Badge
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
 - [ ] **Step 1: Replace the text lockup with the correct logo + badge**
@@ -383,87 +440,147 @@ git commit -m "feat: add per-venue crawl trigger button to crawl inspector"
 Find the wordmark section in `AdminSidebar.tsx` (the part that renders `"concertcrawl./admin"` and `"cc/"`). Replace the entire logo area with:
 
 ```tsx
-{/* Full mode: logo mark + wordmark + ADMIN badge */}
-{mode === 'full' ? (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-    {/* Logo mark — dark rounded square with icon */}
-    <div style={{
-      width: 32,
-      height: 32,
-      borderRadius: 8,
-      background: '#0d0c09',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      {/* Constellation dot pattern — matches IdentityArt micro palette */}
+{
+  /* Full mode: logo mark + wordmark + ADMIN badge */
+}
+{
+  mode === 'full' ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Logo mark — dark rounded square with icon */}
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: '#0d0c09',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {/* Constellation dot pattern — matches IdentityArt micro palette */}
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
+          <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
+          <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
+          <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
+          <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
+          <line
+            x1="3"
+            y1="4"
+            x2="9"
+            y2="9"
+            stroke="#7ab4ff"
+            strokeWidth="0.75"
+            opacity="0.4"
+          />
+          <line
+            x1="9"
+            y1="9"
+            x2="14"
+            y2="14"
+            stroke="#c89bf0"
+            strokeWidth="0.75"
+            opacity="0.4"
+          />
+          <line
+            x1="15"
+            y1="3"
+            x2="9"
+            y2="9"
+            stroke="#7ab4ff"
+            strokeWidth="0.75"
+            opacity="0.4"
+          />
+        </svg>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {/* Wordmark: "concert" white, "crawl." accent */}
+        <div
+          style={{
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 800,
+            fontSize: 13,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          <span style={{ color: 'var(--fg)' }}>concert</span>
+          <span style={{ color: 'var(--accent)' }}>crawl.</span>
+        </div>
+        {/* ADMIN badge */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            height: 14,
+            padding: '0 5px',
+            borderRadius: 999,
+            background: 'rgba(122,58,168,0.18)',
+            color: 'var(--accent)',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 9,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            alignSelf: 'flex-start',
+          }}
+        >
+          ADMIN
+        </div>
+      </div>
+    </div>
+  ) : (
+    /* Rail mode: logo mark only */
+    <div
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        background: '#0d0c09',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
         <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
         <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
         <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
         <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-        <line x1="3" y1="4" x2="9" y2="9" stroke="#7ab4ff" strokeWidth="0.75" opacity="0.4" />
-        <line x1="9" y1="9" x2="14" y2="14" stroke="#c89bf0" strokeWidth="0.75" opacity="0.4" />
-        <line x1="15" y1="3" x2="9" y2="9" stroke="#7ab4ff" strokeWidth="0.75" opacity="0.4" />
+        <line
+          x1="3"
+          y1="4"
+          x2="9"
+          y2="9"
+          stroke="#7ab4ff"
+          strokeWidth="0.75"
+          opacity="0.4"
+        />
+        <line
+          x1="9"
+          y1="9"
+          x2="14"
+          y2="14"
+          stroke="#c89bf0"
+          strokeWidth="0.75"
+          opacity="0.4"
+        />
+        <line
+          x1="15"
+          y1="3"
+          x2="9"
+          y2="9"
+          stroke="#7ab4ff"
+          strokeWidth="0.75"
+          opacity="0.4"
+        />
       </svg>
     </div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {/* Wordmark: "concert" white, "crawl." accent */}
-      <div style={{
-        fontFamily: "'Inter', sans-serif",
-        fontWeight: 800,
-        fontSize: 13,
-        lineHeight: 1,
-        letterSpacing: '-0.02em',
-      }}>
-        <span style={{ color: 'var(--fg)' }}>concert</span>
-        <span style={{ color: 'var(--accent)' }}>crawl.</span>
-      </div>
-      {/* ADMIN badge */}
-      <div style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 14,
-        padding: '0 5px',
-        borderRadius: 999,
-        background: 'rgba(122,58,168,0.18)',
-        color: 'var(--accent)',
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: 9,
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        alignSelf: 'flex-start',
-      }}>
-        ADMIN
-      </div>
-    </div>
-  </div>
-) : (
-  /* Rail mode: logo mark only */
-  <div style={{
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    background: '#0d0c09',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  }}>
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-      <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
-      <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
-      <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
-      <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
-      <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-      <line x1="3" y1="4" x2="9" y2="9" stroke="#7ab4ff" strokeWidth="0.75" opacity="0.4" />
-      <line x1="9" y1="9" x2="14" y2="14" stroke="#c89bf0" strokeWidth="0.75" opacity="0.4" />
-      <line x1="15" y1="3" x2="9" y2="9" stroke="#7ab4ff" strokeWidth="0.75" opacity="0.4" />
-    </svg>
-  </div>
-)}
+  );
+}
 ```
 
 > **Refactoring note:** Extract the SVG into a `<CCMark />` component in `apps/web/src/components/admin/shell/CCMark.tsx` if it is used more than once after this change.
@@ -471,6 +588,7 @@ Find the wordmark section in `AdminSidebar.tsx` (the part that renders `"concert
 - [ ] **Step 2: Visual check** — Run dev server, confirm the sidebar shows the logo mark, "concertcrawl." two-tone wordmark, and "ADMIN" pill. Check both full and rail modes.
 
 - [ ] **Step 3: Commit**
+
 ```bash
 git add apps/web/src/components/admin/shell/AdminSidebar.tsx
 git commit -m "fix: replace plain text sidebar lockup with logo mark and ADMIN badge"
@@ -481,6 +599,7 @@ git commit -m "fix: replace plain text sidebar lockup with logo mark and ADMIN b
 ## Task 5: Shell — Nav Badge Counts + Section Labels
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/nav.ts`
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
@@ -490,29 +609,72 @@ Open `nav.ts`. The `NavItem` type likely has `badge?: { kind: string }`. Update 
 
 ```ts
 export interface NavItem {
-  key: string
-  label: string
-  icon: string        // Lucide icon name
-  href: string
+  key: string;
+  label: string;
+  icon: string; // Lucide icon name
+  href: string;
   badge?: {
-    count: number
-    kind: 'danger' | 'warning'
-  }
-  section?: 'operations' | 'account'
+    count: number;
+    kind: 'danger' | 'warning';
+  };
+  section?: 'operations' | 'account';
 }
 ```
 
 Add `section` to each NAV item:
+
 ```ts
 export const NAV: NavItem[] = [
-  { key: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard', href: '/admin', section: 'operations' },
-  { key: 'venues',    label: 'Venues',    icon: 'MapPin',          href: '/admin/venues', section: 'operations' },
-  { key: 'crawl',     label: 'Crawl',     icon: 'RefreshCw',       href: '/admin/crawl',  section: 'operations' },
-  { key: 'events',    label: 'Event review', icon: 'CalendarCheck', href: '/admin/events', section: 'operations' },
-  { key: 'prices',    label: 'Prices',    icon: 'DollarSign',      href: '/admin/prices', section: 'operations' },
-  { key: 'invites',   label: 'Invite codes', icon: 'Ticket',       href: '/admin/invite-codes', section: 'operations' },
-  { key: 'settings',  label: 'Settings',  icon: 'Settings',        href: '/admin/settings', section: 'account' },
-]
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    icon: 'LayoutDashboard',
+    href: '/admin',
+    section: 'operations',
+  },
+  {
+    key: 'venues',
+    label: 'Venues',
+    icon: 'MapPin',
+    href: '/admin/venues',
+    section: 'operations',
+  },
+  {
+    key: 'crawl',
+    label: 'Crawl',
+    icon: 'RefreshCw',
+    href: '/admin/crawl',
+    section: 'operations',
+  },
+  {
+    key: 'events',
+    label: 'Event review',
+    icon: 'CalendarCheck',
+    href: '/admin/events',
+    section: 'operations',
+  },
+  {
+    key: 'prices',
+    label: 'Prices',
+    icon: 'DollarSign',
+    href: '/admin/prices',
+    section: 'operations',
+  },
+  {
+    key: 'invites',
+    label: 'Invite codes',
+    icon: 'Ticket',
+    href: '/admin/invite-codes',
+    section: 'operations',
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    icon: 'Settings',
+    href: '/admin/settings',
+    section: 'account',
+  },
+];
 ```
 
 - [ ] **Step 2: Pass live badge counts from the layout**
@@ -521,24 +683,30 @@ The layout at `apps/web/src/app/(protected)/admin/layout.tsx` is a server compon
 
 ```tsx
 // In AdminLayout, fetch badge counts:
-const { getToken } = await auth()
-const token = await getToken()
+const { getToken } = await auth();
+const token = await getToken();
 
-let pendingEvents = 0
-let blockedCrawls = 0
+let pendingEvents = 0;
+let blockedCrawls = 0;
 
 if (token) {
   const [statusRes, eventsRes] = await Promise.allSettled([
-    apiClient.get<{ id: string; status: string }[]>('/v1/admin/crawl/status', token),
-    apiClient.get<{ id: string }[]>('/v1/admin/events?verified=false&limit=1', token),
-  ])
+    apiClient.get<{ id: string; status: string }[]>(
+      '/v1/admin/crawl/status',
+      token,
+    ),
+    apiClient.get<{ id: string }[]>(
+      '/v1/admin/events?verified=false&limit=1',
+      token,
+    ),
+  ]);
   if (statusRes.status === 'fulfilled') {
     blockedCrawls = statusRes.value.filter(
-      (v) => v.status === 'blocked' || v.status === 'failed'
-    ).length
+      (v) => v.status === 'blocked' || v.status === 'failed',
+    ).length;
   }
   if (eventsRes.status === 'fulfilled') {
-    pendingEvents = eventsRes.value.length
+    pendingEvents = eventsRes.value.length;
   }
 }
 ```
@@ -553,37 +721,47 @@ Add `badgeCounts?: Record<string, number>` prop to AdminSidebar. In the NavLink,
 
 ```tsx
 // In NavLink, inside the full-mode label span:
-{mode === 'full' && badge && badge.count > 0 && (
-  <span style={{
-    marginLeft: 'auto',
-    minWidth: 18,
-    height: 18,
-    padding: '0 5px',
-    borderRadius: 999,
-    background: badge.kind === 'danger' ? 'var(--danger)' : 'var(--warning)',
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 700,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: "'JetBrains Mono', monospace",
-  }}>
-    {badge.count}
-  </span>
-)}
+{
+  mode === 'full' && badge && badge.count > 0 && (
+    <span
+      style={{
+        marginLeft: 'auto',
+        minWidth: 18,
+        height: 18,
+        padding: '0 5px',
+        borderRadius: 999,
+        background:
+          badge.kind === 'danger' ? 'var(--danger)' : 'var(--warning)',
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 700,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'JetBrains Mono', monospace",
+      }}
+    >
+      {badge.count}
+    </span>
+  );
+}
 // Rail mode: small dot
-{mode === 'rail' && badge && badge.count > 0 && (
-  <span style={{
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    background: badge.kind === 'danger' ? 'var(--danger)' : 'var(--warning)',
-  }} />
-)}
+{
+  mode === 'rail' && badge && badge.count > 0 && (
+    <span
+      style={{
+        position: 'absolute',
+        top: 2,
+        right: 2,
+        width: 6,
+        height: 6,
+        borderRadius: '50%',
+        background:
+          badge.kind === 'danger' ? 'var(--danger)' : 'var(--warning)',
+      }}
+    />
+  );
+}
 ```
 
 - [ ] **Step 4: Add section labels in full mode**
@@ -592,22 +770,49 @@ Above the "operations" section and before the "account" section, render a small 
 
 ```tsx
 // In the nav items render loop, before first item of each section:
-{item.section === 'operations' && idx === 0 && mode === 'full' && (
-  <div style={{ padding: '4px 10px', fontSize: 10, fontWeight: 700, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-    Operations
-  </div>
-)}
-{item.section === 'account' && prevItem?.section !== 'account' && mode === 'full' && (
-  <>
-    <div style={{ height: 1, background: 'var(--border)', margin: '8px 0' }} />
-    <div style={{ padding: '4px 10px', fontSize: 10, fontWeight: 700, color: 'var(--fg-subtle)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-      Account
+{
+  item.section === 'operations' && idx === 0 && mode === 'full' && (
+    <div
+      style={{
+        padding: '4px 10px',
+        fontSize: 10,
+        fontWeight: 700,
+        color: 'var(--fg-subtle)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+      }}
+    >
+      Operations
     </div>
-  </>
-)}
+  );
+}
+{
+  item.section === 'account' &&
+    prevItem?.section !== 'account' &&
+    mode === 'full' && (
+      <>
+        <div
+          style={{ height: 1, background: 'var(--border)', margin: '8px 0' }}
+        />
+        <div
+          style={{
+            padding: '4px 10px',
+            fontSize: 10,
+            fontWeight: 700,
+            color: 'var(--fg-subtle)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+          }}
+        >
+          Account
+        </div>
+      </>
+    );
+}
 ```
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/components/admin/shell/ apps/web/src/app/\(protected\)/admin/layout.tsx
 git commit -m "feat: add nav badge counts and section labels to admin sidebar"
@@ -618,6 +823,7 @@ git commit -m "feat: add nav badge counts and section labels to admin sidebar"
 ## Task 6: Shell — ThemePill in Topbar + User Card in Sidebar
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminTopbar.tsx`
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
@@ -672,76 +878,105 @@ const { theme, setTheme } = useAdminTheme()
 The `AdminSidebar` needs a `user` prop: `user: { firstName: string | null; email: string; imageUrl?: string }`.
 
 Pass user data from the layout (which already calls `requireAdminUser()`). Add to layout:
+
 ```tsx
-const user = await requireAdminUser()
+const user = await requireAdminUser();
 // pass to AdminSidebar: user={{ firstName: user.firstName, email: user.email }}
 ```
 
 In `AdminSidebar.tsx`, add a bottom section after the nav links:
 
 ```tsx
-{/* Bottom user card */}
-<div style={{
-  marginTop: 'auto',
-  paddingTop: 8,
-  borderTop: '1px solid var(--border)',
-}}>
+{
+  /* Bottom user card */
+}
+<div
+  style={{
+    marginTop: 'auto',
+    paddingTop: 8,
+    borderTop: '1px solid var(--border)',
+  }}
+>
   {mode === 'full' ? (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      padding: '8px 10px',
-      borderRadius: 7,
-    }}>
-      <div style={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        background: 'var(--accent)',
+    <div
+      style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 11,
-        fontWeight: 700,
-        color: '#fff',
-        flexShrink: 0,
-      }}>
+        gap: 8,
+        padding: '8px 10px',
+        borderRadius: 7,
+      }}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: 'var(--accent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#fff',
+          flexShrink: 0,
+        }}
+      >
         {(user.firstName ?? user.email).charAt(0).toUpperCase()}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--fg)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {user.firstName ?? user.email}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--fg-subtle)', fontFamily: "'JetBrains Mono', monospace" }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: 'var(--fg-subtle)',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}
+        >
           owner
         </div>
       </div>
     </div>
   ) : (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
-      <div style={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
-        background: 'var(--accent)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 11,
-        fontWeight: 700,
-        color: '#fff',
-      }}>
+    <div
+      style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}
+    >
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          background: 'var(--accent)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#fff',
+        }}
+      >
         {(user.firstName ?? user.email).charAt(0).toUpperCase()}
       </div>
     </div>
   )}
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Verify** — Admin sidebar shows user initials card at bottom. Topbar shows Light/Dark pill. Both modes (full/rail) look correct.
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add apps/web/src/components/admin/shell/
 git commit -m "feat: add ThemePill to topbar and user card to sidebar bottom"
@@ -752,6 +987,7 @@ git commit -m "feat: add ThemePill to topbar and user card to sidebar bottom"
 ## Task 7: Shell — Auto Sidebar Mode (1280px Breakpoint)
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
 - [ ] **Step 1: Add auto mode logic**
@@ -762,52 +998,58 @@ In `AdminSidebar.tsx`, add viewport width tracking (client-side only):
 
 ```tsx
 // Add to the useState/useEffect section:
-const [viewportMode, setViewportMode] = useState<SidebarMode>('full')
+const [viewportMode, setViewportMode] = useState<SidebarMode>('full');
 
 useEffect(() => {
-  const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null
+  const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
   if (stored && stored !== 'auto') {
-    setMode(stored)
-    return
+    setMode(stored);
+    return;
   }
   // Auto mode — collapse under 1280px
-  const mq = window.matchMedia('(min-width: 1280px)')
-  const update = () => setViewportMode(mq.matches ? 'full' : 'rail')
-  update()
-  mq.addEventListener('change', update)
-  return () => mq.removeEventListener('change', update)
-}, [])
+  const mq = window.matchMedia('(min-width: 1280px)');
+  const update = () => setViewportMode(mq.matches ? 'full' : 'rail');
+  update();
+  mq.addEventListener('change', update);
+  return () => mq.removeEventListener('change', update);
+}, []);
 
 // The effective mode used for rendering:
-const effectiveMode = mode === 'auto' ? viewportMode : mode
+const effectiveMode = mode === 'auto' ? viewportMode : mode;
 ```
 
 Replace all uses of `mode` in the render with `effectiveMode`.
 
 Add `auto` as a valid value for `SidebarMode`:
+
 ```ts
-type SidebarMode = 'full' | 'rail' | 'auto'
+type SidebarMode = 'full' | 'rail' | 'auto';
 ```
 
 Add a toggle button in the sidebar that cycles through `full → rail → auto`:
+
 ```tsx
 // Add a small collapse icon button near the user card:
 <button
   onClick={() => {
-    const next = mode === 'full' ? 'rail' : mode === 'rail' ? 'auto' : 'full'
-    setMode(next)
-    localStorage.setItem(STORAGE_KEY, next)
+    const next = mode === 'full' ? 'rail' : mode === 'rail' ? 'auto' : 'full';
+    setMode(next);
+    localStorage.setItem(STORAGE_KEY, next);
   }}
   title={`Mode: ${mode} → click to cycle`}
-  style={{ /* ghost button styles */ }}
+  style={{/* ghost button styles */}}
 >
-  <ChevronLeft size={14} style={{ transform: mode === 'rail' ? 'rotate(180deg)' : undefined }} />
+  <ChevronLeft
+    size={14}
+    style={{ transform: mode === 'rail' ? 'rotate(180deg)' : undefined }}
+  />
 </button>
 ```
 
 - [ ] **Step 2: Test** — Resize browser below/above 1280px in auto mode. Confirm sidebar collapses/expands. Confirm full/rail manual modes still work.
 
 - [ ] **Step 3: Commit**
+
 ```bash
 git add apps/web/src/components/admin/shell/AdminSidebar.tsx
 git commit -m "feat: add auto sidebar mode with 1280px breakpoint"
@@ -818,6 +1060,7 @@ git commit -m "feat: add auto sidebar mode with 1280px breakpoint"
 ## Task 8: Dashboard — Stat Cards, Activity Feed Filter Tabs, Strategy Column
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 
 - [ ] **Step 1: Extract the activity feed to a client component**
@@ -825,26 +1068,28 @@ git commit -m "feat: add auto sidebar mode with 1280px breakpoint"
 Create `apps/web/src/components/admin/dashboard/ActivityFeed.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import type { CrawlRun } from '@concert-crawl/types'
+import { useState } from 'react';
+import type { CrawlRun } from '@concert-crawl/types';
 
-type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
+type FilterTab = 'all' | 'crawl' | 'events' | 'invites';
 
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'crawl', label: 'Crawl' },
   { id: 'events', label: 'Events' },
   { id: 'invites', label: 'Invites' },
-]
+];
 
-interface Props { runs: CrawlRun[] }
+interface Props {
+  runs: CrawlRun[];
+}
 
 export function ActivityFeed({ runs }: Props) {
-  const [tab, setTab] = useState<FilterTab>('all')
+  const [tab, setTab] = useState<FilterTab>('all');
 
-  const filtered = tab === 'crawl' ? runs : tab === 'all' ? runs : []
+  const filtered = tab === 'crawl' ? runs : tab === 'all' ? runs : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -872,15 +1117,28 @@ export function ActivityFeed({ runs }: Props) {
       </div>
       {/* Activity items */}
       {filtered.slice(0, 8).map((run) => (
-        <div key={run.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', paddingBottom: 10 }}>
-          <span style={{
-            fontSize: 11,
-            color: 'var(--fg-subtle)',
-            fontVariantNumeric: 'tabular-nums',
-            minWidth: 56,
-            fontFamily: "'JetBrains Mono', monospace",
-          }}>
-            {new Date(run.startedAt ?? run.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+        <div
+          key={run.id}
+          style={{
+            display: 'flex',
+            gap: 12,
+            alignItems: 'flex-start',
+            paddingBottom: 10,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              color: 'var(--fg-subtle)',
+              fontVariantNumeric: 'tabular-nums',
+              minWidth: 56,
+              fontFamily: "'JetBrains Mono', monospace",
+            }}
+          >
+            {new Date(run.startedAt ?? run.createdAt).toLocaleTimeString(
+              'en-US',
+              { hour: '2-digit', minute: '2-digit' },
+            )}
           </span>
           <div style={{ flex: 1, fontSize: 13 }}>
             <div style={{ color: 'var(--fg)', fontWeight: 500 }}>
@@ -895,35 +1153,46 @@ export function ActivityFeed({ runs }: Props) {
         </div>
       ))}
       {filtered.length === 0 && (
-        <div style={{ color: 'var(--fg-subtle)', fontSize: 13, padding: '12px 0' }}>
+        <div
+          style={{ color: 'var(--fg-subtle)', fontSize: 13, padding: '12px 0' }}
+        >
           No {tab} activity yet.
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 
 - [ ] **Step 2: Add "Strategy" column + action link to the venue health table in page.tsx**
 
 In the `<AdminTable>` inside the "Crawl health · today" Panel, add a `<TH>Strategy</TH>` header and in the row, add:
+
 ```tsx
-<TD color="var(--fg-muted)" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>
+<TD
+  color="var(--fg-muted)"
+  style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}
+>
   {row.strategy !== '—' ? (
-    <span style={{
-      padding: '2px 6px',
-      borderRadius: 999,
-      border: '1px solid var(--border)',
-      fontSize: 10,
-      color: row.strategy === 'llm' ? 'var(--accent)' : 'var(--signal)',
-    }}>
+    <span
+      style={{
+        padding: '2px 6px',
+        borderRadius: 999,
+        border: '1px solid var(--border)',
+        fontSize: 10,
+        color: row.strategy === 'llm' ? 'var(--accent)' : 'var(--signal)',
+      }}
+    >
       {row.strategy}
     </span>
-  ) : '—'}
+  ) : (
+    '—'
+  )}
 </TD>
 ```
 
 Also add a chevron action column:
+
 ```tsx
 <TH></TH>
 // ...
@@ -937,12 +1206,13 @@ Also add a chevron action column:
 - [ ] **Step 3: Replace the inline activity section with `<ActivityFeed>`**
 
 In `page.tsx`, remove the raw activity feed rendering and replace with:
+
 ```tsx
-import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed'
+import { ActivityFeed } from '@/components/admin/dashboard/ActivityFeed';
 // ...
 <Panel title="Recent activity">
   <ActivityFeed runs={runs} />
-</Panel>
+</Panel>;
 ```
 
 - [ ] **Step 4: Add trend to LLM cost StatCard**
@@ -962,6 +1232,7 @@ const costTrend = priorCost > 0
 ```
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/page.tsx apps/web/src/components/admin/dashboard/
 git commit -m "feat: add activity feed filter tabs, strategy column, and cost trend to dashboard"
@@ -972,6 +1243,7 @@ git commit -m "feat: add activity feed filter tabs, strategy column, and cost tr
 ## Task 9: Crawl — Stats Row, Banners, Enhanced Inspector, Run History
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/crawl/page.tsx`
 - Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
@@ -980,23 +1252,38 @@ git commit -m "feat: add activity feed filter tabs, strategy column, and cost tr
 After the `<SectionHead>`, add a 4-card stat row using the page's existing `status` and `runs` data:
 
 ```tsx
-{/* Stats row */}
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+{
+  /* Stats row */
+}
+<div
+  style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}
+>
   <StatCard
     label="Last sweep"
-    value={runs[0]?.startedAt
-      ? `${Math.round((Date.now() - new Date(runs[0].startedAt).getTime()) / 60000)}m ago`
-      : '—'}
+    value={
+      runs[0]?.startedAt
+        ? `${Math.round((Date.now() - new Date(runs[0].startedAt).getTime()) / 60000)}m ago`
+        : '—'
+    }
     icon={RefreshCw}
     kind="neutral"
-    hint={runs[0]?.startedAt ? new Date(runs[0].startedAt).toLocaleString() : undefined}
+    hint={
+      runs[0]?.startedAt
+        ? new Date(runs[0].startedAt).toLocaleString()
+        : undefined
+    }
   />
   <StatCard
     label="Today's runs"
-    value={String(runs.filter(r => new Date(r.createdAt).toDateString() === new Date().toDateString()).length)}
+    value={String(
+      runs.filter(
+        (r) =>
+          new Date(r.createdAt).toDateString() === new Date().toDateString(),
+      ).length,
+    )}
     icon={Activity}
     kind="signal"
-    hint={`${status.filter(s => s.status === 'success').length} ok · ${status.filter(s => s.status === 'failed').length} failed`}
+    hint={`${status.filter((s) => s.status === 'success').length} ok · ${status.filter((s) => s.status === 'failed').length} failed`}
   />
   <StatCard
     label="Events ingested"
@@ -1011,7 +1298,7 @@ After the `<SectionHead>`, add a 4-card stat row using the page's existing `stat
     icon={DollarSign}
     kind="signal"
   />
-</div>
+</div>;
 ```
 
 You'll need to add `import { Activity, CheckSquare, DollarSign } from 'lucide-react'` and `import { StatCard } from '@/components/admin/primitives'`.
@@ -1022,38 +1309,46 @@ Create `apps/web/src/components/admin/crawl/IssuesBanner.tsx`:
 
 ```tsx
 interface Props {
-  blockedVenues: { venueId: string; venueName: string; status: string }[]
+  blockedVenues: { venueId: string; venueName: string; status: string }[];
 }
 
 export function IssuesBanner({ blockedVenues }: Props) {
-  if (blockedVenues.length === 0) return null
+  if (blockedVenues.length === 0) return null;
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      padding: '10px 14px',
-      borderRadius: 10,
-      background: 'rgba(184,56,26,0.08)',
-      border: '1px solid rgba(184,56,26,0.25)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: 'rgba(184,56,26,0.08)',
+        border: '1px solid rgba(184,56,26,0.25)',
+      }}
+    >
       <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
-        {blockedVenues.length} venue{blockedVenues.length > 1 ? 's' : ''} blocked or failed
+        {blockedVenues.length} venue{blockedVenues.length > 1 ? 's' : ''}{' '}
+        blocked or failed
       </span>
       <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-        {blockedVenues.map(v => v.venueName).join(' · ')}
+        {blockedVenues.map((v) => v.venueName).join(' · ')}
       </span>
     </div>
-  )
+  );
 }
 ```
 
 In `crawl/page.tsx`, add between `<SectionHead>` and the stats row:
+
 ```tsx
-import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
+import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner';
 // ...
-<IssuesBanner blockedVenues={status.filter(s => s.status === 'blocked' || s.status === 'failed')} />
+<IssuesBanner
+  blockedVenues={status.filter(
+    (s) => s.status === 'blocked' || s.status === 'failed',
+  )}
+/>;
 ```
 
 - [ ] **Step 3: Enhance CrawlSplitView inspector with HTTP code and events grid**
@@ -1061,57 +1356,106 @@ import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 In `CrawlSplitView.tsx`, the right inspector currently shows a 4-stat grid. Expand it to include run ID, HTTP code, and events breakdown. The `initialRuns` data includes `httpStatusCode`, `eventsFound`, `eventsInserted`.
 
 Update the inspector panel stats grid:
+
 ```tsx
 // Replace the 4-item stats grid with:
-{[
-  {
-    label: 'Status',
-    value: <StatusBadge kind={STATUS_KIND[selected.status] ?? 'neutral'} dot>{selected.status}</StatusBadge>,
-  },
-  {
-    label: 'HTTP',
-    value: selectedRuns[0]?.httpStatusCode ? (
-      <span style={{ color: selectedRuns[0].httpStatusCode === 200 ? 'var(--success)' : 'var(--danger)', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600 }}>
-        {selectedRuns[0].httpStatusCode}
-      </span>
-    ) : '—',
-  },
-  { label: 'Events found',   value: selected.eventsFound },
-  { label: 'Strategy',       value: selected.strategy },
-].map(stat => (
-  <div key={stat.label}>
-    <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginBottom: 4 }}>{stat.label}</div>
-    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>{stat.value}</div>
-  </div>
-))}
+{
+  [
+    {
+      label: 'Status',
+      value: (
+        <StatusBadge kind={STATUS_KIND[selected.status] ?? 'neutral'} dot>
+          {selected.status}
+        </StatusBadge>
+      ),
+    },
+    {
+      label: 'HTTP',
+      value: selectedRuns[0]?.httpStatusCode ? (
+        <span
+          style={{
+            color:
+              selectedRuns[0].httpStatusCode === 200
+                ? 'var(--success)'
+                : 'var(--danger)',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          {selectedRuns[0].httpStatusCode}
+        </span>
+      ) : (
+        '—'
+      ),
+    },
+    { label: 'Events found', value: selected.eventsFound },
+    { label: 'Strategy', value: selected.strategy },
+  ].map((stat) => (
+    <div key={stat.label}>
+      <div style={{ fontSize: 11, color: 'var(--fg-subtle)', marginBottom: 4 }}>
+        {stat.label}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--fg)' }}>
+        {stat.value}
+      </div>
+    </div>
+  ));
+}
 ```
 
 Add an events created/updated mini-grid below the main stats:
+
 ```tsx
-{selectedRuns[0] && (
-  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-    {[
-      { label: 'Found',   value: selectedRuns[0].eventsFound,    color: 'var(--signal)' },
-      { label: 'Created', value: selectedRuns[0].eventsInserted, color: 'var(--success)' },
-    ].map(item => (
-      <div key={item.label} style={{
-        flex: 1,
-        padding: '8px 10px',
-        borderRadius: 8,
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-      }}>
-        <div style={{ fontSize: 10, color: 'var(--fg-subtle)', marginBottom: 2 }}>{item.label}</div>
-        <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: item.color }}>
-          {item.value}
+{
+  selectedRuns[0] && (
+    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      {[
+        {
+          label: 'Found',
+          value: selectedRuns[0].eventsFound,
+          color: 'var(--signal)',
+        },
+        {
+          label: 'Created',
+          value: selectedRuns[0].eventsInserted,
+          color: 'var(--success)',
+        },
+      ].map((item) => (
+        <div
+          key={item.label}
+          style={{
+            flex: 1,
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <div
+            style={{ fontSize: 10, color: 'var(--fg-subtle)', marginBottom: 2 }}
+          >
+            {item.label}
+          </div>
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              fontFamily: "'JetBrains Mono', monospace",
+              color: item.color,
+            }}
+          >
+            {item.value}
+          </div>
         </div>
-      </div>
-    ))}
-  </div>
-)}
+      ))}
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/crawl/ apps/web/src/components/admin/crawl/
 git commit -m "feat: add crawl stats row, issues banner, enhanced inspector to crawl page"
@@ -1122,6 +1466,7 @@ git commit -m "feat: add crawl stats row, issues banner, enhanced inspector to c
 ## Task 10: Event Review — Filter Rail, Flags, Inspector Enhancements
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/events/EventQueueSplit.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/events/page.tsx`
 
@@ -1130,28 +1475,40 @@ git commit -m "feat: add crawl stats row, issues banner, enhanced inspector to c
 Create `apps/web/src/components/admin/events/EventFilterRail.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 
-type StatusFilter = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
+type StatusFilter =
+  'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected';
 
-const FILTERS: { id: StatusFilter; label: string; kind: 'warning' | 'signal' | 'neutral' }[] = [
-  { id: 'pending',    label: 'Pending',    kind: 'warning' },
-  { id: 'low_conf',  label: 'Low conf.',  kind: 'warning' },
+const FILTERS: {
+  id: StatusFilter;
+  label: string;
+  kind: 'warning' | 'signal' | 'neutral';
+}[] = [
+  { id: 'pending', label: 'Pending', kind: 'warning' },
+  { id: 'low_conf', label: 'Low conf.', kind: 'warning' },
   { id: 'duplicates', label: 'Duplicates', kind: 'warning' },
-  { id: 'approved',  label: 'Approved',  kind: 'neutral' },
-  { id: 'rejected',  label: 'Rejected',  kind: 'neutral' },
-]
+  { id: 'approved', label: 'Approved', kind: 'neutral' },
+  { id: 'rejected', label: 'Rejected', kind: 'neutral' },
+];
 
 interface Props {
-  activeFilter: StatusFilter | null
-  onFilterChange: (f: StatusFilter | null) => void
+  activeFilter: StatusFilter | null;
+  onFilterChange: (f: StatusFilter | null) => void;
 }
 
 export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        flexWrap: 'wrap',
+      }}
+    >
       <button
         onClick={() => onFilterChange(null)}
         style={{
@@ -1160,15 +1517,19 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
           borderRadius: 999,
           fontSize: 12,
           fontWeight: 500,
-          border: activeFilter === null ? '2px solid var(--signal)' : '1px solid var(--border)',
-          background: activeFilter === null ? 'rgba(29,95,191,0.08)' : 'transparent',
+          border:
+            activeFilter === null
+              ? '2px solid var(--signal)'
+              : '1px solid var(--border)',
+          background:
+            activeFilter === null ? 'rgba(29,95,191,0.08)' : 'transparent',
           color: activeFilter === null ? 'var(--signal)' : 'var(--fg-muted)',
           cursor: 'pointer',
         }}
       >
         All
       </button>
-      {FILTERS.map(f => (
+      {FILTERS.map((f) => (
         <button
           key={f.id}
           onClick={() => onFilterChange(activeFilter === f.id ? null : f.id)}
@@ -1178,9 +1539,16 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
             borderRadius: 999,
             fontSize: 12,
             fontWeight: 500,
-            border: activeFilter === f.id ? `2px solid var(--${f.kind})` : '1px solid var(--border)',
-            background: activeFilter === f.id ? `rgba(var(--${f.kind}-rgb, 184,117,20),0.08)` : 'transparent',
-            color: activeFilter === f.id ? `var(--${f.kind})` : 'var(--fg-muted)',
+            border:
+              activeFilter === f.id
+                ? `2px solid var(--${f.kind})`
+                : '1px solid var(--border)',
+            background:
+              activeFilter === f.id
+                ? `rgba(var(--${f.kind}-rgb, 184,117,20),0.08)`
+                : 'transparent',
+            color:
+              activeFilter === f.id ? `var(--${f.kind})` : 'var(--fg-muted)',
             cursor: 'pointer',
           }}
         >
@@ -1188,7 +1556,7 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
         </button>
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -1217,24 +1585,50 @@ export function EventFilterRail({ activeFilter, onFilterChange }: Props) {
 In the inspector right panel, after the action buttons (Reject/Approve), add a footer:
 
 ```tsx
-<div style={{
-  marginTop: 'auto',
-  paddingTop: 12,
-  borderTop: '1px solid var(--border)',
-  display: 'flex',
-  gap: 16,
-  fontSize: 11,
-  color: 'var(--fg-subtle)',
-}}>
+<div
+  style={{
+    marginTop: 'auto',
+    paddingTop: 12,
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    gap: 16,
+    fontSize: 11,
+    color: 'var(--fg-subtle)',
+  }}
+>
   {selectedEvent.sourceUrl && (
-    <span style={{ fontFamily: "'JetBrains Mono', monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+    <span
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        flex: 1,
+      }}
+    >
       {new URL(selectedEvent.sourceUrl).hostname}
     </span>
   )}
   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-    {[['J', 'prev'], ['K', 'next'], ['A', 'approve'], ['R', 'reject']].map(([key, label]) => (
+    {[
+      ['J', 'prev'],
+      ['K', 'next'],
+      ['A', 'approve'],
+      ['R', 'reject'],
+    ].map(([key, label]) => (
       <span key={key} style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-        <span style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 4, padding: '1px 5px', fontFamily: "'JetBrains Mono', monospace", fontSize: 10 }}>{key}</span>
+        <span
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 4,
+            padding: '1px 5px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10,
+          }}
+        >
+          {key}
+        </span>
         <span>{label}</span>
       </span>
     ))}
@@ -1247,43 +1641,48 @@ In the inspector right panel, after the action buttons (Reject/Approve), add a f
 The bulk Approve/Reject buttons need to call the events API. Create `apps/web/src/app/api/admin/events/[id]/route.ts`:
 
 ```ts
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { auth } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { id } = await params
-  const body = await req.json()
+  const { id } = await params;
+  const body = await req.json();
 
   const upstream = await fetch(`${API_URL}/v1/admin/events/${id}`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(body),
-  })
+  });
 
-  const result = await upstream.json()
-  return NextResponse.json(result, { status: upstream.status })
+  const result = await upstream.json();
+  return NextResponse.json(result, { status: upstream.status });
 }
 ```
 
 In `EventQueueSplit.tsx`, wire the approve/reject buttons:
+
 ```tsx
 async function handleApprove(id: string) {
   await fetch(`/api/admin/events/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ verified: true }),
-  })
+  });
   // Remove from local state
-  setEvents(prev => prev.filter(e => e.id !== id))
+  setEvents((prev) => prev.filter((e) => e.id !== id));
 }
 
 async function handleReject(id: string) {
@@ -1291,26 +1690,42 @@ async function handleReject(id: string) {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status: 'cancelled' }),
-  })
-  setEvents(prev => prev.filter(e => e.id !== id))
+  });
+  setEvents((prev) => prev.filter((e) => e.id !== id));
 }
 ```
 
 > **Check first:** Verify `PATCH /v1/admin/events/:id` exists in `apps/api/src/routes/admin/events.ts`. If not, add it:
+
 ```ts
-eventsAdminRouter.patch('/:id', zValidator('json', z.object({ verified: z.boolean().optional(), status: z.enum(['upcoming','cancelled','postponed']).optional() })), async (ctx) => {
-  const { id } = ctx.req.param()
-  const body = ctx.req.valid('json')
-  const [updated] = await db.update(events).set({ ...body, updatedAt: new Date() }).where(eq(events.id, id)).returning()
-  if (!updated) return ctx.json({ success: false, error: 'Not found' }, 404)
-  ctx.set('auditAction', 'event.update')
-  ctx.set('auditTargetId', id)
-  ctx.set('auditActorId', getAuthUser(ctx).userId)
-  return ctx.json({ success: true, data: updated })
-})
+eventsAdminRouter.patch(
+  '/:id',
+  zValidator(
+    'json',
+    z.object({
+      verified: z.boolean().optional(),
+      status: z.enum(['upcoming', 'cancelled', 'postponed']).optional(),
+    }),
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.param();
+    const body = ctx.req.valid('json');
+    const [updated] = await db
+      .update(events)
+      .set({ ...body, updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    if (!updated) return ctx.json({ success: false, error: 'Not found' }, 404);
+    ctx.set('auditAction', 'event.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
+    return ctx.json({ success: true, data: updated });
+  },
+);
 ```
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/events/ apps/web/src/components/admin/events/ apps/web/src/app/api/admin/events/
 git commit -m "feat: add event filter rail, confidence flags, bulk actions to event review"
@@ -1321,6 +1736,7 @@ git commit -m "feat: add event filter rail, confidence flags, bulk actions to ev
 ## Task 11: Venues Table — Stat Row, Missing Columns, Action Menu
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/venues/page.tsx`
 
 - [ ] **Step 1: Replace the bare stat grid with proper StatCards**
@@ -1328,22 +1744,48 @@ git commit -m "feat: add event filter rail, confidence flags, bulk actions to ev
 Replace the 4 plain `<div>` stat boxes with `<StatCard>` components:
 
 ```tsx
-import { MapPin, Activity, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { MapPin, Activity, ShieldCheck, AlertTriangle } from 'lucide-react';
 
 // Replace the stat grid:
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-  <StatCard label="Total"         value={String(venues.length)}                    icon={MapPin}       kind="neutral" />
-  <StatCard label="Active"        value={String(activeVenues.length)}              icon={Activity}     kind="success" />
-  <StatCard label="Inactive"      value={String(inactiveVenues.length)}            icon={AlertTriangle} kind="warning"
-    hint={venues.filter(v => v.blockedAt).length > 0 ? `${venues.filter(v => v.blockedAt).length} blocked` : undefined}
+<div
+  style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}
+>
+  <StatCard
+    label="Total"
+    value={String(venues.length)}
+    icon={MapPin}
+    kind="neutral"
   />
-  <StatCard label="Verified"      value={String(venues.filter(v => v.verified).length)} icon={ShieldCheck} kind="signal" />
-</div>
+  <StatCard
+    label="Active"
+    value={String(activeVenues.length)}
+    icon={Activity}
+    kind="success"
+  />
+  <StatCard
+    label="Inactive"
+    value={String(inactiveVenues.length)}
+    icon={AlertTriangle}
+    kind="warning"
+    hint={
+      venues.filter((v) => v.blockedAt).length > 0
+        ? `${venues.filter((v) => v.blockedAt).length} blocked`
+        : undefined
+    }
+  />
+  <StatCard
+    label="Verified"
+    value={String(venues.filter((v) => v.verified).length)}
+    icon={ShieldCheck}
+    kind="signal"
+  />
+</div>;
 ```
 
 - [ ] **Step 2: Add robots.txt, strategy, and health columns to the table**
 
 Replace the existing table header:
+
 ```tsx
 <THead>
   <tr>
@@ -1353,21 +1795,43 @@ Replace the existing table header:
     <TH>Strategy</TH>
     <TH>Status</TH>
     <TH>Health</TH>
-    <TH align="right" mono>Last crawl</TH>
+    <TH align="right" mono>
+      Last crawl
+    </TH>
     <TH></TH>
   </tr>
 </THead>
 ```
 
 And update the row body:
+
 ```tsx
 <TR key={venue.id}>
   <TD>
     <div style={{ fontWeight: 500 }}>{venue.name}</div>
-    <div style={{ fontSize: 12, color: 'var(--fg-muted)', fontFamily: "'JetBrains Mono', monospace" }}>{venue.slug}</div>
+    <div
+      style={{
+        fontSize: 12,
+        color: 'var(--fg-muted)',
+        fontFamily: "'JetBrains Mono', monospace",
+      }}
+    >
+      {venue.slug}
+    </div>
   </TD>
   <TD mono color="var(--fg-muted)">
-    <a href={venue.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--signal)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+    <a
+      href={venue.websiteUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: 'var(--signal)',
+        textDecoration: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+      }}
+    >
       {safeHostname(venue.websiteUrl)}
       <ExternalLink size={11} />
     </a>
@@ -1376,31 +1840,60 @@ And update the row body:
     {venue.robotsTxtAllowed === null ? (
       <StatusBadge kind="neutral">unchecked</StatusBadge>
     ) : venue.robotsTxtAllowed ? (
-      <StatusBadge kind="success" dot>allowed</StatusBadge>
+      <StatusBadge kind="success" dot>
+        allowed
+      </StatusBadge>
     ) : (
-      <StatusBadge kind="danger" dot>blocked</StatusBadge>
+      <StatusBadge kind="danger" dot>
+        blocked
+      </StatusBadge>
     )}
   </TD>
   <TD>
     {venue.extractionStrategy ? (
-      <StatusBadge kind={venue.extractionStrategy === 'llm' ? 'accent' : 'signal'} variant="outline">
+      <StatusBadge
+        kind={venue.extractionStrategy === 'llm' ? 'accent' : 'signal'}
+        variant="outline"
+      >
         {venue.extractionStrategy}
       </StatusBadge>
-    ) : '—'}
+    ) : (
+      '—'
+    )}
   </TD>
   <TD>
-    <StatusBadge kind={venue.active ? 'success' : venue.blockedAt ? 'danger' : 'neutral'} dot>
+    <StatusBadge
+      kind={venue.active ? 'success' : venue.blockedAt ? 'danger' : 'neutral'}
+      dot
+    >
       {venue.blockedAt ? 'blocked' : venue.active ? 'active' : 'inactive'}
     </StatusBadge>
   </TD>
   <TD>
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{
-        width: 8, height: 8, borderRadius: '50%',
-        background: venue.consecutiveFailures === 0 ? 'var(--success)' : venue.consecutiveFailures >= 3 ? 'var(--danger)' : 'var(--warning)',
-      }} />
-      <span style={{ fontSize: 12, color: 'var(--fg-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-        {venue.consecutiveFailures === 0 ? '100%' : `${Math.max(0, 100 - venue.consecutiveFailures * 20)}%`}
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background:
+            venue.consecutiveFailures === 0
+              ? 'var(--success)'
+              : venue.consecutiveFailures >= 3
+                ? 'var(--danger)'
+                : 'var(--warning)',
+        }}
+      />
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--fg-muted)',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}
+      >
+        {venue.consecutiveFailures === 0
+          ? '100%'
+          : `${Math.max(0, 100 - venue.consecutiveFailures * 20)}%`}
       </span>
     </div>
   </TD>
@@ -1409,7 +1902,9 @@ And update the row body:
   </TD>
   <TD>
     <Link href={`/admin/venues/${venue.id}`}>
-      <AdminButton variant="ghost" size="sm">Edit</AdminButton>
+      <AdminButton variant="ghost" size="sm">
+        Edit
+      </AdminButton>
     </Link>
   </TD>
 </TR>
@@ -1418,6 +1913,7 @@ And update the row body:
 Add `import { ExternalLink } from 'lucide-react'` and the `safeHostname` helper from Task 1.
 
 - [ ] **Step 3: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/venues/page.tsx
 git commit -m "feat: add StatCards, robots.txt, strategy, and health columns to venues page"
@@ -1428,6 +1924,7 @@ git commit -m "feat: add StatCards, robots.txt, strategy, and health columns to 
 ## Task 12: Prices Page — Full Redesign with Proper Data
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/prices/page.tsx`
 - Modify: `apps/api/src/routes/admin/prices.ts`
 
@@ -1466,10 +1963,10 @@ pricesAdminRouter.get('/events', async (ctx) => {
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(eq(events.status, 'upcoming'))
     .orderBy(desc(events.date))
-    .limit(100)
+    .limit(100);
 
-  return ctx.json({ success: true, data: rows })
-})
+  return ctx.json({ success: true, data: rows });
+});
 ```
 
 > **Note:** The `sql` import already exists at the top of prices.ts. This query uses correlated subqueries which are acceptable at this data volume. If performance is a concern, use a lateral join instead.
@@ -1477,10 +1974,10 @@ pricesAdminRouter.get('/events', async (ctx) => {
 - [ ] **Step 2: Rewrite prices/page.tsx**
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import { DollarSign, TrendingUp, AlertTriangle, Search } from 'lucide-react'
+import { auth } from '@clerk/nextjs/server';
+import { requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import { DollarSign, TrendingUp, AlertTriangle, Search } from 'lucide-react';
 import {
   SectionHead,
   StatCard,
@@ -1492,42 +1989,42 @@ import {
   TD,
   StatusBadge,
   RelTime,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
 
 interface PriceEvent {
-  eventId: string
-  eventTitle: string | null
-  artist: string
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string | null;
+  artist: string;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 const OUTCOME_KIND: Record<string, StatusKind> = {
   hit: 'success',
   miss: 'warning',
   error: 'danger',
-}
+};
 
 export default async function AdminPricesPage() {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
   const priceEvents = await apiClient
     .get<PriceEvent[]>('/v1/admin/prices/events', token)
-    .catch(() => [] as PriceEvent[])
+    .catch(() => [] as PriceEvent[]);
 
-  const withPrices = priceEvents.filter(e => e.priceMin !== null)
-  const noPrices = priceEvents.filter(e => e.priceMin === null)
-  const recentHits = priceEvents.filter(e => e.lastOutcome === 'hit')
+  const withPrices = priceEvents.filter((e) => e.priceMin !== null);
+  const noPrices = priceEvents.filter((e) => e.priceMin === null);
+  const recentHits = priceEvents.filter((e) => e.lastOutcome === 'hit');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1535,23 +2032,47 @@ export default async function AdminPricesPage() {
         eyebrow="Phase 7 · Pricing"
         title="Price snapshots"
         actions={
-          <AdminButton
-            variant="outline"
-            icon={Search}
-            onClick={undefined}
-          >
+          <AdminButton variant="outline" icon={Search} onClick={undefined}>
             Snapshot now
           </AdminButton>
         }
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-        <StatCard label="Tracked events"  value={String(priceEvents.length)} icon={DollarSign} kind="neutral" />
-        <StatCard label="With prices"     value={String(withPrices.length)}  icon={TrendingUp}  kind="success"
-          hint={priceEvents.length > 0 ? `${Math.round(withPrices.length / priceEvents.length * 100)}% coverage` : undefined}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+        }}
+      >
+        <StatCard
+          label="Tracked events"
+          value={String(priceEvents.length)}
+          icon={DollarSign}
+          kind="neutral"
         />
-        <StatCard label="No price data"   value={String(noPrices.length)}    icon={AlertTriangle} kind="warning" />
-        <StatCard label="Recent hits"     value={String(recentHits.length)}  icon={DollarSign} kind="signal"
+        <StatCard
+          label="With prices"
+          value={String(withPrices.length)}
+          icon={TrendingUp}
+          kind="success"
+          hint={
+            priceEvents.length > 0
+              ? `${Math.round((withPrices.length / priceEvents.length) * 100)}% coverage`
+              : undefined
+          }
+        />
+        <StatCard
+          label="No price data"
+          value={String(noPrices.length)}
+          icon={AlertTriangle}
+          kind="warning"
+        />
+        <StatCard
+          label="Recent hits"
+          value={String(recentHits.length)}
+          icon={DollarSign}
+          kind="signal"
           hint="last retrieval ok"
         />
       </div>
@@ -1562,53 +2083,95 @@ export default async function AdminPricesPage() {
             <tr>
               <TH>Event</TH>
               <TH>Venue / Date</TH>
-              <TH align="right" mono>Min</TH>
-              <TH align="right" mono>Max</TH>
+              <TH align="right" mono>
+                Min
+              </TH>
+              <TH align="right" mono>
+                Max
+              </TH>
               <TH>Source</TH>
               <TH>Last retrieval</TH>
               <TH>Status</TH>
             </tr>
           </THead>
           <tbody>
-            {priceEvents.map(row => (
+            {priceEvents.map((row) => (
               <TR key={row.eventId}>
                 <TD>
-                  <div style={{ fontWeight: 500 }}>{row.eventTitle ?? row.artist}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>{row.artist}</div>
+                  <div style={{ fontWeight: 500 }}>
+                    {row.eventTitle ?? row.artist}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+                    {row.artist}
+                  </div>
                 </TD>
                 <TD>
-                  <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>{row.venueName ?? '—'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-subtle)', fontFamily: "'JetBrains Mono', monospace" }}>{row.date}</div>
+                  <div style={{ fontSize: 13, color: 'var(--fg-muted)' }}>
+                    {row.venueName ?? '—'}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: 'var(--fg-subtle)',
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                  >
+                    {row.date}
+                  </div>
                 </TD>
-                <TD align="right" mono color={row.priceMin ? 'var(--fg)' : 'var(--fg-subtle)'}>
-                  {row.priceMin ? `$${parseFloat(row.priceMin).toFixed(0)}` : '—'}
+                <TD
+                  align="right"
+                  mono
+                  color={row.priceMin ? 'var(--fg)' : 'var(--fg-subtle)'}
+                >
+                  {row.priceMin
+                    ? `$${parseFloat(row.priceMin).toFixed(0)}`
+                    : '—'}
                 </TD>
-                <TD align="right" mono color={row.priceMax ? 'var(--fg)' : 'var(--fg-subtle)'}>
-                  {row.priceMax ? `$${parseFloat(row.priceMax).toFixed(0)}` : '—'}
+                <TD
+                  align="right"
+                  mono
+                  color={row.priceMax ? 'var(--fg)' : 'var(--fg-subtle)'}
+                >
+                  {row.priceMax
+                    ? `$${parseFloat(row.priceMax).toFixed(0)}`
+                    : '—'}
                 </TD>
                 <TD>
                   {row.priceSource ? (
                     <StatusBadge kind="signal" variant="outline">
                       {row.priceSource}
                     </StatusBadge>
-                  ) : '—'}
+                  ) : (
+                    '—'
+                  )}
                 </TD>
                 <TD color="var(--fg-muted)">
-                  {row.lastRetrievedAt ? <RelTime iso={row.lastRetrievedAt} /> : '—'}
+                  {row.lastRetrievedAt ? (
+                    <RelTime iso={row.lastRetrievedAt} />
+                  ) : (
+                    '—'
+                  )}
                 </TD>
                 <TD>
                   {row.lastOutcome ? (
-                    <StatusBadge kind={OUTCOME_KIND[row.lastOutcome] ?? 'neutral'} dot>
+                    <StatusBadge
+                      kind={OUTCOME_KIND[row.lastOutcome] ?? 'neutral'}
+                      dot
+                    >
                       {row.lastOutcome}
                     </StatusBadge>
-                  ) : <StatusBadge kind="neutral">unchecked</StatusBadge>}
+                  ) : (
+                    <StatusBadge kind="neutral">unchecked</StatusBadge>
+                  )}
                 </TD>
               </TR>
             ))}
             {priceEvents.length === 0 && (
               <TR>
                 <TD colSpan={7} color="var(--fg-subtle)">
-                  No events found. Ensure venues have been crawled and events seeded.
+                  No events found. Ensure venues have been crawled and events
+                  seeded.
                 </TD>
               </TR>
             )}
@@ -1616,7 +2179,7 @@ export default async function AdminPricesPage() {
         </AdminTable>
       </Panel>
     </div>
-  )
+  );
 }
 ```
 
@@ -1625,6 +2188,7 @@ export default async function AdminPricesPage() {
 - [ ] **Step 3: Add the missing `import { AdminButton } from '@/components/admin/primitives'` and any other missing imports**
 
 - [ ] **Step 4: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/prices/ apps/api/src/routes/admin/prices.ts
 git commit -m "feat: redesign prices page with event price table and coverage stats"
@@ -1635,6 +2199,7 @@ git commit -m "feat: redesign prices page with event price table and coverage st
 ## Task 13: Invite Codes — Inline Mint Form, Invitee Column
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/invite-codes/page.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/invite-codes/actions.ts` (from Task 1 Cause C)
 
@@ -1643,14 +2208,37 @@ git commit -m "feat: redesign prices page with event price table and coverage st
 The current page uses plain `<div>` stat boxes. Replace with `<StatCard>`:
 
 ```tsx
-import { Ticket, CheckCircle, XCircle, Users } from 'lucide-react'
+import { Ticket, CheckCircle, XCircle, Users } from 'lucide-react';
 
-<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-  <StatCard label="Outstanding" value={String(outstanding)} icon={Ticket}      kind="signal"  hint="unredeemed active codes" />
-  <StatCard label="Redeemed"    value={String(redeemed)}    icon={CheckCircle}  kind="success" />
-  <StatCard label="Total issued" value={String(codes.length)} icon={Users}    kind="neutral" />
-  <StatCard label="Revoked"     value={String(revoked)}     icon={XCircle}    kind="danger" />
-</div>
+<div
+  style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}
+>
+  <StatCard
+    label="Outstanding"
+    value={String(outstanding)}
+    icon={Ticket}
+    kind="signal"
+    hint="unredeemed active codes"
+  />
+  <StatCard
+    label="Redeemed"
+    value={String(redeemed)}
+    icon={CheckCircle}
+    kind="success"
+  />
+  <StatCard
+    label="Total issued"
+    value={String(codes.length)}
+    icon={Users}
+    kind="neutral"
+  />
+  <StatCard
+    label="Revoked"
+    value={String(revoked)}
+    icon={XCircle}
+    kind="danger"
+  />
+</div>;
 ```
 
 - [ ] **Step 2: Replace the header form with an inline InviteCreatorPanel**
@@ -1658,41 +2246,50 @@ import { Ticket, CheckCircle, XCircle, Users } from 'lucide-react'
 Create `apps/web/src/components/admin/invite-codes/InviteCreatorPanel.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useTransition } from 'react'
-import { mintInviteCodeWithOptions } from '../../../app/(protected)/admin/invite-codes/actions'
+import { useState, useTransition } from 'react';
+import { mintInviteCodeWithOptions } from '../../../app/(protected)/admin/invite-codes/actions';
 
 export function InviteCreatorPanel() {
-  const [email, setEmail] = useState('')
-  const [expiresIn, setExpiresIn] = useState<'7d' | '30d' | 'never'>('30d')
-  const [isPending, startTransition] = useTransition()
-  const [result, setResult] = useState<{ ok: boolean; code?: string; error?: string } | null>(null)
+  const [email, setEmail] = useState('');
+  const [expiresIn, setExpiresIn] = useState<'7d' | '30d' | 'never'>('30d');
+  const [isPending, startTransition] = useTransition();
+  const [result, setResult] = useState<{
+    ok: boolean;
+    code?: string;
+    error?: string;
+  } | null>(null);
 
   function handleSubmit() {
     startTransition(async () => {
-      const res = await mintInviteCodeWithOptions({ email: email || undefined, expiresIn })
-      setResult(res)
-      if (res.ok) setEmail('')
-    })
+      const res = await mintInviteCodeWithOptions({
+        email: email || undefined,
+        expiresIn,
+      });
+      setResult(res);
+      if (res.ok) setEmail('');
+    });
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      padding: '14px 16px',
-      borderRadius: 12,
-      background: 'var(--bg-elevated)',
-      border: '1px solid var(--border)',
-      flexWrap: 'wrap',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '14px 16px',
+        borderRadius: 12,
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        flexWrap: 'wrap',
+      }}
+    >
       <input
         type="email"
         placeholder="Recipient email (optional)"
         value={email}
-        onChange={e => setEmail(e.target.value)}
+        onChange={(e) => setEmail(e.target.value)}
         style={{
           flex: '1 1 200px',
           height: 32,
@@ -1708,7 +2305,7 @@ export function InviteCreatorPanel() {
       />
       {/* Expires buttons */}
       <div style={{ display: 'flex', gap: 4 }}>
-        {(['7d', '30d', 'never'] as const).map(opt => (
+        {(['7d', '30d', 'never'] as const).map((opt) => (
           <button
             key={opt}
             onClick={() => setExpiresIn(opt)}
@@ -1718,8 +2315,12 @@ export function InviteCreatorPanel() {
               borderRadius: 6,
               fontSize: 12,
               fontWeight: 500,
-              border: expiresIn === opt ? '2px solid var(--signal)' : '1px solid var(--border)',
-              background: expiresIn === opt ? 'rgba(29,95,191,0.08)' : 'transparent',
+              border:
+                expiresIn === opt
+                  ? '2px solid var(--signal)'
+                  : '1px solid var(--border)',
+              background:
+                expiresIn === opt ? 'rgba(29,95,191,0.08)' : 'transparent',
               color: expiresIn === opt ? 'var(--signal)' : 'var(--fg-muted)',
               cursor: 'pointer',
             }}
@@ -1747,15 +2348,26 @@ export function InviteCreatorPanel() {
         {isPending ? 'Minting…' : 'Mint code'}
       </button>
       {result?.ok && result.code && (
-        <span style={{ fontSize: 12, color: 'var(--success)', fontFamily: "'JetBrains Mono', monospace", padding: '3px 8px', background: 'rgba(47,122,77,0.08)', borderRadius: 6 }}>
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--success)',
+            fontFamily: "'JetBrains Mono', monospace",
+            padding: '3px 8px',
+            background: 'rgba(47,122,77,0.08)',
+            borderRadius: 6,
+          }}
+        >
           ✓ {result.code}
         </span>
       )}
       {result?.error && (
-        <span style={{ fontSize: 12, color: 'var(--danger)' }}>{result.error}</span>
+        <span style={{ fontSize: 12, color: 'var(--danger)' }}>
+          {result.error}
+        </span>
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1764,62 +2376,73 @@ export function InviteCreatorPanel() {
 In `apps/web/src/app/(protected)/admin/invite-codes/actions.ts`:
 
 ```ts
-'use server'
-import { auth } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
-import { apiClient } from '@/lib/api'
+'use server';
+import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
+import { apiClient } from '@/lib/api';
 
 interface MintOptions {
-  email?: string
-  expiresIn: '7d' | '30d' | 'never'
+  email?: string;
+  expiresIn: '7d' | '30d' | 'never';
 }
 
 export async function mintInviteCodeWithOptions(
   opts: MintOptions,
 ): Promise<{ ok: boolean; code?: string; error?: string }> {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return { ok: false, error: 'Not authenticated' }
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return { ok: false, error: 'Not authenticated' };
 
   const expiresAt =
     opts.expiresIn === '7d'
       ? new Date(Date.now() + 7 * 86400_000).toISOString()
       : opts.expiresIn === '30d'
         ? new Date(Date.now() + 30 * 86400_000).toISOString()
-        : undefined
+        : undefined;
 
   try {
-    const result = await apiClient.post<{ code: string }>('/v1/admin/invite-codes', token, {
-      expiresAt,
-      // email is informational only — not stored in current schema; no-op if API doesn't accept it
-    })
-    revalidatePath('/admin/invite-codes')
-    return { ok: true, code: result.code }
+    const result = await apiClient.post<{ code: string }>(
+      '/v1/admin/invite-codes',
+      token,
+      {
+        expiresAt,
+        // email is informational only — not stored in current schema; no-op if API doesn't accept it
+      },
+    );
+    revalidatePath('/admin/invite-codes');
+    return { ok: true, code: result.code };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'Mint failed' }
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Mint failed',
+    };
   }
 }
 
 // Legacy no-arg form action (kept for the plain form fallback)
 export async function mintInviteCode() {
-  await mintInviteCodeWithOptions({ expiresIn: '30d' })
+  await mintInviteCodeWithOptions({ expiresIn: '30d' });
 }
 ```
 
 - [ ] **Step 4: Wire InviteCreatorPanel into the page and add sent-by stub**
 
 In `invite-codes/page.tsx`:
+
 - Remove the old `<form action={mintInviteCode}>` from the `SectionHead` `actions` prop
 - Add `<InviteCreatorPanel />` between the stat row and the `<Panel title="Code log">`:
 
 ```tsx
-import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel'
+import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel';
 // ...
-{/* Inline mint form */}
-<InviteCreatorPanel />
+{
+  /* Inline mint form */
+}
+<InviteCreatorPanel />;
 ```
 
 Add a `Created by` column (shows first 8 chars of createdBy as a monospace ID chip):
+
 ```tsx
 // In THead:
 <TH>Sent by</TH>
@@ -1833,6 +2456,7 @@ Add a `Created by` column (shows first 8 chars of createdBy as a monospace ID ch
 ```
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add apps/web/src/app/\(protected\)/admin/invite-codes/ apps/web/src/components/admin/invite-codes/
 git commit -m "feat: add inline invite creator panel, stat cards, and sent-by column"
@@ -1843,6 +2467,7 @@ git commit -m "feat: add inline invite creator panel, stat cards, and sent-by co
 ## Task 14: Seed — Price Retrieval Log Data
 
 **Files:**
+
 - Modify: `packages/db/seed.ts`
 
 - [ ] **Step 1: Add price retrieval log seed entries**
@@ -1863,20 +2488,30 @@ import {
   events as eventsTable,
   priceRetrievalLog,
   type NewVenue,
-} from './src/schema/index.js'
+} from './src/schema/index.js';
 
 // After inserting venues, fetch their IDs and insert sample events + price log:
 async function seed() {
-  console.warn('Seeding database...')
+  console.warn('Seeding database...');
 
-  await db.insert(venues).values(SEED_VENUES).onConflictDoNothing({ target: venues.slug })
-  console.warn(`Inserted ${SEED_VENUES.length} venues.`)
+  await db
+    .insert(venues)
+    .values(SEED_VENUES)
+    .onConflictDoNothing({ target: venues.slug });
+  console.warn(`Inserted ${SEED_VENUES.length} venues.`);
 
   // Fetch inserted venues to get their IDs
-  const insertedVenues = await db.select().from(venues)
+  const insertedVenues = await db.select().from(venues);
 
   // Insert sample events for each venue
-  const SAMPLE_ARTISTS = ['Khruangbin', 'Explosions in the Sky', 'Modest Mouse', 'Soccer Mommy', 'Phoebe Bridgers', 'Big Thief']
+  const SAMPLE_ARTISTS = [
+    'Khruangbin',
+    'Explosions in the Sky',
+    'Modest Mouse',
+    'Soccer Mommy',
+    'Phoebe Bridgers',
+    'Big Thief',
+  ];
   const sampleEvents = insertedVenues.flatMap((venue, vi) =>
     SAMPLE_ARTISTS.slice(0, 3).map((artist, ai) => ({
       venueId: venue.id,
@@ -1888,19 +2523,19 @@ async function seed() {
       ticketPriceMin: ai % 2 === 0 ? String(25 + ai * 10) : null,
       ticketPriceMax: ai % 2 === 0 ? String(55 + ai * 10) : null,
       priceSource: ai % 2 === 0 ? ('structured_data' as const) : null,
-    }))
-  )
+    })),
+  );
 
   const insertedEvents = await db
     .insert(eventsTable)
     .values(sampleEvents)
     .onConflictDoNothing()
-    .returning()
-  console.warn(`Inserted ${insertedEvents.length} events.`)
+    .returning();
+  console.warn(`Inserted ${insertedEvents.length} events.`);
 
   // Insert price retrieval log entries
-  const OUTCOMES = ['hit', 'miss', 'error'] as const
-  const SOURCES = ['structured_data', 'ticketmaster', 'seatgeek'] as const
+  const OUTCOMES = ['hit', 'miss', 'error'] as const;
+  const SOURCES = ['structured_data', 'ticketmaster', 'seatgeek'] as const;
 
   const logEntries = insertedEvents.flatMap((event) =>
     Array.from({ length: 3 }, (_, idx) => ({
@@ -1909,13 +2544,13 @@ async function seed() {
       source: SOURCES[idx % SOURCES.length],
       outcome: OUTCOMES[idx % OUTCOMES.length],
       attemptedAt: new Date(Date.now() - idx * 3_600_000),
-    }))
-  )
+    })),
+  );
 
-  await db.insert(priceRetrievalLog).values(logEntries).onConflictDoNothing()
-  console.warn(`Inserted ${logEntries.length} price retrieval log entries.`)
+  await db.insert(priceRetrievalLog).values(logEntries).onConflictDoNothing();
+  console.warn(`Inserted ${logEntries.length} price retrieval log entries.`);
 
-  process.exit(0)
+  process.exit(0);
 }
 ```
 
@@ -1936,6 +2571,7 @@ pnpm db:seed
 ```
 
 Expected output:
+
 ```
 Seeding database...
 Inserted 5 venues.
@@ -1949,13 +2585,20 @@ If the seed errors on duplicate events, that's OK — `onConflictDoNothing()` wi
 // Before inserting events, clear price log for re-seeding:
 if (insertedEvents.length > 0) {
   // Optional: truncate only for development/local
-  await db.delete(priceRetrievalLog)
-    .where(inArray(priceRetrievalLog.eventId, insertedEvents.map(e => e.id)))
-    .catch(() => {}) // no-op if table is empty
+  await db
+    .delete(priceRetrievalLog)
+    .where(
+      inArray(
+        priceRetrievalLog.eventId,
+        insertedEvents.map((e) => e.id),
+      ),
+    )
+    .catch(() => {}); // no-op if table is empty
 }
 ```
 
 - [ ] **Step 5: Commit**
+
 ```bash
 git add packages/db/seed.ts
 git commit -m "feat: expand seed to include sample events and price retrieval log data"
@@ -1966,25 +2609,31 @@ git commit -m "feat: expand seed to include sample events and price retrieval lo
 ## Task 15: Final Polish — TypeScript Check, Tests, PR
 
 **Files:**
+
 - Various (type errors found by compiler)
 
 - [ ] **Step 1: Run TypeScript checks**
+
 ```bash
 pnpm --filter @concert-crawl/web exec tsc --noEmit
 pnpm --filter @concert-crawl/api exec tsc --noEmit
 ```
+
 Fix any errors before proceeding.
 
 - [ ] **Step 2: Run existing tests**
+
 ```bash
 pnpm --filter @concert-crawl/web test
 pnpm --filter @concert-crawl/api test
 ```
+
 Fix any regressions. Key tests to watch: `apps/api/src/routes/admin/venues.test.ts`, `apps/api/src/routes/admin/invite-codes.test.ts`.
 
 - [ ] **Step 3: Smoke check all admin pages in browser**
 
 Visit each page and confirm no "Something went wrong" errors:
+
 - [ ] `/admin` — Dashboard loads with greeting, 4 stat cards, health table, activity feed
 - [ ] `/admin/venues` — Venues table with robots.txt, strategy, health columns
 - [ ] `/admin/crawl` — Crawl split view with Re-crawl button in inspector
@@ -2042,6 +2691,7 @@ EOF
 ## Self-Review Checklist
 
 **Spec coverage:**
+
 - [x] BUG-1: Crash — Task 1
 - [x] BUG-2: Theme picker — Task 2
 - [x] BUG-3: Crawl trigger — Task 3
@@ -2068,6 +2718,7 @@ EOF
 - [x] Seed: prices data — Task 14
 
 **Known gaps (deferred as complex, non-critical, or requiring separate feature work):**
+
 - Inbox panel (notification center) — significant feature, no data model yet
 - Topbar search box — requires a search API endpoint
 - CostPanel 30-day chart on Dashboard — requires time-series cost data (no current data model)

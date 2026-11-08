@@ -1,65 +1,65 @@
-'use client'
+'use client';
 
 import {
   type MissingClassification,
   type MovedReason,
-} from '@concert-crawl/types'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@concert-crawl/types';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   computeMissedSweeps,
   formatEventDate,
   formatLastSeen,
-} from '@/lib/admin/missing'
-import { MissingChips } from './MissingChips'
+} from '@/lib/admin/missing';
+import { MissingChips } from './MissingChips';
 import {
   MissingEventLink,
   MissingVenueLink,
   VenueCheckLink,
-} from './MissingLinks'
-import { MissingRowMenu } from './MissingRowMenu'
+} from './MissingLinks';
+import { MissingRowMenu } from './MissingRowMenu';
 
 export interface MissingRowEvent {
-  id: string
-  title: string
-  venueName: string | null
-  venueId: string | null
-  date: string
-  showTime: string | null
-  lastSeenAt: string | null
-  firstMissingAt: string
-  eventUrl: string | null
-  sourceUrl: string | null
-  classification: MissingClassification
-  clusterCount: number
+  id: string;
+  title: string;
+  venueName: string | null;
+  venueId: string | null;
+  date: string;
+  showTime: string | null;
+  lastSeenAt: string | null;
+  firstMissingAt: string;
+  eventUrl: string | null;
+  sourceUrl: string | null;
+  classification: MissingClassification;
+  clusterCount: number;
   /** Suggested relocation target, or null when the matcher found none. */
   movedCandidate: {
-    id: string
-    reason: MovedReason
-    title: string
-    date: string
-    venueName: string | null
-  } | null
+    id: string;
+    reason: MovedReason;
+    title: string;
+    date: string;
+    venueName: string | null;
+  } | null;
 }
 
 export interface MissingRowProps {
-  event: MissingRowEvent
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  onConfirmMove: (event: MissingRowEvent) => void
-  pending?: boolean
+  event: MissingRowEvent;
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  onConfirmMove: (event: MissingRowEvent) => void;
+  pending?: boolean;
 }
 
 const formatTime = (showTime: string | null): string => {
-  if (!showTime) return ''
-  const [hh, mm] = showTime.split(':')
-  const hours = parseInt(hh ?? '0', 10)
-  const minutes = mm ?? '00'
-  const meridiem = hours >= 12 ? 'PM' : 'AM'
-  const display = hours % 12 || 12
-  return ` ${display}:${minutes} ${meridiem}`
-}
+  if (!showTime) return '';
+  const [hh, mm] = showTime.split(':');
+  const hours = parseInt(hh ?? '0', 10);
+  const minutes = mm ?? '00';
+  const meridiem = hours >= 12 ? 'PM' : 'AM';
+  const display = hours % 12 || 12;
+  return ` ${display}:${minutes} ${meridiem}`;
+};
 
 export const MissingRow = ({
   event,
@@ -70,7 +70,7 @@ export const MissingRow = ({
   onConfirmMove,
   pending = false,
 }: MissingRowProps) => {
-  const missed = computeMissedSweeps(event.firstMissingAt, nowIso)
+  const missed = computeMissedSweeps(event.firstMissingAt, nowIso);
   return (
     <div
       style={{
@@ -182,5 +182,5 @@ export const MissingRow = ({
         disabled={pending}
       />
     </div>
-  )
-}
+  );
+};

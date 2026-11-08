@@ -1,7 +1,7 @@
 interface RotateCcwGlyphProps {
-  size?: number
-  color?: string
-  strokeWidth?: number
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
 }
 
 /**
@@ -37,4 +37,4 @@ export const RotateCcwGlyph = ({
       strokeLinejoin="round"
     />
   </svg>
-)
+);

@@ -24,8 +24,8 @@ import {
   sql,
   type SQL,
   type SQLWrapper,
-} from 'drizzle-orm'
-import { events } from '@concert-crawl/db'
+} from 'drizzle-orm';
+import { events } from '@concert-crawl/db';
 
 /**
  * Whether the event bills `canonicalName` — a column reference or a literal.
@@ -45,7 +45,7 @@ import { events } from '@concert-crawl/db'
 export const billsCanonicalName = (
   canonicalName: SQLWrapper | string,
 ): SQL<boolean> => {
-  const oneElement = sql`ARRAY[${canonicalName}]::text[]`
+  const oneElement = sql`ARRAY[${canonicalName}]::text[]`;
 
   return sql`(
     ${events.canonicalHeadliners} && ${oneElement}
@@ -54,8 +54,8 @@ export const billsCanonicalName = (
       ${events.canonicalHeadliners} IS NULL
       AND ${events.canonicalArtist} = ${canonicalName}
     )
-  )`
-}
+  )`;
+};
 
 /**
  * The same predicate against a whole list of names at once, for the routes that
@@ -73,12 +73,12 @@ export const billsAnyCanonicalName = (canonicalNames: string[]): SQL => {
       isNull(events.canonicalHeadliners),
       inArray(events.canonicalArtist, canonicalNames),
     ),
-  )
+  );
   if (condition === undefined) {
-    throw new Error('billsAnyCanonicalName requires a non-empty name list')
+    throw new Error('billsAnyCanonicalName requires a non-empty name list');
   }
-  return condition
-}
+  return condition;
+};
 
 /**
  * The JS-side twin of `billsCanonicalName`, for code that has already read the
@@ -95,16 +95,16 @@ export const billsAnyCanonicalName = (canonicalNames: string[]): SQL => {
  * row would attribute fewer acts than the query that selected it.
  */
 export const billedCanonicalNames = (row: {
-  canonicalArtist: string | null
-  canonicalHeadliners: string[] | null
-  canonicalSupporting: string[] | null
+  canonicalArtist: string | null;
+  canonicalHeadliners: string[] | null;
+  canonicalSupporting: string[] | null;
 }): Set<string> => {
   const headliners =
     row.canonicalHeadliners ??
-    (row.canonicalArtist === null ? [] : [row.canonicalArtist])
+    (row.canonicalArtist === null ? [] : [row.canonicalArtist]);
 
-  return new Set([...headliners, ...(row.canonicalSupporting ?? [])])
-}
+  return new Set([...headliners, ...(row.canonicalSupporting ?? [])]);
+};
 
 /**
  * The one canonical name an event's own imagery should resolve through, for the
@@ -127,7 +127,7 @@ export const portraitCanonicalName = (): SQL<string> => sql<string>`CASE
   WHEN cardinality(${events.canonicalHeadliners}) = 1
     THEN ${events.canonicalHeadliners}[1]
   ELSE ${events.canonicalArtist}
-END`
+END`;
 
 /**
  * The name a consumer surface should print as the event's headliner, and the
@@ -155,4 +155,4 @@ END`
 export const displayHeadliner = (): SQL<string> => sql<string>`CASE
   WHEN cardinality(${events.headliners}) = 1 THEN ${events.headliners}[1]
   ELSE ${events.artist}
-END`
+END`;

@@ -5,7 +5,7 @@
 
 /** `null` for absent, empty, or unparseable input — all of which read as no known price. */
 export const parsePrice = (raw: string | null): number | null => {
-  if (!raw) return null
-  const parsed = Number.parseFloat(raw)
-  return Number.isNaN(parsed) ? null : parsed
-}
+  if (!raw) return null;
+  const parsed = Number.parseFloat(raw);
+  return Number.isNaN(parsed) ? null : parsed;
+};

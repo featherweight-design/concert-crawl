@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { type MissingClassification } from '@concert-crawl/types'
-import { StatusBadge } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { type MissingClassification } from '@concert-crawl/types';
+import { StatusBadge } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const CLUSTER_THRESHOLD = 3
+const CLUSTER_THRESHOLD = 3;
 
 const classificationBadge: Record<
   MissingClassification,
@@ -26,13 +26,13 @@ const classificationBadge: Record<
     label: ADMIN_COPY.review.missing.classificationMoved,
     kind: 'warning',
   },
-}
+};
 
 export interface MissingChipsProps {
-  missedCount: number
-  classification: MissingClassification
-  clusterCount: number
-  venueName: string | null
+  missedCount: number;
+  classification: MissingClassification;
+  clusterCount: number;
+  venueName: string | null;
 }
 
 export const MissingChips = ({
@@ -41,8 +41,8 @@ export const MissingChips = ({
   clusterCount,
   venueName,
 }: MissingChipsProps) => {
-  const missedKind = missedCount >= 4 ? 'danger' : 'warning'
-  const cls = classificationBadge[classification]
+  const missedKind = missedCount >= 4 ? 'danger' : 'warning';
+  const cls = classificationBadge[classification];
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       <StatusBadge kind={cls.kind} variant="outline" mono>
@@ -63,5 +63,5 @@ export const MissingChips = ({
         </StatusBadge>
       )}
     </div>
-  )
-}
+  );
+};

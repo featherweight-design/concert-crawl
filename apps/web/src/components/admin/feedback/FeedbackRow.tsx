@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { ChevronDown, ChevronRight, Image } from 'lucide-react'
-import { StatusBadge } from '@/components/admin/primitives'
-import type { FeedbackStatusFilter } from './FeedbackFilterRail'
-import type { StatusKind } from '@/components/admin/primitives/utils'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
+import { ChevronDown, ChevronRight, Image } from 'lucide-react';
+import { StatusBadge } from '@/components/admin/primitives';
+import type { FeedbackStatusFilter } from './FeedbackFilterRail';
+import type { StatusKind } from '@/components/admin/primitives/utils';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants';
 
 export interface FeedbackItem {
-  id: string
-  userId: string
-  pageUrl: string
-  category: 'bug' | 'idea' | 'praise' | 'other'
-  message: string
-  metadata: Record<string, unknown> | null
-  status: Exclude<FeedbackStatusFilter, 'all'>
-  adminNotes: string | null
-  issueUrl: string | null
-  createdAt: string
+  id: string;
+  userId: string;
+  pageUrl: string;
+  category: 'bug' | 'idea' | 'praise' | 'other';
+  message: string;
+  metadata: Record<string, unknown> | null;
+  status: Exclude<FeedbackStatusFilter, 'all'>;
+  adminNotes: string | null;
+  issueUrl: string | null;
+  createdAt: string;
 }
 
 const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
@@ -25,39 +25,39 @@ const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
   idea: 'accent',
   praise: 'success',
   other: 'neutral',
-}
+};
 
-const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel
+const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel;
 
 function formatRelativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diffMs / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days === 1) return 'yesterday'
-  if (days < 7) return `${days}d ago`
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-  })
+  });
 }
 
 interface FeedbackRowProps {
-  item: FeedbackItem
-  isExpanded: boolean
-  onToggle: (id: string) => void
+  item: FeedbackItem;
+  isExpanded: boolean;
+  onToggle: (id: string) => void;
 }
 
 export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
-  const isUnread = item.status === 'unread'
-  const handle = `@${item.userId.slice(0, 10)}`
+  const isUnread = item.status === 'unread';
+  const handle = `@${item.userId.slice(0, 10)}`;
   const hasScreenshot = Boolean(
     item.metadata?.screenshotDataUrl ?? item.metadata?.screenshot,
-  )
-  const showDot = item.status === 'unread' || item.status === 'flagged'
+  );
+  const showDot = item.status === 'unread' || item.status === 'flagged';
 
   return (
     <div
@@ -203,5 +203,5 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
         </div>
       </button>
     </div>
-  )
+  );
 }

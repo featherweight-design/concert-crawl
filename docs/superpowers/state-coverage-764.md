@@ -37,7 +37,7 @@ matcher only applies when `isPublicBrowseEnabled()` is true:
 ```ts
 // apps/web/src/lib/launch-mode.ts
 export const isPublicBrowseEnabled = (): boolean =>
-  process.env.NEXT_PUBLIC_PUBLIC_BROWSE === 'true'
+  process.env.NEXT_PUBLIC_PUBLIC_BROWSE === 'true';
 ```
 
 `NEXT_PUBLIC_` means the value is **inlined at build time**. The file's own

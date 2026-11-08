@@ -1,5 +1,5 @@
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { SEPARATORS } from '@/components/consumer/event-title-block/lib/supportingLine'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { SEPARATORS } from '@/components/consumer/event-title-block/lib/supportingLine';
 
 /**
  * Every customer-facing string the row renders. Provenance labels match the
@@ -57,16 +57,16 @@ export const EVENT_ROW_COPY = {
     // name who. Members without a handle are counted and never named, so the
     // remainder is reported as "and N more" rather than silently dropped.
     crewGoing: (names: string[], count: number) => {
-      if (names.length === 0) return `${count} from your crews going`
-      const others = Math.max(count - names.length, 0)
+      if (names.length === 0) return `${count} from your crews going`;
+      const others = Math.max(count - names.length, 0);
       // The remainder is a list item like any other, so it takes the "and"
       // slot and the names before it are plain commas.
-      const items = others > 0 ? [...names, `${others} more`] : names
+      const items = others > 0 ? [...names, `${others} more`] : names;
       const named =
         items.length === 1
           ? items[0]
-          : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
-      return `From your crews: ${named} going`
+          : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+      return `From your crews: ${named} going`;
     },
     // Both replace the chip's visible label rather than adding to it, so each
     // one has to carry the status word itself.
@@ -85,4 +85,4 @@ export const EVENT_ROW_COPY = {
     savedDeltaUp: (amount: string) => `Up ${amount} since you started watching`,
     savedDeltaFlat: 'Unchanged since you started watching',
   },
-} as const
+} as const;

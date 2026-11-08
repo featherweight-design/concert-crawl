@@ -1,17 +1,17 @@
-import type { AdminDailyCosts, AdminTopSpend } from '@concert-crawl/types'
+import type { AdminDailyCosts, AdminTopSpend } from '@concert-crawl/types';
 import {
   Panel,
   StatusBadge,
   MonoLabel,
   CostText,
   ProgressBar,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { CostChart } from './CostChart'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { CostChart } from './CostChart';
 import {
   computeWowTrend,
   buildCostAxisLabels,
-} from '@/components/admin/dashboard/lib/dashboard'
+} from '@/components/admin/dashboard/lib/dashboard';
 
 // Admin dashboard "LLM spend" panel (#112 chart + #114 top spend by venue).
 // Visual structure ports design/design_handoff_admin_ui/admin-dashboard.jsx
@@ -21,21 +21,21 @@ import {
 // Total + captions use the JetBrains Mono stack — the same monospace styling
 // CostText/MonoLabel use, inline like the other dashboard components.
 
-const ADMIN_FONT = 'var(--admin-font, Inter, sans-serif)'
-const ADMIN_MONO_FONT = "'JetBrains Mono', monospace"
+const ADMIN_FONT = 'var(--admin-font, Inter, sans-serif)';
+const ADMIN_MONO_FONT = "'JetBrains Mono', monospace";
 
 interface CostPanelProps {
-  daily: AdminDailyCosts
-  topSpend: AdminTopSpend
-  budgetUsd: number
+  daily: AdminDailyCosts;
+  topSpend: AdminTopSpend;
+  budgetUsd: number;
 }
 
 export const CostPanel = ({ daily, topSpend, budgetUsd }: CostPanelProps) => {
-  const copy = ADMIN_COPY.dashboard.costPanel
-  const trend = computeWowTrend(daily.days)
-  const axisLabels = buildCostAxisLabels(daily.days)
-  const totalLabel = `$${daily.totalUsd.toFixed(2)}`
-  const isEmpty = daily.totalUsd === 0
+  const copy = ADMIN_COPY.dashboard.costPanel;
+  const trend = computeWowTrend(daily.days);
+  const axisLabels = buildCostAxisLabels(daily.days);
+  const totalLabel = `$${daily.totalUsd.toFixed(2)}`;
+  const isEmpty = daily.totalUsd === 0;
 
   return (
     <Panel
@@ -197,5 +197,5 @@ export const CostPanel = ({ daily, topSpend, budgetUsd }: CostPanelProps) => {
         </div>
       )}
     </Panel>
-  )
-}
+  );
+};

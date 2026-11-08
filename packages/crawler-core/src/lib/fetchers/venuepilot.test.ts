@@ -1,25 +1,25 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import path from 'path'
-import { CrawlFetchError } from '../fetcher.js'
-import * as robots from '../robots.js'
-import { PlatformFetchDeadlineError } from './deadline.js'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { CrawlFetchError } from '../fetcher.js';
+import * as robots from '../robots.js';
+import { PlatformFetchDeadlineError } from './deadline.js';
 import {
   venuePilotFetcher,
   VenuePilotFetchError,
   VenuePilotSchemaError,
-} from './venuepilot.js'
-import type { Venue } from '@concert-crawl/db'
+} from './venuepilot.js';
+import type { Venue } from '@concert-crawl/db';
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '__fixtures__',
-)
+);
 function loadFixture(name: string): string {
-  return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8')
+  return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
 }
-const LEVITT_FIXTURE = loadFixture('venuepilot-levitt.json')
+const LEVITT_FIXTURE = loadFixture('venuepilot-levitt.json');
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -64,7 +64,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  } satisfies Venue
+  } satisfies Venue;
 }
 
 // Build a single-page GraphQL response body from an array of events.
@@ -85,56 +85,56 @@ function graphqlBody(
         },
       },
     },
-  })
+  });
 }
 
 describe('venuePilotFetcher.canHandle', () => {
   it('returns true for a venuepilot venue with an account id', () => {
-    expect(venuePilotFetcher.canHandle(makeVenue())).toBe(true)
-  })
+    expect(venuePilotFetcher.canHandle(makeVenue())).toBe(true);
+  });
 
   it('returns false when apiProvider is not venuepilot', () => {
     expect(venuePilotFetcher.canHandle(makeVenue({ apiProvider: null }))).toBe(
       false,
-    )
-  })
+    );
+  });
 
   it('returns false when apiAccountId is missing', () => {
     expect(venuePilotFetcher.canHandle(makeVenue({ apiAccountId: null }))).toBe(
       false,
-    )
-  })
+    );
+  });
 
   it('returns false when apiAccountId is empty', () => {
     expect(venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '' }))).toBe(
       false,
-    )
-  })
+    );
+  });
 
   it('returns false when apiAccountId is whitespace-only', () => {
     expect(
       venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '   ' })),
-    ).toBe(false)
-  })
-})
+    ).toBe(false);
+  });
+});
 
 describe('venuePilotFetcher.fetch', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>
-  let isAllowedSpy: ReturnType<typeof vi.spyOn>
-  let crawlDelaySpy: ReturnType<typeof vi.spyOn>
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  let isAllowedSpy: ReturnType<typeof vi.spyOn>;
+  let crawlDelaySpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
     // Stub the robots gate so the rest of the suite keeps asserting on the
     // API requests alone. isAllowedOrSkip() would otherwise issue its own fetch.
-    isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true)
-    crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null)
-  })
+    isAllowedSpy = vi.spyOn(robots, 'isAllowedOrSkip').mockResolvedValue(true);
+    crawlDelaySpy = vi.spyOn(robots, 'getCrawlDelayMs').mockResolvedValue(null);
+  });
   afterEach(() => {
-    fetchSpy.mockRestore()
-    isAllowedSpy.mockRestore()
-    crawlDelaySpy.mockRestore()
-  })
+    fetchSpy.mockRestore();
+    isAllowedSpy.mockRestore();
+    crawlDelaySpy.mockRestore();
+  });
 
   function mockFetchOk(body: string): void {
     fetchSpy.mockResolvedValue(
@@ -142,44 +142,44 @@ describe('venuePilotFetcher.fetch', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    )
+    );
   }
 
   it('POSTs the GraphQL endpoint with accountIds + honest UA', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
+    });
 
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    const [calledUrl, init] = fetchSpy.mock.calls[0]!
-    expect(String(calledUrl)).toBe('https://www.venuepilot.co/graphql')
-    expect(init?.method).toBe('POST')
-    const headers = new Headers(init?.headers)
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [calledUrl, init] = fetchSpy.mock.calls[0]!;
+    expect(String(calledUrl)).toBe('https://www.venuepilot.co/graphql');
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
     expect(headers.get('User-Agent')).toBe(
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-    const body = JSON.parse(String(init?.body))
-    expect(body.variables.args.accountIds).toEqual([1105])
-    expect(result.sourceUrl).toBe('https://www.venuepilot.co/graphql')
-  })
+    );
+    const body = JSON.parse(String(init?.body));
+    expect(body.variables.args.accountIds).toEqual([1105]);
+    expect(result.sourceUrl).toBe('https://www.venuepilot.co/graphql');
+  });
 
   it('normalizes the Levitt fixture into NormalizedEvent rows', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
+    });
 
-    expect(result.events.length).toBeGreaterThan(0)
-    const first = result.events[0]!
-    expect(first.title).toBeTruthy()
-    expect(first.rawTitle).toBe(first.title)
-    expect(first.artist).toBeTruthy()
-    expect(first.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(first.showTime).toMatch(/^\d{2}:\d{2}:\d{2}$/)
-    expect(first.confidence).toBe(1.0)
-    expect(first.sourceUrl).toBe('https://levittdenver.org/')
-  })
+    expect(result.events.length).toBeGreaterThan(0);
+    const first = result.events[0]!;
+    expect(first.title).toBeTruthy();
+    expect(first.rawTitle).toBe(first.title);
+    expect(first.artist).toBeTruthy();
+    expect(first.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(first.showTime).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+    expect(first.confidence).toBe(1.0);
+    expect(first.sourceUrl).toBe('https://levittdenver.org/');
+  });
 
   it('trims trailing whitespace on the title', async () => {
     mockFetchOk(
@@ -197,12 +197,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.title).toBe('Trailing Space Show')
-  })
+    });
+    expect(result.events[0]!.title).toBe('Trailing Space Show');
+  });
 
   it('omits ticketUrl when ticketsUrl is whitespace-only', async () => {
     mockFetchOk(
@@ -220,12 +220,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.ticketUrl).toBeUndefined()
-  })
+    });
+    expect(result.events[0]!.ticketUrl).toBeUndefined();
+  });
 
   it('trims surrounding whitespace on a real ticketsUrl', async () => {
     mockFetchOk(
@@ -243,12 +243,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.ticketUrl).toBe('https://tickets.example/show')
-  })
+    });
+    expect(result.events[0]!.ticketUrl).toBe('https://tickets.example/show');
+  });
 
   it('falls back to the title for artist when announceArtists is empty', async () => {
     mockFetchOk(
@@ -266,12 +266,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.artist).toBe('No Artist Listed')
-  })
+    });
+    expect(result.events[0]!.artist).toBe('No Artist Listed');
+  });
 
   it('omits imageUrl when there are no images', async () => {
     mockFetchOk(
@@ -289,12 +289,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.imageUrl).toBeUndefined()
-  })
+    });
+    expect(result.events[0]!.imageUrl).toBeUndefined();
+  });
 
   it('picks the cover variant of the highlighted image', async () => {
     mockFetchOk(
@@ -324,12 +324,12 @@ describe('venuePilotFetcher.fetch', () => {
           ],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.imageUrl).toBe('https://x/cover-b.png')
-  })
+    });
+    expect(result.events[0]!.imageUrl).toBe('https://x/cover-b.png');
+  });
 
   it('skips an event with a whitespace-only name', async () => {
     mockFetchOk(
@@ -347,12 +347,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events.length).toBe(0)
-  })
+    });
+    expect(result.events.length).toBe(0);
+  });
 
   it('strips HTML — including VenuePilot <iframe-embed> — from the description', async () => {
     mockFetchOk(
@@ -374,14 +374,14 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.description).toBe('Hello world')
-    expect(result.events[0]!.description).not.toContain('<')
-    expect(result.events[0]!.description).not.toContain('iframe-embed')
-  })
+    });
+    expect(result.events[0]!.description).toBe('Hello world');
+    expect(result.events[0]!.description).not.toContain('<');
+    expect(result.events[0]!.description).not.toContain('iframe-embed');
+  });
 
   it('skips an event with a malformed date', async () => {
     mockFetchOk(
@@ -399,23 +399,23 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events.length).toBe(0)
-  })
+    });
+    expect(result.events.length).toBe(0);
+  });
 
   it('falls back to UTC (no throw) when the venue timezone is invalid', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(
       makeVenue({ timezone: 'Not/AZone' }),
       { crawlDelayMs: 0 },
-    )
-    expect(result.events.length).toBeGreaterThan(0)
-    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))
-    expect(body.variables.args.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-  })
+    );
+    expect(result.events.length).toBeGreaterThan(0);
+    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+    expect(body.variables.args.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 
   it('passes an abort signal only when perRequestTimeoutMs is set', async () => {
     fetchSpy.mockImplementation(
@@ -424,39 +424,39 @@ describe('venuePilotFetcher.fetch', () => {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
-    )
-    const venue = makeVenue()
+    );
+    const venue = makeVenue();
 
     await venuePilotFetcher.fetch(venue, {
       crawlDelayMs: 0,
       perRequestTimeoutMs: 15_000,
-    })
-    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+    });
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
 
-    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0 })
-    expect(fetchSpy.mock.calls[1]?.[1]?.signal).toBeUndefined()
-  })
+    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0 });
+    expect(fetchSpy.mock.calls[1]?.[1]?.signal).toBeUndefined();
+  });
 
   it('throws VenuePilotFetchError on a non-200 response', async () => {
-    fetchSpy.mockResolvedValue(new Response('nope', { status: 502 }))
+    fetchSpy.mockResolvedValue(new Response('nope', { status: 502 }));
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+  });
 
   it.each([403, 429])(
     'throws a CrawlFetchError on HTTP %s so crawl.ts classifies it as a block',
     async (status) => {
-      fetchSpy.mockResolvedValue(new Response('blocked', { status }))
+      fetchSpy.mockResolvedValue(new Response('blocked', { status }));
       const error = await venuePilotFetcher
         .fetch(makeVenue(), { crawlDelayMs: 0 })
-        .catch((err: unknown) => err)
-      expect(error).toBeInstanceOf(CrawlFetchError)
+        .catch((err: unknown) => err);
+      expect(error).toBeInstanceOf(CrawlFetchError);
       if (error instanceof CrawlFetchError) {
-        expect(error.httpStatus).toBe(status)
+        expect(error.httpStatus).toBe(status);
       }
     },
-  )
+  );
 
   it('throws VenuePilotFetchError when the body carries GraphQL errors on 200', async () => {
     fetchSpy.mockResolvedValue(
@@ -464,87 +464,87 @@ describe('venuePilotFetcher.fetch', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    )
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+  });
 
   it('throws VenuePilotSchemaError when the response shape is wrong', async () => {
     mockFetchOk(
       JSON.stringify({
         data: { paginatedEvents: { collection: 'not-an-array' } },
       }),
-    )
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotSchemaError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotSchemaError);
+  });
 
   it('throws VenuePilotFetchError for a whitespace-only apiAccountId without fetching', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     await expect(
       venuePilotFetcher.fetch(makeVenue({ apiAccountId: '   ' }), {
         crawlDelayMs: 0,
       }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it('throws VenuePilotFetchError for a non-positive apiAccountId', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     await expect(
       venuePilotFetcher.fetch(makeVenue({ apiAccountId: '0' }), {
         crawlDelayMs: 0,
       }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it.each(['1e2', '0x10', '11.0', '+11', '011'])(
     'rejects a non-decimal apiAccountId (%s) without fetching',
     async (badId) => {
-      mockFetchOk(LEVITT_FIXTURE)
+      mockFetchOk(LEVITT_FIXTURE);
       await expect(
         venuePilotFetcher.fetch(makeVenue({ apiAccountId: badId }), {
           crawlDelayMs: 0,
         }),
-      ).rejects.toBeInstanceOf(VenuePilotFetchError)
-      expect(fetchSpy).not.toHaveBeenCalled()
+      ).rejects.toBeInstanceOf(VenuePilotFetchError);
+      expect(fetchSpy).not.toHaveBeenCalled();
     },
-  )
+  );
 
   // The GraphQL endpoint clears the same robots.txt gate as every page we
   // fetch: it is a path on VenuePilot's host, and robots.txt covers the host.
   it('checks robots.txt for the API endpoint before calling it', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
-    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    mockFetchOk(LEVITT_FIXTURE);
+    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 });
     expect(isAllowedSpy).toHaveBeenCalledWith(
       'https://www.venuepilot.co/graphql',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-  })
+    );
+  });
 
   it('refuses to call the API when robots.txt disallows it', async () => {
-    isAllowedSpy.mockResolvedValueOnce(false)
+    isAllowedSpy.mockResolvedValueOnce(false);
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toThrow('robots.txt disallows https://www.venuepilot.co/graphql')
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toThrow('robots.txt disallows https://www.venuepilot.co/graphql');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it('skips the run when the endpoint asks for a Crawl-delay above the cap', async () => {
-    crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000)
+    crawlDelaySpy.mockResolvedValueOnce(robots.CRAWL_DELAY_CAP_MS + 1000);
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(robots.CrawlSkipError)
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toBeInstanceOf(robots.CrawlSkipError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it("widens the run budget for the endpoint's longer Crawl-delay", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers();
     try {
-      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      crawlDelaySpy.mockResolvedValueOnce(10_000);
       fetchSpy
         .mockResolvedValueOnce(
           new Response(graphqlBody([], { totalPages: 2, currentPage: 1 }), {
@@ -557,79 +557,79 @@ describe('venuePilotFetcher.fetch', () => {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           }),
-        )
+        );
       // A 5s budget sized for a 0ms venue delay would expire during the 10s
       // wait the endpoint asks for between pages.
       const run = venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 5_000,
         budgetFollowsCrawlDelay: true,
-      })
-      await vi.runAllTimersAsync()
-      await expect(run).resolves.toBeDefined()
-      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      });
+      await vi.runAllTimersAsync();
+      await expect(run).resolves.toBeDefined();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
     } finally {
-      vi.useRealTimers()
+      vi.useRealTimers();
     }
-  })
+  });
 
   it("keeps a fixed budget fixed when the endpoint's Crawl-delay is longer", async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers();
     try {
-      crawlDelaySpy.mockResolvedValueOnce(10_000)
+      crawlDelaySpy.mockResolvedValueOnce(10_000);
       fetchSpy.mockResolvedValueOnce(
         new Response(graphqlBody([], { totalPages: 2, currentPage: 1 }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
-      )
+      );
       // The admin probe's ceiling: the 10s wait before the first page can't
       // fit, so the run breaches instead of requesting early or running long.
       const run = venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 5_000,
-      })
+      });
       const settled = expect(run).rejects.toBeInstanceOf(
         PlatformFetchDeadlineError,
-      )
-      await vi.runAllTimersAsync()
-      await settled
-      expect(fetchSpy).not.toHaveBeenCalled()
+      );
+      await vi.runAllTimersAsync();
+      await settled;
+      expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
-      vi.useRealTimers()
+      vi.useRealTimers();
     }
-  })
+  });
 
   it('counts a slow robots.txt lookup against the overall budget', async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers();
     try {
       isAllowedSpy.mockImplementationOnce(
         () => new Promise((resolve) => setTimeout(() => resolve(true), 4_000)),
-      )
-      mockFetchOk(LEVITT_FIXTURE)
+      );
+      mockFetchOk(LEVITT_FIXTURE);
       const run = venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 3_000,
-      })
+      });
       const settled = expect(run).rejects.toBeInstanceOf(
         PlatformFetchDeadlineError,
-      )
-      await vi.runAllTimersAsync()
-      await settled
-      expect(fetchSpy).not.toHaveBeenCalled()
+      );
+      await vi.runAllTimersAsync();
+      await settled;
+      expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
-      vi.useRealTimers()
+      vi.useRealTimers();
     }
-  })
+  });
 
   it("reads the Crawl-delay from the endpoint's own robots.txt", async () => {
-    mockFetchOk(LEVITT_FIXTURE)
-    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    mockFetchOk(LEVITT_FIXTURE);
+    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 });
     expect(crawlDelaySpy).toHaveBeenCalledWith(
       'https://www.venuepilot.co/graphql',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-  })
+    );
+  });
 
   it('does not follow a redirect from the API endpoint', async () => {
     fetchSpy.mockResolvedValueOnce(
@@ -637,13 +637,13 @@ describe('venuePilotFetcher.fetch', () => {
         status: 307,
         headers: { location: 'https://elsewhere.example/graphql' },
       }),
-    )
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toThrow('HTTP 307')
-    expect(fetchSpy).toHaveBeenCalledTimes(1)
-    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' })
-  })
+    ).rejects.toThrow('HTTP 307');
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[1]).toMatchObject({ redirect: 'manual' });
+  });
 
   it('loops pages up to metadata.totalPages and concatenates', async () => {
     const pageEvent = (id: number) => ({
@@ -657,7 +657,7 @@ describe('venuePilotFetcher.fetch', () => {
       status: 'BUY TICKETS',
       announceArtists: [{ name: `A${id}` }],
       announceImages: [],
-    })
+    });
     fetchSpy
       .mockResolvedValueOnce(
         new Response(
@@ -676,14 +676,14 @@ describe('venuePilotFetcher.fetch', () => {
             headers: { 'Content-Type': 'application/json' },
           },
         ),
-      )
+      );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(fetchSpy).toHaveBeenCalledTimes(2)
-    expect(result.events.length).toBe(2)
-    expect(result.meta?.pagesFetched).toBe(2)
-  })
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(result.events.length).toBe(2);
+    expect(result.meta?.pagesFetched).toBe(2);
+  });
 
   it('caps pagination at MAX_PAGES against a runaway totalPages', async () => {
     fetchSpy.mockImplementation(
@@ -708,21 +708,21 @@ describe('venuePilotFetcher.fetch', () => {
           ),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(50)
+    });
+    expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(50);
     // Truncation must be visible in meta so operators can alert on partial fetches.
-    expect(result.meta?.truncated).toBe(true)
-    expect(result.meta?.totalPages).toBe(9999)
-  })
+    expect(result.meta?.truncated).toBe(true);
+    expect(result.meta?.totalPages).toBe(9999);
+  });
 
   it('throws instead of returning a partial set when the overall budget runs out', async () => {
     // A slow page against a 50-page ceiling is the #1184 case: a per-request
     // timeout alone lets worst-case wall time reach MAX_PAGES × the budget.
     fetchSpy.mockImplementation(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 30))
+      await new Promise((resolve) => setTimeout(resolve, 30));
       return new Response(
         graphqlBody(
           [
@@ -742,18 +742,18 @@ describe('venuePilotFetcher.fetch', () => {
           { totalPages: 40 },
         ),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
-    })
+      );
+    });
 
     await expect(
       venuePilotFetcher.fetch(makeVenue(), {
         crawlDelayMs: 0,
         overallTimeoutMs: 90,
       }),
-    ).rejects.toThrow(PlatformFetchDeadlineError)
+    ).rejects.toThrow(PlatformFetchDeadlineError);
 
     // Loud failure, not a truncated success: crawl.ts's stale-event pass
     // would read the pages we never reached as shows that had come down.
-    expect(fetchSpy.mock.calls.length).toBeLessThan(40)
-  })
-})
+    expect(fetchSpy.mock.calls.length).toBeLessThan(40);
+  });
+});

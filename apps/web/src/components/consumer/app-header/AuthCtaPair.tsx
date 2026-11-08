@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.appHeader.auth
+const copy = CONSUMER_COPY.appHeader.auth;
 
 /**
  * Quiet Sign in link + filled Sign up pill, for the desktop header row. The
@@ -13,8 +13,8 @@ const copy = CONSUMER_COPY.appHeader.auth
  * read, so first paint never flashes the wrong arrangement.
  */
 export function AuthCtaPair() {
-  const { isSignedIn } = useAuth()
-  if (isSignedIn) return null
+  const { isSignedIn } = useAuth();
+  if (isSignedIn) return null;
 
   return (
     <div className="flex shrink-0 items-center gap-2">
@@ -31,5 +31,5 @@ export function AuthCtaPair() {
         {copy.signUp}
       </Link>
     </div>
-  )
+  );
 }

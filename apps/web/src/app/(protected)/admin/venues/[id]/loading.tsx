@@ -127,5 +127,5 @@ export default function VenueDetailLoading() {
         ))}
       </div>
     </div>
-  )
+  );
 }

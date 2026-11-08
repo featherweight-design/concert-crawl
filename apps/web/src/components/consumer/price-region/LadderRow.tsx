@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Shared LadderRow primitive used by `FaceValueCard` (two rows: resale + ghost
 // box-office) and `ContributeFaceValueCard` (single ghost box-office row).
@@ -11,18 +11,18 @@
 // `consumer/glyphs.tsx`. The two stars coexist intentionally; see the comment
 // on `TierMark` in glyphs.tsx for the rationale.
 
-export const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)'
-export const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)'
+export const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)';
+export const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)';
 
 const TIER_MARK_STAR_PATH =
-  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z'
+  'M6 0.8l1.5 3.1 3.4.5-2.5 2.4.6 3.4L6 8.9 2.9 10.6l.6-3.4L1 4.4l3.4-.5z';
 
 export interface LadderRowProps {
-  kind: 'resale' | 'boxoffice'
-  label: string
-  sub: string
-  right: string
-  ghost: boolean
+  kind: 'resale' | 'boxoffice';
+  label: string;
+  sub: string;
+  right: string;
+  ghost: boolean;
 }
 
 export const LadderRow = ({
@@ -32,7 +32,7 @@ export const LadderRow = ({
   right,
   ghost,
 }: LadderRowProps) => {
-  const color = kind === 'boxoffice' ? TIER_COLOR_BOXOFFICE : TIER_COLOR_RESALE
+  const color = kind === 'boxoffice' ? TIER_COLOR_BOXOFFICE : TIER_COLOR_RESALE;
   return (
     <div
       style={{
@@ -136,5 +136,5 @@ export const LadderRow = ({
         {right}
       </div>
     </div>
-  )
-}
+  );
+};

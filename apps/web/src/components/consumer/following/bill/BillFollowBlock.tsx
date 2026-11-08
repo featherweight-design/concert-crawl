@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The bill follow block on event detail (native following, PR 7).
 //
@@ -30,44 +30,44 @@
 // therefore structural: there is no breakpoint at which one viewport gets a
 // block the other does not.
 
-import React, { useId, useState } from 'react'
-import Link from 'next/link'
-import type { PickerEntry } from '@concert-crawl/types'
+import React, { useId, useState } from 'react';
+import Link from 'next/link';
+import type { PickerEntry } from '@concert-crawl/types';
 
-import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
+import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
 import {
   NF_FOLLOW_SIZES,
   NF_TAP_MIN,
-} from '@/components/consumer/artist-page/definitions/constants'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
+} from '@/components/consumer/artist-page/definitions/constants';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
 
-import { BILL_FOLLOW_COPY } from './definitions/copy'
-import type { BillArtist } from './lib/bill-artists'
-import { useBillFollows } from './lib/use-bill-follows'
+import { BILL_FOLLOW_COPY } from './definitions/copy';
+import type { BillArtist } from './lib/bill-artists';
+import { useBillFollows } from './lib/use-bill-follows';
 
-const COPY = BILL_FOLLOW_COPY
+const COPY = BILL_FOLLOW_COPY;
 
 // The bulk action sits in the header at the same density as the row buttons it
 // is a shortcut for. It used to draw `primary` full-width below the list, which
 // made a convenience read as the section's primary action.
-const BULK = NF_FOLLOW_SIZES.row
+const BULK = NF_FOLLOW_SIZES.row;
 
 /** How far the invisible target grows past the pill, on every side. */
-const BULK_GROW = (NF_TAP_MIN - BULK.height) / 2
+const BULK_GROW = (NF_TAP_MIN - BULK.height) / 2;
 
 // The row's artist name draws identically whether or not it links, so the two
 // branches share these rather than restating them and drifting apart.
-const NAME_CLASS = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'
+const NAME_CLASS = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap';
 const NAME_STYLE: React.CSSProperties = {
   fontSize: 14,
   fontWeight: 700,
   letterSpacing: '-0.01em',
   color: 'var(--fg)',
-}
+};
 
 const LockGlyph = () => (
   <svg
@@ -83,15 +83,15 @@ const LockGlyph = () => (
     <rect x="1.2" y="6" width="9.6" height="7" rx="2" strokeWidth={1.5} />
     <path d="M3.6 6V4.2a2.4 2.4 0 014.8 0V6" strokeWidth={1.5} />
   </svg>
-)
+);
 
 export interface BillFollowBlockProps {
   /** Headliner first, then support. Slug-less names are dropped upstream. */
-  artists: BillArtist[]
+  artists: BillArtist[];
   /** The public mirror at /e/:id. Rows recruit; the bulk action is withheld. */
-  signedOut?: boolean
+  signedOut?: boolean;
   /** Server-resolved, forwarded to the picker's checkout legal block. */
-  scaRegion: boolean
+  scaRegion: boolean;
 }
 
 export const BillFollowBlock = ({
@@ -99,34 +99,34 @@ export const BillFollowBlock = ({
   signedOut = false,
   scaRegion,
 }: BillFollowBlockProps) => {
-  const { surface } = useEntitlement('following')
-  const { data: planState } = usePlanState()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const { surface } = useEntitlement('following');
+  const { data: planState } = usePlanState();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // useId, not a module counter: two blocks could share a page, and a
   // colliding id aims every gate sentence at one node.
-  const uid = useId().replace(/:/g, '')
-  const titleId = `nf-bill-title-${uid}`
-  const gateId = `nf-bill-gate-${uid}`
+  const uid = useId().replace(/:/g, '');
+  const titleId = `nf-bill-title-${uid}`;
+  const gateId = `nf-bill-gate-${uid}`;
 
-  const onEntitlementRequired = () => setPickerOpen(true)
-  const follows = useBillFollows(artists, onEntitlementRequired)
+  const onEntitlementRequired = () => setPickerOpen(true);
+  const follows = useBillFollows(artists, onEntitlementRequired);
 
   // Signed out draws the at-rest skin and routes to sign-up, per #794 §3.10 —
   // there is no plan to lock a visitor out of. Fails OPEN while the plan is
   // still resolving: showing a paying subscriber an upgrade-shaped block is
   // the worse of the two wrong answers, and the server enforces regardless.
-  const locked = !signedOut && surface !== null && surface !== 'visible-active'
+  const locked = !signedOut && surface !== null && surface !== 'visible-active';
 
   const pickerEntry: PickerEntry =
-    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall';
 
   // Hooks above this line run unconditionally.
-  if (artists.length === 0) return null
+  if (artists.length === 0) return null;
 
   const unfollowed = artists.filter(
     (artist) => !follows.following.has(artist.slug),
-  )
+  );
 
   // ED-03: the bulk action disappears once there is nothing left to commit.
   // Withheld entirely while signed out — every row already routes to sign-up,
@@ -146,21 +146,21 @@ export const BillFollowBlock = ({
     ? false
     : locked
       ? artists.length > 0
-      : unfollowed.length > 1
-  const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length)
+      : unfollowed.length > 1;
+  const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length);
 
   const onBulkClick = () => {
     // Honour `aria-disabled` here rather than only in the hook. The hook's ref
     // guard already makes a second tap a no-op, but a control that announces
     // itself as disabled and still runs its handler is the inconsistency the
     // attribute exists to prevent.
-    if (follows.committing) return
+    if (follows.committing) return;
     if (locked) {
-      setPickerOpen(true)
-      return
+      setPickerOpen(true);
+      return;
     }
-    follows.followAll()
-  }
+    follows.followAll();
+  };
 
   // Quiet `row`, in the header beside the title. It is a shortcut for the rows
   // below it, not the section's own CTA, and the filled pill it used to draw
@@ -222,7 +222,7 @@ export const BillFollowBlock = ({
       {locked && <LockGlyph />}
       {bulkLabel}
     </button>
-  )
+  );
 
   return (
     <section
@@ -390,5 +390,5 @@ export const BillFollowBlock = ({
         entry={pickerEntry}
       />
     </section>
-  )
-}
+  );
+};

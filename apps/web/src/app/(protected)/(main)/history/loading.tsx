@@ -62,7 +62,7 @@ function HistoryRowSkeleton({ delay }: { delay: number }) {
         }}
       />
     </div>
-  )
+  );
 }
 
 function StatTileSkeleton({ delay }: { delay: number }) {
@@ -87,7 +87,7 @@ function StatTileSkeleton({ delay }: { delay: number }) {
         }}
       />
     </div>
-  )
+  );
 }
 
 export default function HistoryLoading() {
@@ -163,5 +163,5 @@ export default function HistoryLoading() {
         </div>
       </main>
     </>
-  )
+  );
 }

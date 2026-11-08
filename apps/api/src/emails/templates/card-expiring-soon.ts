@@ -15,53 +15,53 @@ import {
   row,
   statusEyebrow,
   tierBadge,
-} from '../atoms.js'
+} from '../atoms.js';
 import {
   EMAIL_MONO,
   ME,
   planUrl,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import { TIER_ACCENT, TIER_META } from '../palette.js'
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
+} from '../layout.js';
+import { TIER_ACCENT, TIER_META } from '../palette.js';
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
 
-const SUBJECT = "Heads up. Your card's about to expire."
-const PREHEADER = 'Update it before your next renewal. Takes about 30 seconds.'
-const FOOTER_NOTE = "Already updated it? You're set. Ignore this one."
+const SUBJECT = "Heads up. Your card's about to expire.";
+const PREHEADER = 'Update it before your next renewal. Takes about 30 seconds.';
+const FOOTER_NOTE = "Already updated it? You're set. Ignore this one.";
 
-const CONTENT_PAD = '18px 26px 0'
+const CONTENT_PAD = '18px 26px 0';
 
 // "in 1 day" reads better than "in 1 days" — flex the noun on the count.
 const daysPhrase = (days: number): string =>
-  days === 1 ? 'in 1 day' : `in ${days} days`
+  days === 1 ? 'in 1 day' : `in ${days} days`;
 
-type CardMeta = NonNullable<EmailTemplateVars['card_expiring_soon']['card']>
+type CardMeta = NonNullable<EmailTemplateVars['card_expiring_soon']['card']>;
 
 // "visa" → "Visa"; leaves multi-word brands ("american express") title-cased.
 const formatBrand = (brand: string): string =>
-  brand.replace(/\b\w/g, (chr) => chr.toUpperCase())
+  brand.replace(/\b\w/g, (chr) => chr.toUpperCase());
 
 // Stripe gives a 4-digit year + 1-based month; render "exp MM/YY".
 const formatExp = (card: CardMeta): string =>
-  `exp ${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`
+  `exp ${String(card.expMonth).padStart(2, '0')}/${String(card.expYear).slice(-2)}`;
 
 export const renderCardExpiringSoon: TemplateRenderer<
   EmailTemplateVars['card_expiring_soon']
 > = ({ tierName, daysRemaining, tier, card }) => {
-  const accent = tier === undefined ? ME.signal : TIER_ACCENT[tier]
+  const accent = tier === undefined ? ME.signal : TIER_ACCENT[tier];
   const planPhrase =
-    tierName ?? (tier === undefined ? 'your plan' : TIER_META[tier].label)
+    tierName ?? (tier === undefined ? 'your plan' : TIER_META[tier].label);
 
-  const title = `Your card expires ${daysPhrase(daysRemaining)}.`
-  const sub = `The card on file runs out before your next ${planPhrase} renewal. Drop in a fresh one and nothing skips a beat.`
+  const title = `Your card expires ${daysPhrase(daysRemaining)}.`;
+  const sub = `The card on file runs out before your next ${planPhrase} renewal. Drop in a fresh one and nothing skips a beat.`;
 
-  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Nothing's wrong yet · this is just a nudge</div>`
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Nothing's wrong yet · this is just a nudge</div>`;
 
   const cardLabel =
     card === null || card === undefined
       ? null
-      : `${formatBrand(card.brand)} ·· ${card.last4}`
+      : `${formatBrand(card.brand)} ·· ${card.last4}`;
 
   const bodyRows = [
     headerRow('Billing'),
@@ -80,7 +80,7 @@ export const renderCardExpiringSoon: TemplateRenderer<
     ),
     row('10px 26px 4px', microcopy),
     footerRow({ family: 'billing', showManage: true, note: FOOTER_NOTE }),
-  ].join('\n')
+  ].join('\n');
 
   const text = [
     title,
@@ -93,7 +93,7 @@ export const renderCardExpiringSoon: TemplateRenderer<
     "Nothing's wrong yet · this is just a nudge",
     '',
     `Update your card: ${planUrl()}`,
-  ].join('\n')
+  ].join('\n');
 
   return {
     subject: SUBJECT,
@@ -105,5 +105,5 @@ export const renderCardExpiringSoon: TemplateRenderer<
       showManage: true,
       note: FOOTER_NOTE,
     }),
-  }
-}
+  };
+};

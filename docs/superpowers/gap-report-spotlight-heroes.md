@@ -3,6 +3,7 @@
 ## IMPLEMENTED (107)
 
 All 15 full heroes and 15 compact heroes implemented with correct:
+
 - Stage dimensions (full 580×300, compact 200×132)
 - Background radial-gradient (#1A1228 → #0A0613, theme-independent)
 - Dispatcher routing — all 15 keys in FULL_HEROES and SPOTLIGHT_COMPACT_HEROES

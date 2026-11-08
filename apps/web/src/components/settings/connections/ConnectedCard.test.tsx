@@ -1,24 +1,24 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SpotifyConnectionView } from '@concert-crawl/types'
-import { ApiError } from '@/lib/api'
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { SpotifyConnectionView } from '@concert-crawl/types';
+import { ApiError } from '@/lib/api';
 
 interface MutationStub {
-  mutate: ReturnType<typeof vi.fn>
-  isPending: boolean
-  error: unknown
+  mutate: ReturnType<typeof vi.fn>;
+  isPending: boolean;
+  error: unknown;
 }
 
 const makeMutation = (): MutationStub => ({
   mutate: vi.fn(),
   isPending: false,
   error: null,
-})
+});
 
-let syncMutation: MutationStub
-let disconnectMutation: MutationStub
+let syncMutation: MutationStub;
+let disconnectMutation: MutationStub;
 
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   spotifyConnectionQueryKeyBase: ['spotify-connection'],
@@ -28,12 +28,12 @@ vi.mock('@/lib/queries/use-spotify-connection', () => ({
   ],
   useSpotifySync: () => syncMutation,
   useSpotifyDisconnect: () => disconnectMutation,
-}))
+}));
 
 beforeEach(() => {
-  vi.clearAllMocks()
-  syncMutation = makeMutation()
-  disconnectMutation = makeMutation()
+  vi.clearAllMocks();
+  syncMutation = makeMutation();
+  disconnectMutation = makeMutation();
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -46,14 +46,14 @@ beforeEach(() => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     })),
-  })
-})
+  });
+});
 
-import { ConnectedCard } from './ConnectedCard'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { ConnectedCard } from './ConnectedCard';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 
-const CARD_COPY = SPOTIFY_COPY.connectedCard
-const CONFIRM_COPY = SPOTIFY_COPY.disconnectConfirm
+const CARD_COPY = SPOTIFY_COPY.connectedCard;
+const CONFIRM_COPY = SPOTIFY_COPY.disconnectConfirm;
 
 const CONNECTION: SpotifyConnectionView = {
   status: 'connected',
@@ -66,78 +66,78 @@ const CONNECTION: SpotifyConnectionView = {
   denverArtistCount: 9,
   denverShowCount: 12,
   matchedArtists: ['Wednesday', 'Geese'],
-}
+};
 
 const renderCard = (overrides: Partial<SpotifyConnectionView> = {}) =>
-  render(<ConnectedCard connection={{ ...CONNECTION, ...overrides }} />)
+  render(<ConnectedCard connection={{ ...CONNECTION, ...overrides }} />);
 
 describe('ConnectedCard', () => {
   it('renders the linked pill, account line, counts and last-synced time', () => {
-    renderCard()
-    expect(screen.getByText(CARD_COPY.linkedPill)).toBeTruthy()
-    expect(screen.getByText('maya.k · spotify.com')).toBeTruthy()
-    expect(screen.getByText(/9 play Denver/)).toBeTruthy()
-    expect(screen.getByText('2 hours ago')).toBeTruthy()
-    expect(screen.getByText(CARD_COPY.footerIdle)).toBeTruthy()
-  })
+    renderCard();
+    expect(screen.getByText(CARD_COPY.linkedPill)).toBeTruthy();
+    expect(screen.getByText('maya.k · spotify.com')).toBeTruthy();
+    expect(screen.getByText(/9 play Denver/)).toBeTruthy();
+    expect(screen.getByText('2 hours ago')).toBeTruthy();
+    expect(screen.getByText(CARD_COPY.footerIdle)).toBeTruthy();
+  });
 
   it('triggers a sync from the refresh action', () => {
-    renderCard()
-    fireEvent.click(screen.getByRole('button', { name: CARD_COPY.refreshCta }))
-    expect(syncMutation.mutate).toHaveBeenCalledTimes(1)
-  })
+    renderCard();
+    fireEvent.click(screen.getByRole('button', { name: CARD_COPY.refreshCta }));
+    expect(syncMutation.mutate).toHaveBeenCalledTimes(1);
+  });
 
   it('shows the syncing spinner row and refreshing footer while a sync is in flight', () => {
-    syncMutation.isPending = true
-    renderCard()
+    syncMutation.isPending = true;
+    renderCard();
     expect(screen.getAllByText(CARD_COPY.syncingValue).length).toBeGreaterThan(
       0,
-    )
-    expect(screen.getByText(CARD_COPY.footerRefreshing)).toBeTruthy()
-  })
+    );
+    expect(screen.getByText(CARD_COPY.footerRefreshing)).toBeTruthy();
+  });
 
   it('surfaces the rate-limited message on a 429 sync failure', () => {
-    syncMutation.error = new ApiError(429, 'Too many requests')
-    renderCard()
-    expect(screen.getByText(CARD_COPY.rateLimited)).toBeTruthy()
-  })
+    syncMutation.error = new ApiError(429, 'Too many requests');
+    renderCard();
+    expect(screen.getByText(CARD_COPY.rateLimited)).toBeTruthy();
+  });
 
   // Both preferences moved to Settings ▸ Notifications with their columns.
   // A switch reappearing here means a legacy write path came back with it.
   it('renders no preference toggles', () => {
-    renderCard()
-    expect(screen.queryAllByRole('switch')).toHaveLength(0)
-  })
+    renderCard();
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
+  });
 
   it('opens the disconnect confirm sheet and only disconnects on explicit confirm', () => {
-    renderCard()
+    renderCard();
     fireEvent.click(
       screen.getByRole('button', { name: CARD_COPY.disconnectCta }),
-    )
+    );
     expect(
       screen.getByRole('dialog', { name: CONFIRM_COPY.ariaLabel }),
-    ).toBeTruthy()
+    ).toBeTruthy();
     for (const bullet of CONFIRM_COPY.bullets) {
       expect(
         screen.getByText(new RegExp(bullet.head.slice(0, -1))),
-      ).toBeTruthy()
+      ).toBeTruthy();
     }
-    expect(disconnectMutation.mutate).not.toHaveBeenCalled()
+    expect(disconnectMutation.mutate).not.toHaveBeenCalled();
     fireEvent.click(
       screen.getByRole('button', { name: CONFIRM_COPY.confirmCta }),
-    )
-    expect(disconnectMutation.mutate).toHaveBeenCalledTimes(1)
-  })
+    );
+    expect(disconnectMutation.mutate).toHaveBeenCalledTimes(1);
+  });
 
   it('keeps the connection when choosing "Keep it linked"', () => {
-    renderCard()
+    renderCard();
     fireEvent.click(
       screen.getByRole('button', { name: CARD_COPY.disconnectCta }),
-    )
-    fireEvent.click(screen.getByRole('button', { name: CONFIRM_COPY.keepCta }))
-    expect(disconnectMutation.mutate).not.toHaveBeenCalled()
+    );
+    fireEvent.click(screen.getByRole('button', { name: CONFIRM_COPY.keepCta }));
+    expect(disconnectMutation.mutate).not.toHaveBeenCalled();
     expect(
       screen.queryByRole('dialog', { name: CONFIRM_COPY.ariaLabel }),
-    ).toBeNull()
-  })
-})
+    ).toBeNull();
+  });
+});

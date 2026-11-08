@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
   AlertCircle,
@@ -7,65 +7,65 @@ import {
   Play,
   RefreshCw,
   FileEdit,
-} from 'lucide-react'
-import { StatusBadge, AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from 'lucide-react';
+import { StatusBadge, AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface CrawlRunForDiagnostics {
-  id: string
-  status: string
-  httpStatusCode: number | null
-  errorMessage: string | null
-  consecutiveFailures: number
-  strategy: string
-  venueName: string
-  websiteUrl: string
+  id: string;
+  status: string;
+  httpStatusCode: number | null;
+  errorMessage: string | null;
+  consecutiveFailures: number;
+  strategy: string;
+  venueName: string;
+  websiteUrl: string;
 }
 
 export interface StrategyHistoryEntry {
-  at: string
-  strategy: string
-  outcome: 'success' | 'failed' | 'partial'
-  events: number
-  note?: string
+  at: string;
+  strategy: string;
+  outcome: 'success' | 'failed' | 'partial';
+  events: number;
+  note?: string;
 }
 
 type ErrorClass =
-  'bot_detection' | 'rate_limit' | 'parse_failure' | 'timeout' | 'unknown'
+  'bot_detection' | 'rate_limit' | 'parse_failure' | 'timeout' | 'unknown';
 
-const ERROR_REASONS = ADMIN_COPY.crawl.diagnostics.errorReasons
+const ERROR_REASONS = ADMIN_COPY.crawl.diagnostics.errorReasons;
 
 interface DiagOption {
-  id: string
-  iconName: string
-  recommended: boolean
-  title: string
-  body: string
-  cta: string
+  id: string;
+  iconName: string;
+  recommended: boolean;
+  title: string;
+  body: string;
+  cta: string;
 }
 
 const DIAG_OPTIONS: Record<ErrorClass, readonly DiagOption[]> =
-  ADMIN_COPY.crawl.diagnostics.diagOptions
+  ADMIN_COPY.crawl.diagnostics.diagOptions;
 
 function getErrLabel(run: CrawlRunForDiagnostics): string {
   if (run.httpStatusCode === 403)
-    return ADMIN_COPY.crawl.diagnostics.errLabels.http403
+    return ADMIN_COPY.crawl.diagnostics.errLabels.http403;
   if (run.httpStatusCode === 429)
-    return ADMIN_COPY.crawl.diagnostics.errLabels.http429
+    return ADMIN_COPY.crawl.diagnostics.errLabels.http429;
   if (run.errorMessage?.toLowerCase().includes('timeout'))
-    return ADMIN_COPY.crawl.diagnostics.errLabels.timeout
+    return ADMIN_COPY.crawl.diagnostics.errLabels.timeout;
   if (run.errorMessage)
-    return run.errorMessage.split('\n')[0] ?? run.errorMessage
-  return `HTTP ${run.httpStatusCode ?? '—'}`
+    return run.errorMessage.split('\n')[0] ?? run.errorMessage;
+  return `HTTP ${run.httpStatusCode ?? '—'}`;
 }
 
 function classifyError(run: CrawlRunForDiagnostics): ErrorClass {
   if (run.httpStatusCode === 403 || run.httpStatusCode === 429) {
-    return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection'
+    return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection';
   }
-  if (run.errorMessage?.toLowerCase().includes('timeout')) return 'timeout'
-  if (run.errorMessage?.toLowerCase().includes('parse')) return 'parse_failure'
-  return 'unknown'
+  if (run.errorMessage?.toLowerCase().includes('timeout')) return 'timeout';
+  if (run.errorMessage?.toLowerCase().includes('parse')) return 'parse_failure';
+  return 'unknown';
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ size: number }>> = {
@@ -73,19 +73,19 @@ const ICON_MAP: Record<string, React.ComponentType<{ size: number }>> = {
   Play,
   RefreshCw,
   User,
-}
+};
 
 const DiagIcon = ({ name, size }: { name: string; size: number }) => {
-  const Icon = ICON_MAP[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  const Icon = ICON_MAP[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 interface OptionCardProps {
-  opt: DiagOption
-  staged: boolean
-  onStage: (id: string) => void
-  onApply: (id: string) => void
-  onDiscard: () => void
+  opt: DiagOption;
+  staged: boolean;
+  onStage: (id: string) => void;
+  onApply: (id: string) => void;
+  onDiscard: () => void;
 }
 
 const OptionCard = ({
@@ -182,16 +182,16 @@ const OptionCard = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 interface DiagnosticsPanelProps {
-  run: CrawlRunForDiagnostics
-  stagedId: string | null
-  onStage: (id: string) => void
-  onApply: (id: string) => void
-  onDiscard: () => void
-  historyEntries?: StrategyHistoryEntry[]
+  run: CrawlRunForDiagnostics;
+  stagedId: string | null;
+  onStage: (id: string) => void;
+  onApply: (id: string) => void;
+  onDiscard: () => void;
+  historyEntries?: StrategyHistoryEntry[];
 }
 
 export const DiagnosticsPanel = ({
@@ -202,9 +202,9 @@ export const DiagnosticsPanel = ({
   onDiscard,
   historyEntries = [],
 }: DiagnosticsPanelProps) => {
-  const errClass = classifyError(run)
-  const reason = ERROR_REASONS[errClass]
-  const opts = DIAG_OPTIONS[errClass]
+  const errClass = classifyError(run);
+  const reason = ERROR_REASONS[errClass];
+  const opts = DIAG_OPTIONS[errClass];
 
   return (
     <div
@@ -458,7 +458,7 @@ export const DiagnosticsPanel = ({
                   ? 'success'
                   : entry.outcome === 'failed'
                     ? 'danger'
-                    : 'warning'
+                    : 'warning';
               return (
                 <div
                   key={idx}
@@ -509,11 +509,11 @@ export const DiagnosticsPanel = ({
                     {entry.outcome}
                   </StatusBadge>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};

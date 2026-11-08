@@ -51,13 +51,13 @@ In `packages/types/src/index.ts`, inside `export interface Event { ... }`, add t
 
 ```typescript
 export interface Event {
-  id: string
-  venueId: string
-  title: string
-  artist: string
-  supportingArtists: string[] | null
-  tourName: string | null
-  date: string
+  id: string;
+  venueId: string;
+  title: string;
+  artist: string;
+  supportingArtists: string[] | null;
+  tourName: string | null;
+  date: string;
   // ...rest unchanged
 }
 ```
@@ -174,12 +174,12 @@ In `packages/crawler-core/src/types.ts`, add after `artist: string`:
 
 ```typescript
 export interface NormalizedEvent {
-  title: string
-  rawTitle: string
-  artist: string
-  supportingArtists?: string[]
-  tourName?: string | null
-  date: string
+  title: string;
+  rawTitle: string;
+  artist: string;
+  supportingArtists?: string[];
+  tourName?: string | null;
+  date: string;
   // ...rest unchanged
 }
 ```
@@ -193,7 +193,7 @@ Then **append** to the existing `packages/crawler-core/src/lib/extractors/llm.te
 ```typescript
 // appended to llm.test.ts — the vi.mock('@anthropic-ai/sdk', …) at the top of
 // the file is hoisted, so this dynamic import is safe here too.
-const { NormalizedEventSchema } = await import('./llm.js')
+const { NormalizedEventSchema } = await import('./llm.js');
 
 describe('NormalizedEventSchema', () => {
   it('parses supportingArtists and tourName when present', () => {
@@ -205,10 +205,10 @@ describe('NormalizedEventSchema', () => {
       tourName: 'Rat Saw God Tour',
       date: '2026-08-01',
       confidence: 0.9,
-    })
-    expect(parsed.supportingArtists).toEqual(['Hotline TNT', 'MJ Lenderman'])
-    expect(parsed.tourName).toBe('Rat Saw God Tour')
-  })
+    });
+    expect(parsed.supportingArtists).toEqual(['Hotline TNT', 'MJ Lenderman']);
+    expect(parsed.tourName).toBe('Rat Saw God Tour');
+  });
 
   it('defaults missing supportingArtists/tourName to undefined', () => {
     const parsed = NormalizedEventSchema.parse({
@@ -217,11 +217,11 @@ describe('NormalizedEventSchema', () => {
       artist: 'Solo Act',
       date: '2026-08-01',
       confidence: 0.9,
-    })
-    expect(parsed.supportingArtists).toBeUndefined()
-    expect(parsed.tourName).toBeUndefined()
-  })
-})
+    });
+    expect(parsed.supportingArtists).toBeUndefined();
+    expect(parsed.tourName).toBeUndefined();
+  });
+});
 ```
 
 (The `export` was added at the top of this step — the dynamic import above relies on it.)
@@ -244,7 +244,7 @@ export const NormalizedEventSchema = z.object({
   tourName: z.string().nullable().optional(),
   date: isoDateSchema,
   // ...rest unchanged
-})
+});
 ```
 
 (and `export const NormalizedEventSchema` per Step 2.)
@@ -348,11 +348,11 @@ it('maps trailing JSON-LD performers to supportingArtists', () => {
       { '@type': 'MusicGroup', name: 'Wednesday' },
       { '@type': 'MusicGroup', name: 'Hotline TNT' },
     ],
-  })
-  const events = extractJsonLd(html, SOURCE_URL)
-  expect(events[0]?.artist).toBe('Wednesday')
-  expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
-})
+  });
+  const events = extractJsonLd(html, SOURCE_URL);
+  expect(events[0]?.artist).toBe('Wednesday');
+  expect(events[0]?.supportingArtists).toEqual(['Hotline TNT']);
+});
 ```
 
 (The extractor is `extractJsonLd`, imported from `./json-ld.js` — it takes HTML (not a raw JSON string) plus `SOURCE_URL`, and an optional third `timeZone` arg that the existing tests omit; follow them and pass just the two args. `makeHtml(jsonLd)` wraps the object in a `<script type="application/ld+json">` tag; both `makeHtml` and `SOURCE_URL` already exist at the top of the test file.)
@@ -367,9 +367,9 @@ Expected: FAIL — `supportingArtists` is currently `undefined`.
 In `json-ld.ts`, replace the single-artist derivation with headliner + rest. Add a helper that returns all performer names in order, then split:
 
 ```typescript
-const performerNames = getPerformerNames(obj['performer']) // returns string[] in order
-const artist = performerNames[0] ?? name
-const supportingArtists = performerNames.slice(1)
+const performerNames = getPerformerNames(obj['performer']); // returns string[] in order
+const artist = performerNames[0] ?? name;
+const supportingArtists = performerNames.slice(1);
 // ...
 const event: NormalizedEvent = {
   title: name,
@@ -378,8 +378,8 @@ const event: NormalizedEvent = {
   date,
   sourceUrl,
   confidence: 1.0,
-}
-if (supportingArtists.length > 0) event.supportingArtists = supportingArtists
+};
+if (supportingArtists.length > 0) event.supportingArtists = supportingArtists;
 ```
 
 Add `getPerformerNames` next to the existing `getArtistName` (keep `getArtistName` if other call sites use it): it accepts the same `performer` union (single object, array, or string) and returns an ordered `string[]` of `name` values, filtering non-strings. JSON-LD has no standard tour-name field, so leave `tourName` unset on this path.
@@ -446,38 +446,38 @@ Append to `apps/api/src/routes/events.integration.test.ts` a test that inserts a
 
 ```typescript
 it('returns supportingArtists and tourName on list + detail', async () => {
-  const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+  const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
   const event = await seedEvent(venue.id, {
     title: 'Wednesday',
     date: '2027-06-01',
     supportingArtists: ['Hotline TNT'],
     tourName: 'Rat Saw God Tour',
-  })
+  });
 
-  const list = await app.request('/v1/events')
+  const list = await app.request('/v1/events');
   const listBody = (await list.json()) as {
-    success: boolean
+    success: boolean;
     data: {
       data: Array<{
-        id: string
-        supportingArtists: string[] | null
-        tourName: string | null
-      }>
-      total: number
-    }
-  }
-  const listed = listBody.data.data.find((row) => row.id === event.id)
-  expect(listed?.supportingArtists).toEqual(['Hotline TNT'])
-  expect(listed?.tourName).toBe('Rat Saw God Tour')
+        id: string;
+        supportingArtists: string[] | null;
+        tourName: string | null;
+      }>;
+      total: number;
+    };
+  };
+  const listed = listBody.data.data.find((row) => row.id === event.id);
+  expect(listed?.supportingArtists).toEqual(['Hotline TNT']);
+  expect(listed?.tourName).toBe('Rat Saw God Tour');
 
-  const detail = await app.request(`/v1/events/${event.id}`)
+  const detail = await app.request(`/v1/events/${event.id}`);
   const detailBody = (await detail.json()) as {
-    success: boolean
-    data: { supportingArtists: string[] | null; tourName: string | null }
-  }
-  expect(detailBody.data.supportingArtists).toEqual(['Hotline TNT'])
-  expect(detailBody.data.tourName).toBe('Rat Saw God Tour')
-})
+    success: boolean;
+    data: { supportingArtists: string[] | null; tourName: string | null };
+  };
+  expect(detailBody.data.supportingArtists).toEqual(['Hotline TNT']);
+  expect(detailBody.data.tourName).toBe('Rat Saw God Tour');
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -513,29 +513,29 @@ Then append an assertion to the `GET /v1/venues/:slug — integration` block in 
 
 ```typescript
 it('serializes supportingArtists and tourName on venue-profile events', async () => {
-  const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+  const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' });
   await seedEvent(venue.id, {
     artist: 'Wednesday',
     date: '2027-06-05',
     supportingArtists: ['Hotline TNT'],
     tourName: 'Rat Saw God Tour',
-  })
-  const res = await app.request('/v1/venues/ogden')
+  });
+  const res = await app.request('/v1/venues/ogden');
   const body = (await res.json()) as {
-    success: boolean
+    success: boolean;
     data: {
-      venue: { slug: string }
+      venue: { slug: string };
       upcomingEvents: {
-        supportingArtists: string[] | null
-        tourName: string | null
-      }[]
-    }
-  }
+        supportingArtists: string[] | null;
+        tourName: string | null;
+      }[];
+    };
+  };
   expect(body.data.upcomingEvents[0]?.supportingArtists).toEqual([
     'Hotline TNT',
-  ])
-  expect(body.data.upcomingEvents[0]?.tourName).toBe('Rat Saw God Tour')
-})
+  ]);
+  expect(body.data.upcomingEvents[0]?.tourName).toBe('Rat Saw God Tour');
+});
 ```
 
 - [ ] **Step 6: Run the tests to verify they pass**
@@ -597,33 +597,33 @@ In `copy.ts`, add a top-level `eventTitle` section to `CONSUMER_COPY`:
 Create `apps/web/src/components/consumer/event-title-block/lib/supportingLine.test.ts`:
 
 ```typescript
-import { describe, expect, it } from 'vitest'
-import { formatMoreCount, supportingA11yLabel } from './supportingLine'
+import { describe, expect, it } from 'vitest';
+import { formatMoreCount, supportingA11yLabel } from './supportingLine';
 
 describe('supportingA11yLabel', () => {
   it('returns empty string for no artists', () => {
-    expect(supportingA11yLabel('with', [])).toBe('')
-  })
+    expect(supportingA11yLabel('with', [])).toBe('');
+  });
   it('handles one artist', () => {
     expect(supportingA11yLabel('with', ['Hotline TNT'])).toBe(
       'with Hotline TNT',
-    )
-  })
+    );
+  });
   it('handles two artists', () => {
-    expect(supportingA11yLabel('with', ['A', 'B'])).toBe('with A and B')
-  })
+    expect(supportingA11yLabel('with', ['A', 'B'])).toBe('with A and B');
+  });
   it('handles three or more with Oxford comma', () => {
     expect(supportingA11yLabel('with', ['A', 'B', 'C'])).toBe(
       'with A, B, and C',
-    )
-  })
-})
+    );
+  });
+});
 
 describe('formatMoreCount', () => {
   it('formats the overflow tail', () => {
-    expect(formatMoreCount(3)).toBe('+3 more')
-  })
-})
+    expect(formatMoreCount(3)).toBe('+3 more');
+  });
+});
 ```
 
 - [ ] **Step 3: Run the test to verify it fails**
@@ -636,31 +636,31 @@ Expected: FAIL — module not found.
 Create `apps/web/src/components/consumer/event-title-block/lib/supportingLine.ts`:
 
 ```typescript
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 export const SEPARATORS = {
   middot: '·',
   bullet: '•',
   slash: '/',
   comma: ',',
-} as const
+} as const;
 
-export type SeparatorKey = keyof typeof SEPARATORS
+export type SeparatorKey = keyof typeof SEPARATORS;
 
 export const formatMoreCount = (count: number): string =>
-  `+${count} ${CONSUMER_COPY.eventTitle.moreSuffix}`
+  `+${count} ${CONSUMER_COPY.eventTitle.moreSuffix}`;
 
 export const supportingA11yLabel = (
   lead: string,
   artists: string[],
 ): string => {
-  if (artists.length === 0) return ''
-  if (artists.length === 1) return `${lead} ${artists[0]}`
-  if (artists.length === 2) return `${lead} ${artists[0]} and ${artists[1]}`
-  const head = artists.slice(0, -1).join(', ')
-  const last = artists[artists.length - 1]
-  return `${lead} ${head}, and ${last}`
-}
+  if (artists.length === 0) return '';
+  if (artists.length === 1) return `${lead} ${artists[0]}`;
+  if (artists.length === 2) return `${lead} ${artists[0]} and ${artists[1]}`;
+  const head = artists.slice(0, -1).join(', ');
+  const last = artists[artists.length - 1];
+  return `${lead} ${head}, and ${last}`;
+};
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -690,17 +690,17 @@ git commit -m "feat(web): eventTitle copy + supporting-line a11y/format helpers 
 - Produces:
 
   ```typescript
-  type Surface = 'card' | 'hero' | 'detail'
+  type Surface = 'card' | 'hero' | 'detail';
   interface SupportingLineProps {
-    artists: string[]
-    surface?: Surface // default 'card'
-    maxInline?: number | null // default null (show all)
-    dim?: boolean // default false
-    separator?: SeparatorKey // default 'middot'
+    artists: string[];
+    surface?: Surface; // default 'card'
+    maxInline?: number | null; // default null (show all)
+    dim?: boolean; // default false
+    separator?: SeparatorKey; // default 'middot'
   }
   export const SupportingLine: (
     props: SupportingLineProps,
-  ) => JSX.Element | null
+  ) => JSX.Element | null;
   ```
 
 - [ ] **Step 1: Write failing tests**
@@ -708,34 +708,34 @@ git commit -m "feat(web): eventTitle copy + supporting-line a11y/format helpers 
 Create `SupportingLine.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { SupportingLine } from './SupportingLine'
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { SupportingLine } from './SupportingLine';
 
 describe('SupportingLine', () => {
   it('renders nothing with no artists', () => {
-    const { container } = render(<SupportingLine artists={[]} />)
-    expect(container.firstChild).toBeNull()
-  })
+    const { container } = render(<SupportingLine artists={[]} />);
+    expect(container.firstChild).toBeNull();
+  });
 
   it('exposes the full roster to screen readers even when truncated', () => {
-    render(<SupportingLine artists={['A', 'B', 'C', 'D']} maxInline={2} />)
+    render(<SupportingLine artists={['A', 'B', 'C', 'D']} maxInline={2} />);
     expect(screen.getByRole('group')).toHaveAttribute(
       'aria-label',
       'with A, B, C, and D',
-    )
-  })
+    );
+  });
 
   it('shows a +N more tail when truncated', () => {
-    render(<SupportingLine artists={['A', 'B', 'C', 'D']} maxInline={2} />)
-    expect(screen.getByText('+2 more')).toBeInTheDocument()
-  })
+    render(<SupportingLine artists={['A', 'B', 'C', 'D']} maxInline={2} />);
+    expect(screen.getByText('+2 more')).toBeInTheDocument();
+  });
 
   it('drops the separator for a single opener', () => {
-    render(<SupportingLine artists={['Solo']} />)
-    expect(screen.queryByText('·')).not.toBeInTheDocument()
-  })
-})
+    render(<SupportingLine artists={['Solo']} />);
+    expect(screen.queryByText('·')).not.toBeInTheDocument();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -748,28 +748,28 @@ Expected: FAIL — module not found.
 Create `SupportingLine.tsx`. Port the billing variant from the handoff (`design/design_handoff_supporting_artists_line/supporting-line.jsx:141-190`), converted to an arrow-function TSX component with token classes and a numeric size ramp. Colors come from token classes; per-surface font sizes come from a `RAMP` constant (inline `style` for the numeric sizes is acceptable — Tailwind has no token for arbitrary ramps):
 
 ```tsx
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import {
   formatMoreCount,
   SEPARATORS,
   supportingA11yLabel,
   type SeparatorKey,
-} from './lib/supportingLine'
+} from './lib/supportingLine';
 
-type Surface = 'card' | 'hero' | 'detail'
+type Surface = 'card' | 'hero' | 'detail';
 
 const RAMP: Record<Surface, { lead: number; name: number }> = {
   card: { lead: 10, name: 12 },
   hero: { lead: 11, name: 13 },
   detail: { lead: 13, name: 16 },
-}
+};
 
 interface SupportingLineProps {
-  artists: string[]
-  surface?: Surface
-  separator?: SeparatorKey
-  maxInline?: number | null
-  dim?: boolean
+  artists: string[];
+  surface?: Surface;
+  separator?: SeparatorKey;
+  maxInline?: number | null;
+  dim?: boolean;
 }
 
 export const SupportingLine = ({
@@ -779,14 +779,14 @@ export const SupportingLine = ({
   maxInline = null,
   dim = false,
 }: SupportingLineProps): JSX.Element | null => {
-  if (artists.length === 0) return null
-  const ramp = RAMP[surface]
-  const sep = SEPARATORS[separator]
-  const lead = CONSUMER_COPY.eventTitle.lead
-  const limit = maxInline == null ? artists.length : Math.max(1, maxInline)
-  const shown = artists.slice(0, limit)
-  const hidden = artists.length - shown.length
-  const nameColor = dim ? 'text-fg-subtle' : 'text-fg-muted'
+  if (artists.length === 0) return null;
+  const ramp = RAMP[surface];
+  const sep = SEPARATORS[separator];
+  const lead = CONSUMER_COPY.eventTitle.lead;
+  const limit = maxInline == null ? artists.length : Math.max(1, maxInline);
+  const shown = artists.slice(0, limit);
+  const hidden = artists.length - shown.length;
+  const nameColor = dim ? 'text-fg-subtle' : 'text-fg-muted';
 
   return (
     <div
@@ -838,8 +838,8 @@ export const SupportingLine = ({
         )}
       </span>
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -871,20 +871,20 @@ git commit -m "feat(web): SupportingLine openers billing component (#643)"
 
   ```typescript
   interface EventTitleBlockProps {
-    headliner: string
+    headliner: string;
     // Required, not optional: these are always present on `Event` (nullable
     // but non-optional), so callers must pass them. `null` is the sole legacy
     // marker — keeping the prop required prevents a missing/undefined prop from
     // silently masquerading as a legacy row.
-    supportingArtists: string[] | null
-    tourName: string | null
-    fallbackTitle?: string | null // legacy run-on title; rendered only for legacy rows (supportingArtists === null)
-    surface?: 'card' | 'hero' | 'detail'
-    status?: EventStatus
-    maxInline?: number | null
-    headlinerAs?: 'h1' | 'div' // detail passes 'h1' to keep the page's single top-level heading; cards keep 'div'
+    supportingArtists: string[] | null;
+    tourName: string | null;
+    fallbackTitle?: string | null; // legacy run-on title; rendered only for legacy rows (supportingArtists === null)
+    surface?: 'card' | 'hero' | 'detail';
+    status?: EventStatus;
+    maxInline?: number | null;
+    headlinerAs?: 'h1' | 'div'; // detail passes 'h1' to keep the page's single top-level heading; cards keep 'div'
   }
-  export const EventTitleBlock: (props: EventTitleBlockProps) => JSX.Element
+  export const EventTitleBlock: (props: EventTitleBlockProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Write failing tests (incl. the legacy fallback)**
@@ -892,9 +892,9 @@ git commit -m "feat(web): SupportingLine openers billing component (#643)"
 Create `EventTitleBlock.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { EventTitleBlock } from './EventTitleBlock'
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { EventTitleBlock } from './EventTitleBlock';
 
 describe('EventTitleBlock', () => {
   it('renders headliner + openers', () => {
@@ -904,13 +904,13 @@ describe('EventTitleBlock', () => {
         supportingArtists={['Hotline TNT']}
         tourName={null}
       />,
-    )
-    expect(screen.getByText('Wednesday')).toBeInTheDocument()
+    );
+    expect(screen.getByText('Wednesday')).toBeInTheDocument();
     expect(screen.getByRole('group')).toHaveAttribute(
       'aria-label',
       'with Hotline TNT',
-    )
-  })
+    );
+  });
 
   it('renders the tour name as a kicker', () => {
     render(
@@ -919,9 +919,9 @@ describe('EventTitleBlock', () => {
         supportingArtists={[]}
         tourName="Rat Saw God Tour"
       />,
-    )
-    expect(screen.getByText('Rat Saw God Tour')).toBeInTheDocument()
-  })
+    );
+    expect(screen.getByText('Rat Saw God Tour')).toBeInTheDocument();
+  });
 
   it('falls back to the legacy title for legacy rows (supportingArtists === null)', () => {
     render(
@@ -931,11 +931,11 @@ describe('EventTitleBlock', () => {
         tourName={null}
         fallbackTitle="Wednesday + Hotline TNT / MJ Lenderman"
       />,
-    )
+    );
     expect(
       screen.getByText('Wednesday + Hotline TNT / MJ Lenderman'),
-    ).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+  });
 
   it('suppresses the legacy fallback for freshly extracted solo shows (supportingArtists === [])', () => {
     // `[]` means the crawler ran and found no openers — the headliner alone is
@@ -948,9 +948,11 @@ describe('EventTitleBlock', () => {
         tourName={null}
         fallbackTitle="AEG Presents Wednesday"
       />,
-    )
-    expect(screen.queryByText('AEG Presents Wednesday')).not.toBeInTheDocument()
-  })
+    );
+    expect(
+      screen.queryByText('AEG Presents Wednesday'),
+    ).not.toBeInTheDocument();
+  });
 
   it('omits the legacy fallback when it equals the headliner', () => {
     render(
@@ -960,11 +962,11 @@ describe('EventTitleBlock', () => {
         tourName={null}
         fallbackTitle="Wednesday"
       />,
-    )
-    expect(screen.queryByText('Wednesday')).toBeInTheDocument()
+    );
+    expect(screen.queryByText('Wednesday')).toBeInTheDocument();
     // headliner is present exactly once — no duplicate fallback paragraph
-    expect(screen.getAllByText('Wednesday')).toHaveLength(1)
-  })
+    expect(screen.getAllByText('Wednesday')).toHaveLength(1);
+  });
 
   it('renders the headliner as an <h1> when headlinerAs="h1"', () => {
     render(
@@ -974,12 +976,12 @@ describe('EventTitleBlock', () => {
         tourName={null}
         headlinerAs="h1"
       />,
-    )
+    );
     expect(
       screen.getByRole('heading', { level: 1, name: 'Wednesday' }),
-    ).toBeInTheDocument()
-  })
-})
+    ).toBeInTheDocument();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -992,17 +994,17 @@ Expected: FAIL — module not found.
 Create `EventTitleBlock.tsx`. Port the composition from `supporting-line.jsx:249-317` (kicker row with status pill + tour eyebrow, headliner, openers) plus the fallback branch. Use token classes; numeric head/tour sizes from a `RAMP`:
 
 ```tsx
-import type { EventStatus } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { SupportingLine } from './SupportingLine'
+import type { EventStatus } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { SupportingLine } from './SupportingLine';
 
-type Surface = 'card' | 'hero' | 'detail'
+type Surface = 'card' | 'hero' | 'detail';
 
 const RAMP: Record<Surface, { head: number; tour: number; gap: number }> = {
   card: { head: 15, tour: 9, gap: 2 },
   hero: { head: 22, tour: 10, gap: 3 },
   detail: { head: 34, tour: 12, gap: 5 },
-}
+};
 
 // Labels come from CONSUMER_COPY (copy-rule). The pill span carries the
 // `uppercase` class, so 'Cancelled'/'Postponed' still render all-caps.
@@ -1018,17 +1020,17 @@ const STATUS_PILL: Record<
     label: CONSUMER_COPY.postponedLabel,
     tone: 'text-warning border-warning',
   },
-}
+};
 
 interface EventTitleBlockProps {
-  headliner: string
-  supportingArtists: string[] | null
-  tourName: string | null
-  fallbackTitle?: string | null
-  surface?: Surface
-  status?: EventStatus
-  maxInline?: number | null
-  headlinerAs?: 'h1' | 'div'
+  headliner: string;
+  supportingArtists: string[] | null;
+  tourName: string | null;
+  fallbackTitle?: string | null;
+  surface?: Surface;
+  status?: EventStatus;
+  maxInline?: number | null;
+  headlinerAs?: 'h1' | 'div';
 }
 
 export const EventTitleBlock = ({
@@ -1041,20 +1043,20 @@ export const EventTitleBlock = ({
   maxInline = null,
   headlinerAs = 'div',
 }: EventTitleBlockProps): JSX.Element => {
-  const ramp = RAMP[surface]
-  const dim = status !== 'upcoming'
-  const openers = supportingArtists ?? []
-  const hasOpeners = openers.length > 0
+  const ramp = RAMP[surface];
+  const dim = status !== 'upcoming';
+  const openers = supportingArtists ?? [];
+  const hasOpeners = openers.length > 0;
   // `null` marks a legacy/pre-recrawl row (the crawler never wrote this field);
   // `[]` means the crawler ran and found no openers. Only legacy rows get the
   // run-on `fallbackTitle` — a freshly extracted solo show (`[]`) shows the
   // headliner alone, never the legacy title. Strict `=== null`: `null` is the
   // sole legacy marker, and the prop is required so `undefined` cannot reach here.
-  const isLegacyRow = supportingArtists === null
-  const pill = status !== 'upcoming' ? STATUS_PILL[status] : null
-  const Headliner = headlinerAs
+  const isLegacyRow = supportingArtists === null;
+  const pill = status !== 'upcoming' ? STATUS_PILL[status] : null;
+  const Headliner = headlinerAs;
   const showLegacyFallback =
-    isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner
+    isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner;
 
   return (
     <div className="flex min-w-0 flex-col" style={{ gap: ramp.gap }}>
@@ -1117,14 +1119,14 @@ export const EventTitleBlock = ({
         </p>
       )}
     </div>
-  )
-}
+  );
+};
 ```
 
 Create `index.ts`:
 
 ```typescript
-export { EventTitleBlock } from './EventTitleBlock'
+export { EventTitleBlock } from './EventTitleBlock';
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -1162,7 +1164,7 @@ Replace the existing block:
     <p className="truncate text-[12px] font-medium text-fg-muted">
       {event.title}
     </p>
-  )
+  );
 }
 ```
 

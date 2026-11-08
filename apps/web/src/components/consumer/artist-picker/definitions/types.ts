@@ -5,13 +5,13 @@
  * its own.
  */
 export interface PickArtist {
-  slug: string
-  name: string
-  photoUrl: string | null
+  slug: string;
+  name: string;
+  photoUrl: string | null;
   /**
    * "Sep 12", or null when nothing is on the books. The DATE only, unlike the
    * shelf card's "Venue · Sep 12" (PK-12): a picker tile is half the width of a
    * shelf card and a venue name is the half that gets truncated to nothing.
    */
-  dateLabel: string | null
+  dateLabel: string | null;
 }

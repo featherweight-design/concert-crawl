@@ -9,13 +9,13 @@
  *       are skipped.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   FIXTURE_USER_IDS,
   FIXTURE_SEED,
   CROWD_USER_IDS,
   OWNER_USER_ID,
-} from './fixture-users.js'
+} from './fixture-users.js';
 
 // ---------------------------------------------------------------------------
 // Module-level mocks (hoisted so they intercept imports in the module under test)
@@ -32,19 +32,19 @@ vi.mock('./cleanup-fixtures.js', () => ({
       userProfiles: 0,
     },
   }),
-}))
+}));
 
 vi.mock('./generators/user-profiles.js', () => ({
   generateUserProfiles: vi.fn().mockResolvedValue({ inserted: 5 }),
-}))
+}));
 
 vi.mock('./generators/user-events.js', () => ({
   generateUserEvents: vi.fn().mockResolvedValue({ inserted: 10 }),
-}))
+}));
 
 vi.mock('./generators/feedback.js', () => ({
   generateFeedback: vi.fn().mockResolvedValue({ inserted: 10 }),
-}))
+}));
 
 vi.mock('./generators/price-submissions.js', () => ({
   // Mock must return `insertedConfirms` too — the real generator writes to
@@ -55,11 +55,11 @@ vi.mock('./generators/price-submissions.js', () => ({
   generatePriceSubmissions: vi
     .fn()
     .mockResolvedValue({ inserted: 10, insertedConfirms: 3 }),
-}))
+}));
 
 vi.mock('./generators/notifications.js', () => ({
   generateNotifications: vi.fn().mockResolvedValue({ inserted: 10 }),
-}))
+}));
 
 vi.mock('./generators/watcher-crowd.js', () => ({
   generateWatcherCrowd: vi.fn().mockResolvedValue({
@@ -67,11 +67,11 @@ vi.mock('./generators/watcher-crowd.js', () => ({
     insertedUserEvents: 50,
     showcaseEventIds: ['evt-showcase-1'],
   }),
-}))
+}));
 
 vi.mock('./generators/owner-history.js', () => ({
   generateOwnerHistory: vi.fn().mockResolvedValue({ inserted: 18 }),
-}))
+}));
 
 vi.mock('./generators/crews.js', () => ({
   generateCrews: vi.fn().mockResolvedValue({
@@ -81,7 +81,7 @@ vi.mock('./generators/crews.js', () => ({
     insertedMutes: 1,
     insertedUserEvents: 4,
   }),
-}))
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,7 +91,7 @@ const eventIds = Array.from(
   { length: 10 },
   (_, idx) =>
     `evt-00000000-0000-0000-0000-${String(idx + 1).padStart(12, '0')}`,
-)
+);
 
 /**
  * Builds a minimal staging mock whose select().from().orderBy().limit() chain
@@ -112,14 +112,14 @@ function buildStagingMock(returnedEventIds: { id: string; date?: string }[]) {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockResolvedValue([]),
     }),
-  }
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Import the module under test after mocks are registered
 // ---------------------------------------------------------------------------
 
-const { runSynthetic } = await import('./seed-synthetic.js')
+const { runSynthetic } = await import('./seed-synthetic.js');
 
 // ---------------------------------------------------------------------------
 // Suite (a): determinism + idempotency
@@ -127,8 +127,8 @@ const { runSynthetic } = await import('./seed-synthetic.js')
 
 describe('runSynthetic — determinism and idempotency', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   // What this test proves: the orchestrator threads STABLE non-rng deps
   // (staging, fixtureUserIds, eventIds) identically to every generator on
@@ -143,30 +143,30 @@ describe('runSynthetic — determinism and idempotency', () => {
   // is also covered by the generator-level tests.
   it('threads identical non-rng deps to every generator on two same-seed runs', async () => {
     const { generateUserProfiles } =
-      await import('./generators/user-profiles.js')
-    const { generateUserEvents } = await import('./generators/user-events.js')
-    const { generateFeedback } = await import('./generators/feedback.js')
+      await import('./generators/user-profiles.js');
+    const { generateUserEvents } = await import('./generators/user-events.js');
+    const { generateFeedback } = await import('./generators/feedback.js');
     const { generatePriceSubmissions } =
-      await import('./generators/price-submissions.js')
+      await import('./generators/price-submissions.js');
     const { generateNotifications } =
-      await import('./generators/notifications.js')
+      await import('./generators/notifications.js');
 
     // Half past-dated so the user_events generator can reach the attending
     // shapes (#70) — the orchestrator derives pastEventIds from these rows.
     const mappedEventIds = eventIds.map((id, idx) => ({
       id,
       date: idx < 5 ? '2020-01-01' : '2099-01-01',
-    }))
+    }));
 
     // First run
-    const stagingA = buildStagingMock(mappedEventIds)
+    const stagingA = buildStagingMock(mappedEventIds);
     await runSynthetic({
       staging: stagingA as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
     const argsA = {
       profiles: (generateUserProfiles as ReturnType<typeof vi.fn>).mock
         .calls[0],
@@ -177,19 +177,19 @@ describe('runSynthetic — determinism and idempotency', () => {
         .mock.calls[0],
       notifications: (generateNotifications as ReturnType<typeof vi.fn>).mock
         .calls[0],
-    }
+    };
 
-    vi.clearAllMocks()
+    vi.clearAllMocks();
 
     // Second run — same seed, fresh staging mock
-    const stagingB = buildStagingMock(mappedEventIds)
+    const stagingB = buildStagingMock(mappedEventIds);
     await runSynthetic({
       staging: stagingB as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
     const argsB = {
       profiles: (generateUserProfiles as ReturnType<typeof vi.fn>).mock
         .calls[0],
@@ -200,7 +200,7 @@ describe('runSynthetic — determinism and idempotency', () => {
         .mock.calls[0],
       notifications: (generateNotifications as ReturnType<typeof vi.fn>).mock
         .calls[0],
-    }
+    };
 
     // Compare the deterministic, structured deps directly (not via
     // JSON.stringify — that silently drops function properties like the
@@ -216,11 +216,11 @@ describe('runSynthetic — determinism and idempotency', () => {
       'priceSubmissions',
       'notifications',
     ] as const) {
-      const { rng: _rngA, staging: _stagingA, ...restA } = argsA[key]![0]
-      const { rng: _rngB, staging: _stagingB, ...restB } = argsB[key]![0]
-      expect(restA).toEqual(restB)
+      const { rng: _rngA, staging: _stagingA, ...restA } = argsA[key]![0];
+      const { rng: _rngB, staging: _stagingB, ...restB } = argsB[key]![0];
+      expect(restA).toEqual(restB);
     }
-  })
+  });
 
   it('returns deleted and inserted summary counts', async () => {
     const stagingMock = buildStagingMock(
@@ -228,156 +228,157 @@ describe('runSynthetic — determinism and idempotency', () => {
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
-    expect(result).toHaveProperty('deleted')
-    expect(result).toHaveProperty('inserted')
-    expect(typeof result.deleted).toBe('object')
-    expect(typeof result.inserted).toBe('object')
-  })
+    });
+    expect(result).toHaveProperty('deleted');
+    expect(result).toHaveProperty('inserted');
+    expect(typeof result.deleted).toBe('object');
+    expect(typeof result.inserted).toBe('object');
+  });
 
   it('calls cleanupFixtures before any generator', async () => {
-    const { cleanupFixtures } = await import('./cleanup-fixtures.js')
+    const { cleanupFixtures } = await import('./cleanup-fixtures.js');
     const { generateUserProfiles } =
-      await import('./generators/user-profiles.js')
+      await import('./generators/user-profiles.js');
 
     const stagingMock = buildStagingMock(
       eventIds.map((id, idx) => ({
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
     const cleanupOrder = (cleanupFixtures as ReturnType<typeof vi.fn>).mock
-      .invocationCallOrder[0]
+      .invocationCallOrder[0];
     const profilesOrder = (generateUserProfiles as ReturnType<typeof vi.fn>)
-      .mock.invocationCallOrder[0]
+      .mock.invocationCallOrder[0];
 
-    expect(cleanupOrder).toBeLessThan(profilesOrder!)
-  })
+    expect(cleanupOrder).toBeLessThan(profilesOrder!);
+  });
 
   it('sweeps the crowd fully but narrows the owner to user_events', async () => {
-    const { cleanupFixtures } = await import('./cleanup-fixtures.js')
+    const { cleanupFixtures } = await import('./cleanup-fixtures.js');
 
     const stagingMock = buildStagingMock(
       eventIds.map((id, idx) => ({
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    const args = (cleanupFixtures as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    const args = (cleanupFixtures as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0];
     expect(args.fixtureUserIds).toEqual([
       ...FIXTURE_USER_IDS,
       ...CROWD_USER_IDS,
-    ])
+    ]);
     // Widening this to the full sweep would delete Hugh's real staging profile,
     // feedback, notifications and price submissions.
-    expect(args.fixtureUserIds).not.toContain(OWNER_USER_ID)
-    expect(args.userEventsOnlyUserIds).toEqual([OWNER_USER_ID])
-  })
+    expect(args.fixtureUserIds).not.toContain(OWNER_USER_ID);
+    expect(args.userEventsOnlyUserIds).toEqual([OWNER_USER_ID]);
+  });
 
   it('runs the watcher-crowd and owner-history generators', async () => {
     const { generateWatcherCrowd } =
-      await import('./generators/watcher-crowd.js')
+      await import('./generators/watcher-crowd.js');
     const { generateOwnerHistory } =
-      await import('./generators/owner-history.js')
+      await import('./generators/owner-history.js');
 
     const stagingMock = buildStagingMock(
       eventIds.map((id, idx) => ({
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(generateWatcherCrowd).toHaveBeenCalledTimes(1)
-    expect(generateOwnerHistory).toHaveBeenCalledTimes(1)
-  })
+    expect(generateWatcherCrowd).toHaveBeenCalledTimes(1);
+    expect(generateOwnerHistory).toHaveBeenCalledTimes(1);
+  });
 
   // Crew attendance on an event the crowd already watched would collide on the
   // (user_id, event_id) unique index and abort the entire run.
   it('excludes the watcher-crowd showcase events from the crews generator', async () => {
-    const { generateCrews } = await import('./generators/crews.js')
+    const { generateCrews } = await import('./generators/crews.js');
 
     const stagingMock = buildStagingMock(
       eventIds.map((id, idx) => ({
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(generateCrews).toHaveBeenCalledTimes(1)
-    const args = vi.mocked(generateCrews).mock.calls[0]?.[0]
-    expect(args?.excludeEventIds).toEqual(['evt-showcase-1'])
-    expect(args?.crowdUserIds).toEqual(CROWD_USER_IDS)
-    expect(args?.ownerUserId).toBe(OWNER_USER_ID)
-    expect(args?.eventIds).toEqual(eventIds)
-    expect(args?.pastEventIds).toEqual(eventIds.slice(0, 5))
-    expect(result.inserted['crews']).toBe(4)
-    expect(result.inserted['crewMembers']).toBe(20)
-  })
+    expect(generateCrews).toHaveBeenCalledTimes(1);
+    const args = vi.mocked(generateCrews).mock.calls[0]?.[0];
+    expect(args?.excludeEventIds).toEqual(['evt-showcase-1']);
+    expect(args?.crowdUserIds).toEqual(CROWD_USER_IDS);
+    expect(args?.ownerUserId).toBe(OWNER_USER_ID);
+    expect(args?.eventIds).toEqual(eventIds);
+    expect(args?.pastEventIds).toEqual(eventIds.slice(0, 5));
+    expect(result.inserted['crews']).toBe(4);
+    expect(result.inserted['crewMembers']).toBe(20);
+  });
 
   it('passes the same rng instance to every generator (same object reference)', async () => {
     const { generateUserProfiles } =
-      await import('./generators/user-profiles.js')
-    const { generateUserEvents } = await import('./generators/user-events.js')
+      await import('./generators/user-profiles.js');
+    const { generateUserEvents } = await import('./generators/user-events.js');
 
     const stagingMock = buildStagingMock(
       eventIds.map((id, idx) => ({
         id,
         date: idx < 5 ? '2020-01-01' : '2099-01-01',
       })),
-    )
+    );
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
     const rngFromProfiles = (generateUserProfiles as ReturnType<typeof vi.fn>)
-      .mock.calls[0]![0].rng
+      .mock.calls[0]![0].rng;
     const rngFromEvents = (generateUserEvents as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0].rng
+      .calls[0]![0].rng;
     // Same object reference means one rng instance is threaded through
-    expect(rngFromProfiles).toBe(rngFromEvents)
-  })
-})
+    expect(rngFromProfiles).toBe(rngFromEvents);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Suite (b): empty eventIds
@@ -385,90 +386,90 @@ describe('runSynthetic — determinism and idempotency', () => {
 
 describe('runSynthetic — empty eventIds', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('skips user_events generator when eventIds is empty', async () => {
-    const { generateUserEvents } = await import('./generators/user-events.js')
+    const { generateUserEvents } = await import('./generators/user-events.js');
 
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(generateUserEvents).not.toHaveBeenCalled()
-  })
+    expect(generateUserEvents).not.toHaveBeenCalled();
+  });
 
   it('skips price_submissions generator when eventIds is empty', async () => {
     const { generatePriceSubmissions } =
-      await import('./generators/price-submissions.js')
+      await import('./generators/price-submissions.js');
 
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(generatePriceSubmissions).not.toHaveBeenCalled()
-  })
+    expect(generatePriceSubmissions).not.toHaveBeenCalled();
+  });
 
   it('still runs profiles, feedback, and notifications when eventIds is empty', async () => {
     const { generateUserProfiles } =
-      await import('./generators/user-profiles.js')
-    const { generateFeedback } = await import('./generators/feedback.js')
+      await import('./generators/user-profiles.js');
+    const { generateFeedback } = await import('./generators/feedback.js');
     const { generateNotifications } =
-      await import('./generators/notifications.js')
+      await import('./generators/notifications.js');
 
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(generateUserProfiles).toHaveBeenCalledTimes(1)
-    expect(generateFeedback).toHaveBeenCalledTimes(1)
-    expect(generateNotifications).toHaveBeenCalledTimes(1)
-  })
+    expect(generateUserProfiles).toHaveBeenCalledTimes(1);
+    expect(generateFeedback).toHaveBeenCalledTimes(1);
+    expect(generateNotifications).toHaveBeenCalledTimes(1);
+  });
 
   it('still runs cleanup when eventIds is empty', async () => {
-    const { cleanupFixtures } = await import('./cleanup-fixtures.js')
+    const { cleanupFixtures } = await import('./cleanup-fixtures.js');
 
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(cleanupFixtures).toHaveBeenCalledTimes(1)
-  })
+    expect(cleanupFixtures).toHaveBeenCalledTimes(1);
+  });
 
   it('inserted counts for skipped generators are 0 when eventIds is empty', async () => {
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
       crowdUserIds: CROWD_USER_IDS,
       ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
-    })
+    });
 
-    expect(result.inserted['userEvents']).toBe(0)
-    expect(result.inserted['priceSubmissions']).toBe(0)
-  })
-})
+    expect(result.inserted['userEvents']).toBe(0);
+    expect(result.inserted['priceSubmissions']).toBe(0);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // Suite (c): empty fixtureUserIds — reject up front
@@ -480,7 +481,7 @@ describe('runSynthetic — empty fixtureUserIds guard', () => {
     // fixtureUserIds[0]!; notifications calls rng.pick(fixtureUserIds);
     // profiles would insert([])). Failing at the entry point is more
     // debuggable than a deep crash mid-generation.
-    const stagingMock = buildStagingMock([])
+    const stagingMock = buildStagingMock([]);
     await expect(
       runSynthetic({
         staging: stagingMock as any,
@@ -489,6 +490,6 @@ describe('runSynthetic — empty fixtureUserIds guard', () => {
         ownerUserId: OWNER_USER_ID,
         seed: FIXTURE_SEED,
       }),
-    ).rejects.toThrow('fixtureUserIds must not be empty')
-  })
-})
+    ).rejects.toThrow('fixtureUserIds must not be empty');
+  });
+});

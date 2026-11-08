@@ -12,13 +12,13 @@
 
 ## Files
 
-| Action | Path |
-|--------|------|
-| Modify | `apps/web/src/components/admin/crawl/CrawlSplitView.tsx` |
-| Modify | `apps/web/src/lib/queries/use-admin-events.ts` |
+| Action | Path                                                       |
+| ------ | ---------------------------------------------------------- |
+| Modify | `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`   |
+| Modify | `apps/web/src/lib/queries/use-admin-events.ts`             |
 | Modify | `apps/web/src/components/admin/events/EventQueueSplit.tsx` |
-| Modify | `apps/api/src/routes/admin/events.ts` |
-| Modify | `apps/api/src/routes/admin/events.test.ts` |
+| Modify | `apps/api/src/routes/admin/events.ts`                      |
+| Modify | `apps/api/src/routes/admin/events.test.ts`                 |
 
 ---
 
@@ -27,6 +27,7 @@
 The `CrawlRunHistoryTable` already renders `TR` rows with full `active` + `onClick` support — they just aren't wired up. `activeRun` in `CrawlSplitView` is derived as `venueRuns[0]`, so clicking a past run has no effect.
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/crawl/CrawlSplitView.tsx`
 
 ---
@@ -36,12 +37,12 @@ The `CrawlRunHistoryTable` already renders `TR` rows with full `active` + `onCli
 In `CrawlSplitView`, after the existing state declarations (around line 244), add:
 
 ```tsx
-const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
 // Reset run selection when the user switches venues
 useEffect(() => {
-  setSelectedRunId(null)
-}, [selectedId])
+  setSelectedRunId(null);
+}, [selectedId]);
 ```
 
 ---
@@ -55,7 +56,7 @@ Replace the existing `activeRun` derivation (currently around line 318):
 const activeRun =
   (selectedId ? venueRuns[0] : null) ??
   initialRuns.find((run) => run.venueId === selectedId) ??
-  null
+  null;
 ```
 
 With:
@@ -66,7 +67,7 @@ const activeRun =
     ? (venueRuns.find((run) => run.id === selectedRunId) ?? venueRuns[0])
     : null) ??
   initialRuns.find((run) => run.venueId === selectedId) ??
-  null
+  null;
 ```
 
 ---
@@ -154,6 +155,7 @@ Then update the `TR` rendering inside the table body (currently around line 1150
 - [ ] **Step 5: Verify the feature works manually**
 
 Run the dev server from the worktree root:
+
 ```bash
 pnpm dev
 ```
@@ -180,6 +182,7 @@ git commit -m "feat(admin/crawl): make run history rows selectable (#161)"
 `EventQueueSplit` currently seeds its `events` state from `initialEvents` (an SSR prop) and never re-fetches. New events that arrive via a crawl run won't appear without a full route refresh, and approve/reject mutations don't update any shared cache.
 
 **Files:**
+
 - Modify: `apps/web/src/lib/queries/use-admin-events.ts`
 - Modify: `apps/web/src/components/admin/events/EventQueueSplit.tsx`
 
@@ -190,61 +193,61 @@ git commit -m "feat(admin/crawl): make run history rows selectable (#161)"
 The file currently only exports `useApproveEvent` and `useRejectEvent`. Replace the entire file with:
 
 ```ts
-'use client'
+'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import { apiClient } from '@/lib/api'
-import type { AdminEvent } from '@/app/(protected)/admin/events/page'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import { apiClient } from '@/lib/api';
+import type { AdminEvent } from '@/app/(protected)/admin/events/page';
 
-export const adminEventsQueryKey = ['admin', 'events'] as const
+export const adminEventsQueryKey = ['admin', 'events'] as const;
 
 export function useAdminEvents(initialData: AdminEvent[]) {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   return useQuery({
     queryKey: adminEventsQueryKey,
     queryFn: async (): Promise<AdminEvent[]> => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
       return apiClient.get<AdminEvent[]>(
         '/v1/admin/events?verified=false&limit=500',
         token,
-      )
+      );
     },
     initialData,
     staleTime: 0,
     refetchOnWindowFocus: true,
-  })
+  });
 }
 
 export function useApproveEvent() {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {});
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey });
     },
-  })
+  });
 }
 
 export function useRejectEvent() {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      await apiClient.delete(`/v1/admin/events/${id}`, token)
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
+      await apiClient.delete(`/v1/admin/events/${id}`, token);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey });
     },
-  })
+  });
 }
 ```
 
@@ -258,25 +261,29 @@ Find the component's state declarations (near the top of the component function)
 
 ```tsx
 // Add to imports at top of file
-import { useAdminEvents, useApproveEvent, useRejectEvent } from '@/lib/queries/use-admin-events'
+import {
+  useAdminEvents,
+  useApproveEvent,
+  useRejectEvent,
+} from '@/lib/queries/use-admin-events';
 ```
 
 Then find the events state declaration on line 243:
 
 ```tsx
 // Before (line 243)
-const [events, setEvents] = useState(initialEvents)
+const [events, setEvents] = useState(initialEvents);
 ```
 
 ```tsx
 // After
-const { data: queriedEvents } = useAdminEvents(initialEvents)
-const [events, setEvents] = useState<AdminEvent[]>(queriedEvents)
+const { data: queriedEvents } = useAdminEvents(initialEvents);
+const [events, setEvents] = useState<AdminEvent[]>(queriedEvents);
 
 // Keep query data in sync with local state when a background refetch lands
 useEffect(() => {
-  setEvents(queriedEvents)
-}, [queriedEvents])
+  setEvents(queriedEvents);
+}, [queriedEvents]);
 ```
 
 > **Note:** The existing optimistic local-removal (where `setEvents(prev => prev.filter(...))` runs immediately on approve/reject) stays untouched. The `useEffect` above reconciles local state with the server after the invalidation refetch resolves, without fighting the optimistic update.
@@ -316,6 +323,7 @@ git commit -m "feat(admin/events): background refresh via useAdminEvents query (
 The `PATCH /v1/admin/events/:id` route exists but only accepts `verified` and `status`. The inspector shows fields labeled "extracted (editable)" but they're read-only `FieldRow` display spans. This task extends the API and wires up a full edit mode.
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/events.ts`
 - Modify: `apps/api/src/routes/admin/events.test.ts`
 - Modify: `apps/web/src/lib/queries/use-admin-events.ts`
@@ -330,108 +338,90 @@ Open `apps/api/src/routes/admin/events.test.ts` and add a new `describe` block a
 ```ts
 describe('PATCH /v1/admin/events/:id', () => {
   beforeEach(() => {
-    mockGetAuth.mockReset()
-  })
+    mockGetAuth.mockReset();
+  });
 
   it('returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Title' }),
-      },
-    )
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Title' }),
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('returns 403 for non-admin users', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { metadata: { role: 'user' } },
-    })
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Title' }),
-      },
-    )
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New Title' }),
+    });
+    expect(res.status).toBe(403);
+  });
 
   it('returns 200 and updates content fields', async () => {
-    adminAuth()
-    const { db } = await import('@concert-crawl/db')
+    adminAuth();
+    const { db } = await import('@concert-crawl/db');
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
       { ...mockEventRow, title: 'Updated Title', artist: 'New Artist' },
-    ])
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Updated Title', artist: 'New Artist' }),
-      },
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data.title).toBe('Updated Title')
-    expect(body.data.artist).toBe('New Artist')
-  })
+    ]);
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated Title', artist: 'New Artist' }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.title).toBe('Updated Title');
+    expect(body.data.artist).toBe('New Artist');
+  });
 
   it('returns 200 and accepts nullable price fields', async () => {
-    adminAuth()
-    const { db } = await import('@concert-crawl/db')
+    adminAuth();
+    const { db } = await import('@concert-crawl/db');
     vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([
       { ...mockEventRow, ticketPriceMin: '25.00', ticketPriceMax: null },
-    ])
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticketPriceMin: '25.00', ticketPriceMax: null }),
-      },
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data.ticketPriceMin).toBe('25.00')
-    expect(body.data.ticketPriceMax).toBeNull()
-  })
+    ]);
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketPriceMin: '25.00', ticketPriceMax: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.ticketPriceMin).toBe('25.00');
+    expect(body.data.ticketPriceMax).toBeNull();
+  });
 
   it('returns 400 for invalid date format', async () => {
-    adminAuth()
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: 'not-a-date' }),
-      },
-    )
-    expect(res.status).toBe(400)
-  })
+    adminAuth();
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ date: 'not-a-date' }),
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('returns 404 when event not found', async () => {
-    adminAuth()
-    const { db } = await import('@concert-crawl/db')
-    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([])
-    const res = await createApp().request(
-      `/v1/admin/events/${EVENT_ID}`,
-      {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'Updated Title' }),
-      },
-    )
-    expect(res.status).toBe(404)
-  })
-})
+    adminAuth();
+    const { db } = await import('@concert-crawl/db');
+    vi.mocked(db.update().set().where().returning).mockResolvedValueOnce([]);
+    const res = await createApp().request(`/v1/admin/events/${EVENT_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated Title' }),
+    });
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 ---
@@ -518,39 +508,39 @@ Append to the end of `apps/web/src/lib/queries/use-admin-events.ts`:
 
 ```ts
 interface EventUpdatePayload {
-  title?: string
-  artist?: string
-  date?: string
-  doorsTime?: string | null
-  showTime?: string | null
-  ticketPriceMin?: string | null
-  ticketPriceMax?: string | null
-  genre?: string[] | null
+  title?: string;
+  artist?: string;
+  date?: string;
+  doorsTime?: string | null;
+  showTime?: string | null;
+  ticketPriceMin?: string | null;
+  ticketPriceMax?: string | null;
+  genre?: string[] | null;
 }
 
 export function useUpdateEvent() {
-  const { getToken } = useAuth()
-  const queryClient = useQueryClient()
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       id,
       payload,
     }: {
-      id: string
-      payload: EventUpdatePayload
+      id: string;
+      payload: EventUpdatePayload;
     }) => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
+      const token = await getToken();
+      if (!token) throw new Error('Not authenticated');
       return apiClient.patch<AdminEvent>(
         `/v1/admin/events/${id}`,
         token,
         payload,
-      )
+      );
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: adminEventsQueryKey });
     },
-  })
+  });
 }
 ```
 
@@ -561,22 +551,27 @@ export function useUpdateEvent() {
 In `EventQueueSplit.tsx`, add the new imports and state. Add to the imports:
 
 ```tsx
-import { useAdminEvents, useApproveEvent, useRejectEvent, useUpdateEvent } from '@/lib/queries/use-admin-events'
+import {
+  useAdminEvents,
+  useApproveEvent,
+  useRejectEvent,
+  useUpdateEvent,
+} from '@/lib/queries/use-admin-events';
 ```
 
 Then, inside the component body, after the existing state declarations, add:
 
 ```tsx
-const updateEvent = useUpdateEvent()
-const [isEditing, setIsEditing] = useState(false)
+const updateEvent = useUpdateEvent();
+const [isEditing, setIsEditing] = useState(false);
 const [editDraft, setEditDraft] = useState<{
-  title: string
-  artist: string
-  date: string
-  doorsTime: string
-  showTime: string
-  ticketPriceMin: string
-  ticketPriceMax: string
+  title: string;
+  artist: string;
+  date: string;
+  doorsTime: string;
+  showTime: string;
+  ticketPriceMin: string;
+  ticketPriceMax: string;
 }>({
   title: '',
   artist: '',
@@ -585,22 +580,22 @@ const [editDraft, setEditDraft] = useState<{
   showTime: '',
   ticketPriceMin: '',
   ticketPriceMax: '',
-})
+});
 ```
 
 Add a `useEffect` that resets edit mode when the selected event changes:
 
 ```tsx
 useEffect(() => {
-  setIsEditing(false)
-}, [selectedId])
+  setIsEditing(false);
+}, [selectedId]);
 ```
 
 Add a handler that initializes the draft and enters edit mode when the Edit button is clicked:
 
 ```tsx
 function handleEditStart() {
-  if (!selected) return
+  if (!selected) return;
   setEditDraft({
     title: selected.title,
     artist: selected.artist,
@@ -609,12 +604,12 @@ function handleEditStart() {
     showTime: selected.showTime ?? '',
     ticketPriceMin: selected.ticketPriceMin ?? '',
     ticketPriceMax: selected.ticketPriceMax ?? '',
-  })
-  setIsEditing(true)
+  });
+  setIsEditing(true);
 }
 
 async function handleEditSave() {
-  if (!selected) return
+  if (!selected) return;
   try {
     await updateEvent.mutateAsync({
       id: selected.id,
@@ -627,16 +622,16 @@ async function handleEditSave() {
         ticketPriceMin: editDraft.ticketPriceMin || null,
         ticketPriceMax: editDraft.ticketPriceMax || null,
       },
-    })
-    setIsEditing(false)
+    });
+    setIsEditing(false);
   } catch (err) {
     // actionError state already handles display
-    console.error('Failed to save event edits', err)
+    console.error('Failed to save event edits', err);
   }
 }
 
 function handleEditCancel() {
-  setIsEditing(false)
+  setIsEditing(false);
 }
 ```
 
@@ -655,31 +650,40 @@ Find the existing Edit button in the inspector panel (around line 777):
 
 ```tsx
 // After
-{isEditing ? (
-  <>
+{
+  isEditing ? (
+    <>
+      <AdminButton
+        variant="primary"
+        size="sm"
+        onClick={() => void handleEditSave()}
+        disabled={updateEvent.isPending}
+      >
+        {updateEvent.isPending ? 'Saving…' : 'Save'}
+      </AdminButton>
+      <AdminButton variant="ghost" size="sm" onClick={handleEditCancel}>
+        Cancel
+      </AdminButton>
+    </>
+  ) : (
     <AdminButton
-      variant="primary"
+      variant="outline"
       size="sm"
-      onClick={() => void handleEditSave()}
-      disabled={updateEvent.isPending}
+      icon={Edit2}
+      onClick={handleEditStart}
     >
-      {updateEvent.isPending ? 'Saving…' : 'Save'}
+      Edit
     </AdminButton>
-    <AdminButton variant="ghost" size="sm" onClick={handleEditCancel}>
-      Cancel
-    </AdminButton>
-  </>
-) : (
-  <AdminButton variant="outline" size="sm" icon={Edit2} onClick={handleEditStart}>
-    Edit
-  </AdminButton>
-)}
+  );
+}
 ```
 
 Then find the extracted fields section (the `{/* Left: extracted (editable) */}` block, around line 881). Replace the inner field list:
 
 ```tsx
-{/* Left: extracted (editable) */}
+{
+  /* Left: extracted (editable) */
+}
 <div>
   <MonoLabel>extracted {isEditing ? '· editing' : '(editable)'}</MonoLabel>
   <div
@@ -787,7 +791,7 @@ Then find the extracted fields section (the `{/* Left: extracted (editable) */}`
       </>
     )}
   </div>
-</div>
+</div>;
 ```
 
 ---
@@ -804,11 +808,11 @@ function EditFieldRow({
   mono,
   onChange,
 }: {
-  label: string
-  value: string
-  type?: 'text' | 'date' | 'time' | 'number'
-  mono?: boolean
-  onChange: (val: string) => void
+  label: string;
+  value: string;
+  type?: 'text' | 'date' | 'time' | 'number';
+  mono?: boolean;
+  onChange: (val: string) => void;
 }) {
   return (
     <div
@@ -847,14 +851,14 @@ function EditFieldRow({
           outline: 'none',
         }}
         onFocus={(ev) => {
-          ev.currentTarget.style.borderColor = 'var(--signal)'
+          ev.currentTarget.style.borderColor = 'var(--signal)';
         }}
         onBlur={(ev) => {
-          ev.currentTarget.style.borderColor = 'var(--border)'
+          ev.currentTarget.style.borderColor = 'var(--border)';
         }}
       />
     </div>
-  )
+  );
 }
 ```
 

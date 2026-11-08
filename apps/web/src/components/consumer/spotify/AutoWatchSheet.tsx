@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
 // One-time auto-watch opt-in sheet, shown after the connect success screen
 // (#763 PR 5, connect-flow.jsx mock). Two explicit choices — auto-watch vs
 // highlight-only (the default). Dismissing writes nothing; only confirming
 // the "auto" choice ever flips the preference.
 
-import { useState } from 'react'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { SignalButton } from './SpotifyButtons'
+import { useState } from 'react';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { SignalButton } from './SpotifyButtons';
 
-const COPY = SPOTIFY_COPY.autoWatchSheet
+const COPY = SPOTIFY_COPY.autoWatchSheet;
 
-export type AutoWatchChoice = 'auto' | 'highlight'
+export type AutoWatchChoice = 'auto' | 'highlight';
 
 const StarIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -22,7 +22,7 @@ const StarIcon = () => (
       fill="currentColor"
     />
   </svg>
-)
+);
 
 const EyeIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -33,7 +33,7 @@ const EyeIcon = () => (
     />
     <circle cx="9" cy="9.5" r="1.8" fill="currentColor" />
   </svg>
-)
+);
 
 const OptionCard = ({
   selected,
@@ -43,12 +43,12 @@ const OptionCard = ({
   body,
   defaultPill,
 }: {
-  selected: boolean
-  onSelect: () => void
-  icon: React.ReactNode
-  title: string
-  body: string
-  defaultPill?: string
+  selected: boolean;
+  onSelect: () => void;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  defaultPill?: string;
 }) => (
   <button
     type="button"
@@ -106,14 +106,14 @@ const OptionCard = ({
       }}
     />
   </button>
-)
+);
 
 interface AutoWatchSheetProps {
-  open: boolean
-  denverArtistCount: number
-  denverShowCount: number
-  onConfirm: (choice: AutoWatchChoice) => void
-  onClose: () => void
+  open: boolean;
+  denverArtistCount: number;
+  denverShowCount: number;
+  onConfirm: (choice: AutoWatchChoice) => void;
+  onClose: () => void;
 }
 
 export const AutoWatchSheet = ({
@@ -124,18 +124,18 @@ export const AutoWatchSheet = ({
   onClose,
 }: AutoWatchSheetProps) => {
   // Highlight-only is the designed default; auto is the explicit opt-in.
-  const [choice, setChoice] = useState<AutoWatchChoice>('highlight')
+  const [choice, setChoice] = useState<AutoWatchChoice>('highlight');
 
   const eyebrow =
     denverArtistCount === 1
       ? COPY.eyebrowSingular
-      : COPY.eyebrow(denverArtistCount)
+      : COPY.eyebrow(denverArtistCount);
   const cta =
     choice === 'auto'
       ? denverShowCount === 1
         ? COPY.ctaAutoSingular
         : COPY.ctaAuto(denverShowCount)
-      : COPY.ctaHighlight
+      : COPY.ctaHighlight;
 
   return (
     <ModalShell
@@ -203,5 +203,5 @@ export const AutoWatchSheet = ({
         </div>
       </div>
     </ModalShell>
-  )
-}
+  );
+};

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Download your data (#1573), design_handoff_email_prefs_and_export/email-export.jsx.
 //
@@ -10,18 +10,18 @@
 // No entitlement gate. Handing over your own data is an obligation, not a
 // feature of a plan.
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import {
   ExportRateLimitedError,
   downloadUserDataExport,
   formatWait,
-} from '@/lib/user-export'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from '@/lib/user-export';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.settings.dataExport
+const COPY = CONSUMER_COPY.settings.dataExport;
 
-const LIMIT_ID = 'data-export-limit'
+const LIMIT_ID = 'data-export-limit';
 
 const DownloadIcon = () => (
   <svg
@@ -46,7 +46,7 @@ const DownloadIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const ClockIcon = () => (
   <svg
@@ -65,7 +65,7 @@ const ClockIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const AlertIcon = () => (
   <svg
@@ -84,7 +84,7 @@ const AlertIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const StatusLine = ({
   id,
@@ -92,13 +92,13 @@ const StatusLine = ({
   rail,
   children,
 }: {
-  id?: string
-  tone: 'warning' | 'danger'
-  rail: string
-  children: string
+  id?: string;
+  tone: 'warning' | 'danger';
+  rail: string;
+  children: string;
 }) => {
-  const danger = tone === 'danger'
-  const color = danger ? 'var(--danger)' : 'var(--warning)'
+  const danger = tone === 'danger';
+  const color = danger ? 'var(--danger)' : 'var(--warning)';
   return (
     <div
       id={id}
@@ -144,53 +144,53 @@ const StatusLine = ({
         </span>
       </span>
     </div>
-  )
-}
+  );
+};
 
 export const DataExportRow = () => {
-  const { getToken } = useAuth()
-  const [pending, setPending] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [waitSeconds, setWaitSeconds] = useState<number | null>(null)
-  const limited = waitSeconds !== null
-  const disabled = pending || limited
+  const { getToken } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState<number | null>(null);
+  const limited = waitSeconds !== null;
+  const disabled = pending || limited;
 
   // The countdown is session-local, so a reload during the hour shows a
   // pressable row that refuses on press and lands back here with a fresh wait.
   // Self-correcting, and cheaper than persisting a limit the server owns.
   useEffect(() => {
-    if (!limited) return undefined
+    if (!limited) return undefined;
     const timer = setInterval(() => {
-      setWaitSeconds((prev) => (prev === null || prev <= 1 ? null : prev - 1))
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [limited])
+      setWaitSeconds((prev) => (prev === null || prev <= 1 ? null : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [limited]);
 
   const download = () => {
-    setFailed(false)
-    setPending(true)
+    setFailed(false);
+    setPending(true);
     void (async () => {
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (token === null) {
-          setFailed(true)
-          return
+          setFailed(true);
+          return;
         }
-        await downloadUserDataExport(token)
+        await downloadUserDataExport(token);
       } catch (err) {
         if (err instanceof ExportRateLimitedError) {
-          setWaitSeconds(err.retryAfterSeconds)
-          return
+          setWaitSeconds(err.retryAfterSeconds);
+          return;
         }
         // The row is the only surface for this failure — no toast system in
         // settings — so the console is the only place the cause survives.
-        console.error('Data export failed', err)
-        setFailed(true)
+        console.error('Data export failed', err);
+        setFailed(true);
       } finally {
-        setPending(false)
+        setPending(false);
       }
-    })()
-  }
+    })();
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -266,5 +266,5 @@ export const DataExportRow = () => {
         </StatusLine>
       )}
     </div>
-  )
-}
+  );
+};

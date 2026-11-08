@@ -1,6 +1,6 @@
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { type ReviewCounts } from '@/lib/queries/use-admin-review'
-import { type ReviewTabDescriptor } from '../ReviewTabs'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { type ReviewCounts } from '@/lib/queries/use-admin-review';
+import { type ReviewTabDescriptor } from '../ReviewTabs';
 
 /**
  * Counts are intentionally omitted from `prices` and `missing` (#1079). Price
@@ -45,4 +45,4 @@ export const buildReviewTabs = (
     count: counts.priceContests,
     kind: 'warning',
   },
-]
+];

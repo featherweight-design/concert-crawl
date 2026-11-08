@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { EventsMobileList } from './EventsMobileList'
-import { type AllEvent } from './types'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { EventsMobileList } from './EventsMobileList';
+import { type AllEvent } from './types';
 
 const baseEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   id: 'evt-1',
@@ -27,7 +27,7 @@ const baseEvent = (overrides: Partial<AllEvent> = {}): AllEvent => ({
   hiddenFromConsumer: false,
   isConcertReviewNeeded: false,
   ...overrides,
-})
+});
 
 // Mobile and desktop must show the same classification badges — a misclassified
 // concert that is only visible on one breakpoint is still a concert nobody finds.
@@ -38,9 +38,9 @@ describe('EventsMobileList — classification badges', () => {
         events={[baseEvent({ hiddenFromConsumer: true })]}
         onRowClick={() => {}}
       />,
-    )
-    expect(screen.getByText('non-concert')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('non-concert')).toBeTruthy();
+  });
 
   it('renders the needs-review badge when isConcertReviewNeeded=true', () => {
     render(
@@ -48,9 +48,9 @@ describe('EventsMobileList — classification badges', () => {
         events={[baseEvent({ isConcertReviewNeeded: true })]}
         onRowClick={() => {}}
       />,
-    )
-    expect(screen.getByText('needs review')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('needs review')).toBeTruthy();
+  });
 
   // The two bits are independent, so a visible event can still be flagged.
   it('renders the needs-review badge on a visible event', () => {
@@ -64,17 +64,17 @@ describe('EventsMobileList — classification badges', () => {
         ]}
         onRowClick={() => {}}
       />,
-    )
-    expect(screen.getByText('needs review')).toBeTruthy()
-    expect(screen.queryByText('non-concert')).toBeNull()
-  })
+    );
+    expect(screen.getByText('needs review')).toBeTruthy();
+    expect(screen.queryByText('non-concert')).toBeNull();
+  });
 
   it('renders neither classification badge on an ordinary card', () => {
-    render(<EventsMobileList events={[baseEvent()]} onRowClick={() => {}} />)
-    expect(screen.queryByText('non-concert')).toBeNull()
-    expect(screen.queryByText('needs review')).toBeNull()
-  })
-})
+    render(<EventsMobileList events={[baseEvent()]} onRowClick={() => {}} />);
+    expect(screen.queryByText('non-concert')).toBeNull();
+    expect(screen.queryByText('needs review')).toBeNull();
+  });
+});
 
 describe('EventsMobileList', () => {
   it('renders one card per event', () => {
@@ -86,20 +86,20 @@ describe('EventsMobileList', () => {
         ]}
         onRowClick={() => {}}
       />,
-    )
-    expect(screen.getByText('Lord Huron')).toBeTruthy()
-    expect(screen.getByText('King Krule')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Lord Huron')).toBeTruthy();
+    expect(screen.getByText('King Krule')).toBeTruthy();
+  });
 
   it('invokes onRowClick with the event id when a card is clicked', () => {
-    const onRowClick = vi.fn()
+    const onRowClick = vi.fn();
     render(
       <EventsMobileList
         events={[baseEvent({ id: 'evt-9' })]}
         onRowClick={onRowClick}
       />,
-    )
-    fireEvent.click(screen.getByText('Lord Huron'))
-    expect(onRowClick).toHaveBeenCalledWith('evt-9')
-  })
-})
+    );
+    fireEvent.click(screen.getByText('Lord Huron'));
+    expect(onRowClick).toHaveBeenCalledWith('evt-9');
+  });
+});

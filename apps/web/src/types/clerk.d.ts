@@ -1,4 +1,4 @@
-import type { Role } from '@concert-crawl/types'
+import type { Role } from '@concert-crawl/types';
 
 declare global {
   // Augments Clerk's session claims type with our custom JWT template fields.
@@ -7,13 +7,13 @@ declare global {
   // Used by the API's requireRole middleware and any JWT-based role checks.
   interface CustomJwtSessionClaims {
     metadata?: {
-      role?: Role
-    }
+      role?: Role;
+    };
   }
 
   // Augments Clerk's user publicMetadata type.
   // Used by currentUser().publicMetadata in web server components and actions.
   interface UserPublicMetadata {
-    role?: Role
+    role?: Role;
   }
 }

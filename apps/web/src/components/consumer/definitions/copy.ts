@@ -1099,9 +1099,9 @@ export const CONSUMER_COPY = {
     // optimistic confirm lands before the price is promoted out of pending —
     // so that case gets its own line rather than 'Waiting on 0 more fans'.
     waitingOnFans: (remaining: number) => {
-      if (remaining <= 0) return 'Confirms are in'
-      if (remaining === 1) return 'Waiting on one more fan'
-      return `Waiting on ${remaining === 2 ? 'two' : String(remaining)} more fans`
+      if (remaining <= 0) return 'Confirms are in';
+      if (remaining === 1) return 'Waiting on one more fan';
+      return `Waiting on ${remaining === 2 ? 'two' : String(remaining)} more fans`;
     },
     // Footer — submitter view
     editButton: 'Edit',
@@ -1561,12 +1561,12 @@ export const CONSUMER_COPY = {
       // window. Hardcoding "1/2 ... one more fan" made this surface contradict
       // the pending rail's "1 of 3 confirmed" on every imminent show.
       pendingFragment: (confirmsNeeded: number) => {
-        const remaining = Math.max(confirmsNeeded - 1, 0)
+        const remaining = Math.max(confirmsNeeded - 1, 0);
         const tail =
           remaining === 1
             ? 'one more fan confirms'
-            : `${remaining === 2 ? 'two' : String(remaining)} more fans confirm`
-        return `sits pending · 1/${confirmsNeeded} until ${tail}.`
+            : `${remaining === 2 ? 'two' : String(remaining)} more fans confirm`;
+        return `sits pending · 1/${confirmsNeeded} until ${tail}.`;
       },
       addAnotherEyebrow: 'This show has more than one tier?',
       addPillTemplate: (tier: string) => `+ Add ${tier.toLowerCase()}`,
@@ -1773,7 +1773,7 @@ export const CONSUMER_COPY = {
     requirement:
       "A price check needs the price you saw. Seller and ticket type stay the same. If you saw something different, log it. That's how we find the truth.",
   },
-} as const
+} as const;
 
 // ── Vendor picker (#1193) ─────────────────────────────────────────
 // Display strings for the "Where it's listed" field. Keyed by the stored enum
@@ -1812,4 +1812,4 @@ export const VENDOR_PICKER_COPY = {
     TicketNetwork: 'TicketNetwork',
     Other: 'Somewhere else',
   },
-} as const
+} as const;

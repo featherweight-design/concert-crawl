@@ -1,29 +1,29 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useClerk } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry'
+import { useEffect } from 'react';
+import { useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
 
-const copy = CONSUMER_COPY.error
+const copy = CONSUMER_COPY.error;
 
 interface ProtectedErrorProps {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }
 
 export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
-  const { signOut } = useClerk()
-  const router = useRouter()
-  const retry = useErrorBoundaryRetry(reset)
+  const { signOut } = useClerk();
+  const router = useRouter();
+  const retry = useErrorBoundaryRetry(reset);
 
   useEffect(() => {
-    console.error('[app error]', error)
-  }, [error])
+    console.error('[app error]', error);
+  }, [error]);
 
   function handleSignOut() {
-    void signOut(() => router.push('/'))
+    void signOut(() => router.push('/'));
   }
 
   return (
@@ -122,5 +122,5 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
         </button>
       </div>
     </div>
-  )
+  );
 }

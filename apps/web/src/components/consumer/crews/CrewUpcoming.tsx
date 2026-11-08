@@ -1,16 +1,16 @@
-import type { CrewShow } from '@concert-crawl/types'
+import type { CrewShow } from '@concert-crawl/types';
 
-import { EventRow, fromCrewShow } from '@/components/consumer/event-row'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { MemberCluster } from './MemberCluster'
-import { groupInOrder } from './lib/format'
-import { CREWS_COPY } from './definitions/copy'
+import { EventRow, fromCrewShow } from '@/components/consumer/event-row';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { MemberCluster } from './MemberCluster';
+import { groupInOrder } from './lib/format';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface CrewUpcomingProps {
-  shows: CrewShow[]
-  wide: boolean
+  shows: CrewShow[];
+  wide: boolean;
 }
 
 /**
@@ -30,10 +30,10 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
         body={COPY.empty.noUpcomingBody}
         railLabel={COPY.empty.noUpcomingRail}
       />
-    )
+    );
   }
 
-  const groups = groupInOrder(shows, (show) => show.iso)
+  const groups = groupInOrder(shows, (show) => show.iso);
 
   return (
     <div className="flex flex-col gap-5">
@@ -91,5 +91,5 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
         </section>
       ))}
     </div>
-  )
-}
+  );
+};

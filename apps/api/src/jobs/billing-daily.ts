@@ -40,9 +40,9 @@
 //     safely implemented for templates whose vars are re-derivable; it is
 //     log-skipped with an explicit comment until the schema supports it.
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
-import type { SQL } from 'drizzle-orm'
+import { pathToFileURL } from 'node:url';
+import { and, eq, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import {
   db,
   giftedComps,
@@ -52,66 +52,70 @@ import {
   userArtistFollows,
   userBilling,
   userEvents,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   canUseFeature,
   isGiftLive,
   USER_PLANS,
-} from '@concert-crawl/entitlements'
-import type { PremiumFeature } from '@concert-crawl/entitlements'
-import { isRole, PREMIUM_ROLES } from '@concert-crawl/types'
-import { sendTransactionalEmail } from '../lib/email.js'
-import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
-import type { PaidEmailTier } from '../emails/types.js'
-import { apiLogger } from '../lib/logger.js'
-import { pruneNotifications } from '../lib/prune-notifications.js'
+} from '@concert-crawl/entitlements';
+import type { PremiumFeature } from '@concert-crawl/entitlements';
+import { isRole, PREMIUM_ROLES } from '@concert-crawl/types';
+import { sendTransactionalEmail } from '../lib/email.js';
+import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js';
+import type { PaidEmailTier } from '../emails/types.js';
+import { apiLogger } from '../lib/logger.js';
+import { pruneNotifications } from '../lib/prune-notifications.js';
 import {
   getBillingJobStripeClient,
   type BillingJobStripeClient,
-} from './billing-daily-stripe.js'
+} from './billing-daily-stripe.js';
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const NINETY_DAYS_MS = 90 * DAY_MS
-const WINBACK_DELAY_MS = 60 * DAY_MS
-const GIFT_ENDING_WINDOW_MS = 7 * DAY_MS
-const DUNNING_FALLBACK_AGE_MS = 8 * DAY_MS
-const PROCESSED_EVENT_RETENTION_MS = NINETY_DAYS_MS
+const DAY_MS = 24 * 60 * 60 * 1000;
+const NINETY_DAYS_MS = 90 * DAY_MS;
+const WINBACK_DELAY_MS = 60 * DAY_MS;
+const GIFT_ENDING_WINDOW_MS = 7 * DAY_MS;
+const DUNNING_FALLBACK_AGE_MS = 8 * DAY_MS;
+const PROCESSED_EVENT_RETENTION_MS = NINETY_DAYS_MS;
 
 // Card-expiry warning windows (§5.1 task 1). A card is warned for the TIGHTEST
 // window it currently falls into, so a card 6 days out sends the 7-day notice
 // (not 30/14). This array is the set of valid window values (used for the
 // CardExpiryWindow type); the tightest-band selection is done by the explicit
 // if-ladder in selectCardExpiryWindow, not by iterating this array.
-export const CARD_EXPIRY_WINDOWS = [30, 14, 7] as const
-export type CardExpiryWindow = (typeof CARD_EXPIRY_WINDOWS)[number]
+export const CARD_EXPIRY_WINDOWS = [30, 14, 7] as const;
+export type CardExpiryWindow = (typeof CARD_EXPIRY_WINDOWS)[number];
 
 // Premium-and-up: a live subscription on one of these is never purge-eligible
 // (isPurgeEligible) and counts as an upgrade for the trial reminders. Mirrors
 // PREMIUM_AND_UP in stripe-webhook-handlers.ts.
-const PREMIUM_AND_UP: readonly string[] = ['premium', 'founder']
+const PREMIUM_AND_UP: readonly string[] = ['premium', 'founder'];
 
 // Tiers whose cancellation starts the 90-day preserve-then-purge clock (#780
 // §5). Supporter joined in #1229: since the 2026-07-29 amendment it unlocks
 // concert history and calendar export, and Hugh ruled its data purges like
 // the other tiers'. Mirrors PURGE_CLOCK_TIERS in stripe-webhook-handlers.ts.
-const PURGE_CLOCK_TIERS: readonly string[] = ['supporter', 'premium', 'founder']
+const PURGE_CLOCK_TIERS: readonly string[] = [
+  'supporter',
+  'premium',
+  'founder',
+];
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Free',
   premium: 'Premium',
   supporter: 'Supporter',
   founder: 'Founder',
-}
+};
 
 const tierDisplayName = (tier: string | null): string | null =>
-  tier !== null ? (TIER_DISPLAY_NAMES[tier] ?? null) : null
+  tier !== null ? (TIER_DISPLAY_NAMES[tier] ?? null) : null;
 
 // Narrows a raw subscriptions.tier string to the paid-tier union the email
 // templates accept, so card_expiring_soon can render the tier-aware accent +
 // badge. 'free' (and any unknown value) yields undefined — the template then
 // falls back to the neutral signal accent and omits the badge.
 const isPaidEmailTier = (tier: string | null): tier is PaidEmailTier =>
-  tier === 'premium' || tier === 'supporter' || tier === 'founder'
+  tier === 'premium' || tier === 'supporter' || tier === 'founder';
 
 // ---------------------------------------------------------------------------
 // Pure decidable helpers (unit-tested directly, no DB)
@@ -123,7 +127,7 @@ const isPaidEmailTier = (tier: string | null): tier is PaidEmailTier =>
  * of the following month (2026-07-01T00:00:00Z) so "days remaining" is honest.
  */
 export const cardExpiryInstant = (expMonth: number, expYear: number): Date =>
-  new Date(Date.UTC(expYear, expMonth, 1))
+  new Date(Date.UTC(expYear, expMonth, 1));
 
 /**
  * Whole days between `now` and the card's expiry instant. Negative once the
@@ -137,7 +141,7 @@ export const daysUntilCardExpiry = (
 ): number =>
   Math.floor(
     (cardExpiryInstant(expMonth, expYear).getTime() - now.getTime()) / DAY_MS,
-  )
+  );
 
 /**
  * Which warning window a card falls into given days-remaining, or null if it
@@ -150,35 +154,35 @@ export const daysUntilCardExpiry = (
 export const selectCardExpiryWindow = (
   daysRemaining: number,
 ): CardExpiryWindow | null => {
-  if (daysRemaining <= 0) return null
-  if (daysRemaining <= 7) return 7
-  if (daysRemaining <= 14) return 14
-  if (daysRemaining <= 30) return 30
-  return null
-}
+  if (daysRemaining <= 0) return null;
+  if (daysRemaining <= 7) return 7;
+  if (daysRemaining <= 14) return 14;
+  if (daysRemaining <= 30) return 30;
+  return null;
+};
 
 /** card_expiring_soon dedupe key (design table CE-6). */
 export const cardExpiryDedupeKey = (input: {
-  cardFingerprint: string
-  expMonth: number
-  expYear: number
-  window: CardExpiryWindow
+  cardFingerprint: string;
+  expMonth: number;
+  expYear: number;
+  window: CardExpiryWindow;
 }): string =>
-  `${input.cardFingerprint}:${input.expMonth}-${input.expYear}:${input.window}`
+  `${input.cardFingerprint}:${input.expMonth}-${input.expYear}:${input.window}`;
 
 /** A gift is "ending soon" when it expires within the next 7 days (GE-1). */
 export const isGiftEndingSoon = (
   expiresAt: Date | null,
   now: Date,
 ): boolean => {
-  if (expiresAt === null) return false // lifetime gift — never ends
-  const remaining = expiresAt.getTime() - now.getTime()
-  return remaining > 0 && remaining <= GIFT_ENDING_WINDOW_MS
-}
+  if (expiresAt === null) return false; // lifetime gift — never ends
+  const remaining = expiresAt.getTime() - now.getTime();
+  return remaining > 0 && remaining <= GIFT_ENDING_WINDOW_MS;
+};
 
 /** A gift is expired (past its end) and still needs revoking (§5.1 task 2). */
 export const isGiftExpired = (expiresAt: Date | null, now: Date): boolean =>
-  expiresAt !== null && expiresAt.getTime() <= now.getTime()
+  expiresAt !== null && expiresAt.getTime() <= now.getTime();
 
 /**
  * Winback fires exactly 60 days after cancel completion (WB-1), single-shot.
@@ -187,11 +191,11 @@ export const isGiftExpired = (expiresAt: Date | null, now: Date): boolean =>
  * needs to gate the earliest fire.
  */
 export const isWinbackDue = (cancelledAt: Date, now: Date): boolean =>
-  now.getTime() - cancelledAt.getTime() >= WINBACK_DELAY_MS
+  now.getTime() - cancelledAt.getTime() >= WINBACK_DELAY_MS;
 
 /** winback dedupe key (WB-2). */
 export const winbackDedupeKey = (subscriptionId: string): string =>
-  `sub:${subscriptionId}`
+  `sub:${subscriptionId}`;
 
 /**
  * Purge guard (§5.3): a user is purge-eligible only when the 90-day clock has
@@ -205,20 +209,20 @@ export const winbackDedupeKey = (subscriptionId: string): string =>
  * to everything, so nothing purges.
  */
 export const isPurgeEligible = (input: {
-  premiumDataExpiresAt: Date | null
-  liveTier: string | null
-  compedPremium?: boolean
-  now: Date
+  premiumDataExpiresAt: Date | null;
+  liveTier: string | null;
+  compedPremium?: boolean;
+  now: Date;
 }): boolean => {
-  if (input.premiumDataExpiresAt === null) return false
-  if (input.premiumDataExpiresAt.getTime() >= input.now.getTime()) return false
-  if (input.compedPremium === true) return false
+  if (input.premiumDataExpiresAt === null) return false;
+  if (input.premiumDataExpiresAt.getTime() >= input.now.getTime()) return false;
+  if (input.compedPremium === true) return false;
   // Still-premium (re-upgraded) users are never purged.
   if (input.liveTier !== null && PREMIUM_AND_UP.includes(input.liveTier)) {
-    return false
+    return false;
   }
-  return true
-}
+  return true;
+};
 
 /**
  * Per-category purge guard. `isPurgeEligible` decides whether a user enters the
@@ -236,15 +240,15 @@ export const shouldPurgeFeature = (
   liveTier: string | null,
   feature: PremiumFeature,
 ): boolean => {
-  const plan = USER_PLANS.find((candidate) => candidate === liveTier)
+  const plan = USER_PLANS.find((candidate) => candidate === liveTier);
   // `liveTier` is a subscription-tier string, so an unrecognized or absent
   // value means no active subscription row grants this feature. Role-comped
   // entitlement is out of scope here: the caller only reads the subscriptions
   // table, and a comped user has no premiumDataExpiresAt clock to expire in
   // the first place, so they never reach the purge.
-  if (plan === undefined) return true
-  return !canUseFeature({ plan, roleComped: false }, feature)
-}
+  if (plan === undefined) return true;
+  return !canUseFeature({ plan, roleComped: false }, feature);
+};
 
 /**
  * Where-clause for the 90-day purge's follows delete (E9): manual rows only.
@@ -260,12 +264,12 @@ export const purgeFollowsWhere = (userId: string): SQL => {
   const condition = and(
     eq(userArtistFollows.userId, userId),
     eq(userArtistFollows.source, 'manual'),
-  )
+  );
   if (condition === undefined) {
-    throw new Error('purgeFollowsWhere: and() returned undefined')
+    throw new Error('purgeFollowsWhere: and() returned undefined');
   }
-  return condition
-}
+  return condition;
+};
 
 /**
  * Whether a cancellation of `tier` should start the 90-day preserve-then-purge
@@ -276,7 +280,7 @@ export const purgeFollowsWhere = (userId: string): SQL => {
  * the real webhook would have.
  */
 export const cancellationStartsPurgeClock = (tier: string | null): boolean =>
-  tier !== null && PURGE_CLOCK_TIERS.includes(tier)
+  tier !== null && PURGE_CLOCK_TIERS.includes(tier);
 
 // ---------------------------------------------------------------------------
 // Task 1 — Card-expiry warnings
@@ -303,20 +307,20 @@ export const runCardExpiryWarnings = async (
       status: subscriptions.status,
     })
     .from(subscriptions)
-    .where(sql`${subscriptions.status} in ('active', 'trialing', 'past_due')`)
+    .where(sql`${subscriptions.status} in ('active', 'trialing', 'past_due')`);
 
   for (const row of rows) {
     try {
-      const card = await stripe.getDefaultCard(row.stripeCustomerId)
-      if (card === null) continue // no card on file / non-card method
+      const card = await stripe.getDefaultCard(row.stripeCustomerId);
+      if (card === null) continue; // no card on file / non-card method
 
       const daysRemaining = daysUntilCardExpiry(
         card.expMonth,
         card.expYear,
         now,
-      )
-      const window = selectCardExpiryWindow(daysRemaining)
-      if (window === null) continue
+      );
+      const window = selectCardExpiryWindow(daysRemaining);
+      if (window === null) continue;
 
       await sendTransactionalEmail({
         templateKey: 'card_expiring_soon',
@@ -338,15 +342,15 @@ export const runCardExpiryWarnings = async (
             expYear: card.expYear,
           },
         },
-      })
+      });
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
         'billing-daily task1: card-expiry check failed for one subscription — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 2 — Gift-ending notices + expired-gift revoke
@@ -361,32 +365,32 @@ export const runCardExpiryWarnings = async (
  * which logs the drift).
  */
 const repairGiftMirror = async (userId: string): Promise<void> => {
-  const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+  const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
   if (!clerkSecretKey) {
     apiLogger.warn(
       { userId },
       'billing-daily task2: CLERK_SECRET_KEY not set — gift mirror repair skipped',
-    )
-    return
+    );
+    return;
   }
   try {
     // Lazy import so the job never requires Clerk unless a revoke happens.
-    const { createClerkClient } = await import('@clerk/backend')
-    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
-    const user = await clerkClient.users.getUser(userId)
-    const currentPlan = (user.publicMetadata as { plan?: unknown }).plan
+    const { createClerkClient } = await import('@clerk/backend');
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
+    const user = await clerkClient.users.getUser(userId);
+    const currentPlan = (user.publicMetadata as { plan?: unknown }).plan;
     if (currentPlan === 'premium_gifted') {
       await clerkClient.users.updateUserMetadata(userId, {
         publicMetadata: { plan: null },
-      })
+      });
     }
   } catch (err) {
     apiLogger.error(
       { err, userId },
       'billing-daily task2: gift mirror repair failed — DB revoke stands, mirror self-heals on next read',
-    )
+    );
   }
-}
+};
 
 /**
  * Revokes an expired gift: sets revokedAt, repairs the Clerk mirror, writes a
@@ -396,9 +400,9 @@ const repairGiftMirror = async (userId: string): Promise<void> => {
  * shape as the webhook handlers.
  */
 const revokeExpiredGift = async (input: {
-  giftId: string
-  userId: string
-  expiresAt: Date
+  giftId: string;
+  userId: string;
+  expiresAt: Date;
 }): Promise<void> => {
   // Atomic: the revoke UPDATE, the gift_revoked event, and the 90-day clock
   // must land together. `runGiftEndingNotices` filters on `revoked_at is null`,
@@ -408,12 +412,12 @@ const revokeExpiredGift = async (input: {
   // run retries the whole unit.
   const premiumDataExpiresAt = new Date(
     input.expiresAt.getTime() + NINETY_DAYS_MS,
-  )
+  );
   await db.transaction(async (tx) => {
     await tx
       .update(giftedComps)
       .set({ revokedAt: new Date() })
-      .where(and(eq(giftedComps.id, input.giftId), sql`revoked_at is null`))
+      .where(and(eq(giftedComps.id, input.giftId), sql`revoked_at is null`));
 
     // Event-existence guard: at most one gift_revoked per gift (idempotent
     // re-run). Matches the metadata-probe pattern in founder-seats.ts.
@@ -426,13 +430,13 @@ const revokeExpiredGift = async (input: {
           sql`${subscriptionEvents.metadata}->>'giftId' = ${input.giftId}`,
         ),
       )
-      .limit(1)
+      .limit(1);
     if (existingEvent === undefined) {
       await tx.insert(subscriptionEvents).values({
         userId: input.userId,
         type: 'gift_revoked',
         metadata: { giftId: input.giftId, reason: 'expired' },
-      })
+      });
     }
 
     // Start the 90-day clock at expiry (§5.3 clock-start rule for gift expiry).
@@ -442,20 +446,20 @@ const revokeExpiredGift = async (input: {
       .onConflictDoUpdate({
         target: userBilling.userId,
         set: { premiumDataExpiresAt, updatedAt: new Date() },
-      })
-  })
+      });
+  });
 
   // Best-effort Clerk mirror repair AFTER the DB unit commits — it is an
   // external call that self-heals on next read, so it stays outside the tx.
-  await repairGiftMirror(input.userId)
-}
+  await repairGiftMirror(input.userId);
+};
 
 export const runGiftEndingNotices = async (now: Date): Promise<void> => {
   // Live gifts (not revoked) with a finite expiry, bounded to those already
   // expired or ending within the 7-day window — the only two actions this task
   // takes. Anything expiring farther out is irrelevant today, so we keep the
   // scan bounded as gifted_comps grows (avoids a full-table read every run).
-  const endingCutoff = new Date(now.getTime() + GIFT_ENDING_WINDOW_MS)
+  const endingCutoff = new Date(now.getTime() + GIFT_ENDING_WINDOW_MS);
   const rows = await db
     .select({
       giftId: giftedComps.id,
@@ -470,20 +474,20 @@ export const runGiftEndingNotices = async (now: Date): Promise<void> => {
         lte(giftedComps.expiresAt, endingCutoff),
         sql`revoked_at is null`,
       ),
-    )
+    );
 
   for (const row of rows) {
     try {
-      const expiresAt = row.expiresAt
-      if (expiresAt === null) continue
+      const expiresAt = row.expiresAt;
+      if (expiresAt === null) continue;
 
       if (isGiftExpired(expiresAt, now)) {
         await revokeExpiredGift({
           giftId: row.giftId,
           userId: row.userId,
           expiresAt,
-        })
-        continue
+        });
+        continue;
       }
 
       if (isGiftEndingSoon(expiresAt, now)) {
@@ -504,16 +508,16 @@ export const runGiftEndingNotices = async (now: Date): Promise<void> => {
             giftEndsAt: expiresAt.toISOString(),
             unsubscribeUrl: buildUnsubscribeUrl(row.userId, 'product') ?? null,
           },
-        })
+        });
       }
     } catch (err) {
       apiLogger.error(
         { err, giftId: row.giftId, userId: row.userId },
         'billing-daily task2: gift notice/revoke failed for one gift — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 3 — Trial-end events
@@ -536,12 +540,12 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
     .from(userBilling)
     .where(
       and(isNotNull(userBilling.trialEndsAt), lt(userBilling.trialEndsAt, now)),
-    )
+    );
 
   for (const row of rows) {
     try {
-      const trialEndsAt = row.trialEndsAt
-      if (trialEndsAt === null) continue
+      const trialEndsAt = row.trialEndsAt;
+      if (trialEndsAt === null) continue;
 
       // Never-upgraded gate: any live premium-and-up subscription means they
       // converted — no trial_ended clock.
@@ -549,16 +553,16 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
         .select({ tier: subscriptions.tier, status: subscriptions.status })
         .from(subscriptions)
         .where(eq(subscriptions.userId, row.userId))
-        .limit(1)
+        .limit(1);
       const upgraded =
         liveSub !== undefined &&
         ['active', 'trialing', 'past_due'].includes(liveSub.status) &&
-        PREMIUM_AND_UP.includes(liveSub.tier)
-      if (upgraded) continue
+        PREMIUM_AND_UP.includes(liveSub.tier);
+      if (upgraded) continue;
 
       // Idempotency: one trial_ended per trial expiry (keyed to trialEndsAt so
       // a re-issued trial can fire again).
-      const trialEndsAtIso = trialEndsAt.toISOString()
+      const trialEndsAtIso = trialEndsAt.toISOString();
       const [existingEvent] = await db
         .select({ id: subscriptionEvents.id })
         .from(subscriptionEvents)
@@ -569,7 +573,7 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
             sql`${subscriptionEvents.metadata}->>'trialEndsAt' = ${trialEndsAtIso}`,
           ),
         )
-        .limit(1)
+        .limit(1);
 
       // Start the 90-day clock at trialEndsAt + 90d (§5.3 clock-start rule for
       // trial end). Event insert + clock start are one transaction so a crash
@@ -580,14 +584,14 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
       // makes it a no-op once a later event has set the clock).
       const premiumDataExpiresAt = new Date(
         trialEndsAt.getTime() + NINETY_DAYS_MS,
-      )
+      );
       await db.transaction(async (tx) => {
         if (existingEvent === undefined) {
           await tx.insert(subscriptionEvents).values({
             userId: row.userId,
             type: 'trial_ended',
             metadata: { trialEndsAt: trialEndsAtIso },
-          })
+          });
         }
         await tx
           .update(userBilling)
@@ -597,16 +601,16 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
               eq(userBilling.userId, row.userId),
               sql`premium_data_expires_at is null`,
             ),
-          )
-      })
+          );
+      });
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
         'billing-daily task3: trial-end processing failed for one user — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 4 — Winback
@@ -620,7 +624,7 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
 export const runWinback = async (now: Date): Promise<void> => {
   // cancel_completed events at least 60 days old. metadata carries
   // subscriptionId + tier (written by handleSubscriptionDeleted).
-  const cutoff = new Date(now.getTime() - WINBACK_DELAY_MS)
+  const cutoff = new Date(now.getTime() - WINBACK_DELAY_MS);
   const rows = await db
     .select({
       userId: subscriptionEvents.userId,
@@ -633,29 +637,29 @@ export const runWinback = async (now: Date): Promise<void> => {
         eq(subscriptionEvents.type, 'cancel_completed'),
         lte(subscriptionEvents.createdAt, cutoff),
       ),
-    )
+    );
 
   for (const row of rows) {
     try {
-      if (!isWinbackDue(row.createdAt, now)) continue
+      if (!isWinbackDue(row.createdAt, now)) continue;
 
       const metadata =
         row.metadata !== null && typeof row.metadata === 'object'
           ? (row.metadata as Record<string, unknown>)
-          : {}
+          : {};
       const subscriptionId =
         typeof metadata['subscriptionId'] === 'string'
           ? metadata['subscriptionId']
-          : null
+          : null;
       if (subscriptionId === null) {
         apiLogger.warn(
           { userId: row.userId },
           'billing-daily task4: cancel_completed event missing subscriptionId — cannot dedupe winback, skipping',
-        )
-        continue
+        );
+        continue;
       }
       const tier =
-        typeof metadata['tier'] === 'string' ? metadata['tier'] : null
+        typeof metadata['tier'] === 'string' ? metadata['tier'] : null;
 
       // "no new active sub": a live subscription means they re-subscribed —
       // no winback.
@@ -663,11 +667,11 @@ export const runWinback = async (now: Date): Promise<void> => {
         .select({ status: subscriptions.status })
         .from(subscriptions)
         .where(eq(subscriptions.userId, row.userId))
-        .limit(1)
+        .limit(1);
       const hasLiveSub =
         liveSub !== undefined &&
-        ['active', 'trialing', 'past_due'].includes(liveSub.status)
-      if (hasLiveSub) continue
+        ['active', 'trialing', 'past_due'].includes(liveSub.status);
+      if (hasLiveSub) continue;
 
       await sendTransactionalEmail({
         templateKey: 'winback',
@@ -677,15 +681,15 @@ export const runWinback = async (now: Date): Promise<void> => {
           tierName: tierDisplayName(tier),
           unsubscribeUrl: buildUnsubscribeUrl(row.userId, 'product') ?? null,
         },
-      })
+      });
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
         'billing-daily task4: winback failed for one user — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 5 — 90-day preserve-then-purge (§5.3)
@@ -712,26 +716,26 @@ export const runWinback = async (now: Date): Promise<void> => {
  * defer rather than guess.
  */
 const loadRoleComped = async (userId: string): Promise<boolean | null> => {
-  const clerkSecretKey = process.env['CLERK_SECRET_KEY']
-  if (!clerkSecretKey) return null
+  const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
+  if (!clerkSecretKey) return null;
   try {
-    const { createClerkClient } = await import('@clerk/backend')
-    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
-    const user = await clerkClient.users.getUser(userId)
-    const metadata: unknown = user.publicMetadata
+    const { createClerkClient } = await import('@clerk/backend');
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey });
+    const user = await clerkClient.users.getUser(userId);
+    const metadata: unknown = user.publicMetadata;
     const role =
       typeof metadata === 'object' && metadata !== null && 'role' in metadata
         ? metadata.role
-        : undefined
-    return isRole(role) && PREMIUM_ROLES.includes(role)
+        : undefined;
+    return isRole(role) && PREMIUM_ROLES.includes(role);
   } catch (err) {
     apiLogger.warn(
       { err, userId },
       'billing-daily task5: Clerk role read failed',
-    )
-    return null
+    );
+    return null;
   }
-}
+};
 
 export const runNinetyDayPurge = async (now: Date): Promise<void> => {
   const rows = await db
@@ -745,7 +749,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         isNotNull(userBilling.premiumDataExpiresAt),
         lt(userBilling.premiumDataExpiresAt, now),
       ),
-    )
+    );
 
   for (const row of rows) {
     try {
@@ -755,12 +759,12 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         .select({ tier: subscriptions.tier, status: subscriptions.status })
         .from(subscriptions)
         .where(eq(subscriptions.userId, row.userId))
-        .limit(1)
+        .limit(1);
       const liveTier =
         liveSub !== undefined &&
         ['active', 'trialing', 'past_due'].includes(liveSub.status)
           ? liveSub.tier
-          : null
+          : null;
       // A live gift grants Premium regardless of the subscription (gifted is
       // derived BEFORE Stripe, #781), so the purge must check it too.
       const [gift] = await db
@@ -770,7 +774,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         })
         .from(giftedComps)
         .where(eq(giftedComps.userId, row.userId))
-        .limit(1)
+        .limit(1);
 
       if (
         !isPurgeEligible({
@@ -780,20 +784,20 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
           now,
         })
       ) {
-        continue
+        continue;
       }
       // A PREMIUM_ROLES role (admin, promoter, beta…) comps everything too,
       // and roles live in Clerk. If the role can't be read, skip this user
       // today rather than delete data they might be entitled to.
-      const roleComped = await loadRoleComped(row.userId)
+      const roleComped = await loadRoleComped(row.userId);
       if (roleComped !== false) {
         if (roleComped === null) {
           apiLogger.warn(
             { userId: row.userId },
             'billing-daily task5: role lookup failed — purge deferred to the next run',
-          )
+          );
         }
-        continue
+        continue;
       }
 
       // Delete + audit-event insert + clock clear are one transaction: a crash
@@ -809,7 +813,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         // until 0065 contracts them) carries no Free relationship worth
         // keeping, so the whole row goes.
         // Skipped entirely for a live Supporter, who is entitled to keep it.
-        const purgeHistory = shouldPurgeFeature(liveTier, 'concert-history')
+        const purgeHistory = shouldPurgeFeature(liveTier, 'concert-history');
         const deletedHistory = purgeHistory
           ? await tx
               .delete(userEvents)
@@ -824,7 +828,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
                 ),
               )
               .returning({ id: userEvents.id })
-          : []
+          : [];
         const nulledHistory = purgeHistory
           ? await tx
               .update(userEvents)
@@ -837,7 +841,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
                 ),
               )
               .returning({ id: userEvents.id })
-          : []
+          : [];
 
         // Following — manual rows only (E9): Spotify-sourced rows live and
         // die with the Spotify connection (PR 3 disconnect purge), not the
@@ -845,7 +849,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         const deletedFollows = await tx
           .delete(userArtistFollows)
           .where(purgeFollowsWhere(row.userId))
-          .returning({ id: userArtistFollows.id })
+          .returning({ id: userArtistFollows.id });
 
         // Alert prefs + Spotify sync state: the Spotify tables now exist
         // (migration 0053) but are intentionally excluded from the billing
@@ -861,35 +865,35 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
           follows: deletedFollows.length,
           alertPrefs: null,
           spotifySyncState: null,
-        }
+        };
 
         await tx.insert(subscriptionEvents).values({
           userId: row.userId,
           type: 'data_purged',
           metadata: counts,
-        })
+        });
 
         // Clear the clock so the user is not re-purged next run.
         await tx
           .update(userBilling)
           .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
-          .where(eq(userBilling.userId, row.userId))
+          .where(eq(userBilling.userId, row.userId));
 
-        return counts
-      })
+        return counts;
+      });
 
       apiLogger.info(
         { userId: row.userId, purgeCounts },
         'billing-daily task5: purged premium data after 90-day window',
-      )
+      );
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
         'billing-daily task5: purge failed for one user — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 6 — Dunning fallback sweep (webhook-loss safety net)
@@ -909,7 +913,7 @@ export const runDunningFallbackSweep = async (
   now: Date,
   stripe: BillingJobStripeClient,
 ): Promise<void> => {
-  const cutoff = new Date(now.getTime() - DUNNING_FALLBACK_AGE_MS)
+  const cutoff = new Date(now.getTime() - DUNNING_FALLBACK_AGE_MS);
   const rows = await db
     .select({
       userId: subscriptions.userId,
@@ -923,7 +927,7 @@ export const runDunningFallbackSweep = async (
         eq(subscriptions.status, 'past_due'),
         lt(subscriptions.updatedAt, cutoff),
       ),
-    )
+    );
 
   for (const row of rows) {
     try {
@@ -937,13 +941,13 @@ export const runDunningFallbackSweep = async (
             sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${row.stripeSubscriptionId}`,
           ),
         )
-        .limit(1)
-      if (cancelled !== undefined) continue
+        .limit(1);
+      if (cancelled !== undefined) continue;
 
       const liveStatus = await stripe.getSubscriptionStatus(
         row.stripeSubscriptionId,
-      )
-      if (liveStatus === null) continue
+      );
+      if (liveStatus === null) continue;
 
       // Stripe says canceled but our mirror still reads past_due ⇒ the delete
       // webhook was lost. Reconcile the mirror + write the missing events so
@@ -959,7 +963,7 @@ export const runDunningFallbackSweep = async (
           await tx
             .update(subscriptions)
             .set({ status: 'cancelled', updatedAt: new Date() })
-            .where(eq(subscriptions.userId, row.userId))
+            .where(eq(subscriptions.userId, row.userId));
 
           const [existing] = await tx
             .select({ id: subscriptionEvents.id })
@@ -970,7 +974,7 @@ export const runDunningFallbackSweep = async (
                 sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${row.stripeSubscriptionId}`,
               ),
             )
-            .limit(1)
+            .limit(1);
           if (existing === undefined) {
             await tx.insert(subscriptionEvents).values({
               userId: row.userId,
@@ -980,7 +984,7 @@ export const runDunningFallbackSweep = async (
                 tier: row.tier,
                 reconciledBy: 'billing-daily-fallback-sweep',
               },
-            })
+            });
           }
 
           // Mirror handleSubscriptionDeleted: every paid tier, Supporter
@@ -992,29 +996,29 @@ export const runDunningFallbackSweep = async (
           if (cancellationStartsPurgeClock(row.tier)) {
             const premiumDataExpiresAt = new Date(
               now.getTime() + NINETY_DAYS_MS,
-            )
+            );
             await tx
               .insert(userBilling)
               .values({ userId: row.userId, premiumDataExpiresAt })
               .onConflictDoUpdate({
                 target: userBilling.userId,
                 set: { premiumDataExpiresAt, updatedAt: new Date() },
-              })
+              });
           }
-        })
+        });
         apiLogger.warn(
           { userId: row.userId, subscriptionId: row.stripeSubscriptionId },
           'billing-daily task6: reconciled lost subscription-deleted webhook — mirror set to cancelled',
-        )
+        );
       }
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
         'billing-daily task6: dunning fallback reconcile failed for one subscription — continuing',
-      )
+      );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Task 7 — Housekeeping
@@ -1038,16 +1042,16 @@ export const runDunningFallbackSweep = async (
  * safe). See the report for the follow-up.
  */
 export const runHousekeeping = async (now: Date): Promise<void> => {
-  const cutoff = new Date(now.getTime() - PROCESSED_EVENT_RETENTION_MS)
+  const cutoff = new Date(now.getTime() - PROCESSED_EVENT_RETENTION_MS);
   const pruned = await db
     .delete(processedStripeEvents)
     .where(lt(processedStripeEvents.processedAt, cutoff))
-    .returning({ eventId: processedStripeEvents.eventId })
+    .returning({ eventId: processedStripeEvents.eventId });
 
   apiLogger.info(
     { prunedCount: pruned.length },
     'billing-daily task7: pruned processed_stripe_events older than 90 days',
-  )
+  );
 
   // Failed-send retry: not implementable against the current email_send_log
   // schema (no attempts counter, no persisted vars) — log-skipped. The daily
@@ -1057,8 +1061,8 @@ export const runHousekeeping = async (now: Date): Promise<void> => {
   // dedicated retry sweep.
   apiLogger.info(
     'billing-daily task7: failed email_send_log retry skipped — schema lacks attempts counter + vars snapshot (see job header)',
-  )
-}
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Task 8 — Notification retention prune (#737)
@@ -1070,12 +1074,12 @@ export const runHousekeeping = async (now: Date): Promise<void> => {
  * admin-alert exclusion) lives in prune-notifications.ts.
  */
 export const runNotificationPrune = async (now: Date): Promise<void> => {
-  const { deleted } = await pruneNotifications(db, now)
+  const { deleted } = await pruneNotifications(db, now);
   apiLogger.info(
     { deletedCount: deleted },
     'billing-daily task8: pruned expired user notifications',
-  )
-}
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Orchestrator
@@ -1099,21 +1103,21 @@ export const runBillingDaily = async (
     ['dunning-fallback-sweep', () => runDunningFallbackSweep(now, stripe)],
     ['housekeeping', () => runHousekeeping(now)],
     ['notification-prune', () => runNotificationPrune(now)],
-  ]
+  ];
 
   for (const [name, run] of tasks) {
     try {
-      apiLogger.info({ task: name }, 'billing-daily: starting task')
-      await run()
-      apiLogger.info({ task: name }, 'billing-daily: task complete')
+      apiLogger.info({ task: name }, 'billing-daily: starting task');
+      await run();
+      apiLogger.info({ task: name }, 'billing-daily: task complete');
     } catch (err) {
       apiLogger.error(
         { err, task: name },
         'billing-daily: task failed — continuing with remaining tasks',
-      )
+      );
     }
   }
-}
+};
 
 // CLI entry guard — same shape as the sibling tsx scripts (gifted-comps
 // backfill). Runs only when executed directly, so tests import the functions
@@ -1122,15 +1126,15 @@ export const runBillingDaily = async (
 // and logged inside runBillingDaily).
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
   runBillingDaily()
     .then(() => {
-      apiLogger.info('billing-daily: all tasks dispatched')
-      process.exit(0)
+      apiLogger.info('billing-daily: all tasks dispatched');
+      process.exit(0);
     })
     .catch((err) => {
-      apiLogger.error({ err }, 'billing-daily: catastrophic failure')
-      process.exit(1)
-    })
+      apiLogger.error({ err }, 'billing-daily: catastrophic failure');
+      process.exit(1);
+    });
 }

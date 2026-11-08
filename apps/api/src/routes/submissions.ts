@@ -1,36 +1,36 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, eq, getTableColumns, sql } from 'drizzle-orm';
 import {
   db,
   events,
   priceSubmissions,
   submissionConfirms,
   venues,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   SP_POLICY,
   VENDOR_VALUES,
   deriveSourceCategory,
-} from '@concert-crawl/types'
-import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
-import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js'
+} from '@concert-crawl/types';
+import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
+import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
 
-export const submissionsRouter = new Hono()
+export const submissionsRouter = new Hono();
 
 // `price_submissions.id` is a uuid column, so an unparseable `:id` reaches
 // Postgres as a cast error and surfaces as a 500 rather than the 404 the caller
 // deserves. Every handler here takes the same param, so every one needs this.
-const submissionIdSchema = z.string().uuid()
+const submissionIdSchema = z.string().uuid();
 
 // GET /v1/submissions/:id
 submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
-    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
-  const id = parsedId.data
+  const id = parsedId.data;
 
   // Explicit projection, not `select()`. Submission ids are public — they ship
   // in TierHeadline — so any signed-in user can read any row by id, and a
@@ -61,14 +61,14 @@ submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
     })
     .from(priceSubmissions)
     .where(eq(priceSubmissions.id, id))
-    .limit(1)
+    .limit(1);
 
   if (!submission) {
-    return ctx.json({ success: false, error: 'Not found' }, 404)
+    return ctx.json({ success: false, error: 'Not found' }, 404);
   }
 
-  return ctx.json({ success: true, data: submission })
-})
+  return ctx.json({ success: true, data: submission });
+});
 
 // A submission whose show is on an inactive venue is off the site, and a
 // removed venue's prices are gone for good, so confirming, checking or
@@ -84,38 +84,38 @@ function selectOnActiveVenue(id: string) {
       and(eq(venues.id, events.venueId), eq(venues.active, true)),
     )
     .where(eq(priceSubmissions.id, id))
-    .limit(1)
+    .limit(1);
 }
 
 // POST /v1/submissions/:id/confirm
 submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
-    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
-  const submissionId = parsedId.data
-  const { userId } = getAuthUser(ctx)
+  const submissionId = parsedId.data;
+  const { userId } = getAuthUser(ctx);
 
-  const [submission] = await selectOnActiveVenue(submissionId)
+  const [submission] = await selectOnActiveVenue(submissionId);
 
   if (!submission) {
-    return ctx.json({ success: false, error: 'Not found' }, 404)
+    return ctx.json({ success: false, error: 'Not found' }, 404);
   }
   if (submission.userId === userId) {
     return ctx.json(
       { success: false, error: 'Cannot confirm your own submission' },
       403,
-    )
+    );
   }
 
   const inserted = await db
     .insert(submissionConfirms)
     .values({ submissionId, userId })
     .onConflictDoNothing()
-    .returning()
+    .returning();
 
-  let newStatus = submission.status
-  let newCount = submission.corroborationCount
+  let newStatus = submission.status;
+  let newCount = submission.corroborationCount;
 
   if (inserted.length > 0) {
     const [updated] = await db
@@ -129,18 +129,18 @@ submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
       .returning({
         corroborationCount: priceSubmissions.corroborationCount,
         status: priceSubmissions.status,
-      })
+      });
     if (updated) {
-      newCount = updated.corroborationCount
-      newStatus = updated.status
+      newCount = updated.corroborationCount;
+      newStatus = updated.status;
     }
   }
 
   return ctx.json({
     success: true,
     data: { confirms: newCount, status: newStatus },
-  })
-})
+  });
+});
 
 const disputeBodySchema = z
   .object({
@@ -157,7 +157,7 @@ const disputeBodySchema = z
   .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
     message: "Ceiling can't be below floor.",
     path: ['ceiling'],
-  })
+  });
 
 // POST /v1/submissions/:id/dispute
 submissionsRouter.post(
@@ -173,30 +173,30 @@ submissionsRouter.post(
           details: result.error.flatten(),
         },
         400,
-      )
+      );
   }),
   async (ctx) => {
-    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
     if (!parsedId.success) {
-      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
     }
-    const submissionId = parsedId.data
-    const { userId } = getAuthUser(ctx)
+    const submissionId = parsedId.data;
+    const { userId } = getAuthUser(ctx);
     // `vendor` is ignored on the server — see disputeBodySchema. The locked
     // price-only contest scope means the (tier, source_category) slot
     // identity is fixed; the dispute always inherits vendor from the parent.
-    const { floor, ceiling } = ctx.req.valid('json')
+    const { floor, ceiling } = ctx.req.valid('json');
 
-    const [parent] = await selectOnActiveVenue(submissionId)
+    const [parent] = await selectOnActiveVenue(submissionId);
 
     if (!parent) {
-      return ctx.json({ success: false, error: 'Not found' }, 404)
+      return ctx.json({ success: false, error: 'Not found' }, 404);
     }
     if (parent.userId === userId) {
       return ctx.json(
         { success: false, error: 'Cannot dispute your own submission' },
         403,
-      )
+      );
     }
 
     // 1-pending-counter-per-parent invariant (locked design decision — see
@@ -216,7 +216,7 @@ submissionsRouter.post(
           eq(priceSubmissions.status, 'pending'),
         ),
       )
-      .limit(1)
+      .limit(1);
     if (existingCounter) {
       return ctx.json(
         {
@@ -225,12 +225,12 @@ submissionsRouter.post(
             'Another challenge is already pending against this submission.',
         },
         409,
-      )
+      );
     }
 
-    const vendor = parent.vendor
+    const vendor = parent.vendor;
 
-    let disputeRow: typeof priceSubmissions.$inferSelect
+    let disputeRow: typeof priceSubmissions.$inferSelect;
     try {
       disputeRow = await db.transaction(async (tx) => {
         const [created] = await tx
@@ -253,19 +253,19 @@ submissionsRouter.post(
             disputedSubmissionId: submissionId,
             status: 'pending',
           })
-          .returning()
+          .returning();
 
         if (!created) {
-          throw new Error('Dispute insert returned no rows')
+          throw new Error('Dispute insert returned no rows');
         }
 
         await tx
           .update(priceSubmissions)
           .set({ status: 'disputed', updatedAt: sql`now()` })
-          .where(eq(priceSubmissions.id, submissionId))
+          .where(eq(priceSubmissions.id, submissionId));
 
-        return created
-      })
+        return created;
+      });
     } catch (err) {
       // Belt-and-braces: translate the DB unique_violation on the partial
       // unique index into the same clean 409 the pre-insert SELECT returns.
@@ -279,14 +279,14 @@ submissionsRouter.post(
               'Another challenge is already pending against this submission.',
           },
           409,
-        )
+        );
       }
-      throw err
+      throw err;
     }
 
-    return ctx.json({ success: true, data: disputeRow }, 201)
+    return ctx.json({ success: true, data: disputeRow }, 201);
   },
-)
+);
 
 const patchBodySchema = z
   .object({
@@ -309,7 +309,7 @@ const patchBodySchema = z
   .refine(
     (data) => !data.floor || !data.ceiling || data.ceiling >= data.floor,
     { message: "Ceiling can't be below floor.", path: ['ceiling'] },
-  )
+  );
 
 // PATCH /v1/submissions/:id
 submissionsRouter.patch(
@@ -325,38 +325,38 @@ submissionsRouter.patch(
           details: result.error.flatten(),
         },
         400,
-      )
+      );
   }),
   async (ctx) => {
-    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
     if (!parsedId.success) {
-      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
     }
-    const id = parsedId.data
-    const { userId } = getAuthUser(ctx)
-    const body = ctx.req.valid('json')
+    const id = parsedId.data;
+    const { userId } = getAuthUser(ctx);
+    const body = ctx.req.valid('json');
 
-    const [submission] = await selectOnActiveVenue(id)
+    const [submission] = await selectOnActiveVenue(id);
 
     if (!submission) {
-      return ctx.json({ success: false, error: 'Not found' }, 404)
+      return ctx.json({ success: false, error: 'Not found' }, 404);
     }
     if (submission.userId !== userId) {
-      return ctx.json({ success: false, error: 'Forbidden' }, 403)
+      return ctx.json({ success: false, error: 'Forbidden' }, 403);
     }
     if (submission.status !== 'pending') {
       return ctx.json(
         { success: false, error: 'Can only edit pending submissions' },
         400,
-      )
+      );
     }
 
-    const updates: Record<string, unknown> = { updatedAt: sql`now()` }
-    if (body.floor != null) updates['priceMin'] = String(body.floor)
-    if (body.ceiling != null) updates['priceMax'] = String(body.ceiling)
-    if (body.tier != null) updates['tier'] = body.tier
-    if (body.vendor != null) updates['vendor'] = body.vendor
-    if (body.howFound != null) updates['howFound'] = body.howFound
+    const updates: Record<string, unknown> = { updatedAt: sql`now()` };
+    if (body.floor != null) updates['priceMin'] = String(body.floor);
+    if (body.ceiling != null) updates['priceMax'] = String(body.ceiling);
+    if (body.tier != null) updates['tier'] = body.tier;
+    if (body.vendor != null) updates['vendor'] = body.vendor;
+    if (body.howFound != null) updates['howFound'] = body.howFound;
 
     // Re-derive sourceCategory only when the existing row has NULL (legacy)
     // and vendor or howFound is changing. If the existing row already has an
@@ -370,41 +370,41 @@ submissionsRouter.patch(
       updates['sourceCategory'] = deriveSourceCategory(
         body.vendor ?? submission.vendor,
         body.howFound ?? submission.howFound,
-      )
+      );
     }
 
     const [updated] = await db
       .update(priceSubmissions)
       .set(updates)
       .where(eq(priceSubmissions.id, id))
-      .returning()
+      .returning();
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // DELETE /v1/submissions/:id
 submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'));
   if (!parsedId.success) {
-    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
   }
-  const id = parsedId.data
-  const { userId } = getAuthUser(ctx)
+  const id = parsedId.data;
+  const { userId } = getAuthUser(ctx);
 
   const [submission] = await db
     .select()
     .from(priceSubmissions)
     .where(eq(priceSubmissions.id, id))
-    .limit(1)
+    .limit(1);
 
   if (!submission) {
-    return ctx.json({ success: false, error: 'Not found' }, 404)
+    return ctx.json({ success: false, error: 'Not found' }, 404);
   }
   if (submission.userId !== userId) {
-    return ctx.json({ success: false, error: 'Forbidden' }, 403)
+    return ctx.json({ success: false, error: 'Forbidden' }, 403);
   }
 
-  await db.delete(priceSubmissions).where(eq(priceSubmissions.id, id))
-  return ctx.body(null, 204)
-})
+  await db.delete(priceSubmissions).where(eq(priceSubmissions.id, id));
+  return ctx.body(null, 204);
+});

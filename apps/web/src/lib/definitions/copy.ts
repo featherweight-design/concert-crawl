@@ -9,4 +9,4 @@ export const RELATIVE_TIME_COPY = {
     hour: 'hour',
     day: 'day',
   },
-} as const
+} as const;

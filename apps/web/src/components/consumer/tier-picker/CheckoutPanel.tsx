@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Embedded checkout — mounts Stripe's Payment Element against the
 // clientSecret from POST /v1/billing/checkout-session and confirms
@@ -12,57 +12,57 @@
 // or moving the element re-creates the Stripe iframe and loses the entered
 // card. Layout pieces render as conditional siblings around the element.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
-import { loadStripe } from '@stripe/stripe-js'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { loadStripe } from '@stripe/stripe-js';
 import {
   Elements,
   PaymentElement,
   useStripe,
   useElements,
-} from '@stripe/react-stripe-js'
-import { mapDeclineCategory, type DeclineCategory } from '@concert-crawl/types'
-import { TIER_PICKER_COPY } from './definitions/copy'
+} from '@stripe/react-stripe-js';
+import { mapDeclineCategory, type DeclineCategory } from '@concert-crawl/types';
+import { TIER_PICKER_COPY } from './definitions/copy';
 import {
   FAILURE_SURFACE_BEHAVIOR,
   REQUIRES_ACTION_POLL_MS,
   TIER_DEFINITIONS,
-} from './definitions/constants'
-import type { CheckoutSurface, TierKey } from './definitions/types'
-import { watchForRequiresAction } from './lib/requires-action-detector'
-import { useEscapeCapture } from './lib/use-escape-capture'
+} from './definitions/constants';
+import type { CheckoutSurface, TierKey } from './definitions/types';
+import { watchForRequiresAction } from './lib/requires-action-detector';
+import { useEscapeCapture } from './lib/use-escape-capture';
 import {
   FailureActions,
   FailureCardKeptNote,
   FailureSurfaceIntro,
   TierSummaryLine,
-} from './FailureSurface'
-import { ChallengeMount } from './ChallengeMount'
+} from './FailureSurface';
+import { ChallengeMount } from './ChallengeMount';
 
-const CHECKOUT_COPY = TIER_PICKER_COPY.checkout
-const PUBLISHABLE_KEY = process.env['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']
+const CHECKOUT_COPY = TIER_PICKER_COPY.checkout;
+const PUBLISHABLE_KEY = process.env['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'];
 
-const CHECKOUT_SURFACE: CheckoutSurface = { kind: 'checkout' }
+const CHECKOUT_SURFACE: CheckoutSurface = { kind: 'checkout' };
 
 interface CheckoutPanelProps {
-  tierKey: Exclude<TierKey, 'free'>
-  clientSecret: string
+  tierKey: Exclude<TierKey, 'free'>;
+  clientSecret: string;
   // Server-resolved from x-vercel-ip-country (spec §1.7) — gates the
   // conditional SCA notice row in the legal block and frames the
   // challenge mount as SCA rather than 3DS.
-  scaRegion: boolean
-  onBack: () => void
-  onSuccess: () => void
+  scaRegion: boolean;
+  onBack: () => void;
+  onSuccess: () => void;
   // Lets the sheet swap its rail header + modal width per surface.
-  onSurfaceChange?: (surface: CheckoutSurface) => void
+  onSurfaceChange?: (surface: CheckoutSurface) => void;
 }
 
 const LegalRow = ({
   children,
   tone = 'subtle',
 }: {
-  children: React.ReactNode
-  tone?: 'subtle' | 'muted'
+  children: React.ReactNode;
+  tone?: 'subtle' | 'muted';
 }) => (
   <div
     style={{
@@ -90,7 +90,7 @@ const LegalRow = ({
     />
     <span style={{ flex: 1 }}>{children}</span>
   </div>
-)
+);
 
 // Legal pages open in a new tab — in-surface navigation would dismiss
 // the sheet and abandon the in-flight subscription mid-checkout.
@@ -109,7 +109,7 @@ const LegalLink = ({ href, children }: { href: string; children: string }) => (
   >
     {children}
   </Link>
-)
+);
 
 // Above-CTA legal block (#782 §6.1) — stacked mono micro-rows keep every
 // legal line visible, no collapse.
@@ -142,7 +142,7 @@ const LegalBlock = ({ scaRegion }: { scaRegion: boolean }) => (
       <LegalRow tone="muted">{CHECKOUT_COPY.legal.scaNotice}</LegalRow>
     )}
   </div>
-)
+);
 
 const railTextStyle = {
   fontFamily: 'var(--font-mono)',
@@ -151,7 +151,7 @@ const railTextStyle = {
   color: 'var(--fg-subtle)',
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
-} as const
+} as const;
 
 // Bottom mono rail (#782 §6.2) — splits trust (Stripe / card privacy)
 // from the cancel reassurance so each reads.
@@ -198,17 +198,17 @@ const BottomMonoRail = () => (
     </span>
     <span style={railTextStyle}>{CHECKOUT_COPY.rail.cancel}</span>
   </div>
-)
+);
 
 interface CheckoutFormProps {
-  tierKey: Exclude<TierKey, 'free'>
-  clientSecret: string
-  scaRegion: boolean
-  surface: CheckoutSurface
-  onSurface: (surface: CheckoutSurface) => void
-  onSuccess: () => void
+  tierKey: Exclude<TierKey, 'free'>;
+  clientSecret: string;
+  scaRegion: boolean;
+  surface: CheckoutSurface;
+  onSurface: (surface: CheckoutSurface) => void;
+  onSuccess: () => void;
   /** Dismiss back to the tier picker (failure-surface close / Escape). */
-  onDismiss: () => void
+  onDismiss: () => void;
 }
 
 const CheckoutForm = ({
@@ -220,64 +220,66 @@ const CheckoutForm = ({
   onSuccess,
   onDismiss,
 }: CheckoutFormProps) => {
-  const stripe = useStripe()
-  const elements = useElements()
-  const [submitting, setSubmitting] = useState(false)
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
   // Bumping remounts the PaymentElement empty ("Use a different card" /
   // freshEmpty failure entry — design table state coverage).
-  const [elementKey, setElementKey] = useState(0)
-  const tier = TIER_DEFINITIONS[tierKey]
+  const [elementKey, setElementKey] = useState(0);
+  const tier = TIER_DEFINITIONS[tierKey];
 
-  const isFailure = surface.kind === 'failure'
-  const isChallenge = surface.kind === 'challenge'
-  const behavior = isFailure ? FAILURE_SURFACE_BEHAVIOR[surface.category] : null
+  const isFailure = surface.kind === 'failure';
+  const isChallenge = surface.kind === 'challenge';
+  const behavior = isFailure
+    ? FAILURE_SURFACE_BEHAVIOR[surface.category]
+    : null;
   // network_timeout keeps the entered card off-screen (card-kept note in
   // its place); the challenge hides it while Stripe's window is up.
-  const hideElement = isChallenge || (behavior !== null && !behavior.freshCard)
+  const hideElement = isChallenge || (behavior !== null && !behavior.freshCard);
 
   const enterFailure = (category: DeclineCategory) => {
     if (FAILURE_SURFACE_BEHAVIOR[category].freshEmpty)
-      setElementKey((key) => key + 1)
-    onSurface({ kind: 'failure', category })
-  }
+      setElementKey((key) => key + 1);
+    onSurface({ kind: 'failure', category });
+  };
 
-  const resetCard = () => setElementKey((key) => key + 1)
+  const resetCard = () => setElementKey((key) => key + 1);
 
-  const cancelChallenge = () => onSurface(CHECKOUT_SURFACE)
+  const cancelChallenge = () => onSurface(CHECKOUT_SURFACE);
 
   // Cancelling the challenge returns focus to the payment surface's
   // primary CTA (a11y table — focus never falls to the document body).
-  const payButtonRef = useRef<HTMLButtonElement | null>(null)
-  const prevSurfaceKindRef = useRef(surface.kind)
+  const payButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevSurfaceKindRef = useRef(surface.kind);
   useEffect(() => {
     if (
       prevSurfaceKindRef.current === 'challenge' &&
       surface.kind === 'checkout'
     )
-      payButtonRef.current?.focus()
-    prevSurfaceKindRef.current = surface.kind
-  }, [surface.kind])
+      payButtonRef.current?.focus();
+    prevSurfaceKindRef.current = surface.kind;
+  }, [surface.kind]);
 
   // Escape dismisses the failure surface to the picker, and cancels the
   // challenge chrome — before ModalShell's document listener closes the
   // whole sheet (a11y table).
-  useEscapeCapture(isFailure, onDismiss)
-  useEscapeCapture(isChallenge, cancelChallenge)
+  useEscapeCapture(isFailure, onDismiss);
+  useEscapeCapture(isChallenge, cancelChallenge);
 
   // A confirmPayment can resolve after the user has dismissed the surface
   // (Escape / close-X unmounts this form) — without a guard the late
   // resolve would still fire onSuccess/onSurface against a closed flow.
-  const dismissedRef = useRef(false)
+  const dismissedRef = useRef(false);
   useEffect(
     () => () => {
-      dismissedRef.current = true
+      dismissedRef.current = true;
     },
     [],
-  )
+  );
 
   const confirm = async () => {
-    if (!stripe || !elements) return
-    setSubmitting(true)
+    if (!stripe || !elements) return;
+    setSubmitting(true);
     // confirmPayment handles 3DS/SCA next-actions itself with no callback,
     // so while it's in flight we watch the PaymentIntent for
     // `requires_action` and mount the challenge chrome around Stripe's
@@ -286,11 +288,11 @@ const CheckoutForm = ({
       stripe,
       clientSecret,
       () => {
-        if (dismissedRef.current) return
-        onSurface({ kind: 'challenge', challenge: scaRegion ? 'sca' : '3ds' })
+        if (dismissedRef.current) return;
+        onSurface({ kind: 'challenge', challenge: scaRegion ? 'sca' : '3ds' });
       },
       REQUIRES_ACTION_POLL_MS,
-    )
+    );
     try {
       const result = await stripe.confirmPayment({
         elements,
@@ -298,41 +300,41 @@ const CheckoutForm = ({
         // the Payment Element require a return_url or confirmation fails.
         confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
-      })
-      if (dismissedRef.current) return
+      });
+      if (dismissedRef.current) return;
       if (result.error) {
         if (result.error.type === 'validation_error') {
           // Incomplete form — the Payment Element shows its own
           // field-level errors; no decline happened. Return to the
           // checkout layout so those field errors are visible.
-          onSurface(CHECKOUT_SURFACE)
-          return
+          onSurface(CHECKOUT_SURFACE);
+          return;
         }
         const category = mapDeclineCategory({
           declineCode: result.error.decline_code ?? null,
           errorCode: result.error.code ?? null,
           errorType: result.error.type,
-        })
+        });
         // Raw decline codes stay out of the client entirely (the webhook
         // records them server-side) — log only the sanitized shape.
         console.error('tier-picker: confirmPayment declined', {
           errorType: result.error.type,
           category,
-        })
-        enterFailure(category)
-        return
+        });
+        enterFailure(category);
+        return;
       }
-      onSuccess()
+      onSuccess();
     } catch (err) {
       // Thrown (not returned) errors are transport-level — the card was
       // never decided (spec §1.6 network_timeout row).
-      console.error('tier-picker: confirmPayment failed', err)
-      if (!dismissedRef.current) enterFailure('network_timeout')
+      console.error('tier-picker: confirmPayment failed', err);
+      if (!dismissedRef.current) enterFailure('network_timeout');
     } finally {
-      stopWatching()
-      if (!dismissedRef.current) setSubmitting(false)
+      stopWatching();
+      if (!dismissedRef.current) setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div
@@ -404,8 +406,8 @@ const CheckoutForm = ({
         />
       )}
     </div>
-  )
-}
+  );
+};
 
 export const CheckoutPanel = ({
   tierKey,
@@ -418,22 +420,22 @@ export const CheckoutPanel = ({
   const stripePromise = useMemo(
     () => (PUBLISHABLE_KEY ? loadStripe(PUBLISHABLE_KEY) : null),
     [],
-  )
-  const tier = TIER_DEFINITIONS[tierKey]
-  const [surface, setSurface] = useState<CheckoutSurface>(CHECKOUT_SURFACE)
+  );
+  const tier = TIER_DEFINITIONS[tierKey];
+  const [surface, setSurface] = useState<CheckoutSurface>(CHECKOUT_SURFACE);
 
   useEffect(() => {
-    onSurfaceChange?.(surface)
-  }, [surface, onSurfaceChange])
+    onSurfaceChange?.(surface);
+  }, [surface, onSurfaceChange]);
 
   if (stripePromise === null) {
     // Publishable key missing (misconfigured env) — never render a dead form.
-    console.error('tier-picker: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set')
+    console.error('tier-picker: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set');
     return (
       <div role="alert" style={{ fontSize: 13, color: 'var(--danger)' }}>
         {CHECKOUT_COPY.startError}
       </div>
-    )
+    );
   }
 
   return (
@@ -500,5 +502,5 @@ export const CheckoutPanel = ({
         />
       </Elements>
     </div>
-  )
-}
+  );
+};

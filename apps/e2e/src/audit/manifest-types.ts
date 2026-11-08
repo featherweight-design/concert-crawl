@@ -14,28 +14,28 @@
  * validation; TypeScript's static types guard them at the call site.
  */
 
-import { z } from 'zod'
-import type { Page } from '@playwright/test'
+import { z } from 'zod';
+import type { Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type AuditInteraction = {
-  id: string
-  description: string
-  run: (page: Page) => Promise<void>
-}
+  id: string;
+  description: string;
+  run: (page: Page) => Promise<void>;
+};
 
 export type AuditRoute = {
-  id: string
-  path: string
-  tags: ('consumer' | 'admin')[]
-  auth: 'none' | 'user' | 'admin'
-  interactions?: AuditInteraction[]
-}
+  id: string;
+  path: string;
+  tags: ('consumer' | 'admin')[];
+  auth: 'none' | 'user' | 'admin';
+  interactions?: AuditInteraction[];
+};
 
-export type AuditManifest = readonly AuditRoute[]
+export type AuditManifest = readonly AuditRoute[];
 
 // ---------------------------------------------------------------------------
 // Zod schema — serializable subset (no interactions)
@@ -44,7 +44,7 @@ export type AuditManifest = readonly AuditRoute[]
 // route.id is embedded verbatim in output filenames (see
 // sweep-helpers.ts::outputPathFor). Restrict to a safe segment character set
 // so a manifest typo can never write outside audit-output/<runId>/.
-const ROUTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
+const ROUTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 // route.path must be a same-origin path — a single leading `/`, followed
 // immediately by a non-`/` character, then any non-whitespace characters
@@ -53,7 +53,7 @@ const ROUTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 // the protocol-relative URL bypass (`//evil.com/x`), which Playwright's
 // baseURL-aware page.goto would otherwise resolve to a foreign origin.
 // Absolute URLs (`https://…`) are rejected by the leading `/` requirement.
-const ROUTE_PATH_PATTERN = /^\/(?!\/)[^\s]*$/
+const ROUTE_PATH_PATTERN = /^\/(?!\/)[^\s]*$/;
 
 export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
   z.object({
@@ -75,7 +75,7 @@ export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
       .array(z.enum(['consumer', 'admin']))
       .min(1, 'route must have at least one tag'),
     auth: z.enum(['none', 'user', 'admin']),
-  })
+  });
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -91,9 +91,9 @@ export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
 function hasInteractions(
   entry: unknown,
 ): entry is { interactions: AuditInteraction[] } {
-  if (entry === null || typeof entry !== 'object') return false
-  if (!('interactions' in entry)) return false
-  return Array.isArray(entry.interactions)
+  if (entry === null || typeof entry !== 'object') return false;
+  if (!('interactions' in entry)) return false;
+  return Array.isArray(entry.interactions);
 }
 
 /**
@@ -109,29 +109,29 @@ function hasInteractions(
  */
 export function validateManifest(manifest: unknown): AuditManifest {
   if (!Array.isArray(manifest)) {
-    throw new Error('[manifest] manifest must be an array')
+    throw new Error('[manifest] manifest must be an array');
   }
 
-  const routes: AuditRoute[] = []
-  const seenIds = new Set<string>()
+  const routes: AuditRoute[] = [];
+  const seenIds = new Set<string>();
 
   for (let idx = 0; idx < manifest.length; idx++) {
-    const entry = manifest[idx]
-    const result = AuditRouteSchema.safeParse(entry)
+    const entry = manifest[idx];
+    const result = AuditRouteSchema.safeParse(entry);
 
     if (!result.success) {
-      const firstIssue = result.error.issues[0]
+      const firstIssue = result.error.issues[0];
       throw new Error(
         `[manifest] route at index ${idx}: ${firstIssue?.message ?? result.error.message}`,
-      )
+      );
     }
 
-    const parsed = result.data
+    const parsed = result.data;
 
     if (seenIds.has(parsed.id)) {
-      throw new Error(`[manifest] duplicate route id: '${parsed.id}'`)
+      throw new Error(`[manifest] duplicate route id: '${parsed.id}'`);
     }
-    seenIds.add(parsed.id)
+    seenIds.add(parsed.id);
 
     // Preserve interactions from the original entry if present. They are
     // runtime functions and cannot pass through Zod — the type guard
@@ -153,12 +153,14 @@ export function validateManifest(manifest: unknown): AuditManifest {
     ) {
       throw new Error(
         `[manifest] route '${parsed.id}': interactions must be an array (got ${typeof entry.interactions})`,
-      )
+      );
     }
-    const interactions = hasInteractions(entry) ? entry.interactions : undefined
+    const interactions = hasInteractions(entry)
+      ? entry.interactions
+      : undefined;
 
-    routes.push({ ...parsed, ...(interactions ? { interactions } : {}) })
+    routes.push({ ...parsed, ...(interactions ? { interactions } : {}) });
   }
 
-  return routes
+  return routes;
 }

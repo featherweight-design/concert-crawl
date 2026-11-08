@@ -1,23 +1,23 @@
-import type { CrewShow } from '@concert-crawl/types'
+import type { CrewShow } from '@concert-crawl/types';
 
-import { EventRow, fromCrewShow } from '@/components/consumer/event-row'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { groupInOrder } from './lib/format'
-import { CREWS_COPY } from './definitions/copy'
+import { EventRow, fromCrewShow } from '@/components/consumer/event-row';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { groupInOrder } from './lib/format';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface CrewLensListProps {
-  crewName: string
-  shows: CrewShow[]
+  crewName: string;
+  shows: CrewShow[];
   /** A load failure, which is not the same state as a crew going to nothing. */
-  failed?: boolean
+  failed?: boolean;
   /**
    * Browse's current URL with only `crew` removed. Passed in rather than
    * hardcoded to `/events`, so clearing the lens keeps the view and filters the
    * viewer already chose.
    */
-  clearLensHref: string
+  clearLensHref: string;
 }
 
 /**
@@ -42,7 +42,7 @@ export const CrewLensList = ({
         railLabel={COPY.lens.failedRail}
         secondaryCta={{ label: COPY.lens.emptyCta, href: clearLensHref }}
       />
-    )
+    );
   }
 
   if (shows.length === 0) {
@@ -55,10 +55,10 @@ export const CrewLensList = ({
         railLabel={COPY.lens.emptyRail}
         secondaryCta={{ label: COPY.lens.emptyCta, href: clearLensHref }}
       />
-    )
+    );
   }
 
-  const groups = groupInOrder(shows, (show) => show.iso)
+  const groups = groupInOrder(shows, (show) => show.iso);
 
   return (
     <div className="flex flex-col gap-5">
@@ -93,5 +93,5 @@ export const CrewLensList = ({
         </section>
       ))}
     </div>
-  )
-}
+  );
+};

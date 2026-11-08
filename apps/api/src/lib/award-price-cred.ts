@@ -9,10 +9,10 @@
 // Runs inside the caller's transaction so the award commits atomically with the
 // submission status change that triggered it.
 
-import { sql } from 'drizzle-orm'
-import { userCred } from '@concert-crawl/db'
+import { sql } from 'drizzle-orm';
+import { userCred } from '@concert-crawl/db';
 
-import type { DbExecutor } from './db-executor.js'
+import type { DbExecutor } from './db-executor.js';
 
 export const awardPriceCred = async (
   executor: DbExecutor,
@@ -27,5 +27,5 @@ export const awardPriceCred = async (
         priceCredScore: sql`${userCred.priceCredScore} + 1`,
         updatedAt: sql`now()`,
       },
-    })
-}
+    });
+};

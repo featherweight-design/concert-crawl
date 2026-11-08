@@ -1,10 +1,10 @@
-import { and, eq, exists, isNull, sql } from 'drizzle-orm'
-import { db, events, priceRetrievalLog, venues } from '@concert-crawl/db'
-import type { PriceSource } from '@concert-crawl/types'
-import { PriceFetchDeferredError } from './types.js'
-import type { PipelineContext, PriceTierResult } from './types.js'
-import { tier1StructuredData } from './tier1-structured-data.js'
-import { tier6Community } from './tier6-community.js'
+import { and, eq, exists, isNull, sql } from 'drizzle-orm';
+import { db, events, priceRetrievalLog, venues } from '@concert-crawl/db';
+import type { PriceSource } from '@concert-crawl/types';
+import { PriceFetchDeferredError } from './types.js';
+import type { PipelineContext, PriceTierResult } from './types.js';
+import { tier1StructuredData } from './tier1-structured-data.js';
+import { tier6Community } from './tier6-community.js';
 
 async function logAttempt(
   ctx: PipelineContext,
@@ -20,7 +20,7 @@ async function logAttempt(
     outcome,
     latencyMs,
     errorMessage: errorMessage ?? null,
-  })
+  });
 }
 
 export async function updateEventPrice(
@@ -57,7 +57,7 @@ export async function updateEventPrice(
             .for('share'),
         ),
       ),
-    )
+    );
 }
 
 async function runTier(
@@ -65,48 +65,48 @@ async function runTier(
   source: PriceSource,
   fn: (ctx: PipelineContext) => Promise<PriceTierResult | null>,
 ): Promise<{ result: PriceTierResult | null; deferred: boolean }> {
-  const start = Date.now()
-  let result: PriceTierResult | null = null
-  let outcome: 'hit' | 'miss' | 'error' = 'miss'
-  let errorMessage: string | undefined
-  let deferred = false
+  const start = Date.now();
+  let result: PriceTierResult | null = null;
+  let outcome: 'hit' | 'miss' | 'error' = 'miss';
+  let errorMessage: string | undefined;
+  let deferred = false;
 
   try {
-    result = await fn(ctx)
-    outcome = result ? 'hit' : 'miss'
+    result = await fn(ctx);
+    outcome = result ? 'hit' : 'miss';
   } catch (err) {
-    outcome = 'error'
-    errorMessage = err instanceof Error ? err.message : String(err)
-    deferred = err instanceof PriceFetchDeferredError
+    outcome = 'error';
+    errorMessage = err instanceof Error ? err.message : String(err);
+    deferred = err instanceof PriceFetchDeferredError;
   }
 
-  await logAttempt(ctx, source, outcome, Date.now() - start, errorMessage)
-  return { result, deferred }
+  await logAttempt(ctx, source, outcome, Date.now() - start, errorMessage);
+  return { result, deferred };
 }
 
 export async function runPricePipeline(ctx: PipelineContext): Promise<void> {
-  const t1 = await runTier(ctx, 'structured_data', tier1StructuredData)
+  const t1 = await runTier(ctx, 'structured_data', tier1StructuredData);
   if (t1.result) {
-    await updateEventPrice(ctx.eventId, t1.result)
-    return
+    await updateEventPrice(ctx.eventId, t1.result);
+    return;
   }
 
-  const t6 = await runTier(ctx, 'community', tier6Community)
+  const t6 = await runTier(ctx, 'community', tier6Community);
   if (t6.result) {
-    await updateEventPrice(ctx.eventId, t6.result)
-    return
+    await updateEventPrice(ctx.eventId, t6.result);
+    return;
   }
 
   // A tier that could not try this run (robots.txt did not answer) has not
   // missed. Leave the event unstamped so the next run asks again.
-  if (t1.deferred || t6.deferred) return
+  if (t1.deferred || t6.deferred) return;
 
   await db
     .update(events)
     .set({ pipelineExhaustedAt: sql`now()` })
-    .where(eq(events.id, ctx.eventId))
+    .where(eq(events.id, ctx.eventId));
 }
 
-export type { PipelineContext, PriceTierResult } from './types.js'
-export { PriceFetchDeferredError } from './types.js'
-export type { PriceSource } from '@concert-crawl/types'
+export type { PipelineContext, PriceTierResult } from './types.js';
+export { PriceFetchDeferredError } from './types.js';
+export type { PriceSource } from '@concert-crawl/types';

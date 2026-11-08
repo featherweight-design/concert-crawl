@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { useAuth, useClerk } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { deleteAccount } from '@/lib/users'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState, useRef, useEffect } from 'react';
+import { useAuth, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { deleteAccount } from '@/lib/users';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
-const DANGER_COPY = SETTINGS_COPY.dangerZone
+const SETTINGS_COPY = CONSUMER_COPY.settings;
+const DANGER_COPY = SETTINGS_COPY.dangerZone;
 
 interface DeleteAccountSheetProps {
-  open: boolean
-  onClose: () => void
-  handle?: string | null
-  submissionCount?: number
+  open: boolean;
+  onClose: () => void;
+  handle?: string | null;
+  submissionCount?: number;
 }
 
 export function DeleteAccountSheet({
@@ -22,55 +22,55 @@ export function DeleteAccountSheet({
   handle,
   submissionCount,
 }: DeleteAccountSheetProps) {
-  const [inputValue, setInputValue] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [isDesktop, setIsDesktop] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const { getToken } = useAuth()
-  const { signOut } = useClerk()
-  const router = useRouter()
+  const [inputValue, setInputValue] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { getToken } = useAuth();
+  const { signOut } = useClerk();
+  const router = useRouter();
 
-  const isArmed = inputValue === 'DELETE'
+  const isArmed = inputValue === 'DELETE';
 
   useEffect(() => {
-    const mql = window.matchMedia('(min-width: 640px)')
-    setIsDesktop(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(min-width: 640px)');
+    setIsDesktop(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsDesktop(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   useEffect(() => {
     if (open) {
-      setInputValue('')
-      setFailed(false)
-      setTimeout(() => inputRef.current?.focus(), 100)
+      setInputValue('');
+      setFailed(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [open])
+  }, [open]);
 
   async function handleDelete() {
-    if (!isArmed || loading) return
-    setLoading(true)
-    setFailed(false)
+    if (!isArmed || loading) return;
+    setLoading(true);
+    setFailed(false);
     try {
-      const token = await getToken()
+      const token = await getToken();
       // Without a token nothing was deleted, so signing out here would end the
       // session on an account that still exists and looks deleted.
-      if (!token) throw new Error('No auth token for account deletion')
-      await deleteAccount(token)
-      await signOut()
-      router.push('/')
+      if (!token) throw new Error('No auth token for account deletion');
+      await deleteAccount(token);
+      await signOut();
+      router.push('/');
     } catch (err) {
-      console.error('Account deletion failed', err)
+      console.error('Account deletion failed', err);
       // Staying signed in is the retry path.
-      setFailed(true)
+      setFailed(true);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  if (!open) return null
+  if (!open) return null;
 
   if (isDesktop) {
     return (
@@ -178,7 +178,7 @@ export function DeleteAccountSheet({
           </div>
         </div>
       </>
-    )
+    );
   }
 
   return (
@@ -301,5 +301,5 @@ export function DeleteAccountSheet({
         </div>
       </div>
     </>
-  )
+  );
 }

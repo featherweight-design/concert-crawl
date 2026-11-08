@@ -5,7 +5,7 @@
 // (spotify/DiscoveryShelfSkeleton.tsx).
 
 /** Card width, in px. Flat across viewports; 168 renders at the 320px baseline. */
-export const SHELF_CARD_WIDTH = 168
+export const SHELF_CARD_WIDTH = 168;
 
 /**
  * Card height, in px, and the reason it is a number rather than a consequence.
@@ -31,7 +31,7 @@ export const SHELF_CARD_WIDTH = 168
  * is the fixed side of this equation — if the body ever grows, this constant
  * moves and the 3:4 does not.
  */
-const SHELF_CARD_ART_H = (SHELF_CARD_WIDTH * 4) / 3
-const SHELF_CARD_BODY_H = 85
+const SHELF_CARD_ART_H = (SHELF_CARD_WIDTH * 4) / 3;
+const SHELF_CARD_BODY_H = 85;
 
-export const SHELF_CARD_HEIGHT = SHELF_CARD_ART_H + SHELF_CARD_BODY_H
+export const SHELF_CARD_HEIGHT = SHELF_CARD_ART_H + SHELF_CARD_BODY_H;

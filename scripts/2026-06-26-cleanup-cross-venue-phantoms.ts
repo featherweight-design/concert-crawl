@@ -46,8 +46,8 @@
  * but takes no row-level locks on shared tables.
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm'
+import { pathToFileURL } from 'node:url';
+import { and, eq, inArray, isNotNull, sql } from 'drizzle-orm';
 import {
   db,
   events,
@@ -56,15 +56,15 @@ import {
   eventReports,
   priceSubmissions,
   priceRetrievalLog,
-} from '@concert-crawl/db'
-import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-title.js'
+} from '@concert-crawl/db';
+import { canonicalizeTitle } from '../packages/crawler-core/src/lib/canonical-title.js';
 
 // The Cervantes events page that aggregates "AT MISSION BALLROOM" /
 // "AT OGDEN" / etc. presale listings alongside Cervantes' own shows.
 // Hard-coded because this script is venue-specific to the 2026-06-26
 // incident — extending it to other partial-aggregator venues should be
 // a deliberate audit, not a string-match accident.
-const CERVANTES_SOURCE_URL = 'https://cervantesmasterpiece.com/events/'
+const CERVANTES_SOURCE_URL = 'https://cervantesmasterpiece.com/events/';
 
 // Strip "X Presents " / "X Present " promoter prefixes before pairing.
 // The 2026-06-26 phantom rows had titles like "AEG Presents Connor Price
@@ -77,48 +77,48 @@ const CERVANTES_SOURCE_URL = 'https://cervantesmasterpiece.com/events/'
 // SHIFT…") are handled because we don't restrict the chars between ^ and
 // the keyword. Applied to BOTH sides of the pair so the canonical row's
 // rare "X Presents" prefix wouldn't desync the match either.
-const PROMOTER_PREFIX = /^[^,]{1,60}?\sPresents?\s+/i
+const PROMOTER_PREFIX = /^[^,]{1,60}?\sPresents?\s+/i;
 
 function stripPromoterPrefix(title: string): string {
-  return title.replace(PROMOTER_PREFIX, '')
+  return title.replace(PROMOTER_PREFIX, '');
 }
 
 function pairingKey(date: string, title: string): string {
-  return `${date}|${canonicalizeTitle(stripPromoterPrefix(title))}`
+  return `${date}|${canonicalizeTitle(stripPromoterPrefix(title))}`;
 }
 
 interface PhantomCandidate {
   /** The Cervantes-stored phantom row. */
-  phantomId: string
-  phantomTitle: string
-  phantomArtist: string
-  phantomDate: string
-  phantomVenueId: string
-  phantomVenueName: string
+  phantomId: string;
+  phantomTitle: string;
+  phantomArtist: string;
+  phantomDate: string;
+  phantomVenueId: string;
+  phantomVenueName: string;
   /** The canonical row at the actual host venue. */
-  canonicalId: string
-  canonicalTitle: string
-  canonicalArtist: string
-  canonicalVenueId: string
-  canonicalVenueName: string
+  canonicalId: string;
+  canonicalTitle: string;
+  canonicalArtist: string;
+  canonicalVenueId: string;
+  canonicalVenueName: string;
   /** Re-canonicalized title used as the match key. */
-  matchKey: string
+  matchKey: string;
 }
 
 interface CleanupSummary {
-  candidatesFound: number
+  candidatesFound: number;
   fkReassignments: {
-    userEvents: number
-    eventReports: number
-    priceSubmissions: number
-    priceRetrievalLog: number
-  }
-  phantomsDeleted: number
-  committed: boolean
+    userEvents: number;
+    eventReports: number;
+    priceSubmissions: number;
+    priceRetrievalLog: number;
+  };
+  phantomsDeleted: number;
+  committed: boolean;
 }
 
 export async function runCleanup(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<CleanupSummary> {
   // 1. Load all Cervantes rows from the Cervantes events page, plus any
   //    same-date row at any other venue whose canonical_title matches.
@@ -150,18 +150,18 @@ export async function runCleanup(opts: {
         eq(events.sourceUrl, CERVANTES_SOURCE_URL),
         isNotNull(events.venueId),
       ),
-    )
+    );
 
   // Narrow venueId from nullable to string for the rest of the pipeline.
   // The isNotNull above guarantees no nulls in practice; this is the
   // type-system mirror so downstream consumers don't see `string | null`.
   const cervantesRows = cervantesRowsRaw.flatMap((row) =>
     row.venueId === null ? [] : [{ ...row, venueId: row.venueId }],
-  )
+  );
 
   console.log(
     `Loaded ${cervantesRows.length} Cervantes rows sourced from ${CERVANTES_SOURCE_URL}`,
-  )
+  );
 
   // Build per-(date, promoter-stripped canonical-title) match key.
   // Recompute the key from the live title so a row written before
@@ -170,19 +170,19 @@ export async function runCleanup(opts: {
   // "Cervantes' & River Beats Present …") are stripped before
   // canonicalization so the Cervantes phantom row and the canonical row
   // at the host venue end up with matching keys (Copilot R1 on #826).
-  const cervantesByKey = new Map<string, (typeof cervantesRows)[number]>()
+  const cervantesByKey = new Map<string, (typeof cervantesRows)[number]>();
   for (const row of cervantesRows) {
-    const matchKey = pairingKey(row.date, row.title)
+    const matchKey = pairingKey(row.date, row.title);
     // If multiple Cervantes rows collide on the same key (shouldn't happen
     // post-#608 but defend against it), keep the first one — the duplicate
     // is itself a phantom that will get caught on the next run.
     if (!cervantesByKey.has(matchKey)) {
-      cervantesByKey.set(matchKey, row)
+      cervantesByKey.set(matchKey, row);
     }
   }
 
   if (cervantesByKey.size === 0) {
-    console.log('No Cervantes rows found — nothing to do.')
+    console.log('No Cervantes rows found — nothing to do.');
     return {
       candidatesFound: 0,
       fkReassignments: {
@@ -196,17 +196,17 @@ export async function runCleanup(opts: {
       // passed. The summary should reflect whether writes actually
       // happened, not the flag the operator set (#836 Copilot R5).
       committed: false,
-    }
+    };
   }
 
   // 2. Pull all candidate sibling rows at OTHER venues on the same dates.
   //    Filter further in JS by canonicalizeTitle(row.title) match.
   const allDates = Array.from(
     new Set(Array.from(cervantesByKey.values()).map((row) => row.date)),
-  )
+  );
   const cervantesVenueIds = Array.from(
     new Set(Array.from(cervantesByKey.values()).map((row) => row.venueId)),
-  )
+  );
 
   // Same rationale as the Cervantes-side query — pairingKey recomputes
   // from `title`, so `events.canonical_title` would only add wire weight
@@ -235,22 +235,22 @@ export async function runCleanup(opts: {
           sql`, `,
         )})`,
       ),
-    )
+    );
 
   const siblingRows = siblingRowsRaw.flatMap((row) =>
     row.venueId === null ? [] : [{ ...row, venueId: row.venueId }],
-  )
+  );
 
-  const candidates: PhantomCandidate[] = []
+  const candidates: PhantomCandidate[] = [];
   for (const sibling of siblingRows) {
-    const matchKey = pairingKey(sibling.date, sibling.title)
-    const phantom = cervantesByKey.get(matchKey)
-    if (!phantom) continue
+    const matchKey = pairingKey(sibling.date, sibling.title);
+    const phantom = cervantesByKey.get(matchKey);
+    if (!phantom) continue;
     // Skip if we've already paired this phantom (a Cervantes row could in
     // theory match multiple siblings, e.g. if two host-venue duplicates
     // exist; #608 should have cleaned those up, but defend anyway by
     // taking the first sibling and leaving the rest to a future pass).
-    if (candidates.some((cand) => cand.phantomId === phantom.id)) continue
+    if (candidates.some((cand) => cand.phantomId === phantom.id)) continue;
     candidates.push({
       phantomId: phantom.id,
       phantomTitle: phantom.title,
@@ -264,12 +264,12 @@ export async function runCleanup(opts: {
       canonicalVenueId: sibling.venueId,
       canonicalVenueName: sibling.venueName,
       matchKey,
-    })
+    });
   }
 
   console.log(
     `Found ${candidates.length} phantom→canonical pairs (Cervantes → host venue).`,
-  )
+  );
 
   if (candidates.length === 0) {
     return {
@@ -285,7 +285,7 @@ export async function runCleanup(opts: {
       // passed. The summary should reflect whether writes actually
       // happened, not the flag the operator set (#836 Copilot R5).
       committed: false,
-    }
+    };
   }
 
   // 3. Per-candidate dry-run log — operator-readable so the spot-check
@@ -307,12 +307,12 @@ export async function runCleanup(opts: {
         `  artist      = ${cand.canonicalArtist}`,
         `match key     = ${cand.matchKey}`,
       ].join('\n'),
-    )
+    );
   }
 
   // 4. Count FK rows pointing at each phantom so the dry-run shows the
   //    blast radius. Done in a single query per table for efficiency.
-  const phantomIds = candidates.map((cand) => cand.phantomId)
+  const phantomIds = candidates.map((cand) => cand.phantomId);
   const [ueCount, erCount, psCount, prlCount] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
@@ -330,30 +330,30 @@ export async function runCleanup(opts: {
       .select({ count: sql<number>`count(*)::int` })
       .from(priceRetrievalLog)
       .where(inArray(priceRetrievalLog.eventId, phantomIds)),
-  ])
+  ]);
 
   const fkCounts = {
     userEvents: ueCount[0]?.count ?? 0,
     eventReports: erCount[0]?.count ?? 0,
     priceSubmissions: psCount[0]?.count ?? 0,
     priceRetrievalLog: prlCount[0]?.count ?? 0,
-  }
+  };
 
-  console.log('---')
+  console.log('---');
   console.log(
     `FK rows to reassign before delete: user_events=${fkCounts.userEvents}, event_reports=${fkCounts.eventReports}, price_submissions=${fkCounts.priceSubmissions}, price_retrieval_log=${fkCounts.priceRetrievalLog}`,
-  )
+  );
 
   if (!opts.commit) {
     console.log(
       'Dry-run mode — no rows touched. Re-run with --commit to apply.',
-    )
+    );
     return {
       candidatesFound: candidates.length,
       fkReassignments: fkCounts,
       phantomsDeleted: 0,
       committed: false,
-    }
+    };
   }
 
   // 5. --commit path. One transaction per pair so a single bad pair
@@ -362,13 +362,13 @@ export async function runCleanup(opts: {
   //    but here every pair is independently auditable from the dry-run
   //    log, and partial progress is preferable to all-or-nothing if a
   //    surprise FK constraint fires mid-batch.
-  let deletedCount = 0
+  let deletedCount = 0;
   const writtenFkCounts = {
     userEvents: 0,
     eventReports: 0,
     priceSubmissions: 0,
     priceRetrievalLog: 0,
-  }
+  };
   for (const cand of candidates) {
     await db.transaction(async (tx) => {
       // 5a. user_events — dedupe per (user_id, canonical) before redirecting.
@@ -391,64 +391,64 @@ export async function runCleanup(opts: {
                 AND ue_canonical.user_id = ue_phantom.user_id
             )
         `,
-      )
-      const dupeIds = dupeUserRows.map((row) => row.id)
+      );
+      const dupeIds = dupeUserRows.map((row) => row.id);
       if (dupeIds.length > 0) {
-        await tx.delete(userEvents).where(inArray(userEvents.id, dupeIds))
+        await tx.delete(userEvents).where(inArray(userEvents.id, dupeIds));
       }
 
       const ueRes = await tx
         .update(userEvents)
         .set({ eventId: cand.canonicalId })
         .where(eq(userEvents.eventId, cand.phantomId))
-        .returning({ id: userEvents.id })
-      writtenFkCounts.userEvents += ueRes.length
+        .returning({ id: userEvents.id });
+      writtenFkCounts.userEvents += ueRes.length;
 
       const erRes = await tx
         .update(eventReports)
         .set({ eventId: cand.canonicalId })
         .where(eq(eventReports.eventId, cand.phantomId))
-        .returning({ id: eventReports.id })
-      writtenFkCounts.eventReports += erRes.length
+        .returning({ id: eventReports.id });
+      writtenFkCounts.eventReports += erRes.length;
 
       const psRes = await tx
         .update(priceSubmissions)
         .set({ eventId: cand.canonicalId })
         .where(eq(priceSubmissions.eventId, cand.phantomId))
-        .returning({ id: priceSubmissions.id })
-      writtenFkCounts.priceSubmissions += psRes.length
+        .returning({ id: priceSubmissions.id });
+      writtenFkCounts.priceSubmissions += psRes.length;
 
       const prlRes = await tx
         .update(priceRetrievalLog)
         .set({ eventId: cand.canonicalId })
         .where(eq(priceRetrievalLog.eventId, cand.phantomId))
-        .returning({ id: priceRetrievalLog.id })
-      writtenFkCounts.priceRetrievalLog += prlRes.length
+        .returning({ id: priceRetrievalLog.id });
+      writtenFkCounts.priceRetrievalLog += prlRes.length;
 
       // 5b. Delete the phantom. FK rows are reassigned by this point so
       //     CASCADE has nothing to chase.
-      await tx.delete(events).where(eq(events.id, cand.phantomId))
-    })
+      await tx.delete(events).where(eq(events.id, cand.phantomId));
+    });
     // Increment AFTER db.transaction() resolves so a rollback or commit
     // failure doesn't leave the in-memory count out of sync with the DB
     // (#836 Copilot R4).
-    deletedCount += 1
+    deletedCount += 1;
     console.log(
       `Reassigned + deleted phantom ${cand.phantomId} → canonical ${cand.canonicalId}`,
-    )
+    );
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Deleted ${deletedCount} phantoms. FK reassignments: user_events=${writtenFkCounts.userEvents}, event_reports=${writtenFkCounts.eventReports}, price_submissions=${writtenFkCounts.priceSubmissions}, price_retrieval_log=${writtenFkCounts.priceRetrievalLog}`,
-  )
+  );
 
   return {
     candidatesFound: candidates.length,
     fkReassignments: writtenFkCounts,
     phantomsDeleted: deletedCount,
     committed: true,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can also be imported by a future
@@ -456,17 +456,17 @@ export async function runCleanup(opts: {
 // invoked script URL.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runCleanup({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Cleanup failed:', err)
-      process.exit(1)
-    })
+      console.error('Cleanup failed:', err);
+      process.exit(1);
+    });
 }

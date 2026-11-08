@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { extractJsonLd } from './json-ld.js'
+import { describe, expect, it } from 'vitest';
+import { extractJsonLd } from './json-ld.js';
 
 const page = (event: Record<string, unknown>) =>
   `<script type="application/ld+json">${JSON.stringify({
     '@type': 'Event',
     startDate: '2026-09-12T20:00:00-06:00',
     ...event,
-  })}</script>`
+  })}</script>`;
 
 describe('json-ld observedPerformers', () => {
   it('splits a flat performer list into a headliner and its openers', () => {
@@ -20,20 +20,20 @@ describe('json-ld observedPerformers', () => {
       }),
       'https://example.com/events',
       'America/Denver',
-    )
+    );
 
-    expect(events[0]?.observedPerformers).toEqual(['Thee Sacred Souls'])
-    expect(events[0]?.observedSupportingArtists).toEqual(['LA LOM'])
-  })
+    expect(events[0]?.observedPerformers).toEqual(['Thee Sacred Souls']);
+    expect(events[0]?.observedSupportingArtists).toEqual(['LA LOM']);
+  });
 
   it('reports an EMPTY list when the listing names no performer, and never copies the title', () => {
     const events = extractJsonLd(
       page({ name: 'HUMP! Film Festival' }),
       'https://example.com/events',
       'America/Denver',
-    )
+    );
 
-    expect(events[0]?.observedPerformers).toEqual([])
-    expect(events[0]?.artist).toBe('HUMP! Film Festival')
-  })
-})
+    expect(events[0]?.observedPerformers).toEqual([]);
+    expect(events[0]?.artist).toBe('HUMP! Film Festival');
+  });
+});

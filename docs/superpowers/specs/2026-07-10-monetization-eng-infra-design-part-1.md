@@ -213,16 +213,16 @@ Replaces `apps/api/src/routes/users.ts:derivePlan` wholesale. New home: `package
 
 ```ts
 export type UserPlan =
-  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted'
+  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted';
 
 export interface PlanState {
-  plan: UserPlan
-  onTrial: boolean // true ⇒ plan === 'premium' via trial (Decision 7)
-  trialEndsAt: string | null // ISO; non-null while trial is live or recently ended
-  status: SubscriptionStatus | null // Stripe-mirrored status; null when no subscription row
-  cancelAtPeriodEnd: boolean
-  currentPeriodEnd: string | null
-  roleComped: boolean // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
+  plan: UserPlan;
+  onTrial: boolean; // true ⇒ plan === 'premium' via trial (Decision 7)
+  trialEndsAt: string | null; // ISO; non-null while trial is live or recently ended
+  status: SubscriptionStatus | null; // Stripe-mirrored status; null when no subscription row
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  roleComped: boolean; // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
 }
 ```
 
@@ -264,15 +264,15 @@ export type PremiumFeature =
   | 'following'
   | 'alerts'
   | 'spotify-sync'
-  | 'price-drop-alerts'
+  | 'price-drop-alerts';
 
 export type EntitlementCell =
-  'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden'
+  'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden';
 
 export const ENTITLEMENTS_MATRIX: Record<
   PremiumFeature,
   Record<UserPlan, EntitlementCell>
->
+>;
 ```
 
 Matrix content (from #781 §6, including the R6 Watching-is-Free amendment; the spotify-sync row shows the #763 §7 (E8) override that superseded #781's hidden cells):

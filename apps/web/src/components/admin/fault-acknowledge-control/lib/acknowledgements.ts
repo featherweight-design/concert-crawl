@@ -1,21 +1,21 @@
-import { apiClient } from '@/lib/api'
-import { parseTriageResponse } from '@/components/admin/triage/lib/parse-triage'
+import { apiClient } from '@/lib/api';
+import { parseTriageResponse } from '@/components/admin/triage/lib/parse-triage';
 import type {
   AcknowledgedFault,
   TriageCondition,
   TriageFault,
-} from '@/components/admin/triage/definitions/types'
+} from '@/components/admin/triage/definitions/types';
 
 export interface VenueFault {
-  fault: TriageFault | null
-  acknowledged: AcknowledgedFault | null
+  fault: TriageFault | null;
+  acknowledged: AcknowledgedFault | null;
 }
 
 export interface FaultAcknowledgementBody {
-  condition: TriageCondition
-  evidenceKind: 'pinned_count' | 'horizon_shrank' | null
-  evidenceValue: string | null
-  reason: string
+  condition: TriageCondition;
+  evidenceKind: 'pinned_count' | 'horizon_shrank' | null;
+  evidenceValue: string | null;
+  reason: string;
 }
 
 /**
@@ -31,15 +31,15 @@ export const fetchVenueFault = async (
   venueId: string,
   token: string,
 ): Promise<VenueFault> => {
-  const raw = await apiClient.get<unknown>('/v1/admin/triage', token)
-  const parsed = parseTriageResponse(raw)
-  if (parsed === null) return { fault: null, acknowledged: null }
+  const raw = await apiClient.get<unknown>('/v1/admin/triage', token);
+  const parsed = parseTriageResponse(raw);
+  if (parsed === null) return { fault: null, acknowledged: null };
   return {
     fault: parsed.faults.find((row) => row.venueId === venueId) ?? null,
     acknowledged:
       parsed.acknowledged.find((row) => row.venueId === venueId) ?? null,
-  }
-}
+  };
+};
 
 export const acknowledgeFault = async (
   venueId: string,
@@ -50,8 +50,8 @@ export const acknowledgeFault = async (
     `/v1/admin/venues/${venueId}/fault-acknowledgements`,
     token,
     body,
-  )
-}
+  );
+};
 
 export const unacknowledgeFault = async (
   venueId: string,
@@ -61,5 +61,5 @@ export const unacknowledgeFault = async (
   await apiClient.delete<unknown>(
     `/v1/admin/venues/${venueId}/fault-acknowledgements/${condition}`,
     token,
-  )
-}
+  );
+};

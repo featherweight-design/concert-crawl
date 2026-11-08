@@ -1,9 +1,9 @@
 interface CCClusterMarkProps {
-  size?: number
-  color?: string
-  glow?: string | null
-  className?: string
-  style?: React.CSSProperties
+  size?: number;
+  color?: string;
+  glow?: string | null;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function CCClusterMark({
@@ -13,7 +13,7 @@ export function CCClusterMark({
   className,
   style,
 }: CCClusterMarkProps) {
-  const glowColor = glow ?? color
+  const glowColor = glow ?? color;
   const trail = [
     { cx: 14, cy: 76, radius: 1.5 },
     { cx: 24, cy: 70, radius: 2 },
@@ -22,7 +22,7 @@ export function CCClusterMark({
     { cx: 50, cy: 50, radius: 4 },
     { cx: 58, cy: 42, radius: 5 },
     { cx: 66, cy: 32, radius: 6 },
-  ]
+  ];
   return (
     <svg
       width={size}
@@ -46,5 +46,5 @@ export function CCClusterMark({
         />
       ))}
     </svg>
-  )
+  );
 }

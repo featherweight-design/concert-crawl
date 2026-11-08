@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
 // Free-tier upsell for the taste filter chip (#763 PR 7, taste-filter.jsx
 // mock). Opens when a free/supporter viewer taps the locked "Following"
 // chip; "See plans" hands off to the tier picker (paywall entry).
 
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
-import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
+import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons';
 
-const COPY = SPOTIFY_COPY.tasteFilter.upsell
+const COPY = SPOTIFY_COPY.tasteFilter.upsell;
 
 interface TasteUpsellSheetProps {
-  open: boolean
-  onClose: () => void
-  onSeePlans: () => void
+  open: boolean;
+  onClose: () => void;
+  onSeePlans: () => void;
 }
 
 export const TasteUpsellSheet = ({
@@ -86,4 +86,4 @@ export const TasteUpsellSheet = ({
       </ul>
     </div>
   </ModalShell>
-)
+);

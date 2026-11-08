@@ -5,48 +5,48 @@
 // dormant-credentials path, dedupe, the exact-match flag, the query override,
 // and the error taxonomy. The client's own HTTP behaviour is already covered
 // by spotify-app-client.test.ts.
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { eq, sql } from 'drizzle-orm'
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { eq, sql } from 'drizzle-orm';
 
 interface AuthState {
   current: {
-    userId: string
-    sessionClaims: { metadata?: { role?: string } }
-  } | null
+    userId: string;
+    sessionClaims: { metadata?: { role?: string } };
+  } | null;
 }
 
 interface SpotifyCandidate {
-  id: string
-  name: string
-  images: { url: string }[]
-  genres: string[]
-  spotifyUrl: string | null
+  id: string;
+  name: string;
+  images: { url: string }[];
+  genres: string[];
+  spotifyUrl: string | null;
 }
 
 interface SearchState {
   /** Resolves to these candidates, unless `error` is set. */
-  candidates: SpotifyCandidate[]
-  error: Error | null
+  candidates: SpotifyCandidate[];
+  error: Error | null;
   /** False models unset SPOTIFY_CLIENT_ID/SECRET — the dormant path. */
-  clientAvailable: boolean
-  lastQuery: string | null
+  clientAvailable: boolean;
+  lastQuery: string | null;
   /** What `GET /artists/{id}` reports, keyed by artist id. */
-  detailsById: Record<string, { genres: string[] }>
+  detailsById: Record<string, { genres: string[] }>;
   /** Thrown by `fetchArtistDetails` — the degrade-to-unhydrated path. */
-  detailsError: Error | null
+  detailsError: Error | null;
   /** The ids the route asked to hydrate, or null if it never asked. */
-  lastDetailIds: string[] | null
+  lastDetailIds: string[] | null;
   /**
    * How many clients the route built. Building one mints an app token, so a
    * cache hit that needs no hydration must leave this at zero.
    */
-  clientBuilds: number
+  clientBuilds: number;
 }
 
 const { authState, searchState } = vi.hoisted(
   (): {
-    authState: AuthState
-    searchState: SearchState
+    authState: AuthState;
+    searchState: SearchState;
   } => ({
     authState: { current: null },
     searchState: {
@@ -60,51 +60,51 @@ const { authState, searchState } = vi.hoisted(
       clientBuilds: 0,
     },
   }),
-)
+);
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
 vi.mock('../../lib/spotify-app-client.js', () => ({
   createSpotifyAppClient: async () => {
-    searchState.clientBuilds += 1
-    if (!searchState.clientAvailable) return null
+    searchState.clientBuilds += 1;
+    if (!searchState.clientAvailable) return null;
     return {
       searchArtists: async (query: string) => {
-        searchState.lastQuery = query
-        if (searchState.error !== null) throw searchState.error
-        return searchState.candidates
+        searchState.lastQuery = query;
+        if (searchState.error !== null) throw searchState.error;
+        return searchState.candidates;
       },
       fetchArtistDetails: async (artistIds: string[]) => {
-        searchState.lastDetailIds = artistIds
-        if (searchState.detailsError !== null) throw searchState.detailsError
+        searchState.lastDetailIds = artistIds;
+        if (searchState.detailsError !== null) throw searchState.detailsError;
         return new Map(
           artistIds
             .filter((id) => searchState.detailsById[id] !== undefined)
             .map((id) => [id, searchState.detailsById[id] ?? { genres: [] }]),
-        )
+        );
       },
       getCallCount: () => 1,
-    }
+    };
   },
-}))
+}));
 
-import { artists, type SpotifyCandidateSnapshot } from '@concert-crawl/db'
-import { createApp } from '../../app.js'
-import { testDb } from '../../test/helpers/db.js'
-import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js'
+import { artists, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
+import { createApp } from '../../app.js';
+import { testDb } from '../../test/helpers/db.js';
+import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js';
 
-const app = createApp()
+const app = createApp();
 
-const ADMIN_HEADERS = { Authorization: 'Bearer admin-token' }
+const ADMIN_HEADERS = { Authorization: 'Bearer admin-token' };
 
-const CANONICAL = 'sublime'
+const CANONICAL = 'sublime';
 
 /** When a seeded snapshot was taken — any instant before "now" works. */
-const CACHED_AT = new Date('2026-08-01T12:00:00Z')
+const CACHED_AT = new Date('2026-08-01T12:00:00Z');
 
 const snapshot = (
   id: string,
@@ -117,20 +117,20 @@ const snapshot = (
   genres: null,
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
-})
+});
 
 interface CandidateBody {
-  success: boolean
-  query?: string
-  cachedAt?: string | null
+  success: boolean;
+  query?: string;
+  cachedAt?: string | null;
   data?: Array<{
-    id: string
-    name: string
-    isExactMatch: boolean
-    imageUrl: string | null
-    genres: string[] | null
-  }>
-  error?: string
+    id: string;
+    name: string;
+    isExactMatch: boolean;
+    imageUrl: string | null;
+    genres: string[] | null;
+  }>;
+  error?: string;
 }
 
 const candidate = (
@@ -147,7 +147,7 @@ const candidate = (
   genres: [],
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
-})
+});
 
 const seedAmbiguous = async (
   cached: SpotifyCandidateSnapshot[] | null = null,
@@ -162,16 +162,16 @@ const seedAmbiguous = async (
       spotifyCandidates: cached,
       spotifyCandidatesFetchedAt: cached === null ? null : CACHED_AT,
     })
-    .returning({ id: artists.id })
-  if (!row) throw new Error('seed failed')
-  return row.id
-}
+    .returning({ id: artists.id });
+  if (!row) throw new Error('seed failed');
+  return row.id;
+};
 
 const readCache = async (
   id: string,
 ): Promise<{
-  spotifyCandidates: SpotifyCandidateSnapshot[] | null
-  spotifyCandidatesFetchedAt: Date | null
+  spotifyCandidates: SpotifyCandidateSnapshot[] | null;
+  spotifyCandidatesFetchedAt: Date | null;
 }> => {
   const [row] = await testDb
     .select({
@@ -179,60 +179,60 @@ const readCache = async (
       spotifyCandidatesFetchedAt: artists.spotifyCandidatesFetchedAt,
     })
     .from(artists)
-    .where(eq(artists.id, id))
-  if (!row) throw new Error('artist vanished')
-  return row
-}
+    .where(eq(artists.id, id));
+  if (!row) throw new Error('artist vanished');
+  return row;
+};
 
 describe('GET /v1/admin/artists/:id/candidates', () => {
   beforeEach(async () => {
     authState.current = {
       userId: 'admin_candidates_test',
       sessionClaims: { metadata: { role: 'admin' } },
-    }
-    searchState.candidates = []
-    searchState.error = null
-    searchState.clientAvailable = true
-    searchState.lastQuery = null
-    searchState.detailsById = {}
-    searchState.detailsError = null
-    searchState.lastDetailIds = null
-    searchState.clientBuilds = 0
-    await testDb.delete(artists).where(eq(artists.canonicalName, CANONICAL))
-  })
+    };
+    searchState.candidates = [];
+    searchState.error = null;
+    searchState.clientAvailable = true;
+    searchState.lastQuery = null;
+    searchState.detailsById = {};
+    searchState.detailsError = null;
+    searchState.lastDetailIds = null;
+    searchState.clientBuilds = 0;
+    await testDb.delete(artists).where(eq(artists.canonicalName, CANONICAL));
+  });
 
   it('hydrates genres for the candidates it returns', async () => {
-    const id = await seedAmbiguous()
+    const id = await seedAmbiguous();
     searchState.candidates = [
       candidate('spotify_ska', 'Sublime'),
       candidate('spotify_other', 'Subliminal'),
-    ]
+    ];
     searchState.detailsById = {
       spotify_ska: { genres: ['ska punk', 'reggae rock'] },
       spotify_other: { genres: ['hip hop'] },
-    }
+    };
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     // Hydration is asked only for the candidates actually being returned.
-    expect(searchState.lastDetailIds).toEqual(['spotify_ska', 'spotify_other'])
+    expect(searchState.lastDetailIds).toEqual(['spotify_ska', 'spotify_other']);
     // Search and hydration share one client, so one token mint covers both.
-    expect(searchState.clientBuilds).toBe(1)
+    expect(searchState.clientBuilds).toBe(1);
     expect(body.data?.map((row) => row.genres)).toEqual([
       ['ska punk', 'reggae rock'],
       ['hip hop'],
-    ])
-  })
+    ]);
+  });
 
   it('drops a legacy popularity key rather than writing it back', async () => {
     // Rows snapshotted before February 2026 still carry `popularity` in the
     // JSONB. Hydration rebuilds the snapshot field by field so those rows shed
     // it on the next write instead of round-tripping a field nothing can fill.
-    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')]);
     await testDb.execute(
       sql`update artists set spotify_candidates = ${JSON.stringify([
         {
@@ -244,301 +244,303 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
           popularity: 72,
         },
       ])}::jsonb where id = ${id}`,
-    )
-    searchState.detailsById = { spotify_ska: { genres: ['ska'] } }
+    );
+    searchState.detailsById = { spotify_ska: { genres: ['ska'] } };
 
     await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
+    });
 
-    const [cached] = (await readCache(id)).spotifyCandidates ?? []
+    const [cached] = (await readCache(id)).spotifyCandidates ?? [];
     expect(cached).toEqual({
       id: 'spotify_ska',
       name: 'Sublime',
       imageUrl: 'https://i.scdn.co/image/spotify_ska',
       genres: ['ska'],
       spotifyUrl: 'https://open.spotify.com/artist/spotify_ska',
-    })
-  })
+    });
+  });
 
   it('settles an artist Spotify lists no genres for, rather than re-hydrating forever', async () => {
     // Spotify has deprecated genres, so `[]` is now the common answer. Writing
     // it back is what ends the hydration: while the trigger also watched the
     // since-removed `popularity`, which no endpoint can ever fill, every open
     // of the row re-spent one call per candidate.
-    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
-    searchState.detailsById = { spotify_ska: { genres: [] } }
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')]);
+    searchState.detailsById = { spotify_ska: { genres: [] } };
 
     const first = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await first.json()
+    });
+    const body: CandidateBody = await first.json();
 
-    expect(body.data?.[0]?.genres).toEqual([])
-    expect((await readCache(id)).spotifyCandidates?.[0]?.genres).toEqual([])
+    expect(body.data?.[0]?.genres).toEqual([]);
+    expect((await readCache(id)).spotifyCandidates?.[0]?.genres).toEqual([]);
 
-    searchState.lastDetailIds = null
+    searchState.lastDetailIds = null;
     await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    expect(searchState.lastDetailIds).toBeNull()
-  })
+    });
+    expect(searchState.lastDetailIds).toBeNull();
+  });
 
   it('still serves candidates when genre hydration fails', async () => {
-    const id = await seedAmbiguous()
-    searchState.candidates = [candidate('spotify_ska', 'Sublime')]
-    searchState.detailsError = new Error('spotify said no')
+    const id = await seedAmbiguous();
+    searchState.candidates = [candidate('spotify_ska', 'Sublime')];
+    searchState.detailsError = new Error('spotify said no');
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
     // Genres are a nicety; losing them must not cost the admin the picker.
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     // Still `null`, not `[]` — the hydration never happened, so claiming
     // Spotify lists no genres would be a lie the next open would believe.
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_ska', genres: null }),
-    ])
-  })
+    ]);
+  });
 
   it('leaves genres unknown for an id Spotify would not resolve', async () => {
     const id = await seedAmbiguous([
       snapshot('spotify_ska', 'Sublime'),
       snapshot('spotify_gone', 'Sublime'),
-    ])
+    ]);
     searchState.detailsById = {
       spotify_ska: { genres: ['ska punk'] },
-    }
+    };
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
     // `[]` would claim Spotify lists no genres for a row we never read, and
     // would be persisted — no later open would retry it.
-    expect(body.data?.map((row) => row.genres)).toEqual([['ska punk'], null])
+    expect(body.data?.map((row) => row.genres)).toEqual([['ska punk'], null]);
     expect(
       (await readCache(id)).spotifyCandidates?.map((row) => row.genres),
-    ).toEqual([['ska punk'], null])
-  })
+    ).toEqual([['ska punk'], null]);
+  });
 
   it('searches the row’s canonical name and flags the exact collisions', async () => {
-    const id = await seedAmbiguous()
+    const id = await seedAmbiguous();
     searchState.candidates = [
       candidate('spotify_ska', 'Sublime'),
       candidate('spotify_other', 'Subliminal'),
-    ]
+    ];
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
-    expect(res.status).toBe(200)
-    expect(searchState.lastQuery).toBe(CANONICAL)
+    expect(res.status).toBe(200);
+    expect(searchState.lastQuery).toBe(CANONICAL);
     // The flag is what tells the admin which rows actually collided —
     // "Subliminal" came back from the same search but never competed.
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_ska', isExactMatch: true }),
       expect.objectContaining({ id: 'spotify_other', isExactMatch: false }),
-    ])
-  })
+    ]);
+  });
 
   it('honours a query override so a no_match row can be searched by hand', async () => {
-    const id = await seedAmbiguous()
-    searchState.candidates = [candidate('spotify_mike', 'Mike Smoak')]
+    const id = await seedAmbiguous();
+    searchState.candidates = [candidate('spotify_mike', 'Mike Smoak')];
 
     const res = await app.request(
       `/v1/admin/artists/${id}/candidates?query=Mike%20Smoak`,
       { headers: ADMIN_HEADERS },
-    )
-    const body: CandidateBody = await res.json()
+    );
+    const body: CandidateBody = await res.json();
 
-    expect(searchState.lastQuery).toBe('Mike Smoak')
-    expect(body.query).toBe('Mike Smoak')
+    expect(searchState.lastQuery).toBe('Mike Smoak');
+    expect(body.query).toBe('Mike Smoak');
     // Nothing matched the row's canonical name, which is the honest answer for
     // a hand-typed spelling — the admin picks it anyway.
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_mike', isExactMatch: false }),
-    ])
-  })
+    ]);
+  });
 
   it('returns each artist once when Spotify echoes a duplicate', async () => {
-    const id = await seedAmbiguous()
+    const id = await seedAmbiguous();
     searchState.candidates = [
       candidate('spotify_ska', 'Sublime'),
       candidate('spotify_ska', 'Sublime'),
-    ]
+    ];
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
-    expect(body.data).toHaveLength(1)
-  })
+    expect(body.data).toHaveLength(1);
+  });
 
   it('404s an unknown artist id without spending a search', async () => {
     const res = await app.request(
       '/v1/admin/artists/11111111-1111-1111-1111-111111111111/candidates',
       { headers: ADMIN_HEADERS },
-    )
+    );
 
-    expect(res.status).toBe(404)
-    expect(searchState.lastQuery).toBeNull()
-  })
+    expect(res.status).toBe(404);
+    expect(searchState.lastQuery).toBeNull();
+  });
 
   it('serves the snapshot the match job left, without spending a search', async () => {
     const id = await seedAmbiguous([
       snapshot('spotify_ska', 'Sublime', { genres: ['ska punk'] }),
       snapshot('spotify_other', 'Subliminal', { genres: [] }),
-    ])
+    ]);
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     // The whole point of #1525 — opening the picker costs Spotify nothing.
     // Not even a client: building one mints an app token over the network.
-    expect(searchState.clientBuilds).toBe(0)
-    expect(searchState.lastQuery).toBeNull()
-    expect(searchState.lastDetailIds).toBeNull()
-    expect(body.cachedAt).toBe(CACHED_AT.toISOString())
+    expect(searchState.clientBuilds).toBe(0);
+    expect(searchState.lastQuery).toBeNull();
+    expect(searchState.lastDetailIds).toBeNull();
+    expect(body.cachedAt).toBe(CACHED_AT.toISOString());
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_ska', isExactMatch: true }),
       expect.objectContaining({ id: 'spotify_other', isExactMatch: false }),
-    ])
-  })
+    ]);
+  });
 
   it('hydrates a snapshot’s genres once and writes them back', async () => {
-    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')]);
     searchState.detailsById = {
       spotify_ska: { genres: ['ska punk'] },
-    }
+    };
 
     const first = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await first.json()
+    });
+    const body: CandidateBody = await first.json();
 
-    expect(body.data?.[0]?.genres).toEqual(['ska punk'])
+    expect(body.data?.[0]?.genres).toEqual(['ska punk']);
     // Persisted, so the second open is free.
     expect((await readCache(id)).spotifyCandidates?.[0]?.genres).toEqual([
       'ska punk',
-    ])
+    ]);
 
-    searchState.lastDetailIds = null
-    searchState.clientBuilds = 0
+    searchState.lastDetailIds = null;
+    searchState.clientBuilds = 0;
     await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    expect(searchState.clientBuilds).toBe(0)
-    expect(searchState.lastDetailIds).toBeNull()
-    expect(searchState.lastQuery).toBeNull()
-  })
+    });
+    expect(searchState.clientBuilds).toBe(0);
+    expect(searchState.lastDetailIds).toBeNull();
+    expect(searchState.lastQuery).toBeNull();
+  });
 
   it('spends a search on refresh and replaces the snapshot', async () => {
-    const id = await seedAmbiguous([snapshot('spotify_stale', 'Sublime')])
-    searchState.candidates = [candidate('spotify_fresh', 'Sublime')]
+    const id = await seedAmbiguous([snapshot('spotify_stale', 'Sublime')]);
+    searchState.candidates = [candidate('spotify_fresh', 'Sublime')];
 
     const res = await app.request(
       `/v1/admin/artists/${id}/candidates?refresh=true`,
       { headers: ADMIN_HEADERS },
-    )
-    const body: CandidateBody = await res.json()
+    );
+    const body: CandidateBody = await res.json();
 
-    expect(searchState.lastQuery).toBe(CANONICAL)
+    expect(searchState.lastQuery).toBe(CANONICAL);
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_fresh' }),
-    ])
-    const stored = await readCache(id)
+    ]);
+    const stored = await readCache(id);
     expect(stored.spotifyCandidates?.map((row) => row.id)).toEqual([
       'spotify_fresh',
-    ])
+    ]);
     expect(stored.spotifyCandidatesFetchedAt?.getTime()).toBeGreaterThan(
       CACHED_AT.getTime(),
-    )
-  })
+    );
+  });
 
   it('never writes a hand-typed query back over the row’s snapshot', async () => {
-    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
-    searchState.candidates = [candidate('spotify_mike', 'Mike Smoak')]
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')]);
+    searchState.candidates = [candidate('spotify_mike', 'Mike Smoak')];
 
     const res = await app.request(
       `/v1/admin/artists/${id}/candidates?query=Mike%20Smoak`,
       { headers: ADMIN_HEADERS },
-    )
-    const body: CandidateBody = await res.json()
+    );
+    const body: CandidateBody = await res.json();
 
     // An override answers a different question from the one the row asks, so
     // caching it under the canonical name would poison the row.
-    expect(body.data).toEqual([expect.objectContaining({ id: 'spotify_mike' })])
-    expect(body.cachedAt).toBeNull()
+    expect(body.data).toEqual([
+      expect.objectContaining({ id: 'spotify_mike' }),
+    ]);
+    expect(body.cachedAt).toBeNull();
     expect(
       (await readCache(id)).spotifyCandidates?.map((row) => row.id),
-    ).toEqual(['spotify_ska'])
-  })
+    ).toEqual(['spotify_ska']);
+  });
 
   it('serves a snapshot even when the Spotify credentials are unset', async () => {
-    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
-    searchState.clientAvailable = false
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')]);
+    searchState.clientAvailable = false;
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
     // Dormant credentials stop searching, not reading — the snapshot is
     // already ours, and the paste-an-id escape hatch needs the list beside it.
-    expect(res.status).toBe(200)
-    expect(body.data).toHaveLength(1)
-  })
+    expect(res.status).toBe(200);
+    expect(body.data).toHaveLength(1);
+  });
 
   it('503s when the credentials are unset and the row has no snapshot', async () => {
-    const id = await seedAmbiguous()
-    searchState.clientAvailable = false
+    const id = await seedAmbiguous();
+    searchState.clientAvailable = false;
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    const body: CandidateBody = await res.json()
+    });
+    const body: CandidateBody = await res.json();
 
     // A configuration state, not a request failure — the admin needs to be
     // told to provision credentials, not to retry.
-    expect(res.status).toBe(503)
-    expect(body.error).toContain('credentials')
-  })
+    expect(res.status).toBe(503);
+    expect(body.error).toContain('credentials');
+  });
 
   it('maps the Spotify error taxonomy to distinct statuses', async () => {
-    const id = await seedAmbiguous()
+    const id = await seedAmbiguous();
 
-    searchState.error = new SpotifyRateLimitError()
+    searchState.error = new SpotifyRateLimitError();
     const limited = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    expect(limited.status).toBe(429)
+    });
+    expect(limited.status).toBe(429);
 
-    searchState.error = new SpotifyAuthError('rejected')
+    searchState.error = new SpotifyAuthError('rejected');
     const rejected = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
-    expect(rejected.status).toBe(502)
-  })
+    });
+    expect(rejected.status).toBe(502);
+  });
 
   it('refuses a non-admin caller', async () => {
-    const id = await seedAmbiguous()
-    authState.current = { userId: 'plain_user', sessionClaims: {} }
+    const id = await seedAmbiguous();
+    authState.current = { userId: 'plain_user', sessionClaims: {} };
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
-    })
+    });
 
-    expect(res.status).toBe(403)
-    expect(searchState.lastQuery).toBeNull()
-  })
-})
+    expect(res.status).toBe(403);
+    expect(searchState.lastQuery).toBeNull();
+  });
+});

@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { type ReactNode } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { type ReactNode } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface EditLabelProps {
-  children: ReactNode
-  changed?: boolean
+  children: ReactNode;
+  changed?: boolean;
 }
 
 export const EditLabel = ({ children, changed = false }: EditLabelProps) => (
@@ -43,4 +43,4 @@ export const EditLabel = ({ children, changed = false }: EditLabelProps) => (
       />
     )}
   </div>
-)
+);

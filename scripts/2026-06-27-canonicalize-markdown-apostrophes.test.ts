@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   chunk,
   planUserEventDedup,
@@ -6,16 +6,16 @@ import {
   sortBucketByWinnerPriority,
   type UserEventRow,
   type WinnerPriorityRow,
-} from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js'
+} from './2026-06-27-canonicalize-markdown-apostrophes-helpers.js';
 import {
   MERGEABLE_PATCH_KEYS,
   buildWinnerPatch,
-} from './2026-06-27-canonicalize-markdown-apostrophes.js'
+} from './2026-06-27-canonicalize-markdown-apostrophes.js';
 
-const WINNER = 'winner-event'
-const LOSER_A = 'loser-a'
-const LOSER_B = 'loser-b'
-const LOSER_C = 'loser-c'
+const WINNER = 'winner-event';
+const LOSER_A = 'loser-a';
+const LOSER_B = 'loser-b';
+const LOSER_C = 'loser-c';
 
 function makeRow(
   id: string,
@@ -23,25 +23,25 @@ function makeRow(
   eventId: string,
   createdAt: Date = new Date('2026-01-01T00:00:00Z'),
 ): UserEventRow {
-  return { id, userId, eventId, createdAt }
+  return { id, userId, eventId, createdAt };
 }
 
 describe('planUserEventDedup', () => {
   it('returns an empty plan when no rows touch the cluster', () => {
-    const plan = planUserEventDedup([], WINNER)
-    expect(plan.rowIdsToDelete).toEqual([])
-    expect(plan.rowIdsToRedirect).toEqual([])
-  })
+    const plan = planUserEventDedup([], WINNER);
+    expect(plan.rowIdsToDelete).toEqual([]);
+    expect(plan.rowIdsToRedirect).toEqual([]);
+  });
 
   it('redirects a single loser row when the user has no winner row', () => {
     // Baseline — one user, one row on a loser, plan is a single redirect.
     const plan = planUserEventDedup(
       [makeRow('row-1', 'user-1', LOSER_A)],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual(['row-1'])
-    expect(plan.rowIdsToDelete).toEqual([])
-  })
+    );
+    expect(plan.rowIdsToRedirect).toEqual(['row-1']);
+    expect(plan.rowIdsToDelete).toEqual([]);
+  });
 
   it('deletes a loser row when the user already watches the winner', () => {
     // Original Copilot-cited case the script already handled: a single
@@ -52,10 +52,10 @@ describe('planUserEventDedup', () => {
         makeRow('row-loser', 'user-1', LOSER_A),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual([])
-    expect(plan.rowIdsToDelete).toEqual(['row-loser'])
-  })
+    );
+    expect(plan.rowIdsToRedirect).toEqual([]);
+    expect(plan.rowIdsToDelete).toEqual(['row-loser']);
+  });
 
   it('handles the multi-loser-watches-by-same-user case (the #855 R1 bug)', () => {
     // The regression Copilot flagged: one user has watch rows on TWO
@@ -68,10 +68,10 @@ describe('planUserEventDedup', () => {
         makeRow('row-b', 'user-1', LOSER_B, new Date('2026-01-02T00:00:00Z')),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual(['row-a'])
-    expect(plan.rowIdsToDelete).toEqual(['row-b'])
-  })
+    );
+    expect(plan.rowIdsToRedirect).toEqual(['row-a']);
+    expect(plan.rowIdsToDelete).toEqual(['row-b']);
+  });
 
   it('handles multi-loser AND winner-side row for same user', () => {
     // Maximal collision: user watches the winner AND two losers. Keep
@@ -83,10 +83,10 @@ describe('planUserEventDedup', () => {
         makeRow('row-loser-b', 'user-1', LOSER_B),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual([])
-    expect(plan.rowIdsToDelete.sort()).toEqual(['row-loser-a', 'row-loser-b'])
-  })
+    );
+    expect(plan.rowIdsToRedirect).toEqual([]);
+    expect(plan.rowIdsToDelete.sort()).toEqual(['row-loser-a', 'row-loser-b']);
+  });
 
   it('handles three losers for one user with no winner row', () => {
     // Even broader collision shape — promote the earliest, delete the rest.
@@ -97,10 +97,10 @@ describe('planUserEventDedup', () => {
         makeRow('row-c', 'user-1', LOSER_C, new Date('2026-01-02T00:00:00Z')),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual(['row-b'])
-    expect(plan.rowIdsToDelete.sort()).toEqual(['row-a', 'row-c'])
-  })
+    );
+    expect(plan.rowIdsToRedirect).toEqual(['row-b']);
+    expect(plan.rowIdsToDelete.sort()).toEqual(['row-a', 'row-c']);
+  });
 
   it('isolates per-user planning — different users plan independently', () => {
     // user-1 already on winner → loser row deletes
@@ -115,47 +115,47 @@ describe('planUserEventDedup', () => {
         makeRow('u3-only', 'user-3', LOSER_B),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect.sort()).toEqual(['u2-a', 'u3-only'])
-    expect(plan.rowIdsToDelete.sort()).toEqual(['u1-loser', 'u2-b'])
-  })
+    );
+    expect(plan.rowIdsToRedirect.sort()).toEqual(['u2-a', 'u3-only']);
+    expect(plan.rowIdsToDelete.sort()).toEqual(['u1-loser', 'u2-b']);
+  });
 
   it('uses id as a stable tiebreak when createdAt ties', () => {
     // Two losers, identical createdAt — the lowest id wins to keep the
     // plan deterministic across operator machines / re-runs.
-    const sameTime = new Date('2026-01-01T00:00:00Z')
+    const sameTime = new Date('2026-01-01T00:00:00Z');
     const plan = planUserEventDedup(
       [
         makeRow('row-zzz', 'user-1', LOSER_A, sameTime),
         makeRow('row-aaa', 'user-1', LOSER_B, sameTime),
       ],
       WINNER,
-    )
-    expect(plan.rowIdsToRedirect).toEqual(['row-aaa'])
-    expect(plan.rowIdsToDelete).toEqual(['row-zzz'])
-  })
-})
+    );
+    expect(plan.rowIdsToRedirect).toEqual(['row-aaa']);
+    expect(plan.rowIdsToDelete).toEqual(['row-zzz']);
+  });
+});
 
 describe('selectCollapseClusters', () => {
   // Minimal row shape — just enough fields for the helper to evaluate
   // "did the new normalizer change anything in this bucket?". Mirrors
   // the structural CanonicalChangeRow interface.
   function makeBucketRow(stored: string, computed: string) {
-    return { storedCanonical: stored, computedCanonical: computed }
+    return { storedCanonical: stored, computedCanonical: computed };
   }
 
   it('returns an empty map for empty input', () => {
-    const out = selectCollapseClusters(new Map())
-    expect(out.size).toBe(0)
-  })
+    const out = selectCollapseClusters(new Map());
+    expect(out.size).toBe(0);
+  });
 
   it('skips single-row buckets (no collision precondition)', () => {
     const buckets = new Map([
       ['venue-1|2026-07-01|x', [makeBucketRow('old-canonical', 'x')]],
-    ])
-    const out = selectCollapseClusters(buckets)
-    expect(out.size).toBe(0)
-  })
+    ]);
+    const out = selectCollapseClusters(buckets);
+    expect(out.size).toBe(0);
+  });
 
   it("skips clusters where no row's canonical_title would change", () => {
     // Pre-existing collision: both rows already share the same stored
@@ -166,10 +166,10 @@ describe('selectCollapseClusters', () => {
         'venue-1|2026-07-01|x',
         [makeBucketRow('x', 'x'), makeBucketRow('x', 'x')],
       ],
-    ])
-    const out = selectCollapseClusters(buckets)
-    expect(out.size).toBe(0)
-  })
+    ]);
+    const out = selectCollapseClusters(buckets);
+    expect(out.size).toBe(0);
+  });
 
   it('processes clusters where at least one row recomputes to a new canonical', () => {
     // The script's target case: row A's stored canonical was the old
@@ -178,14 +178,14 @@ describe('selectCollapseClusters', () => {
     const bucket = [
       makeBucketRow('zeds dead jamboree!', 'zeds dead jamboree!'),
       makeBucketRow("zed's dead jamboree!", 'zeds dead jamboree!'),
-    ]
+    ];
     const buckets = new Map([
       ['venue-1|2026-07-01|zeds dead jamboree!', bucket],
-    ])
-    const out = selectCollapseClusters(buckets)
-    expect(out.size).toBe(1)
-    expect(out.get('venue-1|2026-07-01|zeds dead jamboree!')).toBe(bucket)
-  })
+    ]);
+    const out = selectCollapseClusters(buckets);
+    expect(out.size).toBe(1);
+    expect(out.get('venue-1|2026-07-01|zeds dead jamboree!')).toBe(bucket);
+  });
 
   it('processes clusters where every row recomputes (both stored values stale)', () => {
     // Edge case: both rows had the old un-normalized stored canonical
@@ -194,11 +194,11 @@ describe('selectCollapseClusters', () => {
     const bucket = [
       makeBucketRow('old-a', 'new-x'),
       makeBucketRow('old-b', 'new-x'),
-    ]
-    const buckets = new Map([['venue-1|2026-07-01|new-x', bucket]])
-    const out = selectCollapseClusters(buckets)
-    expect(out.size).toBe(1)
-  })
+    ];
+    const buckets = new Map([['venue-1|2026-07-01|new-x', bucket]]);
+    const out = selectCollapseClusters(buckets);
+    expect(out.size).toBe(1);
+  });
 
   it('keeps qualifying clusters and skips pre-existing ones in a mixed input', () => {
     // Realistic mix: one cluster the new normalizer creates, one
@@ -207,18 +207,18 @@ describe('selectCollapseClusters', () => {
     const qualifying = [
       makeBucketRow('old-stored', 'new-x'),
       makeBucketRow('new-x', 'new-x'),
-    ]
-    const preExisting = [makeBucketRow('y', 'y'), makeBucketRow('y', 'y')]
+    ];
+    const preExisting = [makeBucketRow('y', 'y'), makeBucketRow('y', 'y')];
     const buckets = new Map<string, ReturnType<typeof makeBucketRow>[]>([
       ['venue-1|2026-07-01|new-x', qualifying],
       ['venue-1|2026-07-02|y', preExisting],
-    ])
-    const out = selectCollapseClusters(buckets)
-    expect(out.size).toBe(1)
-    expect(out.has('venue-1|2026-07-01|new-x')).toBe(true)
-    expect(out.has('venue-1|2026-07-02|y')).toBe(false)
-  })
-})
+    ]);
+    const out = selectCollapseClusters(buckets);
+    expect(out.size).toBe(1);
+    expect(out.has('venue-1|2026-07-01|new-x')).toBe(true);
+    expect(out.has('venue-1|2026-07-02|y')).toBe(false);
+  });
+});
 
 describe('sortBucketByWinnerPriority', () => {
   // Comparator under test:
@@ -235,7 +235,7 @@ describe('sortBucketByWinnerPriority', () => {
     confidenceScore: string | null,
     createdAt: Date,
   ): WinnerPriorityRow {
-    return { id, confidenceScore, createdAt }
+    return { id, confidenceScore, createdAt };
   }
 
   it('returns rows in confidence_score DESC order, NULL last', () => {
@@ -243,26 +243,26 @@ describe('sortBucketByWinnerPriority', () => {
       makeRow('low', '0.5', new Date('2026-01-01T00:00:00Z')),
       makeRow('null', null, new Date('2026-01-01T00:00:00Z')),
       makeRow('high', '0.9', new Date('2026-01-01T00:00:00Z')),
-    ])
-    expect(sorted.map((row) => row.id)).toEqual(['high', 'low', 'null'])
-  })
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(['high', 'low', 'null']);
+  });
 
   it('tiebreaks equal confidence_score by created_at ASC', () => {
     const sorted = sortBucketByWinnerPriority([
       makeRow('later', '0.9', new Date('2026-01-02T00:00:00Z')),
       makeRow('earlier', '0.9', new Date('2026-01-01T00:00:00Z')),
-    ])
-    expect(sorted.map((row) => row.id)).toEqual(['earlier', 'later'])
-  })
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(['earlier', 'later']);
+  });
 
   it('tiebreaks equal confidence_score AND created_at by id ASC', () => {
-    const sameTime = new Date('2026-01-01T00:00:00Z')
+    const sameTime = new Date('2026-01-01T00:00:00Z');
     const sorted = sortBucketByWinnerPriority([
       makeRow('zzz', '0.9', sameTime),
       makeRow('aaa', '0.9', sameTime),
-    ])
-    expect(sorted.map((row) => row.id)).toEqual(['aaa', 'zzz'])
-  })
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(['aaa', 'zzz']);
+  });
 
   it('preserves loser priority order — the #855 R4 bug', () => {
     // Three-row bucket: one winner + two losers with conflicting
@@ -281,18 +281,18 @@ describe('sortBucketByWinnerPriority', () => {
       makeRow('low-conf-loser', '0.3', new Date('2026-01-01T00:00:00Z')),
       makeRow('winner', '0.95', new Date('2026-01-01T00:00:00Z')),
       makeRow('high-conf-loser', '0.8', new Date('2026-01-01T00:00:00Z')),
-    ])
+    ]);
     expect(sorted.map((row) => row.id)).toEqual([
       'winner',
       'high-conf-loser',
       'low-conf-loser',
-    ])
+    ]);
     // The slice(1) losers are also deterministic — higher-conf first.
     expect(sorted.slice(1).map((row) => row.id)).toEqual([
       'high-conf-loser',
       'low-conf-loser',
-    ])
-  })
+    ]);
+  });
 
   it('is stable when called repeatedly on the same input', () => {
     // Different scrambles of the same logical bucket all sort to the
@@ -304,22 +304,22 @@ describe('sortBucketByWinnerPriority', () => {
       makeRow('b', '0.9', new Date('2026-01-02T00:00:00Z')),
       makeRow('c', null, new Date('2026-01-01T00:00:00Z')),
       makeRow('d', '0.5', new Date('2026-01-03T00:00:00Z')),
-    ]
-    const sortedA = sortBucketByWinnerPriority(rowSet)
-    const sortedB = sortBucketByWinnerPriority([...rowSet].reverse())
-    expect(sortedA.map((row) => row.id)).toEqual(sortedB.map((row) => row.id))
-  })
+    ];
+    const sortedA = sortBucketByWinnerPriority(rowSet);
+    const sortedB = sortBucketByWinnerPriority([...rowSet].reverse());
+    expect(sortedA.map((row) => row.id)).toEqual(sortedB.map((row) => row.id));
+  });
 
   it('does not mutate the input array', () => {
     const input = [
       makeRow('a', '0.7', new Date('2026-01-01T00:00:00Z')),
       makeRow('b', '0.9', new Date('2026-01-02T00:00:00Z')),
-    ]
-    const inputBefore = input.map((row) => row.id)
-    sortBucketByWinnerPriority(input)
-    expect(input.map((row) => row.id)).toEqual(inputBefore)
-  })
-})
+    ];
+    const inputBefore = input.map((row) => row.id);
+    sortBucketByWinnerPriority(input);
+    expect(input.map((row) => row.id)).toEqual(inputBefore);
+  });
+});
 
 describe('MERGEABLE_PATCH_KEYS / buildWinnerPatch (single-source-of-truth contract)', () => {
   // Regression target: PR #855 R5 — `patchKeys` was previously hand-
@@ -357,15 +357,17 @@ describe('MERGEABLE_PATCH_KEYS / buildWinnerPatch (single-source-of-truth contra
       ticketPriceMin: null,
       ticketPriceMax: null,
       ...overrides,
-    }
+    };
   }
 
   it('exposes a stable, non-empty patch-key set', () => {
     // If this fails, MERGEABLE_FIELD_COLUMNS shrank or its key derivation
     // broke. Both downstream helpers depend on this set being correct.
-    expect(MERGEABLE_PATCH_KEYS.length).toBeGreaterThan(0)
-    expect(new Set(MERGEABLE_PATCH_KEYS).size).toBe(MERGEABLE_PATCH_KEYS.length)
-  })
+    expect(MERGEABLE_PATCH_KEYS.length).toBeGreaterThan(0);
+    expect(new Set(MERGEABLE_PATCH_KEYS).size).toBe(
+      MERGEABLE_PATCH_KEYS.length,
+    );
+  });
 
   it('buildWinnerPatch fills EVERY MERGEABLE_PATCH_KEY when winner is null and a loser has a value', () => {
     // Construct a loser that has a non-null value for every mergeable
@@ -374,68 +376,68 @@ describe('MERGEABLE_PATCH_KEYS / buildWinnerPatch (single-source-of-truth contra
     // single-source-of-truth list (not a separate hand-maintained one)
     // and would automatically pick up any future fields added to
     // MERGEABLE_FIELD_COLUMNS.
-    const winner = makeWinnerRow()
-    const loserOverrides: Partial<Record<string, string | null>> = {}
+    const winner = makeWinnerRow();
+    const loserOverrides: Partial<Record<string, string | null>> = {};
     for (const key of MERGEABLE_PATCH_KEYS) {
-      loserOverrides[key] = `loser-${key}`
+      loserOverrides[key] = `loser-${key}`;
     }
     const loser = makeWinnerRow({
       id: 'loser',
       ...loserOverrides,
-    })
-    const patch = buildWinnerPatch(winner, [loser])
-    expect(Object.keys(patch).sort()).toEqual([...MERGEABLE_PATCH_KEYS].sort())
+    });
+    const patch = buildWinnerPatch(winner, [loser]);
+    expect(Object.keys(patch).sort()).toEqual([...MERGEABLE_PATCH_KEYS].sort());
     for (const key of MERGEABLE_PATCH_KEYS) {
-      expect(patch[key]).toBe(`loser-${key}`)
+      expect(patch[key]).toBe(`loser-${key}`);
     }
-  })
+  });
 
   it('buildWinnerPatch returns empty patch when winner has values for every mergeable field', () => {
     // Inverse case — pinning that the iteration short-circuits per-field
     // when the winner is already populated, so the patch stays bounded
     // to the actual gaps.
-    const winnerOverrides: Partial<Record<string, string | null>> = {}
+    const winnerOverrides: Partial<Record<string, string | null>> = {};
     for (const key of MERGEABLE_PATCH_KEYS) {
-      winnerOverrides[key] = `winner-${key}`
+      winnerOverrides[key] = `winner-${key}`;
     }
-    const winner = makeWinnerRow(winnerOverrides)
-    const loserOverrides: Partial<Record<string, string | null>> = {}
+    const winner = makeWinnerRow(winnerOverrides);
+    const loserOverrides: Partial<Record<string, string | null>> = {};
     for (const key of MERGEABLE_PATCH_KEYS) {
-      loserOverrides[key] = `loser-${key}`
+      loserOverrides[key] = `loser-${key}`;
     }
-    const loser = makeWinnerRow({ id: 'loser', ...loserOverrides })
-    const patch = buildWinnerPatch(winner, [loser])
-    expect(Object.keys(patch)).toEqual([])
-  })
-})
+    const loser = makeWinnerRow({ id: 'loser', ...loserOverrides });
+    const patch = buildWinnerPatch(winner, [loser]);
+    expect(Object.keys(patch)).toEqual([]);
+  });
+});
 
 describe('chunk', () => {
   it('returns empty array for empty input', () => {
-    expect(chunk([], 10)).toEqual([])
-  })
+    expect(chunk([], 10)).toEqual([]);
+  });
 
   it('returns a single batch when input fits', () => {
-    const items = [1, 2, 3]
-    expect(chunk(items, 10)).toEqual([[1, 2, 3]])
-  })
+    const items = [1, 2, 3];
+    expect(chunk(items, 10)).toEqual([[1, 2, 3]]);
+  });
 
   it('splits into fixed-size batches with a smaller trailing batch', () => {
     // 7 items / batch=3 → [3, 3, 1]
-    const items = [1, 2, 3, 4, 5, 6, 7]
-    expect(chunk(items, 3)).toEqual([[1, 2, 3], [4, 5, 6], [7]])
-  })
+    const items = [1, 2, 3, 4, 5, 6, 7];
+    expect(chunk(items, 3)).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
+  });
 
   it('splits cleanly when length is a multiple of size', () => {
-    const items = [1, 2, 3, 4]
+    const items = [1, 2, 3, 4];
     expect(chunk(items, 2)).toEqual([
       [1, 2],
       [3, 4],
-    ])
-  })
+    ]);
+  });
 
   it('throws on non-positive chunk size', () => {
     // Defensive guard — a zero-size chunk would loop forever.
-    expect(() => chunk([1], 0)).toThrow(/chunk size/)
-    expect(() => chunk([1], -1)).toThrow(/chunk size/)
-  })
-})
+    expect(() => chunk([1], 0)).toThrow(/chunk size/);
+    expect(() => chunk([1], -1)).toThrow(/chunk size/);
+  });
+});

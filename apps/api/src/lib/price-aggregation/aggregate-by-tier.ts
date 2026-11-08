@@ -8,77 +8,77 @@ import type {
   TierPending,
   TierPriceBlock,
   Vendor,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   compareTierRows,
   pickTierHeadline,
   type TierRow,
-} from './pick-tier-headline.js'
-import { narrowLastAdminAction } from '../last-admin-action.js'
-import { deriveObservedAt } from './observed-at.js'
+} from './pick-tier-headline.js';
+import { narrowLastAdminAction } from '../last-admin-action.js';
+import { deriveObservedAt } from './observed-at.js';
 
 export interface CorroboratedTierRow extends TierRow {
-  tier: Tier
-  confirmsCount: number
+  tier: Tier;
+  confirmsCount: number;
 }
 
 export interface PendingTierRow {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  howFound: HowFound
-  note: string | null
-  userId: string | null
-  tier: Tier
-  createdAt: Date
-  confirmsCount: number
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  howFound: HowFound;
+  note: string | null;
+  userId: string | null;
+  tier: Tier;
+  createdAt: Date;
+  confirmsCount: number;
 }
 
 export interface CounterTierRow {
-  id: string
-  parentSubmissionId: string
-  tier: Tier
-  priceMin: string
-  priceMax: string | null
-  userId: string | null
-  createdAt: Date
+  id: string;
+  parentSubmissionId: string;
+  tier: Tier;
+  priceMin: string;
+  priceMax: string | null;
+  userId: string | null;
+  createdAt: Date;
   // Engagement-signal columns carried straight off the counter's
   // price_submissions row. The consumer event-detail surface renders a
   // quiet pill on the counter card when lastAdminActionKind === 'defer'.
   // `string | null` (not the narrow union) because Drizzle returns the raw
   // text column — buildCounter narrows to the API shape.
-  lastAdminActionAt: Date | null
-  lastAdminActionKind: string | null
+  lastAdminActionAt: Date | null;
+  lastAdminActionKind: string | null;
 }
 
 export interface AggregateByTierInput {
-  corroborated: readonly CorroboratedTierRow[]
-  pending: readonly PendingTierRow[]
+  corroborated: readonly CorroboratedTierRow[];
+  pending: readonly PendingTierRow[];
   // Sorted newest-first (createdAt descending). The composer's find() picks
   // the first matching counter for each headline, so the caller's ordering
   // determines which dispute wins when multiple challenge the same row.
-  counters: readonly CounterTierRow[]
-  handles: ReadonlyMap<string, string>
-  reportsByTier: ReadonlyMap<Tier, number>
-  confirmsNeeded: number
-  viewerUserId: string | null
+  counters: readonly CounterTierRow[];
+  handles: ReadonlyMap<string, string>;
+  reportsByTier: ReadonlyMap<Tier, number>;
+  confirmsNeeded: number;
+  viewerUserId: string | null;
 }
 
 function groupByTier<RowType extends { tier: Tier }>(
   rows: readonly RowType[],
 ): Map<Tier, RowType[]> {
-  const map = new Map<Tier, RowType[]>()
+  const map = new Map<Tier, RowType[]>();
   for (const row of rows) {
-    const existing = map.get(row.tier)
+    const existing = map.get(row.tier);
     if (existing) {
-      existing.push(row)
+      existing.push(row);
     } else {
-      map.set(row.tier, [row])
+      map.set(row.tier, [row]);
     }
   }
-  return map
+  return map;
 }
 
 // Pick the headline (top-trust row) for each tier present in the input.
@@ -93,13 +93,13 @@ function groupByTier<RowType extends { tier: Tier }>(
 export function pickHeadlinesByTier<RowType extends TierRow & { tier: Tier }>(
   rows: readonly RowType[],
 ): Map<Tier, RowType> {
-  const grouped = groupByTier(rows)
-  const headlines = new Map<Tier, RowType>()
+  const grouped = groupByTier(rows);
+  const headlines = new Map<Tier, RowType>();
   for (const [tier, tierRows] of grouped) {
-    const head = pickTierHeadline(tierRows)
-    if (head !== null) headlines.set(tier, head)
+    const head = pickTierHeadline(tierRows);
+    if (head !== null) headlines.set(tier, head);
   }
-  return headlines
+  return headlines;
 }
 
 function buildHeadline(
@@ -118,7 +118,7 @@ function buildHeadline(
     approvedAt: row.updatedAt.toISOString(),
     approvalKind: row.confirmsCount > 0 ? 'fan' : 'admin',
     confirmsCount: row.confirmsCount,
-  }
+  };
 }
 
 function buildAlternate(row: CorroboratedTierRow): TierAlternate {
@@ -128,7 +128,7 @@ function buildAlternate(row: CorroboratedTierRow): TierAlternate {
     priceMax: row.priceMax,
     vendor: row.vendor,
     sourceCategory: row.sourceCategory,
-  }
+  };
 }
 
 function buildPending(
@@ -151,15 +151,15 @@ function buildPending(
     confirmsCount: row.confirmsCount,
     confirmsNeeded,
     isSubmitter: row.userId !== null && row.userId === viewerUserId,
-  }
+  };
 }
 
 function buildCounter(
   row: CounterTierRow,
   handles: ReadonlyMap<string, string>,
 ): TierCounter {
-  const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null
-  const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null
+  const handle = row.userId !== null ? (handles.get(row.userId) ?? null) : null;
+  const ceiling = row.priceMax !== null ? parseFloat(row.priceMax) : null;
   // Pair-narrow kind + at together so an unrecognized kind in the column
   // never leaves a half-populated pair (kind=null, at=<timestamp>) for
   // consumers. Shared helper in apps/api/src/lib/last-admin-action.ts —
@@ -168,7 +168,7 @@ function buildCounter(
   const lastAction = narrowLastAdminAction(
     row.lastAdminActionKind,
     row.lastAdminActionAt,
-  )
+  );
   return {
     id: row.id,
     parentSubmissionId: row.parentSubmissionId,
@@ -178,7 +178,7 @@ function buildCounter(
     submittedAt: row.createdAt.toISOString(),
     lastAdminActionAt: lastAction.at,
     lastAdminActionKind: lastAction.kind,
-  }
+  };
 }
 
 // Pending order within a tier: VenueBoxOffice first, then newest first. Mirrors
@@ -186,23 +186,23 @@ function buildCounter(
 // migrates off the flat pendingSubmissions field.
 function sortPending(rows: readonly PendingTierRow[]): PendingTierRow[] {
   return [...rows].sort((left, right) => {
-    const leftBoxOffice = left.vendor === 'VenueBoxOffice' ? 0 : 1
-    const rightBoxOffice = right.vendor === 'VenueBoxOffice' ? 0 : 1
-    if (leftBoxOffice !== rightBoxOffice) return leftBoxOffice - rightBoxOffice
-    return right.createdAt.getTime() - left.createdAt.getTime()
-  })
+    const leftBoxOffice = left.vendor === 'VenueBoxOffice' ? 0 : 1;
+    const rightBoxOffice = right.vendor === 'VenueBoxOffice' ? 0 : 1;
+    if (leftBoxOffice !== rightBoxOffice) return leftBoxOffice - rightBoxOffice;
+    return right.createdAt.getTime() - left.createdAt.getTime();
+  });
 }
 
 // Min priceMin across a tier's pending rows. pending[] is sorted for display
 // (VenueBoxOffice-first, newest-first), so pending[0] is NOT guaranteed to be
 // the cheapest — we have to scan.
 function minPendingPrice(pending: readonly TierPending[]): number {
-  let min = Number.POSITIVE_INFINITY
+  let min = Number.POSITIVE_INFINITY;
   for (const row of pending) {
-    const value = parseFloat(row.priceMin)
-    if (value < min) min = value
+    const value = parseFloat(row.priceMin);
+    if (value < min) min = value;
   }
-  return min === Number.POSITIVE_INFINITY ? 0 : min
+  return min === Number.POSITIVE_INFINITY ? 0 : min;
 }
 
 // Tier display order: tiers with a corroborated headline first (sorted by
@@ -210,14 +210,14 @@ function minPendingPrice(pending: readonly TierPending[]): number {
 // Tiers with no submissions at all are omitted by construction (only tiers
 // surfaced in the union of corroborated + pending groups produce blocks).
 function compareBlocks(left: TierPriceBlock, right: TierPriceBlock): number {
-  const leftHead = left.headline
-  const rightHead = right.headline
+  const leftHead = left.headline;
+  const rightHead = right.headline;
   if (leftHead !== null && rightHead !== null) {
-    return parseFloat(leftHead.priceMin) - parseFloat(rightHead.priceMin)
+    return parseFloat(leftHead.priceMin) - parseFloat(rightHead.priceMin);
   }
-  if (leftHead !== null) return -1
-  if (rightHead !== null) return 1
-  return minPendingPrice(left.pending) - minPendingPrice(right.pending)
+  if (leftHead !== null) return -1;
+  if (rightHead !== null) return 1;
+  return minPendingPrice(left.pending) - minPendingPrice(right.pending);
 }
 
 export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
@@ -229,26 +229,26 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
     reportsByTier,
     confirmsNeeded,
     viewerUserId,
-  } = input
+  } = input;
 
-  const corrobByTier = groupByTier(corroborated)
-  const pendingByTier = groupByTier(pending)
+  const corrobByTier = groupByTier(corroborated);
+  const pendingByTier = groupByTier(pending);
 
-  const allTiers = new Set<Tier>()
-  for (const tier of corrobByTier.keys()) allTiers.add(tier)
-  for (const tier of pendingByTier.keys()) allTiers.add(tier)
+  const allTiers = new Set<Tier>();
+  for (const tier of corrobByTier.keys()) allTiers.add(tier);
+  for (const tier of pendingByTier.keys()) allTiers.add(tier);
 
-  const blocks: TierPriceBlock[] = []
+  const blocks: TierPriceBlock[] = [];
   for (const tier of allTiers) {
-    const corrobRows = corrobByTier.get(tier) ?? []
-    const pendingRows = pendingByTier.get(tier) ?? []
+    const corrobRows = corrobByTier.get(tier) ?? [];
+    const pendingRows = pendingByTier.get(tier) ?? [];
 
     // Sort once and slice — the head and alternates share the same ordering
     // so the API response is fully deterministic regardless of DB row order.
-    const sortedCorrob = [...corrobRows].sort(compareTierRows)
-    const head = sortedCorrob[0] ?? null
-    const headline = head !== null ? buildHeadline(head, handles) : null
-    const alternates = sortedCorrob.slice(1).map(buildAlternate)
+    const sortedCorrob = [...corrobRows].sort(compareTierRows);
+    const head = sortedCorrob[0] ?? null;
+    const headline = head !== null ? buildHeadline(head, handles) : null;
+    const alternates = sortedCorrob.slice(1).map(buildAlternate);
 
     // Counters input is contract-required to be sorted newest-first by the
     // caller so find() returns the most recent challenger deterministically
@@ -259,7 +259,7 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
         ? counters.find(
             (row) => row.tier === tier && row.parentSubmissionId === head.id,
           )
-        : undefined
+        : undefined;
 
     blocks.push({
       tier,
@@ -271,8 +271,8 @@ export function aggregateByTier(input: AggregateByTierInput): TierPriceBlock[] {
       counterSubmission:
         counter !== undefined ? buildCounter(counter, handles) : null,
       reports: reportsByTier.get(tier) ?? 0,
-    })
+    });
   }
 
-  return blocks.sort(compareBlocks)
+  return blocks.sort(compareBlocks);
 }

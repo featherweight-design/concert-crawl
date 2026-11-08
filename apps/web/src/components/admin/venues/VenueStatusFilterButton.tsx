@@ -1,11 +1,11 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
-import { Filter } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useRouter } from 'next/navigation';
+import { Filter } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface Props {
-  currentFilter: string | undefined
+  currentFilter: string | undefined;
 }
 
 const OPTIONS = [
@@ -13,18 +13,18 @@ const OPTIONS = [
   { value: 'active', label: ADMIN_COPY.venuesPage.options.active },
   { value: 'paused', label: ADMIN_COPY.venuesPage.options.paused },
   { value: 'blocked', label: ADMIN_COPY.venuesPage.options.blocked },
-]
+];
 
 export function VenueStatusFilterButton({ currentFilter }: Props) {
-  const router = useRouter()
-  const isFiltered = Boolean(currentFilter)
+  const router = useRouter();
+  const isFiltered = Boolean(currentFilter);
 
   function handleChange(evt: React.ChangeEvent<HTMLSelectElement>) {
-    const val = evt.target.value
+    const val = evt.target.value;
     if (val) {
-      router.push(`/admin/venues?status=${val}`)
+      router.push(`/admin/venues?status=${val}`);
     } else {
-      router.push('/admin/venues')
+      router.push('/admin/venues');
     }
   }
 
@@ -75,5 +75,5 @@ export function VenueStatusFilterButton({ currentFilter }: Props) {
         ))}
       </select>
     </div>
-  )
+  );
 }

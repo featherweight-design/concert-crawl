@@ -1,1 +1,1 @@
-export { HeroEventCard } from './HeroEventCard'
+export { HeroEventCard } from './HeroEventCard';

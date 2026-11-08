@@ -1,8 +1,8 @@
-import { Hono } from 'hono'
-import type { Context } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
+import { Hono } from 'hono';
+import type { Context } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
 import {
   db,
   artists,
@@ -14,11 +14,11 @@ import {
   submissionConfirms,
   eventReports,
   eventReportConfirms,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   upcomingEventConditions,
   SCHEDULED_STATUSES,
-} from '@concert-crawl/db/upcoming-events'
+} from '@concert-crawl/db/upcoming-events';
 import {
   type SQL,
   and,
@@ -35,7 +35,7 @@ import {
   lte,
   or,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   SP_POLICY,
   RESALE_VENDOR_VALUES,
@@ -47,35 +47,35 @@ import {
   type PlanState,
   type SourceCategory,
   type Tier,
-} from '@concert-crawl/types'
-import { followedArtistsCondition } from '../lib/artist-follows.js'
-import { resolveArtistSlugs } from '../lib/artist-slugs.js'
-import { getEventWatchers } from '../lib/event-watchers.js'
+} from '@concert-crawl/types';
+import { followedArtistsCondition } from '../lib/artist-follows.js';
+import { resolveArtistSlugs } from '../lib/artist-slugs.js';
+import { getEventWatchers } from '../lib/event-watchers.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
-} from '../lib/event-billing.js'
-import { isImminentEvent, todayInTimezone } from '../lib/time.js'
-import { apiLogger } from '../lib/logger.js'
+} from '../lib/event-billing.js';
+import { isImminentEvent, todayInTimezone } from '../lib/time.js';
+import { apiLogger } from '../lib/logger.js';
 import {
   aggregateByTier,
   deriveObservedAt,
   loadPriceByTierByEventId,
   pickHeadlinesByTier,
-} from '../lib/price-aggregation/index.js'
-import { narrowLastAdminAction } from '../lib/last-admin-action.js'
+} from '../lib/price-aggregation/index.js';
+import { narrowLastAdminAction } from '../lib/last-admin-action.js';
 import {
   getFollowedArtistMatcher,
   spotifyTasteCondition,
-} from '../lib/spotify-matches.js'
-import { canUseFeature } from '@concert-crawl/entitlements'
-import { isFeatureEnabled } from '../lib/feature-flags.js'
-import { loadPlanState } from '../lib/plan.js'
-import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
-import { parseGenreRows } from '../lib/parse-genre-rows.js'
-import { releaseWatch } from '../lib/user-events.js'
+} from '../lib/spotify-matches.js';
+import { canUseFeature } from '@concert-crawl/entitlements';
+import { isFeatureEnabled } from '../lib/feature-flags.js';
+import { loadPlanState } from '../lib/plan.js';
+import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
+import { parseGenreRows } from '../lib/parse-genre-rows.js';
+import { releaseWatch } from '../lib/user-events.js';
 
-const uuidSchema = z.string().uuid()
+const uuidSchema = z.string().uuid();
 
 const listEventsSchema = z.object({
   from: z
@@ -98,42 +98,42 @@ const listEventsSchema = z.object({
   // "My artists" scope filter (native following, §7.1) — same presence-flag
   // shape as `taste`, for the same reason.
   following: z.literal('1').optional(),
-})
+});
 
 // Shape of the custom claims added by our Clerk JWT template — same contract
 // as middleware/entitlement.ts: only extract `metadata`, loadPlanState owns
 // validating its contents.
 const listClaimsSchema = z.object({
   metadata: z.unknown(),
-})
+});
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const MAX_WINDOW_DAYS = 400
-const MT_TIME_ZONE = 'America/Denver'
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_WINDOW_DAYS = 400;
+const MT_TIME_ZONE = 'America/Denver';
 
 // Regex alone accepts impossible calendar dates (e.g. 2026-02-31), which
 // Date.parse silently rolls over to a different day rather than rejecting.
 // Require the date to round-trip so the window can't be quietly widened.
 const isRealDate = (value: string): boolean => {
-  const parsed = new Date(`${value}T00:00:00Z`)
+  const parsed = new Date(`${value}T00:00:00Z`);
   return (
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
-  )
-}
+  );
+};
 
 const availabilitySchema = z.object({
   from: z.string().regex(DATE_RE).refine(isRealDate).optional(),
   to: z.string().regex(DATE_RE).refine(isRealDate),
-})
+});
 
 function dayCountBetween(from: string, to: string): number {
-  const start = Date.parse(`${from}T00:00:00Z`)
-  const end = Date.parse(`${to}T00:00:00Z`)
-  return Math.floor((end - start) / 86_400_000) + 1
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  return Math.floor((end - start) / 86_400_000) + 1;
 }
 
-export const eventsRouter = new Hono()
+export const eventsRouter = new Hono();
 
 // GET /v1/events — public event listing with filters and pagination.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so
@@ -155,12 +155,12 @@ eventsRouter.get(
       filterVibe,
       taste,
       following,
-    } = ctx.req.valid('query')
+    } = ctx.req.valid('query');
 
     // Resolved up front (getAuth is a local JWT read — no network/DB cost)
     // because the scope gates below need it before any query runs; the
     // followedArtists overlay after the queries reuses the same value.
-    const listAuth = getAuth(ctx)
+    const listAuth = getAuth(ctx);
 
     // ── Scope-flag gates ───────────────────────────────────────────────────
     // Run before ANY other filter so an unknown venueSlug can't short-circuit
@@ -176,32 +176,32 @@ eventsRouter.get(
     // matching rows gets an empty 200 (the EXISTS matches nothing).
     //
     // Both flags can arrive together, so plan state is resolved at most once.
-    const scopeConditions: SQL[] = []
-    let cachedPlanState: PlanState | null = null
+    const scopeConditions: SQL[] = [];
+    let cachedPlanState: PlanState | null = null;
     const listPlanState = async (userId: string): Promise<PlanState> => {
-      if (cachedPlanState) return cachedPlanState
-      const claims = listClaimsSchema.safeParse(listAuth?.sessionClaims)
-      const metadata = claims.success ? claims.data.metadata : undefined
-      cachedPlanState = await loadPlanState(userId, metadata)
-      return cachedPlanState
-    }
+      if (cachedPlanState) return cachedPlanState;
+      const claims = listClaimsSchema.safeParse(listAuth?.sessionClaims);
+      const metadata = claims.success ? claims.data.metadata : undefined;
+      cachedPlanState = await loadPlanState(userId, metadata);
+      return cachedPlanState;
+    };
 
     if (taste) {
       // The flag is checked before the entitlement so a flagged-off scope
       // answers 404 rather than a 403 upsell, matching requireFlag: an
       // unreleased feature must not advertise itself as purchasable.
       if (!(await isFeatureEnabled('spotify-sync'))) {
-        return ctx.notFound()
+        return ctx.notFound();
       }
       if (!listAuth?.userId) {
-        return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+        return ctx.json({ success: false, error: 'Unauthorized' }, 401);
       }
-      const planState = await listPlanState(listAuth.userId)
+      const planState = await listPlanState(listAuth.userId);
       if (!canUseFeature(planState, 'spotify-sync')) {
         apiLogger.debug(
           { userId: listAuth.userId, plan: planState.plan },
           'taste filter entitlement denied',
-        )
+        );
         return ctx.json(
           {
             success: false,
@@ -210,21 +210,21 @@ eventsRouter.get(
             feature: 'spotify-sync',
           },
           403,
-        )
+        );
       }
-      scopeConditions.push(spotifyTasteCondition(listAuth.userId))
+      scopeConditions.push(spotifyTasteCondition(listAuth.userId));
     }
 
     if (following) {
       if (!listAuth?.userId) {
-        return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+        return ctx.json({ success: false, error: 'Unauthorized' }, 401);
       }
-      const planState = await listPlanState(listAuth.userId)
+      const planState = await listPlanState(listAuth.userId);
       if (!canUseFeature(planState, 'following')) {
         apiLogger.debug(
           { userId: listAuth.userId, plan: planState.plan },
           'following filter entitlement denied',
-        )
+        );
         return ctx.json(
           {
             success: false,
@@ -233,16 +233,16 @@ eventsRouter.get(
             feature: 'following',
           },
           403,
-        )
+        );
       }
-      scopeConditions.push(followedArtistsCondition(listAuth.userId))
+      scopeConditions.push(followedArtistsCondition(listAuth.userId));
     }
 
     // The scope banner is a `role="status"` announcement, so it must never
     // claim a filter that did not apply. Reaching here means the flag survived
     // both gates; a rejected flag returned 401/403 above and the client renders
     // the locked surface instead.
-    const followingApplied = Boolean(following)
+    const followingApplied = Boolean(following);
 
     // Without the firstMissingAt filter, every LLM artist-string drift produces
     // a visible dupe (BASS BINGO – Wooli Edition showed 3 rows for one show on
@@ -250,14 +250,14 @@ eventsRouter.get(
     const conditions: SQL[] = upcomingEventConditions({
       from: from ?? todayInTimezone('UTC'),
       statuses: SCHEDULED_STATUSES,
-    })
+    });
 
     // Shared conditions array — the EXISTS applies to both the count and row
     // queries, so `total` reflects the filtered set.
-    conditions.push(...scopeConditions)
+    conditions.push(...scopeConditions);
 
     if (to) {
-      conditions.push(lte(events.date, to))
+      conditions.push(lte(events.date, to));
     }
 
     if (venueSlug) {
@@ -265,14 +265,14 @@ eventsRouter.get(
         .select({ id: venues.id })
         .from(venues)
         .where(eq(venues.slug, venueSlug))
-        .limit(1)
+        .limit(1);
       if (!venue) {
         return ctx.json({
           success: true,
           data: { data: [], total: 0, limit, offset, followingApplied },
-        })
+        });
       }
-      conditions.push(eq(events.venueId, venue.id))
+      conditions.push(eq(events.venueId, venue.id));
     }
 
     if (search) {
@@ -280,8 +280,8 @@ eventsRouter.get(
         ilike(events.title, `%${search}%`),
         ilike(events.artist, `%${search}%`),
         ilike(venues.name, `%${search}%`),
-      )
-      if (searchCondition) conditions.push(searchCondition)
+      );
+      if (searchCondition) conditions.push(searchCondition);
     }
 
     const priceCondition =
@@ -303,9 +303,9 @@ eventsRouter.get(
                   isNull(events.ticketPriceMin),
                   isNull(events.ticketPriceMax),
                 )
-              : undefined
+              : undefined;
 
-    if (priceCondition) conditions.push(priceCondition)
+    if (priceCondition) conditions.push(priceCondition);
 
     if (filterVibe) {
       // Bucket taxonomy (#1101): a filterVibe value like 'electronic' expands
@@ -313,17 +313,17 @@ eventsRouter.get(
       // whole family (house / dubstep / bass / ...). Unknown values fall
       // through as a single-element array so bookmarked ?filterVibe=dubstep
       // URLs from before this shipped still match exactly.
-      const genreValues = expandBucket(filterVibe)
+      const genreValues = expandBucket(filterVibe);
       const genrePlaceholders = sql.join(
         genreValues.map((genre) => sql`${genre}`),
         sql`, `,
-      )
+      );
       conditions.push(
         sql`${events.genre} && ARRAY[${genrePlaceholders}]::text[]`,
-      )
+      );
     }
 
-    const where = and(...conditions)
+    const where = and(...conditions);
 
     const countResult = await db
       .select({ total: count() })
@@ -332,9 +332,9 @@ eventsRouter.get(
         venues,
         and(eq(events.venueId, venues.id), eq(venues.active, true)),
       )
-      .where(where)
+      .where(where);
 
-    const total = countResult[0]?.total ?? 0
+    const total = countResult[0]?.total ?? 0;
 
     const rows = await db
       .select({
@@ -392,7 +392,7 @@ eventsRouter.get(
       .where(where)
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     // followedArtists overlay (#763 PR 6, §9.2): one extra query for any
     // signed-in viewer with results (the matcher must load Spotify-sourced
@@ -406,15 +406,15 @@ eventsRouter.get(
       rows.length > 0 &&
       (await isFeatureEnabled('spotify-sync'))
         ? await getFollowedArtistMatcher(listAuth.userId)
-        : null
+        : null;
 
     // Batch-fetch corroborated submission vendor for community-priced events so the
     // browse card can show the correct trust tier (boxoffice ★, resale R, community C).
     const communityEventIds = rows
       .filter((row) => row.priceSource === 'community')
-      .map((row) => row.id)
+      .map((row) => row.id);
 
-    const vendorByEventId: Record<string, string | null> = {}
+    const vendorByEventId: Record<string, string | null> = {};
     if (communityEventIds.length > 0) {
       const vendorRows = await db
         .select({
@@ -431,11 +431,11 @@ eventsRouter.get(
         .orderBy(
           sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
           desc(priceSubmissions.createdAt),
-        )
+        );
 
       for (const vRow of vendorRows) {
         if (!(vRow.eventId in vendorByEventId)) {
-          vendorByEventId[vRow.eventId] = vRow.vendor
+          vendorByEventId[vRow.eventId] = vRow.vendor;
         }
       }
     }
@@ -449,7 +449,7 @@ eventsRouter.get(
     // one corroborated submission).
     const priceByTierByEventId = await loadPriceByTierByEventId(
       rows.map((row) => row.id),
-    )
+    );
 
     const enrichedRows = rows.map((row) => {
       const {
@@ -457,7 +457,7 @@ eventsRouter.get(
         canonicalHeadliners,
         canonicalSupporting,
         ...publicRow
-      } = row
+      } = row;
       return {
         ...publicRow,
         priceVendor:
@@ -474,15 +474,15 @@ eventsRouter.get(
               }),
             }
           : {}),
-      }
-    })
+      };
+    });
 
     return ctx.json({
       success: true,
       data: { data: enrichedRows, total, limit, offset, followingApplied },
-    })
+    });
   },
-)
+);
 
 // GET /v1/events/genres — bucket labels present across all upcoming events.
 //
@@ -503,10 +503,10 @@ eventsRouter.get(
 eventsRouter.get('/genres', async (ctx) => {
   const rows = await db.execute(
     sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL`,
-  )
-  const rawGenres = parseGenreRows(rows)
-  return ctx.json({ success: true, data: bucketsPresentIn(rawGenres) })
-})
+  );
+  const rawGenres = parseGenreRows(rows);
+  return ctx.json({ success: true, data: bucketsPresentIn(rawGenres) });
+});
 
 // GET /v1/events/availability — per-date show counts for a bounded window.
 // Registered AFTER /genres and BEFORE /:id so the `/:id` param route does not
@@ -516,27 +516,30 @@ eventsRouter.get('/availability', async (ctx) => {
   const parsed = availabilitySchema.safeParse({
     from: ctx.req.query('from'),
     to: ctx.req.query('to'),
-  })
+  });
   if (!parsed.success) {
     return ctx.json(
       { success: false, error: 'Invalid availability window' },
       400,
-    )
+    );
   }
   // events.date holds event-local (Mountain Time) calendar dates, so default
   // the window start to today in MT — not UTC. During MT evening UTC has already
   // rolled to tomorrow, which would drop same-day shows from the calendar.
-  const from = parsed.data.from ?? todayInTimezone(MT_TIME_ZONE)
-  const { to } = parsed.data
+  const from = parsed.data.from ?? todayInTimezone(MT_TIME_ZONE);
+  const { to } = parsed.data;
   if (to < from) {
     return ctx.json(
       { success: false, error: '`to` must be on or after `from`' },
       400,
-    )
+    );
   }
-  const span = dayCountBetween(from, to)
+  const span = dayCountBetween(from, to);
   if (span < 1 || span > MAX_WINDOW_DAYS) {
-    return ctx.json({ success: false, error: 'Window must be 1–400 days' }, 400)
+    return ctx.json(
+      { success: false, error: 'Window must be 1–400 days' },
+      400,
+    );
   }
 
   const rows = await db
@@ -551,17 +554,20 @@ eventsRouter.get('/availability', async (ctx) => {
     .groupBy(events.date)
     // A bare GROUP BY leaves row order up to the planner; sort ascending so the
     // response is stable and self-describing regardless of Postgres plan.
-    .orderBy(asc(events.date))
+    .orderBy(asc(events.date));
 
   const data: AvailabilityDay[] = rows.map((row) => ({
     date: row.date,
     count: Number(row.count),
-  }))
+  }));
 
-  ctx.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
-  const body: EventsAvailabilityResponse = { data, from, to }
-  return ctx.json({ success: true, data: body })
-})
+  ctx.header(
+    'Cache-Control',
+    'public, max-age=300, stale-while-revalidate=600',
+  );
+  const body: EventsAvailabilityResponse = { data, from, to };
+  return ctx.json({ success: true, data: body });
+});
 
 // Both '/:id' and '/:id/related' take optional auth and answer differently for
 // a signed-in caller (isWatching). Vary tells any shared cache the two answers
@@ -571,17 +577,17 @@ eventsRouter.get('/availability', async (ctx) => {
 function markViewerScoped(ctx: Context, isAuthed: boolean): void {
   // Appended, not set: CORS contributes its own Vary, and replacing the header
   // would drop that and make a shared cache key on the wrong axis.
-  ctx.header('Vary', 'Authorization', { append: true })
-  if (isAuthed) ctx.header('Cache-Control', 'private, no-store')
+  ctx.header('Vary', 'Authorization', { append: true });
+  if (isAuthed) ctx.header('Cache-Control', 'private, no-store');
 }
 
 // GET /v1/events/:id — single event with venue and watching count
 eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
-  const rawId = ctx.req.param('id')
-  const parsed = uuidSchema.safeParse(rawId)
+  const rawId = ctx.req.param('id');
+  const parsed = uuidSchema.safeParse(rawId);
   if (!parsed.success)
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
-  const id = parsed.data
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
+  const id = parsed.data;
 
   const [row] = await db
     .select({
@@ -646,22 +652,22 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(events.hiddenFromConsumer, false),
         isNull(events.firstMissingAt),
       ),
-    )
+    );
 
   if (!row) {
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
   const [watchCountRow] = await db
     .select({ total: count() })
     .from(userEvents)
-    .where(and(eq(userEvents.eventId, id), eq(userEvents.status, 'watching')))
+    .where(and(eq(userEvents.eventId, id), eq(userEvents.status, 'watching')));
 
-  const watchingCount = watchCountRow?.total ?? 0
+  const watchingCount = watchCountRow?.total ?? 0;
 
-  const authInfo = getAuth(ctx)
-  let isWatching = false
-  let attendingAt: string | null = null
+  const authInfo = getAuth(ctx);
+  let isWatching = false;
+  let attendingAt: string | null = null;
   if (authInfo?.userId) {
     // No status filter: the shared user_events row may carry attendance only
     // (#70), and one read answers both questions.
@@ -674,9 +680,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       .where(
         and(eq(userEvents.userId, authInfo.userId), eq(userEvents.eventId, id)),
       )
-      .limit(1)
-    isWatching = trackRow?.status === 'watching'
-    attendingAt = trackRow?.attendingAt?.toISOString() ?? null
+      .limit(1);
+    isWatching = trackRow?.status === 'watching';
+    attendingAt = trackRow?.attendingAt?.toISOString() ?? null;
   }
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
@@ -695,30 +701,30 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       ),
     )
     .orderBy(desc(eventReports.createdAt))
-    .limit(1)
+    .limit(1);
 
-  let priceStatus: 'live' | 'soldout' | null = null
+  let priceStatus: 'live' | 'soldout' | null = null;
   let soldOutReport: {
-    reporterHandle: string | null
-    confirmsCount: number
-    reportedAt: string
-  } | null = null
+    reporterHandle: string | null;
+    confirmsCount: number;
+    reportedAt: string;
+  } | null = null;
 
   if (soldOutReportRow) {
-    priceStatus = 'soldout'
+    priceStatus = 'soldout';
 
     const [confirmCountRow] = await db
       .select({ total: count() })
       .from(eventReportConfirms)
-      .where(eq(eventReportConfirms.reportId, soldOutReportRow.id))
+      .where(eq(eventReportConfirms.reportId, soldOutReportRow.id));
 
-    const confirmsCount = confirmCountRow?.total ?? 0
+    const confirmsCount = confirmCountRow?.total ?? 0;
 
     const [reporterProfile] = await db
       .select({ handle: userProfiles.handle })
       .from(userProfiles)
       .where(eq(userProfiles.userId, soldOutReportRow.reporterId))
-      .limit(1)
+      .limit(1);
 
     soldOutReport = {
       reporterHandle: reporterProfile?.handle ?? null,
@@ -726,46 +732,46 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       // promoted soldOutReport surface stays consistent across endpoints.
       confirmsCount,
       reportedAt: soldOutReportRow.createdAt.toISOString(),
-    }
+    };
   }
 
   // Flat-field declarations — populated below from the same in-memory data
   // that feeds priceByTier so the two payload shapes can't drift. The flat
   // fields are deprecated; PR 4 migrates the consumer UI to priceByTier and
   // the Contract PR drops them.
-  let priceVendor: string | null = null
-  let priceSourceCategory: SourceCategory | null = null
-  let priceSubmitterHandle: string | null = null
-  let priceObservedAt: string | null = null
+  let priceVendor: string | null = null;
+  let priceSourceCategory: SourceCategory | null = null;
+  let priceSubmitterHandle: string | null = null;
+  let priceObservedAt: string | null = null;
   // The submission the flat fields describe. Must come off `legacyPrimary`,
   // never off priceByTier[0]: the two use different orderings (see the comment
   // on legacySortedCorroborated below), so taking the id from the tier
   // headline while the timestamp comes from here would name one row and stamp
   // another. Null whenever priceObservedAt is null — they travel together.
-  let priceSubmissionId: string | null = null
+  let priceSubmissionId: string | null = null;
 
-  let priceApprovalKind: 'admin' | 'fan' | null = null
-  let priceApprovedAt: string | null = null
+  let priceApprovalKind: 'admin' | 'fan' | null = null;
+  let priceApprovedAt: string | null = null;
   let priceAlternates: Array<{
-    vendor: string | null
-    priceMin: string
-    priceMax: string | null
-    sourceCategory: SourceCategory | null
-  }> = []
-  let priceConfirmsCount: number = 0
+    vendor: string | null;
+    priceMin: string;
+    priceMax: string | null;
+    sourceCategory: SourceCategory | null;
+  }> = [];
+  let priceConfirmsCount: number = 0;
   let counterSubmission: {
-    id: string
-    parentSubmissionId: string
-    floor: number
-    ceiling?: number
-    submitter: { handle: string } | null
-    submittedAt: string
+    id: string;
+    parentSubmissionId: string;
+    floor: number;
+    ceiling?: number;
+    submitter: { handle: string } | null;
+    submittedAt: string;
     // Engagement-signal fields mirror priceByTier[].counterSubmission so the
     // flat + per-tier shapes stay in lock-step during PR 4's migration window.
     // 'defer' is the only kind we surface to consumers today.
-    lastAdminActionAt: string | null
-    lastAdminActionKind: 'defer' | null
-  } | null = null
+    lastAdminActionAt: string | null;
+    lastAdminActionKind: 'defer' | null;
+  } | null = null;
 
   // Per-tier price aggregation (PR 3) and the flat priceVendor/priceAlternates/
   // priceConfirmsCount/counterSubmission/pendingSubmissions fields share the
@@ -791,7 +797,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(priceSubmissions.eventId, id),
         eq(priceSubmissions.status, 'corroborated'),
       ),
-    )
+    );
 
   const allPendingRows = await db
     .select({
@@ -819,7 +825,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         eq(priceSubmissions.eventId, id),
         eq(priceSubmissions.status, 'pending'),
       ),
-    )
+    );
 
   // Counter-submissions = pending rows that point at a corroborated parent
   // AT THE SAME TIER. Tier match is required so a dispute that landed under a
@@ -833,13 +839,13 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // the same headline, the most recent challenger wins deterministically.
   const corroboratedById = new Map(
     allCorroboratedRows.map((sub) => [sub.id, sub]),
-  )
+  );
   const counterTierRows = allPendingRows
     .flatMap((sub) => {
-      const parentId = sub.disputedSubmissionId
-      if (parentId === null) return []
-      const parent = corroboratedById.get(parentId)
-      if (!parent || parent.tier !== sub.tier) return []
+      const parentId = sub.disputedSubmissionId;
+      if (parentId === null) return [];
+      const parent = corroboratedById.get(parentId);
+      if (!parent || parent.tier !== sub.tier) return [];
       return [
         {
           id: sub.id,
@@ -852,29 +858,31 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
           lastAdminActionAt: sub.lastAdminActionAt,
           lastAdminActionKind: sub.lastAdminActionKind,
         },
-      ]
+      ];
     })
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+    .sort(
+      (left, right) => right.createdAt.getTime() - left.createdAt.getTime(),
+    );
 
   // Resolve the per-tier headlines AND the legacy flat-field primary so both
   // the truePendingRows filter and the flat-field derivation below share a
   // single source of truth for "which corroborated row leads".
-  const headlinesByTier = pickHeadlinesByTier(allCorroboratedRows)
+  const headlinesByTier = pickHeadlinesByTier(allCorroboratedRows);
 
   // Legacy vendor-trust ordering preserved for the flat priceVendor /
   // priceAlternates / counterSubmission shape during the PR 4 migration
   // window. May pick a different "primary" than any per-tier headline does.
   const isCommunityPriced =
-    row.priceSource === 'community' && allCorroboratedRows.length > 0
+    row.priceSource === 'community' && allCorroboratedRows.length > 0;
   const legacySortedCorroborated = isCommunityPriced
     ? [...allCorroboratedRows].sort((left, right) => {
         const trustDelta =
-          vendorTrustRank(left.vendor) - vendorTrustRank(right.vendor)
-        if (trustDelta !== 0) return trustDelta
-        return right.createdAt.getTime() - left.createdAt.getTime()
+          vendorTrustRank(left.vendor) - vendorTrustRank(right.vendor);
+        if (trustDelta !== 0) return trustDelta;
+        return right.createdAt.getTime() - left.createdAt.getTime();
       })
-    : []
-  const legacyPrimary = legacySortedCorroborated[0] ?? null
+    : [];
+  const legacyPrimary = legacySortedCorroborated[0] ?? null;
 
   // truePendingRows excludes ONLY the counter rows that actually surface
   // somewhere via counterSubmission — either as the flat-field counter
@@ -886,23 +894,23 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // counters against alternate (non-headline) corroborated rows would
   // disappear from both pendingSubmissions and priceByTier[].pending — the
   // PR 723 audit caught exactly this regression.
-  const attachedCounterIds = new Set<string>()
+  const attachedCounterIds = new Set<string>();
   for (const [tier, head] of headlinesByTier) {
     const newest = counterTierRows.find(
       (sub) => sub.tier === tier && sub.parentSubmissionId === head.id,
-    )
-    if (newest) attachedCounterIds.add(newest.id)
+    );
+    if (newest) attachedCounterIds.add(newest.id);
   }
   if (legacyPrimary) {
     const flatCounter = counterTierRows.find(
       (sub) => sub.parentSubmissionId === legacyPrimary.id,
-    )
-    if (flatCounter) attachedCounterIds.add(flatCounter.id)
+    );
+    if (flatCounter) attachedCounterIds.add(flatCounter.id);
   }
 
   const truePendingRows = allPendingRows.filter(
     (sub) => !attachedCounterIds.has(sub.id),
-  )
+  );
 
   // Batch handle lookups across every userId surfaced in any block.
   const aggregateUserIds = Array.from(
@@ -913,16 +921,16 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         ...counterTierRows.map((sub) => sub.userId),
       ].filter((uid): uid is string => uid !== null),
     ),
-  )
-  const aggregateHandles = new Map<string, string>()
+  );
+  const aggregateHandles = new Map<string, string>();
   if (aggregateUserIds.length > 0) {
     const profileRows = await db
       .select({ userId: userProfiles.userId, handle: userProfiles.handle })
       .from(userProfiles)
-      .where(inArray(userProfiles.userId, aggregateUserIds))
+      .where(inArray(userProfiles.userId, aggregateUserIds));
     for (const profileRow of profileRows) {
       if (profileRow.handle !== null) {
-        aggregateHandles.set(profileRow.userId, profileRow.handle)
+        aggregateHandles.set(profileRow.userId, profileRow.handle);
       }
     }
   }
@@ -930,8 +938,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const aggregateSubIds = [
     ...allCorroboratedRows.map((sub) => sub.id),
     ...truePendingRows.map((sub) => sub.id),
-  ]
-  const confirmsBySubmissionId = new Map<string, number>()
+  ];
+  const confirmsBySubmissionId = new Map<string, number>();
   if (aggregateSubIds.length > 0) {
     const confirmCounts = await db
       .select({
@@ -940,9 +948,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       })
       .from(submissionConfirms)
       .where(inArray(submissionConfirms.submissionId, aggregateSubIds))
-      .groupBy(submissionConfirms.submissionId)
+      .groupBy(submissionConfirms.submissionId);
     for (const confirmRow of confirmCounts) {
-      confirmsBySubmissionId.set(confirmRow.submissionId, confirmRow.total)
+      confirmsBySubmissionId.set(confirmRow.submissionId, confirmRow.total);
     }
   }
 
@@ -956,10 +964,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     })
     .from(priceSubmissions)
     .where(eq(priceSubmissions.eventId, id))
-    .groupBy(priceSubmissions.tier)
-  const reportsByTier = new Map<Tier, number>()
+    .groupBy(priceSubmissions.tier);
+  const reportsByTier = new Map<Tier, number>();
   for (const reportRow of reportRowsByTier) {
-    reportsByTier.set(reportRow.tier, reportRow.total)
+    reportsByTier.set(reportRow.tier, reportRow.total);
   }
 
   const aggregateConfirmsNeeded = isImminentEvent(
@@ -967,7 +975,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     SP_POLICY.imminentThresholdDays,
   )
     ? SP_POLICY.confirmsRequiredImminent
-    : SP_POLICY.confirmsRequired
+    : SP_POLICY.confirmsRequired;
 
   // Flat-field derivation for community-priced events — preserves the legacy
   // vendor-trust ordering (boxoffice=0, resale=2, else=1, then createdAt
@@ -976,40 +984,40 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // the in-memory allCorroboratedRows + side-tables that priceByTier also
   // consumes, so the two payload shapes share a single source of truth.
   if (legacyPrimary) {
-    const otherSubs = legacySortedCorroborated.slice(1)
-    priceVendor = legacyPrimary.vendor
-    priceSourceCategory = legacyPrimary.sourceCategory
+    const otherSubs = legacySortedCorroborated.slice(1);
+    priceVendor = legacyPrimary.vendor;
+    priceSourceCategory = legacyPrimary.sourceCategory;
     priceObservedAt = deriveObservedAt(
       legacyPrimary.lastSeenAt,
       legacyPrimary.createdAt,
-    ).toISOString()
-    priceSubmissionId = legacyPrimary.id
-    priceApprovedAt = legacyPrimary.updatedAt.toISOString()
-    priceConfirmsCount = confirmsBySubmissionId.get(legacyPrimary.id) ?? 0
-    priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
+    ).toISOString();
+    priceSubmissionId = legacyPrimary.id;
+    priceApprovedAt = legacyPrimary.updatedAt.toISOString();
+    priceConfirmsCount = confirmsBySubmissionId.get(legacyPrimary.id) ?? 0;
+    priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin';
     priceSubmitterHandle =
       legacyPrimary.userId !== null
         ? (aggregateHandles.get(legacyPrimary.userId) ?? null)
-        : null
+        : null;
     priceAlternates = otherSubs.map((sub) => ({
       vendor: sub.vendor,
       priceMin: sub.priceMin,
       priceMax: sub.priceMax,
       sourceCategory: sub.sourceCategory,
-    }))
+    }));
 
     // counterTierRows is sorted newest-first and filtered to tier-match
     // counters. Pick the newest counter whose parent is the legacy primary.
     const counter = counterTierRows.find(
       (sub) => sub.parentSubmissionId === legacyPrimary.id,
-    )
+    );
     if (counter) {
       const counterHandle =
         counter.userId !== null
           ? (aggregateHandles.get(counter.userId) ?? null)
-          : null
+          : null;
       const counterCeiling =
-        counter.priceMax !== null ? parseFloat(counter.priceMax) : null
+        counter.priceMax !== null ? parseFloat(counter.priceMax) : null;
       // Pair-narrow kind + at together — same defensive treatment as
       // buildCounter in aggregate-by-tier.ts and the contest detail
       // endpoint so the flat + per-tier shapes can't drift on an
@@ -1018,7 +1026,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       const counterLastAction = narrowLastAdminAction(
         counter.lastAdminActionKind,
         counter.lastAdminActionAt,
-      )
+      );
       counterSubmission = {
         id: counter.id,
         parentSubmissionId: counter.parentSubmissionId,
@@ -1028,7 +1036,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         submittedAt: counter.createdAt.toISOString(),
         lastAdminActionAt: counterLastAction.at,
         lastAdminActionKind: counterLastAction.kind,
-      }
+      };
     }
   }
 
@@ -1055,7 +1063,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     reportsByTier,
     confirmsNeeded: aggregateConfirmsNeeded,
     viewerUserId: authInfo?.userId ?? null,
-  })
+  });
 
   // Flat pendingSubmissions field — derived from the same truePendingRows /
   // handles / confirms side-tables as priceByTier so the two payload shapes
@@ -1063,30 +1071,30 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // priceByTier.counterSubmission don't double-appear here. Kept on the
   // response for PR 4 to migrate consumers off; the Contract PR removes it.
   let pendingSubmissions: Array<{
-    id: string
-    priceMin: string
-    priceMax: string | null
-    tier: string
-    vendor: string
-    howFound: string
-    sourceCategory: 'boxoffice' | 'standard' | 'resale' | null
-    note: string | null
-    submitterHandle: string | null
-    submittedAt: string
-    confirmsCount: number
-    confirmsNeeded: number
-    isSubmitter: boolean
-  }> | null = null
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    tier: string;
+    vendor: string;
+    howFound: string;
+    sourceCategory: 'boxoffice' | 'standard' | 'resale' | null;
+    note: string | null;
+    submitterHandle: string | null;
+    submittedAt: string;
+    confirmsCount: number;
+    confirmsNeeded: number;
+    isSubmitter: boolean;
+  }> | null = null;
 
   if (truePendingRows.length > 0) {
     // VenueBoxOffice-first, then newest-first — mirrors the legacy ordering
     // so the consumer surface is stable during PR 4's migration window.
     const ordered = [...truePendingRows].sort((left, right) => {
-      const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1
-      const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1
-      if (leftBox !== rightBox) return leftBox - rightBox
-      return right.createdAt.getTime() - left.createdAt.getTime()
-    })
+      const leftBox = left.vendor === 'VenueBoxOffice' ? 0 : 1;
+      const rightBox = right.vendor === 'VenueBoxOffice' ? 0 : 1;
+      if (leftBox !== rightBox) return leftBox - rightBox;
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    });
     pendingSubmissions = ordered.map((sub) => ({
       id: sub.id,
       priceMin: sub.priceMin,
@@ -1102,7 +1110,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       confirmsCount: confirmsBySubmissionId.get(sub.id) ?? 0,
       confirmsNeeded: aggregateConfirmsNeeded,
       isSubmitter: sub.userId === authInfo?.userId,
-    }))
+    }));
   }
 
   // followedArtists overlay (#763 PR 6, §9.2) — one extra query for any
@@ -1114,13 +1122,13 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const followMatcher =
     authInfo?.userId && (await isFeatureEnabled('spotify-sync'))
       ? await getFollowedArtistMatcher(authInfo.userId)
-      : null
+      : null;
 
   // #1115 PR-G — slugs for the artist-page links on the detail title block.
   const { artistSlug, supportingArtistSlugs } = await resolveArtistSlugs(
     row.artist,
     row.supportingArtists,
-  )
+  );
 
   const {
     canonicalArtist,
@@ -1128,9 +1136,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     canonicalSupporting,
     venueGuidePublishedAt,
     ...publicRow
-  } = row
+  } = row;
 
-  markViewerScoped(ctx, authInfo?.userId != null)
+  markViewerScoped(ctx, authInfo?.userId != null);
   return ctx.json({
     success: true,
     data: {
@@ -1165,8 +1173,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceByTier,
       soldOutReport,
     },
-  })
-})
+  });
+});
 
 // GET /v1/events/:id/related — slim list of other upcoming events at the same
 // venue. Keyed by event id (not venue slug) so the consumer event detail page
@@ -1186,11 +1194,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 // Optional auth, matching the sibling '/:id' handler: signed-out callers get the
 // same panel, minus the per-row watch state.
 eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
-  const rawId = ctx.req.param('id')
-  const parsed = uuidSchema.safeParse(rawId)
+  const rawId = ctx.req.param('id');
+  const parsed = uuidSchema.safeParse(rawId);
   if (!parsed.success)
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
-  const eventId = parsed.data
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
+  const eventId = parsed.data;
 
   const [sourceEvent] = await db
     .select({ venueId: events.venueId })
@@ -1202,14 +1210,14 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
         isNull(events.firstMissingAt),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (!sourceEvent || sourceEvent.venueId === null) {
     // venueId is nullable on the events row (draft events or admin-entered
     // rows pending venue assignment). Without a venue we have nothing to
     // group related shows by — treat the same as "not found" rather than
     // returning every venueless event in the system.
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
   // Slim same-venue query — mirrors the list endpoint shape but skips the
@@ -1226,7 +1234,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       statuses: SCHEDULED_STATUSES,
     }),
     sql`${events.id} != ${eventId}`,
-  ]
+  ];
 
   const relatedRows = await db
     .select({
@@ -1276,14 +1284,14 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
     .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(and(...relatedConditions))
     .orderBy(asc(events.date), asc(events.showTime))
-    .limit(3)
+    .limit(3);
 
   // One batched read for the whole panel rather than a query per row. The set is
   // empty for an anonymous caller, so every row reports not-watching — which is
   // also what the service worker's public cache stores, since it refuses to cache
   // any request carrying an Authorization header.
-  const authInfo = getAuth(ctx)
-  const watchedIds = new Set<string>()
+  const authInfo = getAuth(ctx);
+  const watchedIds = new Set<string>();
   if (authInfo?.userId && relatedRows.length > 0) {
     const watchRows = await db
       .select({ eventId: userEvents.eventId })
@@ -1297,18 +1305,18 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
             relatedRows.map((row) => row.id),
           ),
         ),
-      )
-    for (const row of watchRows) watchedIds.add(row.eventId)
+      );
+    for (const row of watchRows) watchedIds.add(row.eventId);
   }
 
   const related = relatedRows.map((row) => ({
     ...row,
     isWatching: watchedIds.has(row.id),
-  }))
+  }));
 
-  markViewerScoped(ctx, authInfo?.userId != null)
-  return ctx.json({ success: true, data: { data: related } })
-})
+  markViewerScoped(ctx, authInfo?.userId != null);
+  return ctx.json({ success: true, data: { data: related } });
+});
 
 // GET /v1/events/:id/watchers — the social-proof roster for event detail.
 //
@@ -1318,14 +1326,14 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
 // this). The response is viewer-specific — the caller is excluded from their own
 // roster — so it must never land in a shared cache.
 eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
-  const parsed = uuidSchema.safeParse(ctx.req.param('id'))
+  const parsed = uuidSchema.safeParse(ctx.req.param('id'));
   if (!parsed.success)
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
-  const eventId = parsed.data
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
+  const eventId = parsed.data;
 
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   // Same visibility predicate as '/:id' so a hidden event's roster isn't
   // readable when its detail page 404s.
@@ -1339,40 +1347,40 @@ eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
         isNull(events.firstMissingAt),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (!visibleEvent)
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
 
-  const data = await getEventWatchers(eventId, authInfo.userId)
+  const data = await getEventWatchers(eventId, authInfo.userId);
 
-  ctx.header('Cache-Control', 'private, no-store')
-  return ctx.json({ success: true, data })
-})
+  ctx.header('Cache-Control', 'private, no-store');
+  return ctx.json({ success: true, data });
+});
 
 // POST /v1/events/:id/watch — opt in to watching
 eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const rawId = ctx.req.param('id')
-  const parsed = uuidSchema.safeParse(rawId)
+  const rawId = ctx.req.param('id');
+  const parsed = uuidSchema.safeParse(rawId);
   if (!parsed.success)
-    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
 
-  const eventId = parsed.data
+  const eventId = parsed.data;
 
   const [eventRow] = await db
     .select({ ticketPriceMin: events.ticketPriceMin })
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-    .limit(1)
+    .limit(1);
 
   if (!eventRow)
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
 
-  const savedPrice = eventRow.ticketPriceMin ?? null
+  const savedPrice = eventRow.ticketPriceMin ?? null;
 
   try {
     await db
@@ -1386,30 +1394,30 @@ eventsRouter.post('/:id/watch', clerkMiddleware(), async (ctx) => {
       .onConflictDoUpdate({
         target: [userEvents.userId, userEvents.eventId],
         set: { status: 'watching', savedPrice },
-      })
+      });
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
       'watch insert failed',
-    )
-    return ctx.json({ success: false, error: 'Failed to watch event' }, 500)
+    );
+    return ctx.json({ success: false, error: 'Failed to watch event' }, 500);
   }
 
-  return ctx.json({ success: true, data: { watching: true } })
-})
+  return ctx.json({ success: true, data: { watching: true } });
+});
 
 // DELETE /v1/events/:id/watch — opt out of watching
 eventsRouter.delete('/:id/watch', clerkMiddleware(), async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const rawId = ctx.req.param('id')
-  const parsed = uuidSchema.safeParse(rawId)
+  const rawId = ctx.req.param('id');
+  const parsed = uuidSchema.safeParse(rawId);
   if (!parsed.success)
-    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
 
-  const eventId = parsed.data
+  const eventId = parsed.data;
 
   const [existing] = await db
     .select({ id: userEvents.id })
@@ -1421,14 +1429,14 @@ eventsRouter.delete('/:id/watch', clerkMiddleware(), async (ctx) => {
         eq(userEvents.status, 'watching'),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   // The select above keeps the status='watching' filter, so un-watching a
   // non-watched row stays a no-op. The mutation routes through releaseWatch so
   // an attending row survives with status cleared rather than being deleted (#70).
   if (existing) {
-    await releaseWatch(authInfo.userId, eventId)
+    await releaseWatch(authInfo.userId, eventId);
   }
 
-  return ctx.json({ success: true, data: { watching: false } })
-})
+  return ctx.json({ success: true, data: { watching: false } });
+});

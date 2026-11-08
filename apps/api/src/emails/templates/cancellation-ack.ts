@@ -12,7 +12,7 @@ import {
   monoEyebrow,
   row,
   statusEyebrow,
-} from '../atoms.js'
+} from '../atoms.js';
 import {
   EMAIL_FONT,
   ME,
@@ -20,33 +20,33 @@ import {
   planUrl,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { formatEmailDate } from './format.js'
+} from '../layout.js';
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { formatEmailDate } from './format.js';
 
-const SUBJECT = "Your Premium's set to wind down."
+const SUBJECT = "Your Premium's set to wind down.";
 const FOOTER_NOTE =
-  "If this cancel was a surprise, reply to this email and we'll sort it out."
+  "If this cancel was a surprise, reply to this email and we'll sort it out.";
 const CHANGES_BODY_TEXT =
-  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you're watching stays put."
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you're watching stays put.";
 
-const CONTENT_PAD = '18px 26px 0'
+const CONTENT_PAD = '18px 26px 0';
 
 export const renderCancellationAck: TemplateRenderer<
   EmailTemplateVars['cancellation_ack']
 > = ({ accessEndsAt }) => {
   const accessValue =
-    formatEmailDate(accessEndsAt) ?? 'the end of your billing period'
-  const preheader = `You're good through ${accessValue}. No hooks, no hard feelings.`
-  const sub = `Done. We won't bill you again. Premium keeps working right up until ${accessValue}, then your account drops back to Free.`
+    formatEmailDate(accessEndsAt) ?? 'the end of your billing period';
+  const preheader = `You're good through ${accessValue}. No hooks, no hard feelings.`;
+  const sub = `Done. We won't bill you again. Premium keeps working right up until ${accessValue}, then your account drops back to Free.`;
 
   const accessPanel = `<div style="padding: 16px 18px; border-radius: 12px; background: ${ME.surf}; border: 1px solid ${ME.border};">
 ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 })}
 <div style="font-family: ${EMAIL_FONT}; font-weight: 900; font-size: 24px; color: ${ME.fg}; letter-spacing: -0.02em;">${escapeHtml(accessValue)}</div>
-</div>`
+</div>`;
 
   const changesBody = `${monoEyebrow({ text: 'What changes after that', color: ME.subtle, marginBottom: 10 })}
-<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you're watching stays put.</span></div>`
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you're watching stays put.</span></div>`;
 
   const bodyRows = [
     headerRow('Subscription'),
@@ -59,7 +59,7 @@ ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 }
       button({ label: 'Manage subscription', tone: 'ghost', href: planUrl() }),
     ),
     footerRow({ family: 'billing', showManage: false, note: FOOTER_NOTE }),
-  ].join('\n')
+  ].join('\n');
 
   const text = [
     'Cancelled. No more charges.',
@@ -72,7 +72,7 @@ ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 }
     CHANGES_BODY_TEXT,
     '',
     `Manage subscription: ${planUrl()}`,
-  ].join('\n')
+  ].join('\n');
 
   return {
     subject: SUBJECT,
@@ -84,5 +84,5 @@ ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 }
       showManage: false,
       note: FOOTER_NOTE,
     }),
-  }
-}
+  };
+};

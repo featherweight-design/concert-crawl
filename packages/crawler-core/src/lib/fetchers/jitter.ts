@@ -15,6 +15,6 @@
  * jittering zero would sometimes return up to 999ms and pace the admin probe.
  */
 export function jitter(ms: number): number {
-  if (ms <= 0) return 0
-  return ms + Math.floor(Math.random() * 1000)
+  if (ms <= 0) return 0;
+  return ms + Math.floor(Math.random() * 1000);
 }

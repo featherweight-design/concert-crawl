@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { type ComponentProps } from 'react'
-import { PricesSubmissionsClient } from '@/components/admin/prices/PricesSubmissionsClient'
+import { type ComponentProps } from 'react';
+import { PricesSubmissionsClient } from '@/components/admin/prices/PricesSubmissionsClient';
 
-type SubmissionsProps = ComponentProps<typeof PricesSubmissionsClient>
+type SubmissionsProps = ComponentProps<typeof PricesSubmissionsClient>;
 
 export interface SubmissionsTabContentProps {
-  initialSubmissions: SubmissionsProps['initialSubmissions']
-  initialTotal: SubmissionsProps['initialTotal']
+  initialSubmissions: SubmissionsProps['initialSubmissions'];
+  initialTotal: SubmissionsProps['initialTotal'];
 }
 
 export const SubmissionsTabContent = ({
@@ -19,4 +19,4 @@ export const SubmissionsTabContent = ({
     initialSubmissions={initialSubmissions}
     initialTotal={initialTotal}
   />
-)
+);

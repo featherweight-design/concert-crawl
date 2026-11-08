@@ -1,30 +1,30 @@
-'use client'
+'use client';
 
 interface ChipOption {
-  value: string
-  label: string
+  value: string;
+  label: string;
   // Disable a single chip while its siblings stay interactive. Used by the
   // multi-tier submit form to grey out tiers already chosen in another panel.
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 interface ChipGroupProps {
-  label: string
-  options: ChipOption[]
-  value: string | null
-  onChange: (value: string) => void
-  error?: string | undefined
+  label: string;
+  options: ChipOption[];
+  value: string | null;
+  onChange: (value: string) => void;
+  error?: string | undefined;
   // When true, render an accent-colored asterisk after the label. Mirrors the
   // SPNumberField `required` prop but uses var(--accent) instead of var(--warning)
   // — required-marker pattern locked in property table §3 "Vendor block — DEMOTED
   // BUT REQUIRED" and submitPriceV2 copy notes (FormLabel `req` accepts asterisk
   // separately from the label string).
-  req?: boolean
+  req?: boolean;
   // When true, the chips become non-interactive (visually muted, no click
   // handler). Used by SubmitPriceModal to lock the vendor field when
   // sourceCategory='boxoffice' auto-fills it to 'VenueBoxOffice' — otherwise
   // the UI shows e.g. "AXS" selected while the payload sends "Venue".
-  disabled?: boolean
+  disabled?: boolean;
 }
 
 export function ChipGroup({
@@ -60,8 +60,8 @@ export function ChipGroup({
       </span>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
-          const isActive = value === opt.value
-          const isDisabled = disabled || opt.disabled
+          const isActive = value === opt.value;
+          const isDisabled = disabled || opt.disabled;
           return (
             <button
               key={opt.value}
@@ -82,7 +82,7 @@ export function ChipGroup({
             >
               {opt.label}
             </button>
-          )
+          );
         })}
       </div>
       {error && (
@@ -100,5 +100,5 @@ export function ChipGroup({
         </span>
       )}
     </div>
-  )
+  );
 }

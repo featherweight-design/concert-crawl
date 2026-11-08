@@ -17,9 +17,9 @@
  * CLI input throws loudly at the entry point.
  */
 
-import { z } from 'zod'
+import { z } from 'zod';
 
-import type { AuditManifest } from './manifest-types.js'
+import type { AuditManifest } from './manifest-types.js';
 
 // ---------------------------------------------------------------------------
 // filterManifest
@@ -34,10 +34,10 @@ export function filterManifest(
   manifest: AuditManifest,
   tags?: readonly string[],
 ): AuditManifest {
-  if (tags === undefined || tags.length === 0) return manifest
+  if (tags === undefined || tags.length === 0) return manifest;
   return manifest.filter((route) =>
     route.tags.some((routeTag) => tags.includes(routeTag)),
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ function assertSafePathSegment(name: string, value: string): void {
   if (value.includes('/') || value.includes('\\') || value.includes('..')) {
     throw new Error(
       `outputPathFor: unsafe ${name} segment '${value}' — must not contain '/', '\\\\', or '..'`,
-    )
+    );
   }
 }
 
@@ -77,18 +77,18 @@ export function outputPathFor(
   viewportLabel: string,
   ext: 'png' | 'json',
 ): string {
-  assertSafePathSegment('runId', runId)
-  assertSafePathSegment('routeId', routeId)
-  assertSafePathSegment('state', state)
-  assertSafePathSegment('viewportLabel', viewportLabel)
-  return `audit-output/${runId}/${routeId}__${state}__${viewportLabel}.${ext}`
+  assertSafePathSegment('runId', runId);
+  assertSafePathSegment('routeId', routeId);
+  assertSafePathSegment('state', state);
+  assertSafePathSegment('viewportLabel', viewportLabel);
+  return `audit-output/${runId}/${routeId}__${state}__${viewportLabel}.${ext}`;
 }
 
 // ---------------------------------------------------------------------------
 // parseCliTags
 // ---------------------------------------------------------------------------
 
-const TagsSchema = z.array(z.enum(['consumer', 'admin']))
+const TagsSchema = z.array(z.enum(['consumer', 'admin']));
 
 /**
  * Parses the `--tags` flag from a process.argv slice.
@@ -105,21 +105,21 @@ const TagsSchema = z.array(z.enum(['consumer', 'admin']))
 export function parseCliTags(
   argv: readonly string[],
 ): ('consumer' | 'admin')[] | undefined {
-  const equalsMatch = argv.find((arg) => arg.startsWith('--tags='))
+  const equalsMatch = argv.find((arg) => arg.startsWith('--tags='));
   if (equalsMatch !== undefined) {
-    const raw = equalsMatch.slice('--tags='.length)
-    if (raw === '') return undefined
-    return TagsSchema.parse(raw.split(',').filter(Boolean))
+    const raw = equalsMatch.slice('--tags='.length);
+    if (raw === '') return undefined;
+    return TagsSchema.parse(raw.split(',').filter(Boolean));
   }
-  const spaceIdx = argv.indexOf('--tags')
+  const spaceIdx = argv.indexOf('--tags');
   if (spaceIdx >= 0 && spaceIdx + 1 < argv.length) {
-    const raw = argv[spaceIdx + 1]
-    if (raw === undefined) return undefined
+    const raw = argv[spaceIdx + 1];
+    if (raw === undefined) return undefined;
     // If the next arg looks like another flag, the user forgot the value.
     // Treat as "no tag filter" rather than passing '--other' into Zod
     // (which would throw with a confusing enum-mismatch error).
-    if (raw.startsWith('--')) return undefined
-    return TagsSchema.parse(raw.split(',').filter(Boolean))
+    if (raw.startsWith('--')) return undefined;
+    return TagsSchema.parse(raw.split(',').filter(Boolean));
   }
-  return undefined
+  return undefined;
 }

@@ -4,7 +4,7 @@
 // tables lifecycle-manage.md / lifecycle-flows.md). Inter is the app-wide
 // body font (inherited); mono runs through var(--font-mono).
 
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react';
 
 export const MonoEyebrow = ({
   children,
@@ -13,11 +13,11 @@ export const MonoEyebrow = ({
   letterSpacing = '0.14em',
   style,
 }: {
-  children: ReactNode
-  color?: string
-  size?: number
-  letterSpacing?: string
-  style?: CSSProperties
+  children: ReactNode;
+  color?: string;
+  size?: number;
+  letterSpacing?: string;
+  style?: CSSProperties;
 }) => (
   <div
     style={{
@@ -32,26 +32,26 @@ export const MonoEyebrow = ({
   >
     {children}
   </div>
-)
+);
 
-export type RailTone = 'signal' | 'accent' | 'muted'
+export type RailTone = 'signal' | 'accent' | 'muted';
 
 const RAIL_TONE_COLOR: Record<RailTone, string> = {
   signal: 'var(--signal)',
   accent: 'var(--accent)',
   muted: 'var(--fg-subtle)',
-}
+};
 
 export const RailHeader = ({
   tone,
   eyebrow,
   code,
 }: {
-  tone: RailTone
-  eyebrow: string
-  code?: string
+  tone: RailTone;
+  eyebrow: string;
+  code?: string;
 }) => {
-  const toneColor = RAIL_TONE_COLOR[tone]
+  const toneColor = RAIL_TONE_COLOR[tone];
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
@@ -75,8 +75,8 @@ export const RailHeader = ({
         <MonoEyebrow letterSpacing="0.14em">{code}</MonoEyebrow>
       )}
     </div>
-  )
-}
+  );
+};
 
 export const FlowButton = ({
   label,
@@ -87,15 +87,15 @@ export const FlowButton = ({
   disabled = false,
   onClick,
 }: {
-  label: string
-  kind?: 'primary' | 'ghost'
-  accent?: string
-  glow?: boolean
-  sub?: string
-  disabled?: boolean
-  onClick: () => void
+  label: string;
+  kind?: 'primary' | 'ghost';
+  accent?: string;
+  glow?: boolean;
+  sub?: string;
+  disabled?: boolean;
+  onClick: () => void;
 }) => {
-  const primary = kind === 'primary'
+  const primary = kind === 'primary';
   return (
     <button
       type="button"
@@ -144,8 +144,8 @@ export const FlowButton = ({
         </span>
       )}
     </button>
-  )
-}
+  );
+};
 
 export const FinePrint = ({ children }: { children: ReactNode }) => (
   <div
@@ -160,18 +160,18 @@ export const FinePrint = ({ children }: { children: ReactNode }) => (
   >
     {children}
   </div>
-)
+);
 
-export type InfoCardTone = 'neutral' | 'signal' | 'accent'
+export type InfoCardTone = 'neutral' | 'signal' | 'accent';
 
 export const InfoCard = ({
   tone = 'neutral',
   children,
 }: {
-  tone?: InfoCardTone
-  children: ReactNode
+  tone?: InfoCardTone;
+  children: ReactNode;
 }) => {
-  const toneColor = tone === 'signal' ? 'var(--signal)' : 'var(--accent)'
+  const toneColor = tone === 'signal' ? 'var(--signal)' : 'var(--accent)';
   return (
     <div
       style={{
@@ -193,17 +193,17 @@ export const InfoCard = ({
     >
       {children}
     </div>
-  )
-}
+  );
+};
 
 export const MathRow = ({
   label,
   value,
   strong = false,
 }: {
-  label: string
-  value: string
-  strong?: boolean
+  label: string;
+  value: string;
+  strong?: boolean;
 }) => (
   <div
     style={{
@@ -234,7 +234,7 @@ export const MathRow = ({
       {value}
     </span>
   </div>
-)
+);
 
 /** Mutation-failure line — design defines no error states, so this follows
  * the tier-picker convention (role="alert", danger-toned). */
@@ -245,4 +245,4 @@ export const ErrorLine = ({ text }: { text: string }) => (
   >
     {text}
   </div>
-)
+);

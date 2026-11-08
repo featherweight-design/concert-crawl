@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import type { FilterOption } from './filter-defs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import type { FilterOption } from './filter-defs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.filterBar
+const copy = CONSUMER_COPY.filterBar;
 
 interface FilterSheetProps {
-  open: boolean
-  title: string
-  placeholder: string
-  options: FilterOption[]
-  value: string
-  alwaysOn?: boolean
-  onSelect: (nextValue: string) => void
-  onClose: () => void
+  open: boolean;
+  title: string;
+  placeholder: string;
+  options: FilterOption[];
+  value: string;
+  alwaysOn?: boolean;
+  onSelect: (nextValue: string) => void;
+  onClose: () => void;
 }
 
 export function FilterSheet({
@@ -26,7 +26,7 @@ export function FilterSheet({
   onSelect,
   onClose,
 }: FilterSheetProps) {
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 sm:hidden" aria-hidden={!open}>
@@ -74,8 +74,8 @@ export function FilterSheet({
               label={placeholder}
               active={!value}
               onClick={() => {
-                onSelect('')
-                onClose()
+                onSelect('');
+                onClose();
               }}
             />
           )}
@@ -85,21 +85,21 @@ export function FilterSheet({
               label={option.label}
               active={value === option.value}
               onClick={() => {
-                onSelect(option.value)
-                onClose()
+                onSelect(option.value);
+                onClose();
               }}
             />
           ))}
         </div>
       </section>
     </div>
-  )
+  );
 }
 
 interface OptionButtonProps {
-  label: string
-  active: boolean
-  onClick: () => void
+  label: string;
+  active: boolean;
+  onClick: () => void;
 }
 
 function OptionButton({ label, active, onClick }: OptionButtonProps) {
@@ -129,5 +129,5 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
         </svg>
       ) : null}
     </button>
-  )
+  );
 }

@@ -1,54 +1,54 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { displayVendor } from '@/components/consumer/vendor-display'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { displayVendor } from '@/components/consumer/vendor-display';
 
-const copy = CONSUMER_COPY.multiTier
+const copy = CONSUMER_COPY.multiTier;
 
 // ── Color constants ──────────────────────────────────────────────
-const GOLD = 'oklch(0.66 0.14 78)'
-const AZURE = 'oklch(0.62 0.12 240)'
-const AZURE_M = 'oklch(0.62 0.12 240)'
-const CORAL = 'oklch(0.65 0.20 25)'
+const GOLD = 'oklch(0.66 0.14 78)';
+const AZURE = 'oklch(0.62 0.12 240)';
+const AZURE_M = 'oklch(0.62 0.12 240)';
+const CORAL = 'oklch(0.65 0.20 25)';
 
 // ── Helpers ──────────────────────────────────────────────────────
 const dotColor = (
   kind: 'community' | 'boxoffice' | 'resale' | null,
 ): string => {
-  if (kind === 'boxoffice') return GOLD
-  if (kind === 'resale') return CORAL
-  if (kind === 'community') return AZURE
-  return 'var(--fg-muted)'
-}
+  if (kind === 'boxoffice') return GOLD;
+  if (kind === 'resale') return CORAL;
+  if (kind === 'community') return AZURE;
+  return 'var(--fg-muted)';
+};
 
 const formatPrice = (floor: number, ceiling?: number): string => {
-  if (ceiling !== undefined) return `$${floor}–$${ceiling}`
-  return `$${floor}`
-}
+  if (ceiling !== undefined) return `$${floor}–$${ceiling}`;
+  return `$${floor}`;
+};
 
 // ── Props ────────────────────────────────────────────────────────
 // `confirms` and `needed` are required only when `pending` is true so the
 // pending strip never renders as `pending · X/0`.
 interface TierAlternateRowBase {
-  tier: string
-  vendor: string
-  floor: number
-  ceiling?: number
-  kind: 'community' | 'boxoffice' | 'resale' | null
+  tier: string;
+  vendor: string;
+  floor: number;
+  ceiling?: number;
+  kind: 'community' | 'boxoffice' | 'resale' | null;
 }
 
 export type TierAlternateRowProps = TierAlternateRowBase &
   (
     | { pending: true; confirms: number; needed: number }
     | { pending?: false; confirms?: never; needed?: never }
-  )
+  );
 
 // ── Component ────────────────────────────────────────────────────
 export const TierAlternateRow = (props: TierAlternateRowProps) => {
-  const { tier, vendor, floor, ceiling, kind } = props
-  const pending = props.pending === true
-  const confirms = pending ? props.confirms : 0
-  const needed = pending ? props.needed : 0
+  const { tier, vendor, floor, ceiling, kind } = props;
+  const pending = props.pending === true;
+  const confirms = pending ? props.confirms : 0;
+  const needed = pending ? props.needed : 0;
   return (
     <div
       style={{
@@ -135,5 +135,5 @@ export const TierAlternateRow = (props: TierAlternateRowProps) => {
         {formatPrice(floor, ceiling)}
       </span>
     </div>
-  )
-}
+  );
+};

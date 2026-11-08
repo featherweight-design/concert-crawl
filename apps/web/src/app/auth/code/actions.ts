@@ -1,27 +1,27 @@
-'use server'
+'use server';
 
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import {
   signInviteCookie,
   INVITE_COOKIE_NAME,
   INVITE_COOKIE_MAX_AGE,
   RETURN_PATH_COOKIE_NAME,
-} from '@/lib/invite-cookie'
-import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent'
+} from '@/lib/invite-cookie';
+import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent';
 
 type ValidationResult =
   | { ok: true }
   | {
-      ok: false
+      ok: false;
       error:
         | 'invalid_format'
         | 'notfound'
         | 'used'
         | 'expired'
         | 'ratelimit'
-        | 'server_error'
-    }
+        | 'server_error';
+    };
 
 export async function validateAndSetInviteCode(
   code: string,
@@ -30,54 +30,54 @@ export async function validateAndSetInviteCode(
   // and is sanitised before it is written anywhere.
   returnPath?: string | null,
 ): Promise<ValidationResult> {
-  const codePattern = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+  const codePattern = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
   if (!codePattern.test(code.toUpperCase())) {
-    return { ok: false, error: 'invalid_format' }
+    return { ok: false, error: 'invalid_format' };
   }
 
-  const normalizedCode = code.toUpperCase()
+  const normalizedCode = code.toUpperCase();
 
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
     const res = await fetch(`${apiUrl}/v1/auth/validate-code`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: normalizedCode }),
-    })
+    });
 
-    if (res.status === 404) return { ok: false, error: 'notfound' }
-    if (res.status === 409) return { ok: false, error: 'used' }
-    if (res.status === 410) return { ok: false, error: 'expired' }
-    if (res.status === 429) return { ok: false, error: 'ratelimit' }
-    if (!res.ok) return { ok: false, error: 'server_error' }
+    if (res.status === 404) return { ok: false, error: 'notfound' };
+    if (res.status === 409) return { ok: false, error: 'used' };
+    if (res.status === 410) return { ok: false, error: 'expired' };
+    if (res.status === 429) return { ok: false, error: 'ratelimit' };
+    if (!res.ok) return { ok: false, error: 'server_error' };
   } catch {
-    return { ok: false, error: 'server_error' }
+    return { ok: false, error: 'server_error' };
   }
 
-  const secret = process.env.INVITE_COOKIE_SECRET
-  if (!secret) throw new Error('INVITE_COOKIE_SECRET is not set')
+  const secret = process.env.INVITE_COOKIE_SECRET;
+  if (!secret) throw new Error('INVITE_COOKIE_SECRET is not set');
 
-  const cookieValue = signInviteCookie(normalizedCode, secret)
-  const cookieStore = await cookies()
+  const cookieValue = signInviteCookie(normalizedCode, secret);
+  const cookieStore = await cookies();
   cookieStore.set(INVITE_COOKIE_NAME, cookieValue, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: INVITE_COOKIE_MAX_AGE,
     path: '/',
-  })
+  });
 
   // A second signed cookie beside invite_verified, because a query param
   // cannot cross Clerk's screens. Only written when there is somewhere other
   // than the default to go — a visitor who came in the front door leaves no
   // cookie behind and lands on /events exactly as before.
-  const safeReturn = sanitizeReturnPath(returnPath)
+  const safeReturn = sanitizeReturnPath(returnPath);
   if (safeReturn === DEFAULT_RETURN_PATH) {
     // Nothing to carry, so clear whatever an abandoned earlier attempt left
     // behind. Otherwise a stale cookie survives to be spent on a later,
     // unrelated trip through the funnel and lands the visitor somewhere they
     // never asked to go.
-    cookieStore.delete(RETURN_PATH_COOKIE_NAME)
+    cookieStore.delete(RETURN_PATH_COOKIE_NAME);
   } else {
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
@@ -89,7 +89,7 @@ export async function validateAndSetInviteCode(
         maxAge: INVITE_COOKIE_MAX_AGE,
         path: '/',
       },
-    )
+    );
   }
 
   // Straight to sign-up, not into the tour. The walkthrough runs AFTER the
@@ -99,5 +99,5 @@ export async function validateAndSetInviteCode(
   // the tour on a visitor with only an invite cookie made step 7 fail for
   // everyone, every time. It also matches the launched funnel, where there is
   // no invite step and sign-up is the front door.
-  redirect('/sign-up')
+  redirect('/sign-up');
 }

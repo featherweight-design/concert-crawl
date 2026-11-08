@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
-import { THEME_NAMES, type ThemeName } from '@/theme/themes'
-import { useTheme } from '@/theme'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { cn } from '@/lib/utils';
+import { THEME_NAMES, type ThemeName } from '@/theme/themes';
+import { useTheme } from '@/theme';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const THEME_ICONS: Record<ThemeName, string> = {
   electric: '⚡',
@@ -15,7 +15,7 @@ const THEME_ICONS: Record<ThemeName, string> = {
   drip: '●',
   cedar: '◇',
   gloss: '★',
-}
+};
 
 const THEME_LABELS: Record<ThemeName, string> = {
   electric: 'Electric',
@@ -27,10 +27,10 @@ const THEME_LABELS: Record<ThemeName, string> = {
   drip: 'Drip',
   cedar: 'Cedar',
   gloss: 'Gloss',
-}
+};
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <div
@@ -39,7 +39,7 @@ export function ThemeToggle() {
       className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-1 p-0.5"
     >
       {THEME_NAMES.map((name) => {
-        const isSelected = theme === name
+        const isSelected = theme === name;
         return (
           <button
             key={name}
@@ -58,8 +58,8 @@ export function ThemeToggle() {
           >
             {THEME_ICONS[name]}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

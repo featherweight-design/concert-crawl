@@ -6,10 +6,10 @@
 // failure rolls back the processed_stripe_events row and Stripe's retry
 // re-processes the event.
 
-import type { Database } from '@concert-crawl/db'
+import type { Database } from '@concert-crawl/db';
 
 export type DbTransaction = Parameters<
   Parameters<Database['transaction']>[0]
->[0]
+>[0];
 
-export type DbExecutor = Database | DbTransaction
+export type DbExecutor = Database | DbTransaction;

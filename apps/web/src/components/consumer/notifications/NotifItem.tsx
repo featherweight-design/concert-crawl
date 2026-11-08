@@ -13,18 +13,18 @@
 // left rail in the category ink, a --surface-1 row fill, a 700-weight title,
 // and a trailing dot. Any one of them can be missed; all four cannot.
 
-import { useId } from 'react'
-import type { ConsumerNotification } from '@/lib/notifications'
-import { CrewPatch } from '@/components/consumer/crew-patch/CrewPatch'
-import { categoryFor } from './definitions/categories'
-import { NMono } from './NMono'
-import { NotifTile } from './NotifTile'
-import { itemLabel, isUnread, relTime } from './lib/format-time'
-import { activateOnKey } from './lib/activate-keys'
-import { CREW_CATEGORY_PREFIX, crewRowIdentity } from './lib/crew-meta'
+import { useId } from 'react';
+import type { ConsumerNotification } from '@/lib/notifications';
+import { CrewPatch } from '@/components/consumer/crew-patch/CrewPatch';
+import { categoryFor } from './definitions/categories';
+import { NMono } from './NMono';
+import { NotifTile } from './NotifTile';
+import { itemLabel, isUnread, relTime } from './lib/format-time';
+import { activateOnKey } from './lib/activate-keys';
+import { CREW_CATEGORY_PREFIX, crewRowIdentity } from './lib/crew-meta';
 
 /** Matches NotifTile's default box, so the row's rhythm is unchanged. */
-const CREW_PATCH_SIZE = 28
+const CREW_PATCH_SIZE = 28;
 
 export const NotifItem = ({
   item,
@@ -32,19 +32,19 @@ export const NotifItem = ({
   compact = false,
   now,
 }: {
-  item: ConsumerNotification
-  onOpen?: ((item: ConsumerNotification) => void) | undefined
-  compact?: boolean | undefined
+  item: ConsumerNotification;
+  onOpen?: ((item: ConsumerNotification) => void) | undefined;
+  compact?: boolean | undefined;
   /** Injectable clock — tests freeze it; production leaves it undefined. */
-  now?: Date | undefined
+  now?: Date | undefined;
 }) => {
-  const cat = categoryFor(item.category)
-  const unread = isUnread(item)
+  const cat = categoryFor(item.category);
+  const unread = isUnread(item);
   // A crew row swaps the category tile for the crew's own patch and the
   // category eyebrow for the crew's name — the patch is the fastest "which
   // crew is this" cue there is, and "Crew" three times over is not. A row
   // whose metadata failed the guard keeps the ordinary presentation.
-  const crew = crewRowIdentity(item.category, item.metadata)
+  const crew = crewRowIdentity(item.category, item.metadata);
   // A crew row's title names another reader ("x is going to …"). Analytics
   // autocapture records the clicked element's text and every ancestor's
   // attributes, so a crew row reads its accessible name from a hidden span
@@ -52,20 +52,20 @@ export const NotifItem = ({
   // row, and its title and body are skipped too: a tap on them sends nothing,
   // a tap elsewhere on the row still records the open, with its category.
   // Other categories name nobody and keep their aria-label and text.
-  const labelId = useId()
-  const namesSomeone = item.category.startsWith(CREW_CATEGORY_PREFIX)
-  const noCapture = namesSomeone ? 'ph-no-capture' : undefined
+  const labelId = useId();
+  const namesSomeone = item.category.startsWith(CREW_CATEGORY_PREFIX);
+  const noCapture = namesSomeone ? 'ph-no-capture' : undefined;
 
   const open = (): void => {
-    onOpen?.(item)
-  }
+    onOpen?.(item);
+  };
 
   // This row is the feature's ONE faux button, because its interactivity is
   // conditional (see below) and a `<button>` that is sometimes inert is worse
   // than a div that is sometimes a button. Every unconditional row — the menu
   // row, the back row, "See all" — is a native `<button>`. See
   // lib/activate-keys.ts for why Space is preventDefault'd on repeat.
-  const onKeyDown = activateOnKey(open)
+  const onKeyDown = activateOnKey(open);
 
   // `onOpen` is optional, so the button semantics have to be too: a row that
   // announces itself as a button, takes focus and then does nothing is worse
@@ -83,7 +83,7 @@ export const NotifItem = ({
             : { 'aria-label': itemLabel(item, now) }),
           onClick: open,
           onKeyDown,
-        }
+        };
 
   return (
     <div
@@ -230,5 +230,5 @@ export const NotifItem = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

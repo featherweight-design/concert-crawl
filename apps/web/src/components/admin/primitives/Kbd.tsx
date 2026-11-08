@@ -13,4 +13,4 @@ export const Kbd = ({ children }: { children: React.ReactNode }) => (
   >
     {children}
   </kbd>
-)
+);

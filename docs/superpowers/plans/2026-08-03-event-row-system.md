@@ -31,8 +31,8 @@ The handoff was written against the design prototypes. Four things about the shi
 The handoff's non-negotiable is that provenance keys off production's `source_category`. Half of that is already true and half is a bug.
 
 - **Browse/Venue already do it.** `pickBrowseHeadline` (`apps/web/src/components/consumer/price-region/lib/pick-headline.ts:43-52`) reads `block.headline.sourceCategory` off `TierPriceBlock` (`packages/types/src/index.ts:650-661`) — the real enum, sourced from `priceSubmissions.sourceCategory` (`packages/db/src/schema/prices.ts:63-67`). Venue builds the same blocks at `apps/api/src/routes/venues-public.ts:309-345`.
-- **But it re-translates on the way out.** `kindFromCategory` (`apps/web/src/components/consumer/price-region/lib/pick-headline.ts:24-29`) maps the enum onto a parallel `BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale'`. That is a second vocabulary living one function away from the first — a translation layer that exists only to rename `standard` to `community`. The handoff's `PROVENANCE` lookup does the same job correctly by keying the *label* off the enum and never renaming the *key*.
-- **Watching is worse, and it is a live bug.** `apps/api/src/routes/watching.ts` computes `currentPrice` and `priceObservedAt` from the corroborated tier headline (`lowestHeadlinePrice` / `lowestHeadlineObservedAt`, `apps/api/src/lib/price-aggregation/build-price-by-tier.ts:107-121`) but computes `sourceKind` from `mapSourceKind(row.priceSource)` (`apps/api/src/routes/watching.ts:25-32`) — the event scalar's *crawler origin*, a different field describing a different price.
+- **But it re-translates on the way out.** `kindFromCategory` (`apps/web/src/components/consumer/price-region/lib/pick-headline.ts:24-29`) maps the enum onto a parallel `BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale'`. That is a second vocabulary living one function away from the first — a translation layer that exists only to rename `standard` to `community`. The handoff's `PROVENANCE` lookup does the same job correctly by keying the _label_ off the enum and never renaming the _key_.
+- **Watching is worse, and it is a live bug.** `apps/api/src/routes/watching.ts` computes `currentPrice` and `priceObservedAt` from the corroborated tier headline (`lowestHeadlinePrice` / `lowestHeadlineObservedAt`, `apps/api/src/lib/price-aggregation/build-price-by-tier.ts:107-121`) but computes `sourceKind` from `mapSourceKind(row.priceSource)` (`apps/api/src/routes/watching.ts:25-32`) — the event scalar's _crawler origin_, a different field describing a different price.
 
   So the price a Watching row shows and the provenance chip beside it can describe two different prices. A community-submitted headline can render with no chip because the scalar says the crawler found it; `mapSourceKind` has no `boxoffice` branch at all, so a box-office price is unrepresentable there. This is precisely the class #1364/#1365/#1366 fixed for price and staleness — provenance was left behind.
 
@@ -79,11 +79,11 @@ Note that `sourceCategory` is `null` for crawler-sourced prices, which have no s
 
 ## Sequencing lock
 
-| PR   | Scope | Depends on |
-| ---- | ----- | ---------- |
-| PR-A | API — provenance parity: `lowestHeadlineSourceCategory`, Watching's `sourceKind` → `priceSourceCategory`, `mapSourceKind` deleted | none |
+| PR   | Scope                                                                                                                                 | Depends on                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| PR-A | API — provenance parity: `lowestHeadlineSourceCategory`, Watching's `sourceKind` → `priceSourceCategory`, `mapSourceKind` deleted     | none                            |
 | PR-B | The `EventRow` component + `SURFACES` + `RowMetaChip` + both measure passes, wired to **Browse and Venue only**. `EventCard` deleted. | PR-A (provenance shape settled) |
-| PR-C | Watching migrated onto `EventRow`. `WatchingItem`, `SourcePill`, `DeltaTag` deleted. Release note + `progress.md`. | PR-B |
+| PR-C | Watching migrated onto `EventRow`. `WatchingItem`, `SourcePill`, `DeltaTag` deleted. Release note + `progress.md`.                    | PR-B                            |
 
 Three PRs, strictly sequential — every one of them touches the same new folder, so there is no parallel lane here. PR-B and PR-C are each a delete-and-replace of a live consumer surface; they do not get bundled.
 
@@ -136,10 +136,10 @@ The adapter reuses `pickBrowseHeadline` for the amount rather than reimplementin
 
 `definitions/surfaces.ts`. Per-surface: `carries` (what the context already states, so the row subtracts it), the meta-chip priority order, whether an action gutter exists, `carded` vs divided.
 
-| Surface | Carries | Line 3 renders | Chip priority |
-|---|---|---|---|
-| browse | date group headers | time · venue | following → genre |
-| venue | the venue | date · time | following → genre |
+| Surface  | Carries                 | Line 3 renders      | Chip priority          |
+| -------- | ----------------------- | ------------------- | ---------------------- |
+| browse   | date group headers      | time · venue        | following → genre      |
+| venue    | the venue               | date · time         | following → genre      |
 | watching | nothing (loose windows) | date · time · venue | freshness → provenance |
 
 Adding a surface must be an entry here and nothing else. Test that each surface's line-3 unit list is derived from `carries` rather than hardcoded per surface.

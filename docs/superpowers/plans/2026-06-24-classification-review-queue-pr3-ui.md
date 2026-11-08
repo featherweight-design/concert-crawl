@@ -16,9 +16,11 @@ PR 3 can open in parallel with PR 2 (only the column from PR 1 is required). Sam
 ### Task 3.1: Create worktree + branch + env files
 
 **Files:**
+
 - Create: `.worktrees/feat-classification-review-ui/`
 
 **Interfaces:**
+
 - Produces: clean worktree on branch `feat/classification-review-ui`.
 
 - [ ] **Step 1: Create worktree**
@@ -49,6 +51,7 @@ All remaining tasks for PR 3 run inside this worktree.
 ### Task 3.2: API — extend list query with `view` enum + projection
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/events.ts:96-130` (listQuerySchema — add `view`)
 - Modify: `apps/api/src/routes/admin/events.ts:255-280` (baseSelect — add `isConcertReviewNeeded`)
 - Modify: `apps/api/src/routes/admin/events.ts:332-346` (whereClause — branch on view)
@@ -56,6 +59,7 @@ All remaining tasks for PR 3 run inside this worktree.
 - Modify: `apps/api/src/routes/admin/events.integration.test.ts`
 
 **Interfaces:**
+
 - Consumes: `events.isConcertReviewNeeded` from PR 1.
 - Produces: `GET /v1/admin/events?view=hidden-flagged-for-review` returns only rows where `hidden_from_consumer=true AND is_concert_review_needed=true`. Every list + detail response includes `isConcertReviewNeeded: boolean`.
 
@@ -66,79 +70,79 @@ In `apps/api/src/routes/admin/events.integration.test.ts`, add a new `describe` 
 ```typescript
 describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns only events where hidden_from_consumer=true AND is_concert_review_needed=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Visible Concert',
       date: futureDate(7),
       hiddenFromConsumer: false,
       isConcertReviewNeeded: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Unflagged',
       date: futureDate(8),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: false,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Flagged Borderline',
       date: futureDate(9),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?view=hidden-flagged-for-review',
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Hidden Flagged Borderline')
-  })
+      success: boolean;
+      data: { title: string }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Hidden Flagged Borderline');
+  });
 
   it('GET /:id projection includes isConcertReviewNeeded', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
-    const res = await app.request(`/v1/admin/events/${event.id}`)
-    expect(res.status).toBe(200)
+    const res = await app.request(`/v1/admin/events/${event.id}`);
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { isConcertReviewNeeded: boolean }
-    }
-    expect(body.data.isConcertReviewNeeded).toBe(true)
-  })
+      success: boolean;
+      data: { isConcertReviewNeeded: boolean };
+    };
+    expect(body.data.isConcertReviewNeeded).toBe(true);
+  });
 
   it('list projection includes isConcertReviewNeeded', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?view=hidden-flagged-for-review',
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { isConcertReviewNeeded: boolean }[]
-    }
-    expect(body.data[0]?.isConcertReviewNeeded).toBe(true)
-  })
-})
+      success: boolean;
+      data: { isConcertReviewNeeded: boolean }[];
+    };
+    expect(body.data[0]?.isConcertReviewNeeded).toBe(true);
+  });
+});
 ```
 
 Also extend `apps/api/src/test/helpers/seed.ts` `seedEvent` defaults to accept `isConcertReviewNeeded` (likely already passes through via `...overrides`; verify and add if needed).
@@ -170,50 +174,50 @@ In `apps/api/src/routes/admin/events.ts`, modify `listQuerySchema` around line 9
 In `apps/api/src/routes/admin/events.ts` (the GET handler around line 234-246), add `view` to the destructure:
 
 ```typescript
-    const {
-      count,
-      verified,
-      missing,
-      view,
-      query,
-      dateFrom,
-      dateTo,
-      genre,
-      missingData,
-      limit,
-      offset,
-    } = ctx.req.valid('query')
+const {
+  count,
+  verified,
+  missing,
+  view,
+  query,
+  dateFrom,
+  dateTo,
+  genre,
+  missingData,
+  limit,
+  offset,
+} = ctx.req.valid('query');
 ```
 
 Then around line 332, branch the where clause:
 
 ```typescript
-    const whereClause = missing
-      ? and(
-          isNotNull(events.firstMissingAt),
-          eq(events.status, 'upcoming'),
-          gte(events.date, today),
-          eq(events.hiddenFromConsumer, false),
-        )
-      : view === 'hidden-flagged-for-review'
-        ? and(
-            eq(events.hiddenFromConsumer, true),
-            eq(events.isConcertReviewNeeded, true),
-            verified === undefined ? undefined : eq(events.verified, verified),
-            dateFromClause,
-            dateToClause,
-            searchClause,
-            genreClause,
-            ...missingDataClauses,
-          )
-        : and(
-            verified === undefined ? undefined : eq(events.verified, verified),
-            dateFromClause,
-            dateToClause,
-            searchClause,
-            genreClause,
-            ...missingDataClauses,
-          )
+const whereClause = missing
+  ? and(
+      isNotNull(events.firstMissingAt),
+      eq(events.status, 'upcoming'),
+      gte(events.date, today),
+      eq(events.hiddenFromConsumer, false),
+    )
+  : view === 'hidden-flagged-for-review'
+    ? and(
+        eq(events.hiddenFromConsumer, true),
+        eq(events.isConcertReviewNeeded, true),
+        verified === undefined ? undefined : eq(events.verified, verified),
+        dateFromClause,
+        dateToClause,
+        searchClause,
+        genreClause,
+        ...missingDataClauses,
+      )
+    : and(
+        verified === undefined ? undefined : eq(events.verified, verified),
+        dateFromClause,
+        dateToClause,
+        searchClause,
+        genreClause,
+        ...missingDataClauses,
+      );
 ```
 
 - [ ] **Step 5: Add `isConcertReviewNeeded` to both projections**
@@ -248,11 +252,13 @@ git commit -m "feat(api): view=hidden-flagged-for-review + isConcertReviewNeeded
 ### Task 3.3: Web — extend `AllEvent` type + filters round-trip
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/review/all/types.ts`
 - Modify: `apps/web/src/components/admin/review/all/filters.ts`
 - Modify: `apps/web/src/components/admin/review/all/filters.test.ts`
 
 **Interfaces:**
+
 - Consumes: API projection from task 3.2 (`hiddenFromConsumer`, `isConcertReviewNeeded`).
 - Produces: `AllEvent.hiddenFromConsumer: boolean`, `AllEvent.isConcertReviewNeeded: boolean`. `AllEventsFilters.flagged: boolean` round-trips through URL via `view=hidden-flagged-for-review` and through fetch query via the same name. `countActiveFilters` counts `flagged === true`.
 
@@ -263,32 +269,32 @@ Add to `apps/web/src/components/admin/review/all/filters.test.ts`:
 ```typescript
 describe('AllEventsFilters — flagged chip round-trip', () => {
   it('parses view=hidden-flagged-for-review into flagged=true', () => {
-    const params = new URLSearchParams('view=hidden-flagged-for-review')
-    const filters = parseFiltersFromParams(params)
-    expect(filters.flagged).toBe(true)
-  })
+    const params = new URLSearchParams('view=hidden-flagged-for-review');
+    const filters = parseFiltersFromParams(params);
+    expect(filters.flagged).toBe(true);
+  });
 
   it('serializes flagged=true to view=hidden-flagged-for-review', () => {
     const params = serializeFiltersToParams({
       ...EMPTY_FILTERS,
       flagged: true,
-    })
-    expect(params.get('view')).toBe('hidden-flagged-for-review')
-  })
+    });
+    expect(params.get('view')).toBe('hidden-flagged-for-review');
+  });
 
   it('filtersToFetchQuery includes view when flagged is true', () => {
-    const out = filtersToFetchQuery({ ...EMPTY_FILTERS, flagged: true })
-    expect(out).toContain('view=hidden-flagged-for-review')
-  })
+    const out = filtersToFetchQuery({ ...EMPTY_FILTERS, flagged: true });
+    expect(out).toContain('view=hidden-flagged-for-review');
+  });
 
   it('countActiveFilters counts flagged=true', () => {
-    expect(countActiveFilters({ ...EMPTY_FILTERS, flagged: true })).toBe(1)
-  })
+    expect(countActiveFilters({ ...EMPTY_FILTERS, flagged: true })).toBe(1);
+  });
 
   it('EMPTY_FILTERS has flagged=false', () => {
-    expect(EMPTY_FILTERS.flagged).toBe(false)
-  })
-})
+    expect(EMPTY_FILTERS.flagged).toBe(false);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests, verify they fail**
@@ -304,29 +310,29 @@ Expected: FAIL — `flagged` not in `AllEventsFilters`.
 In `apps/web/src/components/admin/review/all/types.ts`, add two new fields:
 
 ```typescript
-import { type LifecycleStatus } from '@/components/admin/events/editor/LifecycleBadge'
+import { type LifecycleStatus } from '@/components/admin/events/editor/LifecycleBadge';
 
 export interface AllEvent {
-  id: string
-  title: string
-  artist: string | null
-  venueId: string
-  venueName: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  verified: boolean
-  status: LifecycleStatus
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  isSoldOut: boolean
-  hiddenFromConsumer: boolean
-  isConcertReviewNeeded: boolean
+  id: string;
+  title: string;
+  artist: string | null;
+  venueId: string;
+  venueName: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  verified: boolean;
+  status: LifecycleStatus;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  isSoldOut: boolean;
+  hiddenFromConsumer: boolean;
+  isConcertReviewNeeded: boolean;
 }
 ```
 
@@ -336,13 +342,13 @@ In `apps/web/src/components/admin/review/all/filters.ts`:
 
 ```typescript
 export interface AllEventsFilters {
-  query: string
-  verified: VerificationFilter
-  dateFrom: string
-  dateTo: string
-  genre: string[]
-  missingData: MissingDataFlag[]
-  flagged: boolean
+  query: string;
+  verified: VerificationFilter;
+  dateFrom: string;
+  dateTo: string;
+  genre: string[];
+  missingData: MissingDataFlag[];
+  flagged: boolean;
 }
 
 export const EMPTY_FILTERS: AllEventsFilters = {
@@ -353,23 +359,23 @@ export const EMPTY_FILTERS: AllEventsFilters = {
   genre: [],
   missingData: [],
   flagged: false,
-}
+};
 ```
 
 In `parseFiltersFromParams`, after the existing fields:
 
 ```typescript
-  const flagged = params.get('view') === 'hidden-flagged-for-review'
+const flagged = params.get('view') === 'hidden-flagged-for-review';
 
-  return {
-    query: params.get('query') ?? '',
-    verified,
-    dateFrom: params.get('dateFrom') ?? '',
-    dateTo: params.get('dateTo') ?? '',
-    genre,
-    missingData,
-    flagged,
-  }
+return {
+  query: params.get('query') ?? '',
+  verified,
+  dateFrom: params.get('dateFrom') ?? '',
+  dateTo: params.get('dateTo') ?? '',
+  genre,
+  missingData,
+  flagged,
+};
 ```
 
 In `serializeFiltersToParams`, add `'view'` to the strip-first array, and after the existing if-blocks:
@@ -403,7 +409,7 @@ In `filtersToFetchQuery`, add after the existing fields:
 In `countActiveFilters`:
 
 ```typescript
-  if (filters.flagged) count++
+if (filters.flagged) count++;
 ```
 
 - [ ] **Step 5: Run tests, verify they pass**
@@ -428,9 +434,11 @@ git commit -m "feat(web): AllEventsFilters flagged round-trip + AllEvent isConce
 ### Task 3.4: Web — add copy for new editor + chip + confirm modal
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/definitions/copy.ts`
 
 **Interfaces:**
+
 - Produces: new copy keys under `editor.classification` (`markAsConcertTitle`, `markAsConcertBody`, `markAsConcertButton`, `markNonConcertButton`, `reviewNeededPillLabel`, `markAsConcertConfirm`) and under `review.allEvents.filters` (`flaggedChip*`). The existing `review.allEvents.nonConcertConfirm` is reused as-is for the Mark-non-concert confirm (`EventConfirmModal` already routes the `'non-concert'` kind there). The dead `editor.dangerZone.markNonConcert` key is removed in task 3.7 — see the note on Step 2 below.
 
 - [ ] **Step 1: Locate the existing `editor.classification` block**
@@ -504,9 +512,11 @@ git commit -m "feat(web): admin copy for classification review queue"
 ### Task 3.5: Web — extend `EventConfirmModal` with `mark-as-concert` kind
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/review/all/EventConfirmModal.tsx`
 
 **Interfaces:**
+
 - Consumes: copy keys from task 3.4.
 - Produces: `ConfirmKind = 'delete' | 'non-concert' | 'mark-as-concert'`. The 'mark-as-concert' kind routes to `editor.classification.markAsConcertConfirm` copy.
 
@@ -614,9 +624,11 @@ git commit -m "feat(web): EventConfirmModal handles mark-as-concert kind"
 ### Task 3.6: Web — make `ClassificationSection` interactive
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/events/editor/sections/ClassificationSection.tsx`
 
 **Interfaces:**
+
 - Consumes: copy from task 3.4; `EventConfirmModal` kind from task 3.5.
 - Produces: `ClassificationSection` now accepts `hiddenFromConsumer: boolean`, `isConcertReviewNeeded: boolean`, `onMarkNonConcert: () => void`, `onMarkAsConcert: () => void`, `disabled?: boolean` props. Renders the review-needed pill when `isConcertReviewNeeded`, and either Mark-non-concert or Mark-as-concert button based on `hiddenFromConsumer`.
 
@@ -645,13 +657,13 @@ const SAMPLE: EditorEvent = {
   isSoldOut: false,
   hiddenFromConsumer: false,
   isConcertReviewNeeded: false,
-}
+};
 
 const HIDDEN_FLAGGED: EditorEvent = {
   ...SAMPLE,
   hiddenFromConsumer: true,
   isConcertReviewNeeded: true,
-}
+};
 ```
 
 Replace the existing "PATCHes hiddenFromConsumer when confirming Mark non-concert" test (it was inside the Danger zone block; the action moved). Add:
@@ -892,9 +904,11 @@ git commit -m "feat(web): ClassificationSection becomes interactive"
 ### Task 3.7: Web — slim `DangerZoneSection` (drop Mark non-concert)
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/events/editor/sections/DangerZoneSection.tsx`
 
 **Interfaces:**
+
 - Produces: `DangerZoneSection` no longer accepts `onMarkNonConcert`. Props become `{ onMerge, onDelete, disabled? }`.
 
 - [ ] **Step 1: Rewrite the section + drop the now-unused copy key**
@@ -993,10 +1007,12 @@ git commit -m "feat(web): DangerZoneSection drops Mark non-concert"
 ### Task 3.8: Web — wire parent `EventEditorClient` to new section APIs
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/events/editor/EventEditorClient.tsx`
 - Modify: `apps/web/src/components/admin/events/editor/EventEditorClient.test.tsx` (`SAMPLE` already updated in 3.6)
 
 **Interfaces:**
+
 - Consumes: `ClassificationSection` from 3.6, `DangerZoneSection` from 3.7, `EventConfirmModal` from 3.5.
 - Produces: a green test run. `EditorEvent` gains `hiddenFromConsumer + isConcertReviewNeeded`. Two separate confirm-state hooks: `pendingClassification: 'mark-non-concert' | 'mark-as-concert' | null` (handled in `ClassificationSection`), `pendingDanger: 'delete' | null` (handled in `DangerZoneSection`).
 
@@ -1006,25 +1022,25 @@ In `apps/web/src/components/admin/events/editor/EventEditorClient.tsx`:
 
 ```typescript
 export interface EditorEvent {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  verified: boolean
-  status: LifecycleStatus
-  extractionStrategy: string | null
-  genre: string[] | null
-  updatedAt: string | null
-  venueId: string | null
-  venueName: string | null
-  isSoldOut: boolean
-  hiddenFromConsumer: boolean
-  isConcertReviewNeeded: boolean
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  verified: boolean;
+  status: LifecycleStatus;
+  extractionStrategy: string | null;
+  genre: string[] | null;
+  updatedAt: string | null;
+  venueId: string | null;
+  venueName: string | null;
+  isSoldOut: boolean;
+  hiddenFromConsumer: boolean;
+  isConcertReviewNeeded: boolean;
 }
 ```
 
@@ -1033,64 +1049,67 @@ export interface EditorEvent {
 Drop `'non-concert'` from `pendingDanger`. Add separate `pendingClassification` state. Add a `pendingClassificationOp` to track the in-flight PATCH:
 
 ```typescript
-  const [pendingDanger, setPendingDanger] = useState<'delete' | null>(null)
-  const [dangerPending, setDangerPending] = useState(false)
-  const [pendingClassification, setPendingClassification] = useState<
-    'mark-non-concert' | 'mark-as-concert' | null
-  >(null)
-  const [classificationPending, setClassificationPending] = useState(false)
-  const [mergeOpen, setMergeOpen] = useState(false)
+const [pendingDanger, setPendingDanger] = useState<'delete' | null>(null);
+const [dangerPending, setDangerPending] = useState(false);
+const [pendingClassification, setPendingClassification] = useState<
+  'mark-non-concert' | 'mark-as-concert' | null
+>(null);
+const [classificationPending, setClassificationPending] = useState(false);
+const [mergeOpen, setMergeOpen] = useState(false);
 ```
 
 Replace the `onConfirmDanger` callback. The non-concert branch is removed; only `'delete'` remains:
 
 ```typescript
-  const onConfirmDanger = useCallback(async () => {
-    if (pendingDanger !== 'delete') return
-    setDangerPending(true)
-    setError(null)
-    try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.delete(`/v1/admin/events/${event.id}`, token)
-      setPendingDanger(null)
-      router.push('/admin/review?tab=all-events')
-    } catch (dangerErr) {
-      const message =
-        dangerErr instanceof ApiError
-          ? dangerErr.message
-          : ADMIN_COPY.editor.saveBar.saveFailed
-      console.error('EventEditorClient danger action error:', dangerErr)
-      setError(message)
-    } finally {
-      setDangerPending(false)
-    }
-  }, [event.id, getToken, pendingDanger, router])
+const onConfirmDanger = useCallback(async () => {
+  if (pendingDanger !== 'delete') return;
+  setDangerPending(true);
+  setError(null);
+  try {
+    const token = await getToken();
+    if (!token) throw new ApiError(401, 'Unauthorized');
+    await apiClient.delete(`/v1/admin/events/${event.id}`, token);
+    setPendingDanger(null);
+    router.push('/admin/review?tab=all-events');
+  } catch (dangerErr) {
+    const message =
+      dangerErr instanceof ApiError
+        ? dangerErr.message
+        : ADMIN_COPY.editor.saveBar.saveFailed;
+    console.error('EventEditorClient danger action error:', dangerErr);
+    setError(message);
+  } finally {
+    setDangerPending(false);
+  }
+}, [event.id, getToken, pendingDanger, router]);
 
-  const onConfirmClassification = useCallback(async () => {
-    if (!pendingClassification) return
-    setClassificationPending(true)
-    setError(null)
-    try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      const hiddenFromConsumer = pendingClassification === 'mark-non-concert'
-      await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
-        hiddenFromConsumer,
-      })
-      setPendingClassification(null)
-      router.refresh()
-    } catch (classificationErr) {
-      const message =
-        classificationErr instanceof ApiError
-          ? classificationErr.message
-          : ADMIN_COPY.editor.saveBar.saveFailed
-      console.error('EventEditorClient classification action error:', classificationErr)
-      setError(message)
-    } finally {
-      setClassificationPending(false)
-    }
-  }, [event.id, getToken, pendingClassification, router])
+const onConfirmClassification = useCallback(async () => {
+  if (!pendingClassification) return;
+  setClassificationPending(true);
+  setError(null);
+  try {
+    const token = await getToken();
+    if (!token) throw new ApiError(401, 'Unauthorized');
+    const hiddenFromConsumer = pendingClassification === 'mark-non-concert';
+    await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
+      hiddenFromConsumer,
+    });
+    setPendingClassification(null);
+    router.refresh();
+  } catch (classificationErr) {
+    const message =
+      classificationErr instanceof ApiError
+        ? classificationErr.message
+        : ADMIN_COPY.editor.saveBar.saveFailed;
+    console.error(
+      'EventEditorClient classification action error:',
+      classificationErr,
+    );
+    setError(message);
+  } finally {
+    setClassificationPending(false);
+  }
+}, [event.id, getToken, pendingClassification, router]);
 ```
 
 - [ ] **Step 3: Pass the new props to `ClassificationSection` + `DangerZoneSection`**
@@ -1189,11 +1208,13 @@ git commit -m "feat(web): wire ClassificationSection + DangerZoneSection refacto
 ### Task 3.9: Web — add filter chip to `EventsFilterBar`
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/review/all/EventsFilterBar.tsx`
 - Modify: `apps/web/src/components/admin/review/all/EventsFilterBar.test.tsx`
 - Modify: `apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx`
 
 **Interfaces:**
+
 - Consumes: copy from task 3.4 (`flaggedChipLabel`, `flaggedChipAriaLabel`).
 - Produces: a toggle chip at the top of the filter bar. Sets/clears `filters.flagged`.
 
@@ -1429,4 +1450,3 @@ EOF
 Same protocol as PR 1 + PR 2.
 
 ---
-

@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider'
-import type { AdminTheme } from '@/components/admin/shell/AdminThemeProvider'
-import { THEME_META, THEME_NAMES } from '@/theme/themes'
-import { ThemeSwatch } from '@/theme/ThemeSwatch'
+import { useState, useEffect } from 'react';
+import { useAdminTheme } from '@/components/admin/shell/AdminThemeProvider';
+import type { AdminTheme } from '@/components/admin/shell/AdminThemeProvider';
+import { THEME_META, THEME_NAMES } from '@/theme/themes';
+import { ThemeSwatch } from '@/theme/ThemeSwatch';
 
 // Admin picker mirrors the consumer-facing `ThemePickerInline` (Theme
 // header + grid/scroll swatches + tap-to-switch hint) so the two
@@ -23,25 +23,25 @@ import { ThemeSwatch } from '@/theme/ThemeSwatch'
 // first render lines up with the true viewport.
 const useIsMobile = (): boolean => {
   const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return window.matchMedia('(max-width: 480px)').matches
-  })
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 480px)').matches;
+  });
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 480px)')
-    setIsMobile(mql.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 480px)');
+    setIsMobile(mql.matches);
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
-  return isMobile
-}
+  return isMobile;
+};
 
 export function ThemePicker() {
-  const { theme, setTheme } = useAdminTheme()
-  const isMobile = useIsMobile()
-  const activeMeta = THEME_META[theme]
+  const { theme, setTheme } = useAdminTheme();
+  const isMobile = useIsMobile();
+  const activeMeta = THEME_META[theme];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -132,5 +132,5 @@ export function ThemePicker() {
         )}
       </div>
     </div>
-  )
+  );
 }

@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { AdminButton, AdminDialog } from '@/components/admin/primitives'
+import { AdminButton, AdminDialog } from '@/components/admin/primitives';
 
 export interface BulkConfirmCopy {
-  eyebrow: string
-  heading: (count: number) => string
-  body: string
-  confirm: (count: number) => string
-  cancel: string
+  eyebrow: string;
+  heading: (count: number) => string;
+  body: string;
+  confirm: (count: number) => string;
+  cancel: string;
 }
 
 export interface BulkConfirmModalProps {
-  copy: BulkConfirmCopy
-  count: number
-  accent: string
-  confirmVariant?: 'danger' | 'outline'
-  onCancel: () => void
-  onConfirm: () => void
-  pending?: boolean
+  copy: BulkConfirmCopy;
+  count: number;
+  accent: string;
+  confirmVariant?: 'danger' | 'outline';
+  onCancel: () => void;
+  onConfirm: () => void;
+  pending?: boolean;
 }
 
 export const BulkConfirmModal = ({
@@ -69,4 +69,4 @@ export const BulkConfirmModal = ({
       {copy.body}
     </div>
   </AdminDialog>
-)
+);

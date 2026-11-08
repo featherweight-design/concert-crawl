@@ -11,14 +11,14 @@
 // 500-retry-loop on unmatchable events); genuine processing failures throw
 // so the route 500s and Stripe retries.
 
-import { eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm';
 import {
   subscriptions,
   subscriptionEvents,
   userBilling,
-} from '@concert-crawl/db'
-import type { BillingStripeClient } from './stripe.js'
-import type { DbExecutor } from './db-executor.js'
+} from '@concert-crawl/db';
+import type { BillingStripeClient } from './stripe.js';
+import type { DbExecutor } from './db-executor.js';
 import {
   epochSecondsToDate,
   resolveInvoiceSubscriptionId,
@@ -26,18 +26,18 @@ import {
   stripePaymentIntentSchema,
   stripeSubscriptionSchema,
   type StripeSubscriptionSnapshot,
-} from './stripe-webhook-schemas.js'
-import { mapDeclineCategory } from '@concert-crawl/types'
+} from './stripe-webhook-schemas.js';
+import { mapDeclineCategory } from '@concert-crawl/types';
 import {
   parseFounderSeatNumber,
   restoreFounderSeat,
   subscriptionNeverPaid,
-} from './founder-seats.js'
-import { apiLogger } from './logger.js'
+} from './founder-seats.js';
+import { apiLogger } from './logger.js';
 import type {
   PaidEmailTier,
   TransactionalEmailParams,
-} from '../emails/types.js'
+} from '../emails/types.js';
 
 export type DbSubscriptionStatus =
   | 'active'
@@ -45,15 +45,15 @@ export type DbSubscriptionStatus =
   | 'past_due'
   | 'trialing'
   | 'incomplete'
-  | 'incomplete_expired'
+  | 'incomplete_expired';
 
-export type DbSubscriptionTier = 'free' | 'premium' | 'supporter' | 'founder'
+export type DbSubscriptionTier = 'free' | 'premium' | 'supporter' | 'founder';
 
-const DAY_MS = 24 * 60 * 60 * 1000
-const NINETY_DAYS_MS = 90 * DAY_MS
+const DAY_MS = 24 * 60 * 60 * 1000;
+const NINETY_DAYS_MS = 90 * DAY_MS;
 
 // Premium-and-up (#780 §5): a payment on one of these clears the purge clock.
-const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder']
+const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder'];
 
 // Tiers whose cancellation starts the 90-day preserve-then-purge clock.
 // Supporter joined in #1229. Mirrors PURGE_CLOCK_TIERS in jobs/billing-daily.ts.
@@ -61,13 +61,13 @@ const PURGE_CLOCK_TIERS: readonly DbSubscriptionTier[] = [
   'supporter',
   'premium',
   'founder',
-]
+];
 
 const LOOKUP_KEY_TIERS: Record<string, DbSubscriptionTier> = {
   supporter_monthly: 'supporter',
   premium_monthly: 'premium',
   founder_monthly: 'founder',
-}
+};
 
 /**
  * Stripe subscription status → our subscription_status enum (Part 1 §1).
@@ -80,35 +80,35 @@ export const mapStripeStatus = (
 ): { status: DbSubscriptionStatus; unexpected: boolean } => {
   switch (stripeStatus) {
     case 'active':
-      return { status: 'active', unexpected: false }
+      return { status: 'active', unexpected: false };
     case 'past_due':
-      return { status: 'past_due', unexpected: false }
+      return { status: 'past_due', unexpected: false };
     case 'trialing':
-      return { status: 'trialing', unexpected: false }
+      return { status: 'trialing', unexpected: false };
     case 'canceled':
-      return { status: 'cancelled', unexpected: false }
+      return { status: 'cancelled', unexpected: false };
     case 'incomplete':
-      return { status: 'incomplete', unexpected: false }
+      return { status: 'incomplete', unexpected: false };
     case 'incomplete_expired':
-      return { status: 'incomplete_expired', unexpected: false }
+      return { status: 'incomplete_expired', unexpected: false };
     default:
-      return { status: 'past_due', unexpected: true }
+      return { status: 'past_due', unexpected: true };
   }
-}
+};
 
 /** Dunning stage from the invoice attempt_count (spec §1.5, Decision 11). */
 export const dunningStageForAttempt = (attemptCount: number): 1 | 2 | 3 => {
-  if (attemptCount <= 1) return 1
-  if (attemptCount === 2) return 2
-  return 3
-}
+  if (attemptCount <= 1) return 1;
+  if (attemptCount === 2) return 2;
+  return 3;
+};
 
 const TIER_DISPLAY_NAMES: Record<DbSubscriptionTier, string> = {
   free: 'Free',
   premium: 'Premium',
   supporter: 'Supporter',
   founder: 'Founder',
-}
+};
 
 // Dunning CTA target — /me?section=plan hosts the Stripe-portal entry point
 // (POST /v1/billing/portal-session); portal sessions themselves are
@@ -116,51 +116,51 @@ const TIER_DISPLAY_NAMES: Record<DbSubscriptionTier, string> = {
 // ALLOWED_ORIGIN (same convention as app.ts CORS and the portal return_url)
 // so staging/local emails never link prod.
 const billingPortalEntryUrl = (): string =>
-  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/me?section=plan`
+  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/me?section=plan`;
 
 const DUNNING_TEMPLATE_BY_STAGE = {
   1: 'dunning_1_card_declined',
   2: 'dunning_2_still_declined',
   3: 'dunning_3_final_warning',
-} as const
+} as const;
 
 const tierDisplayName = (tier: DbSubscriptionTier | null): string | null =>
-  tier !== null ? TIER_DISPLAY_NAMES[tier] : null
+  tier !== null ? TIER_DISPLAY_NAMES[tier] : null;
 
 // Narrows a DB tier to the paid-tier union the email templates accept, so
 // receipts can render the tier-aware badge/accent and the founder receipt
 // variant. 'free'/null yields false — the template falls back to Premium.
 const isPaidTier = (tier: DbSubscriptionTier | null): tier is PaidEmailTier =>
-  tier === 'premium' || tier === 'supporter' || tier === 'founder'
+  tier === 'premium' || tier === 'supporter' || tier === 'founder';
 
 const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
   timeZone: 'America/Denver',
-})
+});
 
-const monthLabel = (date: Date): string => monthLabelFormatter.format(date)
+const monthLabel = (date: Date): string => monthLabelFormatter.format(date);
 
-const formatUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+const formatUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
 
 /** welcome_paid / renewal_receipt_monthly intent (spec §4.4 rows 1 + 3). */
 export const emailForInvoicePaymentSucceeded = (input: {
-  userId: string
-  subscriptionId: string
-  invoiceId: string | null
-  billingReason: string | null
-  tier: DbSubscriptionTier | null
-  seatNumber: number | null
-  customerId: string
-  amountPaidCents: number | null
-  chargedAt: Date | null
-  periodEnd: Date | null
-  hostedInvoiceUrl: string | null
+  userId: string;
+  subscriptionId: string;
+  invoiceId: string | null;
+  billingReason: string | null;
+  tier: DbSubscriptionTier | null;
+  seatNumber: number | null;
+  customerId: string;
+  amountPaidCents: number | null;
+  chargedAt: Date | null;
+  periodEnd: Date | null;
+  hostedInvoiceUrl: string | null;
 }): TransactionalEmailParams | null => {
   if (input.billingReason === 'subscription_create') {
-    const tier = input.tier
+    const tier = input.tier;
     if (tier !== 'premium' && tier !== 'supporter' && tier !== 'founder') {
-      return null
+      return null;
     }
     return {
       templateKey: 'welcome_paid',
@@ -172,11 +172,11 @@ export const emailForInvoicePaymentSucceeded = (input: {
           ? { founderSeatNumber: input.seatNumber }
           : {}),
       },
-    }
+    };
   }
   // No invoice id = no dedupe key; no created timestamp = wrong period label
   // and charge date on the receipt — skip rather than guess.
-  if (input.invoiceId === null || input.chargedAt === null) return null
+  if (input.invoiceId === null || input.chargedAt === null) return null;
   return {
     templateKey: 'renewal_receipt_monthly',
     userId: input.userId,
@@ -194,18 +194,18 @@ export const emailForInvoicePaymentSucceeded = (input: {
       customerId: input.customerId,
       stripeReceiptUrl: input.hostedInvoiceUrl,
     },
-  }
-}
+  };
+};
 
 /** dunning_1/2/3 intent by attempt_count (spec §4.4 row 4, §1.5 row 3). */
 export const emailForInvoicePaymentFailed = (input: {
-  userId: string
-  invoiceId: string | null
-  attemptCount: number
-  tier: DbSubscriptionTier | null
+  userId: string;
+  invoiceId: string | null;
+  attemptCount: number;
+  tier: DbSubscriptionTier | null;
 }): TransactionalEmailParams | null => {
-  if (input.invoiceId === null) return null
-  const stage = dunningStageForAttempt(input.attemptCount)
+  if (input.invoiceId === null) return null;
+  const stage = dunningStageForAttempt(input.attemptCount);
   return {
     templateKey: DUNNING_TEMPLATE_BY_STAGE[stage],
     userId: input.userId,
@@ -214,8 +214,8 @@ export const emailForInvoicePaymentFailed = (input: {
       tierName: tierDisplayName(input.tier),
       portalUrl: billingPortalEntryUrl(),
     },
-  }
-}
+  };
+};
 
 /**
  * cancellation_ack intent (spec §4.4 row 6). The dedupe key carries the
@@ -223,13 +223,13 @@ export const emailForInvoicePaymentFailed = (input: {
  * for account-deletion cancels, flagged via subscription metadata.
  */
 export const emailForCancelScheduled = (input: {
-  userId: string
-  subscriptionId: string
-  tier: DbSubscriptionTier | null
-  currentPeriodEndSeconds: number | null
-  accountDeletion: boolean
+  userId: string;
+  subscriptionId: string;
+  tier: DbSubscriptionTier | null;
+  currentPeriodEndSeconds: number | null;
+  accountDeletion: boolean;
 }): TransactionalEmailParams | null => {
-  if (input.accountDeletion) return null
+  if (input.accountDeletion) return null;
   return {
     templateKey: 'cancellation_ack',
     userId: input.userId,
@@ -240,38 +240,38 @@ export const emailForCancelScheduled = (input: {
         epochSecondsToDate(input.currentPeriodEndSeconds)?.toISOString() ??
         null,
     },
-  }
-}
+  };
+};
 
 interface HandlerContext {
-  stripe: BillingStripeClient
-  stripeEventId: string
+  stripe: BillingStripeClient;
+  stripeEventId: string;
   /**
    * Transaction handle from the webhook route — every handler write shares
    * the idempotency insert's transaction so a failure rolls back atomically.
    */
-  dbClient: DbExecutor
+  dbClient: DbExecutor;
   /**
    * Emails queued by handlers; the route fires them fire-and-forget AFTER
    * the transaction commits (spec §4.4) — never inside it.
    */
-  postCommitEmails: TransactionalEmailParams[]
+  postCommitEmails: TransactionalEmailParams[];
 }
 
 const parseSubscriptionSnapshot = (
   raw: unknown,
   context: string,
 ): StripeSubscriptionSnapshot => {
-  const parsed = stripeSubscriptionSchema.safeParse(raw)
+  const parsed = stripeSubscriptionSchema.safeParse(raw);
   if (!parsed.success) {
     // A malformed subscription object is a genuine processing failure — the
     // schema drifted from Stripe's payload shape. Throw so the route 500s.
     throw new Error(
       `${context}: subscription payload failed validation — ${parsed.error.message}`,
-    )
+    );
   }
-  return parsed.data
-}
+  return parsed.data;
+};
 
 /**
  * Resolves the Clerk userId for a Stripe subscription: creation metadata
@@ -282,31 +282,31 @@ const resolveUserId = async (
   snapshot: StripeSubscriptionSnapshot,
   dbClient: DbExecutor,
 ): Promise<string | null> => {
-  const metadataUserId = snapshot.metadata?.['userId']
-  if (metadataUserId) return metadataUserId
+  const metadataUserId = snapshot.metadata?.['userId'];
+  if (metadataUserId) return metadataUserId;
   const [bySubscription] = await dbClient
     .select({ userId: subscriptions.userId })
     .from(subscriptions)
     .where(eq(subscriptions.stripeSubscriptionId, snapshot.id))
-    .limit(1)
-  if (bySubscription) return bySubscription.userId
+    .limit(1);
+  if (bySubscription) return bySubscription.userId;
   const [byCustomer] = await dbClient
     .select({ userId: subscriptions.userId })
     .from(subscriptions)
     .where(eq(subscriptions.stripeCustomerId, snapshot.customer))
-    .limit(1)
-  return byCustomer?.userId ?? null
-}
+    .limit(1);
+  return byCustomer?.userId ?? null;
+};
 
 const firstItem = (snapshot: StripeSubscriptionSnapshot) =>
-  snapshot.items?.data[0] ?? null
+  snapshot.items?.data[0] ?? null;
 
 const tierFromSnapshot = (
   snapshot: StripeSubscriptionSnapshot,
 ): DbSubscriptionTier | null => {
-  const lookupKey = firstItem(snapshot)?.price.lookup_key ?? null
-  return lookupKey !== null ? (LOOKUP_KEY_TIERS[lookupKey] ?? null) : null
-}
+  const lookupKey = firstItem(snapshot)?.price.lookup_key ?? null;
+  return lookupKey !== null ? (LOOKUP_KEY_TIERS[lookupKey] ?? null) : null;
+};
 
 /**
  * Upserts the subscriptions mirror row (unique per user). Fields absent from
@@ -320,17 +320,17 @@ const mirrorSubscription = async (
   status: DbSubscriptionStatus,
   dbClient: DbExecutor,
 ): Promise<void> => {
-  const item = firstItem(snapshot)
-  const tier = tierFromSnapshot(snapshot)
-  const currentPeriodStart = epochSecondsToDate(item?.current_period_start)
-  const currentPeriodEnd = epochSecondsToDate(item?.current_period_end)
-  const cancelAtPeriodEnd = snapshot.cancel_at_period_end ?? false
+  const item = firstItem(snapshot);
+  const tier = tierFromSnapshot(snapshot);
+  const currentPeriodStart = epochSecondsToDate(item?.current_period_start);
+  const currentPeriodEnd = epochSecondsToDate(item?.current_period_end);
+  const cancelAtPeriodEnd = snapshot.cancel_at_period_end ?? false;
 
   const [existing] = await dbClient
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
-    .limit(1)
+    .limit(1);
 
   if (existing) {
     await dbClient
@@ -346,16 +346,16 @@ const mirrorSubscription = async (
         ...(currentPeriodStart !== null ? { currentPeriodStart } : {}),
         ...(currentPeriodEnd !== null ? { currentPeriodEnd } : {}),
       })
-      .where(eq(subscriptions.userId, userId))
-    return
+      .where(eq(subscriptions.userId, userId));
+    return;
   }
 
   if (tier === null || currentPeriodEnd === null) {
     apiLogger.warn(
       { userId, subscriptionId: snapshot.id, tier, status },
       'stripe-webhooks: cannot insert mirror row without tier/period end — skipping',
-    )
-    return
+    );
+    return;
   }
   await dbClient.insert(subscriptions).values({
     userId,
@@ -367,56 +367,56 @@ const mirrorSubscription = async (
     stripePriceId: item?.price.id ?? null,
     currentPeriodStart,
     currentPeriodEnd,
-  })
-}
+  });
+};
 
 /** invoice.payment_succeeded (spec §1.5 row 2). */
 export const handleInvoicePaymentSucceeded = async (
   rawObject: unknown,
   ctx: HandlerContext,
 ): Promise<void> => {
-  const parsed = stripeInvoiceSchema.safeParse(rawObject)
+  const parsed = stripeInvoiceSchema.safeParse(rawObject);
   if (!parsed.success) {
     throw new Error(
       `invoice.payment_succeeded: invoice payload failed validation — ${parsed.error.message}`,
-    )
+    );
   }
-  const invoice = parsed.data
-  const subscriptionId = resolveInvoiceSubscriptionId(invoice)
+  const invoice = parsed.data;
+  const subscriptionId = resolveInvoiceSubscriptionId(invoice);
   if (subscriptionId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, invoiceId: invoice.id },
       'invoice.payment_succeeded: no subscription on invoice — skipping',
-    )
-    return
+    );
+    return;
   }
 
   const snapshot = parseSubscriptionSnapshot(
     await ctx.stripe.subscriptions.retrieve(subscriptionId),
     'invoice.payment_succeeded',
-  )
-  const userId = await resolveUserId(snapshot, ctx.dbClient)
+  );
+  const userId = await resolveUserId(snapshot, ctx.dbClient);
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId },
       'invoice.payment_succeeded: unmatchable subscription — skipping',
-    )
-    return
+    );
+    return;
   }
 
-  const { status, unexpected } = mapStripeStatus(snapshot.status)
+  const { status, unexpected } = mapStripeStatus(snapshot.status);
   if (unexpected) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, stripeStatus: snapshot.status },
       'invoice.payment_succeeded: unexpected Stripe status mapped to past_due',
-    )
+    );
   }
 
-  await mirrorSubscription(userId, snapshot, status, ctx.dbClient)
+  await mirrorSubscription(userId, snapshot, status, ctx.dbClient);
 
-  const isFirstInvoice = invoice.billing_reason === 'subscription_create'
-  const seatNumber = parseFounderSeatNumber(snapshot.metadata)
-  const tier = tierFromSnapshot(snapshot)
+  const isFirstInvoice = invoice.billing_reason === 'subscription_create';
+  const seatNumber = parseFounderSeatNumber(snapshot.metadata);
+  const tier = tierFromSnapshot(snapshot);
   await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: isFirstInvoice ? 'subscription_created' : 'renewal_succeeded',
@@ -427,7 +427,7 @@ export const handleInvoicePaymentSucceeded = async (
       tier,
       ...(seatNumber !== null ? { seatNumber } : {}),
     },
-  })
+  });
 
   const emailParams = emailForInvoicePaymentSucceeded({
     userId,
@@ -441,9 +441,9 @@ export const handleInvoicePaymentSucceeded = async (
     chargedAt: epochSecondsToDate(invoice.created),
     periodEnd: epochSecondsToDate(firstItem(snapshot)?.current_period_end),
     hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
-  })
+  });
   if (emailParams !== null) {
-    ctx.postCommitEmails.push(emailParams)
+    ctx.postCommitEmails.push(emailParams);
   } else {
     apiLogger.warn(
       {
@@ -453,7 +453,7 @@ export const handleInvoicePaymentSucceeded = async (
         billingReason: invoice.billing_reason ?? null,
       },
       'invoice.payment_succeeded: no email queued — non-paid tier on first invoice, or missing invoice id/created timestamp on renewal',
-    )
+    );
   }
 
   // Re-upgrade to premium-and-up clears the 90-day preserve-then-purge clock
@@ -464,29 +464,29 @@ export const handleInvoicePaymentSucceeded = async (
     await ctx.dbClient
       .update(userBilling)
       .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
-      .where(eq(userBilling.userId, userId))
+      .where(eq(userBilling.userId, userId));
   }
-}
+};
 
 /** invoice.payment_failed (spec §1.5 row 3). */
 export const handleInvoicePaymentFailed = async (
   rawObject: unknown,
   ctx: HandlerContext,
 ): Promise<void> => {
-  const parsed = stripeInvoiceSchema.safeParse(rawObject)
+  const parsed = stripeInvoiceSchema.safeParse(rawObject);
   if (!parsed.success) {
     throw new Error(
       `invoice.payment_failed: invoice payload failed validation — ${parsed.error.message}`,
-    )
+    );
   }
-  const invoice = parsed.data
-  const subscriptionId = resolveInvoiceSubscriptionId(invoice)
+  const invoice = parsed.data;
+  const subscriptionId = resolveInvoiceSubscriptionId(invoice);
   if (subscriptionId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, invoiceId: invoice.id },
       'invoice.payment_failed: no subscription on invoice — skipping',
-    )
-    return
+    );
+    return;
   }
 
   // Incomplete first invoices (subscription never activated) get NO dunning
@@ -496,33 +496,33 @@ export const handleInvoicePaymentFailed = async (
     apiLogger.info(
       { stripeEventId: ctx.stripeEventId, subscriptionId },
       'invoice.payment_failed: first-invoice failure — no dunning treatment (spec §1.5)',
-    )
-    return
+    );
+    return;
   }
 
   const snapshot = parseSubscriptionSnapshot(
     await ctx.stripe.subscriptions.retrieve(subscriptionId),
     'invoice.payment_failed',
-  )
-  const userId = await resolveUserId(snapshot, ctx.dbClient)
+  );
+  const userId = await resolveUserId(snapshot, ctx.dbClient);
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId },
       'invoice.payment_failed: unmatchable subscription — skipping',
-    )
-    return
+    );
+    return;
   }
 
   const [existingRow] = await ctx.dbClient
     .select({ status: subscriptions.status })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
-    .limit(1)
-  const firstPastDueTransition = existingRow?.status !== 'past_due'
+    .limit(1);
+  const firstPastDueTransition = existingRow?.status !== 'past_due';
 
-  await mirrorSubscription(userId, snapshot, 'past_due', ctx.dbClient)
+  await mirrorSubscription(userId, snapshot, 'past_due', ctx.dbClient);
 
-  const attemptCount = invoice.attempt_count ?? 1
+  const attemptCount = invoice.attempt_count ?? 1;
   await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: 'payment_failed',
@@ -533,14 +533,14 @@ export const handleInvoicePaymentFailed = async (
       attemptCount,
       dunningStage: dunningStageForAttempt(attemptCount),
     },
-  })
+  });
   if (firstPastDueTransition) {
     await ctx.dbClient.insert(subscriptionEvents).values({
       userId,
       type: 'past_due_entered',
       stripeEventId: ctx.stripeEventId,
       metadata: { subscriptionId },
-    })
+    });
   }
 
   const emailParams = emailForInvoicePaymentFailed({
@@ -548,16 +548,16 @@ export const handleInvoicePaymentFailed = async (
     invoiceId: invoice.id ?? null,
     attemptCount,
     tier: tierFromSnapshot(snapshot),
-  })
+  });
   if (emailParams !== null) {
-    ctx.postCommitEmails.push(emailParams)
+    ctx.postCommitEmails.push(emailParams);
   } else {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId, attemptCount },
       'invoice.payment_failed: no dunning email queued — missing invoice id',
-    )
+    );
   }
-}
+};
 
 /** customer.subscription.updated (spec §1.5 row 4). */
 export const handleSubscriptionUpdated = async (
@@ -567,22 +567,22 @@ export const handleSubscriptionUpdated = async (
   const snapshot = parseSubscriptionSnapshot(
     rawObject,
     'customer.subscription.updated',
-  )
-  const userId = await resolveUserId(snapshot, ctx.dbClient)
+  );
+  const userId = await resolveUserId(snapshot, ctx.dbClient);
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId: snapshot.id },
       'customer.subscription.updated: unmatchable subscription — skipping',
-    )
-    return
+    );
+    return;
   }
 
-  const { status, unexpected } = mapStripeStatus(snapshot.status)
+  const { status, unexpected } = mapStripeStatus(snapshot.status);
   if (unexpected) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, stripeStatus: snapshot.status },
       'customer.subscription.updated: unexpected Stripe status mapped to past_due',
-    )
+    );
   }
 
   // Cancel-schedule flips are detected against our mirror, read pre-update.
@@ -590,11 +590,11 @@ export const handleSubscriptionUpdated = async (
     .select({ cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
-    .limit(1)
-  const previousCancelFlag = existingRow?.cancelAtPeriodEnd ?? false
-  const nextCancelFlag = snapshot.cancel_at_period_end ?? false
+    .limit(1);
+  const previousCancelFlag = existingRow?.cancelAtPeriodEnd ?? false;
+  const nextCancelFlag = snapshot.cancel_at_period_end ?? false;
 
-  await mirrorSubscription(userId, snapshot, status, ctx.dbClient)
+  await mirrorSubscription(userId, snapshot, status, ctx.dbClient);
 
   if (!previousCancelFlag && nextCancelFlag) {
     await ctx.dbClient.insert(subscriptionEvents).values({
@@ -602,15 +602,15 @@ export const handleSubscriptionUpdated = async (
       type: 'cancel_scheduled',
       stripeEventId: ctx.stripeEventId,
       metadata: { subscriptionId: snapshot.id },
-    })
+    });
     const emailParams = emailForCancelScheduled({
       userId,
       subscriptionId: snapshot.id,
       tier: tierFromSnapshot(snapshot),
       currentPeriodEndSeconds: firstItem(snapshot)?.current_period_end ?? null,
       accountDeletion: snapshot.metadata?.['accountDeletion'] === 'true',
-    })
-    if (emailParams !== null) ctx.postCommitEmails.push(emailParams)
+    });
+    if (emailParams !== null) ctx.postCommitEmails.push(emailParams);
   }
   if (previousCancelFlag && !nextCancelFlag) {
     await ctx.dbClient.insert(subscriptionEvents).values({
@@ -618,13 +618,13 @@ export const handleSubscriptionUpdated = async (
       type: 'resubscribed',
       stripeEventId: ctx.stripeEventId,
       metadata: { subscriptionId: snapshot.id },
-    })
+    });
   }
 
   // Stripe auto-expires unconfirmed subscriptions after ~23h — a founder
   // claim held by an incomplete subscription is released here (§3.2 path 2).
   if (snapshot.status === 'incomplete_expired') {
-    const seatNumber = parseFounderSeatNumber(snapshot.metadata)
+    const seatNumber = parseFounderSeatNumber(snapshot.metadata);
     if (seatNumber !== null) {
       await restoreFounderSeat(
         {
@@ -635,10 +635,10 @@ export const handleSubscriptionUpdated = async (
           stripeEventId: ctx.stripeEventId,
         },
         ctx.dbClient,
-      )
+      );
     }
   }
-}
+};
 
 /** customer.subscription.deleted (spec §1.5 row 5). */
 export const handleSubscriptionDeleted = async (
@@ -648,36 +648,36 @@ export const handleSubscriptionDeleted = async (
   const snapshot = parseSubscriptionSnapshot(
     rawObject,
     'customer.subscription.deleted',
-  )
-  const userId = await resolveUserId(snapshot, ctx.dbClient)
+  );
+  const userId = await resolveUserId(snapshot, ctx.dbClient);
   if (userId === null) {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId: snapshot.id },
       'customer.subscription.deleted: unmatchable subscription — skipping',
-    )
-    return
+    );
+    return;
   }
 
   const [existingRow] = await ctx.dbClient
     .select({ tier: subscriptions.tier })
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId))
-    .limit(1)
-  const tier = existingRow?.tier ?? tierFromSnapshot(snapshot)
+    .limit(1);
+  const tier = existingRow?.tier ?? tierFromSnapshot(snapshot);
 
-  await mirrorSubscription(userId, snapshot, 'cancelled', ctx.dbClient)
+  await mirrorSubscription(userId, snapshot, 'cancelled', ctx.dbClient);
 
   await ctx.dbClient.insert(subscriptionEvents).values({
     userId,
     type: 'cancel_completed',
     stripeEventId: ctx.stripeEventId,
     metadata: { subscriptionId: snapshot.id, tier },
-  })
+  });
 
   // Never-paid check BEFORE any premium-data clock: a subscription with no
   // subscription_created audit event never produced a paid invoice.
   if (await subscriptionNeverPaid(snapshot.id, ctx.dbClient)) {
-    const seatNumber = parseFounderSeatNumber(snapshot.metadata)
+    const seatNumber = parseFounderSeatNumber(snapshot.metadata);
     if (seatNumber !== null) {
       await restoreFounderSeat(
         {
@@ -688,54 +688,54 @@ export const handleSubscriptionDeleted = async (
           stripeEventId: ctx.stripeEventId,
         },
         ctx.dbClient,
-      )
+      );
     }
-    return
+    return;
   }
 
   // Every paid tier starts the 90-day preserve-then-purge clock (#780 §5).
   // Supporter included since #1229: its logged Concerts purge like everyone
   // else's. (Calendar export holds no data of its own; it reads Concerts.)
   if (tier !== null && PURGE_CLOCK_TIERS.includes(tier)) {
-    const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS)
+    const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS);
     await ctx.dbClient
       .insert(userBilling)
       .values({ userId, premiumDataExpiresAt })
       .onConflictDoUpdate({
         target: userBilling.userId,
         set: { premiumDataExpiresAt, updatedAt: new Date() },
-      })
+      });
   }
-}
+};
 
 /** payment_intent.payment_failed (spec §1.5 row 6) — analytics only. */
 export const handlePaymentIntentFailed = async (
   rawObject: unknown,
   ctx: HandlerContext,
 ): Promise<void> => {
-  const parsed = stripePaymentIntentSchema.safeParse(rawObject)
+  const parsed = stripePaymentIntentSchema.safeParse(rawObject);
   if (!parsed.success) {
     throw new Error(
       `payment_intent.payment_failed: payload failed validation — ${parsed.error.message}`,
-    )
+    );
   }
-  const paymentIntent = parsed.data
-  const lastError = paymentIntent.last_payment_error ?? null
+  const paymentIntent = parsed.data;
+  const lastError = paymentIntent.last_payment_error ?? null;
   const declineCategory = mapDeclineCategory({
     declineCode: lastError?.decline_code ?? null,
     errorCode: lastError?.code ?? null,
     errorType: lastError?.type ?? null,
-  })
+  });
 
-  const customerId = paymentIntent.customer ?? null
-  let userId: string | null = null
+  const customerId = paymentIntent.customer ?? null;
+  let userId: string | null = null;
   if (customerId !== null) {
     const [byCustomer] = await ctx.dbClient
       .select({ userId: subscriptions.userId })
       .from(subscriptions)
       .where(eq(subscriptions.stripeCustomerId, customerId))
-      .limit(1)
-    userId = byCustomer?.userId ?? null
+      .limit(1);
+    userId = byCustomer?.userId ?? null;
   }
   if (userId === null) {
     apiLogger.warn(
@@ -745,8 +745,8 @@ export const handlePaymentIntentFailed = async (
         declineCategory,
       },
       'payment_intent.payment_failed: unmatchable customer — skipping',
-    )
-    return
+    );
+    return;
   }
 
   // No state change — the client surface owns the retry UX. The raw
@@ -760,5 +760,5 @@ export const handlePaymentIntentFailed = async (
       declineCategory,
       declineCode: lastError?.decline_code ?? null,
     },
-  })
-}
+  });
+};

@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { LayoutDashboard, ExternalLink } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import Link from 'next/link';
+import { LayoutDashboard, ExternalLink } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface AppSwitcherProps {
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md';
 }
 
 const SIZES = {
   sm: { height: 26, fs: 10, px: 8, gap: 4, iconSize: 12 },
   md: { height: 30, fs: 11, px: 10, gap: 5, iconSize: 13 },
-} as const
+} as const;
 
 export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
-  const sz = SIZES[size]
+  const sz = SIZES[size];
 
   return (
     <div
@@ -53,10 +53,10 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
           transition: 'background .12s, color .12s',
         }}
         onMouseEnter={(evt) => {
-          evt.currentTarget.style.color = 'var(--fg)'
+          evt.currentTarget.style.color = 'var(--fg)';
         }}
         onMouseLeave={(evt) => {
-          evt.currentTarget.style.color = 'var(--fg-muted)'
+          evt.currentTarget.style.color = 'var(--fg-muted)';
         }}
       >
         <ExternalLink size={sz.iconSize} />
@@ -87,5 +87,5 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         <span>{ADMIN_COPY.shell.appSwitcher.admin}</span>
       </div>
     </div>
-  )
-}
+  );
+};

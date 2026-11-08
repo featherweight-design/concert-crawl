@@ -1,7 +1,7 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import {
   artists,
   db,
@@ -10,8 +10,8 @@ import {
   userEvents,
   venueGuideChips,
   venues,
-} from '@concert-crawl/db'
-import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
+} from '@concert-crawl/db';
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events';
 import {
   type SQL,
   and,
@@ -23,7 +23,7 @@ import {
   isNotNull,
   ne,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   GUIDE_CHIP_ORDER,
   SP_POLICY,
@@ -32,26 +32,26 @@ import {
   deriveSourceCategory,
   isGuideChipKey,
   RESALE_VENDOR_VALUES,
-} from '@concert-crawl/types'
-import { todayInTimezone } from '../lib/time.js'
+} from '@concert-crawl/types';
+import { todayInTimezone } from '../lib/time.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
-} from '../lib/event-billing.js'
+} from '../lib/event-billing.js';
 
 // Matches history.ts — "already happened" is a Mountain Time calendar-day call,
 // not a UTC one, or a late show reads as past hours before it starts.
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
-import { venueSlug } from '../lib/venue-slug-schema.js'
-import { aggregateByTier } from '../lib/price-aggregation/index.js'
+import { venueSlug } from '../lib/venue-slug-schema.js';
+import { aggregateByTier } from '../lib/price-aggregation/index.js';
 
-export const venuesPublicRouter = new Hono()
+export const venuesPublicRouter = new Hono();
 
 // Clerk is mounted so `getAuth(ctx)` can resolve a session when one is present.
 // It never rejects — these routes stay public, and an anonymous reader gets
 // `viewerHasAttended: null` rather than a 401. Same shape as artists-public.ts.
-venuesPublicRouter.use('*', clerkMiddleware())
+venuesPublicRouter.use('*', clerkMiddleware());
 
 // GET /v1/venues — list active venues with upcoming event counts (public)
 venuesPublicRouter.get('/', async (ctx) => {
@@ -76,9 +76,9 @@ venuesPublicRouter.get('/', async (ctx) => {
     })
     .from(venues)
     .where(eq(venues.active, true))
-    .orderBy(asc(venues.name))
+    .orderBy(asc(venues.name));
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10);
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)
@@ -88,37 +88,37 @@ venuesPublicRouter.get('/', async (ctx) => {
         isNotNull(events.venueId),
       ),
     )
-    .groupBy(events.venueId)
+    .groupBy(events.venueId);
 
   const countByVenueId = new Map(
     eventCounts.map((row) => [row.venueId, row.total]),
-  )
+  );
 
   const data = rows.map((venue) => ({
     ...venue,
     upcomingCount: countByVenueId.get(venue.id) ?? 0,
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // Same rule the admin API creates slugs with, so this route can never reject a
 // venue that was legitimately created. A param that can't be a slug is answered
 // with the same 404 as a slug that simply doesn't exist — a public reader
 // learns nothing from the difference, and a 400 here would turn today's 404 for
 // a malformed URL into a new status code for callers.
-const slugParamSchema = z.object({ slug: venueSlug() })
+const slugParamSchema = z.object({ slug: venueSlug() });
 
 // GET /v1/venues/:slug — venue detail + upcoming events (public)
 venuesPublicRouter.get(
   '/:slug',
   zValidator('param', slugParamSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
   }),
   async (ctx) => {
-    const { slug } = ctx.req.valid('param')
+    const { slug } = ctx.req.valid('param');
 
     const [venue] = await db
       .select({
@@ -150,15 +150,15 @@ venuesPublicRouter.get(
       // and indexable at a direct URL. Admin reads venues by id through
       // /v1/admin/venues/:id, so nothing internal depends on reaching an
       // inactive venue by slug here.
-      .where(and(eq(venues.slug, slug), eq(venues.active, true)))
+      .where(and(eq(venues.slug, slug), eq(venues.active, true)));
 
     if (!venue) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
     // Split off the two guide-only columns so the venue object serialized to
     // the consumer can never carry a draft insiderTip.
-    const { insiderTip, guidePublishedAt, ...venuePublic } = venue
+    const { insiderTip, guidePublishedAt, ...venuePublic } = venue;
 
     // #764 — the published guide. Only queried when the venue has actually
     // published, so a draft costs zero extra round-trips and can never leak.
@@ -167,7 +167,7 @@ venuesPublicRouter.get(
     // A row whose chip_type is outside the v1 pool (a #997 key promoted in a
     // later deploy, read by an older API instance) is dropped rather than
     // appended in arbitrary order — the consumer has no label for it.
-    let guide: VenueGuide | null = null
+    let guide: VenueGuide | null = null;
     if (guidePublishedAt !== null) {
       const chipRows = await db
         .select({
@@ -176,7 +176,7 @@ venuesPublicRouter.get(
           isPlaceholder: venueGuideChips.isPlaceholder,
         })
         .from(venueGuideChips)
-        .where(eq(venueGuideChips.venueId, venue.id))
+        .where(eq(venueGuideChips.venueId, venue.id));
 
       const chips: VenueGuideChip[] = chipRows
         .flatMap((row) =>
@@ -194,7 +194,7 @@ venuesPublicRouter.get(
           (left, right) =>
             GUIDE_CHIP_ORDER.indexOf(left.chipType) -
             GUIDE_CHIP_ORDER.indexOf(right.chipType),
-        )
+        );
 
       // A published guide with no chips has no drawn state — accessibility is
       // the publish gate, so this only happens if the rows were deleted out
@@ -205,11 +205,11 @@ venuesPublicRouter.get(
           chips,
           insiderTip,
           publishedAt: guidePublishedAt.toISOString(),
-        }
+        };
       }
     }
 
-    const today = todayInTimezone(venue.timezone)
+    const today = todayInTimezone(venue.timezone);
 
     // Shared between the count query and the list query below, so the
     // upcomingCount the detail page renders stays consistent with the rows in
@@ -217,14 +217,14 @@ venuesPublicRouter.get(
     const conditions: SQL[] = [
       eq(events.venueId, venue.id),
       ...upcomingEventConditions({ from: today }),
-    ]
+    ];
 
     const [countRow] = await db
       .select({ total: count(events.id) })
       .from(events)
-      .where(and(...conditions))
+      .where(and(...conditions));
 
-    const upcomingCount = countRow?.total ?? 0
+    const upcomingCount = countRow?.total ?? 0;
 
     const upcomingEvents = await db
       .select({
@@ -261,13 +261,13 @@ venuesPublicRouter.get(
       .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
       .where(and(...conditions))
       .orderBy(asc(events.date), asc(events.showTime))
-      .limit(50)
+      .limit(50);
 
     const communityEventIds = upcomingEvents
       .filter((evt) => evt.priceSource === 'community')
-      .map((evt) => evt.id)
+      .map((evt) => evt.id);
 
-    const vendorByEventId: Record<string, string | null> = {}
+    const vendorByEventId: Record<string, string | null> = {};
     if (communityEventIds.length > 0) {
       const vendorRows = await db
         .select({
@@ -284,10 +284,10 @@ venuesPublicRouter.get(
         .orderBy(
           sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
           desc(priceSubmissions.createdAt),
-        )
+        );
       for (const vRow of vendorRows) {
         if (!(vRow.eventId in vendorByEventId)) {
-          vendorByEventId[vRow.eventId] = vRow.vendor
+          vendorByEventId[vRow.eventId] = vRow.vendor;
         }
       }
     }
@@ -302,11 +302,11 @@ venuesPublicRouter.get(
     // endpoint's cost-controlled shape: only corroborated rows, empty
     // pending/counters, headline-only consumption. Bounded by the 50-event
     // page limit above, same order as a browse page.
-    const visibleEventIds = upcomingEvents.map((evt) => evt.id)
+    const visibleEventIds = upcomingEvents.map((evt) => evt.id);
     const priceByTierByEventId = new Map<
       string,
       Awaited<ReturnType<typeof aggregateByTier>>
-    >()
+    >();
     if (visibleEventIds.length > 0) {
       const corroboratedRows = await db
         .select({
@@ -330,13 +330,13 @@ venuesPublicRouter.get(
             inArray(priceSubmissions.eventId, visibleEventIds),
             eq(priceSubmissions.status, 'corroborated'),
           ),
-        )
+        );
 
-      const corroboratedByEvent = new Map<string, typeof corroboratedRows>()
+      const corroboratedByEvent = new Map<string, typeof corroboratedRows>();
       for (const sub of corroboratedRows) {
-        const existing = corroboratedByEvent.get(sub.eventId)
-        if (existing) existing.push(sub)
-        else corroboratedByEvent.set(sub.eventId, [sub])
+        const existing = corroboratedByEvent.get(sub.eventId);
+        if (existing) existing.push(sub);
+        else corroboratedByEvent.set(sub.eventId, [sub]);
       }
 
       for (const [eventId, subs] of corroboratedByEvent) {
@@ -364,8 +364,8 @@ venuesPublicRouter.get(
           reportsByTier: new Map(),
           confirmsNeeded: SP_POLICY.confirmsRequired,
           viewerUserId: null,
-        })
-        priceByTierByEventId.set(eventId, blocks)
+        });
+        priceByTierByEventId.set(eventId, blocks);
       }
     }
 
@@ -376,7 +376,7 @@ venuesPublicRouter.get(
           ? (vendorByEventId[evt.id] ?? null)
           : null,
       priceByTier: priceByTierByEventId.get(evt.id) ?? null,
-    }))
+    }));
 
     // #764 — has this viewer ever been to this room? `null` means "we cannot
     // know" and must never collapse to `false`, which would be a positive claim
@@ -386,8 +386,8 @@ venuesPublicRouter.get(
     // so a watched-but-never-attended row leaves the viewer a first-timer. And
     // "attending" is not "attended" — the predicate is the one documented in
     // history.ts, past date included.
-    const authInfo = getAuth(ctx)
-    let viewerHasAttended: boolean | null = null
+    const authInfo = getAuth(ctx);
+    let viewerHasAttended: boolean | null = null;
     if (authInfo?.userId) {
       const [attendedRow] = await db
         .select({ id: userEvents.id })
@@ -406,8 +406,8 @@ venuesPublicRouter.get(
             ne(events.status, 'cancelled'),
           ),
         )
-        .limit(1)
-      viewerHasAttended = Boolean(attendedRow)
+        .limit(1);
+      viewerHasAttended = Boolean(attendedRow);
     }
 
     return ctx.json({
@@ -417,6 +417,6 @@ venuesPublicRouter.get(
         upcomingEvents: enrichedEvents,
         viewerHasAttended,
       },
-    })
+    });
   },
-)
+);

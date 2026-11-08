@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The "My shows" sub-tab bar — Watching · Concerts · Artists (#70, #1357, and
 // native following PR 6).
@@ -15,12 +15,12 @@
 // aria-current="page" rather than role="tab" buttons — there is no panel to
 // associate and no in-place switching.
 
-import Link from 'next/link'
-import { HISTORY_COPY } from './definitions/copy'
+import Link from 'next/link';
+import { HISTORY_COPY } from './definitions/copy';
 
-const COPY = HISTORY_COPY.tabs
+const COPY = HISTORY_COPY.tabs;
 
-export type MyShowsTab = 'watching' | 'history' | 'artists'
+export type MyShowsTab = 'watching' | 'history' | 'artists';
 
 // The Artists route is `/following`, deliberately NOT `/artists`: middleware
 // lists `/artists(.*)` under isPublicOnceLaunched, so an artists index would
@@ -30,16 +30,16 @@ const TABS: readonly { key: MyShowsTab; label: string; href: string }[] = [
   { key: 'watching', label: COPY.watching, href: '/watching' },
   { key: 'history', label: COPY.concerts, href: '/history' },
   { key: 'artists', label: COPY.artists, href: '/following' },
-]
+];
 
 interface MyShowsTabsProps {
-  active: MyShowsTab
+  active: MyShowsTab;
   /**
    * Follows the viewer has. Rendered on the Artists tab only while it is the
    * active one (the prototype's active-only count rule), and omitted entirely
    * at zero — nought is not a number worth announcing.
    */
-  artistCount?: number
+  artistCount?: number;
 }
 
 export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
@@ -48,14 +48,14 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
     className="mb-4 flex gap-1 rounded-[10px] border border-border bg-surface-1 p-[3px] sm:mb-6 sm:gap-2 sm:border-transparent sm:bg-transparent sm:p-0"
   >
     {TABS.map((tab) => {
-      const current = tab.key === active
+      const current = tab.key === active;
       const count =
         tab.key === 'artists' &&
         current &&
         artistCount !== undefined &&
         artistCount > 0
           ? artistCount
-          : null
+          : null;
       return (
         <Link
           key={tab.key}
@@ -93,7 +93,7 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
             </span>
           )}
         </Link>
-      )
+      );
     })}
   </nav>
-)
+);

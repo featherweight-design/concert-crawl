@@ -1,42 +1,42 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { type AllEvent } from './types'
+import { useEffect, useRef, useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { type AllEvent } from './types';
 
-const COPY = ADMIN_COPY.review.allEvents.rowMenu
+const COPY = ADMIN_COPY.review.allEvents.rowMenu;
 
 export interface EventRowActions {
-  onViewDetail: (event: AllEvent) => void
-  onEdit: (event: AllEvent) => void
-  onVerify: (event: AllEvent) => void
-  onSendBackToReview: (event: AllEvent) => void
-  onMarkPostponed: (event: AllEvent) => void
-  onMarkCancelled: (event: AllEvent) => void
-  onMarkUpcoming: (event: AllEvent) => void
-  onMarkSoldOut: (event: AllEvent) => void
-  onMarkAvailable: (event: AllEvent) => void
-  onRequestMarkNonConcert: (event: AllEvent) => void
-  onRequestDelete: (event: AllEvent) => void
+  onViewDetail: (event: AllEvent) => void;
+  onEdit: (event: AllEvent) => void;
+  onVerify: (event: AllEvent) => void;
+  onSendBackToReview: (event: AllEvent) => void;
+  onMarkPostponed: (event: AllEvent) => void;
+  onMarkCancelled: (event: AllEvent) => void;
+  onMarkUpcoming: (event: AllEvent) => void;
+  onMarkSoldOut: (event: AllEvent) => void;
+  onMarkAvailable: (event: AllEvent) => void;
+  onRequestMarkNonConcert: (event: AllEvent) => void;
+  onRequestDelete: (event: AllEvent) => void;
 }
 
 export interface EventRowMenuProps {
-  event: AllEvent
-  actions: EventRowActions
+  event: AllEvent;
+  actions: EventRowActions;
 }
 
 interface MenuItem {
-  label: string
-  destructive?: boolean
-  onClick: () => void
+  label: string;
+  destructive?: boolean;
+  onClick: () => void;
 }
 
 const buildItems = (event: AllEvent, actions: EventRowActions): MenuItem[] => {
   const items: MenuItem[] = [
     { label: COPY.viewDetail, onClick: () => actions.onViewDetail(event) },
     { label: COPY.edit, onClick: () => actions.onEdit(event) },
-  ]
+  ];
   items.push(
     event.verified
       ? {
@@ -44,24 +44,24 @@ const buildItems = (event: AllEvent, actions: EventRowActions): MenuItem[] => {
           onClick: () => actions.onSendBackToReview(event),
         }
       : { label: COPY.verify, onClick: () => actions.onVerify(event) },
-  )
+  );
   if (event.status !== 'postponed') {
     items.push({
       label: COPY.markPostponed,
       onClick: () => actions.onMarkPostponed(event),
-    })
+    });
   }
   if (event.status !== 'cancelled') {
     items.push({
       label: COPY.markCancelled,
       onClick: () => actions.onMarkCancelled(event),
-    })
+    });
   }
   if (event.status !== 'upcoming') {
     items.push({
       label: COPY.markUpcoming,
       onClick: () => actions.onMarkUpcoming(event),
-    })
+    });
   }
   items.push(
     event.isSoldOut
@@ -73,45 +73,45 @@ const buildItems = (event: AllEvent, actions: EventRowActions): MenuItem[] => {
           label: COPY.markSoldOut,
           onClick: () => actions.onMarkSoldOut(event),
         },
-  )
+  );
   items.push({
     label: COPY.markNonConcert,
     onClick: () => actions.onRequestMarkNonConcert(event),
-  })
+  });
   items.push({
     label: COPY.delete,
     destructive: true,
     onClick: () => actions.onRequestDelete(event),
-  })
-  return items
-}
+  });
+  return items;
+};
 
 export const EventRowMenu = ({ event, actions }: EventRowMenuProps) => {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!open) return undefined;
     const handleClick = (evt: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(evt.target as Node)
       ) {
-        setOpen(false)
+        setOpen(false);
       }
-    }
+    };
     const handleEscape = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('mousedown', handleClick)
-    window.addEventListener('keydown', handleEscape)
+      if (evt.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('mousedown', handleClick);
+    window.addEventListener('keydown', handleEscape);
     return () => {
-      window.removeEventListener('mousedown', handleClick)
-      window.removeEventListener('keydown', handleEscape)
-    }
-  }, [open])
+      window.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
 
-  const items = buildItems(event, actions)
+  const items = buildItems(event, actions);
 
   return (
     <div
@@ -124,8 +124,8 @@ export const EventRowMenu = ({ event, actions }: EventRowMenuProps) => {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={(evt) => {
-          evt.stopPropagation()
-          setOpen((prev) => !prev)
+          evt.stopPropagation();
+          setOpen((prev) => !prev);
         }}
         style={{
           border: 'none',
@@ -157,7 +157,7 @@ export const EventRowMenu = ({ event, actions }: EventRowMenuProps) => {
           }}
         >
           {items.map((item, idx) => {
-            const isDivider = idx === items.length - 1 && item.destructive
+            const isDivider = idx === items.length - 1 && item.destructive;
             return (
               <div key={item.label}>
                 {isDivider && (
@@ -173,9 +173,9 @@ export const EventRowMenu = ({ event, actions }: EventRowMenuProps) => {
                   type="button"
                   role="menuitem"
                   onClick={(evt) => {
-                    evt.stopPropagation()
-                    setOpen(false)
-                    item.onClick()
+                    evt.stopPropagation();
+                    setOpen(false);
+                    item.onClick();
                   }}
                   style={{
                     width: '100%',
@@ -193,10 +193,10 @@ export const EventRowMenu = ({ event, actions }: EventRowMenuProps) => {
                   {item.label}
                 </button>
               </div>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
-}
+  );
+};

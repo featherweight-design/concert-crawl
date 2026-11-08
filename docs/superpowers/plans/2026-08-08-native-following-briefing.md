@@ -108,15 +108,15 @@ user-facing PR lands its entry on its own branch as normal.
 
 ## Off-happy-path homes
 
-| New state | Where it lives in the IA | How the user reaches it | Reversible? |
-|---|---|---|---|
-| Follows nobody, free/supporter | Browse starter shelf, My shows ▸ Artists empty state, onboarding step 7 with a locked commit | Browse tab, or My shows ▸ Artists | n/a — it is the zero state |
-| Follows nobody, premium | Same surfaces, unlocked | Same | n/a |
-| Follows an artist with no upcoming Denver date | My shows ▸ Artists, "Nothing on the books" group, muted and alphabetical | My shows ▸ Artists | Yes, unfollow |
-| Follows someone, then downgrades to free | **Follows retained.** Artists tab still renders; alerts row shows the locked card; scope chip locks | My shows ▸ Artists | Yes — unfollow stays available, because DELETE is unentitled by design |
-| Followed via Spotify, then disconnects Spotify | Spotify-sourced rows persist; preferences now come from `user_notification_preferences` | My shows ▸ Artists | Yes |
-| Selected artists in onboarding, then hit the paywall | Picks held in component state **and** `sessionStorage`; commit retried after checkout closes | Returns automatically on paywall dismiss | Yes — deselect |
-| Zero-follow user who wants the starter shelf gone | No dismiss affordance exists. The shelf is the slot's zero mode, not a promo | n/a | n/a |
+| New state                                            | Where it lives in the IA                                                                            | How the user reaches it                  | Reversible?                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------- |
+| Follows nobody, free/supporter                       | Browse starter shelf, My shows ▸ Artists empty state, onboarding step 7 with a locked commit        | Browse tab, or My shows ▸ Artists        | n/a — it is the zero state                                             |
+| Follows nobody, premium                              | Same surfaces, unlocked                                                                             | Same                                     | n/a                                                                    |
+| Follows an artist with no upcoming Denver date       | My shows ▸ Artists, "Nothing on the books" group, muted and alphabetical                            | My shows ▸ Artists                       | Yes, unfollow                                                          |
+| Follows someone, then downgrades to free             | **Follows retained.** Artists tab still renders; alerts row shows the locked card; scope chip locks | My shows ▸ Artists                       | Yes — unfollow stays available, because DELETE is unentitled by design |
+| Followed via Spotify, then disconnects Spotify       | Spotify-sourced rows persist; preferences now come from `user_notification_preferences`             | My shows ▸ Artists                       | Yes                                                                    |
+| Selected artists in onboarding, then hit the paywall | Picks held in component state **and** `sessionStorage`; commit retried after checkout closes        | Returns automatically on paywall dismiss | Yes — deselect                                                         |
+| Zero-follow user who wants the starter shelf gone    | No dismiss affordance exists. The shelf is the slot's zero mode, not a promo                        | n/a                                      | n/a                                                                    |
 
 **Downgrading never deletes follows.** This is the row that has bitten before; it is settled.
 

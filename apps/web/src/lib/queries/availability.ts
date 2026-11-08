@@ -1,12 +1,12 @@
-import type { EventsAvailabilityResponse } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from '@/lib/api'
+import type { EventsAvailabilityResponse } from '@concert-crawl/types';
+import { apiClient, publicApiClient } from '@/lib/api';
 
 export function availabilityQueryKey(from: string, to: string) {
-  return ['availability', from, to] as const
+  return ['availability', from, to] as const;
 }
 
 export function availabilityPath(from: string, to: string) {
-  return `/v1/events/availability?from=${from}&to=${to}`
+  return `/v1/events/availability?from=${from}&to=${to}`;
 }
 
 // SSR-only prefetch for the events page (no `'use client'`), so it must not
@@ -22,8 +22,8 @@ export async function fetchAvailability(
   to: string,
   token: string | null,
 ): Promise<EventsAvailabilityResponse> {
-  const path = availabilityPath(from, to)
+  const path = availabilityPath(from, to);
   return token
     ? apiClient.get<EventsAvailabilityResponse>(path, token)
-    : publicApiClient.get<EventsAvailabilityResponse>(path)
+    : publicApiClient.get<EventsAvailabilityResponse>(path);
 }

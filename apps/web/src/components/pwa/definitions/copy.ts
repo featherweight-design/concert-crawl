@@ -35,7 +35,7 @@ export const INSTALL_COPY = {
   dismissAria: 'Dismiss install prompt',
   dismissNote:
     "We'll quit asking. You can still add it from Settings whenever.",
-} as const
+} as const;
 
 // #1062 post-watch permission sheet. Two variants:
 // - default: browser can prompt for push permission directly
@@ -65,7 +65,7 @@ export const POST_WATCH_COPY = {
   // stable label independent of the visible headings.
   srTitleDefault: 'Enable push notifications',
   srTitleIos: 'How to enable notifications on iPhone',
-} as const
+} as const;
 
 export const OFFLINE_COPY = {
   pillLabel: 'Offline · cached OK',
@@ -84,4 +84,4 @@ export const OFFLINE_COPY = {
       link: 'Try the home page',
     },
   },
-} as const
+} as const;

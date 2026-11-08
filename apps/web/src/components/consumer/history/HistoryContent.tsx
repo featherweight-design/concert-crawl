@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The /history route body (#70) — the three-state switch from
 // design_handoff_concert_history/history-routes.jsx:242-298.
@@ -18,35 +18,35 @@
 // ordered. The header, the export and the passport stay past-only: nights,
 // venues and spend are all past-tense claims.
 
-import type { HistoryResponse, HistoryShow } from '@concert-crawl/types'
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { useHistory } from '@/lib/queries/use-history'
-import { MyShowsTabs } from './MyShowsTabs'
-import { HistoryHeader } from './HistoryHeader'
-import { HistoryItem } from './HistoryItem'
-import { HistoryEmpty } from './HistoryEmpty'
-import { HistoryLocked } from './HistoryLocked'
-import { SaveCalendarRow } from './SaveCalendarRow'
-import { PassportTeaser } from './PassportTeaser'
-import { groupHistoryByMonth } from './lib/buckets'
-import { HISTORY_DENSITY } from './definitions/constants'
-import { HISTORY_COPY } from './definitions/copy'
+import type { HistoryResponse, HistoryShow } from '@concert-crawl/types';
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { useHistory } from '@/lib/queries/use-history';
+import { MyShowsTabs } from './MyShowsTabs';
+import { HistoryHeader } from './HistoryHeader';
+import { HistoryItem } from './HistoryItem';
+import { HistoryEmpty } from './HistoryEmpty';
+import { HistoryLocked } from './HistoryLocked';
+import { SaveCalendarRow } from './SaveCalendarRow';
+import { PassportTeaser } from './PassportTeaser';
+import { groupHistoryByMonth } from './lib/buckets';
+import { HISTORY_DENSITY } from './definitions/constants';
+import { HISTORY_COPY } from './definitions/copy';
 
-const SECTION_COPY = HISTORY_COPY.sections
+const SECTION_COPY = HISTORY_COPY.sections;
 
 interface HistoryContentProps {
   // null when the server's fetch came back 403 — see `locked`.
-  initialData: HistoryResponse | null
+  initialData: HistoryResponse | null;
   // The server's belt-and-braces verdict from the /v1/history 403.
-  locked: boolean
-  scaRegion: boolean
+  locked: boolean;
+  scaRegion: boolean;
 }
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
   <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8 lg:max-w-[960px]">
     {children}
   </main>
-)
+);
 
 const MonthBuckets = ({ shows }: { shows: HistoryShow[] }) => (
   <>
@@ -88,7 +88,7 @@ const MonthBuckets = ({ shows }: { shows: HistoryShow[] }) => (
       </section>
     ))}
   </>
-)
+);
 
 // One half of the attendance list. The empty line is inline rather than a full
 // EmptyState: the other half has rows, so this is a gap in a populated screen,
@@ -98,9 +98,9 @@ const AttendanceSection = ({
   emptyLabel,
   shows,
 }: {
-  heading: string
-  emptyLabel: string
-  shows: HistoryShow[]
+  heading: string;
+  emptyLabel: string;
+  shows: HistoryShow[];
 }) => (
   <section aria-label={heading} className="flex flex-col gap-2 sm:gap-3">
     <h2
@@ -128,26 +128,26 @@ const AttendanceSection = ({
       <MonthBuckets shows={shows} />
     )}
   </section>
-)
+);
 
 export const HistoryContent = ({
   initialData,
   locked,
   scaRegion,
 }: HistoryContentProps) => {
-  const { isLoading, active } = useEntitlement('concert-history')
+  const { isLoading, active } = useEntitlement('concert-history');
   // Only poll the API when the client agrees the plan can read history —
   // otherwise the query just re-earns the 403 the server already reported.
-  const clientEntitled = !isLoading && active
+  const clientEntitled = !isLoading && active;
   const { data } = useHistory({
     initialData,
     enabled: !locked && clientEntitled,
-  })
-  const history = data ?? initialData
+  });
+  const history = data ?? initialData;
 
   // Server 403 wins outright; the client hook is what decides for a plan the
   // server hasn't rejected (e.g. a stale token that downgraded mid-session).
-  const isLocked = locked || (!isLoading && !active)
+  const isLocked = locked || (!isLoading && !active);
 
   if (isLocked) {
     return (
@@ -155,7 +155,7 @@ export const HistoryContent = ({
         <MyShowsTabs active="history" />
         <HistoryLocked scaRegion={scaRegion} />
       </Shell>
-    )
+    );
   }
 
   // Hold the layout while the plan resolves rather than flashing empty at a
@@ -165,7 +165,7 @@ export const HistoryContent = ({
       <Shell>
         <MyShowsTabs active="history" />
       </Shell>
-    )
+    );
   }
 
   if (history.past.length === 0 && history.upcoming.length === 0) {
@@ -174,7 +174,7 @@ export const HistoryContent = ({
         <MyShowsTabs active="history" />
         <HistoryEmpty />
       </Shell>
-    )
+    );
   }
 
   return (
@@ -208,5 +208,5 @@ export const HistoryContent = ({
         </div>
       </div>
     </Shell>
-  )
-}
+  );
+};

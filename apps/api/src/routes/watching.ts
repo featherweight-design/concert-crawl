@@ -1,48 +1,48 @@
 // apps/api/src/routes/watching.ts
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, and, gte, asc, isNull } from 'drizzle-orm'
-import { z } from 'zod'
-import { db, userEvents, events, venues, artists } from '@concert-crawl/db'
-import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
-import { apiLogger } from '../lib/logger.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { eq, and, gte, asc, isNull } from 'drizzle-orm';
+import { z } from 'zod';
+import { db, userEvents, events, venues, artists } from '@concert-crawl/db';
+import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
+import { apiLogger } from '../lib/logger.js';
 import {
   loadPriceByTierByEventId,
   lowestHeadlineObservedAt,
   lowestHeadlineSourceCategory,
   lowestHeadlinePrice,
-} from '../lib/price-aggregation/index.js'
-import { parsePrice } from '../lib/price.js'
-import { releaseWatch } from '../lib/user-events.js'
-import { resolveArtistSlugs } from '../lib/artist-slugs.js'
+} from '../lib/price-aggregation/index.js';
+import { parsePrice } from '../lib/price.js';
+import { releaseWatch } from '../lib/user-events.js';
+import { resolveArtistSlugs } from '../lib/artist-slugs.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
-} from '../lib/event-billing.js'
+} from '../lib/event-billing.js';
 
-const uuidSchema = z.string().uuid()
+const uuidSchema = z.string().uuid();
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
 // auth is the only requirement.
-export const watchingRouter = new Hono()
+export const watchingRouter = new Hono();
 
-watchingRouter.use('*', clerkMiddleware())
+watchingRouter.use('*', clerkMiddleware());
 
 function resolveWatchStatus(
   eventStatus: 'upcoming' | 'cancelled' | 'postponed',
 ): 'live' | 'soldout' {
-  if (eventStatus === 'cancelled') return 'soldout'
-  return 'live'
+  if (eventStatus === 'cancelled') return 'soldout';
+  return 'live';
 }
 
 // GET /v1/watching — return user's watched upcoming shows
 watchingRouter.get('/', async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10);
 
   const rows = await db
     .select({
@@ -87,14 +87,14 @@ watchingRouter.get('/', async (ctx) => {
         isNull(events.firstMissingAt),
       ),
     )
-    .orderBy(asc(events.date), asc(events.showTime))
+    .orderBy(asc(events.date), asc(events.showTime));
 
   // The cheapest tier, not events.ticketPriceMin — that scalar holds whatever
   // price was written last and made Watching disagree with the event page
   // (#1365).
   const priceByTierByEventId = await loadPriceByTierByEventId(
     rows.map((row) => row.eventId),
-  )
+  );
 
   const data: WatchingShow[] = rows.map((row) => ({
     userEventId: row.userEventId,
@@ -128,23 +128,23 @@ watchingRouter.get('/', async (ctx) => {
     imageUrl: row.imageUrl ?? null,
     artistPhotoUrl: row.artistPhotoUrl ?? null,
     attendingAt: row.attendingAt?.toISOString() ?? null,
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // PUT /v1/watching/:eventId — toggle watch on/off
 watchingRouter.put('/:eventId', async (ctx) => {
-  const authInfo = getAuth(ctx)
+  const authInfo = getAuth(ctx);
   if (!authInfo?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const eventIdRaw = ctx.req.param('eventId')
-  const parsed = uuidSchema.safeParse(eventIdRaw)
+  const eventIdRaw = ctx.req.param('eventId');
+  const parsed = uuidSchema.safeParse(eventIdRaw);
   if (!parsed.success) {
-    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
   }
-  const eventId = parsed.data
+  const eventId = parsed.data;
 
   // Check for any existing row for this user+event (regardless of status),
   // so we don't violate the unique (user_id, event_id) index on insert.
@@ -157,12 +157,12 @@ watchingRouter.put('/:eventId', async (ctx) => {
         eq(userEvents.eventId, eventId),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (existing?.status === 'watching') {
     // Already watching — release it. Not a bare DELETE: the row may also carry
     // attendance, which must survive un-watching (#70).
-    await releaseWatch(authInfo.userId, eventId)
+    await releaseWatch(authInfo.userId, eventId);
 
     const response: WatchToggleResponse = {
       watching: false,
@@ -172,8 +172,8 @@ watchingRouter.put('/:eventId', async (ctx) => {
       userEventId: null,
       artist: null,
       artistSlug: null,
-    }
-    return ctx.json({ success: true, data: response })
+    };
+    return ctx.json({ success: true, data: response });
   }
 
   // Not watching — fetch current price and upsert to watching.
@@ -193,20 +193,20 @@ watchingRouter.put('/:eventId', async (ctx) => {
         isNull(events.firstMissingAt),
       ),
     )
-    .limit(1)
+    .limit(1);
 
   if (!eventRow) {
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
-  const currentPriceRaw = eventRow.ticketPriceMin ?? null
-  const savedPrice = parsePrice(currentPriceRaw)
-  const savedPriceStr = savedPrice !== null ? String(savedPrice) : null
+  const currentPriceRaw = eventRow.ticketPriceMin ?? null;
+  const savedPrice = parsePrice(currentPriceRaw);
+  const savedPriceStr = savedPrice !== null ? String(savedPrice) : null;
 
   // `.returning()` rather than a follow-up SELECT: the id the nudge keys on
   // must be the id this very write produced, and the conflict branch can
   // resurrect a row that a concurrent request just replaced.
-  let userEventId: string
+  let userEventId: string;
   try {
     const [written] = await db
       .insert(userEvents)
@@ -220,29 +220,29 @@ watchingRouter.put('/:eventId', async (ctx) => {
         target: [userEvents.userId, userEvents.eventId],
         set: { status: 'watching', savedPrice: savedPriceStr },
       })
-      .returning({ id: userEvents.id })
-    if (!written) throw new Error('watch upsert returned no rows')
-    userEventId = written.id
+      .returning({ id: userEvents.id });
+    if (!written) throw new Error('watch upsert returned no rows');
+    userEventId = written.id;
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
       'watch upsert failed',
-    )
-    return ctx.json({ success: false, error: 'Failed to save watch' }, 500)
+    );
+    return ctx.json({ success: false, error: 'Failed to save watch' }, 500);
   }
 
   // The nudge invites the viewer to follow the headliner, so it needs a slug.
   // A name the artists projection has no row for is normal (see
   // resolveArtistSlugs) and simply means there is nothing to follow — the
   // watch itself already succeeded, so a failure here must not fail the write.
-  let artistSlug: string | null = null
+  let artistSlug: string | null = null;
   try {
-    ;({ artistSlug } = await resolveArtistSlugs(eventRow.artist, null))
+    ({ artistSlug } = await resolveArtistSlugs(eventRow.artist, null));
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
       'watch toggle artist slug resolution failed',
-    )
+    );
   }
 
   const response: WatchToggleResponse = {
@@ -251,6 +251,6 @@ watchingRouter.put('/:eventId', async (ctx) => {
     userEventId,
     artist: eventRow.artist,
     artistSlug,
-  }
-  return ctx.json({ success: true, data: response })
-})
+  };
+  return ctx.json({ success: true, data: response });
+});

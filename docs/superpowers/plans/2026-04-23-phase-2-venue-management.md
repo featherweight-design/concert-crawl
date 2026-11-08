@@ -68,31 +68,31 @@ concert-crawl/
 Add to `packages/types/src/index.test.ts`:
 
 ```typescript
-import type { Venue, NewVenue, InviteCode } from './index.js'
+import type { Venue, NewVenue, InviteCode } from './index.js';
 
 describe('venue and invite code types', () => {
   it('Venue has required fields', () => {
     expectTypeOf<Venue>().toMatchTypeOf<{
-      id: string
-      name: string
-      slug: string
-      websiteUrl: string
-      city: string
-      active: boolean
-      verified: boolean
-    }>()
-  })
+      id: string;
+      name: string;
+      slug: string;
+      websiteUrl: string;
+      city: string;
+      active: boolean;
+      verified: boolean;
+    }>();
+  });
 
   it('InviteCode has revocation fields', () => {
     expectTypeOf<InviteCode>().toMatchTypeOf<{
-      id: string
-      code: string
-      createdBy: string
-      revokedAt: Date | null
-      revokedBy: string | null
-    }>()
-  })
-})
+      id: string;
+      code: string;
+      createdBy: string;
+      revokedAt: Date | null;
+      revokedBy: string | null;
+    }>();
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -110,40 +110,40 @@ Append to the existing file:
 ```typescript
 // Venue — mirrors the Drizzle inferred type from packages/db
 export interface Venue {
-  id: string
-  name: string
-  slug: string
-  websiteUrl: string
-  city: string
-  active: boolean
-  verified: boolean
-  lastCrawledAt: Date | null
-  crawlNotes: string | null
-  crawlDelayMs: number
-  robotsTxtAllowed: boolean | null
-  consecutiveFailures: number
-  blockedAt: Date | null
-  extractionStrategy: 'structured_data' | 'llm' | 'manual' | null
-  contactEmail: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  name: string;
+  slug: string;
+  websiteUrl: string;
+  city: string;
+  active: boolean;
+  verified: boolean;
+  lastCrawledAt: Date | null;
+  crawlNotes: string | null;
+  crawlDelayMs: number;
+  robotsTxtAllowed: boolean | null;
+  consecutiveFailures: number;
+  blockedAt: Date | null;
+  extractionStrategy: 'structured_data' | 'llm' | 'manual' | null;
+  contactEmail: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type NewVenue = Omit<
   Venue,
   'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
->
+>;
 
 export interface InviteCode {
-  id: string
-  code: string
-  createdBy: string
-  usedBy: string | null
-  usedAt: Date | null
-  expiresAt: Date | null
-  revokedAt: Date | null
-  revokedBy: string | null
-  createdAt: Date
+  id: string;
+  code: string;
+  createdBy: string;
+  usedBy: string | null;
+  usedAt: Date | null;
+  expiresAt: Date | null;
+  revokedAt: Date | null;
+  revokedBy: string | null;
+  createdAt: Date;
 }
 ```
 
@@ -186,16 +186,16 @@ git commit -m "feat: add Venue and InviteCode types to shared package"
 Create `apps/api/src/routes/admin/venues.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createApp } from '../../app.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app.js';
 
 // Mock Clerk auth — simulate admin user
-const mockGetAuth = vi.fn()
+const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 // Mock the database
 vi.mock('@concert-crawl/db', () => ({
@@ -226,54 +226,54 @@ vi.mock('@concert-crawl/db', () => ({
     delete: vi.fn().mockReturnThis(),
   },
   venues: {},
-}))
+}));
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
     sessionClaims: { publicMetadata: { role: 'admin' } },
-  })
+  });
 }
 
 describe('Admin venue routes', () => {
-  beforeEach(() => mockGetAuth.mockReset())
+  beforeEach(() => mockGetAuth.mockReset());
 
   it('GET /v1/admin/venues returns 401 for unauthenticated requests', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(401);
+  });
 
   it('GET /v1/admin/venues returns 403 for non-admin users', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: { role: 'user' } },
-    })
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(403);
+  });
 
   it('GET /v1/admin/venues returns 200 and array for admin', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/venues')
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown[] }
-    expect(body.success).toBe(true)
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    adminAuth();
+    const res = await createApp().request('/v1/admin/venues');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown[] };
+    expect(body.success).toBe(true);
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('POST /v1/admin/venues returns 400 for missing required fields', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Missing Fields' }), // no slug or websiteUrl
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('POST /v1/admin/venues creates a venue and returns 201', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/venues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -283,10 +283,10 @@ describe('Admin venue routes', () => {
         websiteUrl: 'https://ogdentheatre.com',
         city: 'Denver',
       }),
-    })
-    expect(res.status).toBe(201)
-  })
-})
+    });
+    expect(res.status).toBe(201);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -300,12 +300,12 @@ Expected: FAIL — `Cannot find module '../../app.js'` or routes not found (404s
 - [ ] **Step 3: Create `apps/api/src/routes/admin/venues.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { db, venues } from '@concert-crawl/db'
-import { eq } from 'drizzle-orm'
-import { getAuth } from '@hono/clerk-auth'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { db, venues } from '@concert-crawl/db';
+import { eq } from 'drizzle-orm';
+import { getAuth } from '@hono/clerk-auth';
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -319,126 +319,126 @@ const createVenueSchema = z.object({
   crawlDelayMs: z.number().int().min(1000).max(30000).default(3000),
   contactEmail: z.string().email().optional(),
   crawlNotes: z.string().optional(),
-})
+});
 
 const updateVenueSchema = createVenueSchema.partial().extend({
   active: z.boolean().optional(),
   verified: z.boolean().optional(),
-})
+});
 
-export const venuesAdminRouter = new Hono()
+export const venuesAdminRouter = new Hono();
 
 // GET /v1/admin/venues — list all venues
 venuesAdminRouter.get('/', async (ctx) => {
-  const allVenues = await db.select().from(venues).orderBy(venues.name)
-  return c.json({ success: true, data: allVenues })
-})
+  const allVenues = await db.select().from(venues).orderBy(venues.name);
+  return c.json({ success: true, data: allVenues });
+});
 
 // GET /v1/admin/venues/:id — get single venue
 venuesAdminRouter.get('/:id', async (ctx) => {
-  const { id } = c.req.param()
-  const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+  const { id } = c.req.param();
+  const [venue] = await db.select().from(venues).where(eq(venues.id, id));
 
   if (!venue) {
-    return c.json({ success: false, error: 'Venue not found' }, 404)
+    return c.json({ success: false, error: 'Venue not found' }, 404);
   }
 
-  return c.json({ success: true, data: venue })
-})
+  return c.json({ success: true, data: venue });
+});
 
 // POST /v1/admin/venues — create venue
 venuesAdminRouter.post(
   '/',
   zValidator('json', createVenueSchema),
   async (ctx) => {
-    const body = c.req.valid('json')
-    const auth = getAuth(ctx)
+    const body = c.req.valid('json');
+    const auth = getAuth(ctx);
 
-    const [venue] = await db.insert(venues).values(body).returning()
+    const [venue] = await db.insert(venues).values(body).returning();
 
     // Audit log written by the admin route group middleware (see admin/index.ts)
-    c.set('auditAction', 'venue.create')
-    c.set('auditTargetId', venue!.id)
-    c.set('auditActorId', auth!.userId)
+    c.set('auditAction', 'venue.create');
+    c.set('auditTargetId', venue!.id);
+    c.set('auditActorId', auth!.userId);
 
-    return c.json({ success: true, data: venue }, 201)
+    return c.json({ success: true, data: venue }, 201);
   },
-)
+);
 
 // PATCH /v1/admin/venues/:id — update venue
 venuesAdminRouter.patch(
   '/:id',
   zValidator('json', updateVenueSchema),
   async (ctx) => {
-    const { id } = c.req.param()
-    const body = c.req.valid('json')
-    const auth = getAuth(ctx)
+    const { id } = c.req.param();
+    const body = c.req.valid('json');
+    const auth = getAuth(ctx);
 
-    const [existing] = await db.select().from(venues).where(eq(venues.id, id))
+    const [existing] = await db.select().from(venues).where(eq(venues.id, id));
     if (!existing) {
-      return c.json({ success: false, error: 'Venue not found' }, 404)
+      return c.json({ success: false, error: 'Venue not found' }, 404);
     }
 
     const [updated] = await db
       .update(venues)
       .set({ ...body, updatedAt: new Date() })
       .where(eq(venues.id, id))
-      .returning()
+      .returning();
 
-    c.set('auditAction', 'venue.update')
-    c.set('auditTargetId', id)
-    c.set('auditActorId', auth!.userId)
+    c.set('auditAction', 'venue.update');
+    c.set('auditTargetId', id);
+    c.set('auditActorId', auth!.userId);
 
-    return c.json({ success: true, data: updated })
+    return c.json({ success: true, data: updated });
   },
-)
+);
 
 // DELETE /v1/admin/venues/:id — soft delete (set active = false)
 venuesAdminRouter.delete('/:id', async (ctx) => {
-  const { id } = c.req.param()
-  const auth = getAuth(ctx)
+  const { id } = c.req.param();
+  const auth = getAuth(ctx);
 
-  const [existing] = await db.select().from(venues).where(eq(venues.id, id))
+  const [existing] = await db.select().from(venues).where(eq(venues.id, id));
   if (!existing) {
-    return c.json({ success: false, error: 'Venue not found' }, 404)
+    return c.json({ success: false, error: 'Venue not found' }, 404);
   }
 
   await db
     .update(venues)
     .set({ active: false, updatedAt: new Date() })
-    .where(eq(venues.id, id))
+    .where(eq(venues.id, id));
 
-  c.set('auditAction', 'venue.deactivate')
-  c.set('auditTargetId', id)
-  c.set('auditActorId', auth!.userId)
+  c.set('auditAction', 'venue.deactivate');
+  c.set('auditTargetId', id);
+  c.set('auditActorId', auth!.userId);
 
-  return c.json({ success: true })
-})
+  return c.json({ success: true });
+});
 ```
 
 - [ ] **Step 4: Create `apps/api/src/routes/admin/index.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { requireRole } from '../../middleware/role.js'
-import { clerkAuth } from '../../middleware/auth.js'
-import { db, auditLog } from '@concert-crawl/db'
-import { venuesAdminRouter } from './venues.js'
-import { inviteCodesAdminRouter } from './invite-codes.js'
+import { Hono } from 'hono';
+import { requireRole } from '../../middleware/role.js';
+import { clerkAuth } from '../../middleware/auth.js';
+import { db, auditLog } from '@concert-crawl/db';
+import { venuesAdminRouter } from './venues.js';
+import { inviteCodesAdminRouter } from './invite-codes.js';
 
-export const adminRouter = new Hono()
+export const adminRouter = new Hono();
 
 // All admin routes require Clerk auth + admin role
-adminRouter.use('*', clerkAuth)
-adminRouter.use('*', requireRole('admin'))
+adminRouter.use('*', clerkAuth);
+adminRouter.use('*', requireRole('admin'));
 
 // Write audit log entry after each mutating request
 adminRouter.use('*', async (c, next) => {
-  await next()
+  await next();
 
-  const action = c.get('auditAction') as string | undefined
-  const targetId = c.get('auditTargetId') as string | undefined
-  const actorId = c.get('auditActorId') as string | undefined
+  const action = c.get('auditAction') as string | undefined;
+  const targetId = c.get('auditTargetId') as string | undefined;
+  const actorId = c.get('auditActorId') as string | undefined;
 
   if (action && actorId) {
     await db.insert(auditLog).values({
@@ -446,24 +446,24 @@ adminRouter.use('*', async (c, next) => {
       action,
       targetId: targetId ?? null,
       metadata: null,
-    })
+    });
   }
-})
+});
 
-adminRouter.route('/venues', venuesAdminRouter)
-adminRouter.route('/invite-codes', inviteCodesAdminRouter)
+adminRouter.route('/venues', venuesAdminRouter);
+adminRouter.route('/invite-codes', inviteCodesAdminRouter);
 ```
 
 - [ ] **Step 5: Modify `apps/api/src/routes/index.ts`**
 
 ```typescript
-import type { Hono } from 'hono'
-import { healthRouter } from './health.js'
-import { adminRouter } from './admin/index.js'
+import type { Hono } from 'hono';
+import { healthRouter } from './health.js';
+import { adminRouter } from './admin/index.js';
 
 export function registerRoutes(app: Hono) {
-  app.route('/v1/health', healthRouter)
-  app.route('/v1/admin', adminRouter)
+  app.route('/v1/health', healthRouter);
+  app.route('/v1/admin', adminRouter);
 }
 ```
 
@@ -502,15 +502,15 @@ git commit -m "feat: add admin venue CRUD routes with role guard and audit loggi
 Create `apps/api/src/routes/admin/invite-codes.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createApp } from '../../app.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createApp } from '../../app.js';
 
-const mockGetAuth = vi.fn()
+const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 vi.mock('@concert-crawl/db', () => ({
   db: {
@@ -538,51 +538,51 @@ vi.mock('@concert-crawl/db', () => ({
   },
   inviteCodes: {},
   auditLog: {},
-}))
+}));
 
 function adminAuth() {
   mockGetAuth.mockReturnValue({
     userId: 'admin_123',
     sessionClaims: { publicMetadata: { role: 'admin' } },
-  })
+  });
 }
 
 describe('Admin invite code routes', () => {
-  beforeEach(() => mockGetAuth.mockReset())
+  beforeEach(() => mockGetAuth.mockReset());
 
   it('GET /v1/admin/invite-codes returns 200 for admin', async () => {
-    adminAuth()
-    const res = await createApp().request('/v1/admin/invite-codes')
-    expect(res.status).toBe(200)
-  })
+    adminAuth();
+    const res = await createApp().request('/v1/admin/invite-codes');
+    expect(res.status).toBe(200);
+  });
 
   it('POST /v1/admin/invite-codes generates a code and returns 201', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request('/v1/admin/invite-codes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      success: boolean
-      data: { code: string }
-    }
-    expect(body.success).toBe(true)
-    expect(typeof body.data.code).toBe('string')
-  })
+      success: boolean;
+      data: { code: string };
+    };
+    expect(body.success).toBe(true);
+    expect(typeof body.data.code).toBe('string');
+  });
 
   it('POST /v1/admin/invite-codes/:id/revoke sets revokedAt and returns 200', async () => {
-    adminAuth()
+    adminAuth();
     const res = await createApp().request(
       '/v1/admin/invite-codes/code-1/revoke',
       {
         method: 'POST',
       },
-    )
-    expect(res.status).toBe(200)
-  })
-})
+    );
+    expect(res.status).toBe(200);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -596,33 +596,33 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Create `apps/api/src/routes/admin/invite-codes.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { db, inviteCodes } from '@concert-crawl/db'
-import { eq } from 'drizzle-orm'
-import { getAuth } from '@hono/clerk-auth'
-import { randomBytes } from 'crypto'
+import { Hono } from 'hono';
+import { db, inviteCodes } from '@concert-crawl/db';
+import { eq } from 'drizzle-orm';
+import { getAuth } from '@hono/clerk-auth';
+import { randomBytes } from 'crypto';
 
 function generateCode(): string {
   // Format: BETA-XXXX-XXXX (uppercase alphanumeric, URL-safe)
-  const part = () => randomBytes(3).toString('hex').toUpperCase().slice(0, 4)
-  return `BETA-${part()}-${part()}`
+  const part = () => randomBytes(3).toString('hex').toUpperCase().slice(0, 4);
+  return `BETA-${part()}-${part()}`;
 }
 
-export const inviteCodesAdminRouter = new Hono()
+export const inviteCodesAdminRouter = new Hono();
 
 // GET /v1/admin/invite-codes — list all codes
 inviteCodesAdminRouter.get('/', async (ctx) => {
   const codes = await db
     .select()
     .from(inviteCodes)
-    .orderBy(inviteCodes.createdAt)
-  return c.json({ success: true, data: codes })
-})
+    .orderBy(inviteCodes.createdAt);
+  return c.json({ success: true, data: codes });
+});
 
 // POST /v1/admin/invite-codes — generate a new code
 inviteCodesAdminRouter.post('/', async (ctx) => {
-  const auth = getAuth(ctx)
-  const body = await c.req.json<{ expiresAt?: string }>().catch(() => ({}))
+  const auth = getAuth(ctx);
+  const body = await c.req.json<{ expiresAt?: string }>().catch(() => ({}));
 
   const [code] = await db
     .insert(inviteCodes)
@@ -631,43 +631,46 @@ inviteCodesAdminRouter.post('/', async (ctx) => {
       createdBy: auth!.userId,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : null,
     })
-    .returning()
+    .returning();
 
-  c.set('auditAction', 'invite_code.create')
-  c.set('auditTargetId', code!.id)
-  c.set('auditActorId', auth!.userId)
+  c.set('auditAction', 'invite_code.create');
+  c.set('auditTargetId', code!.id);
+  c.set('auditActorId', auth!.userId);
 
-  return c.json({ success: true, data: code }, 201)
-})
+  return c.json({ success: true, data: code }, 201);
+});
 
 // POST /v1/admin/invite-codes/:id/revoke — revoke a code
 inviteCodesAdminRouter.post('/:id/revoke', async (ctx) => {
-  const { id } = c.req.param()
-  const auth = getAuth(ctx)
+  const { id } = c.req.param();
+  const auth = getAuth(ctx);
 
   const [existing] = await db
     .select()
     .from(inviteCodes)
-    .where(eq(inviteCodes.id, id))
+    .where(eq(inviteCodes.id, id));
   if (!existing) {
-    return c.json({ success: false, error: 'Invite code not found' }, 404)
+    return c.json({ success: false, error: 'Invite code not found' }, 404);
   }
   if (existing.revokedAt) {
-    return c.json({ success: false, error: 'Invite code already revoked' }, 400)
+    return c.json(
+      { success: false, error: 'Invite code already revoked' },
+      400,
+    );
   }
 
   const [updated] = await db
     .update(inviteCodes)
     .set({ revokedAt: new Date(), revokedBy: auth!.userId })
     .where(eq(inviteCodes.id, id))
-    .returning()
+    .returning();
 
-  c.set('auditAction', 'invite_code.revoke')
-  c.set('auditTargetId', id)
-  c.set('auditActorId', auth!.userId)
+  c.set('auditAction', 'invite_code.revoke');
+  c.set('auditTargetId', id);
+  c.set('auditActorId', auth!.userId);
 
-  return c.json({ success: true, data: updated })
-})
+  return c.json({ success: true, data: updated });
+});
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -872,38 +875,38 @@ git commit -m "chore: initialize shadcn/ui with default components"
 Create `apps/web/src/lib/api.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest';
 
-global.fetch = vi.fn()
+global.fetch = vi.fn();
 
 describe('apiClient', () => {
-  beforeEach(() => vi.mocked(fetch).mockReset())
+  beforeEach(() => vi.mocked(fetch).mockReset());
 
   it('GET request returns parsed JSON on success', async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ success: true, data: [] }), {
         status: 200,
       }),
-    )
+    );
 
-    const { apiClient } = await import('./api.js')
-    const result = await apiClient.get('/v1/admin/venues', 'test-token')
-    expect(result).toEqual({ success: true, data: [] })
-  })
+    const { apiClient } = await import('./api.js');
+    const result = await apiClient.get('/v1/admin/venues', 'test-token');
+    expect(result).toEqual({ success: true, data: [] });
+  });
 
   it('throws on non-ok response', async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ success: false, error: 'Forbidden' }), {
         status: 403,
       }),
-    )
+    );
 
-    const { apiClient } = await import('./api.js')
+    const { apiClient } = await import('./api.js');
     await expect(
       apiClient.get('/v1/admin/venues', 'test-token'),
-    ).rejects.toThrow('Forbidden')
-  })
-})
+    ).rejects.toThrow('Forbidden');
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify they fail**
@@ -917,7 +920,7 @@ Expected: FAIL — `Cannot find module './api.js'`.
 - [ ] **Step 3: Create `apps/web/src/lib/api.ts`**
 
 ```typescript
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 async function request<T>(
   path: string,
@@ -931,19 +934,19 @@ async function request<T>(
       Authorization: `Bearer ${token}`,
       ...options.headers,
     },
-  })
+  });
 
   const body = (await res.json()) as {
-    success: boolean
-    data?: T
-    error?: string
-  }
+    success: boolean;
+    data?: T;
+    error?: string;
+  };
 
   if (!res.ok || !body.success) {
-    throw new Error(body.error ?? `Request failed with status ${res.status}`)
+    throw new Error(body.error ?? `Request failed with status ${res.status}`);
   }
 
-  return body.data as T
+  return body.data as T;
 }
 
 export const apiClient = {
@@ -963,7 +966,7 @@ export const apiClient = {
 
   delete: <T>(path: string, token: string) =>
     request<T>(path, token, { method: 'DELETE' }),
-}
+};
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -998,28 +1001,28 @@ Append to the existing file:
 ```typescript
 // Convenience wrapper — redirects to / if user is not an admin
 export async function requireAdminUser(): Promise<AuthUser> {
-  return requireRole('admin')
+  return requireRole('admin');
 }
 ```
 
 - [ ] **Step 2: Create `apps/web/src/app/(protected)/admin/layout.tsx`**
 
 ```tsx
-import { requireAdminUser } from '@/lib/auth'
-import Link from 'next/link'
+import { requireAdminUser } from '@/lib/auth';
+import Link from 'next/link';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/venues', label: 'Venues' },
   { href: '/admin/invite-codes', label: 'Invite Codes' },
-]
+];
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  await requireAdminUser()
+  await requireAdminUser();
 
   return (
     <div className="flex min-h-screen">
@@ -1041,19 +1044,19 @@ export default async function AdminLayout({
       </aside>
       <main className="flex-1 p-8">{children}</main>
     </div>
-  )
+  );
 }
 ```
 
 - [ ] **Step 3: Create `apps/web/src/app/(protected)/admin/page.tsx`**
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { requireAdminUser } from '@/lib/auth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { auth } from '@clerk/nextjs/server';
+import { requireAdminUser } from '@/lib/auth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function AdminDashboardPage() {
-  const user = await requireAdminUser()
+  const user = await requireAdminUser();
 
   return (
     <div className="space-y-6">
@@ -1101,7 +1104,7 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1140,23 +1143,23 @@ git commit -m "feat: add admin layout with sidebar nav and dashboard page"
 Create `apps/web/src/lib/actions/venues.ts`:
 
 ```typescript
-'use server'
+'use server';
 
-import { auth } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
-import { apiClient } from '@/lib/api'
-import type { Venue } from '@concert-crawl/types'
+import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { apiClient } from '@/lib/api';
+import type { Venue } from '@concert-crawl/types';
 
 async function getToken(): Promise<string> {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) throw new Error('Not authenticated')
-  return token
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) throw new Error('Not authenticated');
+  return token;
 }
 
 export async function createVenue(formData: FormData): Promise<void> {
-  const token = await getToken()
+  const token = await getToken();
 
   await apiClient.post<Venue>('/v1/admin/venues', token, {
     name: formData.get('name'),
@@ -1165,17 +1168,17 @@ export async function createVenue(formData: FormData): Promise<void> {
     city: formData.get('city') || 'Denver',
     crawlNotes: formData.get('crawlNotes') || undefined,
     contactEmail: formData.get('contactEmail') || undefined,
-  })
+  });
 
-  revalidatePath('/admin/venues')
-  redirect('/admin/venues')
+  revalidatePath('/admin/venues');
+  redirect('/admin/venues');
 }
 
 export async function updateVenue(
   id: string,
   formData: FormData,
 ): Promise<void> {
-  const token = await getToken()
+  const token = await getToken();
 
   await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
     name: formData.get('name'),
@@ -1186,25 +1189,25 @@ export async function updateVenue(
     verified: formData.get('verified') === 'true',
     crawlNotes: formData.get('crawlNotes') || undefined,
     contactEmail: formData.get('contactEmail') || undefined,
-  })
+  });
 
-  revalidatePath('/admin/venues')
-  redirect('/admin/venues')
+  revalidatePath('/admin/venues');
+  redirect('/admin/venues');
 }
 
 export async function deactivateVenue(id: string): Promise<void> {
-  const token = await getToken()
-  await apiClient.delete(`/v1/admin/venues/${id}`, token)
-  revalidatePath('/admin/venues')
+  const token = await getToken();
+  await apiClient.delete(`/v1/admin/venues/${id}`, token);
+  revalidatePath('/admin/venues');
 }
 ```
 
 - [ ] **Step 2: Create `apps/web/src/components/admin/venue-table.tsx`**
 
 ```tsx
-import type { Venue } from '@concert-crawl/types'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import type { Venue } from '@concert-crawl/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -1212,12 +1215,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import Link from 'next/link'
-import { deactivateVenue } from '@/lib/actions/venues'
+} from '@/components/ui/table';
+import Link from 'next/link';
+import { deactivateVenue } from '@/lib/actions/venues';
 
 interface VenueTableProps {
-  venues: Venue[]
+  venues: Venue[];
 }
 
 export function VenueTable({ venues }: VenueTableProps) {
@@ -1283,33 +1286,33 @@ export function VenueTable({ venues }: VenueTableProps) {
         )}
       </TableBody>
     </Table>
-  )
+  );
 }
 ```
 
 - [ ] **Step 3: Create `apps/web/src/components/admin/venue-form.tsx`**
 
 ```tsx
-'use client'
+'use client';
 
-import { useFormStatus } from 'react-dom'
-import type { Venue } from '@concert-crawl/types'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useFormStatus } from 'react-dom';
+import type { Venue } from '@concert-crawl/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface VenueFormProps {
-  venue?: Venue
-  action: (formData: FormData) => Promise<void>
+  venue?: Venue;
+  action: (formData: FormData) => Promise<void>;
 }
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
       {pending ? 'Saving…' : 'Save Venue'}
     </Button>
-  )
+  );
 }
 
 export function VenueForm({ venue, action }: VenueFormProps) {
@@ -1381,7 +1384,7 @@ export function VenueForm({ venue, action }: VenueFormProps) {
 
       <SubmitButton />
     </form>
-  )
+  );
 }
 ```
 
@@ -1390,17 +1393,17 @@ export function VenueForm({ venue, action }: VenueFormProps) {
 Create `apps/web/src/app/(protected)/admin/venues/page.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { apiClient } from '@/lib/api'
-import type { Venue } from '@concert-crawl/types'
-import { VenueTable } from '@/components/admin/venue-table'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import { auth } from '@clerk/nextjs/server';
+import { apiClient } from '@/lib/api';
+import type { Venue } from '@concert-crawl/types';
+import { VenueTable } from '@/components/admin/venue-table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default async function VenuesPage() {
-  const { getToken } = await auth()
-  const token = await getToken()
-  const venues = await apiClient.get<Venue[]>('/v1/admin/venues', token!)
+  const { getToken } = await auth();
+  const token = await getToken();
+  const venues = await apiClient.get<Venue[]>('/v1/admin/venues', token!);
 
   return (
     <div className="space-y-6">
@@ -1412,7 +1415,7 @@ export default async function VenuesPage() {
       </div>
       <VenueTable venues={venues} />
     </div>
-  )
+  );
 }
 ```
 
@@ -1421,8 +1424,8 @@ export default async function VenuesPage() {
 Create `apps/web/src/app/(protected)/admin/venues/new/page.tsx`:
 
 ```tsx
-import { VenueForm } from '@/components/admin/venue-form'
-import { createVenue } from '@/lib/actions/venues'
+import { VenueForm } from '@/components/admin/venue-form';
+import { createVenue } from '@/lib/actions/venues';
 
 export default function NewVenuePage() {
   return (
@@ -1430,7 +1433,7 @@ export default function NewVenuePage() {
       <h1 className="text-2xl font-bold">Add Venue</h1>
       <VenueForm action={createVenue} />
     </div>
-  )
+  );
 }
 ```
 
@@ -1439,37 +1442,37 @@ export default function NewVenuePage() {
 Create `apps/web/src/app/(protected)/admin/venues/[id]/page.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { apiClient } from '@/lib/api'
-import type { Venue } from '@concert-crawl/types'
-import { VenueForm } from '@/components/admin/venue-form'
-import { updateVenue } from '@/lib/actions/venues'
-import { notFound } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server';
+import { apiClient } from '@/lib/api';
+import type { Venue } from '@concert-crawl/types';
+import { VenueForm } from '@/components/admin/venue-form';
+import { updateVenue } from '@/lib/actions/venues';
+import { notFound } from 'next/navigation';
 
 interface Props {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default async function EditVenuePage({ params }: Props) {
-  const { id } = await params
-  const { getToken } = await auth()
-  const token = await getToken()
+  const { id } = await params;
+  const { getToken } = await auth();
+  const token = await getToken();
 
-  let venue: Venue
+  let venue: Venue;
   try {
-    venue = await apiClient.get<Venue>(`/v1/admin/venues/${id}`, token!)
+    venue = await apiClient.get<Venue>(`/v1/admin/venues/${id}`, token!);
   } catch {
-    notFound()
+    notFound();
   }
 
-  const action = updateVenue.bind(null, id)
+  const action = updateVenue.bind(null, id);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Edit Venue — {venue.name}</h1>
       <VenueForm venue={venue} action={action} />
     </div>
-  )
+  );
 }
 ```
 
@@ -1507,44 +1510,44 @@ git commit -m "feat: add venue management UI with list, create, and edit pages"
 Create `apps/web/src/lib/actions/invite-codes.ts`:
 
 ```typescript
-'use server'
+'use server';
 
-import { auth } from '@clerk/nextjs/server'
-import { revalidatePath } from 'next/cache'
-import { apiClient } from '@/lib/api'
-import type { InviteCode } from '@concert-crawl/types'
+import { auth } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
+import { apiClient } from '@/lib/api';
+import type { InviteCode } from '@concert-crawl/types';
 
 async function getToken(): Promise<string> {
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) throw new Error('Not authenticated')
-  return token
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) throw new Error('Not authenticated');
+  return token;
 }
 
 export async function generateInviteCode(formData: FormData): Promise<void> {
-  const token = await getToken()
-  const expiresAt = formData.get('expiresAt') as string | null
+  const token = await getToken();
+  const expiresAt = formData.get('expiresAt') as string | null;
 
   await apiClient.post<InviteCode>('/v1/admin/invite-codes', token, {
     expiresAt: expiresAt || undefined,
-  })
+  });
 
-  revalidatePath('/admin/invite-codes')
+  revalidatePath('/admin/invite-codes');
 }
 
 export async function revokeInviteCode(id: string): Promise<void> {
-  const token = await getToken()
-  await apiClient.post(`/v1/admin/invite-codes/${id}/revoke`, token, {})
-  revalidatePath('/admin/invite-codes')
+  const token = await getToken();
+  await apiClient.post(`/v1/admin/invite-codes/${id}/revoke`, token, {});
+  revalidatePath('/admin/invite-codes');
 }
 ```
 
 - [ ] **Step 2: Create `apps/web/src/components/admin/invite-code-table.tsx`**
 
 ```tsx
-import type { InviteCode } from '@concert-crawl/types'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import type { InviteCode } from '@concert-crawl/types';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -1552,18 +1555,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { revokeInviteCode } from '@/lib/actions/invite-codes'
+} from '@/components/ui/table';
+import { revokeInviteCode } from '@/lib/actions/invite-codes';
 
 function codeStatus(code: InviteCode): {
-  label: string
-  variant: 'default' | 'secondary' | 'destructive' | 'outline'
+  label: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
 } {
-  if (code.revokedAt) return { label: 'Revoked', variant: 'destructive' }
-  if (code.usedAt) return { label: 'Used', variant: 'secondary' }
+  if (code.revokedAt) return { label: 'Revoked', variant: 'destructive' };
+  if (code.usedAt) return { label: 'Used', variant: 'secondary' };
   if (code.expiresAt && new Date(code.expiresAt) < new Date())
-    return { label: 'Expired', variant: 'outline' }
-  return { label: 'Active', variant: 'default' }
+    return { label: 'Expired', variant: 'outline' };
+  return { label: 'Active', variant: 'default' };
 }
 
 export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
@@ -1581,7 +1584,7 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
       </TableHeader>
       <TableBody>
         {codes.map((code) => {
-          const status = codeStatus(code)
+          const status = codeStatus(code);
           return (
             <TableRow key={code.id}>
               <TableCell className="font-mono text-sm">{code.code}</TableCell>
@@ -1609,7 +1612,7 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
                 )}
               </TableCell>
             </TableRow>
-          )
+          );
         })}
         {codes.length === 0 && (
           <TableRow>
@@ -1620,28 +1623,28 @@ export function InviteCodeTable({ codes }: { codes: InviteCode[] }) {
         )}
       </TableBody>
     </Table>
-  )
+  );
 }
 ```
 
 - [ ] **Step 3: Create `apps/web/src/components/admin/generate-invite-form.tsx`**
 
 ```tsx
-'use client'
+'use client';
 
-import { useFormStatus } from 'react-dom'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { generateInviteCode } from '@/lib/actions/invite-codes'
+import { useFormStatus } from 'react-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { generateInviteCode } from '@/lib/actions/invite-codes';
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending}>
       {pending ? 'Generating…' : 'Generate Code'}
     </Button>
-  )
+  );
 }
 
 export function GenerateInviteForm() {
@@ -1653,7 +1656,7 @@ export function GenerateInviteForm() {
       </div>
       <SubmitButton />
     </form>
-  )
+  );
 }
 ```
 
@@ -1662,19 +1665,19 @@ export function GenerateInviteForm() {
 Create `apps/web/src/app/(protected)/admin/invite-codes/page.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { apiClient } from '@/lib/api'
-import type { InviteCode } from '@concert-crawl/types'
-import { InviteCodeTable } from '@/components/admin/invite-code-table'
-import { GenerateInviteForm } from '@/components/admin/generate-invite-form'
+import { auth } from '@clerk/nextjs/server';
+import { apiClient } from '@/lib/api';
+import type { InviteCode } from '@concert-crawl/types';
+import { InviteCodeTable } from '@/components/admin/invite-code-table';
+import { GenerateInviteForm } from '@/components/admin/generate-invite-form';
 
 export default async function InviteCodesPage() {
-  const { getToken } = await auth()
-  const token = await getToken()
+  const { getToken } = await auth();
+  const token = await getToken();
   const codes = await apiClient.get<InviteCode[]>(
     '/v1/admin/invite-codes',
     token!,
-  )
+  );
 
   return (
     <div className="space-y-8">
@@ -1687,7 +1690,7 @@ export default async function InviteCodesPage() {
       <GenerateInviteForm />
       <InviteCodeTable codes={codes} />
     </div>
-  )
+  );
 }
 ```
 

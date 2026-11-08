@@ -8,14 +8,14 @@
 // zero-usable run is written as 'partial' rather than 'success', and both need
 // this check.
 
-import { and, desc, eq, gt, ne } from 'drizzle-orm'
-import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
-import { reportFailure } from '@concert-crawl/logger'
-import { sendEventCountDropEmail } from './email.js'
+import { and, desc, eq, gt, ne } from 'drizzle-orm';
+import { db, crawlRuns, notifications, venues } from '@concert-crawl/db';
+import { reportFailure } from '@concert-crawl/logger';
+import { sendEventCountDropEmail } from './email.js';
 import {
   BASELINE_RUN_COUNT,
   evaluateEventCountCondition,
-} from './triage-conditions.js'
+} from './triage-conditions.js';
 
 // Thresholds and the classifier itself live in triage-conditions.ts so the
 // admin triage read path (#1215) and this write path can never drift. Kept as
@@ -24,7 +24,7 @@ export {
   BASELINE_RUN_COUNT,
   COLD_START_MIN_RUNS,
   SOFT_DROP_RATIO,
-} from './triage-conditions.js'
+} from './triage-conditions.js';
 
 // Don't re-alert a venue that is *still* dark more than once per 7 days.
 // Without this, every daily crawl after a regression would re-fire until the
@@ -32,38 +32,38 @@ export {
 // cooldown is cleared as soon as a healthy run lands (see runCheck), so a
 // venue that recovers and then goes dark again alerts immediately rather than
 // being silenced for the remainder of the window (#1174).
-export const ALERT_COOLDOWN_DAYS = 7
+export const ALERT_COOLDOWN_DAYS = 7;
 
 export interface EventCountAlertInput {
-  venueId: string
-  venueName: string
-  crawlRunId: string
+  venueId: string;
+  venueName: string;
+  crawlRunId: string;
   /** Raw extractor output. Reported for context; does not classify the drop. */
-  eventsFound: number
+  eventsFound: number;
   /**
    * Rows that survived the downstream cross-venue presale filter and empty
    * canonical artist/title guards. Classification and the baseline key off
    * this (#1167) — a run that extracted 10 rows and kept none learned as
    * little as one that extracted zero.
    */
-  eventsUsable: number
+  eventsUsable: number;
   /** venues.last_event_count_alert_at as of the start of this run. */
-  lastEventCountAlertAt: Date | null
+  lastEventCountAlertAt: Date | null;
   /** Override for tests; defaults to new Date(). */
-  now?: Date
+  now?: Date;
 }
 
 type AlertOutcome =
   | {
-      fired: false
-      reason: 'cold_start' | 'cooldown' | 'no_drop' | 'recovered'
+      fired: false;
+      reason: 'cold_start' | 'cooldown' | 'no_drop' | 'recovered';
     }
   | {
-      fired: true
-      severity: 'went_dark' | 'dropped_sharply'
-      baselineCount: number
-      dropPercent: number
-    }
+      fired: true;
+      severity: 'went_dark' | 'dropped_sharply';
+      baselineCount: number;
+      dropPercent: number;
+    };
 
 /**
  * Check whether the just-completed non-failed crawl looks suspicious and,
@@ -83,7 +83,7 @@ export async function checkEventCountDrop(
   input: EventCountAlertInput,
 ): Promise<AlertOutcome> {
   try {
-    return await runCheck(input)
+    return await runCheck(input);
   } catch (err) {
     reportFailure({
       event: 'crawl.event_count_alert.error',
@@ -91,13 +91,13 @@ export async function checkEventCountDrop(
       venueId: input.venueId,
       crawlRunId: input.crawlRunId,
       error: err instanceof Error ? err.message : String(err),
-    })
-    return { fired: false, reason: 'no_drop' }
+    });
+    return { fired: false, reason: 'no_drop' };
   }
 }
 
 async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
-  const now = input.now ?? new Date()
+  const now = input.now ?? new Date();
 
   // Pull the last N successful runs that actually returned events, to form
   // the baseline. Three filter notes:
@@ -132,15 +132,15 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       ),
     )
     .orderBy(desc(crawlRuns.createdAt))
-    .limit(BASELINE_RUN_COUNT)
+    .limit(BASELINE_RUN_COUNT);
 
   const condition = evaluateEventCountCondition({
     eventsUsable: input.eventsUsable,
     baselineUsableCounts: recent.map((row) => row.eventsUsable),
-  })
+  });
 
   if (!condition.detected && condition.reason === 'cold_start') {
-    return { fired: false, reason: 'cold_start' }
+    return { fired: false, reason: 'cold_start' };
   }
 
   if (!condition.detected) {
@@ -163,34 +163,34 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
             eq(venues.lastEventCountAlertAt, input.lastEventCountAlertAt),
           ),
         )
-        .returning({ id: venues.id })
+        .returning({ id: venues.id });
       // Zero rows means the CAS lost — a newer marker landed while this run
       // was in flight, so the cooldown stands and nothing recovered.
       return {
         fired: false,
         reason: cleared.length > 0 ? 'recovered' : 'no_drop',
-      }
+      };
     }
-    return { fired: false, reason: 'no_drop' }
+    return { fired: false, reason: 'no_drop' };
   }
 
   // Cooldown gate. Only reached when this run is itself a drop, so it
   // throttles a venue that *stays* dark without ever muting a recurrence.
   if (input.lastEventCountAlertAt) {
-    const cooldownMs = ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
+    const cooldownMs = ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
     if (now.getTime() - input.lastEventCountAlertAt.getTime() < cooldownMs) {
-      return { fired: false, reason: 'cooldown' }
+      return { fired: false, reason: 'cooldown' };
     }
   }
 
-  const { condition: severity, baselineCount, dropPercent } = condition
+  const { condition: severity, baselineCount, dropPercent } = condition;
 
   // When extraction produced rows but the downstream guards ate them all,
   // that's a different failure than a page returning nothing — the fetch and
   // parse worked, so the operator should look at the presale filter and the
   // canonical artist/title guards rather than at the venue's markup. Surfaced
   // in the notification body and the email.
-  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0
+  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0;
 
   // Insert notification + bump cooldown atomically. If the cooldown update
   // were a separate statement and failed transiently, the next crawl would
@@ -222,13 +222,13 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
         baselineCount,
         dropPercent,
       }),
-    })
+    });
 
     await tx
       .update(venues)
       .set({ lastEventCountAlertAt: now, updatedAt: now })
-      .where(eq(venues.id, input.venueId))
-  })
+      .where(eq(venues.id, input.venueId));
+  });
 
   // Report to Sentry only after the transaction commits, so a Sentry issue
   // always corresponds to a recorded alert rather than a rolled-back one. A
@@ -247,7 +247,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     eventsUsable: input.eventsUsable,
     baselineCount,
     dropPercent,
-  })
+  });
 
   // Await the email send. The crawler runs as a Render cron that hard-exits
   // via process.exit(0) the moment main() resolves; a fire-and-forget Promise
@@ -265,14 +265,14 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       eventsUsable: input.eventsUsable,
       baselineCount,
       dropPercent,
-    })
+    });
   } catch (emailErr) {
     reportFailure({
       event: 'crawl.event_count_alert.email_error',
       severity: 'error',
       venueId: input.venueId,
       error: String(emailErr),
-    })
+    });
   }
 
   return {
@@ -280,5 +280,5 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     severity,
     baselineCount,
     dropPercent,
-  }
+  };
 }

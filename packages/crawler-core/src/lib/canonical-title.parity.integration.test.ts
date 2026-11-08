@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest'
-import { sql } from 'drizzle-orm'
-import { db } from '@concert-crawl/db'
-import { latinExtendedSql } from '@concert-crawl/types'
-import { canonicalizeTitle } from './canonical-title.js'
+import { describe, it, expect } from 'vitest';
+import { sql } from 'drizzle-orm';
+import { db } from '@concert-crawl/db';
+import { latinExtendedSql } from '@concert-crawl/types';
+import { canonicalizeTitle } from './canonical-title.js';
 
 /**
  * Parity test for canonical_title — confirms that the SQL normalization
@@ -139,7 +139,7 @@ const PARITY_INPUTS: { label: string; input: string }[] = [
     label: 'real-prod apostrophe dupe',
     input: 'BASS BINGO – Road to Zed’s Dead Jamboree!',
   },
-]
+];
 
 describe('canonical_title — SQL backfill / JS function parity', () => {
   it.each(PARITY_INPUTS)('matches on: $label', async ({ input }) => {
@@ -215,11 +215,11 @@ describe('canonical_title — SQL backfill / JS function parity', () => {
         regexp_replace(lower(val), '\\s+', ' ', 'g')
       ) AS canonical
       FROM apos
-    `)
+    `);
 
-    const sqlCanonical = rows[0]?.canonical
-    const jsCanonical = canonicalizeTitle(input)
+    const sqlCanonical = rows[0]?.canonical;
+    const jsCanonical = canonicalizeTitle(input);
 
-    expect(sqlCanonical).toBe(jsCanonical)
-  })
-})
+    expect(sqlCanonical).toBe(jsCanonical);
+  });
+});

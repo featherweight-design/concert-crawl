@@ -1,22 +1,22 @@
 // @vitest-environment jsdom
 
-import '@testing-library/jest-dom'
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import '@testing-library/jest-dom';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   render,
   screen,
   cleanup,
   within,
   fireEvent,
-} from '@testing-library/react'
-import type { ConsumerNotification } from '@/lib/notifications'
-import { NotifBody } from './NotifBody'
-import { NotifItem } from './NotifItem'
-import { NOTIFICATIONS_COPY } from './definitions/copy'
+} from '@testing-library/react';
+import type { ConsumerNotification } from '@/lib/notifications';
+import { NotifBody } from './NotifBody';
+import { NotifItem } from './NotifItem';
+import { NOTIFICATIONS_COPY } from './definitions/copy';
 
-afterEach(cleanup)
+afterEach(cleanup);
 
-const NOW = new Date('2026-07-24T20:10:00-06:00')
+const NOW = new Date('2026-07-24T20:10:00-06:00');
 
 const notification = (
   over: Partial<ConsumerNotification> = {},
@@ -30,33 +30,33 @@ const notification = (
   createdAt: '2026-07-24T18:10:00-06:00',
   metadata: null,
   ...over,
-})
+});
 
 describe('NotifBody — panel states', () => {
   it('renders the loading state as a polite busy region, never a list', () => {
-    render(<NotifBody state="loading" now={NOW} />)
-    const status = screen.getByRole('status')
-    expect(status).toHaveAttribute('aria-busy', 'true')
-    expect(status).toHaveTextContent(NOTIFICATIONS_COPY.loading)
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
-  })
+    render(<NotifBody state="loading" now={NOW} />);
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent(NOTIFICATIONS_COPY.loading);
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
 
   it('drops the header subtitle while loading — neither a stale count nor a claim', () => {
     // "All caught up." before the first page lands is a guess presented as a
     // fact, and the same string sat directly above "Couldn't reach the crawl."
     // in the error state. An unsettled query says nothing at all.
-    render(<NotifBody state="loading" unreadCount={4} now={NOW} />)
-    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
-    expect(screen.queryByText(NOTIFICATIONS_COPY.panelSub(4))).toBeNull()
+    render(<NotifBody state="loading" unreadCount={4} now={NOW} />);
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull();
+    expect(screen.queryByText(NOTIFICATIONS_COPY.panelSub(4))).toBeNull();
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('drops the header subtitle in the error state too', () => {
-    render(<NotifBody state="error" unreadCount={4} now={NOW} />)
-    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
-  })
+    render(<NotifBody state="error" unreadCount={4} now={NOW} />);
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull();
+  });
 
   it('renders an inline notice under the header when one is supplied', () => {
     render(
@@ -66,34 +66,36 @@ describe('NotifBody — panel states', () => {
         now={NOW}
         notice={NOTIFICATIONS_COPY.actionFailed}
       />,
-    )
+    );
     expect(screen.getByRole('alert')).toHaveTextContent(
       NOTIFICATIONS_COPY.actionFailed,
-    )
-  })
+    );
+  });
 
   it('renders the error state as an alert with a wired Retry', async () => {
-    const onRetry = vi.fn()
-    render(<NotifBody state="error" onRetry={onRetry} now={NOW} />)
-    const alert = screen.getByRole('alert')
-    expect(alert).toHaveTextContent(NOTIFICATIONS_COPY.error)
-    expect(alert).toHaveTextContent(NOTIFICATIONS_COPY.errorBody)
+    const onRetry = vi.fn();
+    render(<NotifBody state="error" onRetry={onRetry} now={NOW} />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(NOTIFICATIONS_COPY.error);
+    expect(alert).toHaveTextContent(NOTIFICATIONS_COPY.errorBody);
     fireEvent.click(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.errorAction }),
-    )
-    expect(onRetry).toHaveBeenCalledTimes(1)
-  })
+    );
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
 
   it('renders the empty state with a wired CTA', async () => {
-    const onAction = vi.fn()
-    render(<NotifBody state="ready" items={[]} onAction={onAction} now={NOW} />)
-    expect(screen.getByText(NOTIFICATIONS_COPY.emptyTitle)).toBeInTheDocument()
-    expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument()
+    const onAction = vi.fn();
+    render(
+      <NotifBody state="ready" items={[]} onAction={onAction} now={NOW} />,
+    );
+    expect(screen.getByText(NOTIFICATIONS_COPY.emptyTitle)).toBeInTheDocument();
+    expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument();
     fireEvent.click(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.emptyAction }),
-    )
-    expect(onAction).toHaveBeenCalledTimes(1)
-  })
+    );
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
 
   it('renders zero-after-mark-all as a list, not as the empty state', () => {
     render(
@@ -102,24 +104,24 @@ describe('NotifBody — panel states', () => {
         items={[notification({ readAt: '2026-07-24T19:00:00-06:00' })]}
         now={NOW}
       />,
-    )
-    expect(screen.getByRole('list')).toBeInTheDocument()
-    expect(screen.getByText(NOTIFICATIONS_COPY.markedAll)).toBeInTheDocument()
+    );
+    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getByText(NOTIFICATIONS_COPY.markedAll)).toBeInTheDocument();
     expect(
       screen.queryByText(NOTIFICATIONS_COPY.emptyTitle),
-    ).not.toBeInTheDocument()
-  })
-})
+    ).not.toBeInTheDocument();
+  });
+});
 
 describe('NotifBody — header count', () => {
   it('prefers the API window count over the loaded page', () => {
     render(
       <NotifBody state="ready" items={[notification()]} unreadCount={12} />,
-    )
+    );
     expect(
       screen.getByText(NOTIFICATIONS_COPY.panelSub(12)),
-    ).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+  });
 
   it('falls back to the loaded page when no count is supplied', () => {
     render(
@@ -130,25 +132,27 @@ describe('NotifBody — header count', () => {
           notification({ id: 'b', readAt: '2026-07-24T19:00:00-06:00' }),
         ]}
       />,
-    )
-    expect(screen.getByText(NOTIFICATIONS_COPY.panelSub(1))).toBeInTheDocument()
-  })
+    );
+    expect(
+      screen.getByText(NOTIFICATIONS_COPY.panelSub(1)),
+    ).toBeInTheDocument();
+  });
 
   it('fires onMarkAll from the header', async () => {
-    const onMarkAll = vi.fn()
+    const onMarkAll = vi.fn();
     render(
       <NotifBody
         state="ready"
         items={[notification()]}
         onMarkAll={onMarkAll}
       />,
-    )
+    );
     fireEvent.click(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
-    )
-    expect(onMarkAll).toHaveBeenCalledTimes(1)
-  })
-})
+    );
+    expect(onMarkAll).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('NotifBody — day grouping', () => {
   it('renders one divider per day run, in list order', () => {
@@ -162,11 +166,11 @@ describe('NotifBody — day grouping', () => {
           notification({ id: 'c', createdAt: '2026-07-23T21:14:00-06:00' }),
         ]}
       />,
-    )
-    expect(screen.getByText(NOTIFICATIONS_COPY.today)).toBeInTheDocument()
-    expect(screen.getByText(NOTIFICATIONS_COPY.yesterday)).toBeInTheDocument()
-    expect(screen.getAllByRole('listitem')).toHaveLength(3)
-  })
+    );
+    expect(screen.getByText(NOTIFICATIONS_COPY.today)).toBeInTheDocument();
+    expect(screen.getByText(NOTIFICATIONS_COPY.yesterday)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  });
 
   it('opens on the newest real day when nothing arrived today', () => {
     render(
@@ -178,11 +182,13 @@ describe('NotifBody — day grouping', () => {
           notification({ id: 'b', createdAt: '2026-07-19T15:22:00-06:00' }),
         ]}
       />,
-    )
-    expect(screen.getByText('Mon, Jul 20')).toBeInTheDocument()
-    expect(screen.getByText('Sun, Jul 19')).toBeInTheDocument()
-    expect(screen.queryByText(NOTIFICATIONS_COPY.today)).not.toBeInTheDocument()
-  })
+    );
+    expect(screen.getByText('Mon, Jul 20')).toBeInTheDocument();
+    expect(screen.getByText('Sun, Jul 19')).toBeInTheDocument();
+    expect(
+      screen.queryByText(NOTIFICATIONS_COPY.today),
+    ).not.toBeInTheDocument();
+  });
 
   it('keeps duplicate rows with distinct ids — writers are not exactly-once', () => {
     render(
@@ -191,9 +197,9 @@ describe('NotifBody — day grouping', () => {
         now={NOW}
         items={[notification({ id: 'a' }), notification({ id: 'b' })]}
       />,
-    )
-    expect(screen.getAllByRole('listitem')).toHaveLength(2)
-  })
+    );
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
 
   it('renders a flat list with no dividers when grouping is off', () => {
     render(
@@ -203,20 +209,22 @@ describe('NotifBody — day grouping', () => {
         now={NOW}
         items={[notification()]}
       />,
-    )
-    expect(screen.queryByText(NOTIFICATIONS_COPY.today)).not.toBeInTheDocument()
-    expect(screen.getAllByRole('listitem')).toHaveLength(1)
-  })
-})
+    );
+    expect(
+      screen.queryByText(NOTIFICATIONS_COPY.today),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+});
 
 describe('NotifBody — paging footer', () => {
   it('closes the list with the end-of-list line when there is no more', () => {
-    render(<NotifBody state="ready" items={[notification()]} now={NOW} />)
-    expect(screen.getByText(NOTIFICATIONS_COPY.endOfList)).toBeInTheDocument()
-  })
+    render(<NotifBody state="ready" items={[notification()]} now={NOW} />);
+    expect(screen.getByText(NOTIFICATIONS_COPY.endOfList)).toBeInTheDocument();
+  });
 
   it('offers "Older notifications" and fires onLoadMore', async () => {
-    const onLoadMore = vi.fn()
+    const onLoadMore = vi.fn();
     render(
       <NotifBody
         state="ready"
@@ -225,12 +233,12 @@ describe('NotifBody — paging footer', () => {
         onLoadMore={onLoadMore}
         now={NOW}
       />,
-    )
+    );
     fireEvent.click(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.loadMore }),
-    )
-    expect(onLoadMore).toHaveBeenCalledTimes(1)
-  })
+    );
+    expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
 
   it('disables and relabels the load-more button while a page is in flight', () => {
     render(
@@ -241,14 +249,14 @@ describe('NotifBody — paging footer', () => {
         isLoadingMore
         onLoadMore={vi.fn()}
       />,
-    )
+    );
     const button = screen.getByRole('button', {
       name: NOTIFICATIONS_COPY.loadingVisible,
-    })
-    expect(button).toBeDisabled()
-    expect(button).toHaveAttribute('aria-busy', 'true')
-  })
-})
+    });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+  });
+});
 
 describe('NotifBody — unwired controls never render', () => {
   // Every handler on this component is optional, so a caller that forgets one
@@ -256,59 +264,61 @@ describe('NotifBody — unwired controls never render', () => {
   // the panel's rule for a dead control, already used for mark-all at zero.
 
   it('hides "Mark all read" when no handler is wired, despite a count', () => {
-    render(<NotifBody state="ready" items={[notification()]} unreadCount={3} />)
+    render(
+      <NotifBody state="ready" items={[notification()]} unreadCount={3} />,
+    );
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('hides the close button when showClose is set but onClose is not', () => {
-    render(<NotifBody state="ready" items={[notification()]} showClose />)
+    render(<NotifBody state="ready" items={[notification()]} showClose />);
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.closeLabel }),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('hides Retry rather than showing an inert one', () => {
-    render(<NotifBody state="error" />)
+    render(<NotifBody state="error" />);
     // The error still explains itself; only the dead control is gone.
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.errorAction }),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('hides the empty-state CTA rather than showing an inert one', () => {
-    render(<NotifBody state="ready" items={[]} />)
-    expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument()
+    render(<NotifBody state="ready" items={[]} />);
+    expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.emptyAction }),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('falls back to the end-of-list line when hasMore has no onLoadMore', () => {
-    render(<NotifBody state="ready" items={[notification()]} hasMore />)
+    render(<NotifBody state="ready" items={[notification()]} hasMore />);
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.loadMore }),
-    ).not.toBeInTheDocument()
-    expect(screen.getByText(NOTIFICATIONS_COPY.endOfList)).toBeInTheDocument()
-  })
-})
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(NOTIFICATIONS_COPY.endOfList)).toBeInTheDocument();
+  });
+});
 
 describe('NotifItem', () => {
   it('gives an unread row a category rail, a dot and a bold title', () => {
-    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
-    const row = screen.getByRole('button')
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />);
+    const row = screen.getByRole('button');
     // jsdom drops a `border-left` shorthand carrying a var(), so assert on
     // the serialised inline style rather than the computed one.
     expect(row.getAttribute('style')).toContain(
       'border-left: 2px solid var(--success)',
-    )
-    expect(row.getAttribute('style')).toContain('background: var(--surface-1)')
-    const title = within(row).getByText(/The price for Geese/)
-    expect(title).toHaveStyle({ fontWeight: '700' })
-    expect(row.getAttribute('aria-label')).toContain('. Unread')
-  })
+    );
+    expect(row.getAttribute('style')).toContain('background: var(--surface-1)');
+    const title = within(row).getByText(/The price for Geese/);
+    expect(title).toHaveStyle({ fontWeight: '700' });
+    expect(row.getAttribute('aria-label')).toContain('. Unread');
+  });
 
   it('drops every unread signal once the row has been read', () => {
     render(
@@ -317,44 +327,44 @@ describe('NotifItem', () => {
         onOpen={vi.fn()}
         now={NOW}
       />,
-    )
-    const row = screen.getByRole('button')
+    );
+    const row = screen.getByRole('button');
     expect(row.getAttribute('style')).toContain(
       'border-left: 2px solid transparent',
-    )
-    expect(row.getAttribute('style')).toContain('background: transparent')
+    );
+    expect(row.getAttribute('style')).toContain('background: transparent');
     expect(within(row).getByText(/The price for Geese/)).toHaveStyle({
       fontWeight: '600',
-    })
-    expect(row.getAttribute('aria-label')).not.toContain('Unread')
-  })
+    });
+    expect(row.getAttribute('aria-label')).not.toContain('Unread');
+  });
 
   it('is not announced as a button when no open handler is wired', () => {
     // An inert focusable row is worse for a keyboard or screen-reader user
     // than a plain one — the text still reads either way.
-    render(<NotifItem item={notification()} now={NOW} />)
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.getByText(notification().title)).toBeInTheDocument()
-  })
+    render(<NotifItem item={notification()} now={NOW} />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByText(notification().title)).toBeInTheDocument();
+  });
 
   it('drops the hover and focus affordances along with the semantics', () => {
     // `.notif-row` is purely interaction styling — hover fill, focus ring,
     // chevron reveal — so an unwired row must not carry it either.
-    const { container } = render(<NotifItem item={notification()} now={NOW} />)
-    expect(container.querySelector('.notif-row')).toBeNull()
-  })
+    const { container } = render(<NotifItem item={notification()} now={NOW} />);
+    expect(container.querySelector('.notif-row')).toBeNull();
+  });
 
   it('is a single target with no nested interactives', () => {
-    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
-    expect(screen.getAllByRole('button')).toHaveLength(1)
-    expect(screen.getByRole('button')).toHaveAttribute('tabindex', '0')
-  })
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />);
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button')).toHaveAttribute('tabindex', '0');
+  });
 
   it('spells the category out, so colour is never the only signal', () => {
-    render(<NotifItem item={notification()} now={NOW} />)
-    expect(screen.getByText('Price drop')).toBeInTheDocument()
-    expect(screen.getByText('2h')).toBeInTheDocument()
-  })
+    render(<NotifItem item={notification()} now={NOW} />);
+    expect(screen.getByText('Price drop')).toBeInTheDocument();
+    expect(screen.getByText('2h')).toBeInTheDocument();
+  });
 
   it('falls back to a neutral presentation for an unknown category', () => {
     render(
@@ -363,87 +373,87 @@ describe('NotifItem', () => {
         onOpen={vi.fn()}
         now={NOW}
       />,
-    )
-    expect(screen.getByText('Update')).toBeInTheDocument()
+    );
+    expect(screen.getByText('Update')).toBeInTheDocument();
     expect(screen.getByRole('button').getAttribute('style')).toContain(
       'border-left: 2px solid var(--fg-muted)',
-    )
-  })
+    );
+  });
 
   it('opens on click', async () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
-    fireEvent.click(screen.getByRole('button'))
-    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1' }))
-  })
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1' }));
+  });
 
   it('opens on Enter', () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' })
-    expect(onOpen).toHaveBeenCalledTimes(1)
-  })
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
+    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
 
   it('opens on Space without letting the page scroll', () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
     // fireEvent returns false when the handler called preventDefault, which is
     // the only thing standing between Space and a scrolled-away panel.
     const notCancelled = fireEvent.keyDown(screen.getByRole('button'), {
       key: ' ',
-    })
-    expect(onOpen).toHaveBeenCalledTimes(1)
-    expect(notCancelled).toBe(false)
-  })
+    });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(notCancelled).toBe(false);
+  });
 
   it('opens once when Space is held down, not once per repeat', () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
-    const row = screen.getByRole('button')
-    fireEvent.keyDown(row, { key: ' ' })
-    fireEvent.keyDown(row, { key: ' ', repeat: true })
-    fireEvent.keyDown(row, { key: ' ', repeat: true })
-    expect(onOpen).toHaveBeenCalledTimes(1)
-  })
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
+    const row = screen.getByRole('button');
+    fireEvent.keyDown(row, { key: ' ' });
+    fireEvent.keyDown(row, { key: ' ', repeat: true });
+    fireEvent.keyDown(row, { key: ' ', repeat: true });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
 
   it('still blocks page scroll on a repeated Space', () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
     const event = new KeyboardEvent('keydown', {
       key: ' ',
       repeat: true,
       bubbles: true,
       cancelable: true,
-    })
-    fireEvent(screen.getByRole('button'), event)
-    expect(event.defaultPrevented).toBe(true)
-  })
+    });
+    fireEvent(screen.getByRole('button'), event);
+    expect(event.defaultPrevented).toBe(true);
+  });
 
   it('ignores keys that are not activation keys, and lets them through', () => {
-    const onOpen = vi.fn()
-    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
-    const row = screen.getByRole('button')
+    const onOpen = vi.fn();
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />);
+    const row = screen.getByRole('button');
     for (const key of ['Tab', 'ArrowDown', 'a', 'Escape']) {
-      expect(fireEvent.keyDown(row, { key })).toBe(true)
+      expect(fireEvent.keyDown(row, { key })).toBe(true);
     }
-    expect(onOpen).not.toHaveBeenCalled()
-  })
+    expect(onOpen).not.toHaveBeenCalled();
+  });
 
   it('omits the body element entirely when the body is empty', () => {
-    render(<NotifItem item={notification({ body: '' })} now={NOW} />)
+    render(<NotifItem item={notification({ body: '' })} now={NOW} />);
     expect(
       screen.queryByText("Cheapest it's been since the on-sale."),
-    ).not.toBeInTheDocument()
-  })
+    ).not.toBeInTheDocument();
+  });
 
   it('carries the action url as data, not as a nested link', () => {
-    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />);
     expect(screen.getByRole('button')).toHaveAttribute(
       'data-action-url',
       '/events/e1',
-    )
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
-  })
+    );
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
 
   it('omits the data attribute when there is nowhere to go', () => {
     render(
@@ -452,7 +462,7 @@ describe('NotifItem', () => {
         onOpen={vi.fn()}
         now={NOW}
       />,
-    )
-    expect(screen.getByRole('button')).not.toHaveAttribute('data-action-url')
-  })
-})
+    );
+    expect(screen.getByRole('button')).not.toHaveAttribute('data-action-url');
+  });
+});

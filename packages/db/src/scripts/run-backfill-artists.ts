@@ -12,10 +12,10 @@
  *   DATABASE_URL=<target> pnpm --filter @concert-crawl/db db:backfill-artists
  */
 
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { db } from '../client.js'
-import { backfillArtists } from './backfill-artists.js'
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { db } from '../client.js';
+import { backfillArtists } from './backfill-artists.js';
 
 /**
  * True only when this file is the process entrypoint. Without it, any import —
@@ -23,23 +23,23 @@ import { backfillArtists } from './backfill-artists.js'
  * kill the process via `process.exit`.
  */
 const isEntrypoint = (): boolean => {
-  const invoked = process.argv[1]
-  if (invoked === undefined) return false
-  return path.resolve(invoked) === fileURLToPath(import.meta.url)
-}
+  const invoked = process.argv[1];
+  if (invoked === undefined) return false;
+  return path.resolve(invoked) === fileURLToPath(import.meta.url);
+};
 
 async function main(): Promise<void> {
-  const result = await backfillArtists(db)
+  const result = await backfillArtists(db);
   console.log(
     `[backfill-artists] discovered=${result.discovered} inserted=${result.inserted}`,
-  )
+  );
 }
 
 if (isEntrypoint()) {
   main()
     .then(() => process.exit(0))
     .catch((err: unknown) => {
-      console.error('[backfill-artists] failed', err)
-      process.exit(1)
-    })
+      console.error('[backfill-artists] failed', err);
+      process.exit(1);
+    });
 }

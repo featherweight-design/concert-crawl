@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { priceSubmissions } from './prices.js'
+import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { priceSubmissions } from './prices.js';
 
 export const submissionConfirms = pgTable(
   'submission_confirms',
@@ -23,7 +23,7 @@ export const submissionConfirms = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
-export type SubmissionConfirm = typeof submissionConfirms.$inferSelect
-export type NewSubmissionConfirm = typeof submissionConfirms.$inferInsert
+export type SubmissionConfirm = typeof submissionConfirms.$inferSelect;
+export type NewSubmissionConfirm = typeof submissionConfirms.$inferInsert;

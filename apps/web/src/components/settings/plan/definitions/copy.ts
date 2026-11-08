@@ -161,4 +161,4 @@ export const PLAN_CARD_COPY = {
     portal: "Couldn't open subscription management. Try again in a moment.",
     resubscribe: "Couldn't restart your plan. Refresh and try again.",
   },
-} as const
+} as const;

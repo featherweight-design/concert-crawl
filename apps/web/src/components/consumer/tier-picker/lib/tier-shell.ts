@@ -2,13 +2,13 @@
 // (monetization-tier-states.jsx tierShell). Semantic tokens only, so all
 // nine themes hold.
 
-import type { TierKey } from '../definitions/types'
+import type { TierKey } from '../definitions/types';
 
 export interface TierShell {
-  background: string
-  border: string
-  accent: string
-  shadow: string
+  background: string;
+  border: string;
+  accent: string;
+  shadow: string;
 }
 
 const SHELLS: Record<TierKey, TierShell> = {
@@ -39,13 +39,13 @@ const SHELLS: Record<TierKey, TierShell> = {
     accent: 'var(--signal)',
     shadow: '0 0 0 1px color-mix(in oklch, var(--accent) 18%, transparent)',
   },
-}
+};
 
-export const tierShell = (key: TierKey): TierShell => SHELLS[key]
+export const tierShell = (key: TierKey): TierShell => SHELLS[key];
 
 /** Free's accent is neutral — its "current" stamp uses border-strong. */
 export const isNeutralAccent = (shell: TierShell): boolean =>
-  shell.accent === 'var(--fg-muted)'
+  shell.accent === 'var(--fg-muted)';
 
 export const stampColor = (shell: TierShell): string =>
-  isNeutralAccent(shell) ? 'var(--border-strong)' : shell.accent
+  isNeutralAccent(shell) ? 'var(--border-strong)' : shell.accent;

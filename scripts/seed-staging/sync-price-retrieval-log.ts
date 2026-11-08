@@ -19,37 +19,37 @@
  * defaultRandom() assigns a fresh staging uuid.
  */
 
-import { and, gte, inArray, ne } from 'drizzle-orm'
-import { priceRetrievalLog } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { IdMap, DrizzleWriteDb } from './sync-venues.js'
-import { rollingWindow } from './sync-events-helpers.js'
+import { and, gte, inArray, ne } from 'drizzle-orm';
+import { priceRetrievalLog } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { IdMap, DrizzleWriteDb } from './sync-venues.js';
+import { rollingWindow } from './sync-events-helpers.js';
 
 export async function syncPriceRetrievalLog(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
-  venueIdMap: IdMap
-  eventIdMap: IdMap
-  now: Date
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
+  venueIdMap: IdMap;
+  eventIdMap: IdMap;
+  now: Date;
 }): Promise<{
-  scanned: number
+  scanned: number;
   // Named `inserted` (not `upserted`) — this table has no UNIQUE index on the
   // composite (event_id, source, attempted_at), so we use query-and-skip
   // idempotency: existing rows are counted as `skippedDuplicates` rather
   // than updated. Distinct from venues/events where matching rows go through
   // an UPDATE path.
-  inserted: number
-  skippedMissingFk: number
-  skippedDuplicates: number
+  inserted: number;
+  skippedMissingFk: number;
+  skippedDuplicates: number;
 }> {
-  const { prod, staging, dryRun, venueIdMap, eventIdMap, now } = deps
+  const { prod, staging, dryRun, venueIdMap, eventIdMap, now } = deps;
 
   // 1. Read price_retrieval_log rows from prod within the rolling 30-day window.
   //    Mirrors the window used by syncEvents to avoid pulling the full table on
   //    large prod volumes.
-  const { fromDate } = rollingWindow(now)
-  const fromDateTs = new Date(`${fromDate}T00:00:00Z`)
+  const { fromDate } = rollingWindow(now);
+  const fromDateTs = new Date(`${fromDate}T00:00:00Z`);
 
   // Exclude source='community' — spec §1a scopes public-data sync to
   // venue/vendor-sourced rows only; community-tier attempts originate from
@@ -65,58 +65,58 @@ export async function syncPriceRetrievalLog(deps: {
           ne(priceRetrievalLog.source, 'community'),
         ),
       ),
-  )
+  );
 
-  const scanned = prodRows.length
-  let inserted = 0
-  let skippedMissingFk = 0
-  let skippedDuplicates = 0
+  const scanned = prodRows.length;
+  let inserted = 0;
+  let skippedMissingFk = 0;
+  let skippedDuplicates = 0;
 
   // Cap per-row skip warnings to avoid flooding logs on fresh staging DBs
   // (empty venue/event maps → every row skipped). Aggregate count still
   // reported at end.
-  const MAX_SKIP_WARNINGS = 5
-  let skipWarningsEmitted = 0
+  const MAX_SKIP_WARNINGS = 5;
+  let skipWarningsEmitted = 0;
   const warnSkip = (msg: string): void => {
     if (skipWarningsEmitted < MAX_SKIP_WARNINGS) {
-      console.warn(msg)
-      skipWarningsEmitted++
+      console.warn(msg);
+      skipWarningsEmitted++;
       if (skipWarningsEmitted === MAX_SKIP_WARNINGS) {
         console.warn(
           `[sync-price-retrieval-log] (further per-row skip warnings suppressed — see aggregate summary at end)`,
-        )
+        );
       }
     }
-  }
+  };
 
   // Translate FKs up-front so we can collect staging venue ids for the prefetch.
   type TranslatedRow = {
-    row: (typeof prodRows)[number]
-    stagingVenueId: string
-    stagingEventId: string
-  }
-  const translated: TranslatedRow[] = []
+    row: (typeof prodRows)[number];
+    stagingVenueId: string;
+    stagingEventId: string;
+  };
+  const translated: TranslatedRow[] = [];
 
   for (const row of prodRows) {
-    const stagingVenueId = venueIdMap.get(row.venueId)
+    const stagingVenueId = venueIdMap.get(row.venueId);
     if (stagingVenueId === undefined) {
       warnSkip(
         `[sync-price-retrieval-log] skipping log ${row.id} — prod venueId ${row.venueId} not in venueIdMap`,
-      )
-      skippedMissingFk++
-      continue
+      );
+      skippedMissingFk++;
+      continue;
     }
 
-    const stagingEventId = eventIdMap.get(row.eventId)
+    const stagingEventId = eventIdMap.get(row.eventId);
     if (stagingEventId === undefined) {
       warnSkip(
         `[sync-price-retrieval-log] skipping log ${row.id} — prod eventId ${row.eventId} not in eventIdMap`,
-      )
-      skippedMissingFk++
-      continue
+      );
+      skippedMissingFk++;
+      continue;
     }
 
-    translated.push({ row, stagingVenueId, stagingEventId })
+    translated.push({ row, stagingVenueId, stagingEventId });
   }
 
   // Prefetch existing staging keys in one query (read-only — runs in both
@@ -127,8 +127,8 @@ export async function syncPriceRetrievalLog(deps: {
   // dedupe would false-positive across sibling events.
   const uniqueStagingEventIds = [
     ...new Set(translated.map((tr) => tr.stagingEventId)),
-  ]
-  const existingKeys = new Set<string>()
+  ];
+  const existingKeys = new Set<string>();
 
   if (uniqueStagingEventIds.length > 0) {
     const existingRows = await staging
@@ -143,12 +143,12 @@ export async function syncPriceRetrievalLog(deps: {
           gte(priceRetrievalLog.attemptedAt, fromDateTs),
           inArray(priceRetrievalLog.eventId, uniqueStagingEventIds),
         ),
-      )
+      );
 
     for (const existingRow of existingRows) {
       existingKeys.add(
         `${existingRow.eventId}|${existingRow.source}|${existingRow.attemptedAt.toISOString()}`,
-      )
+      );
     }
   }
 
@@ -158,45 +158,45 @@ export async function syncPriceRetrievalLog(deps: {
     // (matches commit-mode semantics — first occurrence counts as insert,
     // subsequent identical composites count as skippedDuplicates).
     for (const { row, stagingEventId } of translated) {
-      const compositeKey = `${stagingEventId}|${row.source}|${row.attemptedAt.toISOString()}`
+      const compositeKey = `${stagingEventId}|${row.source}|${row.attemptedAt.toISOString()}`;
       if (existingKeys.has(compositeKey)) {
-        skippedDuplicates++
+        skippedDuplicates++;
       } else {
-        inserted++
-        existingKeys.add(compositeKey)
+        inserted++;
+        existingKeys.add(compositeKey);
       }
     }
   } else {
     for (const { row, stagingVenueId, stagingEventId } of translated) {
-      const compositeKey = `${stagingEventId}|${row.source}|${row.attemptedAt.toISOString()}`
+      const compositeKey = `${stagingEventId}|${row.source}|${row.attemptedAt.toISOString()}`;
 
       if (existingKeys.has(compositeKey)) {
-        skippedDuplicates++
-        continue
+        skippedDuplicates++;
+        continue;
       }
 
       // Insert without the prod id — Drizzle assigns a fresh staging uuid.
-      const { id: _omittedId, ...rowWithoutId } = row
+      const { id: _omittedId, ...rowWithoutId } = row;
       await staging.insert(priceRetrievalLog).values({
         ...rowWithoutId,
         venueId: stagingVenueId,
         eventId: stagingEventId,
-      })
+      });
 
       // Add the just-inserted composite to the seen-set so a second prod row
       // with the same (event_id, source, attempted_at) in this same batch
       // dedupes correctly instead of double-inserting.
-      existingKeys.add(compositeKey)
+      existingKeys.add(compositeKey);
 
-      inserted++
+      inserted++;
     }
   }
 
   if (skippedMissingFk > 0) {
     console.warn(
       `[sync-price-retrieval-log] skipped ${skippedMissingFk} row(s) due to missing FK parent (venueId or eventId not in map)`,
-    )
+    );
   }
 
-  return { scanned, inserted, skippedMissingFk, skippedDuplicates }
+  return { scanned, inserted, skippedMissingFk, skippedDuplicates };
 }

@@ -3,8 +3,8 @@
 // it pauses" callout — but the CTA stays branded signal, never alarm-red.
 // Nothing gets deleted; a fresh card switches everything back on.
 
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { renderDunning } from './dunning-core.js'
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { renderDunning } from './dunning-core.js';
 
 export const renderDunning3FinalWarning: TemplateRenderer<
   EmailTemplateVars['dunning_3_final_warning']
@@ -25,4 +25,4 @@ export const renderDunning3FinalWarning: TemplateRenderer<
         'Your account and the shows you watch stay put. History, alerts, and calendar export go quiet until a payment goes through. Nothing gets deleted. A fresh card switches all of it back on.',
     },
     portalUrl,
-  )
+  );

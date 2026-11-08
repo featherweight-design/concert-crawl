@@ -1,9 +1,9 @@
-import React from 'react'
+import React from 'react';
 
 interface EmbedRailProps {
-  label: string
+  label: string;
   /** Right-hand disclosure. Omitted in the absent-player state. */
-  note?: string | undefined
+  note?: string | undefined;
 }
 
 /**
@@ -50,4 +50,4 @@ export const EmbedRail = ({ label, note }: EmbedRailProps) => (
       </span>
     ) : null}
   </div>
-)
+);

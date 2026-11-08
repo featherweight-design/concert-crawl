@@ -1,40 +1,40 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react';
 
-import { BOT_COPY } from './definitions/copy'
+import { BOT_COPY } from './definitions/copy';
 
 interface CopyBlockProps {
   /** Rendered one per line, and joined with newlines for the clipboard. */
-  lines: string[]
+  lines: string[];
   /** Describes the string being copied, for screen readers. */
-  ariaLabel: string
+  ariaLabel: string;
 }
 
 export function CopyBlock({ lines, ariaLabel }: CopyBlockProps) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
-  )
-  const text = lines.join('\n')
+  );
+  const text = lines.join('\n');
 
-  useEffect(() => () => clearTimeout(resetTimer.current), [])
+  useEffect(() => () => clearTimeout(resetTimer.current), []);
 
   // Only confirm on a resolved write. writeText rejects in an insecure context,
   // and a "Copied" that lied would send an operator away with an empty clipboard
   // and no reason to look at the selectable text sitting next to the button.
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
       // A second click otherwise inherits the first click's remaining time and
       // clears the confirmation early.
-      clearTimeout(resetTimer.current)
-      resetTimer.current = setTimeout(() => setCopied(false), 1600)
+      clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setCopied(false), 1600);
     } catch (err) {
-      console.warn('Clipboard write failed; the string is selectable.', err)
+      console.warn('Clipboard write failed; the string is selectable.', err);
     }
-  }
+  };
 
   return (
     <div className="flex items-start gap-2.5 rounded-[10px] border border-border bg-surface-1 py-2.5 pl-3 pr-2.5">
@@ -61,5 +61,5 @@ export function CopyBlock({ lines, ariaLabel }: CopyBlockProps) {
         {copied ? BOT_COPY.copyButton.copied : ''}
       </span>
     </div>
-  )
+  );
 }

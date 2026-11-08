@@ -79,15 +79,15 @@
  * Read-only by default. Dry-run takes no row-level locks.
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, sql } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { pathToFileURL } from 'node:url';
+import { and, eq, sql } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
 // Relative source import (not package barrel) so this one-shot script
 // runs against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
 // `.js` suffix back to the `.ts` source. Mirrors the import shape used
 // by scripts/2026-06-27-strip-description-html.ts.
-import { stripDuplicatedTrailingWord } from '../packages/crawler-core/src/lib/strip-duplicated-trailing-word.js'
+import { stripDuplicatedTrailingWord } from '../packages/crawler-core/src/lib/strip-duplicated-trailing-word.js';
 // Pulled out into a DB-free helper module so the SQL-shape regression
 // tests can import the constants without also pulling in
 // `@concert-crawl/db`, which constructs a Postgres client at module
@@ -97,33 +97,33 @@ import {
   BACKUP_TABLE_DDL,
   BACKUP_TABLE_PK_BACKFILL_DDL,
   SQL_PREFILTER_REGEX,
-} from './2026-06-27-extractor-dedup-suffix-scan-helpers.js'
+} from './2026-06-27-extractor-dedup-suffix-scan-helpers.js';
 
 export interface BackfillSummary {
-  rowsScanned: number
-  rowsDirty: number
-  rowsUpdated: number
-  rowsSnapshotted: number
+  rowsScanned: number;
+  rowsDirty: number;
+  rowsUpdated: number;
+  rowsSnapshotted: number;
   // Dirty rows whose title was modified by another process between the
   // initial SELECT and the optimistic-locked UPDATE — operator should
   // re-run to pick them up if still dirty.
-  rowsSkippedConcurrentEdit: number
-  applied: boolean
+  rowsSkippedConcurrentEdit: number;
+  applied: boolean;
 }
 
 interface DirtyRow {
-  id: string
-  venueName: string | null
+  id: string;
+  venueName: string | null;
   // Drizzle's default mapping for a `date()` column is `string`
   // (ISO YYYY-MM-DD). Carry it as-is — no Date construction needed
   // since the log line just prints the date portion.
-  date: string
-  before: string
-  after: string
+  date: string;
+  before: string;
+  after: string;
 }
 
 export async function runBackfill(opts: {
-  apply: boolean
+  apply: boolean;
 }): Promise<BackfillSummary> {
   const candidates = await db
     .select({
@@ -134,26 +134,26 @@ export async function runBackfill(opts: {
     })
     .from(events)
     .leftJoin(venues, eq(events.venueId, venues.id))
-    .where(sql`${events.title} ~* ${SQL_PREFILTER_REGEX}`)
+    .where(sql`${events.title} ~* ${SQL_PREFILTER_REGEX}`);
 
-  console.log(`Loaded ${candidates.length} candidate rows from events.`)
+  console.log(`Loaded ${candidates.length} candidate rows from events.`);
 
-  const dirty: DirtyRow[] = []
+  const dirty: DirtyRow[] = [];
   for (const row of candidates) {
-    const cleaned = stripDuplicatedTrailingWord(row.title)
+    const cleaned = stripDuplicatedTrailingWord(row.title);
     // Defensive: a Postgres regex hit that the JS helper doesn't change
     // means the SQL and JS rules drifted — skip rather than no-op-update.
-    if (cleaned === row.title) continue
+    if (cleaned === row.title) continue;
     dirty.push({
       id: row.id,
       venueName: row.venueName,
       date: row.date,
       before: row.title,
       after: cleaned,
-    })
+    });
   }
 
-  console.log(`Of those, ${dirty.length} actually need a rewrite.`)
+  console.log(`Of those, ${dirty.length} actually need a rewrite.`);
 
   if (dirty.length === 0) {
     return {
@@ -163,7 +163,7 @@ export async function runBackfill(opts: {
       rowsSnapshotted: 0,
       rowsSkippedConcurrentEdit: 0,
       applied: false,
-    }
+    };
   }
 
   // Per-row operator log (always — both dry-run and --apply). Keeps the
@@ -179,14 +179,14 @@ export async function runBackfill(opts: {
         `before = ${row.before}`,
         `after  = ${row.after}`,
       ].join('\n'),
-    )
+    );
   }
 
   if (!opts.apply) {
-    console.log('---')
+    console.log('---');
     console.log(
       `Dry-run mode — no rows touched. Re-run with --apply to commit.`,
-    )
+    );
     return {
       rowsScanned: candidates.length,
       rowsDirty: dirty.length,
@@ -194,7 +194,7 @@ export async function runBackfill(opts: {
       rowsSnapshotted: 0,
       rowsSkippedConcurrentEdit: 0,
       applied: false,
-    }
+    };
   }
 
   // --apply: snapshot first, then per-row optimistic-locked UPDATE.
@@ -212,7 +212,7 @@ export async function runBackfill(opts: {
   // tests can assert their structure without importing the DB client
   // (PR #853 R8). `sql.raw` emits the string verbatim — the DDL has
   // no parameters so this is safe.
-  await db.execute(sql.raw(BACKUP_TABLE_DDL))
+  await db.execute(sql.raw(BACKUP_TABLE_DDL));
 
   // Self-heal: if the table was created by an earlier run of this
   // script (before the PK was added in R8), the CREATE IF NOT EXISTS
@@ -222,7 +222,7 @@ export async function runBackfill(opts: {
   // a catalog lookup. If the table already has any PK (this run's or
   // a previous one's), this is a no-op; otherwise it locks the table
   // briefly to add the constraint. Safe to run on every --apply.
-  await db.execute(sql.raw(BACKUP_TABLE_PK_BACKFILL_DDL))
+  await db.execute(sql.raw(BACKUP_TABLE_PK_BACKFILL_DDL));
 
   // Optimistic-lock the UPDATE on the original title so a concurrent
   // crawler / admin edit between the initial SELECT and the UPDATE
@@ -244,9 +244,9 @@ export async function runBackfill(opts: {
   // commit-time failure can't leave them out of sync with the DB
   // (mirrors the pattern in scripts/2026-06-26-cleanup-cross-venue-
   // phantoms.ts).
-  let updatedCount = 0
-  let snapshottedCount = 0
-  let skippedCount = 0
+  let updatedCount = 0;
+  let snapshottedCount = 0;
+  let skippedCount = 0;
   class ConcurrentEditSkip extends Error {}
   for (const row of dirty) {
     try {
@@ -268,36 +268,38 @@ export async function runBackfill(opts: {
               ON CONFLICT (event_id) DO UPDATE SET
                 title_after = EXCLUDED.title_after,
                 snapshotted_at = now()`,
-        )
+        );
 
         const updated = await tx
           .update(events)
           .set({ title: row.after })
           .where(and(eq(events.id, row.id), eq(events.title, row.before)))
-          .returning({ id: events.id })
+          .returning({ id: events.id });
         if (updated.length === 0) {
           // Throwing inside `db.transaction` rolls back the snapshot
           // INSERT above so the backup table stays in lockstep with
           // what actually changed.
-          throw new ConcurrentEditSkip()
+          throw new ConcurrentEditSkip();
         }
-      })
+      });
     } catch (err) {
       if (err instanceof ConcurrentEditSkip) {
-        console.log(`Skipped ${row.id} — title changed between scan and update`)
-        skippedCount += 1
-        continue
+        console.log(
+          `Skipped ${row.id} — title changed between scan and update`,
+        );
+        skippedCount += 1;
+        continue;
       }
-      throw err
+      throw err;
     }
-    snapshottedCount += 1
-    updatedCount += 1
+    snapshottedCount += 1;
+    updatedCount += 1;
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Applied. Snapshotted ${snapshottedCount} rows to events_851_backup. Updated ${updatedCount} rows. Skipped ${skippedCount} rows (concurrent edit).`,
-  )
+  );
 
   return {
     rowsScanned: candidates.length,
@@ -310,24 +312,24 @@ export async function runBackfill(opts: {
     // updatedCount is 0 and we report applied=false even though --apply
     // was passed — matches the semantics in the #827 backfill.
     applied: updatedCount > 0,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can also be imported by a test
 // without auto-running.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const apply = process.argv.includes('--apply')
+  const apply = process.argv.includes('--apply');
   runBackfill({ apply })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

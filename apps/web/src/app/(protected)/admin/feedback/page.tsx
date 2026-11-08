@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { StatCard, Panel, SectionHead } from '@/components/admin/primitives'
-import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail'
-import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow'
-import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded'
+import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { StatCard, Panel, SectionHead } from '@/components/admin/primitives';
+import { FeedbackFilterRail } from '@/components/admin/feedback/FeedbackFilterRail';
+import { FeedbackRow } from '@/components/admin/feedback/FeedbackRow';
+import { FeedbackExpanded } from '@/components/admin/feedback/FeedbackExpanded';
 import type {
   FeedbackStatusFilter,
   FeedbackSource,
-} from '@/components/admin/feedback/FeedbackFilterRail'
-import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/feedback/FeedbackFilterRail';
+import type { FeedbackItem } from '@/components/admin/feedback/FeedbackRow';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
   { value: 'all', label: ADMIN_COPY.feedback.statusChips.all },
@@ -26,58 +26,58 @@ const STATUS_CHIPS: { value: FeedbackStatusFilter; label: string }[] = [
   },
   { value: 'resolved', label: ADMIN_COPY.feedback.statusChips.resolved },
   { value: 'archived', label: ADMIN_COPY.feedback.statusChips.archived },
-]
+];
 
 const PANEL_TITLE: Record<FeedbackStatusFilter, string> =
-  ADMIN_COPY.feedback.panelTitle
+  ADMIN_COPY.feedback.panelTitle;
 
 export default function FeedbackPage() {
-  const { getToken } = useAuth()
-  const router = useRouter()
-  const [items, setItems] = useState<FeedbackItem[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [activeFilter, setActiveFilter] = useState<FeedbackStatusFilter>('all')
+  const { getToken } = useAuth();
+  const router = useRouter();
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FeedbackStatusFilter>('all');
   const [activeSources, setActiveSources] = useState<Set<FeedbackSource>>(
     new Set(['feedback_surface']),
-  )
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)')
-    setIsMobile(mq.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const fetchFeedback = async () => {
-    const token = await getToken()
-    if (!token) return
+    const token = await getToken();
+    if (!token) return;
     const resp = await fetch(`${API_BASE}/v1/admin/feedback?limit=200`, {
       headers: { Authorization: `Bearer ${token}` },
-    })
-    if (!resp.ok) return
-    const body = (await resp.json()) as { data: FeedbackItem[] }
-    setItems(body.data)
-  }
+    });
+    if (!resp.ok) return;
+    const body = (await resp.json()) as { data: FeedbackItem[] };
+    setItems(body.data);
+  };
 
   useEffect(() => {
-    setIsLoading(true)
-    void fetchFeedback().finally(() => setIsLoading(false))
+    setIsLoading(true);
+    void fetchFeedback().finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   const handleToggle = (id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id))
-  }
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
 
   const handleStatusChange = async (
     id: string,
     status: FeedbackItem['status'],
   ) => {
-    const token = await getToken()
-    if (!token) return
+    const token = await getToken();
+    if (!token) return;
     await fetch(`${API_BASE}/v1/admin/feedback/${id}`, {
       method: 'PATCH',
       headers: {
@@ -85,17 +85,17 @@ export default function FeedbackPage() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ status }),
-    })
+    });
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item)),
-    )
-    router.refresh()
-  }
+    );
+    router.refresh();
+  };
 
   const handleMarkAllRead = async () => {
-    const token = await getToken()
-    if (!token) return
-    const unreadItems = items.filter((item) => item.status === 'unread')
+    const token = await getToken();
+    if (!token) return;
+    const unreadItems = items.filter((item) => item.status === 'unread');
     await Promise.all(
       unreadItems.map((item) =>
         fetch(`${API_BASE}/v1/admin/feedback/${item.id}`, {
@@ -107,18 +107,18 @@ export default function FeedbackPage() {
           body: JSON.stringify({ status: 'read' }),
         }),
       ),
-    )
+    );
     setItems((prev) =>
       prev.map((item) =>
         item.status === 'unread' ? { ...item, status: 'read' as const } : item,
       ),
-    )
-    router.refresh()
-  }
+    );
+    router.refresh();
+  };
 
   const handleNotesChange = async (id: string, adminNotes: string) => {
-    const token = await getToken()
-    if (!token) return
+    const token = await getToken();
+    if (!token) return;
     await fetch(`${API_BASE}/v1/admin/feedback/${id}`, {
       method: 'PATCH',
       headers: {
@@ -126,30 +126,30 @@ export default function FeedbackPage() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ adminNotes }),
-    })
+    });
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, adminNotes } : item)),
-    )
-  }
+    );
+  };
 
   const handleSourceToggle = (source: FeedbackSource) => {
     setActiveSources((prev) => {
-      const next = new Set(prev)
+      const next = new Set(prev);
       if (next.has(source)) {
-        next.delete(source)
+        next.delete(source);
       } else {
-        next.add(source)
+        next.add(source);
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
-  const sourceFiltered = activeSources.has('feedback_surface') ? items : []
+  const sourceFiltered = activeSources.has('feedback_surface') ? items : [];
 
   const filtered =
     activeFilter === 'all'
       ? sourceFiltered
-      : sourceFiltered.filter((item) => item.status === activeFilter)
+      : sourceFiltered.filter((item) => item.status === activeFilter);
 
   const counts = {
     all: items.length,
@@ -159,27 +159,27 @@ export default function FeedbackPage() {
     issue_opened: items.filter((item) => item.status === 'issue_opened').length,
     resolved: items.filter((item) => item.status === 'resolved').length,
     archived: items.filter((item) => item.status === 'archived').length,
-  }
+  };
 
   const lastWeek = items.filter(
     (item) =>
       Date.now() - new Date(item.createdAt).getTime() < 7 * 24 * 60 * 60 * 1000,
-  ).length
+  ).length;
 
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const issuesThisMonth = items.filter(
     (item) =>
       item.status === 'issue_opened' &&
       new Date(item.createdAt) >= startOfMonth,
-  ).length
+  ).length;
 
   const mobileSubtitle = [
     counts.unread > 0 ? `${counts.unread} unread` : null,
     counts.flagged > 0 ? `${counts.flagged} flagged` : null,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(' · ');
 
   const feedbackList = (
     <>
@@ -224,7 +224,7 @@ export default function FeedbackPage() {
         ))
       )}
     </>
-  )
+  );
 
   if (isMobile) {
     return (
@@ -270,7 +270,7 @@ export default function FeedbackPage() {
           }}
         >
           {STATUS_CHIPS.map((chip) => {
-            const isActive = activeFilter === chip.value
+            const isActive = activeFilter === chip.value;
             return (
               <button
                 key={chip.value}
@@ -295,14 +295,14 @@ export default function FeedbackPage() {
               >
                 {chip.label}
               </button>
-            )
+            );
           })}
         </div>
 
         {/* Feedback list */}
         <Panel padding={0}>{feedbackList}</Panel>
       </div>
-    )
+    );
   }
 
   return (
@@ -429,5 +429,5 @@ export default function FeedbackPage() {
         </Panel>
       </div>
     </div>
-  )
+  );
 }

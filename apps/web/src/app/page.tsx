@@ -1,7 +1,7 @@
-import LandingClientShell from './_components/LandingClientShell'
-import { publicApiClient, ApiError } from '@/lib/api'
-import type { EventsListResponse } from '@concert-crawl/types'
-import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
+import LandingClientShell from './_components/LandingClientShell';
+import { publicApiClient, ApiError } from '@/lib/api';
+import type { EventsListResponse } from '@concert-crawl/types';
+import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
 
 const MONTHS = [
   'JAN',
@@ -16,39 +16,39 @@ const MONTHS = [
   'OCT',
   'NOV',
   'DEC',
-] as const
+] as const;
 
 function formatShowTime(time: string | null | undefined): string {
-  if (!time) return ''
-  const parts = time.split(':')
-  const hoursStr = parts[0] ?? '0'
-  const minutesStr = parts[1] ?? '00'
-  const hours = parseInt(hoursStr, 10)
-  const minutes = parseInt(minutesStr, 10)
-  const period = hours >= 12 ? 'pm' : 'am'
-  const displayHours = hours % 12 || 12
+  if (!time) return '';
+  const parts = time.split(':');
+  const hoursStr = parts[0] ?? '0';
+  const minutesStr = parts[1] ?? '00';
+  const hours = parseInt(hoursStr, 10);
+  const minutes = parseInt(minutesStr, 10);
+  const period = hours >= 12 ? 'pm' : 'am';
+  const displayHours = hours % 12 || 12;
   return minutes === 0
     ? `${displayHours}${period}`
-    : `${displayHours}:${minutesStr}${period}`
+    : `${displayHours}:${minutesStr}${period}`;
 }
 
 function formatDateShort(date: string): string {
-  const dd = new Date(date + 'T12:00:00')
-  const month = MONTHS[dd.getMonth()]
-  return `${month} ${dd.getDate().toString().padStart(2, '0')}`
+  const dd = new Date(date + 'T12:00:00');
+  const month = MONTHS[dd.getMonth()];
+  return `${month} ${dd.getDate().toString().padStart(2, '0')}`;
 }
 
 // Day arithmetic and serialization both run in UTC. Mixing local setDate with
 // a UTC toISOString slice shifts the YYYY-MM-DD by a day depending on the
 // runtime's timezone and time of day, which would skew the "this week" count.
 function futureDateString(daysFromNow: number): string {
-  const dd = new Date()
-  dd.setUTCDate(dd.getUTCDate() + daysFromNow)
-  return dd.toISOString().slice(0, 10)
+  const dd = new Date();
+  dd.setUTCDate(dd.getUTCDate() + daysFromNow);
+  return dd.toISOString().slice(0, 10);
 }
 
 function makeFallbackShows(): LandingShow[] {
-  const dateAt = (offset: number) => futureDateString(offset)
+  const dateAt = (offset: number) => futureDateString(offset);
   return [
     {
       id: 'fallback-1',
@@ -94,14 +94,14 @@ function makeFallbackShows(): LandingShow[] {
       opener: 'Soul Glo',
       state: null,
     },
-  ]
+  ];
 }
 
 async function fetchHeroShows(): Promise<LandingShow[]> {
   try {
     const result =
-      await publicApiClient.get<EventsListResponse>('/v1/events?limit=4')
-    if (!result?.data?.length) return makeFallbackShows()
+      await publicApiClient.get<EventsListResponse>('/v1/events?limit=4');
+    if (!result?.data?.length) return makeFallbackShows();
 
     const mapped = result.data.map((row) => ({
       id: row.id,
@@ -114,15 +114,15 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       opener: null,
       state: null,
       href: `/events/${row.id}`,
-    }))
+    }));
 
-    return mapped.length >= 2 ? mapped : makeFallbackShows()
+    return mapped.length >= 2 ? mapped : makeFallbackShows();
   } catch (err) {
     console.error(
       '[landing] failed to fetch hero shows:',
       err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
-    )
-    return makeFallbackShows()
+    );
+    return makeFallbackShows();
   }
 }
 
@@ -134,14 +134,14 @@ async function fetchWeekCount(): Promise<number | null> {
   try {
     const result = await publicApiClient.get<EventsListResponse>(
       `/v1/events?limit=1&to=${futureDateString(6)}`,
-    )
-    return typeof result?.total === 'number' ? result.total : null
+    );
+    return typeof result?.total === 'number' ? result.total : null;
   } catch (err) {
     console.error(
       '[landing] failed to fetch this-week count:',
       err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
-    )
-    return null
+    );
+    return null;
   }
 }
 
@@ -152,12 +152,12 @@ async function fetchWeekCount(): Promise<number | null> {
 // Next.js to render dynamically on every request). If a future change adds
 // user-personalized rendering, split it into an ISR shell + a Client Component
 // island rather than dropping ISR entirely.
-export const revalidate = 300
+export const revalidate = 300;
 
 export default async function LandingPage() {
   const [shows, weekCount] = await Promise.all([
     fetchHeroShows(),
     fetchWeekCount(),
-  ])
-  return <LandingClientShell shows={shows} showCount={weekCount} />
+  ]);
+  return <LandingClientShell shows={shows} showCount={weekCount} />;
 }

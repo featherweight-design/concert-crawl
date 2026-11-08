@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   esbuild: {
@@ -43,4 +43,4 @@ export default defineConfig({
     // any of these suites would have been waved off as "that flake again".
     testTimeout: 15_000,
   },
-})
+});

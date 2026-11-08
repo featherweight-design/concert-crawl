@@ -1,7 +1,7 @@
-import { EmptyState } from '@/components/consumer/empty-state'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { EmptyState } from '@/components/consumer/empty-state';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 export function WatchingEmpty() {
   return (
@@ -11,5 +11,5 @@ export function WatchingEmpty() {
       body={copy.watchingEmptyBody}
       primaryCta={{ label: copy.watchingEmptyCta, href: '/events' }}
     />
-  )
+  );
 }

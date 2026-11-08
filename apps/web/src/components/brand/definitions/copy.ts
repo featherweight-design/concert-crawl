@@ -6,4 +6,4 @@ export const BRAND_COPY = {
     lead: 'concert',
     accent: 'crawl.',
   },
-} as const
+} as const;

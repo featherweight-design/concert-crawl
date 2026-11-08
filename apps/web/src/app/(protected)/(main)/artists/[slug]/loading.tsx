@@ -3,7 +3,7 @@
 // This stands in for the ARTIST PAYLOAD only. The Spotify embed (PR-F) has its
 // own loading clock on purpose — a third-party iframe must never be able to
 // hold the whole page grey.
-import React from 'react'
+import React from 'react';
 
 import {
   CrumbSkeleton,
@@ -11,8 +11,8 @@ import {
   HeroSkeleton,
   ShowsSkeleton,
   TextSkeleton,
-} from '@/components/consumer/artist-page/skeletons/Skeletons'
-import { AP_RAIL_W } from '@/components/consumer/artist-page/definitions/constants'
+} from '@/components/consumer/artist-page/skeletons/Skeletons';
+import { AP_RAIL_W } from '@/components/consumer/artist-page/definitions/constants';
 
 const ArtistLoading = () => (
   <main className="ap-page">
@@ -84,6 +84,6 @@ const ArtistLoading = () => (
       </div>
     </div>
   </main>
-)
+);
 
-export default ArtistLoading
+export default ArtistLoading;

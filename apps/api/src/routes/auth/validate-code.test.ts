@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { mockInviteCode } = vi.hoisted(() => ({
   mockInviteCode: {
@@ -9,7 +9,7 @@ const { mockInviteCode } = vi.hoisted(() => ({
     expiresAt: null,
     revokedAt: null,
   },
-}))
+}));
 
 vi.mock('@concert-crawl/db', () => ({
   db: {
@@ -18,101 +18,101 @@ vi.mock('@concert-crawl/db', () => ({
     where: vi.fn().mockResolvedValue([mockInviteCode]),
   },
   inviteCodes: {},
-}))
+}));
 
 vi.mock('../../lib/rate-limit.js', () => ({
   checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, retryAfterMs: 0 }),
-}))
+}));
 
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('drizzle-orm', () => ({ eq: vi.fn() }));
 
-import { createApp } from '../../app.js'
-import { inviteCodes } from '@concert-crawl/db'
+import { createApp } from '../../app.js';
+import { inviteCodes } from '@concert-crawl/db';
 
-const app = createApp()
+const app = createApp();
 
 describe('POST /v1/auth/validate-code', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => vi.clearAllMocks());
 
   it('returns 400 for invalid code format', async () => {
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'NOTVALID' }),
-    })
-    expect(res.status).toBe(400)
-  })
+    });
+    expect(res.status).toBe(400);
+  });
 
   it('returns 200 for valid code', async () => {
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.ok).toBe(true)
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+  });
 
   it('returns 409 with error "used" for already-redeemed code', async () => {
-    const { db } = await import('@concert-crawl/db')
+    const { db } = await import('@concert-crawl/db');
     vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
       { ...mockInviteCode, usedBy: 'user_abc', usedAt: new Date() },
-    ])
+    ]);
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
-    })
-    const body = await res.json()
-    expect(res.status).toBe(409)
-    expect(body.error).toBe('used')
-  })
+    });
+    const body = await res.json();
+    expect(res.status).toBe(409);
+    expect(body.error).toBe('used');
+  });
 
   it('returns 404 with error "notfound" for unknown code', async () => {
-    const { db } = await import('@concert-crawl/db')
-    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([])
+    const { db } = await import('@concert-crawl/db');
+    vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([]);
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'BETA-XXXX-1234' }),
-    })
-    const body = await res.json()
-    expect(res.status).toBe(404)
-    expect(body.error).toBe('notfound')
-  })
+    });
+    const body = await res.json();
+    expect(res.status).toBe(404);
+    expect(body.error).toBe('notfound');
+  });
 
   it('returns 429 when rate limited', async () => {
-    const { checkRateLimit } = await import('../../lib/rate-limit.js')
+    const { checkRateLimit } = await import('../../lib/rate-limit.js');
     vi.mocked(checkRateLimit).mockResolvedValueOnce({
       allowed: false,
       retryAfterMs: 30000,
-    })
+    });
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
-    })
-    expect(res.status).toBe(429)
-  })
+    });
+    expect(res.status).toBe(429);
+  });
 
   it('sends Retry-After on a fail-closed 429 when the rate-limit store is down', async () => {
     // checkRateLimit answers a store failure with STORE_ERROR_RETRY_MS for this
     // fail-closed limiter; the route must pass that on, not drop it.
-    const { checkRateLimit } = await import('../../lib/rate-limit.js')
+    const { checkRateLimit } = await import('../../lib/rate-limit.js');
     vi.mocked(checkRateLimit).mockResolvedValueOnce({
       allowed: false,
       retryAfterMs: 60_000,
-    })
+    });
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: 'BETA-3C41-8BC0' }),
-    })
-    expect(res.status).toBe(429)
-    expect(res.headers.get('Retry-After')).toBe('60')
+    });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('60');
     expect(vi.mocked(checkRateLimit).mock.calls[0]?.[3]).toEqual({
       onStoreError: 'deny',
-    })
-  })
-})
+    });
+  });
+});

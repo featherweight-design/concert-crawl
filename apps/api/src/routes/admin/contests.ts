@@ -1,27 +1,27 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
-import { z } from 'zod'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
+import { z } from 'zod';
 import {
   db,
   events,
   priceSubmissions,
   userProfiles,
   venues,
-} from '@concert-crawl/db'
-import { getAuthUser } from '../../middleware/auth.js'
-import { awardPriceCred } from '../../lib/award-price-cred.js'
-import { writeContestNotifications } from '../../lib/contest-notifications.js'
-import { narrowLastAdminAction } from '../../lib/last-admin-action.js'
+} from '@concert-crawl/db';
+import { getAuthUser } from '../../middleware/auth.js';
+import { awardPriceCred } from '../../lib/award-price-cred.js';
+import { writeContestNotifications } from '../../lib/contest-notifications.js';
+import { narrowLastAdminAction } from '../../lib/last-admin-action.js';
 import {
   detectPriceDrop,
   fanoutPriceDrop,
   type PriceDrop,
-} from '../../lib/price-drop.js'
-import type { AdminVariables } from './index.js'
+} from '../../lib/price-drop.js';
+import type { AdminVariables } from './index.js';
 
-export const contestsAdminRouter = new Hono<AdminVariables>()
+export const contestsAdminRouter = new Hono<AdminVariables>();
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
@@ -41,7 +41,7 @@ const listQuerySchema = z.object({
     .optional()
     .default('false')
     .transform((val) => val === 'true'),
-})
+});
 
 // GET /v1/admin/contests/prices — paginated open price contests
 //
@@ -56,11 +56,11 @@ contestsAdminRouter.get(
   '/prices',
   zValidator('query', listQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid query params' }, 422)
+      return ctx.json({ success: false, error: 'Invalid query params' }, 422);
     }
   }),
   async (ctx) => {
-    const { limit, offset, sort, includeArchived } = ctx.req.valid('query')
+    const { limit, offset, sort, includeArchived } = ctx.req.valid('query');
 
     // Both the page query and the total count must apply the same filter,
     // or the pager's "X–Y of TOTAL" readout drifts from the rows shown.
@@ -69,11 +69,11 @@ contestsAdminRouter.get(
       : and(
           eq(priceSubmissions.status, 'pending'),
           isNotNull(priceSubmissions.disputedSubmissionId),
-        )
-    const direction = sort === 'filed-at-desc' ? desc : asc
+        );
+    const direction = sort === 'filed-at-desc' ? desc : asc;
 
     // parentAlias = the disputed parent submission (self-join target).
-    const parentAlias = alias(priceSubmissions, 'parent')
+    const parentAlias = alias(priceSubmissions, 'parent');
     const counterRows = await db
       .select({
         contestId: parentAlias.id,
@@ -129,7 +129,7 @@ contestsAdminRouter.get(
         direction(priceSubmissions.id),
       )
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     // Resolve handles for every userId surfaced across both sides via a
     // single LEFT JOIN-style lookup. Handle may be null if a profile wasn't
@@ -141,8 +141,8 @@ contestsAdminRouter.get(
           ...counterRows.map((row) => row.counterUserId),
         ].filter((uid): uid is string => uid !== null),
       ),
-    )
-    const handleMap = new Map<string, string | null>()
+    );
+    const handleMap = new Map<string, string | null>();
     if (allUserIds.length > 0) {
       const handles = await db
         .select({
@@ -150,9 +150,9 @@ contestsAdminRouter.get(
           handle: userProfiles.handle,
         })
         .from(userProfiles)
-        .where(inArray(userProfiles.userId, allUserIds))
+        .where(inArray(userProfiles.userId, allUserIds));
       for (const row of handles) {
-        handleMap.set(row.userId, row.handle ?? null)
+        handleMap.set(row.userId, row.handle ?? null);
       }
     }
 
@@ -213,7 +213,7 @@ contestsAdminRouter.get(
         status: row.counterStatus,
       },
       filedAt: row.filedAt.toISOString(),
-    }))
+    }));
 
     // `total` counts contests by their pending counter (matching the items
     // shape), not by parents with status='disputed' — those numbers can
@@ -222,18 +222,18 @@ contestsAdminRouter.get(
     const [totalRow] = await db
       .select({ value: sql<number>`count(*)::int` })
       .from(priceSubmissions)
-      .where(listWhere)
+      .where(listWhere);
 
     return ctx.json({
       success: true,
       data: { items, total: totalRow?.value ?? 0, limit, offset },
-    })
+    });
   },
-)
+);
 
 const detailParamsSchema = z.object({
   contestId: z.string().uuid(),
-})
+});
 
 // GET /v1/admin/contests/prices/:contestId — full detail for one contest.
 //
@@ -254,11 +254,11 @@ contestsAdminRouter.get(
   '/prices/:contestId',
   zValidator('param', detailParamsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400);
     }
   }),
   async (ctx) => {
-    const { contestId } = ctx.req.valid('param')
+    const { contestId } = ctx.req.valid('param');
 
     // Parent = the row at :contestId. Join events + venues for the projection.
     const [parentRow] = await db
@@ -292,10 +292,10 @@ contestsAdminRouter.get(
       .innerJoin(events, eq(events.id, priceSubmissions.eventId))
       .innerJoin(venues, eq(venues.id, events.venueId))
       .where(eq(priceSubmissions.id, contestId))
-      .limit(1)
+      .limit(1);
 
     if (!parentRow) {
-      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+      return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
 
     // Counter = the most recent row whose disputedSubmissionId = parent.id.
@@ -321,21 +321,21 @@ contestsAdminRouter.get(
       .from(priceSubmissions)
       .where(eq(priceSubmissions.disputedSubmissionId, contestId))
       .orderBy(desc(priceSubmissions.createdAt))
-      .limit(1)
+      .limit(1);
 
     if (!counterRow) {
       // The parent exists but no row references it as a dispute — caller
       // passed a non-contest submission id. 404 keeps the contract simple:
       // either we have both sides, or we don't have a contest.
-      return ctx.json({ success: false, error: 'Counter not found' }, 404)
+      return ctx.json({ success: false, error: 'Counter not found' }, 404);
     }
 
     // Resolve handles for both sides via a single LEFT JOIN-style lookup.
     // Same pattern as the list endpoint.
     const userIds = [parentRow.userId, counterRow.userId].filter(
       (uid): uid is string => uid !== null,
-    )
-    const handleMap = new Map<string, string | null>()
+    );
+    const handleMap = new Map<string, string | null>();
     if (userIds.length > 0) {
       const handles = await db
         .select({
@@ -343,9 +343,9 @@ contestsAdminRouter.get(
           handle: userProfiles.handle,
         })
         .from(userProfiles)
-        .where(inArray(userProfiles.userId, userIds))
+        .where(inArray(userProfiles.userId, userIds));
       for (const row of handles) {
-        handleMap.set(row.userId, row.handle ?? null)
+        handleMap.set(row.userId, row.handle ?? null);
       }
     }
 
@@ -356,7 +356,7 @@ contestsAdminRouter.get(
     const counterLastAction = narrowLastAdminAction(
       counterRow.lastAdminActionKind,
       counterRow.lastAdminActionAt,
-    )
+    );
 
     return ctx.json({
       success: true,
@@ -424,18 +424,18 @@ contestsAdminRouter.get(
         filedAt: counterRow.observedAt.toISOString(),
         history: [],
       },
-    })
+    });
   },
-)
+);
 
 const resolveParamsSchema = z.object({
   contestId: z.string().uuid(),
-})
+});
 
 const resolveBodySchema = z.object({
   resolution: z.enum(['parent_wins', 'challenger_wins']),
   reason: z.string().min(10).max(2000),
-})
+});
 
 // POST /v1/admin/contests/prices/:contestId/resolve — atomic resolution.
 //
@@ -477,7 +477,7 @@ contestsAdminRouter.post(
   '/prices/:contestId/resolve',
   zValidator('param', resolveParamsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400);
     }
   }),
   zValidator('json', resolveBodySchema, (result, ctx) => {
@@ -485,37 +485,37 @@ contestsAdminRouter.post(
       return ctx.json(
         { success: false, error: 'Reason must be 10–2000 characters.' },
         400,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { contestId } = ctx.req.valid('param')
-    const { resolution, reason } = ctx.req.valid('json')
-    const admin = getAuthUser(ctx)
+    const { contestId } = ctx.req.valid('param');
+    const { resolution, reason } = ctx.req.valid('json');
+    const admin = getAuthUser(ctx);
 
     type ResolveOutcome =
       | {
-          ok: 'committed'
-          parent: typeof priceSubmissions.$inferSelect
-          challenger: typeof priceSubmissions.$inferSelect
-          eventPriceUpdated: boolean
-          pricedrop: PriceDrop | undefined
-          orphanedCounterIds: string[]
+          ok: 'committed';
+          parent: typeof priceSubmissions.$inferSelect;
+          challenger: typeof priceSubmissions.$inferSelect;
+          eventPriceUpdated: boolean;
+          pricedrop: PriceDrop | undefined;
+          orphanedCounterIds: string[];
           before: {
             parent: {
-              status: string
-              priceMin: string
-              priceMax: string | null
-            }
+              status: string;
+              priceMin: string;
+              priceMax: string | null;
+            };
             challenger: {
-              status: string
-              priceMin: string
-              priceMax: string | null
-            }
-          }
+              status: string;
+              priceMin: string;
+              priceMax: string | null;
+            };
+          };
         }
       | { ok: 'not_found' }
-      | { ok: 'precondition_failed'; reason: string }
+      | { ok: 'precondition_failed'; reason: string };
 
     const outcome: ResolveOutcome = await db.transaction(async (tx) => {
       // Lock the parent row first.
@@ -524,8 +524,8 @@ contestsAdminRouter.post(
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, contestId))
         .limit(1)
-        .for('update')
-      if (!parent) return { ok: 'not_found' }
+        .for('update');
+      if (!parent) return { ok: 'not_found' };
 
       // Lock the (single, per §4.6) pending counter. If a previous resolution
       // already archived it, we surface precondition_failed instead of
@@ -540,12 +540,12 @@ contestsAdminRouter.post(
           ),
         )
         .limit(1)
-        .for('update')
+        .for('update');
       if (!challenger) {
         return {
           ok: 'precondition_failed',
           reason: 'No pending counter exists for this contest.',
-        }
+        };
       }
 
       // Sanity gates.
@@ -553,19 +553,19 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: 'Target row is a counter, not a parent.',
-        }
+        };
       }
       if (parent.status !== 'disputed' && parent.status !== 'corroborated') {
         return {
           ok: 'precondition_failed',
           reason: `Parent status is ${parent.status}; cannot resolve.`,
-        }
+        };
       }
       if (challenger.status !== 'pending') {
         return {
           ok: 'precondition_failed',
           reason: `Challenger status is ${challenger.status}; cannot resolve.`,
-        }
+        };
       }
       // Same-slot assertions — defense-in-depth against a counter being
       // inserted with a mismatched slot. Without these, a parameter mix-up
@@ -574,13 +574,13 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: 'Parent and challenger belong to different events.',
-        }
+        };
       }
       if (parent.tier !== challenger.tier) {
         return {
           ok: 'precondition_failed',
           reason: `Parent tier ${parent.tier} does not match challenger tier ${challenger.tier}.`,
-        }
+        };
       }
       // Treat NULL source_category as "matches anything." Legacy rows
       // pre-PR-#651 have parent.sourceCategory = null; the counter-creation
@@ -596,7 +596,7 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: `Parent source_category ${parent.sourceCategory} does not match challenger source_category ${challenger.sourceCategory}.`,
-        }
+        };
       }
 
       const before = {
@@ -610,7 +610,7 @@ contestsAdminRouter.post(
           priceMin: challenger.priceMin,
           priceMax: challenger.priceMax,
         },
-      }
+      };
 
       // Unlocked existence check for the precondition. The event row is
       // NOT locked here: a lock taken before the submission updates below
@@ -622,18 +622,18 @@ contestsAdminRouter.post(
         .select({ id: events.id })
         .from(events)
         .where(eq(events.id, parent.eventId))
-        .limit(1)
+        .limit(1);
       if (!eventExists) {
         // Should be unreachable given the FK from price_submissions.event_id,
         // but treat as precondition_failed rather than a 500 if it ever fires.
         return {
           ok: 'precondition_failed',
           reason: 'Event row missing for parent submission.',
-        }
+        };
       }
 
-      let eventPriceUpdated = false
-      let pricedrop: PriceDrop | undefined
+      let eventPriceUpdated = false;
+      let pricedrop: PriceDrop | undefined;
 
       if (resolution === 'challenger_wins') {
         // Winner = challenger → corroborated. Loser = parent → archived.
@@ -648,7 +648,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, challenger.id))
+          .where(eq(priceSubmissions.id, challenger.id));
         await tx
           .update(priceSubmissions)
           .set({
@@ -658,12 +658,12 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, parent.id))
+          .where(eq(priceSubmissions.id, parent.id));
 
         // Cred before the event lock: the global price-writer lock order is
         // submissions, then user_cred, then events (see lib/price-drop.ts).
         if (challenger.userId !== null) {
-          await awardPriceCred(tx, challenger.userId)
+          await awardPriceCred(tx, challenger.userId);
         }
 
         // Only now, after the submission and cred rows, lock and read the event.
@@ -681,11 +681,11 @@ contestsAdminRouter.post(
           .from(events)
           .where(eq(events.id, parent.eventId))
           .for('no key update')
-          .limit(1)
+          .limit(1);
         const projectionAllowed =
           eventRow !== undefined &&
           (eventRow.priceSource === null ||
-            eventRow.priceSource === 'community')
+            eventRow.priceSource === 'community');
         if (projectionAllowed) {
           await tx
             .update(events)
@@ -695,13 +695,13 @@ contestsAdminRouter.post(
               priceSource: 'community',
               updatedAt: sql`now()`,
             })
-            .where(eq(events.id, parent.eventId))
-          eventPriceUpdated = true
+            .where(eq(events.id, parent.eventId));
+          eventPriceUpdated = true;
           pricedrop = detectPriceDrop(
             parent.eventId,
             eventRow.ticketPriceMin,
             challenger.priceMin,
-          )
+          );
         }
       } else {
         // parent_wins: parent stays canonical → corroborated.
@@ -714,7 +714,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, parent.id))
+          .where(eq(priceSubmissions.id, parent.id));
         await tx
           .update(priceSubmissions)
           .set({
@@ -724,7 +724,7 @@ contestsAdminRouter.post(
             lastAdminActionAt: null,
             updatedAt: sql`now()`,
           })
-          .where(eq(priceSubmissions.id, challenger.id))
+          .where(eq(priceSubmissions.id, challenger.id));
         // events row already reflects parent's price; no propagation.
         // Parent submitter already received cred when initially corroborated;
         // no re-award.
@@ -755,23 +755,23 @@ contestsAdminRouter.post(
             ne(priceSubmissions.id, challenger.id),
           ),
         )
-        .returning({ id: priceSubmissions.id })
-      const orphanedCounterIds = orphans.map((row) => row.id)
+        .returning({ id: priceSubmissions.id });
+      const orphanedCounterIds = orphans.map((row) => row.id);
 
       const [parentAfter] = await tx
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, parent.id))
-        .limit(1)
+        .limit(1);
       const [challengerAfter] = await tx
         .select()
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, challenger.id))
-        .limit(1)
+        .limit(1);
       if (!parentAfter || !challengerAfter) {
         throw new Error(
           'Post-resolution read failed — parent or challenger missing.',
-        )
+        );
       }
 
       return {
@@ -782,11 +782,11 @@ contestsAdminRouter.post(
         pricedrop,
         orphanedCounterIds,
         before,
-      }
-    })
+      };
+    });
 
     if (outcome.ok === 'not_found') {
-      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+      return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
     if (outcome.ok === 'precondition_failed') {
       return ctx.json(
@@ -796,15 +796,15 @@ contestsAdminRouter.post(
           code: 'precondition_failed',
         },
         409,
-      )
+      );
     }
 
     // Audit middleware reads these from context after the response is built.
     // Failures inside the middleware are swallowed there; the resolution
     // itself is already committed.
-    ctx.set('auditActorId', admin.userId)
-    ctx.set('auditAction', 'contest.resolve')
-    ctx.set('auditTargetId', contestId)
+    ctx.set('auditActorId', admin.userId);
+    ctx.set('auditAction', 'contest.resolve');
+    ctx.set('auditTargetId', contestId);
     ctx.set('auditMeta', {
       resolution,
       parentId: outcome.parent.id,
@@ -827,7 +827,7 @@ contestsAdminRouter.post(
       },
       eventPriceUpdated: outcome.eventPriceUpdated,
       orphanedCounterIds: outcome.orphanedCounterIds,
-    })
+    });
 
     // Notification fan-out lives in apps/api/src/lib/contest-notifications.ts
     // (extracted in Task 10). The helper handles dedupe, JSON-encoding the
@@ -843,7 +843,7 @@ contestsAdminRouter.post(
       action: 'resolve',
       resolution,
       reason,
-    })
+    });
 
     // #1107: a challenger_wins resolution that projected a strictly lower
     // price onto the event fans out watch.pricedrop to watchers, after the
@@ -855,7 +855,7 @@ contestsAdminRouter.post(
       await fanoutPriceDrop(
         outcome.pricedrop,
         `submission:${outcome.challenger.id}:${outcome.challenger.updatedAt.toISOString()}`,
-      )
+      );
     }
 
     return ctx.json({
@@ -866,17 +866,17 @@ contestsAdminRouter.post(
         challenger: outcome.challenger,
         eventPriceUpdated: outcome.eventPriceUpdated,
       },
-    })
+    });
   },
-)
+);
 
 const deferParamsSchema = z.object({
   contestId: z.string().uuid(),
-})
+});
 
 const deferBodySchema = z.object({
   reason: z.string().min(10).max(2000),
-})
+});
 
 // POST /v1/admin/contests/prices/:contestId/defer — "Need more info"
 // engagement signal.
@@ -911,7 +911,7 @@ contestsAdminRouter.post(
   '/prices/:contestId/defer',
   zValidator('param', deferParamsSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid contestId' }, 400)
+      return ctx.json({ success: false, error: 'Invalid contestId' }, 400);
     }
   }),
   zValidator('json', deferBodySchema, (result, ctx) => {
@@ -919,23 +919,23 @@ contestsAdminRouter.post(
       return ctx.json(
         { success: false, error: 'Reason must be 10–2000 characters.' },
         400,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { contestId } = ctx.req.valid('param')
-    const { reason } = ctx.req.valid('json')
-    const admin = getAuthUser(ctx)
+    const { contestId } = ctx.req.valid('param');
+    const { reason } = ctx.req.valid('json');
+    const admin = getAuthUser(ctx);
 
     type DeferOutcome =
       | {
-          ok: 'committed'
-          parent: typeof priceSubmissions.$inferSelect
-          counter: typeof priceSubmissions.$inferSelect
-          deferredAt: Date
+          ok: 'committed';
+          parent: typeof priceSubmissions.$inferSelect;
+          counter: typeof priceSubmissions.$inferSelect;
+          deferredAt: Date;
         }
       | { ok: 'not_found' }
-      | { ok: 'precondition_failed'; reason: string }
+      | { ok: 'precondition_failed'; reason: string };
 
     const outcome: DeferOutcome = await db.transaction(async (tx) => {
       // Lock the parent row first.
@@ -944,8 +944,8 @@ contestsAdminRouter.post(
         .from(priceSubmissions)
         .where(eq(priceSubmissions.id, contestId))
         .limit(1)
-        .for('update')
-      if (!parent) return { ok: 'not_found' }
+        .for('update');
+      if (!parent) return { ok: 'not_found' };
 
       // Lock the single pending counter (§4.6 partial unique index).
       const [counter] = await tx
@@ -958,12 +958,12 @@ contestsAdminRouter.post(
           ),
         )
         .limit(1)
-        .for('update')
+        .for('update');
       if (!counter) {
         return {
           ok: 'precondition_failed',
           reason: 'No pending counter exists for this contest.',
-        }
+        };
       }
 
       // Sanity gates — symmetric with the resolve handler so a defer can't
@@ -973,19 +973,19 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: 'Target row is a counter, not a parent.',
-        }
+        };
       }
       if (parent.eventId !== counter.eventId) {
         return {
           ok: 'precondition_failed',
           reason: 'Parent and challenger belong to different events.',
-        }
+        };
       }
       if (parent.tier !== counter.tier) {
         return {
           ok: 'precondition_failed',
           reason: `Parent tier ${parent.tier} does not match challenger tier ${counter.tier}.`,
-        }
+        };
       }
       // Treat NULL source_category as "matches anything." See the resolve
       // handler above for the full rationale — legacy parents have
@@ -999,7 +999,7 @@ contestsAdminRouter.post(
         return {
           ok: 'precondition_failed',
           reason: `Parent source_category ${parent.sourceCategory} does not match challenger source_category ${counter.sourceCategory}.`,
-        }
+        };
       }
 
       // Single UPDATE — engagement-signal fields on the counter. Status
@@ -1014,17 +1014,17 @@ contestsAdminRouter.post(
           updatedAt: sql`now()`,
         })
         .where(eq(priceSubmissions.id, counter.id))
-        .returning()
+        .returning();
       if (!updated) {
         throw new Error(
           'Post-defer read failed — counter row missing after update.',
-        )
+        );
       }
-      const deferredAt = updated.lastAdminActionAt
+      const deferredAt = updated.lastAdminActionAt;
       if (!deferredAt) {
         throw new Error(
           'Post-defer read returned null lastAdminActionAt — expected timestamp.',
-        )
+        );
       }
 
       return {
@@ -1032,11 +1032,11 @@ contestsAdminRouter.post(
         parent,
         counter: updated,
         deferredAt,
-      }
-    })
+      };
+    });
 
     if (outcome.ok === 'not_found') {
-      return ctx.json({ success: false, error: 'Contest not found' }, 404)
+      return ctx.json({ success: false, error: 'Contest not found' }, 404);
     }
     if (outcome.ok === 'precondition_failed') {
       return ctx.json(
@@ -1046,21 +1046,21 @@ contestsAdminRouter.post(
           code: 'precondition_failed',
         },
         409,
-      )
+      );
     }
 
     // Audit middleware reads these from context after the response is built.
     // Same pattern as resolve. Failures inside the middleware are swallowed
     // there; the defer signal is already committed.
-    ctx.set('auditActorId', admin.userId)
-    ctx.set('auditAction', 'contest.defer')
-    ctx.set('auditTargetId', contestId)
+    ctx.set('auditActorId', admin.userId);
+    ctx.set('auditAction', 'contest.defer');
+    ctx.set('auditTargetId', contestId);
     ctx.set('auditMeta', {
       parentId: outcome.parent.id,
       challengerId: outcome.counter.id,
       eventId: outcome.parent.eventId,
       reason,
-    })
+    });
 
     // Notification fan-out lives in apps/api/src/lib/contest-notifications.ts
     // (extracted in Task 10). The helper handles dedupe, JSON-encoding the
@@ -1078,7 +1078,7 @@ contestsAdminRouter.post(
       action: 'defer',
       deferredAt: outcome.deferredAt,
       reason,
-    })
+    });
 
     return ctx.json({
       success: true,
@@ -1087,6 +1087,6 @@ contestsAdminRouter.post(
         deferredAt: outcome.deferredAt.toISOString(),
         deferReason: reason,
       },
-    })
+    });
   },
-)
+);

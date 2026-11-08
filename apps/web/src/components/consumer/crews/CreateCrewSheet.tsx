@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
 // The create sheet. The id is minted here, not on the server, so the patch
 // the customer approves is the patch the crew keeps: the artwork is a pure
 // function of (crewId, patchSalt), and both travel with the POST.
 
-import { useState, useId, useEffect } from 'react'
-import type { CrewSummary } from '@concert-crawl/types'
-import { useAuth } from '@clerk/nextjs'
+import { useState, useId, useEffect } from 'react';
+import type { CrewSummary } from '@concert-crawl/types';
+import { useAuth } from '@clerk/nextjs';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { createCrew } from '@/lib/crews'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { createCrew } from '@/lib/crews';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY.create
+const COPY = CREWS_COPY.create;
 
 /** Reroll mints a fresh id rather than bumping a salt (row P4). */
-const mintCrewId = (): string => crypto.randomUUID()
+const mintCrewId = (): string => crypto.randomUUID();
 
 interface CreateCrewSheetProps {
-  open: boolean
-  onClose: () => void
-  onCreated: (crew: CrewSummary) => void
+  open: boolean;
+  onClose: () => void;
+  onCreated: (crew: CrewSummary) => void;
 }
 
 export const CreateCrewSheet = ({
@@ -29,44 +29,44 @@ export const CreateCrewSheet = ({
   onClose,
   onCreated,
 }: CreateCrewSheetProps) => {
-  const { getToken } = useAuth()
-  const nameId = useId()
-  const helpId = useId()
-  const [crewId, setCrewId] = useState(mintCrewId)
-  const [name, setName] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const { getToken } = useAuth();
+  const nameId = useId();
+  const helpId = useId();
+  const [crewId, setCrewId] = useState(mintCrewId);
+  const [name, setName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // A closed sheet keeps no state: reopening is a new crew, so it gets a new
   // id and a clean field rather than the last attempt's leftovers.
   useEffect(() => {
-    if (open) return
-    setCrewId(mintCrewId())
-    setName('')
-    setSaving(false)
-    setFailed(false)
-  }, [open])
+    if (open) return;
+    setCrewId(mintCrewId());
+    setName('');
+    setSaving(false);
+    setFailed(false);
+  }, [open]);
 
-  const trimmed = name.trim()
-  const canSubmit = trimmed !== '' && !saving
+  const trimmed = name.trim();
+  const canSubmit = trimmed !== '' && !saving;
 
   const onSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
-    ev.preventDefault()
-    if (!canSubmit) return
-    setSaving(true)
-    setFailed(false)
+    ev.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      const crew = await createCrew(token, { id: crewId, name: trimmed })
-      onCreated(crew)
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      const crew = await createCrew(token, { id: crewId, name: trimmed });
+      onCreated(crew);
     } catch (err) {
-      console.error('CreateCrewSheet: could not create crew', err)
+      console.error('CreateCrewSheet: could not create crew', err);
       // The id is kept on failure so a retry produces the patch they saw.
-      setFailed(true)
-      setSaving(false)
+      setFailed(true);
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <ModalShell
@@ -256,5 +256,5 @@ export const CreateCrewSheet = ({
         </button>
       </form>
     </ModalShell>
-  )
-}
+  );
+};

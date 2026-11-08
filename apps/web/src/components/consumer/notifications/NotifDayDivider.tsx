@@ -8,7 +8,7 @@
 // It is opaque (--bg-elevated) rather than translucent because rows scroll
 // underneath it.
 
-import { NMono } from './NMono'
+import { NMono } from './NMono';
 
 export const NotifDayDivider = ({ label }: { label: string }) => (
   <div
@@ -24,4 +24,4 @@ export const NotifDayDivider = ({ label }: { label: string }) => (
   >
     <NMono>{label}</NMono>
   </div>
-)
+);

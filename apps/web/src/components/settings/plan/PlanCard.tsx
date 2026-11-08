@@ -4,31 +4,31 @@
 // parity is CSS-responsive: same markup, Tailwind sm: sizing, CTAs stack
 // on mobile and sit inline on desktop.
 
-import { TierBadge } from '@/components/consumer/tier-picker'
-import { PLAN_CARD_COPY } from './definitions/copy'
+import { TierBadge } from '@/components/consumer/tier-picker';
+import { PLAN_CARD_COPY } from './definitions/copy';
 import type {
   PlanCardContent,
   PlanCardCta,
   PlanCardTone,
-} from './definitions/types'
+} from './definitions/types';
 
 const TONE_ACCENT: Record<PlanCardTone, string> = {
   signal: 'var(--signal)',
   accent: 'var(--accent)',
   warning: 'var(--warning)',
   muted: 'var(--fg-muted)',
-}
+};
 
 const RAIL_ACCENT = {
   signal: 'var(--signal)',
   warning: 'var(--warning)',
   muted: 'var(--fg-muted)',
-} as const
+} as const;
 
 interface PlanCardProps {
-  content: PlanCardContent
-  onCtaClick: (cta: PlanCardCta) => void
-  ctaPending: boolean
+  content: PlanCardContent;
+  onCtaClick: (cta: PlanCardCta) => void;
+  ctaPending: boolean;
 }
 
 const FreeChip = () => (
@@ -46,16 +46,16 @@ const FreeChip = () => (
   >
     {PLAN_CARD_COPY.freeChip}
   </span>
-)
+);
 
 export const PlanCard = ({
   content,
   onCtaClick,
   ctaPending,
 }: PlanCardProps) => {
-  const accent = TONE_ACCENT[content.tone]
+  const accent = TONE_ACCENT[content.tone];
   // Past-due keeps a warning shell but its action buttons stay signal (#782).
-  const ctaAccent = content.tone === 'warning' ? 'var(--signal)' : accent
+  const ctaAccent = content.tone === 'warning' ? 'var(--signal)' : accent;
 
   return (
     <section
@@ -230,7 +230,7 @@ export const PlanCard = ({
           // sheet/picker CTAs are instant and stay tappable.
           const isDisabled =
             ctaPending &&
-            (cta.action === 'portal' || cta.action === 'resubscribe')
+            (cta.action === 'portal' || cta.action === 'resubscribe');
           return (
             <button
               key={cta.label}
@@ -294,9 +294,9 @@ export const PlanCard = ({
                 cta.label
               )}
             </button>
-          )
+          );
         })}
       </div>
     </section>
-  )
-}
+  );
+};

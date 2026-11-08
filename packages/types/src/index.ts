@@ -1,52 +1,52 @@
 // Stripe decline_code → 5-category mapping (spec Part 2 §1.6) — shared by
 // the API webhook handler and the web tier-picker failure surfaces.
-export * from './decline-category.js'
+export * from './decline-category.js';
 
 // Web analytics share-event contract (posthog-js) and the tier picker's entry
 // type.
-export * from './analytics-events.js'
+export * from './analytics-events.js';
 
 // #764 venue first-timer guide — chip pool, chip-state / publish-state /
 // viewer-mode / density derivation. One implementation, imported by both apps.
-export * from './venue-guide.js'
+export * from './venue-guide.js';
 // Re-exported above; imported explicitly because `export *` does not bring
 // the name into this module's scope for use in VenuePublic below.
-import type { VenueGuide } from './venue-guide.js'
+import type { VenueGuide } from './venue-guide.js';
 // URL-safe artist slug derivation (#1115) — shared by the crawler
 // write-through and the packages/db backfill. Lives here because it is the
 // only package both can depend on without a workspace build cycle.
-export * from './artist-slug.js'
+export * from './artist-slug.js';
 
 // Artist canonicalization (#608/#763) lives here rather than in crawler-core
 // so packages/db can canonicalize at seed/backfill time: crawler-core depends
 // on db, so db importing from crawler-core would be a workspace build cycle.
 // crawler-core re-exports both from './lib/canonical-artist.js', keeping the
 // `@concert-crawl/crawler-core/canonical` subpath and every call site intact.
-export * from './canonical-artist.js'
+export * from './canonical-artist.js';
 
 // Shared by canonicalizeArtist here and canonicalizeTitle in crawler-core —
 // the precomposed Latin Extended letters that NFD will not split into base +
 // combining mark (#648: Ø/ø, Ł/ł, Æ/æ, ß/ẞ, Þ/þ, Ð/ð, Œ/œ, Đ/đ). See
 // latin-extended-map.ts for the SQL parity contract the map carries.
-export * from './latin-extended-map.js'
+export * from './latin-extended-map.js';
 
 // The single user agent every outbound request carries (#1228). Lives here so
 // the fetchers that send it, the robots.txt checker that asks about it, and the
 // /bot page that publishes it all read one string.
-export * from './crawler-identity.js'
+export * from './crawler-identity.js';
 
 // Concert Crews (#1226) — /v1/crews and invite-resolution response contracts,
 // shared by the API handlers and every web crew surface.
-export * from './crew.js'
+export * from './crew.js';
 
 // #1115 artist page — GET /v1/artists/:slug response contract, shared by the
 // API handler and the web route shell.
-export * from './artist.js'
+export * from './artist.js';
 
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.
-export type Role = 'admin' | 'promoter' | 'beta' | 'sub_admin' | 'user'
+export type Role = 'admin' | 'promoter' | 'beta' | 'sub_admin' | 'user';
 
 // Ordered lowest → highest privilege. Used for role comparison across API and web.
 export const ROLE_HIERARCHY: readonly Role[] = [
@@ -55,7 +55,7 @@ export const ROLE_HIERARCHY: readonly Role[] = [
   'promoter',
   'sub_admin',
   'admin',
-]
+];
 
 // Roles that grant full premium access independent of subscription plan
 export const PREMIUM_ROLES: readonly Role[] = [
@@ -63,56 +63,56 @@ export const PREMIUM_ROLES: readonly Role[] = [
   'sub_admin',
   'promoter',
   'beta',
-]
+];
 
 // Type guard — use instead of casting when reading role from external sources (e.g. Clerk metadata)
 export function isRole(value: unknown): value is Role {
-  return ROLE_HIERARCHY.includes(value as Role)
+  return ROLE_HIERARCHY.includes(value as Role);
 }
 
 // Badge displayed in ProfileHero / settings for privileged role-holders; null for regular users
 // sub_admin maps to 'admin' badge; 'user' maps to null (no badge)
-export type RoleBadge = 'admin' | 'promoter' | 'beta'
+export type RoleBadge = 'admin' | 'promoter' | 'beta';
 
 // Standard API response envelope
 export type ApiResponse<T> =
-  { success: true; data: T } | { success: false; error: string; code?: string }
+  { success: true; data: T } | { success: false; error: string; code?: string };
 
 // Paginated list response
 export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 // Clerk user shape (subset we use in the app)
 export interface AuthUser {
-  id: string // Clerk user ID
-  email: string
-  role: Role
-  firstName: string | null
-  lastName: string | null
+  id: string; // Clerk user ID
+  email: string;
+  role: Role;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 // Extraction strategies used by the crawler
-export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual'
+export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual';
 
 // Crawl run status. 'skipped' = page-hash dedup matched the last successful
 // run, so extraction was bypassed (cost-saving). Treat as healthy alongside
 // 'success' in dashboards; surface visually distinct so it doesn't conflate
 // with 'success + eventsFound: 0' (which would indicate a real failure).
-export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped'
+export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped';
 
 // Vibe filter bucket taxonomy. Lives here rather than in apps/api because the
 // row's genre pair needs bucket membership client-side to decide which of two
 // genres leads under an active filter — the web app only ever holds the bare
 // filterVibe string from the URL.
-export * from './genre-buckets.js'
+export * from './genre-buckets.js';
 
 // Event status
-export * from './event-status.js'
-import type { EventStatus } from './event-status.js'
+export * from './event-status.js';
+import type { EventStatus } from './event-status.js';
 
 /**
  * Why an event landed on the admin "missing from crawl" list.
@@ -123,14 +123,14 @@ import type { EventStatus } from './event-status.js'
  *   date, or relocated to another venue. Suggestion only — never auto-applied.
  */
 export type MissingClassification =
-  'removed' | 'crawl_gap' | 'duplicate' | 'moved'
+  'removed' | 'crawl_gap' | 'duplicate' | 'moved';
 
 /**
  * Which predicate the moved-candidate matcher relaxed to find the suggestion.
  * - date: same venue, different date
  * - venue: same date (+/- 1 day), different venue
  */
-export type MovedReason = 'date' | 'venue'
+export type MovedReason = 'date' | 'venue';
 
 // Price source — identifies where ticket price data originated
 export type PriceSource =
@@ -141,10 +141,10 @@ export type PriceSource =
   | 'songkick'
   | 'bandsintown'
   | 'seatgeek'
-  | 'community'
+  | 'community';
 
 // Ticket tier
-export type Tier = 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
+export type Tier = 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn';
 
 // Ticket vendor. Single source of truth — `z.enum(VENDOR_VALUES)` at every API
 // boundary rather than a hand-written list per route, which is how the six
@@ -162,9 +162,9 @@ export const VENDOR_VALUES = [
   'Viagogo',
   'TicketNetwork',
   'Other',
-] as const
+] as const;
 
-export type Vendor = (typeof VENDOR_VALUES)[number]
+export type Vendor = (typeof VENDOR_VALUES)[number];
 
 // Vendor picker taxonomy (#1193). Pinned vendors render as always-visible
 // chips; the rest live behind the "More…" disclosure, grouped so a fan can tell
@@ -180,46 +180,46 @@ export type Vendor = (typeof VENDOR_VALUES)[number]
 // classification disagrees — `host-rules.ts` files seatgeek.com under
 // KNOWN_VENDOR_HOSTS — but the picker follows the price-kind side, because
 // that's the axis a fan reads a trust mark from.
-export type VendorGroupId = 'primary' | 'resale'
+export type VendorGroupId = 'primary' | 'resale';
 
 export const VENDOR_PINNED: readonly Vendor[] = [
   'VenueBoxOffice',
   'AXS',
   'Ticketmaster',
-]
+];
 
 export const VENDOR_GROUPS: readonly {
-  id: VendorGroupId
-  items: readonly Vendor[]
+  id: VendorGroupId;
+  items: readonly Vendor[];
 }[] = [
   { id: 'primary', items: ['Etix', 'Eventbrite', 'DICE'] },
   {
     id: 'resale',
     items: ['StubHub', 'SeatGeek', 'VividSeats', 'Viagogo', 'TicketNetwork'],
   },
-]
+];
 
-export const VENDOR_CATCHALL: Vendor = 'Other'
+export const VENDOR_CATCHALL: Vendor = 'Other';
 
 // Derived from the resale group rather than listed again: the price-trust
 // ordering in events.ts / venues-public.ts previously hardcoded SeatGeek as
 // the only resale vendor, so expanding the enum silently let StubHub and
 // friends outrank a primary-market seller.
 export const RESALE_VENDOR_VALUES: readonly Vendor[] =
-  VENDOR_GROUPS.find((group) => group.id === 'resale')?.items ?? []
+  VENDOR_GROUPS.find((group) => group.id === 'resale')?.items ?? [];
 
-const RESALE_VENDORS = new Set<string>(RESALE_VENDOR_VALUES)
+const RESALE_VENDORS = new Set<string>(RESALE_VENDOR_VALUES);
 
 export const isResaleVendor = (vendor: string | null | undefined): boolean =>
-  vendor !== null && vendor !== undefined && RESALE_VENDORS.has(vendor)
+  vendor !== null && vendor !== undefined && RESALE_VENDORS.has(vendor);
 
 // Ordering weight for "which corroborated price leads" — box office first,
 // then primary-market sellers, then resale. Shared so the in-memory sort and
 // the SQL CASE expressions can't drift apart.
 export const vendorTrustRank = (vendor: string): number => {
-  if (vendor === 'VenueBoxOffice') return 0
-  return isResaleVendor(vendor) ? 2 : 1
-}
+  if (vendor === 'VenueBoxOffice') return 0;
+  return isResaleVendor(vendor) ? 2 : 1;
+};
 
 // Ticket vendor — lower-cased for pipeline
 export type TicketVendor =
@@ -229,27 +229,27 @@ export type TicketVendor =
   | 'dice'
   | 'eventbrite'
   | 'venue_box_office'
-  | 'unknown'
+  | 'unknown';
 
 // API provider for API-backed venue crawling (#506). When set, the crawler
 // bypasses the HTML → JSON-LD → LLM cascade and pulls events from the provider.
-export type ApiProvider = 'venuepilot'
+export type ApiProvider = 'venuepilot';
 
 // How the submitter found the price
-export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
+export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue';
 
 // Source-category for community-submitted prices (issue #641). Distinct from
 // PriceSource (which identifies the upstream data origin for events.priceSource).
 // Captured directly from the submit form; legacy rows backfilled from
 // (vendor, how_found) heuristics in migration 0040.
-export type SourceCategory = 'boxoffice' | 'standard' | 'resale'
+export type SourceCategory = 'boxoffice' | 'standard' | 'resale';
 
 // Typed entry in events.ticketLinks (issue #641). Populated by the crawler
 // (PR 2) and consumed by the Consumer UI (PR 4) for source-category disclosure.
 export interface TicketLink {
-  kind: 'boxoffice' | 'primary' | 'resale'
-  vendor: string | null
-  url: string
+  kind: 'boxoffice' | 'primary' | 'resale';
+  vendor: string | null;
+  url: string;
 }
 
 // Shared heuristic for deriving source_category when a caller hasn't picked
@@ -265,7 +265,7 @@ export function deriveSourceCategory(
 ): 'boxoffice' | 'standard' {
   return vendor === 'VenueBoxOffice' || howFound === 'at_the_venue'
     ? 'boxoffice'
-    : 'standard'
+    : 'standard';
 }
 
 /**
@@ -278,7 +278,7 @@ export function deriveSourceCategory(
  * accepts ones it does not — a bug with no symptom on either side alone, only
  * in the gap between them.
  */
-export const STALE_AFTER_MS = 24 * 60 * 60 * 1000
+export const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
 // Shared validation policy — server enforces, client mirrors for UX
 export const SP_POLICY = {
@@ -296,31 +296,31 @@ export const SP_POLICY = {
   rateLimitMaxSubmissions: 3,
   outlierLowFactor: 0.4,
   outlierHighFactor: 2.5,
-} as const
+} as const;
 
 // Event report policy — server enforces, client mirrors for UX
 export const ER_POLICY = {
   confirmsRequired: 2,
   confirmsRequiredImminent: 3,
   imminentThresholdDays: 7,
-} as const
+} as const;
 
 // Notification types
-export type NotificationType = 'admin_alert' | 'user_notification'
+export type NotificationType = 'admin_alert' | 'user_notification';
 
 // Feedback categories
-export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
+export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
 
 // Subscription tiers
-export type SubscriptionTier = 'free' | 'premium'
+export type SubscriptionTier = 'free' | 'premium';
 
 // VenuePlatform — per-platform fetcher dispatch (#623). Widen the list
 // as new platform adapters land in packages/crawler-core. Exported as a
 // runtime array so the admin Zod schema and the web platform picker read
 // the same source rather than each restating the union as a literal.
-export const VENUE_PLATFORMS = ['aeg', 'livenation', 'detail-page'] as const
+export const VENUE_PLATFORMS = ['aeg', 'livenation', 'detail-page'] as const;
 
-export type VenuePlatform = (typeof VENUE_PLATFORMS)[number]
+export type VenuePlatform = (typeof VENUE_PLATFORMS)[number];
 
 // Platforms whose fetcher addresses a venue by an opaque id on the
 // platform's own side. `detail-page` (#1295) is not one of them: it follows
@@ -329,139 +329,139 @@ export type VenuePlatform = (typeof VENUE_PLATFORMS)[number]
 const PLATFORMS_REQUIRING_VENUE_ID: readonly VenuePlatform[] = [
   'aeg',
   'livenation',
-]
+];
 
 // Narrows an untrusted value (a form field, a query param) to a platform
 // the dispatcher actually knows about.
 export const isVenuePlatform = (value: unknown): value is VenuePlatform =>
-  VENUE_PLATFORMS.some((platform) => platform === value)
+  VENUE_PLATFORMS.some((platform) => platform === value);
 
 export const platformRequiresVenueId = (
   platform: VenuePlatform | null | undefined,
 ): boolean =>
-  platform != null && PLATFORMS_REQUIRING_VENUE_ID.includes(platform)
+  platform != null && PLATFORMS_REQUIRING_VENUE_ID.includes(platform);
 
 // PlatformProbeResult — dry-run outcome of POST /v1/admin/venues/:id/probe-platform.
 // Returned inside the standard { success: true, data } envelope with HTTP 200
 // for BOTH ok:true and ok:false — a failed probe is a successful diagnosis.
 export type PlatformProbeResult =
   | {
-      ok: true
-      eventsFound: number
-      fetchLatencyMs: number
-      sourceUrl: string
+      ok: true;
+      eventsFound: number;
+      fetchLatencyMs: number;
+      sourceUrl: string;
     }
   | {
-      ok: false
-      reason: 'missing_config' | 'fetch_error' | 'schema_error'
-      error: string
-    }
+      ok: false;
+      reason: 'missing_config' | 'fetch_error' | 'schema_error';
+      error: string;
+    };
 
 // Venue — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface Venue {
-  id: string
-  name: string
-  slug: string
-  websiteUrl: string
-  city: string
-  timezone: string
-  active: boolean
-  verified: boolean
-  verifiedBy: string | null
-  verifiedAt: string | null
-  lastCrawledAt: string | null
-  crawlNotes: string | null
-  crawlDelayMs: number
-  crawlWaitUntil: 'networkidle' | 'load' | 'domcontentloaded'
-  crawlWaitForSelector: string | null
-  robotsTxtAllowed: boolean | null
-  robotsTxtCheckedAt: string | null
-  consecutiveFailures: number
-  blockedAt: string | null
-  crawlPausedAt: string | null
+  id: string;
+  name: string;
+  slug: string;
+  websiteUrl: string;
+  city: string;
+  timezone: string;
+  active: boolean;
+  verified: boolean;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  lastCrawledAt: string | null;
+  crawlNotes: string | null;
+  crawlDelayMs: number;
+  crawlWaitUntil: 'networkidle' | 'load' | 'domcontentloaded';
+  crawlWaitForSelector: string | null;
+  robotsTxtAllowed: boolean | null;
+  robotsTxtCheckedAt: string | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
+  crawlPausedAt: string | null;
   // Set when the venue's data was removed at its request; cleared on activation.
-  removedAt: string | null
-  extractionStrategy: ExtractionStrategy | null
-  contactEmail: string | null
-  priceUrl: string | null
-  ticketVendor: TicketVendor | null
-  apiProvider: ApiProvider | null
-  apiAccountId: string | null
-  debugCaptureHtml: boolean
-  crawlMode: 'http' | 'browser' | null
-  platform: VenuePlatform | null
-  platformVenueId: string | null
-  address: string | null
-  capacity: number | null
-  venueType: string | null
-  about: string | null
-  neighborhood: string | null
-  featured: boolean
-  lat: number | null
-  lng: number | null
-  createdAt: string
-  updatedAt: string
+  removedAt: string | null;
+  extractionStrategy: ExtractionStrategy | null;
+  contactEmail: string | null;
+  priceUrl: string | null;
+  ticketVendor: TicketVendor | null;
+  apiProvider: ApiProvider | null;
+  apiAccountId: string | null;
+  debugCaptureHtml: boolean;
+  crawlMode: 'http' | 'browser' | null;
+  platform: VenuePlatform | null;
+  platformVenueId: string | null;
+  address: string | null;
+  capacity: number | null;
+  venueType: string | null;
+  about: string | null;
+  neighborhood: string | null;
+  featured: boolean;
+  lat: number | null;
+  lng: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type NewVenue = Omit<
   Venue,
   'id' | 'createdAt' | 'updatedAt' | 'lastCrawledAt' | 'consecutiveFailures'
->
+>;
 
 // VenueWithEventCount — admin list view only, includes upcoming event count
 export interface VenueWithEventCount extends Venue {
-  eventCount: number
+  eventCount: number;
   // Outcome of the venue's most recent run, null when it has never crawled.
   // The venue's own columns describe whether crawling is enabled, not whether
   // it is producing anything — a venue skipping every night still reads Active.
-  lastRunStatus: CrawlStatus | null
+  lastRunStatus: CrawlStatus | null;
 }
 
 // CrawlHealth — 7-day crawl health stats returned by GET /v1/admin/venues/:id
 export interface CrawlHealth {
-  sevenDayPercent: number
-  sparkline: { date: string; success: boolean; hasRun: boolean }[]
-  lastCrawledAt: string | null
-  avgDurationMs: number | null
-  eventsTracked: number
-  consecutiveFails: number
+  sevenDayPercent: number;
+  sparkline: { date: string; success: boolean; hasRun: boolean }[];
+  lastCrawledAt: string | null;
+  avgDurationMs: number | null;
+  eventsTracked: number;
+  consecutiveFails: number;
 }
 
 // VenueWithCrawlHealth — admin detail view includes crawl health stats
 export interface VenueWithCrawlHealth extends Venue {
-  crawlHealth: CrawlHealth
+  crawlHealth: CrawlHealth;
 }
 
 // VenueRobotsStatus — robots.txt audit row for the admin audit page.
 // Reflects the stored crawl-time result on the venues table, not a live fetch.
 export interface VenueRobotsStatus {
-  id: string
-  name: string
-  slug: string
-  websiteUrl: string
-  robotsTxtAllowed: boolean | null
-  robotsTxtCheckedAt: string | null
+  id: string;
+  name: string;
+  slug: string;
+  websiteUrl: string;
+  robotsTxtAllowed: boolean | null;
+  robotsTxtCheckedAt: string | null;
 }
 
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {
-  id: string
-  venueId: string
-  status: CrawlStatus | 'in_progress'
-  httpStatusCode: number | null
-  robotsTxtBlocked: string | null
-  extractionStrategyUsed: string | null
-  eventsFound: number
-  eventsInserted: number
-  eventsUpdated: number
-  errorMessage: string | null
-  durationMs: number | null
-  createdAt: string
-  llmCostUsd?: number | null
-  venueName?: string | null
-  startedAt?: string | null
+  id: string;
+  venueId: string;
+  status: CrawlStatus | 'in_progress';
+  httpStatusCode: number | null;
+  robotsTxtBlocked: string | null;
+  extractionStrategyUsed: string | null;
+  eventsFound: number;
+  eventsInserted: number;
+  eventsUpdated: number;
+  errorMessage: string | null;
+  durationMs: number | null;
+  createdAt: string;
+  llmCostUsd?: number | null;
+  venueName?: string | null;
+  startedAt?: string | null;
   // Surfaces an unread admin_alert notification of category
   // 'crawl.event_count_dropped' (covers both went-dark and sharp-drop)
   // or 'crawl.failed' (any run that brings a venue's consecutive failure
@@ -472,7 +472,7 @@ export interface CrawlRun {
   // tripped the event-count alert is no longer silent (#804). `severity`
   // lets the badge distinguish "Went dark" from "Dropped sharply"
   // without round-tripping the notification body.
-  activeAlert?: ActiveCrawlAlert | null
+  activeAlert?: ActiveCrawlAlert | null;
 }
 
 // CrawlTrigger — JSON-serialized shape of a queued crawl trigger row.
@@ -481,120 +481,120 @@ export interface CrawlRun {
 // created, the resulting `crawlRunId`. Clients poll GET
 // /v1/admin/crawl/triggers/:id to learn when the async crawl finished, then
 // fetch the linked run for its result.
-export type CrawlTriggerStatus = 'pending' | 'processing' | 'done' | 'failed'
+export type CrawlTriggerStatus = 'pending' | 'processing' | 'done' | 'failed';
 
 export interface CrawlTrigger {
-  id: string
-  venueId: string
-  status: CrawlTriggerStatus
-  crawlRunId: string | null
-  triggeredBy: string | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  venueId: string;
+  status: CrawlTriggerStatus;
+  crawlRunId: string | null;
+  triggeredBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ActiveCrawlAlert {
-  notificationId: string
+  notificationId: string;
   category:
     | 'crawl.event_count_dropped'
     | 'crawl.failed'
     | 'crawl.event_ceiling_suspected'
-    | 'crawl.url_coverage_gap'
+    | 'crawl.url_coverage_gap';
   // Only present for 'crawl.event_count_dropped' — the event-count alert
   // classifies the drop as 'went_dark' (0 events) or 'dropped_sharply'
   // (non-zero but well below baseline). 'crawl.failed' has no sub-severity.
-  severity?: 'went_dark' | 'dropped_sharply' | null
+  severity?: 'went_dark' | 'dropped_sharply' | null;
   // Only present for 'crawl.event_ceiling_suspected' — which of the two
   // capped-catalogue fingerprints tripped (#1185). 'horizon_shrank' means the
   // furthest announced show moved materially closer; 'pinned_count' means the
   // extracted count repeated exactly across consecutive runs.
-  ceilingKind?: 'horizon_shrank' | 'pinned_count' | null
+  ceilingKind?: 'horizon_shrank' | 'pinned_count' | null;
   // Only present for 'crawl.url_coverage_gap' — whether the venue's whole
   // upcoming catalogue lacks per-event ticket links ('no_coverage') or only
   // part of it does ('partial_gap').
-  coverageSeverity?: 'no_coverage' | 'partial_gap' | null
+  coverageSeverity?: 'no_coverage' | 'partial_gap' | null;
 }
 
 // DailyCost — one zero-filled day bucket from GET /v1/admin/costs/daily.
 // `date` is a Mountain-Time calendar date (YYYY-MM-DD); `costUsd` is the
 // coalesced sum of crawl_runs.llm_cost_usd for runs on that MT day.
 export interface DailyCost {
-  date: string
-  costUsd: number
+  date: string;
+  costUsd: number;
 }
 
 // AdminDailyCosts — GET /v1/admin/costs/daily response payload. `days` is
 // contiguous (missing days zero-filled server-side) and ordered oldest→newest.
 export interface AdminDailyCosts {
-  days: DailyCost[]
-  totalUsd: number
+  days: DailyCost[];
+  totalUsd: number;
 }
 
 // TopSpendVenue — one ranked row from GET /v1/admin/costs/top-venues.
 // `venueId` is null for the aggregated "(others)" remainder row; `pct` is
 // the venue's rounded share of the window total.
 export interface TopSpendVenue {
-  venueId: string | null
-  name: string
-  costUsd: number
-  pct: number
+  venueId: string | null;
+  name: string;
+  costUsd: number;
+  pct: number;
 }
 
 // AdminTopSpend — GET /v1/admin/costs/top-venues response payload.
 export interface AdminTopSpend {
-  venues: TopSpendVenue[]
-  totalUsd: number
+  venues: TopSpendVenue[];
+  totalUsd: number;
 }
 
 // Event — represents the JSON-serialized API response shape.
 // Date/time fields are strings; date is YYYY-MM-DD, time is HH:MM:SS or null.
 export interface Event {
-  id: string
-  venueId: string
-  title: string
-  artist: string
-  supportingArtists: string[] | null
-  tourName: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketUrl: string | null
-  ticketLinks: TicketLink[] | null
+  id: string;
+  venueId: string;
+  title: string;
+  artist: string;
+  supportingArtists: string[] | null;
+  tourName: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketUrl: string | null;
+  ticketLinks: TicketLink[] | null;
   // The event's own detail page on the source venue site. Deep-link
   // fallback for "Get tickets" when ticketUrl is null (#1152).
-  eventUrl: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  priceSource: PriceSource | null
-  pipelineExhaustedAt: string | null
-  description: string | null
-  imageUrl: string | null
-  genre: string[] | null
-  status: EventStatus
-  confidenceScore: string | null
-  verified: boolean
-  sourceUrl: string | null
-  createdAt: string
-  updatedAt: string
+  eventUrl: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  priceSource: PriceSource | null;
+  pipelineExhaustedAt: string | null;
+  description: string | null;
+  imageUrl: string | null;
+  genre: string[] | null;
+  status: EventStatus;
+  confidenceScore: string | null;
+  verified: boolean;
+  sourceUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // PriceSubmission — community-submitted ticket price for an event
 export interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  disputedSubmissionId: string | null
-  status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
-  corroborationCount: number
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  disputedSubmissionId: string | null;
+  status: 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived';
+  corroborationCount: number;
   // Submitter's free-text note (existed in DB but was missing from this
   // shared interface — added during the admin contest-review PR per #697).
-  note: string | null
+  note: string | null;
   // Admin's archive reason. No DB-level length cap; the API enforces
   // min 10 / max 2000 chars at the resolve/defer Zod validators (see
   // apps/api/src/routes/admin/contests.ts resolveBodySchema +
@@ -605,14 +605,14 @@ export interface PriceSubmission {
   // archived_reason CAN be non-null on status='stale' rows — do NOT
   // infer status from this field's presence; query by status for
   // behavior, read archived_reason for the explanation.
-  archivedReason: string | null
+  archivedReason: string | null;
   // Engagement-signal columns surfaced via priceByTier[].counterSubmission
   // so consumers see a quiet "Admin requested more info" pill on the event
   // detail page after an admin defers the contest.
-  lastAdminActionAt: string | null
-  lastAdminActionKind: 'defer' | null
-  createdAt: string
-  updatedAt: string
+  lastAdminActionAt: string | null;
+  lastAdminActionKind: 'defer' | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // SubmissionWithMeta — single submission + peer-confirm metadata.
@@ -622,44 +622,44 @@ export interface PriceSubmission {
 // own id (so the "yours" affordance keeps working) and null everywhere else;
 // an anonymous caller sees null throughout.
 export interface SubmissionWithMeta extends Omit<PriceSubmission, 'userId'> {
-  userId: string | null
-  confirms: number
-  byYou: boolean
+  userId: string | null;
+  confirms: number;
+  byYou: boolean;
 }
 
 // SubmissionListResponse — response for GET /v1/events/:id/price-submissions
 export interface SubmissionListResponse {
-  submissions: SubmissionWithMeta[]
-  alreadySubmitted: boolean
+  submissions: SubmissionWithMeta[];
+  alreadySubmitted: boolean;
   // How many contribution acts the caller has left for this event inside the
   // 24h window (#876) — SP_POLICY.rateLimitMaxSubmissions minus acts used.
   // 0 means the next POST would 429. Anonymous callers get the full allowance.
-  submissionsRemaining: number
-  userSubmission: SubmissionWithMeta | null
+  submissionsRemaining: number;
+  userSubmission: SubmissionWithMeta | null;
 }
 
 // EventReport status options
-export type EventReportStatus = 'sold-out' | 'cancelled' | 'postponed'
+export type EventReportStatus = 'sold-out' | 'cancelled' | 'postponed';
 
 // EventReport evidence methods
 export type EventReportEvidenceMethod =
-  'bought_myself' | 'saw_listing' | 'venue_site' | 'other'
+  'bought_myself' | 'saw_listing' | 'venue_site' | 'other';
 
 // EventReport — community-filed report about an event's status
 export interface EventReport {
-  id: string
-  eventId: string
-  reporterId: string
-  status: EventReportStatus
-  evidenceMethod: EventReportEvidenceMethod
-  evidenceUrl: string | null
-  note: string | null
-  createdAt: string
-  confirmsCount: number
-  confirmsNeeded: number
-  isReporter: boolean
-  userHasConfirmed: boolean
-  reporterHandle: string | null
+  id: string;
+  eventId: string;
+  reporterId: string;
+  status: EventReportStatus;
+  evidenceMethod: EventReportEvidenceMethod;
+  evidenceUrl: string | null;
+  note: string | null;
+  createdAt: string;
+  confirmsCount: number;
+  confirmsNeeded: number;
+  isReporter: boolean;
+  userHasConfirmed: boolean;
+  reporterHandle: string | null;
 }
 
 // EventWithVenue — event joined with its venue, returned by the public events API
@@ -667,9 +667,9 @@ export interface EventWithVenue extends Event {
   venue: Pick<
     Venue,
     'id' | 'name' | 'slug' | 'city' | 'websiteUrl' | 'timezone'
-  >
+  >;
   // Vendor from the corroborated community submission — only present for community-priced events
-  priceVendor?: string | null
+  priceVendor?: string | null;
   // Per-tier price aggregation surfaced on the BROWSE list endpoint so the
   // browse chip can mirror pickTierHeadline / compareTierRows exactly
   // (issue #787).
@@ -691,20 +691,20 @@ export interface EventWithVenue extends Event {
   // `pickBrowseHeadline` reads only `block.headline`, so the trimmed
   // payload is sufficient for the browse chip. Any consumer that wants
   // those fields populated must use `EventDetailResponse` instead.
-  priceByTier?: TierPriceBlock[] | null
+  priceByTier?: TierPriceBlock[] | null;
   // Display names of the viewer's Spotify-sourced taste artists (followed +
   // top, per §9.1's canonical set) that match this event's headliner or
   // supporting set (#763 PR 6, eng spec §9.2). Present ONLY for signed-in
   // users with Spotify-sourced follow rows — a possibly empty array per
   // event. Absent entirely for anonymous/unconnected viewers.
-  followedArtists?: string[]
+  followedArtists?: string[];
   // The headliner's Spotify portrait, from the `artists` projection joined on
   // `canonicalArtist`. Second link in the event-surface chain: `imageUrl` →
   // `artistPhotoUrl` → IdentityArt. Null whenever the event has no canonical
   // headliner, no projection row, or a row without a photo — all ordinary.
   // Never populated from a supporting artist: a wrong face beside the right
   // name is worse than no face.
-  artistPhotoUrl?: string | null
+  artistPhotoUrl?: string | null;
 }
 
 // Per-tier price-aggregation building blocks (issue #644). Surfaced inside
@@ -713,79 +713,79 @@ export interface EventWithVenue extends Event {
 // stay alongside for the migration buffer and get dropped in the Contract PR.
 
 export interface TierHeadline {
-  submissionId: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  submitterHandle: string | null
-  observedAt: string
-  approvedAt: string
-  approvalKind: 'admin' | 'fan'
-  confirmsCount: number
+  submissionId: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  submitterHandle: string | null;
+  observedAt: string;
+  approvedAt: string;
+  approvalKind: 'admin' | 'fan';
+  confirmsCount: number;
 }
 
 export interface TierAlternate {
-  submissionId: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
+  submissionId: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
 }
 
 export interface TierPending {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  howFound: HowFound
-  sourceCategory: SourceCategory | null
-  note: string | null
-  submitterHandle: string | null
-  submittedAt: string
-  confirmsCount: number
-  confirmsNeeded: number
-  isSubmitter: boolean
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  howFound: HowFound;
+  sourceCategory: SourceCategory | null;
+  note: string | null;
+  submitterHandle: string | null;
+  submittedAt: string;
+  confirmsCount: number;
+  confirmsNeeded: number;
+  isSubmitter: boolean;
 }
 
 export interface TierCounter {
-  id: string
-  parentSubmissionId: string
-  floor: number
-  ceiling?: number
-  submitter: { handle: string } | null
-  submittedAt: string
+  id: string;
+  parentSubmissionId: string;
+  floor: number;
+  ceiling?: number;
+  submitter: { handle: string } | null;
+  submittedAt: string;
   // Engagement-signal columns surfaced when an admin defers the contest.
   // The consumer event-detail page renders a quiet "Admin requested more
   // info" pill on the counter card when lastAdminActionKind === 'defer'.
   // Both stay null while the contest sits with no admin engagement; resolve
   // clears them on both rows so a prior defer doesn't outlive resolution.
-  lastAdminActionAt: string | null
-  lastAdminActionKind: 'defer' | null
+  lastAdminActionAt: string | null;
+  lastAdminActionKind: 'defer' | null;
 }
 
 export interface TierPriceBlock {
-  tier: Tier
-  headline: TierHeadline | null
-  alternates: TierAlternate[]
-  pending: TierPending[]
-  counterSubmission: TierCounter | null
-  reports: number
+  tier: Tier;
+  headline: TierHeadline | null;
+  alternates: TierAlternate[];
+  pending: TierPending[];
+  counterSubmission: TierCounter | null;
+  reports: number;
 }
 
 // A single other watcher of an event, as exposed on the social-proof surface.
 export interface EventWatcher {
   /** Never null — handle-less watchers are never listed by name. */
-  handle: string
-  avatarColor: AvatarColor | null
+  handle: string;
+  avatarColor: AvatarColor | null;
 }
 
 // GET /v1/events/:id/watchers
 export interface EventWatchersResponse {
   /** Count of OTHER watchers (excludes the viewer; includes handle-less users). */
-  total: number
+  total: number;
   /** Handle-bearing other watchers, most-recent-first, capped at ROSTER_CAP. */
-  named: EventWatcher[]
+  named: EventWatcher[];
 }
 
 // EventDetailResponse — single event detail with computed watch state
@@ -793,75 +793,75 @@ export interface EventDetailResponse extends EventWithVenue {
   // #1115 PR-G — artist-page entry points. The headliner's `artists.slug`, or
   // null when the projection has no row for that canonical name (an unresolved
   // name renders as plain text rather than a dead link).
-  artistSlug: string | null
+  artistSlug: string | null;
   // Positionally aligned with `supportingArtists`: index i of one is index i of
   // the other, null where that name has no `artists` row. The UI zips the two
   // arrays, so alignment is the contract. Deliberately NOT derived from
   // `events.canonical_supporting`, which dedupes and sorts (see
   // canonicalizeSupporting) and therefore cannot be zipped against the display
   // names. Null exactly when `supportingArtists` is null (a legacy row).
-  supportingArtistSlugs: Array<string | null> | null
-  watching: number
-  isWatching: boolean
+  supportingArtistSlugs: Array<string | null> | null;
+  watching: number;
+  isWatching: boolean;
   // ISO when the signed-in user said "I'm going!" (#70). Orthogonal to
   // isWatching — a row can carry either, both, or neither.
-  attendingAt: string | null
+  attendingAt: string | null;
   // #764 — whether this event's venue has a published first-timer guide, so the
   // event page can decide whether to show the chip that links to it.
-  venueGuidePublished: boolean
-  priceStatus?: 'live' | 'soldout' | null
+  venueGuidePublished: boolean;
+  priceStatus?: 'live' | 'soldout' | null;
   // Price detail fields — not yet in DB schema; null until added via migration
-  ticketPriceOpenedAt?: number | null
-  ticketFees?: number | null
+  ticketPriceOpenedAt?: number | null;
+  ticketFees?: number | null;
   // Community price enrichment — vendor, submitter handle, and observation timestamp
-  priceVendor?: string | null
+  priceVendor?: string | null;
   // The submitter's "Where's the price from?" answer. Drives the trust mark;
   // null only for rows predating #641, which fall back to vendor inference.
-  priceSourceCategory?: SourceCategory | null
-  priceSubmitterHandle?: string | null
-  priceObservedAt?: string | null
+  priceSourceCategory?: SourceCategory | null;
+  priceSubmitterHandle?: string | null;
+  priceObservedAt?: string | null;
   // The corroborated submission the flat price fields describe. Populated from
   // the same row as `priceObservedAt` and null whenever that is — the two are
   // read together so a freshness action can name the row it is refreshing.
   // NOT interchangeable with `priceByTier[].headline.submissionId`: the flat
   // shape keeps a legacy vendor-trust ordering that can pick a different row.
-  priceSubmissionId?: string | null
+  priceSubmissionId?: string | null;
   // Approval metadata — who corroborated and when
-  priceApprovalKind?: 'admin' | 'fan' | null
-  priceApprovedAt?: string | null
+  priceApprovalKind?: 'admin' | 'fan' | null;
+  priceApprovedAt?: string | null;
   // Alternate corroborated submissions (other vendors/sources beyond the primary)
   priceAlternates?: Array<{
-    vendor: string | null
-    priceMin: string
-    priceMax: string | null
-    sourceCategory?: SourceCategory | null
-  }> | null
+    vendor: string | null;
+    priceMin: string;
+    priceMax: string | null;
+    sourceCategory?: SourceCategory | null;
+  }> | null;
   // Confirms count for the primary live community price
-  priceConfirmsCount?: number | null
+  priceConfirmsCount?: number | null;
   // Pending counter-submission against the primary live price (if any).
   // parentSubmissionId is the corroborated submission being disputed — it
   // must be the value passed as disputedSubmissionId when filing a new dispute.
   counterSubmission?: {
-    id: string
-    parentSubmissionId: string
-    floor: number
-    ceiling?: number
-    submitter: { handle: string } | null
-    submittedAt: string
+    id: string;
+    parentSubmissionId: string;
+    floor: number;
+    ceiling?: number;
+    submitter: { handle: string } | null;
+    submittedAt: string;
     // Engagement-signal columns surfaced when an admin defers the contest.
     // Mirrors TierCounter.lastAdminAction* above so the flat shape stays in
     // lock-step with the per-tier shape during the PR 4 migration window
     // (events.ts:666–675 writes both paths off the same counter row). Both
     // stay null while the contest sits with no admin engagement.
-    lastAdminActionAt: string | null
-    lastAdminActionKind: 'defer' | null
-  } | null
+    lastAdminActionAt: string | null;
+    lastAdminActionKind: 'defer' | null;
+  } | null;
   // Promoted sold-out report — present when a community sold-out report was confirmed
   soldOutReport?: {
-    reporterHandle: string | null
-    confirmsCount: number
-    reportedAt: string
-  } | null
+    reporterHandle: string | null;
+    confirmsCount: number;
+    reportedAt: string;
+  } | null;
   // All pending submissions whenever any exist (PR 3 dropped the
   // "only when no corroborated price" gate so multi-tier pending stays
   // visible alongside corroborated tiers). Counter rows that surface via
@@ -869,20 +869,20 @@ export interface EventDetailResponse extends EventWithVenue {
   // don't double-appear here. Deprecated — PR 4 migrates consumers to
   // priceByTier; the Contract PR drops this field.
   pendingSubmissions?: Array<{
-    id: string
-    priceMin: string
-    priceMax: string | null
-    tier: string
-    vendor: string
-    howFound: string
-    sourceCategory: SourceCategory | null
-    note: string | null
-    submitterHandle: string | null
-    submittedAt: string
-    confirmsCount: number
-    confirmsNeeded: number
-    isSubmitter: boolean
-  }> | null
+    id: string;
+    priceMin: string;
+    priceMax: string | null;
+    tier: string;
+    vendor: string;
+    howFound: string;
+    sourceCategory: SourceCategory | null;
+    note: string | null;
+    submitterHandle: string | null;
+    submittedAt: string;
+    confirmsCount: number;
+    confirmsNeeded: number;
+    isSubmitter: boolean;
+  }> | null;
   // Per-tier price aggregation (issue #644). Each tier block contains a single
   // corroborated headline (best-of by source-category trust + price), other
   // corroborated rows in the same tier as alternates, every pending submission
@@ -891,25 +891,25 @@ export interface EventDetailResponse extends EventWithVenue {
   // pending-only tiers after). The flat priceVendor / priceAlternates / etc.
   // fields above stay for PR 4 migration; the eventual Contract PR drops them
   // once consumers have moved.
-  priceByTier?: TierPriceBlock[] | null
+  priceByTier?: TierPriceBlock[] | null;
 }
 
 // Public events list query params
 export interface EventsListParams {
-  from?: string
-  to?: string
-  venueSlug?: string
-  search?: string
-  limit?: number
-  offset?: number
+  from?: string;
+  to?: string;
+  venueSlug?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
 }
 
 // Public events list response
 export interface EventsListResponse {
-  data: EventWithVenue[]
-  total: number
-  limit: number
-  offset: number
+  data: EventWithVenue[];
+  total: number;
+  limit: number;
+  offset: number;
   /**
    * Whether the API actually narrowed this list to followed artists. Sent on
    * every `/v1/events` response and simply false when the scope wasn't asked
@@ -917,22 +917,22 @@ export interface EventsListResponse {
    * than its own request intent, so it can never claim a scope the API
    * didn't apply.
    */
-  followingApplied?: boolean
+  followingApplied?: boolean;
 }
 
 export interface AvailabilityDay {
   /** ISO date `YYYY-MM-DD` (event-local calendar date). */
-  date: string
+  date: string;
   /** Number of consumer-visible shows on that date. */
-  count: number
+  count: number;
 }
 
 export interface EventsAvailabilityResponse {
-  data: AvailabilityDay[]
+  data: AvailabilityDay[];
   /** Inclusive window start, `YYYY-MM-DD`. */
-  from: string
+  from: string;
   /** Inclusive window end, `YYYY-MM-DD`. */
-  to: string
+  to: string;
 }
 
 // Related-events response (issue #833). Returned by GET /v1/events/:id/related.
@@ -946,40 +946,40 @@ export interface EventsAvailabilityResponse {
 // that shape is also served anonymously and from surfaces with no auth context;
 // only the endpoints that resolve a caller can honestly answer the question.
 export interface RelatedEvent extends EventWithVenue {
-  isWatching: boolean
+  isWatching: boolean;
 }
 
 export interface EventsRelatedResponse {
-  data: RelatedEvent[]
+  data: RelatedEvent[];
 }
 
 // VenuePublic — public-facing venue shape (subset of Venue, no crawl internals)
 export interface VenuePublic {
-  id: string
-  name: string
-  slug: string
-  city: string
-  timezone: string
-  websiteUrl: string
-  active: boolean
-  verified: boolean
-  address: string | null
-  capacity: number | null
-  venueType: string | null
-  about: string | null
-  neighborhood: string | null
-  featured: boolean
-  lat: number | null
-  lng: number | null
-  upcomingCount: number
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  timezone: string;
+  websiteUrl: string;
+  active: boolean;
+  verified: boolean;
+  address: string | null;
+  capacity: number | null;
+  venueType: string | null;
+  about: string | null;
+  neighborhood: string | null;
+  featured: boolean;
+  lat: number | null;
+  lng: number | null;
+  upcomingCount: number;
   // #764 first-timer guide. `null` when the venue has no published guide —
   // drafts never leak to the consumer surface.
-  guide: VenueGuide | null
+  guide: VenueGuide | null;
 }
 
 // VenueWithEvents — venue profile page response
 export interface VenueWithEvents {
-  venue: VenuePublic
+  venue: VenuePublic;
   // upcomingEvents carry the same priceVendor + priceByTier enrichment the
   // browse list endpoint adds, so the shared consumer EventCard renders an
   // identical "from" price on both surfaces (#787 parity). Without priceByTier
@@ -987,30 +987,30 @@ export interface VenueWithEvents {
   // to whichever tier was most recently confirmed. Reuse EventWithVenue's
   // enrichment field types (minus its `venue`, which lives on the parent) so
   // the two surfaces can't drift.
-  upcomingEvents: Array<Omit<EventWithVenue, 'venue'>>
+  upcomingEvents: Array<Omit<EventWithVenue, 'venue'>>;
   // #764 first-timer detection. `null` means "we cannot know" — either the
   // request is unauthenticated, or detection is not wired yet. It is always
   // `null` until PR-4 consumes `user_events.attending_at` from #70; the field
   // is declared now so that PR is a data change and not a type churn.
-  viewerHasAttended: boolean | null
+  viewerHasAttended: boolean | null;
 }
 
 // InviteCode — represents the JSON-serialized API response shape.
 // Date fields are ISO 8601 strings because fetch().json() cannot revive Date objects.
 export interface InviteCode {
-  id: string
-  code: string
-  createdBy: string
-  usedBy: string | null
-  usedAt: string | null
-  expiresAt: string | null
-  revokedAt: string | null
-  revokedBy: string | null
-  createdAt: string
+  id: string;
+  code: string;
+  createdBy: string;
+  usedBy: string | null;
+  usedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  createdAt: string;
 }
 
 // Avatar color token keys — survive theme switches
-export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning'
+export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning';
 
 // User-selectable theme
 export type UserTheme =
@@ -1022,12 +1022,12 @@ export type UserTheme =
   | 'bluenote'
   | 'drip'
   | 'cedar'
-  | 'gloss'
+  | 'gloss';
 
 // Six-plan model (eng infra spec Part 1, #781 §6). Mirrors the DB
 // subscription_tier enum plus the two non-tier states.
 export type UserPlan =
-  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted'
+  'logged-out' | 'free' | 'supporter' | 'premium' | 'founder' | 'gifted';
 
 // Mirrors the DB subscription_status enum (Stripe-mirrored statuses).
 export type SubscriptionStatus =
@@ -1036,31 +1036,31 @@ export type SubscriptionStatus =
   | 'past_due'
   | 'trialing'
   | 'incomplete'
-  | 'incomplete_expired'
+  | 'incomplete_expired';
 
 // Derived plan state (eng infra spec Part 1, "derivePlan rewrite").
 // 'past-due' is not a plan — it's `status`. 'trial' is not a plan — it's
 // `onTrial` (Decision 7). Roles no longer masquerade as the founder plan.
 export interface PlanState {
-  plan: UserPlan
-  onTrial: boolean // true ⇒ plan === 'premium' via trial (Decision 7)
-  trialEndsAt: string | null // ISO; non-null while trial is live or recently ended
-  status: SubscriptionStatus | null // Stripe-mirrored status; null when no subscription row
-  cancelAtPeriodEnd: boolean
-  currentPeriodEnd: string | null
-  roleComped: boolean // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
+  plan: UserPlan;
+  onTrial: boolean; // true ⇒ plan === 'premium' via trial (Decision 7)
+  trialEndsAt: string | null; // ISO; non-null while trial is live or recently ended
+  status: SubscriptionStatus | null; // Stripe-mirrored status; null when no subscription row
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+  roleComped: boolean; // PREMIUM_ROLES holder — full entitlements, picker shows "You're in already"
 }
 
 // Founder launch-window state as exposed by GET /v1/billing/founder-window
 // (eng infra spec Part 2 §1.4). `seatsRemaining` is omitted pre-launch —
 // the scarcity number is not public before the window opens.
-export type FounderWindowState = 'pre-launch' | 'open' | 'closed'
+export type FounderWindowState = 'pre-launch' | 'open' | 'closed';
 
 export interface FounderWindowView {
-  state: FounderWindowState
-  seatsTotal: number
-  seatsRemaining?: number
-  closesAt: string | null // ISO; null pre-launch
+  state: FounderWindowState;
+  seatsTotal: number;
+  seatsRemaining?: number;
+  closesAt: string | null; // ISO; null pre-launch
 }
 
 // A single founder-seat claim, surfaced in the admin control panel's
@@ -1068,9 +1068,9 @@ export interface FounderWindowView {
 // seatsRemaining at claim time); null if the originating event predates
 // seat-number metadata.
 export interface AdminFounderClaim {
-  userId: string
-  seatNumber: number | null
-  claimedAt: string // ISO
+  userId: string;
+  seatNumber: number | null;
+  claimedAt: string; // ISO
 }
 
 // GET /v1/admin/founder-window — full singleton view for the admin control
@@ -1078,113 +1078,113 @@ export interface AdminFounderClaim {
 // always exposes the raw seat counts plus the test-only simulation counter
 // and the recent-claims feed.
 export interface AdminFounderWindow {
-  state: FounderWindowState
-  opensAt: string | null // ISO; null while dormant (not yet launched)
-  closesAt: string | null // ISO; null while opens_at is null
-  windowDays: number
-  seatsTotal: number
-  seatsRemaining: number
-  seatsRemainingTest: number // decremented only by simulate-claim
-  recentClaims: AdminFounderClaim[]
+  state: FounderWindowState;
+  opensAt: string | null; // ISO; null while dormant (not yet launched)
+  closesAt: string | null; // ISO; null while opens_at is null
+  windowDays: number;
+  seatsTotal: number;
+  seatsRemaining: number;
+  seatsRemainingTest: number; // decremented only by simulate-claim
+  recentClaims: AdminFounderClaim[];
 }
 
 // POST /v1/billing/checkout-session success payload (eng infra spec Part 2
 // §1.3) — the Payment Element mounts against `clientSecret`.
 export interface CheckoutSessionResponse {
-  clientSecret: string
-  subscriptionId: string
-  founderSeatNumber: number | null // null for non-founder tiers
+  clientSecret: string;
+  subscriptionId: string;
+  founderSeatNumber: number | null; // null for non-founder tiers
 }
 
 // User-facing role — separate from auth Role (admin/sub_admin/user)
-export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff'
+export type DisplayRole = 'fan' | 'crew' | 'artist' | 'staff';
 
 // Submission status as shown in the UI (mapped from DB enum)
-export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed'
+export type SubmissionDisplayStatus = 'confirmed' | 'pending' | 'disputed';
 
 // Full user profile as returned by GET /v1/users/me
 export interface UserProfileResponse {
-  id: string // Clerk user ID
-  email: string // from Clerk
-  handle: string | null
-  city: string | null
-  avatarColor: AvatarColor | null
-  theme: UserTheme
-  planState: PlanState
-  displayRole: DisplayRole
-  roleBadge: RoleBadge | null
-  joined: string // formatted "Apr 2026"
-  submissionCount: number
-  cred: number // lifetime cumulative confirmed-submission count
+  id: string; // Clerk user ID
+  email: string; // from Clerk
+  handle: string | null;
+  city: string | null;
+  avatarColor: AvatarColor | null;
+  theme: UserTheme;
+  planState: PlanState;
+  displayRole: DisplayRole;
+  roleBadge: RoleBadge | null;
+  joined: string; // formatted "Apr 2026"
+  submissionCount: number;
+  cred: number; // lifetime cumulative confirmed-submission count
   // Lifecycle nudge flags + founder window snapshot — evaluated
   // server-side (eng infra spec Part 2 §6).
-  showTrialEndedTakeover: boolean
-  showDayThirteenBanner: boolean
-  showPastDueBanner: boolean
-  founderWindow: FounderWindowView
+  showTrialEndedTakeover: boolean;
+  showDayThirteenBanner: boolean;
+  showPastDueBanner: boolean;
+  founderWindow: FounderWindowView;
 }
 
 // Single submission row as returned by GET /v1/users/me/submissions
 export interface UserSubmissionItem {
-  id: string
-  eventId: string
-  artist: string
-  venue: string
-  date: string // ISO YYYY-MM-DD
-  priceMin: number // cents (integer)
-  priceMax: number | null
-  tier: Tier
-  corroborationCount: number // fans who confirmed this price
-  submittedAt: string // ISO timestamp
-  status: SubmissionDisplayStatus
+  id: string;
+  eventId: string;
+  artist: string;
+  venue: string;
+  date: string; // ISO YYYY-MM-DD
+  priceMin: number; // cents (integer)
+  priceMax: number | null;
+  tier: Tier;
+  corroborationCount: number; // fans who confirmed this price
+  submittedAt: string; // ISO timestamp
+  status: SubmissionDisplayStatus;
 }
 
 // Handle availability check response
 export interface HandleAvailabilityResponse {
-  available: boolean
-  reason?: 'taken' | 'reserved'
+  available: boolean;
+  reason?: 'taken' | 'reserved';
 }
 
 // WatchingShow — a single upcoming show saved by the user, with price delta context
 export interface WatchingShow {
-  userEventId: string
-  eventId: string
-  artist: string
-  venueName: string
-  venueSlug: string
-  date: string // ISO YYYY-MM-DD
-  showTime: string | null
-  ticketUrl: string | null
-  ticketLinks: TicketLink[] | null
-  savedAt: string // ISO — when the user saved the show
-  savedPrice: number | null // dollars (from ticket_price_min at save time)
+  userEventId: string;
+  eventId: string;
+  artist: string;
+  venueName: string;
+  venueSlug: string;
+  date: string; // ISO YYYY-MM-DD
+  showTime: string | null;
+  ticketUrl: string | null;
+  ticketLinks: TicketLink[] | null;
+  savedAt: string; // ISO — when the user saved the show
+  savedPrice: number | null; // dollars (from ticket_price_min at save time)
   // Dollars — the cheapest corroborated tier, falling back to
   // events.ticketPriceMin for events with no corroborated submissions.
-  currentPrice: number | null
+  currentPrice: number | null;
   // Where `currentPrice` came from, read off the same headline. Null means a
   // crawled price with no corroborated submission, which renders no chip.
-  priceSourceCategory: SourceCategory | null
-  eventStatus: 'upcoming' | 'cancelled' | 'postponed'
-  watchStatus: 'live' | 'soldout'
-  updatedAt: string // ISO — last time event row was updated
+  priceSourceCategory: SourceCategory | null;
+  eventStatus: 'upcoming' | 'cancelled' | 'postponed';
+  watchStatus: 'live' | 'soldout';
+  updatedAt: string; // ISO — last time event row was updated
   // ISO when `currentPrice` was observed, for the staleness marker (#1366).
   // Null for crawler-sourced prices, where `updatedAt` is the best available
   // proxy — a re-crawl is what last confirmed the number.
-  priceObservedAt: string | null
-  imageUrl: string | null
+  priceObservedAt: string | null;
+  imageUrl: string | null;
   // Second link in the imagery chain behind `imageUrl`, so a watched show
   // resolves to the same picture Browse gives it. Null when the event has no
   // canonical headliner, or that headliner has no portrait yet.
-  artistPhotoUrl: string | null
+  artistPhotoUrl: string | null;
   // ISO when the user said "I'm going!", independent of watching (#70). The
   // 7-day nudge reads it to decide whether it has already been answered.
-  attendingAt: string | null
+  attendingAt: string | null;
 }
 
 // WatchToggleResponse — returned by PUT /v1/watching/:eventId
 export interface WatchToggleResponse {
-  watching: boolean
-  savedPrice: number | null
+  watching: boolean;
+  savedPrice: number | null;
   /**
    * The `user_events` row this watch now lives on, or null when the toggle
    * turned watching OFF.
@@ -1195,15 +1195,15 @@ export interface WatchToggleResponse {
    * Keying on the event instead is the #70-class bug where a dismissal taken
    * once silences the surface forever.
    */
-  userEventId: string | null
+  userEventId: string | null;
   /** Headliner display name, for the nudge's copy. Null when watching OFF. */
-  artist: string | null
+  artist: string | null;
   /**
    * The headliner's artist-page slug, or null when the artists projection has
    * no row for that name (a normal case, not an error) or watching went OFF.
    * No slug means there is nothing to follow, so there is no nudge.
    */
-  artistSlug: string | null
+  artistSlug: string | null;
 }
 
 // --- Concert History (#70) ---
@@ -1211,41 +1211,41 @@ export interface WatchToggleResponse {
 
 // AttendingToggleResponse — returned by PUT/DELETE /v1/attending/:eventId
 export interface AttendingToggleResponse {
-  going: boolean
-  attendingAt: string | null // ISO, null when released
+  going: boolean;
+  attendingAt: string | null; // ISO, null when released
 }
 
 // One attended night — GET /v1/history. dateLabel and showTime arrive
 // pre-formatted in Mountain Time because the row treats date presentation as
 // data, not copy.
 export interface HistoryShow {
-  eventId: string
-  artist: string
+  eventId: string;
+  artist: string;
   // The headliner's portrait, or null when the artist row has none and the
   // tile falls through to generated identity art. Non-optional so a surface
   // that forgets the `artists` join fails to typecheck rather than silently
   // rendering every night as generated art.
-  artistPhotoUrl: string | null
-  venueName: string
-  venueSlug: string
-  neighborhood: string | null
-  date: string // YYYY-MM-DD, event local date
-  dateLabel: string // "Mon, Oct 20"
-  showTime: string | null // "8:00 PM"
-  priceFinal: number | null // last observed face price
-  genre: string | null // single word, drives "top genre"
-  attendingAt: string // ISO — non-null by construction on this surface
+  artistPhotoUrl: string | null;
+  venueName: string;
+  venueSlug: string;
+  neighborhood: string | null;
+  date: string; // YYYY-MM-DD, event local date
+  dateLabel: string; // "Mon, Oct 20"
+  showTime: string | null; // "8:00 PM"
+  priceFinal: number | null; // last observed face price
+  genre: string | null; // single word, drives "top genre"
+  attendingAt: string; // ISO — non-null by construction on this surface
 }
 
 export interface HistoryStats {
-  nights: number
-  venues: number
-  artists: number
-  topGenre: string | null
-  topVenue: string | null
-  first: string | null // YYYY-MM-DD
-  last: string | null
-  totalSpent: number | null // null when no row has priceFinal
+  nights: number;
+  venues: number;
+  artists: number;
+  topGenre: string | null;
+  topVenue: string | null;
+  first: string | null; // YYYY-MM-DD
+  last: string | null;
+  totalSpent: number | null; // null when no row has priceFinal
 }
 
 // Attendance is one list split by time (#1357): `past` and `upcoming` are the
@@ -1253,9 +1253,9 @@ export interface HistoryStats {
 // gone by. `stats` covers `past` alone — a night that hasn't happened yet can't
 // be counted, priced, or ranked.
 export interface HistoryResponse {
-  past: HistoryShow[]
-  upcoming: HistoryShow[]
-  stats: HistoryStats
+  past: HistoryShow[];
+  upcoming: HistoryShow[];
+  stats: HistoryStats;
 }
 
 // --- Admin user detail (GET /v1/admin/users/:userId) ---
@@ -1271,88 +1271,88 @@ export interface HistoryResponse {
 // 'going' and 'interested' are legacy read-only since #70 — attendance is
 // `attendingAt`, and the only value written today is 'watching'.
 export type AdminFeedbackStatus =
-  'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived'
-export type AdminUserEventStatus = 'going' | 'interested' | 'watching'
+  'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived';
+export type AdminUserEventStatus = 'going' | 'interested' | 'watching';
 
 export interface AdminUserFeedbackItem {
-  id: string
-  category: FeedbackCategory
-  status: AdminFeedbackStatus
-  message: string
-  pageUrl: string
-  issueUrl: string | null
-  createdAt: string
+  id: string;
+  category: FeedbackCategory;
+  status: AdminFeedbackStatus;
+  message: string;
+  pageUrl: string;
+  issueUrl: string | null;
+  createdAt: string;
 }
 
 // Named for the full tracked-event set, not just the watchlist — a row can
 // carry attendance with no Watching relationship at all, so "watching" would
 // mislead. `status: null` is exactly that case (#70).
 export interface AdminUserTrackedEventItem {
-  eventId: string
-  eventTitle: string
-  eventDate: string // ISO YYYY-MM-DD
-  venueName: string | null
-  status: AdminUserEventStatus | null
-  attendingAt: string | null // ISO — set when the user marked "I'm going!"
-  createdAt: string
+  eventId: string;
+  eventTitle: string;
+  eventDate: string; // ISO YYYY-MM-DD
+  venueName: string | null;
+  status: AdminUserEventStatus | null;
+  attendingAt: string | null; // ISO — set when the user marked "I'm going!"
+  createdAt: string;
 }
 
 export interface AdminUserDetailStats {
-  feedback: number
-  trackedEvents: number
-  priceSubmissions: number
-  artistFollows: number
+  feedback: number;
+  trackedEvents: number;
+  priceSubmissions: number;
+  artistFollows: number;
 }
 
 export interface AdminUserDetail {
-  id: string
-  email: string | null
-  handle: string | null
-  city: string | null
-  theme: UserTheme | null
-  avatarColor: AvatarColor | null
-  role: Role | null
-  joinedAt: string | null // Clerk account creation, ISO
+  id: string;
+  email: string | null;
+  handle: string | null;
+  city: string | null;
+  theme: UserTheme | null;
+  avatarColor: AvatarColor | null;
+  role: Role | null;
+  joinedAt: string | null; // Clerk account creation, ISO
   // true when no Clerk record backs this id (deleted account) — identity
   // fields fall back to profile/null and the UI shows a retained-activity note.
-  clerkAccountMissing: boolean
-  stats: AdminUserDetailStats
-  feedback: AdminUserFeedbackItem[]
-  trackedEvents: AdminUserTrackedEventItem[]
+  clerkAccountMissing: boolean;
+  stats: AdminUserDetailStats;
+  feedback: AdminUserFeedbackItem[];
+  trackedEvents: AdminUserTrackedEventItem[];
 }
 
 // --- Spotify sync (#763) ---
 // Connection payload returned by GET/POST/PATCH /v1/spotify/connection and
 // POST /v1/spotify/connection/sync (eng spec §6). A user with no connection
 // row gets the bare disconnected variant.
-export type SpotifyConnectionStatus = 'connected' | 'error' | 'revoked'
+export type SpotifyConnectionStatus = 'connected' | 'error' | 'revoked';
 
 export interface SpotifyConnectionView {
-  status: SpotifyConnectionStatus
-  displayName: string | null
-  artistCount: number
-  lastSyncedAt: string | null // ISO
-  autoWatch: boolean
-  digestEnabled: boolean
-  pushEnabled: boolean
+  status: SpotifyConnectionStatus;
+  displayName: string | null;
+  artistCount: number;
+  lastSyncedAt: string | null; // ISO
+  autoWatch: boolean;
+  digestEnabled: boolean;
+  pushEnabled: boolean;
   // Denver-match summary (§9.1 canonical match against upcoming events) —
   // additive extension over the spec §6 payload so the connect-success and
   // Connections surfaces can show real "N play Denver" numbers (PR 5).
-  denverArtistCount: number
-  denverShowCount: number
+  denverArtistCount: number;
+  denverShowCount: number;
   // Display names of every Denver-matched artist for the "WE RECOGNIZED"
   // chip row on the connect-success screen (folds past 6 behind "+N more").
-  matchedArtists: string[]
+  matchedArtists: string[];
 }
 
 export type SpotifyConnectionResponse =
-  SpotifyConnectionView | { status: 'disconnected' }
+  SpotifyConnectionView | { status: 'disconnected' };
 
 // GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
 // Eligible = user has no Spotify connection row AND has never seen the nudge
 // (user_profiles.spotify_nudge_seen_at IS NULL).
 export interface SpotifyNudgeResponse {
-  eligible: boolean
+  eligible: boolean;
 }
 
 // GET /v1/spotify/taste-picks — "Based on your taste" discovery shelf
@@ -1362,32 +1362,32 @@ export interface SpotifyNudgeResponse {
 // "Following". artistName is the display name of the matched artist.
 export type SpotifyTastePickReason =
   | { kind: 'top'; rank: number; artistName: string }
-  | { kind: 'followed'; artistName: string }
+  | { kind: 'followed'; artistName: string };
 
 // One shelf card — a lean event projection (the shelf card shows art,
 // artist, venue · date, and a single price), not the full EventWithVenue.
 export interface SpotifyTastePick {
-  eventId: string
-  artist: string
-  title: string
-  imageUrl: string | null
+  eventId: string;
+  artist: string;
+  title: string;
+  imageUrl: string | null;
   // Second source in the imagery chain (#1525) — the headliner's portrait,
   // shown when the event carries no artwork of its own.
-  artistPhotoUrl: string | null
-  date: string // YYYY-MM-DD, event-local (Mountain Time) calendar date
-  showTime: string | null // HH:MM:SS
-  ticketPriceMin: string | null // decimal string, matches events payloads
-  venueName: string
-  venueSlug: string
-  reason: SpotifyTastePickReason
+  artistPhotoUrl: string | null;
+  date: string; // YYYY-MM-DD, event-local (Mountain Time) calendar date
+  showTime: string | null; // HH:MM:SS
+  ticketPriceMin: string | null; // decimal string, matches events payloads
+  venueName: string;
+  venueSlug: string;
+  reason: SpotifyTastePickReason;
 }
 
 // status mirrors the connection row so the shelf can render the design's
 // failure ("taste on pause" + Reconnect) state without a second request;
 // error/revoked/disconnected responses always carry an empty picks array.
 export interface SpotifyTastePicksResponse {
-  status: SpotifyConnectionStatus | 'disconnected'
-  picks: SpotifyTastePick[]
+  status: SpotifyConnectionStatus | 'disconnected';
+  picks: SpotifyTastePick[];
 }
 
 /**
@@ -1397,4 +1397,4 @@ export interface SpotifyTastePicksResponse {
  * would silently revert the panel to rendering "crawled clean at —", claiming a
  * sweep that never ran.
  */
-export const TRIAGE_NO_SWEEP = '—'
+export const TRIAGE_NO_SWEEP = '—';

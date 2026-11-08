@@ -1,22 +1,22 @@
-'use client'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+'use client';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-import Link from 'next/link'
+import Link from 'next/link';
 import {
   ExternalLink,
   RefreshCw,
   Settings,
   ChevronRight,
   AlertCircle,
-} from 'lucide-react'
-import type { VenueWithEventCount } from '@concert-crawl/types'
-import { AdminButton, StatusBadge } from '@/components/admin/primitives'
-import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
-import { useState, useRef, useEffect } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from 'lucide-react';
+import type { VenueWithEventCount } from '@concert-crawl/types';
+import { AdminButton, StatusBadge } from '@/components/admin/primitives';
+import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger';
+import { useState, useRef, useEffect } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface Props {
-  venue: VenueWithEventCount
+  venue: VenueWithEventCount;
 }
 
 const TICKET_VENDOR_LABELS: Record<string, string> = {
@@ -27,27 +27,27 @@ const TICKET_VENDOR_LABELS: Record<string, string> = {
   eventbrite: 'Eventbrite',
   venue_box_office: 'Box Office',
   unknown: 'Unknown',
-}
+};
 
 function formatStrategy(strategy: string | null): string {
-  if (strategy === 'structured_data') return 'structured'
-  if (strategy === 'llm') return 'llm'
-  if (strategy === 'manual') return 'manual'
-  return 'auto'
+  if (strategy === 'structured_data') return 'structured';
+  if (strategy === 'llm') return 'llm';
+  if (strategy === 'manual') return 'manual';
+  return 'auto';
 }
 
 function strategyKind(
   strategy: string | null,
 ): 'signal' | 'accent' | 'neutral' {
-  if (strategy === 'structured_data') return 'signal'
-  if (strategy === 'llm') return 'accent'
-  return 'neutral'
+  if (strategy === 'structured_data') return 'signal';
+  if (strategy === 'llm') return 'accent';
+  return 'neutral';
 }
 
 function failureColor(count: number): string {
-  if (count >= 3) return 'var(--danger)'
-  if (count > 0) return 'var(--warning)'
-  return 'var(--fg)'
+  if (count >= 3) return 'var(--danger)';
+  if (count > 0) return 'var(--warning)';
+  return 'var(--fg)';
 }
 
 const SECTION_LABEL: React.CSSProperties = {
@@ -57,31 +57,31 @@ const SECTION_LABEL: React.CSSProperties = {
   textTransform: 'uppercase',
   color: 'var(--fg-subtle)',
   marginBottom: 6,
-}
+};
 
 export function VenueQuickView({ venue }: Props) {
-  const triggerCrawl = useTriggerVenueCrawl()
+  const triggerCrawl = useTriggerVenueCrawl();
   const [crawlState, setCrawlState] = useState<
     'idle' | 'triggering' | 'queued' | 'error'
-  >('idle')
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  >('idle');
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
-    }
-  }, [])
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   async function handleRunCrawl() {
-    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current)
-    setCrawlState('triggering')
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    setCrawlState('triggering');
     try {
-      await triggerCrawl.mutateAsync(venue.id)
-      setCrawlState('queued')
-      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 4000)
+      await triggerCrawl.mutateAsync(venue.id);
+      setCrawlState('queued');
+      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 4000);
     } catch {
-      setCrawlState('error')
-      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 3000)
+      setCrawlState('error');
+      timeoutRef.current = setTimeout(() => setCrawlState('idle'), 3000);
     }
   }
 
@@ -92,11 +92,11 @@ export function VenueQuickView({ venue }: Props) {
         ? ADMIN_COPY.venueQuickView.actions.queued
         : crawlState === 'error'
           ? ADMIN_COPY.venueQuickView.actions.error
-          : ADMIN_COPY.venueQuickView.actions.runCrawl
+          : ADMIN_COPY.venueQuickView.actions.runCrawl;
 
   const vendorLabel = venue.ticketVendor
     ? (TICKET_VENDOR_LABELS[venue.ticketVendor] ?? venue.ticketVendor)
-    : null
+    : null;
 
   return (
     <div
@@ -336,5 +336,5 @@ export function VenueQuickView({ venue }: Props) {
         </Link>
       </div>
     </div>
-  )
+  );
 }

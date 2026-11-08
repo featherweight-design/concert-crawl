@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { StatusBadge } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { StatusBadge } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export interface SrcTagProps {
-  source: string | null
+  source: string | null;
 }
 
-type Kind = 'signal' | 'accent' | 'warning' | 'neutral' | 'danger'
+type Kind = 'signal' | 'accent' | 'warning' | 'neutral' | 'danger';
 
 // Mirrors crawler-core/crawl.ts extraction strategy values:
 // - 'structured_data' for JSON-LD / microdata
@@ -16,21 +16,21 @@ type Kind = 'signal' | 'accent' | 'warning' | 'neutral' | 'danger'
 // - 'community' / 'admin' for human-submitted data (review surfaces)
 // - 'structured' / 'crawled' kept for back-compat with older rows
 const resolveKind = (source: string): Kind => {
-  if (source.startsWith('platform:')) return 'signal'
+  if (source.startsWith('platform:')) return 'signal';
   switch (source) {
     case 'structured_data':
     case 'structured':
     case 'crawled':
-      return 'signal'
+      return 'signal';
     case 'llm':
     case 'community':
-      return 'accent'
+      return 'accent';
     case 'admin':
-      return 'warning'
+      return 'warning';
     default:
-      return 'neutral'
+      return 'neutral';
   }
-}
+};
 
 export const SrcTag = ({ source }: SrcTagProps) => {
   if (!source) {
@@ -38,11 +38,11 @@ export const SrcTag = ({ source }: SrcTagProps) => {
       <StatusBadge kind="danger" variant="outline" mono>
         {ADMIN_COPY.editor.fields.noSource}
       </StatusBadge>
-    )
+    );
   }
   return (
     <StatusBadge kind={resolveKind(source)} variant="outline" mono>
       {source}
     </StatusBadge>
-  )
-}
+  );
+};

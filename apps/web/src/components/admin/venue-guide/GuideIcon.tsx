@@ -1,13 +1,13 @@
-import type { ReactNode } from 'react'
-import type { GuideChipKey } from '@concert-crawl/types'
+import type { ReactNode } from 'react';
+import type { GuideChipKey } from '@concert-crawl/types';
 
 // Tokenized stroke icons lifted from the #764 handoff (guide-data.jsx), rekeyed
 // to the canonical schema keys. Always decorative — every chip's name is
 // carried by a real <label>, so these are aria-hidden.
 
 interface GuideIconProps {
-  name: GuideChipKey
-  size?: number
+  name: GuideChipKey;
+  size?: number;
 }
 
 const PATHS: Record<GuideChipKey, ReactNode> = {
@@ -55,7 +55,7 @@ const PATHS: Record<GuideChipKey, ReactNode> = {
       <path d="M8 16.5L6 20M16 16.5L18 20" />
     </>
   ),
-}
+};
 
 export const GuideIcon = ({ name, size = 14 }: GuideIconProps) => (
   <svg
@@ -71,4 +71,4 @@ export const GuideIcon = ({ name, size = 14 }: GuideIconProps) => (
   >
     {PATHS[name]}
   </svg>
-)
+);

@@ -18,53 +18,53 @@ import {
   inArray,
   isNull,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   artists,
   db,
   events,
   userArtistFollows,
   venues,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   billsCanonicalName,
   displayHeadliner,
   portraitCanonicalName,
-} from './event-billing.js'
+} from './event-billing.js';
 import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
-} from './price-aggregation/index.js'
-import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js'
-import { todayInTimezone } from './time.js'
+} from './price-aggregation/index.js';
+import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js';
+import { todayInTimezone } from './time.js';
 
 // events.date holds event-local (Mountain Time) calendar dates — see the
 // events route for the same reasoning.
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 export interface SpotifyMatchSummary {
-  denverArtistCount: number
-  denverShowCount: number
-  matchedArtists: string[]
+  denverArtistCount: number;
+  denverShowCount: number;
+  matchedArtists: string[];
 }
 
 export const EMPTY_MATCH_SUMMARY: SpotifyMatchSummary = {
   denverArtistCount: 0,
   denverShowCount: 0,
   matchedArtists: [],
-}
+};
 
 interface FollowName {
-  artistName: string
-  canonicalName: string
-  source: (typeof userArtistFollows.$inferSelect)['source']
-  rank: number | null
+  artistName: string;
+  canonicalName: string;
+  source: (typeof userArtistFollows.$inferSelect)['source'];
+  rank: number | null;
 }
 
 const loadSpotifyFollowNames = async (
@@ -89,21 +89,21 @@ const loadSpotifyFollowNames = async (
       // exists under both sources: 'spotify_followed' sorts before
       // 'spotify_top', then artistName breaks remaining ties.
       .orderBy(asc(userArtistFollows.source), asc(userArtistFollows.artistName))
-  )
-}
+  );
+};
 
 interface MatchedEventRow {
-  id: string
-  canonicalArtist: string
-  canonicalHeadliners: string[] | null
-  canonicalSupporting: string[] | null
+  id: string;
+  canonicalArtist: string;
+  canonicalHeadliners: string[] | null;
+  canonicalSupporting: string[] | null;
 }
 
 // Shared §9.1 condition: consumer-visible upcoming events whose bill names one
 // of the canonical set, per `billsAnyCanonicalName` (lib/event-billing.ts).
 const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
   // Total: inArray/arrayOverlaps with [] would generate invalid SQL.
-  if (canonicalNames.length === 0) return sql`false`
+  if (canonicalNames.length === 0) return sql`false`;
   return (
     and(
       eq(events.status, 'upcoming'),
@@ -122,13 +122,13 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
       ),
       billsAnyCanonicalName(canonicalNames),
     ) ?? sql`false`
-  )
-}
+  );
+};
 
 const loadMatchedUpcomingEvents = async (
   canonicalNames: string[],
 ): Promise<MatchedEventRow[]> => {
-  if (canonicalNames.length === 0) return []
+  if (canonicalNames.length === 0) return [];
   return db
     .select({
       id: events.id,
@@ -137,8 +137,8 @@ const loadMatchedUpcomingEvents = async (
       canonicalSupporting: events.canonicalSupporting,
     })
     .from(events)
-    .where(matchedUpcomingCondition(canonicalNames))
-}
+    .where(matchedUpcomingCondition(canonicalNames));
+};
 
 // Full summary for the connection payload: how many of the user's artists
 // have an upcoming Denver show, how many shows that is, and the display
@@ -146,25 +146,25 @@ const loadMatchedUpcomingEvents = async (
 export async function getSpotifyMatchSummary(
   userId: string,
 ): Promise<SpotifyMatchSummary> {
-  const follows = await loadSpotifyFollowNames(userId)
-  if (follows.length === 0) return EMPTY_MATCH_SUMMARY
+  const follows = await loadSpotifyFollowNames(userId);
+  if (follows.length === 0) return EMPTY_MATCH_SUMMARY;
 
-  const displayByCanonical = new Map<string, string>()
+  const displayByCanonical = new Map<string, string>();
   for (const follow of follows) {
     if (!displayByCanonical.has(follow.canonicalName)) {
-      displayByCanonical.set(follow.canonicalName, follow.artistName)
+      displayByCanonical.set(follow.canonicalName, follow.artistName);
     }
   }
-  const canonicalNames = [...displayByCanonical.keys()]
+  const canonicalNames = [...displayByCanonical.keys()];
 
-  const matchedEvents = await loadMatchedUpcomingEvents(canonicalNames)
-  if (matchedEvents.length === 0) return EMPTY_MATCH_SUMMARY
+  const matchedEvents = await loadMatchedUpcomingEvents(canonicalNames);
+  if (matchedEvents.length === 0) return EMPTY_MATCH_SUMMARY;
 
-  const followSet = new Set(canonicalNames)
-  const matchedCanonicals = new Set<string>()
+  const followSet = new Set(canonicalNames);
+  const matchedCanonicals = new Set<string>();
   for (const event of matchedEvents) {
     for (const billed of billedCanonicalNames(event)) {
-      if (followSet.has(billed)) matchedCanonicals.add(billed)
+      if (followSet.has(billed)) matchedCanonicals.add(billed);
     }
   }
 
@@ -174,13 +174,13 @@ export async function getSpotifyMatchSummary(
   // "+N more", and the set is naturally bounded by the user's Denver matches.
   const matchedArtists = [...matchedCanonicals]
     .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
-    .sort((left, right) => left.localeCompare(right))
+    .sort((left, right) => left.localeCompare(right));
 
   return {
     denverArtistCount: matchedCanonicals.size,
     denverShowCount: matchedEvents.length,
     matchedArtists,
-  }
+  };
 }
 
 // Per-event follow matcher for the events list/detail `followedArtists`
@@ -192,38 +192,38 @@ export async function getSpotifyMatchSummary(
 // retains its rows, so highlighting deliberately continues (§8.4).
 export interface FollowedArtistMatcher {
   matchEvent: (event: {
-    canonicalArtist: string | null
-    canonicalHeadliners: string[] | null
-    canonicalSupporting: string[] | null
-  }) => string[]
+    canonicalArtist: string | null;
+    canonicalHeadliners: string[] | null;
+    canonicalSupporting: string[] | null;
+  }) => string[];
 }
 
 export async function getFollowedArtistMatcher(
   userId: string,
 ): Promise<FollowedArtistMatcher | null> {
-  const follows = await loadSpotifyFollowNames(userId)
-  if (follows.length === 0) return null
+  const follows = await loadSpotifyFollowNames(userId);
+  if (follows.length === 0) return null;
 
-  const displayByCanonical = new Map<string, string>()
+  const displayByCanonical = new Map<string, string>();
   for (const follow of follows) {
     if (!displayByCanonical.has(follow.canonicalName)) {
-      displayByCanonical.set(follow.canonicalName, follow.artistName)
+      displayByCanonical.set(follow.canonicalName, follow.artistName);
     }
   }
 
   return {
     matchEvent: (event) => {
-      const matched = new Set<string>()
+      const matched = new Set<string>();
       for (const billed of billedCanonicalNames(event)) {
-        if (displayByCanonical.has(billed)) matched.add(billed)
+        if (displayByCanonical.has(billed)) matched.add(billed);
       }
       // localeCompare sort mirrors getSpotifyMatchSummary — deterministic
       // regardless of row/Set iteration order.
       return [...matched]
         .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
-        .sort((left, right) => left.localeCompare(right))
+        .sort((left, right) => left.localeCompare(right));
     },
-  }
+  };
 }
 
 // EXISTS condition for the events-list `taste=1` filter (#763 PR 7, eng spec
@@ -243,7 +243,7 @@ export function spotifyTasteCondition(userId: string): SQL {
           billsCanonicalName(userArtistFollows.canonicalName),
         ),
       ),
-  )
+  );
 }
 
 // Event ids for the auto-watch opt-in backfill: every currently-matched
@@ -253,11 +253,11 @@ export function spotifyTasteCondition(userId: string): SQL {
 export async function getMatchedUpcomingEventIds(
   userId: string,
 ): Promise<string[]> {
-  const follows = await loadSpotifyFollowNames(userId)
-  if (follows.length === 0) return []
-  const canonicalNames = [...new Set(follows.map((row) => row.canonicalName))]
-  const matched = await loadMatchedUpcomingEvents(canonicalNames)
-  return matched.map((event) => event.id)
+  const follows = await loadSpotifyFollowNames(userId);
+  if (follows.length === 0) return [];
+  const canonicalNames = [...new Set(follows.map((row) => row.canonicalName))];
+  const matched = await loadMatchedUpcomingEvents(canonicalNames);
+  return matched.map((event) => event.id);
 }
 
 // True when `candidate` is a strictly stronger reason than `current` under
@@ -269,12 +269,12 @@ const isStrongerReason = (
   candidate: SpotifyTastePickReason,
   current: SpotifyTastePickReason | null,
 ): boolean => {
-  if (current === null) return true
+  if (current === null) return true;
   if (candidate.kind === 'top' && current.kind === 'top') {
-    return candidate.rank < current.rank
+    return candidate.rank < current.rank;
   }
-  return candidate.kind === 'top' && current.kind === 'followed'
-}
+  return candidate.kind === 'top' && current.kind === 'followed';
+};
 
 // Discovery shelf picks (#763 PR 8, eng spec §9.4): the viewer's matched
 // upcoming events ranked deterministically — top-artist rank ascending
@@ -285,25 +285,25 @@ export async function getTastePicks(
   userId: string,
   limit: number,
 ): Promise<SpotifyTastePick[]> {
-  const follows = await loadSpotifyFollowNames(userId)
-  if (follows.length === 0) return []
+  const follows = await loadSpotifyFollowNames(userId);
+  if (follows.length === 0) return [];
 
   // Strongest reason per canonical name: a spotify_top row (with rank)
   // beats a spotify_followed row for the same artist; among top rows the
   // smallest rank wins.
-  const reasonByCanonical = new Map<string, SpotifyTastePickReason>()
+  const reasonByCanonical = new Map<string, SpotifyTastePickReason>();
   for (const follow of follows) {
     const candidate: SpotifyTastePickReason =
       follow.source === 'spotify_top' && follow.rank !== null
         ? { kind: 'top', rank: follow.rank, artistName: follow.artistName }
-        : { kind: 'followed', artistName: follow.artistName }
+        : { kind: 'followed', artistName: follow.artistName };
     if (
       isStrongerReason(
         candidate,
         reasonByCanonical.get(follow.canonicalName) ?? null,
       )
     ) {
-      reasonByCanonical.set(follow.canonicalName, candidate)
+      reasonByCanonical.set(follow.canonicalName, candidate);
     }
   }
 
@@ -332,49 +332,49 @@ export async function getTastePicks(
     // this cannot multiply picks.
     .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(matchedUpcomingCondition([...reasonByCanonical.keys()]))
-    .orderBy(asc(events.date), asc(events.showTime), asc(events.id))
+    .orderBy(asc(events.date), asc(events.showTime), asc(events.id));
 
   const scored: Array<{
-    row: (typeof rows)[number]
-    reason: SpotifyTastePickReason
-    soonestIndex: number
-  }> = []
+    row: (typeof rows)[number];
+    reason: SpotifyTastePickReason;
+    soonestIndex: number;
+  }> = [];
   for (const [index, row] of rows.entries()) {
     // Headliner first, then co-headliners, then supporting in stored order —
     // with first-wins ties in isStrongerReason this is deterministic per
     // event. Co-headliners must be here or a row matched solely by that arm
     // would find no reason and be dropped by the `continue` below.
-    let reason: SpotifyTastePickReason | null = null
+    let reason: SpotifyTastePickReason | null = null;
     for (const canonical of billedCanonicalNames(row)) {
-      const candidate = reasonByCanonical.get(canonical)
+      const candidate = reasonByCanonical.get(canonical);
       if (candidate && isStrongerReason(candidate, reason)) {
-        reason = candidate
+        reason = candidate;
       }
     }
-    if (reason === null) continue // defensive — the WHERE guarantees a match
-    scored.push({ row, reason, soonestIndex: index })
+    if (reason === null) continue; // defensive — the WHERE guarantees a match
+    scored.push({ row, reason, soonestIndex: index });
   }
 
   scored.sort((left, right) => {
     if (left.reason.kind !== right.reason.kind) {
-      return left.reason.kind === 'top' ? -1 : 1
+      return left.reason.kind === 'top' ? -1 : 1;
     }
     if (left.reason.kind === 'top' && right.reason.kind === 'top') {
       if (left.reason.rank !== right.reason.rank) {
-        return left.reason.rank - right.reason.rank
+        return left.reason.rank - right.reason.rank;
       }
     }
-    return left.soonestIndex - right.soonestIndex
-  })
+    return left.soonestIndex - right.soonestIndex;
+  });
 
-  const top = scored.slice(0, limit)
+  const top = scored.slice(0, limit);
 
   // The cheapest tier, not events.ticketPriceMin — that scalar holds whatever
   // price was written last and made taste picks disagree with the event page
   // (#1365). Resolved after the slice so we only aggregate the picks we return.
   const priceByTierByEventId = await loadPriceByTierByEventId(
     top.map((entry) => entry.row.id),
-  )
+  );
 
   return top.map(({ row, reason }) => ({
     eventId: row.id,
@@ -391,5 +391,5 @@ export async function getTastePicks(
     venueName: row.venueName,
     venueSlug: row.venueSlug,
     reason,
-  }))
+  }));
 }

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 /**
  * EventDetailClient — three focused client islands for the event detail page.
@@ -11,41 +11,41 @@
  * server component, keeping data-fetching entirely server-side.
  */
 
-import { useState, useCallback } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
+import { useState, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import type {
   EventReport,
   EventDetailResponse,
   Tier,
   TierPriceBlock,
   SourceCategory,
-} from '@concert-crawl/types'
-import { SP_POLICY } from '@concert-crawl/types'
-import { confirmEventReport, withdrawEventReport } from '@/lib/events'
-import { PendingCardB } from '@/components/consumer/PendingCardB'
-import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
-import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard'
-import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard'
-import { PendingStack } from '@/components/consumer/multi-tier/PendingStack'
-import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner'
-import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard'
-import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner'
-import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink'
-import { ReportSheet } from '@/components/consumer/reporting/ReportSheet'
-import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm'
-import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet'
-import { PriceDisplay } from '@/components/consumer/PriceDisplay'
-import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard'
-import { SoldOutPriceCard } from '@/components/consumer/SoldOutPriceCard'
+} from '@concert-crawl/types';
+import { SP_POLICY } from '@concert-crawl/types';
+import { confirmEventReport, withdrawEventReport } from '@/lib/events';
+import { PendingCardB } from '@/components/consumer/PendingCardB';
+import { CorroborationSheet } from '@/components/consumer/CorroborationSheet';
+import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard';
+import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard';
+import { PendingStack } from '@/components/consumer/multi-tier/PendingStack';
+import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner';
+import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard';
+import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner';
+import { ReportFooterLink } from '@/components/consumer/reporting/ReportFooterLink';
+import { ReportSheet } from '@/components/consumer/reporting/ReportSheet';
+import { EvidenceForm } from '@/components/consumer/reporting/EvidenceForm';
+import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmReportSheet';
+import { PriceDisplay } from '@/components/consumer/PriceDisplay';
+import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard';
+import { SoldOutPriceCard } from '@/components/consumer/SoldOutPriceCard';
 import {
   SubmitPriceCardCta,
   SubmitPriceCardButton,
-} from '@/components/consumer/SubmitPriceCardCta'
+} from '@/components/consumer/SubmitPriceCardCta';
 import {
   SubmitPriceModal,
   type SubmitPriceResult,
-} from '@/components/consumer/submit-price/SubmitPriceModal'
+} from '@/components/consumer/submit-price/SubmitPriceModal';
 import {
   FaceValueCard,
   ContributeFaceValueCard,
@@ -53,22 +53,23 @@ import {
   MTAddTierSuccess,
   ProvenanceCTA,
   type ProvenanceCTAKind,
-} from '@/components/consumer/price-region'
-import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree'
+} from '@/components/consumer/price-region';
+import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree';
 
 // Without the fallback an unset var interpolates as the literal `undefined`,
 // which resolves relative and 404s rather than failing loudly.
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
 // All five canonical tiers — used by MTAddTierSuccess to derive `remainingTiers`
 // from this session's submitted tiers (Q4-eng lock).
-const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
+const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn'];
 
 // Widened read-only view of TIER_ENUM so the type guard can probe arbitrary
 // strings — `ReadonlyArray<Tier>.includes` rejects plain strings at the type
 // level, and an `as` cast is off the table (CLAUDE.md principle 6).
-const TIER_NAMES: ReadonlyArray<string> = TIER_ENUM
-const isTierValue = (value: string): value is Tier => TIER_NAMES.includes(value)
+const TIER_NAMES: ReadonlyArray<string> = TIER_ENUM;
+const isTierValue = (value: string): value is Tier =>
+  TIER_NAMES.includes(value);
 
 // Submitter counts as observation #1 in the 1/2 corroboration model — see
 // price_submissions.corroboration_count default in migration 0040, and
@@ -78,11 +79,11 @@ const isTierValue = (value: string): value is Tier => TIER_NAMES.includes(value)
 // add +1 to fold the submitter back in, or the strip lies "0 of 2 confirmed"
 // the moment after a user submits (issue #831). Centralised here so the
 // math can't drift between call sites again.
-const SUBMITTER_OBSERVATION = 1
+const SUBMITTER_OBSERVATION = 1;
 const displayConfirms = (
   apiConfirmsCount: number,
   localConfirmsBoost = 0,
-): number => apiConfirmsCount + SUBMITTER_OBSERVATION + localConfirmsBoost
+): number => apiConfirmsCount + SUBMITTER_OBSERVATION + localConfirmsBoost;
 
 // Resolves the corroboration-policy denominator from event.date so the
 // imminent-show bump (SP_POLICY.confirmsRequiredImminent) is applied
@@ -97,42 +98,42 @@ const displayConfirms = (
 // in sync avoids the trust strip rendering "1 of 2" while the server
 // enforces 3-confirm imminent policy (#835 Copilot R4).
 function corroborationConfirmsRequired(eventDate: string): number {
-  const parts = eventDate.split('-').map(Number)
-  const year = parts[0]
-  const month = parts[1]
-  const day = parts[2]
+  const parts = eventDate.split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
   if (year == null || month == null || day == null) {
-    return SP_POLICY.confirmsRequired
+    return SP_POLICY.confirmsRequired;
   }
-  const eventMs = Date.UTC(year, month - 1, day)
-  const now = new Date()
+  const eventMs = Date.UTC(year, month - 1, day);
+  const now = new Date();
   const todayMs = Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
     now.getUTCDate(),
-  )
-  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24)
+  );
+  const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24);
   const isImminent =
-    diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays
+    diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays;
   return isImminent
     ? SP_POLICY.confirmsRequiredImminent
-    : SP_POLICY.confirmsRequired
+    : SP_POLICY.confirmsRequired;
 }
 
 // ── Shared types ─────────────────────────────────────────────────────
 
 export interface EventDetailSharedProps {
-  event: EventDetailResponse
-  reports: EventReport[]
-  currentUserId: string | null
+  event: EventDetailResponse;
+  reports: EventReport[];
+  currentUserId: string | null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function parseCents(val: string | null | undefined): number | null {
-  if (!val) return null
-  const parsed = parseFloat(val)
-  return isNaN(parsed) ? null : parsed
+  if (!val) return null;
+  const parsed = parseFloat(val);
+  return isNaN(parsed) ? null : parsed;
 }
 
 // Derive the pending report of a given status from the reports array
@@ -140,7 +141,7 @@ function findPendingReport(
   reports: EventReport[],
   status: EventReport['status'],
 ): EventReport | null {
-  return reports.find((rpt) => rpt.status === status) ?? null
+  return reports.find((rpt) => rpt.status === status) ?? null;
 }
 
 // ── EventDetailBanners ───────────────────────────────────────────────
@@ -152,17 +153,17 @@ export function EventDetailBanners({
   reports,
   currentUserId: _currentUserId,
 }: EventDetailSharedProps) {
-  const { getToken } = useAuth()
-  const router = useRouter()
-  const [confirmSheetOpen, setConfirmSheetOpen] = useState(false)
-  const [sawDifferentSheetOpen, setSawDifferentSheetOpen] = useState(false)
-  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false)
+  const { getToken } = useAuth();
+  const router = useRouter();
+  const [confirmSheetOpen, setConfirmSheetOpen] = useState(false);
+  const [sawDifferentSheetOpen, setSawDifferentSheetOpen] = useState(false);
+  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false);
   const [evidenceFormReportType, setEvidenceFormReportType] = useState<
     'sold-out' | 'cancelled' | 'postponed'
-  >('cancelled')
+  >('cancelled');
 
-  const pendingCancelledReport = findPendingReport(reports, 'cancelled')
-  const pendingPostponedReport = findPendingReport(reports, 'postponed')
+  const pendingCancelledReport = findPendingReport(reports, 'cancelled');
+  const pendingPostponedReport = findPendingReport(reports, 'postponed');
 
   // Promoted status is reflected in event.status — admin resolves reports by promoting them.
   // The GET /reports endpoint only returns unresolved reports (resolvedAt IS NULL),
@@ -174,7 +175,7 @@ export function EventDetailBanners({
         ? 'postponed'
         : event.priceStatus === 'soldout'
           ? 'sold-out'
-          : null
+          : null;
 
   // Show pending banner only when the event is NOT already in the promoted state
   const activePendingReport: EventReport | null =
@@ -182,41 +183,41 @@ export function EventDetailBanners({
       ? pendingCancelledReport
       : pendingPostponedReport !== null && event.status !== 'postponed'
         ? pendingPostponedReport
-        : null
+        : null;
 
   const handleWithdrawReport = useCallback(
     (reportId: string) => {
       void (async () => {
-        const token = await getToken()
-        if (!token) return
+        const token = await getToken();
+        if (!token) return;
         try {
-          await withdrawEventReport(event.id, reportId, token)
-          router.refresh()
+          await withdrawEventReport(event.id, reportId, token);
+          router.refresh();
         } catch {
           // swallow
         }
-      })()
+      })();
     },
     [event.id, getToken, router],
-  )
+  );
 
   const handleConfirmSuccess = useCallback(() => {
-    setConfirmSheetOpen(false)
-    router.refresh()
-  }, [router])
+    setConfirmSheetOpen(false);
+    router.refresh();
+  }, [router]);
 
   const handleSawDifferentSelect = useCallback(
     (reportType: 'sold-out' | 'cancelled' | 'postponed') => {
-      setSawDifferentSheetOpen(false)
-      setEvidenceFormReportType(reportType)
-      setEvidenceFormOpen(true)
+      setSawDifferentSheetOpen(false);
+      setEvidenceFormReportType(reportType);
+      setEvidenceFormOpen(true);
     },
     [],
-  )
+  );
 
   // Nothing to render when no banners are active
   if (liveReportStatus === null && activePendingReport === null) {
-    return null
+    return null;
   }
 
   // liveStatus for the "Saw something different?" ReportSheet — treat the
@@ -226,23 +227,23 @@ export function EventDetailBanners({
       ? 'cancelled'
       : activePendingReport?.status === 'postponed'
         ? 'postponed'
-        : null
+        : null;
 
   // Derive reporter info from the promoted sold-out report when present
   const liveReporter = (() => {
     if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      const handle = event.soldOutReport.reporterHandle
-      return handle != null ? { handle, url: '' } : null
+      const handle = event.soldOutReport.reporterHandle;
+      return handle != null ? { handle, url: '' } : null;
     }
-    return null
-  })()
+    return null;
+  })();
 
   const liveConfirmCount = (() => {
     if (liveReportStatus === 'sold-out' && event.soldOutReport != null) {
-      return event.soldOutReport.confirmsCount
+      return event.soldOutReport.confirmsCount;
     }
-    return undefined
-  })()
+    return undefined;
+  })();
 
   return (
     <>
@@ -320,8 +321,8 @@ export function EventDetailBanners({
           }
           onSuccess={handleConfirmSuccess}
           onFileCounter={() => {
-            setConfirmSheetOpen(false)
-            setSawDifferentSheetOpen(true)
+            setConfirmSheetOpen(false);
+            setSawDifferentSheetOpen(true);
           }}
         />
       )}
@@ -339,9 +340,9 @@ export function EventDetailBanners({
               reportType === 'cancelled' ||
               reportType === 'postponed'
             ) {
-              handleSawDifferentSelect(reportType)
+              handleSawDifferentSelect(reportType);
             } else {
-              setSawDifferentSheetOpen(false)
+              setSawDifferentSheetOpen(false);
             }
           }}
         />
@@ -355,12 +356,12 @@ export function EventDetailBanners({
         eventId={event.id}
         eventDate={event.date}
         onSuccess={() => {
-          setEvidenceFormOpen(false)
-          router.refresh()
+          setEvidenceFormOpen(false);
+          router.refresh();
         }}
       />
     </>
-  )
+  );
 }
 
 // ── EventDetailPriceBlock ────────────────────────────────────────────
@@ -385,102 +386,104 @@ export function EventDetailPriceBlock({
   reports,
   currentUserId: _currentUserId,
 }: EventDetailSharedProps) {
-  const { getToken, isLoaded: authLoaded, isSignedIn } = useAuth()
-  const router = useRouter()
+  const { getToken, isLoaded: authLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
   // Only announce the gate once Clerk has resolved; before that a signed-in
   // visitor would briefly get the sign-up accessible name (#1247).
-  const priceGateSignedOut = authLoaded && !isSignedIn
+  const priceGateSignedOut = authLoaded && !isSignedIn;
   const [activeCorroborationId, setActiveCorroborationId] = useState<
     string | null
-  >(null)
-  const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
-  const [submitPriceEditMode, setSubmitPriceEditMode] = useState(false)
-  const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false)
-  const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false)
+  >(null);
+  const [submitPriceOpen, setSubmitPriceOpen] = useState(false);
+  const [submitPriceEditMode, setSubmitPriceEditMode] = useState(false);
+  const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false);
+  const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false);
   const [soldOutEvidenceReportType, setSoldOutEvidenceReportType] = useState<
     'sold-out' | 'cancelled' | 'postponed'
-  >('sold-out')
+  >('sold-out');
   // Local confirm counts — incremented optimistically on successful API confirm
-  const [localConfirms, setLocalConfirms] = useState<Record<string, number>>({})
+  const [localConfirms, setLocalConfirms] = useState<Record<string, number>>(
+    {},
+  );
   // Local copy of pending submissions — mutated optimistically without a page refresh
   type PendingSubItem = NonNullable<
     EventDetailResponse['pendingSubmissions']
-  >[number]
+  >[number];
   const [localSubmissions, setLocalSubmissions] = useState<PendingSubItem[]>(
     event.pendingSubmissions ?? [],
-  )
+  );
   // Q4-eng lock — client-side React session state of "tiers I just submitted
   // in this session." Drives `remainingTiers` for MTAddTierSuccess without
   // a refetch of priceByTier. Resets only when the user clicks Done on the
   // success card (or the modal closes after another submission).
   const [submittedThisSession, setSubmittedThisSession] = useState<Set<Tier>>(
     new Set(),
-  )
+  );
   const [submitSuccessPayload, setSubmitSuccessPayload] = useState<{
-    tier: Tier
-    price: number
-    sourceCategory: SourceCategory
+    tier: Tier;
+    price: number;
+    sourceCategory: SourceCategory;
     // #876 — acts left after this submit; 0 hides the add-tier pills.
     // undefined (older API) keeps the pills.
-    submissionsRemaining: number | undefined
-  } | null>(null)
+    submissionsRemaining: number | undefined;
+  } | null>(null);
   // Pre-populates the tier picker when the user clicks "+ Add <tier>" on
   // MTAddTierSuccess. SubmitPriceModal accepts this as an optional prop and
   // seeds formState.tier on open.
-  const [preselectedTier, setPreselectedTier] = useState<Tier | null>(null)
+  const [preselectedTier, setPreselectedTier] = useState<Tier | null>(null);
 
   // Every dismissal clears the tier/edit state the opener set. Otherwise a
   // modal opened from an add-tier CTA and closed without submitting leaks its
   // preselected tier into the next open from a different CTA.
   const closeSubmitPriceModal = useCallback(() => {
-    setSubmitPriceOpen(false)
-    setPreselectedTier(null)
-    setSubmitPriceEditMode(false)
-  }, [])
+    setSubmitPriceOpen(false);
+    setPreselectedTier(null);
+    setSubmitPriceEditMode(false);
+  }, []);
 
-  const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
-  const pendingCancelledReport = findPendingReport(reports, 'cancelled')
+  const pendingSoldOutReport = findPendingReport(reports, 'sold-out');
+  const pendingCancelledReport = findPendingReport(reports, 'cancelled');
 
-  const priceMin = parseCents(event.ticketPriceMin)
-  const priceMax = parseCents(event.ticketPriceMax)
+  const priceMin = parseCents(event.ticketPriceMin);
+  const priceMax = parseCents(event.ticketPriceMax);
 
   // Fix 15: postponed confirmed → hide price section entirely
   // Exception: if there's a pending counter-submission we still show it,
   // but in practice postponed + active dispute is unlikely so we keep it simple.
   const isPostponedConfirmed =
-    event.status === 'postponed' && event.counterSubmission == null
+    event.status === 'postponed' && event.counterSubmission == null;
 
   const handleConfirmReport = useCallback(
     (reportId: string) => {
       void (async () => {
-        const token = await getToken()
-        if (!token) return
+        const token = await getToken();
+        if (!token) return;
         try {
-          await confirmEventReport(event.id, reportId, token)
-          router.refresh()
+          await confirmEventReport(event.id, reportId, token);
+          router.refresh();
         } catch {
           // swallow
         }
-      })()
+      })();
     },
     [event.id, getToken, router],
-  )
+  );
 
   const handleWithdrawReport = useCallback(
     (reportId: string) => {
       void (async () => {
-        const token = await getToken()
-        if (!token) return
+        const token = await getToken();
+        if (!token) return;
         try {
-          await withdrawEventReport(event.id, reportId, token)
-          router.refresh()
+          await withdrawEventReport(event.id, reportId, token);
+          router.refresh();
         } catch {
           // swallow
         }
-      })()
+      })();
     },
     [event.id, getToken, router],
-  )
+  );
 
   // Optimistic localSubmissions updater shared by the two decision-tree
   // branches that render pending-submission cards. A batch submit (#832)
@@ -489,7 +492,7 @@ export function EventDetailPriceBlock({
   const applySubmissionResults = useCallback(
     (results: SubmitPriceResult[]) => {
       setLocalSubmissions((prev) => {
-        let next = prev
+        let next = prev;
         for (const result of results) {
           if (result.isEdit) {
             next = next.map((sub) =>
@@ -503,7 +506,7 @@ export function EventDetailPriceBlock({
                     howFound: result.howFound,
                   }
                 : sub,
-            )
+            );
           } else {
             next = [
               ...next,
@@ -525,14 +528,14 @@ export function EventDetailPriceBlock({
                 confirmsNeeded: corroborationConfirmsRequired(event.date),
                 isSubmitter: true,
               },
-            ]
+            ];
           }
         }
-        return next
-      })
+        return next;
+      });
     },
     [event.date],
-  )
+  );
 
   // Shared submit-success handler — used by every new decision-tree branch
   // that owns a SubmitPriceModal. A batch submit (#832) returns one row per
@@ -542,33 +545,33 @@ export function EventDetailPriceBlock({
   // shows something useful.
   const handleSubmitSuccess = useCallback(
     (results: SubmitPriceResult[], submissionsRemaining?: number) => {
-      const newRows = results.filter((row) => !row.isEdit)
-      const firstRow = newRows[0]
-      if (!firstRow) return
+      const newRows = results.filter((row) => !row.isEdit);
+      const firstRow = newRows[0];
+      if (!firstRow) return;
       const submittedTiers = newRows.map((row): Tier =>
         isTierValue(row.tier) ? row.tier : 'GA',
-      )
-      const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA'
-      const price = Math.round(parseFloat(firstRow.priceMin))
+      );
+      const firstTier: Tier = isTierValue(firstRow.tier) ? firstRow.tier : 'GA';
+      const price = Math.round(parseFloat(firstRow.priceMin));
       const sourceCategory: SourceCategory =
-        firstRow.sourceCategory ?? 'standard'
+        firstRow.sourceCategory ?? 'standard';
       setSubmittedThisSession((prev) => {
-        const next = new Set(prev)
+        const next = new Set(prev);
         for (const tier of submittedTiers) {
-          next.add(tier)
+          next.add(tier);
         }
-        return next
-      })
+        return next;
+      });
       setSubmitSuccessPayload({
         tier: firstTier,
         price,
         sourceCategory,
         submissionsRemaining,
-      })
-      closeSubmitPriceModal()
+      });
+      closeSubmitPriceModal();
     },
     [closeSubmitPriceModal],
-  )
+  );
 
   // #895 symptom: the two legacy pending-card branches transition shape as
   // localSubmissions populates (noPriceState branch 5 → branch 4), which
@@ -579,11 +582,11 @@ export function EventDetailPriceBlock({
   // state), which survives the branch switch.
   const onPendingSubmitSuccess = useCallback(
     (results: SubmitPriceResult[], submissionsRemaining?: number) => {
-      applySubmissionResults(results)
-      handleSubmitSuccess(results, submissionsRemaining)
+      applySubmissionResults(results);
+      handleSubmitSuccess(results, submissionsRemaining);
     },
     [applySubmissionResults, handleSubmitSuccess],
-  )
+  );
 
   // Submit-success surface — Submit-success state #1 (post-submit add-tier).
   // The MTAddTierSuccess follow-up is a GLOBAL after-submit affordance:
@@ -608,14 +611,14 @@ export function EventDetailPriceBlock({
             submitSuccessPayload.submissionsRemaining <= 0
           }
           onAddTier={(tier) => {
-            setSubmitSuccessPayload(null)
-            setPreselectedTier(tier)
-            setSubmitPriceOpen(true)
+            setSubmitSuccessPayload(null);
+            setPreselectedTier(tier);
+            setSubmitPriceOpen(true);
           }}
           onDone={() => setSubmitSuccessPayload(null)}
         />
       </div>
-    ) : null
+    ) : null;
 
   // Persistent "submit another price" affordance (#1364). Every branch that
   // resolves to a live price still needs it: MTAddTierSuccess is session-only,
@@ -629,13 +632,13 @@ export function EventDetailPriceBlock({
         <SubmitPriceCardButton
           signedOut={priceGateSignedOut}
           onClick={() => {
-            setPreselectedTier(null)
-            setSubmitPriceEditMode(false)
-            setSubmitPriceOpen(true)
+            setPreselectedTier(null);
+            setSubmitPriceEditMode(false);
+            setSubmitPriceOpen(true);
           }}
         />
       </div>
-    ) : null
+    ) : null;
 
   // Pending submissions surface (#1377). Renders one PendingCardB per block
   // that has a pending row, plus the CorroborationSheet the cards' Confirm
@@ -650,23 +653,23 @@ export function EventDetailPriceBlock({
   // leaves the same uncorroboratable submission this fix exists to prevent.
   // The tell summarises; this surface is where the price can be acted on.
   const renderPendingSurface = (blocks: TierPriceBlock[]) => {
-    const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
+    const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = [];
     // Flattened so the sheet can resolve `activeCorroborationId` against a
     // single list instead of re-walking the nested blocks.
     const pendingByIdAtt: Array<{
-      id: string
-      tier: Tier
-      pending: TierPriceBlock['pending'][number]
-    }> = []
+      id: string;
+      tier: Tier;
+      pending: TierPriceBlock['pending'][number];
+    }> = [];
     for (const block of blocks) {
-      const firstPending = block.pending[0]
-      if (firstPending == null) continue
+      const firstPending = block.pending[0];
+      if (firstPending == null) continue;
       pendingByIdAtt.push({
         id: firstPending.id,
         tier: block.tier,
         pending: firstPending,
-      })
-      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice'
+      });
+      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice';
       cardPropsList.push({
         floor: parseFloat(firstPending.priceMin),
         ...(firstPending.priceMax != null
@@ -703,8 +706,8 @@ export function EventDetailPriceBlock({
         // a router refresh instead.
         onWithdraw: () => {
           void (async () => {
-            const token = await getToken()
-            if (!token) return
+            const token = await getToken();
+            if (!token) return;
             try {
               const res = await fetch(
                 `${API_URL}/v1/submissions/${firstPending.id}`,
@@ -712,34 +715,34 @@ export function EventDetailPriceBlock({
                   method: 'DELETE',
                   headers: { Authorization: `Bearer ${token}` },
                 },
-              )
+              );
               if (res.ok) {
-                router.refresh()
+                router.refresh();
               } else {
-                console.error('Withdraw failed', res.status)
+                console.error('Withdraw failed', res.status);
               }
             } catch (err) {
-              console.error('Withdraw failed', err)
+              console.error('Withdraw failed', err);
             }
-          })()
+          })();
         },
         // The only entry point into the modal's edit mode (#1378). The
         // submit-price modal's already_submitted error tells the user to
         // "edit it from the event page" — this is that path, and it has to
         // exist on every branch or that instruction is a dead end.
         onEdit: () => {
-          setPreselectedTier(block.tier)
-          setSubmitPriceEditMode(true)
-          setSubmitPriceOpen(true)
+          setPreselectedTier(block.tier);
+          setSubmitPriceEditMode(true);
+          setSubmitPriceOpen(true);
         },
-      })
+      });
     }
-    if (cardPropsList.length === 0) return null
+    if (cardPropsList.length === 0) return null;
     const activeAtt =
       activeCorroborationId !== null
         ? (pendingByIdAtt.find((row) => row.id === activeCorroborationId) ??
           null)
-        : null
+        : null;
     return (
       <>
         {/* Matches the mt-3 every sibling block in these branches sets for
@@ -776,11 +779,11 @@ export function EventDetailPriceBlock({
             open={activeCorroborationId !== null}
             onClose={() => setActiveCorroborationId(null)}
             onConfirm={(method) => {
-              const confirmedId = activeAtt.pending.id
-              setActiveCorroborationId(null)
+              const confirmedId = activeAtt.pending.id;
+              setActiveCorroborationId(null);
               void (async () => {
-                const token = await getToken()
-                if (!token) return
+                const token = await getToken();
+                if (!token) return;
                 try {
                   const res = await fetch(
                     `${API_URL}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
@@ -792,33 +795,33 @@ export function EventDetailPriceBlock({
                       },
                       body: JSON.stringify({ method }),
                     },
-                  )
+                  );
                   if (res.ok) {
-                    router.refresh()
+                    router.refresh();
                   } else {
-                    console.error('Confirm failed', res.status)
+                    console.error('Confirm failed', res.status);
                   }
                 } catch (err) {
                   console.error(
                     'EventDetailPriceBlock: price confirm failed',
                     err,
-                  )
+                  );
                 }
-              })()
+              })();
             }}
             onSubmitUpdate={() => {
-              setActiveCorroborationId(null)
-              setSubmitPriceOpen(true)
+              setActiveCorroborationId(null);
+              setSubmitPriceOpen(true);
             }}
           />
         )}
       </>
-    )
-  }
+    );
+  };
 
   // ── Fix 15: postponed confirmed → hide price section ───────────
   if (isPostponedConfirmed) {
-    return null
+    return null;
   }
 
   // ── 0. Promoted sold-out (confirmed by community) ──────────────
@@ -828,7 +831,7 @@ export function EventDetailPriceBlock({
   // when `priceStatus === 'soldout'` AND `soldOutReport == null` (i.e.
   // sold-out flagged by another path).
   if (event.priceStatus === 'soldout' && event.soldOutReport != null) {
-    const soldOut = event.soldOutReport
+    const soldOut = event.soldOutReport;
     return (
       <SoldOutPriceCard
         priceMin={priceMin}
@@ -837,7 +840,7 @@ export function EventDetailPriceBlock({
         confirmsCount={soldOut.confirmsCount}
         reportedAt={soldOut.reportedAt}
       />
-    )
+    );
   }
 
   // ── 0b. New decision-tree branches (property-table §8 states #3, #10–13) ─
@@ -845,7 +848,7 @@ export function EventDetailPriceBlock({
   // through this block. All other state still falls into the legacy
   // branches below — promoted sold-out + counter-submission + pending-report
   // logic stays intact during the migration window.
-  const priceDecision = decidePriceRegion({ event })
+  const priceDecision = decidePriceRegion({ event });
   if (priceDecision.kind === 'sold-out-resale') {
     return (
       <>
@@ -878,8 +881,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={false}
           preselectedTier={preselectedTier}
@@ -890,7 +893,7 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'sold-out-contribute') {
@@ -906,8 +909,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={false}
           preselectedTier={preselectedTier}
@@ -918,7 +921,7 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'no-price-resale') {
@@ -964,8 +967,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={false}
           preselectedTier={preselectedTier}
@@ -976,7 +979,7 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'resale-headline') {
@@ -984,18 +987,18 @@ export function EventDetailPriceBlock({
     // standard headline anywhere. Render MultiTierLiveCard with kind='resale'
     // + show-level FaceValueCard inviting box-office contribution + outbound
     // resale ProvenanceCTA.
-    const blocks = priceDecision.priceByTier
+    const blocks = priceDecision.priceByTier;
     const headlineBlock =
       blocks.find((block) => block.headline?.sourceCategory === 'resale') ??
-      blocks[0]
-    const headlineRow = headlineBlock?.headline
-    const headlineFloor = headlineRow ? parseFloat(headlineRow.priceMin) : 0
+      blocks[0];
+    const headlineRow = headlineBlock?.headline;
+    const headlineFloor = headlineRow ? parseFloat(headlineRow.priceMin) : 0;
     const headlineCeiling =
-      headlineRow?.priceMax != null ? parseFloat(headlineRow.priceMax) : null
-    const headlineVendor = headlineRow?.vendor ?? event.venue.name
-    const otherBlocks = blocks.filter((block) => block !== headlineBlock)
+      headlineRow?.priceMax != null ? parseFloat(headlineRow.priceMax) : null;
+    const headlineVendor = headlineRow?.vendor ?? event.venue.name;
+    const otherBlocks = blocks.filter((block) => block !== headlineBlock);
     const alternates = otherBlocks.map((block) => {
-      const altHeadline = block.headline
+      const altHeadline = block.headline;
       if (altHeadline != null) {
         return {
           tier: block.tier,
@@ -1010,9 +1013,9 @@ export function EventDetailPriceBlock({
               : altHeadline.sourceCategory === 'resale'
                 ? ('resale' as const)
                 : ('community' as const),
-        }
+        };
       }
-      const firstAlt = block.alternates[0]
+      const firstAlt = block.alternates[0];
       if (firstAlt != null) {
         return {
           tier: block.tier,
@@ -1022,9 +1025,9 @@ export function EventDetailPriceBlock({
             ? { ceiling: parseFloat(firstAlt.priceMax) }
             : {}),
           kind: null as null,
-        }
+        };
       }
-      const firstPending = block.pending[0]
+      const firstPending = block.pending[0];
       return {
         tier: block.tier,
         vendor: firstPending?.vendor ?? 'Community',
@@ -1046,13 +1049,13 @@ export function EventDetailPriceBlock({
             ? displayConfirms(firstPending.confirmsCount)
             : 0,
         needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
-      }
-    })
+      };
+    });
 
     // Find a resale ticketLink for the outbound CTA; fall back to the headline
     // vendor when no link is surfaced.
     const resaleLink =
-      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null
+      event.ticketLinks?.find((link) => link.kind === 'resale') ?? null;
 
     return (
       <>
@@ -1095,8 +1098,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={false}
           preselectedTier={preselectedTier}
@@ -1107,32 +1110,32 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'multi-source-mixed') {
-    const { entryBlock, crossSourceAlt, otherTiers } = priceDecision
-    const headlineRow = entryBlock.headline
+    const { entryBlock, crossSourceAlt, otherTiers } = priceDecision;
+    const headlineRow = entryBlock.headline;
     const headlineFloor = headlineRow
       ? Math.round(parseFloat(headlineRow.priceMin))
-      : 0
+      : 0;
     const crossKind: 'boxoffice' | 'resale' | 'community' =
       crossSourceAlt.sourceCategory === 'boxoffice'
         ? 'boxoffice'
         : crossSourceAlt.sourceCategory === 'resale'
           ? 'resale'
-          : 'community'
+          : 'community';
     const otherTierRows = otherTiers.map((block) => {
-      const altHeadline = block.headline ?? block.alternates[0] ?? null
+      const altHeadline = block.headline ?? block.alternates[0] ?? null;
       const altFloor = altHeadline
         ? parseFloat(
             'priceMin' in altHeadline
               ? altHeadline.priceMin
               : String(altHeadline),
           )
-        : 0
+        : 0;
       const altCeilingStr =
-        altHeadline && 'priceMax' in altHeadline ? altHeadline.priceMax : null
+        altHeadline && 'priceMax' in altHeadline ? altHeadline.priceMax : null;
       const altKind: 'boxoffice' | 'resale' | 'community' | null = altHeadline
         ? altHeadline.sourceCategory === 'boxoffice'
           ? 'boxoffice'
@@ -1141,7 +1144,7 @@ export function EventDetailPriceBlock({
             : altHeadline.sourceCategory === 'standard'
               ? 'community'
               : null
-        : null
+        : null;
       return {
         tier: block.tier,
         vendor: altHeadline?.vendor ?? 'Community',
@@ -1150,8 +1153,8 @@ export function EventDetailPriceBlock({
           ? { ceiling: parseFloat(altCeilingStr) }
           : {}),
         kind: altKind,
-      }
-    })
+      };
+    });
     return (
       <>
         <MultiSourceMultiTierCard
@@ -1174,8 +1177,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1186,7 +1189,7 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'mixed-tier') {
@@ -1194,21 +1197,21 @@ export function EventDetailPriceBlock({
     // is pending-only. Render shipped MixedTierCard with per-tier pending
     // tells. Pick the cheapest headline tier as the card headline, route
     // every other block through TierAlternateRow.
-    const blocks = priceDecision.priceByTier
+    const blocks = priceDecision.priceByTier;
     const headlineBlock =
-      blocks.find((block) => block.headline !== null) ?? blocks[0]
-    const headlineRow = headlineBlock?.headline
+      blocks.find((block) => block.headline !== null) ?? blocks[0];
+    const headlineRow = headlineBlock?.headline;
     if (headlineRow != null && headlineBlock != null) {
-      const headlineFloor = parseFloat(headlineRow.priceMin)
+      const headlineFloor = parseFloat(headlineRow.priceMin);
       const headlineCeiling =
-        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null
+        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null;
       const headlineKind: 'boxoffice' | 'resale' | 'community' =
         headlineRow.sourceCategory === 'boxoffice'
           ? 'boxoffice'
           : headlineRow.sourceCategory === 'resale'
             ? 'resale'
-            : 'community'
-      const otherBlocks = blocks.filter((block) => block !== headlineBlock)
+            : 'community';
+      const otherBlocks = blocks.filter((block) => block !== headlineBlock);
       const alternateRows = otherBlocks.map((block) => {
         // Headline-bearing tier → render as alternate row (resolved tier).
         if (block.headline != null) {
@@ -1217,7 +1220,7 @@ export function EventDetailPriceBlock({
               ? 'boxoffice'
               : block.headline.sourceCategory === 'resale'
                 ? 'resale'
-                : 'community'
+                : 'community';
           return {
             tier: block.tier,
             vendor: block.headline.vendor,
@@ -1226,16 +1229,16 @@ export function EventDetailPriceBlock({
               ? { ceiling: parseFloat(block.headline.priceMax) }
               : {}),
             kind: altKind,
-          }
+          };
         }
         // Pending-only tier → render the cheapest pending row with the
         // per-tier pending tell (`pending · N/needed`).
-        const firstPending = block.pending[0]
+        const firstPending = block.pending[0];
         const pendingKind: 'boxoffice' | 'community' | null = firstPending
           ? firstPending.vendor === 'VenueBoxOffice'
             ? 'boxoffice'
             : 'community'
-          : null
+          : null;
         return {
           tier: block.tier,
           vendor: firstPending?.vendor ?? 'Community',
@@ -1254,8 +1257,8 @@ export function EventDetailPriceBlock({
               ? displayConfirms(firstPending.confirmsCount)
               : 0,
           needed: firstPending?.confirmsNeeded ?? SP_POLICY.confirmsRequired,
-        }
-      })
+        };
+      });
       return (
         <>
           <MixedTierCard
@@ -1274,8 +1277,8 @@ export function EventDetailPriceBlock({
           <SubmitPriceModal
             open={submitPriceOpen}
             onClose={() => {
-              closeSubmitPriceModal()
-              setSubmitSuccessPayload(null)
+              closeSubmitPriceModal();
+              setSubmitSuccessPayload(null);
             }}
             openInEditMode={submitPriceEditMode}
             preselectedTier={preselectedTier}
@@ -1286,7 +1289,7 @@ export function EventDetailPriceBlock({
             onSuccess={handleSubmitSuccess}
           />
         </>
-      )
+      );
     }
   }
 
@@ -1308,8 +1311,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1320,7 +1323,7 @@ export function EventDetailPriceBlock({
           onSuccess={handleSubmitSuccess}
         />
       </>
-    )
+    );
   }
 
   if (priceDecision.kind === 'multi-tier-shipped') {
@@ -1328,30 +1331,30 @@ export function EventDetailPriceBlock({
     // Kept side-by-side with the legacy flat-field MixedTierCard branch
     // below until the migration is verified — eventually that branch
     // becomes unreachable when priceByTier is non-null.
-    const blocks = priceDecision.priceByTier
-    const headlineBlock = blocks[0]
-    const headlineRow = headlineBlock?.headline
+    const blocks = priceDecision.priceByTier;
+    const headlineBlock = blocks[0];
+    const headlineRow = headlineBlock?.headline;
     if (headlineRow != null && headlineBlock != null) {
-      const headlineFloor = parseFloat(headlineRow.priceMin)
+      const headlineFloor = parseFloat(headlineRow.priceMin);
       const headlineCeiling =
-        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null
+        headlineRow.priceMax != null ? parseFloat(headlineRow.priceMax) : null;
       const headlineKind: 'boxoffice' | 'resale' | 'community' =
         headlineRow.sourceCategory === 'boxoffice'
           ? 'boxoffice'
           : headlineRow.sourceCategory === 'resale'
             ? 'resale'
-            : 'community'
+            : 'community';
       const alternateRows = blocks.slice(1).map((block) => {
-        const altHeadline = block.headline ?? block.alternates[0] ?? null
-        const altFloor = altHeadline ? parseFloat(altHeadline.priceMin) : 0
-        const altCeilingStr = altHeadline?.priceMax ?? null
+        const altHeadline = block.headline ?? block.alternates[0] ?? null;
+        const altFloor = altHeadline ? parseFloat(altHeadline.priceMin) : 0;
+        const altCeilingStr = altHeadline?.priceMax ?? null;
         const altKind: 'boxoffice' | 'resale' | 'community' | null = altHeadline
           ? altHeadline.sourceCategory === 'boxoffice'
             ? 'boxoffice'
             : altHeadline.sourceCategory === 'resale'
               ? 'resale'
               : 'community'
-          : null
+          : null;
         return {
           tier: block.tier,
           vendor: altHeadline?.vendor ?? 'Community',
@@ -1360,16 +1363,16 @@ export function EventDetailPriceBlock({
             ? { ceiling: parseFloat(altCeilingStr) }
             : {}),
           kind: altKind,
-        }
-      })
-      const outboundLink = event.ticketLinks?.[0] ?? null
+        };
+      });
+      const outboundLink = event.ticketLinks?.[0] ?? null;
       const outboundKind: ProvenanceCTAKind | null = outboundLink
         ? outboundLink.kind === 'boxoffice'
           ? 'boxoffice'
           : outboundLink.kind === 'resale'
             ? 'resale'
             : 'primary'
-        : null
+        : null;
       return (
         <>
           <MultiTierLiveCard
@@ -1402,8 +1405,8 @@ export function EventDetailPriceBlock({
           <SubmitPriceModal
             open={submitPriceOpen}
             onClose={() => {
-              closeSubmitPriceModal()
-              setSubmitSuccessPayload(null)
+              closeSubmitPriceModal();
+              setSubmitSuccessPayload(null);
             }}
             openInEditMode={submitPriceEditMode}
             preselectedTier={preselectedTier}
@@ -1414,7 +1417,7 @@ export function EventDetailPriceBlock({
             onSuccess={handleSubmitSuccess}
           />
         </>
-      )
+      );
     }
   }
 
@@ -1425,7 +1428,7 @@ export function EventDetailPriceBlock({
 
   // ── 1. Pending sold-out report ──────────────────────────────────
   if (pendingSoldOutReport !== null) {
-    const soldOutView = pendingSoldOutReport.isReporter ? 'reporter' : 'other'
+    const soldOutView = pendingSoldOutReport.isReporter ? 'reporter' : 'other';
 
     return (
       <>
@@ -1459,14 +1462,14 @@ export function EventDetailPriceBlock({
           liveStatus="sold-out"
           eventDate={event.date}
           onSelect={(reportType) => {
-            setSoldOutSawDifferentOpen(false)
+            setSoldOutSawDifferentOpen(false);
             if (
               reportType === 'sold-out' ||
               reportType === 'cancelled' ||
               reportType === 'postponed'
             ) {
-              setSoldOutEvidenceReportType(reportType)
-              setSoldOutEvidenceFormOpen(true)
+              setSoldOutEvidenceReportType(reportType);
+              setSoldOutEvidenceFormOpen(true);
             }
           }}
         />
@@ -1477,19 +1480,19 @@ export function EventDetailPriceBlock({
           eventId={event.id}
           eventDate={event.date}
           onSuccess={() => {
-            setSoldOutEvidenceFormOpen(false)
-            router.refresh()
+            setSoldOutEvidenceFormOpen(false);
+            router.refresh();
           }}
         />
       </>
-    )
+    );
   }
 
   // ── 2. Pending cancelled report → hide price area ───────────────
   if (pendingCancelledReport !== null && event.status !== 'cancelled') {
     // The PriceDisplay is suppressed server-side too (event.status check in page.tsx).
     // Return null here as a belt-and-suspenders measure.
-    return null
+    return null;
   }
 
   // ── 3a. Live price + pending counter-submission → DisputedPriceCard ─
@@ -1498,9 +1501,9 @@ export function EventDetailPriceBlock({
     priceMin !== null &&
     event.priceStatus !== 'soldout'
   ) {
-    const counter = event.counterSubmission
+    const counter = event.counterSubmission;
     const liveKind: 'community' | 'boxoffice' =
-      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community'
+      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community';
     return (
       <DisputedPriceCard
         floor={priceMin}
@@ -1528,25 +1531,25 @@ export function EventDetailPriceBlock({
         signedOut={priceGateSignedOut}
         onUpdateSuccess={() => router.refresh()}
       />
-    )
+    );
   }
 
   // ── 3. Live price with alternates → MultiTierLiveCard ───────────
-  const alternates = event.priceAlternates ?? []
+  const alternates = event.priceAlternates ?? [];
   if (
     priceMin !== null &&
     alternates.length > 0 &&
     event.priceStatus !== 'soldout'
   ) {
     const headlineKind: 'community' | 'boxoffice' =
-      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community'
+      event.priceApprovalKind === 'admin' ? 'boxoffice' : 'community';
     const headline = {
       floor: priceMin,
       ...(priceMax !== null ? { ceiling: priceMax } : {}),
       tier: 'General Admission',
       vendor: event.priceVendor ?? event.venue.name,
       kind: headlineKind,
-    }
+    };
 
     const alternateRows = alternates.map((alt) => ({
       tier: 'General Admission',
@@ -1554,7 +1557,7 @@ export function EventDetailPriceBlock({
       floor: parseFloat(alt.priceMin),
       ...(alt.priceMax !== null ? { ceiling: parseFloat(alt.priceMax) } : {}),
       kind: null as 'community' | 'boxoffice' | null,
-    }))
+    }));
 
     return (
       <>
@@ -1571,7 +1574,7 @@ export function EventDetailPriceBlock({
           </div>
         )}
       </>
-    )
+    );
   }
 
   // ── 4. Pending submissions — no corroborated price yet ───────────
@@ -1591,10 +1594,10 @@ export function EventDetailPriceBlock({
           venueName={event.venue.name}
           date={event.date}
         />
-      )
+      );
     }
 
-    const visibleSubs = localSubmissions
+    const visibleSubs = localSubmissions;
 
     // If any submission has met the API's promotion threshold, render as live.
     // Compare actual observations (submitter as #1 + non-submitter confirms +
@@ -1607,14 +1610,14 @@ export function EventDetailPriceBlock({
       (sub) =>
         displayConfirms(sub.confirmsCount, localConfirms[sub.id] ?? 0) >=
         sub.confirmsNeeded,
-    )
+    );
     if (confirmedSub != null) {
       // PriceDisplay's `priceConfirmsCount` renders "N fans confirmed" — that
       // copy means non-submitter peers, so DON'T fold the submitter in here
       // (separate from the X/Y trust-strip semantic the displayConfirms()
       // helper covers).
       const confirmsDisplay =
-        confirmedSub.confirmsCount + (localConfirms[confirmedSub.id] ?? 0)
+        confirmedSub.confirmsCount + (localConfirms[confirmedSub.id] ?? 0);
       return (
         <>
           <PriceDisplay
@@ -1637,14 +1640,14 @@ export function EventDetailPriceBlock({
             // one site advances its own row to mirror the last_seen_at the
             // server just wrote; every other stamp site reads a server prop.
             onSighted={() => {
-              const sightedAt = new Date().toISOString()
+              const sightedAt = new Date().toISOString();
               setLocalSubmissions((subs) =>
                 subs.map((sub) =>
                   sub.id === confirmedSub.id
                     ? { ...sub, submittedAt: sightedAt }
                     : sub,
                 ),
-              )
+              );
             }}
             priceApprovalKind="fan"
             priceApprovedAt={confirmedSub.submittedAt}
@@ -1663,13 +1666,13 @@ export function EventDetailPriceBlock({
             </div>
           )}
         </>
-      )
+      );
     }
 
     const activeCorroboration =
       activeCorroborationId !== null
         ? (visibleSubs.find((sub) => sub.id === activeCorroborationId) ?? null)
-        : null
+        : null;
 
     // Per-tier counter pointer (LOCKED §9 Q3). When a tier already has a
     // counter-submission, `view === 'other'` PendingCardB cards REPLACE the
@@ -1681,18 +1684,18 @@ export function EventDetailPriceBlock({
     // so the helper accepts string and matches against priceByTier.tier
     // (typed `Tier`). Non-canonical tier strings yield no match → null.
     const counterPointerFor = (tier: string): { href: string } | null => {
-      const block = event.priceByTier?.find((blk) => blk.tier === tier)
-      if (block?.counterSubmission == null) return null
-      return { href: `#counter-${block.counterSubmission.id}` }
-    }
+      const block = event.priceByTier?.find((blk) => blk.tier === tier);
+      if (block?.counterSubmission == null) return null;
+      return { href: `#counter-${block.counterSubmission.id}` };
+    };
 
     // §8 state #18 — surfaces the admin defer engagement signal on the
     // PendingCardB that sits alongside a counter. Falls back to null when
     // there's no counter for the tier or the counter has no admin action.
     const lastAdminActionKindFor = (tier: string): 'defer' | null => {
-      const block = event.priceByTier?.find((blk) => blk.tier === tier)
-      return block?.counterSubmission?.lastAdminActionKind ?? null
-    }
+      const block = event.priceByTier?.find((blk) => blk.tier === tier);
+      return block?.counterSubmission?.lastAdminActionKind ?? null;
+    };
 
     const pendingCardProps = visibleSubs.map((sub) => {
       // Submitter counts as observation #1 (#831). Helper folds the submitter
@@ -1701,11 +1704,11 @@ export function EventDetailPriceBlock({
       const subConfirms = displayConfirms(
         sub.confirmsCount,
         localConfirms[sub.id] ?? 0,
-      )
-      const isBoxOffice = sub.vendor === 'VenueBoxOffice'
+      );
+      const isBoxOffice = sub.vendor === 'VenueBoxOffice';
       const viewKind: 'other' | 'submitter' | 'self-locked' = sub.isSubmitter
         ? 'submitter'
-        : 'other'
+        : 'other';
       const props: React.ComponentProps<typeof PendingCardB> = {
         floor: parseFloat(sub.priceMin),
         ...(sub.priceMax !== null ? { ceiling: parseFloat(sub.priceMax) } : {}),
@@ -1725,32 +1728,32 @@ export function EventDetailPriceBlock({
         onConfirm: () => setActiveCorroborationId(sub.id),
         onWithdraw: () => {
           void (async () => {
-            const token = await getToken()
-            if (!token) return
+            const token = await getToken();
+            if (!token) return;
             try {
               const res = await fetch(`${API_URL}/v1/submissions/${sub.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
-              })
+              });
               if (res.ok) {
                 setLocalSubmissions((prev) =>
                   prev.filter((item) => item.id !== sub.id),
-                )
+                );
               } else {
-                console.error('Withdraw failed', res.status)
+                console.error('Withdraw failed', res.status);
               }
             } catch (err) {
-              console.error('Withdraw failed', err)
+              console.error('Withdraw failed', err);
             }
-          })()
+          })();
         },
         onEdit: () => {
-          setSubmitPriceEditMode(true)
-          setSubmitPriceOpen(true)
+          setSubmitPriceEditMode(true);
+          setSubmitPriceOpen(true);
         },
-      }
-      return { id: sub.id, props }
-    })
+      };
+      return { id: sub.id, props };
+    });
 
     return (
       <>
@@ -1792,11 +1795,11 @@ export function EventDetailPriceBlock({
             open={activeCorroborationId !== null}
             onClose={() => setActiveCorroborationId(null)}
             onConfirm={(method) => {
-              const confirmedId = activeCorroboration.id
-              setActiveCorroborationId(null)
+              const confirmedId = activeCorroboration.id;
+              setActiveCorroborationId(null);
               void (async () => {
-                const token = await getToken()
-                if (!token) return
+                const token = await getToken();
+                if (!token) return;
                 try {
                   const res = await fetch(
                     `${API_URL}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
@@ -1808,24 +1811,24 @@ export function EventDetailPriceBlock({
                       },
                       body: JSON.stringify({ method }),
                     },
-                  )
+                  );
                   if (res.ok) {
                     setLocalConfirms((prev) => ({
                       ...prev,
                       [confirmedId]: (prev[confirmedId] ?? 0) + 1,
-                    }))
+                    }));
                   }
                 } catch (err) {
                   console.error(
                     'EventDetailPriceBlock: price confirm failed',
                     err,
-                  )
+                  );
                 }
-              })()
+              })();
             }}
             onSubmitUpdate={() => {
-              setActiveCorroborationId(null)
-              setSubmitPriceOpen(true)
+              setActiveCorroborationId(null);
+              setSubmitPriceOpen(true);
             }}
           />
         )}
@@ -1839,8 +1842,8 @@ export function EventDetailPriceBlock({
             <SubmitPriceCardButton
               signedOut={priceGateSignedOut}
               onClick={() => {
-                setSubmitPriceEditMode(false)
-                setSubmitPriceOpen(true)
+                setSubmitPriceEditMode(false);
+                setSubmitPriceOpen(true);
               }}
             />
           </div>
@@ -1849,8 +1852,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1862,11 +1865,11 @@ export function EventDetailPriceBlock({
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),
-            )
+            );
           }}
         />
       </>
-    )
+    );
   }
 
   // A crawler-sourced price used to render here as a pending *community*
@@ -1881,7 +1884,7 @@ export function EventDetailPriceBlock({
   // No Phase 8.5 override applies — render the existing price card.
   // When price is null (community-handoff card), own the submit modal so
   // onSuccess can update localSubmissions and transition into section 4.
-  const noPriceState = event.ticketPriceMin === null
+  const noPriceState = event.ticketPriceMin === null;
   return (
     <>
       <PriceDisplay
@@ -1924,8 +1927,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            closeSubmitPriceModal()
-            setSubmitSuccessPayload(null)
+            closeSubmitPriceModal();
+            setSubmitSuccessPayload(null);
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1937,12 +1940,12 @@ export function EventDetailPriceBlock({
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),
-            )
+            );
           }}
         />
       )}
     </>
-  )
+  );
 }
 
 // ── EventDetailFooter ────────────────────────────────────────────────
@@ -1952,17 +1955,17 @@ export function EventDetailFooter({
   event,
   reports,
 }: Omit<EventDetailSharedProps, 'currentUserId'>) {
-  const router = useRouter()
-  const { isLoaded: authLoaded, isSignedIn } = useAuth()
-  const [isReportSheetOpen, setIsReportSheetOpen] = useState(false)
-  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false)
+  const router = useRouter();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
+  const [isReportSheetOpen, setIsReportSheetOpen] = useState(false);
+  const [evidenceFormOpen, setEvidenceFormOpen] = useState(false);
   const [evidenceFormReportType, setEvidenceFormReportType] = useState<
     'sold-out' | 'cancelled' | 'postponed'
-  >('cancelled')
+  >('cancelled');
 
-  const pendingSoldOut = findPendingReport(reports, 'sold-out')
-  const pendingCancelled = findPendingReport(reports, 'cancelled')
-  const pendingPostponed = findPendingReport(reports, 'postponed')
+  const pendingSoldOut = findPendingReport(reports, 'sold-out');
+  const pendingCancelled = findPendingReport(reports, 'cancelled');
+  const pendingPostponed = findPendingReport(reports, 'postponed');
 
   // Derive the footer live status:
   // 1. Promoted report → event.status or priceStatus
@@ -1975,17 +1978,17 @@ export function EventDetailFooter({
         ? 'postponed'
         : event.priceStatus === 'soldout' || pendingSoldOut !== null
           ? 'sold-out'
-          : null
+          : null;
 
   // When there's a pending cancellation/postponement (not yet promoted), the footer
   // CTA becomes "Tickets still available?" and the ReportSheet must show the counter-
   // report options (liveStatus='cancelled' → only 'available' is shown).
   const hasPendingCancellation =
-    pendingCancelled !== null && event.status !== 'cancelled'
+    pendingCancelled !== null && event.status !== 'cancelled';
   const hasPendingPostponement =
-    pendingPostponed !== null && event.status !== 'postponed'
+    pendingPostponed !== null && event.status !== 'postponed';
   const hasPendingSoldOut =
-    pendingSoldOut !== null && event.priceStatus !== 'soldout'
+    pendingSoldOut !== null && event.priceStatus !== 'soldout';
 
   // The liveStatus passed to the ReportSheet controls which options are shown.
   // For pending-but-not-promoted states, pass the pending type so the counter-report
@@ -1995,12 +1998,12 @@ export function EventDetailFooter({
       ? 'cancelled'
       : hasPendingPostponement
         ? 'postponed'
-        : footerLiveStatus
+        : footerLiveStatus;
 
   // The "CURRENTLY LIVE" chip in ReportSheet shows pending state when the report
   // is pending (not yet promoted by admin).
   const reportSheetIsPending =
-    hasPendingCancellation || hasPendingPostponement || hasPendingSoldOut
+    hasPendingCancellation || hasPendingPostponement || hasPendingSoldOut;
 
   return (
     <>
@@ -2016,7 +2019,7 @@ export function EventDetailFooter({
         isPending={reportSheetIsPending}
         eventDate={event.date}
         onSelect={(reportType) => {
-          setIsReportSheetOpen(false)
+          setIsReportSheetOpen(false);
           // 'available' is a counter-report — the API does not yet support this status.
           // The modal closes cleanly; backend support is a follow-up item.
           if (
@@ -2024,8 +2027,8 @@ export function EventDetailFooter({
             reportType === 'cancelled' ||
             reportType === 'postponed'
           ) {
-            setEvidenceFormReportType(reportType)
-            setEvidenceFormOpen(true)
+            setEvidenceFormReportType(reportType);
+            setEvidenceFormOpen(true);
           }
         }}
       />
@@ -2036,10 +2039,10 @@ export function EventDetailFooter({
         eventId={event.id}
         eventDate={event.date}
         onSuccess={() => {
-          setEvidenceFormOpen(false)
-          router.refresh()
+          setEvidenceFormOpen(false);
+          router.refresh();
         }}
       />
     </>
-  )
+  );
 }

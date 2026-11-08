@@ -30,7 +30,7 @@
  * "/" in "ac/dc" and "," in "earth, wind") is a genuine word boundary and
  * becomes a hyphen.
  */
-const INTRA_WORD_PUNCTUATION = /['’‘`´.!?¡¿*"“”]/g
+const INTRA_WORD_PUNCTUATION = /['’‘`´.!?¡¿*"“”]/g;
 
 /**
  * Longest slug this function will emit, and therefore the longest slug the
@@ -38,7 +38,7 @@ const INTRA_WORD_PUNCTUATION = /['’‘`´.!?¡¿*"“”]/g
  * the route boundary: a cap that exists on one side alone makes a legitimately
  * stored row permanently unreachable at its own URL.
  */
-export const ARTIST_SLUG_MAX_LENGTH = 120
+export const ARTIST_SLUG_MAX_LENGTH = 120;
 
 /**
  * Derives a URL-safe slug from an already-canonical artist name.
@@ -50,7 +50,7 @@ export const ARTIST_SLUG_MAX_LENGTH = 120
  */
 export const artistSlug = (canonicalName: string): string => {
   if (typeof canonicalName !== 'string' || canonicalName.length === 0) {
-    return ''
+    return '';
   }
 
   return (
@@ -62,8 +62,8 @@ export const artistSlug = (canonicalName: string): string => {
       // Trim after the slice too: cutting mid-separator would otherwise leave a
       // trailing hyphen.
       .replace(/^-+|-+$/g, '')
-  )
-}
+  );
+};
 
 /**
  * Small, stable, non-cryptographic hash (FNV-1a, 32-bit) rendered base-36.
@@ -72,16 +72,16 @@ export const artistSlug = (canonicalName: string): string => {
  * slug for the same canonical name, or the row's URL churns.
  */
 const stableHash = (input: string): string => {
-  let hash = 0x811c9dc5
+  let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193) >>> 0
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return hash.toString(36)
-}
+  return hash.toString(36);
+};
 
 /** Prefix for hashed fallback slugs, so they read as intentional in a URL. */
-export const ARTIST_SLUG_FALLBACK_PREFIX = 'artist'
+export const ARTIST_SLUG_FALLBACK_PREFIX = 'artist';
 
 /**
  * Resolves a slug candidate against the set of slugs already taken.
@@ -101,20 +101,20 @@ export const resolveSlug = (
   const base =
     candidate === ''
       ? `${ARTIST_SLUG_FALLBACK_PREFIX}-${stableHash(canonicalName)}`
-      : candidate
+      : candidate;
 
   if (!taken.has(base)) {
-    return base
+    return base;
   }
 
-  let suffix = 2
+  let suffix = 2;
   // Room for the de-collision suffix has to come out of the base, or a
   // maximum-length slug would grow past the bound the routes accept.
   const withSuffix = (nth: number): string =>
-    `${base.slice(0, ARTIST_SLUG_MAX_LENGTH - `-${nth}`.length).replace(/-+$/, '')}-${nth}`
+    `${base.slice(0, ARTIST_SLUG_MAX_LENGTH - `-${nth}`.length).replace(/-+$/, '')}-${nth}`;
 
   while (taken.has(withSuffix(suffix))) {
-    suffix++
+    suffix++;
   }
-  return withSuffix(suffix)
-}
+  return withSuffix(suffix);
+};

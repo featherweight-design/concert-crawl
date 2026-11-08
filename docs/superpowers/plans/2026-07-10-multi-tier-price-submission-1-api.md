@@ -57,45 +57,45 @@ Every task's requirements implicitly include all of these:
 Create `apps/api/src/routes/price-submissions-batch.integration.test.ts`:
 
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { eq } from 'drizzle-orm'
-import { priceSubmissions } from '@concert-crawl/db'
-import { createApp } from '../app.js'
-import { testDb } from '../test/helpers/db.js'
+import { eq } from 'drizzle-orm';
+import { priceSubmissions } from '@concert-crawl/db';
+import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
   seedEvent,
   seedVenue,
   seedPriceSubmission,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(userId = 'user_abc123'): void {
   authState.current = {
     userId,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 // The API accepts any HowFound value regardless of vendor — 'at_the_venue'
@@ -109,20 +109,20 @@ const BATCH_BODY = {
     { tier: 'GA', priceMin: 45 },
     { tier: 'VIP', priceMin: 120, priceMax: 150 },
   ],
-}
+};
 
-type RowError = { index: number; tier: string | null; error: string }
+type RowError = { index: number; tier: string | null; error: string };
 
 describe('POST /v1/events/:id/price-submissions/batch', () => {
-  let eventId: string
+  let eventId: string;
 
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    eventId = event.id
-  })
+    clearAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    eventId = event.id;
+  });
 
   const postBatch = (body: unknown) =>
     app.request(`/v1/events/${eventId}/price-submissions/batch`, {
@@ -132,76 +132,76 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(body),
-    })
+    });
 
   it('returns 401 without auth', async () => {
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(401)
-  })
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(401);
+  });
 
   it('creates two pending rows for a 2-tier batch (happy path)', async () => {
-    setAuth()
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(201)
+    setAuth();
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: Array<{
-        id: string
-        status: string
-        tier: string
-        priceMin: string
-        priceMax: string | null
-        vendor: string
-        howFound: string
-        sourceCategory: string | null
-        corroborationCount: number
-        disputedSubmissionId: string | null
-      }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
-    const gaRow = body.data.find((row) => row.tier === 'GA')
-    const vipRow = body.data.find((row) => row.tier === 'VIP')
-    expect(gaRow).toBeDefined()
-    expect(vipRow).toBeDefined()
-    expect(parseFloat(gaRow!.priceMin)).toBe(45)
-    expect(gaRow!.priceMax).toBeNull()
-    expect(parseFloat(vipRow!.priceMin)).toBe(120)
-    expect(parseFloat(vipRow!.priceMax!)).toBe(150)
+        id: string;
+        status: string;
+        tier: string;
+        priceMin: string;
+        priceMax: string | null;
+        vendor: string;
+        howFound: string;
+        sourceCategory: string | null;
+        corroborationCount: number;
+        disputedSubmissionId: string | null;
+      }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
+    const gaRow = body.data.find((row) => row.tier === 'GA');
+    const vipRow = body.data.find((row) => row.tier === 'VIP');
+    expect(gaRow).toBeDefined();
+    expect(vipRow).toBeDefined();
+    expect(parseFloat(gaRow!.priceMin)).toBe(45);
+    expect(gaRow!.priceMax).toBeNull();
+    expect(parseFloat(vipRow!.priceMin)).toBe(120);
+    expect(parseFloat(vipRow!.priceMax!)).toBe(150);
     for (const row of body.data) {
-      expect(row.status).toBe('pending')
-      expect(row.vendor).toBe('VenueBoxOffice')
-      expect(row.howFound).toBe('at_the_venue')
-      expect(row.sourceCategory).toBe('boxoffice')
+      expect(row.status).toBe('pending');
+      expect(row.vendor).toBe('VenueBoxOffice');
+      expect(row.howFound).toBe('at_the_venue');
+      expect(row.sourceCategory).toBe('boxoffice');
       // Submitter counts as observation #1 (1/2 confirmation model)
-      expect(row.corroborationCount).toBe(1)
-      expect(row.disputedSubmissionId).toBeNull()
+      expect(row.corroborationCount).toBe(1);
+      expect(row.disputedSubmissionId).toBeNull();
     }
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(2)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(2);
+  });
 
   it('accepts a single-tier batch (N=1) identically to the single endpoint insert', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'GA', priceMin: 45 }],
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      data: Array<{ tier: string; status: string; corroborationCount: number }>
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]!.tier).toBe('GA')
-    expect(body.data[0]!.status).toBe('pending')
-    expect(body.data[0]!.corroborationCount).toBe(1)
-  })
+      data: Array<{ tier: string; status: string; corroborationCount: number }>;
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]!.tier).toBe('GA');
+    expect(body.data[0]!.status).toBe('pending');
+    expect(body.data[0]!.corroborationCount).toBe(1);
+  });
 
   it('derives sourceCategory from (vendor, howFound) when omitted, on every row', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       vendor: 'VenueBoxOffice',
       howFound: 'at_the_venue',
@@ -209,80 +209,80 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         { tier: 'GA', priceMin: 30 },
         { tier: 'Pit', priceMin: 60 },
       ],
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      data: Array<{ sourceCategory: string | null }>
-    }
+      data: Array<{ sourceCategory: string | null }>;
+    };
     for (const row of body.data) {
-      expect(row.sourceCategory).toBe('boxoffice')
+      expect(row.sourceCategory).toBe('boxoffice');
     }
-  })
+  });
 
   it('rejects an empty tiers array with 422', async () => {
-    setAuth()
-    const res = await postBatch({ ...BATCH_BODY, tiers: [] })
-    expect(res.status).toBe(422)
-  })
+    setAuth();
+    const res = await postBatch({ ...BATCH_BODY, tiers: [] });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects more than 10 tier rows with 422', async () => {
-    setAuth()
+    setAuth();
     const elevenRows = Array.from({ length: 11 }, () => ({
       tier: 'GA',
       priceMin: 45,
-    }))
-    const res = await postBatch({ ...BATCH_BODY, tiers: elevenRows })
-    expect(res.status).toBe(422)
-  })
+    }));
+    const res = await postBatch({ ...BATCH_BODY, tiers: elevenRows });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects duplicate tiers within the request with 422, before any insert', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [
         { tier: 'GA', priceMin: 45 },
         { tier: 'GA', priceMin: 50 },
       ],
-    })
-    expect(res.status).toBe(422)
+    });
+    expect(res.status).toBe(422);
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(0)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(0);
+  });
 
   it('returns a per-row indexed error when one row price is out of range, inserts zero rows', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [
         { tier: 'GA', priceMin: 45 },
         { tier: 'VIP', priceMin: 5000 },
       ],
-    })
-    expect(res.status).toBe(422)
-    const body = (await res.json()) as { success: boolean; errors: RowError[] }
-    expect(body.success).toBe(false)
-    expect(body.errors.some((rowError) => rowError.index === 1)).toBe(true)
+    });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { success: boolean; errors: RowError[] };
+    expect(body.success).toBe(false);
+    expect(body.errors.some((rowError) => rowError.index === 1)).toBe(true);
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(0)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(0);
+  });
 
   it('rejects disputedSubmissionId in the batch body with 422', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       disputedSubmissionId: '2b3f8a10-0000-4000-8000-000000000000',
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('returns 404 for an unknown event', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request(
       `/v1/events/2b3f8a10-0000-4000-8000-000000000000/price-submissions/batch`,
       {
@@ -293,10 +293,10 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         },
         body: JSON.stringify(BATCH_BODY),
       },
-    )
-    expect(res.status).toBe(404)
-  })
-})
+    );
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 Note: `seedPriceSubmission` is imported now but first used in Task 2 — if ESLint flags it as unused at this step, defer the import to Task 2 Step 1.
@@ -324,7 +324,7 @@ const batchTierRowSchema = z
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
     path: ['priceMax'],
-  })
+  });
 
 const batchBodySchema = z
   .object({
@@ -346,7 +346,7 @@ const batchBodySchema = z
     (data) =>
       new Set(data.tiers.map((row) => row.tier)).size === data.tiers.length,
     { message: 'Tiers must be unique within a batch.', path: ['tiers'] },
-  )
+  );
 ```
 
 `.strict()` is what rejects `disputedSubmissionId` (and any other stray key) with 422 — the single-POST schema is non-strict, but the batch contract explicitly excludes counters, so unknown keys failing loudly is the spec behavior.
@@ -369,10 +369,10 @@ priceSubmissionsRouter.post(
       // Issues outside tiers[<n>] (bundle-level fields, uniqueness refine)
       // stay in `details` only.
       const rowErrors = result.error.issues.flatMap((issue) => {
-        const [rootKey, rowIndex] = issue.path
-        if (rootKey !== 'tiers' || typeof rowIndex !== 'number') return []
-        return [{ index: rowIndex, tier: null, error: issue.message }]
-      })
+        const [rootKey, rowIndex] = issue.path;
+        if (rootKey !== 'tiers' || typeof rowIndex !== 'number') return [];
+        return [{ index: rowIndex, tier: null, error: issue.message }];
+      });
       return ctx.json(
         {
           success: false,
@@ -381,26 +381,26 @@ priceSubmissionsRouter.post(
           details: result.error.flatten(),
         },
         422,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { id: eventId } = ctx.req.param()
-    const { userId } = getAuthUser(ctx)
-    const body = ctx.req.valid('json')
+    const { id: eventId } = ctx.req.param();
+    const { userId } = getAuthUser(ctx);
+    const body = ctx.req.valid('json');
 
     const [event] = await db
       .select({ id: events.id })
       .from(events)
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-      .limit(1)
+      .limit(1);
     if (!event)
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
 
     // Shared bundle-level derivation — identical for every row, mirroring
     // the single POST's expand-phase fallback.
     const sourceCategory =
-      body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound)
+      body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound);
 
     // Atomicity: a single multi-row INSERT is one implicit transaction —
     // all rows land or none do (spec §2 "one request, one atomic insert").
@@ -425,11 +425,11 @@ priceSubmissionsRouter.post(
           disputedSubmissionId: null,
         })),
       )
-      .returning()
+      .returning();
 
-    return ctx.json({ success: true, data: created }, 201)
+    return ctx.json({ success: true, data: created }, 201);
   },
-)
+);
 ```
 
 Also add a deprecation pointer on the existing single POST — immediately above line 132's comment (`// POST /v1/events/:id/price-submissions — authenticated users submit price data`), extend it:
@@ -479,73 +479,73 @@ Append inside the existing `describe` block of `price-submissions-batch.integrat
 
 ```typescript
 it('returns 422 {index, tier, already_submitted} when a tier is already pending, inserts zero rows (atomic)', async () => {
-  setAuth()
+  setAuth();
   // Pending GA row by this user, older than the 24h rate-limit window so
   // only the per-tier duplicate check fires (not the rate limit).
-  const staleCreatedAt = new Date(Date.now() - 48 * 60 * 60 * 1000)
+  const staleCreatedAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
   await seedPriceSubmission(eventId, {
     userId: 'user_abc123',
     tier: 'GA',
     status: 'pending',
     createdAt: staleCreatedAt,
-  })
-  const res = await postBatch(BATCH_BODY) // tiers: GA (index 0) + VIP (index 1)
-  expect(res.status).toBe(422)
-  const body = (await res.json()) as { success: boolean; errors: RowError[] }
-  expect(body.success).toBe(false)
+  });
+  const res = await postBatch(BATCH_BODY); // tiers: GA (index 0) + VIP (index 1)
+  expect(res.status).toBe(422);
+  const body = (await res.json()) as { success: boolean; errors: RowError[] };
+  expect(body.success).toBe(false);
   expect(body.errors).toEqual([
     { index: 0, tier: 'GA', error: 'already_submitted' },
-  ])
+  ]);
   // Atomicity: the valid VIP row must NOT have been inserted.
   const dbRows = await testDb
     .select()
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.eventId, eventId))
-  expect(dbRows).toHaveLength(1) // only the seeded GA row
-})
+    .where(eq(priceSubmissions.eventId, eventId));
+  expect(dbRows).toHaveLength(1); // only the seeded GA row
+});
 
 it('rejects a bundle whose note fails moderation, inserts zero rows', async () => {
-  setAuth()
+  setAuth();
   const res = await postBatch({
     ...BATCH_BODY,
     note: 'buy cheap tickets at https://scam.example',
-  })
-  expect(res.status).toBe(422)
+  });
+  expect(res.status).toBe(422);
   const dbRows = await testDb
     .select()
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.eventId, eventId))
-  expect(dbRows).toHaveLength(0)
-})
+    .where(eq(priceSubmissions.eventId, eventId));
+  expect(dbRows).toHaveLength(0);
+});
 
 it('blocks the batch as a unit when the rate-limit window is active', async () => {
-  setAuth()
+  setAuth();
   // Recent submission (any tier/status) inside the 24h window.
   await seedPriceSubmission(eventId, {
     userId: 'user_abc123',
     tier: 'Lawn',
     status: 'corroborated',
     createdAt: new Date(),
-  })
-  const res = await postBatch(BATCH_BODY)
-  expect(res.status).toBe(429)
+  });
+  const res = await postBatch(BATCH_BODY);
+  expect(res.status).toBe(429);
   const dbRows = await testDb
     .select()
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.eventId, eventId))
-  expect(dbRows).toHaveLength(1)
-})
+    .where(eq(priceSubmissions.eventId, eventId));
+  expect(dbRows).toHaveLength(1);
+});
 
 it('successful batch starts the rate-limit window — an immediate second batch is blocked', async () => {
-  setAuth()
-  const first = await postBatch(BATCH_BODY)
-  expect(first.status).toBe(201)
+  setAuth();
+  const first = await postBatch(BATCH_BODY);
+  expect(first.status).toBe(201);
   const second = await postBatch({
     ...BATCH_BODY,
     tiers: [{ tier: 'Reserved', priceMin: 80 }],
-  })
-  expect(second.status).toBe(429)
-})
+  });
+  expect(second.status).toBe(429);
+});
 ```
 
 Check `apps/api/src/test/helpers/seed.ts` for `seedPriceSubmission`'s exact signature before writing — it takes `(eventId, overrides)` where overrides is `Partial<typeof priceSubmissions.$inferInsert>`. If `moderateNote` in `apps/api/src/lib/moderate-note.ts` uses a different trigger than URLs, read that file and adjust the moderation test's note string to one that its rules reject (the existing single-endpoint suite has a moderation test to copy the rejected string from).
@@ -563,12 +563,12 @@ In the batch handler from Task 1, insert between the event 404 check and the `so
 // Content moderation for the bundle-level note — moderated once, exactly
 // like the single POST (spec §2: note is shared across all rows).
 if (body.note) {
-  const modResult = moderateNote(body.note)
+  const modResult = moderateNote(body.note);
   if (!modResult.ok) {
     return ctx.json(
       { success: false, error: modResult.reason ?? 'Note rejected.' },
       422,
-    )
+    );
   }
 }
 
@@ -585,21 +585,21 @@ const pendingRows = await db
       eq(priceSubmissions.userId, userId),
       eq(priceSubmissions.status, 'pending'),
     ),
-  )
-const pendingTiers = new Set(pendingRows.map((row) => row.tier))
+  );
+const pendingTiers = new Set(pendingRows.map((row) => row.tier));
 const duplicateErrors = body.tiers.flatMap((row, rowIndex) =>
   pendingTiers.has(row.tier)
     ? [{ index: rowIndex, tier: row.tier, error: 'already_submitted' }]
     : [],
-)
+);
 if (duplicateErrors.length > 0) {
-  return ctx.json({ success: false, errors: duplicateErrors }, 422)
+  return ctx.json({ success: false, errors: duplicateErrors }, 422);
 }
 
 // 429 — the batch is ONE rate-limit hit (one act of contribution). Same
 // window query as the single POST; a batch inside the window is blocked
 // as a unit, and a successful batch starts the window.
-const cutoff = new Date(Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000)
+const cutoff = new Date(Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000);
 const recent = await db
   .select({ id: priceSubmissions.id })
   .from(priceSubmissions)
@@ -610,12 +610,12 @@ const recent = await db
       gt(priceSubmissions.createdAt, cutoff),
     ),
   )
-  .limit(1)
+  .limit(1);
 if (recent.length > 0) {
   return ctx.json(
     { success: false, error: 'Rate limit: 1 submission per 24h' },
     429,
-  )
+  );
 }
 ```
 

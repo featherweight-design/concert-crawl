@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import type { Release } from '@/lib/definitions/releases'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import type { Release } from '@/lib/definitions/releases';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 interface FeatureDropPillProps {
-  release: Release
-  onOpen: () => void
-  onDismiss?: () => void
-  variant?: 'desktop' | 'mobile'
+  release: Release;
+  onOpen: () => void;
+  onDismiss?: () => void;
+  variant?: 'desktop' | 'mobile';
 }
 
 export function FeatureDropPill({
@@ -18,10 +18,10 @@ export function FeatureDropPill({
   onDismiss,
   variant = 'desktop',
 }: FeatureDropPillProps) {
-  const sp = release.spotlight
-  if (!sp) return null
+  const sp = release.spotlight;
+  if (!sp) return null;
 
-  const isMobile = variant === 'mobile'
+  const isMobile = variant === 'mobile';
 
   return (
     <div
@@ -156,5 +156,5 @@ export function FeatureDropPill({
         </button>
       )}
     </div>
-  )
+  );
 }

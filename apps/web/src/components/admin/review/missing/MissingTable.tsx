@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { AlertTriangle, Check } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { StatusBadge } from '@/components/admin/primitives'
-import { MissingRow, type MissingRowEvent } from './MissingRow'
+import { AlertTriangle, Check } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { StatusBadge } from '@/components/admin/primitives';
+import { MissingRow, type MissingRowEvent } from './MissingRow';
 
 export interface MissingTableProps {
-  events: MissingRowEvent[]
-  nowIso: string
-  onMarkPostponed: (id: string) => void
-  onMarkCancelled: (id: string) => void
-  onDismiss: (id: string) => void
-  onConfirmMove: (event: MissingRowEvent) => void
-  pendingIds: ReadonlySet<string>
+  events: MissingRowEvent[];
+  nowIso: string;
+  onMarkPostponed: (id: string) => void;
+  onMarkCancelled: (id: string) => void;
+  onDismiss: (id: string) => void;
+  onConfirmMove: (event: MissingRowEvent) => void;
+  pendingIds: ReadonlySet<string>;
   // Server-side total used for the header badge so paging doesn't shrink
   // the count to the current page size (#710). Optional for legacy callers
   // that don't paginate; when omitted (or passed explicitly as undefined,
   // which is how MissingTabContent threads through its own optional prop)
   // we fall back to events.length.
-  total?: number | undefined
+  total?: number | undefined;
 }
 
 export const MissingTable = ({
@@ -31,7 +31,7 @@ export const MissingTable = ({
   pendingIds,
   total,
 }: MissingTableProps) => {
-  const flaggedTotal = total ?? events.length
+  const flaggedTotal = total ?? events.length;
   const headerBar = (
     <div
       style={{
@@ -64,7 +64,7 @@ export const MissingTable = ({
         )}
       </div>
     </div>
-  )
+  );
 
   // Gate the "all accounted for" empty state on the server total, not the
   // current page's row count. With pagination, a deep-link to a page past
@@ -131,7 +131,7 @@ export const MissingTable = ({
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -183,5 +183,5 @@ export const MissingTable = ({
         />
       ))}
     </div>
-  )
-}
+  );
+};

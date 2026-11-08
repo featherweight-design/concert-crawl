@@ -4,34 +4,34 @@
  * Returns eight lowercase hex characters, zero-padded.
  */
 export const hashStr = (input: string): string => {
-  let hash = 0x811c9dc5 >>> 0
+  let hash = 0x811c9dc5 >>> 0;
   for (let i = 0; i < input.length; i++) {
-    hash = (hash ^ input.charCodeAt(i)) >>> 0
-    hash = Math.imul(hash, 0x01000193) >>> 0
+    hash = (hash ^ input.charCodeAt(i)) >>> 0;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return ('0000000' + hash.toString(16)).slice(-8)
-}
+  return ('0000000' + hash.toString(16)).slice(-8);
+};
 
 export interface MintEvent {
-  id: string
-  state: string
+  id: string;
+  state: string;
 }
 
 export interface MintUser {
-  id: string
+  id: string;
   /** Public handle, or `null`/absent for an anonymous caller. */
-  handle?: string | null
+  handle?: string | null;
 }
 
 export interface MintMeta {
   /** Zero-padded to 4. Metadata only — never drawn on the card (README §3). */
-  serial: string
+  serial: string;
   /** `null` for an anonymous caller. */
-  by: string | null
+  by: string | null;
   /** ISO-8601. Metadata only — never drawn on the card (README §3). */
-  mintedAt: string
+  mintedAt: string;
   /** Eight uppercase hex characters. Stable for stable inputs. */
-  contentHash: string
+  contentHash: string;
 }
 
 /**
@@ -48,7 +48,7 @@ export const mintMeta = (
   by: user.handle ?? null,
   mintedAt: new Date().toISOString(),
   contentHash: hashStr(`${event.id}:${user.id}:${event.state}`).toUpperCase(),
-})
+});
 
 /**
  * Fingerprint of everything actually drawn on the card.
@@ -65,7 +65,7 @@ export const mintMeta = (
  * collide and two visibly different cards would share a cache entry.
  */
 export const posterFingerprint = (fields: Array<string | null>): string =>
-  hashStr(JSON.stringify(fields))
+  hashStr(JSON.stringify(fields));
 
 /**
  * Cache key for a rendered share image. Deliberately excludes `serial` and
@@ -76,4 +76,4 @@ export const shareCacheKey = (
   eventId: string,
   userId: string,
   contentHash: string,
-): string => `share:${eventId}:${userId}:${contentHash}`
+): string => `share:${eventId}:${userId}:${contentHash}`;

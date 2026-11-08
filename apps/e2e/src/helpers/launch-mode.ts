@@ -6,4 +6,4 @@
  * deployment. See #794.
  */
 export const PUBLIC_BROWSE_ENABLED =
-  process.env['NEXT_PUBLIC_PUBLIC_BROWSE'] === 'true'
+  process.env['NEXT_PUBLIC_PUBLIC_BROWSE'] === 'true';

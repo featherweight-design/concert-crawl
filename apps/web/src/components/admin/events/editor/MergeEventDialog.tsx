@@ -1,29 +1,29 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { ApiError, apiClient } from '@/lib/api'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { ApiError, apiClient } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives';
 
-const COPY = ADMIN_COPY.editor.mergeDialog
+const COPY = ADMIN_COPY.editor.mergeDialog;
 
 interface SearchHit {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  venueName: string | null;
 }
 
 export interface MergeEventDialogProps {
-  sourceId: string
-  sourceTitle: string
-  onCancel: () => void
-  onMerged: (targetId: string) => void
+  sourceId: string;
+  sourceTitle: string;
+  onCancel: () => void;
+  onMerged: (targetId: string) => void;
 }
 
-const SEARCH_DEBOUNCE_MS = 220
+const SEARCH_DEBOUNCE_MS = 220;
 
 export const MergeEventDialog = ({
   sourceId,
@@ -31,73 +31,73 @@ export const MergeEventDialog = ({
   onCancel,
   onMerged,
 }: MergeEventDialogProps) => {
-  const { getToken } = useAuth()
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchHit[]>([])
-  const [searching, setSearching] = useState(false)
-  const [target, setTarget] = useState<SearchHit | null>(null)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { getToken } = useAuth();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [target, setTarget] = useState<SearchHit | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // A generation counter so a slow search response can't overwrite the
   // results of a newer query.
-  const generationRef = useRef(0)
+  const generationRef = useRef(0);
 
   useEffect(() => {
-    const trimmed = query.trim()
+    const trimmed = query.trim();
     if (trimmed.length < 2 || target) {
-      setResults([])
-      setSearching(false)
-      return
+      setResults([]);
+      setSearching(false);
+      return;
     }
-    setSearching(true)
-    generationRef.current += 1
-    const myGen = generationRef.current
+    setSearching(true);
+    generationRef.current += 1;
+    const myGen = generationRef.current;
     const handle = window.setTimeout(() => {
       void (async () => {
         try {
-          const token = await getToken()
-          if (!token || myGen !== generationRef.current) return
+          const token = await getToken();
+          if (!token || myGen !== generationRef.current) return;
           // `dateFrom=1970-01-01` overrides the list endpoint's "today"
           // default so historical duplicates are findable too — merging an
           // old reposted show into its canonical entry is the common case.
           const rows = await apiClient.get<SearchHit[]>(
             `/v1/admin/events?query=${encodeURIComponent(trimmed)}&dateFrom=1970-01-01&limit=10&offset=0`,
             token,
-          )
-          if (myGen !== generationRef.current) return
-          setResults(rows)
+          );
+          if (myGen !== generationRef.current) return;
+          setResults(rows);
         } catch (searchErr) {
-          if (myGen !== generationRef.current) return
-          console.error('MergeEventDialog search error:', searchErr)
-          setResults([])
+          if (myGen !== generationRef.current) return;
+          console.error('MergeEventDialog search error:', searchErr);
+          setResults([]);
         } finally {
-          if (myGen === generationRef.current) setSearching(false)
+          if (myGen === generationRef.current) setSearching(false);
         }
-      })()
-    }, SEARCH_DEBOUNCE_MS)
-    return () => window.clearTimeout(handle)
-  }, [query, getToken, target])
+      })();
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [query, getToken, target]);
 
   const onConfirm = async () => {
-    if (!target || pending) return
-    setPending(true)
-    setError(null)
+    if (!target || pending) return;
+    setPending(true);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       await apiClient.post(`/v1/admin/events/${sourceId}/merge`, token, {
         targetId: target.id,
-      })
-      onMerged(target.id)
+      });
+      onMerged(target.id);
     } catch (mergeErr) {
       const message =
-        mergeErr instanceof ApiError ? mergeErr.message : COPY.mergeFailed
-      console.error('MergeEventDialog merge error:', mergeErr)
-      setError(message)
+        mergeErr instanceof ApiError ? mergeErr.message : COPY.mergeFailed;
+      console.error('MergeEventDialog merge error:', mergeErr);
+      setError(message);
     } finally {
-      setPending(false)
+      setPending(false);
     }
-  }
+  };
 
   // Hook rather than AdminDialog: this is a search-and-pick flow, not a
   // confirmation. It has a debounced query field, a result list and a
@@ -105,8 +105,8 @@ export const MergeEventDialog = ({
   // would mean growing AdminDialog a body it only ever uses once. Escape is
   // gated on `pending` for the same reason the scrim is: mid-merge the work
   // has already been committed.
-  const panelRef = useRef<HTMLDivElement>(null)
-  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending })
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panelRef, onCancel, { dismissible: !pending });
 
   return (
     <div
@@ -125,8 +125,8 @@ export const MergeEventDialog = ({
         padding: 24,
       }}
       onClick={(evt) => {
-        if (pending) return
-        if (evt.target === evt.currentTarget) onCancel()
+        if (pending) return;
+        if (evt.target === evt.currentTarget) onCancel();
       }}
     >
       <div
@@ -245,7 +245,7 @@ export const MergeEventDialog = ({
               }}
             >
               {results.map((hit) => {
-                const isSelf = hit.id === sourceId
+                const isSelf = hit.id === sourceId;
                 return (
                   <li key={hit.id}>
                     <button
@@ -290,7 +290,7 @@ export const MergeEventDialog = ({
                       )}
                     </button>
                   </li>
-                )
+                );
               })}
             </ul>
           </div>
@@ -386,5 +386,5 @@ export const MergeEventDialog = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -1,11 +1,11 @@
 // Tier data — prices and names are data (locked in design brief #781),
 // customer-facing prose comes from copy.ts.
 
-import type { DeclineCategory, PlanState } from '@concert-crawl/types'
-import { TIER_PICKER_COPY } from './copy'
-import type { TierDefinition, TierKey } from './types'
+import type { DeclineCategory, PlanState } from '@concert-crawl/types';
+import { TIER_PICKER_COPY } from './copy';
+import type { TierDefinition, TierKey } from './types';
 
-const TIERS_COPY = TIER_PICKER_COPY.tiers
+const TIERS_COPY = TIER_PICKER_COPY.tiers;
 
 // The picker needs a full PlanState, but logged-out viewers (and the
 // fail-closed fetch-error case) have none. Mirrors derivePlanState's logged-out
@@ -19,14 +19,14 @@ export const LOGGED_OUT_PLAN_STATE: PlanState = {
   cancelAtPeriodEnd: false,
   currentPeriodEnd: null,
   roleComped: false,
-}
+};
 
 export const TIER_ORDER: readonly TierKey[] = [
   'free',
   'supporter',
   'premium',
   'founder',
-]
+];
 
 export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
   free: {
@@ -75,34 +75,34 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
     // rather than duplicates (#782 handoff, locked wording).
     pricePromise: TIER_PICKER_COPY.card.pricePromise.founder,
   },
-}
+};
 
 // URL affordance for auto-opening the tier picker on the Settings · Plan
 // surface (`/me?plan=open`) — used by the lifecycle takeover / day-13
 // banner routing (PR 4.2) and stripped after firing.
-export const PLAN_OPEN_PARAM = 'plan'
-export const PLAN_OPEN_VALUE = 'open'
-export const PLAN_SETTINGS_ROUTE = `/me?${PLAN_OPEN_PARAM}=${PLAN_OPEN_VALUE}`
+export const PLAN_OPEN_PARAM = 'plan';
+export const PLAN_OPEN_VALUE = 'open';
+export const PLAN_SETTINGS_ROUTE = `/me?${PLAN_OPEN_PARAM}=${PLAN_OPEN_VALUE}`;
 
 // Full-bleed takeover surfaces sit above all app chrome: app bar/bottom
 // nav z-40, feature-drop pill z-80, ModalShell scrim/dialog 90/100.
-export const FULL_BLEED_TAKEOVER_Z_INDEX = 110
+export const FULL_BLEED_TAKEOVER_Z_INDEX = 110;
 
 // Founder seat count fallback when the founder-window payload is
 // unavailable at claim time (eng infra spec Part 2 §1.4 default).
-export const FOUNDER_SEATS_TOTAL_FALLBACK = 100
+export const FOUNDER_SEATS_TOTAL_FALLBACK = 100;
 
 // ── Failure surfaces (design table failure-surfaces.md, PR 4.4) ──────────
 
 export interface FailureSurfaceBehavior {
   /** Payment element visible in the failure body (false → card-kept note). */
-  freshCard: boolean
+  freshCard: boolean;
   /** Payment element re-renders empty (React key bump) on surface entry. */
-  freshEmpty: boolean
+  freshEmpty: boolean;
   /** "Use a different card" secondary CTA renders. */
-  hasSecondary: boolean
+  hasSecondary: boolean;
   /** Note line tone: 'polite' gets aria-live, 'muted' gets none. */
-  noteTone: 'muted' | 'polite' | null
+  noteTone: 'muted' | 'polite' | null;
 }
 
 // State-coverage matrix, verbatim from the design table:
@@ -142,13 +142,13 @@ export const FAILURE_SURFACE_BEHAVIOR: Record<
     hasSecondary: false,
     noteTone: 'polite',
   },
-}
+};
 
 // Desktop modal widths per surface (design table: 520 failure, 500
 // challenge; checkout keeps its existing 560).
-export const FAILURE_DESKTOP_WIDTH = 520
-export const CHALLENGE_DESKTOP_WIDTH = 500
+export const FAILURE_DESKTOP_WIDTH = 520;
+export const CHALLENGE_DESKTOP_WIDTH = 500;
 
 // How often to check the PaymentIntent for `requires_action` while
 // confirmPayment is in flight (3DS/SCA challenge detection).
-export const REQUIRES_ACTION_POLL_MS = 1200
+export const REQUIRES_ACTION_POLL_MS = 1200;

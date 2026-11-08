@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The "I'm going!" commitment CTA (#70), from
 // design_handoff_concert_history/going-cta.jsx:77-182.
@@ -10,10 +10,10 @@
 // `past-yes` / `past-no` are read-only displays, not affordances: the
 // retroactive "I went, actually" toggle is out of scope for v1.
 
-import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
-import { GOING_COPY } from './definitions/copy'
-import { stampAccentFor, stampGlyphFor } from './lib/stamp'
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { GOING_COPY } from './definitions/copy';
+import { stampAccentFor, stampGlyphFor } from './lib/stamp';
 
 export type GoingButtonState =
   | 'default'
@@ -23,35 +23,35 @@ export type GoingButtonState =
   // Free or logged-out. Deliberately never disabled: a disabled control cannot
   // sell anything, and this one is the discovery surface for the perk.
   | 'locked'
-  | 'error'
-export type GoingButtonSize = 'sm' | 'md' | 'lg'
+  | 'error';
+export type GoingButtonSize = 'sm' | 'md' | 'lg';
 
 type GoingButtonProps = {
-  show: { eventId: string; artist: string; date: string }
-  state?: GoingButtonState
-  size?: GoingButtonSize
-  fullWidth?: boolean
-  pending?: boolean
-  onChange?: (going: boolean) => void
-}
+  show: { eventId: string; artist: string; date: string };
+  state?: GoingButtonState;
+  size?: GoingButtonSize;
+  fullWidth?: boolean;
+  pending?: boolean;
+  onChange?: (going: boolean) => void;
+};
 
 export const GOING_BUTTON_SIZES: Record<
   GoingButtonSize,
   {
-    height: number
-    padX: number
-    font: number
-    gap: number
-    hole: number
-    radius: number
+    height: number;
+    padX: number;
+    font: number;
+    gap: number;
+    hole: number;
+    radius: number;
   }
 > = {
   sm: { height: 36, padX: 12, font: 12, gap: 6, hole: 28, radius: 8 },
   md: { height: 44, padX: 16, font: 13.5, gap: 8, hole: 32, radius: 9 },
   lg: { height: 52, padX: 20, font: 15, gap: 10, hole: 38, radius: 10 },
-}
+};
 
-const MIN_TAP_TARGET = 44
+const MIN_TAP_TARGET = 44;
 
 // A plain YYYY-MM-DD is anchored at noon UTC before formatting — midnight would
 // slip to the previous day in any negative-offset zone and label the night the
@@ -62,7 +62,7 @@ const formatWentDate = (date: string): string =>
     day: 'numeric',
     year: 'numeric',
     timeZone: 'America/Denver',
-  }).format(new Date(`${date}T12:00:00Z`))
+  }).format(new Date(`${date}T12:00:00Z`));
 
 const LockIcon = ({ size }: { size: number }) => (
   <svg
@@ -89,7 +89,7 @@ const LockIcon = ({ size }: { size: number }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const AlertIcon = ({ size }: { size: number }) => (
   <svg
@@ -109,7 +109,7 @@ const AlertIcon = ({ size }: { size: number }) => (
     />
     <circle cx="12" cy="16.5" r="1.2" fill="currentColor" />
   </svg>
-)
+);
 
 const CheckIcon = ({ size }: { size: number }) => (
   <svg
@@ -128,7 +128,7 @@ const CheckIcon = ({ size }: { size: number }) => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 export const GoingButton = ({
   show,
@@ -138,36 +138,36 @@ export const GoingButton = ({
   pending = false,
   onChange,
 }: GoingButtonProps) => {
-  const sizes = GOING_BUTTON_SIZES[size]
-  const accent = stampAccentFor(show.artist)
-  const glyph = stampGlyphFor(show.artist)
+  const sizes = GOING_BUTTON_SIZES[size];
+  const accent = stampAccentFor(show.artist);
+  const glyph = stampGlyphFor(show.artist);
 
-  const isPast = state === 'past-yes' || state === 'past-no'
-  const isOn = state === 'going' || state === 'past-yes'
-  const isDeclined = state === 'past-no'
-  const disabled = isPast || pending
+  const isPast = state === 'past-yes' || state === 'past-no';
+  const isOn = state === 'going' || state === 'past-yes';
+  const isDeclined = state === 'past-no';
+  const disabled = isPast || pending;
 
-  const [announcement, setAnnouncement] = useState('')
-  const previousState = useRef(state)
+  const [announcement, setAnnouncement] = useState('');
+  const previousState = useRef(state);
 
   // Only a real transition announces — mounting into `going` (a page load for a
   // show you already committed to) is not a state change the user just made.
   useEffect(() => {
-    const was = previousState.current
-    previousState.current = state
-    if (was === state) return
-    if (state === 'going') setAnnouncement(GOING_COPY.button.stateChangeGoing)
+    const was = previousState.current;
+    previousState.current = state;
+    if (was === state) return;
+    if (state === 'going') setAnnouncement(GOING_COPY.button.stateChangeGoing);
     else if (was === 'going' && state === 'default') {
-      setAnnouncement(GOING_COPY.button.stateChangeReleased)
+      setAnnouncement(GOING_COPY.button.stateChangeReleased);
     }
-  }, [state])
+  }, [state]);
 
   // `locked` and `error` drop the ticket-stub interior and render as one
   // centred control. The stub is the shape of a night you committed to; neither
   // of these is that, and both keep the outer geometry so the row never jumps.
   if (state === 'locked' || state === 'error') {
-    const isLocked = state === 'locked'
-    const tone = isLocked ? 'var(--accent)' : 'var(--danger)'
+    const isLocked = state === 'locked';
+    const tone = isLocked ? 'var(--accent)' : 'var(--danger)';
     return (
       <button
         type="button"
@@ -212,7 +212,7 @@ export const GoingButton = ({
           {isLocked ? GOING_COPY.button.default : GOING_COPY.error.retry}
         </span>
       </button>
-    )
+    );
   }
 
   const label =
@@ -222,7 +222,7 @@ export const GoingButton = ({
         ? GOING_COPY.button.going
         : state === 'past-yes'
           ? GOING_COPY.button.pastYes(formatWentDate(show.date))
-          : GOING_COPY.button.pastNo
+          : GOING_COPY.button.pastNo;
 
   const buttonStyle: CSSProperties = {
     all: 'unset',
@@ -254,9 +254,9 @@ export const GoingButton = ({
       : 'none',
     transition:
       'background 160ms, border-color 160ms, color 160ms, opacity 150ms',
-  }
+  };
 
-  const tapPad = Math.max(0, (MIN_TAP_TARGET - sizes.height) / 2)
+  const tapPad = Math.max(0, (MIN_TAP_TARGET - sizes.height) / 2);
 
   return (
     <>
@@ -276,8 +276,8 @@ export const GoingButton = ({
               : undefined
         }
         onClick={() => {
-          if (disabled) return
-          onChange?.(!isOn)
+          if (disabled) return;
+          onChange?.(!isOn);
         }}
         style={buttonStyle}
       >
@@ -416,5 +416,5 @@ export const GoingButton = ({
         {announcement}
       </span>
     </>
-  )
-}
+  );
+};

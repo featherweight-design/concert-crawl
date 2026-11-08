@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useEffect, useState, type RefObject } from 'react'
+import { useEffect, useState, type RefObject } from 'react';
 
 /** The one breakpoint this page has, mirrored from the `.ap-*` media queries. */
-export const AP_DESKTOP_QUERY = '(min-width: 768px)'
+export const AP_DESKTOP_QUERY = '(min-width: 768px)';
 
 /**
  * Layout is CSS everywhere on this page EXCEPT the follow control, which must
@@ -20,19 +20,19 @@ export const AP_DESKTOP_QUERY = '(min-width: 768px)'
  * SSR; the flash is judged the cheaper cost.
  */
 export const useIsDesktop = (): boolean => {
-  const [isDesktop, setIsDesktop] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return
-    const query = window.matchMedia(AP_DESKTOP_QUERY)
-    const apply = () => setIsDesktop(query.matches)
-    apply()
-    query.addEventListener('change', apply)
-    return () => query.removeEventListener('change', apply)
-  }, [])
+    if (typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(AP_DESKTOP_QUERY);
+    const apply = () => setIsDesktop(query.matches);
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, []);
 
-  return isDesktop
-}
+  return isDesktop;
+};
 
 /**
  * The rendered height of `ref`, re-read whenever the element resizes.
@@ -50,24 +50,24 @@ export const useMeasuredHeight = (
   ref: RefObject<HTMLElement | null>,
   fallback: number,
 ): number => {
-  const [height, setHeight] = useState(fallback)
+  const [height, setHeight] = useState(fallback);
 
   useEffect(() => {
-    const node = ref.current
-    if (!node || typeof ResizeObserver !== 'function') return
-    const apply = () => setHeight(node.offsetHeight || fallback)
-    apply()
-    const observer = new ResizeObserver(apply)
-    observer.observe(node)
-    return () => observer.disconnect()
-  }, [ref, fallback])
+    const node = ref.current;
+    if (!node || typeof ResizeObserver !== 'function') return;
+    const apply = () => setHeight(node.offsetHeight || fallback);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [ref, fallback]);
 
-  return height
-}
+  return height;
+};
 
 /** True once the window has scrolled past `threshold` px. */
 export const useScrolledPast = (threshold: number): boolean => {
-  const [past, setPast] = useState(false)
+  const [past, setPast] = useState(false);
 
   useEffect(() => {
     // Scroll fires at frame rate; React would bail out on an unchanged boolean,
@@ -75,17 +75,17 @@ export const useScrolledPast = (threshold: number): boolean => {
     // long scroll costs one state write per threshold crossing, not per frame.
     // null, not false: a threshold change re-runs this effect while `past` may
     // already be true, and seeding with a guess would swallow the correction.
-    let current: boolean | null = null
+    let current: boolean | null = null;
     const apply = () => {
-      const next = window.scrollY > threshold
-      if (next === current) return
-      current = next
-      setPast(next)
-    }
-    apply()
-    window.addEventListener('scroll', apply, { passive: true })
-    return () => window.removeEventListener('scroll', apply)
-  }, [threshold])
+      const next = window.scrollY > threshold;
+      if (next === current) return;
+      current = next;
+      setPast(next);
+    };
+    apply();
+    window.addEventListener('scroll', apply, { passive: true });
+    return () => window.removeEventListener('scroll', apply);
+  }, [threshold]);
 
-  return past
-}
+  return past;
+};

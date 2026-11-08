@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
-import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
-import { LandingPosterAnimation } from '@/components/brand/landing-poster/LandingPosterAnimation'
-import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
-import { CCMark } from '@/components/brand/cc-mark'
-import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
-import { isPublicBrowseEnabled } from '@/lib/launch-mode'
-import { LANDING_COPY } from './definitions/copy'
+import { useState } from 'react';
+import Link from 'next/link';
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
+import { BetaPill } from '@/components/brand/beta-pill/BetaPill';
+import { LandingPosterAnimation } from '@/components/brand/landing-poster/LandingPosterAnimation';
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
+import { CCMark } from '@/components/brand/cc-mark';
+import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
+import { isPublicBrowseEnabled } from '@/lib/launch-mode';
+import { LANDING_COPY } from './definitions/copy';
 
 interface LandingClientShellProps {
-  shows: LandingShow[]
+  shows: LandingShow[];
   // Shows in the next seven days, from the `to`-bounded probe in page.tsx —
   // scoped to match the rail's "this week" wording rather than counting all
   // upcoming shows. Null when that probe failed and there is no honest
   // number to print.
-  showCount?: number | null
+  showCount?: number | null;
 }
 
 const PRIMARY_CTA_STYLE = {
@@ -37,7 +37,7 @@ const PRIMARY_CTA_STYLE = {
   letterSpacing: '-0.01em',
   boxShadow: '0 8px 24px -8px var(--signal)',
   whiteSpace: 'nowrap',
-} as const satisfies React.CSSProperties
+} as const satisfies React.CSSProperties;
 
 const SECONDARY_CTA_STYLE = {
   all: 'unset',
@@ -55,13 +55,13 @@ const SECONDARY_CTA_STYLE = {
   fontWeight: 600,
   fontSize: 15,
   whiteSpace: 'nowrap',
-} as const satisfies React.CSSProperties
+} as const satisfies React.CSSProperties;
 
 // `all: 'unset'` on the CTAs strips the browser's default focus ring along with
 // everything else, so every interactive element on this page restores one
 // explicitly. Matches the ring used across the consumer surfaces.
 const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
 
 const QUIET_LINK_STYLE = {
   fontSize: 13,
@@ -69,42 +69,42 @@ const QUIET_LINK_STYLE = {
   textDecoration: 'none',
   fontFamily: 'Inter, system-ui',
   fontWeight: 500,
-} as const satisfies React.CSSProperties
+} as const satisfies React.CSSProperties;
 
 export default function LandingClientShell({
   shows,
   showCount = null,
 }: LandingClientShellProps) {
-  const [waitlistOpen, setWaitlistOpen] = useState(false)
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   // Before launch the browse surfaces are gated, so every affordance that
   // points at one has to disappear with them — otherwise the landing page
   // advertises doors that redirect. See #794.
-  const launched = isPublicBrowseEnabled()
+  const launched = isPublicBrowseEnabled();
 
   // Poster tiles deep-link into /events/:id, which is gated before launch.
   const posterShows = launched
     ? shows
-    : shows.map(({ href: _href, ...rest }) => rest)
+    : shows.map(({ href: _href, ...rest }) => rest);
 
   // Looking around costs nothing, so browsing leads and signing up follows.
   const ctaBrowse = (
     <Link href="/events" className={FOCUS_RING} style={PRIMARY_CTA_STYLE}>
       {LANDING_COPY.cta.browse}
     </Link>
-  )
+  );
 
   const ctaSignUp = (
     <Link href="/sign-up" className={FOCUS_RING} style={SECONDARY_CTA_STYLE}>
       {LANDING_COPY.cta.signUp}
     </Link>
-  )
+  );
 
   const ctaCode = (
     <Link href="/auth/code" className={FOCUS_RING} style={PRIMARY_CTA_STYLE}>
       {LANDING_COPY.cta.code}
     </Link>
-  )
+  );
 
   const ctaWaitlist = (
     <button
@@ -114,7 +114,7 @@ export default function LandingClientShell({
     >
       {LANDING_COPY.cta.waitlist}
     </button>
-  )
+  );
 
   const noAccountNote = (
     <div
@@ -128,7 +128,7 @@ export default function LandingClientShell({
     >
       {LANDING_COPY.cta.noAccountNote}
     </div>
-  )
+  );
 
   const ctaBlock = launched ? (
     <>
@@ -148,7 +148,7 @@ export default function LandingClientShell({
         {LANDING_COPY.cta.signIn}
       </Link>
     </>
-  )
+  );
 
   const seeAll = launched ? (
     <Link
@@ -169,7 +169,7 @@ export default function LandingClientShell({
         ? LANDING_COPY.rail.seeAll
         : LANDING_COPY.rail.seeAllCounted(showCount)}
     </Link>
-  ) : null
+  ) : null;
 
   return (
     <div
@@ -304,5 +304,5 @@ export default function LandingClientShell({
         onClose={() => setWaitlistOpen(false)}
       />
     </div>
-  )
+  );
 }

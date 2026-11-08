@@ -1,44 +1,44 @@
-'use client'
+'use client';
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   getCachedEvents,
   getCachedVenues,
   type CachedEvent,
   type CachedVenue,
-} from '@/lib/pwa/cached-content'
-import { CachedShortcuts, CachedEmpty } from './CachedShortcuts'
-import { OFFLINE_COPY } from './definitions/copy'
+} from '@/lib/pwa/cached-content';
+import { CachedShortcuts, CachedEmpty } from './CachedShortcuts';
+import { OFFLINE_COPY } from './definitions/copy';
 
 export const OfflineFallback = () => {
-  const router = useRouter()
-  const [events, setEvents] = useState<CachedEvent[]>([])
-  const [venues, setVenues] = useState<CachedVenue[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const router = useRouter();
+  const [events, setEvents] = useState<CachedEvent[]>([]);
+  const [venues, setVenues] = useState<CachedVenue[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     void (async () => {
       const [nextEvents, nextVenues] = await Promise.all([
         getCachedEvents(),
         getCachedVenues(),
-      ])
-      if (cancelled) return
-      setEvents(nextEvents)
-      setVenues(nextVenues)
-      setLoaded(true)
-    })()
+      ]);
+      if (cancelled) return;
+      setEvents(nextEvents);
+      setVenues(nextVenues);
+      setLoaded(true);
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const onRetry = useCallback(() => {
-    router.refresh()
-  }, [router])
+    router.refresh();
+  }, [router]);
 
-  const hasContent = events.length > 0 || venues.length > 0
+  const hasContent = events.length > 0 || venues.length > 0;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-6 px-5 py-10">
@@ -68,5 +68,5 @@ export const OfflineFallback = () => {
           <CachedEmpty />
         ))}
     </main>
-  )
-}
+  );
+};

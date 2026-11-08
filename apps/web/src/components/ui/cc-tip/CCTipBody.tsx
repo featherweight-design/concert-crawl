@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
 // Renders a TipContent record. Six shapes, one entry point, so a call site
 // never authors tooltip markup.
 
-import type { ReactNode } from 'react'
-import { TIP_CHROME_COPY } from './definitions/copy'
-import type { TipContent, TipTone } from './definitions/types'
+import type { ReactNode } from 'react';
+import { TIP_CHROME_COPY } from './definitions/copy';
+import type { TipContent, TipTone } from './definitions/types';
 
-const UI_FONT = { fontFamily: 'var(--font-ui)' }
-const MONO_FONT = { fontFamily: 'var(--font-mono)' }
+const UI_FONT = { fontFamily: 'var(--font-ui)' };
+const MONO_FONT = { fontFamily: 'var(--font-mono)' };
 
 const TipParagraph = ({ children }: { children: ReactNode }) => (
   <p
@@ -17,7 +17,7 @@ const TipParagraph = ({ children }: { children: ReactNode }) => (
   >
     {children}
   </p>
-)
+);
 
 const TipRowTitle = ({ children }: { children: ReactNode }) => (
   <div
@@ -26,7 +26,7 @@ const TipRowTitle = ({ children }: { children: ReactNode }) => (
   >
     {children}
   </div>
-)
+);
 
 const TipRowBody = ({ children }: { children: ReactNode }) => (
   <div
@@ -35,7 +35,7 @@ const TipRowBody = ({ children }: { children: ReactNode }) => (
   >
     {children}
   </div>
-)
+);
 
 // Mirrors ChipStateDot's tones without pulling in the admin bundle.
 const TONE_COLOR: Record<TipTone, string | null> = {
@@ -43,10 +43,10 @@ const TONE_COLOR: Record<TipTone, string | null> = {
   good: 'var(--success)',
   warn: 'var(--warning)',
   bad: 'var(--danger)',
-}
+};
 
 const TipDot = ({ tone }: { tone: TipTone }) => {
-  const color = TONE_COLOR[tone]
+  const color = TONE_COLOR[tone];
   return (
     <span
       aria-hidden
@@ -60,8 +60,8 @@ const TipDot = ({ tone }: { tone: TipTone }) => {
             : `0 0 0 3px color-mix(in oklab, ${color} 16%, transparent)`,
       }}
     />
-  )
-}
+  );
+};
 
 const TipGlyph = ({ good }: { good: boolean }) =>
   good ? (
@@ -83,10 +83,10 @@ const TipGlyph = ({ good }: { good: boolean }) =>
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 
 const TipSnippet = ({ good, text }: { good: boolean; text: string }) => {
-  const color = good ? 'var(--success)' : 'var(--danger)'
+  const color = good ? 'var(--success)' : 'var(--danger)';
   return (
     <div
       className="flex items-start gap-[7px] rounded-[7px] px-[9px] py-[6px]"
@@ -109,19 +109,19 @@ const TipSnippet = ({ good, text }: { good: boolean; text: string }) => {
         {text}
       </span>
     </div>
-  )
-}
+  );
+};
 
 const TipList = ({
   heading,
   items,
   good,
 }: {
-  heading: string
-  items: readonly string[]
-  good: boolean
+  heading: string;
+  items: readonly string[];
+  good: boolean;
 }) => {
-  const color = good ? 'var(--success)' : 'var(--danger)'
+  const color = good ? 'var(--success)' : 'var(--danger)';
   return (
     <div className="flex flex-col gap-[6px]">
       <span
@@ -150,11 +150,11 @@ const TipList = ({
         ))}
       </ul>
     </div>
-  )
-}
+  );
+};
 
 export const CCTipBody = ({ tip }: { tip: TipContent }) => {
-  if (tip.variant === 'text') return <TipParagraph>{tip.body}</TipParagraph>
+  if (tip.variant === 'text') return <TipParagraph>{tip.body}</TipParagraph>;
 
   if (tip.variant === 'titled')
     return (
@@ -167,7 +167,7 @@ export const CCTipBody = ({ tip }: { tip: TipContent }) => {
         </div>
         <TipParagraph>{tip.body}</TipParagraph>
       </div>
-    )
+    );
 
   if (tip.variant === 'defs')
     return (
@@ -190,7 +190,7 @@ export const CCTipBody = ({ tip }: { tip: TipContent }) => {
           ))}
         </div>
       </div>
-    )
+    );
 
   if (tip.variant === 'steps')
     return (
@@ -229,7 +229,7 @@ export const CCTipBody = ({ tip }: { tip: TipContent }) => {
           </div>
         )}
       </div>
-    )
+    );
 
   if (tip.variant === 'example')
     return (
@@ -248,12 +248,12 @@ export const CCTipBody = ({ tip }: { tip: TipContent }) => {
           </div>
         ))}
       </div>
-    )
+    );
 
   return (
     <div className="flex flex-col gap-3">
       <TipList heading={TIP_CHROME_COPY.do} items={tip.dos} good />
       <TipList heading={TIP_CHROME_COPY.dont} items={tip.donts} good={false} />
     </div>
-  )
-}
+  );
+};

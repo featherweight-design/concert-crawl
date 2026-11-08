@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Dialog } from '@base-ui/react/dialog'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Dialog } from '@base-ui/react/dialog';
 import {
   Trash2,
   AlertTriangle,
@@ -11,15 +11,15 @@ import {
   Inbox,
   RefreshCw,
   ExternalLink,
-} from 'lucide-react'
-import { deleteVenue } from '@/lib/actions/venues'
-import { AdminButton, MonoLabel } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from 'lucide-react';
+import { deleteVenue } from '@/lib/actions/venues';
+import { AdminButton, MonoLabel } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface DeleteVenueDialogProps {
-  venueId: string
-  venueName: string
-  eventsTracked: number
+  venueId: string;
+  venueName: string;
+  eventsTracked: number;
 }
 
 export function DeleteVenueDialog({
@@ -27,39 +27,39 @@ export function DeleteVenueDialog({
   venueName,
   eventsTracked,
 }: DeleteVenueDialogProps) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [typedName, setTypedName] = useState('')
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [typedName, setTypedName] = useState('');
   const [deleteState, setDeleteState] = useState<'idle' | 'deleting' | 'error'>(
     'idle',
-  )
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [inputFocused, setInputFocused] = useState(false)
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [inputFocused, setInputFocused] = useState(false);
 
-  const trimmed = typedName.trim()
-  const isMatch = trimmed === venueName
-  const isMismatch = trimmed.length > 0 && !isMatch
-  const canDelete = isMatch && deleteState === 'idle'
+  const trimmed = typedName.trim();
+  const isMatch = trimmed === venueName;
+  const isMismatch = trimmed.length > 0 && !isMatch;
+  const canDelete = isMatch && deleteState === 'idle';
 
   function handleClose() {
-    if (deleteState === 'deleting') return
-    setOpen(false)
-    setTypedName('')
-    setDeleteState('idle')
-    setErrorMessage(null)
+    if (deleteState === 'deleting') return;
+    setOpen(false);
+    setTypedName('');
+    setDeleteState('idle');
+    setErrorMessage(null);
   }
 
   async function handleDelete() {
-    if (!canDelete) return
-    setDeleteState('deleting')
+    if (!canDelete) return;
+    setDeleteState('deleting');
     try {
-      const result = await deleteVenue(venueId)
+      const result = await deleteVenue(venueId);
       router.push(
         `/admin/venues?deleted=${encodeURIComponent(venueName)}&detached=${result.eventsDetached}`,
-      )
+      );
     } catch {
-      setErrorMessage(ADMIN_COPY.deleteVenueDialog.errors.deleteFailed)
-      setDeleteState('error')
+      setErrorMessage(ADMIN_COPY.deleteVenueDialog.errors.deleteFailed);
+      setDeleteState('error');
     }
   }
 
@@ -69,7 +69,7 @@ export function DeleteVenueDialog({
       ? 'var(--danger)'
       : inputFocused
         ? 'var(--signal)'
-        : 'var(--border-strong)'
+        : 'var(--border-strong)';
 
   const inputRing = isMatch
     ? '0 0 0 3px color-mix(in oklab, var(--success) 22%, transparent)'
@@ -77,7 +77,7 @@ export function DeleteVenueDialog({
       ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
       : inputFocused
         ? '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-        : 'none'
+        : 'none';
 
   const consequences = [
     {
@@ -138,7 +138,7 @@ export function DeleteVenueDialog({
         </>
       ),
     },
-  ]
+  ];
 
   return (
     <>
@@ -155,8 +155,8 @@ export function DeleteVenueDialog({
       <Dialog.Root
         open={open}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen) handleClose()
-          else setOpen(true)
+          if (!nextOpen) handleClose();
+          else setOpen(true);
         }}
       >
         <Dialog.Portal>
@@ -327,8 +327,8 @@ export function DeleteVenueDialog({
                   type="text"
                   value={typedName}
                   onChange={(evt) => {
-                    setTypedName(evt.target.value)
-                    setErrorMessage(null)
+                    setTypedName(evt.target.value);
+                    setErrorMessage(null);
                   }}
                   onFocus={() => setInputFocused(true)}
                   onBlur={() => setInputFocused(false)}
@@ -469,5 +469,5 @@ export function DeleteVenueDialog({
         </Dialog.Portal>
       </Dialog.Root>
     </>
-  )
+  );
 }

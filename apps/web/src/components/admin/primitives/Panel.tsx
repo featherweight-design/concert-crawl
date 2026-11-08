@@ -1,8 +1,8 @@
 interface PanelProps {
-  title?: React.ReactNode
-  action?: React.ReactNode
-  padding?: number | string
-  children: React.ReactNode
+  title?: React.ReactNode;
+  action?: React.ReactNode;
+  padding?: number | string;
+  children: React.ReactNode;
 }
 
 export const Panel = ({
@@ -47,4 +47,4 @@ export const Panel = ({
     )}
     <div style={{ padding }}>{children}</div>
   </div>
-)
+);

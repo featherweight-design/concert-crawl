@@ -1,11 +1,11 @@
-import { CONSUMER_COPY } from '../definitions/copy'
-import { GuideIcon } from './GuideIcon'
+import { CONSUMER_COPY } from '../definitions/copy';
+import { GuideIcon } from './GuideIcon';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 interface AccessPlaceholderRowProps {
   /** First row in its column — suppresses the hairline separator above it. */
-  first?: boolean
+  first?: boolean;
 }
 
 /**
@@ -71,4 +71,4 @@ export const AccessPlaceholderRow = ({ first }: AccessPlaceholderRowProps) => (
       </p>
     </div>
   </div>
-)
+);

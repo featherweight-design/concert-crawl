@@ -91,15 +91,15 @@ make `globalSetup` derive its paths from it:
  * both — but only if there is exactly one of them. A second spelling
  * (`playwright/.auth/user.json`) silently ENOENT'd four specs for months.
  */
-export const STORAGE_STATE_PATH = '.auth/user.json'
+export const STORAGE_STATE_PATH = '.auth/user.json';
 ```
 
 In the `globalSetup` body, replace the hardcoded directory and filename:
 
 ```ts
-const authFile = path.resolve(STORAGE_STATE_PATH)
-const authDir = path.dirname(authFile)
-fs.mkdirSync(authDir, { recursive: true })
+const authFile = path.resolve(STORAGE_STATE_PATH);
+const authDir = path.dirname(authFile);
+fs.mkdirSync(authDir, { recursive: true });
 ```
 
 - [ ] **Step 2: Point the config at the constant**
@@ -107,8 +107,8 @@ fs.mkdirSync(authDir, { recursive: true })
 In `apps/e2e/playwright.config.ts`, import it and use it:
 
 ```ts
-import { defineConfig, devices } from '@playwright/test'
-import { STORAGE_STATE_PATH } from './src/fixtures/auth'
+import { defineConfig, devices } from '@playwright/test';
+import { STORAGE_STATE_PATH } from './src/fixtures/auth';
 ```
 
 and inside `use`:
@@ -171,10 +171,10 @@ Then in each of the three remaining tests, replace the
 spec's equivalent) with the same two-line preamble:
 
 ```ts
-const eventId = await resolveEventId(page)
+const eventId = await resolveEventId(page);
 if (eventId === null) {
-  test.skip(true, 'No events on this environment — nothing to price')
-  return
+  test.skip(true, 'No events on this environment — nothing to price');
+  return;
 }
 ```
 
@@ -241,7 +241,7 @@ with:
 
 ```ts
 test('renders event details from the browse page', async ({ page }) => {
-  await page.goto('/events')
+  await page.goto('/events');
 
   // The row's link is the stretched artist-name anchor. Clicking the row
   // container instead can land on the action gutter's button, which sits
@@ -249,25 +249,25 @@ test('renders event details from the browse page', async ({ page }) => {
   // and does not navigate.
   const firstRowLink = page
     .locator('[data-testid="event-row"] a.event-row-stretch')
-    .first()
+    .first();
   // waitFor, not isVisible: isVisible samples once and rows arrive
   // client-side, so a bare probe skips on a populated environment.
   try {
-    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 });
   } catch {
-    test.skip(true, 'No event rows on this environment')
-    return
+    test.skip(true, 'No event rows on this environment');
+    return;
   }
 
-  await firstRowLink.click()
+  await firstRowLink.click();
   // waitForURL, not waitForLoadState: an App Router soft navigation can leave
   // the network idle before the transition commits, so networkidle is not a
   // navigation barrier.
-  await page.waitForURL(/\/events\/[a-z0-9-]+/)
+  await page.waitForURL(/\/events\/[a-z0-9-]+/);
 
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-  await expect(page.locator('[data-testid="event-venue-name"]')).toBeVisible()
-})
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('[data-testid="event-venue-name"]')).toBeVisible();
+});
 ```
 
 - [ ] **Step 2: Fix the back-navigation test in the same file**
@@ -281,26 +281,26 @@ describes. Replace the whole test body with:
 
 ```ts
 test('navigates back to the browse page', async ({ page }) => {
-  await page.goto('/events')
+  await page.goto('/events');
 
   // Same stretched-anchor rule as Step 1: the row container's centre can land
   // on the action gutter's button (z-index: 2) and navigate nowhere.
   const firstRowLink = page
     .locator('[data-testid="event-row"] a.event-row-stretch')
-    .first()
+    .first();
   try {
-    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 });
   } catch {
-    test.skip(true, 'No event rows on this environment')
-    return
+    test.skip(true, 'No event rows on this environment');
+    return;
   }
 
-  await firstRowLink.click()
-  await page.waitForURL(/\/events\/[a-z0-9-]+/)
+  await firstRowLink.click();
+  await page.waitForURL(/\/events\/[a-z0-9-]+/);
 
-  await page.goBack()
-  await page.waitForURL(/\/events$/)
-})
+  await page.goBack();
+  await page.waitForURL(/\/events$/);
+});
 ```
 
 Delete the `await page.waitForLoadState('networkidle')` calls and the
@@ -316,18 +316,18 @@ already fails the test if the URL never matches, so a following `expect` on
 it is the real user path from browse — and fix the barrier:
 
 ```ts
-const venueLink = page.locator('[data-testid="venue-name-link"]').first()
+const venueLink = page.locator('[data-testid="venue-name-link"]').first();
 try {
-  await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
+  await venueLink.waitFor({ state: 'visible', timeout: 15_000 });
 } catch {
-  test.skip(true, 'No venue name link found on browse page')
-  return
+  test.skip(true, 'No venue name link found on browse page');
+  return;
 }
 
-await venueLink.click()
-await page.waitForURL(/\/venues\/[a-z0-9-]+/)
+await venueLink.click();
+await page.waitForURL(/\/venues\/[a-z0-9-]+/);
 
-await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 ```
 
 Delete the now-redundant `await page.waitForLoadState('networkidle')` that
@@ -372,16 +372,16 @@ rows render, and the count is read one tick early.
 Replace lines 60–66 of `apps/e2e/src/e2e/browse.spec.ts` with:
 
 ```ts
-const rows = page.locator('[data-testid="event-row"]')
-const initialCount = await rows.count()
-await loadMoreButton.click()
+const rows = page.locator('[data-testid="event-row"]');
+const initialCount = await rows.count();
+await loadMoreButton.click();
 
 // EventsList appends through react-query's fetchNextPage — no navigation
 // happens, so networkidle can resolve before the new rows render. Poll the
 // count instead of sampling it once.
 await expect
   .poll(async () => rows.count(), { timeout: 10_000 })
-  .toBeGreaterThan(initialCount)
+  .toBeGreaterThan(initialCount);
 ```
 
 - [ ] **Step 2: Typecheck and lint**
@@ -452,14 +452,14 @@ Then, in a Chromium window at `http://localhost:3000`, open DevTools →
 Application → Cache Storage and run in the console:
 
 ```js
-const keys = await caches.keys()
+const keys = await caches.keys();
 for (const key of keys) {
-  const cache = await caches.open(key)
-  const urls = (await cache.keys()).map((req) => req.url)
+  const cache = await caches.open(key);
+  const urls = (await cache.keys()).map((req) => req.url);
   console.log(
     key,
     urls.filter((url) => url.includes('offline')),
-  )
+  );
 }
 ```
 
@@ -499,28 +499,28 @@ regex metacharacter but the entry may be written as a prefix. Append to the
 
 ```ts
 it('lets a signed-out visitor reach the offline fallback', async () => {
-  const { middlewareHandler } = await import('./middleware')
+  const { middlewareHandler } = await import('./middleware');
 
   // Serwist precaches /~offline through a plain navigation fetch with no
   // session. Gating it redirects that fetch, the fallback never lands in the
   // cache, and an offline navigation dies with ERR_FAILED.
-  const req = new NextRequest('http://localhost/~offline')
-  const result = await middlewareHandler(makeAuth(null), req)
+  const req = new NextRequest('http://localhost/~offline');
+  const result = await middlewareHandler(makeAuth(null), req);
 
-  expect(result).toBeUndefined()
-})
+  expect(result).toBeUndefined();
+});
 
 it('does not make a ~offline-prefixed route public', async () => {
-  const { middlewareHandler } = await import('./middleware')
+  const { middlewareHandler } = await import('./middleware');
 
   // The mocked createRouteMatcher uses startsWith, so this is the guard that
   // catches a `/~offline(.*)` glob smuggling a future private sibling in.
-  const req = new NextRequest('http://localhost/~offline-admin')
-  const auth = makeAuth(null)
+  const req = new NextRequest('http://localhost/~offline-admin');
+  const auth = makeAuth(null);
 
-  await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
-  expect(auth.protect).toHaveBeenCalled()
-})
+  await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized');
+  expect(auth.protect).toHaveBeenCalled();
+});
 ```
 
 Run them and watch the second one fail before Step 3's entry is written as an

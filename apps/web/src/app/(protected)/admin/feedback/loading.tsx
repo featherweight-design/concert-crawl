@@ -58,5 +58,5 @@ export default function AdminFeedbackLoading() {
         ))}
       </div>
     </div>
-  )
+  );
 }

@@ -1,11 +1,11 @@
-import React from 'react'
+import React from 'react';
 
-import { formatDollars } from '../definitions/lib'
+import { formatDollars } from '../definitions/lib';
 
-import { ARTIST_COPY } from './definitions/copy'
+import { ARTIST_COPY } from './definitions/copy';
 
 interface PriceChipProps {
-  price: number | null
+  price: number | null;
 }
 
 /**
@@ -27,7 +27,7 @@ export const PriceChip = ({ price }: PriceChipProps) => {
       >
         {ARTIST_COPY.priceUnknown}
       </span>
-    )
+    );
   }
 
   return (
@@ -46,5 +46,5 @@ export const PriceChip = ({ price }: PriceChipProps) => {
     >
       {formatDollars(price)}
     </span>
-  )
-}
+  );
+};

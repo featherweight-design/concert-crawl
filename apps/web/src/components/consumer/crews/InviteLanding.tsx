@@ -1,34 +1,34 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { notFound, useRouter } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import type { PublicCrewInvite } from '@concert-crawl/types'
+import { useEffect, useRef, useState } from 'react';
+import { notFound, useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import type { PublicCrewInvite } from '@concert-crawl/types';
 
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { ApiError } from '@/lib/api'
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { ApiError } from '@/lib/api';
 import {
   CREW_FULL_CODE,
   isCrewInviteDeadReason,
   joinCrew,
   type CrewInviteDeadReason,
-} from '@/lib/crews'
-import { DeadInviteLink } from './DeadInviteLink'
+} from '@/lib/crews';
+import { DeadInviteLink } from './DeadInviteLink';
 import {
   BrowseInstead,
   InviteBody,
   InviteEyebrow,
   InviteShell,
   primaryButtonStyle,
-} from './InviteShell'
-import { CREWS_COPY } from './definitions/copy'
+} from './InviteShell';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface InviteLandingProps {
   /** The invite token from the URL, re-sent on the join. */
-  inviteToken: string
-  invite: PublicCrewInvite
+  inviteToken: string;
+  invite: PublicCrewInvite;
 }
 
 const Padlock = () => (
@@ -56,7 +56,7 @@ const Padlock = () => (
       fill="none"
     />
   </svg>
-)
+);
 
 /**
  * The invite landing and the join itself. The crew's identity is already
@@ -67,80 +67,80 @@ const Padlock = () => (
  * than toasting over a button that can no longer work.
  */
 export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
-  const router = useRouter()
-  const { getToken } = useAuth()
+  const router = useRouter();
+  const { getToken } = useAuth();
   // Membership outranks capacity: a member arriving on a forwarded link is not
   // shut out of their own crew by it being full.
-  const member = invite.viewerIsMember
-  const [full, setFull] = useState(invite.isFull && !member)
+  const member = invite.viewerIsMember;
+  const [full, setFull] = useState(invite.isFull && !member);
   // Mounted empty and kept mounted: a live region that already holds its text
   // when it enters the DOM goes unannounced by VoiceOver and NVDA. Only the
   // in-place swap fills it, so a landing that arrives full says nothing extra.
-  const [announcement, setAnnouncement] = useState('')
-  const [dead, setDead] = useState<CrewInviteDeadReason | null>(null)
-  const [failed, setFailed] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [announcement, setAnnouncement] = useState('');
+  const [dead, setDead] = useState<CrewInviteDeadReason | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
   // The join resolves on its own schedule, which can be after this component
   // is gone (the success path navigates away). Every state write is guarded on
   // the live value in this ref rather than on the closure the click captured.
-  const liveRef = useRef(true)
+  const liveRef = useRef(true);
   useEffect(() => {
-    liveRef.current = true
+    liveRef.current = true;
     return () => {
-      liveRef.current = false
-    }
-  }, [])
+      liveRef.current = false;
+    };
+  }, []);
 
   const onJoin = async () => {
     // Matches the button's own disabled state, so a double-tap that beats the
     // re-render still cannot fire a second join.
-    if (busy || full || dead !== null) return
-    setBusy(true)
-    setFailed(false)
+    if (busy || full || dead !== null) return;
+    setBusy(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      const result = await joinCrew(token, inviteToken)
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      const result = await joinCrew(token, inviteToken);
       // `alreadyMember` is a success: a forwarded link tapped twice lands on
       // the crew instead of erroring.
       if (result.joined || result.alreadyMember) {
-        router.push(`/crews/${result.crewId}`)
+        router.push(`/crews/${result.crewId}`);
         // The crews list is cached from before this membership existed.
-        router.refresh()
-        return
+        router.refresh();
+        return;
       }
       // The API has no fourth outcome, so this is unreachable by contract —
       // and if the contract ever moves, it fails loudly rather than silently
       // stranding the user on a landing that looks unchanged.
-      throw new Error('Join returned neither joined nor alreadyMember')
+      throw new Error('Join returned neither joined nor alreadyMember');
     } catch (err) {
-      console.error('InviteLanding: join failed', err)
-      if (!liveRef.current) return
+      console.error('InviteLanding: join failed', err);
+      if (!liveRef.current) return;
       if (err instanceof ApiError) {
         if (err.status === 409 && err.code === CREW_FULL_CODE) {
-          setFull(true)
-          setAnnouncement(COPY.linkDead.filledUp)
-          return
+          setFull(true);
+          setAnnouncement(COPY.linkDead.filledUp);
+          return;
         }
         if (err.status === 404 && isCrewInviteDeadReason(err.reason)) {
-          setDead(err.reason)
-          return
+          setDead(err.reason);
+          return;
         }
       }
-      setFailed(true)
+      setFailed(true);
     } finally {
       // Every exit path, including the two that swap the surface. Leaving it
       // set would disable a control the next render still shows.
-      if (liveRef.current) setBusy(false)
+      if (liveRef.current) setBusy(false);
     }
-  }
+  };
 
   // `unknown` gets no branded dead end here either — a surface only tokens
   // that once existed can reach would confirm which tokens exist. Raised
   // during render, not from the click handler: `notFound()` works by throwing
   // for the boundary to catch, which an event handler has nobody to do.
-  if (dead === 'unknown') notFound()
-  if (dead !== null) return <DeadInviteLink kind={dead} />
+  if (dead === 'unknown') notFound();
+  if (dead !== null) return <DeadInviteLink kind={dead} />;
 
   return (
     <InviteShell>
@@ -274,5 +274,5 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
         </div>
       )}
     </InviteShell>
-  )
-}
+  );
+};

@@ -19,6 +19,7 @@
 Fix: change the link to `/me?section=submissions`, then read that param in `SettingsRouteDesktop` to initialize the active section. Mobile already shows all sections in a scroll, so no change needed there.
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/user-menu/UserMenu.tsx` (~line 331)
 - Modify: `apps/web/src/components/settings/SettingsRouteDesktop.tsx`
 
@@ -56,30 +57,29 @@ At the top of `apps/web/src/components/settings/SettingsRouteDesktop.tsx`, add t
 
 ```typescript
 // BEFORE:
-import Link from 'next/link'
+import Link from 'next/link';
 
 // AFTER:
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 ```
 
 Inside `SettingsRouteDesktop`, the function currently initializes active section with:
 
 ```typescript
-const [activeSection, setActiveSection] = useState<NavSection>('profile')
+const [activeSection, setActiveSection] = useState<NavSection>('profile');
 ```
 
 Replace with:
 
 ```typescript
-const searchParams = useSearchParams()
-const sectionParam = searchParams.get('section')
+const searchParams = useSearchParams();
+const sectionParam = searchParams.get('section');
 const initialSection: NavSection =
-  sectionParam !== null &&
-  NAV_ITEMS.some((item) => item.key === sectionParam)
+  sectionParam !== null && NAV_ITEMS.some((item) => item.key === sectionParam)
     ? (sectionParam as NavSection)
-    : 'profile'
-const [activeSection, setActiveSection] = useState<NavSection>(initialSection)
+    : 'profile';
+const [activeSection, setActiveSection] = useState<NavSection>(initialSection);
 ```
 
 This reads the `?section=` param on first render, validates it against the known `NAV_ITEMS` keys, and falls back to `'profile'` if the param is missing or invalid.
@@ -116,6 +116,7 @@ git commit -m "fix(settings): deep-link Submitted prices to /me?section=submissi
 - `apps/web/src/app/(protected)/events/page.tsx` lines 58+62 — `fetchEvents` and `fetchVenues` use `publicApiClient` (no auth)
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/events/[id]/submit-price/page.tsx`
 - Modify: `apps/web/src/app/(protected)/events/[id]/submissions/[submissionId]/dispute/page.tsx`
 - Modify: `apps/web/src/app/(protected)/events/page.tsx`
@@ -147,7 +148,7 @@ const [eventRes, submissionsRes] = await Promise.all([
     `${process.env.NEXT_PUBLIC_API_URL}/v1/events/${id}/price-submissions`,
     token ? { headers: { Authorization: `Bearer ${token}` } } : {},
   ),
-])
+]);
 ```
 
 - [ ] **Step 2: Fix dispute/page.tsx — same pattern**
@@ -174,13 +175,15 @@ The full `Promise.all` stays the same for the `submissionRes` fetch (it already 
 In `apps/web/src/app/(protected)/events/page.tsx`, add `apiClient` to the import and update both fetch functions to accept and use the token.
 
 At the top of the file, the import is currently:
+
 ```typescript
-import { publicApiClient } from '@/lib/api'
+import { publicApiClient } from '@/lib/api';
 ```
 
 Change to:
+
 ```typescript
-import { apiClient, publicApiClient } from '@/lib/api'
+import { apiClient, publicApiClient } from '@/lib/api';
 ```
 
 Update `fetchEvents` signature and implementation:
@@ -190,24 +193,24 @@ Update `fetchEvents` signature and implementation:
 async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
 ): Promise<EventsListResponse> {
-  const qs = new URLSearchParams()
-  if (typeof params['search'] === 'string') qs.set('search', params['search'])
-  const venueSlug = params['filterWhere'] ?? params['venueSlug']
-  if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug)
-  if (typeof params['from'] === 'string') qs.set('from', params['from'])
-  if (typeof params['to'] === 'string') qs.set('to', params['to'])
-  const offsetParam = params['offset']
+  const qs = new URLSearchParams();
+  if (typeof params['search'] === 'string') qs.set('search', params['search']);
+  const venueSlug = params['filterWhere'] ?? params['venueSlug'];
+  if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug);
+  if (typeof params['from'] === 'string') qs.set('from', params['from']);
+  if (typeof params['to'] === 'string') qs.set('to', params['to']);
+  const offsetParam = params['offset'];
   if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
-    const parsed = Number(offsetParam)
+    const parsed = Number(offsetParam);
     if (Number.isSafeInteger(parsed) && parsed >= 0)
-      qs.set('offset', String(parsed))
+      qs.set('offset', String(parsed));
   }
   if (typeof params['filterPrice'] === 'string')
-    qs.set('filterPrice', params['filterPrice'])
+    qs.set('filterPrice', params['filterPrice']);
   if (typeof params['filterVibe'] === 'string')
-    qs.set('filterVibe', params['filterVibe'])
-  qs.set('limit', String(PAGE_LIMIT))
-  return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`)
+    qs.set('filterVibe', params['filterVibe']);
+  qs.set('limit', String(PAGE_LIMIT));
+  return publicApiClient.get<EventsListResponse>(`/v1/events?${qs.toString()}`);
 }
 
 // AFTER:
@@ -215,27 +218,27 @@ async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
   token: string | null,
 ): Promise<EventsListResponse> {
-  const qs = new URLSearchParams()
-  if (typeof params['search'] === 'string') qs.set('search', params['search'])
-  const venueSlug = params['filterWhere'] ?? params['venueSlug']
-  if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug)
-  if (typeof params['from'] === 'string') qs.set('from', params['from'])
-  if (typeof params['to'] === 'string') qs.set('to', params['to'])
-  const offsetParam = params['offset']
+  const qs = new URLSearchParams();
+  if (typeof params['search'] === 'string') qs.set('search', params['search']);
+  const venueSlug = params['filterWhere'] ?? params['venueSlug'];
+  if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug);
+  if (typeof params['from'] === 'string') qs.set('from', params['from']);
+  if (typeof params['to'] === 'string') qs.set('to', params['to']);
+  const offsetParam = params['offset'];
   if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
-    const parsed = Number(offsetParam)
+    const parsed = Number(offsetParam);
     if (Number.isSafeInteger(parsed) && parsed >= 0)
-      qs.set('offset', String(parsed))
+      qs.set('offset', String(parsed));
   }
   if (typeof params['filterPrice'] === 'string')
-    qs.set('filterPrice', params['filterPrice'])
+    qs.set('filterPrice', params['filterPrice']);
   if (typeof params['filterVibe'] === 'string')
-    qs.set('filterVibe', params['filterVibe'])
-  qs.set('limit', String(PAGE_LIMIT))
-  const path = `/v1/events?${qs.toString()}`
+    qs.set('filterVibe', params['filterVibe']);
+  qs.set('limit', String(PAGE_LIMIT));
+  const path = `/v1/events?${qs.toString()}`;
   return token
     ? apiClient.get<EventsListResponse>(path, token)
-    : publicApiClient.get<EventsListResponse>(path)
+    : publicApiClient.get<EventsListResponse>(path);
 }
 ```
 
@@ -244,21 +247,22 @@ Update `fetchVenues` signature:
 ```typescript
 // BEFORE:
 async function fetchVenues(): Promise<VenuePublic[]> {
-  return publicApiClient.get<VenuePublic[]>('/v1/venues')
+  return publicApiClient.get<VenuePublic[]>('/v1/venues');
 }
 
 // AFTER:
 async function fetchVenues(token: string | null): Promise<VenuePublic[]> {
   return token
     ? apiClient.get<VenuePublic[]>('/v1/venues', token)
-    : publicApiClient.get<VenuePublic[]>('/v1/venues')
+    : publicApiClient.get<VenuePublic[]>('/v1/venues');
 }
 ```
 
 In `BrowsePage`, token is already fetched on line 127-128:
+
 ```typescript
-const { getToken } = await auth()
-const token = await getToken()
+const { getToken } = await auth();
+const token = await getToken();
 ```
 
 Update the `Promise.all` call to pass the token (currently around line 134):
@@ -269,14 +273,14 @@ const [eventsResult, venues, watchedShows] = await Promise.all([
   fetchEvents(fetchParams),
   fetchVenues(),
   watchedShowsPromise,
-])
+]);
 
 // AFTER:
 const [eventsResult, venues, watchedShows] = await Promise.all([
   fetchEvents(fetchParams, token),
   fetchVenues(token),
   watchedShowsPromise,
-])
+]);
 ```
 
 - [ ] **Step 4: TypeScript check**
@@ -302,12 +306,14 @@ git commit -m "fix(auth): pass token to server-side event fetches on protected p
 ### Task 3: Fix useSearch.ts — add auth headers to client-side fetches
 
 **Context:** `useSearch.ts` is a client-side hook that makes two unauthenticated fetches:
+
 1. `GET /v1/search/popular` on mount (line 106) — fetches popular events for the search overlay
 2. `GET /v1/events?search=...` in a debounced effect (line 131) — fetches search results
 
 Both need an `Authorization: Bearer <token>` header when REQUIRE_BETA_AUTH is active.
 
 **Files:**
+
 - Modify: `apps/web/src/lib/search/useSearch.ts`
 
 - [ ] **Step 1: Add useAuth import**
@@ -316,7 +322,7 @@ At the top of `apps/web/src/lib/search/useSearch.ts`, add Clerk's hook:
 
 ```typescript
 // Add to existing imports:
-import { useAuth } from '@clerk/nextjs'
+import { useAuth } from '@clerk/nextjs';
 ```
 
 - [ ] **Step 2: Call useAuth inside the hook**
@@ -324,7 +330,7 @@ import { useAuth } from '@clerk/nextjs'
 Inside `useSearch`, alongside the existing `useState` and `useRef` calls, add:
 
 ```typescript
-const { getToken } = useAuth()
+const { getToken } = useAuth();
 ```
 
 - [ ] **Step 3: Fix the popular events fetch (mount effect)**
@@ -333,40 +339,40 @@ The current mount effect (around lines 103-112):
 
 ```typescript
 useEffect(() => {
-  setRecentSearches(readRecent())
+  setRecentSearches(readRecent());
 
   fetch(`${API_URL}/v1/search/popular`)
     .then((res) => res.json())
     .then((body: { success: boolean; data: PopularEvent[] }) => {
-      if (body.success) setPopularEvents(body.data)
+      if (body.success) setPopularEvents(body.data);
     })
-    .catch(() => {})
-}, [])
+    .catch(() => {});
+}, []);
 ```
 
 Replace with:
 
 ```typescript
 useEffect(() => {
-  setRecentSearches(readRecent())
+  setRecentSearches(readRecent());
 
   void (async () => {
     try {
-      const token = await getToken()
+      const token = await getToken();
       const headers: Record<string, string> = token
         ? { Authorization: `Bearer ${token}` }
-        : {}
-      const res = await fetch(`${API_URL}/v1/search/popular`, { headers })
+        : {};
+      const res = await fetch(`${API_URL}/v1/search/popular`, { headers });
       const body = (await res.json()) as {
-        success: boolean
-        data: PopularEvent[]
-      }
-      if (body.success) setPopularEvents(body.data)
+        success: boolean;
+        data: PopularEvent[];
+      };
+      if (body.success) setPopularEvents(body.data);
     } catch {
       // ignore
     }
-  })()
-}, [getToken])
+  })();
+}, [getToken]);
 ```
 
 - [ ] **Step 4: Fix the debounced search fetch**
@@ -378,8 +384,8 @@ Replace the `setTimeout` callback body:
 ```typescript
 // BEFORE (inside setTimeout):
 debounceRef.current = setTimeout(() => {
-  const controller = new AbortController()
-  abortRef.current = controller
+  const controller = new AbortController();
+  abortRef.current = controller;
   fetch(
     `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
     { signal: controller.signal },
@@ -387,46 +393,46 @@ debounceRef.current = setTimeout(() => {
     .then((res) => res.json())
     .then((body: { success: boolean; data: { data: EventRow[] } }) => {
       if (body.success) {
-        setArtistResults(deriveArtistResults(body.data.data))
-        setVenueResults(deriveVenueResults(body.data.data))
+        setArtistResults(deriveArtistResults(body.data.data));
+        setVenueResults(deriveVenueResults(body.data.data));
       }
     })
     .catch(() => {})
     .finally(() => {
-      if (!controller.signal.aborted) setIsLoading(false)
-    })
-}, DEBOUNCE_MS)
+      if (!controller.signal.aborted) setIsLoading(false);
+    });
+}, DEBOUNCE_MS);
 
 // AFTER:
 debounceRef.current = setTimeout(() => {
-  const controller = new AbortController()
-  abortRef.current = controller
+  const controller = new AbortController();
+  abortRef.current = controller;
 
   void (async () => {
     try {
-      const token = await getToken()
+      const token = await getToken();
       const headers: Record<string, string> = token
         ? { Authorization: `Bearer ${token}` }
-        : {}
+        : {};
       const res = await fetch(
         `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
         { signal: controller.signal, headers },
-      )
+      );
       const body = (await res.json()) as {
-        success: boolean
-        data: { data: EventRow[] }
-      }
+        success: boolean;
+        data: { data: EventRow[] };
+      };
       if (body.success) {
-        setArtistResults(deriveArtistResults(body.data.data))
-        setVenueResults(deriveVenueResults(body.data.data))
+        setArtistResults(deriveArtistResults(body.data.data));
+        setVenueResults(deriveVenueResults(body.data.data));
       }
     } catch {
       // ignore (includes AbortError)
     } finally {
-      if (!controller.signal.aborted) setIsLoading(false)
+      if (!controller.signal.aborted) setIsLoading(false);
     }
-  })()
-}, DEBOUNCE_MS)
+  })();
+}, DEBOUNCE_MS);
 ```
 
 - [ ] **Step 5: TypeScript check**
@@ -453,6 +459,7 @@ git commit -m "fix(search): add auth token to popular-events and search fetches"
 ### Task 4: Update progress.md and open PR for PR 1
 
 **Files:**
+
 - Modify: `docs/superpowers/progress.md`
 
 - [ ] **Step 1: Run typecheck + lint across the monorepo**
@@ -520,9 +527,11 @@ EOF
 ## PR 2 — Load More Accumulation + Watching Persistence
 
 > **Before starting PR 2:** Create a new worktree on branch `fix/pre-beta-blockers-2`:
+>
 > ```bash
 > git -C /path/to/main/repo worktree add .worktrees/fix/pre-beta-blockers-2 -b fix/pre-beta-blockers-2
 > ```
+>
 > Copy `.env.local` files into all three apps in the new worktree.
 
 ### Task 5: Create EventsList client component
@@ -530,17 +539,20 @@ EOF
 **Context:** Currently the browse page (`events/page.tsx`) is a pure server component. "Load More" works by calling `router.replace()` with an incremented `?offset=` URL param, which triggers a full server re-render that fetches and renders ONLY the new page — replacing the existing events list. The fix is to extract the event list into a client component that fetches additional pages and appends them to local state, without changing the URL.
 
 The server component will continue to fetch and render:
+
 - FilterBar, WeekStrip, HeroEventCard, EmptyState (unchanged)
 - The initial page of events (first 20)
 - Initial watching state
 
 The new `EventsList` client component will own:
+
 - Accumulated events state
 - "Load More" logic (client-side fetch + append)
 - Date grouping and EventCard rendering
 - Watching ID set (seeded from server, stable after initial render)
 
 **Files:**
+
 - Create: `apps/web/src/components/consumer/events-list/EventsList.tsx`
 - Create: `apps/web/src/components/consumer/events-list/index.ts`
 
@@ -549,25 +561,25 @@ The new `EventsList` client component will own:
 Create `apps/web/src/components/consumer/events-list/EventsList.tsx`:
 
 ```tsx
-'use client'
+'use client';
 
-import { Fragment, useState, useTransition } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
-import { EventCard } from '@/components/consumer/event-card'
-import { dateGroupLabel } from '@/components/consumer/definitions/lib'
-import { copy } from '@/components/consumer/definitions/copy'
-import { cn } from '@/lib/utils'
+import { Fragment, useState, useTransition } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
+import { EventCard } from '@/components/consumer/event-card';
+import { dateGroupLabel } from '@/components/consumer/definitions/lib';
+import { copy } from '@/components/consumer/definitions/copy';
+import { cn } from '@/lib/utils';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 
 export interface EventsListProps {
-  initialEvents: EventWithVenue[]
-  initialOffset: number
-  total: number
-  limit: number
-  initialWatchedIds: string[]
+  initialEvents: EventWithVenue[];
+  initialOffset: number;
+  total: number;
+  limit: number;
+  initialWatchedIds: string[];
 }
 
 export function EventsList({
@@ -577,76 +589,76 @@ export function EventsList({
   limit,
   initialWatchedIds,
 }: EventsListProps) {
-  const [events, setEvents] = useState<EventWithVenue[]>(initialEvents)
-  const [offset, setOffset] = useState(initialOffset)
-  const [watchedIds] = useState(() => new Set(initialWatchedIds))
-  const [isPending, startTransition] = useTransition()
-  const { getToken } = useAuth()
-  const searchParams = useSearchParams()
+  const [events, setEvents] = useState<EventWithVenue[]>(initialEvents);
+  const [offset, setOffset] = useState(initialOffset);
+  const [watchedIds] = useState(() => new Set(initialWatchedIds));
+  const [isPending, startTransition] = useTransition();
+  const { getToken } = useAuth();
+  const searchParams = useSearchParams();
 
-  const hasMore = offset + limit < total
+  const hasMore = offset + limit < total;
 
   const loadMore = () => {
     startTransition(async () => {
-      const nextOffset = offset + limit
-      const qs = new URLSearchParams()
+      const nextOffset = offset + limit;
+      const qs = new URLSearchParams();
 
-      const search = searchParams.get('search')
+      const search = searchParams.get('search');
       const filterWhere =
-        searchParams.get('filterWhere') ?? searchParams.get('venueSlug')
-      const from = searchParams.get('from')
-      const to = searchParams.get('to')
-      const filterPrice = searchParams.get('filterPrice')
-      const filterVibe = searchParams.get('filterVibe')
+        searchParams.get('filterWhere') ?? searchParams.get('venueSlug');
+      const from = searchParams.get('from');
+      const to = searchParams.get('to');
+      const filterPrice = searchParams.get('filterPrice');
+      const filterVibe = searchParams.get('filterVibe');
 
-      if (search) qs.set('search', search)
-      if (filterWhere) qs.set('venueSlug', filterWhere)
-      if (from) qs.set('from', from)
-      if (to) qs.set('to', to)
-      if (filterPrice) qs.set('filterPrice', filterPrice)
-      if (filterVibe) qs.set('filterVibe', filterVibe)
-      qs.set('offset', String(nextOffset))
-      qs.set('limit', String(limit))
+      if (search) qs.set('search', search);
+      if (filterWhere) qs.set('venueSlug', filterWhere);
+      if (from) qs.set('from', from);
+      if (to) qs.set('to', to);
+      if (filterPrice) qs.set('filterPrice', filterPrice);
+      if (filterVibe) qs.set('filterVibe', filterVibe);
+      qs.set('offset', String(nextOffset));
+      qs.set('limit', String(limit));
 
       try {
-        const token = await getToken()
+        const token = await getToken();
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
-        }
-        if (token) headers['Authorization'] = `Bearer ${token}`
+        };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
 
         const res = await fetch(`${API_URL}/v1/events?${qs.toString()}`, {
           headers,
-        })
-        if (!res.ok) return
+        });
+        if (!res.ok) return;
 
         const body = (await res.json()) as {
-          success: boolean
-          data: EventsListResponse
-        }
+          success: boolean;
+          data: EventsListResponse;
+        };
         if (body.success) {
-          setEvents((prev) => [...prev, ...body.data.data])
-          setOffset(nextOffset)
+          setEvents((prev) => [...prev, ...body.data.data]);
+          setOffset(nextOffset);
         }
       } catch {
         // ignore
       }
-    })
-  }
+    });
+  };
 
   // Build date groups from accumulated events
-  const groups = new Map<string, EventWithVenue[]>()
+  const groups = new Map<string, EventWithVenue[]>();
   for (const event of events) {
-    if (!groups.has(event.date)) groups.set(event.date, [])
-    groups.get(event.date)!.push(event)
+    if (!groups.has(event.date)) groups.set(event.date, []);
+    groups.get(event.date)!.push(event);
   }
 
   return (
     <>
       <div className="flex flex-col gap-6">
         {Array.from(groups.entries()).map(([date, dateEvents]) => {
-          const label = dateGroupLabel(date)
-          const isTonight = label.toLowerCase() === 'tonight'
+          const label = dateGroupLabel(date);
+          const isTonight = label.toLowerCase() === 'tonight';
           return (
             <section key={date} aria-label={label}>
               <div
@@ -694,7 +706,7 @@ export function EventsList({
                 ))}
               </div>
             </section>
-          )
+          );
         })}
       </div>
 
@@ -714,7 +726,7 @@ export function EventsList({
         </div>
       )}
     </>
-  )
+  );
 }
 ```
 
@@ -723,8 +735,8 @@ export function EventsList({
 Create `apps/web/src/components/consumer/events-list/index.ts`:
 
 ```typescript
-export { EventsList } from './EventsList'
-export type { EventsListProps } from './EventsList'
+export { EventsList } from './EventsList';
+export type { EventsListProps } from './EventsList';
 ```
 
 - [ ] **Step 3: TypeScript check**
@@ -749,6 +761,7 @@ git commit -m "feat(browse): add EventsList client component for client-side eve
 **Context:** Replace the server-side groups rendering + `<LoadMoreButton>` in `events/page.tsx` (list view only) with the new `<EventsList>` client component. Calendar view rendering stays server-side and is unchanged. The hero event also stays server-rendered. The `LoadMoreButton` component is no longer used from the server page — it can be kept in the codebase for now (the new Load More button is inlined in `EventsList`).
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/events/page.tsx`
 
 - [ ] **Step 1: Add EventsList import**
@@ -756,14 +769,14 @@ git commit -m "feat(browse): add EventsList client component for client-side eve
 At the top of `apps/web/src/app/(protected)/events/page.tsx`, add:
 
 ```typescript
-import { EventsList } from '@/components/consumer/events-list'
+import { EventsList } from '@/components/consumer/events-list';
 ```
 
 Remove the `LoadMoreButton` import (it is no longer rendered by the server component):
 
 ```typescript
 // Remove this line:
-import { LoadMoreButton } from '@/components/consumer/load-more'
+import { LoadMoreButton } from '@/components/consumer/load-more';
 ```
 
 - [ ] **Step 2: Replace the shared groups block with split list/cal rendering**
@@ -775,76 +788,84 @@ The current code has a single `{groups.size > 0 && ...}` block that renders even
 Find and replace **the entire existing `{groups.size > 0 && ...}` block AND the `{events.length > 0 && view === 'list' && ...}` LoadMoreButton block** with the following two separate blocks:
 
 ```tsx
-{/* List view — client-side accumulation */}
-{view === 'list' && listEvents.length > 0 && (
-  <Suspense>
-    <EventsList
-      initialEvents={listEvents}
-      initialOffset={currentOffset}
-      total={total}
-      limit={limit}
-      initialWatchedIds={Array.from(watchedIds)}
-    />
-  </Suspense>
-)}
+{
+  /* List view — client-side accumulation */
+}
+{
+  view === 'list' && listEvents.length > 0 && (
+    <Suspense>
+      <EventsList
+        initialEvents={listEvents}
+        initialOffset={currentOffset}
+        total={total}
+        limit={limit}
+        initialWatchedIds={Array.from(watchedIds)}
+      />
+    </Suspense>
+  );
+}
 
-{/* Calendar view — server-rendered date groups */}
-{view === 'cal' && groups.size > 0 && (
-  <div className="flex flex-col gap-6">
-    {Array.from(groups.entries()).map(([date, dateEvents]) => {
-      const label = dateGroupLabel(date)
-      const isTonight = label.toLowerCase() === 'tonight'
-      return (
-        <section key={date} aria-label={label}>
-          <div
-            className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
-            style={{ borderBottom: '1px solid var(--border)' }}
-          >
-            <h2
-              className="shrink-0 leading-none"
-              style={{
-                fontFamily: 'Inter, system-ui',
-                fontWeight: 900,
-                fontSize: 18,
-                letterSpacing: '-0.02em',
-                color: isTonight ? 'var(--accent)' : 'var(--fg)',
-              }}
+{
+  /* Calendar view — server-rendered date groups */
+}
+{
+  view === 'cal' && groups.size > 0 && (
+    <div className="flex flex-col gap-6">
+      {Array.from(groups.entries()).map(([date, dateEvents]) => {
+        const label = dateGroupLabel(date);
+        const isTonight = label.toLowerCase() === 'tonight';
+        return (
+          <section key={date} aria-label={label}>
+            <div
+              className="mb-1 flex items-baseline gap-2.5 px-4 pb-2"
+              style={{ borderBottom: '1px solid var(--border)' }}
             >
-              {label}
-            </h2>
-            <span
-              className="shrink-0 uppercase text-fg-subtle"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                letterSpacing: '0.06em',
-              }}
-            >
-              {dateEvents.length} show
-              {dateEvents.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          <div>
-            {dateEvents.map((event, idx) => (
-              <Fragment key={event.id}>
-                {idx > 0 && (
-                  <div
-                    className="h-px bg-border"
-                    style={{ marginLeft: 58 }}
+              <h2
+                className="shrink-0 leading-none"
+                style={{
+                  fontFamily: 'Inter, system-ui',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  letterSpacing: '-0.02em',
+                  color: isTonight ? 'var(--accent)' : 'var(--fg)',
+                }}
+              >
+                {label}
+              </h2>
+              <span
+                className="shrink-0 uppercase text-fg-subtle"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {dateEvents.length} show
+                {dateEvents.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <div>
+              {dateEvents.map((event, idx) => (
+                <Fragment key={event.id}>
+                  {idx > 0 && (
+                    <div
+                      className="h-px bg-border"
+                      style={{ marginLeft: 58 }}
+                    />
+                  )}
+                  <EventCard
+                    event={event}
+                    isWatching={watchedIds.has(event.id)}
                   />
-                )}
-                <EventCard
-                  event={event}
-                  isWatching={watchedIds.has(event.id)}
-                />
-              </Fragment>
-            ))}
-          </div>
-        </section>
-      )
-    })}
-  </div>
-)}
+                </Fragment>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 ```
 
 The existing empty-state blocks (for list view when `events.length === 0`, and for cal view when `groups.size === 0`) remain untouched.
@@ -885,6 +906,7 @@ git commit -m "fix(browse): use EventsList client component for load-more accumu
 **Context:** `WatchShowButton` uses `useState(initialWatching)` to seed its local state. React does not re-sync `useState` when props change on the same component instance (e.g., when a parent re-renders with different data after navigation). Adding a `useEffect` that watches `initialWatching` ensures the component stays in sync with server-provided state.
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/watch-show-button/WatchShowButton.tsx`
 
 - [ ] **Step 1: Add useEffect to the existing import**
@@ -892,13 +914,13 @@ git commit -m "fix(browse): use EventsList client component for load-more accumu
 In `apps/web/src/components/consumer/watch-show-button/WatchShowButton.tsx`, the current import is:
 
 ```typescript
-import { useState, useCallback } from 'react'
+import { useState, useCallback } from 'react';
 ```
 
 Change to:
 
 ```typescript
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react';
 ```
 
 - [ ] **Step 2: Add the sync effect**
@@ -907,20 +929,20 @@ Immediately after the `const [isWatching, setIsWatching] = useState(initialWatch
 
 ```typescript
 useEffect(() => {
-  setIsWatching(initialWatching)
-}, [initialWatching])
+  setIsWatching(initialWatching);
+}, [initialWatching]);
 ```
 
 The full top of the component body now reads:
 
 ```typescript
-const [isWatching, setIsWatching] = useState(initialWatching)
+const [isWatching, setIsWatching] = useState(initialWatching);
 useEffect(() => {
-  setIsWatching(initialWatching)
-}, [initialWatching])
-const [isConfirming, setIsConfirming] = useState(false)
-const [isPending, setIsPending] = useState(false)
-const { getToken } = useAuth()
+  setIsWatching(initialWatching);
+}, [initialWatching]);
+const [isConfirming, setIsConfirming] = useState(false);
+const [isPending, setIsPending] = useState(false);
+const { getToken } = useAuth();
 ```
 
 - [ ] **Step 3: TypeScript check**
@@ -947,6 +969,7 @@ git commit -m "fix(watching): sync WatchShowButton state when initialWatching pr
 ### Task 8: Update progress.md and open PR for PR 2
 
 **Files:**
+
 - Modify: `docs/superpowers/progress.md`
 
 - [ ] **Step 1: Run full typecheck + lint**

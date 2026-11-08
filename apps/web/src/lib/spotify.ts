@@ -3,8 +3,8 @@ import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
   SpotifyTastePicksResponse,
-} from '@concert-crawl/types'
-import { apiClient } from './api'
+} from '@concert-crawl/types';
+import { apiClient } from './api';
 
 // Spotify is in Development Mode: 5 authenticated users, hard cap, and
 // Extended Quota needs 250k MAU. Past the cap OAuth still SUCCEEDS and every
@@ -18,7 +18,7 @@ import { apiClient } from './api'
 // Deliberately global. A per-user override belongs to the flag system, not an
 // env var.
 export const spotifyConnectEnabled = (): boolean =>
-  process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED'] === '1'
+  process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED'] === '1';
 
 export async function fetchSpotifyConnection(
   token: string,
@@ -26,7 +26,7 @@ export async function fetchSpotifyConnection(
   return apiClient.get<SpotifyConnectionResponse>(
     '/v1/spotify/connection',
     token,
-  )
+  );
 }
 
 // Post-OAuth-return: verifies the Clerk external account, creates our
@@ -39,7 +39,7 @@ export async function connectSpotify(
     '/v1/spotify/connection',
     token,
     {},
-  )
+  );
 }
 
 // On-demand "Refresh my taste" — throws ApiError 429 (Retry-After) when the
@@ -51,26 +51,26 @@ export async function syncSpotifyConnection(
     '/v1/spotify/connection/sync',
     token,
     {},
-  )
+  );
 }
 
 export async function patchSpotifyConnection(
   token: string,
   updates: {
-    autoWatch?: boolean
-    digestEnabled?: boolean
-    pushEnabled?: boolean
+    autoWatch?: boolean;
+    digestEnabled?: boolean;
+    pushEnabled?: boolean;
   },
 ): Promise<SpotifyConnectionView> {
   return apiClient.patch<SpotifyConnectionView>(
     '/v1/spotify/connection',
     token,
     updates,
-  )
+  );
 }
 
 export async function disconnectSpotify(token: string): Promise<void> {
-  await apiClient.delete<void>('/v1/spotify/connection', token)
+  await apiClient.delete<void>('/v1/spotify/connection', token);
 }
 
 // "Based on your taste" shelf (#763 PR 8) — entitlement-gated server-side;
@@ -81,7 +81,7 @@ export async function fetchTastePicks(
   return apiClient.get<SpotifyTastePicksResponse>(
     '/v1/spotify/taste-picks',
     token,
-  )
+  );
 }
 
 // The post-first-watch nudge is no longer a Spotify pitch (native following,

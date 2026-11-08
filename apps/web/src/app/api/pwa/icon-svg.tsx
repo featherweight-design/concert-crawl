@@ -2,7 +2,7 @@
 // serve stale up to a week while revalidating so redesigns still propagate.
 export const PWA_ICON_CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-}
+};
 
 // Signature "ClusterPath" mark, electric palette — the locked logo from
 // design/design_handoff_brand_and_theming/logo-workshop-5.jsx. Trail dots share
@@ -12,16 +12,16 @@ export const PWA_ICON_PALETTE = {
   background: '#171D3A',
   glow: '#FF7BD4',
   signal: '#7AE6FF',
-} as const
+} as const;
 
 // The art is authored in a square viewBox of this many units — matching the
 // canonical ClusterPath source so its coordinates port over verbatim.
-const ICON_VIEWBOX = 96
+const ICON_VIEWBOX = 96;
 // Maskable icons must keep their art inside a centered "safe zone"; platforms
 // may crop the outer margin into any shape. The inset is half the cropped
 // margin, applied on each side, so the scaled art stays centered.
-const MASKABLE_SAFE_ZONE_SCALE = 0.8
-const MASKABLE_INSET = (ICON_VIEWBOX * (1 - MASKABLE_SAFE_ZONE_SCALE)) / 2
+const MASKABLE_SAFE_ZONE_SCALE = 0.8;
+const MASKABLE_INSET = (ICON_VIEWBOX * (1 - MASKABLE_SAFE_ZONE_SCALE)) / 2;
 
 // Dots travel along an implied curve, growing toward the focal halo — verbatim
 // from the ClusterPath source. Opacity ramps as `0.35 + index * 0.09`, and the
@@ -34,11 +34,11 @@ const TRAIL = [
   { cx: 50, cy: 50, radius: 4 },
   { cx: 58, cy: 42, radius: 5 },
   { cx: 66, cy: 32, radius: 6 },
-] as const
+] as const;
 
 interface PwaIconSvgProps {
-  size: number
-  maskable?: boolean
+  size: number;
+  maskable?: boolean;
 }
 
 export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
@@ -49,7 +49,7 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
   // drops the children of a <g> with no transform, blanking the art.
   const artTransform = maskable
     ? `translate(${MASKABLE_INSET} ${MASKABLE_INSET}) scale(${MASKABLE_SAFE_ZONE_SCALE})`
-    : 'translate(0 0)'
+    : 'translate(0 0)';
   return (
     <svg
       width={size}
@@ -92,5 +92,5 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
         ))}
       </g>
     </svg>
-  )
+  );
 }

@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
 // Renaming a crew. Keeper-only, and the counterpart to RerollSheet: that one
 // changes the artwork and never the name, this one changes the name and never
 // the artwork. Neither can reach the other's field, which is what keeps the
 // "renaming won't change the patch" promise true rather than merely stated.
 
-import { useEffect, useId, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
+import { useEffect, useId, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { renameCrew } from '@/lib/crews'
-import { CREWS_COPY } from './definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { renameCrew } from '@/lib/crews';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface RenameSheetProps {
-  open: boolean
-  onClose: () => void
-  crewId: string
-  crewName: string
-  onRenamed: (name: string) => void
+  open: boolean;
+  onClose: () => void;
+  crewId: string;
+  crewName: string;
+  onRenamed: (name: string) => void;
 }
 
 export const RenameSheet = ({
@@ -29,16 +29,16 @@ export const RenameSheet = ({
   crewName,
   onRenamed,
 }: RenameSheetProps) => {
-  const { getToken } = useAuth()
-  const nameId = useId()
-  const [name, setName] = useState(crewName)
+  const { getToken } = useAuth();
+  const nameId = useId();
+  const [name, setName] = useState(crewName);
   // The name as it stood when the sheet opened. `crewName` is live, so
   // comparing against it would arm the submit button the moment a rename from
   // another device landed, offering to overwrite that newer name with the
   // stale one still sitting in the field.
-  const [opened, setOpened] = useState(crewName)
-  const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [opened, setOpened] = useState(crewName);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   // Reseeded on open rather than on `crewName` changing: a rename that is
   // still in flight would otherwise have the field yanked out from under the
@@ -46,34 +46,34 @@ export const RenameSheet = ({
   // deliberately not a dependency, which is exactly the case exhaustive-deps
   // cannot express.
   useEffect(() => {
-    if (!open) return
-    setName(crewName)
-    setOpened(crewName)
-    setSaving(false)
-    setFailed(false)
+    if (!open) return;
+    setName(crewName);
+    setOpened(crewName);
+    setSaving(false);
+    setFailed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open]);
 
-  const trimmed = name.trim()
-  const canSubmit = trimmed !== '' && trimmed !== opened && !saving
+  const trimmed = name.trim();
+  const canSubmit = trimmed !== '' && trimmed !== opened && !saving;
 
   const onSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
-    ev.preventDefault()
-    if (!canSubmit) return
-    setSaving(true)
-    setFailed(false)
+    ev.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    setFailed(false);
     try {
-      const token = await getToken()
-      if (token === null) throw new Error('Not signed in')
-      const crew = await renameCrew(token, crewId, trimmed)
-      onRenamed(crew.name)
-      onClose()
+      const token = await getToken();
+      if (token === null) throw new Error('Not signed in');
+      const crew = await renameCrew(token, crewId, trimmed);
+      onRenamed(crew.name);
+      onClose();
     } catch (err) {
-      console.error('RenameSheet: could not rename crew', err)
-      setFailed(true)
-      setSaving(false)
+      console.error('RenameSheet: could not rename crew', err);
+      setFailed(true);
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <ModalShell
@@ -178,5 +178,5 @@ export const RenameSheet = ({
         </button>
       </form>
     </ModalShell>
-  )
-}
+  );
+};

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 
 // Stub the self-contained contests tab body so the test doesn't need a
 // QueryClient / next-navigation providers — the regression under test is
@@ -12,7 +12,7 @@ vi.mock('./_tabs/ContestsTabContent', () => ({
   ContestsTabContent: () => (
     <div data-testid="contests-content">contests body</div>
   ),
-}))
+}));
 
 // Same reasoning for the submissions tab: it mounts PricesSubmissionsClient,
 // which needs a QueryClient and Clerk. The regression under test is that
@@ -21,9 +21,9 @@ vi.mock('./_tabs/SubmissionsTabContent', () => ({
   SubmissionsTabContent: () => (
     <div data-testid="submissions-content">submissions body</div>
   ),
-}))
+}));
 
-import { AdminReviewMobile } from './AdminReviewMobile'
+import { AdminReviewMobile } from './AdminReviewMobile';
 
 const baseProps = {
   events: [],
@@ -42,39 +42,39 @@ const baseProps = {
   onMarkMissingCancelled: vi.fn(async () => undefined),
   onConfirmMissingMove: vi.fn(async () => {}),
   onDismissMissing: vi.fn(async () => undefined),
-}
+};
 
 describe('AdminReviewMobile tab switcher', () => {
   it('exposes Contests as a selectable tab (regression: #1028 unreachable on mobile)', () => {
-    render(<AdminReviewMobile {...baseProps} />)
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    render(<AdminReviewMobile {...baseProps} />);
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: /Contests/ }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('shows the contest count in the option label when > 0', () => {
-    render(<AdminReviewMobile {...baseProps} contestCount={3} />)
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    render(<AdminReviewMobile {...baseProps} contestCount={3} />);
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: 'Contests (3)' }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('renders the Contests tab body when Contests is selected', () => {
-    render(<AdminReviewMobile {...baseProps} />)
-    expect(screen.queryByTestId('contests-content')).toBeNull()
+    render(<AdminReviewMobile {...baseProps} />);
+    expect(screen.queryByTestId('contests-content')).toBeNull();
     fireEvent.change(
       screen.getByRole('combobox', { name: /Review sections/ }),
       { target: { value: 'contests' } },
-    )
-    expect(screen.getByTestId('contests-content')).toBeTruthy()
-  })
+    );
+    expect(screen.getByTestId('contests-content')).toBeTruthy();
+  });
 
   it('mounts directly on Contests when initialTab is contests', () => {
-    render(<AdminReviewMobile {...baseProps} initialTab="contests" />)
-    expect(screen.getByTestId('contests-content')).toBeTruthy()
-  })
+    render(<AdminReviewMobile {...baseProps} initialTab="contests" />);
+    expect(screen.getByTestId('contests-content')).toBeTruthy();
+  });
 
   it('omits per-page counts from Prices and Missing option labels (#1079/#1080)', () => {
     // Even with a paginated slice full of "needs price" rows, the dropdown
@@ -100,14 +100,16 @@ describe('AdminReviewMobile tab switcher', () => {
         pricesMissingOnly
         priceEventsTotal={1183}
       />,
-    )
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    );
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: 'Price coverage' }),
-    ).toBeTruthy()
-    expect(within(select).getByRole('option', { name: 'Missing' })).toBeTruthy()
-  })
-})
+    ).toBeTruthy();
+    expect(
+      within(select).getByRole('option', { name: 'Missing' }),
+    ).toBeTruthy();
+  });
+});
 
 describe('AdminReviewMobile "Needs price" badge (#1080)', () => {
   const withPricesTab = (
@@ -115,36 +117,36 @@ describe('AdminReviewMobile "Needs price" badge (#1080)', () => {
   ) =>
     render(
       <AdminReviewMobile {...baseProps} initialTab="prices" {...overrides} />,
-    )
+    );
 
   it('shows the server-side total when filter is on missing-only', () => {
-    withPricesTab({ pricesMissingOnly: true, priceEventsTotal: 1183 })
+    withPricesTab({ pricesMissingOnly: true, priceEventsTotal: 1183 });
     // The badge must reflect the server total, not the fetched page size.
     // Anchor to the "Needs price" heading, then look for the count inside
     // its containing header row.
-    const heading = screen.getByText('Needs price')
-    const row = heading.parentElement?.parentElement
-    expect(row).toBeTruthy()
-    expect(within(row!).getByText('1183')).toBeTruthy()
-  })
+    const heading = screen.getByText('Needs price');
+    const row = heading.parentElement?.parentElement;
+    expect(row).toBeTruthy();
+    expect(within(row!).getByText('1183')).toBeTruthy();
+  });
 
   it('hides the badge when the missing filter is off', () => {
-    withPricesTab({ pricesMissingOnly: false, priceEventsTotal: 1183 })
+    withPricesTab({ pricesMissingOnly: false, priceEventsTotal: 1183 });
     // Off-filter, the server total counts *all* upcoming events, not just
     // the missing-price subset — so the badge must not display.
-    const heading = screen.getByText('Needs price')
-    const row = heading.parentElement?.parentElement
-    expect(row).toBeTruthy()
-    expect(within(row!).queryByText('1183')).toBeNull()
-  })
+    const heading = screen.getByText('Needs price');
+    const row = heading.parentElement?.parentElement;
+    expect(row).toBeTruthy();
+    expect(within(row!).queryByText('1183')).toBeNull();
+  });
 
   it('hides the badge when there are zero missing prices', () => {
-    withPricesTab({ pricesMissingOnly: true, priceEventsTotal: 0 })
-    const heading = screen.getByText('Needs price')
-    const row = heading.parentElement?.parentElement
-    expect(row).toBeTruthy()
-    expect(within(row!).queryByText('0')).toBeNull()
-  })
+    withPricesTab({ pricesMissingOnly: true, priceEventsTotal: 0 });
+    const heading = screen.getByText('Needs price');
+    const row = heading.parentElement?.parentElement;
+    expect(row).toBeTruthy();
+    expect(within(row!).queryByText('0')).toBeNull();
+  });
 
   it('hides the badge while the price-events query is re-fetching', () => {
     // React Query keeps the previous filter's data as placeholder during a
@@ -155,65 +157,65 @@ describe('AdminReviewMobile "Needs price" badge (#1080)', () => {
       pricesMissingOnly: true,
       priceEventsTotal: 1183,
       priceEventsLoading: true,
-    })
-    const heading = screen.getByText('Needs price')
-    const row = heading.parentElement?.parentElement
-    expect(row).toBeTruthy()
-    expect(within(row!).queryByText('1183')).toBeNull()
-  })
-})
+    });
+    const heading = screen.getByText('Needs price');
+    const row = heading.parentElement?.parentElement;
+    expect(row).toBeTruthy();
+    expect(within(row!).queryByText('1183')).toBeNull();
+  });
+});
 
 describe('AdminReviewMobile submissions/coverage split', () => {
   it('exposes Submissions as its own selectable tab', () => {
-    render(<AdminReviewMobile {...baseProps} />)
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    render(<AdminReviewMobile {...baseProps} />);
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: /Submissions/ }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('shows the pending-submissions count in the Submissions option label', () => {
-    render(<AdminReviewMobile {...baseProps} submissionsCount={7} />)
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    render(<AdminReviewMobile {...baseProps} submissionsCount={7} />);
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: 'Submissions (7)' }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('renders the submissions body when Submissions is selected', () => {
-    render(<AdminReviewMobile {...baseProps} />)
-    expect(screen.queryByTestId('submissions-content')).toBeNull()
+    render(<AdminReviewMobile {...baseProps} />);
+    expect(screen.queryByTestId('submissions-content')).toBeNull();
     fireEvent.change(
       screen.getByRole('combobox', { name: /Review sections/ }),
       {
         target: { value: 'submissions' },
       },
-    )
-    expect(screen.getByTestId('submissions-content')).toBeTruthy()
-  })
+    );
+    expect(screen.getByTestId('submissions-content')).toBeTruthy();
+  });
 
   it('mounts directly on Submissions when initialTab is submissions', () => {
-    render(<AdminReviewMobile {...baseProps} initialTab="submissions" />)
-    expect(screen.getByTestId('submissions-content')).toBeTruthy()
-  })
+    render(<AdminReviewMobile {...baseProps} initialTab="submissions" />);
+    expect(screen.getByTestId('submissions-content')).toBeTruthy();
+  });
 
   it('counts event flags from the server total, not the loaded page', () => {
     // `events` holds one paginated page (#694), so its length caps at the page
     // size and would tell an admin the queue is smaller than it is. The pill
     // reads the same server count the desktop tab and sidebar badge use.
-    render(<AdminReviewMobile {...baseProps} eventFlagsCount={42} />)
-    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    render(<AdminReviewMobile {...baseProps} eventFlagsCount={42} />);
+    const select = screen.getByRole('combobox', { name: /Review sections/ });
     expect(
       within(select).getByRole('option', { name: 'Event flags (42)' }),
-    ).toBeTruthy()
-  })
+    ).toBeTruthy();
+  });
 
   it('keeps the Prices tab to coverage only — no submissions surface', () => {
     // The whole point of the split: the community-submissions panel used to
     // sit above "Needs price" on this one tab. Mobile must match desktop.
-    render(<AdminReviewMobile {...baseProps} initialTab="prices" />)
-    expect(screen.getByText('Needs price')).toBeTruthy()
-    expect(screen.queryByTestId('submissions-content')).toBeNull()
-    expect(screen.queryByText(/Community submissions/i)).toBeNull()
-  })
-})
+    render(<AdminReviewMobile {...baseProps} initialTab="prices" />);
+    expect(screen.getByText('Needs price')).toBeTruthy();
+    expect(screen.queryByTestId('submissions-content')).toBeNull();
+    expect(screen.queryByText(/Community submissions/i)).toBeNull();
+  });
+});

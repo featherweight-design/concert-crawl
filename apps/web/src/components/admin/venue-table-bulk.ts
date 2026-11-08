@@ -1,8 +1,8 @@
 export interface BulkVisibility {
-  showVerify: boolean
-  showUnverify: boolean
-  showActivate: boolean
-  showDeactivate: boolean
+  showVerify: boolean;
+  showUnverify: boolean;
+  showActivate: boolean;
+  showDeactivate: boolean;
 }
 
 export function deriveBulkVisibility(
@@ -13,5 +13,5 @@ export function deriveBulkVisibility(
     showUnverify: venues.some((venue) => venue.verified),
     showActivate: venues.some((venue) => !venue.active),
     showDeactivate: venues.some((venue) => venue.active),
-  }
+  };
 }

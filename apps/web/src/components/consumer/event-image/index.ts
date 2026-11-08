@@ -1,1 +1,1 @@
-export { EventImage } from './EventImage'
+export { EventImage } from './EventImage';

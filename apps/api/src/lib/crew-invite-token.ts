@@ -5,19 +5,19 @@
 // reach a log line, a Sentry breadcrumb, or an error body. Log the resolved
 // crewId instead.
 
-import { randomBytes } from 'node:crypto'
-import { z } from 'zod'
+import { randomBytes } from 'node:crypto';
+import { z } from 'zod';
 
 /** 9 bytes → exactly 12 base64url characters, no padding. ~72 bits. */
-const TOKEN_BYTES = 9
+const TOKEN_BYTES = 9;
 
 /** Length of the base64url encoding of TOKEN_BYTES, used to bound input. */
-export const CREW_INVITE_TOKEN_LENGTH = 12
+export const CREW_INVITE_TOKEN_LENGTH = 12;
 
 // Re-exported, not redeclared: the dead-link surface renders the day count
 // with no invite payload to derive it from, so the TTL lives with the wire
 // contract for the same reason the 409 codes do.
-export { CREW_INVITE_TTL_MS } from '@concert-crawl/types'
+export { CREW_INVITE_TTL_MS } from '@concert-crawl/types';
 
 /**
  * Follows the shape of `generateCode()` in routes/admin/invite-codes.ts —
@@ -25,7 +25,7 @@ export { CREW_INVITE_TTL_MS } from '@concert-crawl/types'
  * one is never read aloud, so it takes the denser base64url alphabet.
  */
 export const generateCrewInviteToken = (): string =>
-  randomBytes(TOKEN_BYTES).toString('base64url')
+  randomBytes(TOKEN_BYTES).toString('base64url');
 
 /**
  * base64url only. Bounds what reaches the DB and rejects the obvious probes
@@ -36,4 +36,4 @@ export const generateCrewInviteToken = (): string =>
 export const crewInviteTokenSchema = z
   .string()
   .length(CREW_INVITE_TOKEN_LENGTH)
-  .regex(/^[A-Za-z0-9_-]+$/)
+  .regex(/^[A-Za-z0-9_-]+$/);

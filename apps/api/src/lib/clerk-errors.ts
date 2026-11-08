@@ -5,8 +5,8 @@
  */
 export const isClerkNotFound = (err: unknown): boolean => {
   if (typeof err !== 'object' || err === null || !('status' in err)) {
-    return false
+    return false;
   }
-  const { status } = err
-  return status === 404
-}
+  const { status } = err;
+  return status === 404;
+};

@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useId, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
-import { Pause, Play } from 'lucide-react'
-import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time'
-import { AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { pauseCrawling, resumeCrawling } from '@/lib/actions/venues'
-import type { CrawlPauseControlProps } from './definitions/types'
+import { useId, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { Pause, Play } from 'lucide-react';
+import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time';
+import { AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { pauseCrawling, resumeCrawling } from '@/lib/actions/venues';
+import type { CrawlPauseControlProps } from './definitions/types';
 
-const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause
+const COPY = ADMIN_COPY.venueDetailsClient.dangerZone.crawlPause;
 
 /**
  * Stops every crawl of a venue while its shows stay published, for a venue
@@ -20,24 +20,24 @@ export const CrawlPauseControl = ({
   venueId,
   crawlPausedAt,
 }: CrawlPauseControlProps) => {
-  const router = useRouter()
-  const reasonId = useId()
-  const [reason, setReason] = useState('')
-  const [isPending, startTransition] = useTransition()
-  const paused = crawlPausedAt !== null
-  const trimmedReason = reason.trim()
+  const router = useRouter();
+  const reasonId = useId();
+  const [reason, setReason] = useState('');
+  const [isPending, startTransition] = useTransition();
+  const paused = crawlPausedAt !== null;
+  const trimmedReason = reason.trim();
 
   const toggleCrawlPause = () => {
     startTransition(async () => {
       if (paused) {
-        await resumeCrawling(venueId)
+        await resumeCrawling(venueId);
       } else {
-        await pauseCrawling(venueId, trimmedReason)
-        setReason('')
+        await pauseCrawling(venueId, trimmedReason);
+        setReason('');
       }
-      router.refresh()
-    })
-  }
+      router.refresh();
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -113,5 +113,5 @@ export const CrawlPauseControl = ({
         </>
       )}
     </div>
-  )
-}
+  );
+};

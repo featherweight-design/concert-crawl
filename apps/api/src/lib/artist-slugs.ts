@@ -10,36 +10,36 @@
 // `canonicalizeSupporting()`, which dedupes and sorts, so it cannot be zipped
 // positionally against `events.supporting_artists`.
 
-import { db, artists } from '@concert-crawl/db'
-import { and, eq, inArray } from 'drizzle-orm'
-import { canonicalizeArtist } from '@concert-crawl/types'
+import { db, artists } from '@concert-crawl/db';
+import { and, eq, inArray } from 'drizzle-orm';
+import { canonicalizeArtist } from '@concert-crawl/types';
 
 export interface ResolvedArtistSlugs {
   /** The headliner's slug, or null when the projection has no row. */
-  artistSlug: string | null
+  artistSlug: string | null;
   /**
    * Positionally aligned with the `supportingArtists` argument — same length,
    * same order, `null` where that name has no row. Null when the argument is
    * null (a legacy pre-recrawl event row).
    */
-  supportingArtistSlugs: Array<string | null> | null
+  supportingArtistSlugs: Array<string | null> | null;
 }
 
 export const resolveArtistSlugs = async (
   headliner: string,
   supportingArtists: string[] | null,
 ): Promise<ResolvedArtistSlugs> => {
-  const headlinerCanonical = canonicalizeArtist(headliner)
+  const headlinerCanonical = canonicalizeArtist(headliner);
   const supportingCanonical = (supportingArtists ?? []).map((name) =>
     canonicalizeArtist(name),
-  )
+  );
 
   // One lookup for every distinct non-empty canonical name on the bill.
   // canonicalizeArtist can return '' (a name that is punctuation only), which
   // matches nothing and would only bloat the IN list.
   const lookup = [...new Set([headlinerCanonical, ...supportingCanonical])]
     .filter((canonical) => canonical !== '')
-    .sort()
+    .sort();
 
   const rows =
     lookup.length === 0
@@ -58,11 +58,11 @@ export const resolveArtistSlugs = async (
               inArray(artists.canonicalName, lookup),
               eq(artists.hidden, false),
             ),
-          )
+          );
 
   const slugByCanonical = new Map(
     rows.map((row) => [row.canonicalName, row.slug]),
-  )
+  );
 
   return {
     artistSlug: slugByCanonical.get(headlinerCanonical) ?? null,
@@ -72,5 +72,5 @@ export const resolveArtistSlugs = async (
         : supportingCanonical.map(
             (canonical) => slugByCanonical.get(canonical) ?? null,
           ),
-  }
-}
+  };
+};

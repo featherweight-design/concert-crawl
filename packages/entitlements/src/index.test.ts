@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import type { UserPlan } from '@concert-crawl/types'
+import { describe, it, expect } from 'vitest';
+import type { UserPlan } from '@concert-crawl/types';
 import {
   ENTITLEMENTS_MATRIX,
   PREMIUM_FEATURES,
@@ -9,7 +9,7 @@ import {
   nfLocked,
   type EntitlementCell,
   type PremiumFeature,
-} from './index.js'
+} from './index.js';
 
 // Independent literal copy of #781 §6, including the R6 Watching-is-Free
 // amendment, the #763 §7 (E8) spotify-sync override, and the 2026-07-29
@@ -86,12 +86,12 @@ const EXPECTED_CELLS: Record<
     founder: 'visible-active',
     gifted: 'visible-active',
   },
-}
+};
 
 const allCombos: Array<[PremiumFeature, UserPlan]> = PREMIUM_FEATURES.flatMap(
   (feature) =>
     USER_PLANS.map((plan): [PremiumFeature, UserPlan] => [feature, plan]),
-)
+);
 
 describe('ENTITLEMENTS_MATRIX', () => {
   it.each(allCombos)(
@@ -99,92 +99,94 @@ describe('ENTITLEMENTS_MATRIX', () => {
     (feature, plan) => {
       expect(ENTITLEMENTS_MATRIX[feature][plan]).toBe(
         EXPECTED_CELLS[feature][plan],
-      )
+      );
     },
-  )
+  );
 
   it('covers exactly 8 features × 6 plans', () => {
-    expect(PREMIUM_FEATURES).toHaveLength(8)
-    expect(USER_PLANS).toHaveLength(6)
-    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(8)
+    expect(PREMIUM_FEATURES).toHaveLength(8);
+    expect(USER_PLANS).toHaveLength(6);
+    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(8);
     for (const feature of PREMIUM_FEATURES) {
-      expect(Object.keys(ENTITLEMENTS_MATRIX[feature])).toHaveLength(6)
+      expect(Object.keys(ENTITLEMENTS_MATRIX[feature])).toHaveLength(6);
     }
-  })
-})
+  });
+});
 
 describe('canUseFeature', () => {
   it.each(allCombos)(
     'returns true for %s × %s only when the cell is visible-active',
     (feature, plan) => {
-      const expected = EXPECTED_CELLS[feature][plan] === 'visible-active'
-      expect(canUseFeature({ plan, roleComped: false }, feature)).toBe(expected)
+      const expected = EXPECTED_CELLS[feature][plan] === 'visible-active';
+      expect(canUseFeature({ plan, roleComped: false }, feature)).toBe(
+        expected,
+      );
     },
-  )
+  );
 
   it.each(allCombos)(
     'roleComped grants %s regardless of plan %s',
     (feature, plan) => {
-      expect(canUseFeature({ plan, roleComped: true }, feature)).toBe(true)
+      expect(canUseFeature({ plan, roleComped: true }, feature)).toBe(true);
     },
-  )
+  );
 
   it('trial maps to plan premium, so premium features are visible-active', () => {
     const trialState: { plan: UserPlan; roleComped: boolean } = {
       plan: 'premium',
       roleComped: false,
-    }
+    };
     for (const feature of PREMIUM_FEATURES) {
-      expect(canUseFeature(trialState, feature)).toBe(true)
+      expect(canUseFeature(trialState, feature)).toBe(true);
     }
-  })
-})
+  });
+});
 
 describe('lockedSurface', () => {
   it.each(allCombos)('returns the matrix cell for %s × %s', (feature, plan) => {
     expect(lockedSurface({ plan, roleComped: false }, feature)).toBe(
       EXPECTED_CELLS[feature][plan],
-    )
-  })
+    );
+  });
 
   it.each(allCombos)(
     'roleComped never routes %s × %s to a locked surface',
     (feature, plan) => {
       expect(lockedSurface({ plan, roleComped: true }, feature)).toBe(
         'visible-active',
-      )
+      );
     },
-  )
-})
+  );
+});
 
 describe('nfLocked', () => {
   it.each<UserPlan>(['logged-out', 'free', 'supporter'])(
     'locks following for %s',
     (plan) => {
-      expect(nfLocked({ plan, roleComped: false })).toBe(true)
+      expect(nfLocked({ plan, roleComped: false })).toBe(true);
     },
-  )
+  );
 
   it.each<UserPlan>(['premium', 'founder', 'gifted'])(
     'unlocks following for %s',
     (plan) => {
-      expect(nfLocked({ plan, roleComped: false })).toBe(false)
+      expect(nfLocked({ plan, roleComped: false })).toBe(false);
     },
-  )
+  );
 
   // roleComped is an override the matrix does not encode. A helper that only
   // saw a tier string would render a comped user locked.
   it('unlocks a comped user whose plan is free', () => {
-    expect(nfLocked({ plan: 'free', roleComped: true })).toBe(false)
-  })
+    expect(nfLocked({ plan: 'free', roleComped: true })).toBe(false);
+  });
 
   // The exact failure mode a tier enumeration produces: `tier === 'free' ||
   // tier === 'supporter'` answers false for logged-out, leaking a live Follow
   // button to a visitor with no account.
   it('agrees with the matrix on every plan', () => {
     for (const plan of USER_PLANS) {
-      const state = { plan, roleComped: false }
-      expect(nfLocked(state)).toBe(!canUseFeature(state, 'following'))
+      const state = { plan, roleComped: false };
+      expect(nfLocked(state)).toBe(!canUseFeature(state, 'following'));
     }
-  })
-})
+  });
+});

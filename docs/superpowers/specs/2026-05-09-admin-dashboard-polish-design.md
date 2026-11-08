@@ -17,6 +17,7 @@ A focused polish pass on the admin shell and dashboard page to close the gap bet
 ### 1. AdminTopbar — simplify chrome
 
 **Remove:**
+
 - Theme selector buttons (Light / Dark / Electric / Jade)
 - Clerk `UserButton` component
 
@@ -39,9 +40,11 @@ Change the fallback theme from `'dark'` → `'electric'`. Users who have never s
 The existing user card (initials chip + name + role) becomes a button that opens a small popover anchored above it.
 
 **Popover contents:**
+
 - **Sign out** — Lucide `LogOut` icon (14px) + "Sign out" label. Calls `useClerk().signOut()` on click.
 
 **Popover behavior:**
+
 - Anchored above the user card, left-aligned to the sidebar edge
 - Closes on outside-click (use a `useEffect` with a `mousedown` listener, or Radix `Popover` primitive if available)
 - In rail mode (icon-only sidebar), the popover still opens above the initials chip
@@ -59,12 +62,14 @@ The existing user card (initials chip + name + role) becomes a button that opens
 Add two buttons to the top-right of the greeting block, matching the mock layout (right-aligned, same row as the greeting text or just below the subtext line).
 
 **Run all venues** (`AdminButton` variant `primary`)
+
 - Loops through all active+verified venues and calls `POST /v1/admin/crawl/:venueId` for each (no bulk endpoint exists)
 - Uses a Next.js Server Action so the token never reaches the client
 - Shows a brief loading spinner (disable button while in flight via `useFormStatus`)
 - On success/error: re-enable the button
 
 **Add venue** (`AdminButton` variant `outline`)
+
 - `href="/admin/venues/new"` — navigate, no API call
 
 **Files:** `apps/web/src/app/(protected)/admin/page.tsx`, new `RunAllVenuesButton.tsx` client component
@@ -112,6 +117,7 @@ Apply by adding a `border-top: 1px solid var(--border)` + `padding-top` inside `
 Add a **Strategy** column between "Last crawl" and "Events". Value from `lastRun.extractionStrategyUsed`.
 
 Render as a `StatusBadge variant="mono"`:
+
 - `structured_data` → display as `structured`
 - `llm` → display as `llm`
 - `manual` → display as `manual`
@@ -130,7 +136,7 @@ Each row navigates to `/admin/crawl?venue={venueId}` on click. Extract the table
 Add **Events** and **Invites** filter tabs to `ActivityFeed` alongside existing All / Crawl.
 
 ```ts
-type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
+type FilterTab = 'all' | 'crawl' | 'events' | 'invites';
 ```
 
 Since the feed only receives `CrawlRun[]`, both new tabs show an empty state: "No recent activity."
@@ -143,32 +149,32 @@ The `FilterTab` type and tab array are defined so that issue #116 can wire up re
 
 ## What this spec does NOT include
 
-| Item | Reason | Ticket |
-|---|---|---|
-| Inbox sidebar item + drawer | New feature, own scope | #111 |
-| LLM spend area chart | Needs chart lib + aggregation API | #112 |
-| Admin global search | Scope TBD | #113 |
-| Top spend breakdown | Needs aggregation API | #114 |
-| SSE live indicator | Needs SSE infrastructure | #115 |
-| Events/Invites wired to feed | Needs unified activity type + API | #116 |
+| Item                         | Reason                            | Ticket |
+| ---------------------------- | --------------------------------- | ------ |
+| Inbox sidebar item + drawer  | New feature, own scope            | #111   |
+| LLM spend area chart         | Needs chart lib + aggregation API | #112   |
+| Admin global search          | Scope TBD                         | #113   |
+| Top spend breakdown          | Needs aggregation API             | #114   |
+| SSE live indicator           | Needs SSE infrastructure          | #115   |
+| Events/Invites wired to feed | Needs unified activity type + API | #116   |
 
 ---
 
 ## Files touched
 
-| File | Change |
-|---|---|
-| `apps/web/src/components/admin/shell/AdminTopbar.tsx` | Remove theme selector + Clerk UserButton |
-| `apps/web/src/components/admin/shell/AdminThemeProvider.tsx` | Default theme → `electric` |
-| `apps/web/src/components/admin/shell/AdminSidebar.tsx` | User card → popover with sign-out |
-| `apps/web/src/components/admin/primitives/StatCard.tsx` | Footer separator |
-| `apps/web/src/components/admin/primitives/AdminTable.tsx` | Add `onClick` to TR |
-| `apps/web/src/components/admin/dashboard/lib/dashboard.ts` | Shared types + pure helpers (new) |
-| `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts` | Unit tests (new) |
-| `apps/web/src/components/admin/dashboard/RunAllVenuesButton.tsx` | Client component (new) |
-| `apps/web/src/components/admin/dashboard/CrawlHealthTable.tsx` | Client component (new) |
-| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx` | Events + Invites tabs (stubs) |
-| `apps/web/src/app/(protected)/admin/page.tsx` | Data fetching, stat card content, layout |
+| File                                                             | Change                                   |
+| ---------------------------------------------------------------- | ---------------------------------------- |
+| `apps/web/src/components/admin/shell/AdminTopbar.tsx`            | Remove theme selector + Clerk UserButton |
+| `apps/web/src/components/admin/shell/AdminThemeProvider.tsx`     | Default theme → `electric`               |
+| `apps/web/src/components/admin/shell/AdminSidebar.tsx`           | User card → popover with sign-out        |
+| `apps/web/src/components/admin/primitives/StatCard.tsx`          | Footer separator                         |
+| `apps/web/src/components/admin/primitives/AdminTable.tsx`        | Add `onClick` to TR                      |
+| `apps/web/src/components/admin/dashboard/lib/dashboard.ts`       | Shared types + pure helpers (new)        |
+| `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts`  | Unit tests (new)                         |
+| `apps/web/src/components/admin/dashboard/RunAllVenuesButton.tsx` | Client component (new)                   |
+| `apps/web/src/components/admin/dashboard/CrawlHealthTable.tsx`   | Client component (new)                   |
+| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx`       | Events + Invites tabs (stubs)            |
+| `apps/web/src/app/(protected)/admin/page.tsx`                    | Data fetching, stat card content, layout |
 
 ---
 

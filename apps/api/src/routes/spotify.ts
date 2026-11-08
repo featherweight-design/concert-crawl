@@ -4,48 +4,48 @@
 // All routes are auth-only and FREE — connecting, syncing, auto-watch, and
 // highlighting carry no entitlement gate. Premium enforcement lives on the
 // R2 read surfaces (taste filter, discovery, digest, push).
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { zValidator } from '@hono/zod-validator'
-import { createClerkClient } from '@clerk/backend'
-import { eq } from 'drizzle-orm'
-import { z } from 'zod'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { zValidator } from '@hono/zod-validator';
+import { createClerkClient } from '@clerk/backend';
+import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import {
   db,
   spotifyAlertLog,
   userEvents,
   userProfiles,
   userSpotifyConnections,
-} from '@concert-crawl/db'
-import type { UserSpotifyConnection } from '@concert-crawl/db'
+} from '@concert-crawl/db';
+import type { UserSpotifyConnection } from '@concert-crawl/db';
 import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
   SpotifyNudgeResponse,
   SpotifyTastePicksResponse,
-} from '@concert-crawl/types'
-import { apiLogger } from '../lib/logger.js'
-import { checkRateLimit } from '../lib/rate-limit.js'
-import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
-import { requireFlag } from '../middleware/feature-flag.js'
-import { requireFeature } from '../middleware/entitlement.js'
+} from '@concert-crawl/types';
+import { apiLogger } from '../lib/logger.js';
+import { checkRateLimit } from '../lib/rate-limit.js';
+import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js';
+import { requireFlag } from '../middleware/feature-flag.js';
+import { requireFeature } from '../middleware/entitlement.js';
 import {
   EMPTY_MATCH_SUMMARY,
   getMatchedUpcomingEventIds,
   getSpotifyMatchSummary,
   getTastePicks,
-} from '../lib/spotify-matches.js'
+} from '../lib/spotify-matches.js';
 import {
   getSpotifyAccessToken,
   syncSpotifyConnection,
-} from '../lib/spotify-sync.js'
+} from '../lib/spotify-sync.js';
 
 // On-demand refresh window (spec §6): reject when the last sync is fresher
 // than 10 minutes, with Retry-After pointing at the window's end.
-const SYNC_MIN_INTERVAL_MS = 10 * 60 * 1000
+const SYNC_MIN_INTERVAL_MS = 10 * 60 * 1000;
 
-const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
-const clerkClient = createClerkClient({ secretKey })
+const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
+const clerkClient = createClerkClient({ secretKey });
 
 const patchSchema = z
   .object({
@@ -60,15 +60,15 @@ const patchSchema = z
       body.digestEnabled !== undefined ||
       body.pushEnabled !== undefined,
     { message: 'At least one toggle is required' },
-  )
+  );
 
-export const spotifyRouter = new Hono()
+export const spotifyRouter = new Hono();
 
 // Release gate, mounted ahead of auth so the whole Spotify surface is absent
 // rather than merely refused while the flag is off.
-spotifyRouter.use('*', requireFlag('spotify-sync'))
+spotifyRouter.use('*', requireFlag('spotify-sync'));
 
-spotifyRouter.use('*', clerkMiddleware())
+spotifyRouter.use('*', clerkMiddleware());
 
 // The Denver-match summary rides along on every connection payload (PR 5) —
 // it drives "N play Denver" on the success screen and Connections card.
@@ -80,7 +80,7 @@ const toView = async (
   const matches =
     row.status === 'connected'
       ? await getSpotifyMatchSummary(row.userId)
-      : EMPTY_MATCH_SUMMARY
+      : EMPTY_MATCH_SUMMARY;
   return {
     status: row.status,
     displayName: row.displayName ?? null,
@@ -90,8 +90,8 @@ const toView = async (
     digestEnabled: row.digestEnabled,
     pushEnabled: row.pushEnabled,
     ...matches,
-  }
-}
+  };
+};
 
 const loadConnection = async (
   userId: string,
@@ -100,9 +100,9 @@ const loadConnection = async (
     .select()
     .from(userSpotifyConnections)
     .where(eq(userSpotifyConnections.userId, userId))
-    .limit(1)
-  return row ?? null
-}
+    .limit(1);
+  return row ?? null;
+};
 
 // Auto-watch opt-in backfill: claim a spotify_alert_log row per matched
 // event (kind='auto_watch', the spec §10 idempotency ledger) and insert a
@@ -112,8 +112,8 @@ const loadConnection = async (
 // truth and already landed.
 const backfillAutoWatch = async (userId: string): Promise<void> => {
   try {
-    const eventIds = await getMatchedUpcomingEventIds(userId)
-    if (eventIds.length === 0) return
+    const eventIds = await getMatchedUpcomingEventIds(userId);
+    if (eventIds.length === 0) return;
     await db.transaction(async (tx) => {
       const claimed = await tx
         .insert(spotifyAlertLog)
@@ -125,8 +125,8 @@ const backfillAutoWatch = async (userId: string): Promise<void> => {
           })),
         )
         .onConflictDoNothing()
-        .returning({ eventId: spotifyAlertLog.eventId })
-      if (claimed.length === 0) return
+        .returning({ eventId: spotifyAlertLog.eventId });
+      if (claimed.length === 0) return;
       await tx
         .insert(userEvents)
         .values(
@@ -136,53 +136,53 @@ const backfillAutoWatch = async (userId: string): Promise<void> => {
             status: 'watching' as const,
           })),
         )
-        .onConflictDoNothing()
-    })
+        .onConflictDoNothing();
+    });
   } catch (err) {
-    apiLogger.error({ err, userId }, 'spotify: auto-watch backfill failed')
+    apiLogger.error({ err, userId }, 'spotify: auto-watch backfill failed');
   }
-}
+};
 
 // Clerk models the linked account with provider 'oauth_spotify' (the
 // strategy string); tolerate the unprefixed form too in case the SDK
 // normalizes it in a future major.
 const isSpotifyAccount = (account: { provider: string }): boolean =>
-  account.provider === 'oauth_spotify' || account.provider === 'spotify'
+  account.provider === 'oauth_spotify' || account.provider === 'spotify';
 
 // GET /v1/spotify/connection — drives Settings ▸ Connections + banners
 spotifyRouter.get('/connection', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const row = await loadConnection(auth.userId)
+  const row = await loadConnection(auth.userId);
   const data: SpotifyConnectionResponse = row
     ? await toView(row)
-    : { status: 'disconnected' }
-  return ctx.json({ success: true, data })
-})
+    : { status: 'disconnected' };
+  return ctx.json({ success: true, data });
+});
 
 // POST /v1/spotify/connection — post-OAuth-return: verify the external
 // account exists on the Clerk user, upsert our row, first sync inline so the
 // success screen shows a real artist count (spec §3/§6).
 spotifyRouter.post('/connection', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  let hasSpotifyAccount = false
+  let hasSpotifyAccount = false;
   try {
-    const clerkUser = await clerkClient.users.getUser(auth.userId)
-    hasSpotifyAccount = clerkUser.externalAccounts.some(isSpotifyAccount)
+    const clerkUser = await clerkClient.users.getUser(auth.userId);
+    hasSpotifyAccount = clerkUser.externalAccounts.some(isSpotifyAccount);
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
       'spotify connect: Clerk user lookup failed',
-    )
+    );
     return ctx.json(
       { success: false, error: 'Failed to verify Spotify account' },
       500,
-    )
+    );
   }
   if (!hasSpotifyAccount) {
     // `code` lets the client brand-narrow this specific failure — most
@@ -197,45 +197,45 @@ spotifyRouter.post('/connection', async (ctx) => {
         code: 'no_external_account',
       },
       400,
-    )
+    );
   }
 
-  const tokenResult = await getSpotifyAccessToken(auth.userId)
+  const tokenResult = await getSpotifyAccessToken(auth.userId);
   if (tokenResult.status === 'no-grant') {
     return ctx.json(
       { success: false, error: 'Spotify authorization is incomplete' },
       400,
-    )
+    );
   }
   if (tokenResult.status === 'error') {
     return ctx.json(
       { success: false, error: 'Spotify is unavailable — try again shortly' },
       502,
-    )
+    );
   }
 
   // Identity fetch (connect time only, spec §5): spotifyUserId + displayName
-  let spotifyUserId: string
-  let displayName: string | null
+  let spotifyUserId: string;
+  let displayName: string | null;
   try {
-    const profile = await createSpotifyClient(tokenResult.token).getProfile()
-    spotifyUserId = profile.spotifyUserId
-    displayName = profile.displayName
+    const profile = await createSpotifyClient(tokenResult.token).getProfile();
+    spotifyUserId = profile.spotifyUserId;
+    displayName = profile.displayName;
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
       'spotify connect: profile fetch failed',
-    )
+    );
     if (err instanceof SpotifyAuthError) {
       return ctx.json(
         { success: false, error: 'Spotify authorization is incomplete' },
         400,
-      )
+      );
     }
     return ctx.json(
       { success: false, error: 'Spotify is unavailable — try again shortly' },
       502,
-    )
+    );
   }
 
   // Reconnect overwrites a revoked row back to 'connected' (spec §3);
@@ -253,35 +253,41 @@ spotifyRouter.post('/connection', async (ctx) => {
           lastSyncError: null,
           connectedAt: new Date(),
         },
-      })
+      });
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
       'spotify connect: connection upsert failed',
-    )
-    return ctx.json({ success: false, error: 'Failed to connect Spotify' }, 500)
+    );
+    return ctx.json(
+      { success: false, error: 'Failed to connect Spotify' },
+      500,
+    );
   }
 
   // First sync inline — outcomes land on the row (status/error bookkeeping),
   // so the response reflects whatever the sync left behind.
-  await syncSpotifyConnection(auth.userId)
+  await syncSpotifyConnection(auth.userId);
 
-  const row = await loadConnection(auth.userId)
+  const row = await loadConnection(auth.userId);
   if (!row) {
-    return ctx.json({ success: false, error: 'Failed to connect Spotify' }, 500)
+    return ctx.json(
+      { success: false, error: 'Failed to connect Spotify' },
+      500,
+    );
   }
-  return ctx.json({ success: true, data: await toView(row) }, 201)
-})
+  return ctx.json({ success: true, data: await toView(row) }, 201);
+});
 
 // POST /v1/spotify/connection/sync — on-demand "Refresh my taste"
 spotifyRouter.post('/connection/sync', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const row = await loadConnection(auth.userId)
+  const row = await loadConnection(auth.userId);
   if (!row)
-    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
+    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404);
   if (row.status === 'revoked') {
     return ctx.json(
       {
@@ -289,21 +295,23 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
         error: 'Spotify access was revoked — reconnect to sync',
       },
       409,
-    )
+    );
   }
 
   if (row.lastSyncedAt) {
-    const elapsedMs = Date.now() - row.lastSyncedAt.getTime()
+    const elapsedMs = Date.now() - row.lastSyncedAt.getTime();
     if (elapsedMs < SYNC_MIN_INTERVAL_MS) {
-      const retryAfterSec = Math.ceil((SYNC_MIN_INTERVAL_MS - elapsedMs) / 1000)
-      ctx.header('Retry-After', String(retryAfterSec))
+      const retryAfterSec = Math.ceil(
+        (SYNC_MIN_INTERVAL_MS - elapsedMs) / 1000,
+      );
+      ctx.header('Retry-After', String(retryAfterSec));
       return ctx.json(
         {
           success: false,
           error: 'Taste was refreshed recently — try again in a few minutes',
         },
         429,
-      )
+      );
     }
   }
 
@@ -318,43 +326,43 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
     // Fail open: lastSyncedAt above still throttles the success path, and a
     // rate-limit DB blip should not block a user's own refresh.
     { onStoreError: 'allow', userId: auth.userId },
-  )
+  );
   if (!allowed) {
-    ctx.header('Retry-After', String(Math.ceil(retryAfterMs / 1000)))
+    ctx.header('Retry-After', String(Math.ceil(retryAfterMs / 1000)));
     return ctx.json(
       {
         success: false,
         error: 'Taste was refreshed recently — try again in a few minutes',
       },
       429,
-    )
+    );
   }
 
-  await syncSpotifyConnection(auth.userId)
+  await syncSpotifyConnection(auth.userId);
 
-  const updated = await loadConnection(auth.userId)
+  const updated = await loadConnection(auth.userId);
   if (!updated) {
-    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
+    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404);
   }
-  return ctx.json({ success: true, data: await toView(updated) })
-})
+  return ctx.json({ success: true, data: await toView(updated) });
+});
 
 // PATCH /v1/spotify/connection — Settings toggles + one-time auto-watch opt-in
 spotifyRouter.patch('/connection', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  let body: unknown = null
+  let body: unknown = null;
   try {
-    body = await ctx.req.json()
+    body = await ctx.req.json();
   } catch (err) {
     apiLogger.warn(
       { err, userId: auth.userId },
       'spotify: unparseable PATCH body',
-    )
+    );
   }
-  const parsed = patchSchema.safeParse(body)
+  const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return ctx.json(
       {
@@ -363,24 +371,24 @@ spotifyRouter.patch('/connection', async (ctx) => {
         details: parsed.error.flatten(),
       },
       422,
-    )
+    );
   }
 
-  const row = await loadConnection(auth.userId)
+  const row = await loadConnection(auth.userId);
   if (!row)
-    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
+    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404);
 
   try {
     const [updated] = await db
       .update(userSpotifyConnections)
       .set(parsed.data)
       .where(eq(userSpotifyConnections.userId, auth.userId))
-      .returning()
+      .returning();
     if (!updated) {
       return ctx.json(
         { success: false, error: 'Spotify is not connected' },
         404,
-      )
+      );
     }
     // Opt-in moment (auto-watch off → on): backfill currently-matched
     // upcoming shows into Watching. PR 10's fan-out only covers events that
@@ -388,20 +396,20 @@ spotifyRouter.patch('/connection', async (ctx) => {
     // now". Best-effort — the toggle write above already succeeded, and a
     // failed backfill is self-healing on the next explicit opt-in cycle.
     if (parsed.data.autoWatch === true && !row.autoWatch) {
-      await backfillAutoWatch(auth.userId)
+      await backfillAutoWatch(auth.userId);
     }
-    return ctx.json({ success: true, data: await toView(updated) })
+    return ctx.json({ success: true, data: await toView(updated) });
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
       'spotify: connection update failed',
-    )
+    );
     return ctx.json(
       { success: false, error: 'Failed to update connection' },
       500,
-    )
+    );
   }
-})
+});
 
 // DELETE /v1/spotify/connection — explicit disconnect: delete the connection
 // row (unlike revoke, which retains it), then delete the Clerk external
@@ -411,25 +419,25 @@ spotifyRouter.patch('/connection', async (ctx) => {
 // request to unfollow the artists already imported, which the user removes
 // one at a time like any other follow.
 spotifyRouter.delete('/connection', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
-  const userId = auth.userId
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+  const userId = auth.userId;
 
-  const row = await loadConnection(userId)
+  const row = await loadConnection(userId);
   if (!row)
-    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
+    return ctx.json({ success: false, error: 'Spotify is not connected' }, 404);
 
   try {
     await db
       .delete(userSpotifyConnections)
-      .where(eq(userSpotifyConnections.userId, userId))
+      .where(eq(userSpotifyConnections.userId, userId));
   } catch (err) {
-    apiLogger.error({ err, userId }, 'spotify disconnect: delete failed')
+    apiLogger.error({ err, userId }, 'spotify disconnect: delete failed');
     return ctx.json(
       { success: false, error: 'Failed to disconnect Spotify' },
       500,
-    )
+    );
   }
 
   // Best-effort grant revoke: the connection is already gone (the user-visible
@@ -437,29 +445,29 @@ spotifyRouter.delete('/connection', async (ctx) => {
   // a stale external account without a connection row is inert, and the
   // user can also remove it from the Clerk-managed account page.
   try {
-    const clerkUser = await clerkClient.users.getUser(userId)
-    const spotifyAccount = clerkUser.externalAccounts.find(isSpotifyAccount)
+    const clerkUser = await clerkClient.users.getUser(userId);
+    const spotifyAccount = clerkUser.externalAccounts.find(isSpotifyAccount);
     if (spotifyAccount) {
       await clerkClient.users.deleteUserExternalAccount({
         userId,
         externalAccountId: spotifyAccount.id,
-      })
+      });
     }
   } catch (err) {
     apiLogger.error(
       { err, userId },
       'spotify disconnect: Clerk external account delete failed',
-    )
+    );
   }
 
-  return ctx.body(null, 204)
-})
+  return ctx.body(null, 204);
+});
 
 // Shelf default is 10 per the spec's endpoint contract; the max is a hard
 // clamp so a tampered limit can't turn the shelf query into a full export.
 const tastePicksQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(25).default(10),
-})
+});
 
 // GET /v1/spotify/taste-picks — "Based on your taste" discovery shelf
 // (#763 PR 8, eng spec §9.4). The one premium-gated route in this file:
@@ -473,13 +481,13 @@ spotifyRouter.get(
   requireFeature('spotify-sync'),
   zValidator('query', tastePicksQuerySchema),
   async (ctx) => {
-    const auth = getAuth(ctx)
+    const auth = getAuth(ctx);
     // requireFeature already rejected anonymous requests — defensive only.
     if (!auth?.userId)
-      return ctx.json({ success: false, error: 'Unauthorized' }, 401)
-    const { limit } = ctx.req.valid('query')
+      return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+    const { limit } = ctx.req.valid('query');
 
-    const row = await loadConnection(auth.userId)
+    const row = await loadConnection(auth.userId);
     const data: SpotifyTastePicksResponse =
       row === null
         ? { status: 'disconnected', picks: [] }
@@ -488,64 +496,64 @@ spotifyRouter.get(
           : {
               status: 'connected',
               picks: await getTastePicks(auth.userId, limit),
-            }
-    return ctx.json({ success: true, data })
+            };
+    return ctx.json({ success: true, data });
   },
-)
+);
 
 // GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
 // Eligible only while the user has no connection row AND has never been
 // shown the nudge (single-fire via user_profiles.spotify_nudge_seen_at).
 spotifyRouter.get('/nudge', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const row = await loadConnection(auth.userId)
+  const row = await loadConnection(auth.userId);
   if (row) {
-    const data: SpotifyNudgeResponse = { eligible: false }
-    return ctx.json({ success: true, data })
+    const data: SpotifyNudgeResponse = { eligible: false };
+    return ctx.json({ success: true, data });
   }
 
   const [profile] = await db
     .select({ spotifyNudgeSeenAt: userProfiles.spotifyNudgeSeenAt })
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
-    .limit(1)
+    .limit(1);
   // No profile row yet = never seen — the seen write lazily creates the row.
   const data: SpotifyNudgeResponse = {
     eligible: !profile || profile.spotifyNudgeSeenAt === null,
-  }
-  return ctx.json({ success: true, data })
-})
+  };
+  return ctx.json({ success: true, data });
+});
 
 // POST /v1/spotify/nudge/seen — mark the nudge shown (fires when it is
 // DISPLAYED, regardless of what the user taps — single-fire, spec §3).
 // Lazy profile-row creation mirrors PATCH /v1/users/me.
 spotifyRouter.post('/nudge/seen', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   try {
     // Idempotent upsert — the nudge can double-fire (two tabs, StrictMode),
     // so read-then-insert would race on the user_id unique constraint. The
     // conflict path touches only the nudge timestamp, never handle/theme.
-    const seenAt = new Date()
+    const seenAt = new Date();
     await db
       .insert(userProfiles)
       .values({ userId: auth.userId, spotifyNudgeSeenAt: seenAt })
       .onConflictDoUpdate({
         target: userProfiles.userId,
         set: { spotifyNudgeSeenAt: seenAt, updatedAt: seenAt },
-      })
+      });
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
       'spotify: nudge seen write failed',
-    )
-    return ctx.json({ success: false, error: 'Failed to record nudge' }, 500)
+    );
+    return ctx.json({ success: false, error: 'Failed to record nudge' }, 500);
   }
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});

@@ -42,16 +42,16 @@
  * Idempotent: a no-op re-run reports every venue as unchanged.
  */
 
-import { pathToFileURL } from 'node:url'
-import { sql } from 'drizzle-orm'
-import { db, venues } from '@concert-crawl/db'
-import { SEED_VENUES } from '../packages/db/seed.js'
+import { pathToFileURL } from 'node:url';
+import { sql } from 'drizzle-orm';
+import { db, venues } from '@concert-crawl/db';
+import { SEED_VENUES } from '../packages/db/seed.js';
 import {
   COMPARED_FIELDS,
   diffVenues,
   parseOnly,
   type ColumnDefaults,
-} from './sync-venues-helpers.js'
+} from './sync-venues-helpers.js';
 
 // The `set` block used ONLY on the `--only` path. On the default path
 // nothing is updated at all, so this never runs unscoped.
@@ -87,7 +87,7 @@ const UPSERT_SET = {
   crawlWaitUntil: sql`excluded.crawl_wait_until`,
   crawlWaitForSelector: sql`excluded.crawl_wait_for_selector`,
   crawlDelayMs: sql`excluded.crawl_delay_ms`,
-}
+};
 
 // Read from the Drizzle table rather than hardcoded, so a schema default
 // change can't silently make the dry-run disagree with the commit.
@@ -96,71 +96,71 @@ const columnDefaults: ColumnDefaults = Object.fromEntries(
     field,
     venues[field].default,
   ]),
-)
+);
 
 export interface SyncSummary {
-  committed: boolean
-  only: string[] | null
-  seedVenueCount: number
-  existingVenueCount: number
-  toCreate: string[]
-  toUpdate: string[]
-  unchanged: string[]
+  committed: boolean;
+  only: string[] | null;
+  seedVenueCount: number;
+  existingVenueCount: number;
+  toCreate: string[];
+  toUpdate: string[];
+  unchanged: string[];
 }
 
 export const runSync = async ({
   commit,
   only,
 }: {
-  commit: boolean
-  only?: string[]
+  commit: boolean;
+  only?: string[];
 }): Promise<SyncSummary> => {
-  const scoped = only !== undefined
+  const scoped = only !== undefined;
   if (scoped && only.length === 0) {
-    throw new Error('--only was given no slugs')
+    throw new Error('--only was given no slugs');
   }
 
   const seedVenues = scoped
     ? SEED_VENUES.filter((venue) => only.includes(venue.slug))
-    : SEED_VENUES
+    : SEED_VENUES;
 
   if (scoped) {
     const unknown = only.filter(
       (slug) => !SEED_VENUES.some((venue) => venue.slug === slug),
-    )
+    );
     if (unknown.length > 0) {
       throw new Error(
         `--only names slugs absent from SEED_VENUES: ${unknown.join(', ')}`,
-      )
+      );
     }
   }
 
-  const existing = await db.select().from(venues)
+  const existing = await db.select().from(venues);
   const { toCreate, toUpdate, unchanged } = diffVenues(
     seedVenues,
     existing,
     columnDefaults,
-  )
+  );
 
-  console.warn(`SEED_VENUES entries: ${SEED_VENUES.length}`)
-  console.warn(`Venues currently in the target DB: ${existing.length}`)
+  console.warn(`SEED_VENUES entries: ${SEED_VENUES.length}`);
+  console.warn(`Venues currently in the target DB: ${existing.length}`);
   if (scoped) {
-    console.warn(`Scoped by --only to: ${only.join(', ')}`)
+    console.warn(`Scoped by --only to: ${only.join(', ')}`);
   }
   console.warn(
     `\nWill CREATE (${toCreate.length}): ${toCreate.join(', ') || '—'}`,
-  )
+  );
   console.warn(
     `${scoped ? 'Will UPDATE' : 'Drift, NOT written'} (${toUpdate.length}): ${toUpdate.join(', ') || '—'}`,
-  )
+  );
   console.warn(
     `Unchanged  (${unchanged.length}): ${unchanged.join(', ') || '—'}`,
-  )
+  );
   if (!scoped && toUpdate.length > 0) {
     console.warn(
       '\nThis script is create-only. To push a seed edit to an existing venue,\n' +
         `re-run scoped: --only ${toUpdate.join(',')} --commit`,
-    )
+    );
   }
 
   const summary: SyncSummary = {
@@ -171,11 +171,11 @@ export const runSync = async ({
     toCreate,
     toUpdate,
     unchanged,
-  }
+  };
 
   if (!commit) {
-    console.warn('\nDry-run — nothing written. Re-run with --commit to apply.')
-    return summary
+    console.warn('\nDry-run — nothing written. Re-run with --commit to apply.');
+    return summary;
   }
 
   // Scoped: every conflicting row in the scope is re-updated, including the
@@ -187,34 +187,34 @@ export const runSync = async ({
   // which is the exact drift this script exists to prevent.
   //
   // Unscoped: DO NOTHING, so an existing row keeps its admin-owned values.
-  const insert = db.insert(venues).values(seedVenues)
+  const insert = db.insert(venues).values(seedVenues);
   await (scoped
     ? insert.onConflictDoUpdate({ target: venues.slug, set: UPSERT_SET })
-    : insert.onConflictDoNothing({ target: venues.slug }))
+    : insert.onConflictDoNothing({ target: venues.slug }));
 
   console.warn(
     scoped
       ? `\nUpserted ${seedVenues.length} venue(s): ${only.join(', ')}.`
       : `\nCreated ${toCreate.length} venue(s); ${existing.length} existing rows left untouched.`,
-  )
+  );
 
-  return summary
-}
+  return summary;
+};
 
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
-  const only = parseOnly(process.argv)
+  const commit = process.argv.includes('--commit');
+  const only = parseOnly(process.argv);
   runSync({ commit, only })
     .then((summary) => {
-      console.warn('---')
-      console.warn(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.warn('---');
+      console.warn(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Venue sync failed:', err)
-      process.exit(1)
-    })
+      console.error('Venue sync failed:', err);
+      process.exit(1);
+    });
 }

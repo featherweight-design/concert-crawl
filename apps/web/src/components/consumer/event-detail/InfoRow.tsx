@@ -3,8 +3,8 @@
 // verbatim out of `app/(protected)/(main)/events/[id]/page.tsx`, where they
 // were module-private, so the mirror renders the same rows rather than a
 // second, drifting copy of them.
-import Link from 'next/link'
-import React from 'react'
+import Link from 'next/link';
+import React from 'react';
 
 export function IconPin() {
   return (
@@ -23,7 +23,7 @@ export function IconPin() {
         strokeWidth="1.5"
       />
     </svg>
-  )
+  );
 }
 
 export function IconCalendar() {
@@ -46,7 +46,7 @@ export function IconCalendar() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 export function IconClock() {
@@ -67,7 +67,7 @@ export function IconClock() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 export function IconUsers() {
@@ -100,7 +100,7 @@ export function IconUsers() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 export function IconTag() {
@@ -114,7 +114,7 @@ export function IconTag() {
       />
       <circle cx="5" cy="5" r="1.1" fill="var(--fg-subtle)" />
     </svg>
-  )
+  );
 }
 
 export function ExternalLinkIcon() {
@@ -135,16 +135,16 @@ export function ExternalLinkIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 interface InfoRowProps {
-  icon: React.ReactNode
-  label: string
-  value: string
-  signal?: boolean
-  href?: string
-  'data-testid'?: string
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  signal?: boolean;
+  href?: string;
+  'data-testid'?: string;
 }
 
 export function InfoRow({
@@ -199,9 +199,9 @@ export function InfoRow({
         </p>
       </div>
     </>
-  )
+  );
 
-  const baseClass = 'flex items-center gap-2.5 py-2'
+  const baseClass = 'flex items-center gap-2.5 py-2';
 
   if (href) {
     return (
@@ -212,11 +212,11 @@ export function InfoRow({
       >
         {inner}
       </Link>
-    )
+    );
   }
   return (
     <div data-testid={dataTestId} className={baseClass}>
       {inner}
     </div>
-  )
+  );
 }

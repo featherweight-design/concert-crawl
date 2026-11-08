@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * Builds the retry handler for an App Router `error.tsx` boundary.
@@ -21,12 +21,12 @@ import { useRouter } from 'next/navigation'
  * a boundary that calls bare `reset()` is silently broken.
  */
 export const useErrorBoundaryRetry = (reset: () => void): (() => void) => {
-  const router = useRouter()
+  const router = useRouter();
 
   return useCallback(() => {
     // Order matters: invalidate the cached RSC payload first so the re-render
     // triggered by reset() renders against fresh server data.
-    router.refresh()
-    reset()
-  }, [router, reset])
-}
+    router.refresh();
+    reset();
+  }, [router, reset]);
+};

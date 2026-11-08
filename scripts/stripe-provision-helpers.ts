@@ -4,14 +4,14 @@
  * scripts/2026-07-11-gifted-comps-backfill-helpers.ts.
  */
 
-export type ProvisionMode = 'test' | 'live'
+export type ProvisionMode = 'test' | 'live';
 
 export interface ProvisionPriceSpec {
-  lookupKey: string
-  productName: string
-  unitAmountCents: number
-  interval: 'month'
-  currency: 'usd'
+  lookupKey: string;
+  productName: string;
+  unitAmountCents: number;
+  interval: 'month';
+  currency: 'usd';
 }
 
 /**
@@ -40,7 +40,7 @@ export const PROVISION_PRICES: readonly ProvisionPriceSpec[] = [
     interval: 'month',
     currency: 'usd',
   },
-]
+];
 
 /**
  * Resolves the required `--mode test | live` argument (both `--mode test`
@@ -48,21 +48,21 @@ export const PROVISION_PRICES: readonly ProvisionPriceSpec[] = [
  * deliberate, labeled statement of intent, never defaulted.
  */
 export const parseMode = (argv: readonly string[]): ProvisionMode => {
-  let value: string | null = null
+  let value: string | null = null;
   for (let idx = 0; idx < argv.length; idx += 1) {
-    const arg = argv[idx]
+    const arg = argv[idx];
     if (arg === '--mode') {
-      value = argv[idx + 1] ?? null
-      break
+      value = argv[idx + 1] ?? null;
+      break;
     }
     if (arg?.startsWith('--mode=')) {
-      value = arg.slice('--mode='.length)
-      break
+      value = arg.slice('--mode='.length);
+      break;
     }
   }
-  if (value === 'test' || value === 'live') return value
-  throw new Error('Required argument: --mode test | live')
-}
+  if (value === 'test' || value === 'live') return value;
+  throw new Error('Required argument: --mode test | live');
+};
 
 /**
  * Sanity-checks STRIPE_SECRET_KEY against the declared mode so a live key
@@ -74,15 +74,15 @@ export const assertKeyMatchesMode = (
   mode: ProvisionMode,
 ): void => {
   if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is required (never pasted — env only)')
+    throw new Error('STRIPE_SECRET_KEY is required (never pasted — env only)');
   }
-  const expectedPrefix = mode === 'test' ? 'sk_test_' : 'sk_live_'
+  const expectedPrefix = mode === 'test' ? 'sk_test_' : 'sk_live_';
   if (!secretKey.startsWith(expectedPrefix)) {
     throw new Error(
       `STRIPE_SECRET_KEY does not match --mode ${mode} (expected a ${expectedPrefix}… key)`,
-    )
+    );
   }
-}
+};
 
 /**
  * The exact enabled_events set for the webhook endpoint (eng infra spec
@@ -99,7 +99,7 @@ export const WEBHOOK_ENABLED_EVENTS: readonly string[] = [
   'payment_intent.payment_failed',
   'customer.updated',
   'payment_method.attached',
-]
+];
 
 /**
  * Resolves the optional `--webhooks <url>` argument (both `--webhooks url`
@@ -107,48 +107,48 @@ export const WEBHOOK_ENABLED_EVENTS: readonly string[] = [
  * when the flag is present without a valid https URL.
  */
 export const parseWebhooksUrl = (argv: readonly string[]): string | null => {
-  let value: string | null = null
-  let flagSeen = false
+  let value: string | null = null;
+  let flagSeen = false;
   for (let idx = 0; idx < argv.length; idx += 1) {
-    const arg = argv[idx]
+    const arg = argv[idx];
     if (arg === '--webhooks') {
-      flagSeen = true
-      value = argv[idx + 1] ?? null
-      break
+      flagSeen = true;
+      value = argv[idx + 1] ?? null;
+      break;
     }
     if (arg?.startsWith('--webhooks=')) {
-      flagSeen = true
-      value = arg.slice('--webhooks='.length)
-      break
+      flagSeen = true;
+      value = arg.slice('--webhooks='.length);
+      break;
     }
   }
-  if (!flagSeen) return null
+  if (!flagSeen) return null;
   if (!value || value.startsWith('--')) {
-    throw new Error('--webhooks requires a URL argument')
+    throw new Error('--webhooks requires a URL argument');
   }
-  let parsed: URL
+  let parsed: URL;
   try {
-    parsed = new URL(value)
+    parsed = new URL(value);
   } catch (err) {
-    throw new Error(`--webhooks URL is not a valid URL: ${String(err)}`)
+    throw new Error(`--webhooks URL is not a valid URL: ${String(err)}`);
   }
   if (parsed.protocol !== 'https:') {
-    throw new Error('--webhooks URL must be https (Stripe requirement)')
+    throw new Error('--webhooks URL must be https (Stripe requirement)');
   }
-  return value
-}
+  return value;
+};
 
 export interface ExistingPriceSummary {
-  id: string
-  unitAmount: number | null
-  interval: string | null
-  currency: string | null
+  id: string;
+  unitAmount: number | null;
+  interval: string | null;
+  currency: string | null;
 }
 
 export type PriceAction =
   | { action: 'noop'; priceId: string }
   | { action: 'create' }
-  | { action: 'mismatch'; detail: string }
+  | { action: 'mismatch'; detail: string };
 
 /**
  * Idempotency decision for one lookup_key (spec §1.2): matching existing
@@ -160,25 +160,25 @@ export const planPriceAction = (
   existing: ExistingPriceSummary | null,
   desired: ProvisionPriceSpec,
 ): PriceAction => {
-  if (existing === null) return { action: 'create' }
-  const mismatches: string[] = []
+  if (existing === null) return { action: 'create' };
+  const mismatches: string[] = [];
   if (existing.unitAmount !== desired.unitAmountCents) {
     mismatches.push(
       `unit_amount is ${String(existing.unitAmount)}, expected ${desired.unitAmountCents}`,
-    )
+    );
   }
   if (existing.interval !== desired.interval) {
     mismatches.push(
       `interval is ${String(existing.interval)}, expected ${desired.interval}`,
-    )
+    );
   }
   if (existing.currency !== desired.currency) {
     mismatches.push(
       `currency is ${String(existing.currency)}, expected ${desired.currency}`,
-    )
+    );
   }
   if (mismatches.length > 0) {
-    return { action: 'mismatch', detail: mismatches.join('; ') }
+    return { action: 'mismatch', detail: mismatches.join('; ') };
   }
-  return { action: 'noop', priceId: existing.id }
-}
+  return { action: 'noop', priceId: existing.id };
+};

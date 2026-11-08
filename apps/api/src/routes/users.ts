@@ -1,9 +1,9 @@
 // apps/api/src/routes/users.ts
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, count, ne, and, desc } from 'drizzle-orm'
-import { z } from 'zod'
-import { zValidator } from '@hono/zod-validator'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { eq, count, ne, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
+import { zValidator } from '@hono/zod-validator';
 import {
   db,
   founderWindow,
@@ -13,8 +13,8 @@ import {
   events,
   subscriptions,
   venues,
-} from '@concert-crawl/db'
-import { createClerkClient } from '@clerk/backend'
+} from '@concert-crawl/db';
+import { createClerkClient } from '@clerk/backend';
 import type {
   DisplayRole,
   FounderWindowView,
@@ -24,22 +24,22 @@ import type {
   UserSubmissionItem,
   HandleAvailabilityResponse,
   Tier,
-} from '@concert-crawl/types'
-import { displayHeadliner } from '../lib/event-billing.js'
-import { apiLogger } from '../lib/logger.js'
-import { deleteUserData } from '../lib/user-data.js'
-import { getStripeClient } from '../lib/stripe.js'
-import { isClerkNotFound } from '../lib/clerk-errors.js'
-import { evaluateNudgeFlags } from '../lib/nudges.js'
-import { loadPlanContext } from '../lib/plan.js'
-import { resolveFounderWindowView } from './billing-founder-window.js'
+} from '@concert-crawl/types';
+import { displayHeadliner } from '../lib/event-billing.js';
+import { apiLogger } from '../lib/logger.js';
+import { deleteUserData } from '../lib/user-data.js';
+import { getStripeClient } from '../lib/stripe.js';
+import { isClerkNotFound } from '../lib/clerk-errors.js';
+import { evaluateNudgeFlags } from '../lib/nudges.js';
+import { loadPlanContext } from '../lib/plan.js';
+import { resolveFounderWindowView } from './billing-founder-window.js';
 
-export const usersRouter = new Hono()
+export const usersRouter = new Hono();
 
-usersRouter.use('*', clerkMiddleware())
+usersRouter.use('*', clerkMiddleware());
 
-const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
-const clerkClient = createClerkClient({ secretKey })
+const secretKey = process.env['CLERK_SECRET_KEY'] ?? '';
+const clerkClient = createClerkClient({ secretKey });
 
 const RESERVED_HANDLES = new Set([
   'admin',
@@ -76,23 +76,23 @@ const RESERVED_HANDLES = new Set([
   'moderator',
   'system',
   'bot',
-])
+]);
 
-const HANDLE_REGEX = /^[a-z0-9_]+$/
+const HANDLE_REGEX = /^[a-z0-9_]+$/;
 
 function mapStatus(dbStatus: string): SubmissionDisplayStatus {
-  if (dbStatus === 'corroborated') return 'confirmed'
-  if (dbStatus === 'disputed') return 'disputed'
-  return 'pending'
+  if (dbStatus === 'corroborated') return 'confirmed';
+  if (dbStatus === 'disputed') return 'disputed';
+  return 'pending';
 }
 
 function formatJoined(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
 // Optional narrowing input for the past-due banner predicate — invalid or
 // missing values fall back to null rather than 400.
-const sessionStartedAtSchema = z.string().datetime({ offset: true })
+const sessionStartedAtSchema = z.string().datetime({ offset: true });
 
 // The profile surface must not 500 over a billing read — a missing
 // founder_window singleton falls back to the pre-launch view.
@@ -100,7 +100,7 @@ const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {
   state: 'pre-launch',
   seatsTotal: 100,
   closesAt: null,
-}
+};
 
 // `opensAt` is the launch instant twice over: it drives the founder-window
 // view AND is the monetization cutover the trial clock is measured against
@@ -114,58 +114,58 @@ async function loadFounderWindow(
       .select()
       .from(founderWindow)
       .where(eq(founderWindow.id, 1))
-      .limit(1)
+      .limit(1);
     if (!windowRow) {
-      apiLogger.error({}, 'users/me: founder_window singleton row missing')
-      return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null }
+      apiLogger.error({}, 'users/me: founder_window singleton row missing');
+      return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null };
     }
     return {
       view: resolveFounderWindowView(windowRow, now),
       opensAt: windowRow.opensAt,
-    }
+    };
   } catch (err) {
-    apiLogger.error({ err }, 'users/me: founder_window read failed')
-    return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null }
+    apiLogger.error({ err }, 'users/me: founder_window read failed');
+    return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null };
   }
 }
 
 // GET /v1/users/me
 usersRouter.get('/me', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const clerkUser = await clerkClient.users.getUser(auth.userId)
+  const clerkUser = await clerkClient.users.getUser(auth.userId);
 
   const [profile] = await db
     .select()
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
-  const now = new Date()
+  const now = new Date();
   const { view: founderWindowView, opensAt: monetizationLiveAt } =
-    await loadFounderWindow(now)
+    await loadFounderWindow(now);
 
   const accountCreatedAt =
     clerkUser.createdAt === undefined || clerkUser.createdAt === null
       ? null
-      : new Date(clerkUser.createdAt)
+      : new Date(clerkUser.createdAt);
   const planContext = await loadPlanContext(
     auth.userId,
     clerkUser.publicMetadata,
     accountCreatedAt === null
       ? undefined
       : { accountCreatedAt, monetizationLiveAt },
-  )
-  const { planState } = planContext
+  );
+  const { planState } = planContext;
 
   const parsedSessionStartedAt = sessionStartedAtSchema.safeParse(
     ctx.req.query('sessionStartedAt'),
-  )
+  );
   const sessionStartedAt = parsedSessionStartedAt.success
     ? new Date(parsedSessionStartedAt.data)
-    : null
+    : null;
 
   const nudgeFlags = evaluateNudgeFlags({
     trialEndsAt: planContext.trialEndsAt,
@@ -177,25 +177,25 @@ usersRouter.get('/me', async (ctx) => {
     subscriptionStatus: planState.status,
     sessionStartedAt,
     now,
-  })
+  });
 
   const [submissionCountRow] = await db
     .select({ value: count() })
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.userId, auth.userId))
+    .where(eq(priceSubmissions.userId, auth.userId));
 
   const [credRow] = await db
     .select({ priceCredScore: userCred.priceCredScore })
     .from(userCred)
     .where(eq(userCred.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
-  const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
-  const rawRole = (clerkUser.publicMetadata as { role?: unknown }).role
-  const authRole = typeof rawRole === 'string' ? rawRole : undefined
+  const email = clerkUser.emailAddresses[0]?.emailAddress ?? '';
+  const rawRole = (clerkUser.publicMetadata as { role?: unknown }).role;
+  const authRole = typeof rawRole === 'string' ? rawRole : undefined;
 
   const displayRole: DisplayRole =
-    authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan'
+    authRole === 'admin' || authRole === 'sub_admin' ? 'staff' : 'fan';
 
   const roleBadge: RoleBadge | null =
     authRole === 'admin' || authRole === 'sub_admin'
@@ -204,7 +204,7 @@ usersRouter.get('/me', async (ctx) => {
         ? 'promoter'
         : authRole === 'beta'
           ? 'beta'
-          : null
+          : null;
 
   const response: UserProfileResponse = {
     id: auth.userId,
@@ -223,10 +223,10 @@ usersRouter.get('/me', async (ctx) => {
     showDayThirteenBanner: nudgeFlags.showDayThirteenBanner,
     showPastDueBanner: nudgeFlags.showPastDueBanner,
     founderWindow: founderWindowView,
-  }
+  };
 
-  return ctx.json({ success: true, data: response })
-})
+  return ctx.json({ success: true, data: response });
+});
 
 // PATCH /v1/users/me
 const patchSchema = z.object({
@@ -249,21 +249,21 @@ const patchSchema = z.object({
       'gloss',
     ])
     .optional(),
-})
+});
 
 usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const body = ctx.req.valid('json')
+  const body = ctx.req.valid('json');
 
   if (body.handle !== undefined && body.handle !== null) {
     if (RESERVED_HANDLES.has(body.handle)) {
       return ctx.json(
         { success: false, error: 'Handle is reserved', code: 'reserved' },
         422,
-      )
+      );
     }
     const [existingHandle] = await db
       .select({ id: userProfiles.id })
@@ -274,35 +274,35 @@ usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
           ne(userProfiles.userId, auth.userId),
         ),
       )
-      .limit(1)
+      .limit(1);
     if (existingHandle) {
       return ctx.json(
         { success: false, error: 'Handle is taken', code: 'taken' },
         409,
-      )
+      );
     }
   }
 
   const updateValues: Partial<typeof userProfiles.$inferInsert> = {
     updatedAt: new Date(),
-  }
-  if (body.handle !== undefined) updateValues.handle = body.handle
-  if (body.city !== undefined) updateValues.city = body.city
+  };
+  if (body.handle !== undefined) updateValues.handle = body.handle;
+  if (body.city !== undefined) updateValues.city = body.city;
   if (body.avatarColor !== undefined)
-    updateValues.avatarColor = body.avatarColor
-  if (body.theme !== undefined) updateValues.theme = body.theme
+    updateValues.avatarColor = body.avatarColor;
+  if (body.theme !== undefined) updateValues.theme = body.theme;
 
   const [existingProfile] = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
     .where(eq(userProfiles.userId, auth.userId))
-    .limit(1)
+    .limit(1);
 
   if (existingProfile) {
     await db
       .update(userProfiles)
       .set(updateValues)
-      .where(eq(userProfiles.userId, auth.userId))
+      .where(eq(userProfiles.userId, auth.userId));
   } else {
     await db.insert(userProfiles).values({
       userId: auth.userId,
@@ -310,17 +310,17 @@ usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
       city: body.city ?? null,
       avatarColor: body.avatarColor ?? null,
       theme: body.theme ?? 'electric',
-    })
+    });
   }
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});
 
 // GET /v1/users/me/submissions/count — count of non-stale price submissions for current user
 usersRouter.get('/me/submissions/count', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   const [row] = await db
     .select({ value: count() })
@@ -330,30 +330,30 @@ usersRouter.get('/me/submissions/count', async (ctx) => {
         eq(priceSubmissions.userId, auth.userId),
         ne(priceSubmissions.status, 'stale'),
       ),
-    )
+    );
 
-  return ctx.json({ success: true, data: { count: row?.value ?? 0 } })
-})
+  return ctx.json({ success: true, data: { count: row?.value ?? 0 } });
+});
 
 // GET /v1/users/me/submissions
 usersRouter.get('/me/submissions', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   type SubmissionRow = {
-    id: string
-    eventId: string
-    artist: string | null
-    venue: string | null
-    date: string | null
-    priceMin: string
-    priceMax: string | null
-    tier: Tier
-    corroborationCount: number
-    submittedAt: Date
-    status: string | null
-  }
+    id: string;
+    eventId: string;
+    artist: string | null;
+    venue: string | null;
+    date: string | null;
+    priceMin: string;
+    priceMax: string | null;
+    tier: Tier;
+    corroborationCount: number;
+    submittedAt: Date;
+    status: string | null;
+  };
 
   const rows: SubmissionRow[] = await db
     .select({
@@ -378,7 +378,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
         ne(priceSubmissions.status, 'stale'),
       ),
     )
-    .orderBy(desc(priceSubmissions.createdAt))
+    .orderBy(desc(priceSubmissions.createdAt));
 
   const data: UserSubmissionItem[] = rows.map((row) => ({
     id: row.id,
@@ -392,23 +392,23 @@ usersRouter.get('/me/submissions', async (ctx) => {
     corroborationCount: row.corroborationCount,
     submittedAt: row.submittedAt.toISOString(),
     status: mapStatus(row.status ?? 'pending'),
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // GET /v1/users/handle-availability
 usersRouter.get('/handle-availability', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const handle = ctx.req.query('handle')
+  const handle = ctx.req.query('handle');
   if (!handle || handle.length < 3 || !HANDLE_REGEX.test(handle)) {
     return ctx.json({
       success: true,
       data: { available: false } satisfies HandleAvailabilityResponse,
-    })
+    });
   }
 
   if (RESERVED_HANDLES.has(handle)) {
@@ -418,20 +418,20 @@ usersRouter.get('/handle-availability', async (ctx) => {
         available: false,
         reason: 'reserved',
       } satisfies HandleAvailabilityResponse,
-    })
+    });
   }
 
   const [existing] = await db
     .select({ id: userProfiles.id })
     .from(userProfiles)
     .where(eq(userProfiles.handle, handle))
-    .limit(1)
+    .limit(1);
 
   return ctx.json({
     success: true,
     data: { available: !existing } satisfies HandleAvailabilityResponse,
-  })
-})
+  });
+});
 
 // Every status Stripe can still charge on. `cancelled` and
 // `incomplete_expired` are terminal; anything else may renew or retry.
@@ -440,7 +440,7 @@ const CHARGEABLE_SUBSCRIPTION_STATUSES: readonly string[] = [
   'trialing',
   'past_due',
   'incomplete',
-]
+];
 
 /**
  * Cancels the user's subscription in Stripe immediately, if one can still
@@ -453,60 +453,60 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
       status: subscriptions.status,
     })
     .from(subscriptions)
-    .where(eq(subscriptions.userId, userId))
+    .where(eq(subscriptions.userId, userId));
 
   for (const row of rows) {
-    if (!CHARGEABLE_SUBSCRIPTION_STATUSES.includes(row.status)) continue
+    if (!CHARGEABLE_SUBSCRIPTION_STATUSES.includes(row.status)) continue;
     try {
-      await getStripeClient().subscriptions.cancel(row.stripeSubscriptionId)
+      await getStripeClient().subscriptions.cancel(row.stripeSubscriptionId);
     } catch (err) {
       // Our mirror lags Stripe until the deletion webhook lands. A retry after
       // a cancel that already went through would otherwise be refused here
       // for ever, so ask Stripe what the subscription's state really is.
-      if (await isEndedInStripe(row.stripeSubscriptionId)) continue
+      if (await isEndedInStripe(row.stripeSubscriptionId)) continue;
       apiLogger.error(
         { err, userId, subscriptionId: row.stripeSubscriptionId },
         'Stripe cancel failed at account deletion',
-      )
-      return false
+      );
+      return false;
     }
   }
-  return true
-}
+  return true;
+};
 
-const StripeSubscriptionStatus = z.object({ status: z.string() })
+const StripeSubscriptionStatus = z.object({ status: z.string() });
 
 const isEndedInStripe = async (subscriptionId: string): Promise<boolean> => {
   try {
     const parsed = StripeSubscriptionStatus.safeParse(
       await getStripeClient().subscriptions.retrieve(subscriptionId),
-    )
-    if (!parsed.success) return false
+    );
+    if (!parsed.success) return false;
     return (
       parsed.data.status === 'canceled' ||
       parsed.data.status === 'incomplete_expired'
-    )
+    );
   } catch (err) {
     apiLogger.error(
       { err, subscriptionId },
       'Stripe status lookup failed at account deletion',
-    )
-    return false
+    );
+    return false;
   }
-}
+};
 
 // DELETE /v1/users/me — delete account
 usersRouter.delete('/me', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
   // Billing before anything else. Stripe renews on its own schedule, so a
   // subscription left running would keep charging a card whose owner has no
   // account to cancel from. If the cancel fails, nothing is deleted and the
   // user can retry; deleting first would strand a live charge with no way
   // back to it.
-  const billingClosed = await cancelLiveSubscription(auth.userId)
+  const billingClosed = await cancelLiveSubscription(auth.userId);
   if (!billingClosed) {
     return ctx.json(
       {
@@ -515,7 +515,7 @@ usersRouter.delete('/me', async (ctx) => {
           'We could not cancel your subscription, so your account was not deleted',
       },
       502,
-    )
+    );
   }
 
   // Application data first, in one transaction, across every table the
@@ -523,10 +523,10 @@ usersRouter.delete('/me', async (ctx) => {
   // exists and the user can retry: the previous version deleted the Clerk user
   // even when the cleanup had only partly run, which stranded rows behind an
   // identity nobody could sign in as.
-  await deleteUserData(auth.userId)
+  await deleteUserData(auth.userId);
 
   try {
-    await clerkClient.users.deleteUser(auth.userId)
+    await clerkClient.users.deleteUser(auth.userId);
   } catch (err) {
     // A 404 means the identity is already gone, which is the outcome we were
     // asking for. Anything else leaves a sign-in the user still has.
@@ -534,21 +534,21 @@ usersRouter.delete('/me', async (ctx) => {
       apiLogger.warn(
         { userId: auth.userId },
         'Clerk user was already gone at account deletion',
-      )
+      );
     } else {
       apiLogger.error(
         { err, userId: auth.userId },
         'Clerk user delete failed after application data was removed',
-      )
+      );
       // Saying the account is deleted while they can still sign in is a lie
       // they cannot check. Retrying is safe: `deleteUserData` matches on the
       // user id, so a second run finds nothing left to remove.
       return ctx.json(
         { success: false, error: 'Account deletion did not complete' },
         500,
-      )
+      );
     }
   }
 
-  return ctx.json({ success: true })
-})
+  return ctx.json({ success: true });
+});

@@ -1,40 +1,40 @@
-import type { Metadata, Viewport } from 'next'
-import { ClerkProvider } from '@clerk/nextjs'
-import './globals.css'
-import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
-import { ThemeProvider } from '@/theme'
-import { THEMES } from '@/theme/themes'
-import { cn } from '@/lib/utils'
-import { QueryProvider } from '@/components/QueryProvider'
+import type { Metadata, Viewport } from 'next';
+import { ClerkProvider } from '@clerk/nextjs';
+import './globals.css';
+import { Inter, JetBrains_Mono, Caveat } from 'next/font/google';
+import { ThemeProvider } from '@/theme';
+import { THEMES } from '@/theme/themes';
+import { cn } from '@/lib/utils';
+import { QueryProvider } from '@/components/QueryProvider';
 // Imported directly, not via the analytics barrel: the barrel also re-exports
 // browser-only posthog-js helpers, which must not enter this Server Component's
 // module graph.
-import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
-import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
-import { Toaster } from 'sonner'
-import { SpeedInsights } from '@vercel/speed-insights/next'
-import { LANDING_COPY } from '@/app/_components/definitions/copy'
-import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
-import { siteOrigin } from '@/lib/share/site-origin'
-import { BRAND_PAPER } from '@/lib/definitions/brand'
+import { PostHogProvider } from '@/lib/analytics/PostHogProvider';
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration';
+import { Toaster } from 'sonner';
+import { SpeedInsights } from '@vercel/speed-insights/next';
+import { LANDING_COPY } from '@/app/_components/definitions/copy';
+import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios';
+import { siteOrigin } from '@/lib/share/site-origin';
+import { BRAND_PAPER } from '@/lib/definitions/brand';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-ui',
   weight: ['400', '500', '600', '700', '800', '900'],
-})
+});
 
 const mono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   weight: ['400', '500', '600', '700'],
-})
+});
 
 const caveat = Caveat({
   subsets: ['latin'],
   variable: '--font-handwriting',
   weight: ['400', '600', '700'],
-})
+});
 
 const themeScript = `
   (function() {
@@ -53,7 +53,7 @@ const themeScript = `
       root.setAttribute('data-theme', 'light');
     }
   })();
-`
+`;
 
 export const metadata: Metadata = {
   // Absolute URLs for every relative one below. Without it Next resolves them
@@ -131,16 +131,16 @@ export const metadata: Metadata = {
   verification: {
     google: 'kJBcxiEDRqZNKvZ3cplUZ6fyXcrQy2yRC1PPGexR2UI',
   },
-}
+};
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: BRAND_PAPER,
-}
+};
 
 interface RootLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
@@ -167,5 +167,5 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }

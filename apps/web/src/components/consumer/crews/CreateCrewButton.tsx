@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
 // The ONE create-a-crew affordance. Both places that offer it — the list
 // header and the empty state — mount this component rather than each wiring
 // its own entitlement check, because two copies of a paywall is how one of
 // them ends up ungated.
 
-import { useState } from 'react'
-import type { PlanState, CrewSummary } from '@concert-crawl/types'
+import { useState } from 'react';
+import type { PlanState, CrewSummary } from '@concert-crawl/types';
 
-import { useEntitlement } from '@/lib/queries/use-entitlement'
-import { usePlanState } from '@/lib/queries/use-plan-state'
-import { unlockTierFor } from '@/lib/unlock-tier'
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { CreateCrewSheet } from './CreateCrewSheet'
-import { CREWS_COPY } from './definitions/copy'
+import { useEntitlement } from '@/lib/queries/use-entitlement';
+import { usePlanState } from '@/lib/queries/use-plan-state';
+import { unlockTierFor } from '@/lib/unlock-tier';
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { CreateCrewSheet } from './CreateCrewSheet';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 // Mirrors derivePlanState's logged-out shape, as HistoryLocked and
 // EventDetailCtaBlock do: the picker needs a full PlanState and a logged-out
@@ -29,13 +29,13 @@ const LOGGED_OUT_PLAN_STATE: PlanState = {
   cancelAtPeriodEnd: false,
   currentPeriodEnd: null,
   roleComped: false,
-}
+};
 
 interface CreateCrewButtonProps {
   /** `header` is the trailing-edge pill; `empty` is the empty state's CTA. */
-  variant: 'header' | 'empty'
-  scaRegion: boolean
-  onCreated: (crew: CrewSummary) => void
+  variant: 'header' | 'empty';
+  scaRegion: boolean;
+  onCreated: (crew: CrewSummary) => void;
 }
 
 export const CreateCrewButton = ({
@@ -43,43 +43,43 @@ export const CreateCrewButton = ({
   scaRegion,
   onCreated,
 }: CreateCrewButtonProps) => {
-  const { isLoading, active, surface } = useEntitlement('crews')
-  const { data: planState } = usePlanState()
-  const [createOpen, setCreateOpen] = useState(false)
-  const [gateOpen, setGateOpen] = useState(false)
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const { isLoading, active, surface } = useEntitlement('crews');
+  const { data: planState } = usePlanState();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const tier = unlockTierFor('crews')
+  const tier = unlockTierFor('crews');
   // A plan that once paid and no longer does keeps its crews; only starting
   // another one is gated. Saying so is the difference between a paywall and a
   // false alarm about work they already did. `status` is null until a
   // subscription row has ever existed, so it — not `plan === 'free'` — is what
   // separates a lapsed subscriber from someone who never paid; the lapsed copy
   // says "again", which is a lie to a first-time viewer.
-  const lapsed = (planState?.status ?? null) !== null
+  const lapsed = (planState?.status ?? null) !== null;
 
   // Never flash a locked treatment while the plan is still resolving.
-  const gated = !isLoading && !active
+  const gated = !isLoading && !active;
 
   const openPicker = () => {
-    setGateOpen(false)
-    setPickerOpen(true)
-  }
+    setGateOpen(false);
+    setPickerOpen(true);
+  };
 
   const onTap = () => {
-    if (isLoading) return
+    if (isLoading) return;
     if (active) {
-      setCreateOpen(true)
-      return
+      setCreateOpen(true);
+      return;
     }
     if (surface === 'tier-picker-on-tap') {
-      setPickerOpen(true)
-      return
+      setPickerOpen(true);
+      return;
     }
-    setGateOpen(true)
-  }
+    setGateOpen(true);
+  };
 
-  const isHeader = variant === 'header'
+  const isHeader = variant === 'header';
 
   return (
     <>
@@ -233,10 +233,10 @@ export const CreateCrewButton = ({
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={(crew) => {
-          setCreateOpen(false)
-          onCreated(crew)
+          setCreateOpen(false);
+          onCreated(crew);
         }}
       />
     </>
-  )
-}
+  );
+};

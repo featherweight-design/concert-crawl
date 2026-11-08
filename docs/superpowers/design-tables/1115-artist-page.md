@@ -290,12 +290,12 @@ where `playerTitle(name)` = **"Spotify player for {name}"**.
 ### `embedPlate(themeKey, direction = "mat")` — the only value we send them
 
 ```js
-const EMBED_LIGHT_PLATE = '#191A1F'
+const EMBED_LIGHT_PLATE = '#191A1F';
 function embedPlate(themeKey, direction = 'mat') {
-  const t = THEMES[themeKey]
-  if (!t) return EMBED_LIGHT_PLATE
-  if (t.mode === 'light') return EMBED_LIGHT_PLATE
-  return direction === 'flush' ? t.tokens['bg'] : t.tokens['surface-1']
+  const t = THEMES[themeKey];
+  if (!t) return EMBED_LIGHT_PLATE;
+  if (t.mode === 'light') return EMBED_LIGHT_PLATE;
+  return direction === 'flush' ? t.tokens['bg'] : t.tokens['surface-1'];
 }
 ```
 
@@ -378,7 +378,7 @@ Skip link + `EmbedStandIn` with `radius={0}`, no rail, no border, bg param → `
 | State                     | Style                                                                                                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Known                     | Mono **12 / 700**, `var(--fg)`, `padding: 4px 8px`, `border-radius: 6`, `background: var(--surface-2)`, `border: 1px solid var(--border)`, content `${price}` |
-| Unknown (`price == null`) | Mono **10 / 600**, `letter-spacing: .06em`, uppercase, `var(--fg-subtle)`, **no box** — `priceUnknown` = **`tba`** (uppercased by CSS to TBA)                                      |
+| Unknown (`price == null`) | Mono **10 / 600**, `letter-spacing: .06em`, uppercase, `var(--fg-subtle)`, **no box** — `priceUnknown` = **`tba`** (uppercased by CSS to TBA)                 |
 
 ### `ShowRow` (artist-surface.jsx:203-219)
 
@@ -629,7 +629,7 @@ Watching; it never replaces or renames it.
 | 28  | Empty card   | Body variant — not following                           | both                                           |
 | 29  | Empty card   | Body variant — following                               | both                                           |
 | 30  | Price chip   | Known price                                            | all                                            |
-| 31  | Price chip   | `tba`                                                 | all                                            |
+| 31  | Price chip   | `tba`                                                  | all                                            |
 | 32  | Previously   | Multi-row list                                         | mobile · desktop · Light                       |
 | 33  | Previously   | Single row                                             | mobile                                         |
 | 34  | Previously   | **Absent — section does not render at all**            | mobile                                         |

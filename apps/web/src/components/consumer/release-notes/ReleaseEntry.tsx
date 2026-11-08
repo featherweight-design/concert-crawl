@@ -1,29 +1,29 @@
-'use client'
+'use client';
 
-import type { Release, ReleaseItem } from '@/lib/definitions/releases'
-import { SpotlightHero } from './SpotlightHero'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import type { Release, ReleaseItem } from '@/lib/definitions/releases';
+import { SpotlightHero } from './SpotlightHero';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 const KIND_LABEL: Record<ReleaseItem['kind'], string> = {
   added: 'Added',
   fixed: 'Fixed',
   changed: 'Changed',
   removed: 'Removed',
-}
+};
 
 const KIND_COLOR: Record<ReleaseItem['kind'], string> = {
   added: 'var(--success)',
   fixed: 'var(--signal)',
   changed: 'var(--fg-muted)',
   removed: 'var(--warning)',
-}
+};
 
 interface ReleaseEntryProps {
-  release: Release
-  isLatest?: boolean
-  onOpenSpotlight?: (release: Release) => void
+  release: Release;
+  isLatest?: boolean;
+  onOpenSpotlight?: (release: Release) => void;
 }
 
 export function ReleaseEntry({
@@ -133,18 +133,18 @@ export function ReleaseEntry({
           )),
       )}
     </div>
-  )
+  );
 }
 
 function SpotlightStrip({
   release,
   onOpen,
 }: {
-  release: Release
-  onOpen: () => void
+  release: Release;
+  onOpen: () => void;
 }) {
-  const sp = release.spotlight
-  if (!sp) return null
+  const sp = release.spotlight;
+  if (!sp) return null;
 
   return (
     <button
@@ -246,12 +246,12 @@ function SpotlightStrip({
         </div>
       </div>
     </button>
-  )
+  );
 }
 
 function ReleaseItemRow({ item }: { item: ReleaseItem }) {
-  const label = KIND_LABEL[item.kind]
-  const color = KIND_COLOR[item.kind]
+  const label = KIND_LABEL[item.kind];
+  const color = KIND_COLOR[item.kind];
 
   return (
     <div
@@ -296,5 +296,5 @@ function ReleaseItemRow({ item }: { item: ReleaseItem }) {
         {item.text}
       </div>
     </div>
-  )
+  );
 }

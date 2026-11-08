@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Payment failure surfaces (PR 4.4) — the five decline-category layouts
 // from docs/superpowers/design-tables/failure-surfaces.md. Exported as
@@ -11,20 +11,21 @@
 // the message only, the forward action stays --signal; raw decline codes
 // are never rendered.
 
-import { useEffect, useRef } from 'react'
-import type { DeclineCategory } from '@concert-crawl/types'
-import { TIER_PICKER_COPY } from './definitions/copy'
+import { useEffect, useRef } from 'react';
+import type { DeclineCategory } from '@concert-crawl/types';
+import { TIER_PICKER_COPY } from './definitions/copy';
 import {
   FAILURE_SURFACE_BEHAVIOR,
   TIER_DEFINITIONS,
-} from './definitions/constants'
-import type { TierKey } from './definitions/types'
+} from './definitions/constants';
+import type { TierKey } from './definitions/types';
 
-const FAILURE_COPY = TIER_PICKER_COPY.failure
+const FAILURE_COPY = TIER_PICKER_COPY.failure;
 
 export const failureHeadlineId = (category: DeclineCategory) =>
-  `fail-h-${category}`
-export const failureBodyId = (category: DeclineCategory) => `fail-d-${category}`
+  `fail-h-${category}`;
+export const failureBodyId = (category: DeclineCategory) =>
+  `fail-d-${category}`;
 
 /**
  * ModalShell overrides while the failure layout is up — the shell is the
@@ -35,7 +36,7 @@ export const failureDialogProps = (category: DeclineCategory) => ({
   role: 'alertdialog' as const,
   ariaLabelledBy: failureHeadlineId(category),
   ariaDescribedBy: failureBodyId(category),
-})
+});
 
 const monoEyebrowStyle = {
   fontFamily: 'var(--font-mono)',
@@ -43,7 +44,7 @@ const monoEyebrowStyle = {
   fontWeight: 700,
   textTransform: 'uppercase',
   letterSpacing: '0.16em',
-} as const
+} as const;
 
 const CloseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -54,7 +55,7 @@ const CloseIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const InfoIcon = () => (
   <svg
@@ -79,15 +80,15 @@ const InfoIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 /** Tier name + price row — shared by failure and challenge layouts. */
 export const TierSummaryLine = ({
   tierKey,
 }: {
-  tierKey: Exclude<TierKey, 'free'>
+  tierKey: Exclude<TierKey, 'free'>;
 }) => {
-  const tier = TIER_DEFINITIONS[tierKey]
+  const tier = TIER_DEFINITIONS[tierKey];
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
       <span
@@ -105,8 +106,8 @@ export const TierSummaryLine = ({
         <span style={{ fontSize: 11, fontWeight: 600 }}> {tier.priceUnit}</span>
       </span>
     </div>
-  )
-}
+  );
+};
 
 /**
  * Close-X row + the danger status block (eyebrow / headline / body /
@@ -116,12 +117,12 @@ export const FailureSurfaceIntro = ({
   category,
   onDismiss,
 }: {
-  category: DeclineCategory
-  onDismiss: () => void
+  category: DeclineCategory;
+  onDismiss: () => void;
 }) => {
-  const config = FAILURE_COPY.categories[category]
-  const behavior = FAILURE_SURFACE_BEHAVIOR[category]
-  const note = 'note' in config ? config.note : null
+  const config = FAILURE_COPY.categories[category];
+  const behavior = FAILURE_SURFACE_BEHAVIOR[category];
+  const note = 'note' in config ? config.note : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -215,8 +216,8 @@ export const FailureSurfaceIntro = ({
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 /** network_timeout only — the element is hidden, the entered card kept. */
 export const FailureCardKeptNote = () => (
@@ -263,7 +264,7 @@ export const FailureCardKeptNote = () => (
       {FAILURE_COPY.cardKeptNote}
     </span>
   </div>
-)
+);
 
 const RetryIcon = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
@@ -276,7 +277,7 @@ const RetryIcon = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 /**
  * Primary / conditional secondary CTAs. Focus moves to the primary
@@ -290,18 +291,18 @@ export const FailureActions = ({
   onPrimary,
   onSecondary,
 }: {
-  category: DeclineCategory
-  disabled: boolean
-  onPrimary: () => void
-  onSecondary: () => void
+  category: DeclineCategory;
+  disabled: boolean;
+  onPrimary: () => void;
+  onSecondary: () => void;
 }) => {
-  const config = FAILURE_COPY.categories[category]
-  const behavior = FAILURE_SURFACE_BEHAVIOR[category]
-  const primaryRef = useRef<HTMLButtonElement | null>(null)
+  const config = FAILURE_COPY.categories[category];
+  const behavior = FAILURE_SURFACE_BEHAVIOR[category];
+  const primaryRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    primaryRef.current?.focus()
-  }, [category])
+    primaryRef.current?.focus();
+  }, [category]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -357,5 +358,5 @@ export const FailureActions = ({
         </button>
       )}
     </div>
-  )
-}
+  );
+};

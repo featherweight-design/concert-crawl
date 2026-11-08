@@ -42,44 +42,44 @@
  * Read-only by default. Dry-run takes no row-level locks.
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, sql } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { pathToFileURL } from 'node:url';
+import { and, eq, sql } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
 // Relative source import (not package barrel) so this one-shot script
 // runs against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
 // `.js` suffix back to the `.ts` source.
-import { stripDescriptionHtml } from '../packages/crawler-core/src/lib/strip-description-html.js'
+import { stripDescriptionHtml } from '../packages/crawler-core/src/lib/strip-description-html.js';
 
 export interface BackfillSummary {
-  rowsScanned: number
-  rowsDirty: number
-  rowsUpdated: number
+  rowsScanned: number;
+  rowsDirty: number;
+  rowsUpdated: number;
   // Dirty rows whose description was modified by another process between
   // the initial SELECT and the optimistic-locked UPDATE — operator should
   // re-run to pick them up if still dirty.
-  rowsSkippedConcurrentEdit: number
-  committed: boolean
+  rowsSkippedConcurrentEdit: number;
+  committed: boolean;
 }
 
 interface DirtyRow {
-  id: string
-  venueName: string | null
-  title: string
-  before: string
-  after: string
+  id: string;
+  venueName: string | null;
+  title: string;
+  before: string;
+  after: string;
 }
 
 // First ~120 chars of a value for operator dry-run readability. Strips
 // trailing newlines to keep each row a tidy single line in the log.
 function preview(value: string): string {
-  const oneLine = value.replace(/\n+/g, ' ⏎ ')
-  if (oneLine.length <= 120) return oneLine
-  return `${oneLine.slice(0, 117)}...`
+  const oneLine = value.replace(/\n+/g, ' ⏎ ');
+  if (oneLine.length <= 120) return oneLine;
+  return `${oneLine.slice(0, 117)}...`;
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<BackfillSummary> {
   // Pull candidates: descriptions that look like they might contain HTML
   // markup or numeric entities. The tag filter matches `</?` followed by
@@ -100,25 +100,25 @@ export async function runBackfill(opts: {
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(
       sql`${events.description} ~* '</?[a-z]' OR ${events.description} ~ '&[a-zA-Z]+;' OR ${events.description} ~* '&#x?[0-9a-fA-F]+;'`,
-    )
+    );
 
-  console.log(`Loaded ${candidates.length} candidate rows from events.`)
+  console.log(`Loaded ${candidates.length} candidate rows from events.`);
 
-  const dirty: DirtyRow[] = []
+  const dirty: DirtyRow[] = [];
   for (const row of candidates) {
-    if (row.description === null) continue
-    const cleaned = stripDescriptionHtml(row.description)
-    if (cleaned === row.description) continue
+    if (row.description === null) continue;
+    const cleaned = stripDescriptionHtml(row.description);
+    if (cleaned === row.description) continue;
     dirty.push({
       id: row.id,
       venueName: row.venueName,
       title: row.title,
       before: row.description,
       after: cleaned,
-    })
+    });
   }
 
-  console.log(`Of those, ${dirty.length} actually need a rewrite.`)
+  console.log(`Of those, ${dirty.length} actually need a rewrite.`);
 
   if (dirty.length === 0) {
     return {
@@ -130,7 +130,7 @@ export async function runBackfill(opts: {
       // passed — the summary reflects whether writes actually happened,
       // not the flag the operator set.
       committed: false,
-    }
+    };
   }
 
   // Per-row operator log (always — both dry-run and --commit). Keeps the
@@ -146,21 +146,21 @@ export async function runBackfill(opts: {
         `before = ${preview(row.before)}`,
         `after  = ${preview(row.after)}`,
       ].join('\n'),
-    )
+    );
   }
 
   if (!opts.commit) {
-    console.log('---')
+    console.log('---');
     console.log(
       `Dry-run mode — no rows touched. Re-run with --commit to apply.`,
-    )
+    );
     return {
       rowsScanned: candidates.length,
       rowsDirty: dirty.length,
       rowsUpdated: 0,
       rowsSkippedConcurrentEdit: 0,
       committed: false,
-    }
+    };
   }
 
   // --commit: one UPDATE per row. Per-row writes (vs. a single
@@ -173,28 +173,28 @@ export async function runBackfill(opts: {
   // UPDATE doesn't get silently clobbered. If the row's description
   // changed in the window, .returning() yields zero rows and we log +
   // skip rather than overwriting fresher content (#844 Copilot R3).
-  let updatedCount = 0
-  let skippedCount = 0
+  let updatedCount = 0;
+  let skippedCount = 0;
   for (const row of dirty) {
     const updated = await db
       .update(events)
       .set({ description: row.after })
       .where(and(eq(events.id, row.id), eq(events.description, row.before)))
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     if (updated.length === 0) {
       console.log(
         `Skipped ${row.id} — description changed between scan and update`,
-      )
-      skippedCount += 1
-      continue
+      );
+      skippedCount += 1;
+      continue;
     }
-    updatedCount += 1
+    updatedCount += 1;
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Updated ${updatedCount} rows. Skipped ${skippedCount} rows (concurrent edit).`,
-  )
+  );
 
   return {
     rowsScanned: candidates.length,
@@ -207,24 +207,24 @@ export async function runBackfill(opts: {
     // --commit was passed — matches the semantics applied on the no-op
     // early-return paths above (#844 Copilot R4, same shape as #836 R5).
     committed: updatedCount > 0,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can also be imported by a test
 // without auto-running.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

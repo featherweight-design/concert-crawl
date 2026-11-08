@@ -11,20 +11,20 @@
 // label — degraded, never dropped, matching how the panel treats an unknown
 // category and a hostile actionUrl.
 
-export const CREW_CATEGORY_PREFIX = 'crew.'
+export const CREW_CATEGORY_PREFIX = 'crew.';
 
 export interface CrewRowIdentity {
-  crewId: string
-  crewName: string
+  crewId: string;
+  crewName: string;
   /** Reroll counter. Absent on a malformed blob, which draws the salt-0 patch. */
-  patchSalt: number
+  patchSalt: number;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const nonEmptyString = (value: unknown): value is string =>
-  typeof value === 'string' && value.trim() !== ''
+  typeof value === 'string' && value.trim() !== '';
 
 /**
  * Both halves have to hold: the category says "this is crew news" and the blob
@@ -36,10 +36,10 @@ export const crewRowIdentity = (
   category: string,
   metadata: Record<string, unknown> | null,
 ): CrewRowIdentity | null => {
-  if (!category.startsWith(CREW_CATEGORY_PREFIX)) return null
-  if (!isRecord(metadata)) return null
-  const { crewId, crewName, patchSalt } = metadata
-  if (!nonEmptyString(crewId) || !nonEmptyString(crewName)) return null
+  if (!category.startsWith(CREW_CATEGORY_PREFIX)) return null;
+  if (!isRecord(metadata)) return null;
+  const { crewId, crewName, patchSalt } = metadata;
+  if (!nonEmptyString(crewId) || !nonEmptyString(crewName)) return null;
   return {
     crewId,
     crewName,
@@ -49,5 +49,5 @@ export const crewRowIdentity = (
       typeof patchSalt === 'number' && Number.isInteger(patchSalt)
         ? patchSalt
         : 0,
-  }
-}
+  };
+};

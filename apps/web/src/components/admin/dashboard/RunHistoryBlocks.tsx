@@ -1,11 +1,11 @@
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface RunHistoryBlocksProps {
-  data: number[]
+  data: number[];
 }
 
 export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
-  if (!data.length) return null
+  if (!data.length) return null;
 
   return (
     <div
@@ -44,5 +44,5 @@ export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
         {ADMIN_COPY.dashboard.runHistoryBlocks.lastNRuns(data.length)}
       </span>
     </div>
-  )
-}
+  );
+};

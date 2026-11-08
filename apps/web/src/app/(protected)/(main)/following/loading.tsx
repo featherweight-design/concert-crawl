@@ -1,15 +1,15 @@
 // Mirrors HistoryLoading, adjusted for the Artists list: a sub-tab bar, a mono
 // group heading, and rows whose right column is the follow control.
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties } from 'react';
 
-import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants'
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
 
 // `CSSProperties` has no room for custom properties, so the two the class pair
 // above reads are declared alongside it rather than cast in.
 const CONTROL_STYLE: CSSProperties & {
-  '--nf-follow-row': string
-  '--nf-follow-row-wide': string
+  '--nf-follow-row': string;
+  '--nf-follow-row-wide': string;
 } = {
   width: 92,
   '--nf-follow-row': `${NF_FOLLOW_SIZES.row.height}px`,
@@ -17,7 +17,7 @@ const CONTROL_STYLE: CSSProperties & {
   borderRadius: 8,
   background: 'var(--surface-2)',
   flexShrink: 0,
-}
+};
 
 function ArtistRowSkeleton({ delay }: { delay: number }) {
   return (
@@ -77,7 +77,7 @@ function ArtistRowSkeleton({ delay }: { delay: number }) {
         style={CONTROL_STYLE}
       />
     </div>
-  )
+  );
 }
 
 export default function FollowingLoading() {
@@ -126,5 +126,5 @@ export default function FollowingLoading() {
         </div>
       </main>
     </>
-  )
+  );
 }

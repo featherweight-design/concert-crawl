@@ -57,6 +57,7 @@ Everyone can connect Spotify. Free users get passive highlighting on browse/deta
 ### 2. Free-tier UX — passive highlighting + auto-watch opt-in modal
 
 **Free tier gets:**
+
 - Passive "you follow this artist" signal on browse cards + event detail (Design owns the visual — badge, glyph, color, size)
 - One-time opt-in modal at connect with two explicit choices: auto-watch matching shows, OR highlight-only (no auto-watch). Dismissal defaults to highlight-only — the connected baseline is never in doubt. Design owns exact copy + affordance shape.
 - Auto-watch (if opted-in) reuses the shipped Watching mechanism — no net-new state, no schema change
@@ -80,6 +81,7 @@ Pull two sources from Spotify:
 - **Top artists from listening history** (~50 top artists over 6 months via Spotify's top-artists endpoint)
 
 **Skipped intentionally:**
+
 - Playlists (messy artist-name mapping from playlist tracks; risks capturing work/exercise playlists that don't reflect concert taste)
 - Detailed track-by-track listening history (privacy overreach for beta)
 - Saved albums (redundant with top artists)
@@ -123,19 +125,19 @@ When the user disconnects (or Spotify revokes us externally):
 
 ## What's NOT in this brief
 
-| Concern | Owner |
-|---|---|
-| OAuth provider path (Clerk vs. direct Spotify SDK) | Eng — decide in the implementation plan |
-| Token refresh + expiry handling | Eng — implementation plan |
-| Sync cron infrastructure + retry policy | Eng — implementation plan |
-| Spotify API rate-limit handling + budget | Eng — implementation plan |
-| Push alert delivery mechanism | [#737](https://github.com/HartiganHM/concert-crawl/issues/737) (consumer notification UI gap) — hard sequencing dep |
-| Weekly digest email infrastructure | Part of #783 email family + monetization Phase 5 build |
-| `subscription_tier` enum expansion for Premium gating | Already merged (PR #878, monetization Phase 2.1) |
-| Public profile visibility of Spotify connection | Deferred — internal-only per Q6 lock |
-| Social features (who else follows this artist) | Adjacent — [#762](https://github.com/HartiganHM/concert-crawl/issues/762) |
-| Playlist syncing or full listening history | Out of scope entirely per Q4 lock |
-| Recommendations engine tuning / ML | Out of scope — Design specs the surface, eng picks aggregation logic |
+| Concern                                               | Owner                                                                                                               |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| OAuth provider path (Clerk vs. direct Spotify SDK)    | Eng — decide in the implementation plan                                                                             |
+| Token refresh + expiry handling                       | Eng — implementation plan                                                                                           |
+| Sync cron infrastructure + retry policy               | Eng — implementation plan                                                                                           |
+| Spotify API rate-limit handling + budget              | Eng — implementation plan                                                                                           |
+| Push alert delivery mechanism                         | [#737](https://github.com/HartiganHM/concert-crawl/issues/737) (consumer notification UI gap) — hard sequencing dep |
+| Weekly digest email infrastructure                    | Part of #783 email family + monetization Phase 5 build                                                              |
+| `subscription_tier` enum expansion for Premium gating | Already merged (PR #878, monetization Phase 2.1)                                                                    |
+| Public profile visibility of Spotify connection       | Deferred — internal-only per Q6 lock                                                                                |
+| Social features (who else follows this artist)        | Adjacent — [#762](https://github.com/HartiganHM/concert-crawl/issues/762)                                           |
+| Playlist syncing or full listening history            | Out of scope entirely per Q4 lock                                                                                   |
+| Recommendations engine tuning / ML                    | Out of scope — Design specs the surface, eng picks aggregation logic                                                |
 
 ## Decisions inherited
 

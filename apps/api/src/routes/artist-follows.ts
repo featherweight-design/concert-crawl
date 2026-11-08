@@ -1,21 +1,21 @@
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm'
-import { db, artists, userArtistFollows } from '@concert-crawl/db'
-import { requireFeature } from '../middleware/entitlement.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm';
+import { db, artists, userArtistFollows } from '@concert-crawl/db';
+import { requireFeature } from '../middleware/entitlement.js';
 import {
   ARTIST_SLUG_MAX_LENGTH,
   BULK_FOLLOW_MAX_SLUGS,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import type {
   ArtistFollowResponse,
   BulkFollowResponse,
   BulkFollowResult,
   FollowedArtist,
-} from '@concert-crawl/types'
-import { loadNextShowByCanonical } from '../lib/artist-follows.js'
+} from '@concert-crawl/types';
+import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 
 /**
  * Follow / unfollow an artist (#1115, PR-D).
@@ -33,9 +33,9 @@ import { loadNextShowByCanonical } from '../lib/artist-follows.js'
  * call the Spotify API: the button does not follow the artist on the user's
  * Spotify account (brief §3.5). A regression test asserts zero Spotify calls.
  */
-export const artistFollowsRouter = new Hono()
+export const artistFollowsRouter = new Hono();
 
-artistFollowsRouter.use('*', clerkMiddleware())
+artistFollowsRouter.use('*', clerkMiddleware());
 
 const slugParamSchema = z.object({
   slug: z
@@ -43,14 +43,14 @@ const slugParamSchema = z.object({
     .min(1)
     .max(ARTIST_SLUG_MAX_LENGTH)
     .regex(/^[a-z0-9-]+$/),
-})
+});
 
-const notFound = { success: false, error: 'Artist not found' } as const
-const unauthorized = { success: false, error: 'Unauthorized' } as const
+const notFound = { success: false, error: 'Artist not found' } as const;
+const unauthorized = { success: false, error: 'Unauthorized' } as const;
 
 const slugValidator = zValidator('param', slugParamSchema, (result, ctx) => {
-  if (!result.success) return ctx.json(notFound, 404)
-})
+  if (!result.success) return ctx.json(notFound, 404);
+});
 
 // POST /v1/artists/:slug/follow
 artistFollowsRouter.post(
@@ -58,10 +58,10 @@ artistFollowsRouter.post(
   slugValidator,
   requireFeature('following'),
   async (ctx) => {
-    const authInfo = getAuth(ctx)
-    if (!authInfo?.userId) return ctx.json(unauthorized, 401)
+    const authInfo = getAuth(ctx);
+    if (!authInfo?.userId) return ctx.json(unauthorized, 401);
 
-    const { slug } = ctx.req.valid('param')
+    const { slug } = ctx.req.valid('param');
 
     const [artist] = await db
       .select({
@@ -74,9 +74,9 @@ artistFollowsRouter.post(
       // start following something with no page. DELETE deliberately does NOT
       // filter — a user who followed before an admin hid the row must still be
       // able to unfollow it.
-      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
+      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)));
 
-    if (!artist) return ctx.json(notFound, 404)
+    if (!artist) return ctx.json(notFound, 404);
 
     // Read-before-insert so a repeat follow is a cheap no-op rather than a
     // wasted write. It is not the correctness guarantee — two concurrent
@@ -93,7 +93,7 @@ artistFollowsRouter.post(
           eq(userArtistFollows.source, 'manual'),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!existing) {
       await db
@@ -109,27 +109,27 @@ artistFollowsRouter.post(
         })
         // Untargeted on purpose: it covers whichever unique index the loser of
         // a concurrent double-tap trips, so neither request 500s.
-        .onConflictDoNothing()
+        .onConflictDoNothing();
     }
 
-    const data: ArtistFollowResponse = { following: true }
-    return ctx.json({ success: true, data })
+    const data: ArtistFollowResponse = { following: true };
+    return ctx.json({ success: true, data });
   },
-)
+);
 
 // DELETE /v1/artists/:slug/follow
 artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
-  const authInfo = getAuth(ctx)
-  if (!authInfo?.userId) return ctx.json(unauthorized, 401)
+  const authInfo = getAuth(ctx);
+  if (!authInfo?.userId) return ctx.json(unauthorized, 401);
 
-  const { slug } = ctx.req.valid('param')
+  const { slug } = ctx.req.valid('param');
 
   const [artist] = await db
     .select({ canonicalName: artists.canonicalName })
     .from(artists)
-    .where(eq(artists.slug, slug))
+    .where(eq(artists.slug, slug));
 
-  if (!artist) return ctx.json(notFound, 404)
+  if (!artist) return ctx.json(notFound, 404);
 
   // Every source, not just 'manual'. Spotify seeds follows but no longer owns
   // them, so this is the one and only way a follow is removed — leaving the
@@ -141,7 +141,7 @@ artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
         eq(userArtistFollows.userId, authInfo.userId),
         eq(userArtistFollows.canonicalName, artist.canonicalName),
       ),
-    )
+    );
 
   // Report the effective state, not the intent. GET /v1/artists/:slug counts a
   // follow from any source except `spotify_top`, which is listening history, so
@@ -157,20 +157,20 @@ artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
         ne(userArtistFollows.source, 'spotify_top'),
       ),
     )
-    .limit(1)
+    .limit(1);
 
-  const data: ArtistFollowResponse = { following: Boolean(remaining) }
-  return ctx.json({ success: true, data })
-})
+  const data: ArtistFollowResponse = { following: Boolean(remaining) };
+  return ctx.json({ success: true, data });
+});
 
 /**
  * Viewer-scoped follow collection, mounted at `/v1/me` (native following eng
  * spec §7.5, §9.3). Separate router from the `/v1/artists`-mounted one above
  * purely because the mount point differs; the semantics are the same table.
  */
-export const meArtistFollowsRouter = new Hono()
+export const meArtistFollowsRouter = new Hono();
 
-meArtistFollowsRouter.use('*', clerkMiddleware())
+meArtistFollowsRouter.use('*', clerkMiddleware());
 
 /**
  * GET /v1/me/artist-follows — the viewer's follows, newest first, each with
@@ -186,8 +186,8 @@ meArtistFollowsRouter.use('*', clerkMiddleware())
  * upcoming"), not an error.
  */
 meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
-  const authInfo = getAuth(ctx)
-  if (!authInfo?.userId) return ctx.json(unauthorized, 401)
+  const authInfo = getAuth(ctx);
+  if (!authInfo?.userId) return ctx.json(unauthorized, 401);
 
   const followRows = await db
     .select({
@@ -201,10 +201,10 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
     .orderBy(
       desc(userArtistFollows.createdAt),
       asc(userArtistFollows.artistName),
-    )
+    );
 
   if (followRows.length === 0) {
-    return ctx.json({ success: true, data: [] })
+    return ctx.json({ success: true, data: [] });
   }
 
   // One entry per artist, not per row. A user can hold BOTH a manual row and a
@@ -217,11 +217,11 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
   // The manual row wins the tie because it is the one the user owns — a Spotify
   // row disappears the moment they unfollow over there, and reporting that
   // source would make the follow look borrowed when it isn't.
-  const followByCanonical = new Map<string, (typeof followRows)[number]>()
+  const followByCanonical = new Map<string, (typeof followRows)[number]>();
   for (const row of followRows) {
-    const held = followByCanonical.get(row.canonicalName)
+    const held = followByCanonical.get(row.canonicalName);
     if (!held || (held.source !== 'manual' && row.source === 'manual')) {
-      followByCanonical.set(row.canonicalName, row)
+      followByCanonical.set(row.canonicalName, row);
     }
   }
   // Re-sort rather than lean on the Map's insertion order. The SQL ordering is
@@ -232,9 +232,9 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
     (left, right) =>
       right.createdAt.getTime() - left.createdAt.getTime() ||
       left.artistName.localeCompare(right.artistName),
-  )
+  );
 
-  const canonicalNames = [...followByCanonical.keys()]
+  const canonicalNames = [...followByCanonical.keys()];
 
   // Two supporting reads, both keyed on the canonical name: the projection row
   // (for the page link and the photo) and the next date.
@@ -255,14 +255,14 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
         ),
       ),
     loadNextShowByCanonical(canonicalNames),
-  ])
+  ]);
 
   const projectionByCanonical = new Map(
     projectionRows.map((row) => [row.canonicalName, row]),
-  )
+  );
 
   const data: FollowedArtist[] = uniqueFollowRows.map((row) => {
-    const projection = projectionByCanonical.get(row.canonicalName)
+    const projection = projectionByCanonical.get(row.canonicalName);
     return {
       name: row.artistName,
       slug: projection?.slug ?? null,
@@ -271,11 +271,11 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
       source: row.source,
       followedAt: row.createdAt.toISOString(),
       nextShow: nextShows.get(row.canonicalName) ?? null,
-    }
-  })
+    };
+  });
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // Cap chosen to comfortably exceed the largest realistic commit — the
 // onboarding artist step and "Follow all N" on a festival bill — while keeping
@@ -291,7 +291,7 @@ const bulkFollowSchema = z.object({
     )
     .min(1)
     .max(BULK_FOLLOW_MAX_SLUGS),
-})
+});
 
 /**
  * POST /v1/me/artist-follows/bulk — commit a whole selection in one write
@@ -308,18 +308,18 @@ meArtistFollowsRouter.post(
   '/artist-follows/bulk',
   zValidator('json', bulkFollowSchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid slug list' }, 400)
+      return ctx.json({ success: false, error: 'Invalid slug list' }, 400);
     }
   }),
   requireFeature('following'),
   async (ctx) => {
-    const authInfo = getAuth(ctx)
-    if (!authInfo?.userId) return ctx.json(unauthorized, 401)
+    const authInfo = getAuth(ctx);
+    if (!authInfo?.userId) return ctx.json(unauthorized, 401);
 
-    const { slugs } = ctx.req.valid('json')
+    const { slugs } = ctx.req.valid('json');
     // A duplicated slug in the body is the caller's bug, not a conflict — dedupe
     // and answer once per distinct slug, preserving first-seen order.
-    const requestedSlugs = [...new Set(slugs)]
+    const requestedSlugs = [...new Set(slugs)];
 
     const artistRows = await db
       .select({
@@ -333,9 +333,9 @@ meArtistFollowsRouter.post(
       // `artist_not_found`, which is the same answer in list form.
       .where(
         and(inArray(artists.slug, requestedSlugs), eq(artists.hidden, false)),
-      )
+      );
 
-    const artistBySlug = new Map(artistRows.map((row) => [row.slug, row]))
+    const artistBySlug = new Map(artistRows.map((row) => [row.slug, row]));
 
     // Read across EVERY source, not just 'manual'. `already_following` reports
     // what the user can see, and every read in this feature is source-agnostic
@@ -359,11 +359,11 @@ meArtistFollowsRouter.post(
                   artistRows.map((row) => row.canonicalName),
                 ),
               ),
-            )
+            );
 
     const alreadyFollowing = new Set(
       existingRows.map((row) => row.canonicalName),
-    )
+    );
     // The write stays manual-scoped, matching the single POST. A Spotify row is
     // owned by the sync and vanishes when the user unfollows over there, so a
     // deliberate pick still earns its own manual anchor even though the status
@@ -372,36 +372,36 @@ meArtistFollowsRouter.post(
       existingRows
         .filter((row) => row.source === 'manual')
         .map((row) => row.canonicalName),
-    )
+    );
 
-    const toInsert: Array<typeof userArtistFollows.$inferInsert> = []
+    const toInsert: Array<typeof userArtistFollows.$inferInsert> = [];
     const results: BulkFollowResult[] = requestedSlugs.map((slug) => {
-      const artist = artistBySlug.get(slug)
-      if (!artist) return { slug, status: 'artist_not_found' }
-      const wasVisiblyFollowed = alreadyFollowing.has(artist.canonicalName)
+      const artist = artistBySlug.get(slug);
+      if (!artist) return { slug, status: 'artist_not_found' };
+      const wasVisiblyFollowed = alreadyFollowing.has(artist.canonicalName);
       // Two slugs can canonicalize to the same artist; the second adds nothing,
       // so the insert set stays unique.
       if (!manuallyFollowing.has(artist.canonicalName)) {
-        manuallyFollowing.add(artist.canonicalName)
+        manuallyFollowing.add(artist.canonicalName);
         toInsert.push({
           userId: authInfo.userId,
           artistName: artist.name,
           canonicalName: artist.canonicalName,
           spotifyArtistId: artist.spotifyArtistId,
           source: 'manual',
-        })
+        });
       }
-      alreadyFollowing.add(artist.canonicalName)
+      alreadyFollowing.add(artist.canonicalName);
       return {
         slug,
         status: wasVisiblyFollowed ? 'already_following' : 'followed',
-      }
-    })
+      };
+    });
 
     if (toInsert.length > 0) {
       // Untargeted on purpose, matching the single POST: it covers whichever
       // unique index a concurrent double-commit trips, so neither request 500s.
-      await db.insert(userArtistFollows).values(toInsert).onConflictDoNothing()
+      await db.insert(userArtistFollows).values(toInsert).onConflictDoNothing();
     }
 
     const data: BulkFollowResponse = {
@@ -410,7 +410,7 @@ meArtistFollowsRouter.post(
       // artist a Spotify sync already holds still earns a manual anchor row
       // while reporting `already_following`.
       followedCount: results.filter((row) => row.status === 'followed').length,
-    }
-    return ctx.json({ success: true, data })
+    };
+    return ctx.json({ success: true, data });
   },
-)
+);

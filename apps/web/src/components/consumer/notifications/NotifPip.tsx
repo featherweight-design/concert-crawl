@@ -10,7 +10,7 @@
 // fixed colour, so the --signal fill keeps its separation on Electric, Jade
 // and Light alike. Callers pass the bar they sit in.
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties } from 'react';
 
 export const NotifPip = ({
   size = 8,
@@ -19,11 +19,11 @@ export const NotifPip = ({
   animate = true,
   style,
 }: {
-  size?: number
-  ring?: string
-  ringWidth?: number
-  animate?: boolean
-  style?: CSSProperties
+  size?: number;
+  ring?: string;
+  ringWidth?: number;
+  animate?: boolean;
+  style?: CSSProperties;
 }) => (
   <span
     className={animate ? 'notif-pip' : undefined}
@@ -41,4 +41,4 @@ export const NotifPip = ({
       ...style,
     }}
   />
-)
+);

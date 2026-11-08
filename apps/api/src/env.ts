@@ -1,8 +1,8 @@
-import dotenv from 'dotenv'
-import { z } from 'zod'
+import dotenv from 'dotenv';
+import { z } from 'zod';
 
-dotenv.config({ path: '.env.local' })
-dotenv.config() // fallback to .env if present
+dotenv.config({ path: '.env.local' });
+dotenv.config(); // fallback to .env if present
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
@@ -12,7 +12,7 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
-})
+});
 
 // Web Push (#971) VAPID vars are read directly from process.env at runtime
 // inside @concert-crawl/push (send-push.ts) and me-push.ts — not validated
@@ -21,12 +21,12 @@ const envSchema = z.object({
 // env.ts's exit-on-invalid path (unit tests import routes without a
 // populated .env). See .env.example for the three names and generation.
 
-const parsed = envSchema.safeParse(process.env)
+const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:')
-  console.error(parsed.error.flatten().fieldErrors)
-  process.exit(1)
+  console.error('❌ Invalid environment variables:');
+  console.error(parsed.error.flatten().fieldErrors);
+  process.exit(1);
 }
 
-export const env = parsed.data
+export const env = parsed.data;

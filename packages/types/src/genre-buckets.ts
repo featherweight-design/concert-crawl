@@ -82,16 +82,16 @@ const GENRE_BUCKETS_SOURCE = {
     'stoner',
   ],
   world: ['world', 'bollywood', 'indigenous'],
-} as const satisfies Record<string, readonly string[]>
+} as const satisfies Record<string, readonly string[]>;
 
-export type GenreBucket = keyof typeof GENRE_BUCKETS_SOURCE
+export type GenreBucket = keyof typeof GENRE_BUCKETS_SOURCE;
 
 // Type guard against the source-object keys — the ONE place we know the
 // membership check narrows to GenreBucket. Downstream lookups use this
 // instead of `as GenreBucket` casts so a typo in a bucket label surfaces
 // at type-check time.
 export function isGenreBucket(value: string): value is GenreBucket {
-  return Object.prototype.hasOwnProperty.call(GENRE_BUCKETS_SOURCE, value)
+  return Object.prototype.hasOwnProperty.call(GENRE_BUCKETS_SOURCE, value);
 }
 
 // Alphabetically sorted list of bucket labels. The endpoint returns these
@@ -100,20 +100,20 @@ export const BUCKET_LABELS: readonly GenreBucket[] = Object.keys(
   GENRE_BUCKETS_SOURCE,
 )
   .filter(isGenreBucket)
-  .sort()
+  .sort();
 
 // Lowercase-keyed reverse index: sub-genre → bucket. Case-insensitive to
 // absorb LLM drift (K-POP vs k-pop, Americana vs americana). Whitespace is
 // trimmed in the lookup helper — never bake either into the key.
 const GENRE_TO_BUCKET: ReadonlyMap<string, GenreBucket> = (() => {
-  const entries: [string, GenreBucket][] = []
+  const entries: [string, GenreBucket][] = [];
   for (const bucket of BUCKET_LABELS) {
     for (const sub of GENRE_BUCKETS_SOURCE[bucket]) {
-      entries.push([sub.toLowerCase(), bucket])
+      entries.push([sub.toLowerCase(), bucket]);
     }
   }
-  return new Map(entries)
-})()
+  return new Map(entries);
+})();
 
 /**
  * Map a raw genre string (as stored on events.genre) to its bucket label,
@@ -122,9 +122,9 @@ const GENRE_TO_BUCKET: ReadonlyMap<string, GenreBucket> = (() => {
  * Case- and whitespace-insensitive so LLM drift never silently drops rows.
  */
 export function bucketForGenre(rawGenre: string): GenreBucket | null {
-  const key = rawGenre.trim().toLowerCase()
-  if (key === '') return null
-  return GENRE_TO_BUCKET.get(key) ?? null
+  const key = rawGenre.trim().toLowerCase();
+  if (key === '') return null;
+  return GENRE_TO_BUCKET.get(key) ?? null;
 }
 
 /**
@@ -138,11 +138,11 @@ export function bucketForGenre(rawGenre: string): GenreBucket | null {
  * exact-string overlap still matches raw DB values.
  */
 export function expandBucket(bucketOrRaw: string): readonly string[] {
-  const key = bucketOrRaw.trim().toLowerCase()
+  const key = bucketOrRaw.trim().toLowerCase();
   if (isGenreBucket(key)) {
-    return GENRE_BUCKETS_SOURCE[key]
+    return GENRE_BUCKETS_SOURCE[key];
   }
-  return [bucketOrRaw]
+  return [bucketOrRaw];
 }
 
 /**
@@ -161,10 +161,10 @@ export function expandBucket(bucketOrRaw: string): readonly string[] {
 export function bucketMembersFor(
   filterValue: string | null | undefined,
 ): readonly string[] | null {
-  if (filterValue === null || filterValue === undefined) return null
-  const key = filterValue.trim().toLowerCase()
-  if (!isGenreBucket(key)) return null
-  return expandBucket(key)
+  if (filterValue === null || filterValue === undefined) return null;
+  const key = filterValue.trim().toLowerCase();
+  if (!isGenreBucket(key)) return null;
+  return expandBucket(key);
 }
 
 /**
@@ -174,10 +174,10 @@ export function bucketMembersFor(
  * longer clutter the Vibe dropdown.
  */
 export function bucketsPresentIn(rawGenres: readonly string[]): GenreBucket[] {
-  const seen = new Set<GenreBucket>()
+  const seen = new Set<GenreBucket>();
   for (const raw of rawGenres) {
-    const bucket = bucketForGenre(raw)
-    if (bucket !== null) seen.add(bucket)
+    const bucket = bucketForGenre(raw);
+    if (bucket !== null) seen.add(bucket);
   }
-  return Array.from(seen).sort()
+  return Array.from(seen).sort();
 }

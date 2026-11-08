@@ -194,4 +194,4 @@ export const ONBOARDING_COPY = {
       done: "THAT'S THE TOUR",
     },
   },
-}
+};

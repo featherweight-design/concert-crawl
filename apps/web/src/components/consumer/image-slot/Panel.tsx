@@ -1,35 +1,35 @@
-'use client'
+'use client';
 
 // A sized image slot: one box, one radius, one hairline, one source chain.
 // Every small artwork in the product goes through here so a 56px tile looks the
 // same whether a row or a card happens to be drawing it (#1525).
 
-import { EventImage } from '../event-image'
-import { SLOT_HAIRLINE } from './definitions/constants'
-import type { SlotScale, SlotSource } from './definitions/types'
-import { slotRadiusFor, slotScaleFor, slotSources } from './lib/slot-metrics'
+import { EventImage } from '../event-image';
+import { SLOT_HAIRLINE } from './definitions/constants';
+import type { SlotScale, SlotSource } from './definitions/types';
+import { slotRadiusFor, slotScaleFor, slotSources } from './lib/slot-metrics';
 
 export type PanelProps = {
   /** The name the generated mark is keyed on when no photograph resolves. */
-  name: string
+  name: string;
   /**
    * Decorative by default: these slots sit beside the same name as text, so
    * announcing it twice is noise. Pass a string only where the slot is the
    * sole carrier of the information.
    */
-  alt?: string
+  alt?: string;
   /** CSS px, or `'100%'` to fill the parent's width and take `ratio`. */
-  size?: number | '100%'
-  ratio?: string
-  radius?: number
+  size?: number | '100%';
+  ratio?: string;
+  radius?: number;
   /**
    * Overrides the scale derived from `size`. A slot sized in CSS rather than in
    * px — a panel that is 128 on mobile and 208 on desktop — knows its detail
    * density even though `size` is `'100%'` and cannot tell us.
    */
-  scale?: SlotScale
-  className?: string
-} & SlotSource
+  scale?: SlotScale;
+  className?: string;
+} & SlotSource;
 
 export const Panel = (props: PanelProps) => {
   const {
@@ -40,8 +40,8 @@ export const Panel = (props: PanelProps) => {
     radius,
     scale,
     className,
-  } = props
-  const { primary, secondary } = slotSources(props)
+  } = props;
+  const { primary, secondary } = slotSources(props);
 
   return (
     <span
@@ -68,5 +68,5 @@ export const Panel = (props: PanelProps) => {
         className="h-full w-full"
       />
     </span>
-  )
-}
+  );
+};

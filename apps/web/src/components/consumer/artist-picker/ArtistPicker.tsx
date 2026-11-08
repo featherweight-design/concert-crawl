@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Multi-select artist picker (native following, PR 8). Two modes over one
 // selection: a grid of checkbox tiles, or a search over the same index.
@@ -21,19 +21,19 @@
 // onboarding shell mounts its mobile and desktop trees at the same time, so
 // state held here would let the two disagree about what is being searched.
 
-import { useEffect, useRef } from 'react'
-import { PickGrid } from './PickGrid'
-import { ArtistPickTile } from './ArtistPickTile'
-import { ArtistSearchRow } from './ArtistSearchRow'
-import { PickedStrip } from './PickedStrip'
-import { SearchField, SearchTrigger } from './SearchField'
-import { ARTIST_PICKER_COPY } from './definitions/copy'
+import { useEffect, useRef } from 'react';
+import { PickGrid } from './PickGrid';
+import { ArtistPickTile } from './ArtistPickTile';
+import { ArtistSearchRow } from './ArtistSearchRow';
+import { PickedStrip } from './PickedStrip';
+import { SearchField, SearchTrigger } from './SearchField';
+import { ARTIST_PICKER_COPY } from './definitions/copy';
 import {
   PICK_SKELETON_COUNT,
   SEARCH_SKELETON_COUNT,
-} from './definitions/constants'
-import type { PickArtist } from './definitions/types'
-import type { ArtistSearchState } from './lib/use-artist-search'
+} from './definitions/constants';
+import type { PickArtist } from './definitions/types';
+import type { ArtistSearchState } from './lib/use-artist-search';
 
 const SkeletonRow = () => (
   <div
@@ -45,7 +45,7 @@ const SkeletonRow = () => (
       border: '1px solid var(--border)',
     }}
   />
-)
+);
 
 const SkeletonTile = () => (
   <div
@@ -66,7 +66,7 @@ const SkeletonTile = () => (
       }}
     />
   </div>
-)
+);
 
 // Both the empty and the failed grid say a headline and a sentence in the
 // space the tiles would have taken. `role="alert"` only on the failure: the
@@ -76,9 +76,9 @@ const Notice = ({
   body,
   role,
 }: {
-  title: string
-  body: string
-  role?: 'alert'
+  title: string;
+  body: string;
+  role?: 'alert';
 }) => (
   <div role={role} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
     <span
@@ -91,7 +91,7 @@ const Notice = ({
       {body}
     </span>
   </div>
-)
+);
 
 // Both are ghost buttons rather than primaries: the step's rail is the only
 // primary on screen, and a second filled button beside it would ask twice.
@@ -99,8 +99,8 @@ const GhostButton = ({
   label,
   onClick,
 }: {
-  label: string
-  onClick: () => void
+  label: string;
+  onClick: () => void;
 }) => (
   <button
     type="button"
@@ -122,15 +122,15 @@ const GhostButton = ({
   >
     {label}
   </button>
-)
+);
 
 const RetryButton = ({ onClick }: { onClick: () => void }) => (
   <GhostButton label={ARTIST_PICKER_COPY.errorRetry} onClick={onClick} />
-)
+);
 
 const BackToSuggestions = ({ onClick }: { onClick: () => void }) => (
   <GhostButton label={ARTIST_PICKER_COPY.searchBack} onClick={onClick} />
-)
+);
 
 /**
  * What the search body says, per state, and what the live region announces.
@@ -150,22 +150,22 @@ const searchNoticeFor = (
       return {
         title: ARTIST_PICKER_COPY.searchRestTitle,
         body: ARTIST_PICKER_COPY.searchRestBody,
-      }
+      };
     case 'none':
       return {
         title: ARTIST_PICKER_COPY.searchNoneTitle,
         body: ARTIST_PICKER_COPY.searchNoneBody,
-      }
+      };
     case 'allFollowed':
       return {
         title: ARTIST_PICKER_COPY.searchAllFollowedTitle,
         body: ARTIST_PICKER_COPY.searchAllFollowedBody,
-      }
+      };
     case 'typing':
     case 'results':
-      return null
+      return null;
   }
-}
+};
 
 /** One announcement per SETTLED state; typing says nothing, because the next
  *  state will a moment later and "searching" on every keystroke is chatter. */
@@ -175,62 +175,62 @@ const searchAnnouncementFor = (
 ): string => {
   switch (state) {
     case 'results':
-      return ARTIST_PICKER_COPY.searchResultCount(count)
+      return ARTIST_PICKER_COPY.searchResultCount(count);
     case 'none':
-      return ARTIST_PICKER_COPY.searchNoneTitle
+      return ARTIST_PICKER_COPY.searchNoneTitle;
     case 'allFollowed':
-      return ARTIST_PICKER_COPY.searchAllFollowedTitle
+      return ARTIST_PICKER_COPY.searchAllFollowedTitle;
     case 'typing':
-      return ''
+      return '';
     case 'rest':
-      return ARTIST_PICKER_COPY.searchOpened
+      return ARTIST_PICKER_COPY.searchOpened;
   }
-}
+};
 
 interface ArtistPickerProps {
-  artists: PickArtist[]
+  artists: PickArtist[];
   /** Slugs currently selected. The caller owns the set; the picker only reads. */
-  selected: ReadonlySet<string>
-  onToggle: (slug: string) => void
-  loading: boolean
+  selected: ReadonlySet<string>;
+  onToggle: (slug: string) => void;
+  loading: boolean;
   /**
    * The read failed. Separate from `artists.length === 0` on purpose: a
    * failure also hands back an empty list, and the two want different words.
    */
-  errored?: boolean
+  errored?: boolean;
   /** Re-runs the suggestions read. The error state's only offer. */
-  onRetry?: () => void
+  onRetry?: () => void;
   /** 2 on mobile, 5 on desktop (RS-07 / RS-08). Never 1, even at 320px. */
-  columns: number
+  columns: number;
   /**
    * Whether the search field has replaced the grid. Owned by the caller
    * because two trees of this component are mounted at once.
    */
-  searching: boolean
-  searchQuery: string
-  onSearchQueryChange: (next: string) => void
-  onSearchOpen: () => void
-  onSearchClose: () => void
+  searching: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (next: string) => void;
+  onSearchOpen: () => void;
+  onSearchClose: () => void;
   /**
    * The search read's output, threaded from the shell for the same reason the
    * suggestions are: both trees are mounted, so a fetch in here would fire
    * twice per keystroke and keep two caches that can disagree.
    */
-  searchResults: PickArtist[]
-  searchState: ArtistSearchState
+  searchResults: PickArtist[];
+  searchState: ArtistSearchState;
   /**
    * The step's eyebrow/heading/lede. Rendered HERE rather than above this
    * component so the field can take its place in the same vertical box —
    * removing the head and rendering the field lower down shifts the grid,
    * which is the mode swap becoming a relayout.
    */
-  head?: React.ReactNode
+  head?: React.ReactNode;
   /**
    * Desktop draws the trigger in the step's head rather than under the grid,
    * so the picker renders it there instead of below. The control is the same
    * object either way; only where it sits moves.
    */
-  triggerAbove?: boolean
+  triggerAbove?: boolean;
 }
 
 export const ArtistPicker = ({
@@ -260,23 +260,23 @@ export const ArtistPicker = ({
   // A ref, written after commit and read during render. Held in state it
   // would be a new Map every render, which re-renders, which writes again:
   // the same loop the search effect avoids by keying on the query text.
-  const knownArtists = useRef(new Map<string, PickArtist>())
-  const artistKey = artists.map((artist) => artist.slug).join(',')
-  const resultKey = results.map((artist) => artist.slug).join(',')
+  const knownArtists = useRef(new Map<string, PickArtist>());
+  const artistKey = artists.map((artist) => artist.slug).join(',');
+  const resultKey = results.map((artist) => artist.slug).join(',');
   useEffect(() => {
     for (const artist of [...artists, ...results]) {
-      knownArtists.current.set(artist.slug, artist)
+      knownArtists.current.set(artist.slug, artist);
     }
     // Keyed on the JOINED SLUGS, never the arrays: both are rebuilt on every
     // render, so an array dependency fires this effect every time.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [artistKey, resultKey])
-  const onScreen = new Map(knownArtists.current)
+  }, [artistKey, resultKey]);
+  const onScreen = new Map(knownArtists.current);
   for (const artist of [...artists, ...results])
-    onScreen.set(artist.slug, artist)
+    onScreen.set(artist.slug, artist);
   const pickedArtists = Array.from(selected)
     .map((slug) => onScreen.get(slug))
-    .filter((artist): artist is PickArtist => artist !== undefined)
+    .filter((artist): artist is PickArtist => artist !== undefined);
   // A pick made in search has no tile in the suggestions, so closing the field
   // used to return the visitor to a grid that said nothing about the artist
   // they had just chosen — the rail counted it and the grid did not, which
@@ -291,42 +291,42 @@ export const ArtistPicker = ({
   // would vanish the moment it was unticked, reflowing the grid and leaving
   // no way back to that artist but reopening search and retyping the query —
   // where every suggestion tile simply goes unchecked and waits.
-  const suggested = new Set(artists.map((artist) => artist.slug))
-  const appended = useRef<string[]>([])
+  const suggested = new Set(artists.map((artist) => artist.slug));
+  const appended = useRef<string[]>([]);
   for (const slug of selected) {
-    if (suggested.has(slug)) continue
-    if (appended.current.includes(slug)) continue
+    if (suggested.has(slug)) continue;
+    if (appended.current.includes(slug)) continue;
     // Written during render rather than from an effect, so the tile is there
     // on the frame the mode flips back rather than one after it. Idempotent
     // by the guard above, which is what makes that safe: a double invoke adds
     // nothing the first pass did not.
-    appended.current.push(slug)
+    appended.current.push(slug);
   }
   const appendedArtists = appended.current
     // A slug the suggestions have since picked up is drawn in rank order
     // rather than twice.
     .filter((slug) => !suggested.has(slug))
     .map((slug) => onScreen.get(slug))
-    .filter((artist): artist is PickArtist => artist !== undefined)
+    .filter((artist): artist is PickArtist => artist !== undefined);
   // While a read is in flight the suggestions are whatever the last one left
   // behind, and the skeletons below stand in for them. The appended tiles are
   // not standing in for anything, so they keep drawing.
   const gridArtists = loading
     ? appendedArtists
-    : [...artists, ...appendedArtists]
-  const notice = searchNoticeFor(state)
-  const fieldRef = useRef<HTMLInputElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+    : [...artists, ...appendedArtists];
+  const notice = searchNoticeFor(state);
+  const fieldRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   // Focus follows the mode in both directions. Opening without moving focus
   // leaves a keyboard user on a control that is no longer there; closing
   // without returning it drops them at the top of the document.
-  const wasSearching = useRef(searching)
+  const wasSearching = useRef(searching);
   useEffect(() => {
-    if (searching === wasSearching.current) return
-    wasSearching.current = searching
-    if (searching) fieldRef.current?.focus()
-    else triggerRef.current?.focus()
-  }, [searching])
+    if (searching === wasSearching.current) return;
+    wasSearching.current = searching;
+    if (searching) fieldRef.current?.focus();
+    else triggerRef.current?.focus();
+  }, [searching]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -461,5 +461,5 @@ export const ArtistPicker = ({
         <SearchTrigger ref={triggerRef} onOpen={onSearchOpen} />
       )}
     </div>
-  )
-}
+  );
+};

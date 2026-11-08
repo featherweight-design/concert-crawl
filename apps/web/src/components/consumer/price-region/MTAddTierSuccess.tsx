@@ -1,25 +1,25 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { CheckGlyph, Eyebrow } from '@/components/consumer/glyphs'
-import type { Tier, SourceCategory } from '@concert-crawl/types'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CheckGlyph, Eyebrow } from '@/components/consumer/glyphs';
+import type { Tier, SourceCategory } from '@concert-crawl/types';
 
-const copy = CONSUMER_COPY.priceRegion.addTierSuccess
-const AZURE = 'oklch(0.62 0.12 240)'
+const copy = CONSUMER_COPY.priceRegion.addTierSuccess;
+const AZURE = 'oklch(0.62 0.12 240)';
 
 export interface MTAddTierSuccessProps {
-  submittedTier: Tier
-  submittedPrice: number
-  submittedSourceCategory: SourceCategory
-  remainingTiers: ReadonlyArray<Tier>
+  submittedTier: Tier;
+  submittedPrice: number;
+  submittedSourceCategory: SourceCategory;
+  remainingTiers: ReadonlyArray<Tier>;
   // Corroboration denominator for this event, resolved by the caller from the
   // event date so the imminent-policy bump reaches this surface too.
-  confirmsNeeded: number
+  confirmsNeeded: number;
   // #876 — caller has no contribution acts left for this event today; hide
   // the add-tier pills and show the come-back-tomorrow line instead.
-  limitReached?: boolean
-  onAddTier: (tier: Tier) => void
-  onDone: () => void
+  limitReached?: boolean;
+  onAddTier: (tier: Tier) => void;
+  onDone: () => void;
 }
 
 // Sequential add-another-tier success state. Per §9 Q4-eng lock, the parent
@@ -184,4 +184,4 @@ export const MTAddTierSuccess = ({
       {copy.doneButton}
     </button>
   </div>
-)
+);

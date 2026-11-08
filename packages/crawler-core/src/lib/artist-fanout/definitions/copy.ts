@@ -33,19 +33,19 @@ export const newShowCopy = {
     `${showCount} new shows, all added to your Watching.`,
   batchHighlightBody: (showCount: number): string =>
     `${showCount} new shows. Want in? Tap to watch.`,
-} as const
+} as const;
 
 const DATE_LABEL_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: 'UTC',
   month: 'short',
   day: 'numeric',
-})
+});
 
 // '2026-10-12' → 'Oct 12' (mock format). events.date is a Denver-local
 // calendar date string, so it is formatted as a plain calendar date in UTC —
 // same convention as the digest's dateLabel in spotify-weekly.ts.
 export const newShowDateLabel = (dateStr: string): string => {
-  const parsed = Date.parse(`${dateStr}T00:00:00Z`)
-  if (Number.isNaN(parsed)) return dateStr
-  return DATE_LABEL_FORMAT.format(new Date(parsed))
-}
+  const parsed = Date.parse(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(parsed)) return dateStr;
+  return DATE_LABEL_FORMAT.format(new Date(parsed));
+};

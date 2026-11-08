@@ -1,41 +1,41 @@
-import { ChevronRight } from 'lucide-react'
-import Link from 'next/link'
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import type {
   AdminDailyCosts,
   AdminTopSpend,
   CrawlRun,
   Venue,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   StatCard,
   AdminButton,
   ProgressBar,
-} from '@/components/admin/primitives'
-import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
-import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting'
-import { RunHistoryBlocks } from '@/components/admin/dashboard/RunHistoryBlocks'
-import { CostPanel } from '@/components/admin/dashboard/CostPanel'
-import { TriagePanel, parseTriageResponse } from '@/components/admin/triage'
+} from '@/components/admin/primitives';
+import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable';
+import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting';
+import { RunHistoryBlocks } from '@/components/admin/dashboard/RunHistoryBlocks';
+import { CostPanel } from '@/components/admin/dashboard/CostPanel';
+import { TriagePanel, parseTriageResponse } from '@/components/admin/triage';
 import {
   LLM_BUDGET_USD,
   toStatusRow,
   buildCrawlHealthHint,
   buildSparklineData,
   computeWowTrend,
-} from '@/components/admin/dashboard/lib/dashboard'
-import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard'
-import { Panel } from '@/components/admin/primitives'
+} from '@/components/admin/dashboard/lib/dashboard';
+import type { RawVenueStatus } from '@/components/admin/dashboard/lib/dashboard';
+import { Panel } from '@/components/admin/primitives';
 
 interface EventCount {
-  pending: number
-  approved: number
+  pending: number;
+  approved: number;
 }
 
 interface PriceSubmissionCount {
-  pending: number
+  pending: number;
 }
 
 async function fetchDashboardData(token: string) {
@@ -54,45 +54,45 @@ async function fetchDashboardData(token: string) {
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
       throw new Error(
         `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
-      )
+      );
     }),
     apiClient
       .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     apiClient
       .get<EventCount>('/v1/admin/events/count', token)
       .catch((err: unknown) => {
-        console.error('[admin] failed to load event counts:', err)
-        return { pending: 0, approved: 0 }
+        console.error('[admin] failed to load event counts:', err);
+        return { pending: 0, approved: 0 };
       }),
     apiClient
       .get<PriceSubmissionCount>('/v1/admin/prices/submissions/count', token)
       .catch((err: unknown) => {
-        console.error('[admin] failed to load price submission counts:', err)
-        return { pending: 0 }
+        console.error('[admin] failed to load price submission counts:', err);
+        return { pending: 0 };
       }),
     apiClient
       .get<AdminDailyCosts>('/v1/admin/costs/daily?days=30', token)
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load daily LLM costs: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     apiClient
       .get<AdminTopSpend>('/v1/admin/costs/top-venues?days=30', token)
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load top LLM spend venues: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     // Deliberately does NOT re-throw. The sibling fetches above take the page
     // to error.tsx when they fail, which is right for the data the dashboard
@@ -103,10 +103,10 @@ async function fetchDashboardData(token: string) {
       .get<unknown>('/v1/admin/triage', token)
       .then(parseTriageResponse)
       .catch((err: unknown) => {
-        console.error('[admin] failed to load triage:', err)
-        return null
+        console.error('[admin] failed to load triage:', err);
+        return null;
       }),
-  ])
+  ]);
   return {
     status: rawStatus.map(toStatusRow),
     venues,
@@ -116,16 +116,16 @@ async function fetchDashboardData(token: string) {
     dailyCosts,
     topSpend,
     triage,
-  }
+  };
 }
 
 export default async function AdminDashboardPage() {
-  const user = await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  const user = await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
-  const firstName = user.firstName ?? user.email
+  const firstName = user.firstName ?? user.email;
 
   const {
     status,
@@ -136,54 +136,54 @@ export default async function AdminDashboardPage() {
     dailyCosts,
     topSpend,
     triage,
-  } = await fetchDashboardData(token)
+  } = await fetchDashboardData(token);
 
   const greenCount = status.filter(
     (row) => row.status === 'success' || row.status === 'skipped',
-  ).length
+  ).length;
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',
-  ).length
-  const totalCost = dailyCosts.totalUsd
-  const llmBudgetPct = Math.round((totalCost / LLM_BUDGET_USD) * 100)
-  const costTrend = computeWowTrend(dailyCosts.days)
+  ).length;
+  const totalCost = dailyCosts.totalUsd;
+  const llmBudgetPct = Math.round((totalCost / LLM_BUDGET_USD) * 100);
+  const costTrend = computeWowTrend(dailyCosts.days);
 
-  const crawlHealthHint = buildCrawlHealthHint(status)
+  const crawlHealthHint = buildCrawlHealthHint(status);
 
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
   const venuesPaused = venues.filter(
     (venue) => !venue.active && venue.blockedAt === null,
-  ).length
+  ).length;
   const venuesBlocked = venues.filter(
     (venue) => venue.blockedAt !== null,
-  ).length
+  ).length;
   const venuesAddedThisWeek = venues.filter(
     (venue) => Date.now() - new Date(venue.createdAt).getTime() < sevenDaysMs,
-  ).length
+  ).length;
   const activeVenuesHintParts = [
     venuesPaused > 0 ? `${venuesPaused} paused` : '',
     venuesBlocked > 0 ? `${venuesBlocked} blocked` : '',
-  ].filter(Boolean)
-  const activeVenuesHint = activeVenuesHintParts.join(' · ')
-  const sparklineData = buildSparklineData(runs)
+  ].filter(Boolean);
+  const activeVenuesHint = activeVenuesHintParts.join(' · ');
+  const sparklineData = buildSparklineData(runs);
 
-  const summaryParts: string[] = []
+  const summaryParts: string[] = [];
   if (blockedCount > 0)
     summaryParts.push(
       ADMIN_COPY.dashboard.summary.venuesNeedAttention(blockedCount),
-    )
+    );
   if (pendingEventCount > 0)
     summaryParts.push(
       ADMIN_COPY.dashboard.summary.eventsFlagged(pendingEventCount),
-    )
+    );
   if (pendingPriceCount > 0)
     summaryParts.push(
       ADMIN_COPY.dashboard.summary.pricesWaiting(pendingPriceCount),
-    )
+    );
   if (summaryParts.length === 0)
     summaryParts.push(
       ADMIN_COPY.dashboard.summary.venuesGreen(greenCount, status.length),
-    )
+    );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -247,8 +247,8 @@ export default async function AdminDashboardPage() {
               pendingPriceCount > 0 ? `${pendingPriceCount} prices` : '',
             ]
               .filter(Boolean)
-              .join(' · ')
-            return hint ? { hint } : {}
+              .join(' · ');
+            return hint ? { hint } : {};
           })()}
           footer={
             <Link
@@ -342,5 +342,5 @@ export default async function AdminDashboardPage() {
         <CrawlHealthTable rows={status} />
       </Panel>
     </div>
-  )
+  );
 }

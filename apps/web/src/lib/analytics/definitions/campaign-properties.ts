@@ -30,7 +30,7 @@ export const CAMPAIGN_PROPERTY_BASES: readonly string[] = [
   'irclid',
   '_kx',
   'ph_keyword',
-]
+];
 
 // Each one travels three ways: bare (event properties: the campaign names
 // while `save_campaign_params` is on, `ph_keyword` on every capture whatever
@@ -43,4 +43,4 @@ export const CAMPAIGN_PROPERTIES: readonly string[] =
     base,
     `$initial_${base}`,
     `$session_entry_${base}`,
-  ])
+  ]);

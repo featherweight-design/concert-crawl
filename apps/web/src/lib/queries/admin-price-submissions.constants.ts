@@ -6,4 +6,4 @@
 // The submissions endpoint caps `limit` at 100. Both the first-paint seed and
 // the client-side offset walker page at this size, so they must share it to
 // stay aligned.
-export const FETCH_PAGE_SIZE = 100
+export const FETCH_PAGE_SIZE = 100;

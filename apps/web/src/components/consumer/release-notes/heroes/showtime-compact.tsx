@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 import {
   ShowtimeBackdrop,
   ShowtimeEyebrow,
@@ -8,10 +8,10 @@ import {
   StubGlyph,
   ShowtimeStub,
   useShowtimeKeyframes,
-} from './showtime-base'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './showtime-base';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 // ── Shared compact stage ─────────────────────────────────────────────────────
 // 200×132 strip backdrop: dark cinematic base + two contained color washes +
@@ -21,10 +21,10 @@ const COPY = CONSUMER_COPY.releaseNotes
 // cmpArrowFall) are injected by showtime-base.tsx — do NOT redefine here.
 
 interface CompactStageProps {
-  children?: React.ReactNode
-  eyebrow?: string
-  eyebrowHue?: string
-  founderGlow?: boolean
+  children?: React.ReactNode;
+  eyebrow?: string;
+  eyebrowHue?: string;
+  founderGlow?: boolean;
 }
 
 export function CompactStage({
@@ -33,7 +33,7 @@ export function CompactStage({
   eyebrowHue = '#7AE6FF',
   founderGlow,
 }: CompactStageProps): React.ReactElement {
-  useShowtimeKeyframes()
+  useShowtimeKeyframes();
   return (
     <div
       style={{
@@ -132,14 +132,14 @@ export function CompactStage({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── Compact eyebrow (standalone, for use outside CompactStage) ───────────────
 
 interface CompactEyebrowProps {
-  children: React.ReactNode
-  dotHue?: string
+  children: React.ReactNode;
+  dotHue?: string;
 }
 
 export function CompactEyebrow({
@@ -180,7 +180,7 @@ export function CompactEyebrow({
       />
       {children}
     </div>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -261,7 +261,7 @@ export function PricesCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 2 · Tier badges — single Founder medallion
@@ -364,7 +364,7 @@ export function TierCompact(): React.ReactElement {
         {COPY.heroes.compact.tiers.firstHundredOnly}
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 3 · History — single hero stub + counter
@@ -500,7 +500,7 @@ export function HistoryCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 4 · Calendar — mini calendar grid with one stamp
@@ -529,8 +529,8 @@ export function CalendarCompact(): React.ReactElement {
           }}
         >
           {Array.from({ length: 28 }).map((_, idx) => {
-            const date = idx + 1
-            const isStamp = date === 14
+            const date = idx + 1;
+            const isStamp = date === 14;
             return (
               <div
                 key={idx}
@@ -586,12 +586,12 @@ export function CalendarCompact(): React.ReactElement {
                   </div>
                 )}
               </div>
-            )
+            );
           })}
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 5 · Shareable — single poster card
@@ -646,12 +646,12 @@ export function ShareableCompact(): React.ReactElement {
             style={{ position: 'absolute', inset: 0, mixBlendMode: 'screen' }}
           >
             {Array.from({ length: 24 }).map((_, idx) => {
-              const col = idx % 6
-              const row = Math.floor(idx / 4)
-              const xPos = col * 16 + 8
-              const yPos = row * 16 + 6
-              const dist = Math.sqrt((5 - col) ** 2 + row ** 2)
-              const dotR = Math.max(0.8, 3.4 - dist * 0.5)
+              const col = idx % 6;
+              const row = Math.floor(idx / 4);
+              const xPos = col * 16 + 8;
+              const yPos = row * 16 + 6;
+              const dist = Math.sqrt((5 - col) ** 2 + row ** 2);
+              const dotR = Math.max(0.8, 3.4 - dist * 0.5);
               return (
                 <circle
                   key={idx}
@@ -661,7 +661,7 @@ export function ShareableCompact(): React.ReactElement {
                   fill="#FF7BD4"
                   opacity="0.85"
                 />
-              )
+              );
             })}
           </svg>
         </div>
@@ -700,7 +700,7 @@ export function ShareableCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 6 · Watchers — big count + 2 rings
@@ -755,17 +755,17 @@ export function WatchersCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 7 · Spotify — mini EQ + count
 export function SpotifyCompact(): React.ReactElement {
   const bars = Array.from({ length: 10 }).map((_, idx) => {
-    const minVal = 0.22 + Math.abs(Math.sin(idx * 0.8) * 0.18)
-    const maxVal = 0.6 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.4)
-    const dur = 1.8 + Math.abs(Math.sin(idx * 0.42) * 1.3)
-    return { min: minVal, max: maxVal, dur, offset: -idx * 0.18 }
-  })
+    const minVal = 0.22 + Math.abs(Math.sin(idx * 0.8) * 0.18);
+    const maxVal = 0.6 + Math.abs(Math.sin(idx * 0.6 + 1) * 0.4);
+    const dur = 1.8 + Math.abs(Math.sin(idx * 0.42) * 1.3);
+    return { min: minVal, max: maxVal, dur, offset: -idx * 0.18 };
+  });
 
   return (
     <CompactStage
@@ -851,7 +851,7 @@ export function SpotifyCompact(): React.ReactElement {
         ))}
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -939,7 +939,7 @@ export function FollowingCompact(): React.ReactElement {
         RUN THE JEWELS
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 9 · Price Drop — old/new ticker
@@ -1033,7 +1033,7 @@ export function PriceDropCompact(): React.ReactElement {
         />
       </svg>
     </CompactStage>
-  )
+  );
 }
 
 // 10 · Setlist — mini receipt with 3 lines
@@ -1042,7 +1042,7 @@ export function SetlistCompact(): React.ReactElement {
     { num: '01', barWidth: 86, debut: false },
     { num: '02', barWidth: 70, debut: false },
     { num: '03', barWidth: 92, debut: true },
-  ]
+  ];
 
   return (
     <CompactStage
@@ -1138,7 +1138,7 @@ export function SetlistCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 11 · First-Timer — venue plate with seating diagram
@@ -1242,7 +1242,7 @@ export function FirstTimerCompact(): React.ReactElement {
         THE GOTHIC
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 12 · Last Time — single tilted polaroid
@@ -1359,7 +1359,7 @@ export function LastTimeCompact(): React.ReactElement {
         />
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // 13 · Support Act — single opener card
@@ -1470,24 +1470,24 @@ export function SupportActCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // ── Internal helper for PassportCompact ─────────────────────────────────────
 
 interface MiniStubConfig {
-  tx: number
-  ty: number
-  rot: number
-  accent: string
-  glyph: string
-  top?: boolean
+  tx: number;
+  ty: number;
+  rot: number;
+  accent: string;
+  glyph: string;
+  top?: boolean;
 }
 
 function MiniStub({
   stubConfig,
 }: {
-  stubConfig: MiniStubConfig
+  stubConfig: MiniStubConfig;
 }): React.ReactElement {
   return (
     <div style={{ position: 'relative', width: 110, height: 65 }}>
@@ -1569,7 +1569,7 @@ function MiniStub({
         />
       </div>
     </div>
-  )
+  );
 }
 
 // 14 · Concert Passport — 3 stubs fanned + sparkles (the marquee)
@@ -1586,14 +1586,14 @@ export function PassportCompact(): React.ReactElement {
       glyph: '★',
       top: true,
     },
-  ]
+  ];
   // 6 sparkles — restrained but present
   const sparkles = Array.from({ length: 6 }).map((_, idx) => ({
     xPos: ((idx * 39) % 180) + 10,
     yPos: ((idx * 53) % 110) + 10,
     delay: (idx * 0.31) % 2.4,
     hue: ['#7AE6FF', '#FFE36B', '#FF7BD4', '#FFFFFF'][idx % 4],
-  }))
+  }));
 
   return (
     <CompactStage
@@ -1648,7 +1648,7 @@ export function PassportCompact(): React.ReactElement {
         </div>
       ))}
     </CompactStage>
-  )
+  );
 }
 
 // 15 · Venue Passport — single big stamp
@@ -1716,7 +1716,7 @@ export function VenuePassportCompact(): React.ReactElement {
         </div>
       </div>
     </CompactStage>
-  )
+  );
 }
 
 // ── Compact lookup map (for dispatcher) ──────────────────────────────────────
@@ -1738,7 +1738,7 @@ export const SPOTLIGHT_COMPACT_HEROES: Record<string, React.ComponentType> = {
   'support-act': SupportActCompact,
   passport: PassportCompact,
   'venue-passport': VenuePassportCompact,
-}
+};
 
 // Re-export ShowtimeBackdrop, ShowtimeEyebrow, ShowtimeSparkles, StubGlyph,
 // ShowtimeStub so consumers only need to import from this file if they
@@ -1749,4 +1749,4 @@ export {
   ShowtimeSparkles,
   StubGlyph,
   ShowtimeStub,
-}
+};

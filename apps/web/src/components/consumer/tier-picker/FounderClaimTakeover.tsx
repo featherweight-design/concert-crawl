@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
 // Founder post-claim seat reveal (#781 §3.3, PR 4.2) — full-bleed surface
 // that replaces the tier picker sheet after a successful founder checkout.
 // No confetti, no entrance animation (design brief §3.3). Escape and the
 // CTA both hand control back via onDone.
 
-import { useEffect } from 'react'
-import { TIER_PICKER_COPY } from './definitions/copy'
-import { FULL_BLEED_TAKEOVER_Z_INDEX } from './definitions/constants'
-import { TierBadge } from './TierBadge'
+import { useEffect } from 'react';
+import { TIER_PICKER_COPY } from './definitions/copy';
+import { FULL_BLEED_TAKEOVER_Z_INDEX } from './definitions/constants';
+import { TierBadge } from './TierBadge';
 
-const CLAIM_COPY = TIER_PICKER_COPY.founderClaim
+const CLAIM_COPY = TIER_PICKER_COPY.founderClaim;
 
 interface FounderClaimTakeoverProps {
-  variant: 'mobile' | 'desktop'
-  seatNumber: number
-  seatsTotal: number
-  onDone: () => void
+  variant: 'mobile' | 'desktop';
+  seatNumber: number;
+  seatsTotal: number;
+  onDone: () => void;
 }
 
 const MonoEyebrow = ({
@@ -25,10 +25,10 @@ const MonoEyebrow = ({
   letterSpacing = '0.14em',
   children,
 }: {
-  size?: number
-  color?: string
-  letterSpacing?: string
-  children: React.ReactNode
+  size?: number;
+  color?: string;
+  letterSpacing?: string;
+  children: React.ReactNode;
 }) => (
   <span
     style={{
@@ -42,7 +42,7 @@ const MonoEyebrow = ({
   >
     {children}
   </span>
-)
+);
 
 // Trail circles (cx, cy, radius) — opacity ramps 0.35 → 0.89 by index.
 const MMARK_TRAIL: ReadonlyArray<readonly [number, number, number]> = [
@@ -53,7 +53,7 @@ const MMARK_TRAIL: ReadonlyArray<readonly [number, number, number]> = [
   [50, 50, 4],
   [58, 42, 5],
   [66, 32, 6],
-]
+];
 
 const MMark = ({ size }: { size: number }) => (
   <svg width={size} height={size} viewBox="0 0 96 96" aria-hidden="true">
@@ -72,7 +72,7 @@ const MMark = ({ size }: { size: number }) => (
       />
     ))}
   </svg>
-)
+);
 
 export const FounderClaimTakeover = ({
   variant,
@@ -80,23 +80,23 @@ export const FounderClaimTakeover = ({
   seatsTotal,
   onDone,
 }: FounderClaimTakeoverProps) => {
-  const wide = variant === 'desktop'
+  const wide = variant === 'desktop';
 
   useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onDone()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onDone])
+      if (ev.key === 'Escape') onDone();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onDone]);
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
+      document.body.style.overflow = previous;
+    };
+  }, []);
 
   return (
     <div
@@ -366,5 +366,5 @@ export const FounderClaimTakeover = ({
         </MonoEyebrow>
       </div>
     </div>
-  )
-}
+  );
+};

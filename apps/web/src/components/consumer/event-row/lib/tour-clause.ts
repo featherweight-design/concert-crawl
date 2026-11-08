@@ -31,8 +31,8 @@ export function tourClauseFits(
   // A zero-width box is an unlaid-out column, not a 0px one. Claiming the
   // clause does not fit would flash it out of every row on first paint, so the
   // pre-layout answer is the optimistic one and the observer corrects it.
-  if (available <= 0) return true
+  if (available <= 0) return true;
   // Sub-pixel layout rounding routinely puts a line a fraction over a box it
   // visually fills exactly.
-  return titleWidth + gap + clauseWidth <= available + 0.5
+  return titleWidth + gap + clauseWidth <= available + 0.5;
 }

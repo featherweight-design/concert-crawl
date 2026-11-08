@@ -17,35 +17,35 @@
  */
 function parseSlugs(raw: string): string[] | null {
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return null
-    const slugs: string[] = []
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const slugs: string[] = [];
     for (const value of parsed) {
-      if (typeof value !== 'string') return null
-      const slug = value.trim()
-      if (slug !== '' && !slugs.includes(slug)) slugs.push(slug)
+      if (typeof value !== 'string') return null;
+      const slug = value.trim();
+      if (slug !== '' && !slugs.includes(slug)) slugs.push(slug);
     }
-    return slugs
+    return slugs;
   } catch (err: unknown) {
     // Corrupt JSON is indistinguishable from no mirror at all, and the right
     // answer to both is the same: fall back to whatever state the caller has.
     // It still logs, because a silent return here reads exactly like a mirror
     // that was never written when someone is chasing a lost selection.
-    console.warn('artist picks mirror parse failed', err)
-    return null
+    console.warn('artist picks mirror parse failed', err);
+    return null;
   }
 }
 
 /** `[]` for "no mirror", so callers never have to spell the empty case twice. */
 export function readPicks(key: string): string[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === 'undefined') return [];
   try {
-    const raw = window.sessionStorage.getItem(key)
-    if (raw === null) return []
-    return parseSlugs(raw) ?? []
+    const raw = window.sessionStorage.getItem(key);
+    if (raw === null) return [];
+    return parseSlugs(raw) ?? [];
   } catch (err: unknown) {
-    console.warn('artist picks mirror read failed', err)
-    return []
+    console.warn('artist picks mirror read failed', err);
+    return [];
   }
 }
 
@@ -55,25 +55,25 @@ export function readPicks(key: string): string[] {
  * key behind would make a stale mirror outlive the step that owned it.
  */
 export function writePicks(key: string, slugs: readonly string[]): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined') return;
   try {
     if (slugs.length === 0) {
-      window.sessionStorage.removeItem(key)
-      return
+      window.sessionStorage.removeItem(key);
+      return;
     }
-    window.sessionStorage.setItem(key, JSON.stringify(Array.from(slugs)))
+    window.sessionStorage.setItem(key, JSON.stringify(Array.from(slugs)));
   } catch (err: unknown) {
-    console.warn('artist picks mirror write failed', err)
+    console.warn('artist picks mirror write failed', err);
   }
 }
 
 /** Called on a committed write or an explicit skip, never on unmount. */
 export function clearPicks(key: string): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.removeItem(key)
+    window.sessionStorage.removeItem(key);
   } catch (err: unknown) {
-    console.warn('artist picks mirror clear failed', err)
+    console.warn('artist picks mirror clear failed', err);
   }
 }
 
@@ -92,36 +92,36 @@ export function clearPicks(key: string): void {
  * a preference. Out of range reads as absent, so shrinking the flow can never
  * strand anyone past its end.
  */
-export const STEP_INDEX_KEY = 'cc.onboarding.stepIndex'
+export const STEP_INDEX_KEY = 'cc.onboarding.stepIndex';
 
 export function readStepIndex(total: number): number {
-  if (typeof window === 'undefined') return 0
+  if (typeof window === 'undefined') return 0;
   try {
-    const raw = window.sessionStorage.getItem(STEP_INDEX_KEY)
-    if (raw === null) return 0
+    const raw = window.sessionStorage.getItem(STEP_INDEX_KEY);
+    if (raw === null) return 0;
     // `Number`, not `parseInt`: the latter truncates, so a stored "3.5" would
     // read back as step 3 rather than as the corruption it is. Nothing writes
     // a fraction here, so anything that is not a whole number came from
     // somewhere that does not get to choose the step.
-    const parsed = Number(raw)
-    if (!Number.isInteger(parsed) || parsed < 0 || parsed >= total) return 0
-    return parsed
+    const parsed = Number(raw);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed >= total) return 0;
+    return parsed;
   } catch (err: unknown) {
-    console.warn('onboarding step mirror read failed', err)
-    return 0
+    console.warn('onboarding step mirror read failed', err);
+    return 0;
   }
 }
 
 /** Step 0 clears rather than storing `0` — see `writePicks` for the reasoning. */
 export function writeStepIndex(index: number): void {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined') return;
   try {
     if (index <= 0) {
-      window.sessionStorage.removeItem(STEP_INDEX_KEY)
-      return
+      window.sessionStorage.removeItem(STEP_INDEX_KEY);
+      return;
     }
-    window.sessionStorage.setItem(STEP_INDEX_KEY, String(index))
+    window.sessionStorage.setItem(STEP_INDEX_KEY, String(index));
   } catch (err: unknown) {
-    console.warn('onboarding step mirror write failed', err)
+    console.warn('onboarding step mirror write failed', err);
   }
 }

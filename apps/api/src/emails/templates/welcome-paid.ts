@@ -15,8 +15,8 @@ import {
   row,
   seatStamp,
   tierBadge,
-} from '../atoms.js'
-import type { FeatureItem } from '../atoms.js'
+} from '../atoms.js';
+import type { FeatureItem } from '../atoms.js';
 import {
   EMAIL_MONO,
   ME,
@@ -24,44 +24,44 @@ import {
   profileUrl,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { PREMIUM_FEATURES, PREMIUM_FEATURES_CORE } from './unlocks.js'
+} from '../layout.js';
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { PREMIUM_FEATURES, PREMIUM_FEATURES_CORE } from './unlocks.js';
 
-const CONTENT_PAD = '18px 26px 0'
-const CTA_PAD = '20px 26px 8px'
+const CONTENT_PAD = '18px 26px 0';
+const CTA_PAD = '20px 26px 8px';
 
 const featureTextLines = (items: FeatureItem[]): string[] =>
   items.map((item) => {
-    const text = typeof item === 'string' ? item : item.text
-    const future = typeof item !== 'string' && item.future
-    return `  ${future ? '*' : '-'} ${text}`
-  })
+    const text = typeof item === 'string' ? item : item.text;
+    const future = typeof item !== 'string' && item.future;
+    return `  ${future ? '*' : '-'} ${text}`;
+  });
 
 const microcopyRow = (text: string): string =>
-  `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">${text}</div>`
+  `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">${text}</div>`;
 
 const SUPPORTER_FEATURES: FeatureItem[] = [
   'Concerts: every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
   'A Supporter badge on your profile',
-]
+];
 
 const FOUNDER_FEATURES: FeatureItem[] = [
   ...PREMIUM_FEATURES_CORE,
   'Founder badge — first 100 only',
-]
+];
 
 export const renderWelcomePaid: TemplateRenderer<
   EmailTemplateVars['welcome_paid']
 > = ({ tier, founderSeatNumber }) => {
   if (tier === 'supporter') {
-    const subject = "You're in, and you're keeping the lights on."
-    const preheader = 'Your Concerts, your exports, your badge. All live.'
-    const microcopy = 'Both run on servers we already pay for.'
-    const title = "You didn't have to. Thanks for backing us."
+    const subject = "You're in, and you're keeping the lights on.";
+    const preheader = 'Your Concerts, your exports, your badge. All live.';
+    const microcopy = 'Both run on servers we already pay for.';
+    const title = "You didn't have to. Thanks for backing us.";
     const sub =
-      "Your Concerts and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone. The glow is real."
+      "Your Concerts and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone. The glow is real.";
 
     const bodyRows = [
       headerRow('Welcome · supporter'),
@@ -83,7 +83,7 @@ export const renderWelcomePaid: TemplateRenderer<
         }),
       ),
       footerRow({ family: 'billing', showManage: true }),
-    ].join('\n')
+    ].join('\n');
 
     const text = [
       title,
@@ -97,7 +97,7 @@ export const renderWelcomePaid: TemplateRenderer<
       pricePromiseText('supporter'),
       '',
       `Wear it on your profile: ${profileUrl()}`,
-    ].join('\n')
+    ].join('\n');
 
     return {
       subject,
@@ -108,22 +108,22 @@ export const renderWelcomePaid: TemplateRenderer<
         family: 'billing',
         showManage: true,
       }),
-    }
+    };
   }
 
   if (tier === 'founder') {
     const seatLabel =
       founderSeatNumber === undefined
         ? 'a Founder'
-        : `Founder #${founderSeatNumber}`
+        : `Founder #${founderSeatNumber}`;
     const subject =
       founderSeatNumber === undefined
         ? "You're a Founder. Locked in at $3, forever."
-        : `You're Founder #${founderSeatNumber}. Locked in at $3, forever.`
-    const preheader = 'First 100 only. $3/mo never goes up. Here’s your seat.'
-    const title = `You're ${seatLabel}.`
+        : `You're Founder #${founderSeatNumber}. Locked in at $3, forever.`;
+    const preheader = 'First 100 only. $3/mo never goes up. Here’s your seat.';
+    const title = `You're ${seatLabel}.`;
     const sub =
-      'One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves, no matter what anyone pays later.'
+      'One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves, no matter what anyone pays later.';
 
     const bodyRows = [
       headerRow('Welcome · founder'),
@@ -143,7 +143,7 @@ export const renderWelcomePaid: TemplateRenderer<
         button({ label: 'Open Concert Crawl', tone: 'signal', href: appUrl() }),
       ),
       footerRow({ family: 'billing', showManage: true }),
-    ].join('\n')
+    ].join('\n');
 
     const text = [
       title,
@@ -158,7 +158,7 @@ export const renderWelcomePaid: TemplateRenderer<
       pricePromiseText('founder'),
       '',
       `Open Concert Crawl: ${appUrl()}`,
-    ].join('\n')
+    ].join('\n');
 
     return {
       subject,
@@ -169,16 +169,16 @@ export const renderWelcomePaid: TemplateRenderer<
         family: 'billing',
         showManage: true,
       }),
-    }
+    };
   }
 
   // premium
-  const subject = "You're in. Premium is live on your account."
+  const subject = "You're in. Premium is live on your account.";
   const preheader =
-    "Everything Premium, switched on. Here's what you just unlocked."
-  const title = "You're in. Premium's switched on."
+    "Everything Premium, switched on. Here's what you just unlocked.";
+  const title = "You're in. Premium's switched on.";
   const sub =
-    'Everything that actually costs us money to run is now yours. No trial asterisks, no upsell wall. Go use it.'
+    'Everything that actually costs us money to run is now yours. No trial asterisks, no upsell wall. Go use it.';
 
   const bodyRows = [
     headerRow('Welcome · premium'),
@@ -195,7 +195,7 @@ export const renderWelcomePaid: TemplateRenderer<
       button({ label: 'Open Concert Crawl', tone: 'signal', href: appUrl() }),
     ),
     footerRow({ family: 'billing', showManage: true }),
-  ].join('\n')
+  ].join('\n');
 
   const text = [
     title,
@@ -207,12 +207,12 @@ export const renderWelcomePaid: TemplateRenderer<
     pricePromiseText('premium'),
     '',
     `Open Concert Crawl: ${appUrl()}`,
-  ].join('\n')
+  ].join('\n');
 
   return {
     subject,
     preheader,
     html: renderEmailShell({ preheader, bodyRows }),
     text: renderTextShell({ body: text, family: 'billing', showManage: true }),
-  }
-}
+  };
+};

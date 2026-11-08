@@ -1,9 +1,9 @@
 import {
   isShareRatio,
   type ShareRatio,
-} from '@/components/consumer/share/definitions/ratios'
-import { resolveThemeTokens } from '@/lib/share/theme-tokens'
-import type { ThemeName } from '@/theme/themes'
+} from '@/components/consumer/share/definitions/ratios';
+import { resolveThemeTokens } from '@/lib/share/theme-tokens';
+import type { ThemeName } from '@/theme/themes';
 
 /**
  * Input validation for the share PNG route.
@@ -24,21 +24,21 @@ import type { ThemeName } from '@/theme/themes'
  * cost a Vercel→Render round-trip.
  */
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Handles are drawn onto a raster, so there is nothing to escape — the risk is
  * a 200-character string blowing the footer layout apart, or a control
  * character that satori cannot map to a glyph. An allowlist covers both.
  */
-const HANDLE_PATTERN = /^[A-Za-z0-9._-]{1,30}$/
+const HANDLE_PATTERN = /^[A-Za-z0-9._-]{1,30}$/;
 
 /** `null` means an anonymous share, which renders no signature line at all. */
 export const resolveShareHandle = (raw: string | undefined): string | null => {
-  if (raw === undefined) return null
-  const trimmed = raw.startsWith('@') ? raw.slice(1) : raw
-  return HANDLE_PATTERN.test(trimmed) ? `@${trimmed}` : null
-}
+  if (raw === undefined) return null;
+  const trimmed = raw.startsWith('@') ? raw.slice(1) : raw;
+  return HANDLE_PATTERN.test(trimmed) ? `@${trimmed}` : null;
+};
 
 /**
  * Locked in the plan: an hour in the browser, a day at the edge, a week of
@@ -46,7 +46,7 @@ export const resolveShareHandle = (raw: string | undefined): string | null => {
  * status does, and the ETag catches that.
  */
 export const SHARE_CACHE_CONTROL =
-  'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800'
+  'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
 
 /**
  * `If-None-Match` is a comma-separated list, and a cache in front of us is
@@ -56,30 +56,30 @@ export const SHARE_CACHE_CONTROL =
  * two closed-set words, none of which can contain one.
  */
 export const etagMatches = (header: string | null, etag: string): boolean => {
-  if (header === null) return false
-  if (header.trim() === '*') return true
-  const strip = (tag: string) => tag.trim().replace(/^W\//, '')
-  const wanted = strip(etag)
-  return header.split(',').some((candidate) => strip(candidate) === wanted)
-}
+  if (header === null) return false;
+  if (header.trim() === '*') return true;
+  const strip = (tag: string) => tag.trim().replace(/^W\//, '');
+  const wanted = strip(etag);
+  return header.split(',').some((candidate) => strip(candidate) === wanted);
+};
 
 export interface ShareRequestParams {
-  eventId: string
-  ratio: string
-  theme?: string | undefined
-  by?: string | undefined
+  eventId: string;
+  ratio: string;
+  theme?: string | undefined;
+  by?: string | undefined;
 }
 
 export type ParsedShareRequest =
   | {
-      ok: true
-      eventId: string
-      ratio: ShareRatio
-      theme: ThemeName
-      tokens: Record<string, string>
-      handle: string | null
+      ok: true;
+      eventId: string;
+      ratio: ShareRatio;
+      theme: ThemeName;
+      tokens: Record<string, string>;
+      handle: string | null;
     }
-  | { ok: false; reason: string }
+  | { ok: false; reason: string };
 
 /**
  * The ratio is a hard reject and the theme is a soft fallback, deliberately:
@@ -90,12 +90,12 @@ export const parseShareRequest = (
   params: ShareRequestParams,
 ): ParsedShareRequest => {
   if (!UUID_PATTERN.test(params.eventId)) {
-    return { ok: false, reason: 'invalid event id' }
+    return { ok: false, reason: 'invalid event id' };
   }
   if (!isShareRatio(params.ratio)) {
-    return { ok: false, reason: 'unknown ratio' }
+    return { ok: false, reason: 'unknown ratio' };
   }
-  const { theme, tokens } = resolveThemeTokens(params.theme)
+  const { theme, tokens } = resolveThemeTokens(params.theme);
   return {
     ok: true,
     eventId: params.eventId,
@@ -103,5 +103,5 @@ export const parseShareRequest = (
     theme,
     tokens,
     handle: resolveShareHandle(params.by),
-  }
-}
+  };
+};

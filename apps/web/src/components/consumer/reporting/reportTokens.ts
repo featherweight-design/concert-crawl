@@ -31,7 +31,7 @@ export const REPORT_TOKENS = {
     label: 'Tickets available',
     short: 'available',
   },
-} as const
+} as const;
 
-export type ReportTokenKey = keyof typeof REPORT_TOKENS
-export type ReportToken = (typeof REPORT_TOKENS)[ReportTokenKey]
+export type ReportTokenKey = keyof typeof REPORT_TOKENS;
+export type ReportToken = (typeof REPORT_TOKENS)[ReportTokenKey];

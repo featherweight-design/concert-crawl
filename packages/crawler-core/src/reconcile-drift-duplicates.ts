@@ -1,8 +1,8 @@
-import { sql } from 'drizzle-orm'
-import { db } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
+import { sql } from 'drizzle-orm';
+import { db } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('reconcile-drift-duplicates')
+const logger = createLogger('reconcile-drift-duplicates');
 
 /**
  * FK tables referencing events.id. Kept in sync with the DB by the
@@ -16,7 +16,7 @@ export const EVENT_FK_TABLES = [
   'price_submissions',
   'spotify_alert_log',
   'user_events',
-] as const
+] as const;
 
 /**
  * Runtime analogue of scripts/2026-07-19-missing-event-orphan-cleanup.sql,
@@ -65,19 +65,19 @@ export const reconcileDriftDuplicates = async (
             OR strpos(o.canonical_title, s.canonical_artist) > 0 )
       )
       SELECT loser_id, winner_id FROM candidates WHERE rn = 1
-    `)
+    `);
 
     const countRows = [
       ...(await tx.execute(
         sql`SELECT COUNT(*)::int AS loser_count FROM orphan_map`,
       )),
-    ]
-    const rawCount = countRows[0]?.['loser_count']
-    const loserCount = typeof rawCount === 'number' ? rawCount : 0
+    ];
+    const rawCount = countRows[0]?.['loser_count'];
+    const loserCount = typeof rawCount === 'number' ? rawCount : 0;
 
     if (loserCount === 0) {
       // Temp table is ON COMMIT DROP — nothing to clean up, just return.
-      return { reconciledLosers: 0 }
+      return { reconciledLosers: 0 };
     }
 
     await tx.execute(sql`
@@ -85,7 +85,7 @@ export const reconcileDriftDuplicates = async (
       SELECT loser_id AS event_id, winner_id AS target_id FROM orphan_map
       UNION
       SELECT DISTINCT winner_id AS event_id, winner_id AS target_id FROM orphan_map
-    `)
+    `);
 
     // user_events — dedup on (user_id, target_id) then redirect.
     await tx.execute(sql`
@@ -99,11 +99,11 @@ export const reconcileDriftDuplicates = async (
       )
       DELETE FROM user_events ue USING target_user_rows tur
       WHERE ue.id = tur.ue_id AND tur.group_size > 1 AND tur.rn > 1
-    `)
+    `);
     await tx.execute(sql`
       UPDATE user_events ue SET event_id = om.winner_id
       FROM orphan_map om WHERE ue.event_id = om.loser_id
-    `)
+    `);
 
     // spotify_alert_log — dedup on (user_id, kind, target_id) then redirect.
     await tx.execute(sql`
@@ -117,34 +117,34 @@ export const reconcileDriftDuplicates = async (
       )
       DELETE FROM spotify_alert_log sal USING target_alert_rows tar
       WHERE sal.id = tar.sal_id AND tar.group_size > 1 AND tar.rn > 1
-    `)
+    `);
     await tx.execute(sql`
       UPDATE spotify_alert_log sal SET event_id = om.winner_id
       FROM orphan_map om WHERE sal.event_id = om.loser_id
-    `)
+    `);
 
     // No user-uniqueness — plain redirect.
     await tx.execute(sql`
       UPDATE price_submissions ps SET event_id = om.winner_id
       FROM orphan_map om WHERE ps.event_id = om.loser_id
-    `)
+    `);
     await tx.execute(sql`
       UPDATE price_retrieval_log prl SET event_id = om.winner_id
       FROM orphan_map om WHERE prl.event_id = om.loser_id
-    `)
+    `);
     await tx.execute(sql`
       UPDATE event_reports er SET event_id = om.winner_id
       FROM orphan_map om WHERE er.event_id = om.loser_id
-    `)
+    `);
 
     // DELETE losers — FK rows reassigned, CASCADE has nothing to chase.
     await tx.execute(sql`
       DELETE FROM events e USING orphan_map om WHERE e.id = om.loser_id
-    `)
+    `);
 
     logger.info(
       { venueId, reconciledLosers: loserCount },
       'reconciled drift-duplicate orphans',
-    )
-    return { reconciledLosers: loserCount }
-  })
+    );
+    return { reconciledLosers: loserCount };
+  });

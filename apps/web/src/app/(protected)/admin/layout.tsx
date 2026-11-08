@@ -1,58 +1,58 @@
-import './admin.css'
-import { requireAdminUser } from '@/lib/auth'
-import { auth } from '@clerk/nextjs/server'
-import { apiClient } from '@/lib/api'
-import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider'
-import { AdminShellClient } from '@/components/admin/shell/AdminShellClient'
+import './admin.css';
+import { requireAdminUser } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
+import { apiClient } from '@/lib/api';
+import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider';
+import { AdminShellClient } from '@/components/admin/shell/AdminShellClient';
 
 interface CrawlStatusVenue {
-  id: string
-  name: string
-  blockedAt: string | null
-  lastRun: { status: string } | null
+  id: string;
+  name: string;
+  blockedAt: string | null;
+  lastRun: { status: string } | null;
 }
 
 interface ReviewCounts {
-  eventFlags: number
-  prices: number
-  missing: number
-  priceContests: number
+  eventFlags: number;
+  prices: number;
+  missing: number;
+  priceContests: number;
 }
 
 interface FeedbackCounts {
-  unread: number
+  unread: number;
 }
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const adminUser = await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
+  const adminUser = await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
 
-  let blockedCrawls = 0
-  let pendingReview = 0
-  let unreadFeedback = 0
+  let blockedCrawls = 0;
+  let pendingReview = 0;
+  let unreadFeedback = 0;
 
   if (token) {
     const [statusRes, reviewRes, feedbackRes] = await Promise.allSettled([
       apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
       apiClient.get<ReviewCounts>('/v1/admin/review/counts', token),
       apiClient.get<FeedbackCounts>('/v1/admin/feedback/counts', token),
-    ])
+    ]);
 
     if (statusRes.status === 'fulfilled') {
       blockedCrawls = statusRes.value.filter(
         (venue) =>
           (venue.blockedAt !== null && venue.lastRun?.status !== 'success') ||
           venue.lastRun?.status === 'failed',
-      ).length
+      ).length;
     } else {
       console.warn('[admin layout] crawl status fetch failed', {
         reason: statusRes.reason,
-      })
+      });
     }
 
     if (reviewRes.status === 'fulfilled') {
@@ -64,19 +64,19 @@ export default async function AdminLayout({
         reviewRes.value.eventFlags +
         reviewRes.value.prices +
         reviewRes.value.missing +
-        reviewRes.value.priceContests
+        reviewRes.value.priceContests;
     } else {
       console.warn('[admin layout] review counts fetch failed', {
         reason: reviewRes.reason,
-      })
+      });
     }
 
     if (feedbackRes.status === 'fulfilled') {
-      unreadFeedback = feedbackRes.value.unread
+      unreadFeedback = feedbackRes.value.unread;
     } else {
       console.warn('[admin layout] feedback counts fetch failed', {
         reason: feedbackRes.reason,
-      })
+      });
     }
   }
 
@@ -103,5 +103,5 @@ export default async function AdminLayout({
         </AdminShellClient>
       </div>
     </AdminThemeProvider>
-  )
+  );
 }

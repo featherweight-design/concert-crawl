@@ -1,19 +1,19 @@
-import React from 'react'
+import React from 'react';
 import {
   identityFor,
   ia_isDark,
-} from '@/components/consumer/identity-art/IdentityArt'
-import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArtPrint'
+} from '@/components/consumer/identity-art/IdentityArt';
+import { IdentityArtPrint } from '@/components/consumer/identity-art/IdentityArtPrint';
 import {
   SC_METRICS,
   SC_RATIOS,
   type ShareRatio,
-} from '@/components/consumer/share/definitions/ratios'
-import { ShareWordmark } from '@/components/consumer/share/ShareWordmark'
-import { StatePill } from '@/components/consumer/share/StatePill'
-import type { PosterEvent } from '@/lib/share/poster-event'
-import { fitTitleSize } from '@/lib/share/poster-title'
-import { posterTagline } from '@/lib/share/taglines'
+} from '@/components/consumer/share/definitions/ratios';
+import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
+import { StatePill } from '@/components/consumer/share/StatePill';
+import type { PosterEvent } from '@/lib/share/poster-event';
+import { fitTitleSize } from '@/lib/share/poster-title';
+import { posterTagline } from '@/lib/share/taglines';
 
 // ── Why this file looks the way it does ────────────────────────────
 // Everything here renders inside satori, not a browser. That rules out
@@ -23,12 +23,12 @@ import { posterTagline } from '@/lib/share/taglines'
 // `IdentityArtPrint` — this file must not invent a second approach.
 
 export interface PosterCardProps {
-  event: PosterEvent
-  ratio: ShareRatio
+  event: PosterEvent;
+  ratio: ShareRatio;
   /** Resolved theme tokens from `lib/share/theme-tokens.ts`. */
-  tokens: Record<string, string>
+  tokens: Record<string, string>;
   /** `@handle`, or null for an anonymous share — which draws no signature. */
-  handle: string | null
+  handle: string | null;
 }
 
 /**
@@ -37,11 +37,11 @@ export interface PosterCardProps {
  * any other colour reads as a grey haze over the art.
  */
 const paperChannels = (paper: string): string => {
-  const rr = Number.parseInt(paper.slice(1, 3), 16)
-  const gg = Number.parseInt(paper.slice(3, 5), 16)
-  const bb = Number.parseInt(paper.slice(5, 7), 16)
-  return `${rr},${gg},${bb}`
-}
+  const rr = Number.parseInt(paper.slice(1, 3), 16);
+  const gg = Number.parseInt(paper.slice(3, 5), 16);
+  const bb = Number.parseInt(paper.slice(5, 7), 16);
+  return `${rr},${gg},${bb}`;
+};
 
 /**
  * The locked scrim ramp. Transparent through 38% so the top half of the card
@@ -49,10 +49,10 @@ const paperChannels = (paper: string): string => {
  * tagline and wordmark all read against flat paper rather than over texture.
  */
 const scrimGradient = (paper: string): string => {
-  const channels = paperChannels(paper)
-  const rgba = (alpha: number): string => `rgba(${channels},${alpha})`
-  return `linear-gradient(180deg, ${rgba(0)} 0%, ${rgba(0)} 38%, ${rgba(0.85)} 52%, ${rgba(1)} 62%, ${rgba(1)} 100%)`
-}
+  const channels = paperChannels(paper);
+  const rgba = (alpha: number): string => `rgba(${channels},${alpha})`;
+  return `linear-gradient(180deg, ${rgba(0)} 0%, ${rgba(0)} 38%, ${rgba(0.85)} 52%, ${rgba(1)} 62%, ${rgba(1)} 100%)`;
+};
 
 /**
  * Direction B — the poster. Full-bleed identity art over the top half, heavy
@@ -65,27 +65,27 @@ export const PosterCard = ({
   tokens,
   handle,
 }: PosterCardProps) => {
-  const { width, height } = SC_RATIOS[ratio]
-  const metrics = SC_METRICS[ratio]
+  const { width, height } = SC_RATIOS[ratio];
+  const metrics = SC_METRICS[ratio];
 
   // The card is drawn in the artist's own identity palette, not the theme's.
   // That is the Phase 7.5 contract: two people sharing the same show get the
   // same artwork whatever theme either of them is running.
-  const identity = identityFor(event.artist, 'artist')
-  const paper = identity.palette.bg
-  const ink = identity.palette.ink
+  const identity = identityFor(event.artist, 'artist');
+  const paper = identity.palette.bg;
+  const ink = identity.palette.ink;
   const ghostInk = ia_isDark(paper)
     ? 'rgba(255,255,255,0.14)'
-    : 'rgba(0,0,0,0.12)'
+    : 'rgba(0,0,0,0.12)';
 
   // Satori cannot measure text, so the title size is estimated up front from
   // the artist's longest word rather than reacting to an overflow.
-  const contentWidth = width - metrics.padding * 2
-  const titleSize = fitTitleSize(event.artist, metrics.title, contentWidth)
+  const contentWidth = width - metrics.padding * 2;
+  const titleSize = fitTitleSize(event.artist, metrics.title, contentWidth);
 
-  const accent = tokens.accent ?? ink
+  const accent = tokens.accent ?? ink;
   // `link` is a 628px-tall strip. The tagline is the first thing to go.
-  const showTagline = ratio !== 'link'
+  const showTagline = ratio !== 'link';
 
   return (
     <div
@@ -286,5 +286,5 @@ export const PosterCard = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

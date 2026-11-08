@@ -1,17 +1,17 @@
-import { type MissingClassification } from '@concert-crawl/types'
+import { type MissingClassification } from '@concert-crawl/types';
 
 export interface MissingClassificationInput {
   /** Event date, YYYY-MM-DD. */
-  date: string
+  date: string;
   /** Max date among the venue's currently-seen future events, YYYY-MM-DD, or null if none. */
-  venueHorizon: string | null
+  venueHorizon: string | null;
   /** True when a live sibling row for the same show is still being crawled. */
-  hasLiveSibling: boolean
+  hasLiveSibling: boolean;
   /**
    * Id of a newly-created row that looks like this same show rescheduled or
    * relocated, or null when the matcher found nothing. See ./moved-candidate.
    */
-  movedCandidateId: string | null
+  movedCandidateId: string | null;
 }
 
 /**
@@ -32,8 +32,8 @@ export const classifyMissing = ({
   hasLiveSibling,
   movedCandidateId,
 }: MissingClassificationInput): MissingClassification => {
-  if (hasLiveSibling) return 'duplicate'
-  if (movedCandidateId !== null) return 'moved'
-  if (venueHorizon === null || date > venueHorizon) return 'crawl_gap'
-  return 'removed'
-}
+  if (hasLiveSibling) return 'duplicate';
+  if (movedCandidateId !== null) return 'moved';
+  if (venueHorizon === null || date > venueHorizon) return 'crawl_gap';
+  return 'removed';
+};

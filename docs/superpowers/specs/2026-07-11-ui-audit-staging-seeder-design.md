@@ -131,18 +131,18 @@ One entry per auditable surface:
 
 ```ts
 type AuditRoute = {
-  id: string // "admin-feedback"
-  path: string // "/admin/feedback"
-  tags: ('consumer' | 'admin')[]
-  auth: 'none' | 'user' | 'admin'
-  interactions?: AuditInteraction[] // named steps executed before capture
-}
+  id: string; // "admin-feedback"
+  path: string; // "/admin/feedback"
+  tags: ('consumer' | 'admin')[];
+  auth: 'none' | 'user' | 'admin';
+  interactions?: AuditInteraction[]; // named steps executed before capture
+};
 
 type AuditInteraction = {
-  id: string // "expand-first-card"
-  description: string
-  run: (page: Page) => Promise<void>
-}
+  id: string; // "expand-first-card"
+  description: string;
+  run: (page: Page) => Promise<void>;
+};
 ```
 
 - Each interaction produces an **additional** capture state beyond the default

@@ -28,6 +28,7 @@ Issue: #608
 Branch: `feat/canonical-artist-upsert-key` (created after Track B merges + runs in prod)
 
 **Deliverable:**
+
 1. Migration `0034_event_canonical_artist_unique.sql` — add partial UNIQUE index `(venue_id, date, canonical_artist) WHERE status = 'upcoming'`
 2. `packages/crawler-core/src/crawl.ts` — swap upsert target from `[events.venueId, events.date, events.artist]` → `[events.venueId, events.date, events.canonicalArtist]`. Also update the `eventsToUpsert` filter map key from `${e.artist}|${e.date}` → `${canonicalize(e.artist)}|${e.date}`.
 3. Update crawler integration test to assert two extractions ("Wynonna Judd" then "Wynonna Judd & Melissa Etheridge") on the same date collapse to a single row.
@@ -136,12 +137,12 @@ ORDER BY v.name, cc.date;
 
 **FK enumeration confirmed via `information_schema` (staging, 2026-06-17):**
 
-| Table              | Column     | Delete rule | Notes                                            |
-| ------------------ | ---------- | ----------- | ------------------------------------------------ |
-| `event_reports`    | `event_id` | CASCADE     | Sold-out reports (#628). Must reassign FIRST.    |
-| `price_retrieval_log` | `event_id` | CASCADE  | Price-pipeline log entries.                      |
-| `price_submissions` | `event_id` | CASCADE   | Community price submissions.                     |
-| `user_events`      | `event_id` | CASCADE     | Watch state. Critical — losing this loses user data. |
+| Table                 | Column     | Delete rule | Notes                                                |
+| --------------------- | ---------- | ----------- | ---------------------------------------------------- |
+| `event_reports`       | `event_id` | CASCADE     | Sold-out reports (#628). Must reassign FIRST.        |
+| `price_retrieval_log` | `event_id` | CASCADE     | Price-pipeline log entries.                          |
+| `price_submissions`   | `event_id` | CASCADE     | Community price submissions.                         |
+| `user_events`         | `event_id` | CASCADE     | Watch state. Critical — losing this loses user data. |
 
 **Critical:** because every FK has `ON DELETE CASCADE`, the REASSIGN phase MUST run before the DELETE phase. The script will enumerate FKs again at runtime via:
 
@@ -272,7 +273,7 @@ If all three checks pass: `COMMIT`. If anything looks off: `ROLLBACK` and the sn
 The 24h soak in the prior draft was overkill — VALIDATE inside the transaction already catches orphans, dup survivors, and FK breakage. Instead: ephemeral Neon branch off staging gives a free risk-free rehearsal, and a post-execute smoke check on real staging substitutes for the soak.
 
 1. Open Track B PR → review + merge to main
-2. **Dry-run rehearsal on a Neon branch off staging** (not local — the June 15 dump in `~/concert-crawl-migration/` predates #617's `canonical_artist` column; a branch is a COW snapshot of *current* staging including all 20+ live dup clusters):
+2. **Dry-run rehearsal on a Neon branch off staging** (not local — the June 15 dump in `~/concert-crawl-migration/` predates #617's `canonical_artist` column; a branch is a COW snapshot of _current_ staging including all 20+ live dup clusters):
    - Create branch via `mcp__neon__create_branch` from `br-fancy-meadow-a67wo70v`
    - Run script through DIAGNOSE + DRY-RUN phases
    - **Pause for human review**: emit the cluster CSV; admin spot-checks ~5–10 representative clusters (e.g. Ziggy Marley @ Red Rocks, SHIFT × 3 @ Cervantes, BleakHeart casing pair @ Hi-Dive) — confirm winner picks are sane before authorizing execute
@@ -286,14 +287,14 @@ The 24h soak in the prior draft was overkill — VALIDATE inside the transaction
 
 ## Risks + mitigations
 
-| Risk                                          | Mitigation                                                    |
-| --------------------------------------------- | ------------------------------------------------------------- |
-| Aggressive canonicalization collapses distinct artists | Dry-run CSV inspection before COMMIT                  |
-| Watch state lost                              | Idempotent reassignment with race-handling delete             |
-| FK table we didn't enumerate                  | Runtime info_schema query + RAISE EXCEPTION on unknown table  |
-| Re-running script double-consolidates         | Already-canonical clusters have `cluster_size = 1`, no-op    |
-| Track A migration fails mid-deploy            | Track B runs to completion first — index applies cleanly      |
-| User-reported issue post-COMMIT               | 7-day snapshot table (`events_consolidate_608`) + rollback runbook |
+| Risk                                                   | Mitigation                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------ |
+| Aggressive canonicalization collapses distinct artists | Dry-run CSV inspection before COMMIT                               |
+| Watch state lost                                       | Idempotent reassignment with race-handling delete                  |
+| FK table we didn't enumerate                           | Runtime info_schema query + RAISE EXCEPTION on unknown table       |
+| Re-running script double-consolidates                  | Already-canonical clusters have `cluster_size = 1`, no-op          |
+| Track A migration fails mid-deploy                     | Track B runs to completion first — index applies cleanly           |
+| User-reported issue post-COMMIT                        | 7-day snapshot table (`events_consolidate_608`) + rollback runbook |
 
 ## Acceptance
 

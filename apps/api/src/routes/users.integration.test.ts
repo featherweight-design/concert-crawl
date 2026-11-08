@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface AuthState {
   current: {
-    userId: string
-    sessionClaims: { metadata?: { role?: string } }
-  } | null
+    userId: string;
+    sessionClaims: { metadata?: { role?: string } };
+  } | null;
 }
 
 interface ClerkState {
-  role: string
-  plan: string | undefined
-  createdAt: number
+  role: string;
+  plan: string | undefined;
+  createdAt: number;
   // The HTTP status `deleteUser` should reject with, or null to succeed.
-  deleteUserFailsWith: number | null
+  deleteUserFailsWith: number | null;
 }
 
 const { stripeState } = vi.hoisted(() => ({
@@ -22,7 +22,7 @@ const { stripeState } = vi.hoisted(() => ({
     // What `subscriptions.retrieve` reports after a refused cancel.
     statusInStripe: 'active',
   },
-}))
+}));
 
 // Account deletion cancels billing through the shared client.
 vi.mock('../lib/stripe.js', async (importOriginal) => ({
@@ -31,32 +31,32 @@ vi.mock('../lib/stripe.js', async (importOriginal) => ({
     subscriptions: {
       cancel: (subscriptionId: string) => {
         if (stripeState.cancelFails) {
-          return Promise.reject(new Error('stripe unavailable'))
+          return Promise.reject(new Error('stripe unavailable'));
         }
-        stripeState.cancelled.push(subscriptionId)
-        return Promise.resolve({})
+        stripeState.cancelled.push(subscriptionId);
+        return Promise.resolve({});
       },
       retrieve: () => Promise.resolve({ status: stripeState.statusInStripe }),
     },
   }),
-}))
+}));
 
 const { authState, clerkState } = vi.hoisted(() => {
-  const authState: AuthState = { current: null }
+  const authState: AuthState = { current: null };
   const clerkState: ClerkState = {
     role: 'user',
     plan: undefined,
     createdAt: new Date('2026-04-01').getTime(),
     deleteUserFailsWith: null,
-  }
-  return { authState, clerkState }
-})
+  };
+  return { authState, clerkState };
+});
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
 // Mock Clerk client — getUser and deleteUser
 vi.mock('@clerk/backend', () => ({
@@ -70,40 +70,40 @@ vi.mock('@clerk/backend', () => ({
         }),
       ),
       deleteUser: vi.fn().mockImplementation(() => {
-        if (clerkState.deleteUserFailsWith === null) return Promise.resolve({})
+        if (clerkState.deleteUserFailsWith === null) return Promise.resolve({});
         return Promise.reject(
           Object.assign(new Error('clerk delete failed'), {
             status: clerkState.deleteUserFailsWith,
           }),
-        )
+        );
       }),
     },
   }),
-}))
+}));
 
-import { eq, sql } from 'drizzle-orm'
-import { z } from 'zod'
+import { eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import {
   founderWindow,
   giftedComps,
   subscriptions,
   userBilling,
   userProfiles,
-} from '@concert-crawl/db'
-import { createApp } from '../app.js'
+} from '@concert-crawl/db';
+import { createApp } from '../app.js';
 import {
   clearTables,
   seedVenue,
   seedEvent,
   seedPriceSubmission,
   seedUserProfile,
-} from '../test/helpers/seed.js'
-import { testDb } from '../test/helpers/db.js'
+} from '../test/helpers/seed.js';
+import { testDb } from '../test/helpers/db.js';
 
-const app = createApp()
+const app = createApp();
 
 async function clearBillingTables(): Promise<void> {
-  await testDb.execute(sql`TRUNCATE subscriptions, gifted_comps, user_billing`)
+  await testDb.execute(sql`TRUNCATE subscriptions, gifted_comps, user_billing`);
 }
 
 async function seedSubscription(
@@ -118,7 +118,7 @@ async function seedSubscription(
     status: 'active',
     currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
     ...overrides,
-  })
+  });
 }
 
 const planStateBodySchema = z.object({
@@ -144,16 +144,16 @@ const planStateBodySchema = z.object({
       closesAt: z.string().nullable(),
     }),
   }),
-})
+});
 
 async function fetchMe(
   query = '',
 ): Promise<z.infer<typeof planStateBodySchema>> {
   const res = await app.request(`/v1/users/me${query}`, {
     headers: { Authorization: 'Bearer test' },
-  })
-  expect(res.status).toBe(200)
-  return planStateBodySchema.parse(await res.json())
+  });
+  expect(res.status).toBe(200);
+  return planStateBodySchema.parse(await res.json());
 }
 
 // closesAt is a generated column (opensAt + windowDays) — never written.
@@ -163,61 +163,61 @@ const FOUNDER_WINDOW_DEFAULTS = {
   seatsRemaining: 100,
   seatsRemainingTest: 100,
   windowDays: 30,
-}
+};
 
 async function setFounderWindow(
   overrides: Partial<typeof FOUNDER_WINDOW_DEFAULTS> = {},
 ): Promise<void> {
-  const values = { ...FOUNDER_WINDOW_DEFAULTS, ...overrides }
+  const values = { ...FOUNDER_WINDOW_DEFAULTS, ...overrides };
   await testDb
     .insert(founderWindow)
     .values({ id: 1, ...values })
-    .onConflictDoUpdate({ target: founderWindow.id, set: values })
+    .onConflictDoUpdate({ target: founderWindow.id, set: values });
 }
 
 function setAuth(userId = 'user_test123'): void {
   authState.current = {
     userId,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 describe('GET /v1/users/me', () => {
   beforeEach(async () => {
-    clearAuth()
-    clerkState.role = 'user'
-    clerkState.plan = undefined
-    await clearTables()
-    await clearBillingTables()
-  })
+    clearAuth();
+    clerkState.role = 'user';
+    clerkState.plan = undefined;
+    await clearTables();
+    await clearBillingTables();
+  });
 
   it('returns 401 without auth', async () => {
-    const res = await app.request('/v1/users/me')
-    expect(res.status).toBe(401)
-  })
+    const res = await app.request('/v1/users/me');
+    expect(res.status).toBe(401);
+  });
 
   it('returns profile with defaults when no profile row exists', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { handle: null; theme: string }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.handle).toBeNull()
-    expect(body.data.theme).toBe('electric')
-  })
+      success: boolean;
+      data: { handle: null; theme: string };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.handle).toBeNull();
+    expect(body.data.theme).toBe('electric');
+  });
 
   it('derives free with no billing rows (no more implicit founder)', async () => {
-    setAuth()
-    const body = await fetchMe()
+    setAuth();
+    const body = await fetchMe();
     expect(body.data.planState).toEqual({
       plan: 'free',
       onTrial: false,
@@ -226,434 +226,436 @@ describe('GET /v1/users/me', () => {
       cancelAtPeriodEnd: false,
       currentPeriodEnd: null,
       roleComped: false,
-    })
-  })
+    });
+  });
 
   it('derives gifted from a live gifted_comps row, before any subscription', async () => {
-    setAuth()
-    clerkState.plan = 'premium_gifted'
+    setAuth();
+    clerkState.plan = 'premium_gifted';
     await testDb.insert(giftedComps).values({
       userId: 'user_test123',
       grantedBy: 'user_admin',
-    })
-    await seedSubscription('user_test123', { tier: 'supporter' })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('gifted')
-  })
+    });
+    await seedSubscription('user_test123', { tier: 'supporter' });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('gifted');
+  });
 
   it('treats a revoked gift as absent', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(giftedComps).values({
       userId: 'user_test123',
       grantedBy: 'user_admin',
       revokedAt: new Date(),
-    })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+  });
 
   it('derives premium from an active premium subscription', async () => {
-    setAuth()
-    await seedSubscription('user_test123')
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('premium')
-    expect(body.data.planState.status).toBe('active')
-    expect(body.data.planState.onTrial).toBe(false)
-  })
+    setAuth();
+    await seedSubscription('user_test123');
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('premium');
+    expect(body.data.planState.status).toBe('active');
+    expect(body.data.planState.onTrial).toBe(false);
+  });
 
   it('keeps the founder plan while past_due (dunning window)', async () => {
-    setAuth()
+    setAuth();
     await seedSubscription('user_test123', {
       tier: 'founder',
       status: 'past_due',
-    })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('founder')
-    expect(body.data.planState.status).toBe('past_due')
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('founder');
+    expect(body.data.planState.status).toBe('past_due');
+  });
 
   it('falls through to free on a cancelled subscription', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'cancelled' })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.planState.status).toBe('cancelled')
-  })
+    setAuth();
+    await seedSubscription('user_test123', { status: 'cancelled' });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.planState.status).toBe('cancelled');
+  });
 
   it('derives premium with onTrial from a live user_billing trial', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() + 7 * 86400000),
-    })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('premium')
-    expect(body.data.planState.onTrial).toBe(true)
-    expect(body.data.planState.trialEndsAt).not.toBeNull()
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('premium');
+    expect(body.data.planState.onTrial).toBe(true);
+    expect(body.data.planState.trialEndsAt).not.toBeNull();
+  });
 
   it('derives free from an expired trial', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() - 86400000),
-    })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.planState.onTrial).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.planState.onTrial).toBe(false);
+  });
 
   it('reports cancel-grace via cancelAtPeriodEnd with active status', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { cancelAtPeriodEnd: true })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('premium')
-    expect(body.data.planState.cancelAtPeriodEnd).toBe(true)
-    expect(body.data.planState.status).toBe('active')
-  })
+    setAuth();
+    await seedSubscription('user_test123', { cancelAtPeriodEnd: true });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('premium');
+    expect(body.data.planState.cancelAtPeriodEnd).toBe(true);
+    expect(body.data.planState.status).toBe('active');
+  });
 
   it('returns saved handle when profile exists', async () => {
-    setAuth()
-    await seedUserProfile('user_test123', { handle: 'testuser' })
+    setAuth();
+    await seedUserProfile('user_test123', { handle: 'testuser' });
     const res = await app.request('/v1/users/me', {
       headers: { Authorization: 'Bearer test' },
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: { handle: string }
-    }
-    expect(body.data.handle).toBe('testuser')
-  })
+      success: boolean;
+      data: { handle: string };
+    };
+    expect(body.data.handle).toBe('testuser');
+  });
 
   it('beta role sets roleComped (not the founder plan) and beta roleBadge', async () => {
-    clerkState.role = 'beta'
-    setAuth()
-    const body = await fetchMe()
-    expect(body.data.planState.roleComped).toBe(true)
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.roleBadge).toBe('beta')
-  })
+    clerkState.role = 'beta';
+    setAuth();
+    const body = await fetchMe();
+    expect(body.data.planState.roleComped).toBe(true);
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.roleBadge).toBe('beta');
+  });
 
   it('promoter role sets roleComped and promoter roleBadge', async () => {
-    clerkState.role = 'promoter'
-    setAuth()
-    const body = await fetchMe()
-    expect(body.data.planState.roleComped).toBe(true)
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.roleBadge).toBe('promoter')
-  })
+    clerkState.role = 'promoter';
+    setAuth();
+    const body = await fetchMe();
+    expect(body.data.planState.roleComped).toBe(true);
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.roleBadge).toBe('promoter');
+  });
 
   it('admin role sets roleComped and admin roleBadge', async () => {
-    clerkState.role = 'admin'
-    setAuth()
-    const body = await fetchMe()
-    expect(body.data.planState.roleComped).toBe(true)
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.roleBadge).toBe('admin')
-  })
+    clerkState.role = 'admin';
+    setAuth();
+    const body = await fetchMe();
+    expect(body.data.planState.roleComped).toBe(true);
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.roleBadge).toBe('admin');
+  });
 
   it('sub_admin role sets roleComped and admin roleBadge', async () => {
-    clerkState.role = 'sub_admin'
-    setAuth()
-    const body = await fetchMe()
-    expect(body.data.planState.roleComped).toBe(true)
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.roleBadge).toBe('admin')
-  })
+    clerkState.role = 'sub_admin';
+    setAuth();
+    const body = await fetchMe();
+    expect(body.data.planState.roleComped).toBe(true);
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.roleBadge).toBe('admin');
+  });
 
   it('role-holder with a live subscription keeps roleComped and the paid tier', async () => {
-    clerkState.role = 'beta'
-    setAuth()
-    await seedSubscription('user_test123', { tier: 'founder' })
-    const body = await fetchMe()
-    expect(body.data.planState.roleComped).toBe(true)
-    expect(body.data.planState.plan).toBe('founder')
-  })
+    clerkState.role = 'beta';
+    setAuth();
+    await seedSubscription('user_test123', { tier: 'founder' });
+    const body = await fetchMe();
+    expect(body.data.planState.roleComped).toBe(true);
+    expect(body.data.planState.plan).toBe('founder');
+  });
 
   it('user role produces null roleBadge', async () => {
-    clerkState.role = 'user'
-    setAuth()
+    clerkState.role = 'user';
+    setAuth();
     const res = await app.request('/v1/users/me', {
       headers: { Authorization: 'Bearer test' },
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: { roleBadge: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.roleBadge).toBeNull()
-  })
-})
+      success: boolean;
+      data: { roleBadge: string | null };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.roleBadge).toBeNull();
+  });
+});
 
 describe('GET /v1/users/me — card-less trial seeding', () => {
   // Opening the founder window IS the monetization cutover — there is no
   // separate switch, so the trial clock keys off founder_window.opensAt.
-  const FOUNDER_WINDOW_OPENS_AT = new Date('2026-09-01T00:00:00.000Z')
-  const DAY_MS = 86400000
-  const TRIAL_DAYS = 14
+  const FOUNDER_WINDOW_OPENS_AT = new Date('2026-09-01T00:00:00.000Z');
+  const DAY_MS = 86400000;
+  const TRIAL_DAYS = 14;
   // Relative to the real clock, not a calendar date. The route judges the
   // trial against now, so a fixed sign-up of 2026-09-10 made these tests pass
   // until 2026-09-24 and fail on every PR after it. Two days ago stays inside
   // the 14-day trial forever, and after the window opened for as long as the
   // window's date is in the past.
-  let signedUpAt: Date
-  let expectedTrialEnd: Date
+  let signedUpAt: Date;
+  let expectedTrialEnd: Date;
 
   const readBillingRow = async () => {
     const [row] = await testDb
       .select({ trialEndsAt: userBilling.trialEndsAt })
       .from(userBilling)
       .where(eq(userBilling.userId, 'user_test123'))
-      .limit(1)
-    return row
-  }
+      .limit(1);
+    return row;
+  };
 
   beforeEach(async () => {
-    clearAuth()
-    clerkState.role = 'user'
-    clerkState.plan = undefined
-    signedUpAt = new Date(Date.now() - 2 * DAY_MS)
-    expectedTrialEnd = new Date(signedUpAt.getTime() + TRIAL_DAYS * DAY_MS)
-    clerkState.createdAt = signedUpAt.getTime()
-    await clearTables()
-    await clearBillingTables()
-    await setFounderWindow({ opensAt: FOUNDER_WINDOW_OPENS_AT })
-  })
+    clearAuth();
+    clerkState.role = 'user';
+    clerkState.plan = undefined;
+    signedUpAt = new Date(Date.now() - 2 * DAY_MS);
+    expectedTrialEnd = new Date(signedUpAt.getTime() + TRIAL_DAYS * DAY_MS);
+    clerkState.createdAt = signedUpAt.getTime();
+    await clearTables();
+    await clearBillingTables();
+    await setFounderWindow({ opensAt: FOUNDER_WINDOW_OPENS_AT });
+  });
 
   it('starts the 14-day clock on first touch and reports the trial', async () => {
-    setAuth()
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('premium')
-    expect(body.data.planState.onTrial).toBe(true)
-    expect(body.data.planState.trialEndsAt).toBe(expectedTrialEnd.toISOString())
-    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd)
-  })
+    setAuth();
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('premium');
+    expect(body.data.planState.onTrial).toBe(true);
+    expect(body.data.planState.trialEndsAt).toBe(
+      expectedTrialEnd.toISOString(),
+    );
+    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd);
+  });
 
   it('never re-seeds — a second read cannot extend the trial', async () => {
-    setAuth()
-    await fetchMe()
-    const seeded = (await readBillingRow())?.trialEndsAt
-    clerkState.createdAt = Date.now()
-    await fetchMe()
-    expect((await readBillingRow())?.trialEndsAt).toEqual(seeded)
-  })
+    setAuth();
+    await fetchMe();
+    const seeded = (await readBillingRow())?.trialEndsAt;
+    clerkState.createdAt = Date.now();
+    await fetchMe();
+    expect((await readBillingRow())?.trialEndsAt).toEqual(seeded);
+  });
 
   it('grants nothing to the pre-monetization beta cohort', async () => {
-    setAuth()
-    clerkState.createdAt = new Date('2026-04-01').getTime()
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.planState.onTrial).toBe(false)
-    expect(await readBillingRow()).toBeUndefined()
-  })
+    setAuth();
+    clerkState.createdAt = new Date('2026-04-01').getTime();
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.planState.onTrial).toBe(false);
+    expect(await readBillingRow()).toBeUndefined();
+  });
 
   it('grants nothing while the founder window is unopened', async () => {
-    setAuth()
-    await setFounderWindow({ opensAt: null })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect(await readBillingRow()).toBeUndefined()
-  })
+    setAuth();
+    await setFounderWindow({ opensAt: null });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect(await readBillingRow()).toBeUndefined();
+  });
 
   // A mis-seeded environment must fail closed. The account here is created
   // well after any plausible cutover, so a trial would appear if the missing
   // row were treated as anything other than "not launched".
   it('grants nothing when the founder_window singleton row is missing', async () => {
-    setAuth()
-    await testDb.execute(sql`TRUNCATE founder_window`)
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect(body.data.planState.onTrial).toBe(false)
-    expect(await readBillingRow()).toBeUndefined()
-  })
+    setAuth();
+    await testDb.execute(sql`TRUNCATE founder_window`);
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect(body.data.planState.onTrial).toBe(false);
+    expect(await readBillingRow()).toBeUndefined();
+  });
 
   // The row outlives the trial, so an expired trial must not re-seed.
   it('leaves an existing row alone even when its trial has lapsed', async () => {
-    setAuth()
-    const lapsed = new Date(Date.now() - DAY_MS)
+    setAuth();
+    const lapsed = new Date(Date.now() - DAY_MS);
     await testDb
       .insert(userBilling)
-      .values({ userId: 'user_test123', trialEndsAt: lapsed })
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('free')
-    expect((await readBillingRow())?.trialEndsAt).toEqual(lapsed)
-  })
+      .values({ userId: 'user_test123', trialEndsAt: lapsed });
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('free');
+    expect((await readBillingRow())?.trialEndsAt).toEqual(lapsed);
+  });
 
   // billing-nudges, the daily job and the Stripe webhooks all upsert
   // user_billing for their own columns. If one lands before the user's first
   // read, gating the seed on a missing row would drop their trial for good.
   it('still seeds when another writer created the row without a trial', async () => {
-    setAuth()
+    setAuth();
     await testDb
       .insert(userBilling)
-      .values({ userId: 'user_test123', pastDueBannerDismissedAt: new Date() })
+      .values({ userId: 'user_test123', pastDueBannerDismissedAt: new Date() });
 
-    const body = await fetchMe()
-    expect(body.data.planState.plan).toBe('premium')
-    expect(body.data.planState.onTrial).toBe(true)
-    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd)
-  })
-})
+    const body = await fetchMe();
+    expect(body.data.planState.plan).toBe('premium');
+    expect(body.data.planState.onTrial).toBe(true);
+    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd);
+  });
+});
 
 describe('GET /v1/users/me — lifecycle nudge flags + founder window', () => {
-  const DAY_MS = 86400000
-  const HOUR_MS = 3600000
+  const DAY_MS = 86400000;
+  const HOUR_MS = 3600000;
 
   beforeEach(async () => {
-    clearAuth()
-    clerkState.role = 'user'
-    clerkState.plan = undefined
-    await clearTables()
-    await clearBillingTables()
-    await setFounderWindow()
-  })
+    clearAuth();
+    clerkState.role = 'user';
+    clerkState.plan = undefined;
+    await clearTables();
+    await clearBillingTables();
+    await setFounderWindow();
+  });
 
   it('shows the trial-ended takeover when the trial expired and was never shown', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() - DAY_MS),
-    })
-    const body = await fetchMe()
-    expect(body.data.showTrialEndedTakeover).toBe(true)
-    expect(body.data.showDayThirteenBanner).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.showTrialEndedTakeover).toBe(true);
+    expect(body.data.showDayThirteenBanner).toBe(false);
+  });
 
   it('does not re-show the takeover once shown after expiry', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() - DAY_MS),
       lastTrialEndedShownAt: new Date(Date.now() - HOUR_MS),
-    })
-    const body = await fetchMe()
-    expect(body.data.showTrialEndedTakeover).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.showTrialEndedTakeover).toBe(false);
+  });
 
   it('shows the day-13 banner inside the 48h→24h window', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
-    })
-    const body = await fetchMe()
-    expect(body.data.showDayThirteenBanner).toBe(true)
-    expect(body.data.showTrialEndedTakeover).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.showDayThirteenBanner).toBe(true);
+    expect(body.data.showTrialEndedTakeover).toBe(false);
+  });
 
   it('hides the day-13 banner when dismissed during this trial window', async () => {
-    setAuth()
+    setAuth();
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() + 36 * HOUR_MS),
       dayThirteenBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    })
-    const body = await fetchMe()
-    expect(body.data.showDayThirteenBanner).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.showDayThirteenBanner).toBe(false);
+  });
 
   it('suppresses the takeover and day-13 banner for a user with a live subscription', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'active' })
+    setAuth();
+    await seedSubscription('user_test123', { status: 'active' });
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       trialEndsAt: new Date(Date.now() - DAY_MS),
-    })
-    const body = await fetchMe()
-    expect(body.data.showTrialEndedTakeover).toBe(false)
-    expect(body.data.showDayThirteenBanner).toBe(false)
-  })
+    });
+    const body = await fetchMe();
+    expect(body.data.showTrialEndedTakeover).toBe(false);
+    expect(body.data.showDayThirteenBanner).toBe(false);
+  });
 
   it('shows the past-due banner for past_due with no dismissal', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'past_due' })
-    const body = await fetchMe()
-    expect(body.data.showPastDueBanner).toBe(true)
-  })
+    setAuth();
+    await seedSubscription('user_test123', { status: 'past_due' });
+    const body = await fetchMe();
+    expect(body.data.showPastDueBanner).toBe(true);
+  });
 
   it('hides the past-due banner when dismissed after the supplied sessionStartedAt', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'past_due' })
-    const sessionStartedAt = new Date(Date.now() - 2 * HOUR_MS)
+    setAuth();
+    await seedSubscription('user_test123', { status: 'past_due' });
+    const sessionStartedAt = new Date(Date.now() - 2 * HOUR_MS);
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    })
+    });
     const body = await fetchMe(
       `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
-    )
-    expect(body.data.showPastDueBanner).toBe(false)
-  })
+    );
+    expect(body.data.showPastDueBanner).toBe(false);
+  });
 
   it('shows the past-due banner when the dismissal predates the supplied sessionStartedAt', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'past_due' })
-    const sessionStartedAt = new Date(Date.now() - HOUR_MS)
+    setAuth();
+    await seedSubscription('user_test123', { status: 'past_due' });
+    const sessionStartedAt = new Date(Date.now() - HOUR_MS);
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       pastDueBannerDismissedAt: new Date(Date.now() - 2 * HOUR_MS),
-    })
+    });
     const body = await fetchMe(
       `?sessionStartedAt=${encodeURIComponent(sessionStartedAt.toISOString())}`,
-    )
-    expect(body.data.showPastDueBanner).toBe(true)
-  })
+    );
+    expect(body.data.showPastDueBanner).toBe(true);
+  });
 
   it('ignores an invalid sessionStartedAt instead of returning 400', async () => {
-    setAuth()
-    await seedSubscription('user_test123', { status: 'past_due' })
+    setAuth();
+    await seedSubscription('user_test123', { status: 'past_due' });
     await testDb.insert(userBilling).values({
       userId: 'user_test123',
       pastDueBannerDismissedAt: new Date(Date.now() - HOUR_MS),
-    })
+    });
     // Invalid ⇒ treated as absent ⇒ any dismissal suppresses.
-    const body = await fetchMe('?sessionStartedAt=not-a-date')
-    expect(body.data.showPastDueBanner).toBe(false)
-  })
+    const body = await fetchMe('?sessionStartedAt=not-a-date');
+    expect(body.data.showPastDueBanner).toBe(false);
+  });
 
   it('returns the founder window snapshot', async () => {
-    setAuth()
-    const opensAt = new Date(Date.now() - DAY_MS)
-    await setFounderWindow({ opensAt, seatsRemaining: 42 })
-    const body = await fetchMe()
+    setAuth();
+    const opensAt = new Date(Date.now() - DAY_MS);
+    await setFounderWindow({ opensAt, seatsRemaining: 42 });
+    const body = await fetchMe();
     // closesAt is generated: opensAt + windowDays (30).
     expect(body.data.founderWindow).toEqual({
       state: 'open',
       seatsTotal: 100,
       seatsRemaining: 42,
       closesAt: new Date(opensAt.getTime() + 30 * DAY_MS).toISOString(),
-    })
-  })
+    });
+  });
 
   it('falls back to a pre-launch founder window when the singleton row is missing', async () => {
-    setAuth()
-    await testDb.execute(sql`TRUNCATE founder_window`)
-    const body = await fetchMe()
+    setAuth();
+    await testDb.execute(sql`TRUNCATE founder_window`);
+    const body = await fetchMe();
     expect(body.data.founderWindow).toEqual({
       state: 'pre-launch',
       seatsTotal: 100,
       closesAt: null,
-    })
-  })
-})
+    });
+  });
+});
 
 describe('PATCH /v1/users/me', () => {
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-  })
+    clearAuth();
+    await clearTables();
+  });
 
   it('returns 401 without auth', async () => {
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ handle: 'myhandle' }),
-    })
-    expect(res.status).toBe(401)
-  })
+    });
+    expect(res.status).toBe(401);
+  });
 
   it('creates a profile with handle', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
       headers: {
@@ -661,12 +663,12 @@ describe('PATCH /v1/users/me', () => {
         Authorization: 'Bearer test',
       },
       body: JSON.stringify({ handle: 'myhandle' }),
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   it('rejects reserved handles with 422', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
       headers: {
@@ -674,13 +676,13 @@ describe('PATCH /v1/users/me', () => {
         Authorization: 'Bearer test',
       },
       body: JSON.stringify({ handle: 'admin' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects taken handles with 409', async () => {
-    await seedUserProfile('user_other', { handle: 'taken' })
-    setAuth('user_test123')
+    await seedUserProfile('user_other', { handle: 'taken' });
+    setAuth('user_test123');
     const res = await app.request('/v1/users/me', {
       method: 'PATCH',
       headers: {
@@ -688,89 +690,89 @@ describe('PATCH /v1/users/me', () => {
         Authorization: 'Bearer test',
       },
       body: JSON.stringify({ handle: 'taken' }),
-    })
-    expect(res.status).toBe(409)
-  })
-})
+    });
+    expect(res.status).toBe(409);
+  });
+});
 
 describe('GET /v1/users/me/submissions', () => {
   it('returns user submissions with display status', async () => {
-    setAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
     await seedPriceSubmission(event.id, 'user_test123', {
       status: 'corroborated',
       priceMin: '40',
-    })
+    });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ status: string; priceMin: number }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data[0]?.status).toBe('confirmed')
-    expect(body.data[0]?.priceMin).toBe(4000)
-  })
+      success: boolean;
+      data: Array<{ status: string; priceMin: number }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data[0]?.status).toBe('confirmed');
+    expect(body.data[0]?.priceMin).toBe(4000);
+  });
 
   it('returns tier, corroborationCount, and submittedAt fields', async () => {
-    setAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '25' })
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '25' });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: Array<{
-        tier: string
-        corroborationCount: number
-        submittedAt: string
-      }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data[0]?.tier).toBe('GA')
+        tier: string;
+        corroborationCount: number;
+        submittedAt: string;
+      }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data[0]?.tier).toBe('GA');
     // Submitter counts as observation #1 (1/2 corroboration model) — seed
     // helper inserts with corroborationCount=1.
-    expect(body.data[0]?.corroborationCount).toBe(1)
-    expect(typeof body.data[0]?.submittedAt).toBe('string')
-    expect(new Date(body.data[0]?.submittedAt ?? '').getTime()).not.toBeNaN()
-  })
+    expect(body.data[0]?.corroborationCount).toBe(1);
+    expect(typeof body.data[0]?.submittedAt).toBe('string');
+    expect(new Date(body.data[0]?.submittedAt ?? '').getTime()).not.toBeNaN();
+  });
 
   it('returns submissions newest-first', async () => {
-    setAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '10' })
-    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '20' })
+    setAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '10' });
+    await seedPriceSubmission(event.id, 'user_test123', { priceMin: '20' });
 
     const res = await app.request('/v1/users/me/submissions', {
       headers: { Authorization: 'Bearer test' },
-    })
+    });
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ submittedAt: string }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.length).toBe(2)
-    const first = new Date(body.data[0]?.submittedAt ?? '').getTime()
-    const second = new Date(body.data[1]?.submittedAt ?? '').getTime()
-    expect(first).toBeGreaterThanOrEqual(second)
-  })
-})
+      success: boolean;
+      data: Array<{ submittedAt: string }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.length).toBe(2);
+    const first = new Date(body.data[0]?.submittedAt ?? '').getTime();
+    const second = new Date(body.data[1]?.submittedAt ?? '').getTime();
+    expect(first).toBeGreaterThanOrEqual(second);
+  });
+});
 
 describe('GET /v1/users/handle-availability', () => {
   beforeEach(async () => {
-    setAuth()
-    await clearTables()
-  })
+    setAuth();
+    await clearTables();
+  });
 
   it('returns available: true for free handle', async () => {
     const res = await app.request(
@@ -778,13 +780,13 @@ describe('GET /v1/users/handle-availability', () => {
       {
         headers: { Authorization: 'Bearer test' },
       },
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { available: boolean }
-    }
-    expect(body.data.available).toBe(true)
-  })
+      success: boolean;
+      data: { available: boolean };
+    };
+    expect(body.data.available).toBe(true);
+  });
 
   it('returns available: false for reserved word', async () => {
     const res = await app.request(
@@ -792,168 +794,168 @@ describe('GET /v1/users/handle-availability', () => {
       {
         headers: { Authorization: 'Bearer test' },
       },
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { available: boolean; reason: string }
-    }
-    expect(body.data.available).toBe(false)
-    expect(body.data.reason).toBe('reserved')
-  })
+      success: boolean;
+      data: { available: boolean; reason: string };
+    };
+    expect(body.data.available).toBe(false);
+    expect(body.data.reason).toBe('reserved');
+  });
 
   it('returns available: false for taken handle', async () => {
-    await seedUserProfile('user_other2', { handle: 'takenone' })
+    await seedUserProfile('user_other2', { handle: 'takenone' });
     const res = await app.request(
       '/v1/users/handle-availability?handle=takenone',
       {
         headers: { Authorization: 'Bearer test' },
       },
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { available: boolean }
-    }
-    expect(body.data.available).toBe(false)
-  })
-})
+      success: boolean;
+      data: { available: boolean };
+    };
+    expect(body.data.available).toBe(false);
+  });
+});
 
 describe('DELETE /v1/users/me', () => {
   it('anonymizes submissions and deletes profile', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    await seedPriceSubmission(event.id, 'user_test123')
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    await seedPriceSubmission(event.id, 'user_test123');
 
     const res = await app.request('/v1/users/me', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
-  })
+    });
+    expect(res.status).toBe(200);
+  });
 
   // A 200 here would tell the user their account is gone while they can still
   // sign in, and the client would sign them out with no way back to retry.
   it('reports failure when the Clerk account outlives the data', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    clerkState.deleteUserFailsWith = 503
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    clerkState.deleteUserFailsWith = 503;
 
     try {
       const res = await app.request('/v1/users/me', {
         method: 'DELETE',
         headers: { Authorization: 'Bearer test' },
-      })
-      expect(res.status).toBe(500)
-      const body = z.object({ success: z.boolean() }).parse(await res.json())
-      expect(body.success).toBe(false)
+      });
+      expect(res.status).toBe(500);
+      const body = z.object({ success: z.boolean() }).parse(await res.json());
+      expect(body.success).toBe(false);
     } finally {
-      clerkState.deleteUserFailsWith = null
+      clerkState.deleteUserFailsWith = null;
     }
-  })
+  });
 
   // Stripe renews on its own: an account deleted with a live subscription
   // would keep charging a card nobody can cancel from.
   it('cancels a live subscription in Stripe before deleting', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    await seedSubscription('user_test123')
-    stripeState.cancelled = []
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123');
+    stripeState.cancelled = [];
 
     const res = await app.request('/v1/users/me', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
-    expect(stripeState.cancelled).toEqual(['sub_user_test123'])
-  })
+    });
+    expect(res.status).toBe(200);
+    expect(stripeState.cancelled).toEqual(['sub_user_test123']);
+  });
 
   it('does not call Stripe for a subscription that already ended', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    await seedSubscription('user_test123', { status: 'cancelled' })
-    stripeState.cancelled = []
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123', { status: 'cancelled' });
+    stripeState.cancelled = [];
 
     const res = await app.request('/v1/users/me', {
       method: 'DELETE',
       headers: { Authorization: 'Bearer test' },
-    })
-    expect(res.status).toBe(200)
-    expect(stripeState.cancelled).toEqual([])
-  })
+    });
+    expect(res.status).toBe(200);
+    expect(stripeState.cancelled).toEqual([]);
+  });
 
   it('deletes nothing when Stripe will not cancel', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    await seedSubscription('user_test123')
-    stripeState.cancelFails = true
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123');
+    stripeState.cancelFails = true;
 
     try {
       const res = await app.request('/v1/users/me', {
         method: 'DELETE',
         headers: { Authorization: 'Bearer test' },
-      })
-      expect(res.status).toBe(502)
+      });
+      expect(res.status).toBe(502);
       const profiles = await testDb
         .select()
         .from(userProfiles)
-        .where(eq(userProfiles.userId, 'user_test123'))
-      expect(profiles).toHaveLength(1)
+        .where(eq(userProfiles.userId, 'user_test123'));
+      expect(profiles).toHaveLength(1);
     } finally {
-      stripeState.cancelFails = false
+      stripeState.cancelFails = false;
     }
-  })
+  });
 
   // A first attempt can cancel in Stripe and then fail at Clerk. Our mirror
   // still says active until the webhook lands, so the retry's cancel is
   // refused; Stripe's own state has to decide, or the user is stuck.
   it('deletes on retry when Stripe already ended the subscription', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    await seedSubscription('user_test123')
-    stripeState.cancelFails = true
-    stripeState.statusInStripe = 'canceled'
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123');
+    stripeState.cancelFails = true;
+    stripeState.statusInStripe = 'canceled';
 
     try {
       const res = await app.request('/v1/users/me', {
         method: 'DELETE',
         headers: { Authorization: 'Bearer test' },
-      })
-      expect(res.status).toBe(200)
+      });
+      expect(res.status).toBe(200);
       const profiles = await testDb
         .select()
         .from(userProfiles)
-        .where(eq(userProfiles.userId, 'user_test123'))
-      expect(profiles).toHaveLength(0)
+        .where(eq(userProfiles.userId, 'user_test123'));
+      expect(profiles).toHaveLength(0);
     } finally {
-      stripeState.cancelFails = false
-      stripeState.statusInStripe = 'active'
+      stripeState.cancelFails = false;
+      stripeState.statusInStripe = 'active';
     }
-  })
+  });
 
   // Clerk 404s when the identity is already gone, which is the outcome the
   // request asked for. Reporting that as a failure would send the user back to
   // retry a deletion that has nothing left to do.
   it('succeeds when Clerk says the account is already gone', async () => {
-    setAuth()
-    await clearTables()
-    await seedUserProfile('user_test123')
-    clerkState.deleteUserFailsWith = 404
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    clerkState.deleteUserFailsWith = 404;
 
     try {
       const res = await app.request('/v1/users/me', {
         method: 'DELETE',
         headers: { Authorization: 'Bearer test' },
-      })
-      expect(res.status).toBe(200)
+      });
+      expect(res.status).toBe(200);
     } finally {
-      clerkState.deleteUserFailsWith = null
+      clerkState.deleteUserFailsWith = null;
     }
-  })
-})
+  });
+});

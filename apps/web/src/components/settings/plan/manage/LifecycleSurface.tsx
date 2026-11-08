@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Dialog chrome for the #780 manage sheet + lifecycle flows. ModalShell is
 // deliberately NOT reused here: its chrome (radius 22 sheet on bg-elevated,
@@ -7,12 +7,12 @@
 // with a drag handle and no chrome split. Escape/scrim dismissal, z-layers
 // (scrim 90 / dialog 100) and the aria contract mirror ModalShell.
 
-import { useCallback, useEffect } from 'react'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
+import { useCallback, useEffect } from 'react';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import {
   SURFACE_DIALOG_Z_INDEX,
   SURFACE_SCRIM_Z_INDEX,
-} from './definitions/constants'
+} from './definitions/constants';
 
 const DragHandle = () => (
   <div
@@ -28,15 +28,15 @@ const DragHandle = () => (
       }}
     />
   </div>
-)
+);
 
 interface LifecycleSurfaceProps {
-  open: boolean
-  onClose: () => void
-  ariaLabel: string
+  open: boolean;
+  onClose: () => void;
+  ariaLabel: string;
   /** Desktop modal width in px; mobile is always the full-width sheet. */
-  desktopWidth: number
-  children: React.ReactNode
+  desktopWidth: number;
+  children: React.ReactNode;
 }
 
 export const LifecycleSurface = ({
@@ -46,22 +46,22 @@ export const LifecycleSurface = ({
   desktopWidth,
   children,
 }: LifecycleSurfaceProps) => {
-  const isMobile = useIsMobileViewport()
+  const isMobile = useIsMobileViewport();
 
   const onKeyDown = useCallback(
     (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onClose()
+      if (ev.key === 'Escape') onClose();
     },
     [onClose],
-  )
+  );
 
   useEffect(() => {
-    if (!open) return
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open, onKeyDown])
+    if (!open) return;
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open, onKeyDown]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <>
@@ -156,5 +156,5 @@ export const LifecycleSurface = ({
         </div>
       )}
     </>
-  )
-}
+  );
+};

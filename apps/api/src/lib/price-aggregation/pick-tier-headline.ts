@@ -1,19 +1,19 @@
-import type { SourceCategory, Vendor } from '@concert-crawl/types'
+import type { SourceCategory, Vendor } from '@concert-crawl/types';
 
 export interface TierRow {
-  id: string
-  priceMin: string
-  priceMax: string | null
-  vendor: Vendor
-  sourceCategory: SourceCategory | null
-  userId: string | null
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  vendor: Vendor;
+  sourceCategory: SourceCategory | null;
+  userId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   // Null until someone reports the price still on sale. Not part of the
   // ordering — `compareTierRows` tie-breaks on `updatedAt`, which is a
   // different fact — but every projection feeding a TierRow must carry it or
   // `observedAt` silently falls back to `createdAt` on that surface alone.
-  lastSeenAt: Date | null
+  lastSeenAt: Date | null;
 }
 
 // Trust order: boxoffice leads (face value, exempt from staleness per the
@@ -21,9 +21,9 @@ export interface TierRow {
 // Null source_category is treated as standard so legacy rows don't get
 // demoted below resale.
 function trustRank(category: SourceCategory | null): number {
-  if (category === 'boxoffice') return 0
-  if (category === 'resale') return 2
-  return 1
+  if (category === 'boxoffice') return 0;
+  if (category === 'resale') return 2;
+  return 1;
 }
 
 // Comparator for tier rows. Sort order:
@@ -34,18 +34,18 @@ function trustRank(category: SourceCategory | null): number {
 // deterministic alternates list) don't have to re-implement the rules.
 export function compareTierRows(left: TierRow, right: TierRow): number {
   const trustDelta =
-    trustRank(left.sourceCategory) - trustRank(right.sourceCategory)
-  if (trustDelta !== 0) return trustDelta
-  const priceDelta = parseFloat(left.priceMin) - parseFloat(right.priceMin)
-  if (priceDelta !== 0) return priceDelta
-  return right.updatedAt.getTime() - left.updatedAt.getTime()
+    trustRank(left.sourceCategory) - trustRank(right.sourceCategory);
+  if (trustDelta !== 0) return trustDelta;
+  const priceDelta = parseFloat(left.priceMin) - parseFloat(right.priceMin);
+  if (priceDelta !== 0) return priceDelta;
+  return right.updatedAt.getTime() - left.updatedAt.getTime();
 }
 
 // Pick the leading row for a single tier (sort by compareTierRows, take head).
 export function pickTierHeadline<TRow extends TierRow>(
   rows: readonly TRow[],
 ): TRow | null {
-  if (rows.length === 0) return null
-  const sorted = [...rows].sort(compareTierRows)
-  return sorted[0] ?? null
+  if (rows.length === 0) return null;
+  const sorted = [...rows].sort(compareTierRows);
+  return sorted[0] ?? null;
 }

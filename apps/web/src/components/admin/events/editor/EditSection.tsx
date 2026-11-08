@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import { type ReactNode } from 'react'
+import { type ReactNode } from 'react';
 
 export interface EditSectionProps {
-  number: string
-  title: string
-  action?: ReactNode
-  children: ReactNode
+  number: string;
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
 }
 
 export const EditSection = ({
@@ -59,4 +59,4 @@ export const EditSection = ({
     </div>
     <div style={{ padding: 18 }}>{children}</div>
   </div>
-)
+);

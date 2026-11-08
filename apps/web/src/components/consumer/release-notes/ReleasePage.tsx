@@ -1,45 +1,47 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import type { Release } from '@/lib/definitions/releases'
-import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal'
-import { useReleaseReadState } from './useReleaseReadState'
-import { ReleaseEntry } from './ReleaseEntry'
-import { SpotlightModal } from './SpotlightModal'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Release } from '@/lib/definitions/releases';
+import { FeedbackModal } from '@/components/consumer/feedback/FeedbackModal';
+import { useReleaseReadState } from './useReleaseReadState';
+import { ReleaseEntry } from './ReleaseEntry';
+import { SpotlightModal } from './SpotlightModal';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const COPY = CONSUMER_COPY.releaseNotes
+const COPY = CONSUMER_COPY.releaseNotes;
 
 interface ReleasePageProps {
-  releases: Release[]
+  releases: Release[];
 }
 
 export function ReleasePage({ releases }: ReleasePageProps) {
-  const router = useRouter()
-  const latestVersion = releases[0]?.version ?? ''
-  const { markSeen } = useReleaseReadState(latestVersion)
+  const router = useRouter();
+  const latestVersion = releases[0]?.version ?? '';
+  const { markSeen } = useReleaseReadState(latestVersion);
 
-  const [spotlightRelease, setSpotlightRelease] = useState<Release | null>(null)
-  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [spotlightRelease, setSpotlightRelease] = useState<Release | null>(
+    null,
+  );
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
-    markSeen()
-  }, [markSeen])
+    markSeen();
+  }, [markSeen]);
 
   const handleOpenSpotlight = useCallback((release: Release) => {
-    setSpotlightRelease(release)
-  }, [])
+    setSpotlightRelease(release);
+  }, []);
 
   const handleCloseSpotlight = useCallback(() => {
-    setSpotlightRelease(null)
-  }, [])
+    setSpotlightRelease(null);
+  }, []);
 
   const handleCTA = useCallback(() => {
-    if (!spotlightRelease?.spotlight?.ctaHref) return
-    setSpotlightRelease(null)
-    void router.push(spotlightRelease.spotlight.ctaHref)
-  }, [router, spotlightRelease])
+    if (!spotlightRelease?.spotlight?.ctaHref) return;
+    setSpotlightRelease(null);
+    void router.push(spotlightRelease.spotlight.ctaHref);
+  }, [router, spotlightRelease]);
 
   return (
     <>
@@ -179,5 +181,5 @@ export function ReleasePage({ releases }: ReleasePageProps) {
         onClose={() => setFeedbackOpen(false)}
       />
     </>
-  )
+  );
 }

@@ -60,11 +60,11 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
       'connected',
       'error',
       'revoked',
-    ])
-  })
+    ]);
+  });
 
   it('user_spotify_connections has the spec §4 columns', () => {
-    const cols = getTableColumns(userSpotifyConnections)
+    const cols = getTableColumns(userSpotifyConnections);
     expect(Object.keys(cols).sort()).toEqual(
       [
         'id',
@@ -80,20 +80,20 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
         'lastSyncError',
         'artistCount',
       ].sort(),
-    )
-    expect(cols.userId.notNull).toBe(true)
-    expect(cols.status.notNull).toBe(true)
-    expect(cols.status.default).toBe('connected')
-    expect(cols.autoWatch.default).toBe(false)
-    expect(cols.digestEnabled.default).toBe(true)
-    expect(cols.pushEnabled.default).toBe(true)
-    expect(cols.artistCount.default).toBe(0)
-    expect(cols.lastSyncedAt.notNull).toBe(false)
-    expect(cols.lastSyncError.notNull).toBe(false)
-  })
+    );
+    expect(cols.userId.notNull).toBe(true);
+    expect(cols.status.notNull).toBe(true);
+    expect(cols.status.default).toBe('connected');
+    expect(cols.autoWatch.default).toBe(false);
+    expect(cols.digestEnabled.default).toBe(true);
+    expect(cols.pushEnabled.default).toBe(true);
+    expect(cols.artistCount.default).toBe(0);
+    expect(cols.lastSyncedAt.notNull).toBe(false);
+    expect(cols.lastSyncError.notNull).toBe(false);
+  });
 
   it('push_subscriptions has the spec §4 columns', () => {
-    const cols = getTableColumns(pushSubscriptions)
+    const cols = getTableColumns(pushSubscriptions);
     expect(Object.keys(cols).sort()).toEqual(
       [
         'id',
@@ -106,19 +106,19 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
         'lastUsedAt',
         'disabledAt',
       ].sort(),
-    )
-    expect(cols.endpoint.notNull).toBe(true)
-    expect(cols.disabledAt.notNull).toBe(false)
-  })
+    );
+    expect(cols.endpoint.notNull).toBe(true);
+    expect(cols.disabledAt.notNull).toBe(false);
+  });
 
   it('spotify_alert_log has the spec §4 columns', () => {
-    const cols = getTableColumns(spotifyAlertLog)
+    const cols = getTableColumns(spotifyAlertLog);
     expect(Object.keys(cols).sort()).toEqual(
       ['id', 'userId', 'eventId', 'kind', 'createdAt'].sort(),
-    )
-    expect(cols.eventId.notNull).toBe(true)
-  })
-})
+    );
+    expect(cols.eventId.notNull).toBe(true);
+  });
+});
 ```
 
 (Use the same column-introspection style the existing monetization block uses — check the file's current helpers; it may use `getTableColumns` from `drizzle-orm` or direct property access like `userBilling.userId.notNull`. Mirror whichever it uses.)
@@ -138,14 +138,14 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { events } from './events.js'
+} from 'drizzle-orm/pg-core';
+import { events } from './events.js';
 
 export const spotifyConnectionStatusEnum = pgEnum('spotify_connection_status', [
   'connected',
   'error',
   'revoked',
-])
+]);
 
 // One row per user with a linked Spotify account. Disconnect (user-initiated)
 // DELETEs the row; an externally revoked grant keeps the row with
@@ -175,7 +175,7 @@ export const userSpotifyConnections = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
 export const pushSubscriptions = pgTable(
   'push_subscriptions',
@@ -200,7 +200,7 @@ export const pushSubscriptions = pgTable(
     ),
     userIdIdx: index('push_subscriptions_user_id_idx').on(table.userId),
   }),
-)
+);
 
 // Idempotency ledger for fan-out (spec §10): a (user, event, kind) row is
 // claimed before the side effect fires, so retries never double-send.
@@ -224,20 +224,20 @@ export const spotifyAlertLog = pgTable(
       table.kind,
     ),
   }),
-)
+);
 
-export type UserSpotifyConnection = typeof userSpotifyConnections.$inferSelect
+export type UserSpotifyConnection = typeof userSpotifyConnections.$inferSelect;
 export type NewUserSpotifyConnection =
-  typeof userSpotifyConnections.$inferInsert
-export type PushSubscription = typeof pushSubscriptions.$inferSelect
-export type NewPushSubscription = typeof pushSubscriptions.$inferInsert
-export type SpotifyAlertLogRow = typeof spotifyAlertLog.$inferSelect
+  typeof userSpotifyConnections.$inferInsert;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+export type SpotifyAlertLogRow = typeof spotifyAlertLog.$inferSelect;
 ```
 
 Then add to `packages/db/src/schema/index.ts` (after line 14):
 
 ```ts
-export * from './spotify.js'
+export * from './spotify.js';
 ```
 
 - [ ] **Step 4: Run tests** — `pnpm --filter @concert-crawl/db test -- schema.test` → PASS.
@@ -264,18 +264,18 @@ it('artist_follow_source enum has exactly the spec values', () => {
     'manual',
     'spotify_followed',
     'spotify_top',
-  ])
-})
+  ]);
+});
 
 it('user_artist_follows gains source/canonicalName/rank/lastSyncedAt', () => {
-  const cols = getTableColumns(userArtistFollows)
-  expect(cols.source.notNull).toBe(true)
-  expect(cols.source.default).toBe('manual')
-  expect(cols.canonicalName.notNull).toBe(true)
-  expect(cols.canonicalName.default).toBe('')
-  expect(cols.rank.notNull).toBe(false)
-  expect(cols.lastSyncedAt.notNull).toBe(false)
-})
+  const cols = getTableColumns(userArtistFollows);
+  expect(cols.source.notNull).toBe(true);
+  expect(cols.source.default).toBe('manual');
+  expect(cols.canonicalName.notNull).toBe(true);
+  expect(cols.canonicalName.default).toBe('');
+  expect(cols.rank.notNull).toBe(false);
+  expect(cols.lastSyncedAt.notNull).toBe(false);
+});
 ```
 
 - [ ] **Step 2: Verify FAIL.**
@@ -286,7 +286,7 @@ export const artistFollowSourceEnum = pgEnum('artist_follow_source', [
   'manual',
   'spotify_followed',
   'spotify_top',
-])
+]);
 
 export const userArtistFollows = pgTable(
   'user_artist_follows',
@@ -318,7 +318,7 @@ export const userArtistFollows = pgTable(
       table.canonicalName,
     ),
   }),
-)
+);
 ```
 
 (No standalone user_id index — the unique index's prefix covers user-scoped scans, per spec.)
@@ -343,10 +343,10 @@ export const userArtistFollows = pgTable(
 
 ```ts
 it('events gains canonical_supporting text[]', () => {
-  const cols = getTableColumns(events)
-  expect(cols.canonicalSupporting).toBeDefined()
-  expect(cols.canonicalSupporting.notNull).toBe(false)
-})
+  const cols = getTableColumns(events);
+  expect(cols.canonicalSupporting).toBeDefined();
+  expect(cols.canonicalSupporting.notNull).toBe(false);
+});
 ```
 
 - [ ] **Step 2: Verify FAIL.**
@@ -387,10 +387,10 @@ If the installed drizzle-orm version rejects `.using('gin', ...)` (typecheck fai
 
 ```ts
 it('user_profiles gains spotifyNudgeSeenAt (nullable)', () => {
-  const cols = getTableColumns(userProfiles)
-  expect(cols.spotifyNudgeSeenAt).toBeDefined()
-  expect(cols.spotifyNudgeSeenAt.notNull).toBe(false)
-})
+  const cols = getTableColumns(userProfiles);
+  expect(cols.spotifyNudgeSeenAt).toBeDefined();
+  expect(cols.spotifyNudgeSeenAt.notNull).toBe(false);
+});
 ```
 
 - [ ] **Step 2: Verify FAIL.**
@@ -441,7 +441,7 @@ it('purge deletes only manual follow rows (E9 — spotify rows survive)', () => 
   // Assert the follows delete is scoped: userId match AND source = 'manual'.
   // Shape depends on existing test utilities in this file — mirror the
   // nearest sibling test's mocking approach.
-})
+});
 ```
 
 - [ ] **Step 2: Verify FAIL.**
@@ -459,7 +459,7 @@ const deletedFollows = await tx
       eq(userArtistFollows.source, 'manual'),
     ),
   )
-  .returning({ id: userArtistFollows.id })
+  .returning({ id: userArtistFollows.id });
 ```
 
 Leave `alertPrefs: null, spotifySyncState: null` in the audit counts unchanged (those become real in PR 3) but update the stale comment at line 689 to say the Spotify tables now exist and are intentionally excluded here.
@@ -488,7 +488,7 @@ it('writes canonical_supporting alongside supporting_artists', () => {
   // Given supportingArtists ['MIKE', 'Niontay & Friends', 'MIKE'],
   // expect canonicalSupporting ['mike', 'niontay'] — canonicalized,
   // deduped, empty strings dropped.
-})
+});
 ```
 
 - [ ] **Step 2: Verify FAIL.**
@@ -504,12 +504,12 @@ with a small exported helper next to the enrichment code (or in `canonical-artis
 
 ```ts
 export function canonicalizeSupporting(artists: string[]): string[] {
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   for (const artist of artists) {
-    const canonical = canonicalizeArtist(artist)
-    if (canonical !== '') seen.add(canonical)
+    const canonical = canonicalizeArtist(artist);
+    if (canonical !== '') seen.add(canonical);
   }
-  return [...seen]
+  return [...seen];
 }
 ```
 
@@ -543,23 +543,23 @@ Grep for any OTHER writer of `supportingArtists` (`grep -rn "supportingArtists" 
 - [ ] **Step 1: Failing helper tests** — pure functions only (mirror `2026-06-19-non-concert-backfill-helpers.ts` split):
 
 ```ts
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest';
 import {
   planFollowBackfill,
   planSupportingBackfill,
-} from './2026-07-18-spotify-schema-backfill-helpers.js'
+} from './2026-07-18-spotify-schema-backfill-helpers.js';
 
 describe('planFollowBackfill', () => {
   it('maps artistName → canonicalName, skipping already-canonical rows', () => {
     const rows = [
       { id: 'a', artistName: 'Earl Sweatshirt & MIKE', canonicalName: '' },
       { id: 'b', artistName: 'MIKE', canonicalName: 'mike' },
-    ]
+    ];
     expect(planFollowBackfill(rows)).toEqual([
       { id: 'a', canonicalName: 'earl sweatshirt' },
-    ])
-  })
-})
+    ]);
+  });
+});
 
 describe('planSupportingBackfill', () => {
   it('canonicalizes + dedupes supporting arrays, skipping null/backfilled rows', () => {
@@ -571,12 +571,12 @@ describe('planSupportingBackfill', () => {
       },
       { id: 'e2', supportingArtists: null, canonicalSupporting: null },
       { id: 'e3', supportingArtists: ['X'], canonicalSupporting: ['x'] },
-    ]
+    ];
     expect(planSupportingBackfill(rows)).toEqual([
       { id: 'e1', canonicalSupporting: ['mike'] },
-    ])
-  })
-})
+    ]);
+  });
+});
 ```
 
 - [ ] **Step 2: Verify FAIL** — `pnpm vitest run scripts/2026-07-18-spotify-schema-backfill.test.ts` (match how sibling script tests are invoked — check `scripts/package.json`).
@@ -586,54 +586,54 @@ describe('planSupportingBackfill', () => {
 import {
   canonicalizeArtist,
   canonicalizeSupporting,
-} from '@concert-crawl/crawler-core'
+} from '@concert-crawl/crawler-core';
 
 export interface FollowRow {
-  id: string
-  artistName: string
-  canonicalName: string
+  id: string;
+  artistName: string;
+  canonicalName: string;
 }
 
 export interface FollowUpdate {
-  id: string
-  canonicalName: string
+  id: string;
+  canonicalName: string;
 }
 
 export function planFollowBackfill(rows: FollowRow[]): FollowUpdate[] {
-  const updates: FollowUpdate[] = []
+  const updates: FollowUpdate[] = [];
   for (const row of rows) {
-    const canonical = canonicalizeArtist(row.artistName)
+    const canonical = canonicalizeArtist(row.artistName);
     if (canonical !== row.canonicalName) {
-      updates.push({ id: row.id, canonicalName: canonical })
+      updates.push({ id: row.id, canonicalName: canonical });
     }
   }
-  return updates
+  return updates;
 }
 
 export interface SupportingRow {
-  id: string
-  supportingArtists: string[] | null
-  canonicalSupporting: string[] | null
+  id: string;
+  supportingArtists: string[] | null;
+  canonicalSupporting: string[] | null;
 }
 
 export interface SupportingUpdate {
-  id: string
-  canonicalSupporting: string[]
+  id: string;
+  canonicalSupporting: string[];
 }
 
 export function planSupportingBackfill(
   rows: SupportingRow[],
 ): SupportingUpdate[] {
-  const updates: SupportingUpdate[] = []
+  const updates: SupportingUpdate[] = [];
   for (const row of rows) {
-    if (row.supportingArtists === null) continue
-    if (row.canonicalSupporting !== null) continue
+    if (row.supportingArtists === null) continue;
+    if (row.canonicalSupporting !== null) continue;
     updates.push({
       id: row.id,
       canonicalSupporting: canonicalizeSupporting(row.supportingArtists),
-    })
+    });
   }
-  return updates
+  return updates;
 }
 ```
 

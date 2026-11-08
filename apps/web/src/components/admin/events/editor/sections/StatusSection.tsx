@@ -1,60 +1,60 @@
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { StatusBadge } from '@/components/admin/primitives'
-import { EditLabel } from '../EditLabel'
-import { EditSection } from '../EditSection'
-import { LifecycleBadge, type LifecycleStatus } from '../LifecycleBadge'
-import { SrcTag } from '../SrcTag'
-import { VerifyMark } from '../VerifyMark'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { StatusBadge } from '@/components/admin/primitives';
+import { EditLabel } from '../EditLabel';
+import { EditSection } from '../EditSection';
+import { LifecycleBadge, type LifecycleStatus } from '../LifecycleBadge';
+import { SrcTag } from '../SrcTag';
+import { VerifyMark } from '../VerifyMark';
 
 export interface StatusSectionEvent {
-  status: LifecycleStatus
-  isSoldOut: boolean
-  verified: boolean
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  date: string
+  status: LifecycleStatus;
+  isSoldOut: boolean;
+  verified: boolean;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  date: string;
 }
 
 export type SoldOutMethod =
-  'saw_listing' | 'venue_site' | 'bought_myself' | 'other'
+  'saw_listing' | 'venue_site' | 'bought_myself' | 'other';
 
 export interface SoldOutProvenance {
-  method: SoldOutMethod
-  url: string
-  note: string
+  method: SoldOutMethod;
+  url: string;
+  note: string;
 }
 
 export interface StatusSectionProps {
-  event: StatusSectionEvent
-  editedStatus?: LifecycleStatus
-  editedVerified?: boolean
-  editedDate?: string
-  editedIsSoldOut?: boolean
-  editedProvenance?: SoldOutProvenance
-  onStatusChange?: (next: LifecycleStatus) => void
-  onVerifiedChange?: (next: boolean) => void
-  onDateChange?: (next: string) => void
-  onSoldOutChange?: (next: boolean) => void
-  onProvenanceChange?: (next: SoldOutProvenance) => void
+  event: StatusSectionEvent;
+  editedStatus?: LifecycleStatus;
+  editedVerified?: boolean;
+  editedDate?: string;
+  editedIsSoldOut?: boolean;
+  editedProvenance?: SoldOutProvenance;
+  onStatusChange?: (next: LifecycleStatus) => void;
+  onVerifiedChange?: (next: boolean) => void;
+  onDateChange?: (next: string) => void;
+  onSoldOutChange?: (next: boolean) => void;
+  onProvenanceChange?: (next: SoldOutProvenance) => void;
 }
 
 const LIFECYCLE_OPTIONS: ReadonlyArray<{
-  key: LifecycleStatus
-  label: string
+  key: LifecycleStatus;
+  label: string;
 }> = [
   { key: 'upcoming', label: ADMIN_COPY.editor.status.upcoming },
   { key: 'postponed', label: ADMIN_COPY.editor.status.postponed },
   { key: 'cancelled', label: ADMIN_COPY.editor.status.cancelled },
-]
+];
 
 const LifecycleSegmented = ({
   value,
   onChange,
 }: {
-  value: LifecycleStatus
-  onChange: (next: LifecycleStatus) => void
+  value: LifecycleStatus;
+  onChange: (next: LifecycleStatus) => void;
 }) => (
   <div
     role="group"
@@ -71,7 +71,7 @@ const LifecycleSegmented = ({
     }}
   >
     {LIFECYCLE_OPTIONS.map(({ key, label }) => {
-      const active = value === key
+      const active = value === key;
       return (
         <button
           key={key}
@@ -96,22 +96,22 @@ const LifecycleSegmented = ({
         >
           {label}
         </button>
-      )
+      );
     })}
   </div>
-)
+);
 
 const SOLD_OUT_OPTIONS: ReadonlyArray<{ key: boolean; label: string }> = [
   { key: false, label: ADMIN_COPY.editor.statusControls.available },
   { key: true, label: ADMIN_COPY.editor.statusControls.soldOut },
-]
+];
 
 const AvailabilitySegmented = ({
   value,
   onChange,
 }: {
-  value: boolean
-  onChange: (next: boolean) => void
+  value: boolean;
+  onChange: (next: boolean) => void;
 }) => (
   <div
     role="group"
@@ -128,7 +128,7 @@ const AvailabilitySegmented = ({
     }}
   >
     {SOLD_OUT_OPTIONS.map(({ key, label }) => {
-      const active = value === key
+      const active = value === key;
       return (
         <button
           key={String(key)}
@@ -153,10 +153,10 @@ const AvailabilitySegmented = ({
         >
           {label}
         </button>
-      )
+      );
     })}
   </div>
-)
+);
 
 export const StatusSection = ({
   event,
@@ -172,20 +172,20 @@ export const StatusSection = ({
   onProvenanceChange,
 }: StatusSectionProps) => {
   const { sections, fields, status, upcomingHint, statusControls } =
-    ADMIN_COPY.editor
-  const editable = Boolean(onStatusChange && onVerifiedChange && onDateChange)
-  const currentStatus = editedStatus ?? event.status
-  const currentVerified = editedVerified ?? event.verified
-  const currentDate = editedDate ?? event.date
-  const currentIsSoldOut = editedIsSoldOut ?? event.isSoldOut
-  const provenanceEditable = Boolean(onSoldOutChange && onProvenanceChange)
+    ADMIN_COPY.editor;
+  const editable = Boolean(onStatusChange && onVerifiedChange && onDateChange);
+  const currentStatus = editedStatus ?? event.status;
+  const currentVerified = editedVerified ?? event.verified;
+  const currentDate = editedDate ?? event.date;
+  const currentIsSoldOut = editedIsSoldOut ?? event.isSoldOut;
+  const provenanceEditable = Boolean(onSoldOutChange && onProvenanceChange);
   const showProvenanceFields =
     provenanceEditable &&
     currentIsSoldOut &&
     !event.isSoldOut &&
-    editedProvenance !== undefined
-  const isUpcoming = currentStatus === 'upcoming'
-  const isPostponed = currentStatus === 'postponed'
+    editedProvenance !== undefined;
+  const isUpcoming = currentStatus === 'upcoming';
+  const isPostponed = currentStatus === 'postponed';
   return (
     <EditSection number={sections.statusNumber} title={sections.statusTitle}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -464,5 +464,5 @@ export const StatusSection = ({
         </div>
       </div>
     </EditSection>
-  )
-}
+  );
+};

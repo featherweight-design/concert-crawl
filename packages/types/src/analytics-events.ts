@@ -22,18 +22,18 @@ export type PickerEntry =
   // Reopened on the far side of sign-up, on the tier the visitor had picked
   // before they had an account (#1284).
   | 'post-signup'
-  | 'takeover'
+  | 'takeover';
 
 /** Where a share sheet was opened from. One surface today; named so a second
  * one is a new member rather than an untyped string. */
-export type ShareSurface = 'event-detail'
+export type ShareSurface = 'event-detail';
 
 /**
  * The destinations the sheet actually offers. The keys are minted at the
  * `track` call-sites in `apps/web/.../share/ShareSheet.tsx` — `destinations.ts`
  * holds the capability helpers each one drives, not these identifiers.
  */
-export type ShareDestination = 'system' | 'save-image' | 'copy-link'
+export type ShareDestination = 'system' | 'save-image' | 'copy-link';
 
 /**
  * The poster shapes and themes a card can be drawn in.
@@ -45,7 +45,7 @@ export type ShareDestination = 'system' | 'save-image' | 'copy-link'
  * assignability, so adding a shape or a theme there without updating these
  * fails typecheck rather than silently emitting an unmodelled value.
  */
-export type ShareCardRatio = 'story' | 'square' | 'link'
+export type ShareCardRatio = 'story' | 'square' | 'link';
 
 export type ShareCardTheme =
   | 'electric'
@@ -56,35 +56,38 @@ export type ShareCardTheme =
   | 'bluenote'
   | 'drip'
   | 'cedar'
-  | 'gloss'
+  | 'gloss';
 
 // Poster sharing (#72): the only typed events the web app sends.
 export interface ShareEventMap {
   // `authed` distinguishes a share from a signed-in user from one taken on the
   // public mirror; no userId is attached here — the emitter already identifies.
   share_sheet_opened: {
-    eventId: string
-    surface: ShareSurface
-    authed: boolean
-  }
-  share_destination_selected: { eventId: string; destination: ShareDestination }
+    eventId: string;
+    surface: ShareSurface;
+    authed: boolean;
+  };
+  share_destination_selected: {
+    eventId: string;
+    destination: ShareDestination;
+  };
   // `eventId` so a render joins back to the `share_sheet_opened` and
   // `share_destination_selected` rows for the same show — without it the render
   // count is a standalone total and the funnel cannot be walked end to end.
   share_card_rendered: {
-    eventId: string
-    ratio: ShareCardRatio
-    theme: ShareCardTheme
-    cacheHit: boolean
-  }
+    eventId: string;
+    ratio: ShareCardRatio;
+    theme: ShareCardTheme;
+    cacheHit: boolean;
+  };
   // `referrer` is the referring host only, never the full URL — a full referrer
   // can carry a query string belonging to somebody else's session.
-  public_event_viewed: { eventId: string; referrer: string | null }
+  public_event_viewed: { eventId: string; referrer: string | null };
   // The Passport (#85). No `eventId` — the card is about the person, not a
   // show — and no `copy-link` destination, because it has no public URL.
   passport_shared: {
-    destination: Extract<ShareDestination, 'system' | 'save-image'>
-  }
+    destination: Extract<ShareDestination, 'system' | 'save-image'>;
+  };
 }
 
-export type ShareEvent = keyof ShareEventMap
+export type ShareEvent = keyof ShareEventMap;

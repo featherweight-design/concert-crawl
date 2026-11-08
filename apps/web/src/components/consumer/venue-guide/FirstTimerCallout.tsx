@@ -1,15 +1,15 @@
-import { type VenueGuide, deriveGuideDensity } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '../definitions/copy'
-import { venueShortName } from './lib'
+import { type VenueGuide, deriveGuideDensity } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '../definitions/copy';
+import { venueShortName } from './lib';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 /** Anchor id the callout jumps to, and the id `GuideSection` renders with. */
-export const GUIDE_ANCHOR_ID = 'ft-guide'
+export const GUIDE_ANCHOR_ID = 'ft-guide';
 
 interface FirstTimerCalloutProps {
-  venueName: string
-  guide: VenueGuide
+  venueName: string;
+  guide: VenueGuide;
 }
 
 /**
@@ -20,11 +20,11 @@ export const FirstTimerCallout = ({
   venueName,
   guide,
 }: FirstTimerCalloutProps) => {
-  const shortName = venueShortName(venueName)
+  const shortName = venueShortName(venueName);
   const density = deriveGuideDensity({
     chips: guide.chips,
     insiderTip: guide.insiderTip,
-  })
+  });
 
   return (
     <div
@@ -105,5 +105,5 @@ export const FirstTimerCallout = ({
         </p>
       </div>
     </div>
-  )
-}
+  );
+};

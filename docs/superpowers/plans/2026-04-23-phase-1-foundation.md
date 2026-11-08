@@ -328,7 +328,7 @@ module.exports = {
     '@typescript-eslint/consistent-type-imports': 'error',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
   },
-}
+};
 ```
 
 - [ ] **Step 4: Create `packages/config/eslint-next.js`**
@@ -346,7 +346,7 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/consistent-type-imports': 'error',
   },
-}
+};
 ```
 
 - [ ] **Step 5: Commit**
@@ -479,30 +479,30 @@ Expected: commit succeeds.
 Create `packages/types/src/index.test.ts`:
 
 ```typescript
-import { describe, it, expectTypeOf } from 'vitest'
-import type { Role, ApiResponse, PaginatedResponse } from './index.js'
+import { describe, it, expectTypeOf } from 'vitest';
+import type { Role, ApiResponse, PaginatedResponse } from './index.js';
 
 describe('shared types', () => {
   it('Role is a union of expected string literals', () => {
-    expectTypeOf<Role>().toEqualTypeOf<'admin' | 'sub_admin' | 'user'>()
-  })
+    expectTypeOf<Role>().toEqualTypeOf<'admin' | 'sub_admin' | 'user'>();
+  });
 
   it('ApiResponse wraps data with success flag', () => {
     expectTypeOf<ApiResponse<string>>().toMatchTypeOf<{
-      success: boolean
-      data: string
-    }>()
-  })
+      success: boolean;
+      data: string;
+    }>();
+  });
 
   it('PaginatedResponse includes pagination metadata', () => {
     expectTypeOf<PaginatedResponse<string>>().toMatchTypeOf<{
-      data: string[]
-      total: number
-      page: number
-      pageSize: number
-    }>()
-  })
-})
+      data: string[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>();
+  });
+});
 ```
 
 - [ ] **Step 4: Run to verify it fails (file doesn't exist yet)**
@@ -517,47 +517,46 @@ Expected: FAIL — `Cannot find module './index.js'`
 
 ```typescript
 // User roles — mirrors Clerk publicMetadata.role
-export type Role = 'admin' | 'sub_admin' | 'user'
+export type Role = 'admin' | 'sub_admin' | 'user';
 
 // Standard API response envelope
 export type ApiResponse<T> =
-  | { success: true; data: T }
-  | { success: false; error: string; code?: string }
+  { success: true; data: T } | { success: false; error: string; code?: string };
 
 // Paginated list response
 export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 // Clerk user shape (subset we use in the app)
 export interface AuthUser {
-  id: string // Clerk user ID
-  email: string
-  role: Role
-  firstName: string | null
-  lastName: string | null
+  id: string; // Clerk user ID
+  email: string;
+  role: Role;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 // Extraction strategies used by the crawler
-export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual'
+export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual';
 
 // Crawl run status
-export type CrawlStatus = 'success' | 'failed' | 'partial'
+export type CrawlStatus = 'success' | 'failed' | 'partial';
 
 // Event status
-export type EventStatus = 'upcoming' | 'cancelled' | 'postponed'
+export type EventStatus = 'upcoming' | 'cancelled' | 'postponed';
 
 // Notification types
-export type NotificationType = 'admin_alert' | 'user_notification'
+export type NotificationType = 'admin_alert' | 'user_notification';
 
 // Feedback categories
-export type FeedbackCategory = 'bug' | 'suggestion' | 'praise'
+export type FeedbackCategory = 'bug' | 'suggestion' | 'praise';
 
 // Subscription tiers
-export type SubscriptionTier = 'free' | 'premium'
+export type SubscriptionTier = 'free' | 'premium';
 ```
 
 - [ ] **Step 6: Run tests to verify they pass**
@@ -650,7 +649,7 @@ git commit -m "feat: add shared types package (Role, ApiResponse, domain enums)"
 - [ ] **Step 3: Create `packages/db/drizzle.config.ts`**
 
 ```typescript
-import type { Config } from 'drizzle-kit'
+import type { Config } from 'drizzle-kit';
 
 export default {
   schema: './src/schema/index.ts',
@@ -661,7 +660,7 @@ export default {
       process.env['DATABASE_URL'] ??
       'postgresql://postgres:postgres@localhost:5432/concert_crawl',
   },
-} satisfies Config
+} satisfies Config;
 ```
 
 - [ ] **Step 4: Write the failing schema test**
@@ -669,7 +668,7 @@ export default {
 Create `packages/db/src/schema/schema.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   venues,
   events,
@@ -678,47 +677,47 @@ import {
   auditLog,
   notifications,
   feedback,
-} from './index.js'
+} from './index.js';
 
 describe('database schema exports', () => {
   it('exports venues table', () => {
-    expect(venues).toBeDefined()
-  })
+    expect(venues).toBeDefined();
+  });
 
   it('venues table has required columns', () => {
-    const columns = Object.keys(venues)
-    expect(columns).toContain('id')
-    expect(columns).toContain('name')
-    expect(columns).toContain('slug')
-    expect(columns).toContain('websiteUrl')
-    expect(columns).toContain('active')
-    expect(columns).toContain('verified')
-  })
+    const columns = Object.keys(venues);
+    expect(columns).toContain('id');
+    expect(columns).toContain('name');
+    expect(columns).toContain('slug');
+    expect(columns).toContain('websiteUrl');
+    expect(columns).toContain('active');
+    expect(columns).toContain('verified');
+  });
 
   it('exports events table', () => {
-    expect(events).toBeDefined()
-  })
+    expect(events).toBeDefined();
+  });
 
   it('exports userRoles table', () => {
-    expect(userRoles).toBeDefined()
-  })
+    expect(userRoles).toBeDefined();
+  });
 
   it('exports inviteCodes table', () => {
-    expect(inviteCodes).toBeDefined()
-  })
+    expect(inviteCodes).toBeDefined();
+  });
 
   it('exports auditLog table', () => {
-    expect(auditLog).toBeDefined()
-  })
+    expect(auditLog).toBeDefined();
+  });
 
   it('exports notifications table', () => {
-    expect(notifications).toBeDefined()
-  })
+    expect(notifications).toBeDefined();
+  });
 
   it('exports feedback table', () => {
-    expect(feedback).toBeDefined()
-  })
-})
+    expect(feedback).toBeDefined();
+  });
+});
 ```
 
 - [ ] **Step 5: Run to verify it fails**
@@ -740,13 +739,13 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 export const extractionStrategyEnum = pgEnum('extraction_strategy', [
   'structured_data',
   'llm',
   'manual',
-])
+]);
 
 export const venues = pgTable('venues', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -773,10 +772,10 @@ export const venues = pgTable('venues', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type Venue = typeof venues.$inferSelect
-export type NewVenue = typeof venues.$inferInsert
+export type Venue = typeof venues.$inferSelect;
+export type NewVenue = typeof venues.$inferInsert;
 ```
 
 - [ ] **Step 7: Create `packages/db/src/schema/events.ts`**
@@ -793,15 +792,15 @@ import {
   time,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { venues } from './venues.js';
 
 export const eventStatusEnum = pgEnum('event_status', [
   'upcoming',
   'cancelled',
   'postponed',
-])
+]);
 
 export const events = pgTable(
   'events',
@@ -846,10 +845,10 @@ export const events = pgTable(
       table.artist,
     ),
   }),
-)
+);
 
-export type Event = typeof events.$inferSelect
-export type NewEvent = typeof events.$inferInsert
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
 ```
 
 - [ ] **Step 8: Create `packages/db/src/schema/users.ts`**
@@ -862,9 +861,9 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
-export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user'])
+export const roleEnum = pgEnum('role', ['admin', 'sub_admin', 'user']);
 
 export const userRoles = pgTable('user_roles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -875,7 +874,7 @@ export const userRoles = pgTable('user_roles', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const inviteCodes = pgTable('invite_codes', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -889,7 +888,7 @@ export const inviteCodes = pgTable('invite_codes', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const auditLog = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -900,28 +899,28 @@ export const auditLog = pgTable('audit_log', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type UserRole = typeof userRoles.$inferSelect
-export type InviteCode = typeof inviteCodes.$inferSelect
-export type AuditLogEntry = typeof auditLog.$inferSelect
+export type UserRole = typeof userRoles.$inferSelect;
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type AuditLogEntry = typeof auditLog.$inferSelect;
 ```
 
 - [ ] **Step 9: Create `packages/db/src/schema/social.ts`**
 
 ```typescript
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { events } from './events.js'
+import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { events } from './events.js';
 
 export const userEventStatusEnum = pgEnum('user_event_status', [
   'going',
   'interested',
-])
+]);
 export const feedbackCategoryEnum = pgEnum('feedback_category', [
   'bug',
   'suggestion',
   'praise',
-])
+]);
 
 export const userEvents = pgTable('user_events', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -933,7 +932,7 @@ export const userEvents = pgTable('user_events', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const userArtistFollows = pgTable('user_artist_follows', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -943,7 +942,7 @@ export const userArtistFollows = pgTable('user_artist_follows', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -954,7 +953,7 @@ export const feedback = pgTable('feedback', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 - [ ] **Step 10: Create `packages/db/src/schema/commerce.ts`**
@@ -968,17 +967,17 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 export const subscriptionTierEnum = pgEnum('subscription_tier', [
   'free',
   'premium',
-])
+]);
 export const subscriptionStatusEnum = pgEnum('subscription_status', [
   'active',
   'cancelled',
   'past_due',
-])
+]);
 
 export const subscriptions = pgTable('subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -997,7 +996,7 @@ export const subscriptions = pgTable('subscriptions', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const costTracking = pgTable('cost_tracking', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -1008,18 +1007,18 @@ export const costTracking = pgTable('cost_tracking', {
     .notNull()
     .defaultNow(),
   metadata: text('metadata'), // JSON string for flexibility
-})
+});
 ```
 
 - [ ] **Step 11: Create `packages/db/src/schema/notifications.ts`**
 
 ```typescript
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const notificationTypeEnum = pgEnum('notification_type', [
   'admin_alert',
   'user_notification',
-])
+]);
 
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -1034,45 +1033,45 @@ export const notifications = pgTable('notifications', {
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 ```
 
 - [ ] **Step 12: Create `packages/db/src/schema/index.ts`**
 
 ```typescript
-export * from './venues.js'
-export * from './events.js'
-export * from './users.js'
-export * from './social.js'
-export * from './commerce.js'
-export * from './notifications.js'
+export * from './venues.js';
+export * from './events.js';
+export * from './users.js';
+export * from './social.js';
+export * from './commerce.js';
+export * from './notifications.js';
 ```
 
 - [ ] **Step 13: Create `packages/db/src/client.ts`**
 
 ```typescript
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from './schema/index.js'
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema/index.js';
 
 const connectionString =
   process.env['DATABASE_URL'] ??
-  'postgresql://postgres:postgres@localhost:5432/concert_crawl'
+  'postgresql://postgres:postgres@localhost:5432/concert_crawl';
 
 // Disable prefetch for compatibility with Render's connection pooler
-const queryClient = postgres(connectionString, { prepare: false })
+const queryClient = postgres(connectionString, { prepare: false });
 
-export const db = drizzle(queryClient, { schema })
+export const db = drizzle(queryClient, { schema });
 
-export type Database = typeof db
+export type Database = typeof db;
 ```
 
 - [ ] **Step 14: Create `packages/db/src/index.ts`**
 
 ```typescript
-export { db } from './client.js'
-export type { Database } from './client.js'
-export * from './schema/index.js'
+export { db } from './client.js';
+export type { Database } from './client.js';
+export * from './schema/index.js';
 ```
 
 - [ ] **Step 15: Run tests to verify they pass**
@@ -1143,34 +1142,34 @@ Expected output includes `concert-crawl-db` with status `healthy`.
 - [ ] **Step 3: Create `packages/db/src/migrate.ts`**
 
 ```typescript
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import postgres from 'postgres'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const connectionString =
   process.env['DATABASE_URL'] ??
-  'postgresql://postgres:postgres@localhost:5432/concert_crawl'
+  'postgresql://postgres:postgres@localhost:5432/concert_crawl';
 
-const migrationClient = postgres(connectionString, { max: 1 })
+const migrationClient = postgres(connectionString, { max: 1 });
 
 async function runMigrations() {
-  const db = drizzle(migrationClient)
-  console.warn('Running migrations...')
+  const db = drizzle(migrationClient);
+  console.warn('Running migrations...');
   await migrate(db, {
     migrationsFolder: path.join(__dirname, '..', 'migrations'),
-  })
-  console.warn('Migrations complete.')
-  await migrationClient.end()
+  });
+  console.warn('Migrations complete.');
+  await migrationClient.end();
 }
 
 runMigrations().catch((err) => {
-  console.error('Migration failed:', err)
-  process.exit(1)
-})
+  console.error('Migration failed:', err);
+  process.exit(1);
+});
 ```
 
 - [ ] **Step 4: Generate migrations**
@@ -1225,28 +1224,28 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/concert_crawl
 Create `packages/db/src/seed.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { SEED_VENUES } from '../seed.js'
+import { describe, it, expect } from 'vitest';
+import { SEED_VENUES } from '../seed.js';
 
 describe('seed data', () => {
   it('contains at least 5 Denver venues', () => {
-    expect(SEED_VENUES.length).toBeGreaterThanOrEqual(5)
-  })
+    expect(SEED_VENUES.length).toBeGreaterThanOrEqual(5);
+  });
 
   it('every venue has a name, slug, websiteUrl, and city', () => {
     for (const venue of SEED_VENUES) {
-      expect(venue.name).toBeTruthy()
-      expect(venue.slug).toBeTruthy()
-      expect(venue.websiteUrl).toBeTruthy()
-      expect(venue.city).toBe('Denver')
+      expect(venue.name).toBeTruthy();
+      expect(venue.slug).toBeTruthy();
+      expect(venue.websiteUrl).toBeTruthy();
+      expect(venue.city).toBe('Denver');
     }
-  })
+  });
 
   it('slugs are unique', () => {
-    const slugs = SEED_VENUES.map((v) => v.slug)
-    expect(new Set(slugs).size).toBe(slugs.length)
-  })
-})
+    const slugs = SEED_VENUES.map((v) => v.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+});
 ```
 
 - [ ] **Step 3: Run to verify it fails**
@@ -1260,8 +1259,8 @@ Expected: FAIL — `Cannot find module '../seed.js'`
 - [ ] **Step 4: Create `packages/db/seed.ts`**
 
 ```typescript
-import { db } from './src/client.js'
-import { venues, type NewVenue } from './src/schema/index.js'
+import { db } from './src/client.js';
+import { venues, type NewVenue } from './src/schema/index.js';
 
 export const SEED_VENUES: NewVenue[] = [
   {
@@ -1309,24 +1308,24 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
   },
-]
+];
 
 async function seed() {
-  console.warn('Seeding database...')
+  console.warn('Seeding database...');
 
   await db
     .insert(venues)
     .values(SEED_VENUES)
-    .onConflictDoNothing({ target: venues.slug })
+    .onConflictDoNothing({ target: venues.slug });
 
-  console.warn(`Inserted ${SEED_VENUES.length} venues.`)
-  process.exit(0)
+  console.warn(`Inserted ${SEED_VENUES.length} venues.`);
+  process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error('Seed failed:', err)
-  process.exit(1)
-})
+  console.error('Seed failed:', err);
+  process.exit(1);
+});
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -1430,14 +1429,14 @@ git commit -m "feat: add database seed script with 5 Denver venues"
 - [ ] **Step 3: Create `apps/api/vitest.config.ts`**
 
 ```typescript
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
   },
-})
+});
 ```
 
 - [ ] **Step 4: Create `apps/api/.env.example`**
@@ -1458,32 +1457,32 @@ PORT=3001
 Create `apps/api/src/routes/health.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { createApp } from '../app.js'
+import { describe, it, expect } from 'vitest';
+import { createApp } from '../app.js';
 
 describe('GET /v1/health', () => {
-  const app = createApp()
+  const app = createApp();
 
   it('returns 200 with status ok', async () => {
-    const res = await app.request('/v1/health')
-    expect(res.status).toBe(200)
-  })
+    const res = await app.request('/v1/health');
+    expect(res.status).toBe(200);
+  });
 
   it('returns JSON with status, timestamp, and version', async () => {
-    const res = await app.request('/v1/health')
-    const body = (await res.json()) as Record<string, unknown>
-    expect(body['status']).toBe('ok')
-    expect(typeof body['timestamp']).toBe('string')
-    expect(typeof body['version']).toBe('string')
-  })
+    const res = await app.request('/v1/health');
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body['status']).toBe('ok');
+    expect(typeof body['timestamp']).toBe('string');
+    expect(typeof body['version']).toBe('string');
+  });
 
   it('returns a valid ISO 8601 timestamp', async () => {
-    const res = await app.request('/v1/health')
-    const body = (await res.json()) as Record<string, unknown>
-    const date = new Date(body['timestamp'] as string)
-    expect(date.toISOString()).toBe(body['timestamp'])
-  })
-})
+    const res = await app.request('/v1/health');
+    const body = (await res.json()) as Record<string, unknown>;
+    const date = new Date(body['timestamp'] as string);
+    expect(date.toISOString()).toBe(body['timestamp']);
+  });
+});
 ```
 
 - [ ] **Step 6: Run to verify it fails**
@@ -1497,7 +1496,7 @@ Expected: FAIL — `Cannot find module '../app.js'`
 - [ ] **Step 7: Create `apps/api/src/env.ts`**
 
 ```typescript
-import { z } from 'zod'
+import { z } from 'zod';
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
@@ -1506,83 +1505,83 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
-})
+});
 
-const parsed = envSchema.safeParse(process.env)
+const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error('❌ Invalid environment variables:')
-  console.error(parsed.error.flatten().fieldErrors)
-  process.exit(1)
+  console.error('❌ Invalid environment variables:');
+  console.error(parsed.error.flatten().fieldErrors);
+  process.exit(1);
 }
 
-export const env = parsed.data
+export const env = parsed.data;
 ```
 
 - [ ] **Step 8: Create `apps/api/src/routes/health.ts`**
 
 ```typescript
-import { Hono } from 'hono'
+import { Hono } from 'hono';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const { version } = { version: '0.1.0' } // Phase 1 static version
+const { version } = { version: '0.1.0' }; // Phase 1 static version
 
-export const healthRouter = new Hono()
+export const healthRouter = new Hono();
 
 healthRouter.get('/', (ctx) => {
   return c.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     version,
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 9: Create `apps/api/src/routes/index.ts`**
 
 ```typescript
-import type { Hono } from 'hono'
-import { healthRouter } from './health.js'
+import type { Hono } from 'hono';
+import { healthRouter } from './health.js';
 
 export function registerRoutes(app: Hono) {
-  app.route('/v1/health', healthRouter)
+  app.route('/v1/health', healthRouter);
 }
 ```
 
 - [ ] **Step 10: Create `apps/api/src/app.ts`**
 
 ```typescript
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
-import { registerRoutes } from './routes/index.js'
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
+import { registerRoutes } from './routes/index.js';
 
 export function createApp() {
-  const app = new Hono()
+  const app = new Hono();
 
-  app.use('*', logger())
+  app.use('*', logger());
   app.use(
     '*',
     cors({
       origin: process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000',
       credentials: true,
     }),
-  )
+  );
 
-  registerRoutes(app)
+  registerRoutes(app);
 
-  return app
+  return app;
 }
 ```
 
 - [ ] **Step 11: Create `apps/api/src/index.ts`**
 
 ```typescript
-import { serve } from '@hono/node-server'
-import { createApp } from './app.js'
-import { env } from './env.js'
+import { serve } from '@hono/node-server';
+import { createApp } from './app.js';
+import { env } from './env.js';
 
-const app = createApp()
+const app = createApp();
 
 serve(
   {
@@ -1590,9 +1589,11 @@ serve(
     port: env.PORT,
   },
   () => {
-    console.warn(`🎸 Concert Crawl API running on http://localhost:${env.PORT}`)
+    console.warn(
+      `🎸 Concert Crawl API running on http://localhost:${env.PORT}`,
+    );
   },
-)
+);
 ```
 
 - [ ] **Step 12: Install dependencies**
@@ -1649,31 +1650,31 @@ git commit -m "feat: add Hono API with health endpoint and Zod env validation"
 Create `apps/api/src/middleware/auth.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { Hono } from 'hono'
-import { requireAuth } from './auth.js'
+import { describe, it, expect } from 'vitest';
+import { Hono } from 'hono';
+import { requireAuth } from './auth.js';
 
 describe('requireAuth middleware', () => {
   it('returns 401 when no Authorization header is present', async () => {
-    const app = new Hono()
-    app.use('/protected', requireAuth)
-    app.get('/protected', (ctx) => c.json({ ok: true }))
+    const app = new Hono();
+    app.use('/protected', requireAuth);
+    app.get('/protected', (ctx) => c.json({ ok: true }));
 
-    const res = await app.request('/protected')
-    expect(res.status).toBe(401)
-  })
+    const res = await app.request('/protected');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 401 when Authorization header is malformed', async () => {
-    const app = new Hono()
-    app.use('/protected', requireAuth)
-    app.get('/protected', (ctx) => c.json({ ok: true }))
+    const app = new Hono();
+    app.use('/protected', requireAuth);
+    app.get('/protected', (ctx) => c.json({ ok: true }));
 
     const res = await app.request('/protected', {
       headers: { Authorization: 'NotBearer token' },
-    })
-    expect(res.status).toBe(401)
-  })
-})
+    });
+    expect(res.status).toBe(401);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -1687,11 +1688,11 @@ Expected: FAIL — `Cannot find module './auth.js'`
 - [ ] **Step 3: Create `apps/api/src/middleware/auth.ts`**
 
 ```typescript
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import type { Context, MiddlewareHandler, Next } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import type { Context, MiddlewareHandler, Next } from 'hono';
 
 // Initialize Clerk middleware — verifies JWT from Authorization: Bearer <token>
-export const clerkAuth = clerkMiddleware()
+export const clerkAuth = clerkMiddleware();
 
 // requireAuth — use after clerkAuth on protected routes
 // Returns 401 if no valid session is present
@@ -1699,27 +1700,27 @@ export const requireAuth: MiddlewareHandler = async (
   c: Context,
   next: Next,
 ) => {
-  const authHeader = c.req.header('Authorization')
+  const authHeader = c.req.header('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401)
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
 
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
 
   if (!auth?.userId) {
-    return c.json({ success: false, error: 'Unauthorized' }, 401)
+    return c.json({ success: false, error: 'Unauthorized' }, 401);
   }
 
-  await next()
-}
+  await next();
+};
 
 // getAuthUser — call inside a route handler after requireAuth to get the userId
 export function getAuthUser(c: Context): { userId: string } {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId)
-    throw new Error('getAuthUser called outside of authenticated context')
-  return { userId: auth.userId }
+    throw new Error('getAuthUser called outside of authenticated context');
+  return { userId: auth.userId };
 }
 ```
 
@@ -1736,73 +1737,73 @@ Expected: PASS — 2 tests pass.
 Create `apps/api/src/middleware/role.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Hono } from 'hono'
-import type { Role } from '@concert-crawl/types'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Hono } from 'hono';
+import type { Role } from '@concert-crawl/types';
 
 // Mock getAuth so we control what session it returns
-const mockGetAuth = vi.fn()
+const mockGetAuth = vi.fn();
 vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => mockGetAuth(),
-}))
+}));
 
 // Import after mock is set up
-const { requireRole } = await import('./role.js')
+const { requireRole } = await import('./role.js');
 
 describe('requireRole middleware', () => {
   beforeEach(() => {
-    mockGetAuth.mockReset()
-  })
+    mockGetAuth.mockReset();
+  });
 
   function makeApp(minimumRole: Role) {
-    const app = new Hono()
-    app.use('/route', requireRole(minimumRole))
-    app.get('/route', (ctx) => c.json({ ok: true }))
-    return app
+    const app = new Hono();
+    app.use('/route', requireRole(minimumRole));
+    app.get('/route', (ctx) => c.json({ ok: true }));
+    return app;
   }
 
   it('returns 401 when user is not authenticated', async () => {
-    mockGetAuth.mockReturnValue(null)
-    const res = await makeApp('admin').request('/route')
-    expect(res.status).toBe(401)
-  })
+    mockGetAuth.mockReturnValue(null);
+    const res = await makeApp('admin').request('/route');
+    expect(res.status).toBe(401);
+  });
 
   it('returns 403 when user has no role in metadata', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: {} }, // authenticated but no role set
-    })
-    const res = await makeApp('admin').request('/route')
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await makeApp('admin').request('/route');
+    expect(res.status).toBe(403);
+  });
 
   it('returns 403 when user role is below minimum', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: { role: 'user' } },
-    })
-    const res = await makeApp('admin').request('/route')
-    expect(res.status).toBe(403)
-  })
+    });
+    const res = await makeApp('admin').request('/route');
+    expect(res.status).toBe(403);
+  });
 
   it('allows exact role match', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: { role: 'sub_admin' } },
-    })
-    const res = await makeApp('sub_admin').request('/route')
-    expect(res.status).toBe(200)
-  })
+    });
+    const res = await makeApp('sub_admin').request('/route');
+    expect(res.status).toBe(200);
+  });
 
   it('allows higher role to access lower-role route', async () => {
     mockGetAuth.mockReturnValue({
       userId: 'user_123',
       sessionClaims: { publicMetadata: { role: 'admin' } },
-    })
-    const res = await makeApp('user').request('/route')
-    expect(res.status).toBe(200)
-  })
-})
+    });
+    const res = await makeApp('user').request('/route');
+    expect(res.status).toBe(200);
+  });
+});
 ```
 
 - [ ] **Step 6: Run to verify it fails**
@@ -1816,37 +1817,37 @@ Expected: FAIL — `Cannot find module './role.js'`
 - [ ] **Step 7: Create `apps/api/src/middleware/role.ts`**
 
 ```typescript
-import { getAuth } from '@hono/clerk-auth'
-import type { MiddlewareHandler } from 'hono'
-import type { Role } from '@concert-crawl/types'
+import { getAuth } from '@hono/clerk-auth';
+import type { MiddlewareHandler } from 'hono';
+import type { Role } from '@concert-crawl/types';
 
 // Role hierarchy — higher index = more permissions
-const ROLE_HIERARCHY: Role[] = ['user', 'sub_admin', 'admin']
+const ROLE_HIERARCHY: Role[] = ['user', 'sub_admin', 'admin'];
 
 function getRoleLevel(role: Role): number {
-  return ROLE_HIERARCHY.indexOf(role)
+  return ROLE_HIERARCHY.indexOf(role);
 }
 
 // requireRole — returns 403 if user's role is below the required level
 // Must be used after clerkAuth middleware
 export function requireRole(minimumRole: Role): MiddlewareHandler {
   return async (c, next) => {
-    const auth = getAuth(ctx)
+    const auth = getAuth(ctx);
 
     if (!auth?.userId) {
-      return c.json({ success: false, error: 'Unauthorized' }, 401)
+      return c.json({ success: false, error: 'Unauthorized' }, 401);
     }
 
     const userRole = (
       auth.sessionClaims?.publicMetadata as { role?: Role } | undefined
-    )?.role
+    )?.role;
 
     if (!userRole || getRoleLevel(userRole) < getRoleLevel(minimumRole)) {
-      return c.json({ success: false, error: 'Forbidden' }, 403)
+      return c.json({ success: false, error: 'Forbidden' }, 403);
     }
 
-    await next()
-  }
+    await next();
+  };
 }
 ```
 
@@ -2009,22 +2010,22 @@ git commit -m "chore: add Bruno API collection with health check"
 - [ ] **Step 3: Create `apps/web/next.config.ts`**
 
 ```typescript
-import type { NextConfig } from 'next'
+import type { NextConfig } from 'next';
 
 const config: NextConfig = {
   // Enable React strict mode for catching potential issues early
   reactStrictMode: true,
   // Transpile internal workspace packages
   transpilePackages: ['@concert-crawl/types'],
-}
+};
 
-export default config
+export default config;
 ```
 
 - [ ] **Step 4: Create `apps/web/tailwind.config.ts`**
 
 ```typescript
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: [
@@ -2041,9 +2042,9 @@ const config: Config = {
     },
   },
   plugins: [],
-}
+};
 
-export default config
+export default config;
 ```
 
 - [ ] **Step 5: Create `apps/web/postcss.config.js`**
@@ -2054,7 +2055,7 @@ module.exports = {
     tailwindcss: {},
     autoprefixer: {},
   },
-}
+};
 ```
 
 - [ ] **Step 6: Create `apps/web/.env.example`**
@@ -2102,26 +2103,26 @@ body {
 - [ ] **Step 8: Create `apps/web/src/app/layout.tsx`**
 
 ```tsx
-import type { Metadata, Viewport } from 'next'
-import { ClerkProvider } from '@clerk/nextjs'
-import './globals.css'
+import type { Metadata, Viewport } from 'next';
+import { ClerkProvider } from '@clerk/nextjs';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Concert Crawl',
   description: 'Denver concert calendar — find shows at your favorite venues.',
   manifest: '/manifest.json',
-}
+};
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: '#000000',
-}
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <ClerkProvider>
@@ -2131,20 +2132,20 @@ export default function RootLayout({
         </body>
       </html>
     </ClerkProvider>
-  )
+  );
 }
 ```
 
 - [ ] **Step 9: Create `apps/web/src/app/page.tsx`**
 
 ```tsx
-import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 
 export default async function RootPage() {
-  const { userId } = await auth()
+  const { userId } = await auth();
   // Authenticated users go to events; everyone else goes to sign-in
-  redirect(userId ? '/events' : '/sign-in')
+  redirect(userId ? '/events' : '/sign-in');
 }
 ```
 
@@ -2177,20 +2178,20 @@ git commit -m "feat: scaffold Next.js web app with Clerk and Tailwind"
 - [ ] **Step 1: Create `apps/web/middleware.ts`**
 
 ```typescript
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
 // Define public routes — everything else requires authentication
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)', // Stripe and Clerk webhooks — Phase 7
-])
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
-    await auth.protect()
+    await auth.protect();
   }
-})
+});
 
 export const config = {
   matcher: [
@@ -2198,7 +2199,7 @@ export const config = {
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
     '/(api|trpc)(.*)',
   ],
-}
+};
 ```
 
 - [ ] **Step 2: Create sign-in page**
@@ -2206,14 +2207,14 @@ export const config = {
 Create `apps/web/src/app/sign-in/[[...sign-in]]/page.tsx`:
 
 ```tsx
-import { SignIn } from '@clerk/nextjs'
+import { SignIn } from '@clerk/nextjs';
 
 export default function SignInPage() {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <SignIn />
     </main>
-  )
+  );
 }
 ```
 
@@ -2222,14 +2223,14 @@ export default function SignInPage() {
 Create `apps/web/src/app/sign-up/[[...sign-up]]/page.tsx`:
 
 ```tsx
-import { SignUp } from '@clerk/nextjs'
+import { SignUp } from '@clerk/nextjs';
 
 export default function SignUpPage() {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <SignUp />
     </main>
-  )
+  );
 }
 ```
 
@@ -2238,21 +2239,21 @@ export default function SignUpPage() {
 Create `apps/web/src/app/(protected)/layout.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 
 export default async function ProtectedLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   if (!userId) {
-    redirect('/sign-in')
+    redirect('/sign-in');
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 ```
 
@@ -2261,10 +2262,10 @@ export default async function ProtectedLayout({
 Create `apps/web/src/app/(protected)/events/page.tsx`:
 
 ```tsx
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server';
 
 export default async function EventsPage() {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
@@ -2272,27 +2273,27 @@ export default async function EventsPage() {
       <p className="text-gray-500">Events calendar coming in Phase 4.</p>
       <p className="text-sm text-gray-400">Signed in as: {userId}</p>
     </main>
-  )
+  );
 }
 ```
 
 - [ ] **Step 6: Create `apps/web/src/lib/auth.ts`**
 
 ```typescript
-import { auth, currentUser } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
-import type { Role, AuthUser } from '@concert-crawl/types'
+import { auth, currentUser } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import type { Role, AuthUser } from '@concert-crawl/types';
 
 // Returns the current Clerk user mapped to our AuthUser shape.
 // Redirects to /sign-in if unauthenticated.
 export async function getCurrentUser(): Promise<AuthUser> {
-  const user = await currentUser()
+  const user = await currentUser();
 
   if (!user) {
-    redirect('/sign-in')
+    redirect('/sign-in');
   }
 
-  const role = (user.publicMetadata as { role?: Role }).role ?? 'user'
+  const role = (user.publicMetadata as { role?: Role }).role ?? 'user';
 
   return {
     id: user.id,
@@ -2300,25 +2301,25 @@ export async function getCurrentUser(): Promise<AuthUser> {
     role,
     firstName: user.firstName,
     lastName: user.lastName,
-  }
+  };
 }
 
 // Asserts the current user has at least the given role.
 // Redirects to / if insufficient permissions.
 export async function requireRole(minimumRole: Role): Promise<AuthUser> {
-  const user = await getCurrentUser()
-  const hierarchy: Role[] = ['user', 'sub_admin', 'admin']
+  const user = await getCurrentUser();
+  const hierarchy: Role[] = ['user', 'sub_admin', 'admin'];
 
   if (hierarchy.indexOf(user.role) < hierarchy.indexOf(minimumRole)) {
-    redirect('/')
+    redirect('/');
   }
 
-  return user
+  return user;
 }
 
 // Returns the raw Clerk auth object (userId, sessionId, etc.)
 // Use in Server Actions and Route Handlers.
-export { auth }
+export { auth };
 ```
 
 - [ ] **Step 7: Copy env and start the dev server**
@@ -2384,8 +2385,8 @@ git commit -m "feat: add Clerk route protection and auth utilities to Next.js ap
 // Crawler stub — implemented in Phase 3
 console.warn(
   '🕷️  Concert Crawl crawler — not yet implemented. Coming in Phase 3.',
-)
-process.exit(0)
+);
+process.exit(0);
 ```
 
 - [ ] **Step 3: Commit**

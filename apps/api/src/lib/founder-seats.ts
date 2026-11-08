@@ -13,26 +13,26 @@
 // (seats are lifetime claims, not concurrent-subscriber counts) — callers
 // enforce that gate; this helper only guards double-restoration.
 
-import { and, eq, lt, sql } from 'drizzle-orm'
-import { db, founderWindow, subscriptionEvents } from '@concert-crawl/db'
-import type { DbExecutor } from './db-executor.js'
-import { apiLogger } from './logger.js'
+import { and, eq, lt, sql } from 'drizzle-orm';
+import { db, founderWindow, subscriptionEvents } from '@concert-crawl/db';
+import type { DbExecutor } from './db-executor.js';
+import { apiLogger } from './logger.js';
 
 export type SeatRestoreReason =
-  'checkout_abandoned' | 'incomplete_expired' | 'never_paid_deleted'
+  'checkout_abandoned' | 'incomplete_expired' | 'never_paid_deleted';
 
 export type SeatRestoreOutcome =
-  'restored' | 'already_restored' | 'seats_already_full'
+  'restored' | 'already_restored' | 'seats_already_full';
 
 export interface SeatRestoreInput {
-  userId: string
+  userId: string;
   /** The Stripe subscription whose claim is being released. */
-  subscriptionId: string
+  subscriptionId: string;
   /** Seat number from the subscription's founderSeatNumber metadata. */
-  seatNumber: number | null
-  reason: SeatRestoreReason
+  seatNumber: number | null;
+  reason: SeatRestoreReason;
   /** Correlating webhook event, when webhook-originated. */
-  stripeEventId?: string | null
+  stripeEventId?: string | null;
 }
 
 export const restoreFounderSeat = async (
@@ -50,7 +50,7 @@ export const restoreFounderSeat = async (
       .select({ id: founderWindow.id })
       .from(founderWindow)
       .where(eq(founderWindow.id, 1))
-      .for('update')
+      .for('update');
     if (!windowRow) {
       // Configuration problem (migration/seed), not seat-accounting drift —
       // log it as such instead of falling through to a misleading
@@ -58,8 +58,8 @@ export const restoreFounderSeat = async (
       apiLogger.error(
         { subscriptionId: input.subscriptionId, reason: input.reason },
         'founder-seats: restore skipped — founder_window singleton row missing',
-      )
-      return 'seats_already_full'
+      );
+      return 'seats_already_full';
     }
 
     // Idempotency: at most one restore per claiming subscription.
@@ -72,13 +72,13 @@ export const restoreFounderSeat = async (
           sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${input.subscriptionId}`,
         ),
       )
-      .limit(1)
+      .limit(1);
     if (existingRestore) {
       apiLogger.info(
         { subscriptionId: input.subscriptionId, reason: input.reason },
         'founder-seats: seat already restored for this claim — skipping',
-      )
-      return 'already_restored'
+      );
+      return 'already_restored';
     }
 
     // Guarded increment — seats never exceed seatsTotal.
@@ -91,7 +91,7 @@ export const restoreFounderSeat = async (
           lt(founderWindow.seatsRemaining, founderWindow.seatsTotal),
         ),
       )
-      .returning({ seatsRemaining: founderWindow.seatsRemaining })
+      .returning({ seatsRemaining: founderWindow.seatsRemaining });
     if (restored.length === 0) {
       // Nothing incremented — the window is already at seatsTotal, which
       // means seat accounting drifted somewhere. Loud log, no event write
@@ -99,8 +99,8 @@ export const restoreFounderSeat = async (
       apiLogger.error(
         { subscriptionId: input.subscriptionId, reason: input.reason },
         'founder-seats: restore skipped — seats_remaining already at seats_total',
-      )
-      return 'seats_already_full'
+      );
+      return 'seats_already_full';
     }
 
     await tx.insert(subscriptionEvents).values({
@@ -112,7 +112,7 @@ export const restoreFounderSeat = async (
         seatNumber: input.seatNumber,
         reason: input.reason,
       },
-    })
+    });
     apiLogger.info(
       {
         subscriptionId: input.subscriptionId,
@@ -120,9 +120,9 @@ export const restoreFounderSeat = async (
         reason: input.reason,
       },
       'founder-seats: seat restored',
-    )
-    return 'restored'
-  })
+    );
+    return 'restored';
+  });
 
 /**
  * True when the subscription never produced a paid invoice — no
@@ -142,9 +142,9 @@ export const subscriptionNeverPaid = async (
         sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${subscriptionId}`,
       ),
     )
-    .limit(1)
-  return paidEvent === undefined
-}
+    .limit(1);
+  return paidEvent === undefined;
+};
 
 /**
  * Parses the founderSeatNumber stamped into Stripe subscription metadata at
@@ -153,8 +153,8 @@ export const subscriptionNeverPaid = async (
 export const parseFounderSeatNumber = (
   metadata: Record<string, string> | null | undefined,
 ): number | null => {
-  const raw = metadata?.['founderSeatNumber']
-  if (raw === undefined) return null
-  const parsed = Number.parseInt(raw, 10)
-  return Number.isNaN(parsed) ? null : parsed
-}
+  const raw = metadata?.['founderSeatNumber'];
+  if (raw === undefined) return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+};

@@ -1,41 +1,41 @@
-'use client'
+'use client';
 
-import { type FC, useCallback } from 'react'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Pagination } from '@/components/admin/primitives'
+import { type FC, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Pagination } from '@/components/admin/primitives';
 import {
   type ContestSortOrder,
   useReviewContestsQuery,
-} from '@/lib/queries/admin-contests'
+} from '@/lib/queries/admin-contests';
 import {
   parsePaginationFromParams,
   serializePaginationToParams,
   EMPTY_PAGINATION,
   type PaginationState,
-} from '../all/filters'
-import { PriceDisputesQueue } from '../PriceDisputesQueue'
-import { REVIEW_CONTEST_COPY } from '../definitions/copy'
+} from '../all/filters';
+import { PriceDisputesQueue } from '../PriceDisputesQueue';
+import { REVIEW_CONTEST_COPY } from '../definitions/copy';
 
 // Contests-tab URL keys beyond the shared page/pageSize pair. `sort` and
 // `disputes` deep-link the header ghost buttons (#758); other tabs ignore
 // both keys, and ReviewPageClient's tab switch only strips pagination, so a
 // lingering sort param on another tab is harmless.
-const SORT_PARAM = 'sort'
-const SORT_DESC = 'filed-at-desc'
-const SCOPE_PARAM = 'disputes'
-const SCOPE_ALL = 'all'
+const SORT_PARAM = 'sort';
+const SORT_DESC = 'filed-at-desc';
+const SCOPE_PARAM = 'disputes';
+const SCOPE_ALL = 'all';
 
 interface ContestsUrlState {
-  pagination: PaginationState
-  sortOrder: ContestSortOrder
-  showAll: boolean
+  pagination: PaginationState;
+  sortOrder: ContestSortOrder;
+  showAll: boolean;
 }
 
 const parseUrlState = (params: URLSearchParams): ContestsUrlState => ({
   pagination: parsePaginationFromParams(params),
   sortOrder: params.get(SORT_PARAM) === SORT_DESC ? SORT_DESC : 'filed-at-asc',
   showAll: params.get(SCOPE_PARAM) === SCOPE_ALL,
-})
+});
 
 // Tab body for the Contests review tab. Mounts the queue when there's
 // data and surfaces minimal loading / error states off the React Query
@@ -47,45 +47,45 @@ const parseUrlState = (params: URLSearchParams): ContestsUrlState => ({
 // the shared review pagination keys (stripped on tab switch by
 // ReviewPageClient), sort + disputes are contests-specific.
 export const ContestsTabContent: FC = () => {
-  const router = useRouter()
-  const pathname = usePathname() ?? ''
-  const searchParams = useSearchParams()
-  const params = new URLSearchParams(searchParams?.toString() ?? '')
-  const { pagination, sortOrder, showAll } = parseUrlState(params)
+  const router = useRouter();
+  const pathname = usePathname() ?? '';
+  const searchParams = useSearchParams();
+  const params = new URLSearchParams(searchParams?.toString() ?? '');
+  const { pagination, sortOrder, showAll } = parseUrlState(params);
 
   const pushParams = useCallback(
     (next: URLSearchParams) => {
-      const query = next.toString()
-      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
+      const query = next.toString();
+      router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
     },
     [pathname, router],
-  )
+  );
 
   const onPaginationChange = useCallback(
     (next: PaginationState) => {
-      const base = new URLSearchParams(searchParams?.toString() ?? '')
-      pushParams(serializePaginationToParams(next, base))
+      const base = new URLSearchParams(searchParams?.toString() ?? '');
+      pushParams(serializePaginationToParams(next, base));
     },
     [pushParams, searchParams],
-  )
+  );
 
   // Sort + scope toggles reset to page 1 — flipping either changes which
   // rows exist on every page, so staying on page N would show arbitrary
   // rows. Mirrors the filter-change convention on the All events tab.
   const setListParam = useCallback(
     (key: string, value: string | null) => {
-      const base = new URLSearchParams(searchParams?.toString() ?? '')
-      if (value === null) base.delete(key)
-      else base.set(key, value)
+      const base = new URLSearchParams(searchParams?.toString() ?? '');
+      if (value === null) base.delete(key);
+      else base.set(key, value);
       pushParams(
         serializePaginationToParams(
           { ...EMPTY_PAGINATION, pageSize: pagination.pageSize },
           base,
         ),
-      )
+      );
     },
     [pagination.pageSize, pushParams, searchParams],
-  )
+  );
 
   const { data, isPending, isFetching, isError, refetch } =
     useReviewContestsQuery({
@@ -93,7 +93,7 @@ export const ContestsTabContent: FC = () => {
       offset: (pagination.page - 1) * pagination.pageSize,
       sort: sortOrder,
       includeArchived: showAll,
-    })
+    });
 
   if (isPending) {
     return (
@@ -108,7 +108,7 @@ export const ContestsTabContent: FC = () => {
       >
         {REVIEW_CONTEST_COPY.queue.loading}
       </div>
-    )
+    );
   }
 
   if (isError) {
@@ -152,11 +152,11 @@ export const ContestsTabContent: FC = () => {
           {REVIEW_CONTEST_COPY.queue.errorRetry}
         </button>
       </div>
-    )
+    );
   }
 
-  const items = data?.items ?? []
-  const total = data?.total ?? 0
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
 
   // Pagination MUST render whenever there's something to page — including
   // the items=[] + total>0 deep-link case (?page=99 past the end), where
@@ -180,12 +180,12 @@ export const ContestsTabContent: FC = () => {
         loading={isFetching}
         itemLabel={REVIEW_CONTEST_COPY.queue.paginationItemLabel}
       />
-    ) : undefined
+    ) : undefined;
 
   // Queue auto-hides on items=[]; render the bare pager in the deep-link
   // recovery case so clamp-sync can run (it corrects the URL on mount).
   if (items.length === 0) {
-    return paginationFooter ?? null
+    return paginationFooter ?? null;
   }
 
   return (
@@ -202,5 +202,5 @@ export const ContestsTabContent: FC = () => {
       }
       footer={paginationFooter}
     />
-  )
-}
+  );
+};

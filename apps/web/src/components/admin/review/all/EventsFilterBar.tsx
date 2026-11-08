@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { StatusBadge } from '@/components/admin/primitives'
+import { useEffect, useRef, useState } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { StatusBadge } from '@/components/admin/primitives';
 import {
   EMPTY_FILTERS,
   MISSING_DATA_FLAGS,
@@ -12,11 +12,11 @@ import {
   type AllEventsView,
   type MissingDataFlag,
   type VerificationFilter,
-} from './filters'
+} from './filters';
 
 export interface EventsFilterBarProps {
-  filters: AllEventsFilters
-  onChange: (next: AllEventsFilters) => void
+  filters: AllEventsFilters;
+  onChange: (next: AllEventsFilters) => void;
 }
 
 // Local debounce for the search input. The input is locally controlled so
@@ -25,16 +25,16 @@ export interface EventsFilterBarProps {
 // 300ms is short enough to feel live but long enough to skip the 1-letter
 // states of multi-character words. The 2-char minimum lives in filters.ts
 // so both the input and `filtersToFetchQuery` share the same rule.
-const SEARCH_DEBOUNCE_MS = 300
+const SEARCH_DEBOUNCE_MS = 300;
 
-const COPY = ADMIN_COPY.review.allEvents.filters
+const COPY = ADMIN_COPY.review.allEvents.filters;
 
 // Selecting one clears the other: the views overlap, so holding both would
 // just mean the narrower one.
 const VIEW_CHIPS: ReadonlyArray<{
-  view: Exclude<AllEventsView, 'all'>
-  label: string
-  ariaLabel: string
+  view: Exclude<AllEventsView, 'all'>;
+  label: string;
+  ariaLabel: string;
 }> = [
   {
     view: 'hidden-flagged-for-review',
@@ -46,7 +46,7 @@ const VIEW_CHIPS: ReadonlyArray<{
     label: COPY.nonConcertChipLabel,
     ariaLabel: COPY.nonConcertChipAriaLabel,
   },
-]
+];
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -55,20 +55,20 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
   color: 'var(--fg-subtle)',
-}
+};
 
 const VerificationSegmented = ({
   value,
   onChange,
 }: {
-  value: VerificationFilter
-  onChange: (next: VerificationFilter) => void
+  value: VerificationFilter;
+  onChange: (next: VerificationFilter) => void;
 }) => {
   const options: ReadonlyArray<{ key: VerificationFilter; label: string }> = [
     { key: 'all', label: COPY.verification.all },
     { key: 'verified', label: COPY.verification.verified },
     { key: 'unverified', label: COPY.verification.unverified },
-  ]
+  ];
   return (
     <div
       role="group"
@@ -85,7 +85,7 @@ const VerificationSegmented = ({
       }}
     >
       {options.map(({ key, label }) => {
-        const active = value === key
+        const active = value === key;
         return (
           <button
             key={key}
@@ -110,34 +110,34 @@ const VerificationSegmented = ({
           >
             {label}
           </button>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 
 export const EventsFilterBar = ({
   filters,
   onChange,
 }: EventsFilterBarProps) => {
-  const [genreDraft, setGenreDraft] = useState('')
-  const [searchDraft, setSearchDraft] = useState(filters.query)
-  const activeCount = countActiveFilters(filters)
+  const [genreDraft, setGenreDraft] = useState('');
+  const [searchDraft, setSearchDraft] = useState(filters.query);
+  const activeCount = countActiveFilters(filters);
 
   const update = (patch: Partial<AllEventsFilters>) => {
-    onChange({ ...filters, ...patch })
-  }
+    onChange({ ...filters, ...patch });
+  };
 
   // Sync the local draft when filters.query changes from outside (deep link,
   // Clear all, etc). Compared as strings so an externally-applied trim still
   // reseeds the input correctly.
-  const lastSyncedQuery = useRef(filters.query)
+  const lastSyncedQuery = useRef(filters.query);
   useEffect(() => {
     if (filters.query !== lastSyncedQuery.current) {
-      lastSyncedQuery.current = filters.query
-      setSearchDraft(filters.query)
+      lastSyncedQuery.current = filters.query;
+      setSearchDraft(filters.query);
     }
-  }, [filters.query])
+  }, [filters.query]);
 
   // Sync search-draft → parent. Empty string bypasses the debounce so
   // clearing the input resets the result set immediately. 1-char drafts are
@@ -145,43 +145,43 @@ export const EventsFilterBar = ({
   // URL deep-links can't slip a single character through). ≥2-char drafts
   // emit after 300ms.
   useEffect(() => {
-    const trimmed = searchDraft.trim()
+    const trimmed = searchDraft.trim();
     // Below threshold but not empty: hold (typing in progress). Empty falls
     // through to the immediate-emit branch.
-    if (trimmed.length > 0 && trimmed.length < SEARCH_MIN_CHARS) return
-    if (trimmed === filters.query.trim()) return
+    if (trimmed.length > 0 && trimmed.length < SEARCH_MIN_CHARS) return;
+    if (trimmed === filters.query.trim()) return;
     if (trimmed.length === 0) {
-      lastSyncedQuery.current = trimmed
-      onChange({ ...filters, query: trimmed })
-      return
+      lastSyncedQuery.current = trimmed;
+      onChange({ ...filters, query: trimmed });
+      return;
     }
     const handle = window.setTimeout(() => {
-      lastSyncedQuery.current = trimmed
-      onChange({ ...filters, query: trimmed })
-    }, SEARCH_DEBOUNCE_MS)
-    return () => window.clearTimeout(handle)
-  }, [searchDraft, filters, onChange])
+      lastSyncedQuery.current = trimmed;
+      onChange({ ...filters, query: trimmed });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [searchDraft, filters, onChange]);
 
   const addGenre = () => {
-    const tag = genreDraft.trim().toLowerCase()
+    const tag = genreDraft.trim().toLowerCase();
     if (!tag || filters.genre.includes(tag)) {
-      setGenreDraft('')
-      return
+      setGenreDraft('');
+      return;
     }
-    update({ genre: [...filters.genre, tag] })
-    setGenreDraft('')
-  }
+    update({ genre: [...filters.genre, tag] });
+    setGenreDraft('');
+  };
 
   const removeGenre = (tag: string) => {
-    update({ genre: filters.genre.filter((existing) => existing !== tag) })
-  }
+    update({ genre: filters.genre.filter((existing) => existing !== tag) });
+  };
 
   const toggleMissing = (flag: MissingDataFlag) => {
     const next = filters.missingData.includes(flag)
       ? filters.missingData.filter((existing) => existing !== flag)
-      : [...filters.missingData, flag]
-    update({ missingData: next })
-  }
+      : [...filters.missingData, flag];
+    update({ missingData: next });
+  };
 
   return (
     <div
@@ -204,7 +204,7 @@ export const EventsFilterBar = ({
         }}
       >
         {VIEW_CHIPS.map(({ view, label, ariaLabel }) => {
-          const active = filters.view === view
+          const active = filters.view === view;
           return (
             <button
               key={view}
@@ -234,7 +234,7 @@ export const EventsFilterBar = ({
             >
               {label}
             </button>
-          )
+          );
         })}
       </div>
 
@@ -374,8 +374,8 @@ export const EventsFilterBar = ({
             onChange={(evt) => setGenreDraft(evt.target.value)}
             onKeyDown={(evt) => {
               if (evt.key === 'Enter') {
-                evt.preventDefault()
-                addGenre()
+                evt.preventDefault();
+                addGenre();
               }
             }}
             placeholder={COPY.genreInputPlaceholder}
@@ -430,7 +430,7 @@ export const EventsFilterBar = ({
           }}
         >
           {MISSING_DATA_FLAGS.map((flag) => {
-            const checked = filters.missingData.includes(flag)
+            const checked = filters.missingData.includes(flag);
             return (
               <label
                 key={flag}
@@ -451,7 +451,7 @@ export const EventsFilterBar = ({
                 />
                 {COPY.missingFlag[flag]}
               </label>
-            )
+            );
           })}
         </div>
       </div>
@@ -488,5 +488,5 @@ export const EventsFilterBar = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

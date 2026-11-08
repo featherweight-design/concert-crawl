@@ -5,12 +5,12 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 export const notificationTypeEnum = pgEnum('notification_type', [
   'admin_alert',
   'user_notification',
-])
+]);
 
 export const notifications = pgTable(
   'notifications',
@@ -39,4 +39,4 @@ export const notifications = pgTable(
       table.dedupeKey,
     ),
   }),
-)
+);

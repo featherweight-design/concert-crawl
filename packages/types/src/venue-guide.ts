@@ -22,9 +22,9 @@ export const GUIDE_CHIP_ORDER = [
   'will_call',
   'food_drink',
   'transit',
-] as const
+] as const;
 
-export type GuideChipKey = (typeof GUIDE_CHIP_ORDER)[number]
+export type GuideChipKey = (typeof GUIDE_CHIP_ORDER)[number];
 
 /**
  * Max length of any authored guide field — each chip body and the insider tip.
@@ -33,7 +33,7 @@ export type GuideChipKey = (typeof GUIDE_CHIP_ORDER)[number]
  * `maxLength` that stops the admin typing one are the same number. Drift
  * between them costs the admin their whole save to a raw validation error.
  */
-export const GUIDE_FIELD_MAX_LENGTH = 400
+export const GUIDE_FIELD_MAX_LENGTH = 400;
 
 /**
  * Reserved for #997. Rendered as disabled ghosts in the admin picker and
@@ -46,22 +46,22 @@ export const GUIDE_CHIP_V2_KEYS = [
   'restrooms',
   'atm',
   'cell_service',
-] as const
+] as const;
 
-export type GuideChipV2Key = (typeof GUIDE_CHIP_V2_KEYS)[number]
+export type GuideChipV2Key = (typeof GUIDE_CHIP_V2_KEYS)[number];
 
 /** Real type predicate over the const tuple — no casts, no lookup object. */
 export const isGuideChipKey = (value: string): value is GuideChipKey =>
-  GUIDE_CHIP_ORDER.some((key) => key === value)
+  GUIDE_CHIP_ORDER.some((key) => key === value);
 
 /** One persisted chip. `blank` is absence — never a row. */
 export interface VenueGuideChip {
-  chipType: GuideChipKey
-  body: string
-  isPlaceholder: boolean
+  chipType: GuideChipKey;
+  body: string;
+  isPlaceholder: boolean;
 }
 
-export type GuideChipState = 'blank' | 'authored' | 'honest_placeholder'
+export type GuideChipState = 'blank' | 'authored' | 'honest_placeholder';
 
 /**
  * `undefined` (no row) and a whitespace-only body are both `blank`.
@@ -71,15 +71,15 @@ export type GuideChipState = 'blank' | 'authored' | 'honest_placeholder'
 export const deriveChipState = (
   input: { body: string; isPlaceholder: boolean } | undefined,
 ): GuideChipState => {
-  if (input === undefined) return 'blank'
-  if (input.isPlaceholder) return 'honest_placeholder'
-  return input.body.trim().length > 0 ? 'authored' : 'blank'
-}
+  if (input === undefined) return 'blank';
+  if (input.isPlaceholder) return 'honest_placeholder';
+  return input.body.trim().length > 0 ? 'authored' : 'blank';
+};
 
 export type GuidePublishState =
   | { kind: 'ready' }
   | { kind: 'ready_with_placeholder' }
-  | { kind: 'blocked'; reason: 'accessibility_required' }
+  | { kind: 'blocked'; reason: 'accessibility_required' };
 
 /**
  * The publish gate. Never persisted — the admin badge and the server-side
@@ -87,15 +87,15 @@ export type GuidePublishState =
  * something the server will reject.
  */
 export const deriveGuidePublishState = (input: {
-  accessibilityBody: string
-  accessibilityPlaceholder: boolean
+  accessibilityBody: string;
+  accessibilityPlaceholder: boolean;
 }): GuidePublishState => {
-  if (input.accessibilityPlaceholder) return { kind: 'ready_with_placeholder' }
-  if (input.accessibilityBody.trim().length > 0) return { kind: 'ready' }
-  return { kind: 'blocked', reason: 'accessibility_required' }
-}
+  if (input.accessibilityPlaceholder) return { kind: 'ready_with_placeholder' };
+  if (input.accessibilityBody.trim().length > 0) return { kind: 'ready' };
+  return { kind: 'blocked', reason: 'accessibility_required' };
+};
 
-export type GuideViewerMode = 'first_timer' | 'returner'
+export type GuideViewerMode = 'first_timer' | 'returner';
 
 /**
  * `hasAttendedVenue === null` means "detection not wired yet" (pre-#70).
@@ -105,32 +105,32 @@ export type GuideViewerMode = 'first_timer' | 'returner'
  * viewer we positively know has attended gets the collapsed returner state.
  */
 export const resolveGuideViewerMode = (input: {
-  isSignedIn: boolean
-  hasAttendedVenue: boolean | null
+  isSignedIn: boolean;
+  hasAttendedVenue: boolean | null;
 }): GuideViewerMode =>
   input.isSignedIn && input.hasAttendedVenue === true
     ? 'returner'
-    : 'first_timer'
+    : 'first_timer';
 
-export type GuideDensity = 'populated' | 'thin'
+export type GuideDensity = 'populated' | 'thin';
 
 /** `thin` === accessibility is the only chip AND there is no insider tip. */
 export const deriveGuideDensity = (input: {
-  chips: VenueGuideChip[]
-  insiderTip: string | null
+  chips: VenueGuideChip[];
+  insiderTip: string | null;
 }): GuideDensity => {
-  const hasInsiderTip = (input.insiderTip ?? '').trim().length > 0
-  if (hasInsiderTip) return 'populated'
+  const hasInsiderTip = (input.insiderTip ?? '').trim().length > 0;
+  if (hasInsiderTip) return 'populated';
   const nonAccessibilityChips = input.chips.filter(
     (chip) => chip.chipType !== 'accessibility',
-  )
-  return nonAccessibilityChips.length > 0 ? 'populated' : 'thin'
-}
+  );
+  return nonAccessibilityChips.length > 0 ? 'populated' : 'thin';
+};
 
 export interface VenueGuide {
   /** Ordered by GUIDE_CHIP_ORDER — accessibility first. */
-  chips: VenueGuideChip[]
-  insiderTip: string | null
+  chips: VenueGuideChip[];
+  insiderTip: string | null;
   /**
    * ISO 8601, or null for a guide that has never been published.
    *
@@ -139,5 +139,5 @@ export interface VenueGuide {
    * an unpublished guide at all — it serves `VenuePublic.guide: null` — so a
    * non-null value there is an invariant of that route, not of this type.
    */
-  publishedAt: string | null
+  publishedAt: string | null;
 }

@@ -40,33 +40,33 @@ it('excludes rows with first_missing_at set from the list response', async () =>
   const venue = await seedVenue({
     name: 'Hide Missing Venue',
     slug: 'hide-missing-venue',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Active Show',
     artist: 'Active Artist',
     date: futureDate(7),
     status: 'upcoming',
     firstMissingAt: null,
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Stale Show',
     artist: 'Stale Artist',
     date: futureDate(8),
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-  })
+  });
 
-  const res = await app.request('/v1/events?venueSlug=hide-missing-venue')
-  expect(res.status).toBe(200)
+  const res = await app.request('/v1/events?venueSlug=hide-missing-venue');
+  expect(res.status).toBe(200);
   const body = (await res.json()) as {
-    success: boolean
-    data: { data: { title: string }[]; total: number }
-  }
-  expect(body.success).toBe(true)
-  expect(body.data.total).toBe(1)
-  expect(body.data.data).toHaveLength(1)
-  expect(body.data.data[0]?.title).toBe('Active Show')
-})
+    success: boolean;
+    data: { data: { title: string }[]; total: number };
+  };
+  expect(body.success).toBe(true);
+  expect(body.data.total).toBe(1);
+  expect(body.data.data).toHaveLength(1);
+  expect(body.data.data[0]?.title).toBe('Active Show');
+});
 ```
 
 Add to the `describe('GET /v1/events/:id', ...)` block (search for it in the file):
@@ -76,20 +76,20 @@ it('returns 404 when the event is flagged first_missing_at', async () => {
   const venue = await seedVenue({
     name: 'Detail Missing Venue',
     slug: 'detail-missing-venue',
-  })
+  });
   const evt = await seedEvent(venue.id, {
     title: 'Stale Detail',
     artist: 'Stale Detail Artist',
     date: futureDate(10),
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-  })
+  });
 
-  const res = await app.request(`/v1/events/${evt.id}`)
-  expect(res.status).toBe(404)
-  const body = (await res.json()) as { success: boolean; error?: string }
-  expect(body.success).toBe(false)
-})
+  const res = await app.request(`/v1/events/${evt.id}`);
+  expect(res.status).toBe(404);
+  const body = (await res.json()) as { success: boolean; error?: string };
+  expect(body.success).toBe(false);
+});
 ```
 
 Add a new `describe('GET /v1/events/genres', ...)` block (or extend if one exists):
@@ -99,7 +99,7 @@ it('omits genres that only appear on first_missing_at rows', async () => {
   const venue = await seedVenue({
     name: 'Genre Missing Venue',
     slug: 'genre-missing-venue',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Stale Genre Show',
     artist: 'Stale Genre Artist',
@@ -107,13 +107,13 @@ it('omits genres that only appear on first_missing_at rows', async () => {
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
     genre: ['ghost-genre-do-not-show'],
-  })
+  });
 
-  const res = await app.request('/v1/events/genres')
-  expect(res.status).toBe(200)
-  const body = (await res.json()) as { success: boolean; data: string[] }
-  expect(body.data).not.toContain('ghost-genre-do-not-show')
-})
+  const res = await app.request('/v1/events/genres');
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as { success: boolean; data: string[] };
+  expect(body.data).not.toContain('ghost-genre-do-not-show');
+});
 ```
 
 If `seedEvent` does not currently accept `firstMissingAt` or `genre`, extend the helper in `apps/api/src/test/helpers/seed.ts` to pass them through to the insert. Confirm the helper supports both before running.
@@ -140,7 +140,7 @@ const conditions: SQL[] = [
   // (#607). The crawler clears firstMissingAt on re-extraction, so a row
   // that genuinely re-appears becomes visible again automatically.
   isNull(events.firstMissingAt),
-]
+];
 ```
 
 Note: `isNull` is already imported on line 27.
@@ -164,7 +164,7 @@ In `apps/api/src/routes/events.ts`, modify the genres SQL at line 229:
 ```typescript
 const rows = await db.execute(
   sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL ORDER BY genre`,
-)
+);
 ```
 
 - [ ] **Step 6: Run the new tests and confirm they PASS**
@@ -214,63 +214,63 @@ it('GET /v1/venues — upcomingCount excludes first_missing_at rows', async () =
   const venue = await seedVenue({
     name: 'Count Missing Venue',
     slug: 'count-missing-venue',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Active',
     artist: 'A',
     date: futureDate(5),
     status: 'upcoming',
     firstMissingAt: null,
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Stale',
     artist: 'B',
     date: futureDate(6),
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-  })
+  });
 
-  const res = await app.request('/v1/venues')
+  const res = await app.request('/v1/venues');
   const body = (await res.json()) as {
-    data: { slug: string; upcomingCount: number }[]
-  }
+    data: { slug: string; upcomingCount: number }[];
+  };
   const row = body.data.find(
     (venueRow) => venueRow.slug === 'count-missing-venue',
-  )
-  expect(row?.upcomingCount).toBe(1)
-})
+  );
+  expect(row?.upcomingCount).toBe(1);
+});
 
 it('GET /v1/venues/:slug — upcomingEvents excludes first_missing_at rows and count matches', async () => {
   const venue = await seedVenue({
     name: 'Detail Missing Venue',
     slug: 'detail-missing-venue-2',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Active',
     artist: 'A',
     date: futureDate(5),
     status: 'upcoming',
     firstMissingAt: null,
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Stale',
     artist: 'B',
     date: futureDate(6),
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-  })
+  });
 
-  const res = await app.request('/v1/venues/detail-missing-venue-2')
+  const res = await app.request('/v1/venues/detail-missing-venue-2');
   const body = (await res.json()) as {
     data: {
-      venue: { upcomingCount: number }
-      upcomingEvents: { title: string }[]
-    }
-  }
-  expect(body.data.venue.upcomingCount).toBe(1)
-  expect(body.data.upcomingEvents).toHaveLength(1)
-  expect(body.data.upcomingEvents[0]?.title).toBe('Active')
-})
+      venue: { upcomingCount: number };
+      upcomingEvents: { title: string }[];
+    };
+  };
+  expect(body.data.venue.upcomingCount).toBe(1);
+  expect(body.data.upcomingEvents).toHaveLength(1);
+  expect(body.data.upcomingEvents[0]?.title).toBe('Active');
+});
 ```
 
 - [ ] **Step 2: Run tests and confirm they FAIL**
@@ -298,7 +298,7 @@ import {
   isNotNull,
   isNull,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 ```
 
 Modify the `eventCounts` query (lines 51-61):
@@ -316,7 +316,7 @@ const eventCounts = await db
       isNull(events.firstMissingAt),
     ),
   )
-  .groupBy(events.venueId)
+  .groupBy(events.venueId);
 ```
 
 - [ ] **Step 4: Add the filter to the venue-detail conditions array**
@@ -330,7 +330,7 @@ const conditions: SQL[] = [
   gte(events.date, today),
   // Hide crawler-flagged stale rows from venue-detail upcoming list (#607).
   isNull(events.firstMissingAt),
-]
+];
 ```
 
 This filter is shared between the count query (line 113) and the list query (line 120) because both use the same `conditions` array — so one change covers both.
@@ -373,29 +373,29 @@ it('GET /v1/search/popular excludes first_missing_at rows', async () => {
   const venue = await seedVenue({
     name: 'Popular Missing Venue',
     slug: 'popular-missing-venue',
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Active Popular',
     artist: 'Pop A',
     date: futureDate(5),
     status: 'upcoming',
     firstMissingAt: null,
-  })
+  });
   await seedEvent(venue.id, {
     title: 'Stale Popular',
     artist: 'Pop B',
     date: futureDate(6),
     status: 'upcoming',
     firstMissingAt: new Date('2026-06-17T09:00:00Z'),
-  })
+  });
 
-  const res = await app.request('/v1/search/popular')
-  expect(res.status).toBe(200)
-  const body = (await res.json()) as { data: { title: string }[] }
-  const titles = body.data.map((row) => row.title)
-  expect(titles).toContain('Active Popular')
-  expect(titles).not.toContain('Stale Popular')
-})
+  const res = await app.request('/v1/search/popular');
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as { data: { title: string }[] };
+  const titles = body.data.map((row) => row.title);
+  expect(titles).toContain('Active Popular');
+  expect(titles).not.toContain('Stale Popular');
+});
 ```
 
 - [ ] **Step 2: Run and confirm it FAILS**
@@ -411,7 +411,7 @@ Expected: FAIL (stale row appears in popular).
 In `apps/api/src/routes/search.ts`:
 
 ```typescript
-import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 ```
 
 Modify the `where` clause (line 37):

@@ -5,7 +5,7 @@
 // recent attendance rather than arbitrarily, so the output is stable across
 // renders and safe for SSR.
 
-import type { HistoryShow, HistoryStats } from '@concert-crawl/types'
+import type { HistoryShow, HistoryStats } from '@concert-crawl/types';
 
 const EMPTY_STATS: HistoryStats = {
   nights: 0,
@@ -16,7 +16,7 @@ const EMPTY_STATS: HistoryStats = {
   first: null,
   last: null,
   totalSpent: null,
-}
+};
 
 /**
  * Highest-count key, ties broken by whichever key was most recently attended.
@@ -26,41 +26,41 @@ const topBy = (
   shows: HistoryShow[],
   pick: (show: HistoryShow) => string | null,
 ): string | null => {
-  const counts = new Map<string, { count: number; recency: number }>()
+  const counts = new Map<string, { count: number; recency: number }>();
 
   for (const show of shows) {
-    const key = pick(show)
-    if (!key) continue
-    const stamp = Date.parse(show.attendingAt)
-    const recency = Number.isNaN(stamp) ? 0 : stamp
-    const existing = counts.get(key)
+    const key = pick(show);
+    if (!key) continue;
+    const stamp = Date.parse(show.attendingAt);
+    const recency = Number.isNaN(stamp) ? 0 : stamp;
+    const existing = counts.get(key);
     if (existing) {
-      existing.count += 1
-      existing.recency = Math.max(existing.recency, recency)
+      existing.count += 1;
+      existing.recency = Math.max(existing.recency, recency);
     } else {
-      counts.set(key, { count: 1, recency })
+      counts.set(key, { count: 1, recency });
     }
   }
 
-  let best: { key: string; count: number; recency: number } | null = null
+  let best: { key: string; count: number; recency: number } | null = null;
   for (const [key, { count, recency }] of counts) {
     if (
       !best ||
       count > best.count ||
       (count === best.count && recency > best.recency)
     ) {
-      best = { key, count, recency }
+      best = { key, count, recency };
     }
   }
 
-  return best?.key ?? null
-}
+  return best?.key ?? null;
+};
 
 export const computeHistoryStats = (shows: HistoryShow[]): HistoryStats => {
-  if (shows.length === 0) return { ...EMPTY_STATS }
+  if (shows.length === 0) return { ...EMPTY_STATS };
 
-  const dates = shows.map((show) => show.date).sort()
-  const priced = shows.filter((show) => show.priceFinal !== null)
+  const dates = shows.map((show) => show.date).sort();
+  const priced = shows.filter((show) => show.priceFinal !== null);
 
   return {
     nights: shows.length,
@@ -75,5 +75,5 @@ export const computeHistoryStats = (shows: HistoryShow[]): HistoryStats => {
       priced.length === 0
         ? null
         : priced.reduce((sum, show) => sum + (show.priceFinal ?? 0), 0),
-  }
-}
+  };
+};

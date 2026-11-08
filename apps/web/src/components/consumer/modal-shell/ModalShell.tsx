@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ModalShellProps {
-  open: boolean
-  onClose: () => void
-  ariaLabel: string
-  header?: React.ReactNode
-  footer?: React.ReactNode
-  mobileFooter?: React.ReactNode
-  children: React.ReactNode
-  sheetHeight?: 'tall' | 'short'
+  open: boolean;
+  onClose: () => void;
+  ariaLabel: string;
+  header?: React.ReactNode;
+  footer?: React.ReactNode;
+  mobileFooter?: React.ReactNode;
+  children: React.ReactNode;
+  sheetHeight?: 'tall' | 'short';
   /** Desktop modal width in px (default 520). Wide surfaces (tier picker) pass more. */
-  desktopWidth?: number
+  desktopWidth?: number;
   /**
    * The shell is the single modal root in the accessibility tree, so
    * surfaces that change its meaning (payment failure = alertdialog)
    * override the role/labeling here instead of nesting a second dialog.
    */
-  role?: 'dialog' | 'alertdialog'
-  ariaLabelledBy?: string
-  ariaDescribedBy?: string
+  role?: 'dialog' | 'alertdialog';
+  ariaLabelledBy?: string;
+  ariaDescribedBy?: string;
 }
 
 export function ModalShell({
@@ -38,84 +38,85 @@ export function ModalShell({
   ariaLabelledBy,
   ariaDescribedBy,
 }: ModalShellProps) {
-  const [isMobile, setIsMobile] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const handleKeyDown = useCallback(
     (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
-        onClose()
-        return
+        onClose();
+        return;
       }
-      if (ev.key !== 'Tab') return
+      if (ev.key !== 'Tab') return;
       // Without this, Tab walks out of the dialog and into the page behind the
       // scrim, which is still fully focusable. `aria-modal` tells a screen
       // reader the rest is inert; it does not stop the keyboard.
-      const dialog = dialogRef.current
-      if (dialog === null) return
+      const dialog = dialogRef.current;
+      if (dialog === null) return;
       const focusable = Array.from(
         dialog.querySelectorAll<HTMLElement>(
           'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
         ),
-      )
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
+      );
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       // An empty dialog still traps: focus stays on the container itself.
       if (first === undefined || last === undefined) {
-        ev.preventDefault()
-        dialog.focus()
-        return
+        ev.preventDefault();
+        dialog.focus();
+        return;
       }
       // Focus opens on the dialog container itself, which is not in `focusable`
       // — Shift+Tab from there would otherwise step backwards out of the modal.
-      const active = document.activeElement
+      const active = document.activeElement;
       if (active === dialog) {
-        ev.preventDefault()
-        ;(ev.shiftKey ? last : first).focus()
-        return
+        ev.preventDefault();
+        (ev.shiftKey ? last : first).focus();
+        return;
       }
-      if (ev.shiftKey && active !== first) return
-      if (!ev.shiftKey && active !== last) return
-      ev.preventDefault()
-      ;(ev.shiftKey ? last : first).focus()
+      if (ev.shiftKey && active !== first) return;
+      if (!ev.shiftKey && active !== last) return;
+      ev.preventDefault();
+      (ev.shiftKey ? last : first).focus();
     },
     [onClose],
-  )
+  );
 
   useEffect(() => {
-    if (!open) return
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, handleKeyDown])
+    if (!open) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, handleKeyDown]);
 
   // Focus stayed on the trigger behind the scrim, so a screen reader carried on
   // reading the page the modal had just covered. Focus lands on the dialog
   // itself rather than its first control, which would skip the heading.
   useEffect(() => {
-    if (!open || !mounted) return
-    const trigger = document.activeElement
-    dialogRef.current?.focus()
+    if (!open || !mounted) return;
+    const trigger = document.activeElement;
+    dialogRef.current?.focus();
     return () => {
-      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus()
-    }
-  }, [open, mounted])
+      if (trigger instanceof HTMLElement && trigger.isConnected)
+        trigger.focus();
+    };
+  }, [open, mounted]);
 
-  if (!open || !mounted) return null
+  if (!open || !mounted) return null;
 
-  const heightValue = sheetHeight === 'tall' ? '85%' : '62%'
+  const heightValue = sheetHeight === 'tall' ? '85%' : '62%';
 
   // Portalled to the body: triggers live inside clipping and transformed
   // ancestors — the filter rail scrolls horizontally, and a transformed
@@ -274,5 +275,5 @@ export function ModalShell({
       )}
     </>,
     document.body,
-  )
+  );
 }

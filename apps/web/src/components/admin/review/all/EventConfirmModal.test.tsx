@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { afterEach, describe, it, expect, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
-import { EventConfirmModal } from './EventConfirmModal'
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { EventConfirmModal } from './EventConfirmModal';
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 describe('EventConfirmModal — mark-as-concert kind', () => {
   it('renders the Mark as concert confirm copy', () => {
@@ -19,10 +19,12 @@ describe('EventConfirmModal — mark-as-concert kind', () => {
         onCancel={vi.fn()}
         onConfirm={vi.fn()}
       />,
-    )
+    );
     expect(
       screen.getByRole('heading', { name: 'Mark as concert?' }),
-    ).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Mark as concert' })).toBeTruthy()
-  })
-})
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Mark as concert' }),
+    ).toBeTruthy();
+  });
+});

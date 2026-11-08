@@ -1,6 +1,6 @@
 # Venue first-timer guide — Design brief
 
-**Ticket:** [#764](https://github.com/HartiganHM/concert-crawl/issues/764) — *Venue first-timer guide surface*
+**Ticket:** [#764](https://github.com/HartiganHM/concert-crawl/issues/764) — _Venue first-timer guide surface_
 **Phase / priority:** Beta · Normal
 **Brainstorm:** 2026-07-17 (Hugh + design agent, 9 questions locked)
 **Follow-ups filed:** [#981](https://github.com/HartiganHM/concert-crawl/issues/981) (community-submitted tips, v2), [#996](https://github.com/HartiganHM/concert-crawl/issues/996) (draft-generation automation, v2), [#997](https://github.com/HartiganHM/concert-crawl/issues/997) (chip pool expansion, v2)
@@ -11,7 +11,7 @@
 
 A user is going to a venue they've never visited before. They have practical questions — where to park, what the age policy is, will-call vs. printed tickets, whether the venue searches bags, whether there's coat check, where the food is, how loud the room actually gets — and the venue's own website often buries these or doesn't surface them clearly. Today Concert Crawl gives the event details but nothing about the venue experience.
 
-**Real scenario:** a user has bought tickets to a 9pm show at Roxy Music Hall (their first time), is leaving work at 6:30pm with 30 minutes to drive there, and is googling *"Roxy Music Hall parking"* on their phone because the venue page just says *"in the LoDo district."* They want a confidence-builder, not a brochure.
+**Real scenario:** a user has bought tickets to a 9pm show at Roxy Music Hall (their first time), is leaving work at 6:30pm with 30 minutes to drive there, and is googling _"Roxy Music Hall parking"_ on their phone because the venue page just says _"in the LoDo district."_ They want a confidence-builder, not a brochure.
 
 ---
 
@@ -32,28 +32,28 @@ A user is going to a venue they've never visited before. They have practical que
 - **Chips** are decision-support content: short, scannable, factual-but-voiced (parking, age, bag check, etc.).
 - **Vibe line** is a single free-form concert-goer voice line — one sentence, personality-driven (loudness, food quality signals, room feel).
 
-Chips are NOT `"Parking: paid lot"` — they're **short concert-goer prose** like *"Paid lot on Blake, $15 cash. Street's usually open a block over."* The chip is the surface for one voice-passed tip, not a form field.
+Chips are NOT `"Parking: paid lot"` — they're **short concert-goer prose** like _"Paid lot on Blake, $15 cash. Street's usually open a block over."_ The chip is the surface for one voice-passed tip, not a form field.
 
 ### Callout treatment (Q3)
 
-**Warm inline card at the top of the venue detail page.** Sits below the venue hero, above everything else. First thing a first-timer sees. Carries voice + a *"jump to the guide ↓"* anchor link.
+**Warm inline card at the top of the venue detail page.** Sits below the venue hero, above everything else. First thing a first-timer sees. Carries voice + a _"jump to the guide ↓"_ anchor link.
 
 Example copy shape (final wording is Design's call):
 
-> *"First time at Roxy? Two minutes of stuff worth knowing before you walk in."*
+> _"First time at Roxy? Two minutes of stuff worth knowing before you walk in."_
 
 ### Chip set (Q4)
 
 **Per-venue curated + accessibility always present.**
 
 - Admin picks which chips are relevant per venue (Red Rocks doesn't need coat check; The Marquis doesn't need weather).
-- **Accessibility is the one always-present chip** on every venue guide. Either voice-passed content or an honest *"not documented yet — reach out to the venue"* placeholder. No invisible third state.
+- **Accessibility is the one always-present chip** on every venue guide. Either voice-passed content or an honest _"not documented yet — reach out to the venue"_ placeholder. No invisible third state.
 
 ### Event detail placement (Q5)
 
 **Compressed chip on event detail → anchor to venue page callout.**
 
-- Event detail carries a thin chip in the sub-hero row: *"First time at Roxy? Guide →"* linking to the venue page anchor.
+- Event detail carries a thin chip in the sub-hero row: _"First time at Roxy? Guide →"_ linking to the venue page anchor.
 - Full warm inline card only lives on the venue page.
 - Event detail chip fires under the same first-timer detection rules as the venue-page callout.
 
@@ -62,7 +62,7 @@ Example copy shape (final wording is Design's call):
 **Callout adapts honestly; guide always surfaces.**
 
 - Guide always renders on the venue page (accessibility guarantees a minimum floor).
-- When the guide is thin (accessibility + zero or few other chips + no vibe line), the callout copy softens: *"First time at Roxy? Here's what we've got so far."*
+- When the guide is thin (accessibility + zero or few other chips + no vibe line), the callout copy softens: _"First time at Roxy? Here's what we've got so far."_
 - Honest > absent. Matches the voice authenticity principle.
 
 ### First-timer detection (Q7)
@@ -90,18 +90,18 @@ Example copy shape (final wording is Design's call):
 
 **8 chip types total. Accessibility locked always-on; 7 admin-selectable.**
 
-| # | Chip type | Notes |
-|---|---|---|
-| ★ | **Accessibility** | Always-on. Two possible states: voice-passed content OR honest placeholder ("not documented yet"). Required-field validation on save. |
-| 1 | **Parking** | Local knowledge, unscrapeable. |
-| 2 | **Age policy** | Practical safety-net. |
-| 3 | **Bag check** | Practical; venues vary widely. |
-| 4 | **Coat check** | Practical, winter-relevant. |
-| 5 | **Will-call / ticket entry** | Practical; *where's the door?* |
-| 6 | **Food + drink** | Practical; are we eating before or during? |
-| 7 | **Transit + getting there** | Ride-share pickup zones, transit walk-time. |
+| #   | Chip type                    | Notes                                                                                                                                 |
+| --- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| ★   | **Accessibility**            | Always-on. Two possible states: voice-passed content OR honest placeholder ("not documented yet"). Required-field validation on save. |
+| 1   | **Parking**                  | Local knowledge, unscrapeable.                                                                                                        |
+| 2   | **Age policy**               | Practical safety-net.                                                                                                                 |
+| 3   | **Bag check**                | Practical; venues vary widely.                                                                                                        |
+| 4   | **Coat check**               | Practical, winter-relevant.                                                                                                           |
+| 5   | **Will-call / ticket entry** | Practical; _where's the door?_                                                                                                        |
+| 6   | **Food + drink**             | Practical; are we eating before or during?                                                                                            |
+| 7   | **Transit + getting there**  | Ride-share pickup zones, transit walk-time.                                                                                           |
 
-**Plus the free-form vibe line** — separate from chips. One short concert-goer voice paragraph for personality: loudness, room feel, food quality signals, insider heads-up. This is where *"Roxy runs loud — earplugs at the bar if you forgot"* and *"line's bad after 8:30"* live.
+**Plus the free-form vibe line** — separate from chips. One short concert-goer voice paragraph for personality: loudness, room feel, food quality signals, insider heads-up. This is where _"Roxy runs loud — earplugs at the bar if you forgot"_ and _"line's bad after 8:30"_ live.
 
 **Deferred to v2 chip pool expansion ([#997](https://github.com/HartiganHM/concert-crawl/issues/997)):** weather / outdoor, restrooms, ATMs / cash-only, cell service, ride-share pickup zone.
 
@@ -128,10 +128,10 @@ The primary reader is on a phone at 6:37pm, driving somewhere they've never been
 ### Consumer surface
 
 - **Venue detail page — first-timer, populated guide:** warm inline card at top + expanded section below with chips + vibe line
-- **Venue detail page — first-timer, thin guide:** softened callout copy (*"here's what we've got so far"*), section shows accessibility + honest placeholders for missing chips
+- **Venue detail page — first-timer, thin guide:** softened callout copy (_"here's what we've got so far"_), section shows accessibility + honest placeholders for missing chips
 - **Venue detail page — returner:** collapsed / compact section, no callout, discoverable in one gesture (accordion preview strip vs. compressed inline row vs. anchor link — Design's call)
 - **Venue detail page — anonymous:** identical to signed-in first-timer (callout fires; guide expanded)
-- **Event detail page — first-timer:** compressed *"First time at Roxy? Guide →"* chip in the sub-hero row, anchoring to venue-page callout
+- **Event detail page — first-timer:** compressed _"First time at Roxy? Guide →"_ chip in the sub-hero row, anchoring to venue-page callout
 - **Event detail page — returner:** no chip; standard event detail unchanged
 - **Mobile + desktop** for every state above
 

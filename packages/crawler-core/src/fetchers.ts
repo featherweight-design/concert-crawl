@@ -6,20 +6,20 @@
 // endpoint only needs dispatch + the AEG error classes, and importing the
 // root barrel from apps/api drags the whole crawl module graph into the
 // API bundle (and into every API unit test's module graph).
-export { dispatch } from './lib/fetchers/dispatch.js'
+export { dispatch } from './lib/fetchers/dispatch.js';
 export {
   aegFetcher,
   AegFetchError,
   AegSchemaError,
-} from './lib/fetchers/aeg.js'
+} from './lib/fetchers/aeg.js';
 export {
   detailPageFetcher,
   DetailPageFetchError,
-} from './lib/fetchers/detail-page.js'
-export { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js'
+} from './lib/fetchers/detail-page.js';
+export { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js';
 export type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
   VenuePlatform,
-} from './lib/fetchers/index.js'
+} from './lib/fetchers/index.js';

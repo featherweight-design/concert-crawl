@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EditSection } from '../EditSection'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EditSection } from '../EditSection';
 
 export interface ArtSectionProps {
-  artist: string | null
+  artist: string | null;
 }
 
 export const ArtSection = ({ artist }: ArtSectionProps) => {
-  const { sections, art } = ADMIN_COPY.editor
+  const { sections, art } = ADMIN_COPY.editor;
   return (
     <EditSection number={sections.artNumber} title={sections.artTitle}>
       <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -61,5 +61,5 @@ export const ArtSection = ({ artist }: ArtSectionProps) => {
         </div>
       </div>
     </EditSection>
-  )
-}
+  );
+};

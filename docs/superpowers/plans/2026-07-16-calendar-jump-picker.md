@@ -82,17 +82,17 @@ In `packages/types/src/index.ts`, immediately after the `EventsListResponse` int
 ```ts
 export interface AvailabilityDay {
   /** ISO date `YYYY-MM-DD` (event-local calendar date). */
-  date: string
+  date: string;
   /** Number of consumer-visible shows on that date. */
-  count: number
+  count: number;
 }
 
 export interface EventsAvailabilityResponse {
-  data: AvailabilityDay[]
+  data: AvailabilityDay[];
   /** Inclusive window start, `YYYY-MM-DD`. */
-  from: string
+  from: string;
   /** Inclusive window end, `YYYY-MM-DD`. */
-  to: string
+  to: string;
 }
 ```
 
@@ -129,74 +129,74 @@ Add to `apps/api/src/routes/events.integration.test.ts` (mirror existing seed/cl
 ```ts
 describe('GET /v1/events/availability', () => {
   it('returns per-date show counts within the window', async () => {
-    const venue = await seedVenue({ slug: 'larimer', name: 'Larimer Lounge' })
+    const venue = await seedVenue({ slug: 'larimer', name: 'Larimer Lounge' });
     await seedEvent({
       venueId: venue.id,
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent({
       venueId: venue.id,
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent({
       venueId: venue.id,
       date: '2026-05-02',
       status: 'upcoming',
-    })
+    });
 
     const res = await app.request(
       '/v1/events/availability?from=2026-04-01&to=2026-05-31',
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.from).toBe('2026-04-01')
-    expect(body.to).toBe('2026-05-31')
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.from).toBe('2026-04-01');
+    expect(body.to).toBe('2026-05-31');
     const byDate = Object.fromEntries(
       body.data.map((d: { date: string; count: number }) => [d.date, d.count]),
-    )
-    expect(byDate['2026-04-28']).toBe(2)
-    expect(byDate['2026-05-02']).toBe(1)
-  })
+    );
+    expect(byDate['2026-04-28']).toBe(2);
+    expect(byDate['2026-05-02']).toBe(1);
+  });
 
   it('excludes hidden and missing events', async () => {
-    const venue = await seedVenue({ slug: 'hi-dive', name: 'Hi-Dive' })
+    const venue = await seedVenue({ slug: 'hi-dive', name: 'Hi-Dive' });
     await seedEvent({
       venueId: venue.id,
       date: '2026-04-28',
       status: 'upcoming',
-    })
+    });
     await seedEvent({
       venueId: venue.id,
       date: '2026-04-28',
       status: 'upcoming',
       hiddenFromConsumer: true,
-    })
+    });
     const res = await app.request(
       '/v1/events/availability?from=2026-04-01&to=2026-04-30',
-    )
-    const body = await res.json()
+    );
+    const body = await res.json();
     const byDate = Object.fromEntries(
       body.data.map((d: { date: string; count: number }) => [d.date, d.count]),
-    )
-    expect(byDate['2026-04-28']).toBe(1)
-  })
+    );
+    expect(byDate['2026-04-28']).toBe(1);
+  });
 
   it('rejects a window wider than 400 days', async () => {
     const res = await app.request(
       '/v1/events/availability?from=2026-01-01&to=2027-12-31',
-    )
-    expect(res.status).toBe(400)
-  })
+    );
+    expect(res.status).toBe(400);
+  });
 
   it('defaults `from` to today when omitted', async () => {
-    const res = await app.request('/v1/events/availability?to=2026-12-31')
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-  })
-})
+    const res = await app.request('/v1/events/availability?to=2026-12-31');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -209,18 +209,18 @@ Expected: FAIL — availability endpoint returns 404 (route not defined).
 In `apps/api/src/routes/events.ts`, add near `listEventsSchema`:
 
 ```ts
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
-const MAX_WINDOW_DAYS = 400
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_WINDOW_DAYS = 400;
 
 const availabilitySchema = z.object({
   from: z.string().regex(DATE_RE).optional(),
   to: z.string().regex(DATE_RE),
-})
+});
 
 function dayCountBetween(from: string, to: string): number {
-  const start = Date.parse(`${from}T00:00:00Z`)
-  const end = Date.parse(`${to}T00:00:00Z`)
-  return Math.floor((end - start) / 86_400_000) + 1
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  return Math.floor((end - start) / 86_400_000) + 1;
 }
 ```
 
@@ -231,18 +231,18 @@ eventsRouter.get('/availability', async (ctx) => {
   const parsed = availabilitySchema.safeParse({
     from: ctx.req.query('from'),
     to: ctx.req.query('to'),
-  })
+  });
   if (!parsed.success) {
-    return ctx.json({ error: 'Invalid availability window' }, 400)
+    return ctx.json({ error: 'Invalid availability window' }, 400);
   }
-  const from = parsed.data.from ?? todayInTimezone('UTC')
-  const { to } = parsed.data
+  const from = parsed.data.from ?? todayInTimezone('UTC');
+  const { to } = parsed.data;
   if (to < from) {
-    return ctx.json({ error: '`to` must be on or after `from`' }, 400)
+    return ctx.json({ error: '`to` must be on or after `from`' }, 400);
   }
-  const span = dayCountBetween(from, to)
+  const span = dayCountBetween(from, to);
   if (span < 1 || span > MAX_WINDOW_DAYS) {
-    return ctx.json({ error: 'Window must be 1–400 days' }, 400)
+    return ctx.json({ error: 'Window must be 1–400 days' }, 400);
   }
 
   const rows = await db
@@ -257,17 +257,20 @@ eventsRouter.get('/availability', async (ctx) => {
         isNull(events.firstMissingAt),
       ),
     )
-    .groupBy(events.date)
+    .groupBy(events.date);
 
   const data: AvailabilityDay[] = rows.map((row) => ({
     date: row.date,
     count: Number(row.count),
-  }))
+  }));
 
-  ctx.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
-  const body: EventsAvailabilityResponse = { data, from, to }
-  return ctx.json(body)
-})
+  ctx.header(
+    'Cache-Control',
+    'public, max-age=300, stale-while-revalidate=600',
+  );
+  const body: EventsAvailabilityResponse = { data, from, to };
+  return ctx.json(body);
+});
 ```
 
 Add `AvailabilityDay` and `EventsAvailabilityResponse` to the `@concert-crawl/types` import at the top of the file. Confirm `count`, `and`, `gte`, `lte`, `eq`, `inArray`, `isNull` are already imported from `drizzle-orm` (they are, per current imports).
@@ -319,7 +322,7 @@ git commit -m "feat(api): add GET /v1/events/availability date-count endpoint (#
 - [ ] **Step 1: Write the failing tests**
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   ymdKey,
   isoOf,
@@ -327,61 +330,61 @@ import {
   monthMatrix,
   pickerWindow,
   weekOffsetForDate,
-} from './date-math'
+} from './date-math';
 
 describe('isoOf / ymdKey', () => {
   it('formats a zero-indexed month to ISO', () => {
-    expect(isoOf(2026, 3, 28)).toBe('2026-04-28')
-    expect(isoOf(2026, 11, 1)).toBe('2026-12-01')
-  })
+    expect(isoOf(2026, 3, 28)).toBe('2026-04-28');
+    expect(isoOf(2026, 11, 1)).toBe('2026-12-01');
+  });
   it('produces a monotonic integer key', () => {
-    expect(ymdKey(2026, 3, 28)).toBe(20260428)
-    expect(ymdKey(2026, 4, 1)).toBeGreaterThan(ymdKey(2026, 3, 28))
-  })
-})
+    expect(ymdKey(2026, 3, 28)).toBe(20260428);
+    expect(ymdKey(2026, 4, 1)).toBeGreaterThan(ymdKey(2026, 3, 28));
+  });
+});
 
 describe('addMonths', () => {
   it('rolls the year forward', () => {
-    expect(addMonths({ y: 2026, m: 11 }, 1)).toEqual({ y: 2027, m: 0 })
-  })
+    expect(addMonths({ y: 2026, m: 11 }, 1)).toEqual({ y: 2027, m: 0 });
+  });
   it('rolls the year backward', () => {
-    expect(addMonths({ y: 2026, m: 0 }, -1)).toEqual({ y: 2025, m: 11 })
-  })
-})
+    expect(addMonths({ y: 2026, m: 0 }, -1)).toEqual({ y: 2025, m: 11 });
+  });
+});
 
 describe('monthMatrix', () => {
   it('returns 42 cells, Sunday-first', () => {
-    const cells = monthMatrix(2026, 3) // April 2026
-    expect(cells).toHaveLength(42)
+    const cells = monthMatrix(2026, 3); // April 2026
+    expect(cells).toHaveLength(42);
     // April 1 2026 is a Wednesday (dow 3) → first three cells spill from March.
-    expect(cells[0].inMonth).toBe(false)
-    expect(cells[3]).toMatchObject({ d: 1, inMonth: true, iso: '2026-04-01' })
-    expect(cells[0].dow).toBe(0)
-    expect(cells[6].dow).toBe(6)
-  })
-})
+    expect(cells[0].inMonth).toBe(false);
+    expect(cells[3]).toMatchObject({ d: 1, inMonth: true, iso: '2026-04-01' });
+    expect(cells[0].dow).toBe(0);
+    expect(cells[6].dow).toBe(6);
+  });
+});
 
 describe('pickerWindow', () => {
   it('spans current month through +12 months', () => {
-    const win = pickerWindow('2026-04-28')
-    expect(win.from).toBe('2026-04-01')
-    expect(win.to).toBe('2027-04-30')
-    expect(win.min).toEqual({ y: 2026, m: 3 })
-    expect(win.max).toEqual({ y: 2027, m: 3 })
-  })
-})
+    const win = pickerWindow('2026-04-28');
+    expect(win.from).toBe('2026-04-01');
+    expect(win.to).toBe('2027-04-30');
+    expect(win.min).toEqual({ y: 2026, m: 3 });
+    expect(win.max).toEqual({ y: 2027, m: 3 });
+  });
+});
 
 describe('weekOffsetForDate', () => {
   it('is 0 within the current Monday-based week', () => {
     // 2026-04-28 is a Tuesday; the week runs Mon 2026-04-27 .. Sun 2026-05-03.
-    expect(weekOffsetForDate('2026-04-28', '2026-04-28')).toBe(0)
-    expect(weekOffsetForDate('2026-05-03', '2026-04-28')).toBe(0)
-  })
+    expect(weekOffsetForDate('2026-04-28', '2026-04-28')).toBe(0);
+    expect(weekOffsetForDate('2026-05-03', '2026-04-28')).toBe(0);
+  });
   it('counts whole weeks forward', () => {
-    expect(weekOffsetForDate('2026-05-04', '2026-04-28')).toBe(1)
-    expect(weekOffsetForDate('2026-05-11', '2026-04-28')).toBe(2)
-  })
-})
+    expect(weekOffsetForDate('2026-05-04', '2026-04-28')).toBe(1);
+    expect(weekOffsetForDate('2026-05-11', '2026-04-28')).toBe(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -393,49 +396,49 @@ Expected: FAIL — module `./date-math` not found.
 
 ```ts
 export interface YearMonth {
-  y: number
-  m: number
+  y: number;
+  m: number;
 }
 
 export interface MatrixCell {
-  y: number
-  m: number
-  d: number
-  iso: string
-  inMonth: boolean
-  dow: number
+  y: number;
+  m: number;
+  d: number;
+  iso: string;
+  inMonth: boolean;
+  dow: number;
 }
 
 function pad(value: number): string {
-  return String(value).padStart(2, '0')
+  return String(value).padStart(2, '0');
 }
 
 export function isoOf(y: number, m: number, d: number): string {
-  return `${y}-${pad(m + 1)}-${pad(d)}`
+  return `${y}-${pad(m + 1)}-${pad(d)}`;
 }
 
 export function ymdKey(y: number, m: number, d: number): number {
-  return y * 10000 + (m + 1) * 100 + d
+  return y * 10000 + (m + 1) * 100 + d;
 }
 
 export function addMonths(ym: YearMonth, delta: number): YearMonth {
-  const total = ym.y * 12 + ym.m + delta
-  return { y: Math.floor(total / 12), m: ((total % 12) + 12) % 12 }
+  const total = ym.y * 12 + ym.m + delta;
+  return { y: Math.floor(total / 12), m: ((total % 12) + 12) % 12 };
 }
 
 export function monthMatrix(y: number, m: number): MatrixCell[] {
-  const startDow = new Date(y, m, 1).getDay() // Sunday-first (0=Sun)
-  const gridStart = new Date(y, m, 1 - startDow)
-  const cells: MatrixCell[] = []
+  const startDow = new Date(y, m, 1).getDay(); // Sunday-first (0=Sun)
+  const gridStart = new Date(y, m, 1 - startDow);
+  const cells: MatrixCell[] = [];
   for (let i = 0; i < 42; i += 1) {
     const cur = new Date(
       gridStart.getFullYear(),
       gridStart.getMonth(),
       gridStart.getDate() + i,
-    )
-    const cy = cur.getFullYear()
-    const cm = cur.getMonth()
-    const cd = cur.getDate()
+    );
+    const cy = cur.getFullYear();
+    const cm = cur.getMonth();
+    const cd = cur.getDate();
     cells.push({
       y: cy,
       m: cm,
@@ -443,38 +446,38 @@ export function monthMatrix(y: number, m: number): MatrixCell[] {
       iso: isoOf(cy, cm, cd),
       inMonth: cm === m && cy === y,
       dow: cur.getDay(),
-    })
+    });
   }
-  return cells
+  return cells;
 }
 
 export function pickerWindow(todayISO: string): {
-  from: string
-  to: string
-  min: YearMonth
-  max: YearMonth
+  from: string;
+  to: string;
+  min: YearMonth;
+  max: YearMonth;
 } {
-  const [ty, tm] = todayISO.split('-').map(Number)
-  const min: YearMonth = { y: ty, m: tm - 1 }
-  const max = addMonths(min, 12)
-  const from = isoOf(min.y, min.m, 1)
-  const lastDay = new Date(max.y, max.m + 1, 0).getDate()
-  const to = isoOf(max.y, max.m, lastDay)
-  return { from, to, min, max }
+  const [ty, tm] = todayISO.split('-').map(Number);
+  const min: YearMonth = { y: ty, m: tm - 1 };
+  const max = addMonths(min, 12);
+  const from = isoOf(min.y, min.m, 1);
+  const lastDay = new Date(max.y, max.m + 1, 0).getDate();
+  const to = isoOf(max.y, max.m, lastDay);
+  return { from, to, min, max };
 }
 
 // Monday-based whole-week delta, matching currentWeekDays' week boundaries.
 export function weekOffsetForDate(targetISO: string, todayISO: string): number {
   const mondayOf = (iso: string): number => {
-    const [y, m, d] = iso.split('-').map(Number)
+    const [y, m, d] = iso.split('-').map(Number);
     // Use UTC-noon to avoid DST/tz shift, mirroring definitions/lib.
-    const base = Date.UTC(y, m - 1, d, 12)
-    const dow = new Date(base).getUTCDay() // 0=Sun
-    const mondayOffset = dow === 0 ? -6 : 1 - dow
-    return base + mondayOffset * 86_400_000
-  }
-  const diffMs = mondayOf(targetISO) - mondayOf(todayISO)
-  return Math.round(diffMs / (7 * 86_400_000))
+    const base = Date.UTC(y, m - 1, d, 12);
+    const dow = new Date(base).getUTCDay(); // 0=Sun
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    return base + mondayOffset * 86_400_000;
+  };
+  const diffMs = mondayOf(targetISO) - mondayOf(todayISO);
+  return Math.round(diffMs / (7 * 86_400_000));
 }
 ```
 
@@ -556,15 +559,15 @@ git commit -m "feat(web): add jump-picker copy strings (#642)"
 Create `apps/web/src/lib/queries/use-availability.test.tsx`:
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
-import { useAvailability } from './use-availability'
+import { describe, it, expect, vi } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { useAvailability } from './use-availability';
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => null }),
-}))
+}));
 vi.mock('@/lib/api', () => ({
   publicApiClient: {
     get: async () => ({
@@ -574,13 +577,13 @@ vi.mock('@/lib/api', () => ({
     }),
   },
   apiClient: { get: async () => ({ data: [], from: '', to: '' }) },
-}))
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  })
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  });
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
 describe('useAvailability', () => {
@@ -588,11 +591,11 @@ describe('useAvailability', () => {
     const { result } = renderHook(
       () => useAvailability({ from: '2026-04-01', to: '2027-04-30' }),
       { wrapper },
-    )
-    await waitFor(() => expect(result.current.data?.size).toBeGreaterThan(0))
-    expect(result.current.data?.get('2026-04-28')).toBe(2)
-  })
-})
+    );
+    await waitFor(() => expect(result.current.data?.size).toBeGreaterThan(0));
+    expect(result.current.data?.get('2026-04-28')).toBe(2);
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -603,16 +606,16 @@ Expected: FAIL — module `./use-availability` not found.
 - [ ] **Step 3: Implement the hook**
 
 ```tsx
-'use client'
+'use client';
 
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import type { EventsAvailabilityResponse } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from '@/lib/api'
-import { STALE_30_MIN } from '@/lib/query-client'
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import type { EventsAvailabilityResponse } from '@concert-crawl/types';
+import { apiClient, publicApiClient } from '@/lib/api';
+import { STALE_30_MIN } from '@/lib/query-client';
 
 export function availabilityQueryKey(from: string, to: string) {
-  return ['availability', from, to] as const
+  return ['availability', from, to] as const;
 }
 
 export async function fetchAvailability(
@@ -620,22 +623,22 @@ export async function fetchAvailability(
   to: string,
   token: string | null,
 ): Promise<EventsAvailabilityResponse> {
-  const url = `/v1/events/availability?from=${from}&to=${to}`
+  const url = `/v1/events/availability?from=${from}&to=${to}`;
   return token
     ? apiClient.get<EventsAvailabilityResponse>(url, token)
-    : publicApiClient.get<EventsAvailabilityResponse>(url)
+    : publicApiClient.get<EventsAvailabilityResponse>(url);
 }
 
 function toMap(res: EventsAvailabilityResponse): Map<string, number> {
-  const map = new Map<string, number>()
-  for (const row of res.data) map.set(row.date, row.count)
-  return map
+  const map = new Map<string, number>();
+  for (const row of res.data) map.set(row.date, row.count);
+  return map;
 }
 
 interface UseAvailabilityArgs {
-  from: string
-  to: string
-  initialData?: EventsAvailabilityResponse
+  from: string;
+  to: string;
+  initialData?: EventsAvailabilityResponse;
 }
 
 export function useAvailability({
@@ -643,17 +646,17 @@ export function useAvailability({
   to,
   initialData,
 }: UseAvailabilityArgs) {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   return useQuery({
     queryKey: availabilityQueryKey(from, to),
     queryFn: async () => {
-      const token = await getToken()
-      const res = await fetchAvailability(from, to, token)
-      return toMap(res)
+      const token = await getToken();
+      const res = await fetchAvailability(from, to, token);
+      return toMap(res);
     },
     staleTime: STALE_30_MIN,
     ...(initialData !== undefined ? { initialData: toMap(initialData) } : {}),
-  })
+  });
 }
 ```
 
@@ -667,19 +670,23 @@ Expected: PASS.
 In `apps/web/src/app/(protected)/(main)/events/page.tsx`, in the `view === 'cal'` branch, compute the window and fetch availability server-side. Add near the other server fetches (after `token` is resolved):
 
 ```ts
-import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
-import { fetchAvailability } from '@/lib/queries/use-availability'
-import type { EventsAvailabilityResponse } from '@concert-crawl/types'
+import { pickerWindow } from '@/components/consumer/jump-picker/date-math';
+import { fetchAvailability } from '@/lib/queries/use-availability';
+import type { EventsAvailabilityResponse } from '@concert-crawl/types';
 
 // ...inside BrowsePage, after `token` is available and view === 'cal':
-let initialAvailability: EventsAvailabilityResponse | undefined
+let initialAvailability: EventsAvailabilityResponse | undefined;
 if (view === 'cal') {
-  const window = pickerWindow(today)
+  const window = pickerWindow(today);
   try {
-    initialAvailability = await fetchAvailability(window.from, window.to, token)
+    initialAvailability = await fetchAvailability(
+      window.from,
+      window.to,
+      token,
+    );
   } catch (err) {
-    console.error('availability prefetch failed', err)
-    initialAvailability = undefined
+    console.error('availability prefetch failed', err);
+    initialAvailability = undefined;
   }
 }
 ```
@@ -712,13 +719,13 @@ git commit -m "feat(web): availability react-query hook + SSR prefetch (#642)"
 - Produces: `JumpPicker` (default export via barrel) with props:
   ```ts
   interface JumpPickerProps {
-    open: boolean
-    onClose: () => void
-    selectedDate: string
-    today: string
-    availability: Map<string, number>
-    onPick: (iso: string) => void
-    variant?: 'mobile' | 'desktop' // layout only; default responsive
+    open: boolean;
+    onClose: () => void;
+    selectedDate: string;
+    today: string;
+    availability: Map<string, number>;
+    onPick: (iso: string) => void;
+    variant?: 'mobile' | 'desktop'; // layout only; default responsive
   }
   ```
   Consumed by `WeekStripHeader` (Task 7).
@@ -728,19 +735,19 @@ All exact visual values (colors, sizes, rings, animation timing) are in `docs/su
 - [ ] **Step 1: Write the failing component tests**
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { JumpPicker } from './JumpPicker'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { JumpPicker } from './JumpPicker';
 
 const availability = new Map<string, number>([
   ['2026-04-28', 2],
   ['2026-05-02', 3],
-])
+]);
 
 function setup(overrides = {}) {
-  const onPick = vi.fn()
-  const onClose = vi.fn()
+  const onPick = vi.fn();
+  const onClose = vi.fn();
   render(
     <JumpPicker
       open
@@ -751,82 +758,82 @@ function setup(overrides = {}) {
       onPick={onPick}
       {...overrides}
     />,
-  )
-  return { onPick, onClose }
+  );
+  return { onPick, onClose };
 }
 
 describe('JumpPicker', () => {
   it('renders a dialog labelled by the visible month', () => {
-    setup()
-    const dialog = screen.getByRole('dialog')
+    setup();
+    const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute(
       'aria-label',
       expect.stringContaining('April 2026'),
-    )
-  })
+    );
+  });
 
   it('marks the selected day with aria-selected', () => {
-    setup()
+    setup();
     const sel = screen.getByRole('gridcell', {
       name: /Tuesday, April 28, 2 shows, today/,
-    })
-    expect(sel).toHaveAttribute('aria-selected', 'true')
-  })
+    });
+    expect(sel).toHaveAttribute('aria-selected', 'true');
+  });
 
   it('encodes show count in the aria-label, not just the dot', () => {
-    setup()
+    setup();
     expect(
       screen.getByRole('gridcell', { name: /Saturday, May 2/ }),
-    ).toBeInTheDocument()
-  })
+    ).toBeInTheDocument();
+  });
 
   it('disables past and out-of-month days', () => {
-    setup()
+    setup();
     // April 27 is in-month but before today → disabled.
-    const past = screen.getByRole('gridcell', { name: /Monday, April 27/ })
-    expect(past).toHaveAttribute('aria-disabled', 'true')
-  })
+    const past = screen.getByRole('gridcell', { name: /Monday, April 27/ });
+    expect(past).toHaveAttribute('aria-disabled', 'true');
+  });
 
   it('calls onPick with the ISO date when a future day is chosen', async () => {
-    const user = userEvent.setup()
-    const { onPick } = setup()
-    await user.click(screen.getByRole('gridcell', { name: /Saturday, May 2/ }))
-    expect(onPick).toHaveBeenCalledWith('2026-05-02')
-  })
+    const user = userEvent.setup();
+    const { onPick } = setup();
+    await user.click(screen.getByRole('gridcell', { name: /Saturday, May 2/ }));
+    expect(onPick).toHaveBeenCalledWith('2026-05-02');
+  });
 
   it('pages to the next month with the pager', async () => {
-    const user = userEvent.setup()
-    setup()
-    await user.click(screen.getByLabelText('Next month'))
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByLabelText('Next month'));
     expect(screen.getByRole('dialog')).toHaveAttribute(
       'aria-label',
       expect.stringContaining('May 2026'),
-    )
-  })
+    );
+  });
 
   it('closes on Escape', async () => {
-    const user = userEvent.setup()
-    const { onClose } = setup()
-    await user.keyboard('{Escape}')
-    expect(onClose).toHaveBeenCalled()
-  })
+    const user = userEvent.setup();
+    const { onClose } = setup();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalled();
+  });
 
   it('moves focus with arrow keys and skips disabled days', async () => {
-    const user = userEvent.setup()
-    setup()
+    const user = userEvent.setup();
+    setup();
     // Selected day (Apr 28) is focused on open; ArrowRight → Apr 29.
-    await user.keyboard('{ArrowRight}')
+    await user.keyboard('{ArrowRight}');
     expect(
       screen.getByRole('gridcell', { name: /Wednesday, April 29/ }),
-    ).toHaveFocus()
-  })
+    ).toHaveFocus();
+  });
 
   it('does not page before the current month (atMin)', async () => {
-    const user = userEvent.setup()
-    setup()
-    expect(screen.getByLabelText('Previous month')).toBeDisabled()
-  })
-})
+    const user = userEvent.setup();
+    setup();
+    expect(screen.getByLabelText('Previous month')).toBeDisabled();
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -859,8 +866,8 @@ Return `null` when `!open`.
 `apps/web/src/components/consumer/jump-picker/index.ts`:
 
 ```ts
-export { JumpPicker } from './JumpPicker'
-export type { JumpPickerProps } from './JumpPicker'
+export { JumpPicker } from './JumpPicker';
+export type { JumpPickerProps } from './JumpPicker';
 ```
 
 - [ ] **Step 5: Run to verify tests pass**
@@ -894,13 +901,13 @@ git commit -m "feat(web): JumpPicker month-grid component (#642)"
   - `WeekStripHeader` with props:
     ```ts
     interface WeekStripHeaderProps {
-      monthLabel: string
-      selectedDate: string
-      today: string
-      availability: Map<string, number>
-      onPick: (iso: string) => void
-      prevWeekHref: string | null
-      nextWeekHref: string
+      monthLabel: string;
+      selectedDate: string;
+      today: string;
+      availability: Map<string, number>;
+      onPick: (iso: string) => void;
+      prevWeekHref: string | null;
+      nextWeekHref: string;
     }
     ```
     Consumed by `CalendarView` (Task 8). Renders the cue chip (opens `JumpPicker`) on the left and the ± week-pager chevrons on the right, per design §1. Cue aria-label `` `${monthLabel}. ${CONSUMER_COPY.jumpPickerCueSuffix}` ``, `aria-haspopup="dialog"`, `aria-expanded={open}`. On close, focus returns to the cue button (via a ref).
@@ -908,13 +915,13 @@ git commit -m "feat(web): JumpPicker month-grid component (#642)"
 - [ ] **Step 1: Write the failing header test**
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { WeekStripHeader } from './WeekStripHeader'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { WeekStripHeader } from './WeekStripHeader';
 
 function setup() {
-  const onPick = vi.fn()
+  const onPick = vi.fn();
   render(
     <WeekStripHeader
       monthLabel="April 2026"
@@ -925,36 +932,36 @@ function setup() {
       prevWeekHref={null}
       nextWeekHref="/events?view=cal&weekOffset=1"
     />,
-  )
-  return { onPick }
+  );
+  return { onPick };
 }
 
 describe('WeekStripHeader', () => {
   it('shows the month cue with a dialog affordance', () => {
-    setup()
+    setup();
     const cue = screen.getByRole('button', {
       name: /April 2026\. Jump to a date/,
-    })
-    expect(cue).toHaveAttribute('aria-haspopup', 'dialog')
-    expect(cue).toHaveAttribute('aria-expanded', 'false')
-  })
+    });
+    expect(cue).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(cue).toHaveAttribute('aria-expanded', 'false');
+  });
 
   it('opens the picker on cue click', async () => {
-    const user = userEvent.setup()
-    setup()
-    await user.click(screen.getByRole('button', { name: /Jump to a date/ }))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-  })
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: /Jump to a date/ }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
 
   it('disables the previous-week chevron at the current week', () => {
-    setup()
-    expect(screen.getByRole('link', { name: 'Next week' })).toBeInTheDocument()
+    setup();
+    expect(screen.getByRole('link', { name: 'Next week' })).toBeInTheDocument();
     // prevWeekHref null → rendered as a disabled span, not a link.
     expect(
       screen.queryByRole('link', { name: 'Previous week' }),
-    ).not.toBeInTheDocument()
-  })
-})
+    ).not.toBeInTheDocument();
+  });
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -975,8 +982,8 @@ Remove `IconChevLeft`/`IconChevRight`, the `prevWeekHref`/`nextWeekHref` props, 
 `apps/web/src/components/consumer/week-strip/index.ts`:
 
 ```ts
-export { WeekStrip, type WeekStripDay } from './WeekStrip'
-export { WeekStripHeader } from './WeekStripHeader'
+export { WeekStrip, type WeekStripDay } from './WeekStrip';
+export { WeekStripHeader } from './WeekStripHeader';
 ```
 
 - [ ] **Step 6: Run header + week-strip tests**
@@ -1021,22 +1028,22 @@ All states reachable — proceed. (If any were `⚠`/`❌`, stop per complete-an
 - [ ] **Step 2: Write the failing wiring test**
 
 ```tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { CalendarView } from './CalendarView'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { CalendarView } from './CalendarView';
 
-const push = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+const push = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => null }),
-}))
+}));
 
 const days = [
   { date: '2026-04-27', label: 'MON', dayOfMonth: '27', hasEvents: false },
   { date: '2026-04-28', label: 'TUE', dayOfMonth: '28', hasEvents: true },
   // …fill the week (Mon 04-27 .. Sun 05-03)
-]
+];
 
 function setup() {
   render(
@@ -1055,21 +1062,21 @@ function setup() {
         to: '2027-04-30',
       }}
     />,
-  )
+  );
 }
 
 describe('CalendarView jump navigation', () => {
   it('router.pushes with weekOffset when jumping outside the current week', async () => {
-    const user = userEvent.setup()
-    setup()
-    await user.click(screen.getByRole('button', { name: /Jump to a date/ }))
-    await user.click(screen.getByRole('gridcell', { name: /Monday, May 11/ }))
-    expect(push).toHaveBeenCalledWith(expect.stringContaining('weekOffset=2'))
+    const user = userEvent.setup();
+    setup();
+    await user.click(screen.getByRole('button', { name: /Jump to a date/ }));
+    await user.click(screen.getByRole('gridcell', { name: /Monday, May 11/ }));
+    expect(push).toHaveBeenCalledWith(expect.stringContaining('weekOffset=2'));
     expect(push).toHaveBeenCalledWith(
       expect.stringContaining('selectedDate=2026-05-11'),
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 - [ ] **Step 3: Run to verify it fails**
@@ -1084,19 +1091,19 @@ Add props `monthLabel: string` and `initialAvailability?: EventsAvailabilityResp
 ```ts
 function onJumpPick(iso: string) {
   if (weekDates.has(iso)) {
-    setSelectedDate(iso)
-    const url = new URL(window.location.href)
-    url.searchParams.set('selectedDate', iso)
-    window.history.replaceState(null, '', url.toString())
-    return
+    setSelectedDate(iso);
+    const url = new URL(window.location.href);
+    url.searchParams.set('selectedDate', iso);
+    window.history.replaceState(null, '', url.toString());
+    return;
   }
-  const offset = weekOffsetForDate(iso, today)
-  const params = new URLSearchParams(window.location.search)
-  params.delete('offset')
-  params.set('view', 'cal')
-  params.set('weekOffset', String(offset))
-  params.set('selectedDate', iso)
-  router.push(`/events?${params.toString()}`)
+  const offset = weekOffsetForDate(iso, today);
+  const params = new URLSearchParams(window.location.search);
+  params.delete('offset');
+  params.set('view', 'cal');
+  params.set('weekOffset', String(offset));
+  params.set('selectedDate', iso);
+  router.push(`/events?${params.toString()}`);
 }
 ```
 

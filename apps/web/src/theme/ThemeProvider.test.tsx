@@ -1,25 +1,25 @@
 // @vitest-environment jsdom
 
-import { render, act } from '@testing-library/react'
-import { renderHook } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
-import React from 'react'
-import { ThemeProvider, useTheme } from './ThemeProvider'
-import { THEMES } from './themes'
+import { render, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import React from 'react';
+import { ThemeProvider, useTheme } from './ThemeProvider';
+import { THEMES } from './themes';
 
 const localStorageMock = (() => {
-  let store: Record<string, string> = {}
+  let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = value
+      store[key] = value;
     },
     clear: () => {
-      store = {}
+      store = {};
     },
-  }
-})()
-Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+  };
+})();
+Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 Object.defineProperty(window, 'matchMedia', {
   value: () => ({
@@ -27,13 +27,13 @@ Object.defineProperty(window, 'matchMedia', {
     addListener: () => {},
     removeListener: () => {},
   }),
-})
+});
 
 beforeEach(() => {
-  localStorageMock.clear()
-  document.documentElement.removeAttribute('data-theme')
-  document.documentElement.removeAttribute('style')
-})
+  localStorageMock.clear();
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('style');
+});
 
 describe('ThemeProvider', () => {
   it('renders children', () => {
@@ -41,55 +41,55 @@ describe('ThemeProvider', () => {
       <ThemeProvider>
         <span>hello</span>
       </ThemeProvider>,
-    )
-    expect(getByText('hello')).toBeTruthy()
-  })
+    );
+    expect(getByText('hello')).toBeTruthy();
+  });
 
   it('returns initial theme of electric when no data-theme is set', () => {
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
-    expect(result.current.theme).toBe('electric')
-  })
+    });
+    expect(result.current.theme).toBe('electric');
+  });
 
   it('setTheme updates theme state, data-theme attribute, and localStorage', async () => {
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
     await act(async () => {
-      result.current.setTheme('jade')
-    })
+      result.current.setTheme('jade');
+    });
 
-    expect(result.current.theme).toBe('jade')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
-    expect(localStorageMock.getItem('cc-theme')).toBe('jade')
-  })
+    expect(result.current.theme).toBe('jade');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('jade');
+    expect(localStorageMock.getItem('cc-theme')).toBe('jade');
+  });
 
   it('reads existing data-theme attribute on mount', async () => {
-    document.documentElement.setAttribute('data-theme', 'light')
+    document.documentElement.setAttribute('data-theme', 'light');
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
     // Wait for the useEffect to fire
-    await act(async () => {})
+    await act(async () => {});
 
-    expect(result.current.theme).toBe('light')
-  })
+    expect(result.current.theme).toBe('light');
+  });
 
   it('ignores data-theme values that are not valid theme names', async () => {
-    document.documentElement.setAttribute('data-theme', 'toString')
+    document.documentElement.setAttribute('data-theme', 'toString');
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
-    await act(async () => {})
+    await act(async () => {});
 
-    expect(result.current.theme).toBe('electric')
-  })
+    expect(result.current.theme).toBe('electric');
+  });
 
   // React 19's hydration-mismatch recovery treats <html> as a singleton and
   // cleans attributes it didn't render — wiping the inline no-flash script's
@@ -98,74 +98,74 @@ describe('ThemeProvider', () => {
   // while state (and the picker's ACTIVE badge) still says otherwise.
 
   it('re-applies the persisted theme when hydration recovery wiped the html attributes', async () => {
-    localStorageMock.setItem('cc-theme', 'jade')
+    localStorageMock.setItem('cc-theme', 'jade');
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
-    await act(async () => {})
+    await act(async () => {});
 
-    expect(result.current.theme).toBe('jade')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
+    expect(result.current.theme).toBe('jade');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('jade');
     expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
       THEMES.jade.bg,
-    )
-  })
+    );
+  });
 
   it('re-asserts style tokens when data-theme survived but inline styles were wiped', async () => {
-    document.documentElement.setAttribute('data-theme', 'jade')
+    document.documentElement.setAttribute('data-theme', 'jade');
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
-    await act(async () => {})
+    await act(async () => {});
 
-    expect(result.current.theme).toBe('jade')
+    expect(result.current.theme).toBe('jade');
     expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
       THEMES.jade.bg,
-    )
-  })
+    );
+  });
 
   it('prefers the persisted localStorage theme over a divergent data-theme attribute', async () => {
-    localStorageMock.setItem('cc-theme', 'jade')
-    document.documentElement.setAttribute('data-theme', 'light')
+    localStorageMock.setItem('cc-theme', 'jade');
+    document.documentElement.setAttribute('data-theme', 'light');
 
     const { result } = renderHook(() => useTheme(), {
       wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-    })
+    });
 
-    await act(async () => {})
+    await act(async () => {});
 
-    expect(result.current.theme).toBe('jade')
-    expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
-  })
+    expect(result.current.theme).toBe('jade');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('jade');
+  });
 
   it('setTheme still applies the theme when localStorage writes throw', async () => {
-    const setItem = localStorageMock.setItem
+    const setItem = localStorageMock.setItem;
     localStorageMock.setItem = () => {
-      throw new Error('storage disabled')
-    }
+      throw new Error('storage disabled');
+    };
     try {
       const { result } = renderHook(() => useTheme(), {
         wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-      })
+      });
 
       await act(async () => {
-        result.current.setTheme('jade')
-      })
+        result.current.setTheme('jade');
+      });
 
-      expect(result.current.theme).toBe('jade')
-      expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
+      expect(result.current.theme).toBe('jade');
+      expect(document.documentElement.getAttribute('data-theme')).toBe('jade');
     } finally {
-      localStorageMock.setItem = setItem
+      localStorageMock.setItem = setItem;
     }
-  })
+  });
 
   it('useTheme throws when called outside ThemeProvider', () => {
     expect(() => renderHook(() => useTheme())).toThrow(
       'useTheme must be used within ThemeProvider',
-    )
-  })
-})
+    );
+  });
+});

@@ -16,6 +16,6 @@ export function deriveObservedAt(
   lastSeenAt: Date | null,
   createdAt: Date,
 ): Date {
-  if (lastSeenAt === null) return createdAt
-  return lastSeenAt.getTime() > createdAt.getTime() ? lastSeenAt : createdAt
+  if (lastSeenAt === null) return createdAt;
+  return lastSeenAt.getTime() > createdAt.getTime() ? lastSeenAt : createdAt;
 }

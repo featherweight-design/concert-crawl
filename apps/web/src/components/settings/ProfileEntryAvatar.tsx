@@ -1,14 +1,14 @@
-import Link from 'next/link'
-import { Avatar } from './Avatar'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import type { AvatarColor } from '@concert-crawl/types'
+import Link from 'next/link';
+import { Avatar } from './Avatar';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import type { AvatarColor } from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface ProfileEntryAvatarProps {
-  handle: string | null
-  avatarColor: AvatarColor | null
-  loading?: boolean
+  handle: string | null;
+  avatarColor: AvatarColor | null;
+  loading?: boolean;
 }
 
 export function ProfileEntryAvatar({
@@ -33,5 +33,5 @@ export function ProfileEntryAvatar({
         loading={loading}
       />
     </Link>
-  )
+  );
 }

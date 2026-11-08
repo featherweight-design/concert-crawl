@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
 import {
   GUIDE_CHIP_ORDER,
   GUIDE_CHIP_V2_KEYS,
   type GuideChipKey,
-} from '@concert-crawl/types'
-import { ADMIN_COPY } from '../definitions/copy'
-import { GuideIcon } from './GuideIcon'
+} from '@concert-crawl/types';
+import { ADMIN_COPY } from '../definitions/copy';
+import { GuideIcon } from './GuideIcon';
 
-const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
+const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide;
 
 // Accessibility is pinned and never appears in the picker — it is always
 // present (authored, blank, or in placeholder mode), so there is nothing to
 // add or remove.
-const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility')
+const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility');
 
 interface ChipPickerProps {
-  selected: GuideChipKey[]
-  onToggle: (key: GuideChipKey) => void
-  disabled?: boolean
+  selected: GuideChipKey[];
+  onToggle: (key: GuideChipKey) => void;
+  disabled?: boolean;
 }
 
 export const ChipPicker = ({
@@ -28,8 +28,8 @@ export const ChipPicker = ({
 }: ChipPickerProps) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
     {OPTIONAL_KEYS.map((key) => {
-      const on = selected.includes(key)
-      const label = GUIDE_COPY.chipLabel[key]
+      const on = selected.includes(key);
+      const label = GUIDE_COPY.chipLabel[key];
       return (
         <button
           key={key}
@@ -76,7 +76,7 @@ export const ChipPicker = ({
             {on ? '−' : '+'}
           </span>
         </button>
-      )
+      );
     })}
 
     {/* #997 pool preview, ghosted so the finite-but-growing model is legible. */}
@@ -131,4 +131,4 @@ export const ChipPicker = ({
       {GUIDE_COPY.picker.soonHint}
     </span>
   </div>
-)
+);

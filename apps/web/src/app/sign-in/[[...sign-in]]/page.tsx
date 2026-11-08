@@ -1,5 +1,5 @@
-import { SignIn, ClerkLoaded, ClerkLoading } from '@clerk/nextjs'
-import { AuthLoadingState } from '../AuthLoadingState'
+import { SignIn, ClerkLoaded, ClerkLoading } from '@clerk/nextjs';
+import { AuthLoadingState } from '../AuthLoadingState';
 
 export default function SignInPage() {
   return (
@@ -14,5 +14,5 @@ export default function SignInPage() {
         <SignIn />
       </ClerkLoaded>
     </main>
-  )
+  );
 }

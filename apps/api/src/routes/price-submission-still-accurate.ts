@@ -1,13 +1,13 @@
-import { Hono } from 'hono'
-import { z } from 'zod'
-import { and, eq, exists, isNull, sql } from 'drizzle-orm'
-import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
-import { STALE_AFTER_MS } from '@concert-crawl/types'
-import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { and, eq, exists, isNull, sql } from 'drizzle-orm';
+import { db, events, priceSubmissions, venues } from '@concert-crawl/db';
+import { STALE_AFTER_MS } from '@concert-crawl/types';
+import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
 
-const uuidSchema = z.string().uuid()
+const uuidSchema = z.string().uuid();
 
-export const priceSubmissionStillAccurateRouter = new Hono()
+export const priceSubmissionStillAccurateRouter = new Hono();
 
 // The event must be reachable the same way event detail reaches it: not
 // hidden, not lost by the crawler, and on an active venue. events.ts:615-632
@@ -30,7 +30,7 @@ function visibleEventPredicate(eventId: string) {
           isNull(events.firstMissingAt),
         ),
       ),
-  )
+  );
 }
 
 // POST /v1/events/:id/price-submissions/:submissionId/still-accurate
@@ -44,19 +44,19 @@ priceSubmissionStillAccurateRouter.post(
   clerkAuth,
   requireAuth,
   async (ctx) => {
-    const parsedEventId = uuidSchema.safeParse(ctx.req.param('id'))
+    const parsedEventId = uuidSchema.safeParse(ctx.req.param('id'));
     if (!parsedEventId.success) {
-      return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+      return ctx.json({ success: false, error: 'Invalid event ID' }, 400);
     }
     const parsedSubmissionId = uuidSchema.safeParse(
       ctx.req.param('submissionId'),
-    )
+    );
     if (!parsedSubmissionId.success) {
-      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400);
     }
-    const eventId = parsedEventId.data
-    const submissionId = parsedSubmissionId.data
-    const { userId } = getAuthUser(ctx)
+    const eventId = parsedEventId.data;
+    const submissionId = parsedSubmissionId.data;
+    const { userId } = getAuthUser(ctx);
 
     // The staleness check IS the cooldown, so it has to be the same statement
     // as the write — a read-then-update lets two concurrent callers both
@@ -81,14 +81,14 @@ priceSubmissionStillAccurateRouter.post(
           visibleEventPredicate(eventId),
         ),
       )
-      .returning({ lastSeenAt: priceSubmissions.lastSeenAt })
+      .returning({ lastSeenAt: priceSubmissions.lastSeenAt });
 
-    const [stamped] = updated
+    const [stamped] = updated;
     if (stamped) {
       return ctx.json({
         success: true,
         data: { lastSeenAt: stamped.lastSeenAt?.toISOString() ?? null },
-      })
+      });
     }
 
     // A zero row count says "no", not "why". This second read is not
@@ -111,10 +111,10 @@ priceSubmissionStillAccurateRouter.post(
           isNull(events.firstMissingAt),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!visibleEvent) {
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
     }
 
     const [submission] = await db
@@ -126,22 +126,22 @@ priceSubmissionStillAccurateRouter.post(
           eq(priceSubmissions.eventId, eventId),
         ),
       )
-      .limit(1)
+      .limit(1);
 
     if (!submission) {
-      return ctx.json({ success: false, error: 'Submission not found' }, 404)
+      return ctx.json({ success: false, error: 'Submission not found' }, 404);
     }
 
     if (submission.status !== 'corroborated') {
       return ctx.json(
         { success: false, error: 'Submission is not corroborated' },
         400,
-      )
+      );
     }
 
     return ctx.json(
       { success: false, error: 'This price was already marked recently' },
       409,
-    )
+    );
   },
-)
+);

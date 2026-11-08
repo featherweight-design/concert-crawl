@@ -1,6 +1,6 @@
-import { Shimmer, ShimmerKeyframes } from './CrewRowSkeleton'
-import { InviteEyebrow, InviteShell } from './InviteShell'
-import { CREWS_COPY } from './definitions/copy'
+import { Shimmer, ShimmerKeyframes } from './CrewRowSkeleton';
+import { InviteEyebrow, InviteShell } from './InviteShell';
+import { CREWS_COPY } from './definitions/copy';
 
 /**
  * Shape only. It renders neither the crew's name nor its patch: both would be
@@ -46,4 +46,4 @@ export const InviteLandingSkeleton = () => (
       </InviteEyebrow>
     </span>
   </InviteShell>
-)
+);

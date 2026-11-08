@@ -1,7 +1,7 @@
-import Link from 'next/link'
-import React from 'react'
+import Link from 'next/link';
+import React from 'react';
 
-import { ARTIST_COPY } from './definitions/copy'
+import { ARTIST_COPY } from './definitions/copy';
 
 /**
  * Box metrics for the crumb row. Exported so the route skeleton's CrumbSkeleton
@@ -16,7 +16,7 @@ export const CRUMB_BOX: React.CSSProperties = {
   fontFamily: 'Inter, system-ui',
   fontSize: 13,
   color: 'var(--fg-muted)',
-}
+};
 
 /** Desktop-only wayfinding. Mobile uses the BackChip over the plate instead. */
 export const Crumb = ({ name }: { name: string }) => (
@@ -29,4 +29,4 @@ export const Crumb = ({ name }: { name: string }) => (
     </span>
     <span style={{ color: 'var(--fg)', fontWeight: 600 }}>{name}</span>
   </nav>
-)
+);

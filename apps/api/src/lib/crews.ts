@@ -5,9 +5,9 @@
 // join router (PR-3), which is why the cap and the row lock live in one place
 // rather than being restated at each insert site.
 
-import { and, eq, sql } from 'drizzle-orm'
-import { crewMembers, crews } from '@concert-crawl/db'
-import type { DbExecutor } from './db-executor.js'
+import { and, eq, sql } from 'drizzle-orm';
+import { crewMembers, crews } from '@concert-crawl/db';
+import type { DbExecutor } from './db-executor.js';
 
 // The cap and the three client-read codes are re-exported, not redeclared: the
 // crew home and the invite landing render them (the spots-left line, the
@@ -20,12 +20,12 @@ export {
   CREW_HANDOFF_REQUIRED_CODE,
   CREW_LAST_MEMBER_CODE,
   CREW_FULL_CODE,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
 /** Up to five avatars ride the cluster on a crews-list row. */
-export const CREW_CLUSTER_SIZE = 5
+export const CREW_CLUSTER_SIZE = 5;
 
-export const CREW_DUPLICATE_ID_CODE = 'crew_duplicate_id'
+export const CREW_DUPLICATE_ID_CODE = 'crew_duplicate_id';
 
 /**
  * Take a row lock on the crew before counting members. Without it, twelve
@@ -44,9 +44,9 @@ export const lockCrew = async (
     .from(crews)
     .where(eq(crews.id, crewId))
     .for('update')
-    .limit(1)
-  return row ?? null
-}
+    .limit(1);
+  return row ?? null;
+};
 
 /** Current member count. Never stored — the number is never larger than 12. */
 export const countMembers = async (
@@ -56,9 +56,9 @@ export const countMembers = async (
   const [row] = await executor
     .select({ total: sql<number>`count(*)::int` })
     .from(crewMembers)
-    .where(eq(crewMembers.crewId, crewId))
-  return row?.total ?? 0
-}
+    .where(eq(crewMembers.crewId, crewId));
+  return row?.total ?? 0;
+};
 
 export const isMember = async (
   executor: DbExecutor,
@@ -69,6 +69,6 @@ export const isMember = async (
     .select({ id: crewMembers.id })
     .from(crewMembers)
     .where(and(eq(crewMembers.crewId, crewId), eq(crewMembers.userId, userId)))
-    .limit(1)
-  return Boolean(row)
-}
+    .limit(1);
+  return Boolean(row);
+};

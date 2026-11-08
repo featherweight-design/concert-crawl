@@ -5,33 +5,33 @@
 // artist matched the canonical name exactly, and guessing would put the wrong
 // press photo on a public page. An admin resolves it by picking from the
 // candidates the matcher saw, or by pasting a Spotify artist id by hand.
-import { Hono } from 'hono'
-import { createLogger } from '@concert-crawl/logger'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, asc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm'
-import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db'
-import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
-import { getAuthUser } from '../../middleware/auth.js'
+import { Hono } from 'hono';
+import { createLogger } from '@concert-crawl/logger';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, asc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm';
+import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
+import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
+import { getAuthUser } from '../../middleware/auth.js';
 import {
   isExhaustedBucketExpr,
   isExhaustibleStatus,
   isNotExhaustedExpr,
-} from '../../lib/artist-exhaustion.js'
-import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js'
-import { httpUrl } from '../../lib/url-schema.js'
+} from '../../lib/artist-exhaustion.js';
+import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js';
+import { httpUrl } from '../../lib/url-schema.js';
 import {
   dedupeCandidates,
   toCandidateSnapshot,
-} from '../../lib/artist-match.js'
+} from '../../lib/artist-match.js';
 import {
   createSpotifyAppClient,
   type SpotifyAppClient,
-} from '../../lib/spotify-app-client.js'
-import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js'
-import type { AdminVariables } from './index.js'
+} from '../../lib/spotify-app-client.js';
+import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js';
+import type { AdminVariables } from './index.js';
 
-const logger = createLogger('admin:artists')
+const logger = createLogger('admin:artists');
 
 const matchStatusSchema = z.enum([
   'unmatched',
@@ -39,7 +39,7 @@ const matchStatusSchema = z.enum([
   'ambiguous',
   'no_match',
   'not_an_artist',
-])
+]);
 
 /**
  * What the admin queue can be filtered by: the five verdicts, plus the
@@ -50,7 +50,7 @@ const matchStatusSchema = z.enum([
  * here because the admin surface is a set of queues, and "rows I no longer need
  * to see in the ambiguous queue" is one of them.
  */
-const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')])
+const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')]);
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -64,7 +64,7 @@ const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')])
 const upcomingParamSchema = z
   .enum(['true', 'false'])
   .default('true')
-  .transform((value) => value === 'true')
+  .transform((value) => value === 'true');
 
 const listQuerySchema = z.object({
   status: listFilterSchema.optional(),
@@ -81,7 +81,7 @@ const listQuerySchema = z.object({
     ),
   limit: z.coerce.number().int().min(1).max(200).default(100),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
 /**
  * Exhausted rows move OUT of the queue they came from rather than sitting in
@@ -97,9 +97,9 @@ const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
     ? isExhaustedBucketExpr()
     : isExhaustibleStatus(status)
       ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
-      : eq(artists.matchStatus, status)
+      : eq(artists.matchStatus, status);
 
-const artistIdSchema = z.object({ id: z.string().uuid() })
+const artistIdSchema = z.object({ id: z.string().uuid() });
 
 const patchBodySchema = z
   .object({
@@ -107,9 +107,9 @@ const patchBodySchema = z
     matchStatus: matchStatusSchema.optional(),
     photoUrl: z.union([httpUrl(), z.null()]).optional(),
   })
-  .strict()
+  .strict();
 
-export const artistsAdminRouter = new Hono<AdminVariables>()
+export const artistsAdminRouter = new Hono<AdminVariables>();
 
 // GET /v1/admin/artists?status=ambiguous&search=&limit=100&offset=0
 //
@@ -121,7 +121,7 @@ artistsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { status, search, limit, offset, upcoming } = ctx.req.valid('query')
+    const { status, search, limit, offset, upcoming } = ctx.req.valid('query');
 
     // A search ignores the upcoming filter for the same reason it ignores
     // `status`: the admin is looking for one named artist, and a row they have
@@ -131,7 +131,7 @@ artistsAdminRouter.get(
       : and(
           status ? statusFilter(status) : undefined,
           upcoming ? hasUpcomingShowExpr() : undefined,
-        )
+        );
 
     const rows = await db
       // Named columns rather than `select()`: `spotifyCandidates` is the widest
@@ -161,7 +161,7 @@ artistsAdminRouter.get(
       // a page boundary and be shown twice or not at all.
       .orderBy(asc(artists.name), asc(artists.id))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
     // The page needs to know whether a next page exists, and the filtered total
     // is the only thing that answers it — a full page of rows is equally
@@ -169,15 +169,15 @@ artistsAdminRouter.get(
     const [totalRow] = await db
       .select({ total: sql<number>`count(*)::int` })
       .from(artists)
-      .where(where)
+      .where(where);
 
     return ctx.json({
       success: true,
       data: rows,
       total: totalRow?.total ?? 0,
-    })
+    });
   },
-)
+);
 
 // GET /v1/admin/artists/counts — queue sizes per match status, plus the
 // derived `exhausted` bucket. Every count matches what its tab lists, which
@@ -188,7 +188,7 @@ artistsAdminRouter.get(
   '/counts',
   zValidator('query', z.object({ upcoming: upcomingParamSchema })),
   async (ctx) => {
-    const { upcoming } = ctx.req.valid('query')
+    const { upcoming } = ctx.req.valid('query');
 
     // A filtered aggregate rather than a GROUP BY on the bucket expression: it
     // carries bind parameters, and Postgres renders separate placeholders in the
@@ -202,7 +202,7 @@ artistsAdminRouter.get(
       })
       .from(artists)
       .where(upcoming ? hasUpcomingShowExpr() : undefined)
-      .groupBy(artists.matchStatus)
+      .groupBy(artists.matchStatus);
 
     const counts = {
       unmatched: 0,
@@ -211,18 +211,18 @@ artistsAdminRouter.get(
       no_match: 0,
       not_an_artist: 0,
       exhausted: 0,
-    }
+    };
     for (const row of rows) {
       // The aggregate already applies the same status gate `statusFilter` does,
       // so a non-exhaustible status contributes 0 here and this subtraction is a
       // no-op for it.
-      counts.exhausted += row.exhausted
-      counts[row.matchStatus] += row.total - row.exhausted
+      counts.exhausted += row.exhausted;
+      counts[row.matchStatus] += row.total - row.exhausted;
     }
 
-    return ctx.json({ success: true, data: counts })
+    return ctx.json({ success: true, data: counts });
   },
-)
+);
 
 // PATCH /v1/admin/artists/:id — resolve a match by hand.
 //
@@ -236,12 +236,12 @@ artistsAdminRouter.patch(
   zValidator('param', artistIdSchema),
   zValidator('json', patchBodySchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const body = ctx.req.valid('json')
+    const { id } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
 
     const nextStatus =
       body.matchStatus ??
-      (body.spotifyArtistId === null ? 'no_match' : 'matched')
+      (body.spotifyArtistId === null ? 'no_match' : 'matched');
 
     if (body.spotifyArtistId === null && nextStatus === 'matched') {
       return ctx.json(
@@ -250,7 +250,7 @@ artistsAdminRouter.patch(
           error: 'matchStatus "matched" requires a spotifyArtistId',
         },
         400,
-      )
+      );
     }
 
     // An identity and a photo only mean anything on a matched row. Rather than
@@ -263,7 +263,7 @@ artistsAdminRouter.patch(
           error: `matchStatus "${nextStatus}" requires spotifyArtistId to be null`,
         },
         400,
-      )
+      );
     }
     if (nextStatus !== 'matched' && body.photoUrl) {
       return ctx.json(
@@ -272,16 +272,16 @@ artistsAdminRouter.patch(
           error: `matchStatus "${nextStatus}" cannot carry a photoUrl`,
         },
         400,
-      )
+      );
     }
 
     const [existing] = await db
       .select({ spotifyArtistId: artists.spotifyArtistId })
       .from(artists)
-      .where(eq(artists.id, id))
+      .where(eq(artists.id, id));
 
     if (!existing) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
     // The cached photo belongs to the Spotify identity it was fetched for, so
@@ -289,7 +289,7 @@ artistsAdminRouter.patch(
     // repointed at a different artist. Leaving it behind is how a stranger's
     // face ends up on a public page, which is the exact failure this queue
     // exists to prevent. The job re-fetches on its next pass.
-    const identityChanged = body.spotifyArtistId !== existing.spotifyArtistId
+    const identityChanged = body.spotifyArtistId !== existing.spotifyArtistId;
     const photoFields =
       nextStatus !== 'matched'
         ? { photoUrl: null, photoFetchedAt: null }
@@ -300,7 +300,7 @@ artistsAdminRouter.patch(
             }
           : identityChanged
             ? { photoUrl: null, photoFetchedAt: null }
-            : {}
+            : {};
 
     const [updated] = await db
       .update(artists)
@@ -324,24 +324,24 @@ artistsAdminRouter.patch(
         ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
       })
       .where(eq(artists.id, id))
-      .returning()
+      .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'artist.match.update')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'artist.match.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
     ctx.set('auditMeta', {
       spotifyArtistId: body.spotifyArtistId,
       matchStatus: nextStatus,
-    })
+    });
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 /**
  * Fill in the genres a snapshot is missing.
@@ -368,24 +368,24 @@ const hydrateCandidateDetails = async (
   candidates: SpotifyCandidateSnapshot[],
   artistId: string,
 ): Promise<SpotifyCandidateSnapshot[] | null> => {
-  const missing = candidates.filter((candidate) => candidate.genres === null)
-  if (missing.length === 0) return null
+  const missing = candidates.filter((candidate) => candidate.genres === null);
+  if (missing.length === 0) return null;
 
-  const client = await getClient()
-  if (client === null) return null
+  const client = await getClient();
+  if (client === null) return null;
 
   try {
     const detailsById = await client.fetchArtistDetails(
       missing.map((candidate) => candidate.id),
-    )
+    );
     // An id Spotify did not resolve stays `null`. Defaulting it would persist
     // "Spotify lists no genres" for an artist we never actually read, and no
     // later open would ever try again.
     if (missing.every((candidate) => !detailsById.has(candidate.id))) {
-      return null
+      return null;
     }
     return candidates.map((candidate) => {
-      const detail = detailsById.get(candidate.id)
+      const detail = detailsById.get(candidate.id);
       // Rebuilt field by field rather than spread: rows snapshotted before
       // February 2026 still carry a `popularity` key in the JSONB, and a spread
       // would write it straight back out.
@@ -395,16 +395,16 @@ const hydrateCandidateDetails = async (
         imageUrl: candidate.imageUrl,
         genres: candidate.genres ?? detail?.genres ?? null,
         spotifyUrl: candidate.spotifyUrl,
-      }
-    })
+      };
+    });
   } catch (err) {
     logger.warn(
       { err, artistId },
       'candidate detail hydration failed — serving candidates unhydrated',
-    )
-    return null
+    );
+    return null;
   }
-}
+};
 
 // GET /v1/admin/artists/:id/candidates?query=&refresh= — what Spotify returned
 // for this row.
@@ -453,8 +453,8 @@ artistsAdminRouter.get(
     }),
   ),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { query, refresh } = ctx.req.valid('query')
+    const { id } = ctx.req.valid('param');
+    const { query, refresh } = ctx.req.valid('query');
 
     const [artist] = await db
       .select({
@@ -463,22 +463,22 @@ artistsAdminRouter.get(
         spotifyCandidatesFetchedAt: artists.spotifyCandidatesFetchedAt,
       })
       .from(artists)
-      .where(eq(artists.id, id))
+      .where(eq(artists.id, id));
 
     if (!artist) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const searchTerm = query ?? artist.canonicalName
+    const searchTerm = query ?? artist.canonicalName;
     const cached =
-      query === undefined && !refresh ? artist.spotifyCandidates : null
+      query === undefined && !refresh ? artist.spotifyCandidates : null;
 
     // Building a client mints or refreshes an app token, so it is itself a
     // Spotify call — deferred until a path needs the network, and memoized so
     // a search plus a hydration still cost one. A fully-hydrated cache hit
     // never calls this, which is what makes the second open free.
-    let clientPromise: Promise<SpotifyAppClient | null> | undefined
-    const getClient = () => (clientPromise ??= createSpotifyAppClient())
+    let clientPromise: Promise<SpotifyAppClient | null> | undefined;
+    const getClient = () => (clientPromise ??= createSpotifyAppClient());
 
     const respond = (
       candidates: SpotifyCandidateSnapshot[],
@@ -493,11 +493,11 @@ artistsAdminRouter.get(
         })),
         query: searchTerm,
         cachedAt: cachedAt === null ? null : cachedAt.toISOString(),
-      })
+      });
 
     try {
       if (cached !== null) {
-        const hydrated = await hydrateCandidateDetails(getClient, cached, id)
+        const hydrated = await hydrateCandidateDetails(getClient, cached, id);
         if (hydrated !== null) {
           // Hydration is a round trip, so a concurrent refresh can land a
           // newer snapshot while it runs. Writing then would replace that
@@ -510,13 +510,13 @@ artistsAdminRouter.get(
               : eq(
                   artists.spotifyCandidatesFetchedAt,
                   artist.spotifyCandidatesFetchedAt,
-                )
+                );
           await db
             .update(artists)
             .set({ spotifyCandidates: hydrated, updatedAt: new Date() })
-            .where(and(eq(artists.id, id), unchanged))
+            .where(and(eq(artists.id, id), unchanged));
         }
-        return respond(hydrated ?? cached, artist.spotifyCandidatesFetchedAt)
+        return respond(hydrated ?? cached, artist.spotifyCandidatesFetchedAt);
       }
 
       // Null means SPOTIFY_CLIENT_ID/SECRET are unset — the dormant path the
@@ -525,7 +525,7 @@ artistsAdminRouter.get(
       // rather than a generic 500. Only the live-search path can reach it: a
       // cache hit is local data, and refusing it because Spotify is
       // unreachable would make the picker useless when it is most needed.
-      const client = await getClient()
+      const client = await getClient();
       if (client === null) {
         return ctx.json(
           {
@@ -533,17 +533,17 @@ artistsAdminRouter.get(
             error: 'Spotify app credentials are not configured',
           },
           503,
-        )
+        );
       }
 
-      const found = dedupeCandidates(await client.searchArtists(searchTerm))
-      const snapshot = found.map(toCandidateSnapshot)
-      const hydrated = await hydrateCandidateDetails(getClient, snapshot, id)
-      const candidates = hydrated ?? snapshot
+      const found = dedupeCandidates(await client.searchArtists(searchTerm));
+      const snapshot = found.map(toCandidateSnapshot);
+      const hydrated = await hydrateCandidateDetails(getClient, snapshot, id);
+      const candidates = hydrated ?? snapshot;
 
       // An overridden query answers a different question from the one the row
       // asks, so it is served but never written back.
-      const fetchedAt = new Date()
+      const fetchedAt = new Date();
       if (query === undefined) {
         await db
           .update(artists)
@@ -552,15 +552,15 @@ artistsAdminRouter.get(
             spotifyCandidatesFetchedAt: fetchedAt,
             updatedAt: fetchedAt,
           })
-          .where(eq(artists.id, id))
+          .where(eq(artists.id, id));
       }
 
-      return respond(candidates, query === undefined ? fetchedAt : null)
+      return respond(candidates, query === undefined ? fetchedAt : null);
     } catch (err) {
       logger.warn(
         { err, artistId: id, searchTerm },
         'candidate search failed against Spotify',
-      )
+      );
       if (err instanceof SpotifyRateLimitError) {
         return ctx.json(
           {
@@ -569,18 +569,18 @@ artistsAdminRouter.get(
               'Spotify is rate limiting us — cooldowns usually run for hours',
           },
           429,
-        )
+        );
       }
       if (err instanceof SpotifyAuthError) {
         return ctx.json(
           { success: false, error: 'Spotify rejected our app credentials' },
           502,
-        )
+        );
       }
-      throw err
+      throw err;
     }
   },
-)
+);
 
 // PATCH /v1/admin/artists/:id/visibility — hide or restore an artist page.
 //
@@ -596,25 +596,25 @@ artistsAdminRouter.patch(
   zValidator('param', artistIdSchema),
   zValidator('json', z.object({ hidden: z.boolean() }).strict()),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { hidden } = ctx.req.valid('json')
+    const { id } = ctx.req.valid('param');
+    const { hidden } = ctx.req.valid('json');
 
     const [updated] = await db
       .update(artists)
       .set({ hidden, updatedAt: new Date() })
       .where(eq(artists.id, id))
-      .returning()
+      .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const actor = getAuthUser(ctx)
-    ctx.set('auditAction', 'artist.visibility.update')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', actor.userId)
-    ctx.set('auditMeta', { hidden, slug: updated.slug })
+    const actor = getAuthUser(ctx);
+    ctx.set('auditAction', 'artist.visibility.update');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', actor.userId);
+    ctx.set('auditMeta', { hidden, slug: updated.slug });
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);

@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
 // Disconnect confirmation sheet (#763 PR 5) — warm, explicit about what's
 // lost and what stays. The third bullet ("Shows you're watching stay") gets
 // the signal dot per the handoff mock.
 
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { GhostButton } from '@/components/consumer/spotify/SpotifyButtons'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { GhostButton } from '@/components/consumer/spotify/SpotifyButtons';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 
-const COPY = SPOTIFY_COPY.disconnectConfirm
+const COPY = SPOTIFY_COPY.disconnectConfirm;
 
 interface DisconnectConfirmSheetProps {
-  open: boolean
-  onClose: () => void
-  onConfirm: () => void
-  busy?: boolean
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  busy?: boolean;
 }
 
 export const DisconnectConfirmSheet = ({
@@ -97,4 +97,4 @@ export const DisconnectConfirmSheet = ({
       ))}
     </ul>
   </ModalShell>
-)
+);

@@ -1,9 +1,9 @@
-import { CONSUMER_COPY } from '../definitions/copy'
+import { CONSUMER_COPY } from '../definitions/copy';
 
-const copy = CONSUMER_COPY.venueGuide
+const copy = CONSUMER_COPY.venueGuide;
 
 interface InsiderTipProps {
-  body: string
+  body: string;
 }
 
 /**
@@ -46,4 +46,4 @@ export const InsiderTip = ({ body }: InsiderTipProps) => (
       {body}
     </p>
   </div>
-)
+);

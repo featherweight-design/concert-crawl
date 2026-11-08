@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Post-OAuth return orchestrator (#763 PR 5). Mounted once at the settings
 // page level (outside the mobile/desktop wrappers — both are in the DOM, so
@@ -11,42 +11,42 @@
 // Auto-watch is PATCHed only on the explicit "auto" choice — the highlight
 // choice and any dismissal write nothing.
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { ApiError } from '@/lib/api'
-import { useSpotifyConnect } from '@/lib/queries/use-spotify-connection'
-import { usePatchNotificationPreferences } from '@/lib/queries/use-notification-preferences'
-import { SPOTIFY_COPY } from './definitions/copy'
-import { AutoWatchSheet } from './AutoWatchSheet'
-import { ConnectSuccessModal } from './ConnectSuccessModal'
-import { EmptyDenverMatchModal } from './EmptyDenverMatchModal'
-import { NoAnswerGlyph } from './glyphs'
-import { StateBody, StateGlyphDisc } from './StateBody'
-import { SignalButton, TextButton } from './SpotifyButtons'
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { ApiError } from '@/lib/api';
+import { useSpotifyConnect } from '@/lib/queries/use-spotify-connection';
+import { usePatchNotificationPreferences } from '@/lib/queries/use-notification-preferences';
+import { SPOTIFY_COPY } from './definitions/copy';
+import { AutoWatchSheet } from './AutoWatchSheet';
+import { ConnectSuccessModal } from './ConnectSuccessModal';
+import { EmptyDenverMatchModal } from './EmptyDenverMatchModal';
+import { NoAnswerGlyph } from './glyphs';
+import { StateBody, StateGlyphDisc } from './StateBody';
+import { SignalButton, TextButton } from './SpotifyButtons';
 
-const PENDING_COPY = SPOTIFY_COPY.connectPending
-const FAIL_COPY = SPOTIFY_COPY.failConnectDown
+const PENDING_COPY = SPOTIFY_COPY.connectPending;
+const FAIL_COPY = SPOTIFY_COPY.failConnectDown;
 
-const RETURN_PARAM = 'spotify'
-const RETURN_VALUE = 'return'
-const CLEAN_PATH = '/me?section=connections'
-const BROWSE_PATH = '/events'
+const RETURN_PARAM = 'spotify';
+const RETURN_VALUE = 'return';
+const CLEAN_PATH = '/me?section=connections';
+const BROWSE_PATH = '/events';
 
 type FlowPhase =
-  'idle' | 'connecting' | 'success' | 'autowatch' | 'empty' | 'failed'
+  'idle' | 'connecting' | 'success' | 'autowatch' | 'empty' | 'failed';
 
 export const SpotifyReturnFlow = () => {
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const connect = useSpotifyConnect()
-  const patch = usePatchNotificationPreferences()
-  const [phase, setPhase] = useState<FlowPhase>('idle')
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const connect = useSpotifyConnect();
+  const patch = usePatchNotificationPreferences();
+  const [phase, setPhase] = useState<FlowPhase>('idle');
   // Distinguishes the "Clerk has no linked Spotify account" 400 (usually a
   // dev-mode allowlist miss) from generic connect failures, so the failure
   // modal can swap in actionable "complete the sign-in" copy.
-  const [failCode, setFailCode] = useState<'no_external_account' | null>(null)
-  const startedRef = useRef(false)
+  const [failCode, setFailCode] = useState<'no_external_account' | null>(null);
+  const startedRef = useRef(false);
 
   const runConnect = () => {
     connect.mutate(undefined, {
@@ -58,37 +58,37 @@ export const SpotifyReturnFlow = () => {
               ? 'success'
               : 'empty'
             : current,
-        )
+        );
       },
       onError: (err) => {
         setFailCode(
           err instanceof ApiError && err.code === 'no_external_account'
             ? 'no_external_account'
             : null,
-        )
-        setPhase((current) => (current === 'connecting' ? 'failed' : current))
+        );
+        setPhase((current) => (current === 'connecting' ? 'failed' : current));
       },
-    })
-  }
+    });
+  };
 
   // Stable across renders: `connect.mutate` identity is stable in
   // react-query, and the ref guarantees single-fire under StrictMode.
-  const runConnectRef = useRef(runConnect)
-  runConnectRef.current = runConnect
+  const runConnectRef = useRef(runConnect);
+  runConnectRef.current = runConnect;
 
   useEffect(() => {
-    if (startedRef.current) return
-    if (searchParams.get(RETURN_PARAM) !== RETURN_VALUE) return
-    startedRef.current = true
-    router.replace(CLEAN_PATH, { scroll: false })
-    setPhase('connecting')
-    runConnectRef.current()
-  }, [searchParams, router])
+    if (startedRef.current) return;
+    if (searchParams.get(RETURN_PARAM) !== RETURN_VALUE) return;
+    startedRef.current = true;
+    router.replace(CLEAN_PATH, { scroll: false });
+    setPhase('connecting');
+    runConnectRef.current();
+  }, [searchParams, router]);
 
   const goBrowse = () => {
-    setPhase('idle')
-    router.push(BROWSE_PATH)
-  }
+    setPhase('idle');
+    router.push(BROWSE_PATH);
+  };
 
   const watchAndBrowse = () => {
     // Navigate only once auto-watch actually saved — on failure the current
@@ -96,10 +96,10 @@ export const SpotifyReturnFlow = () => {
     // artistAutoWatch, not the connection's legacy column — a follow's
     // preferences live in user_notification_preferences now, and that is the
     // only copy the crawl fan-out reads.
-    patch.mutate({ artistAutoWatch: true }, { onSuccess: goBrowse })
-  }
+    patch.mutate({ artistAutoWatch: true }, { onSuccess: goBrowse });
+  };
 
-  const view = connect.data
+  const view = connect.data;
 
   return (
     <>
@@ -145,8 +145,8 @@ export const SpotifyReturnFlow = () => {
           denverArtistCount={view.denverArtistCount}
           denverShowCount={view.denverShowCount}
           onConfirm={(choice) => {
-            if (choice === 'auto') watchAndBrowse()
-            else goBrowse()
+            if (choice === 'auto') watchAndBrowse();
+            else goBrowse();
           }}
           onClose={() => setPhase('idle')}
         />
@@ -172,8 +172,8 @@ export const SpotifyReturnFlow = () => {
             <SignalButton
               withLogo
               onClick={() => {
-                setPhase('connecting')
-                runConnect()
+                setPhase('connecting');
+                runConnect();
               }}
             >
               {FAIL_COPY.primaryCta}
@@ -205,5 +205,5 @@ export const SpotifyReturnFlow = () => {
         />
       </ModalShell>
     </>
-  )
-}
+  );
+};

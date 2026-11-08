@@ -68,18 +68,18 @@ one, and a typo'd key cannot exist in the database at all.
 `packages/entitlements/src/feature-flags.ts`:
 
 ```ts
-export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes'
+export type FeatureFlagKey = 'spotify-sync' | 'crews' | 'release-notes';
 
 export interface FeatureFlagDefinition {
-  key: FeatureFlagKey
+  key: FeatureFlagKey;
   /** Admin UI row title. */
-  label: string
+  label: string;
   /** Admin UI: what disappears for customers when this is off. */
-  description: string
+  description: string;
   /** The entitlement this flag restricts, where one exists. */
-  entitlement: PremiumFeature | null
+  entitlement: PremiumFeature | null;
   /** Value used when the table has no row for this key. */
-  defaultEnabled: boolean
+  defaultEnabled: boolean;
 }
 
 export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
@@ -107,7 +107,7 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
     entitlement: null,
     defaultEnabled: true,
   },
-}
+};
 ```
 
 `FeatureFlagKey` is its own namespace and is deliberately **not** an alias of

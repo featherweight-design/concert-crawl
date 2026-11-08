@@ -10,9 +10,9 @@
 // fails to compile. The operational entries (admin alert, invite, crawler
 // alerts) are enumerated explicitly below.
 
-import type { EmailTemplateKey } from '@concert-crawl/db'
-import { getTemplateRenderer } from './registry.js'
-import type { EmailTemplateVars } from './types.js'
+import type { EmailTemplateKey } from '@concert-crawl/db';
+import { getTemplateRenderer } from './registry.js';
+import type { EmailTemplateVars } from './types.js';
 
 // Operational (non-transactional) sends the app makes outside the template
 // registry. crawl_failure / event_count_drop mirror the crawler-side alerts
@@ -25,25 +25,25 @@ type OperationalTestKey =
   | 'invite_code'
   | 'crawl_failure'
   | 'event_count_drop'
-  | 'run_degraded'
+  | 'run_degraded';
 
-export type TestEmailKey = EmailTemplateKey | OperationalTestKey
+export type TestEmailKey = EmailTemplateKey | OperationalTestKey;
 
 // From-address category — sendTestEmail maps this to the real sender so the
 // test exercises the same domain/identity the live send would use.
-export type TestEmailFromCategory = 'transactional' | 'alert' | 'invite'
+export type TestEmailFromCategory = 'transactional' | 'alert' | 'invite';
 
 export interface BuiltTestEmail {
-  subject: string
-  html: string
-  text: string
-  fromCategory: TestEmailFromCategory
+  subject: string;
+  html: string;
+  text: string;
+  fromCategory: TestEmailFromCategory;
 }
 
 export interface TestEmailOption {
-  key: TestEmailKey
-  label: string
-  group: 'Customer' | 'Operational'
+  key: TestEmailKey;
+  label: string;
+  group: 'Customer' | 'Operational';
 }
 
 // Drives the picker dropdown (via GET /v1/admin/notifications/test-email/options).
@@ -111,7 +111,7 @@ export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
     label: 'Degraded crawl run alert',
     group: 'Operational',
   },
-]
+];
 
 // Derived from the picker options (not spread from EMAIL_TEMPLATE_KEYS) so this
 // module loads without evaluating a db export at import time — full-app tests
@@ -121,12 +121,12 @@ export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
 // fixture, and test-fixtures.test.ts asserts every template key is listed here.
 export const TEST_EMAIL_KEYS: readonly TestEmailKey[] = TEST_EMAIL_OPTIONS.map(
   (option) => option.key,
-)
+);
 
 // Realistic sample vars for each transactional template. Mapped over
 // EmailTemplateKey so a new template without a fixture is a compile error.
 const TRANSACTIONAL_TEST_VARS: {
-  [K in EmailTemplateKey]: EmailTemplateVars[K]
+  [K in EmailTemplateKey]: EmailTemplateVars[K];
 } = {
   welcome_paid: { tier: 'premium' },
   welcome_gifted: {
@@ -233,7 +233,7 @@ const TRANSACTIONAL_TEST_VARS: {
     tastePicks: [],
     unsubscribeUrl: null,
   },
-}
+};
 
 // Derived from the fixture map, not a runtime @concert-crawl/db export, so this
 // module evaluates even when API route tests mock that package with partial
@@ -242,10 +242,10 @@ const TRANSACTIONAL_TEST_VARS: {
 // guarantees these keys are exactly EmailTemplateKey.
 const TRANSACTIONAL_KEYS: ReadonlySet<string> = new Set(
   Object.keys(TRANSACTIONAL_TEST_VARS),
-)
+);
 
 function isTransactionalKey(key: TestEmailKey): key is EmailTemplateKey {
-  return TRANSACTIONAL_KEYS.has(key)
+  return TRANSACTIONAL_KEYS.has(key);
 }
 
 // Faithful samples of the crawler-side admin alerts (source of truth:
@@ -253,7 +253,7 @@ function isTransactionalKey(key: TestEmailKey): key is EmailTemplateKey {
 // the API decoupled from the crawler package.
 // Env-driven so staging/dev test emails link to that environment's admin, not
 // prod. Mirrors the ADMIN_URL ?? prod fallback in the notifications route.
-const SAMPLE_ADMIN_URL = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
+const SAMPLE_ADMIN_URL = process.env.ADMIN_URL ?? 'https://concertcrawl.app';
 
 function buildAdminAlertSample(): BuiltTestEmail {
   return {
@@ -269,11 +269,11 @@ function buildAdminAlertSample(): BuiltTestEmail {
       '',
       'If you received this, the alert pipeline is healthy end-to-end.',
     ].join('\n'),
-  }
+  };
 }
 
 function buildInviteCodeSample(): BuiltTestEmail {
-  const code = 'SAMPLE-CODE-1234'
+  const code = 'SAMPLE-CODE-1234';
   return {
     fromCategory: 'invite',
     subject: "You're invited to Concert Crawl",
@@ -285,12 +285,12 @@ function buildInviteCodeSample(): BuiltTestEmail {
       '',
       'Use it at: https://concertcrawl.app/auth/code',
     ].join('\n'),
-  }
+  };
 }
 
 function buildCrawlFailureSample(): BuiltTestEmail {
-  const venueName = 'Ogden Theatre'
-  const url = `${SAMPLE_ADMIN_URL}/admin/crawl?venueId=sample-venue-id`
+  const venueName = 'Ogden Theatre';
+  const url = `${SAMPLE_ADMIN_URL}/admin/crawl?venueId=sample-venue-id`;
   return {
     fromCategory: 'alert',
     subject: `Crawl failing: ${venueName}`,
@@ -301,29 +301,29 @@ function buildCrawlFailureSample(): BuiltTestEmail {
       to investigate and take action.</p>
     `,
     text: `${venueName} has failed 3 consecutive crawls. Visit ${url} to investigate.`,
-  }
+  };
 }
 
 // Mirrors sendRunDegradedEmail in packages/crawler-core/src/lib/email.ts.
 function buildRunDegradedSample(): BuiltTestEmail {
-  const url = `${SAMPLE_ADMIN_URL}/admin/crawl`
+  const url = `${SAMPLE_ADMIN_URL}/admin/crawl`;
   // The 2026-09-28 run exactly as describeDegradation renders it: the failure
   // rate line, then the shared cause naming every venue it hit.
   const lines = [
     '8 of 20 venues failed this run.',
     "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Ball Arena, Cervantes, Globe Hall, Hi-Dive, Larimer Lounge, Lost Lake Lounge, Meow Wolf Denver, Red Rocks Amphitheatre.",
-  ]
+  ];
   return {
     fromCategory: 'alert',
     subject: 'Daily crawl degraded: 8 of 20 venues failed',
     html: `${lines.map((line) => `<p>${line}</p>`).join('')}<p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>`,
     text: `${lines.join(' ')} Visit ${url} to investigate.`,
-  }
+  };
 }
 
 function buildEventCountDropSample(): BuiltTestEmail {
-  const venueName = 'Ogden Theatre'
-  const url = `${SAMPLE_ADMIN_URL}/admin/crawl?venueId=sample-venue-id`
+  const venueName = 'Ogden Theatre';
+  const url = `${SAMPLE_ADMIN_URL}/admin/crawl?venueId=sample-venue-id`;
   return {
     fromCategory: 'alert',
     subject: `Event count dropped sharply: ${venueName}`,
@@ -338,7 +338,7 @@ function buildEventCountDropSample(): BuiltTestEmail {
       <p><a href="${url}">Admin crawl dashboard</a></p>
     `,
     text: `${venueName} dropped sharply: 2 events vs 18.0 baseline (89% drop). See ${url}.`,
-  }
+  };
 }
 
 const OPERATIONAL_BUILDERS: Record<OperationalTestKey, () => BuiltTestEmail> = {
@@ -347,7 +347,7 @@ const OPERATIONAL_BUILDERS: Record<OperationalTestKey, () => BuiltTestEmail> = {
   crawl_failure: buildCrawlFailureSample,
   event_count_drop: buildEventCountDropSample,
   run_degraded: buildRunDegradedSample,
-}
+};
 
 /**
  * Render a test email for the given key using its sample payload. Transactional
@@ -357,17 +357,17 @@ const OPERATIONAL_BUILDERS: Record<OperationalTestKey, () => BuiltTestEmail> = {
  */
 export function buildTestEmail(key: TestEmailKey): BuiltTestEmail {
   if (isTransactionalKey(key)) {
-    const renderer = getTemplateRenderer(key)
+    const renderer = getTemplateRenderer(key);
     if (renderer === null) {
-      throw new Error(`No renderer registered for template key: ${key}`)
+      throw new Error(`No renderer registered for template key: ${key}`);
     }
-    const rendered = renderer(TRANSACTIONAL_TEST_VARS[key])
+    const rendered = renderer(TRANSACTIONAL_TEST_VARS[key]);
     return {
       fromCategory: 'transactional',
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-    }
+    };
   }
-  return OPERATIONAL_BUILDERS[key]()
+  return OPERATIONAL_BUILDERS[key]();
 }

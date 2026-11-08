@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import type {
   TierHeadline,
   TierAlternate,
   TierPriceBlock,
   TicketLink,
   EventDetailResponse,
-} from '@concert-crawl/types'
-import { decidePriceRegion } from './decision-tree'
+} from '@concert-crawl/types';
+import { decidePriceRegion } from './decision-tree';
 
 type PickInput = Pick<
   EventDetailResponse,
   'priceByTier' | 'priceStatus' | 'status' | 'ticketLinks' | 'priceVendor'
->
+>;
 
 function makeHeadline(
   partial: Partial<TierHeadline> & Pick<TierHeadline, 'priceMin'>,
@@ -27,7 +27,7 @@ function makeHeadline(
     approvalKind: 'fan',
     confirmsCount: 2,
     ...partial,
-  }
+  };
 }
 
 function makeAlternate(
@@ -39,7 +39,7 @@ function makeAlternate(
     vendor: 'Ticketmaster',
     sourceCategory: 'resale',
     ...partial,
-  }
+  };
 }
 
 function makeBlock(partial: Partial<TierPriceBlock>): TierPriceBlock {
@@ -51,7 +51,7 @@ function makeBlock(partial: Partial<TierPriceBlock>): TierPriceBlock {
     counterSubmission: null,
     reports: 0,
     ...partial,
-  }
+  };
 }
 
 function makeInput(partial: Partial<PickInput>): PickInput {
@@ -62,7 +62,7 @@ function makeInput(partial: Partial<PickInput>): PickInput {
     ticketLinks: null,
     priceVendor: null,
     ...partial,
-  }
+  };
 }
 
 describe('decidePriceRegion', () => {
@@ -71,19 +71,19 @@ describe('decidePriceRegion', () => {
       kind: 'resale',
       vendor: 'StubHub',
       url: 'https://stubhub.com/x',
-    }
+    };
     const result = decidePriceRegion({
       event: makeInput({
         priceStatus: 'soldout',
         ticketLinks: [resaleLink],
       }),
-    })
-    expect(result.kind).toBe('sold-out-resale')
+    });
+    expect(result.kind).toBe('sold-out-resale');
     if (result.kind === 'sold-out-resale') {
-      expect(result.resaleLink).toBe(resaleLink)
-      expect(result.faceValueResaleVendor).toBe('StubHub')
+      expect(result.resaleLink).toBe(resaleLink);
+      expect(result.faceValueResaleVendor).toBe('StubHub');
     }
-  })
+  });
 
   it('sold-out + no resale link → sold-out-contribute (LOCKED §9 Q1)', () => {
     const result = decidePriceRegion({
@@ -91,9 +91,9 @@ describe('decidePriceRegion', () => {
         priceStatus: 'soldout',
         ticketLinks: null,
       }),
-    })
-    expect(result.kind).toBe('sold-out-contribute')
-  })
+    });
+    expect(result.kind).toBe('sold-out-contribute');
+  });
 
   it('sold-out + ticketLinks without resale → sold-out-contribute', () => {
     const result = decidePriceRegion({
@@ -103,27 +103,27 @@ describe('decidePriceRegion', () => {
           { kind: 'boxoffice', vendor: 'Venue', url: 'https://venue/x' },
         ],
       }),
-    })
-    expect(result.kind).toBe('sold-out-contribute')
-  })
+    });
+    expect(result.kind).toBe('sold-out-contribute');
+  });
 
   it('no priceByTier + resale link → no-price-resale', () => {
     const resaleLink: TicketLink = {
       kind: 'resale',
       vendor: 'SeatGeek',
       url: 'https://seatgeek/x',
-    }
+    };
     const result = decidePriceRegion({
       event: makeInput({
         priceByTier: null,
         ticketLinks: [resaleLink],
       }),
-    })
-    expect(result.kind).toBe('no-price-resale')
+    });
+    expect(result.kind).toBe('no-price-resale');
     if (result.kind === 'no-price-resale') {
-      expect(result.faceValueResaleVendor).toBe('SeatGeek')
+      expect(result.faceValueResaleVendor).toBe('SeatGeek');
     }
-  })
+  });
 
   it('no priceByTier + no links → no-price-empty (LOCKED §9 Q2-eng)', () => {
     const result = decidePriceRegion({
@@ -131,9 +131,9 @@ describe('decidePriceRegion', () => {
         priceByTier: null,
         ticketLinks: null,
       }),
-    })
-    expect(result.kind).toBe('no-price-empty')
-  })
+    });
+    expect(result.kind).toBe('no-price-empty');
+  });
 
   it('null priceByTier + no soldout → no-price-empty (legacy fallback)', () => {
     const result = decidePriceRegion({
@@ -142,9 +142,9 @@ describe('decidePriceRegion', () => {
         priceStatus: 'live',
         ticketLinks: null,
       }),
-    })
-    expect(result.kind).toBe('no-price-empty')
-  })
+    });
+    expect(result.kind).toBe('no-price-empty');
+  });
 
   it('priceByTier with entry tier mixed sources (boxoffice headline + resale alt) → multi-source-mixed', () => {
     const entryBlock = makeBlock({
@@ -161,24 +161,24 @@ describe('decidePriceRegion', () => {
           vendor: 'Ticketmaster',
         }),
       ],
-    })
+    });
     const otherTier = makeBlock({
       tier: 'VIP',
       headline: makeHeadline({
         priceMin: '80',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [entryBlock, otherTier] }),
-    })
-    expect(result.kind).toBe('multi-source-mixed')
+    });
+    expect(result.kind).toBe('multi-source-mixed');
     if (result.kind === 'multi-source-mixed') {
-      expect(result.entryBlock).toBe(entryBlock)
-      expect(result.crossSourceAlt.sourceCategory).toBe('resale')
-      expect(result.otherTiers).toEqual([otherTier])
+      expect(result.entryBlock).toBe(entryBlock);
+      expect(result.crossSourceAlt.sourceCategory).toBe('resale');
+      expect(result.otherTiers).toEqual([otherTier]);
     }
-  })
+  });
 
   it('priceByTier with sole resale headline (no boxoffice/standard headline anywhere) → resale-headline with vendor (STATE #3)', () => {
     const resaleBlock = makeBlock({
@@ -188,20 +188,20 @@ describe('decidePriceRegion', () => {
         sourceCategory: 'resale',
         vendor: 'SeatGeek',
       }),
-    })
+    });
     const pendingOnlyTier = makeBlock({
       tier: 'VIP',
       headline: null,
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [resaleBlock, pendingOnlyTier] }),
-    })
-    expect(result.kind).toBe('resale-headline')
+    });
+    expect(result.kind).toBe('resale-headline');
     if (result.kind === 'resale-headline') {
-      expect(result.priceByTier).toHaveLength(2)
-      expect(result.faceValueResaleVendor).toBe('SeatGeek')
+      expect(result.priceByTier).toHaveLength(2);
+      expect(result.faceValueResaleVendor).toBe('SeatGeek');
     }
-  })
+  });
 
   it('priceByTier with resale headline + LEGACY null-category headline on another tier → multi-tier-shipped (Copilot R12 regression — null is "standard" per API convention, NOT a missing headline)', () => {
     const resaleBlock = makeBlock({
@@ -211,7 +211,7 @@ describe('decidePriceRegion', () => {
         sourceCategory: 'resale',
         vendor: 'SeatGeek',
       }),
-    })
+    });
     const legacyNullBlock = makeBlock({
       tier: 'VIP',
       headline: makeHeadline({
@@ -223,12 +223,12 @@ describe('decidePriceRegion', () => {
         sourceCategory: null,
         vendor: 'VenueBoxOffice',
       }),
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [resaleBlock, legacyNullBlock] }),
-    })
-    expect(result.kind).toBe('multi-tier-shipped')
-  })
+    });
+    expect(result.kind).toBe('multi-tier-shipped');
+  });
 
   it('priceByTier with boxoffice headline + resale headline on another tier → multi-tier-shipped (NOT resale-headline)', () => {
     const boxOfficeBlock = makeBlock({
@@ -237,19 +237,19 @@ describe('decidePriceRegion', () => {
         priceMin: '25',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const resaleBlock = makeBlock({
       tier: 'VIP',
       headline: makeHeadline({
         priceMin: '120',
         sourceCategory: 'resale',
       }),
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [boxOfficeBlock, resaleBlock] }),
-    })
-    expect(result.kind).toBe('multi-tier-shipped')
-  })
+    });
+    expect(result.kind).toBe('multi-tier-shipped');
+  });
 
   it('priceByTier with entry tier single boxoffice source → multi-tier-shipped', () => {
     const block = makeBlock({
@@ -258,12 +258,12 @@ describe('decidePriceRegion', () => {
         priceMin: '25',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [block] }),
-    })
-    expect(result.kind).toBe('multi-tier-shipped')
-  })
+    });
+    expect(result.kind).toBe('multi-tier-shipped');
+  });
 
   it('STATE #6 — priceByTier with one headline tier + one pending-only tier → mixed-tier', () => {
     const headlineBlock = makeBlock({
@@ -272,7 +272,7 @@ describe('decidePriceRegion', () => {
         priceMin: '25',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const pendingOnlyBlock = makeBlock({
       tier: 'VIP',
       headline: null,
@@ -292,15 +292,15 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [headlineBlock, pendingOnlyBlock] }),
-    })
-    expect(result.kind).toBe('mixed-tier')
+    });
+    expect(result.kind).toBe('mixed-tier');
     if (result.kind === 'mixed-tier') {
-      expect(result.priceByTier).toHaveLength(2)
+      expect(result.priceByTier).toHaveLength(2);
     }
-  })
+  });
 
   it('STATE #6 regression — headline tier WITH pending alongside + pending-only sibling still routes to mixed-tier', () => {
     // Regression for the Copilot R5 finding: the original mixed-tier check
@@ -331,7 +331,7 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const pendingOnlyBlock = makeBlock({
       tier: 'VIP',
       headline: null,
@@ -351,14 +351,14 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({
         priceByTier: [headlineWithPending, pendingOnlyBlock],
       }),
-    })
-    expect(result.kind).toBe('mixed-tier')
-  })
+    });
+    expect(result.kind).toBe('mixed-tier');
+  });
 
   it('STATE #7 — priceByTier where every tier is pending-only → all-tiers-pending', () => {
     const first = makeBlock({
@@ -380,7 +380,7 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const second = makeBlock({
       tier: 'VIP',
       headline: null,
@@ -400,15 +400,15 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [first, second] }),
-    })
-    expect(result.kind).toBe('all-tiers-pending')
+    });
+    expect(result.kind).toBe('all-tiers-pending');
     if (result.kind === 'all-tiers-pending') {
-      expect(result.priceByTier).toHaveLength(2)
+      expect(result.priceByTier).toHaveLength(2);
     }
-  })
+  });
 
   it('STATE #6 — mixed-tier wins over multi-tier-shipped only when a pending-only tier exists', () => {
     // Two headline tiers, both with pending corroborators — NOT mixed-tier
@@ -435,19 +435,19 @@ describe('decidePriceRegion', () => {
           isSubmitter: false,
         },
       ],
-    })
+    });
     const vip = makeBlock({
       tier: 'VIP',
       headline: makeHeadline({
         priceMin: '80',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const result = decidePriceRegion({
       event: makeInput({ priceByTier: [ga, vip] }),
-    })
-    expect(result.kind).toBe('multi-tier-shipped')
-  })
+    });
+    expect(result.kind).toBe('multi-tier-shipped');
+  });
 
   it('soldout trumps priceByTier (priceByTier present + priceStatus=soldout → soldout branch)', () => {
     const block = makeBlock({
@@ -456,19 +456,19 @@ describe('decidePriceRegion', () => {
         priceMin: '25',
         sourceCategory: 'boxoffice',
       }),
-    })
+    });
     const resaleLink: TicketLink = {
       kind: 'resale',
       vendor: 'StubHub',
       url: 'https://stubhub/x',
-    }
+    };
     const result = decidePriceRegion({
       event: makeInput({
         priceByTier: [block],
         priceStatus: 'soldout',
         ticketLinks: [resaleLink],
       }),
-    })
-    expect(result.kind).toBe('sold-out-resale')
-  })
-})
+    });
+    expect(result.kind).toBe('sold-out-resale');
+  });
+});

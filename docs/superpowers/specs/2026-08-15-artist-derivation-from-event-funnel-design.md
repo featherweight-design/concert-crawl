@@ -36,21 +36,21 @@ paths carry an inline fallback that copies the title into `artist` when their ow
 performer signal is missing. One path has no performer field at all and assigns the
 title unconditionally. One path takes a structured headliner and never falls back:
 
-| Path | Performer signal | Title fallback | Junk rows |
-| --- | --- | --- | --- |
-| JSON-LD | `performer[]` | `performerNames[0] ?? name` | 80 |
-| LLM | `evt.artist` | `evt.artist?.trim() \|\| title` | 65 |
-| AEG | `title.headlinersText` | none — returns null without one | 64 |
-| VenuePilot | `announceArtists[].name` | falls back to `title` | 11 |
-| LiveNation | `artistNames[]` | `artistNames[0] ?? event.name` | 2 |
-| Ticketure | none | `artist: title`, unconditional | — |
-| Genre tagger | n/a | `row.artist ?? ''` | — |
-| detail-page | n/a — delegates to JSON-LD | inherits JSON-LD's | (in AEG's 64) |
+| Path         | Performer signal           | Title fallback                  | Junk rows     |
+| ------------ | -------------------------- | ------------------------------- | ------------- |
+| JSON-LD      | `performer[]`              | `performerNames[0] ?? name`     | 80            |
+| LLM          | `evt.artist`               | `evt.artist?.trim() \|\| title` | 65            |
+| AEG          | `title.headlinersText`     | none — returns null without one | 64            |
+| VenuePilot   | `announceArtists[].name`   | falls back to `title`           | 11            |
+| LiveNation   | `artistNames[]`            | `artistNames[0] ?? event.name`  | 2             |
+| Ticketure    | none                       | `artist: title`, unconditional  | —             |
+| Genre tagger | n/a                        | `row.artist ?? ''`              | —             |
+| detail-page  | n/a — delegates to JSON-LD | inherits JSON-LD's              | (in AEG's 64) |
 
 Two distinct defects sit behind those 222 rows, and the difference matters because
 they need different fixes. JSON-LD, the LLM, VenuePilot and LiveNation leak the
 **title** into the artist field whenever their performer signal is absent — that is
-a fallback to delete. AEG leaks nothing: its 64 rows are junk *inside*
+a fallback to delete. AEG leaks nothing: its 64 rows are junk _inside_
 `headlinersText`, because the venue really did bill a bingo night as the headliner.
 No amount of plumbing fixes that one; it needs the adjudication step. The LLM path
 is the sharpest case, since its own fallback silently defeats the prompt it ships
@@ -216,8 +216,8 @@ and shrinking, so nothing more elaborate is warranted.
 ### The `not_an_artist` state
 
 New fifth value on `artistMatchStatusEnum`. Distinct from the existing four because
-those all answer *"how confident is the Spotify match?"* and this one answers *"there
-is nothing here to match."* Reusing the orthogonal `hidden` boolean would conflate
+those all answer _"how confident is the Spotify match?"_ and this one answers _"there
+is nothing here to match."_ Reusing the orthogonal `hidden` boolean would conflate
 "do not show this on the consumer surface" with "this was never an artist", and those
 must stay separable.
 

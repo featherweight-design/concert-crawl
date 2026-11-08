@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
-import { useId, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { REPORTING_COPY } from './definitions/copy'
-import { REPORT_TOKENS } from './reportTokens'
-import { ReportTypeMark } from './ReportTypeMark'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { useId, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { REPORTING_COPY } from './definitions/copy';
+import { REPORT_TOKENS } from './reportTokens';
+import { ReportTypeMark } from './ReportTypeMark';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
 // ── Report type glyphs (15×15) ────────────────────────────────────
 
@@ -26,7 +26,7 @@ const CancelledGlyph15 = ({ color }: { color: string }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const PostponedGlyph15 = ({ color }: { color: string }) => (
   <svg
@@ -52,7 +52,7 @@ const PostponedGlyph15 = ({ color }: { color: string }) => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const SoldOutGlyph15 = ({ color }: { color: string }) => (
   <svg
@@ -77,7 +77,7 @@ const SoldOutGlyph15 = ({ color }: { color: string }) => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const AvailableGlyph15 = ({ color }: { color: string }) => (
   <svg
@@ -101,21 +101,21 @@ const AvailableGlyph15 = ({ color }: { color: string }) => (
       strokeDasharray="1.2 1.6"
     />
   </svg>
-)
+);
 
-const copy = REPORTING_COPY.reportSheet
+const copy = REPORTING_COPY.reportSheet;
 
 // ── Report type ───────────────────────────────────────────────────
-type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available'
+type ReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available';
 
 // ── Token accessor ────────────────────────────────────────────────
-export const reportTokens = (kind: ReportType) => REPORT_TOKENS[kind]
+export const reportTokens = (kind: ReportType) => REPORT_TOKENS[kind];
 
 // ── Option data ───────────────────────────────────────────────────
 interface ReportOptionData {
-  type: ReportType
-  title: string
-  subtitle: string
+  type: ReportType;
+  title: string;
+  subtitle: string;
 }
 
 const OPTION_DATA: Record<ReportType, ReportOptionData> = {
@@ -139,13 +139,13 @@ const OPTION_DATA: Record<ReportType, ReportOptionData> = {
     title: copy.options.available.title,
     subtitle: copy.options.available.subtitle,
   },
-}
+};
 
 // ── ReportOptionRow (internal) ────────────────────────────────────
 interface ReportOptionRowProps {
-  option: ReportOptionData
-  isSelected: boolean
-  onSelect: (type: ReportType) => void
+  option: ReportOptionData;
+  isSelected: boolean;
+  onSelect: (type: ReportType) => void;
 }
 
 const ReportOptionRow = ({
@@ -153,7 +153,7 @@ const ReportOptionRow = ({
   isSelected,
   onSelect,
 }: ReportOptionRowProps) => {
-  const tokens = reportTokens(option.type)
+  const tokens = reportTokens(option.type);
 
   return (
     <div
@@ -163,8 +163,8 @@ const ReportOptionRow = ({
       onClick={() => onSelect(option.type)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault()
-          onSelect(option.type)
+          evt.preventDefault();
+          onSelect(option.type);
         }
       }}
       style={{
@@ -240,29 +240,29 @@ const ReportOptionRow = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 export interface ReportSheetProps {
-  open: boolean
-  onClose: () => void
-  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
-  isPending?: boolean
-  eventDate: string
-  onSelect: (reportType: ReportType) => void
+  open: boolean;
+  onClose: () => void;
+  liveStatus: null | 'sold-out' | 'cancelled' | 'postponed';
+  isPending?: boolean;
+  eventDate: string;
+  onSelect: (reportType: ReportType) => void;
 }
 
 // ── Derive visible options from liveStatus ────────────────────────
 const getVisibleOptions = (
   liveStatus: ReportSheetProps['liveStatus'],
 ): ReportType[] => {
-  if (liveStatus === null) return ['sold-out', 'postponed', 'cancelled']
-  if (liveStatus === 'sold-out') return ['available', 'postponed', 'cancelled']
-  if (liveStatus === 'postponed') return ['available', 'cancelled']
-  if (liveStatus === 'cancelled') return ['available']
-  return ['sold-out', 'postponed', 'cancelled']
-}
+  if (liveStatus === null) return ['sold-out', 'postponed', 'cancelled'];
+  if (liveStatus === 'sold-out') return ['available', 'postponed', 'cancelled'];
+  if (liveStatus === 'postponed') return ['available', 'cancelled'];
+  if (liveStatus === 'cancelled') return ['available'];
+  return ['sold-out', 'postponed', 'cancelled'];
+};
 
 // ── Main component ────────────────────────────────────────────────
 export const ReportSheet = ({
@@ -273,19 +273,19 @@ export const ReportSheet = ({
   eventDate: _eventDate,
   onSelect,
 }: ReportSheetProps) => {
-  const [selectedType, setSelectedType] = useState<ReportType | null>(null)
-  const hintId = useId()
-  const { isLoaded, isSignedIn } = useAuth()
+  const [selectedType, setSelectedType] = useState<ReportType | null>(null);
+  const hintId = useId();
+  const { isLoaded, isSignedIn } = useAuth();
 
-  const visibleOptions = getVisibleOptions(liveStatus)
+  const visibleOptions = getVisibleOptions(liveStatus);
   const sheetHeight: 'tall' | 'short' =
-    visibleOptions.length === 1 ? 'short' : 'tall'
+    visibleOptions.length === 1 ? 'short' : 'tall';
 
   const handleContinue = () => {
     if (selectedType !== null) {
-      onSelect(selectedType)
+      onSelect(selectedType);
     }
-  }
+  };
 
   // Gated here rather than at each trigger: three surfaces open this sheet, and
   // signed out a visitor could pick a report type and fill the whole evidence
@@ -302,7 +302,7 @@ export const ReportSheet = ({
         scaRegion
         entry="logged-out-report"
       />
-    )
+    );
   }
 
   return (
@@ -478,5 +478,5 @@ export const ReportSheet = ({
         </div>
       </div>
     </ModalShell>
-  )
-}
+  );
+};

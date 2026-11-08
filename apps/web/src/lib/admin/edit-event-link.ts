@@ -2,7 +2,7 @@ import {
   REVIEW_TAB_KEYS_SET,
   isReviewTabKey,
   type ReviewTabKey,
-} from './review-tabs'
+} from './review-tabs';
 
 /**
  * Canonical href for the admin event editor.
@@ -17,9 +17,9 @@ import {
  * lock-step with `ReviewPageClient`'s `?tab=` validation (Copilot #1089).
  */
 export const editEventHref = (eventId: string, from?: ReviewTabKey): string => {
-  const base = `/admin/events/${eventId}/edit`
-  return from ? `${base}?from=${encodeURIComponent(from)}` : base
-}
+  const base = `/admin/events/${eventId}/edit`;
+  return from ? `${base}?from=${encodeURIComponent(from)}` : base;
+};
 
 /**
  * Given the `?from=<tab>` param from the current URL, return the Review href
@@ -32,13 +32,13 @@ export const reviewHrefFromParam = (
   from: string | null | undefined,
 ): string => {
   if (from && REVIEW_TAB_KEYS_SET.has(from)) {
-    return `/admin/review?tab=${encodeURIComponent(from)}`
+    return `/admin/review?tab=${encodeURIComponent(from)}`;
   }
-  return '/admin/review'
-}
+  return '/admin/review';
+};
 
 // Re-export so downstream consumers (breadcrumbs, etc.) can go through
 // this file rather than reaching into `./review-tabs.ts` — keeps the
 // admin-facing surface of tab helpers in one module.
-export { REVIEW_TAB_KEYS_SET, isReviewTabKey }
-export type { ReviewTabKey }
+export { REVIEW_TAB_KEYS_SET, isReviewTabKey };
+export type { ReviewTabKey };

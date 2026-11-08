@@ -43,7 +43,7 @@ export const MANAGE_SHEET_COPY = {
 
   portalChip: 'Stripe',
   footer: 'Stripe handles cards · we never see them',
-} as const
+} as const;
 
 export const CANCEL_FLOW_COPY = {
   ariaLabel: 'Cancel subscription',
@@ -75,7 +75,7 @@ export const CANCEL_FLOW_COPY = {
   keepCta: (tierName: string) => `Never mind — keep ${tierName}`,
   finePrint: (periodEnd: string | null) =>
     `No refunds · access continues to ${periodEnd ?? 'period end'} · cancel anytime`,
-} as const
+} as const;
 
 export const DOWNGRADE_FLOW_COPY = {
   ariaLabel: 'Switch to Supporter',
@@ -98,7 +98,7 @@ export const DOWNGRADE_FLOW_COPY = {
   confirmCta: 'Switch to Supporter',
   backCta: 'Never mind',
   finePrint: 'Effective immediately · credit via Stripe · cancel anytime',
-} as const
+} as const;
 
 export const UPGRADE_FLOW_COPY = {
   ariaLabel: 'Upgrade to Premium',
@@ -130,7 +130,7 @@ export const UPGRADE_FLOW_COPY = {
   confirmSub: (prorated: string) => `${prorated} today, then $5/mo`,
   backCta: 'Not yet',
   finePrint: 'Effective immediately · prorated via Stripe · cancel anytime',
-} as const
+} as const;
 
 export const CHANGES_DISCLOSURE_COPY = {
   summary: 'Your follows and alerts stay safe for 90 days.',
@@ -154,15 +154,15 @@ export const CHANGES_DISCLOSURE_COPY = {
   ],
   restoreNote:
     "Re-upgrade within 90 days and it all comes back exactly where you left it. After that it's cleared.",
-} as const
+} as const;
 
 // Design defines no loading state for the proration amounts — a quiet
 // placeholder holds the slot for the beat the preview takes to land.
-export const AMOUNT_PLACEHOLDER = '$—'
+export const AMOUNT_PLACEHOLDER = '$—';
 
 // Resubscribe failure copy lives with the plan card (PLAN_CARD_COPY.errors)
 // since the Resubscribe CTA renders there, not inside the manage sheet.
 export const MANAGE_ERRORS_COPY = {
   cancel: "Couldn't cancel just now. Try again in a moment.",
   changeTier: "Couldn't switch plans just now. Try again in a moment.",
-} as const
+} as const;

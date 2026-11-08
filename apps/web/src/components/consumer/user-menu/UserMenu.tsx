@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {
   useState,
@@ -7,87 +7,88 @@ import {
   useCallback,
   createContext,
   useContext,
-} from 'react'
-import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
-import { useAuth, useUser, useClerk } from '@clerk/nextjs'
-import { Avatar } from '@/components/settings/Avatar'
-import { ThemeSwatch } from '@/theme/ThemeSwatch'
-import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes'
-import { MiniMark } from '@/theme/MiniMark'
-import { useTheme } from '@/theme'
-import { fetchMe, patchMe } from '@/lib/users'
-import type { ThemeName } from '@/theme/themes'
-import type { AvatarColor } from '@concert-crawl/types'
-import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
-import { InboxStrip } from '@/components/consumer/notifications/InboxStrip'
-import { NotifMenuPanel } from '@/components/consumer/notifications/NotifMenuPanel'
-import { NotifPip } from '@/components/consumer/notifications/NotifPip'
-import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definitions/copy'
+} from 'react';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth, useUser, useClerk } from '@clerk/nextjs';
+import { Avatar } from '@/components/settings/Avatar';
+import { ThemeSwatch } from '@/theme/ThemeSwatch';
+import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes';
+import { MiniMark } from '@/theme/MiniMark';
+import { useTheme } from '@/theme';
+import { fetchMe, patchMe } from '@/lib/users';
+import type { ThemeName } from '@/theme/themes';
+import type { AvatarColor } from '@concert-crawl/types';
+import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { AnonDisc } from '@/components/consumer/app-header/AnonDisc';
+import { InboxStrip } from '@/components/consumer/notifications/InboxStrip';
+import { NotifMenuPanel } from '@/components/consumer/notifications/NotifMenuPanel';
+import { NotifPip } from '@/components/consumer/notifications/NotifPip';
+import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definitions/copy';
 import {
   useNotifications,
   unreadCountOf,
   hasUnseen as hasUnseenNotifications,
-} from '@/lib/queries/use-notifications'
-import { GetInCard } from './GetInCard'
-import { AccountMenuContext, useAccountMenu } from './account-menu-context'
-import type { AccountMenuState } from './account-menu-context'
-import { useFocusTrap } from '@/lib/hooks/useFocusTrap'
+} from '@/lib/queries/use-notifications';
+import { GetInCard } from './GetInCard';
+import { AccountMenuContext, useAccountMenu } from './account-menu-context';
+import type { AccountMenuState } from './account-menu-context';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 
-const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
+const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev';
 
-const AVATAR_CACHE_KEY = 'cc-avatar'
+const AVATAR_CACHE_KEY = 'cc-avatar';
 const AVATAR_COLORS: readonly AvatarColor[] = [
   'signal',
   'accent',
   'success',
   'warning',
-]
+];
 
 interface CachedAvatar {
-  handle: string | null
-  avatarColor: AvatarColor | null
+  handle: string | null;
+  avatarColor: AvatarColor | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+  return typeof value === 'object' && value !== null;
 }
 
 function isCachedAvatar(value: unknown): value is CachedAvatar {
-  if (!isRecord(value)) return false
-  const { handle, avatarColor } = value
-  const handleOk = handle === null || typeof handle === 'string'
+  if (!isRecord(value)) return false;
+  const { handle, avatarColor } = value;
+  const handleOk = handle === null || typeof handle === 'string';
   const colorOk =
-    avatarColor === null || AVATAR_COLORS.some((color) => color === avatarColor)
-  return handleOk && colorOk
+    avatarColor === null ||
+    AVATAR_COLORS.some((color) => color === avatarColor);
+  return handleOk && colorOk;
 }
 
 // Scope the cache per Clerk user so a different account signing in on a shared
 // device never briefly sees the previous user's handle/color.
 function avatarCacheKey(userId: string): string {
-  return `${AVATAR_CACHE_KEY}:${userId}`
+  return `${AVATAR_CACHE_KEY}:${userId}`;
 }
 
 function readAvatarCache(userId: string): CachedAvatar | null {
   try {
-    const raw = window.localStorage.getItem(avatarCacheKey(userId))
-    if (!raw) return null
-    const parsed: unknown = JSON.parse(raw)
-    return isCachedAvatar(parsed) ? parsed : null
+    const raw = window.localStorage.getItem(avatarCacheKey(userId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return isCachedAvatar(parsed) ? parsed : null;
   } catch (err) {
-    console.warn('UserMenu: could not read avatar cache', err)
-    return null
+    console.warn('UserMenu: could not read avatar cache', err);
+    return null;
   }
 }
 
 function writeAvatarCache(userId: string, value: CachedAvatar): void {
   try {
-    window.localStorage.setItem(avatarCacheKey(userId), JSON.stringify(value))
+    window.localStorage.setItem(avatarCacheKey(userId), JSON.stringify(value));
   } catch (err) {
     // Non-fatal: caching is a progressive enhancement.
-    console.warn('UserMenu: could not write avatar cache', err)
+    console.warn('UserMenu: could not write avatar cache', err);
   }
 }
 
@@ -95,14 +96,14 @@ function writeAvatarCache(userId: string, value: CachedAvatar): void {
 // and the mobile sheet (rendered by the provider, since the desktop bar that
 // hosts `UserMenu` is `display: none` below sm). Both read the same props from
 // here so exactly one body exists per open menu.
-const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null)
+const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null);
 
 /**
  * Which body the one shell is showing. `'notifications'` swaps NotifBody in
  * place of MenuBody INSIDE the same popover/sheet — see NotifMenuPanel for why
  * this is a mode rather than a second surface.
  */
-export type AccountMenuMode = 'menu' | 'notifications'
+export type AccountMenuMode = 'menu' | 'notifications';
 
 /**
  * The desktop popover's panel height (the mobile sheet grows to its content).
@@ -112,7 +113,7 @@ export type AccountMenuMode = 'menu' | 'notifications'
  * that carries the identity card above it. The handoff's nested-menu component
  * takes `panelMaxHeight = 340` for exactly that reason.
  */
-const PANEL_MAX_HEIGHT = 340
+const PANEL_MAX_HEIGHT = 340;
 
 /**
  * Owns the account menu's open state for every trigger in the app — the
@@ -122,28 +123,28 @@ const PANEL_MAX_HEIGHT = 340
 export function AccountMenuProvider({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const { getToken, sessionClaims, isLoaded, isSignedIn } = useAuth()
-  const { user } = useUser()
-  const { signOut } = useClerk()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<AccountMenuMode>('menu')
-  const [isMobile, setIsMobile] = useState(false)
-  const [submissionCount, setSubmissionCount] = useState(0)
-  const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
-  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
-  const [avatarLoaded, setAvatarLoaded] = useState(false)
-  const surfaceRef = useRef<HTMLDivElement>(null)
+  const { getToken, sessionClaims, isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<AccountMenuMode>('menu');
+  const [isMobile, setIsMobile] = useState(false);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const surfaceRef = useRef<HTMLDivElement>(null);
   // The element that opened the menu, so dismiss can hand focus back to it.
-  const triggerRef = useRef<HTMLElement | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null);
   // Set only by the `‹ Menu` back row, so the focus move below can't fire on
   // an ordinary open (where the shell's own trap already places focus).
-  const returningToMenu = useRef(false)
+  const returningToMenu = useRef(false);
 
-  const userId = user?.id
+  const userId = user?.id;
 
   // Hydrate the avatar from a local cache before fetchMe resolves so the
   // trigger renders filled on repeat loads instead of flashing empty→filled.
@@ -151,83 +152,83 @@ export function AccountMenuProvider({
     // Reset per-user state whenever the signed-in user changes (or signs out),
     // so a previous account's cached handle/color or submission count can't
     // linger on a shared device until fetchMe resolves.
-    setSubmissionCount(0)
+    setSubmissionCount(0);
     if (!userId) {
       // Signed-out: there's nothing to fetch, so resolve the loading state
       // immediately. Otherwise loading={!avatarLoaded} stays true forever and
       // the trigger shows the neutral disc instead of the anonymous avatar.
-      setAvatarHandle(null)
-      setAvatarColor(null)
-      setAvatarLoaded(true)
-      return
+      setAvatarHandle(null);
+      setAvatarColor(null);
+      setAvatarLoaded(true);
+      return;
     }
-    const cached = readAvatarCache(userId)
+    const cached = readAvatarCache(userId);
     if (cached) {
-      setAvatarHandle(cached.handle)
-      setAvatarColor(cached.avatarColor)
-      setAvatarLoaded(true)
+      setAvatarHandle(cached.handle);
+      setAvatarColor(cached.avatarColor);
+      setAvatarLoaded(true);
     } else {
-      setAvatarHandle(null)
-      setAvatarColor(null)
-      setAvatarLoaded(false)
+      setAvatarHandle(null);
+      setAvatarColor(null);
+      setAvatarLoaded(false);
     }
-  }, [userId])
+  }, [userId]);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   // ONE query subscription for the whole chrome. React Query dedupes the two
   // other call sites (the strip, the panel) onto this same cache entry, and the
   // query is itself `enabled: !!isSignedIn` — but the pip is guarded a second
   // time below, because a stale cache entry surviving a sign-out must not put a
   // pip on an anonymous visitor's disc.
-  const notifications = useNotifications()
+  const notifications = useNotifications();
   const unreadCount =
-    isSignedIn === true ? unreadCountOf(notifications.data) : 0
+    isSignedIn === true ? unreadCountOf(notifications.data) : 0;
   // SEEN ≠ READ. The dot is the unseen question — it drops the moment the
   // panel is opened (which advances the watermark), while the spoken count
   // stays UNREAD, because unread is what is actually waiting inside.
   const hasUnseen =
-    isSignedIn === true && hasUnseenNotifications(notifications.data)
+    isSignedIn === true && hasUnseenNotifications(notifications.data);
 
   const close = useCallback(() => {
-    setOpen(false)
+    setOpen(false);
     // Closing always returns to the menu body: reopening into the panel would
     // strand someone who dismissed from notifications and expected the menu.
-    setMode('menu')
-    triggerRef.current?.focus()
-  }, [])
+    setMode('menu');
+    triggerRef.current?.focus();
+  }, []);
 
   const openFrom = useCallback((trigger: HTMLElement | null) => {
-    triggerRef.current = trigger
-    setMode('menu')
-    setOpen(true)
-  }, [])
+    triggerRef.current = trigger;
+    setMode('menu');
+    setOpen(true);
+  }, []);
 
   const toggleFrom = useCallback(
     (trigger: HTMLElement | null) => {
       if (open) {
-        close()
-        return
+        close();
+        return;
       }
-      openFrom(trigger)
+      openFrom(trigger);
     },
     [close, open, openFrom],
-  )
+  );
 
   // Rows that navigate within the same layout (the version footer's push to
   // /changelog) would otherwise leave the menu open on top of the destination.
   // No focus restore: the trigger the menu came from may not exist on the new
   // page, and stealing focus back from a fresh page is worse than leaving it.
   useEffect(() => {
-    setOpen(false)
-    setMode('menu')
-  }, [pathname])
+    setOpen(false);
+    setMode('menu');
+  }, [pathname]);
 
   // Returning from the panel unmounts the element focus was sitting on (the
   // panel surface), which drops focus to <body> while the dialog is still
@@ -235,94 +236,94 @@ export function AccountMenuProvider({
   // looking at. Mirrors NotifMenuPanel's entry focus, in the other direction.
   // Escape needs no equivalent: it closes the shell and restores the trigger.
   useEffect(() => {
-    if (mode !== 'menu' || !returningToMenu.current) return
-    returningToMenu.current = false
-    surfaceRef.current?.focus()
-  }, [mode])
+    if (mode !== 'menu' || !returningToMenu.current) return;
+    returningToMenu.current = false;
+    surfaceRef.current?.focus();
+  }, [mode]);
 
   // Close on Escape key
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handleKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') close()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [close, open])
+      if (ev.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [close, open]);
 
   // Close on click-outside (only registered when open). The trigger is excluded
   // as well as the surface — otherwise a click on the trigger would close here
   // and immediately reopen in the trigger's own handler.
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handleClickOutside = (ev: MouseEvent) => {
-      const target = ev.target
-      if (!(target instanceof Node)) return
-      if (surfaceRef.current?.contains(target)) return
-      if (triggerRef.current?.contains(target)) return
-      close()
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [close, open])
+      const target = ev.target;
+      if (!(target instanceof Node)) return;
+      if (surfaceRef.current?.contains(target)) return;
+      if (triggerRef.current?.contains(target)) return;
+      close();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [close, open]);
 
   useEffect(() => {
     // Wait for Clerk before treating a null token as "nothing to fetch" —
     // otherwise a transient pre-hydration null would strand the effect for the
     // rest of the session, leaving submissionCount at 0 and the avatar cache
     // unrefreshed. The effect re-runs once isLoaded flips true.
-    if (!isLoaded) return
-    if (!userId) return
-    let cancelled = false
+    if (!isLoaded) return;
+    if (!userId) return;
+    let cancelled = false;
     void (async () => {
-      const token = await getToken()
-      if (cancelled) return
+      const token = await getToken();
+      if (cancelled) return;
       if (!token) {
         // Clerk is loaded but this user has no token: nothing to fetch. Keep any
         // cached handle/color already seeded for this userId and just resolve
         // the loading disc so the trigger shows its resolved state.
-        setAvatarLoaded(true)
-        return
+        setAvatarLoaded(true);
+        return;
       }
       try {
-        const profile = await fetchMe(token)
+        const profile = await fetchMe(token);
         if (!cancelled) {
-          setAvatarHandle(profile.handle)
-          setAvatarColor(profile.avatarColor)
-          setSubmissionCount(profile.submissionCount)
+          setAvatarHandle(profile.handle);
+          setAvatarColor(profile.avatarColor);
+          setSubmissionCount(profile.submissionCount);
           writeAvatarCache(userId, {
             handle: profile.handle,
             avatarColor: profile.avatarColor,
-          })
+          });
         }
       } catch (err) {
-        console.warn('UserMenu: could not load profile', err)
+        console.warn('UserMenu: could not load profile', err);
       } finally {
         // Always resolve the loading state so a failed fetch never leaves the
         // avatar stuck in the neutral loading disc.
-        if (!cancelled) setAvatarLoaded(true)
+        if (!cancelled) setAvatarLoaded(true);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [getToken, isLoaded, userId])
+      cancelled = true;
+    };
+  }, [getToken, isLoaded, userId]);
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
       console.error('Sign out failed', err),
-    )
-  }, [signOut])
+    );
+  }, [signOut]);
 
   // Derive user display values
-  const email = user?.emailAddresses[0]?.emailAddress ?? ''
+  const email = user?.emailAddresses[0]?.emailAddress ?? '';
 
   // CustomJwtSessionClaims is augmented in apps/web/src/types/clerk.d.ts — no cast needed
-  const isAdmin = sessionClaims?.metadata?.role === 'admin'
+  const isAdmin = sessionClaims?.metadata?.role === 'admin';
 
   // Build version display: "v0.4.2-beta · abc1234" or just "dev"
-  const buildParts = APP_VERSION.split(' · ')
-  const buildLabel = buildParts[0] ?? APP_VERSION
+  const buildParts = APP_VERSION.split(' · ');
+  const buildLabel = buildParts[0] ?? APP_VERSION;
 
   const bodyProps: MenuBodyProps = {
     email,
@@ -337,24 +338,24 @@ export function AccountMenuProvider({
     mode,
     onOpenNotifications: () => setMode('notifications'),
     onBackToMenu: () => {
-      returningToMenu.current = true
-      setMode('menu')
+      returningToMenu.current = true;
+      setMode('menu');
     },
     onNavigateAway: () => {
       // Same reasoning as onSettings: focus stays with the destination page.
-      setOpen(false)
-      setMode('menu')
+      setOpen(false);
+      setMode('menu');
     },
     onDismiss: close,
     onSettings: () => {
       // Deliberately not close(): this navigates away, so returning focus to a
       // trigger that is about to unmount would fight the destination page for it.
-      setOpen(false)
-      setMode('menu')
-      void router.push('/me')
+      setOpen(false);
+      setMode('menu');
+      void router.push('/me');
     },
     onSignOut: handleSignOut,
-  }
+  };
 
   const menuState: AccountMenuState = {
     open,
@@ -367,7 +368,7 @@ export function AccountMenuProvider({
     openFrom,
     toggleFrom,
     close,
-  }
+  };
 
   return (
     <AccountMenuContext.Provider value={menuState}>
@@ -403,7 +404,7 @@ export function AccountMenuProvider({
         )}
       </AccountMenuBodyContext.Provider>
     </AccountMenuContext.Provider>
-  )
+  );
 }
 
 /**
@@ -422,18 +423,18 @@ export function UserMenu() {
     unreadCount,
     hasUnseen,
     toggleFrom,
-  } = useAccountMenu()
-  const bodyProps = useContext(AccountMenuBodyContext)
-  const [isMobile, setIsMobile] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  } = useAccountMenu();
+  const bodyProps = useContext(AccountMenuBodyContext);
+  const [isMobile, setIsMobile] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mql.matches)
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mql.addEventListener('change', handler)
-    return () => mql.removeEventListener('change', handler)
-  }, [])
+    const mql = window.matchMedia('(max-width: 639px)');
+    setIsMobile(mql.matches);
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   // The pip is signed-in-only, twice over: `hasUnseen` is already false for
   // anonymous visitors in the provider, and this second read makes the rule
@@ -442,12 +443,12 @@ export function UserMenu() {
   // UNSEEN drives the dot, UNREAD drives the words. The dot only says
   // "something arrived since you last looked" — opening the panel clears it —
   // while the accessible name announces what is still waiting inside.
-  const piped = isSignedIn && hasUnseen
+  const piped = isSignedIn && hasUnseen;
   // Deliberately NOT `piped`. Sighted users keep the unread rows in view after
   // the dot clears; gating the label on the dot would delete that standing
   // information for screen-reader users at the exact moment they opened the
   // panel to find it.
-  const announcesUnread = isSignedIn && unreadCount > 0
+  const announcesUnread = isSignedIn && unreadCount > 0;
 
   return (
     <div className="relative">
@@ -488,28 +489,28 @@ export function UserMenu() {
         <UserMenuPopover {...bodyProps} />
       )}
     </div>
-  )
+  );
 }
 
 // ── Shared props ──────────────────────────────────────────────────────────
 
 interface MenuBodyProps {
-  email: string
-  isAdmin: boolean
-  buildLabel: string
-  onSettings: () => void
-  onSignOut: () => void
-  onDismiss: () => void
-  submissionCount: number
-  avatarHandle: string | null
-  avatarColor: AvatarColor | null
-  isSignedIn: boolean
-  open: boolean
-  mode: AccountMenuMode
-  onOpenNotifications: () => void
-  onBackToMenu: () => void
-  onNavigateAway: () => void
-  surfaceRef: React.RefObject<HTMLDivElement | null>
+  email: string;
+  isAdmin: boolean;
+  buildLabel: string;
+  onSettings: () => void;
+  onSignOut: () => void;
+  onDismiss: () => void;
+  submissionCount: number;
+  avatarHandle: string | null;
+  avatarColor: AvatarColor | null;
+  isSignedIn: boolean;
+  open: boolean;
+  mode: AccountMenuMode;
+  onOpenNotifications: () => void;
+  onBackToMenu: () => void;
+  onNavigateAway: () => void;
+  surfaceRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -518,7 +519,7 @@ interface MenuBodyProps {
  * through here so a shell can never label itself one thing and render another.
  */
 const isNotifMode = (props: MenuBodyProps): boolean =>
-  props.mode === 'notifications' && props.isSignedIn
+  props.mode === 'notifications' && props.isSignedIn;
 
 /**
  * The dialog's accessible name has to follow the body it is showing. Both
@@ -529,7 +530,7 @@ const isNotifMode = (props: MenuBodyProps): boolean =>
 const shellLabelOf = (props: MenuBodyProps): string =>
   isNotifMode(props)
     ? NOTIFICATIONS_COPY.panelTitle
-    : CONSUMER_COPY.userMenu.ariaLabels.menuTitle
+    : CONSUMER_COPY.userMenu.ariaLabels.menuTitle;
 
 /**
  * The one place the mode switch happens. Both shells call it, so the popover
@@ -542,10 +543,10 @@ function MenuShellContent({
   panelMaxHeight,
   panelClosable = false,
 }: {
-  props: MenuBodyProps
-  panelMaxHeight?: number
+  props: MenuBodyProps;
+  panelMaxHeight?: number;
   /** See NotifMenuPanel's `onClose` — the sheet sets it, the popover does not. */
-  panelClosable?: boolean
+  panelClosable?: boolean;
 }) {
   if (isNotifMode(props)) {
     return (
@@ -555,45 +556,45 @@ function MenuShellContent({
         {...(panelClosable ? { onClose: props.onDismiss } : {})}
         {...(panelMaxHeight === undefined ? {} : { maxHeight: panelMaxHeight })}
       />
-    )
+    );
   }
-  return <MenuBody {...props} />
+  return <MenuBody {...props} />;
 }
 
 // ── Theme row with inline swatch grid ────────────────────────────────────
 
 function ThemeMenuRow() {
-  const { theme, setTheme } = useTheme()
-  const { getToken } = useAuth()
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const activeTokens = THEMES[theme]
-  const activeMeta = THEME_META[theme]
+  const { theme, setTheme } = useTheme();
+  const { getToken } = useAuth();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const activeTokens = THEMES[theme];
+  const activeMeta = THEME_META[theme];
 
   // Persist to the server (mirrors settings ThemePickerInline). Without this
   // the browse-page picker only set theme locally, so ThemeSync reverted it to
   // the server value on the next /me visit and the choice never stuck.
   const selectTheme = async (name: ThemeName) => {
-    if (name === theme || isSaving) return
-    const previous = theme
-    setTheme(name)
-    setPickerOpen(false)
-    setIsSaving(true)
+    if (name === theme || isSaving) return;
+    const previous = theme;
+    setTheme(name);
+    setPickerOpen(false);
+    setIsSaving(true);
     try {
-      const token = await getToken()
+      const token = await getToken();
       // Signed-out users have no server record to persist to, and no ThemeSync
       // runs to revert the localStorage write setTheme just made — the local
       // choice sticks on its own. Only signed-in users need the server round-trip.
       if (token) {
-        await patchMe(token, { theme: name })
+        await patchMe(token, { theme: name });
       }
     } catch (err) {
-      console.warn('UserMenu: could not persist theme', err)
-      setTheme(previous)
+      console.warn('UserMenu: could not persist theme', err);
+      setTheme(previous);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <>
@@ -673,7 +674,7 @@ function ThemeMenuRow() {
         </div>
       )}
     </>
-  )
+  );
 }
 
 // ── Menu body (shared between popover and sheet) ──────────────────────────
@@ -716,7 +717,7 @@ function MenuBody({
 
         <UserMenuVersionFooter build={buildLabel} />
       </>
-    )
+    );
   }
 
   return (
@@ -873,13 +874,13 @@ function MenuBody({
       {/* Status footer — routes to /changelog, shows unread dot */}
       <UserMenuVersionFooter build={buildLabel} />
     </>
-  )
+  );
 }
 
 // ── Popover (desktop) ─────────────────────────────────────────────────────
 
 function UserMenuPopover(props: MenuBodyProps) {
-  useFocusTrap(props.surfaceRef, props.open)
+  useFocusTrap(props.surfaceRef, props.open);
   return (
     <div
       ref={props.surfaceRef}
@@ -906,13 +907,13 @@ function UserMenuPopover(props: MenuBodyProps) {
     >
       <MenuShellContent props={props} panelMaxHeight={PANEL_MAX_HEIGHT} />
     </div>
-  )
+  );
 }
 
 // ── Bottom sheet (mobile) ─────────────────────────────────────────────────
 
 function UserMenuSheet(props: MenuBodyProps) {
-  useFocusTrap(props.surfaceRef, props.open)
+  useFocusTrap(props.surfaceRef, props.open);
   return (
     <div
       ref={props.surfaceRef}
@@ -971,7 +972,7 @@ function UserMenuSheet(props: MenuBodyProps) {
           where the popover has to be bounded against the viewport. */}
       <MenuShellContent props={props} panelClosable />
     </div>
-  )
+  );
 }
 
 // ── Primitives ────────────────────────────────────────────────────────────
@@ -991,20 +992,20 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
-  )
+  );
 }
 
 interface MenuRowProps {
-  label: string
-  meta?: string
-  kbd?: string
-  hot?: boolean
-  danger?: boolean
-  last?: boolean
-  leading?: React.ReactNode
-  trailing?: React.ReactNode
-  href?: string
-  onClick?: () => void
+  label: string;
+  meta?: string;
+  kbd?: string;
+  hot?: boolean;
+  danger?: boolean;
+  last?: boolean;
+  leading?: React.ReactNode;
+  trailing?: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
 }
 
 function MenuRow({
@@ -1019,7 +1020,7 @@ function MenuRow({
   href,
   onClick,
 }: MenuRowProps) {
-  const color = danger ? 'var(--warning)' : 'var(--fg)'
+  const color = danger ? 'var(--warning)' : 'var(--fg)';
   const rowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -1032,10 +1033,10 @@ function MenuRow({
     textDecoration: 'none',
     textAlign: 'left',
     color,
-  }
+  };
   const rowClass = hot
     ? 'bg-[var(--overlay-hover)]'
-    : 'bg-transparent transition-colors hover:bg-[var(--overlay-hover)]'
+    : 'bg-transparent transition-colors hover:bg-[var(--overlay-hover)]';
 
   const inner = (
     <>
@@ -1102,14 +1103,14 @@ function MenuRow({
         </span>
       )}
     </>
-  )
+  );
 
   if (href) {
     return (
       <Link href={href} style={rowStyle} className={rowClass}>
         {inner}
       </Link>
-    )
+    );
   }
   if (onClick) {
     return (
@@ -1121,13 +1122,13 @@ function MenuRow({
       >
         {inner}
       </button>
-    )
+    );
   }
   return (
     <div style={rowStyle} className={rowClass}>
       {inner}
     </div>
-  )
+  );
 }
 
 function ChevronIcon({ open }: { open: boolean }) {
@@ -1153,7 +1154,7 @@ function ChevronIcon({ open }: { open: boolean }) {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }
 
 function ShieldIcon() {
@@ -1173,5 +1174,5 @@ function ShieldIcon() {
         strokeLinejoin="round"
       />
     </svg>
-  )
+  );
 }

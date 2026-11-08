@@ -74,4 +74,4 @@ export const LANDING_COPY = {
   betaPill: {
     label: 'Private Beta',
   },
-} as const
+} as const;

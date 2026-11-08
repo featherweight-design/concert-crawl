@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useClerk } from '@clerk/nextjs'
-import { DeleteAccountSheet } from './DeleteAccountSheet'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useState } from 'react';
+import { useClerk } from '@clerk/nextjs';
+import { DeleteAccountSheet } from './DeleteAccountSheet';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface DangerZoneProps {
-  handle?: string | null
-  submissionCount?: number
+  handle?: string | null;
+  submissionCount?: number;
 }
 
 export function DangerZone({ handle, submissionCount }: DangerZoneProps) {
-  const { signOut } = useClerk()
-  const [sheetOpen, setSheetOpen] = useState(false)
+  const { signOut } = useClerk();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <>
@@ -107,5 +107,5 @@ export function DangerZone({ handle, submissionCount }: DangerZoneProps) {
         {...(submissionCount !== undefined && { submissionCount })}
       />
     </>
-  )
+  );
 }

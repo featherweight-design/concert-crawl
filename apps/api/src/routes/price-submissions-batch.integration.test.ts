@@ -1,42 +1,42 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { eq } from 'drizzle-orm'
-import { priceSubmissions } from '@concert-crawl/db'
-import { createApp } from '../app.js'
-import { testDb } from '../test/helpers/db.js'
+import { eq } from 'drizzle-orm';
+import { priceSubmissions } from '@concert-crawl/db';
+import { createApp } from '../app.js';
+import { testDb } from '../test/helpers/db.js';
 import {
   clearTables,
   seedEvent,
   seedVenue,
   seedPriceSubmission,
-} from '../test/helpers/seed.js'
+} from '../test/helpers/seed.js';
 
-const app = createApp()
+const app = createApp();
 
 function setAuth(userId = 'user_abc123'): void {
   authState.current = {
     userId,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 function clearAuth(): void {
-  authState.current = null
+  authState.current = null;
 }
 
 // The API accepts any HowFound value regardless of vendor — 'at_the_venue'
@@ -50,20 +50,20 @@ const BATCH_BODY = {
     { tier: 'GA', priceMin: 45 },
     { tier: 'VIP', priceMin: 120, priceMax: 150 },
   ],
-}
+};
 
-type RowError = { index: number; tier: string | null; error: string }
+type RowError = { index: number; tier: string | null; error: string };
 
 describe('POST /v1/events/:id/price-submissions/batch', () => {
-  let eventId: string
+  let eventId: string;
 
   beforeEach(async () => {
-    clearAuth()
-    await clearTables()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
-    eventId = event.id
-  })
+    clearAuth();
+    await clearTables();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
+    eventId = event.id;
+  });
 
   const postBatch = (body: unknown) =>
     app.request(`/v1/events/${eventId}/price-submissions/batch`, {
@@ -73,76 +73,76 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         Authorization: 'Bearer test-token',
       },
       body: JSON.stringify(body),
-    })
+    });
 
   it('returns 401 without auth', async () => {
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(401)
-  })
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(401);
+  });
 
   it('creates two pending rows for a 2-tier batch (happy path)', async () => {
-    setAuth()
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(201)
+    setAuth();
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: Array<{
-        id: string
-        status: string
-        tier: string
-        priceMin: string
-        priceMax: string | null
-        vendor: string
-        howFound: string
-        sourceCategory: string | null
-        corroborationCount: number
-        disputedSubmissionId: string | null
-      }>
-    }
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
-    const gaRow = body.data.find((row) => row.tier === 'GA')
-    const vipRow = body.data.find((row) => row.tier === 'VIP')
-    expect(gaRow).toBeDefined()
-    expect(vipRow).toBeDefined()
-    expect(parseFloat(gaRow!.priceMin)).toBe(45)
-    expect(gaRow!.priceMax).toBeNull()
-    expect(parseFloat(vipRow!.priceMin)).toBe(120)
-    expect(parseFloat(vipRow!.priceMax!)).toBe(150)
+        id: string;
+        status: string;
+        tier: string;
+        priceMin: string;
+        priceMax: string | null;
+        vendor: string;
+        howFound: string;
+        sourceCategory: string | null;
+        corroborationCount: number;
+        disputedSubmissionId: string | null;
+      }>;
+    };
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
+    const gaRow = body.data.find((row) => row.tier === 'GA');
+    const vipRow = body.data.find((row) => row.tier === 'VIP');
+    expect(gaRow).toBeDefined();
+    expect(vipRow).toBeDefined();
+    expect(parseFloat(gaRow!.priceMin)).toBe(45);
+    expect(gaRow!.priceMax).toBeNull();
+    expect(parseFloat(vipRow!.priceMin)).toBe(120);
+    expect(parseFloat(vipRow!.priceMax!)).toBe(150);
     for (const row of body.data) {
-      expect(row.status).toBe('pending')
-      expect(row.vendor).toBe('VenueBoxOffice')
-      expect(row.howFound).toBe('at_the_venue')
-      expect(row.sourceCategory).toBe('boxoffice')
+      expect(row.status).toBe('pending');
+      expect(row.vendor).toBe('VenueBoxOffice');
+      expect(row.howFound).toBe('at_the_venue');
+      expect(row.sourceCategory).toBe('boxoffice');
       // Submitter counts as observation #1 (1/2 confirmation model)
-      expect(row.corroborationCount).toBe(1)
-      expect(row.disputedSubmissionId).toBeNull()
+      expect(row.corroborationCount).toBe(1);
+      expect(row.disputedSubmissionId).toBeNull();
     }
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(2)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(2);
+  });
 
   it('accepts a single-tier batch (N=1) identically to the single endpoint insert', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'GA', priceMin: 45 }],
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      data: Array<{ tier: string; status: string; corroborationCount: number }>
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]!.tier).toBe('GA')
-    expect(body.data[0]!.status).toBe('pending')
-    expect(body.data[0]!.corroborationCount).toBe(1)
-  })
+      data: Array<{ tier: string; status: string; corroborationCount: number }>;
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]!.tier).toBe('GA');
+    expect(body.data[0]!.status).toBe('pending');
+    expect(body.data[0]!.corroborationCount).toBe(1);
+  });
 
   it('derives sourceCategory from (vendor, howFound) when omitted, on every row', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       vendor: 'VenueBoxOffice',
       howFound: 'at_the_venue',
@@ -150,80 +150,80 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         { tier: 'GA', priceMin: 30 },
         { tier: 'Pit', priceMin: 60 },
       ],
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      data: Array<{ sourceCategory: string | null }>
-    }
+      data: Array<{ sourceCategory: string | null }>;
+    };
     for (const row of body.data) {
-      expect(row.sourceCategory).toBe('boxoffice')
+      expect(row.sourceCategory).toBe('boxoffice');
     }
-  })
+  });
 
   it('rejects an empty tiers array with 422', async () => {
-    setAuth()
-    const res = await postBatch({ ...BATCH_BODY, tiers: [] })
-    expect(res.status).toBe(422)
-  })
+    setAuth();
+    const res = await postBatch({ ...BATCH_BODY, tiers: [] });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects more than 10 tier rows with 422', async () => {
-    setAuth()
+    setAuth();
     const elevenRows = Array.from({ length: 11 }, () => ({
       tier: 'GA',
       priceMin: 45,
-    }))
-    const res = await postBatch({ ...BATCH_BODY, tiers: elevenRows })
-    expect(res.status).toBe(422)
-  })
+    }));
+    const res = await postBatch({ ...BATCH_BODY, tiers: elevenRows });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects duplicate tiers within the request with 422, before any insert', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [
         { tier: 'GA', priceMin: 45 },
         { tier: 'GA', priceMin: 50 },
       ],
-    })
-    expect(res.status).toBe(422)
+    });
+    expect(res.status).toBe(422);
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(0)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(0);
+  });
 
   it('returns a per-row indexed error when one row price is out of range, inserts zero rows', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       tiers: [
         { tier: 'GA', priceMin: 45 },
         { tier: 'VIP', priceMin: 5000 },
       ],
-    })
-    expect(res.status).toBe(422)
-    const body = (await res.json()) as { success: boolean; errors: RowError[] }
-    expect(body.success).toBe(false)
-    expect(body.errors.some((rowError) => rowError.index === 1)).toBe(true)
+    });
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { success: boolean; errors: RowError[] };
+    expect(body.success).toBe(false);
+    expect(body.errors.some((rowError) => rowError.index === 1)).toBe(true);
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(0)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(0);
+  });
 
   it('rejects disputedSubmissionId in the batch body with 422', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       disputedSubmissionId: '2b3f8a10-0000-4000-8000-000000000000',
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('returns 404 for an unknown event', async () => {
-    setAuth()
+    setAuth();
     const res = await app.request(
       `/v1/events/2b3f8a10-0000-4000-8000-000000000000/price-submissions/batch`,
       {
@@ -234,143 +234,145 @@ describe('POST /v1/events/:id/price-submissions/batch', () => {
         },
         body: JSON.stringify(BATCH_BODY),
       },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('returns 422 {index, tier, already_submitted} when a tier is already pending, inserts zero rows (atomic)', async () => {
-    setAuth()
+    setAuth();
     // Pending GA row by this user, older than the 24h rate-limit window so
     // only the per-tier duplicate check fires (not the rate limit).
-    const staleCreatedAt = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const staleCreatedAt = new Date(Date.now() - 48 * 60 * 60 * 1000);
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'GA',
       status: 'pending',
       createdAt: staleCreatedAt,
-    })
-    const res = await postBatch(BATCH_BODY) // tiers: GA (index 0) + VIP (index 1)
-    expect(res.status).toBe(422)
-    const body = (await res.json()) as { success: boolean; errors: RowError[] }
-    expect(body.success).toBe(false)
+    });
+    const res = await postBatch(BATCH_BODY); // tiers: GA (index 0) + VIP (index 1)
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { success: boolean; errors: RowError[] };
+    expect(body.success).toBe(false);
     expect(body.errors).toEqual([
       { index: 0, tier: 'GA', error: 'already_submitted' },
-    ])
+    ]);
     // Atomicity: the valid VIP row must NOT have been inserted.
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(1) // only the seeded GA row
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(1); // only the seeded GA row
+  });
 
   it('rejects a bundle whose note fails moderation, inserts zero rows', async () => {
-    setAuth()
+    setAuth();
     const res = await postBatch({
       ...BATCH_BODY,
       note: 'Contact me at admin@scam.com for better prices',
-    })
-    expect(res.status).toBe(422)
+    });
+    expect(res.status).toBe(422);
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(0)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(0);
+  });
 
   it('allows a batch when the caller is under the 3-act limit (#876)', async () => {
-    setAuth()
+    setAuth();
     // One recent act inside the window — 2 of 3 acts still available.
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Lawn',
       status: 'corroborated',
       createdAt: new Date(),
-    })
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(201)
-  })
+    });
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(201);
+  });
 
   it('blocks the batch as a unit after 3 contribution acts within 24h (#876)', async () => {
-    setAuth()
-    const now = Date.now()
+    setAuth();
+    const now = Date.now();
     // Three acts with distinct createdAt values inside the 24h window.
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Lawn',
       status: 'corroborated',
       createdAt: new Date(now - 1 * 60 * 1000),
-    })
+    });
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Pit',
       status: 'corroborated',
       createdAt: new Date(now - 2 * 60 * 1000),
-    })
+    });
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Reserved',
       status: 'stale',
       createdAt: new Date(now - 3 * 60 * 1000),
-    })
-    const res = await postBatch(BATCH_BODY)
-    expect(res.status).toBe(429)
-    const body = (await res.json()) as { error: string }
-    expect(body.error).toBe('Rate limit: 3 submissions per event per 24h')
+    });
+    const res = await postBatch(BATCH_BODY);
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('Rate limit: 3 submissions per event per 24h');
     const dbRows = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, eventId))
-    expect(dbRows).toHaveLength(3)
-  })
+      .where(eq(priceSubmissions.eventId, eventId));
+    expect(dbRows).toHaveLength(3);
+  });
 
   it('counts a multi-tier batch as ONE act and reports submissionsRemaining (#876)', async () => {
-    setAuth()
-    const first = await postBatch(BATCH_BODY) // 2 tiers, 1 act
-    expect(first.status).toBe(201)
-    const firstBody = (await first.json()) as { submissionsRemaining: number }
-    expect(firstBody.submissionsRemaining).toBe(2)
+    setAuth();
+    const first = await postBatch(BATCH_BODY); // 2 tiers, 1 act
+    expect(first.status).toBe(201);
+    const firstBody = (await first.json()) as { submissionsRemaining: number };
+    expect(firstBody.submissionsRemaining).toBe(2);
 
     const second = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'Reserved', priceMin: 80 }],
-    })
-    expect(second.status).toBe(201)
-    const secondBody = (await second.json()) as { submissionsRemaining: number }
-    expect(secondBody.submissionsRemaining).toBe(1)
+    });
+    expect(second.status).toBe(201);
+    const secondBody = (await second.json()) as {
+      submissionsRemaining: number;
+    };
+    expect(secondBody.submissionsRemaining).toBe(1);
 
     const third = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'Pit', priceMin: 95 }],
-    })
-    expect(third.status).toBe(201)
-    const thirdBody = (await third.json()) as { submissionsRemaining: number }
-    expect(thirdBody.submissionsRemaining).toBe(0)
+    });
+    expect(third.status).toBe(201);
+    const thirdBody = (await third.json()) as { submissionsRemaining: number };
+    expect(thirdBody.submissionsRemaining).toBe(0);
 
     // Fourth act exceeds the limit.
     const fourth = await postBatch({
       ...BATCH_BODY,
       tiers: [{ tier: 'Lawn', priceMin: 25 }],
-    })
-    expect(fourth.status).toBe(429)
-  })
+    });
+    expect(fourth.status).toBe(429);
+  });
 
   it('serializes concurrent batches at the limit boundary — one 201, one 429 (#876 TOCTOU)', async () => {
-    setAuth()
-    const now = Date.now()
+    setAuth();
+    const now = Date.now();
     // Two acts already used — exactly one act remains.
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Lawn',
       status: 'corroborated',
       createdAt: new Date(now - 1 * 60 * 1000),
-    })
+    });
     await seedPriceSubmission(eventId, 'user_abc123', {
       tier: 'Reserved',
       status: 'corroborated',
       createdAt: new Date(now - 2 * 60 * 1000),
-    })
+    });
     // Disjoint tiers so the per-tier pending check cannot be what blocks the
     // loser — only the act count can.
     const [first, second] = await Promise.all([
       postBatch({ ...BATCH_BODY, tiers: [{ tier: 'GA', priceMin: 45 }] }),
       postBatch({ ...BATCH_BODY, tiers: [{ tier: 'Pit', priceMin: 95 }] }),
-    ])
-    const statuses = [first.status, second.status].sort()
-    expect(statuses).toEqual([201, 429])
-  })
-})
+    ]);
+    const statuses = [first.status, second.status].sort();
+    expect(statuses).toEqual([201, 429]);
+  });
+});

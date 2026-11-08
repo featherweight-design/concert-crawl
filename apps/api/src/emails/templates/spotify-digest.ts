@@ -10,7 +10,7 @@
 // clients, and the hue (derived from the artist name) still gives each row its
 // color identity.
 
-import { footerRow, headerRow, row } from '../atoms.js'
+import { footerRow, headerRow, row } from '../atoms.js';
 import {
   EMAIL_FONT,
   EMAIL_MONO,
@@ -19,42 +19,42 @@ import {
   escapeHtml,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
+} from '../layout.js';
 import type {
   DigestEmailShow,
   EmailTemplateVars,
   TemplateRenderer,
-} from '../types.js'
-import { sanitizeInlineText } from './format.js'
+} from '../types.js';
+import { sanitizeInlineText } from './format.js';
 
-const MAX_FEATURED_SHOWS = 5
-const MAX_TASTE_PICKS = 2
+const MAX_FEATURED_SHOWS = 5;
+const MAX_TASTE_PICKS = 2;
 // Source-neutral by contract (native following PR 9). The digest now goes to
 // anyone who follows an artist, so naming Spotify would read as a lie to a
 // follower who never connected it. The template key keeps its Spotify name
 // for the send-log history.
 const FOOTER_NOTE =
-  'You get this because you follow artists and turned on the weekly digest.'
-const WEEK_SUB = 'All of them playing Denver in the next 7 days.'
-const ZERO_TITLE = 'A quiet one for your artists.'
+  'You get this because you follow artists and turned on the weekly digest.';
+const WEEK_SUB = 'All of them playing Denver in the next 7 days.';
+const ZERO_TITLE = 'A quiet one for your artists.';
 const ZERO_SUB =
-  "Nobody you follow is playing Denver this week. Here's a couple we think you'd click with anyway."
+  "Nobody you follow is playing Denver this week. Here's a couple we think you'd click with anyway.";
 
 // Deterministic hue from the artist name — same trick as the mock's per-show
 // `hue`, minus the randomness so re-renders are stable.
 const artistHue = (artist: string): number => {
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < artist.length; i += 1) {
-    hash = (hash * 31 + artist.charCodeAt(i)) % 360
+    hash = (hash * 31 + artist.charCodeAt(i)) % 360;
   }
-  return hash
-}
+  return hash;
+};
 
 const showRow = (show: DigestEmailShow, last: boolean): string => {
-  const artist = sanitizeInlineText(show.artist)
-  const tour = show.tourName === null ? '' : sanitizeInlineText(show.tourName)
-  const venue = sanitizeInlineText(show.venue)
-  const hue = artistHue(artist)
+  const artist = sanitizeInlineText(show.artist);
+  const tour = show.tourName === null ? '' : sanitizeInlineText(show.tourName);
+  const venue = sanitizeInlineText(show.venue);
+  const hue = artistHue(artist);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;"><tr>
 <td style="padding: 14px 0; ${last ? '' : `border-bottom: 1px solid ${ME.border}; `}vertical-align: top;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -70,40 +70,40 @@ ${show.priceLabel === null ? '' : `<div style="font-family: ${EMAIL_MONO}; font-
 </td>
 </tr></table>
 </td>
-</tr></table>`
-}
+</tr></table>`;
+};
 
 const eyebrowLine = (text: string): string =>
-  `<div style="font-family: ${EMAIL_MONO}; font-size: 10px; letter-spacing: 0.14em; color: ${ME.subtle}; text-transform: uppercase; margin-bottom: 10px;">${escapeHtml(text)}</div>`
+  `<div style="font-family: ${EMAIL_MONO}; font-size: 10px; letter-spacing: 0.14em; color: ${ME.subtle}; text-transform: uppercase; margin-bottom: 10px;">${escapeHtml(text)}</div>`;
 
 const showTextLines = (show: DigestEmailShow): string[] => {
-  const artist = sanitizeInlineText(show.artist)
-  const tour = show.tourName === null ? '' : sanitizeInlineText(show.tourName)
-  const venue = sanitizeInlineText(show.venue)
+  const artist = sanitizeInlineText(show.artist);
+  const tour = show.tourName === null ? '' : sanitizeInlineText(show.tourName);
+  const venue = sanitizeInlineText(show.venue);
   const meta = [venue, show.dateLabel, show.priceLabel]
     .filter((part): part is string => part !== null && part !== '')
-    .join(' · ')
+    .join(' · ');
   return [
     `- ${artist}${tour === '' ? '' : `: ${tour}`}`,
     `  ${meta}`,
     `  ${show.url}`,
     '',
-  ]
-}
+  ];
+};
 
 export const renderSpotifyDigest: TemplateRenderer<
   EmailTemplateVars['spotify_digest']
 > = ({ shows, tastePicks, unsubscribeUrl }) => {
-  const zero = shows.length === 0
-  const featured = shows.slice(0, MAX_FEATURED_SHOWS)
-  const moreCount = shows.length - featured.length
-  const picks = tastePicks.slice(0, MAX_TASTE_PICKS)
-  const countLabel = `${shows.length} ${shows.length === 1 ? 'show' : 'shows'}`
+  const zero = shows.length === 0;
+  const featured = shows.slice(0, MAX_FEATURED_SHOWS);
+  const moreCount = shows.length - featured.length;
+  const picks = tastePicks.slice(0, MAX_TASTE_PICKS);
+  const countLabel = `${shows.length} ${shows.length === 1 ? 'show' : 'shows'}`;
 
   const subject = zero
     ? 'A quiet week for your artists: two picks anyway'
-    : `${countLabel} this week by artists you follow`
-  const preheader = zero ? ZERO_SUB : WEEK_SUB
+    : `${countLabel} this week by artists you follow`;
+  const preheader = zero ? ZERO_SUB : WEEK_SUB;
 
   const ledeInner = zero
     ? `${eyebrowLine('This week in Denver')}
@@ -111,7 +111,7 @@ export const renderSpotifyDigest: TemplateRenderer<
 <div style="font-family: ${EMAIL_FONT}; font-size: 14px; color: ${ME.muted}; line-height: 1.5; margin-top: 8px;">${escapeHtml(ZERO_SUB)}</div>`
     : `${eyebrowLine('This week in Denver')}
 <div style="font-family: ${EMAIL_FONT}; font-weight: 900; font-size: 25px; color: ${ME.fg}; letter-spacing: -0.02em; line-height: 1.15;"><span style="color: ${ME.signal};">${escapeHtml(countLabel)}</span> by artists you follow.</div>
-<div style="font-family: ${EMAIL_FONT}; font-size: 14px; color: ${ME.muted}; line-height: 1.5; margin-top: 8px;">${escapeHtml(WEEK_SUB)}</div>`
+<div style="font-family: ${EMAIL_FONT}; font-size: 14px; color: ${ME.muted}; line-height: 1.5; margin-top: 8px;">${escapeHtml(WEEK_SUB)}</div>`;
 
   const listInner = zero
     ? `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.14em; color: ${ME.subtle}; text-transform: uppercase; margin-bottom: 2px;">Based on your taste</div>
@@ -121,9 +121,9 @@ ${
   moreCount > 0
     ? `<table role="presentation" width="100%"><tr><td style="padding: 13px 0 2px; text-align: center;"><a href="${escapeHtml(appUrl())}" style="font-family: ${EMAIL_FONT}; font-size: 13px; font-weight: 700; color: ${ME.signal}; text-decoration: none;">+${moreCount} more this week &rarr;</a></td></tr></table>`
     : ''
-}`
+}`;
 
-  const ctaInner = `<a href="${escapeHtml(appUrl())}" style="display: block; background: ${ME.signal}; color: ${ME.onSignal}; font-family: ${EMAIL_FONT}; font-weight: 800; font-size: 14px; text-decoration: none; text-align: center; padding: 13px; border-radius: 12px;">Open Concert Crawl</a>`
+  const ctaInner = `<a href="${escapeHtml(appUrl())}" style="display: block; background: ${ME.signal}; color: ${ME.onSignal}; font-family: ${EMAIL_FONT}; font-weight: 800; font-size: 14px; text-decoration: none; text-align: center; padding: 13px; border-radius: 12px;">Open Concert Crawl</a>`;
 
   const bodyRows = [
     headerRow('Weekly · Following'),
@@ -136,7 +136,7 @@ ${
       note: FOOTER_NOTE,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
-  ].join('\n')
+  ].join('\n');
 
   // Both branches lead with the masthead line: the zero variant used to skip
   // it, so a text-only client read a headerless email.
@@ -146,18 +146,18 @@ ${
     ...(zero
       ? [ZERO_TITLE, '', ZERO_SUB, '', 'Based on your taste', '']
       : [`${countLabel} by artists you follow.`, WEEK_SUB, '']),
-  ]
-  const textShows = (zero ? picks : featured).flatMap(showTextLines)
+  ];
+  const textShows = (zero ? picks : featured).flatMap(showTextLines);
   const textMore =
     !zero && moreCount > 0
       ? [`+${moreCount} more this week: ${appUrl()}`, '']
-      : []
+      : [];
   const text = [
     ...textIntro,
     ...textShows,
     ...textMore,
     `Open Concert Crawl: ${appUrl()}`,
-  ].join('\n')
+  ].join('\n');
 
   return {
     subject,
@@ -170,5 +170,5 @@ ${
       note: FOOTER_NOTE,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
-  }
-}
+  };
+};

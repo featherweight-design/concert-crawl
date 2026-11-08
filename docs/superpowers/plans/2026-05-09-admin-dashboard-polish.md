@@ -16,25 +16,26 @@
 
 ## File Map
 
-| File | Action | Responsibility |
-|---|---|---|
-| `apps/web/src/components/admin/shell/AdminThemeProvider.tsx` | Modify | Default theme → Electric |
-| `apps/web/src/components/admin/shell/AdminTopbar.tsx` | Modify | Remove theme selector + Clerk UserButton |
-| `apps/web/src/components/admin/shell/AdminSidebar.tsx` | Modify | User card → sign-out popover |
-| `apps/web/src/components/admin/primitives/AdminTable.tsx` | Modify | Add `onClick` prop to `TR` |
-| `apps/web/src/components/admin/primitives/StatCard.tsx` | Modify | Footer separator |
-| `apps/web/src/components/admin/dashboard/lib/dashboard.ts` | **Create** | Shared types + pure helper functions |
-| `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts` | **Create** | Unit tests for pure helpers |
-| `apps/web/src/components/admin/dashboard/RunAllVenuesButton.tsx` | **Create** | Client component — form + useFormStatus |
-| `apps/web/src/components/admin/dashboard/CrawlHealthTable.tsx` | **Create** | Client component — strategy col + clickable rows |
-| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx` | Modify | Events + Invites tabs (stubs) |
-| `apps/web/src/app/(protected)/admin/page.tsx` | Modify | Data fetching, stat card content, layout |
+| File                                                             | Action     | Responsibility                                   |
+| ---------------------------------------------------------------- | ---------- | ------------------------------------------------ |
+| `apps/web/src/components/admin/shell/AdminThemeProvider.tsx`     | Modify     | Default theme → Electric                         |
+| `apps/web/src/components/admin/shell/AdminTopbar.tsx`            | Modify     | Remove theme selector + Clerk UserButton         |
+| `apps/web/src/components/admin/shell/AdminSidebar.tsx`           | Modify     | User card → sign-out popover                     |
+| `apps/web/src/components/admin/primitives/AdminTable.tsx`        | Modify     | Add `onClick` prop to `TR`                       |
+| `apps/web/src/components/admin/primitives/StatCard.tsx`          | Modify     | Footer separator                                 |
+| `apps/web/src/components/admin/dashboard/lib/dashboard.ts`       | **Create** | Shared types + pure helper functions             |
+| `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts`  | **Create** | Unit tests for pure helpers                      |
+| `apps/web/src/components/admin/dashboard/RunAllVenuesButton.tsx` | **Create** | Client component — form + useFormStatus          |
+| `apps/web/src/components/admin/dashboard/CrawlHealthTable.tsx`   | **Create** | Client component — strategy col + clickable rows |
+| `apps/web/src/components/admin/dashboard/ActivityFeed.tsx`       | Modify     | Events + Invites tabs (stubs)                    |
+| `apps/web/src/app/(protected)/admin/page.tsx`                    | Modify     | Data fetching, stat card content, layout         |
 
 ---
 
 ## Task 1: Fix default theme → Electric
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminThemeProvider.tsx`
 
 - [ ] **Step 1: Update the fallback in `useEffect`**
@@ -43,12 +44,12 @@ Replace the system-preference fallback with a hardcoded `'electric'` default. Op
 
 ```ts
 useEffect(() => {
-  const raw = localStorage.getItem(STORAGE_KEY)
+  const raw = localStorage.getItem(STORAGE_KEY);
   const stored: AdminTheme | null = VALID_THEMES.includes(raw as AdminTheme)
     ? (raw as AdminTheme)
-    : null
-  setThemeState(stored ?? 'electric')
-}, [])
+    : null;
+  setThemeState(stored ?? 'electric');
+}, []);
 ```
 
 The `preferred` variable and `window.matchMedia` call are removed entirely. Users with no stored preference now get Electric.
@@ -73,6 +74,7 @@ git commit -m "fix: default admin theme to Electric instead of system preference
 ## Task 2: Simplify AdminTopbar
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminTopbar.tsx`
 
 The topbar becomes breadcrumb-only. Remove the theme selector group and the Clerk `UserButton`.
@@ -80,20 +82,20 @@ The topbar becomes breadcrumb-only. Remove the theme selector group and the Cler
 - [ ] **Step 1: Replace the entire file content**
 
 ```tsx
-'use client'
+'use client';
 
-import { usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { NAV } from './nav'
-import { buildBreadcrumbs } from './breadcrumbs'
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { NAV } from './nav';
+import { buildBreadcrumbs } from './breadcrumbs';
 
 const useBreadcrumbs = () => {
-  const pathname = usePathname()
-  return buildBreadcrumbs(pathname, NAV)
-}
+  const pathname = usePathname();
+  return buildBreadcrumbs(pathname, NAV);
+};
 
 export const AdminTopbar = () => {
-  const crumbs = useBreadcrumbs()
+  const crumbs = useBreadcrumbs();
 
   return (
     <header
@@ -142,8 +144,8 @@ export const AdminTopbar = () => {
         ))}
       </nav>
     </header>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Verify TypeScript**
@@ -166,6 +168,7 @@ git commit -m "fix: remove theme selector and Clerk UserButton from admin topbar
 ## Task 3: AdminSidebar — user card sign-out popover
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
 Convert the static user card into a button that opens a popover with a "Sign out" action. Uses `useClerk().signOut()` — no Clerk UI components.
@@ -175,8 +178,8 @@ Convert the static user card into a button that opens a popover with a "Sign out
 Add `useRef` to the existing React import and add the Clerk hook import:
 
 ```tsx
-import { useEffect, useState, useRef } from 'react'
-import { useClerk } from '@clerk/nextjs'
+import { useEffect, useState, useRef } from 'react';
+import { useClerk } from '@clerk/nextjs';
 ```
 
 The existing `import { useEffect, useState } from 'react'` becomes the above.
@@ -186,9 +189,9 @@ The existing `import { useEffect, useState } from 'react'` becomes the above.
 Add these after the existing state declarations (`mode`, `viewportMode`, `pathname`):
 
 ```tsx
-const { signOut } = useClerk()
-const [signOutOpen, setSignOutOpen] = useState(false)
-const userCardRef = useRef<HTMLDivElement>(null)
+const { signOut } = useClerk();
+const [signOutOpen, setSignOutOpen] = useState(false);
+const userCardRef = useRef<HTMLDivElement>(null);
 ```
 
 - [ ] **Step 3: Add outside-click handler**
@@ -197,18 +200,18 @@ Add this `useEffect` after the existing viewport `useEffect`:
 
 ```tsx
 useEffect(() => {
-  if (!signOutOpen) return
+  if (!signOutOpen) return;
   const handler = (evt: MouseEvent) => {
     if (
       userCardRef.current &&
       !userCardRef.current.contains(evt.target as Node)
     ) {
-      setSignOutOpen(false)
+      setSignOutOpen(false);
     }
-  }
-  document.addEventListener('mousedown', handler)
-  return () => document.removeEventListener('mousedown', handler)
-}, [signOutOpen])
+  };
+  document.addEventListener('mousedown', handler);
+  return () => document.removeEventListener('mousedown', handler);
+}, [signOutOpen]);
 ```
 
 - [ ] **Step 4: Replace the user card section**
@@ -216,7 +219,9 @@ useEffect(() => {
 Find the `{/* User card */}` comment block (starting at line 379) and replace it with:
 
 ```tsx
-{/* User card */}
+{
+  /* User card */
+}
 <div
   ref={userCardRef}
   style={{
@@ -357,7 +362,7 @@ Find the `{/* User card */}` comment block (starting at line 379) and replace it
       </button>
     </div>
   )}
-</div>
+</div>;
 ```
 
 - [ ] **Step 5: Verify TypeScript**
@@ -384,6 +389,7 @@ git commit -m "feat: replace Clerk UserButton with custom sign-out popover on ad
 ## Task 4: Add `onClick` to TR + StatCard footer separator
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/primitives/AdminTable.tsx`
 - Modify: `apps/web/src/components/admin/primitives/StatCard.tsx`
 
@@ -399,9 +405,9 @@ export const TR = ({
   active,
   onClick,
 }: {
-  children: React.ReactNode
-  active?: boolean
-  onClick?: () => void
+  children: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
 }) => (
   <tr
     onClick={onClick}
@@ -414,15 +420,15 @@ export const TR = ({
     onMouseEnter={(ev) => {
       if (!active)
         (ev.currentTarget as HTMLElement).style.background =
-          'var(--overlay-hover)'
+          'var(--overlay-hover)';
     }}
     onMouseLeave={(ev) => {
-      if (!active) (ev.currentTarget as HTMLElement).style.background = ''
+      if (!active) (ev.currentTarget as HTMLElement).style.background = '';
     }}
   >
     {children}
   </tr>
-)
+);
 ```
 
 - [ ] **Step 2: Add footer separator to StatCard**
@@ -430,17 +436,19 @@ export const TR = ({
 In `StatCard.tsx`, replace the footer wrapper `<div>`:
 
 ```tsx
-{footer && (
-  <div
-    style={{
-      borderTop: '1px solid var(--border)',
-      paddingTop: 12,
-      marginTop: -4,
-    }}
-  >
-    {footer}
-  </div>
-)}
+{
+  footer && (
+    <div
+      style={{
+        borderTop: '1px solid var(--border)',
+        paddingTop: 12,
+        marginTop: -4,
+      }}
+    >
+      {footer}
+    </div>
+  );
+}
 ```
 
 (The existing code is `{footer && <div>{footer}</div>}` — replace only that line.)
@@ -466,6 +474,7 @@ git commit -m "fix: add onClick to TR primitive, add footer separator to StatCar
 ## Task 5: Dashboard utility module + tests
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/dashboard/lib/dashboard.ts`
 - Create: `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts`
 
@@ -476,27 +485,27 @@ Pure functions for hint text and sparkline data. All logic that can be unit-test
 Create `apps/web/src/components/admin/dashboard/lib/dashboard.ts`:
 
 ```ts
-import type { Event, Venue } from '@concert-crawl/types'
-import type { CrawlRun } from '@concert-crawl/types'
+import type { Event, Venue } from '@concert-crawl/types';
+import type { CrawlRun } from '@concert-crawl/types';
 
 export interface CrawlStatusRow {
-  venueId: string
-  venueName: string
-  status: string
-  lastRunAt: string | null
-  eventsFound: number
-  strategy: string
-  cost: number
-  error: string | null
-  consecutiveFailures: number
-  blockedAt: string | null
+  venueId: string;
+  venueName: string;
+  status: string;
+  lastRunAt: string | null;
+  eventsFound: number;
+  strategy: string;
+  cost: number;
+  error: string | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
 }
 
 /** Display label for an extraction strategy value. */
 export function formatStrategy(raw: string | null): string {
-  if (!raw || raw === '—') return '—'
-  if (raw === 'structured_data') return 'structured'
-  return raw
+  if (!raw || raw === '—') return '—';
+  if (raw === 'structured_data') return 'structured';
+  return raw;
 }
 
 /** Top-3 venues by pending event count, formatted as "Bluebird (5), Gothic (4)". */
@@ -504,25 +513,29 @@ export function buildPendingReviewHint(
   events: Event[],
   venues: Venue[],
 ): string {
-  const venueNameById = new Map(venues.map((v) => [v.id, v.name]))
-  const counts = new Map<string, number>()
+  const venueNameById = new Map(venues.map((v) => [v.id, v.name]));
+  const counts = new Map<string, number>();
   for (const evt of events) {
-    counts.set(evt.venueId, (counts.get(evt.venueId) ?? 0) + 1)
+    counts.set(evt.venueId, (counts.get(evt.venueId) ?? 0) + 1);
   }
   return [...counts.entries()]
     .sort((ax, bx) => bx[1] - ax[1])
     .slice(0, 3)
     .map(([id, n]) => `${venueNameById.get(id) ?? 'Unknown'} (${n})`)
-    .join(', ')
+    .join(', ');
 }
 
 function ordinalSuffix(n: number): string {
-  if (n % 100 >= 11 && n % 100 <= 13) return 'th'
+  if (n % 100 >= 11 && n % 100 <= 13) return 'th';
   switch (n % 10) {
-    case 1: return 'st'
-    case 2: return 'nd'
-    case 3: return 'rd'
-    default: return 'th'
+    case 1:
+      return 'st';
+    case 2:
+      return 'nd';
+    case 3:
+      return 'rd';
+    default:
+      return 'th';
   }
 }
 
@@ -531,35 +544,36 @@ function ordinalSuffix(n: number): string {
  * Prefers the worst blocked venue; falls back to the venue with most consecutive failures.
  */
 export function buildCrawlHealthHint(rows: CrawlStatusRow[]): string {
-  const blocked = rows.find((r) => r.blockedAt !== null)
+  const blocked = rows.find((r) => r.blockedAt !== null);
   if (blocked) {
-    const n = blocked.consecutiveFailures
-    return `${blocked.venueName} blocked · ${n}${ordinalSuffix(n)} failure`
+    const n = blocked.consecutiveFailures;
+    return `${blocked.venueName} blocked · ${n}${ordinalSuffix(n)} failure`;
   }
   const worst = [...rows]
     .filter((r) => r.consecutiveFailures > 0)
-    .sort((ax, bx) => bx.consecutiveFailures - ax.consecutiveFailures)[0]
+    .sort((ax, bx) => bx.consecutiveFailures - ax.consecutiveFailures)[0];
   if (worst) {
-    const n = worst.consecutiveFailures
-    return `${worst.venueName} · ${n} consecutive failure${n > 1 ? 's' : ''}`
+    const n = worst.consecutiveFailures;
+    return `${worst.venueName} · ${n} consecutive failure${n > 1 ? 's' : ''}`;
   }
-  return ''
+  return '';
 }
 
 /** "X paused · Y blocked · +Z this week" hint for the Active Venues stat card. */
 export function buildActiveVenuesHint(venues: Venue[]): string {
-  const now = Date.now()
-  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
-  const paused = venues.filter((v) => !v.active && v.blockedAt === null).length
-  const blocked = venues.filter((v) => v.blockedAt !== null).length
+  const now = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const paused = venues.filter((v) => !v.active && v.blockedAt === null).length;
+  const blocked = venues.filter((v) => v.blockedAt !== null).length;
   const addedThisWeek = venues.filter(
     (v) => now - new Date(v.createdAt).getTime() < sevenDaysMs,
-  ).length
+  ).length;
 
-  const parts: string[] = []
-  if (paused > 0 || blocked > 0) parts.push(`${paused} paused · ${blocked} blocked`)
-  if (addedThisWeek > 0) parts.push(`+${addedThisWeek} this week`)
-  return parts.join(' · ')
+  const parts: string[] = [];
+  if (paused > 0 || blocked > 0)
+    parts.push(`${paused} paused · ${blocked} blocked`);
+  if (addedThisWeek > 0) parts.push(`+${addedThisWeek} this week`);
+  return parts.join(' · ');
 }
 
 /**
@@ -570,10 +584,10 @@ export function buildSparklineData(runs: CrawlRun[]): number[] {
   return runs
     .slice(0, 8)
     .reverse()
-    .map((r) => (r.status === 'success' ? 1 : 0))
+    .map((r) => (r.status === 'success' ? 1 : 0));
 }
 
-export const LLM_BUDGET_USD = 40
+export const LLM_BUDGET_USD = 40;
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -581,16 +595,16 @@ export const LLM_BUDGET_USD = 40
 Create `apps/web/src/components/admin/dashboard/lib/dashboard.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   formatStrategy,
   buildPendingReviewHint,
   buildCrawlHealthHint,
   buildActiveVenuesHint,
   buildSparklineData,
-} from './dashboard'
-import type { CrawlStatusRow } from './dashboard'
-import type { Event, Venue, CrawlRun } from '@concert-crawl/types'
+} from './dashboard';
+import type { CrawlStatusRow } from './dashboard';
+import type { Event, Venue, CrawlRun } from '@concert-crawl/types';
 
 // Minimal factory helpers
 const venue = (overrides: Partial<Venue> = {}): Venue => ({
@@ -614,7 +628,7 @@ const venue = (overrides: Partial<Venue> = {}): Venue => ({
   createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
-})
+});
 
 const event = (overrides: Partial<Event> = {}): Event => ({
   id: 'e1',
@@ -638,7 +652,7 @@ const event = (overrides: Partial<Event> = {}): Event => ({
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
-})
+});
 
 const crawlRun = (overrides: Partial<CrawlRun> = {}): CrawlRun => ({
   id: 'r1',
@@ -654,7 +668,7 @@ const crawlRun = (overrides: Partial<CrawlRun> = {}): CrawlRun => ({
   llmCostUsd: 0,
   createdAt: new Date().toISOString(),
   ...overrides,
-})
+});
 
 const row = (overrides: Partial<CrawlStatusRow> = {}): CrawlStatusRow => ({
   venueId: 'v1',
@@ -668,34 +682,34 @@ const row = (overrides: Partial<CrawlStatusRow> = {}): CrawlStatusRow => ({
   consecutiveFailures: 0,
   blockedAt: null,
   ...overrides,
-})
+});
 
 describe('formatStrategy', () => {
   it('maps structured_data → structured', () => {
-    expect(formatStrategy('structured_data')).toBe('structured')
-  })
+    expect(formatStrategy('structured_data')).toBe('structured');
+  });
   it('passes llm through unchanged', () => {
-    expect(formatStrategy('llm')).toBe('llm')
-  })
+    expect(formatStrategy('llm')).toBe('llm');
+  });
   it('returns — for null', () => {
-    expect(formatStrategy(null)).toBe('—')
-  })
+    expect(formatStrategy(null)).toBe('—');
+  });
   it('returns — for the literal dash', () => {
-    expect(formatStrategy('—')).toBe('—')
-  })
-})
+    expect(formatStrategy('—')).toBe('—');
+  });
+});
 
 describe('buildPendingReviewHint', () => {
   it('returns empty string when no events', () => {
-    expect(buildPendingReviewHint([], [venue()])).toBe('')
-  })
+    expect(buildPendingReviewHint([], [venue()])).toBe('');
+  });
 
   it('lists top 3 venues by count, descending', () => {
     const venues = [
       venue({ id: 'v1', name: 'Bluebird' }),
       venue({ id: 'v2', name: 'Gothic' }),
       venue({ id: 'v3', name: 'Ogden' }),
-    ]
+    ];
     const events = [
       event({ venueId: 'v1' }),
       event({ venueId: 'v1' }),
@@ -707,66 +721,80 @@ describe('buildPendingReviewHint', () => {
       event({ venueId: 'v2' }),
       event({ venueId: 'v2' }),
       event({ venueId: 'v3' }),
-    ]
+    ];
     expect(buildPendingReviewHint(events, venues)).toBe(
       'Bluebird (5), Gothic (4), Ogden (1)',
-    )
-  })
+    );
+  });
 
   it('caps at 3 venues even when more exist', () => {
     const venues = ['v1', 'v2', 'v3', 'v4'].map((id) =>
       venue({ id, name: `Venue ${id}` }),
-    )
-    const events = ['v1', 'v2', 'v3', 'v4'].map((id) => event({ venueId: id }))
-    const result = buildPendingReviewHint(events, venues)
-    expect(result.split(', ').length).toBe(3)
-  })
-})
+    );
+    const events = ['v1', 'v2', 'v3', 'v4'].map((id) => event({ venueId: id }));
+    const result = buildPendingReviewHint(events, venues);
+    expect(result.split(', ').length).toBe(3);
+  });
+});
 
 describe('buildCrawlHealthHint', () => {
   it('returns empty string when all healthy', () => {
-    expect(buildCrawlHealthHint([row()])).toBe('')
-  })
+    expect(buildCrawlHealthHint([row()])).toBe('');
+  });
 
   it('surfaces the blocked venue with ordinal failure count', () => {
     const rows = [
-      row({ venueName: 'Bluebird', blockedAt: '2026-05-01', consecutiveFailures: 3 }),
-    ]
-    expect(buildCrawlHealthHint(rows)).toBe('Bluebird blocked · 3rd failure')
-  })
+      row({
+        venueName: 'Bluebird',
+        blockedAt: '2026-05-01',
+        consecutiveFailures: 3,
+      }),
+    ];
+    expect(buildCrawlHealthHint(rows)).toBe('Bluebird blocked · 3rd failure');
+  });
 
   it('uses correct ordinal suffixes', () => {
     const make = (n: number) =>
-      buildCrawlHealthHint([row({ blockedAt: '2026-05-01', consecutiveFailures: n })])
-    expect(make(1)).toContain('1st')
-    expect(make(2)).toContain('2nd')
-    expect(make(3)).toContain('3rd')
-    expect(make(4)).toContain('4th')
-    expect(make(11)).toContain('11th')
-    expect(make(12)).toContain('12th')
-    expect(make(21)).toContain('21st')
-  })
+      buildCrawlHealthHint([
+        row({ blockedAt: '2026-05-01', consecutiveFailures: n }),
+      ]);
+    expect(make(1)).toContain('1st');
+    expect(make(2)).toContain('2nd');
+    expect(make(3)).toContain('3rd');
+    expect(make(4)).toContain('4th');
+    expect(make(11)).toContain('11th');
+    expect(make(12)).toContain('12th');
+    expect(make(21)).toContain('21st');
+  });
 
   it('falls back to worst failing venue when none blocked', () => {
     const rows = [
       row({ venueName: 'Gothic', consecutiveFailures: 2 }),
       row({ venueName: 'Bluebird', consecutiveFailures: 5 }),
-    ]
-    expect(buildCrawlHealthHint(rows)).toBe('Bluebird · 5 consecutive failures')
-  })
+    ];
+    expect(buildCrawlHealthHint(rows)).toBe(
+      'Bluebird · 5 consecutive failures',
+    );
+  });
 
   it('uses singular "failure" for count of 1', () => {
     expect(
-      buildCrawlHealthHint([row({ venueName: 'Ogden', consecutiveFailures: 1 })]),
-    ).toBe('Ogden · 1 consecutive failure')
-  })
-})
+      buildCrawlHealthHint([
+        row({ venueName: 'Ogden', consecutiveFailures: 1 }),
+      ]),
+    ).toBe('Ogden · 1 consecutive failure');
+  });
+});
 
 describe('buildActiveVenuesHint', () => {
   it('returns empty string when no paused, blocked, or recent venues', () => {
-    const old = venue({ active: true, blockedAt: null, createdAt: new Date(0).toISOString() })
-    expect(buildActiveVenuesHint([old])).toBe('')
-  })
+    const old = venue({
+      active: true,
+      blockedAt: null,
+      createdAt: new Date(0).toISOString(),
+    });
+    expect(buildActiveVenuesHint([old])).toBe('');
+  });
 
   it('shows paused and blocked counts', () => {
     const venues = [
@@ -774,42 +802,42 @@ describe('buildActiveVenuesHint', () => {
       venue({ active: false, blockedAt: null }),
       venue({ active: true, blockedAt: '2026-05-01' }),
       venue({ active: true }),
-    ]
-    const hint = buildActiveVenuesHint(venues)
-    expect(hint).toContain('2 paused · 1 blocked')
-  })
+    ];
+    const hint = buildActiveVenuesHint(venues);
+    expect(hint).toContain('2 paused · 1 blocked');
+  });
 
   it('shows +N this week for recently created venues', () => {
-    const recent = venue({ createdAt: new Date().toISOString() })
-    const old = venue({ createdAt: new Date(0).toISOString() })
-    const hint = buildActiveVenuesHint([recent, old])
-    expect(hint).toContain('+1 this week')
-  })
-})
+    const recent = venue({ createdAt: new Date().toISOString() });
+    const old = venue({ createdAt: new Date(0).toISOString() });
+    const hint = buildActiveVenuesHint([recent, old]);
+    expect(hint).toContain('+1 this week');
+  });
+});
 
 describe('buildSparklineData', () => {
   it('returns empty array for empty runs', () => {
-    expect(buildSparklineData([])).toEqual([])
-  })
+    expect(buildSparklineData([])).toEqual([]);
+  });
 
   it('maps success → 1, others → 0', () => {
     const runs = [
       crawlRun({ status: 'success' }),
       crawlRun({ status: 'failed' }),
       crawlRun({ status: 'partial' }),
-    ]
+    ];
     // slice(0,8).reverse() — with 3 items, reversed = [partial, failed, success]
-    expect(buildSparklineData(runs)).toEqual([0, 0, 1])
-  })
+    expect(buildSparklineData(runs)).toEqual([0, 0, 1]);
+  });
 
   it('takes only the 8 most recent (first in DESC array)', () => {
     const runs = Array.from({ length: 12 }, (_, idx) =>
       crawlRun({ status: idx < 8 ? 'success' : 'failed' }),
-    )
-    expect(buildSparklineData(runs)).toHaveLength(8)
-    expect(buildSparklineData(runs).every((v) => v === 1)).toBe(true)
-  })
-})
+    );
+    expect(buildSparklineData(runs)).toHaveLength(8);
+    expect(buildSparklineData(runs).every((v) => v === 1)).toBe(true);
+  });
+});
 ```
 
 - [ ] **Step 3: Run tests (expect failure — module doesn't exist yet)**
@@ -851,6 +879,7 @@ git commit -m "feat: extract dashboard utility functions and tests"
 ## Task 6: Fetch events + update pending review stat card
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 
 Add an event count fetch to the existing data function and wire the pending review stat card.
@@ -860,7 +889,7 @@ Add an event count fetch to the existing data function and wire the pending revi
 In `page.tsx`, update the type import line:
 
 ```ts
-import type { CrawlRun, Venue, Event } from '@concert-crawl/types'
+import type { CrawlRun, Venue, Event } from '@concert-crawl/types';
 ```
 
 Then in `fetchDashboardData`, add events to the `Promise.all`:
@@ -873,25 +902,25 @@ async function fetchDashboardData(token: string) {
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load crawl status: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     apiClient.get<Venue[]>('/v1/admin/venues', token).catch((err: unknown) => {
       throw new Error(
         `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
-      )
+      );
     }),
     apiClient
       .get<CrawlRun[]>('/v1/admin/crawl/runs?limit=20', token)
       .catch((err: unknown) => {
         throw new Error(
           `Failed to load crawl runs: ${err instanceof Error ? err.message : String(err)}`,
-        )
+        );
       }),
     apiClient
       .get<Event[]>('/v1/admin/events?verified=false&limit=100', token)
       .catch(() => [] as Event[]),
-  ])
-  return { status: rawStatus.map(toStatusRow), venues, runs, pendingEvents }
+  ]);
+  return { status: rawStatus.map(toStatusRow), venues, runs, pendingEvents };
 }
 ```
 
@@ -910,24 +939,24 @@ import {
   buildSparklineData,
   formatStrategy,
   LLM_BUDGET_USD,
-} from '@/components/admin/dashboard/lib/dashboard'
+} from '@/components/admin/dashboard/lib/dashboard';
 ```
 
 Update `toStatusRow` in `page.tsx` to include the new fields, or if you've already removed it, define it in `dashboard.ts`. Here is the updated `toStatusRow` to place in `dashboard.ts` (add it after the `CrawlStatusRow` interface):
 
 ```ts
 export function toStatusRow(venue: {
-  id: string
-  name: string
-  consecutiveFailures: number
-  blockedAt: string | null
+  id: string;
+  name: string;
+  consecutiveFailures: number;
+  blockedAt: string | null;
   lastRun: {
-    status: string
-    createdAt: string
-    eventsFound: number
-    extractionStrategyUsed: string | null
-    errorMessage: string | null
-  } | null
+    status: string;
+    createdAt: string;
+    eventsFound: number;
+    extractionStrategyUsed: string | null;
+    errorMessage: string | null;
+  } | null;
 }): CrawlStatusRow {
   return {
     venueId: venue.id,
@@ -940,7 +969,7 @@ export function toStatusRow(venue: {
     error: venue.lastRun?.errorMessage ?? null,
     consecutiveFailures: venue.consecutiveFailures,
     blockedAt: venue.blockedAt,
-  }
+  };
 }
 ```
 
@@ -951,10 +980,10 @@ Import `toStatusRow` from `dashboard.ts` in `page.tsx` as well. Remove the local
 In `AdminDashboardPage`, update the destructuring and add derived values:
 
 ```ts
-const { status, venues, runs, pendingEvents } = await fetchDashboardData(token)
+const { status, venues, runs, pendingEvents } = await fetchDashboardData(token);
 
 // existing derived values...
-const pendingReviewHint = buildPendingReviewHint(pendingEvents, venues)
+const pendingReviewHint = buildPendingReviewHint(pendingEvents, venues);
 ```
 
 - [ ] **Step 4: Update the pending review StatCard**
@@ -1005,6 +1034,7 @@ git commit -m "fix: wire pending review count and hint from events API, fix Open
 ## Task 7: Update LLM cost, crawl health, and active venues stat cards
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 
 - [ ] **Step 1: Compute the values needed for all three cards**
@@ -1012,10 +1042,13 @@ git commit -m "fix: wire pending review count and hint from events API, fix Open
 In `AdminDashboardPage`, add after existing derived values:
 
 ```ts
-const sparklineData = buildSparklineData(runs)
-const crawlHealthHint = buildCrawlHealthHint(status)
-const activeVenuesHint = buildActiveVenuesHint(venues)
-const llmBudgetPct = Math.min(Math.round((totalCost / LLM_BUDGET_USD) * 100), 100)
+const sparklineData = buildSparklineData(runs);
+const crawlHealthHint = buildCrawlHealthHint(status);
+const activeVenuesHint = buildActiveVenuesHint(venues);
+const llmBudgetPct = Math.min(
+  Math.round((totalCost / LLM_BUDGET_USD) * 100),
+  100,
+);
 ```
 
 - [ ] **Step 2: Update the LLM cost StatCard**
@@ -1053,9 +1086,7 @@ Replace the current crawl health `<StatCard>` with:
   kind={blockedCount > 0 ? 'warning' : 'success'}
   hint={crawlHealthHint || undefined}
   footer={
-    sparklineData.length > 0 ? (
-      <Sparkline data={sparklineData} />
-    ) : undefined
+    sparklineData.length > 0 ? <Sparkline data={sparklineData} /> : undefined
   }
 />
 ```
@@ -1077,7 +1108,7 @@ import {
   CostText,
   RelTime,
   Sparkline,
-} from '@/components/admin/primitives'
+} from '@/components/admin/primitives';
 ```
 
 `Sparkline` is already exported from the primitives index — no change needed there.
@@ -1117,37 +1148,38 @@ git commit -m "feat: populate LLM cost budget label, crawl health sparkline, and
 ## Task 8: Run all venues — Server Action + button component
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/dashboard/RunAllVenuesButton.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 
 - [ ] **Step 1: Create `RunAllVenuesButton.tsx`**
 
 ```tsx
-'use client'
+'use client';
 
-import { useFormStatus } from 'react-dom'
-import { AdminButton } from '@/components/admin/primitives'
-import { Play } from 'lucide-react'
+import { useFormStatus } from 'react-dom';
+import { AdminButton } from '@/components/admin/primitives';
+import { Play } from 'lucide-react';
 
 function SubmitButton() {
-  const { pending } = useFormStatus()
+  const { pending } = useFormStatus();
   return (
     <AdminButton variant="primary" size="sm" icon={Play} disabled={pending}>
       {pending ? 'Running…' : 'Run all venues'}
     </AdminButton>
-  )
+  );
 }
 
 export function RunAllVenuesButton({
   action,
 }: {
-  action: () => Promise<void>
+  action: () => Promise<void>;
 }) {
   return (
     <form action={action}>
       <SubmitButton />
     </form>
-  )
+  );
 }
 ```
 
@@ -1157,38 +1189,40 @@ Add a Server Action inside `AdminDashboardPage` (must be defined with `'use serv
 
 ```ts
 async function triggerAllVenuesAction() {
-  'use server'
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return
+  'use server';
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return;
 
   const allVenues = await apiClient
     .get<Venue[]>('/v1/admin/venues', token)
-    .catch(() => [] as Venue[])
+    .catch(() => [] as Venue[]);
 
-  const targets = allVenues.filter((v) => v.active && v.verified)
+  const targets = allVenues.filter((v) => v.active && v.verified);
   await Promise.allSettled(
     targets.map((v) => apiClient.post(`/v1/admin/crawl/${v.id}`, token, {})),
-  )
+  );
 }
 ```
 
 Add `RunAllVenuesButton` import:
 
 ```ts
-import { RunAllVenuesButton } from '@/components/admin/dashboard/RunAllVenuesButton'
+import { RunAllVenuesButton } from '@/components/admin/dashboard/RunAllVenuesButton';
 ```
 
 Add `Link` import (if not already present):
 
 ```ts
-import Link from 'next/link'
+import Link from 'next/link';
 ```
 
 Update the greeting block to include action buttons on the right:
 
 ```tsx
-{/* Greeting */}
+{
+  /* Greeting */
+}
 <div
   style={{
     display: 'flex',
@@ -1224,7 +1258,7 @@ Update the greeting block to include action buttons on the right:
       </AdminButton>
     </Link>
   </div>
-</div>
+</div>;
 ```
 
 - [ ] **Step 3: Verify TypeScript**
@@ -1252,6 +1286,7 @@ git commit -m "feat: add Run all venues server action and Add venue button to da
 ## Task 9: Extract CrawlHealthTable client component
 
 **Files:**
+
 - Create: `apps/web/src/components/admin/dashboard/CrawlHealthTable.tsx`
 - Modify: `apps/web/src/app/(protected)/admin/page.tsx`
 
@@ -1260,9 +1295,9 @@ Extracts the health table to a client component so rows can navigate using `useR
 - [ ] **Step 1: Create `CrawlHealthTable.tsx`**
 
 ```tsx
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 import {
   AdminTable,
   THead,
@@ -1272,9 +1307,9 @@ import {
   StatusBadge,
   RelTime,
   CostText,
-} from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
-import { formatStrategy, type CrawlStatusRow } from './lib/dashboard'
+} from '@/components/admin/primitives';
+import type { StatusKind } from '@/components/admin/primitives';
+import { formatStrategy, type CrawlStatusRow } from './lib/dashboard';
 
 const STATUS_KIND: Record<string, StatusKind> = {
   success: 'success',
@@ -1283,14 +1318,14 @@ const STATUS_KIND: Record<string, StatusKind> = {
   partial: 'warning',
   paused: 'warning',
   never: 'neutral',
-}
+};
 
 interface CrawlHealthTableProps {
-  rows: CrawlStatusRow[]
+  rows: CrawlStatusRow[];
 }
 
 export function CrawlHealthTable({ rows }: CrawlHealthTableProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <AdminTable>
@@ -1342,7 +1377,7 @@ export function CrawlHealthTable({ rows }: CrawlHealthTableProps) {
         ))}
       </tbody>
     </AdminTable>
-  )
+  );
 }
 ```
 
@@ -1351,13 +1386,13 @@ export function CrawlHealthTable({ rows }: CrawlHealthTableProps) {
 Remove the inline `<AdminTable>` block (including `<THead>` and `<tbody>`) from the health panel. Replace it with:
 
 ```tsx
-import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
+import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable';
 
 // ...
 
 <Panel title="Crawl health · today" padding={0}>
   <CrawlHealthTable rows={status} />
-</Panel>
+</Panel>;
 ```
 
 Also remove the `STATUS_KIND` constant from `page.tsx` (it moved to `CrawlHealthTable.tsx`).
@@ -1385,6 +1420,7 @@ git commit -m "feat: extract CrawlHealthTable with Strategy column and clickable
 ## Task 10: Activity feed — Events + Invites tabs
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/dashboard/ActivityFeed.tsx`
 
 Add Events and Invites tabs. Both show an empty state since the feed only receives `CrawlRun[]`. The `FilterTab` type is designed so #116 can wire real data without structural changes.
@@ -1392,28 +1428,28 @@ Add Events and Invites tabs. Both show an empty state since the feed only receiv
 - [ ] **Step 1: Replace the file content**
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import type { CrawlRun } from '@concert-crawl/types'
+import { useState } from 'react';
+import type { CrawlRun } from '@concert-crawl/types';
 
-type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
+type FilterTab = 'all' | 'crawl' | 'events' | 'invites';
 
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'all', label: 'All' },
   { id: 'crawl', label: 'Crawl' },
   { id: 'events', label: 'Events' },
   { id: 'invites', label: 'Invites' },
-]
+];
 
 interface Props {
-  runs: CrawlRun[]
+  runs: CrawlRun[];
 }
 
 export function ActivityFeed({ runs }: Props) {
-  const [tab, setTab] = useState<FilterTab>('all')
+  const [tab, setTab] = useState<FilterTab>('all');
 
-  const showCrawlRuns = tab === 'all' || tab === 'crawl'
+  const showCrawlRuns = tab === 'all' || tab === 'crawl';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -1497,7 +1533,7 @@ export function ActivityFeed({ runs }: Props) {
         </div>
       )}
     </div>
-  )
+  );
 }
 ```
 

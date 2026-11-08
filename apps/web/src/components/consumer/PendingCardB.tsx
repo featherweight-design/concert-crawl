@@ -1,43 +1,43 @@
-'use client'
+'use client';
 
-import { SP_POLICY } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { CCTip, type TipContent } from '@/components/ui/cc-tip'
+import { SP_POLICY } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { CCTip, type TipContent } from '@/components/ui/cc-tip';
 import {
   CheckGlyph,
   Eyebrow,
   LockGlyph,
   PendingDot,
   PendingTrustPill,
-} from './glyphs'
+} from './glyphs';
 
-const copy = CONSUMER_COPY.pendingCardB
+const copy = CONSUMER_COPY.pendingCardB;
 
 // ── Helpers ──────────────────────────────────────────────────────
 const vendorDisplayName = (vendor: string): string =>
-  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor
+  vendor === 'VenueBoxOffice' ? 'Venue box office' : vendor;
 
 const formatTimeAgo = (isoDate: string): string => {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${Math.floor(diffHours / 24)}d ago`
-}
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
+};
 
 // ── Color constants ──────────────────────────────────────────────
-const AZURE = 'oklch(0.62 0.12 240)' // community tier
-const GOLD = 'oklch(0.66 0.14 78)' // box-office tier
+const AZURE = 'oklch(0.62 0.12 240)'; // community tier
+const GOLD = 'oklch(0.66 0.14 78)'; // box-office tier
 
 // ── Token shape ──────────────────────────────────────────────────
 interface PendingTokens {
-  color: string
-  bg: string
-  border: string
-  strip: string
-  stripBorder: string
-  pill: string
+  color: string;
+  bg: string;
+  border: string;
+  strip: string;
+  stripBorder: string;
+  pill: string;
 }
 
 const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
@@ -49,7 +49,7 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
       strip: `color-mix(in oklab, ${AZURE} 12%, transparent)`,
       stripBorder: `color-mix(in oklab, ${AZURE} 26%, var(--border))`,
       pill: `color-mix(in oklab, ${AZURE} 16%, transparent)`,
-    }
+    };
   }
 
   return {
@@ -59,8 +59,8 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
     strip: `color-mix(in oklab, ${GOLD} 14%, transparent)`,
     stripBorder: `color-mix(in oklab, ${GOLD} 30%, var(--border))`,
     pill: `color-mix(in oklab, ${GOLD} 22%, transparent)`,
-  }
-}
+  };
+};
 
 // ── Counter pointer link (LOCKED §9 Q3 — Appendix A.4) ──────────
 // Coral mono pointer that REPLACES the "Saw a different number?" dispute
@@ -69,7 +69,7 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
 // so opening a second dispute form is guaranteed to 409 — see
 // memory:project_pr4_dispute_affordance_hiding. Hiding the affordance is
 // the UX equivalent.
-const COUNTER_POINTER_CORAL = 'oklch(0.65 0.20 25)'
+const COUNTER_POINTER_CORAL = 'oklch(0.65 0.20 25)';
 
 const CounterPointerLink = ({ href }: { href: string }) => (
   <a
@@ -116,34 +116,34 @@ const CounterPointerLink = ({ href }: { href: string }) => (
       />
     </svg>
   </a>
-)
+);
 
 // ── Props ────────────────────────────────────────────────────────
 export interface PendingCardBProps {
-  floor: number
-  ceiling?: number | null
-  tier: string
-  vendor: string
-  kind: 'community' | 'boxoffice'
-  submitter: { handle: string; url: string } | null
-  submittedAt: string
-  confirms: number
-  needed: number
-  view: 'other' | 'submitter' | 'self-locked'
-  note?: string | null
+  floor: number;
+  ceiling?: number | null;
+  tier: string;
+  vendor: string;
+  kind: 'community' | 'boxoffice';
+  submitter: { handle: string; url: string } | null;
+  submittedAt: string;
+  confirms: number;
+  needed: number;
+  view: 'other' | 'submitter' | 'self-locked';
+  note?: string | null;
   /**
    * Announces the sign-up gate to assistive tech without drawing it (#1247).
    * The button is unchanged visually and still opens the corroboration sheet,
    * which swaps itself for the tier picker when there is no session.
    */
-  signedOut?: boolean
-  onConfirm: () => void
-  onWithdraw: () => void
-  onEdit: () => void
+  signedOut?: boolean;
+  onConfirm: () => void;
+  onWithdraw: () => void;
+  onEdit: () => void;
   // LOCKED §9 Q3 — Appendix A.4. When non-null, the `view === 'other'` footer
   // REPLACES the "Saw a different number?" dispute entry with a coral pointer
   // link to the existing counter card. Confirm button stays unchanged.
-  counterPointer?: { href: string } | null
+  counterPointer?: { href: string } | null;
   // §8 state #18 — when an admin defers the contest on the counter for this
   // tier, render a quiet "Admin requested more info" pill near the pending
   // strip's right side. Mirrors the same affordance on DisputedPriceCard so
@@ -152,7 +152,7 @@ export interface PendingCardBProps {
   // priceByTier[].counterSubmission.lastAdminActionKind on the parent
   // orchestrator. The pill only renders on the `view === 'other'` variant
   // (the counter is someone else's; the submitter view has its own footer).
-  lastAdminActionKind?: 'defer' | null
+  lastAdminActionKind?: 'defer' | null;
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -175,15 +175,15 @@ export const PendingCardB = ({
   counterPointer = null,
   lastAdminActionKind = null,
 }: PendingCardBProps) => {
-  const tok = pendingTokens(kind)
-  const isBox = kind === 'boxoffice'
-  const isSubmitter = view === 'submitter' || view === 'self-locked'
-  const remaining = needed - confirms
+  const tok = pendingTokens(kind);
+  const isBox = kind === 'boxoffice';
+  const isSubmitter = view === 'submitter' || view === 'self-locked';
+  const remaining = needed - confirms;
   // The confirm denominator is only elevated above the standard requirement
   // when the show is imminent, so a bumped `needed` is a reliable signal —
   // no extra prop threading needed at the call sites. Surfacing this keeps
   // the "3 of 3 confirmed" strip from reading as a bug (#895 symptom 2).
-  const isImminent = needed > SP_POLICY.confirmsRequired
+  const isImminent = needed > SP_POLICY.confirmsRequired;
 
   // ── Card background / border ─────────────────────────────────
   const cardStyle = isBox
@@ -202,7 +202,7 @@ export const PendingCardB = ({
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
         boxShadow: 'none',
-      }
+      };
 
   return (
     <div style={cardStyle}>
@@ -618,5 +618,5 @@ export const PendingCardB = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

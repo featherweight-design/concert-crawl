@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Onboarding step 6 of 8. Chips over the bucket labels the browse Vibe filter
 // already uses, so a visitor meets the same vocabulary here and on the events
@@ -9,15 +9,15 @@
 // (Gate 1 decision D3: artists carry no genre of their own either, so the
 // filter runs against the genres of the events they are billed on.)
 
-import { Eyebrow, StepHeading, Lede } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { Eyebrow, StepHeading, Lede } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.pickGenres
+const copy = ONBOARDING_COPY.pickGenres;
 
 interface PickGenresProps {
-  genres: string[]
-  selected: ReadonlySet<string>
-  onToggle: (genre: string) => void
+  genres: string[];
+  selected: ReadonlySet<string>;
+  onToggle: (genre: string) => void;
 }
 
 export function PickGenres({ genres, selected, onToggle }: PickGenresProps) {
@@ -36,7 +36,7 @@ export function PickGenres({ genres, selected, onToggle }: PickGenresProps) {
           style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
         >
           {genres.map((genre) => {
-            const on = selected.has(genre)
+            const on = selected.has(genre);
             return (
               <button
                 key={genre}
@@ -63,10 +63,10 @@ export function PickGenres({ genres, selected, onToggle }: PickGenresProps) {
               >
                 {genre}
               </button>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
+  );
 }

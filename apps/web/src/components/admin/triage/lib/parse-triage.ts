@@ -26,63 +26,63 @@ import type {
   TriageQueue,
   TriageSweep,
   WentDarkEvidence,
-} from '../definitions/types'
+} from '../definitions/types';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const isString = (value: unknown): value is string => typeof value === 'string'
+const isString = (value: unknown): value is string => typeof value === 'string';
 
 const isNumber = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value)
+  typeof value === 'number' && Number.isFinite(value);
 
 const isNullableString = (value: unknown): value is string | null =>
-  value === null || isString(value)
+  value === null || isString(value);
 
 const isNullableNumber = (value: unknown): value is number | null =>
-  value === null || isNumber(value)
+  value === null || isNumber(value);
 
 const isNumberArray = (value: unknown): value is number[] =>
-  Array.isArray(value) && value.every(isNumber)
+  Array.isArray(value) && value.every(isNumber);
 
 const isBand = (
   value: unknown,
 ): value is TriageData['faults'][number]['band'] =>
-  value === 'hard' || value === 'loss' || value === 'suspect'
+  value === 'hard' || value === 'loss' || value === 'suspect';
 
 const parseBlocked = (raw: unknown): BlockedEvidence | null => {
-  if (!isRecord(raw)) return null
-  const { status, refusals, lastSuccess } = raw
-  if (!isNullableNumber(status)) return null
-  if (!isNumber(refusals)) return null
-  if (!isNullableString(lastSuccess)) return null
-  return { status, refusals, lastSuccess }
-}
+  if (!isRecord(raw)) return null;
+  const { status, refusals, lastSuccess } = raw;
+  if (!isNullableNumber(status)) return null;
+  if (!isNumber(refusals)) return null;
+  if (!isNullableString(lastSuccess)) return null;
+  return { status, refusals, lastSuccess };
+};
 
 const parseFailed = (raw: unknown): FailedEvidence | null => {
-  if (!isRecord(raw)) return null
-  const { failures, errorClass, pauseAt } = raw
-  if (!isNumber(failures)) return null
-  if (!isString(errorClass)) return null
-  if (!isNumber(pauseAt)) return null
-  return { failures, errorClass, pauseAt }
-}
+  if (!isRecord(raw)) return null;
+  const { failures, errorClass, pauseAt } = raw;
+  if (!isNumber(failures)) return null;
+  if (!isString(errorClass)) return null;
+  if (!isNumber(pauseAt)) return null;
+  return { failures, errorClass, pauseAt };
+};
 
 const parseWentDark = (raw: unknown): WentDarkEvidence | null => {
-  if (!isRecord(raw)) return null
-  const { count, baselineCount, avg, pct, window, threshold, series } = raw
-  if (!isNumber(count)) return null
-  if (!isNumber(baselineCount)) return null
-  if (!isNumber(avg)) return null
-  if (!isNumber(pct)) return null
-  if (!isNumber(window)) return null
-  if (!isNumber(threshold)) return null
-  if (!isNumberArray(series)) return null
-  return { count, baselineCount, avg, pct, window, threshold, series }
-}
+  if (!isRecord(raw)) return null;
+  const { count, baselineCount, avg, pct, window, threshold, series } = raw;
+  if (!isNumber(count)) return null;
+  if (!isNumber(baselineCount)) return null;
+  if (!isNumber(avg)) return null;
+  if (!isNumber(pct)) return null;
+  if (!isNumber(window)) return null;
+  if (!isNumber(threshold)) return null;
+  if (!isNumberArray(series)) return null;
+  return { count, baselineCount, avg, pct, window, threshold, series };
+};
 
 const parseCeiling = (raw: unknown): CeilingEvidence | null => {
-  if (!isRecord(raw)) return null
+  if (!isRecord(raw)) return null;
   const {
     kind,
     count,
@@ -93,117 +93,127 @@ const parseCeiling = (raw: unknown): CeilingEvidence | null => {
     best,
     shrankDays,
     series,
-  } = raw
-  if (kind !== 'pinned_count' && kind !== 'horizon_shrank') return null
-  if (!isNumber(count)) return null
-  if (!isNumber(runs)) return null
-  if (!isNullableNumber(was)) return null
-  if (!isNullableString(wasWhen)) return null
-  if (!isNullableString(furthest)) return null
-  if (!isNullableString(best)) return null
-  if (!isNullableNumber(shrankDays)) return null
-  if (!isNumberArray(series)) return null
-  return { kind, count, runs, was, wasWhen, furthest, best, shrankDays, series }
-}
+  } = raw;
+  if (kind !== 'pinned_count' && kind !== 'horizon_shrank') return null;
+  if (!isNumber(count)) return null;
+  if (!isNumber(runs)) return null;
+  if (!isNullableNumber(was)) return null;
+  if (!isNullableString(wasWhen)) return null;
+  if (!isNullableString(furthest)) return null;
+  if (!isNullableString(best)) return null;
+  if (!isNullableNumber(shrankDays)) return null;
+  if (!isNumberArray(series)) return null;
+  return {
+    kind,
+    count,
+    runs,
+    was,
+    wasWhen,
+    furthest,
+    best,
+    shrankDays,
+    series,
+  };
+};
 
 const parseCoverage = (raw: unknown): CoverageEvidence | null => {
-  if (!isRecord(raw)) return null
-  const { matched, expected, uncovered, wasWhen } = raw
-  if (!isNumber(matched)) return null
-  if (!isNumber(expected)) return null
-  if (!isNumber(uncovered)) return null
-  if (!isNullableString(wasWhen)) return null
-  return { matched, expected, uncovered, wasWhen }
-}
+  if (!isRecord(raw)) return null;
+  const { matched, expected, uncovered, wasWhen } = raw;
+  if (!isNumber(matched)) return null;
+  if (!isNumber(expected)) return null;
+  if (!isNumber(uncovered)) return null;
+  if (!isNullableString(wasWhen)) return null;
+  return { matched, expected, uncovered, wasWhen };
+};
 
 interface FaultBaseFields {
-  id: string
-  venueId: string
-  venue: string
-  band: 'hard' | 'loss' | 'suspect'
-  persistedSince: string
-  days: number
-  dur: string
-  crawlRunId: string | null
+  id: string;
+  venueId: string;
+  venue: string;
+  band: 'hard' | 'loss' | 'suspect';
+  persistedSince: string;
+  days: number;
+  dur: string;
+  crawlRunId: string | null;
 }
 
 const parseFaultBase = (
   raw: Record<string, unknown>,
 ): FaultBaseFields | null => {
   const { id, venueId, venue, band, persistedSince, days, dur, crawlRunId } =
-    raw
-  if (!isString(id)) return null
-  if (!isString(venueId)) return null
-  if (!isString(venue)) return null
-  if (!isBand(band)) return null
-  if (!isString(persistedSince)) return null
-  if (!isNumber(days)) return null
-  if (!isString(dur)) return null
-  if (!isNullableString(crawlRunId)) return null
-  return { id, venueId, venue, band, persistedSince, days, dur, crawlRunId }
-}
+    raw;
+  if (!isString(id)) return null;
+  if (!isString(venueId)) return null;
+  if (!isString(venue)) return null;
+  if (!isBand(band)) return null;
+  if (!isString(persistedSince)) return null;
+  if (!isNumber(days)) return null;
+  if (!isString(dur)) return null;
+  if (!isNullableString(crawlRunId)) return null;
+  return { id, venueId, venue, band, persistedSince, days, dur, crawlRunId };
+};
 
 export const parseFault = (raw: unknown): TriageFault | null => {
-  if (!isRecord(raw)) return null
-  const base = parseFaultBase(raw)
-  if (base === null) return null
-  const { condition, evidence } = raw
+  if (!isRecord(raw)) return null;
+  const base = parseFaultBase(raw);
+  if (base === null) return null;
+  const { condition, evidence } = raw;
 
   if (condition === 'blocked') {
-    const parsed = parseBlocked(evidence)
-    return parsed === null ? null : { ...base, condition, evidence: parsed }
+    const parsed = parseBlocked(evidence);
+    return parsed === null ? null : { ...base, condition, evidence: parsed };
   }
   if (condition === 'failed') {
-    const parsed = parseFailed(evidence)
-    return parsed === null ? null : { ...base, condition, evidence: parsed }
+    const parsed = parseFailed(evidence);
+    return parsed === null ? null : { ...base, condition, evidence: parsed };
   }
   if (condition === 'wentDark') {
-    const parsed = parseWentDark(evidence)
-    return parsed === null ? null : { ...base, condition, evidence: parsed }
+    const parsed = parseWentDark(evidence);
+    return parsed === null ? null : { ...base, condition, evidence: parsed };
   }
   if (condition === 'ceiling') {
-    const parsed = parseCeiling(evidence)
-    return parsed === null ? null : { ...base, condition, evidence: parsed }
+    const parsed = parseCeiling(evidence);
+    return parsed === null ? null : { ...base, condition, evidence: parsed };
   }
   if (condition === 'coverage') {
-    const parsed = parseCoverage(evidence)
-    return parsed === null ? null : { ...base, condition, evidence: parsed }
+    const parsed = parseCoverage(evidence);
+    return parsed === null ? null : { ...base, condition, evidence: parsed };
   }
   // An unrecognised condition — a sixth alert category shipped crawler-side
   // ahead of the panel. Dropped, never thrown on.
-  return null
-}
+  return null;
+};
 
 const isEvidenceKind = (
   value: unknown,
 ): value is FaultAcknowledgement['evidenceKind'] =>
-  value === null || value === 'pinned_count' || value === 'horizon_shrank'
+  value === null || value === 'pinned_count' || value === 'horizon_shrank';
 
 export const parseAcknowledgedFault = (
   raw: unknown,
 ): AcknowledgedFault | null => {
-  const fault = parseFault(raw)
-  if (fault === null || !isRecord(raw)) return null
-  const { acknowledgement } = raw
-  if (!isRecord(acknowledgement)) return null
+  const fault = parseFault(raw);
+  if (fault === null || !isRecord(raw)) return null;
+  const { acknowledgement } = raw;
+  if (!isRecord(acknowledgement)) return null;
   const {
     evidenceKind,
     evidenceValue,
     reason,
     acknowledgedBy,
     acknowledgedAt,
-  } = acknowledgement
+  } = acknowledgement;
   // Absent is not the same as malformed. Web and API deploy independently, so a
   // panel running ahead of the serializer that added these fields reads them as
   // "no figure pinned" rather than dropping the row. A wrong type still fails —
   // that is a contract break, not version skew.
-  const kind = evidenceKind === undefined ? null : evidenceKind
-  const value = evidenceValue === undefined ? null : evidenceValue
-  if (!isEvidenceKind(kind)) return null
-  if (!isNullableString(value)) return null
-  if (!isString(reason)) return null
-  if (!isString(acknowledgedBy)) return null
-  if (!isString(acknowledgedAt)) return null
+  const kind = evidenceKind === undefined ? null : evidenceKind;
+  const value = evidenceValue === undefined ? null : evidenceValue;
+  if (!isEvidenceKind(kind)) return null;
+  if (!isNullableString(value)) return null;
+  if (!isString(reason)) return null;
+  if (!isString(acknowledgedBy)) return null;
+  if (!isString(acknowledgedAt)) return null;
   return {
     ...fault,
     acknowledgement: {
@@ -213,30 +223,30 @@ export const parseAcknowledgedFault = (
       acknowledgedBy,
       acknowledgedAt,
     },
-  }
-}
+  };
+};
 
 export const parseQueue = (raw: unknown): TriageQueue | null => {
-  if (!isRecord(raw)) return null
-  const { id, kind, count, breakdown, action } = raw
-  if (!isString(id)) return null
-  if (kind !== 'eventFlags' && kind !== 'priceSubmissions') return null
-  if (!isNumber(count)) return null
-  if (!isString(breakdown)) return null
-  if (action !== 'openReview' && action !== 'openSubmissions') return null
-  return { id, kind, count, breakdown, action }
-}
+  if (!isRecord(raw)) return null;
+  const { id, kind, count, breakdown, action } = raw;
+  if (!isString(id)) return null;
+  if (kind !== 'eventFlags' && kind !== 'priceSubmissions') return null;
+  if (!isNumber(count)) return null;
+  if (!isString(breakdown)) return null;
+  if (action !== 'openReview' && action !== 'openSubmissions') return null;
+  return { id, kind, count, breakdown, action };
+};
 
 export const parseSweep = (raw: unknown): TriageSweep | null => {
-  if (!isRecord(raw)) return null
-  const { venues, at, atIso, events, next } = raw
-  if (!isNumber(venues)) return null
-  if (!isString(at)) return null
-  if (!isNullableString(atIso)) return null
-  if (!isNumber(events)) return null
-  if (!isString(next)) return null
-  return { venues, at, atIso, events, next }
-}
+  if (!isRecord(raw)) return null;
+  const { venues, at, atIso, events, next } = raw;
+  if (!isNumber(venues)) return null;
+  if (!isString(at)) return null;
+  if (!isNullableString(atIso)) return null;
+  if (!isNumber(events)) return null;
+  if (!isString(next)) return null;
+  return { venues, at, atIso, events, next };
+};
 
 /**
  * Parses a raw triage payload. Returns `null` only when the envelope itself is
@@ -245,36 +255,36 @@ export const parseSweep = (raw: unknown): TriageSweep | null => {
  * it is never re-sorted here.
  */
 export const parseTriageResponse = (raw: unknown): TriageData | null => {
-  if (!isRecord(raw)) return null
-  const { faults, acknowledged, queues, sweep } = raw
-  if (!Array.isArray(faults)) return null
-  if (!Array.isArray(queues)) return null
+  if (!isRecord(raw)) return null;
+  const { faults, acknowledged, queues, sweep } = raw;
+  if (!Array.isArray(faults)) return null;
+  if (!Array.isArray(queues)) return null;
   // Absent means an older API; present but not a list means the contract broke.
   // Reporting the latter as "nothing is acknowledged" would hide live state.
-  if (acknowledged !== undefined && !Array.isArray(acknowledged)) return null
-  const parsedSweep = parseSweep(sweep)
-  if (parsedSweep === null) return null
+  if (acknowledged !== undefined && !Array.isArray(acknowledged)) return null;
+  const parsedSweep = parseSweep(sweep);
+  if (parsedSweep === null) return null;
 
-  const parsedFaults: TriageFault[] = []
+  const parsedFaults: TriageFault[] = [];
   for (const fault of faults) {
-    const parsed = parseFault(fault)
-    if (parsed !== null) parsedFaults.push(parsed)
+    const parsed = parseFault(fault);
+    if (parsed !== null) parsedFaults.push(parsed);
   }
 
-  const parsedQueues: TriageQueue[] = []
+  const parsedQueues: TriageQueue[] = [];
   for (const queue of queues) {
-    const parsed = parseQueue(queue)
-    if (parsed !== null) parsedQueues.push(parsed)
+    const parsed = parseQueue(queue);
+    if (parsed !== null) parsedQueues.push(parsed);
   }
 
   // Web and API deploy independently, so the panel can briefly read a payload
   // from before acknowledgements shipped. An absent key is no acknowledgements,
   // not an unusable envelope.
-  const parsedAcknowledged: AcknowledgedFault[] = []
+  const parsedAcknowledged: AcknowledgedFault[] = [];
   if (Array.isArray(acknowledged)) {
     for (const fault of acknowledged) {
-      const parsed = parseAcknowledgedFault(fault)
-      if (parsed !== null) parsedAcknowledged.push(parsed)
+      const parsed = parseAcknowledgedFault(fault);
+      if (parsed !== null) parsedAcknowledged.push(parsed);
     }
   }
 
@@ -283,5 +293,5 @@ export const parseTriageResponse = (raw: unknown): TriageData | null => {
     acknowledged: parsedAcknowledged,
     queues: parsedQueues,
     sweep: parsedSweep,
-  }
-}
+  };
+};

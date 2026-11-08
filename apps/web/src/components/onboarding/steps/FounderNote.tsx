@@ -1,7 +1,7 @@
-import { Eyebrow, StepHeading } from './_primitives'
-import { ONBOARDING_COPY } from '../definitions/copy'
+import { Eyebrow, StepHeading } from './_primitives';
+import { ONBOARDING_COPY } from '../definitions/copy';
 
-const copy = ONBOARDING_COPY.founderNote
+const copy = ONBOARDING_COPY.founderNote;
 
 export function FounderNote() {
   return (
@@ -63,5 +63,5 @@ export function FounderNote() {
         </div>
       </div>
     </div>
-  )
+  );
 }

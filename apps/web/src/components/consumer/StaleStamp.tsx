@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness';
 
-const copy = CONSUMER_COPY.priceStaleness
+const copy = CONSUMER_COPY.priceStaleness;
 
 /**
  * The "as of …, could be stale" caption under a price. Shared so every price
@@ -14,12 +14,12 @@ const copy = CONSUMER_COPY.priceStaleness
 export function StaleStamp({
   observedAt,
 }: {
-  observedAt: string | null | undefined
+  observedAt: string | null | undefined;
 }) {
-  if (!observedAt) return null
-  const stale = isPriceStale(observedAt)
-  const rel = relTimeAgo(observedAt)
-  const text = stale ? copy.asOfStale(rel) : copy.asOf(rel)
+  if (!observedAt) return null;
+  const stale = isPriceStale(observedAt);
+  const rel = relTimeAgo(observedAt);
+  const text = stale ? copy.asOfStale(rel) : copy.asOf(rel);
 
   return (
     <span
@@ -42,5 +42,5 @@ export function StaleStamp({
       )}
       {text}
     </span>
-  )
+  );
 }

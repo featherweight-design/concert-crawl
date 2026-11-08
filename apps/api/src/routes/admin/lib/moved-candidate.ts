@@ -1,7 +1,7 @@
-import { z } from 'zod'
-import { sql, type SQL } from 'drizzle-orm'
-import { events } from '@concert-crawl/db'
-import { type MovedReason } from '@concert-crawl/types'
+import { z } from 'zod';
+import { sql, type SQL } from 'drizzle-orm';
+import { events } from '@concert-crawl/db';
+import { type MovedReason } from '@concert-crawl/types';
 
 /**
  * How far a reschedule may land from the original date, in days, for the
@@ -9,13 +9,13 @@ import { type MovedReason } from '@concert-crawl/types'
  * narrow enough that an unrelated booking by the same artist a year out
  * doesn't get claimed as a relocation.
  */
-export const MOVED_DATE_WINDOW_DAYS = 120
+export const MOVED_DATE_WINDOW_DAYS = 120;
 
 /**
  * Slack on the cross-venue arm. A relocation keeps the night; the one-day
  * band only absorbs a late show whose listed date differs by a midnight.
  */
-export const MOVED_VENUE_DAY_SLACK = 1
+export const MOVED_VENUE_DAY_SLACK = 1;
 
 /**
  * How much later than the orphan's own row the candidate must have been
@@ -25,7 +25,7 @@ export const MOVED_VENUE_DAY_SLACK = 1
  * A replacement is by definition a later announcement than the show it
  * replaces.
  */
-export const MOVED_ANNOUNCE_GAP_HOURS = 24
+export const MOVED_ANNOUNCE_GAP_HOURS = 24;
 
 /**
  * How far before the orphan's last sighting the candidate may have appeared.
@@ -37,7 +37,7 @@ export const MOVED_ANNOUNCE_GAP_HOURS = 24
  * The window still excludes an unrelated booking announced months before the
  * orphan went anywhere.
  */
-export const MOVED_REPLACEMENT_WINDOW_DAYS = 14
+export const MOVED_REPLACEMENT_WINDOW_DAYS = 14;
 
 const movedCandidateSchema = z.object({
   id: z.string().uuid(),
@@ -45,14 +45,14 @@ const movedCandidateSchema = z.object({
   title: z.string(),
   date: z.string(),
   venueName: z.string().nullable(),
-})
+});
 
 export interface MovedCandidate {
-  id: string
-  reason: MovedReason
-  title: string
-  date: string
-  venueName: string | null
+  id: string;
+  reason: MovedReason;
+  title: string;
+  date: string;
+  venueName: string | null;
 }
 
 /**
@@ -62,10 +62,10 @@ export interface MovedCandidate {
  * half-built row to an admin who is about to merge on it.
  */
 export const parseMovedCandidate = (raw: unknown): MovedCandidate | null => {
-  if (raw === null || raw === undefined) return null
-  const parsed = movedCandidateSchema.safeParse(raw)
-  return parsed.success ? parsed.data : null
-}
+  if (raw === null || raw === undefined) return null;
+  const parsed = movedCandidateSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+};
 
 /**
  * Correlated lookup for a row that looks like this missing event rescheduled
@@ -135,4 +135,4 @@ export const movedCandidateExpr = (today: string): SQL<unknown> => sql`(
     cnd.created_at DESC,
     cnd.id ASC
   LIMIT 1
-)`
+)`;

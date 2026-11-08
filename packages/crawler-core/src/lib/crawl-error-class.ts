@@ -2,12 +2,12 @@
 // the same for one cause however many venues it hits. Any code asking "is this
 // the same failure?" should ask it here, so the answers never drift apart.
 
-export type CrawlErrorKind = 'llm_quota' | 'other'
+export type CrawlErrorKind = 'llm_quota' | 'other';
 
 export interface CrawlErrorClass {
-  kind: CrawlErrorKind
+  kind: CrawlErrorKind;
   /** The kind itself for a known class; the normalized message otherwise. */
-  key: string
+  key: string;
 }
 
 // Anthropic's two account-level refusals, matched on their message text as the
@@ -16,10 +16,10 @@ export interface CrawlErrorClass {
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
   /reached your specified API usage limits/i,
   /credit balance is too low/i,
-]
+];
 
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
-const MAX_KEY_LENGTH = 160
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const MAX_KEY_LENGTH = 160;
 
 /**
  * Strips what varies per venue or per request, so one cause across several
@@ -34,14 +34,14 @@ export function normalizeErrorMessage(message: string): string {
     .replace(/\d{4,}/g, '#')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, MAX_KEY_LENGTH)
+    .slice(0, MAX_KEY_LENGTH);
 }
 
 export function classifyCrawlError(message: string): CrawlErrorClass {
   if (LLM_QUOTA_PATTERNS.some((pattern) => pattern.test(message))) {
-    return { kind: 'llm_quota', key: 'llm_quota' }
+    return { kind: 'llm_quota', key: 'llm_quota' };
   }
-  return { kind: 'other', key: normalizeErrorMessage(message) }
+  return { kind: 'other', key: normalizeErrorMessage(message) };
 }
 
 /**
@@ -58,9 +58,9 @@ export function classifyCrawlError(message: string): CrawlErrorClass {
  * the run.ts exception and double every count.
  */
 export function crawlFailureGrouping(message: string): {
-  fingerprint: string[]
-  errorKind: CrawlErrorKind
+  fingerprint: string[];
+  errorKind: CrawlErrorKind;
 } {
-  const { kind, key } = classifyCrawlError(message)
-  return { fingerprint: ['crawl.failed', key], errorKind: kind }
+  const { kind, key } = classifyCrawlError(message);
+  return { fingerprint: ['crawl.failed', key], errorKind: kind };
 }

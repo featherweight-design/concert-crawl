@@ -33,26 +33,26 @@
 // mitigation, so expect it to fire on this venue rather than reading that as
 // a regression.
 
-import { z } from 'zod'
-import type { Venue } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
-import type { NormalizedEvent } from '../../types.js'
-import { isAllowed, isAllowedOrSkip } from '../robots.js'
+import { z } from 'zod';
+import type { Venue } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import type { NormalizedEvent } from '../../types.js';
+import { isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
   fetchFollowingRobots,
   RobotsDisallowedError,
   type RobotsFetchResult,
-} from '../robots-fetch.js'
-import { createDeadline } from './deadline.js'
-import { jitter } from './jitter.js'
+} from '../robots-fetch.js';
+import { createDeadline } from './deadline.js';
+import { jitter } from './jitter.js';
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
-} from './index.js'
+} from './index.js';
 
-const logger = createLogger('livenation-fetcher')
+const logger = createLogger('livenation-fetcher');
 
 // Only the fields we map are required. The records carry ~35 keys and
 // Live Nation adds to them freely, so everything else passes through.
@@ -61,13 +61,13 @@ const LiveNationImageSchema = z
     url: z.string(),
     width: z.number().optional(),
   })
-  .passthrough()
+  .passthrough();
 
 const LiveNationArtistSchema = z
   .object({
     name: z.string(),
   })
-  .passthrough()
+  .passthrough();
 
 const LiveNationEventSchema = z
   .object({
@@ -89,9 +89,9 @@ const LiveNationEventSchema = z
     artists: z.array(LiveNationArtistSchema).optional(),
     images: z.array(LiveNationImageSchema).optional(),
   })
-  .passthrough()
+  .passthrough();
 
-export type LiveNationEvent = z.infer<typeof LiveNationEventSchema>
+export type LiveNationEvent = z.infer<typeof LiveNationEventSchema>;
 
 export class LiveNationFetchError extends Error {
   constructor(
@@ -99,14 +99,14 @@ export class LiveNationFetchError extends Error {
     public readonly url: string,
     message: string,
   ) {
-    super(message)
-    this.name = 'LiveNationFetchError'
+    super(message);
+    this.name = 'LiveNationFetchError';
   }
 }
 
 // A show that has been called off is not a listing we want to surface.
 // 'rescheduled' events keep their (new) date and stay in.
-const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled'])
+const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled']);
 
 // Redirects are followed hop by hop through `fetchFollowingRobots`, so each
 // landing clears robots.txt and its Crawl-delay before we request it (an
@@ -118,7 +118,7 @@ async function fetchText(
   timeoutMs?: number,
   landed?: string[],
 ): Promise<string> {
-  let fetched: RobotsFetchResult
+  let fetched: RobotsFetchResult;
   try {
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
@@ -130,18 +130,18 @@ async function fetchText(
       ...(timeoutMs !== undefined
         ? { signal: AbortSignal.timeout(timeoutMs) }
         : {}),
-    })
+    });
   } catch (err) {
     if (err instanceof RobotsDisallowedError) {
       throw new LiveNationFetchError(
         0,
         url,
         `Live Nation fetch for ${url} redirected to ${err.url}, which robots.txt disallows`,
-      )
+      );
     }
-    throw err
+    throw err;
   }
-  const { response, finalUrl } = fetched
+  const { response, finalUrl } = fetched;
   if (!response.ok) {
     throw new LiveNationFetchError(
       response.status,
@@ -149,10 +149,10 @@ async function fetchText(
       // The admin probe surfaces err.message only, so name the URL that
       // failed — otherwise a bad month is indistinguishable from a bad site.
       `Live Nation fetch failed: HTTP ${response.status} for ${url}`,
-    )
+    );
   }
-  landed?.push(finalUrl)
-  return response.text()
+  landed?.push(finalUrl);
+  return response.text();
 }
 
 /**
@@ -163,19 +163,19 @@ async function fetchText(
  * chunk boundary.
  */
 export function reassembleFlightPayload(html: string): string {
-  const chunks: string[] = []
-  let skippedChunkCount = 0
-  const pattern = /self\.__next_f\.push\(\[1,\s*"((?:[^"\\]|\\.)*)"\]\)/g
+  const chunks: string[] = [];
+  let skippedChunkCount = 0;
+  const pattern = /self\.__next_f\.push\(\[1,\s*"((?:[^"\\]|\\.)*)"\]\)/g;
   for (const match of html.matchAll(pattern)) {
     try {
-      chunks.push(JSON.parse(`"${match[1]}"`))
+      chunks.push(JSON.parse(`"${match[1]}"`));
     } catch {
       // A chunk we can't unescape is a chunk we can't trust to join
       // cleanly with its neighbours. Skipping it can only cost us events,
       // never invent them. Note the count-vs-baseline alert only catches a
       // severe drop (SOFT_DROP_RATIO = 0.3), so a partial truncation would
       // pass silently — skippedChunkCount below is the signal for that.
-      skippedChunkCount++
+      skippedChunkCount++;
     }
   }
   if (skippedChunkCount > 0) {
@@ -184,9 +184,9 @@ export function reassembleFlightPayload(html: string): string {
     logger.debug(
       { skippedChunkCount, totalChunks: chunks.length + skippedChunkCount },
       'livenation: skipped unparseable flight chunks',
-    )
+    );
   }
-  return chunks.join('')
+  return chunks.join('');
 }
 
 /**
@@ -201,28 +201,28 @@ export function reassembleFlightPayload(html: string): string {
  * event lists are discarded.
  */
 export function extractEventRecords(flight: string): unknown[] {
-  const records: unknown[] = []
-  let unparseableSliceCount = 0
-  const marker = '"data":['
-  let searchFrom = 0
-  let markerIndex = flight.indexOf(marker, searchFrom)
+  const records: unknown[] = [];
+  let unparseableSliceCount = 0;
+  const marker = '"data":[';
+  let searchFrom = 0;
+  let markerIndex = flight.indexOf(marker, searchFrom);
   while (markerIndex !== -1) {
-    const start = markerIndex + marker.length - 1
-    const end = findMatchingBracket(flight, start)
+    const start = markerIndex + marker.length - 1;
+    const end = findMatchingBracket(flight, start);
     if (end !== -1) {
       try {
-        const parsed: unknown = JSON.parse(flight.slice(start, end + 1))
+        const parsed: unknown = JSON.parse(flight.slice(start, end + 1));
         if (Array.isArray(parsed) && parsed.some(looksLikeEventRecord)) {
-          records.push(...parsed)
+          records.push(...parsed);
         }
       } catch {
         // Not a self-contained JSON array (most `"data":[` hits in the
         // stream are React props, asset manifests, etc). Move on.
-        unparseableSliceCount++
+        unparseableSliceCount++;
       }
     }
-    searchFrom = start + 1
-    markerIndex = flight.indexOf(marker, searchFrom)
+    searchFrom = start + 1;
+    markerIndex = flight.indexOf(marker, searchFrom);
   }
   if (unparseableSliceCount > 0) {
     // Aggregated to one line per page rather than one per slice: on a healthy
@@ -232,9 +232,9 @@ export function extractEventRecords(flight: string): unknown[] {
     logger.debug(
       { unparseableSliceCount, recordCount: records.length },
       'livenation: some flight payload slices were not parseable JSON',
-    )
+    );
   }
-  return records
+  return records;
 }
 
 function looksLikeEventRecord(value: unknown): boolean {
@@ -243,39 +243,39 @@ function looksLikeEventRecord(value: unknown): boolean {
     value !== null &&
     'start_date_local' in value &&
     'tm_id' in value
-  )
+  );
 }
 
 function findMatchingBracket(text: string, openIndex: number): number {
-  let depth = 0
-  let inString = false
-  let escaped = false
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
   for (let i = openIndex; i < text.length; i++) {
-    const char = text[i]!
+    const char = text[i]!;
     if (escaped) {
-      escaped = false
-      continue
+      escaped = false;
+      continue;
     }
     if (char === '\\') {
-      escaped = true
-      continue
+      escaped = true;
+      continue;
     }
     if (inString) {
-      if (char === '"') inString = false
-      continue
+      if (char === '"') inString = false;
+      continue;
     }
     if (char === '"') {
-      inString = true
-      continue
+      inString = true;
+      continue;
     }
     if (char === '[' || char === '{') {
-      depth++
+      depth++;
     } else if (char === ']' || char === '}') {
-      depth--
-      if (depth === 0) return i
+      depth--;
+      if (depth === 0) return i;
     }
   }
-  return -1
+  return -1;
 }
 
 /**
@@ -290,35 +290,35 @@ export function parseCalendarUrls(
   sitemapXml: string,
   origin: string,
 ): string[] {
-  const seen = new Set<string>()
-  const pattern = /<loc>\s*([^<\s]*\/shows\/calendar\/\d{4}-\d{2})\s*<\/loc>/g
+  const seen = new Set<string>();
+  const pattern = /<loc>\s*([^<\s]*\/shows\/calendar\/\d{4}-\d{2})\s*<\/loc>/g;
   for (const match of sitemapXml.matchAll(pattern)) {
-    const url = match[1]!
+    const url = match[1]!;
     // Ignore any sister-venue URLs that share the sitemap — we only ever
     // want the calendar of the venue we're crawling.
-    if (!url.startsWith(origin)) continue
-    seen.add(url)
+    if (!url.startsWith(origin)) continue;
+    seen.add(url);
   }
-  return [...seen].sort()
+  return [...seen].sort();
 }
 
 function pickImageUrl(images: LiveNationEvent['images']): string | undefined {
-  if (!images || images.length === 0) return undefined
-  let best: { width: number; url: string } | null = null
+  if (!images || images.length === 0) return undefined;
+  let best: { width: number; url: string } | null = null;
   for (const image of images) {
-    const width = image.width ?? 0
+    const width = image.width ?? 0;
     if (best === null || width > best.width) {
-      best = { width, url: image.url }
+      best = { width, url: image.url };
     }
   }
-  return best?.url
+  return best?.url;
 }
 
 function normalizeTime(local: string | undefined): string | undefined {
-  if (!local) return undefined
-  const match = local.match(/^(\d{2}:\d{2}(?::\d{2})?)$/)
-  if (!match) return undefined
-  return match[1]!.length === 5 ? `${match[1]}:00` : match[1]!
+  if (!local) return undefined;
+  const match = local.match(/^(\d{2}:\d{2}(?::\d{2})?)$/);
+  if (!match) return undefined;
+  return match[1]!.length === 5 ? `${match[1]}:00` : match[1]!;
 }
 
 function normalize(
@@ -326,19 +326,19 @@ function normalize(
   venueCalendarUrl: string,
 ): NormalizedEvent | null {
   if (event.status_code && DROPPED_STATUS_CODES.has(event.status_code)) {
-    return null
+    return null;
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(event.start_date_local)) {
     logger.warn(
       { tmId: event.tm_id, startDateLocal: event.start_date_local },
       'livenation: skipping event with unparseable start_date_local',
-    )
-    return null
+    );
+    return null;
   }
 
   const artistNames = (event.artists ?? [])
     .map((artist) => artist.name.trim())
-    .filter((name) => name.length > 0)
+    .filter((name) => name.length > 0);
   // The payload lists the headliner first. When the record carries no artist
   // breakdown at all (festival passes, multi-bill packages), the listing name
   // is still the best DISPLAY string — but it is not an observation of a
@@ -346,12 +346,12 @@ function normalize(
   // billing emphasis, so the only honest reading is "first is the headliner,
   // rest are openers" — reported as that split rather than one flat list, which
   // the ladder would otherwise read as a co-headline bill (#1203).
-  const observedPerformers = artistNames.slice(0, 1)
-  const artist = observedPerformers[0] ?? event.name
-  const supportingArtists = artistNames.slice(1)
+  const observedPerformers = artistNames.slice(0, 1);
+  const artist = observedPerformers[0] ?? event.name;
+  const supportingArtists = artistNames.slice(1);
 
-  const showTime = normalizeTime(event.start_time_local)
-  const imageUrl = pickImageUrl(event.images)
+  const showTime = normalizeTime(event.start_time_local);
+  const imageUrl = pickImageUrl(event.images);
 
   // tsconfig sets `exactOptionalPropertyTypes: true`, so optional fields
   // have to be spread in rather than passed as `undefined`.
@@ -372,18 +372,18 @@ function normalize(
     // No LLM uncertainty on a platform fetch — anything that deviates from
     // the schema is dropped at the record level, not down-weighted.
     confidence: 1.0,
-  }
+  };
 }
 
 async function liveNationFetch(
   venue: Venue,
   opts: PlatformFetchOptions,
 ): Promise<PlatformFetchResult> {
-  const origin = new URL(venue.websiteUrl).origin
-  const sitemapUrl = `${origin}/sitemap.xml`
-  const readUrls: string[] = []
-  const startedAt = Date.now()
-  const deadline = createDeadline(opts)
+  const origin = new URL(venue.websiteUrl).origin;
+  const sitemapUrl = `${origin}/sitemap.xml`;
+  const readUrls: string[] = [];
+  const startedAt = Date.now();
+  const deadline = createDeadline(opts);
 
   // crawl.ts gates on venue.websiteUrl only, which is a different path from
   // the two this adapter requests. robots.txt rules are per-path, so a site
@@ -395,7 +395,7 @@ async function liveNationFetch(
       0,
       sitemapUrl,
       `robots.txt disallows ${sitemapUrl}`,
-    )
+    );
   }
 
   const allCalendarUrls = parseCalendarUrls(
@@ -403,32 +403,32 @@ async function liveNationFetch(
       fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs, readUrls),
     ),
     origin,
-  )
+  );
   if (allCalendarUrls.length === 0) {
     throw new LiveNationFetchError(
       0,
       sitemapUrl,
       `Live Nation sitemap for ${origin} listed no /shows/calendar/ URLs`,
-    )
+    );
   }
 
   const allowedFlags = await Promise.all(
     allCalendarUrls.map((url) => isAllowed(url, CRAWLER_USER_AGENT)),
-  )
-  const calendarUrls = allCalendarUrls.filter((_, i) => allowedFlags[i])
-  const robotsSkippedCount = allCalendarUrls.length - calendarUrls.length
+  );
+  const calendarUrls = allCalendarUrls.filter((_, i) => allowedFlags[i]);
+  const robotsSkippedCount = allCalendarUrls.length - calendarUrls.length;
   if (robotsSkippedCount > 0) {
     logger.warn(
       { venueId: venue.id, robotsSkippedCount, origin },
       'livenation: robots.txt disallowed some calendar months — skipping them',
-    )
+    );
   }
   if (calendarUrls.length === 0) {
     throw new LiveNationFetchError(
       0,
       sitemapUrl,
       `robots.txt disallows every calendar month for ${origin}`,
-    )
+    );
   }
 
   // Deduped by the payload's event id: a show spanning a month boundary is
@@ -440,26 +440,26 @@ async function liveNationFetch(
   const byEventId = new Map<
     string,
     { event: LiveNationEvent; calendarUrl: string }
-  >()
-  let rawRecordCount = 0
-  let schemaRejectCount = 0
-  let otherVenueCount = 0
+  >();
+  let rawRecordCount = 0;
+  let schemaRejectCount = 0;
+  let otherVenueCount = 0;
 
   for (const calendarUrl of calendarUrls) {
     // Every month page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
-    await deadline.wait(jitter(opts.crawlDelayMs))
+    await deadline.wait(jitter(opts.crawlDelayMs));
     const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
       fetchText(calendarUrl, opts.crawlDelayMs, timeoutMs, readUrls),
-    )
-    const records = extractEventRecords(reassembleFlightPayload(html))
-    rawRecordCount += records.length
+    );
+    const records = extractEventRecords(reassembleFlightPayload(html));
+    rawRecordCount += records.length;
 
     for (const record of records) {
-      const parsed = LiveNationEventSchema.safeParse(record)
+      const parsed = LiveNationEventSchema.safeParse(record);
       if (!parsed.success) {
-        schemaRejectCount++
-        continue
+        schemaRejectCount++;
+        continue;
       }
       // The calendar pages occasionally surface a sister venue's on-sale.
       // platform_venue_id holds this venue's id as it appears in the page
@@ -469,10 +469,10 @@ async function liveNationFetch(
         parsed.data.venue?.discovery_id &&
         parsed.data.venue.discovery_id !== venue.platformVenueId
       ) {
-        otherVenueCount++
-        continue
+        otherVenueCount++;
+        continue;
       }
-      byEventId.set(parsed.data.tm_id, { event: parsed.data, calendarUrl })
+      byEventId.set(parsed.data.tm_id, { event: parsed.data, calendarUrl });
     }
   }
 
@@ -483,13 +483,13 @@ async function liveNationFetch(
     logger.warn(
       { venueId: venue.id, schemaRejectCount, rawRecordCount },
       'livenation: some calendar records failed schema validation',
-    )
+    );
   }
 
-  const events: NormalizedEvent[] = []
+  const events: NormalizedEvent[] = [];
   for (const { event, calendarUrl } of byEventId.values()) {
-    const normalized = normalize(event, calendarUrl)
-    if (normalized) events.push(normalized)
+    const normalized = normalize(event, calendarUrl);
+    if (normalized) events.push(normalized);
   }
 
   return {
@@ -506,7 +506,7 @@ async function liveNationFetch(
       otherVenueCount,
       eventsAfterNormalization: events.length,
     },
-  }
+  };
 }
 
 export const liveNationFetcher: PlatformFetcher = {
@@ -520,7 +520,7 @@ export const liveNationFetcher: PlatformFetcher = {
       venue.platform === 'livenation' &&
       venue.platformVenueId &&
       venue.platformVenueId.length > 0,
-    )
+    );
   },
   fetch: liveNationFetch,
-}
+};

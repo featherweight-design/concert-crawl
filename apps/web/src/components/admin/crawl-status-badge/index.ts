@@ -1,1 +1,1 @@
-export { CrawlStatusBadge } from './CrawlStatusBadge'
+export { CrawlStatusBadge } from './CrawlStatusBadge';

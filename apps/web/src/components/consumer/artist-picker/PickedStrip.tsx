@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The picks, pinned, while the grid is off screen.
 //
@@ -13,14 +13,14 @@
 // silently removed a pick would be a third way to change the selection, drawn
 // smaller than the other two.
 
-import { Panel } from '@/components/consumer/image-slot'
-import { ARTIST_PICKER_COPY } from './definitions/copy'
-import { PICKED_STRIP_FACES } from './definitions/constants'
-import type { PickArtist } from './definitions/types'
+import { Panel } from '@/components/consumer/image-slot';
+import { ARTIST_PICKER_COPY } from './definitions/copy';
+import { PICKED_STRIP_FACES } from './definitions/constants';
+import type { PickArtist } from './definitions/types';
 
 interface PickedStripProps {
   /** Every pick, resolvable to a face or not. */
-  count: number
+  count: number;
   /**
    * The ones this tree can draw. Deliberately separate from `count`: a pick
    * made in search has no card here after the tree remounts — the upgrade
@@ -28,12 +28,12 @@ interface PickedStripProps {
    * selection as smaller than it is, in the one place that exists to promise
    * nothing was lost.
    */
-  picked: PickArtist[]
+  picked: PickArtist[];
 }
 
 export const PickedStrip = ({ count, picked }: PickedStripProps) => {
-  if (count === 0) return null
-  const faces = picked.slice(0, PICKED_STRIP_FACES)
+  if (count === 0) return null;
+  const faces = picked.slice(0, PICKED_STRIP_FACES);
 
   return (
     <div
@@ -85,5 +85,5 @@ export const PickedStrip = ({ count, picked }: PickedStripProps) => {
         ))}
       </span>
     </div>
-  )
-}
+  );
+};

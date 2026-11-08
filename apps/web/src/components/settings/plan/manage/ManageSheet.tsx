@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 Manage-subscription sheet body (design table lifecycle-manage.md).
 // Two visually separated groups: "On Concert Crawl" (in-app emotional /
@@ -6,14 +6,14 @@
 // (Stripe-portal tooling, each row tagged with the Stripe chip). The
 // design table defines no hover/focus/transition styles for this surface.
 
-import type { ReactNode } from 'react'
-import { CCMark } from '@/components/brand/cc-mark'
-import { TierBadge } from '@/components/consumer/tier-picker'
-import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants'
-import { MANAGE_SHEET_COPY } from './definitions/copy'
-import type { PaidTier } from './definitions/types'
-import { MANAGE_ICONS, RowChevron } from './icons'
-import { ErrorLine, MonoEyebrow, RailHeader } from './primitives'
+import type { ReactNode } from 'react';
+import { CCMark } from '@/components/brand/cc-mark';
+import { TierBadge } from '@/components/consumer/tier-picker';
+import { TIER_DEFINITIONS } from '@/components/consumer/tier-picker/definitions/constants';
+import { MANAGE_SHEET_COPY } from './definitions/copy';
+import type { PaidTier } from './definitions/types';
+import { MANAGE_ICONS, RowChevron } from './icons';
+import { ErrorLine, MonoEyebrow, RailHeader } from './primitives';
 
 const PortalChip = () => (
   <span
@@ -53,7 +53,7 @@ const PortalChip = () => (
       />
     </svg>
   </span>
-)
+);
 
 const ManageRow = ({
   icon,
@@ -63,12 +63,12 @@ const ManageRow = ({
   disabled = false,
   onClick,
 }: {
-  icon: ReactNode
-  label: string
-  sub: string
-  portal?: boolean
-  disabled?: boolean
-  onClick: () => void
+  icon: ReactNode;
+  label: string;
+  sub: string;
+  portal?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
 }) => (
   <button
     type="button"
@@ -140,18 +140,18 @@ const ManageRow = ({
     </span>
     {portal ? <PortalChip /> : <RowChevron />}
   </button>
-)
+);
 
 interface ManageSheetProps {
-  tier: PaidTier
-  periodEnd: string | null
+  tier: PaidTier;
+  periodEnd: string | null;
   /** Desktop modal layout — larger title + TierBadge in the header row. */
-  wide: boolean
-  portalPending: boolean
-  errorText: string | null
-  onChangePlan: () => void
-  onCancel: () => void
-  onPortal: () => void
+  wide: boolean;
+  portalPending: boolean;
+  errorText: string | null;
+  onChangePlan: () => void;
+  onCancel: () => void;
+  onPortal: () => void;
 }
 
 export const ManageSheet = ({
@@ -164,8 +164,8 @@ export const ManageSheet = ({
   onCancel,
   onPortal,
 }: ManageSheetProps) => {
-  const tierDef = TIER_DEFINITIONS[tier]
-  const copy = MANAGE_SHEET_COPY
+  const tierDef = TIER_DEFINITIONS[tier];
+  const copy = MANAGE_SHEET_COPY;
 
   return (
     <div
@@ -307,5 +307,5 @@ export const ManageSheet = ({
         <CCMark size={13} /> {copy.footer}
       </div>
     </div>
-  )
-}
+  );
+};

@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { useAuth } from '@clerk/nextjs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.appHeader.auth
+const copy = CONSUMER_COPY.appHeader.auth;
 
 /**
  * Where the Sign in link goes at 320px, once the header row is down to one CTA.
  * Both affordances exist at every width — only the position moves.
  */
 export function SignInRail() {
-  const { isSignedIn } = useAuth()
-  if (isSignedIn) return null
+  const { isSignedIn } = useAuth();
+  if (isSignedIn) return null;
 
   return (
     <div className="flex justify-end bg-bg px-4 pb-2 sm:hidden">
@@ -24,5 +24,5 @@ export function SignInRail() {
         {copy.signIn}
       </Link>
     </div>
-  )
+  );
 }

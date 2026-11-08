@@ -1,15 +1,15 @@
-import React from 'react'
-import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes'
+import React from 'react';
+import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes';
 
 export interface PassportPillProps {
-  cfg: PassportModeConfig
+  cfg: PassportModeConfig;
   /** The theme's scrim — the pill's fill. */
-  scrim: string
+  scrim: string;
   /** Drops the blur. Satori implements no `backdropFilter`. */
-  print?: boolean
-  muted?: boolean
-  fontSize?: number
-  children: React.ReactNode
+  print?: boolean;
+  muted?: boolean;
+  fontSize?: number;
+  children: React.ReactNode;
 }
 
 /**
@@ -52,4 +52,4 @@ export const PassportPill = ({
   >
     {children}
   </div>
-)
+);

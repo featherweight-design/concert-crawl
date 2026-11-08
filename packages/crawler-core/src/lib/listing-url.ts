@@ -16,38 +16,38 @@
  * carrying tracking params than discard a working per-event link.
  */
 function pagePath(url: string): string | null {
-  let parsed: URL
+  let parsed: URL;
   try {
-    parsed = new URL(url.trim())
+    parsed = new URL(url.trim());
   } catch {
-    return null
+    return null;
   }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
-  const path = parsed.pathname.replace(/\/+$/, '')
-  return `${parsed.protocol}//${parsed.host.toLowerCase()}${path}`
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+  const path = parsed.pathname.replace(/\/+$/, '');
+  return `${parsed.protocol}//${parsed.host.toLowerCase()}${path}`;
 }
 
 export function isListingPageUrl(
   candidate: string | null | undefined,
   listingUrls: readonly (string | null | undefined)[],
 ): boolean {
-  if (candidate == null) return false
-  let parsed: URL
+  if (candidate == null) return false;
+  let parsed: URL;
   try {
-    parsed = new URL(candidate.trim())
+    parsed = new URL(candidate.trim());
   } catch {
-    return false
+    return false;
   }
   // Any query string is treated as a non-match, because it may select one
   // show within the page. See the note above on why erring this way.
-  if (parsed.search !== '') return false
+  if (parsed.search !== '') return false;
 
-  const candidatePath = pagePath(candidate)
-  if (candidatePath == null) return false
+  const candidatePath = pagePath(candidate);
+  if (candidatePath == null) return false;
 
   return listingUrls.some((listing) => {
-    if (listing == null) return false
-    const listingPath = pagePath(listing)
-    return listingPath != null && listingPath === candidatePath
-  })
+    if (listing == null) return false;
+    const listingPath = pagePath(listing);
+    return listingPath != null && listingPath === candidatePath;
+  });
 }

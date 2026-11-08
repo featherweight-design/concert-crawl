@@ -16,11 +16,11 @@
 
 The implementation is sequenced across three PRs. Each sub-plan is self-contained for execution; the Global Constraints below apply to all three.
 
-| Sub-plan | What it ships | Depends on |
-|---|---|---|
-| [PR 1 — Schema + LLM signal + crawler INSERT](2026-06-24-classification-review-queue-pr1-schema.md) | Migration 0042, `reviewNeeded` Zod + tool schema + prompt block, crawler INSERT mapping. No UI, no API change. | — |
-| [PR 2 — Backfill script](2026-06-24-classification-review-queue-pr2-backfill.md) | Targeted to currently-hidden events; dry-run CSV → `--commit` UPDATE; writes only the review-needed flag, NEVER `hidden_from_consumer`. | PR 1 deployed |
-| [PR 3 — Admin UI + API filter](2026-06-24-classification-review-queue-pr3-ui.md) | `ClassificationSection` interactive (absorbs Mark-non-concert + gains Mark-as-concert + flag pill); Danger Zone slim; `GET /v1/admin/events?view=hidden-flagged-for-review`; new filter chip + empty state. | PR 1 deployed (column exists) |
+| Sub-plan                                                                                            | What it ships                                                                                                                                                                                               | Depends on                    |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| [PR 1 — Schema + LLM signal + crawler INSERT](2026-06-24-classification-review-queue-pr1-schema.md) | Migration 0042, `reviewNeeded` Zod + tool schema + prompt block, crawler INSERT mapping. No UI, no API change.                                                                                              | —                             |
+| [PR 2 — Backfill script](2026-06-24-classification-review-queue-pr2-backfill.md)                    | Targeted to currently-hidden events; dry-run CSV → `--commit` UPDATE; writes only the review-needed flag, NEVER `hidden_from_consumer`.                                                                     | PR 1 deployed                 |
+| [PR 3 — Admin UI + API filter](2026-06-24-classification-review-queue-pr3-ui.md)                    | `ClassificationSection` interactive (absorbs Mark-non-concert + gains Mark-as-concert + flag pill); Danger Zone slim; `GET /v1/admin/events?view=hidden-flagged-for-review`; new filter chip + empty state. | PR 1 deployed (column exists) |
 
 PRs 1 + 3 share no code paths and can be developed in parallel; PR 3 only needs PR 1's column live. PR 2 lands any time after PR 1.
 
@@ -46,42 +46,42 @@ Apply to every sub-plan. Sub-plans link back here rather than repeating.
 
 ### PR 1 — schema + LLM signal + crawler INSERT
 
-| Path | Action | Responsibility |
-|---|---|---|
-| `packages/db/migrations/0042_events_is_concert_review_needed.sql` | Create | Add `is_concert_review_needed BOOLEAN NOT NULL DEFAULT FALSE` column |
-| `packages/db/migrations/meta/_journal.json` | Modify | Append the 0042 entry with `when > 1782604800000` |
-| `packages/db/src/schema/events.ts` | Modify | Add `isConcertReviewNeeded` Drizzle column accessor |
-| `packages/crawler-core/src/types.ts` | Modify | Add `reviewNeeded?: boolean` to `NormalizedEvent` |
-| `packages/crawler-core/src/lib/extractors/llm.ts` | Modify | Extend `NormalizedEventSchema`, `IS_CONCERT_RULES`, `SAVE_EVENTS_TOOL`, output mapping |
-| `packages/crawler-core/src/lib/extractors/llm.test.ts` | Modify | Add `reviewNeeded` round-trip cases |
-| `packages/crawler-core/src/crawl.ts` | Modify | Set `isConcertReviewNeeded: event.reviewNeeded === true` in INSERT mapping (around line 643) |
-| `packages/crawler-core/src/crawl.integration.test.ts` | Modify | Add INSERT-writes-column + UPDATE-leaves-column-alone cases |
+| Path                                                              | Action | Responsibility                                                                               |
+| ----------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------- |
+| `packages/db/migrations/0042_events_is_concert_review_needed.sql` | Create | Add `is_concert_review_needed BOOLEAN NOT NULL DEFAULT FALSE` column                         |
+| `packages/db/migrations/meta/_journal.json`                       | Modify | Append the 0042 entry with `when > 1782604800000`                                            |
+| `packages/db/src/schema/events.ts`                                | Modify | Add `isConcertReviewNeeded` Drizzle column accessor                                          |
+| `packages/crawler-core/src/types.ts`                              | Modify | Add `reviewNeeded?: boolean` to `NormalizedEvent`                                            |
+| `packages/crawler-core/src/lib/extractors/llm.ts`                 | Modify | Extend `NormalizedEventSchema`, `IS_CONCERT_RULES`, `SAVE_EVENTS_TOOL`, output mapping       |
+| `packages/crawler-core/src/lib/extractors/llm.test.ts`            | Modify | Add `reviewNeeded` round-trip cases                                                          |
+| `packages/crawler-core/src/crawl.ts`                              | Modify | Set `isConcertReviewNeeded: event.reviewNeeded === true` in INSERT mapping (around line 643) |
+| `packages/crawler-core/src/crawl.integration.test.ts`             | Modify | Add INSERT-writes-column + UPDATE-leaves-column-alone cases                                  |
 
 ### PR 2 — backfill script
 
-| Path | Action | Responsibility |
-|---|---|---|
-| `scripts/2026-06-24-isconcert-review-needed-backfill-helpers.ts` | Create | Pure helpers (`buildBatches`, `formatCsvRow`, types) |
-| `scripts/2026-06-24-isconcert-review-needed-backfill.ts` | Create | DB load, batched classify, dry-run CSV, `--commit` UPDATE |
-| `scripts/2026-06-24-isconcert-review-needed-backfill.test.ts` | Create | Helpers + `classifyBatch` mocked SDK coverage |
+| Path                                                             | Action | Responsibility                                            |
+| ---------------------------------------------------------------- | ------ | --------------------------------------------------------- |
+| `scripts/2026-06-24-isconcert-review-needed-backfill-helpers.ts` | Create | Pure helpers (`buildBatches`, `formatCsvRow`, types)      |
+| `scripts/2026-06-24-isconcert-review-needed-backfill.ts`         | Create | DB load, batched classify, dry-run CSV, `--commit` UPDATE |
+| `scripts/2026-06-24-isconcert-review-needed-backfill.test.ts`    | Create | Helpers + `classifyBatch` mocked SDK coverage             |
 
 ### PR 3 — admin UI + API filter + audit
 
-| Path | Action | Responsibility |
-|---|---|---|
-| `apps/api/src/routes/admin/events.ts` | Modify | Add `view` query enum; thread into the where clause; include `isConcertReviewNeeded` in list + detail projections (~lines 96-130, 255-280, 332-346, 446-480) |
-| `apps/api/src/routes/admin/events.integration.test.ts` | Modify | Cover `view=hidden-flagged-for-review` scoping + projection field |
-| `apps/web/src/components/admin/definitions/copy.ts` | Modify | Add `editor.classification.{markAsConcert*, reviewNeededPill*}`, `review.allEvents.filters.flaggedChip*`; remove `editor.dangerZone.markNonConcert` (in task 3.7) |
-| `apps/web/src/components/admin/review/all/filters.ts` | Modify | Add `flagged: boolean` to `AllEventsFilters`, serialize/parse as `view=hidden-flagged-for-review` |
-| `apps/web/src/components/admin/review/all/filters.test.ts` | Modify | Cover new round-trip parse/serialize cases |
-| `apps/web/src/components/admin/review/all/EventsFilterBar.tsx` | Modify | Render flagged-for-review chip |
-| `apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx` | Modify | Empty-state copy when chip is active + zero rows |
-| `apps/web/src/components/admin/review/all/EventConfirmModal.tsx` | Modify | Add `'mark-as-concert'` to `ConfirmKind` + COPY routing |
-| `apps/web/src/components/admin/review/all/types.ts` | Modify | Add `hiddenFromConsumer: boolean` + `isConcertReviewNeeded: boolean` to `AllEvent` |
-| `apps/web/src/components/admin/events/editor/sections/ClassificationSection.tsx` | Modify | Become interactive: render Mark-non-concert OR Mark-as-concert button + flag pill |
-| `apps/web/src/components/admin/events/editor/sections/DangerZoneSection.tsx` | Modify | Drop `onMarkNonConcert` prop + button — Merge + Delete only |
-| `apps/web/src/components/admin/events/editor/EventEditorClient.tsx` | Modify | Thread `pendingDanger` discriminated union — drop `'non-concert'`, add a separate `pendingClassification: 'mark-non-concert' \| 'mark-as-concert' \| null` |
-| `apps/web/src/components/admin/events/editor/EventEditorClient.test.tsx` | Modify | Cover Mark-non-concert (now in ClassificationSection) + Mark-as-concert flow + Danger Zone slim |
+| Path                                                                             | Action | Responsibility                                                                                                                                                    |
+| -------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/routes/admin/events.ts`                                            | Modify | Add `view` query enum; thread into the where clause; include `isConcertReviewNeeded` in list + detail projections (~lines 96-130, 255-280, 332-346, 446-480)      |
+| `apps/api/src/routes/admin/events.integration.test.ts`                           | Modify | Cover `view=hidden-flagged-for-review` scoping + projection field                                                                                                 |
+| `apps/web/src/components/admin/definitions/copy.ts`                              | Modify | Add `editor.classification.{markAsConcert*, reviewNeededPill*}`, `review.allEvents.filters.flaggedChip*`; remove `editor.dangerZone.markNonConcert` (in task 3.7) |
+| `apps/web/src/components/admin/review/all/filters.ts`                            | Modify | Add `flagged: boolean` to `AllEventsFilters`, serialize/parse as `view=hidden-flagged-for-review`                                                                 |
+| `apps/web/src/components/admin/review/all/filters.test.ts`                       | Modify | Cover new round-trip parse/serialize cases                                                                                                                        |
+| `apps/web/src/components/admin/review/all/EventsFilterBar.tsx`                   | Modify | Render flagged-for-review chip                                                                                                                                    |
+| `apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx`             | Modify | Empty-state copy when chip is active + zero rows                                                                                                                  |
+| `apps/web/src/components/admin/review/all/EventConfirmModal.tsx`                 | Modify | Add `'mark-as-concert'` to `ConfirmKind` + COPY routing                                                                                                           |
+| `apps/web/src/components/admin/review/all/types.ts`                              | Modify | Add `hiddenFromConsumer: boolean` + `isConcertReviewNeeded: boolean` to `AllEvent`                                                                                |
+| `apps/web/src/components/admin/events/editor/sections/ClassificationSection.tsx` | Modify | Become interactive: render Mark-non-concert OR Mark-as-concert button + flag pill                                                                                 |
+| `apps/web/src/components/admin/events/editor/sections/DangerZoneSection.tsx`     | Modify | Drop `onMarkNonConcert` prop + button — Merge + Delete only                                                                                                       |
+| `apps/web/src/components/admin/events/editor/EventEditorClient.tsx`              | Modify | Thread `pendingDanger` discriminated union — drop `'non-concert'`, add a separate `pendingClassification: 'mark-non-concert' \| 'mark-as-concert' \| null`        |
+| `apps/web/src/components/admin/events/editor/EventEditorClient.test.tsx`         | Modify | Cover Mark-non-concert (now in ClassificationSection) + Mark-as-concert flow + Danger Zone slim                                                                   |
 
 ---
 
@@ -103,23 +103,23 @@ Each PR follows the standard process:
 
 **Spec coverage check** — every spec section maps to at least one task:
 
-| Spec section | Tasks |
-|---|---|
-| Data model (column + crawler-frozen rule) | 1.2, 1.5 |
-| LLM tool schema + prompt | 1.3, 1.4 |
-| Crawler write path (INSERT only) | 1.5 |
-| Backfill script (3 actions, optimistic lock, dry-run + commit, idempotent) | 2.2, 2.3 |
-| Admin UI — ClassificationSection interactive | 3.6, 3.8 |
-| Admin UI — DangerZoneSection slim | 3.7, 3.8 |
-| Admin UI — EventConfirmModal new kinds | 3.5 |
-| Admin UI — All Events filter chip + empty state | 3.4, 3.9 |
-| API — `view=hidden-flagged-for-review` param + projection | 3.2 |
-| Audit | inherited from existing PATCH handler — no task needed |
-| Tests — unit (llm.test.ts) | 1.3, 1.4 |
-| Tests — integration (crawl + admin events) | 1.5, 3.2 |
-| Tests — component (EventEditorClient) | 3.6, 3.8 |
-| Tests — script | 2.2, 2.3 |
-| Acceptance criteria | every criterion has a corresponding test or manual check (in 3.10) |
+| Spec section                                                               | Tasks                                                              |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Data model (column + crawler-frozen rule)                                  | 1.2, 1.5                                                           |
+| LLM tool schema + prompt                                                   | 1.3, 1.4                                                           |
+| Crawler write path (INSERT only)                                           | 1.5                                                                |
+| Backfill script (3 actions, optimistic lock, dry-run + commit, idempotent) | 2.2, 2.3                                                           |
+| Admin UI — ClassificationSection interactive                               | 3.6, 3.8                                                           |
+| Admin UI — DangerZoneSection slim                                          | 3.7, 3.8                                                           |
+| Admin UI — EventConfirmModal new kinds                                     | 3.5                                                                |
+| Admin UI — All Events filter chip + empty state                            | 3.4, 3.9                                                           |
+| API — `view=hidden-flagged-for-review` param + projection                  | 3.2                                                                |
+| Audit                                                                      | inherited from existing PATCH handler — no task needed             |
+| Tests — unit (llm.test.ts)                                                 | 1.3, 1.4                                                           |
+| Tests — integration (crawl + admin events)                                 | 1.5, 3.2                                                           |
+| Tests — component (EventEditorClient)                                      | 3.6, 3.8                                                           |
+| Tests — script                                                             | 2.2, 2.3                                                           |
+| Acceptance criteria                                                        | every criterion has a corresponding test or manual check (in 3.10) |
 
 **Open follow-ups opened during plan-writing:**
 

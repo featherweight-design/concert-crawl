@@ -1,19 +1,19 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { Search, X } from 'lucide-react'
-import { useSearch } from '../../../lib/search/useSearch'
-import { SearchDefaultState } from '../search/SearchDefaultState'
-import { SearchResultsState } from '../search/SearchResultsState'
-import { SearchEmptyState } from '../search/SearchEmptyState'
-import { SearchLoadingState } from '../search/SearchLoadingState'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useEffect, useRef, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { useSearch } from '../../../lib/search/useSearch';
+import { SearchDefaultState } from '../search/SearchDefaultState';
+import { SearchResultsState } from '../search/SearchResultsState';
+import { SearchEmptyState } from '../search/SearchEmptyState';
+import { SearchLoadingState } from '../search/SearchLoadingState';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.search
+const copy = CONSUMER_COPY.search;
 
 interface SearchPaletteProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 const kbdStyle: React.CSSProperties = {
@@ -24,26 +24,26 @@ const kbdStyle: React.CSSProperties = {
   color: 'var(--fg-muted)',
   fontFamily: 'var(--font-mono)',
   fontSize: 10,
-}
+};
 
 export function SearchPalette({ open, onClose }: SearchPaletteProps) {
-  const search = useSearch()
-  const [selectedIdx, setSelectedIdx] = useState(-1)
-  const selectedIdxRef = useRef(-1)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const search = useSearch();
+  const [selectedIdx, setSelectedIdx] = useState(-1);
+  const selectedIdxRef = useRef(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    selectedIdxRef.current = -1
-    setSelectedIdx(-1)
-  }, [search.query])
+    selectedIdxRef.current = -1;
+    setSelectedIdx(-1);
+  }, [search.query]);
 
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 0)
+      setTimeout(() => inputRef.current?.focus(), 0);
     } else {
-      search.clearQuery()
+      search.clearQuery();
     }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     artistResults,
@@ -51,83 +51,83 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     venueResults,
     venueFirst,
     navigateTo,
-  } = search
+  } = search;
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const totalResults =
-      artistPageResults.length + artistResults.length + venueResults.length
+      artistPageResults.length + artistResults.length + venueResults.length;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onClose()
+        onClose();
       } else if (event.key === 'ArrowDown') {
-        event.preventDefault()
-        const nextIdx = Math.min(selectedIdxRef.current + 1, totalResults - 1)
-        selectedIdxRef.current = nextIdx
-        setSelectedIdx(nextIdx)
+        event.preventDefault();
+        const nextIdx = Math.min(selectedIdxRef.current + 1, totalResults - 1);
+        selectedIdxRef.current = nextIdx;
+        setSelectedIdx(nextIdx);
       } else if (event.key === 'ArrowUp') {
-        event.preventDefault()
-        const nextIdx = Math.max(selectedIdxRef.current - 1, -1)
-        selectedIdxRef.current = nextIdx
-        setSelectedIdx(nextIdx)
+        event.preventDefault();
+        const nextIdx = Math.max(selectedIdxRef.current - 1, -1);
+        selectedIdxRef.current = nextIdx;
+        setSelectedIdx(nextIdx);
       } else if (event.key === 'Enter' && selectedIdxRef.current >= 0) {
-        event.preventDefault()
-        const rawIdx = selectedIdxRef.current
+        event.preventDefault();
+        const rawIdx = selectedIdxRef.current;
         // #1115 PR-G — artist-page rows own indices 0..n-1, ahead of both
         // event-derived sections; everything below indexes into the remainder.
         if (rawIdx < artistPageResults.length) {
-          const artistPage = artistPageResults[rawIdx]
+          const artistPage = artistPageResults[rawIdx];
           if (artistPage) {
-            navigateTo('artistPage', { slug: artistPage.slug })
-            onClose()
+            navigateTo('artistPage', { slug: artistPage.slug });
+            onClose();
           }
-          return
+          return;
         }
-        const currentIdx = rawIdx - artistPageResults.length
+        const currentIdx = rawIdx - artistPageResults.length;
         if (venueFirst) {
-          const venueCount = venueResults.length
+          const venueCount = venueResults.length;
           if (currentIdx < venueCount) {
-            const venue = venueResults[currentIdx]
+            const venue = venueResults[currentIdx];
             if (venue) {
               navigateTo('venue', {
                 slug: venue.slug,
                 matchingEventId: venue.matchingEventId,
-              })
-              onClose()
+              });
+              onClose();
             }
           } else {
-            const artist = artistResults[currentIdx - venueCount]
+            const artist = artistResults[currentIdx - venueCount];
             if (artist) {
-              navigateTo('artist', artist.name)
-              onClose()
+              navigateTo('artist', artist.name);
+              onClose();
             }
           }
         } else {
-          const artistCount = artistResults.length
+          const artistCount = artistResults.length;
           if (currentIdx < artistCount) {
-            const artist = artistResults[currentIdx]
+            const artist = artistResults[currentIdx];
             if (artist) {
-              navigateTo('artist', artist.name)
-              onClose()
+              navigateTo('artist', artist.name);
+              onClose();
             }
           } else {
-            const venue = venueResults[currentIdx - artistCount]
+            const venue = venueResults[currentIdx - artistCount];
             if (venue) {
               navigateTo('venue', {
                 slug: venue.slug,
                 matchingEventId: venue.matchingEventId,
-              })
-              onClose()
+              });
+              onClose();
             }
           }
         }
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     open,
     artistResults,
@@ -136,14 +136,14 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     venueFirst,
     navigateTo,
     onClose,
-  ])
+  ]);
 
-  if (!open) return null
+  if (!open) return null;
 
   const hasResults =
     search.artistPageResults.length > 0 ||
     search.artistResults.length > 0 ||
-    search.venueResults.length > 0
+    search.venueResults.length > 0;
 
   return (
     <div
@@ -265,12 +265,12 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
               venueFirst={search.venueFirst}
               selectedIdx={selectedIdx}
               onHover={(idx) => {
-                selectedIdxRef.current = idx
-                setSelectedIdx(idx)
+                selectedIdxRef.current = idx;
+                setSelectedIdx(idx);
               }}
               onNavigateTo={(type, value) => {
-                search.navigateTo(type, value)
-                onClose()
+                search.navigateTo(type, value);
+                onClose();
               }}
             />
           )}
@@ -318,5 +318,5 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

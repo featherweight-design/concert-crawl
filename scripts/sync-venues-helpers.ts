@@ -23,18 +23,18 @@ export const COMPARED_FIELDS = [
   'crawlWaitUntil',
   'crawlWaitForSelector',
   'crawlDelayMs',
-] as const
+] as const;
 
-type ComparedField = (typeof COMPARED_FIELDS)[number]
+type ComparedField = (typeof COMPARED_FIELDS)[number];
 
 export type ComparableVenue = { slug: string; address?: unknown } & Partial<
   Record<ComparedField, unknown>
->
+>;
 
 export interface VenueDiff {
-  toCreate: string[]
-  toUpdate: string[]
-  unchanged: string[]
+  toCreate: string[];
+  toUpdate: string[];
+  unchanged: string[];
 }
 
 // Values arrive from two sources with different shapes for the same column:
@@ -45,13 +45,13 @@ export interface VenueDiff {
 // genuinely different values here: writing `excluded.<col>` over a DB `''`
 // with a seed NULL is a real change, and collapsing both to '' would hide
 // it.
-const NULLISH = Symbol('nullish')
+const NULLISH = Symbol('nullish');
 
 const isNullish = (value: unknown): boolean =>
-  value === undefined || value === null
+  value === undefined || value === null;
 
 const normalize = (value: unknown): string | typeof NULLISH =>
-  isNullish(value) ? NULLISH : String(value)
+  isNullish(value) ? NULLISH : String(value);
 
 // A field the seed omits is not "no value" — the INSERT writes the column
 // default, and `excluded.<col>` therefore carries that default into the
@@ -59,7 +59,7 @@ const normalize = (value: unknown): string | typeof NULLISH =>
 // what makes the diff match what a --commit would really do. Without it
 // every venue that leaves `featured` unset reads as drift forever, and an
 // omission that would genuinely reset a hand-edited value reads as clean.
-export type ColumnDefaults = Partial<Record<ComparedField, unknown>>
+export type ColumnDefaults = Partial<Record<ComparedField, unknown>>;
 
 // `address` is written as COALESCE(venues.address, excluded.address), so an
 // existing non-null value always wins and seed drift against it is not a
@@ -71,29 +71,29 @@ export type ColumnDefaults = Partial<Record<ComparedField, unknown>>
 const addressDiffers = (
   seedVenue: ComparableVenue,
   current: ComparableVenue,
-): boolean => isNullish(current.address) && !isNullish(seedVenue.address)
+): boolean => isNullish(current.address) && !isNullish(seedVenue.address);
 
 // `--only a,b` / `--only=a,b`. Returns undefined when the flag is absent,
 // which is what selects the create-only default path.
 export const parseOnly = (argv: readonly string[]): string[] | undefined => {
   const index = argv.findIndex(
     (arg) => arg === '--only' || arg.startsWith('--only='),
-  )
-  if (index === -1) return undefined
+  );
+  if (index === -1) return undefined;
 
-  const next = argv[index + 1]
+  const next = argv[index + 1];
   const raw = argv[index].startsWith('--only=')
     ? argv[index].slice('--only='.length)
     : // A following flag is the next argument, not this one's value —
       // `--only --commit` must read as an empty scope and fail, not scope to
       // a venue named "--commit".
-      ((next?.startsWith('--') ? '' : next) ?? '')
+      ((next?.startsWith('--') ? '' : next) ?? '');
 
   return raw
     .split(',')
     .map((slug) => slug.trim())
-    .filter((slug) => slug.length > 0)
-}
+    .filter((slug) => slug.length > 0);
+};
 
 export const diffVenues = (
   seedVenues: readonly ComparableVenue[],
@@ -101,33 +101,33 @@ export const diffVenues = (
   columnDefaults: ColumnDefaults = {},
 ): VenueDiff => {
   const seedValue = (venue: ComparableVenue, field: ComparedField): unknown =>
-    venue[field] === undefined ? columnDefaults[field] : venue[field]
+    venue[field] === undefined ? columnDefaults[field] : venue[field];
 
-  const bySlug = new Map(existingVenues.map((venue) => [venue.slug, venue]))
+  const bySlug = new Map(existingVenues.map((venue) => [venue.slug, venue]));
 
-  const toCreate: string[] = []
-  const toUpdate: string[] = []
-  const unchanged: string[] = []
+  const toCreate: string[] = [];
+  const toUpdate: string[] = [];
+  const unchanged: string[] = [];
 
   for (const seedVenue of seedVenues) {
-    const current = bySlug.get(seedVenue.slug)
+    const current = bySlug.get(seedVenue.slug);
     if (!current) {
-      toCreate.push(seedVenue.slug)
-      continue
+      toCreate.push(seedVenue.slug);
+      continue;
     }
 
     const differs =
       COMPARED_FIELDS.some(
         (field) =>
           normalize(seedValue(seedVenue, field)) !== normalize(current[field]),
-      ) || addressDiffers(seedVenue, current)
+      ) || addressDiffers(seedVenue, current);
 
     if (differs) {
-      toUpdate.push(seedVenue.slug)
+      toUpdate.push(seedVenue.slug);
     } else {
-      unchanged.push(seedVenue.slug)
+      unchanged.push(seedVenue.slug);
     }
   }
 
-  return { toCreate, toUpdate, unchanged }
-}
+  return { toCreate, toUpdate, unchanged };
+};

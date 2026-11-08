@@ -25,39 +25,43 @@
  *     pnpm --filter e2e audit:sweep -- [--tags=admin,consumer | --tags admin,consumer]
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import fs from 'node:fs';
+import path from 'node:path';
 
-import { chromium } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import { chromium } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
-import { auditStorageStatePath } from '../fixtures/auth.js'
-import { assertNotProdBaseUrl } from './assert-not-prod.js'
-import { prepareAuditAuth } from './audit-auth.js'
-import { collectHeuristics } from './heuristics.js'
-import manifest from './manifest.js'
-import type { AuditManifest } from './manifest-types.js'
-import { waitForPageReady } from './page-ready.js'
-import { filterManifest, outputPathFor, parseCliTags } from './sweep-helpers.js'
+import { auditStorageStatePath } from '../fixtures/auth.js';
+import { assertNotProdBaseUrl } from './assert-not-prod.js';
+import { prepareAuditAuth } from './audit-auth.js';
+import { collectHeuristics } from './heuristics.js';
+import manifest from './manifest.js';
+import type { AuditManifest } from './manifest-types.js';
+import { waitForPageReady } from './page-ready.js';
+import {
+  filterManifest,
+  outputPathFor,
+  parseCliTags,
+} from './sweep-helpers.js';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export type SweepArgs = {
-  tags?: ('consumer' | 'admin')[] | undefined
-  runId?: string | undefined
-}
+  tags?: ('consumer' | 'admin')[] | undefined;
+  runId?: string | undefined;
+};
 
 export type SweepResult = {
-  runId: string
-  captures: number
+  runId: string;
+  captures: number;
   errors: {
-    routeId?: string
-    kind: 'load' | 'interaction' | 'auth'
-    message: string
-  }[]
-}
+    routeId?: string;
+    kind: 'load' | 'interaction' | 'auth';
+    message: string;
+  }[];
+};
 
 // ---------------------------------------------------------------------------
 // Viewports
@@ -67,7 +71,7 @@ const VIEWPORTS = [
   { label: '320x568', width: 320, height: 568 },
   { label: '390x844', width: 390, height: 844 },
   { label: '1440x900', width: 1440, height: 900 },
-] as const
+] as const;
 
 // A page whose <body> has fewer than this many descendant elements is
 // treated as "thin render" — usually a 404, an auth bounce to the waitlist
@@ -83,7 +87,7 @@ const VIEWPORTS = [
 // render (e.g. a Next 404 page, which draws outside the app chrome) measured
 // well below this threshold, while every genuine app route — including the
 // sparsest real page — measured far above it.
-const INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD = 40
+const INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD = 40;
 
 // ---------------------------------------------------------------------------
 // captureState — internal helper
@@ -100,25 +104,25 @@ async function captureState(
   vp: { label: string; width: number; height: number },
   page: Page,
 ): Promise<void> {
-  const pngPath = outputPathFor(runId, routeId, state, vp.label, 'png')
-  const jsonPath = outputPathFor(runId, routeId, state, vp.label, 'json')
+  const pngPath = outputPathFor(runId, routeId, state, vp.label, 'png');
+  const jsonPath = outputPathFor(runId, routeId, state, vp.label, 'json');
 
   // pngPath and jsonPath share the same directory (same run/route bucket),
   // so one mkdirSync covers both.
-  const outDir = path.dirname(pngPath)
-  fs.mkdirSync(outDir, { recursive: true })
+  const outDir = path.dirname(pngPath);
+  fs.mkdirSync(outDir, { recursive: true });
 
-  await page.screenshot({ path: pngPath, fullPage: true })
+  await page.screenshot({ path: pngPath, fullPage: true });
 
-  const snapshot = await collectHeuristics(page, vp.width)
+  const snapshot = await collectHeuristics(page, vp.width);
   // insufficientData is a sweep-side computation, not part of HeuristicSnapshot.
   // The on-disk JSON is a deliberate superset: PR 4 vision-triage reads this
   // flag to skip visual judgment on thin renders ("run the seeder" log instead).
   const insufficientData =
     snapshot.contentDensity.bodyElements <
-    INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD
-  const jsonPayload = { ...snapshot, insufficientData }
-  fs.writeFileSync(jsonPath, JSON.stringify(jsonPayload, null, 2))
+    INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD;
+  const jsonPayload = { ...snapshot, insufficientData };
+  fs.writeFileSync(jsonPath, JSON.stringify(jsonPayload, null, 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -136,55 +140,55 @@ async function captureState(
 export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
   const baseUrl =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
-    'https://staging.concertcrawl.app'
-  assertNotProdBaseUrl(baseUrl)
+    'https://staging.concertcrawl.app';
+  assertNotProdBaseUrl(baseUrl);
   // Format: YYYY-MM-DDTHH-MM-SS (slice(0, 19) trims the fractional-second
   // suffix from the ISO string, which is always 24+ chars).
   const runId =
-    args.runId ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    args.runId ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-  const routes: AuditManifest = filterManifest(manifest, args.tags)
+  const routes: AuditManifest = filterManifest(manifest, args.tags);
 
-  const errors: SweepResult['errors'] = []
-  let captures = 0
+  const errors: SweepResult['errors'] = [];
+  let captures = 0;
 
   // Prepare auth state files for any roles required by the filtered route
   // list. Each role is prepared at most once. If auth preparation fails the
   // role is added to skippedRoles and all routes requiring it are skipped.
-  const rolesNeeded = new Set<'user' | 'admin'>()
+  const rolesNeeded = new Set<'user' | 'admin'>();
   for (const route of routes) {
-    if (route.auth === 'user') rolesNeeded.add('user')
-    if (route.auth === 'admin') rolesNeeded.add('admin')
+    if (route.auth === 'user') rolesNeeded.add('user');
+    if (route.auth === 'admin') rolesNeeded.add('admin');
   }
-  const skippedRoles = new Set<'user' | 'admin'>()
+  const skippedRoles = new Set<'user' | 'admin'>();
   for (const role of rolesNeeded) {
     try {
-      await prepareAuditAuth(role)
+      await prepareAuditAuth(role);
     } catch (err) {
       // Log to stderr so a live sweep run surfaces the failure without
       // corrupting the stdout JSON that the CLI prints. The error is also
       // captured in the result for post-run inspection.
       console.error(
         `[audit] auth prep failed for role '${role}': ${String(err)}`,
-      )
-      errors.push({ kind: 'auth', message: String(err) })
-      skippedRoles.add(role)
+      );
+      errors.push({ kind: 'auth', message: String(err) });
+      skippedRoles.add(role);
     }
   }
 
-  const browser = await chromium.launch()
+  const browser = await chromium.launch();
   try {
     for (const route of routes) {
       if (
         (route.auth === 'user' || route.auth === 'admin') &&
         skippedRoles.has(route.auth)
       ) {
-        continue
+        continue;
       }
       const storageState =
         route.auth === 'none'
           ? undefined
-          : auditStorageStatePath(route.auth === 'admin' ? 'admin' : 'user')
+          : auditStorageStatePath(route.auth === 'admin' ? 'admin' : 'user');
 
       for (const vp of VIEWPORTS) {
         const context = await browser.newContext({
@@ -192,24 +196,24 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
           reducedMotion: 'reduce',
           baseURL: baseUrl,
           ...(storageState !== undefined ? { storageState } : {}),
-        })
-        const page = await context.newPage()
+        });
+        const page = await context.newPage();
         try {
           // `domcontentloaded`, then a concrete ready state. Never
           // `networkidle`: on Next 16 a proxy-redirected RSC prefetch holds a
           // request open, so it never arrives and every route timed out.
-          await page.goto(route.path, { waitUntil: 'domcontentloaded' })
-          await waitForPageReady(page)
+          await page.goto(route.path, { waitUntil: 'domcontentloaded' });
+          await waitForPageReady(page);
 
-          await captureState(runId, route.id, 'default', vp, page)
-          captures++
+          await captureState(runId, route.id, 'default', vp, page);
+          captures++;
 
           for (const interaction of route.interactions ?? []) {
             try {
-              await interaction.run(page)
-              await waitForPageReady(page)
-              await captureState(runId, route.id, interaction.id, vp, page)
-              captures++
+              await interaction.run(page);
+              await waitForPageReady(page);
+              await captureState(runId, route.id, interaction.id, vp, page);
+              captures++;
             } catch (err) {
               // Selector drift or missing state — capture as-is + record.
               // Push the interaction error BEFORE the stale capture so a
@@ -218,12 +222,12 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
               // always in the report even if the stale screenshot fails.
               console.error(
                 `[audit] interaction '${interaction.id}' failed on route '${route.id}' at ${vp.label}: ${String(err)}`,
-              )
+              );
               errors.push({
                 routeId: route.id,
                 kind: 'interaction',
                 message: String(err),
-              })
+              });
               try {
                 await captureState(
                   runId,
@@ -231,8 +235,8 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
                   `${interaction.id}__stale`,
                   vp,
                   page,
-                )
-                captures++
+                );
+                captures++;
               } catch (staleErr) {
                 // The stale screenshot itself failed (page crashed,
                 // context torn down mid-write). Record it as its own
@@ -240,31 +244,35 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
                 // the outer load handler and get misclassified.
                 console.error(
                   `[audit] stale capture failed after interaction '${interaction.id}' on route '${route.id}' at ${vp.label}: ${String(staleErr)}`,
-                )
+                );
                 errors.push({
                   routeId: route.id,
                   kind: 'interaction',
                   message: `stale capture failed after interaction '${interaction.id}': ${String(staleErr)}`,
-                })
+                });
               }
             }
           }
         } catch (err) {
           console.error(
             `[audit] load failed on route '${route.id}' at ${vp.label}: ${String(err)}`,
-          )
-          errors.push({ routeId: route.id, kind: 'load', message: String(err) })
+          );
+          errors.push({
+            routeId: route.id,
+            kind: 'load',
+            message: String(err),
+          });
         } finally {
-          await context.close()
+          await context.close();
         }
       }
     }
   } finally {
-    await browser.close()
+    await browser.close();
   }
 
-  return { runId, captures, errors }
-}
+  return { runId, captures, errors };
+};
 
 // ---------------------------------------------------------------------------
 // CLI entry
@@ -281,14 +289,14 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === path.resolve(__filename)
 ) {
-  const tags = parseCliTags(process.argv.slice(2))
+  const tags = parseCliTags(process.argv.slice(2));
   runSweep({ tags })
     .then((result) => {
-      console.log(JSON.stringify(result, null, 2))
-      process.exit(0)
+      console.log(JSON.stringify(result, null, 2));
+      process.exit(0);
     })
     .catch((err: unknown) => {
-      console.error(err)
-      process.exit(1)
-    })
+      console.error(err);
+      process.exit(1);
+    });
 }

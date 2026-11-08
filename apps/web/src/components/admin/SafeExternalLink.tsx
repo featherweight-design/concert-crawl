@@ -1,18 +1,18 @@
-import React from 'react'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+import React from 'react';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
 interface SafeExternalLinkProps {
-  href: string | null | undefined
-  children: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
-  title?: string
+  href: string | null | undefined;
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  title?: string;
   /**
    * Accessible name for icon-only links. Rendered as visually hidden text
    * rather than `aria-label` so it survives the degraded `<span>`, which has no
    * role and so is skipped by most screen readers when labelled via ARIA.
    */
-  label?: string
+  label?: string;
 }
 
 /**
@@ -41,14 +41,14 @@ export const SafeExternalLink = ({
       {children}
       {label && <span className="sr-only">{label}</span>}
     </>
-  )
+  );
 
   if (!isSafeHttpUrl(href)) {
     return (
       <span className={className} style={style} title={title}>
         {body}
       </span>
-    )
+    );
   }
 
   return (
@@ -62,5 +62,5 @@ export const SafeExternalLink = ({
     >
       {body}
     </a>
-  )
-}
+  );
+};

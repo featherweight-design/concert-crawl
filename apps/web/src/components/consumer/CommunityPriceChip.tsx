@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import type { SubmissionWithMeta } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import type { SubmissionWithMeta } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface CommunityPriceChipProps {
-  topSubmission: SubmissionWithMeta
-  submissionCount: number
-  currentUserId: string | null
-  onConfirm: () => void
-  onOpenVerify: () => void
+  topSubmission: SubmissionWithMeta;
+  submissionCount: number;
+  currentUserId: string | null;
+  onConfirm: () => void;
+  onOpenVerify: () => void;
 }
 
 export function CommunityPriceChip({
@@ -20,11 +20,11 @@ export function CommunityPriceChip({
   onConfirm,
   onOpenVerify,
 }: CommunityPriceChipProps) {
-  const isCorroborated = topSubmission.status === 'corroborated'
+  const isCorroborated = topSubmission.status === 'corroborated';
   const canConfirm =
     !topSubmission.byYou &&
     currentUserId != null &&
-    topSubmission.userId !== currentUserId
+    topSubmission.userId !== currentUserId;
 
   return (
     <div className="rounded-xl bg-surface-1 border border-border p-[14px] flex flex-col gap-[10px]">
@@ -88,5 +88,5 @@ export function CommunityPriceChip({
         </button>
       </div>
     </div>
-  )
+  );
 }

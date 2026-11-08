@@ -33,11 +33,13 @@ Branch: `feat/non-concert-classification-pr1`
 Add the field through the Zod schema, the Anthropic tool schema, and the prompt. End state: LLM returns `isConcert` per event; the parser exposes it on the `NormalizedEvent` type for downstream consumers.
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/types.ts` — add `isConcert?: boolean` to `NormalizedEvent` interface
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts` — add to `NormalizedEventSchema`, `SAVE_EVENTS_TOOL`, `SYSTEM_PROMPT`, and the events-mapping
 - Test: `packages/crawler-core/src/lib/extractors/llm.test.ts` — new test cases for the three parsing branches (true, false, omitted)
 
 **Interfaces:**
+
 - Consumes: existing `NormalizedEvent`, `LLMResult`, `extractWithLlm` signature stays unchanged at function level
 - Produces: `NormalizedEvent.isConcert?: boolean` — present when the LLM emits it (which should be every time). Crawler INSERT path (Task 2) reads this.
 
@@ -46,57 +48,57 @@ Add the field through the Zod schema, the Anthropic tool schema, and the prompt.
 Open `packages/crawler-core/src/lib/extractors/llm.test.ts` and append three new tests inside the existing `describe('extractWithLlm', ...)` block:
 
 ```typescript
-  it('returns isConcert=true when the LLM emits it as true', async () => {
-    const mockEvents = [
-      {
-        title: 'Miles Davis Tribute',
-        artist: 'Miles Davis Tribute',
-        date: '2026-08-15',
-        confidence: 0.95,
-        isConcert: true,
-      },
-    ]
-    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-    expect(result.events).toHaveLength(1)
-    expect(result.events[0]?.isConcert).toBe(true)
-  })
+it('returns isConcert=true when the LLM emits it as true', async () => {
+  const mockEvents = [
+    {
+      title: 'Miles Davis Tribute',
+      artist: 'Miles Davis Tribute',
+      date: '2026-08-15',
+      confidence: 0.95,
+      isConcert: true,
+    },
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.isConcert).toBe(true);
+});
 
-  it('returns isConcert=false when the LLM emits it as false (non-concert event)', async () => {
-    const mockEvents = [
-      {
-        title: 'BASS BINGO – Wooli Edition!',
-        artist: 'Wooli',
-        date: '2026-06-18',
-        confidence: 0.9,
-        isConcert: false,
-      },
-    ]
-    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-    expect(result.events).toHaveLength(1)
-    expect(result.events[0]?.isConcert).toBe(false)
-  })
+it('returns isConcert=false when the LLM emits it as false (non-concert event)', async () => {
+  const mockEvents = [
+    {
+      title: 'BASS BINGO – Wooli Edition!',
+      artist: 'Wooli',
+      date: '2026-06-18',
+      confidence: 0.9,
+      isConcert: false,
+    },
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.isConcert).toBe(false);
+});
 
-  it('defaults isConcert to undefined when the LLM omits the field (defensive parsing)', async () => {
-    // Anthropic enforces required tool schema fields, but defending Zod
-    // against the rare omission prevents one missing field from rejecting
-    // the whole batch. Defaulting omission to "not set" lets the crawler
-    // INSERT path treat it as concert (fail-open).
-    const mockEvents = [
-      {
-        title: 'Open Mic Night',
-        artist: 'Various',
-        date: '2026-08-15',
-        confidence: 0.7,
-        // isConcert intentionally omitted
-      },
-    ]
-    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
-    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
-    expect(result.events).toHaveLength(1)
-    expect(result.events[0]?.isConcert).toBeUndefined()
-  })
+it('defaults isConcert to undefined when the LLM omits the field (defensive parsing)', async () => {
+  // Anthropic enforces required tool schema fields, but defending Zod
+  // against the rare omission prevents one missing field from rejecting
+  // the whole batch. Defaulting omission to "not set" lets the crawler
+  // INSERT path treat it as concert (fail-open).
+  const mockEvents = [
+    {
+      title: 'Open Mic Night',
+      artist: 'Various',
+      date: '2026-08-15',
+      confidence: 0.7,
+      // isConcert intentionally omitted
+    },
+  ];
+  mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents));
+  const result = await extractWithLlm('<html>...</html>', SOURCE_URL);
+  expect(result.events).toHaveLength(1);
+  expect(result.events[0]?.isConcert).toBeUndefined();
+});
 ```
 
 - [ ] **Step 2: Run the new tests and confirm they FAIL**
@@ -113,17 +115,17 @@ In `packages/crawler-core/src/types.ts`:
 
 ```typescript
 export interface NormalizedEvent {
-  title: string
-  artist: string
-  date: string
-  doorsTime?: string
-  showTime?: string
-  ticketUrl?: string
-  description?: string
-  imageUrl?: string
-  sourceUrl: string
-  confidence: number
-  isConcert?: boolean
+  title: string;
+  artist: string;
+  date: string;
+  doorsTime?: string;
+  showTime?: string;
+  ticketUrl?: string;
+  description?: string;
+  imageUrl?: string;
+  sourceUrl: string;
+  confidence: number;
+  isConcert?: boolean;
 }
 ```
 
@@ -142,7 +144,7 @@ const NormalizedEventSchema = z.object({
   description: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
   isConcert: z.boolean().optional(),
-})
+});
 ```
 
 - [ ] **Step 5: Add `isConcert` to the Anthropic tool schema**
@@ -206,7 +208,7 @@ Rules:
 
 isConcert rules (for every event):
 - true: named musician(s) performing live music. Includes bands, solo artists, DJ sets, orchestras, jazz performances, tribute bands when they are themselves performing
-- false: non-performance events that happen at music venues — themed dance parties (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo nights (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events`
+- false: non-performance events that happen at music venues — themed dance parties (e.g. "Liv, Laugh, Love: Olivia Rodrigo Dance Party"), bingo nights (e.g. "BASS BINGO – Wooli Edition!"), trivia, comedy, film/movie screenings (e.g. "Film on the Rocks: Sinners"), karaoke, listening parties, private events`;
 ```
 
 Note the two semantic changes in the lead: "concert events" → "events" (we now want non-concerts too), and the tool description sentence adjusted in step 5's `description: 'Save all extracted upcoming concert events...'` will need a tweak too. Update it now while you're in the file:
@@ -219,7 +221,7 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   input_schema: {
     // ... rest unchanged
   },
-}
+};
 ```
 
 - [ ] **Step 7: Thread `isConcert` through the events-mapping**
@@ -227,19 +229,20 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
 In `llm.ts`, update the `events` mapping (lines 151-162). The `parsed.data.events.map((e) => ...)` callback returns an object that becomes `NormalizedEvent`. Add `isConcert`:
 
 ```typescript
-  const events = parsed.data.events.map((evt) => ({
-    title: evt.title,
-    artist: evt.artist,
-    date: evt.date,
-    confidence: evt.confidence,
-    sourceUrl,
-    ...(evt.doorsTime != null &&
-      evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
-    ...(evt.showTime != null && evt.showTime !== '' && { showTime: evt.showTime }),
-    ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
-    ...(evt.description != null && { description: evt.description }),
-    ...(evt.isConcert != null && { isConcert: evt.isConcert }),
-  }))
+const events = parsed.data.events.map((evt) => ({
+  title: evt.title,
+  artist: evt.artist,
+  date: evt.date,
+  confidence: evt.confidence,
+  sourceUrl,
+  ...(evt.doorsTime != null &&
+    evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
+  ...(evt.showTime != null &&
+    evt.showTime !== '' && { showTime: evt.showTime }),
+  ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
+  ...(evt.description != null && { description: evt.description }),
+  ...(evt.isConcert != null && { isConcert: evt.isConcert }),
+}));
 ```
 
 Note the rename of the callback parameter `e` → `evt` to satisfy the project's no-single-character-identifier rule (mentioned in Global Constraints).
@@ -274,10 +277,12 @@ git commit -m "feat(crawler): LLM extractor emits isConcert per event (#696)"
 Wire the parsed `isConcert` field through `crawl.ts`'s upsert pipeline. INSERT path sets `hidden_from_consumer = (isConcert === false)`; UPDATE path leaves it untouched. End state: crawl integration tests prove both directions.
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/crawl.ts` — add `hiddenFromConsumer` to the `eventValues` map; explicitly NOT in the `onConflictDoUpdate.set` clause
 - Test: `packages/crawler-core/src/crawl.integration.test.ts` — two new tests (INSERT sets the flag; UPDATE doesn't touch admin-set value)
 
 **Interfaces:**
+
 - Consumes: `NormalizedEvent.isConcert?: boolean` from Task 1
 - Produces: rows inserted into `events` table now have `hidden_from_consumer = true` when LLM says non-concert. Re-crawls don't overwrite admin overrides.
 
@@ -288,14 +293,14 @@ Append to `packages/crawler-core/src/crawl.integration.test.ts`. The simplest ho
 ```typescript
 describe('crawlVenue — non-concert auto-classification (#696)', () => {
   it('INSERT path sets hidden_from_consumer=true when LLM returns isConcert=false', async () => {
-    const venue = await seedTestVenue()
-    const dateA = futureDate(7)
+    const venue = await seedTestVenue();
+    const dateA = futureDate(7);
 
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE,
       finalUrl: venue.url,
       httpStatus: 200,
-    })
+    });
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
@@ -313,9 +318,9 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         cacheReadTokens: 0,
         cacheWriteTokens: 0,
       },
-    })
+    });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     const [row] = await db
       .select({
@@ -323,21 +328,21 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         artist: events.artist,
       })
       .from(events)
-      .where(eq(events.venueId, venue.id))
+      .where(eq(events.venueId, venue.id));
 
-    expect(row?.hiddenFromConsumer).toBe(true)
-    expect(row?.artist).toBe('Wooli')
-  })
+    expect(row?.hiddenFromConsumer).toBe(true);
+    expect(row?.artist).toBe('Wooli');
+  });
 
   it('INSERT path sets hidden_from_consumer=false when LLM returns isConcert=true', async () => {
-    const venue = await seedTestVenue()
-    const dateA = futureDate(7)
+    const venue = await seedTestVenue();
+    const dateA = futureDate(7);
 
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE,
       finalUrl: venue.url,
       httpStatus: 200,
-    })
+    });
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
@@ -355,27 +360,27 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         cacheReadTokens: 0,
         cacheWriteTokens: 0,
       },
-    })
+    });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     const [row] = await db
       .select({ hiddenFromConsumer: events.hiddenFromConsumer })
       .from(events)
-      .where(eq(events.venueId, venue.id))
+      .where(eq(events.venueId, venue.id));
 
-    expect(row?.hiddenFromConsumer).toBe(false)
-  })
+    expect(row?.hiddenFromConsumer).toBe(false);
+  });
 
   it('INSERT path defaults to hidden_from_consumer=false when LLM omits isConcert (fail-open)', async () => {
-    const venue = await seedTestVenue()
-    const dateA = futureDate(7)
+    const venue = await seedTestVenue();
+    const dateA = futureDate(7);
 
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE,
       finalUrl: venue.url,
       httpStatus: 200,
-    })
+    });
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
@@ -393,21 +398,21 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         cacheReadTokens: 0,
         cacheWriteTokens: 0,
       },
-    })
+    });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     const [row] = await db
       .select({ hiddenFromConsumer: events.hiddenFromConsumer })
       .from(events)
-      .where(eq(events.venueId, venue.id))
+      .where(eq(events.venueId, venue.id));
 
-    expect(row?.hiddenFromConsumer).toBe(false)
-  })
+    expect(row?.hiddenFromConsumer).toBe(false);
+  });
 
   it('UPDATE path does NOT overwrite admin-set hidden_from_consumer=true even when LLM says isConcert=true', async () => {
-    const venue = await seedTestVenue()
-    const dateA = futureDate(7)
+    const venue = await seedTestVenue();
+    const dateA = futureDate(7);
 
     // Seed an event with admin-overridden hidden_from_consumer=true.
     // Crawler re-extracts the same event with isConcert=true; should leave
@@ -421,13 +426,13 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
       status: 'upcoming',
       hiddenFromConsumer: true,
       sourceHash: 'old-hash',
-    })
+    });
 
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE_V2, // different from any prior to bypass page-hash skip
       finalUrl: venue.url,
       httpStatus: 200,
-    })
+    });
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
@@ -445,9 +450,9 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         cacheReadTokens: 0,
         cacheWriteTokens: 0,
       },
-    })
+    });
 
-    await crawlVenue(venue.id, mockBrowser)
+    await crawlVenue(venue.id, mockBrowser);
 
     const [row] = await db
       .select({
@@ -455,13 +460,13 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
         title: events.title,
       })
       .from(events)
-      .where(eq(events.venueId, venue.id))
+      .where(eq(events.venueId, venue.id));
 
     // Admin override sticks; title updates as normal mutable field
-    expect(row?.hiddenFromConsumer).toBe(true)
-    expect(row?.title).toBe('Originally Misclassified Show — Updated')
-  })
-})
+    expect(row?.hiddenFromConsumer).toBe(true);
+    expect(row?.title).toBe('Originally Misclassified Show — Updated');
+  });
+});
 ```
 
 - [ ] **Step 2: Run the new tests and confirm they FAIL**
@@ -477,32 +482,30 @@ Expected: 4 failures. Current crawler doesn't read `isConcert` so all inserts pr
 In `packages/crawler-core/src/crawl.ts`, find the `eventValues = eventsToUpsert.map(...)` block (around line 591). Add `hiddenFromConsumer` after the `verified` line:
 
 ```typescript
-        const eventValues = eventsToUpsert.map((event) => ({
-          venueId,
-          title: event.title,
-          artist: event.artist,
-          canonicalArtist: event.canonicalArtist,
-          date: event.date,
-          doorsTime:
-            event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
-          showTime:
-            event.showTime && event.showTime !== '' ? event.showTime : null,
-          ticketUrl: event.ticketUrl ?? null,
-          description: event.description ?? null,
-          imageUrl: event.imageUrl ?? null,
-          sourceUrl: event.sourceUrl,
-          sourceHash: event.sourceHash,
-          status: 'upcoming' as const,
-          confidenceScore: event.confidence.toFixed(2),
-          verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
-          extractionStrategy: strategy,
-          // LLM-classified non-concert events get pre-hidden from the consumer
-          // surface (#696). Only takes effect on INSERT — admin owns the field
-          // once the row exists, so onConflictDoUpdate below does NOT include
-          // hiddenFromConsumer in its `set` clause. Mirrors the one-way
-          // promotion pattern for `artist` and `verified` already in this file.
-          hiddenFromConsumer: event.isConcert === false,
-        }))
+const eventValues = eventsToUpsert.map((event) => ({
+  venueId,
+  title: event.title,
+  artist: event.artist,
+  canonicalArtist: event.canonicalArtist,
+  date: event.date,
+  doorsTime: event.doorsTime && event.doorsTime !== '' ? event.doorsTime : null,
+  showTime: event.showTime && event.showTime !== '' ? event.showTime : null,
+  ticketUrl: event.ticketUrl ?? null,
+  description: event.description ?? null,
+  imageUrl: event.imageUrl ?? null,
+  sourceUrl: event.sourceUrl,
+  sourceHash: event.sourceHash,
+  status: 'upcoming' as const,
+  confidenceScore: event.confidence.toFixed(2),
+  verified: event.confidence >= AUTO_APPROVE_THRESHOLD,
+  extractionStrategy: strategy,
+  // LLM-classified non-concert events get pre-hidden from the consumer
+  // surface (#696). Only takes effect on INSERT — admin owns the field
+  // once the row exists, so onConflictDoUpdate below does NOT include
+  // hiddenFromConsumer in its `set` clause. Mirrors the one-way
+  // promotion pattern for `artist` and `verified` already in this file.
+  hiddenFromConsumer: event.isConcert === false,
+}));
 ```
 
 Note `event.isConcert === false` (strict equality with `false`) — `undefined` and `true` both map to `hiddenFromConsumer: false`. That's the fail-open default.
@@ -593,10 +596,12 @@ Branch: `feat/non-concert-classification-pr2-backfill` (branch off main after PR
 Create a script that batches existing events through Haiku, classifies each, writes a dry-run CSV by default, commits to DB on `--commit`. End state: operator runs locally → reviews CSV → re-runs with `--commit` on staging → reviews → repeats on prod.
 
 **Files:**
+
 - Create: `scripts/2026-06-19-non-concert-backfill.ts` (date subject to actual ship day; uses the existing `scripts/YYYY-MM-DD-<topic>.{ts,sql}` convention seen in `scripts/2026-06-17-event-canonical-artist-consolidate.sql` and `scripts/2026-06-16-event-date-utc-backfill.sql`)
 - Test: `scripts/2026-06-19-non-concert-backfill.test.ts` (alongside)
 
 **Interfaces:**
+
 - Consumes: existing Drizzle `db`, `events`, `venues` exports from `@concert-crawl/db`. Anthropic SDK via `@anthropic-ai/sdk`.
 - Produces: a CSV file at `./non-concert-backfill-dry-run-YYYY-MM-DDTHH-MM-SS.csv` (default), or DB writes when `--commit`. Exit code 0 on success, 1 on classification errors (script aborts before commit if any batch fails).
 
@@ -605,8 +610,11 @@ Create a script that batches existing events through Haiku, classifies each, wri
 Create `scripts/2026-06-19-non-concert-backfill.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { buildBatches, formatCsvRow } from './2026-06-19-non-concert-backfill.js'
+import { describe, it, expect } from 'vitest';
+import {
+  buildBatches,
+  formatCsvRow,
+} from './2026-06-19-non-concert-backfill.js';
 
 describe('non-concert-backfill — buildBatches', () => {
   it('splits events into batches of the configured size', () => {
@@ -618,13 +626,13 @@ describe('non-concert-backfill — buildBatches', () => {
       date: '2026-08-01',
       venueName: 'Test Venue',
       currentHidden: false,
-    }))
-    const batches = buildBatches(events, 25)
-    expect(batches).toHaveLength(3) // 25 + 25 + 3
-    expect(batches[0]).toHaveLength(25)
-    expect(batches[1]).toHaveLength(25)
-    expect(batches[2]).toHaveLength(3)
-  })
+    }));
+    const batches = buildBatches(events, 25);
+    expect(batches).toHaveLength(3); // 25 + 25 + 3
+    expect(batches[0]).toHaveLength(25);
+    expect(batches[1]).toHaveLength(25);
+    expect(batches[2]).toHaveLength(3);
+  });
 
   it('returns single batch when input fits in one batch', () => {
     const events = Array.from({ length: 10 }, (_, idx) => ({
@@ -635,16 +643,16 @@ describe('non-concert-backfill — buildBatches', () => {
       date: '2026-08-01',
       venueName: 'V',
       currentHidden: false,
-    }))
-    const batches = buildBatches(events, 25)
-    expect(batches).toHaveLength(1)
-    expect(batches[0]).toHaveLength(10)
-  })
+    }));
+    const batches = buildBatches(events, 25);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toHaveLength(10);
+  });
 
   it('returns empty array for empty input', () => {
-    expect(buildBatches([], 25)).toEqual([])
-  })
-})
+    expect(buildBatches([], 25)).toEqual([]);
+  });
+});
 
 describe('non-concert-backfill — formatCsvRow', () => {
   it('quotes fields containing commas', () => {
@@ -657,9 +665,9 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: true,
       wouldChange: false,
-    })
-    expect(row).toContain('"Show, with, commas"')
-  })
+    });
+    expect(row).toContain('"Show, with, commas"');
+  });
 
   it('escapes embedded double quotes by doubling them (RFC 4180)', () => {
     const row = formatCsvRow({
@@ -671,9 +679,9 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: true,
       wouldChange: false,
-    })
-    expect(row).toContain('"Show ""with"" quotes"')
-  })
+    });
+    expect(row).toContain('"Show ""with"" quotes"');
+  });
 
   it('marks wouldChange=true when currentHidden differs from llmIsConcert', () => {
     // currentHidden=false + llmIsConcert=false → would change (hide)
@@ -686,10 +694,10 @@ describe('non-concert-backfill — formatCsvRow', () => {
       currentHidden: false,
       llmIsConcert: false,
       wouldChange: true,
-    })
-    expect(row).toContain(',true\n')
-  })
-})
+    });
+    expect(row).toContain(',true\n');
+  });
+});
 ```
 
 - [ ] **Step 2: Run failing test to confirm it FAILS**
@@ -725,69 +733,71 @@ Create `scripts/2026-06-19-non-concert-backfill.ts`:
  * should be stable across runs).
  */
 
-import { writeFileSync } from 'node:fs'
-import path from 'node:path'
-import Anthropic from '@anthropic-ai/sdk'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
-import { db, events, venues } from '@concert-crawl/db'
+import { writeFileSync } from 'node:fs';
+import path from 'node:path';
+import Anthropic from '@anthropic-ai/sdk';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { db, events, venues } from '@concert-crawl/db';
 
-const MODEL = 'claude-haiku-4-5-20251001'
-const BATCH_SIZE = 25
+const MODEL = 'claude-haiku-4-5-20251001';
+const BATCH_SIZE = 25;
 
 export interface EventForClassification {
-  id: string
-  title: string
-  artist: string
-  description: string | null
-  date: string
-  venueName: string
-  currentHidden: boolean
+  id: string;
+  title: string;
+  artist: string;
+  description: string | null;
+  date: string;
+  venueName: string;
+  currentHidden: boolean;
 }
 
 export interface ClassificationResult {
-  eventId: string
-  title: string
-  artist: string
-  date: string
-  venueName: string
-  currentHidden: boolean
-  llmIsConcert: boolean
-  wouldChange: boolean
+  eventId: string;
+  title: string;
+  artist: string;
+  date: string;
+  venueName: string;
+  currentHidden: boolean;
+  llmIsConcert: boolean;
+  wouldChange: boolean;
 }
 
 export function buildBatches<T>(items: T[], batchSize: number): T[][] {
-  const batches: T[][] = []
+  const batches: T[][] = [];
   for (let idx = 0; idx < items.length; idx += batchSize) {
-    batches.push(items.slice(idx, idx + batchSize))
+    batches.push(items.slice(idx, idx + batchSize));
   }
-  return batches
+  return batches;
 }
 
 export function formatCsvRow(result: ClassificationResult): string {
   const escape = (val: string): string => {
     if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`
+      return `"${val.replace(/"/g, '""')}"`;
     }
-    return val
-  }
-  return [
-    result.eventId,
-    escape(result.title),
-    escape(result.artist),
-    result.date,
-    escape(result.venueName),
-    String(result.currentHidden),
-    String(result.llmIsConcert),
-    String(result.wouldChange),
-  ].join(',') + '\n'
+    return val;
+  };
+  return (
+    [
+      result.eventId,
+      escape(result.title),
+      escape(result.artist),
+      result.date,
+      escape(result.venueName),
+      String(result.currentHidden),
+      String(result.llmIsConcert),
+      String(result.wouldChange),
+    ].join(',') + '\n'
+  );
 }
 
 // Main function exported for testability; CLI invocation is at the bottom.
 export async function runBackfill(opts: {
-  commit: boolean
-  outputPath?: string
+  commit: boolean;
+  outputPath?: string;
 }): Promise<{ totalEvents: number; wouldChange: number; committed: boolean }> {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10);
   const rows = await db
     .select({
       id: events.id,
@@ -805,7 +815,7 @@ export async function runBackfill(opts: {
         inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
         gte(events.date, today),
       ),
-    )
+    );
 
   const inputs: EventForClassification[] = rows.map((row) => ({
     id: row.id,
@@ -815,29 +825,29 @@ export async function runBackfill(opts: {
     date: row.date,
     venueName: row.venueName ?? '(no venue)',
     currentHidden: row.currentHidden,
-  }))
+  }));
 
-  console.log(`Loaded ${inputs.length} events for classification`)
-  const batches = buildBatches(inputs, BATCH_SIZE)
-  console.log(`Split into ${batches.length} batches of ${BATCH_SIZE}`)
+  console.log(`Loaded ${inputs.length} events for classification`);
+  const batches = buildBatches(inputs, BATCH_SIZE);
+  console.log(`Split into ${batches.length} batches of ${BATCH_SIZE}`);
 
-  const results: ClassificationResult[] = []
-  const client = new Anthropic()
+  const results: ClassificationResult[] = [];
+  const client = new Anthropic();
 
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
-    const batch = batches[batchIdx]
-    if (!batch) continue
-    console.log(`Classifying batch ${batchIdx + 1}/${batches.length}...`)
-    const classifications = await classifyBatch(client, batch)
+    const batch = batches[batchIdx];
+    if (!batch) continue;
+    console.log(`Classifying batch ${batchIdx + 1}/${batches.length}...`);
+    const classifications = await classifyBatch(client, batch);
     for (const evt of batch) {
-      const result = classifications.find((cls) => cls.eventId === evt.id)
+      const result = classifications.find((cls) => cls.eventId === evt.id);
       if (!result) {
         console.error(
           `MISSING classification for event ${evt.id} (${evt.title}); aborting before any DB write`,
-        )
-        throw new Error(`Classification missing for event ${evt.id}`)
+        );
+        throw new Error(`Classification missing for event ${evt.id}`);
       }
-      const llmIsConcert = result.isConcert
+      const llmIsConcert = result.isConcert;
       results.push({
         eventId: evt.id,
         title: evt.title,
@@ -847,63 +857,63 @@ export async function runBackfill(opts: {
         currentHidden: evt.currentHidden,
         llmIsConcert,
         wouldChange: evt.currentHidden !== !llmIsConcert,
-      })
+      });
     }
   }
 
-  const wouldChangeCount = results.filter((row) => row.wouldChange).length
+  const wouldChangeCount = results.filter((row) => row.wouldChange).length;
   console.log(
     `Classification done. ${wouldChangeCount}/${results.length} events would change hidden_from_consumer.`,
-  )
+  );
 
   // Sort: wouldChange first (desc), then by title alphabetical
   results.sort((firstRow, secondRow) => {
     if (firstRow.wouldChange !== secondRow.wouldChange) {
-      return firstRow.wouldChange ? -1 : 1
+      return firstRow.wouldChange ? -1 : 1;
     }
-    return firstRow.title.localeCompare(secondRow.title)
-  })
+    return firstRow.title.localeCompare(secondRow.title);
+  });
 
   const header =
-    'event_id,title,artist,date,venue_name,current_hidden,llm_is_concert,would_change\n'
-  const csv = header + results.map(formatCsvRow).join('')
+    'event_id,title,artist,date,venue_name,current_hidden,llm_is_concert,would_change\n';
+  const csv = header + results.map(formatCsvRow).join('');
 
   if (!opts.commit) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const outPath =
       opts.outputPath ??
-      path.resolve(`./non-concert-backfill-dry-run-${timestamp}.csv`)
-    writeFileSync(outPath, csv, 'utf-8')
-    console.log(`Dry-run CSV written to ${outPath}`)
+      path.resolve(`./non-concert-backfill-dry-run-${timestamp}.csv`);
+    writeFileSync(outPath, csv, 'utf-8');
+    console.log(`Dry-run CSV written to ${outPath}`);
     return {
       totalEvents: results.length,
       wouldChange: wouldChangeCount,
       committed: false,
-    }
+    };
   }
 
   // --commit path: transactionally update every row that would change
-  const toUpdate = results.filter((row) => row.wouldChange)
-  console.log(`Committing ${toUpdate.length} updates...`)
+  const toUpdate = results.filter((row) => row.wouldChange);
+  console.log(`Committing ${toUpdate.length} updates...`);
   await db.transaction(async (tx) => {
     for (const row of toUpdate) {
       await tx
         .update(events)
         .set({ hiddenFromConsumer: !row.llmIsConcert })
-        .where(eq(events.id, row.eventId))
+        .where(eq(events.id, row.eventId));
     }
-  })
-  console.log(`Commit done. Updated ${toUpdate.length} rows.`)
+  });
+  console.log(`Commit done. Updated ${toUpdate.length} rows.`);
   return {
     totalEvents: results.length,
     wouldChange: wouldChangeCount,
     committed: true,
-  }
+  };
 }
 
 interface BatchClassification {
-  eventId: string
-  isConcert: boolean
+  eventId: string;
+  isConcert: boolean;
 }
 
 async function classifyBatch(
@@ -930,14 +940,14 @@ async function classifyBatch(
       },
       required: ['classifications'],
     },
-  }
+  };
 
   const eventList = batch
     .map(
       (evt) =>
         `- id: ${evt.id}\n  title: ${evt.title}\n  artist: ${evt.artist}\n  date: ${evt.date}\n  venue: ${evt.venueName}${evt.description ? `\n  description: ${evt.description}` : ''}`,
     )
-    .join('\n\n')
+    .join('\n\n');
 
   const response = await client.messages.create({
     model: MODEL,
@@ -958,20 +968,20 @@ Events:
 ${eventList}`,
       },
     ],
-  })
+  });
 
-  const toolUseBlock = response.content.find((blk) => blk.type === 'tool_use')
+  const toolUseBlock = response.content.find((blk) => blk.type === 'tool_use');
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    throw new Error('LLM did not return tool_use block')
+    throw new Error('LLM did not return tool_use block');
   }
-  const inputRaw = toolUseBlock.input
+  const inputRaw = toolUseBlock.input;
   if (typeof inputRaw !== 'object' || inputRaw === null) {
-    throw new Error('LLM tool_use input was not an object')
+    throw new Error('LLM tool_use input was not an object');
   }
   const classificationsField =
-    'classifications' in inputRaw ? inputRaw.classifications : undefined
+    'classifications' in inputRaw ? inputRaw.classifications : undefined;
   if (!Array.isArray(classificationsField)) {
-    throw new Error('LLM tool_use input.classifications was not an array')
+    throw new Error('LLM tool_use input.classifications was not an array');
   }
   return classificationsField.map((cls: unknown): BatchClassification => {
     if (
@@ -980,34 +990,34 @@ ${eventList}`,
       !('eventId' in cls) ||
       !('isConcert' in cls)
     ) {
-      throw new Error(`Malformed classification entry: ${JSON.stringify(cls)}`)
+      throw new Error(`Malformed classification entry: ${JSON.stringify(cls)}`);
     }
-    const eventId = (cls as { eventId: unknown }).eventId
-    const isConcert = (cls as { isConcert: unknown }).isConcert
+    const eventId = (cls as { eventId: unknown }).eventId;
+    const isConcert = (cls as { isConcert: unknown }).isConcert;
     if (typeof eventId !== 'string' || typeof isConcert !== 'boolean') {
       throw new Error(
         `Classification entry has wrong types: ${JSON.stringify(cls)}`,
-      )
+      );
     }
-    return { eventId, isConcert }
-  })
+    return { eventId, isConcert };
+  });
 }
 
 // CLI entry point — only runs when file is executed directly (not imported)
-const isCli = import.meta.url === `file://${process.argv[1]}`
+const isCli = import.meta.url === `file://${process.argv[1]}`;
 if (isCli) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
       console.log(
         `Done. ${summary.totalEvents} events processed, ${summary.wouldChange} would change, committed=${summary.committed}`,
-      )
-      process.exit(0)
+      );
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }
 ```
 
@@ -1030,6 +1040,7 @@ pnpm tsx scripts/2026-06-19-non-concert-backfill.ts
 ```
 
 Expected output:
+
 - `Loaded N events for classification`
 - `Split into M batches of 25`
 - `Classifying batch K/M...` (one per batch)
@@ -1037,6 +1048,7 @@ Expected output:
 - `Dry-run CSV written to ./non-concert-backfill-dry-run-<ts>.csv`
 
 Open the CSV and verify:
+
 - Header row matches `event_id,title,artist,date,venue_name,current_hidden,llm_is_concert,would_change`
 - `would_change=true` rows are at the top
 - A reasonable sample looks correct (open-mic = concert, comedy show = non-concert)
@@ -1134,6 +1146,7 @@ After both PRs merge:
 ## Self-review checklist
 
 **Spec coverage:**
+
 - ✅ "Reuse `hidden_from_consumer`, no schema changes" — confirmed in Task 2 step 3 (`hiddenFromConsumer` added to existing column write)
 - ✅ "LLM tool schema gains isConcert" — Task 1 step 5
 - ✅ "Prompt tightened with concert / non-concert examples" — Task 1 step 6

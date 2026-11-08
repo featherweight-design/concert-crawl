@@ -18,55 +18,55 @@
 import {
   canonicalizeArtist,
   canonicalizeSupporting,
-} from '../packages/crawler-core/src/lib/canonical-artist.js'
+} from '../packages/crawler-core/src/lib/canonical-artist.js';
 
 export interface FollowRow {
-  id: string
-  artistName: string
-  canonicalName: string
+  id: string;
+  artistName: string;
+  canonicalName: string;
 }
 
 export interface FollowUpdate {
-  id: string
-  canonicalName: string
+  id: string;
+  canonicalName: string;
 }
 
 export function planFollowBackfill(rows: FollowRow[]): FollowUpdate[] {
-  const updates: FollowUpdate[] = []
+  const updates: FollowUpdate[] = [];
   for (const row of rows) {
-    const canonical = canonicalizeArtist(row.artistName)
+    const canonical = canonicalizeArtist(row.artistName);
     if (canonical !== row.canonicalName) {
-      updates.push({ id: row.id, canonicalName: canonical })
+      updates.push({ id: row.id, canonicalName: canonical });
     }
   }
-  return updates
+  return updates;
 }
 
 export interface SupportingRow {
-  id: string
-  supportingArtists: string[] | null
-  canonicalSupporting: string[] | null
+  id: string;
+  supportingArtists: string[] | null;
+  canonicalSupporting: string[] | null;
 }
 
 export interface SupportingUpdate {
-  id: string
-  canonicalSupporting: string[]
+  id: string;
+  canonicalSupporting: string[];
 }
 
 export function planSupportingBackfill(
   rows: SupportingRow[],
 ): SupportingUpdate[] {
-  const updates: SupportingUpdate[] = []
+  const updates: SupportingUpdate[] = [];
   for (const row of rows) {
-    if (row.supportingArtists === null) continue
+    if (row.supportingArtists === null) continue;
     // NULL means "never backfilled"; any non-NULL array (including []) means
     // the crawler or a prior run already wrote the pair — skip so the script
     // is idempotent and never fights the crawler's fresher writes.
-    if (row.canonicalSupporting !== null) continue
+    if (row.canonicalSupporting !== null) continue;
     updates.push({
       id: row.id,
       canonicalSupporting: canonicalizeSupporting(row.supportingArtists),
-    })
+    });
   }
-  return updates
+  return updates;
 }

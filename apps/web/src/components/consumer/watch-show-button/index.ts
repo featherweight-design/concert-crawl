@@ -1,1 +1,1 @@
-export { WatchShowButton } from './WatchShowButton'
+export { WatchShowButton } from './WatchShowButton';

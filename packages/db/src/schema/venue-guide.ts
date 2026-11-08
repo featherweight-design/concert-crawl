@@ -5,8 +5,8 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 // #764 first-timer guide chips. One row per AUTHORED or PLACEHOLDER chip —
 // the design's third state, `blank`, is the absence of a row and is made
@@ -39,7 +39,7 @@ export const venueGuideChips = pgTable(
       table.chipType,
     ),
   }),
-)
+);
 
-export type VenueGuideChipRow = typeof venueGuideChips.$inferSelect
-export type NewVenueGuideChipRow = typeof venueGuideChips.$inferInsert
+export type VenueGuideChipRow = typeof venueGuideChips.$inferSelect;
+export type NewVenueGuideChipRow = typeof venueGuideChips.$inferInsert;

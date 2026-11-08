@@ -12,37 +12,37 @@ import {
   ledeRow,
   monoEyebrow,
   row,
-} from '../atoms.js'
+} from '../atoms.js';
 import {
   EMAIL_MONO,
   ME,
   planUrl,
   renderEmailShell,
   renderTextShell,
-} from '../layout.js'
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { WINBACK_FEATURES } from './unlocks.js'
+} from '../layout.js';
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { WINBACK_FEATURES } from './unlocks.js';
 
-const SUBJECT = "Denver's been busy since you left."
-const PREHEADER = "Here's what Premium would hand back, whenever you want it."
+const SUBJECT = "Denver's been busy since you left.";
+const PREHEADER = "Here's what Premium would hand back, whenever you want it.";
 
-const CONTENT_PAD = '18px 26px 0'
+const CONTENT_PAD = '18px 26px 0';
 
 export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
   unsubscribeUrl,
 }) => {
-  const title = "Denver's been busy."
+  const title = "Denver's been busy.";
   const sub =
-    "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away. No countdown, no discount gimmick. Just here when you are."
+    "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away. No countdown, no discount gimmick. Just here when you are.";
 
   const calloutInner =
     monoEyebrow({
       text: "What you'd get back",
       color: ME.signal,
       marginBottom: 12,
-    }) + featureList({ items: WINBACK_FEATURES, accent: ME.signal })
+    }) + featureList({ items: WINBACK_FEATURES, accent: ME.signal });
 
-  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Still $5/mo · cancel any time · no hard sell</div>`
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Still $5/mo · cancel any time · no hard sell</div>`;
 
   const bodyRows = [
     headerRow('Concert Crawl'),
@@ -62,7 +62,7 @@ export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
       showManage: false,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
-  ].join('\n')
+  ].join('\n');
 
   const text = [
     title,
@@ -77,7 +77,7 @@ export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
     'Still $5/mo · cancel any time · no hard sell',
     '',
     `Turn Premium back on: ${planUrl()}`,
-  ].join('\n')
+  ].join('\n');
 
   return {
     subject: SUBJECT,
@@ -89,5 +89,5 @@ export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
       showManage: false,
       ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
     }),
-  }
-}
+  };
+};

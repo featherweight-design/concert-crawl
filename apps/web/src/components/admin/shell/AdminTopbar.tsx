@@ -1,27 +1,27 @@
-'use client'
+'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation'
-import { ChevronRight } from 'lucide-react'
-import Link from 'next/link'
-import { NAV_V2 } from './nav'
-import { buildBreadcrumbs } from './breadcrumbs'
-import { usePageTitle } from './PageTitleContext'
-import { AppSwitcher } from './AppSwitcher'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { usePathname, useSearchParams } from 'next/navigation';
+import { ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { NAV_V2 } from './nav';
+import { buildBreadcrumbs } from './breadcrumbs';
+import { usePageTitle } from './PageTitleContext';
+import { AppSwitcher } from './AppSwitcher';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 const useBreadcrumbs = (pageTitle: string | null) => {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const crumbs = buildBreadcrumbs(pathname, NAV_V2, searchParams)
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const crumbs = buildBreadcrumbs(pathname, NAV_V2, searchParams);
   if (pageTitle && crumbs.length > 0) {
-    return [...crumbs.slice(0, -1), { label: pageTitle }]
+    return [...crumbs.slice(0, -1), { label: pageTitle }];
   }
-  return crumbs
-}
+  return crumbs;
+};
 
 export const AdminTopbar = () => {
-  const { pageTitle } = usePageTitle()
-  const crumbs = useBreadcrumbs(pageTitle)
+  const { pageTitle } = usePageTitle();
+  const crumbs = useBreadcrumbs(pageTitle);
 
   return (
     <header
@@ -107,5 +107,5 @@ export const AdminTopbar = () => {
         </nav>
       </div>
     </header>
-  )
-}
+  );
+};

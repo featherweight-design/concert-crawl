@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import type { CrawlRun } from '@concert-crawl/types'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useState } from 'react';
+import type { CrawlRun } from '@concert-crawl/types';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-type FilterTab = 'all' | 'crawl' | 'events' | 'invites'
+type FilterTab = 'all' | 'crawl' | 'events' | 'invites';
 
 const TABS: { id: FilterTab; label: string }[] = [
   { id: 'all', label: ADMIN_COPY.dashboard.activityFeed.tabs.all },
   { id: 'crawl', label: ADMIN_COPY.dashboard.activityFeed.tabs.crawl },
   { id: 'events', label: ADMIN_COPY.dashboard.activityFeed.tabs.events },
   { id: 'invites', label: ADMIN_COPY.dashboard.activityFeed.tabs.invites },
-]
+];
 
 interface Props {
-  runs: CrawlRun[]
+  runs: CrawlRun[];
 }
 
 export function ActivityFeed({ runs }: Props) {
-  const [tab, setTab] = useState<FilterTab>('all')
+  const [tab, setTab] = useState<FilterTab>('all');
 
   // Currently both tabs show the same runs (crawl is the only activity type);
   // when new activity types are added, filter by tab here.
-  const filtered = tab === 'all' ? runs : runs
+  const filtered = tab === 'all' ? runs : runs;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -125,5 +125,5 @@ export function ActivityFeed({ runs }: Props) {
         </>
       )}
     </div>
-  )
+  );
 }

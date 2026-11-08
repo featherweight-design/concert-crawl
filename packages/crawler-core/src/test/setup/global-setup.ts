@@ -1,10 +1,10 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import postgres from 'postgres'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Mirrors apps/api/src/test/setup/global-setup.ts — run migrations against
 // the shared test DB before any integration test executes. We deliberately
@@ -14,26 +14,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const MIGRATIONS_FOLDER = path.resolve(
   __dirname,
   '../../../../../packages/db/migrations',
-)
+);
 
 export async function setup(): Promise<void> {
   const testDbUrl =
     process.env['DATABASE_URL_TEST'] ??
-    'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
+    'postgresql://postgres:postgres@localhost:5433/concert_crawl_test';
 
-  console.log('[crawler-test] Running migrations on test DB...')
+  console.log('[crawler-test] Running migrations on test DB...');
 
-  const client = postgres(testDbUrl, { max: 1 })
-  const dbInstance = drizzle(client)
+  const client = postgres(testDbUrl, { max: 1 });
+  const dbInstance = drizzle(client);
 
   try {
-    await migrate(dbInstance, { migrationsFolder: MIGRATIONS_FOLDER })
-    await client.end()
-    console.log('[crawler-test] Migrations complete.')
+    await migrate(dbInstance, { migrationsFolder: MIGRATIONS_FOLDER });
+    await client.end();
+    console.log('[crawler-test] Migrations complete.');
   } catch (error) {
-    console.error('[crawler-test] Migration failed:', error)
-    await client.end()
-    throw error
+    console.error('[crawler-test] Migration failed:', error);
+    await client.end();
+    throw error;
   }
 }
 

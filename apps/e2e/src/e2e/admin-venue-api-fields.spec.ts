@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
-import { waitForHydrated } from '../fixtures/hydration'
-import { isVisibleWithin } from '../fixtures/presence'
+import { waitForHydrated } from '../fixtures/hydration';
+import { isVisibleWithin } from '../fixtures/presence';
 
 // Admin venue-edit: API provider + account ID fields (#506).
 // Runs against staging with the shared authenticated storage state. If the
@@ -19,55 +19,55 @@ test.describe('admin venue edit — API integration fields', () => {
   test('provider select reveals account ID and validates on empty save', async ({
     page,
   }) => {
-    await page.goto('/admin/venues')
+    await page.goto('/admin/venues');
 
     if (/sign-in|clerk\.com|accounts\./i.test(page.url())) {
-      test.skip(true, 'Authenticated user is not an admin')
-      return
+      test.skip(true, 'Authenticated user is not an admin');
+      return;
     }
 
     const firstVenue = page
       .locator('a[href^="/admin/venues/"]')
       .filter({ hasNotText: /new|robots/i })
-      .first()
+      .first();
     if (!(await isVisibleWithin(firstVenue, 15_000))) {
-      test.skip(true, 'No venues in the admin list')
-      return
+      test.skip(true, 'No venues in the admin list');
+      return;
     }
 
-    await firstVenue.click()
+    await firstVenue.click();
     // `commit`: the field wait below is the readiness check, not a load state.
-    await page.waitForURL(/\/admin\/venues\/[^/]+/, { waitUntil: 'commit' })
+    await page.waitForURL(/\/admin\/venues\/[^/]+/, { waitUntil: 'commit' });
 
     // 15s rather than 5s: this wait now also covers the detail page loading,
     // which a `networkidle` wait used to absorb before it.
-    const providerSelect = page.locator('#edit-venue-api-provider')
+    const providerSelect = page.locator('#edit-venue-api-provider');
     if (!(await isVisibleWithin(providerSelect, 15_000))) {
-      test.skip(true, 'API provider field not present on this venue')
-      return
+      test.skip(true, 'API provider field not present on this venue');
+      return;
     }
     // A select changed before hydration keeps its new value but never tells
     // React, so the reveal below would never happen.
-    await waitForHydrated(providerSelect)
+    await waitForHydrated(providerSelect);
 
-    const accountIdInput = page.locator('#edit-venue-api-account-id')
+    const accountIdInput = page.locator('#edit-venue-api-account-id');
 
     // Baseline: with no provider selected, the account-ID field is hidden.
-    await providerSelect.selectOption('')
-    await expect(accountIdInput).toHaveCount(0)
+    await providerSelect.selectOption('');
+    await expect(accountIdInput).toHaveCount(0);
 
     // Selecting a provider reveals the account-ID field.
-    await providerSelect.selectOption('venuepilot')
-    await expect(accountIdInput).toBeVisible()
+    await providerSelect.selectOption('venuepilot');
+    await expect(accountIdInput).toBeVisible();
 
     // Save with an empty account ID → the API rejects (superRefine 400) and
     // the field error surfaces. Nothing is persisted.
-    await accountIdInput.fill('')
-    await page.getByRole('button', { name: /save changes/i }).click()
-    await expect(page.getByText(/API account ID is required/i)).toBeVisible()
+    await accountIdInput.fill('');
+    await page.getByRole('button', { name: /save changes/i }).click();
+    await expect(page.getByText(/API account ID is required/i)).toBeVisible();
 
     // Setting the provider back to None hides the field again.
-    await providerSelect.selectOption('')
-    await expect(accountIdInput).toHaveCount(0)
-  })
-})
+    await providerSelect.selectOption('');
+    await expect(accountIdInput).toHaveCount(0);
+  });
+});

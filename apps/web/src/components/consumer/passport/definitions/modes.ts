@@ -7,38 +7,38 @@
  * compact preview stops matching the 1080 PNG it advertises.
  */
 
-export type PassportMode = 'compact' | 'share'
+export type PassportMode = 'compact' | 'share';
 
 export interface PassportModeConfig {
-  width: number
-  height: number
-  cols: number
-  rows: number
-  pad: number
-  gap: number
-  radius: number
-  stampRadius: number
-  headEyebrow: number
-  headHandle: number
-  pillPadV: number
-  pillPadH: number
-  pillGap: number
-  padTop: number
-  padBottom: number
-  statBig: number
-  statMid: number
-  statLabel: number
-  panelGap: number
-  wordmark: number
-  dot: number
-  footTag: number
-  stampArtist: number
-  stampDate: number
-  panelPadX: number
-  panelPadB: number
+  width: number;
+  height: number;
+  cols: number;
+  rows: number;
+  pad: number;
+  gap: number;
+  radius: number;
+  stampRadius: number;
+  headEyebrow: number;
+  headHandle: number;
+  pillPadV: number;
+  pillPadH: number;
+  pillGap: number;
+  padTop: number;
+  padBottom: number;
+  statBig: number;
+  statMid: number;
+  statLabel: number;
+  panelGap: number;
+  wordmark: number;
+  dot: number;
+  footTag: number;
+  stampArtist: number;
+  stampDate: number;
+  panelPadX: number;
+  panelPadB: number;
   /** The 1px-class strokes: tile rings, pill borders, the footer rule. */
-  hairline: number
-  grain: number
+  hairline: number;
+  grain: number;
 }
 
 export const PP_MODES: Record<PassportMode, PassportModeConfig> = {
@@ -102,10 +102,10 @@ export const PP_MODES: Record<PassportMode, PassportModeConfig> = {
     hairline: 1,
     grain: 0.1,
   },
-}
+};
 
 /** The mode the PNG route renders. The compact mode is preview-only. */
-export const PASSPORT_PRINT_MODE: PassportMode = 'share'
+export const PASSPORT_PRINT_MODE: PassportMode = 'share';
 
 /**
  * Device-pixel multiplier for the PNG route.
@@ -115,20 +115,20 @@ export const PASSPORT_PRINT_MODE: PassportMode = 'share'
  * 1080 card into a 3× viewport upscales it and the stamp labels go soft. Every
  * length in the config is multiplied, so proportions are identical.
  */
-export const PASSPORT_PRINT_SCALE = 2
+export const PASSPORT_PRINT_SCALE = 2;
 
 /** Counts and opacities — the only config values that are not lengths. */
-const UNSCALED_KEYS = ['cols', 'rows', 'grain'] as const
+const UNSCALED_KEYS = ['cols', 'rows', 'grain'] as const;
 
 export const scalePassportMode = (
   cfg: PassportModeConfig,
   scale: number,
 ): PassportModeConfig => {
-  const scaled: Record<string, number> = {}
+  const scaled: Record<string, number> = {};
   for (const [key, value] of Object.entries(cfg)) {
     scaled[key] = UNSCALED_KEYS.some((unscaled) => unscaled === key)
       ? value
-      : value * scale
+      : value * scale;
   }
-  return { ...cfg, ...scaled }
-}
+  return { ...cfg, ...scaled };
+};

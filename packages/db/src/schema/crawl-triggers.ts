@@ -5,15 +5,15 @@ import {
   text,
   timestamp,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 export const crawlTriggerStatusEnum = pgEnum('crawl_trigger_status', [
   'pending',
   'processing',
   'done',
   'failed',
-])
+]);
 
 export const crawlTriggers = pgTable('crawl_triggers', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -35,7 +35,7 @@ export const crawlTriggers = pgTable('crawl_triggers', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type CrawlTrigger = typeof crawlTriggers.$inferSelect
-export type NewCrawlTrigger = typeof crawlTriggers.$inferInsert
+export type CrawlTrigger = typeof crawlTriggers.$inferSelect;
+export type NewCrawlTrigger = typeof crawlTriggers.$inferInsert;

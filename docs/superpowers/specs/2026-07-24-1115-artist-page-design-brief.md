@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-Concert Crawl treats artists as **strings**. They appear inside event titles, in the supporting-artists line, and in search results — but there is no artist-first surface anywhere in the app. A user who sees a band name they don't recognize has no way to answer the only question that matters at that moment: *should I care about this show?*
+Concert Crawl treats artists as **strings**. They appear inside event titles, in the supporting-artists line, and in search results — but there is no artist-first surface anywhere in the app. A user who sees a band name they don't recognize has no way to answer the only question that matters at that moment: _should I care about this show?_
 
 This brief covers a dedicated artist page whose job is to answer that question in a few seconds — who is this, what do they sound like, when are they playing here, and how do I not miss it.
 
@@ -23,14 +23,14 @@ This brief covers a dedicated artist page whose job is to answer that question i
 
 Design should not trust the ticket's framing here — it overstates the data we have. Verified against `main` on 2026-07-24:
 
-| Thing | Reality |
-|---|---|
-| Artists table | **Does not exist.** No artist master record anywhere. |
-| Artist identity on events | Free-text strings: `events.artist`, `events.supportingArtists` (text array), plus normalized `events.canonicalArtist` and `events.canonicalSupporting` (`packages/db/src/schema/events.ts:54,55,109,122`) |
-| Spotify artist IDs | Stored **only** on `user_artist_follows.spotifyArtistId` (`packages/db/src/schema/social.ts:70`), and only for artists a connected user already follows |
-| Artist photos / genres / popularity | **Not stored.** The Spotify sync deliberately fetches name + ID only (`apps/api/src/lib/spotify.ts:43-48`) |
-| Event↔artist matching | Normalized string equality, not ID joins (`apps/api/src/lib/spotify-matches.ts:86-101`) |
-| Existing artist UI | None. The #763 discovery shelf and taste filter are event-centric; the images they show are event images, not artist photos |
+| Thing                               | Reality                                                                                                                                                                                                   |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Artists table                       | **Does not exist.** No artist master record anywhere.                                                                                                                                                     |
+| Artist identity on events           | Free-text strings: `events.artist`, `events.supportingArtists` (text array), plus normalized `events.canonicalArtist` and `events.canonicalSupporting` (`packages/db/src/schema/events.ts:54,55,109,122`) |
+| Spotify artist IDs                  | Stored **only** on `user_artist_follows.spotifyArtistId` (`packages/db/src/schema/social.ts:70`), and only for artists a connected user already follows                                                   |
+| Artist photos / genres / popularity | **Not stored.** The Spotify sync deliberately fetches name + ID only (`apps/api/src/lib/spotify.ts:43-48`)                                                                                                |
+| Event↔artist matching               | Normalized string equality, not ID joins (`apps/api/src/lib/spotify-matches.ts:86-101`)                                                                                                                   |
+| Existing artist UI                  | None. The #763 discovery shelf and taste filter are event-centric; the images they show are event images, not artist photos                                                                               |
 
 **Consequence:** artist photos and playable music are net-new infrastructure for this feature, not a read of data we already hold.
 
@@ -38,15 +38,15 @@ Design should not trust the ticket's framing here — it overstates the data we 
 
 Spotify removed a large amount of the Web API in February 2026, applied to all existing client IDs. This directly invalidates several assumptions in the ticket:
 
-| Capability | Status |
-|---|---|
-| `GET /artists/{id}` — artist object incl. **images** | ✅ Available. This is what makes the photo hero possible |
-| `GET /artists/{id}/top-tracks` | ❌ **Removed** — we cannot build our own track list |
-| `GET /artists/{id}/related-artists` | ❌ **Removed** — the ticket's related-artists shelf (its Q7) is not buildable |
-| Artist `genres` | ⚠️ Deprecated — must not be load-bearing in any design |
-| Artist `followers`, `popularity` | ❌ **Removed** from the response object |
-| Editorial / algorithmic playlists ("This Is X") | ❌ Not reliably reachable |
-| **Spotify Embeds** (iframe) | ✅ Available, and outside the Web API entirely — no auth, no quota, unaffected by these changes |
+| Capability                                           | Status                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `GET /artists/{id}` — artist object incl. **images** | ✅ Available. This is what makes the photo hero possible                                        |
+| `GET /artists/{id}/top-tracks`                       | ❌ **Removed** — we cannot build our own track list                                             |
+| `GET /artists/{id}/related-artists`                  | ❌ **Removed** — the ticket's related-artists shelf (its Q7) is not buildable                   |
+| Artist `genres`                                      | ⚠️ Deprecated — must not be load-bearing in any design                                          |
+| Artist `followers`, `popularity`                     | ❌ **Removed** from the response object                                                         |
+| Editorial / algorithmic playlists ("This Is X")      | ❌ Not reliably reachable                                                                       |
+| **Spotify Embeds** (iframe)                          | ✅ Available, and outside the Web API entirely — no auth, no quota, unaffected by these changes |
 
 **Standing risk, wider than this ticket:** Spotify Development Mode now requires a Premium account and caps test users, effective for existing client IDs as of 2026-03-09. Our extended-quota request ([#1070](https://github.com/HartiganHM/concert-crawl/issues/1070)) is therefore load-bearing for the entire Spotify vertical, not just this page. This does not block design work.
 
@@ -112,13 +112,13 @@ The page states how many times the artist has played Denver and where — a comp
 
 **Why not a full past-shows list:** doubles the page's primary content, needs its own pagination and empty state, and competes with the upcoming list for attention.
 
-**Why not deep multi-year history now:** the only viable source is setlist.fm, which requires a commercial-use conversation *and* prohibits retaining its data — tracked in **#1170**, see §6.
+**Why not deep multi-year history now:** the only viable source is setlist.fm, which requires a commercial-use conversation _and_ prohibits retaining its data — tracked in **#1170**, see §6.
 
 ### 3.8 — No upcoming shows is a **designed state**, not a leftover
 
 An artist with no upcoming Denver shows gets the full page — photo, embed, history line, follow — with an honest empty block where the upcoming list would be, and the follow button carrying the moment ("nothing announced yet" → follow).
 
-**Rationale:** this will be the *majority* state across the calendar's artists. It is the strongest conversion moment on the page, not a degraded case.
+**Rationale:** this will be the _majority_ state across the calendar's artists. It is the strongest conversion moment on the page, not a degraded case.
 
 **Why not redirect away:** breaks links from past shows and search, and discards the follow opportunity precisely when someone is showing interest.
 
@@ -155,10 +155,10 @@ Handoff at `design/design_handoff_artist_page/`, mirroring the structure of `des
 
 ## 5. Technical requirements
 
-- **Themes:** mock Electric / Jade / Light (the three base themes; production ships nine off the same token set). Token-only colors via `var(--*)`. No hardcoded hex — with one bounded carve-out the handoff must name explicitly if it uses it: the Spotify iframe accepts only a literal background color and cannot consume a CSS variable, so the value passed *into the embed* may be a hex.
+- **Themes:** mock Electric / Jade / Light (the three base themes; production ships nine off the same token set). Token-only colors via `var(--*)`. No hardcoded hex — with one bounded carve-out the handoff must name explicitly if it uses it: the Spotify iframe accepts only a literal background color and cannot consume a CSS variable, so the value passed _into the embed_ may be a hex.
 - **The embed is an un-themeable iframe.** This is the single hardest visual constraint on the page: Spotify's player accepts only a background-color and dimensions, and will not inherit our tokens. Design must decide how a foreign-styled rectangle sits inside three different themes without reading as a bug — including in Light, where the embed's own chrome may clash hardest.
 - **Mobile + desktop parity** is non-negotiable (behavioral parity; visual differences are expected).
-- **WCAG AA.** Colored elements maintain contrast across all three themes. The embed is third-party and cannot be fully controlled — annotate what we *can* control around it (focus order, labeling, whether it's reachable by keyboard in sequence).
+- **WCAG AA.** Colored elements maintain contrast across all three themes. The embed is third-party and cannot be fully controlled — annotate what we _can_ control around it (focus order, labeling, whether it's reachable by keyboard in sequence).
 - **Artist images carry expiring signed URLs.** Design need not solve this, but should flag if a chosen visual approach implies specific caching or a specific aspect ratio.
 - **All customer-facing strings** live in `definitions/copy.ts`. Artist names, venue names, dates and counts are data, not copy.
 - **Prefer no new dependencies.** The Spotify embed is an iframe; it does not require a package.
@@ -168,21 +168,21 @@ Handoff at `design/design_handoff_artist_page/`, mirroring the structure of `des
 
 ## 6. What's NOT in this brief
 
-| Excluded | Why / owner |
-|---|---|
-| Related-artists shelf | Not buildable — endpoint removed by Spotify Feb 2026 |
-| Genres as a design element | `genres` is deprecated on the artist object; must not be load-bearing |
-| Follower / popularity counts | Removed from the artist object |
-| Deep multi-year show history | Only source is setlist.fm — needs a commercial-use license conversation, and its terms prohibit retaining the data. Tracked in **#1170** |
-| Setlist previews for upcoming shows | Same blocker. Note: `events.setlist`, the `Setlist` type, and a working `SetlistPreview` component already exist in the repo but have never been fed real data — and the stored-column shape conflicts with setlist.fm's no-retention terms. Tracked in **#1170** |
-| Artist links on browse cards + discovery shelf | Nested tap-target problem; own design pass. Tracked in **#1171** |
-| Ticketing / purchase flows | Discovery and follow, not commerce |
-| Artist biography, bio editing | Spotify gives what it gives |
-| Community-submitted artist metadata | Out of scope |
-| Artist search | Existing search covers it; this brief only links its results |
-| Notification wiring for follow-artist | #737 territory, downstream |
-| Match-scoring thresholds and signals | Engineering, not Design (per 3.2) |
-| Admin review queue UI for ambiguous matches | Admin-utility surface — exempt from the Design pass per pipeline rules |
+| Excluded                                       | Why / owner                                                                                                                                                                                                                                                       |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Related-artists shelf                          | Not buildable — endpoint removed by Spotify Feb 2026                                                                                                                                                                                                              |
+| Genres as a design element                     | `genres` is deprecated on the artist object; must not be load-bearing                                                                                                                                                                                             |
+| Follower / popularity counts                   | Removed from the artist object                                                                                                                                                                                                                                    |
+| Deep multi-year show history                   | Only source is setlist.fm — needs a commercial-use license conversation, and its terms prohibit retaining the data. Tracked in **#1170**                                                                                                                          |
+| Setlist previews for upcoming shows            | Same blocker. Note: `events.setlist`, the `Setlist` type, and a working `SetlistPreview` component already exist in the repo but have never been fed real data — and the stored-column shape conflicts with setlist.fm's no-retention terms. Tracked in **#1170** |
+| Artist links on browse cards + discovery shelf | Nested tap-target problem; own design pass. Tracked in **#1171**                                                                                                                                                                                                  |
+| Ticketing / purchase flows                     | Discovery and follow, not commerce                                                                                                                                                                                                                                |
+| Artist biography, bio editing                  | Spotify gives what it gives                                                                                                                                                                                                                                       |
+| Community-submitted artist metadata            | Out of scope                                                                                                                                                                                                                                                      |
+| Artist search                                  | Existing search covers it; this brief only links its results                                                                                                                                                                                                      |
+| Notification wiring for follow-artist          | #737 territory, downstream                                                                                                                                                                                                                                        |
+| Match-scoring thresholds and signals           | Engineering, not Design (per 3.2)                                                                                                                                                                                                                                 |
+| Admin review queue UI for ambiguous matches    | Admin-utility surface — exempt from the Design pass per pipeline rules                                                                                                                                                                                            |
 
 ---
 
@@ -192,7 +192,7 @@ Handoff at `design/design_handoff_artist_page/`, mirroring the structure of `des
 - **Free tier for discovery surfaces:** #72 shareable cards, #762 who-else-is-watching
 - **Supporting artists render as discrete names** (#643, shipped) — the linkable units in 3.9 already exist
 - **`avatarColor` atom** (#762) — available if Design wants a deterministic color for artists without photos
-- **Themes:** 9 ship in production off one identical token set. The three base themes (Electric / Jade / Light) are the *mock* scope — token discipline is what makes a three-theme mock sufficient for nine, and Light is the only structural outlier (its `--scrim` is materially lighter)
+- **Themes:** 9 ship in production off one identical token set. The three base themes (Electric / Jade / Light) are the _mock_ scope — token discipline is what makes a three-theme mock sufficient for nine, and Light is the only structural outlier (its `--scrim` is materially lighter)
 - **Voice:** Sour Patch Kids; banned words include "fraud", "last chance"
 
 ---

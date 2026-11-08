@@ -1,6 +1,6 @@
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
-import { BRAND_PAPER } from '@/lib/definitions/brand'
+import { BRAND_PAPER } from '@/lib/definitions/brand';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -55,5 +55,5 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'Concert Crawl',
       },
     ],
-  }
+  };
 }

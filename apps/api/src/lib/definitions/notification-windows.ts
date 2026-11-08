@@ -15,13 +15,13 @@
 // No consumer of these numbers may re-declare them as literals.
 
 /** The list endpoint and unread count never look further back than this. */
-export const NOTIFICATION_BACKFILL_DAYS = 30
+export const NOTIFICATION_BACKFILL_DAYS = 30;
 
 /** The daily prune deletes `user_notification` rows older than this. */
-export const NOTIFICATION_RETENTION_DAYS = 90
+export const NOTIFICATION_RETENTION_DAYS = 90;
 
 /** Default page size for the panel; "Older notifications" fetches the next. */
-export const NOTIFICATION_PAGE_SIZE = 20
+export const NOTIFICATION_PAGE_SIZE = 20;
 
 /** Hard ceiling a client may request via `?limit=`. */
-export const NOTIFICATION_PAGE_SIZE_MAX = 50
+export const NOTIFICATION_PAGE_SIZE_MAX = 50;

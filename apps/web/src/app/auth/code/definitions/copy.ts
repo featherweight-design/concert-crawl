@@ -37,4 +37,4 @@ export const copy = {
     waitlist: "Don't have a code? Join the waitlist",
     back: '← Back to landing',
   },
-} as const
+} as const;

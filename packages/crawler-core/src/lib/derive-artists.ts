@@ -1,5 +1,5 @@
-import { reportFailure } from '@concert-crawl/logger'
-import type { NormalizedEvent } from '../types.js'
+import { reportFailure } from '@concert-crawl/logger';
+import type { NormalizedEvent } from '../types.js';
 
 export interface DerivedArtists {
   /**
@@ -7,21 +7,21 @@ export interface DerivedArtists {
    * produces it, and the upsert reads it as "keep what is stored". An empty
    * array is the opposite: a verdict that nobody is billed.
    */
-  headliners: string[] | null
-  supportingArtists: string[] | null
-  isConcert: boolean
+  headliners: string[] | null;
+  supportingArtists: string[] | null;
+  isConcert: boolean;
   /** True when an LLM call was made — the caller records cost against this. */
-  adjudicated: boolean
+  adjudicated: boolean;
 }
 
 export type Adjudicator = (input: {
-  title: string
-  description: string | undefined
+  title: string;
+  description: string | undefined;
 }) => Promise<{
-  isConcert: boolean
-  headliners: string[]
-  supportingArtists: string[]
-}>
+  isConcert: boolean;
+  headliners: string[];
+  supportingArtists: string[];
+}>;
 
 // Words that mark a title as describing the EVENT rather than naming an act.
 // Deliberately conservative: a false positive costs one LLM call, but a false
@@ -42,7 +42,7 @@ const EVENT_WORDS = [
   'dj set',
   'brunch',
   'market',
-]
+];
 
 export function isSuspiciousObservation(
   observed: string,
@@ -53,11 +53,12 @@ export function isSuspiciousObservation(
   // stating a name it did not simply copy from its own headline, so it is
   // trusted even when it happens to contain an event word ("Halloween Party
   // Orchestra" is a band).
-  if (observed.trim().toLowerCase() !== title.trim().toLowerCase()) return false
+  if (observed.trim().toLowerCase() !== title.trim().toLowerCase())
+    return false;
 
-  const lowered = observed.toLowerCase()
-  if (observed.includes(':')) return true
-  return EVENT_WORDS.some((word) => lowered.includes(word))
+  const lowered = observed.toLowerCase();
+  if (observed.includes(':')) return true;
+  return EVENT_WORDS.some((word) => lowered.includes(word));
 }
 
 /**
@@ -68,16 +69,16 @@ export function isSuspiciousObservation(
  * LLM answer forever. Exported so the reuse gate cannot drift from step 1.
  */
 export function wouldAdjudicate(event: {
-  title: string
-  observedPerformers?: string[]
-  isConcert?: boolean
+  title: string;
+  observedPerformers?: string[];
+  isConcert?: boolean;
 }): boolean {
-  if (event.isConcert === false) return false
+  if (event.isConcert === false) return false;
   const headliner = (event.observedPerformers ?? []).filter(
     (name) => name.trim().length > 0,
-  )[0]
-  if (headliner === undefined) return true
-  return isSuspiciousObservation(headliner, event.title)
+  )[0];
+  if (headliner === undefined) return true;
+  return isSuspiciousObservation(headliner, event.title);
 }
 
 /**
@@ -101,16 +102,16 @@ export function mergeObservedSupporting(
 ): string[] {
   const headlinerKeys = new Set(
     headliners.map((name) => name.trim().toLowerCase()),
-  )
-  const merged: string[] = []
-  const seen = new Set<string>()
+  );
+  const merged: string[] = [];
+  const seen = new Set<string>();
   for (const name of [...verdictSupporting, ...(observedSupporting ?? [])]) {
-    const key = name.trim().toLowerCase()
-    if (key === '' || headlinerKeys.has(key) || seen.has(key)) continue
-    seen.add(key)
-    merged.push(name.trim())
+    const key = name.trim().toLowerCase();
+    if (key === '' || headlinerKeys.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(name.trim());
   }
-  return merged
+  return merged;
 }
 
 export async function deriveArtists(
@@ -119,11 +120,11 @@ export async function deriveArtists(
     // same hazard `rawTitle` has in crawl.ts. A path that forgets to report
     // observations must escalate, not throw and take the whole run to
     // `failed`.
-    observedPerformers?: string[]
-    observedSupportingArtists?: string[]
+    observedPerformers?: string[];
+    observedSupportingArtists?: string[];
     // Only the LLM path and Ticketure emit this. `undefined` means "nobody
     // ruled", which is most of the catalogue and must not read as a negative.
-    isConcert?: boolean
+    isConcert?: boolean;
   },
   // Null when the site's robots.txt closes it to AI crawlers: the title and
   // description are its page text, so step 2 is skipped and the event keeps
@@ -140,14 +141,14 @@ export async function deriveArtists(
       supportingArtists: [],
       isConcert: false,
       adjudicated: false,
-    }
+    };
   }
 
   const nonEmpty = (names: string[] | undefined): string[] =>
-    (names ?? []).filter((name) => name.trim().length > 0)
+    (names ?? []).filter((name) => name.trim().length > 0);
 
-  const observed = nonEmpty(event.observedPerformers)
-  const headliner = observed[0]
+  const observed = nonEmpty(event.observedPerformers);
+  const headliner = observed[0];
 
   // Step 1 — the source named somebody, and it does not merely echo the title.
   // This is the venue's own structured field; an LLM re-reading the page title
@@ -165,7 +166,7 @@ export async function deriveArtists(
       supportingArtists: nonEmpty(event.observedSupportingArtists),
       isConcert: true,
       adjudicated: false,
-    }
+    };
   }
 
   // Step 2 — no signal, or the signal is the title wearing a performer's hat.
@@ -175,13 +176,13 @@ export async function deriveArtists(
       supportingArtists: null,
       isConcert: true,
       adjudicated: false,
-    }
+    };
   }
   try {
     const verdict = await adjudicate({
       title: event.title,
       description: event.description,
-    })
+    });
     return {
       headliners: verdict.headliners,
       supportingArtists: mergeObservedSupporting(
@@ -191,7 +192,7 @@ export async function deriveArtists(
       ),
       isConcert: verdict.isConcert,
       adjudicated: true,
-    }
+    };
   } catch (err) {
     // Step 3 — an adjudicator outage must not become a wrong answer, and must
     // not become a WRITE either. Returning an empty set here would read as a
@@ -205,12 +206,12 @@ export async function deriveArtists(
       severity: 'warn',
       title: event.title,
       error: err instanceof Error ? err.message : String(err),
-    })
+    });
     return {
       headliners: null,
       supportingArtists: null,
       isConcert: true,
       adjudicated: false,
-    }
+    };
   }
 }

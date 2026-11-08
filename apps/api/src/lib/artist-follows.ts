@@ -18,31 +18,31 @@ import {
   inArray,
   isNull,
   sql,
-} from 'drizzle-orm'
-import { db, events, userArtistFollows, venues } from '@concert-crawl/db'
-import type { FollowedArtistNextShow } from '@concert-crawl/types'
+} from 'drizzle-orm';
+import { db, events, userArtistFollows, venues } from '@concert-crawl/db';
+import type { FollowedArtistNextShow } from '@concert-crawl/types';
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   billsCanonicalName,
-} from './event-billing.js'
+} from './event-billing.js';
 import {
   loadPriceByTierByEventId,
   lowestHeadlinePrice,
-} from './price-aggregation/index.js'
-import { parsePrice } from './price.js'
-import { todayInTimezone } from './time.js'
+} from './price-aggregation/index.js';
+import { parsePrice } from './price.js';
+import { todayInTimezone } from './time.js';
 
 // events.date holds event-local (Mountain Time) calendar dates. Denver is the
 // only market we crawl and an artist's shows span venues, so there is no
 // single venue timezone to pivot "today" on — same reasoning as
 // routes/artists-public.ts.
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 // Cancelled and postponed shows stay: a followed artist's date must not vanish
 // from the list at the moment it is cancelled, which is the moment the user
 // most needs to see it. Mirrors routes/artists-public.ts and the events list.
-const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
+const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const;
 
 /**
  * Correlated `EXISTS` for the events-list `following=1` filter. Modelled on
@@ -65,7 +65,7 @@ export function followedArtistsCondition(userId: string): SQL {
           billsCanonicalName(userArtistFollows.canonicalName),
         ),
       ),
-  )
+  );
 }
 
 /**
@@ -78,9 +78,9 @@ export async function loadFollowedCanonicalNames(
   const rows = await db
     .select({ canonicalName: userArtistFollows.canonicalName })
     .from(userArtistFollows)
-    .where(eq(userArtistFollows.userId, userId))
+    .where(eq(userArtistFollows.userId, userId));
 
-  return new Set(rows.map((row) => row.canonicalName))
+  return new Set(rows.map((row) => row.canonicalName));
 }
 
 /**
@@ -95,10 +95,10 @@ export async function loadFollowedCanonicalNames(
 export async function loadNextShowByCanonical(
   canonicalNames: string[],
 ): Promise<Map<string, FollowedArtistNextShow>> {
-  const nextShows = new Map<string, FollowedArtistNextShow>()
-  if (canonicalNames.length === 0) return nextShows
+  const nextShows = new Map<string, FollowedArtistNextShow>();
+  if (canonicalNames.length === 0) return nextShows;
 
-  const today = todayInTimezone(MT_TIME_ZONE)
+  const today = todayInTimezone(MT_TIME_ZONE);
 
   const rows = await db
     .select({
@@ -126,19 +126,19 @@ export async function loadNextShowByCanonical(
         gte(events.date, today),
       ),
     )
-    .orderBy(asc(events.date), asc(events.showTime), asc(events.id))
+    .orderBy(asc(events.date), asc(events.showTime), asc(events.id));
 
-  const wanted = new Set(canonicalNames)
+  const wanted = new Set(canonicalNames);
 
   // Phase 1 picks the winning row per name. Prices are aggregated afterwards
   // over only the winners, so a follow list spanning a hundred names still
   // costs one price query rather than one per candidate row.
-  const winners = new Map<string, (typeof rows)[number]>()
+  const winners = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
-    const onBill = billedCanonicalNames(row)
+    const onBill = billedCanonicalNames(row);
     for (const canonical of onBill) {
-      if (!wanted.has(canonical) || winners.has(canonical)) continue
-      winners.set(canonical, row)
+      if (!wanted.has(canonical) || winners.has(canonical)) continue;
+      winners.set(canonical, row);
     }
   }
 
@@ -148,7 +148,7 @@ export async function loadNextShowByCanonical(
   // Detail (#1365).
   const priceByTierByEventId = await loadPriceByTierByEventId([
     ...new Set([...winners.values()].map((row) => row.eventId)),
-  ])
+  ]);
 
   for (const [canonical, row] of winners) {
     nextShows.set(canonical, {
@@ -159,8 +159,8 @@ export async function loadNextShowByCanonical(
       price:
         lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
         parsePrice(row.ticketPriceMin ?? null),
-    })
+    });
   }
 
-  return nextShows
+  return nextShows;
 }

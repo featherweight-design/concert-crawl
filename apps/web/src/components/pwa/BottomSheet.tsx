@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import { useEffect, useId, useRef } from 'react'
-import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy'
+import { useEffect, useId, useRef } from 'react';
+import { OVERLAY_COPY } from '@/components/ui/cc-overlay/definitions/copy';
 
 interface BottomSheetProps {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
   /** Rendered as an sr-only heading and used as aria-labelledby target. */
-  title: string
-  children: React.ReactNode
+  title: string;
+  children: React.ReactNode;
 }
 
 // :not(:disabled) excludes native controls that can't actually receive focus
 // (disabled button/input/select/textarea) — otherwise the focus trap sees them
 // as focusables and refuses to wrap when they're at either end of the list.
 const FOCUSABLE_SELECTOR =
-  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 export const BottomSheet = ({
   open,
@@ -23,61 +23,62 @@ export const BottomSheet = ({
   title,
   children,
 }: BottomSheetProps) => {
-  const sheetRef = useRef<HTMLDivElement>(null)
-  const previousFocus = useRef<Element | null>(null)
-  const titleId = useId()
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const previousFocus = useRef<Element | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    previousFocus.current = document.activeElement
+    previousFocus.current = document.activeElement;
     // The close button is always the first focusable, so focus never stays
     // behind the modal.
-    sheetRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus()
+    sheetRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
+        event.preventDefault();
+        onClose();
+        return;
       }
-      if (event.key !== 'Tab') return
-      const sheet = sheetRef.current
-      if (!sheet) return
-      const focusables = sheet.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      const firstFocusable = focusables[0]
-      const lastFocusable = focusables[focusables.length - 1]
+      if (event.key !== 'Tab') return;
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const focusables =
+        sheet.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      const firstFocusable = focusables[0];
+      const lastFocusable = focusables[focusables.length - 1];
       // If focus is anywhere outside the dialog (never entered, or moved
       // programmatically) Tab would let the user escape the modal — force
       // focus back to the first (or last, on Shift+Tab) focusable inside.
       if (!sheet.contains(document.activeElement)) {
-        event.preventDefault()
+        event.preventDefault();
         if (event.shiftKey) {
-          lastFocusable?.focus()
+          lastFocusable?.focus();
         } else {
-          firstFocusable?.focus()
+          firstFocusable?.focus();
         }
-        return
+        return;
       }
       if (event.shiftKey && document.activeElement === firstFocusable) {
-        event.preventDefault()
-        lastFocusable?.focus()
+        event.preventDefault();
+        lastFocusable?.focus();
       } else if (!event.shiftKey && document.activeElement === lastFocusable) {
-        event.preventDefault()
-        firstFocusable?.focus()
+        event.preventDefault();
+        firstFocusable?.focus();
       }
-    }
+    };
 
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onKeyDown);
       if (previousFocus.current instanceof HTMLElement) {
-        previousFocus.current.focus()
+        previousFocus.current.focus();
       }
-    }
-  }, [open, onClose])
+    };
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     // z-[90] puts this in the dialog band alongside ModalShell's scrim. At the
@@ -123,8 +124,8 @@ export const BottomSheet = ({
         {children}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const CloseIcon = () => (
   <svg
@@ -141,4 +142,4 @@ const CloseIcon = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);

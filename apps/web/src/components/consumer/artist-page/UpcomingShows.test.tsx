@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import type { ArtistShow } from '@concert-crawl/types'
-import { cleanup, fireEvent, render } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import React from 'react';
+import type { ArtistShow } from '@concert-crawl/types';
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CONSUMER_COPY } from '../definitions/copy'
-import { EVENT_ROW_COPY } from '../event-row/definitions/copy'
+import { CONSUMER_COPY } from '../definitions/copy';
+import { EVENT_ROW_COPY } from '../event-row/definitions/copy';
 
-import { ARTIST_COPY } from './definitions/copy'
-import { UpcomingShows } from './UpcomingShows'
+import { ARTIST_COPY } from './definitions/copy';
+import { UpcomingShows } from './UpcomingShows';
 
 vi.mock('next/link', () => ({
   default: ({
@@ -17,22 +17,22 @@ vi.mock('next/link', () => ({
     children,
     ...rest
   }: {
-    href: string
-    children: React.ReactNode
+    href: string;
+    children: React.ReactNode;
   }) => (
     <a href={href} {...rest}>
       {children}
     </a>
   ),
-}))
+}));
 
 // Every row carries the app-wide Watch control, which reaches for Clerk and
 // React Query. What matters here is the list, not the control.
 vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
   WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
-}))
+}));
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 const show = (
   iso: string,
@@ -51,14 +51,14 @@ const show = (
   genres: [],
   imageUrl: null,
   status,
-})
+});
 
 /**
  * A run is a `RunGroup` card and a one-off is now an `EventRow`, so counting
  * items means counting both markers rather than the one they used to share.
  */
 const items = (container: HTMLElement) =>
-  container.querySelectorAll('[data-show-item], [data-testid="event-row"]')
+  container.querySelectorAll('[data-show-item], [data-testid="event-row"]');
 
 /** Three runs of three, plus four one-offs: 5 items, 13 shows. */
 const thirteenShows = (): ArtistShow[] => [
@@ -75,7 +75,7 @@ const thirteenShows = (): ArtistShow[] => [
   show('2026-11-02', 'Solo Two'),
   show('2026-11-03', 'Solo Three'),
   show('2026-11-04', 'Solo Four'),
-]
+];
 
 describe('UpcomingShows', () => {
   it('counts SHOWS in the show-all control while capping ITEMS in the list', () => {
@@ -85,13 +85,13 @@ describe('UpcomingShows', () => {
         name="The Cold Fronts"
         shows={thirteenShows()}
       />,
-    )
+    );
     // The head carries no count — it duplicated "Upcoming" and clipped at 320px.
-    expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull()
+    expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull();
     // A run is one item; the label is always in shows.
-    expect(items(container)).toHaveLength(5)
-    expect(getByText(ARTIST_COPY.showAll(13))).toBeTruthy()
-  })
+    expect(items(container)).toHaveLength(5);
+    expect(getByText(ARTIST_COPY.showAll(13))).toBeTruthy();
+  });
 
   it('expands and collapses from a keyboard-reachable control', () => {
     const { container, getByRole } = render(
@@ -100,22 +100,22 @@ describe('UpcomingShows', () => {
         name="The Cold Fronts"
         shows={thirteenShows()}
       />,
-    )
-    const toggle = getByRole('button', { name: ARTIST_COPY.showAll(13) })
-    expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    expect(toggle.style.minHeight).toBe('44px')
+    );
+    const toggle = getByRole('button', { name: ARTIST_COPY.showAll(13) });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.style.minHeight).toBe('44px');
 
-    toggle.focus()
-    fireEvent.click(toggle)
-    expect(items(container)).toHaveLength(7)
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(toggle.textContent).toBe(ARTIST_COPY.showFewer)
+    toggle.focus();
+    fireEvent.click(toggle);
+    expect(items(container)).toHaveLength(7);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.textContent).toBe(ARTIST_COPY.showFewer);
     // Focus never leaves the control that moved the list.
-    expect(document.activeElement).toBe(toggle)
+    expect(document.activeElement).toBe(toggle);
 
-    fireEvent.click(toggle)
-    expect(items(container)).toHaveLength(5)
-  })
+    fireEvent.click(toggle);
+    expect(items(container)).toHaveLength(5);
+  });
 
   it('omits the toggle when everything already fits', () => {
     // Scoped by name: every row now carries a Watch control, so "no buttons at
@@ -126,10 +126,10 @@ describe('UpcomingShows', () => {
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15)]}
       />,
-    )
-    expect(queryByRole('button', { name: ARTIST_COPY.showAll(1) })).toBeNull()
-    expect(queryByRole('button', { name: ARTIST_COPY.showFewer })).toBeNull()
-  })
+    );
+    expect(queryByRole('button', { name: ARTIST_COPY.showAll(1) })).toBeNull();
+    expect(queryByRole('button', { name: ARTIST_COPY.showFewer })).toBeNull();
+  });
 
   it('links each row to its event and labels the list', () => {
     const { container } = render(
@@ -138,14 +138,14 @@ describe('UpcomingShows', () => {
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15)]}
       />,
-    )
-    const section = container.querySelector('section')
+    );
+    const section = container.querySelector('section');
     expect(section?.getAttribute('aria-label')).toBe(
       ARTIST_COPY.showsListAria('Wax Harbour'),
-    )
-    const link = container.querySelector('a')
-    expect(link?.getAttribute('href')).toBe('/events/Hi-Dive-2026-08-08')
-  })
+    );
+    const link = container.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('/events/Hi-Dive-2026-08-08');
+  });
 
   it('shows a price when we have one and says tba when we do not', () => {
     const { getByText } = render(
@@ -157,11 +157,11 @@ describe('UpcomingShows', () => {
           show('2026-09-08', 'Lost Lake', null),
         ]}
       />,
-    )
-    expect(getByText('$15')).toBeTruthy()
+    );
+    expect(getByText('$15')).toBeTruthy();
     // The row and the run card beside it now say the same word for an absence.
-    expect(getByText(EVENT_ROW_COPY.price.tba)).toBeTruthy()
-  })
+    expect(getByText(EVENT_ROW_COPY.price.tba)).toBeTruthy();
+  });
 
   it('marks a cancelled show without hiding it', () => {
     const { getByText } = render(
@@ -170,10 +170,10 @@ describe('UpcomingShows', () => {
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'cancelled')]}
       />,
-    )
-    expect(getByText(CONSUMER_COPY.cancelledLabel)).toBeTruthy()
-    expect(getByText('Hi-Dive')).toBeTruthy()
-  })
+    );
+    expect(getByText(CONSUMER_COPY.cancelledLabel)).toBeTruthy();
+    expect(getByText('Hi-Dive')).toBeTruthy();
+  });
 
   it('marks a postponed show', () => {
     const { getByText } = render(
@@ -182,9 +182,9 @@ describe('UpcomingShows', () => {
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'postponed')]}
       />,
-    )
-    expect(getByText(CONSUMER_COPY.postponedLabel)).toBeTruthy()
-  })
+    );
+    expect(getByText(CONSUMER_COPY.postponedLabel)).toBeTruthy();
+  });
 
   it('labels a residency as a run and links every night', () => {
     const { getByText, container } = render(
@@ -197,10 +197,10 @@ describe('UpcomingShows', () => {
           show('2026-08-07', "Ophelia's", 30),
         ]}
       />,
-    )
-    expect(getByText(ARTIST_COPY.residencyRun(3))).toBeTruthy()
-    expect(container.querySelectorAll('a')).toHaveLength(3)
-  })
+    );
+    expect(getByText(ARTIST_COPY.residencyRun(3))).toBeTruthy();
+    expect(container.querySelectorAll('a')).toHaveLength(3);
+  });
 
   it('rules under every one-off that has something below it', () => {
     // Item order: one-off, one-off, run. Two rules — the second one-off still
@@ -217,9 +217,9 @@ describe('UpcomingShows', () => {
           show('2026-09-07', "Ophelia's"),
         ]}
       />,
-    )
-    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(2)
-  })
+    );
+    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(2);
+  });
 
   it('draws no rule above the first item or under a run card', () => {
     // Item order: run, one-off. The run card carries its own edge.
@@ -234,7 +234,7 @@ describe('UpcomingShows', () => {
           show('2026-09-20', 'Solo One'),
         ]}
       />,
-    )
-    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(0)
-  })
-})
+    );
+    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(0);
+  });
+});

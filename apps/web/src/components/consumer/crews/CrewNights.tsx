@@ -1,17 +1,17 @@
-import Link from 'next/link'
-import type { CrewShow } from '@concert-crawl/types'
+import Link from 'next/link';
+import type { CrewShow } from '@concert-crawl/types';
 
-import { EmptyState } from '@/components/consumer/empty-state'
-import { MemberCluster } from './MemberCluster'
-import { groupInOrder, isoYear, stubDate } from './lib/format'
-import { CREWS_COPY } from './definitions/copy'
+import { EmptyState } from '@/components/consumer/empty-state';
+import { MemberCluster } from './MemberCluster';
+import { groupInOrder, isoYear, stubDate } from './lib/format';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 interface StubRowProps {
-  show: CrewShow
-  wide: boolean
-  viewerId: string | null
+  show: CrewShow;
+  wide: boolean;
+  viewerId: string | null;
 }
 
 /**
@@ -20,14 +20,14 @@ interface StubRowProps {
  * countdown and a watch control that all mean nothing here.
  */
 export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
-  const { month, day } = stubDate(show.iso)
+  const { month, day } = stubDate(show.iso);
   // The going count reads differently when you were one of them, and the mono
   // line that says so is desktop-only — so the cluster carries the same words
   // for a screen reader at every width.
   const wentWith =
-    viewerId !== null && show.going.some((one) => one.userId === viewerId)
+    viewerId !== null && show.going.some((one) => one.userId === viewerId);
   const goingLabel = (count: number) =>
-    wentWith ? COPY.detail.together(count - 1) : COPY.detail.went(count)
+    wentWith ? COPY.detail.together(count - 1) : COPY.detail.went(count);
 
   return (
     <Link
@@ -149,13 +149,13 @@ export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
         )}
       </span>
     </Link>
-  )
-}
+  );
+};
 
 interface CrewNightsProps {
-  shows: CrewShow[]
-  wide: boolean
-  viewerId: string | null
+  shows: CrewShow[];
+  wide: boolean;
+  viewerId: string | null;
 }
 
 export const CrewNights = ({ shows, wide, viewerId }: CrewNightsProps) => {
@@ -169,10 +169,10 @@ export const CrewNights = ({ shows, wide, viewerId }: CrewNightsProps) => {
         body={COPY.empty.noPastBody}
         railLabel={COPY.empty.noPastRail}
       />
-    )
+    );
   }
 
-  const groups = groupInOrder(shows, (show) => isoYear(show.iso))
+  const groups = groupInOrder(shows, (show) => isoYear(show.iso));
 
   return (
     <div className="flex flex-col gap-5">
@@ -226,5 +226,5 @@ export const CrewNights = ({ shows, wide, viewerId }: CrewNightsProps) => {
         </section>
       ))}
     </div>
-  )
-}
+  );
+};

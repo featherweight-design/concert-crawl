@@ -138,7 +138,7 @@ Applied as additional `and()` clauses in the Drizzle query:
 Postgres array overlap operator — matches events where the `genre` array contains the selected vibe:
 
 ```typescript
-sql`${events.genre} && ARRAY[${filterVibe}]::text[]`
+sql`${events.genre} && ARRAY[${filterVibe}]::text[]`;
 ```
 
 Applied as an additional `and()` clause. Returns events that have at least one matching genre label.
@@ -153,9 +153,9 @@ In `fetchEvents()`, forward the two new params alongside the existing ones:
 
 ```typescript
 if (typeof params['filterPrice'] === 'string')
-  qs.set('filterPrice', params['filterPrice'])
+  qs.set('filterPrice', params['filterPrice']);
 if (typeof params['filterVibe'] === 'string')
-  qs.set('filterVibe', params['filterVibe'])
+  qs.set('filterVibe', params['filterVibe']);
 ```
 
 No other web changes required. The URL param read, chip UI, and active-filter indicator are already wired correctly in `FilterBar.tsx` and `filter-defs.ts`.
@@ -177,7 +177,7 @@ await db.insert(costTracking).values({
     eventsTagged: results.length,
     ...tokenUsage,
   }),
-})
+});
 ```
 
 This data is immediately queryable from the DB and will surface in the Cost Tracking admin UI when issue #67 ships.

@@ -164,7 +164,7 @@ Integration test: a PATCH of only `artistAutoWatch` must not reset the other fiv
 
 ```ts
 export const nfLocked = (state: PlanStateLike): boolean =>
-  !canUseFeature(state, 'following')
+  !canUseFeature(state, 'following');
 ```
 
 Beside the existing entitlement helpers in `packages/entitlements/src/index.ts`. It negates `canUseFeature`; do not reimplement the lookup. Two things it must not do, both of which were wrong in earlier drafts of the spec:

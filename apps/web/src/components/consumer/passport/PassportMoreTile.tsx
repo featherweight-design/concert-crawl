@@ -1,18 +1,18 @@
-import React from 'react'
-import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy'
-import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes'
-import { passportRotation } from '@/lib/passport/stamp'
+import React from 'react';
+import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
+import type { PassportModeConfig } from '@/components/consumer/passport/definitions/modes';
+import { passportRotation } from '@/lib/passport/stamp';
 
 export interface PassportMoreTileProps {
   /** How many attended shows did not fit on the wall. */
-  count: number
-  cfg: PassportModeConfig
-  width: number
-  height: number
-  surface: string
-  border: string
-  fg: string
-  fgMuted: string
+  count: number;
+  cfg: PassportModeConfig;
+  width: number;
+  height: number;
+  surface: string;
+  border: string;
+  fg: string;
+  fgMuted: string;
 }
 
 /**
@@ -70,4 +70,4 @@ export const PassportMoreTile = ({
       {PASSPORT_COPY.moreTile}
     </span>
   </div>
-)
+);

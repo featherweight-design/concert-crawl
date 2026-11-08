@@ -27,36 +27,37 @@ Probed live on 2026-07-17 against account 1105 (the issue's documented contract 
   data.paginatedEvents.metadata: { totalCount, totalPages, currentPage, limitValue }
   ```
 - **Event fields used:**
-  | GraphQL field | Type | Notes |
-  |---|---|---|
-  | `id` | Int | stable event id |
-  | `name` | String | ⚠ may carry trailing whitespace — trim |
-  | `date` | `"YYYY-MM-DD"` | venue-local |
-  | `doorTime` | `"HH:MM:SS"` | venue-local |
-  | `startTime` | `"HH:MM:SS"` | venue-local |
-  | `description` | HTML String | heavy markup incl. `<iframe-embed>` — must be stripped |
-  | `ticketsUrl` | String | public ticketing URL |
-  | `status` | String | display text ("FREE RSVP/UPGRADE", "BUY TICKETS") — not a clean enum |
-  | `announceArtists` | `[{ name }]` | headliner first; **can be empty** on some events |
-  | `announceImages` | `[{ highlighted: Bool, variants: [{ variant, src }] }]` | `variant ∈ { 'cover', 'cover_small', 'thumb' }` — no `original` |
+
+  | GraphQL field     | Type                                                    | Notes                                                                |
+  | ----------------- | ------------------------------------------------------- | -------------------------------------------------------------------- |
+  | `id`              | Int                                                     | stable event id                                                      |
+  | `name`            | String                                                  | ⚠ may carry trailing whitespace — trim                               |
+  | `date`            | `"YYYY-MM-DD"`                                          | venue-local                                                          |
+  | `doorTime`        | `"HH:MM:SS"`                                            | venue-local                                                          |
+  | `startTime`       | `"HH:MM:SS"`                                            | venue-local                                                          |
+  | `description`     | HTML String                                             | heavy markup incl. `<iframe-embed>` — must be stripped               |
+  | `ticketsUrl`      | String                                                  | public ticketing URL                                                 |
+  | `status`          | String                                                  | display text ("FREE RSVP/UPGRADE", "BUY TICKETS") — not a clean enum |
+  | `announceArtists` | `[{ name }]`                                            | headliner first; **can be empty** on some events                     |
+  | `announceImages`  | `[{ highlighted: Bool, variants: [{ variant, src }] }]` | `variant ∈ { 'cover', 'cover_small', 'thumb' }` — no `original`      |
 
   Sample (account 1105): `{ id:166377, name:"High Fade with Atlas Radio", date:"2026-07-03", doorTime:"18:00:00", startTime:"19:00:00", ticketsUrl:"https://tickets.venuepilot.com/e/...", announceArtists:[{name:"High Fade"},{name:"Atlas Radio"}] }`.
 
 ## Field mapping → `NormalizedEvent`
 
-| NormalizedEvent | Source | Rule |
-|---|---|---|
-| `title` | `name` | `.trim()` |
-| `rawTitle` | `name` | same as `title` (mirrors AEG; keeps the cross-venue presale filter's input contract uniform, #826) |
-| `artist` | `announceArtists[0].name` | headliner; **fallback to `title`** when the array is empty |
-| `date` | `date` | passthrough — already `YYYY-MM-DD` venue-local |
-| `showTime` | `startTime` | passthrough — already `HH:MM:SS` |
-| `doorsTime` | `doorTime` | passthrough; omit when absent |
-| `ticketUrl` | `ticketsUrl` | omit when absent/empty |
-| `imageUrl` | highlighted image → `variant === 'cover'` `.src` | fallback: first variant of the highlighted image, then first image overall; omit if no images |
-| `description` | `description` | pre-strip the custom `<iframe-embed>` element (the shared helper only strips known HTML tags, so it would leak), then `stripDescriptionHtml()`; omit when the stripped result is empty |
-| `confidence` | — | `1.0` (platform fetch, no LLM uncertainty) |
-| `sourceUrl` | `venue.websiteUrl` | the venue's canonical calendar URL (matches AEG/LLM convention) |
+| NormalizedEvent | Source                                           | Rule                                                                                                                                                                                   |
+| --------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `title`         | `name`                                           | `.trim()`                                                                                                                                                                              |
+| `rawTitle`      | `name`                                           | same as `title` (mirrors AEG; keeps the cross-venue presale filter's input contract uniform, #826)                                                                                     |
+| `artist`        | `announceArtists[0].name`                        | headliner; **fallback to `title`** when the array is empty                                                                                                                             |
+| `date`          | `date`                                           | passthrough — already `YYYY-MM-DD` venue-local                                                                                                                                         |
+| `showTime`      | `startTime`                                      | passthrough — already `HH:MM:SS`                                                                                                                                                       |
+| `doorsTime`     | `doorTime`                                       | passthrough; omit when absent                                                                                                                                                          |
+| `ticketUrl`     | `ticketsUrl`                                     | omit when absent/empty                                                                                                                                                                 |
+| `imageUrl`      | highlighted image → `variant === 'cover'` `.src` | fallback: first variant of the highlighted image, then first image overall; omit if no images                                                                                          |
+| `description`   | `description`                                    | pre-strip the custom `<iframe-embed>` element (the shared helper only strips known HTML tags, so it would leak), then `stripDescriptionHtml()`; omit when the stripped result is empty |
+| `confidence`    | —                                                | `1.0` (platform fetch, no LLM uncertainty)                                                                                                                                             |
+| `sourceUrl`     | `venue.websiteUrl`                               | the venue's canonical calendar URL (matches AEG/LLM convention)                                                                                                                        |
 
 `exactOptionalPropertyTypes: true` → optional fields are conditionally spread, never set to `undefined`.
 
@@ -77,9 +78,9 @@ Mirrors `aeg.ts` structure exactly:
   - Returns `PlatformFetchResult { events, sourceUrl: endpoint, meta: { fetchLatencyMs, totalCount, totalPages, pagesFetched, truncated, eventsAfterNormalization } }`.
 - **Export** `venuePilotFetcher: PlatformFetcher`.
 
-**robots.txt stance (check the endpoint domain too):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` *before* `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. **In addition**, the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper before issuing any GraphQL request, and treats an explicit `Disallow` as a `VenuePilotFetchError` (a normal crawl failure — no silent fallback). This upholds CLAUDE.md's "never override a disallow" rule for the *actual URL we fetch*, and future-proofs against VenuePilot later tightening their policy — today `https://www.venuepilot.co/robots.txt` returns a `User-agent: *` group whose only rule is `Allow: /` (line-oriented: `User-agent: *` on one line, `Allow: /` on the next; only `Amazonbot`, `Applebot-Extended`, and `Bytespider` are `Disallow`ed), so our `ConcertCrawl` UA is allowed and this gate is a no-op until that changes. The check is cheap: `isAllowed()` caches `robots.txt` per domain (one fetch per crawl run) and fails open, so the happy path is unaffected. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) apply to every request as before.
+**robots.txt stance (check the endpoint domain too):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` _before_ `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. **In addition**, the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper before issuing any GraphQL request, and treats an explicit `Disallow` as a `VenuePilotFetchError` (a normal crawl failure — no silent fallback). This upholds CLAUDE.md's "never override a disallow" rule for the _actual URL we fetch_, and future-proofs against VenuePilot later tightening their policy — today `https://www.venuepilot.co/robots.txt` returns a `User-agent: *` group whose only rule is `Allow: /` (line-oriented: `User-agent: *` on one line, `Allow: /` on the next; only `Amazonbot`, `Applebot-Extended`, and `Bytespider` are `Disallow`ed), so our `ConcertCrawl` UA is allowed and this gate is a no-op until that changes. The check is cheap: `isAllowed()` caches `robots.txt` per domain (one fetch per crawl run) and fails open, so the happy path is unaffected. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) apply to every request as before.
 
-> **AEG parity follow-up:** the shipped AEG fetcher hits `aegwebprod.blob.core.windows.net` *without* this endpoint-domain robots check, and paces pages with a flat (un-jittered) delay. Adding the VenuePilot gate + jitter leaves AEG as the odd one out; follow-up #985 backfills both the `isAllowed()` gate and the ±500ms jitter into `aeg.ts` so both fetchers are consistent. (Out of scope for this PR — AEG is untouched here.)
+> **AEG parity follow-up:** the shipped AEG fetcher hits `aegwebprod.blob.core.windows.net` _without_ this endpoint-domain robots check, and paces pages with a flat (un-jittered) delay. Adding the VenuePilot gate + jitter leaves AEG as the odd one out; follow-up #985 backfills both the `isAllowed()` gate and the ±500ms jitter into `aeg.ts` so both fetchers are consistent. (Out of scope for this PR — AEG is untouched here.)
 
 ## Registry reconciliation (the only change to shipped crawler code)
 

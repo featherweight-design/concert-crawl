@@ -1,186 +1,186 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import type { ArtistSearchResult } from '@concert-crawl/types'
-import { useAuthToken } from './useAuthToken'
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import type { ArtistSearchResult } from '@concert-crawl/types';
+import { useAuthToken } from './useAuthToken';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-const RECENT_KEY = 'cc_recent_searches'
-const MAX_RECENT = 5
-const DEBOUNCE_MS = 300
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const RECENT_KEY = 'cc_recent_searches';
+const MAX_RECENT = 5;
+const DEBOUNCE_MS = 300;
 
 export interface ArtistResult {
-  name: string
-  nextDate: string
-  venueShort: string
+  name: string;
+  nextDate: string;
+  venueShort: string;
 }
 
 export interface VenueResult {
-  name: string
-  slug: string
-  showCount: number
-  matchingEventId: string
+  name: string;
+  slug: string;
+  showCount: number;
+  matchingEventId: string;
 }
 
 export interface PopularEvent {
-  id: string
-  title: string
-  artist: string
-  date: string
+  id: string;
+  title: string;
+  artist: string;
+  date: string;
   /** The event's own artwork, first choice for the row's tile (#1525). */
-  imageUrl: string | null
+  imageUrl: string | null;
   /** The headliner's portrait, second choice behind `imageUrl`. */
-  artistPhotoUrl: string | null
-  ticketPriceMin: string | null
-  watcherCount: number
-  venue: { name: string; slug: string }
+  artistPhotoUrl: string | null;
+  ticketPriceMin: string | null;
+  watcherCount: number;
+  venue: { name: string; slug: string };
 }
 
 interface EventRow {
-  id: string
-  artist: string
-  date: string
-  title: string
-  venue: { id: string; name: string; slug: string }
+  id: string;
+  artist: string;
+  date: string;
+  title: string;
+  venue: { id: string; name: string; slug: string };
 }
 
 function readRecent(): string[] {
-  if (typeof window === 'undefined') return []
+  if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(RECENT_KEY)
-    return raw ? (JSON.parse(raw) as string[]) : []
+    const raw = localStorage.getItem(RECENT_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
-    return []
+    return [];
   }
 }
 
 function writeRecent(searches: string[]): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(RECENT_KEY, JSON.stringify(searches))
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(RECENT_KEY, JSON.stringify(searches));
 }
 
 function addToRecent(query: string, current: string[]): string[] {
-  const filtered = current.filter((search) => search !== query)
-  return [query, ...filtered].slice(0, MAX_RECENT)
+  const filtered = current.filter((search) => search !== query);
+  return [query, ...filtered].slice(0, MAX_RECENT);
 }
 
 function deriveArtistResults(rows: EventRow[]): ArtistResult[] {
-  const map = new Map<string, ArtistResult>()
+  const map = new Map<string, ArtistResult>();
   for (const row of rows) {
-    const existing = map.get(row.artist)
+    const existing = map.get(row.artist);
     if (!existing || row.date < existing.nextDate) {
       map.set(row.artist, {
         name: row.artist,
         nextDate: row.date,
         venueShort: row.venue.name,
-      })
+      });
     }
   }
-  return Array.from(map.values())
+  return Array.from(map.values());
 }
 
 function deriveVenueResults(rows: EventRow[]): VenueResult[] {
-  const map = new Map<string, VenueResult>()
+  const map = new Map<string, VenueResult>();
   for (const row of rows) {
-    const existing = map.get(row.venue.id)
+    const existing = map.get(row.venue.id);
     if (existing) {
-      existing.showCount += 1
+      existing.showCount += 1;
     } else {
       map.set(row.venue.id, {
         name: row.venue.name,
         slug: row.venue.slug,
         showCount: 1,
         matchingEventId: row.id,
-      })
+      });
     }
   }
-  return Array.from(map.values())
+  return Array.from(map.values());
 }
 
 function venueMatchesQuery(venueName: string, query: string): boolean {
-  const normalizedName = venueName.toLowerCase().trim()
-  const normalizedQuery = query.toLowerCase().trim()
+  const normalizedName = venueName.toLowerCase().trim();
+  const normalizedQuery = query.toLowerCase().trim();
   return (
     normalizedName === normalizedQuery ||
     normalizedName.startsWith(normalizedQuery) ||
     normalizedQuery.startsWith(normalizedName)
-  )
+  );
 }
 
 export function useSearch() {
-  const router = useRouter()
-  const getToken = useAuthToken()
-  const [query, setQuery] = useState('')
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
-  const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([])
-  const [artistResults, setArtistResults] = useState<ArtistResult[]>([])
+  const router = useRouter();
+  const getToken = useAuthToken();
+  const [query, setQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([]);
+  const [artistResults, setArtistResults] = useState<ArtistResult[]>([]);
   // #1115 PR-G — artists with their own page. Distinct from `artistResults`,
   // which is derived from matching events and routes to a filtered browse.
-  const getTokenRef = useRef(getToken)
+  const getTokenRef = useRef(getToken);
   useEffect(() => {
-    getTokenRef.current = getToken
-  }, [getToken])
+    getTokenRef.current = getToken;
+  }, [getToken]);
 
   const [artistPageResults, setArtistPageResults] = useState<
     ArtistSearchResult[]
-  >([])
-  const [venueResults, setVenueResults] = useState<VenueResult[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  >([]);
+  const [venueResults, setVenueResults] = useState<VenueResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    setRecentSearches(readRecent())
+    setRecentSearches(readRecent());
 
     void (async () => {
       try {
-        const token = await getTokenRef.current()
+        const token = await getTokenRef.current();
         fetch(`${API_URL}/v1/search/popular`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
           .then((res) => res.json())
           .then((body: { success: boolean; data: PopularEvent[] }) => {
-            if (body.success) setPopularEvents(body.data)
+            if (body.success) setPopularEvents(body.data);
           })
           .catch((err: unknown) => {
-            console.error(err)
-          })
+            console.error(err);
+          });
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
-    })()
+    })();
     // Mount only. Listed on `getToken` this re-fetched the popular list every
     // time `useAuth()` handed back a new function, which it is free to do.
-  }, [])
+  }, []);
 
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    abortRef.current?.abort()
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
 
-    const trimmed = query.trim()
+    const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setArtistResults([])
-      setArtistPageResults([])
-      setVenueResults([])
-      setIsLoading(false)
-      return
+      setArtistResults([]);
+      setArtistPageResults([]);
+      setVenueResults([]);
+      setIsLoading(false);
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     debounceRef.current = setTimeout(() => {
-      const controller = new AbortController()
-      abortRef.current = controller
+      const controller = new AbortController();
+      abortRef.current = controller;
       // Drop the previous query's answers before asking the new one. Each
       // result set is only reassigned on its own fetch succeeding, so a slow
       // or failed request would otherwise leave rows from the old query on
       // screen once isLoading flips false.
-      setArtistResults([])
-      setArtistPageResults([])
-      setVenueResults([])
+      setArtistResults([]);
+      setArtistPageResults([]);
+      setVenueResults([]);
       void (async () => {
         try {
-          const token = await getTokenRef.current()
+          const token = await getTokenRef.current();
           fetch(
             `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
             {
@@ -191,18 +191,18 @@ export function useSearch() {
             .then((res) => res.json())
             .then((body: { success: boolean; data: { data: EventRow[] } }) => {
               if (body.success) {
-                setArtistResults(deriveArtistResults(body.data.data))
-                setVenueResults(deriveVenueResults(body.data.data))
+                setArtistResults(deriveArtistResults(body.data.data));
+                setVenueResults(deriveVenueResults(body.data.data));
               }
             })
             .catch((err: unknown) => {
               if (err instanceof DOMException && err.name === 'AbortError')
-                return
-              console.error(err)
+                return;
+              console.error(err);
             })
             .finally(() => {
-              if (!controller.signal.aborted) setIsLoading(false)
-            })
+              if (!controller.signal.aborted) setIsLoading(false);
+            });
 
           // #1115 PR-G — artist pages, fetched alongside (not chained after)
           // the event query. It is a garnish on a search whose primary answer
@@ -217,37 +217,37 @@ export function useSearch() {
           )
             .then((res) => res.json())
             .then((body: { success: boolean; data: ArtistSearchResult[] }) => {
-              if (body.success) setArtistPageResults(body.data)
+              if (body.success) setArtistPageResults(body.data);
             })
             .catch((err: unknown) => {
               if (err instanceof DOMException && err.name === 'AbortError')
-                return
-              console.error(err)
-            })
+                return;
+              console.error(err);
+            });
         } catch (err) {
-          if (err instanceof DOMException && err.name === 'AbortError') return
-          console.error(err)
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+          console.error(err);
         }
-      })()
-    }, DEBOUNCE_MS)
+      })();
+    }, DEBOUNCE_MS);
 
     return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      abortRef.current?.abort()
-    }
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
     // `getToken` is read through the ref rather than listed here. `useAuth()`
     // makes no promise of returning the same function across renders, and an
     // unstable one makes this effect a function of the render rather than of
     // the query: it re-runs, aborts its own in-flight request and starts
     // another, which reads as a slow search rather than a bug.
-  }, [query])
+  }, [query]);
 
   const clearQuery = useCallback(() => {
-    setQuery('')
-    setArtistResults([])
-    setArtistPageResults([])
-    setVenueResults([])
-  }, [])
+    setQuery('');
+    setArtistResults([]);
+    setArtistPageResults([]);
+    setVenueResults([]);
+  }, []);
 
   const navigateTo = useCallback(
     (
@@ -255,29 +255,29 @@ export function useSearch() {
       value: string | { slug: string; matchingEventId?: string },
     ) => {
       if (query.trim()) {
-        const updated = addToRecent(query.trim(), recentSearches)
-        setRecentSearches(updated)
-        writeRecent(updated)
+        const updated = addToRecent(query.trim(), recentSearches);
+        setRecentSearches(updated);
+        writeRecent(updated);
       }
 
       if (type === 'artist' && typeof value === 'string') {
-        router.push(`/events?search=${encodeURIComponent(value)}`)
+        router.push(`/events?search=${encodeURIComponent(value)}`);
       } else if (type === 'artistPage' && typeof value === 'object') {
         // The artist's own page — not a filtered browse query.
-        router.push(`/artists/${value.slug}`)
+        router.push(`/artists/${value.slug}`);
       } else if (type === 'venue' && typeof value === 'object') {
         const url = value.matchingEventId
           ? `/venues/${value.slug}?highlight=${value.matchingEventId}`
-          : `/venues/${value.slug}`
-        router.push(url)
+          : `/venues/${value.slug}`;
+        router.push(url);
       }
     },
     [query, recentSearches, router],
-  )
+  );
 
   const venueFirst =
     venueResults.length > 0 &&
-    venueResults.some((venue) => venueMatchesQuery(venue.name, query.trim()))
+    venueResults.some((venue) => venueMatchesQuery(venue.name, query.trim()));
 
   return {
     query,
@@ -291,5 +291,5 @@ export function useSearch() {
     venueFirst,
     isLoading,
     navigateTo,
-  }
+  };
 }

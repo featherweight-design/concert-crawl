@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useMemo, useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
-import type { VenueRobotsStatus } from '@concert-crawl/types'
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import type { VenueRobotsStatus } from '@concert-crawl/types';
 import {
   Panel,
   SectionHead,
@@ -15,37 +15,37 @@ import {
   TH,
   TD,
   RelTime,
-} from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   ROBOTS_STATUS_KIND,
   countRobotsStatuses,
   deriveRobotsStatus,
   safeHostname,
   type RobotsStatusFilter,
-} from '@/lib/admin/robots-audit'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+} from '@/lib/admin/robots-audit';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-const COPY = ADMIN_COPY.robotsAudit
+const COPY = ADMIN_COPY.robotsAudit;
 
 const FILTER_RAIL: ReadonlyArray<RobotsStatusFilter> = [
   'all',
   'allowed',
   'blocked',
   'unchecked',
-]
+];
 
 interface RobotsAuditClientProps {
   // null signals a first-paint load failure — the SSR fetch swallows the error
   // and hands null so the route still renders with a recoverable banner.
-  venues: VenueRobotsStatus[] | null
+  venues: VenueRobotsStatus[] | null;
 }
 
 export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
-  const [filter, setFilter] = useState<RobotsStatusFilter>('all')
+  const [filter, setFilter] = useState<RobotsStatusFilter>('all');
 
-  const rows = useMemo(() => venues ?? [], [venues])
-  const counts = useMemo(() => countRobotsStatuses(rows), [rows])
+  const rows = useMemo(() => venues ?? [], [venues]);
+  const counts = useMemo(() => countRobotsStatuses(rows), [rows]);
 
   const filtered = useMemo(
     () =>
@@ -53,7 +53,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
         ? rows
         : rows.filter((venue) => deriveRobotsStatus(venue) === filter),
     [rows, filter],
-  )
+  );
 
   const backLink = (
     <Link
@@ -72,7 +72,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
       <ArrowLeft size={14} />
       {COPY.page.backButton}
     </Link>
-  )
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -135,7 +135,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
             style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
           >
             {FILTER_RAIL.map((key) => {
-              const active = filter === key
+              const active = filter === key;
               return (
                 <button
                   key={key}
@@ -159,7 +159,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
                 >
                   {COPY.filters[key]}
                 </button>
-              )
+              );
             })}
           </div>
 
@@ -187,7 +187,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
                 </THead>
                 <tbody>
                   {filtered.map((venue) => {
-                    const status = deriveRobotsStatus(venue)
+                    const status = deriveRobotsStatus(venue);
                     return (
                       <TR key={venue.id}>
                         <TD>{venue.name}</TD>
@@ -235,7 +235,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
                           )}
                         </TD>
                       </TR>
-                    )
+                    );
                   })}
                 </tbody>
               </AdminTable>
@@ -244,5 +244,5 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
         </>
       )}
     </div>
-  )
-}
+  );
+};

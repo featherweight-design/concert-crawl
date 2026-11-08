@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { confirmEventReport } from '@/lib/events'
-import { REPORT_TOKENS } from './reportTokens'
-import { REPORTING_COPY } from './definitions/copy'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { confirmEventReport } from '@/lib/events';
+import { REPORT_TOKENS } from './reportTokens';
+import { REPORTING_COPY } from './definitions/copy';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
 
-const copy = REPORTING_COPY.confirmReportSheet
+const copy = REPORTING_COPY.confirmReportSheet;
 
 // ── Glyphs (16×16) ────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ const CancelledGlyph16 = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const PostponedGlyph16 = () => (
   <svg
@@ -54,7 +54,7 @@ const PostponedGlyph16 = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const SoldOutGlyph16 = () => (
   <svg
@@ -79,7 +79,7 @@ const SoldOutGlyph16 = () => (
       strokeLinecap="round"
     />
   </svg>
-)
+);
 
 const AvailableGlyph16 = () => (
   <svg
@@ -103,30 +103,30 @@ const AvailableGlyph16 = () => (
       strokeDasharray="1.2 1.6"
     />
   </svg>
-)
+);
 
-type ConfirmReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available'
+type ConfirmReportType = 'sold-out' | 'cancelled' | 'postponed' | 'available';
 
 const GLYPHS_16: Record<ConfirmReportType, () => React.JSX.Element> = {
   cancelled: CancelledGlyph16,
   postponed: PostponedGlyph16,
   'sold-out': SoldOutGlyph16,
   available: AvailableGlyph16,
-}
+};
 
 // ── Verify option types ───────────────────────────────────────────
 
-type VerifyMethod = 'saw_same_source' | 'own_evidence' | 'heard_from_venue'
+type VerifyMethod = 'saw_same_source' | 'own_evidence' | 'heard_from_venue';
 
 // ── Sub-component: VerifyOption ───────────────────────────────────
 
 interface VerifyOptionProps {
-  method: VerifyMethod
-  label: string
-  description: string
-  isSelected: boolean
-  accentColor: string
-  onSelect: (method: VerifyMethod) => void
+  method: VerifyMethod;
+  label: string;
+  description: string;
+  isSelected: boolean;
+  accentColor: string;
+  onSelect: (method: VerifyMethod) => void;
 }
 
 const VerifyOption = ({
@@ -145,8 +145,8 @@ const VerifyOption = ({
       onClick={() => onSelect(method)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault()
-          onSelect(method)
+          evt.preventDefault();
+          onSelect(method);
         }
       }}
       style={{
@@ -226,21 +226,21 @@ const VerifyOption = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 
 export interface ConfirmReportSheetProps {
-  open: boolean
-  onClose: () => void
-  reportType: ConfirmReportType
-  reporter: { handle: string; url: string } | null
-  reportedAt: string
-  eventId: string
-  reportId: string
-  onSuccess?: () => void
-  onFileCounter: () => void
+  open: boolean;
+  onClose: () => void;
+  reportType: ConfirmReportType;
+  reporter: { handle: string; url: string } | null;
+  reportedAt: string;
+  eventId: string;
+  reportId: string;
+  onSuccess?: () => void;
+  onFileCounter: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────
@@ -258,20 +258,20 @@ export const ConfirmReportSheet = ({
 }: ConfirmReportSheetProps) => {
   const [selectedMethod, setSelectedMethod] = useState<VerifyMethod | null>(
     null,
-  )
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { getToken, isLoaded, isSignedIn } = useAuth()
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { getToken, isLoaded, isSignedIn } = useAuth();
 
-  const token = REPORT_TOKENS[reportType]
-  const Glyph = GLYPHS_16[reportType]
+  const token = REPORT_TOKENS[reportType];
+  const Glyph = GLYPHS_16[reportType];
 
   const attributionText =
-    reporter !== null ? `by ${reporter.handle}` : copy.recapCard.anonymousLabel
+    reporter !== null ? `by ${reporter.handle}` : copy.recapCard.anonymousLabel;
 
   const verifyOptions: Array<{
-    method: VerifyMethod
-    label: string
-    description: string
+    method: VerifyMethod;
+    label: string;
+    description: string;
   }> = [
     {
       method: 'saw_same_source',
@@ -288,24 +288,24 @@ export const ConfirmReportSheet = ({
       label: copy.verifyOptions.heardFromVenue.label,
       description: copy.verifyOptions.heardFromVenue.description,
     },
-  ]
+  ];
 
   const handleConfirm = async () => {
-    if (selectedMethod === null) return
+    if (selectedMethod === null) return;
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      const authToken = await getToken()
-      if (authToken === null) return
-      await confirmEventReport(eventId, reportId, authToken)
-      onSuccess?.()
-      onClose()
+      const authToken = await getToken();
+      if (authToken === null) return;
+      await confirmEventReport(eventId, reportId, authToken);
+      onSuccess?.();
+      onClose();
     } catch (err) {
-      console.error('Failed to confirm report:', err)
+      console.error('Failed to confirm report:', err);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   // Same gate as ReportSheet: signed out, `getToken()` returned null and
   // handleConfirm bailed without telling anyone, so the confirm button looked
@@ -321,7 +321,7 @@ export const ConfirmReportSheet = ({
         scaRegion
         entry="logged-out-report"
       />
-    )
+    );
   }
 
   return (
@@ -399,7 +399,7 @@ export const ConfirmReportSheet = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button
             onClick={() => {
-              void handleConfirm()
+              void handleConfirm();
             }}
             disabled={selectedMethod === null || isSubmitting}
             style={{
@@ -537,5 +537,5 @@ export const ConfirmReportSheet = ({
         </div>
       </div>
     </ModalShell>
-  )
-}
+  );
+};

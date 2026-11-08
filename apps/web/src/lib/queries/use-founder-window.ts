@@ -1,10 +1,10 @@
-'use client'
+'use client';
 
-import { useQuery } from '@tanstack/react-query'
-import type { FounderWindowView } from '@concert-crawl/types'
-import { fetchFounderWindow } from '@/lib/billing'
+import { useQuery } from '@tanstack/react-query';
+import type { FounderWindowView } from '@concert-crawl/types';
+import { fetchFounderWindow } from '@/lib/billing';
 
-export const founderWindowQueryKey = ['founder-window'] as const
+export const founderWindowQueryKey = ['founder-window'] as const;
 
 // The API caches the payload in-process for 10s (eng infra spec Part 2
 // §1.4); polling at that same interval keeps the scarcity rail fresh
@@ -17,7 +17,7 @@ export function useFounderWindow(enabled = true) {
     staleTime: 10_000,
     refetchInterval: 10_000,
     enabled,
-  })
+  });
 
-  return query
+  return query;
 }

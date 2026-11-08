@@ -1,26 +1,26 @@
-'use client'
+'use client';
 
-import { useId } from 'react'
-import type { EventWatchersResponse } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
+import { useId } from 'react';
+import type { EventWatchersResponse } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import {
   CCOverlay,
   CCOverlayHost,
   useOverlayTrigger,
-} from '@/components/ui/cc-overlay'
-import { NAMED_CAP, watchersToParts } from '@/lib/watchers'
-import { WatcherAvatarStack } from './WatcherAvatarStack'
-import { WatchersRoster } from './WatchersRoster'
-import { WatchersSkeleton } from './WatchersSkeleton'
+} from '@/components/ui/cc-overlay';
+import { NAMED_CAP, watchersToParts } from '@/lib/watchers';
+import { WatcherAvatarStack } from './WatcherAvatarStack';
+import { WatchersRoster } from './WatchersRoster';
+import { WatchersSkeleton } from './WatchersSkeleton';
 
 interface WatchersSurfaceProps {
-  data: EventWatchersResponse | undefined
-  loading?: boolean
-  expandable?: boolean
+  data: EventWatchersResponse | undefined;
+  loading?: boolean;
+  expandable?: boolean;
 }
 
-const copy = CONSUMER_COPY.watchers
+const copy = CONSUMER_COPY.watchers;
 
 /**
  * The social-proof row under the Watch button. Renders as prose, not a list:
@@ -36,30 +36,30 @@ export const WatchersSurface = ({
   loading = false,
   expandable = true,
 }: WatchersSurfaceProps) => {
-  const isMobile = useIsMobileViewport()
+  const isMobile = useIsMobileViewport();
   // Only the click transitions are wired up. The hover-intent handlers exist
   // for explainer tips, where a panel that opens under the pointer is a
   // convenience; a roster is content you asked for, and one that appeared on
   // mouse-through would be an accident every time.
-  const trigger = useOverlayTrigger({ isMobile })
-  const panelId = useId()
-  const labelId = useId()
+  const trigger = useOverlayTrigger({ isMobile });
+  const panelId = useId();
+  const labelId = useId();
 
-  if (loading) return <WatchersSkeleton />
-  if (!data || data.total === 0) return null
+  if (loading) return <WatchersSkeleton />;
+  if (!data || data.total === 0) return null;
 
-  const { parts, aria, others, anonOnly, total, shown } = watchersToParts(data)
-  const anonymousCount = total - data.named.length
+  const { parts, aria, others, anonOnly, total, shown } = watchersToParts(data);
+  const anonymousCount = total - data.named.length;
   // When nobody has a handle there is nothing to name, so `others` equals
   // `total` and can't tell us whether the discs already fit — only the disc cap
   // can. Naming at least one watcher makes `others` the real overflow.
-  const canExpand = expandable && (anonOnly ? total > NAMED_CAP : others > 0)
+  const canExpand = expandable && (anonOnly ? total > NAMED_CAP : others > 0);
 
   // Analytics autocapture records every ancestor's attributes with a click,
   // and the "see all" button sits inside this group, so a sentence that names
   // other readers is read from a hidden span autocapture skips rather than
   // from an aria-label. The names on screen are skipped the same way.
-  const namesSomeone = !anonOnly
+  const namesSomeone = !anonOnly;
 
   return (
     <div>
@@ -151,5 +151,5 @@ export const WatchersSurface = ({
         </p>
       )}
     </div>
-  )
-}
+  );
+};

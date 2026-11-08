@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import type { AdminUserDetail } from '@concert-crawl/types'
-import { UserDetailClient } from './UserDetailClient'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import type { AdminUserDetail } from '@concert-crawl/types';
+import { UserDetailClient } from './UserDetailClient';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const COPY = ADMIN_COPY.users.detail
+const COPY = ADMIN_COPY.users.detail;
 
 const baseUser = (
   overrides: Partial<AdminUserDetail> = {},
@@ -49,42 +49,42 @@ const baseUser = (
     },
   ],
   ...overrides,
-})
+});
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 describe('UserDetailClient', () => {
   it('renders identity, stats, feedback, and watchlist for a full user', () => {
-    render(<UserDetailClient user={baseUser()} />)
-    expect(screen.getByText('@targethandle')).toBeTruthy()
-    expect(screen.getByText('target@example.com')).toBeTruthy()
-    expect(screen.getByText('beta')).toBeTruthy()
-    expect(screen.getByText('Something broke')).toBeTruthy()
-    expect(screen.getByText('Night One')).toBeTruthy()
-    expect(screen.getByText('Ogden Theatre')).toBeTruthy()
-    expect(screen.getByText('user_target')).toBeTruthy()
+    render(<UserDetailClient user={baseUser()} />);
+    expect(screen.getByText('@targethandle')).toBeTruthy();
+    expect(screen.getByText('target@example.com')).toBeTruthy();
+    expect(screen.getByText('beta')).toBeTruthy();
+    expect(screen.getByText('Something broke')).toBeTruthy();
+    expect(screen.getByText('Night One')).toBeTruthy();
+    expect(screen.getByText('Ogden Theatre')).toBeTruthy();
+    expect(screen.getByText('user_target')).toBeTruthy();
     // theme + avatarColor are returned by the API and must be surfaced, not
     // silently dropped.
-    expect(screen.getByText('jade')).toBeTruthy()
-    expect(screen.getByText('signal')).toBeTruthy()
-  })
+    expect(screen.getByText('jade')).toBeTruthy();
+    expect(screen.getByText('signal')).toBeTruthy();
+  });
 
   it('hides the appearance line when theme and avatarColor are both null', () => {
     render(
       <UserDetailClient user={baseUser({ theme: null, avatarColor: null })} />,
-    )
-    expect(screen.queryByText(COPY.identity.themePrefix)).toBeNull()
-    expect(screen.queryByText(COPY.identity.avatarPrefix)).toBeNull()
-  })
+    );
+    expect(screen.queryByText(COPY.identity.themePrefix)).toBeNull();
+    expect(screen.queryByText(COPY.identity.avatarPrefix)).toBeNull();
+  });
 
   it('links a feedback item with an issueUrl out to the tracker', () => {
-    render(<UserDetailClient user={baseUser()} />)
-    const issueLink = screen.getByText(COPY.feedback.viewIssue).closest('a')
-    expect(issueLink).toBeTruthy()
+    render(<UserDetailClient user={baseUser()} />);
+    const issueLink = screen.getByText(COPY.feedback.viewIssue).closest('a');
+    expect(issueLink).toBeTruthy();
     expect(issueLink?.getAttribute('href')).toBe(
       'https://github.com/HartiganHM/concert-crawl/issues/1',
-    )
-  })
+    );
+  });
 
   it('does not render the issue link for a non-http(s) issueUrl scheme', () => {
     render(
@@ -103,10 +103,10 @@ describe('UserDetailClient', () => {
           ],
         })}
       />,
-    )
-    expect(screen.getByText('Malicious link')).toBeTruthy()
-    expect(screen.queryByText(COPY.feedback.viewIssue)).toBeNull()
-  })
+    );
+    expect(screen.getByText('Malicious link')).toBeTruthy();
+    expect(screen.queryByText(COPY.feedback.viewIssue)).toBeNull();
+  });
 
   it('shows empty copy when the user has no feedback or watchlist', () => {
     render(
@@ -122,10 +122,10 @@ describe('UserDetailClient', () => {
           },
         })}
       />,
-    )
-    expect(screen.getByText(COPY.feedback.empty)).toBeTruthy()
-    expect(screen.getByText(COPY.watching.empty)).toBeTruthy()
-  })
+    );
+    expect(screen.getByText(COPY.feedback.empty)).toBeTruthy();
+    expect(screen.getByText(COPY.watching.empty)).toBeTruthy();
+  });
 
   it('surfaces the deleted-account note and null-email fallback', () => {
     render(
@@ -139,12 +139,12 @@ describe('UserDetailClient', () => {
           clerkAccountMissing: true,
         })}
       />,
-    )
-    expect(screen.getByText(COPY.identity.deletedNote)).toBeTruthy()
-    expect(screen.getByText(COPY.identity.noEmail)).toBeTruthy()
-    expect(screen.getByText(COPY.identity.noRole)).toBeTruthy()
-    expect(screen.getByText(COPY.identity.unknownJoined)).toBeTruthy()
-  })
+    );
+    expect(screen.getByText(COPY.identity.deletedNote)).toBeTruthy();
+    expect(screen.getByText(COPY.identity.noEmail)).toBeTruthy();
+    expect(screen.getByText(COPY.identity.noRole)).toBeTruthy();
+    expect(screen.getByText(COPY.identity.unknownJoined)).toBeTruthy();
+  });
 
   it('renders the issue_opened feedback status with the danger token, matching the inbox', () => {
     render(
@@ -163,25 +163,25 @@ describe('UserDetailClient', () => {
           ],
         })}
       />,
-    )
-    const badge = screen.getByText('issue_opened')
-    expect(badge.style.color).toBe('var(--danger)')
-  })
+    );
+    const badge = screen.getByText('issue_opened');
+    expect(badge.style.color).toBe('var(--danger)');
+  });
 
   it('hides the deleted-account note for a live Clerk user with no email', () => {
     render(
       <UserDetailClient
         user={baseUser({ email: null, clerkAccountMissing: false })}
       />,
-    )
-    expect(screen.queryByText(COPY.identity.deletedNote)).toBeNull()
-  })
+    );
+    expect(screen.queryByText(COPY.identity.deletedNote)).toBeNull();
+  });
 
   it('renders only the load-error banner when user is null', () => {
-    render(<UserDetailClient user={null} />)
-    expect(screen.getByRole('alert').textContent).toContain(COPY.loadError)
-    expect(screen.queryByText(COPY.feedback.title)).toBeNull()
-  })
+    render(<UserDetailClient user={null} />);
+    expect(screen.getByRole('alert').textContent).toContain(COPY.loadError);
+    expect(screen.queryByText(COPY.feedback.title)).toBeNull();
+  });
 
   it('falls back to the unknown-venue label when venueName is null', () => {
     render(
@@ -200,9 +200,9 @@ describe('UserDetailClient', () => {
           ],
         })}
       />,
-    )
-    expect(screen.getByText(COPY.watching.unknownVenue)).toBeTruthy()
-  })
+    );
+    expect(screen.getByText(COPY.watching.unknownVenue)).toBeTruthy();
+  });
 
   it('renders the attending chip alongside the status chip when a row carries both', () => {
     render(
@@ -221,10 +221,10 @@ describe('UserDetailClient', () => {
           ],
         })}
       />,
-    )
-    expect(screen.getByText('watching')).toBeTruthy()
-    expect(screen.getByText(COPY.watching.attending)).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('watching')).toBeTruthy();
+    expect(screen.getByText(COPY.watching.attending)).toBeTruthy();
+  });
 
   it('renders no status chip for an attending-only row', () => {
     render(
@@ -243,14 +243,14 @@ describe('UserDetailClient', () => {
           ],
         })}
       />,
-    )
-    expect(screen.queryByText('watching')).toBeNull()
-    expect(screen.getByText(COPY.watching.attending)).toBeTruthy()
-  })
+    );
+    expect(screen.queryByText('watching')).toBeNull();
+    expect(screen.getByText(COPY.watching.attending)).toBeTruthy();
+  });
 
   it('renders no attending chip for a watching-only row', () => {
-    render(<UserDetailClient user={baseUser()} />)
-    expect(screen.getByText('watching')).toBeTruthy()
-    expect(screen.queryByText(COPY.watching.attending)).toBeNull()
-  })
-})
+    render(<UserDetailClient user={baseUser()} />);
+    expect(screen.getByText('watching')).toBeTruthy();
+    expect(screen.queryByText(COPY.watching.attending)).toBeNull();
+  });
+});

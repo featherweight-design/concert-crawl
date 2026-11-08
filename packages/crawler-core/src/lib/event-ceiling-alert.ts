@@ -26,14 +26,14 @@
 // Never fails the crawl: this is advisory detection layered on a run that
 // already completed.
 
-import { and, desc, eq, ne } from 'drizzle-orm'
-import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
-import { reportFailure } from '@concert-crawl/logger'
+import { and, desc, eq, ne } from 'drizzle-orm';
+import { db, crawlRuns, notifications, venues } from '@concert-crawl/db';
+import { reportFailure } from '@concert-crawl/logger';
 import {
   CEILING_HISTORY_RUN_COUNT,
   evaluateCeilingCondition,
-} from './triage-conditions.js'
-import type { CeilingConditionKind as CeilingKind } from './triage-conditions.js'
+} from './triage-conditions.js';
+import type { CeilingConditionKind as CeilingKind } from './triage-conditions.js';
 
 // Thresholds and both detections live in triage-conditions.ts so the admin
 // triage read path (#1215) and this write path can never drift. Kept as
@@ -44,41 +44,41 @@ export {
   HORIZON_SHRINK_DAYS,
   PINNED_RUN_COUNT,
   PINNED_MIN_COUNT,
-} from './triage-conditions.js'
+} from './triage-conditions.js';
 
 // Mirrors ALERT_COOLDOWN_DAYS in event-count-alert.ts. Cleared on a healthy
 // run, so a venue that recovers and re-caps alerts again instead of staying
 // silenced for the rest of the window (the #1174 lesson).
-export const CEILING_ALERT_COOLDOWN_DAYS = 7
+export const CEILING_ALERT_COOLDOWN_DAYS = 7;
 
-export type { CeilingConditionKind as CeilingKind } from './triage-conditions.js'
+export type { CeilingConditionKind as CeilingKind } from './triage-conditions.js';
 
 export interface EventCeilingAlertInput {
-  venueId: string
-  venueName: string
-  crawlRunId: string
+  venueId: string;
+  venueName: string;
+  crawlRunId: string;
   /** Raw extractor output for this run — what the pinned-count check compares. */
-  eventsFound: number
+  eventsFound: number;
   /** Rows that survived the downstream guards. Gates the check; see runCheck. */
-  eventsUsable: number
+  eventsUsable: number;
   /** Latest date among this run's usable events, 'YYYY-MM-DD', or null. */
-  furthestEventDate: string | null
+  furthestEventDate: string | null;
   /** venues.last_event_ceiling_alert_at as of the start of this run. */
-  lastEventCeilingAlertAt: Date | null
+  lastEventCeilingAlertAt: Date | null;
   /** Override for tests; defaults to new Date(). */
-  now?: Date
+  now?: Date;
 }
 
 export type CeilingOutcome =
   | {
-      fired: false
-      reason: 'not_healthy' | 'cold_start' | 'cooldown' | 'no_ceiling'
+      fired: false;
+      reason: 'not_healthy' | 'cold_start' | 'cooldown' | 'no_ceiling';
     }
   | {
-      fired: true
-      kind: CeilingKind
-      detail: string
-    }
+      fired: true;
+      kind: CeilingKind;
+      detail: string;
+    };
 
 /**
  * Check whether the just-completed crawl looks capped and, if so, insert an
@@ -92,7 +92,7 @@ export async function checkEventCeiling(
   input: EventCeilingAlertInput,
 ): Promise<CeilingOutcome> {
   try {
-    return await runCheck(input)
+    return await runCheck(input);
   } catch (err) {
     reportFailure({
       event: 'crawl.event_ceiling_alert.error',
@@ -100,22 +100,22 @@ export async function checkEventCeiling(
       venueId: input.venueId,
       crawlRunId: input.crawlRunId,
       error: err instanceof Error ? err.message : String(err),
-    })
-    return { fired: false, reason: 'no_ceiling' }
+    });
+    return { fired: false, reason: 'no_ceiling' };
   }
 }
 
 async function runCheck(
   input: EventCeilingAlertInput,
 ): Promise<CeilingOutcome> {
-  const now = input.now ?? new Date()
+  const now = input.now ?? new Date();
 
   // A run that kept nothing is a went-dark incident, not a ceiling.
   // event-count-alert.ts owns that case; classifying it here too would
   // double-notify for one regression, and a zero-event run has no horizon
   // reading to compare anyway.
   if (input.eventsUsable === 0) {
-    return { fired: false, reason: 'not_healthy' }
+    return { fired: false, reason: 'not_healthy' };
   }
 
   // Excluding 'skipped' matters for both detections: a page-hash dedup skip
@@ -136,16 +136,16 @@ async function runCheck(
       ),
     )
     .orderBy(desc(crawlRuns.createdAt))
-    .limit(CEILING_HISTORY_RUN_COUNT)
+    .limit(CEILING_HISTORY_RUN_COUNT);
 
   const detected = evaluateCeilingCondition({
     eventsFound: input.eventsFound,
     furthestEventDate: input.furthestEventDate,
     recent,
-  })
+  });
 
   if (!detected.detected && detected.reason === 'cold_start') {
-    return { fired: false, reason: 'cold_start' }
+    return { fired: false, reason: 'cold_start' };
   }
 
   if (!detected.detected) {
@@ -164,15 +164,15 @@ async function runCheck(
             eq(venues.id, input.venueId),
             eq(venues.lastEventCeilingAlertAt, input.lastEventCeilingAlertAt),
           ),
-        )
+        );
     }
-    return { fired: false, reason: 'no_ceiling' }
+    return { fired: false, reason: 'no_ceiling' };
   }
 
   if (input.lastEventCeilingAlertAt) {
-    const cooldownMs = CEILING_ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
+    const cooldownMs = CEILING_ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
     if (now.getTime() - input.lastEventCeilingAlertAt.getTime() < cooldownMs) {
-      return { fired: false, reason: 'cooldown' }
+      return { fired: false, reason: 'cooldown' };
     }
   }
 
@@ -193,13 +193,13 @@ async function runCheck(
         eventsFound: input.eventsFound,
         furthestEventDate: input.furthestEventDate,
       }),
-    })
+    });
 
     await tx
       .update(venues)
       .set({ lastEventCeilingAlertAt: now, updatedAt: now })
-      .where(eq(venues.id, input.venueId))
-  })
+      .where(eq(venues.id, input.venueId));
+  });
 
-  return { fired: true, kind: detected.condition, detail: detected.body }
+  return { fired: true, kind: detected.condition, detail: detected.body };
 }

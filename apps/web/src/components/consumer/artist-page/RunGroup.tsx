@@ -1,21 +1,21 @@
-import type { ArtistShow } from '@concert-crawl/types'
-import Link from 'next/link'
-import React from 'react'
+import type { ArtistShow } from '@concert-crawl/types';
+import Link from 'next/link';
+import React from 'react';
 
-import { StatusPill } from '@/components/consumer/StatusPill'
-import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
+import { StatusPill } from '@/components/consumer/StatusPill';
+import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton';
 
-import { AP_PILL_FONT_SIZE } from './definitions/constants'
-import { ARTIST_COPY } from './definitions/copy'
-import { fmtDate } from './DateStamp'
-import { PriceChip } from './PriceChip'
+import { AP_PILL_FONT_SIZE } from './definitions/constants';
+import { ARTIST_COPY } from './definitions/copy';
+import { fmtDate } from './DateStamp';
+import { PriceChip } from './PriceChip';
 
 interface RunGroupProps {
-  venue: string
-  city: string | null
-  shows: ArtistShow[]
+  venue: string;
+  city: string | null;
+  shows: ArtistShow[];
   /** Headliner name — only used to build the Watch control's signed-out name. */
-  artist: string
+  artist: string;
 }
 
 /** A residency reads as one booking with several nights, not several bookings. */
@@ -77,7 +77,7 @@ export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
     ) : null}
     <div style={{ marginTop: 8 }}>
       {shows.map((show) => {
-        const { dow, mon, day } = fmtDate(show.iso)
+        const { dow, mon, day } = fmtDate(show.iso);
         return (
           // Each night is its own booking, so each night gets its own Watch —
           // beside the link, never inside it.
@@ -132,8 +132,8 @@ export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
             </Link>
             <WatchShowButton eventId={show.eventId} artist={artist} />
           </div>
-        )
+        );
       })}
     </div>
   </div>
-)
+);

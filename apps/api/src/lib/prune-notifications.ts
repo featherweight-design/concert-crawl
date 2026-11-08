@@ -8,19 +8,19 @@
 //
 // `admin_alert` rows are deliberately untouched — they are operator history
 // with a different lifecycle and no fan-out multiplier.
-import { and, eq, lt } from 'drizzle-orm'
-import { notifications } from '@concert-crawl/db'
-import type { Database } from '@concert-crawl/db'
-import { apiLogger } from './logger.js'
-import { NOTIFICATION_RETENTION_DAYS } from './definitions/notification-windows.js'
+import { and, eq, lt } from 'drizzle-orm';
+import { notifications } from '@concert-crawl/db';
+import type { Database } from '@concert-crawl/db';
+import { apiLogger } from './logger.js';
+import { NOTIFICATION_RETENTION_DAYS } from './definitions/notification-windows.js';
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const pruneNotifications = async (
   database: Database,
   now: Date = new Date(),
 ): Promise<{ deleted: number }> => {
-  const cutoff = new Date(now.getTime() - NOTIFICATION_RETENTION_DAYS * DAY_MS)
+  const cutoff = new Date(now.getTime() - NOTIFICATION_RETENTION_DAYS * DAY_MS);
   // No `.returning()`: the driver's affected-row count is all this job needs,
   // and materializing one row per deletion would make the cron's memory scale
   // with a backlog it is specifically there to clear.
@@ -31,8 +31,8 @@ export const pruneNotifications = async (
         eq(notifications.type, 'user_notification'),
         lt(notifications.createdAt, cutoff),
       ),
-    )
-  const deletedCount = result.count
+    );
+  const deletedCount = result.count;
 
   apiLogger.info(
     {
@@ -40,7 +40,7 @@ export const pruneNotifications = async (
       retentionDays: NOTIFICATION_RETENTION_DAYS,
     },
     'prune-notifications: deleted user notifications past the retention window',
-  )
+  );
 
-  return { deleted: deletedCount }
-}
+  return { deleted: deletedCount };
+};

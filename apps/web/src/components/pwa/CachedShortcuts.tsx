@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import type { CachedEvent, CachedVenue } from '@/lib/pwa/cached-content'
-import { OFFLINE_COPY } from './definitions/copy'
+import Link from 'next/link';
+import type { CachedEvent, CachedVenue } from '@/lib/pwa/cached-content';
+import { OFFLINE_COPY } from './definitions/copy';
 
 interface CachedShortcutsProps {
-  events: CachedEvent[]
-  venues: CachedVenue[]
+  events: CachedEvent[];
+  venues: CachedVenue[];
 }
 
-const MAX_EVENTS = 6
-const MAX_VENUES = 6
+const MAX_EVENTS = 6;
+const MAX_VENUES = 6;
 
 const formatEventLine = (event: CachedEvent): string => {
   // "The Roxy · Aug 14" — venue name + short date; keeps the shortcut card
@@ -19,19 +19,19 @@ const formatEventLine = (event: CachedEvent): string => {
   // Append a midday time when the value is a bare date so `new Date` doesn't
   // treat it as UTC midnight and display the previous day in Mountain time.
   // (Match the pattern used in AdminReviewMobile.tsx:176.)
-  const raw = event.date.includes('T') ? event.date : `${event.date}T12:00:00`
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return event.venue.name
+  const raw = event.date.includes('T') ? event.date : `${event.date}T12:00:00`;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return event.venue.name;
   const short = date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-  })
-  return `${event.venue.name} · ${short}`
-}
+  });
+  return `${event.venue.name} · ${short}`;
+};
 
 export const CachedShortcuts = ({ events, venues }: CachedShortcutsProps) => {
-  const eventItems = events.slice(0, MAX_EVENTS)
-  const venueItems = venues.slice(0, MAX_VENUES)
+  const eventItems = events.slice(0, MAX_EVENTS);
+  const venueItems = venues.slice(0, MAX_VENUES);
 
   return (
     <section className="flex flex-col gap-4">
@@ -78,8 +78,8 @@ export const CachedShortcuts = ({ events, venues }: CachedShortcutsProps) => {
       )}
       <p className="text-xs text-fg-subtle">{OFFLINE_COPY.fallback.authNote}</p>
     </section>
-  )
-}
+  );
+};
 
 export const CachedEmpty = () => (
   <section className="flex flex-col gap-3 text-center">
@@ -94,4 +94,4 @@ export const CachedEmpty = () => (
       {OFFLINE_COPY.fallback.empty.link}
     </Link>
   </section>
-)
+);

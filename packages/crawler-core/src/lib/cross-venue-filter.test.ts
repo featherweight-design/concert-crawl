@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   detectCrossVenuePresale,
   normalizeVenueName,
   type CrossVenueCandidate,
-} from './cross-venue-filter.js'
+} from './cross-venue-filter.js';
 
 // Mirrors the actual seed shapes in packages/db/seed.ts so the tests catch
 // real-world cases (titles often drop suffixes — "AT RED ROCKS" vs seed
@@ -39,7 +39,7 @@ const CANDIDATES: CrossVenueCandidate[] = [
     slug: 'summit-music-hall',
     name: 'Summit Music Hall',
   },
-]
+];
 
 describe('detectCrossVenuePresale', () => {
   it('matches "AT OGDEN THEATRE" in an all-caps title', () => {
@@ -48,15 +48,15 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
     expect(result).toEqual({
       matchedVenueId: 'venue-ogden',
       matchedVenueSlug: 'ogden-theatre',
       matchedVenueName: 'Ogden Theatre',
       reason: 'known-venue',
-    })
-  })
+    });
+  });
 
   it('matches case-insensitively ("at ogden theatre")', () => {
     const result = detectCrossVenuePresale({
@@ -64,10 +64,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueId).toBe('venue-ogden')
-  })
+    expect(result?.matchedVenueId).toBe('venue-ogden');
+  });
 
   it('matches the "@" variant ("@ Ogden Theatre")', () => {
     const result = detectCrossVenuePresale({
@@ -75,10 +75,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueId).toBe('venue-ogden')
-  })
+    expect(result?.matchedVenueId).toBe('venue-ogden');
+  });
 
   it('matches mixed case venue name in marker ("AT Ogden Theatre")', () => {
     const result = detectCrossVenuePresale({
@@ -86,10 +86,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueId).toBe('venue-ogden')
-  })
+    expect(result?.matchedVenueId).toBe('venue-ogden');
+  });
 
   it('handles trailing whitespace after the venue name', () => {
     const result = detectCrossVenuePresale({
@@ -97,10 +97,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueId).toBe('venue-ogden')
-  })
+    expect(result?.matchedVenueId).toBe('venue-ogden');
+  });
 
   it('does NOT match when the marker text is not a known venue ("Live At Last")', () => {
     const result = detectCrossVenuePresale({
@@ -108,10 +108,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result).toBeNull()
-  })
+    expect(result).toBeNull();
+  });
 
   it('does NOT match "@ home" when "home" is not a known venue', () => {
     const result = detectCrossVenuePresale({
@@ -119,10 +119,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result).toBeNull()
-  })
+    expect(result).toBeNull();
+  });
 
   it('does NOT match when the marker names the source venue itself (self-venue)', () => {
     // Cervantes' own page lists a show "AT CERVANTES MASTERPIECE BALLROOM" —
@@ -132,10 +132,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result).toBeNull()
-  })
+    expect(result).toBeNull();
+  });
 
   it('does NOT match when the title has no AT/@ marker', () => {
     const result = detectCrossVenuePresale({
@@ -143,10 +143,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result).toBeNull()
-  })
+    expect(result).toBeNull();
+  });
 
   it('returns null when candidate list is empty', () => {
     const result = detectCrossVenuePresale({
@@ -154,10 +154,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: [],
-    })
+    });
 
-    expect(result).toBeNull()
-  })
+    expect(result).toBeNull();
+  });
 
   it('matches the Bluebird as a different venue', () => {
     const result = detectCrossVenuePresale({
@@ -165,10 +165,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueSlug).toBe('bluebird-theater')
-  })
+    expect(result?.matchedVenueSlug).toBe('bluebird-theater');
+  });
 
   it('matches when marker text contains the venue name plus trailing qualifier', () => {
     // Some venues append room/level: "AT OGDEN THEATRE BALCONY"
@@ -177,10 +177,10 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    })
+    });
 
-    expect(result?.matchedVenueId).toBe('venue-ogden')
-  })
+    expect(result?.matchedVenueId).toBe('venue-ogden');
+  });
 
   describe('shortened-name matching (venue suffix + "The" stripping)', () => {
     it('matches "AT RED ROCKS" against seed "Red Rocks Amphitheatre"', () => {
@@ -189,10 +189,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result?.matchedVenueSlug).toBe('red-rocks-amphitheatre')
-    })
+      expect(result?.matchedVenueSlug).toBe('red-rocks-amphitheatre');
+    });
 
     it('matches "AT OGDEN" against seed "Ogden Theatre"', () => {
       const result = detectCrossVenuePresale({
@@ -200,10 +200,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result?.matchedVenueSlug).toBe('ogden-theatre')
-    })
+      expect(result?.matchedVenueSlug).toBe('ogden-theatre');
+    });
 
     it('matches "AT FILLMORE" against seed "The Fillmore Auditorium" (strips both "The" and "Auditorium")', () => {
       const result = detectCrossVenuePresale({
@@ -211,10 +211,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result?.matchedVenueSlug).toBe('fillmore-auditorium')
-    })
+      expect(result?.matchedVenueSlug).toBe('fillmore-auditorium');
+    });
 
     it('matches "AT THE FILLMORE" against seed "The Fillmore Auditorium"', () => {
       const result = detectCrossVenuePresale({
@@ -222,10 +222,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result?.matchedVenueSlug).toBe('fillmore-auditorium')
-    })
+      expect(result?.matchedVenueSlug).toBe('fillmore-auditorium');
+    });
 
     it('matches "AT SUMMIT MUSIC" against seed "Summit Music Hall"', () => {
       // Shortened by suffix only — "AT SUMMIT" alone is too ambiguous and
@@ -236,10 +236,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result?.matchedVenueSlug).toBe('summit-music-hall')
-    })
+      expect(result?.matchedVenueSlug).toBe('summit-music-hall');
+    });
 
     it('does NOT spuriously match a non-venue word after suffix stripping ("AT LAST")', () => {
       // "Live At Last" extracted → "Last". Normalized → "Last". No candidate
@@ -249,10 +249,10 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     it('still respects self-venue when the match is shortened', () => {
       // Cervantes' page lists "AT CERVANTES'" — shortened. Still self-venue.
@@ -261,11 +261,11 @@ describe('detectCrossVenuePresale', () => {
         sourceVenueId: 'venue-cervantes',
         sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
-      })
+      });
 
-      expect(result).toBeNull()
-    })
-  })
+      expect(result).toBeNull();
+    });
+  });
 
   describe('ticket-URL corroboration for venues we do not crawl (#1286)', () => {
     // Etix encodes the host venue in the purchase link, after the slugified
@@ -275,7 +275,7 @@ describe('detectCrossVenuePresale', () => {
       sourceVenueId: 'venue-cervantes',
       sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
-    }
+    };
 
     it('ignores the ?cobrand= query param, which names the SELLING venue on every link', () => {
       const result = detectCrossVenuePresale({
@@ -283,10 +283,10 @@ describe('detectCrossVenuePresale', () => {
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl:
           'https://www.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep?cobrand=Cervantes&partner_id=100',
-      })
+      });
 
-      expect(result?.reason).toBe('ticket-url')
-    })
+      expect(result?.reason).toBe('ticket-url');
+    });
 
     it('skips a show at an un-crawled venue when the ticket URL agrees', () => {
       const result = detectCrossVenuePresale({
@@ -294,15 +294,15 @@ describe('detectCrossVenuePresale', () => {
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl:
           'https://www.etix.com/ticket/p/53930568/brother-ali-at-the-black-sheep-denver-the-black-sheep?cobrand=Cervantes',
-      })
+      });
 
       expect(result).toEqual({
         matchedVenueId: null,
         matchedVenueSlug: null,
         matchedVenueName: 'THE BLACK SHEEP',
         reason: 'ticket-url',
-      })
-    })
+      });
+    });
 
     it('skips an out-of-town park with no venue suffix in its name', () => {
       const result = detectCrossVenuePresale({
@@ -310,10 +310,10 @@ describe('detectCrossVenuePresale', () => {
         title: 'Terrapin Roadshow AT TWO RIVERS PARK, GLENWOOD SPRINGS',
         ticketUrl:
           'https://www.etix.com/ticket/p/58446797/terrapin-roadshow-at-two-rivers-parkglenwood-springs-denver-two-rivers-park?cobrand=Cervantes',
-      })
+      });
 
-      expect(result?.reason).toBe('ticket-url')
-    })
+      expect(result?.reason).toBe('ticket-url');
+    });
 
     it('does NOT skip a legitimate show whose title merely contains "At"', () => {
       // Real prod listing. The marker regex fires on "At Best World Tour", but
@@ -323,10 +323,10 @@ describe('detectCrossVenuePresale', () => {
         title: 'Brenn! Amateur At Best World Tour',
         ticketUrl:
           'https://www.etix.com/ticket/p/35599410/brenn-denver-cervantesmasterpiece-ballroom-and-cervantes-other-side?cobrand=Cervantes',
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     it('does NOT skip a second-room listing (Etix slugifies it as "cervantesother-side")', () => {
       const result = detectCrossVenuePresale({
@@ -334,30 +334,30 @@ describe('detectCrossVenuePresale', () => {
         title: 'Some Band At Sundown',
         ticketUrl:
           'https://www.etix.com/ticket/p/38246630/some-band-at-sundown-denver-cervantesother-side?cobrand=Cervantes',
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     it('does NOT skip when there is no ticket URL to corroborate the marker', () => {
       const result = detectCrossVenuePresale({
         ...CERVANTES,
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl: null,
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     it('does NOT skip when the marker itself names the source venue', () => {
       const result = detectCrossVenuePresale({
         ...CERVANTES,
         title: "Band AT CERVANTES' OTHER SIDE",
         ticketUrl: 'https://tickets.example.com/p/12345/band-denver',
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     // Vendors that encode only the CITY corroborate nothing. Requiring a
     // positive marker hit in the URL — rather than merely the ABSENCE of the
@@ -397,11 +397,11 @@ describe('detectCrossVenuePresale', () => {
           sourceVenueName,
           ticketUrl,
           candidates: CANDIDATES,
-        })
+        });
 
-        expect(result).toBeNull()
+        expect(result).toBeNull();
       },
-    )
+    );
 
     it.each([
       ['a relative href', '/ticket/p/1/brother-ali-denver-the-black-sheep'],
@@ -418,10 +418,10 @@ describe('detectCrossVenuePresale', () => {
         ...CERVANTES,
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl,
-      })
+      });
 
-      expect(result?.reason).toBe('ticket-url')
-    })
+      expect(result?.reason).toBe('ticket-url');
+    });
 
     it('ignores the host, so a source-venue subdomain does not veto the skip', () => {
       // Etix serves Cervantes under a branded host. Only the path names the
@@ -431,10 +431,10 @@ describe('detectCrossVenuePresale', () => {
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl:
           '//cervantes.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep',
-      })
+      });
 
-      expect(result?.reason).toBe('ticket-url')
-    })
+      expect(result?.reason).toBe('ticket-url');
+    });
 
     it.each([
       ['a malformed URL', 'https://'],
@@ -445,10 +445,10 @@ describe('detectCrossVenuePresale', () => {
         ...CERVANTES,
         title: 'Brother Ali AT THE BLACK SHEEP',
         ticketUrl,
-      })
+      });
 
-      expect(result).toBeNull()
-    })
+      expect(result).toBeNull();
+    });
 
     it('prefers a known-venue match over URL corroboration', () => {
       const result = detectCrossVenuePresale({
@@ -456,11 +456,11 @@ describe('detectCrossVenuePresale', () => {
         title: 'Headliner AT OGDEN THEATRE',
         ticketUrl:
           'https://www.etix.com/ticket/p/1/headliner-denver-ogden-theatre',
-      })
+      });
 
-      expect(result?.reason).toBe('known-venue')
-      expect(result?.matchedVenueId).toBe('venue-ogden')
-    })
+      expect(result?.reason).toBe('known-venue');
+      expect(result?.matchedVenueId).toBe('venue-ogden');
+    });
 
     it('does NOT skip when the source venue name is too short to be a reliable token', () => {
       // A one-to-three character first word would hit incidental substrings, so
@@ -472,39 +472,39 @@ describe('detectCrossVenuePresale', () => {
         title: 'Artist AT THE BLACK SHEEP',
         ticketUrl:
           'https://www.etix.com/ticket/p/1/artist-denver-the-black-sheep',
-      })
+      });
 
-      expect(result).toBeNull()
-    })
-  })
+      expect(result).toBeNull();
+    });
+  });
 
   describe('normalizeVenueName helper', () => {
     it('strips trailing venue suffixes', () => {
-      expect(normalizeVenueName('Red Rocks Amphitheatre')).toBe('red rocks')
-      expect(normalizeVenueName('Ogden Theatre')).toBe('ogden')
-      expect(normalizeVenueName('Bluebird Theater')).toBe('bluebird')
-      expect(normalizeVenueName('Mission Ballroom')).toBe('mission')
-      expect(normalizeVenueName('Summit Music Hall')).toBe('summit music')
-    })
+      expect(normalizeVenueName('Red Rocks Amphitheatre')).toBe('red rocks');
+      expect(normalizeVenueName('Ogden Theatre')).toBe('ogden');
+      expect(normalizeVenueName('Bluebird Theater')).toBe('bluebird');
+      expect(normalizeVenueName('Mission Ballroom')).toBe('mission');
+      expect(normalizeVenueName('Summit Music Hall')).toBe('summit music');
+    });
 
     it('strips leading "The "', () => {
-      expect(normalizeVenueName('The Fillmore Auditorium')).toBe('fillmore')
-    })
+      expect(normalizeVenueName('The Fillmore Auditorium')).toBe('fillmore');
+    });
 
     it('leaves a venue with no suffix unchanged', () => {
-      expect(normalizeVenueName('Hi-Dive')).toBe('hi-dive')
-    })
+      expect(normalizeVenueName('Hi-Dive')).toBe('hi-dive');
+    });
 
     it('handles already-lowercase + already-trimmed input', () => {
-      expect(normalizeVenueName('ogden theatre')).toBe('ogden')
-    })
+      expect(normalizeVenueName('ogden theatre')).toBe('ogden');
+    });
 
     it('does NOT strip a suffix appearing mid-name (only trailing)', () => {
       // Defensive: a name like "Theatre Walk" (fictional) keeps "Theatre".
-      expect(normalizeVenueName('Theatre Walk')).toBe('theatre walk')
-    })
-  })
-})
+      expect(normalizeVenueName('Theatre Walk')).toBe('theatre walk');
+    });
+  });
+});
 
 // #1338 — Cervantes' feed serves entity-encoded headlines. An encoded
 // apostrophe in the "AT <venue>" marker defeats every comparison form the
@@ -513,9 +513,9 @@ describe('detectCrossVenuePresale', () => {
 // pin both halves of that contract.
 describe('detectCrossVenuePresale — entity-encoded markers', () => {
   const encoded =
-    'Sublime &amp; Slightly Stoopid AT CERVANTES&#8217; MASTERPIECE BALLROOM'
+    'Sublime &amp; Slightly Stoopid AT CERVANTES&#8217; MASTERPIECE BALLROOM';
   const decoded =
-    'Sublime & Slightly Stoopid AT CERVANTES’ MASTERPIECE BALLROOM'
+    'Sublime & Slightly Stoopid AT CERVANTES’ MASTERPIECE BALLROOM';
 
   it('does not match while the marker is still entity-encoded', () => {
     expect(
@@ -525,8 +525,8 @@ describe('detectCrossVenuePresale — entity-encoded markers', () => {
         sourceVenueName: 'Ogden Theatre',
         candidates: CANDIDATES,
       }),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('matches once the marker has been decoded', () => {
     expect(
@@ -541,6 +541,6 @@ describe('detectCrossVenuePresale — entity-encoded markers', () => {
       matchedVenueSlug: 'cervantes-masterpiece-ballroom',
       matchedVenueName: "Cervantes' Masterpiece Ballroom",
       reason: 'known-venue',
-    })
-  })
-})
+    });
+  });
+});

@@ -30,20 +30,20 @@
  * writes.
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, isNotNull, isNull } from 'drizzle-orm'
-import { db, events } from '@concert-crawl/db'
-import { planSupportingBackfill } from './2026-07-18-spotify-schema-backfill-helpers.js'
+import { pathToFileURL } from 'node:url';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { db, events } from '@concert-crawl/db';
+import { planSupportingBackfill } from './2026-07-18-spotify-schema-backfill-helpers.js';
 
 export interface BackfillSummary {
-  rowsScanned: number
-  updatesPlanned: number
-  rowsUpdated: number
-  committed: boolean
+  rowsScanned: number;
+  updatesPlanned: number;
+  rowsUpdated: number;
+  committed: boolean;
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<BackfillSummary> {
   // 1. Select the un-backfilled rows: supporting_artists written by the
   //    crawler, canonical_supporting never populated.
@@ -59,31 +59,31 @@ export async function runBackfill(opts: {
         isNotNull(events.supportingArtists),
         isNull(events.canonicalSupporting),
       ),
-    )
+    );
 
   // 2. Plan via the pure helper.
-  const updates = planSupportingBackfill(rows)
+  const updates = planSupportingBackfill(rows);
 
   console.log(
     `Scanned ${rows.length} events with supporting_artists and NULL canonical_supporting; ${updates.length} updates planned.`,
-  )
+  );
 
   // Per-row operator log (dry-run and --commit alike).
   const supportingById = new Map(
     rows.map((row) => [row.id, row.supportingArtists]),
-  )
+  );
   for (const update of updates) {
     console.log(
       `---\nid                  = ${update.id}\nsupportingArtists   = ${JSON.stringify(supportingById.get(update.id))}\ncanonicalSupporting = ${JSON.stringify(update.canonicalSupporting)}`,
-    )
+    );
   }
 
   if (updates.length === 0 || !opts.commit) {
     if (!opts.commit) {
-      console.log('---')
+      console.log('---');
       console.log(
         'Dry-run mode — no rows written. Re-run with --commit to apply.',
-      )
+      );
     }
     return {
       rowsScanned: rows.length,
@@ -92,54 +92,54 @@ export async function runBackfill(opts: {
       // Sibling-script convention: committed reflects commit-mode
       // invocation, not whether any rows changed.
       committed: opts.commit,
-    }
+    };
   }
 
   // 3. --commit path: per-row updates keyed by primary key, with an
   //    optimistic IS NULL re-check so a crawler write landing between the
   //    scan and this update is never clobbered.
-  let updatedCount = 0
+  let updatedCount = 0;
   for (const update of updates) {
     const updated = await db
       .update(events)
       .set({ canonicalSupporting: update.canonicalSupporting })
       .where(and(eq(events.id, update.id), isNull(events.canonicalSupporting)))
-      .returning({ id: events.id })
+      .returning({ id: events.id });
     if (updated.length > 0) {
-      updatedCount += 1
+      updatedCount += 1;
     } else {
       console.log(
         `Skipped ${update.id} — canonical_supporting written since scan`,
-      )
+      );
     }
   }
 
-  console.log('---')
-  console.log(`Committed. Updated ${updatedCount} rows.`)
+  console.log('---');
+  console.log(`Committed. Updated ${updatedCount} rows.`);
 
   return {
     rowsScanned: rows.length,
     updatesPlanned: updates.length,
     rowsUpdated: updatedCount,
     committed: true,
-  }
+  };
 }
 
 // CLI entrypoint guard so the module can be imported by a test without
 // auto-running — same shape as the sibling scripts.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Suggestions for the onboarding artists step.
 //
@@ -7,14 +7,14 @@
 // mounted inside the step would fire twice for one screen. Hoisting it also
 // means the two trees can never disagree about what is on offer.
 
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
-import { formatShortDate } from '@/components/consumer/definitions/lib'
-import { fetchArtistSuggestions } from '@/lib/following'
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import { formatShortDate } from '@/components/consumer/definitions/lib';
+import { fetchArtistSuggestions } from '@/lib/following';
 import {
   PICK_SUGGESTION_LIMIT,
   type PickArtist,
-} from '@/components/consumer/artist-picker'
+} from '@/components/consumer/artist-picker';
 
 /**
  * Suggestions as picker tiles, minus anyone already followed: the tile has one
@@ -30,17 +30,17 @@ export function useOnboardingSuggestions(
   genres: readonly string[],
   enabled: boolean,
 ): {
-  artists: PickArtist[]
-  loading: boolean
-  loaded: boolean
-  errored: boolean
+  artists: PickArtist[];
+  loading: boolean;
+  loaded: boolean;
+  errored: boolean;
   /** Re-runs the read. The error state's only offer, so it has to be real. */
-  retry: () => void
+  retry: () => void;
 } {
   // The genre set is part of the key, so re-picking on the step before this
   // one refetches rather than showing the previous lane's artists.
-  const sorted = Array.from(genres).sort()
-  const { getToken } = useAuth()
+  const sorted = Array.from(genres).sort();
+  const { getToken } = useAuth();
   const query = useQuery({
     queryKey: ['onboarding', 'artist-suggestions', sorted],
     queryFn: async () => {
@@ -48,16 +48,16 @@ export function useOnboardingSuggestions(
       // public client on a null token, and that read answers `following: null`
       // on every row, so the exclusion below would pass everything through and
       // the step would offer tiles the commit cannot change.
-      const token = await getToken()
-      if (token === null) throw new Error('onboarding suggestions: no token')
-      return fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted, token)
+      const token = await getToken();
+      if (token === null) throw new Error('onboarding suggestions: no token');
+      return fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted, token);
     },
     enabled,
     // The tour is a single sitting; refetching mid-step would swap tiles out
     // from under a half-made selection.
     staleTime: Infinity,
     retry: 1,
-  })
+  });
 
   const artists = (query.data ?? [])
     .filter((suggestion) => suggestion.following !== true)
@@ -66,7 +66,7 @@ export function useOnboardingSuggestions(
       name: suggestion.name,
       photoUrl: suggestion.photoUrl,
       dateLabel: formatShortDate(suggestion.nextShow.iso),
-    }))
+    }));
 
   // `loaded` is not `!loading`. A failed fetch is also not-loading, and it
   // hands back the same empty array a genuinely empty result does — so a caller
@@ -85,7 +85,7 @@ export function useOnboardingSuggestions(
     // an invalidation marks the entry stale without anyone asking for it
     // again, so the button would report success and change nothing.
     retry: () => {
-      void query.refetch()
+      void query.refetch();
     },
-  }
+  };
 }

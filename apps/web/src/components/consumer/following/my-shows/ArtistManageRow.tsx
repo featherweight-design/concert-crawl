@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One followed artist on My shows ▸ Artists.
 //
@@ -20,32 +20,32 @@
 // the desktop grid is two-up rather than the handoff's three-up: it needs the
 // width.
 
-import Link from 'next/link'
-import { Panel } from '@/components/consumer/image-slot'
-import { FollowDateLine } from '@/components/consumer/following/FollowDateLine'
-import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
-import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import { followDateLine } from '@/lib/following'
-import type { FollowedArtist } from '@concert-crawl/types'
-import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
+import Link from 'next/link';
+import { Panel } from '@/components/consumer/image-slot';
+import { FollowDateLine } from '@/components/consumer/following/FollowDateLine';
+import { FollowButton } from '@/components/consumer/artist-page/FollowButton';
+import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import { followDateLine } from '@/lib/following';
+import type { FollowedArtist } from '@concert-crawl/types';
+import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy';
 import {
   CARD_ART_SIZE,
   ROW_ART_SIZE,
   ROW_ART_SIZE_NARROW,
-} from './definitions/constants'
-import { SourceMark } from './SourceMark'
+} from './definitions/constants';
+import { SourceMark } from './SourceMark';
 
-const COPY = MY_SHOWS_ARTISTS_COPY
+const COPY = MY_SHOWS_ARTISTS_COPY;
 
 export interface ArtistManageRowProps {
-  artist: FollowedArtist
+  artist: FollowedArtist;
   /** `row` is mobile, `card` is the desktop grid cell. */
-  variant?: 'row' | 'card'
+  variant?: 'row' | 'card';
   /** 320px: the row has no width for the word "Following". */
-  narrow?: boolean
+  narrow?: boolean;
   /** The API answered 403 — open the tier picker. */
-  onEntitlementRequired: () => void
+  onEntitlementRequired: () => void;
 }
 
 export const ArtistManageRow = ({
@@ -57,15 +57,23 @@ export const ArtistManageRow = ({
   // Hooks run unconditionally. A slug-less follow (a Spotify act never billed
   // in Denver) simply never renders the control that would call `toggle` —
   // the follow endpoint is keyed by slug, so there is nothing to call.
-  const follow = useArtistFollow(artist.slug ?? '', true, onEntitlementRequired)
+  const follow = useArtistFollow(
+    artist.slug ?? '',
+    true,
+    onEntitlementRequired,
+  );
   // The follows endpoint is deliberately ungated — a user must be able to
   // manage a list they already have — so `source` keeps arriving with the flag
   // off. Naming Spotify is the part that has to stop, not the row.
-  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync');
 
-  const card = variant === 'card'
-  const art = card ? CARD_ART_SIZE : narrow ? ROW_ART_SIZE_NARROW : ROW_ART_SIZE
-  const dateLine = followDateLine(artist.nextShow)
+  const card = variant === 'card';
+  const art = card
+    ? CARD_ART_SIZE
+    : narrow
+      ? ROW_ART_SIZE_NARROW
+      : ROW_ART_SIZE;
+  const dateLine = followDateLine(artist.nextShow);
 
   return (
     <div
@@ -168,5 +176,5 @@ export const ArtistManageRow = ({
         />
       )}
     </div>
-  )
-}
+  );
+};

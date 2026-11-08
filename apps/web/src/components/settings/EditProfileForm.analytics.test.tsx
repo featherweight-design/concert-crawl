@@ -1,35 +1,35 @@
 // @vitest-environment jsdom
-import '@testing-library/jest-dom'
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import '@testing-library/jest-dom';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   render,
   screen,
   cleanup,
   fireEvent,
   waitFor,
-} from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import type { UserProfileResponse } from '@concert-crawl/types'
+} from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { UserProfileResponse } from '@concert-crawl/types';
 
-const { mockPatchMe } = vi.hoisted(() => ({ mockPatchMe: vi.fn() }))
+const { mockPatchMe } = vi.hoisted(() => ({ mockPatchMe: vi.fn() }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
-}))
+}));
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({
     getToken: () => Promise.resolve('token'),
     userId: 'user_1',
   }),
-}))
+}));
 vi.mock('@/lib/users', () => ({
   patchMe: mockPatchMe,
   checkHandleAvailability: vi.fn(),
-}))
+}));
 
-import { EditProfileForm } from './EditProfileForm'
-import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { EditProfileForm } from './EditProfileForm';
+import { analyticsHandleQueryKey } from '@/lib/analytics/PostHogProvider';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 const PROFILE: UserProfileResponse = {
   id: 'user_1',
@@ -56,64 +56,64 @@ const PROFILE: UserProfileResponse = {
   showDayThirteenBanner: false,
   showPastDueBanner: false,
   founderWindow: { state: 'pre-launch', seatsTotal: 100, closesAt: null },
-}
+};
 
 describe('EditProfileForm and the analytics name', () => {
-  afterEach(cleanup)
+  afterEach(cleanup);
 
   it('hands a cleared handle to the analytics provider after a save', async () => {
-    mockPatchMe.mockResolvedValue(undefined)
-    const client = new QueryClient()
-    client.setQueryData(analyticsHandleQueryKey('user_1'), 'adal')
+    mockPatchMe.mockResolvedValue(undefined);
+    const client = new QueryClient();
+    client.setQueryData(analyticsHandleQueryKey('user_1'), 'adal');
     render(
       <QueryClientProvider client={client}>
         <EditProfileForm profile={PROFILE} onClose={vi.fn()} />
       </QueryClientProvider>,
-    )
+    );
     fireEvent.change(
       screen.getByLabelText(CONSUMER_COPY.settings.handleLabel),
       { target: { value: '' } },
-    )
+    );
     fireEvent.click(
       screen.getByRole('button', {
         name: CONSUMER_COPY.settings.editSaveButton,
       }),
-    )
-    await waitFor(() => expect(mockPatchMe).toHaveBeenCalledTimes(1))
+    );
+    await waitFor(() => expect(mockPatchMe).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(client.getQueryData(analyticsHandleQueryKey('user_1'))).toBeNull(),
-    )
-  })
+    );
+  });
 
   it('does not let a profile read sent before the save restore the old handle', async () => {
-    mockPatchMe.mockResolvedValue(undefined)
-    const client = new QueryClient()
-    const key = analyticsHandleQueryKey('user_1')
-    let answerLateRead: (handle: string) => void = () => {}
+    mockPatchMe.mockResolvedValue(undefined);
+    const client = new QueryClient();
+    const key = analyticsHandleQueryKey('user_1');
+    let answerLateRead: (handle: string) => void = () => {};
     void client.prefetchQuery({
       queryKey: key,
       queryFn: () =>
         new Promise<string>((resolve) => {
-          answerLateRead = resolve
+          answerLateRead = resolve;
         }),
-    })
+    });
     render(
       <QueryClientProvider client={client}>
         <EditProfileForm profile={PROFILE} onClose={vi.fn()} />
       </QueryClientProvider>,
-    )
+    );
     fireEvent.change(
       screen.getByLabelText(CONSUMER_COPY.settings.handleLabel),
       { target: { value: '' } },
-    )
+    );
     fireEvent.click(
       screen.getByRole('button', {
         name: CONSUMER_COPY.settings.editSaveButton,
       }),
-    )
-    await waitFor(() => expect(client.getQueryData(key)).toBeNull())
-    answerLateRead('adal')
-    await new Promise((resolve) => setTimeout(resolve, 0))
-    expect(client.getQueryData(key)).toBeNull()
-  })
-})
+    );
+    await waitFor(() => expect(client.getQueryData(key)).toBeNull());
+    answerLateRead('adal');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(client.getQueryData(key)).toBeNull();
+  });
+});

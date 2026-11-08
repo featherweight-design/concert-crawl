@@ -1,14 +1,14 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import * as LucideIcons from 'lucide-react'
-import { NAV_V2 } from './nav'
-import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
+import * as LucideIcons from 'lucide-react';
+import { NAV_V2 } from './nav';
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface MobileBottomBarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number }
+  badgeCounts?: { crawl: number; review: number; feedback: number };
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -17,29 +17,29 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 const getCount = (
   key: string,
   counts?: { crawl: number; review: number; feedback: number },
 ): number => {
-  if (!counts) return 0
-  if (key === 'crawl') return counts.crawl
-  if (key === 'review') return counts.review
-  if (key === 'feedback') return counts.feedback
-  return 0
-}
+  if (!counts) return 0;
+  if (key === 'crawl') return counts.crawl;
+  if (key === 'review') return counts.review;
+  if (key === 'feedback') return counts.feedback;
+  return 0;
+};
 
 export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   // Review-parented sub-pages (e.g. the event editor) drop a `?from=<tab>`
   // param on the URL so the Review tab we surface here matches the tab the
   // admin came from (#1083). No signal → plain `/admin/review`.
-  const reviewHref = reviewHrefFromParam(searchParams?.get('from'))
-  const tabItems = NAV_V2.filter((item) => item.section === 'operations')
+  const reviewHref = reviewHrefFromParam(searchParams?.get('from'));
+  const tabItems = NAV_V2.filter((item) => item.section === 'operations');
 
   return (
     <nav
@@ -62,11 +62,11 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
       {tabItems.map((item) => {
         const active =
           pathname === item.href ||
-          (item.href !== '/admin' && pathname.startsWith(item.href))
-        const count = getCount(item.key, badgeCounts)
-        const showBadge = item.badge !== undefined && count > 0
+          (item.href !== '/admin' && pathname.startsWith(item.href));
+        const count = getCount(item.key, badgeCounts);
+        const showBadge = item.badge !== undefined && count > 0;
 
-        const href = item.key === 'review' ? reviewHref : item.href
+        const href = item.key === 'review' ? reviewHref : item.href;
         return (
           <Link
             key={item.key}
@@ -126,8 +126,8 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
               {item.label}
             </span>
           </Link>
-        )
+        );
       })}
     </nav>
-  )
-}
+  );
+};

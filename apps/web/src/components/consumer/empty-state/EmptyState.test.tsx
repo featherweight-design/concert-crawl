@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { EmptyState } from './EmptyState'
+import React from 'react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { EmptyState } from './EmptyState';
 
 // Next.js Link renders as <a> in tests
 vi.mock('next/link', () => ({
@@ -12,15 +12,15 @@ vi.mock('next/link', () => ({
     children,
     style,
   }: {
-    href: string
-    children: React.ReactNode
-    style?: React.CSSProperties
+    href: string;
+    children: React.ReactNode;
+    style?: React.CSSProperties;
   }) => (
     <a href={href} style={style}>
       {children}
     </a>
   ),
-}))
+}));
 
 describe('EmptyState', () => {
   it('renders eyebrow, title, and body', () => {
@@ -30,30 +30,30 @@ describe('EmptyState', () => {
         title="No shows tonight, grandpa."
         body="Slow night on the calendar."
       />,
-    )
-    expect(screen.getByText('Tonight')).toBeTruthy()
-    expect(screen.getByText('No shows tonight, grandpa.')).toBeTruthy()
-    expect(screen.getByText('Slow night on the calendar.')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('Tonight')).toBeTruthy();
+    expect(screen.getByText('No shows tonight, grandpa.')).toBeTruthy();
+    expect(screen.getByText('Slow night on the calendar.')).toBeTruthy();
+  });
 
   it('omits the eyebrow but keeps the rail when none is passed', () => {
     // The rail is dot + [eyebrow] + rule + right-hand label, so its child
     // count is what proves the eyebrow node is absent rather than empty.
     const withEyebrow = render(
       <EmptyState eyebrow="Tonight" title="No shows" body="Nothing here." />,
-    )
-    const railWith = withEyebrow.container.firstElementChild?.firstElementChild
-    expect(railWith?.children.length).toBe(4)
-    withEyebrow.unmount()
+    );
+    const railWith = withEyebrow.container.firstElementChild?.firstElementChild;
+    expect(railWith?.children.length).toBe(4);
+    withEyebrow.unmount();
 
     const { container } = render(
       <EmptyState title="No shows" body="Nothing here." />,
-    )
-    const rail = container.firstElementChild?.firstElementChild
-    expect(rail?.children.length).toBe(3)
-    expect(screen.queryByText('Tonight')).toBeNull()
-    expect(screen.getByText('0 / 0')).toBeTruthy()
-  })
+    );
+    const rail = container.firstElementChild?.firstElementChild;
+    expect(rail?.children.length).toBe(3);
+    expect(screen.queryByText('Tonight')).toBeNull();
+    expect(screen.getByText('0 / 0')).toBeTruthy();
+  });
 
   it('renders rail-right as "0 / 0" for no-data state', () => {
     render(
@@ -63,9 +63,9 @@ describe('EmptyState', () => {
         title="No shows"
         body="Nothing here."
       />,
-    )
-    expect(screen.getByText('0 / 0')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('0 / 0')).toBeTruthy();
+  });
 
   it('renders rail-right as "0 hits" for filtered state', () => {
     render(
@@ -75,9 +75,9 @@ describe('EmptyState', () => {
         title="Crickets."
         body="Try widening your filters."
       />,
-    )
-    expect(screen.getByText('0 hits')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('0 hits')).toBeTruthy();
+  });
 
   it('renders rail-right as "err" for error state', () => {
     render(
@@ -87,9 +87,9 @@ describe('EmptyState', () => {
         title="Signal lost."
         body="Try again."
       />,
-    )
-    expect(screen.getByText('err')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('err')).toBeTruthy();
+  });
 
   it('renders primaryCta as Link', () => {
     render(
@@ -99,10 +99,10 @@ describe('EmptyState', () => {
         body="Nothing saved."
         primaryCta={{ label: 'Browse tonight', href: '/events' }}
       />,
-    )
-    const link = screen.getByRole('link', { name: 'Browse tonight' })
-    expect(link.getAttribute('href')).toBe('/events')
-  })
+    );
+    const link = screen.getByRole('link', { name: 'Browse tonight' });
+    expect(link.getAttribute('href')).toBe('/events');
+  });
 
   it('renders secondaryCta as Link', () => {
     render(
@@ -112,10 +112,10 @@ describe('EmptyState', () => {
         body="Try widening."
         secondaryCta={{ label: 'Clear filters', href: '/events' }}
       />,
-    )
-    const link = screen.getByRole('link', { name: 'Clear filters' })
-    expect(link.getAttribute('href')).toBe('/events')
-  })
+    );
+    const link = screen.getByRole('link', { name: 'Clear filters' });
+    expect(link.getAttribute('href')).toBe('/events');
+  });
 
   it('renders no links when no CTAs are given', () => {
     render(
@@ -124,9 +124,9 @@ describe('EmptyState', () => {
         title="Type something."
         body="Artist or venue."
       />,
-    )
-    expect(screen.queryByRole('link')).toBeNull()
-  })
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+  });
 
   it('applies className to wrapper', () => {
     const { container } = render(
@@ -136,10 +136,10 @@ describe('EmptyState', () => {
         body="Test"
         className="test-class"
       />,
-    )
-    expect(container.firstChild).toBeTruthy()
+    );
+    expect(container.firstChild).toBeTruthy();
     expect(
       (container.firstChild as HTMLElement).classList.contains('test-class'),
-    ).toBe(true)
-  })
-})
+    ).toBe(true);
+  });
+});

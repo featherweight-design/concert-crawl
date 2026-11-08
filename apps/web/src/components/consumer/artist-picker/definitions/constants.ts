@@ -11,10 +11,10 @@
  * "nothing gets lost". `session`, not `local`: a selection is a thing you are
  * in the middle of, not a preference.
  */
-export const ARTIST_PICKS_KEY = 'cc.onboarding.artistPicks'
+export const ARTIST_PICKS_KEY = 'cc.onboarding.artistPicks';
 
 /** Same mirror, for the genre step that feeds the suggestions query. */
-export const GENRE_PICKS_KEY = 'cc.onboarding.genrePicks'
+export const GENRE_PICKS_KEY = 'cc.onboarding.genrePicks';
 
 /**
  * Which picks came from SEARCH rather than from the suggestion grid.
@@ -27,34 +27,34 @@ export const GENRE_PICKS_KEY = 'cc.onboarding.genrePicks'
  * Mirrored rather than held in state alone for the same reason the picks are:
  * a redirect-based payment method unmounts this tree and comes back.
  */
-export const SEARCH_PICKS_KEY = 'cc.onboarding.searchPicks'
+export const SEARCH_PICKS_KEY = 'cc.onboarding.searchPicks';
 
 // Mobile is ALWAYS two-up, 320 through the desktop breakpoint — never one, or
 // a 320px screen shows two artists and a scroll. Desktop's card is wide enough
 // for five.
-export const PICK_COLUMNS_MOBILE = 2
-export const PICK_COLUMNS_DESKTOP = 5
+export const PICK_COLUMNS_MOBILE = 2;
+export const PICK_COLUMNS_DESKTOP = 5;
 
 /**
  * How many suggestions the step asks for. Matches the API's default, so the
  * grid fills five desktop columns evenly and lands on six mobile rows.
  */
-export const PICK_SUGGESTION_LIMIT = 12
+export const PICK_SUGGESTION_LIMIT = 12;
 
 /** Placeholder tiles while the suggestions land, so the grid never flashes empty. */
-export const PICK_SKELETON_COUNT = 6
+export const PICK_SKELETON_COUNT = 6;
 
 /**
  * The field debounce, matched to the one `/search` uses so the tour's field
  * feels like the app's field rather than a second search with its own rhythm.
  */
-export const SEARCH_DEBOUNCE_MS = 300
+export const SEARCH_DEBOUNCE_MS = 300;
 
 /**
  * Below this the endpoint 400s, so asking is a wasted round trip and a
  * misleading "nobody by that name". Same floor the route validates against.
  */
-export const SEARCH_MIN_QUERY = 2
+export const SEARCH_MIN_QUERY = 2;
 
 /**
  * Skeleton rows while a query is in flight — a count, not a spinner, so the
@@ -65,7 +65,7 @@ export const SEARCH_MIN_QUERY = 2
  * contracted by a row's height — the exact jump this constant exists to
  * prevent, caused by the constant itself.
  */
-export const SEARCH_SKELETON_COUNT = 3
+export const SEARCH_SKELETON_COUNT = 3;
 
 /** Faces in the picked strip before it stops drawing them and counts instead. */
-export const PICKED_STRIP_FACES = 6
+export const PICKED_STRIP_FACES = 6;

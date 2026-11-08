@@ -1,11 +1,11 @@
-import type { PlanState, UserPlan } from '@concert-crawl/types'
+import type { PlanState, UserPlan } from '@concert-crawl/types';
 
 export {
   derivePlanState,
   isGiftLive,
   LIVE_STATUSES,
   type PlanDerivationInput,
-} from './plan-state.js'
+} from './plan-state.js';
 
 export {
   FEATURE_FLAGS,
@@ -17,7 +17,7 @@ export {
   type FeatureFlagDefinition,
   type FeatureFlagKey,
   type FeatureFlagView,
-} from './feature-flags.js'
+} from './feature-flags.js';
 
 export type PremiumFeature =
   | 'watching'
@@ -27,10 +27,10 @@ export type PremiumFeature =
   | 'alerts'
   | 'spotify-sync'
   | 'price-drop-alerts'
-  | 'crews'
+  | 'crews';
 
 export type EntitlementCell =
-  'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden'
+  'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden';
 
 export const PREMIUM_FEATURES: readonly PremiumFeature[] = [
   'watching',
@@ -41,7 +41,7 @@ export const PREMIUM_FEATURES: readonly PremiumFeature[] = [
   'spotify-sync',
   'price-drop-alerts',
   'crews',
-]
+];
 
 export const USER_PLANS: readonly UserPlan[] = [
   'logged-out',
@@ -50,7 +50,7 @@ export const USER_PLANS: readonly UserPlan[] = [
   'premium',
   'founder',
   'gifted',
-]
+];
 
 // Canonical encoding of #781 §6, as amended by:
 //   - R6 Watching-is-Free (watching is visible-active for every signed-in tier)
@@ -137,11 +137,11 @@ export const ENTITLEMENTS_MATRIX: Record<
     founder: 'visible-active',
     gifted: 'visible-active',
   },
-}
+};
 
 // Callers with only the serialized session payload can gate without the
 // full PlanState.
-export type PlanStateLike = Pick<PlanState, 'plan' | 'roleComped'>
+export type PlanStateLike = Pick<PlanState, 'plan' | 'roleComped'>;
 
 // Boolean entitlement — the only function servers use to gate writes.
 export const canUseFeature = (
@@ -149,7 +149,7 @@ export const canUseFeature = (
   feature: PremiumFeature,
 ): boolean =>
   state.roleComped ||
-  ENTITLEMENTS_MATRIX[feature][state.plan] === 'visible-active'
+  ENTITLEMENTS_MATRIX[feature][state.plan] === 'visible-active';
 
 // The follow affordance's gate, in one place. Every surface that renders a
 // Follow control asks this and nothing else.
@@ -167,7 +167,7 @@ export const canUseFeature = (
 // tier picker. nfLocked is for render paths that already hold a plan state and
 // would otherwise re-query.
 export const nfLocked = (state: PlanStateLike): boolean =>
-  !canUseFeature(state, 'following')
+  !canUseFeature(state, 'following');
 
 // UX routing for the false case — what the renderer shows on locked taps.
 // roleComped short-circuits to 'visible-active' so callers that skip the
@@ -176,4 +176,6 @@ export const lockedSurface = (
   state: PlanStateLike,
   feature: PremiumFeature,
 ): EntitlementCell =>
-  state.roleComped ? 'visible-active' : ENTITLEMENTS_MATRIX[feature][state.plan]
+  state.roleComped
+    ? 'visible-active'
+    : ENTITLEMENTS_MATRIX[feature][state.plan];

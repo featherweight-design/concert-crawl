@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
@@ -12,7 +12,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 // Expand-only (eng infra spec Part 1 §1): 'supporter' + 'founder' appended.
 // The vestigial `subscriptions.founder` boolean is superseded by
@@ -22,7 +22,7 @@ export const subscriptionTierEnum = pgEnum('subscription_tier', [
   'premium',
   'supporter',
   'founder',
-])
+]);
 
 // Expand-only (spec §1): mirrors the Stripe subscription statuses we consume.
 // Stripe `canceled` maps to 'cancelled'; unexpected statuses (`unpaid`,
@@ -34,7 +34,7 @@ export const subscriptionStatusEnum = pgEnum('subscription_status', [
   'trialing',
   'incomplete',
   'incomplete_expired',
-])
+]);
 
 // Audit event types for subscription_events (spec §5) — exactly 16 values.
 export const subscriptionEventTypeEnum = pgEnum('subscription_event_type', [
@@ -54,7 +54,7 @@ export const subscriptionEventTypeEnum = pgEnum('subscription_event_type', [
   'gift_granted',
   'gift_revoked',
   'data_purged',
-])
+]);
 
 // The 11 #783 transactional email template keys (eng infra spec Part 2 §4.4),
 // plus the #763 spotify_digest weekly digest key (Spotify sync eng spec §8.2).
@@ -72,9 +72,9 @@ export const EMAIL_TEMPLATE_KEYS = [
   'gifting_ending_notice',
   'winback',
   'spotify_digest',
-] as const
+] as const;
 
-export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number]
+export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number];
 
 export const subscriptions = pgTable(
   'subscriptions',
@@ -113,7 +113,7 @@ export const subscriptions = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
 // Billing-adjacent user state that must exist without a subscription row
 // (spec §3, Decision 13) — one row per user, lazily upserted.
@@ -144,7 +144,7 @@ export const userBilling = pgTable('user_billing', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 // Founder window singleton (spec §4). Seeded with id = 1, opens_at = NULL;
 // flipping opens_at is a HARD PAUSE / Hugh-only action.
@@ -174,7 +174,7 @@ export const founderWindow = pgTable(
       sql`seats_remaining >= 0`,
     ),
   }),
-)
+);
 
 // Append-only audit trail for every subscription state change (spec §5).
 export const subscriptionEvents = pgTable(
@@ -195,7 +195,7 @@ export const subscriptionEvents = pgTable(
   (table) => ({
     userIdIdx: index('subscription_events_user_id_idx').on(table.userId),
   }),
-)
+);
 
 // Webhook idempotency (spec §6): INSERT … ON CONFLICT DO NOTHING on the
 // Stripe event ID; handler runs only when the insert lands. Rows older than
@@ -206,7 +206,7 @@ export const processedStripeEvents = pgTable('processed_stripe_events', {
   processedAt: timestamp('processed_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 // Source of truth for gifted Premium (spec §7, Decision 10). Clerk
 // publicMetadata.plan = 'premium_gifted' remains the JWT-fast mirror;
@@ -233,7 +233,7 @@ export const giftedComps = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
 // Transactional-send idempotency + audit (spec §8; behavior in Part 2 §4).
 export const emailSendLog = pgTable(
@@ -256,7 +256,7 @@ export const emailSendLog = pgTable(
       'email_send_log_template_dedupe_unique_idx',
     ).on(table.templateKey, table.dedupeKey),
   }),
-)
+);
 
 // Per-template kill switch (spec §8) — disabled templates log 'suppressed'
 // sends. Seeded with every EMAIL_TEMPLATE_KEYS entry, enabled.
@@ -266,7 +266,7 @@ export const emailTemplateConfig = pgTable('email_template_config', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
 export const costTracking = pgTable('cost_tracking', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -277,4 +277,4 @@ export const costTracking = pgTable('cost_tracking', {
     .notNull()
     .defaultNow(),
   metadata: text('metadata'), // JSON string for flexibility
-})
+});

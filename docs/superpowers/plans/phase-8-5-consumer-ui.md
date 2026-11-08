@@ -11,6 +11,7 @@ Branch: feat/phase-8-5-consumer-ui
 ## Context
 
 PR #569 (merged 2026-05-26) delivered the DB + API layer:
+
 - `POST /v1/events/:id/price-submissions/:submissionId/confirm` (with method enum)
 - `POST /v1/events/:id/reports` / `GET` / `POST .../confirm` / `DELETE` (withdraw)
 - `PATCH /v1/admin/events/reports/:reportId/resolve`
@@ -22,7 +23,9 @@ Consumer UI builds on top of these endpoints. All components live in
 Key integration file: `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx`
 
 ### API shape notes (actual vs design README)
+
 The design README uses schema field names that differ slightly from what was built:
+
 - Design `evidenceType` values ("email", "social", etc.) → API `evidenceMethod` values ("bought_myself", "saw_listing", "venue_site", "other")
 - Design has separate `kind` + `status` fields → API uses `status` for the report type ("sold-out", "cancelled", "postponed")
 - Design mentions `corroborationCount` on `eventReports` → not in current migration; omit for now

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   safeParseNotificationList,
   isNotificationCategory,
@@ -7,8 +7,8 @@ import {
   markAllNotificationsRead,
   markPanelSeen,
   NOTIFICATION_PAGE_SIZE,
-} from './notifications'
-import { ApiError } from './api'
+} from './notifications';
+import { ApiError } from './api';
 
 const row = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -19,7 +19,7 @@ const row = {
   readAt: null,
   createdAt: '2026-07-24T18:35:00.000Z',
   metadata: { eventId: 'e1' },
-}
+};
 
 const payload = {
   items: [row],
@@ -27,18 +27,18 @@ const payload = {
   hasMore: false,
   nextCursor: null,
   seenAt: null,
-}
+};
 
 describe('safeParseNotificationList', () => {
   it('accepts the shipped response shape', () => {
-    const result = safeParseNotificationList(payload)
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.items).toHaveLength(1)
-    expect(result.data.items[0]?.metadata).toEqual({ eventId: 'e1' })
-    expect(result.data.unreadCount).toBe(1)
-    expect(result.data.seenAt).toBeNull()
-  })
+    const result = safeParseNotificationList(payload);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.items).toHaveLength(1);
+    expect(result.data.items[0]?.metadata).toEqual({ eventId: 'e1' });
+    expect(result.data.unreadCount).toBe(1);
+    expect(result.data.seenAt).toBeNull();
+  });
 
   it.each([
     ['https://evil.example/steal', 'an absolute cross-origin URL'],
@@ -51,26 +51,26 @@ describe('safeParseNotificationList', () => {
       const result = safeParseNotificationList({
         ...payload,
         items: [{ ...row, actionUrl }],
-      })
-      expect(result.success).toBe(true)
-      if (!result.success) return
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) return;
       // The row still renders — it just does not navigate.
-      expect(result.data.items).toHaveLength(1)
-      expect(result.data.items[0]?.actionUrl).toBeNull()
+      expect(result.data.items).toHaveLength(1);
+      expect(result.data.items[0]?.actionUrl).toBeNull();
     },
-  )
+  );
 
   it('keeps a same-origin path with a query string intact', () => {
     const result = safeParseNotificationList({
       ...payload,
       items: [{ ...row, actionUrl: '/events/e1?from=notifications' }],
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
     expect(result.data.items[0]?.actionUrl).toBe(
       '/events/e1?from=notifications',
-    )
-  })
+    );
+  });
 
   it('accepts a null actionUrl, a null metadata and an ISO readAt', () => {
     const result = safeParseNotificationList({
@@ -83,36 +83,36 @@ describe('safeParseNotificationList', () => {
           readAt: '2026-07-24T19:00:00.000Z',
         },
       ],
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.items[0]?.actionUrl).toBeNull()
-    expect(result.data.items[0]?.metadata).toBeNull()
-    expect(result.data.items[0]?.readAt).toBe('2026-07-24T19:00:00.000Z')
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.items[0]?.actionUrl).toBeNull();
+    expect(result.data.items[0]?.metadata).toBeNull();
+    expect(result.data.items[0]?.readAt).toBe('2026-07-24T19:00:00.000Z');
+  });
 
   it('keeps an unknown category as a raw string rather than dropping the row', () => {
     const result = safeParseNotificationList({
       ...payload,
       items: [{ ...row, category: 'venue.went_dark' }],
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.items[0]?.category).toBe('venue.went_dark')
-    expect(isNotificationCategory('venue.went_dark')).toBe(false)
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.items[0]?.category).toBe('venue.went_dark');
+    expect(isNotificationCategory('venue.went_dark')).toBe(false);
+  });
 
   it('keeps duplicate rows with distinct ids — the writers are not exactly-once', () => {
     const result = safeParseNotificationList({
       ...payload,
       items: [row, { ...row, id: '22222222-2222-4222-8222-222222222222' }],
       unreadCount: 2,
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.items).toHaveLength(2)
-    expect(result.data.items[0]?.id).not.toBe(result.data.items[1]?.id)
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.items).toHaveLength(2);
+    expect(result.data.items[0]?.id).not.toBe(result.data.items[1]?.id);
+  });
 
   it('drops hasMore when nextCursor is null, so paging cannot loop', () => {
     // null is also the first-page param, so honouring this contradiction would
@@ -121,12 +121,12 @@ describe('safeParseNotificationList', () => {
       ...payload,
       hasMore: true,
       nextCursor: null,
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.hasMore).toBe(false)
-    expect(result.data.items).toHaveLength(1)
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.hasMore).toBe(false);
+    expect(result.data.items).toHaveLength(1);
+  });
 
   it('normalises an empty-string nextCursor to null, so paging cannot loop', () => {
     // Same hazard as null in a different type: every truthiness check
@@ -135,26 +135,26 @@ describe('safeParseNotificationList', () => {
       ...payload,
       hasMore: true,
       nextCursor: '',
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.nextCursor).toBeNull()
-    expect(result.data.hasMore).toBe(false)
-    expect(result.data.items).toHaveLength(1)
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.nextCursor).toBeNull();
+    expect(result.data.hasMore).toBe(false);
+    expect(result.data.items).toHaveLength(1);
+  });
 
   it('skips one malformed row rather than blanking the whole panel', () => {
     const result = safeParseNotificationList({
       ...payload,
       items: [row, { ...row, id: undefined }, { ...row, id: 'keep-me' }],
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
     expect(result.data.items.map((each) => each.id)).toEqual([
       row.id,
       'keep-me',
-    ])
-  })
+    ]);
+  });
 
   it('rejects a payload whose rows ALL fail, rather than showing "All quiet."', () => {
     // Not one bad record — a broken contract. Rendering the empty state over
@@ -165,21 +165,21 @@ describe('safeParseNotificationList', () => {
         { ...row, id: undefined },
         { ...row, title: 7 },
       ],
-    })
-    expect(result.success).toBe(false)
-  })
+    });
+    expect(result.success).toBe(false);
+  });
 
   it('carries an opaque nextCursor through verbatim', () => {
-    const cursor = 'MjAyNi0wOC0wMSAxMjowMDowMCswMHxhYmM'
+    const cursor = 'MjAyNi0wOC0wMSAxMjowMDowMCswMHxhYmM';
     const result = safeParseNotificationList({
       ...payload,
       hasMore: true,
       nextCursor: cursor,
-    })
-    expect(result.success).toBe(true)
-    if (!result.success) return
-    expect(result.data.nextCursor).toBe(cursor)
-  })
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.nextCursor).toBe(cursor);
+  });
 
   it.each([
     ['a non-object payload', null],
@@ -218,9 +218,9 @@ describe('safeParseNotificationList', () => {
       { ...payload, items: [{ ...row, metadata: [1, 2] }] },
     ],
   ])('rejects %s', (_label, value) => {
-    expect(safeParseNotificationList(value).success).toBe(false)
-  })
-})
+    expect(safeParseNotificationList(value).success).toBe(false);
+  });
+});
 
 const okResponse = (data: unknown) =>
   Promise.resolve(
@@ -228,93 +228,93 @@ const okResponse = (data: unknown) =>
       status: 200,
       headers: { 'content-type': 'application/json' },
     }),
-  )
+  );
 
 afterEach(() => {
-  vi.unstubAllGlobals()
-})
+  vi.unstubAllGlobals();
+});
 
 describe('fetchNotifications', () => {
   it('requests the shipped page size and no cursor on the first page', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse(payload),
-    )
-    vi.stubGlobal('fetch', fetchMock)
+    );
+    vi.stubGlobal('fetch', fetchMock);
 
-    const result = await fetchNotifications('tok')
+    const result = await fetchNotifications('tok');
 
-    expect(result.items).toHaveLength(1)
-    const [url] = fetchMock.mock.calls[0] ?? []
+    expect(result.items).toHaveLength(1);
+    const [url] = fetchMock.mock.calls[0] ?? [];
     expect(String(url)).toContain(
       `/v1/notifications?limit=${NOTIFICATION_PAGE_SIZE}`,
-    )
-    expect(String(url)).not.toContain('cursor=')
-  })
+    );
+    expect(String(url)).not.toContain('cursor=');
+  });
 
   it('sends an empty cursor rather than silently refetching page 1', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse(payload),
-    )
-    vi.stubGlobal('fetch', fetchMock)
+    );
+    vi.stubGlobal('fetch', fetchMock);
 
-    await fetchNotifications('tok', '')
+    await fetchNotifications('tok', '');
 
-    const [url] = fetchMock.mock.calls[0] ?? []
-    expect(String(url)).toContain('cursor=')
-  })
+    const [url] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toContain('cursor=');
+  });
 
   it('echoes the opaque cursor back verbatim, url-encoded', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse(payload),
-    )
-    vi.stubGlobal('fetch', fetchMock)
+    );
+    vi.stubGlobal('fetch', fetchMock);
 
-    await fetchNotifications('tok', 'abc+/=def')
+    await fetchNotifications('tok', 'abc+/=def');
 
-    const [url] = fetchMock.mock.calls[0] ?? []
-    expect(String(url)).toContain(`cursor=${encodeURIComponent('abc+/=def')}`)
-  })
+    const [url] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toContain(`cursor=${encodeURIComponent('abc+/=def')}`);
+  });
 
   it('throws an ApiError when the payload does not match the contract', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => okResponse({ items: 'nope' })),
-    )
-    await expect(fetchNotifications('tok')).rejects.toBeInstanceOf(ApiError)
-  })
-})
+    );
+    await expect(fetchNotifications('tok')).rejects.toBeInstanceOf(ApiError);
+  });
+});
 
 describe('the write endpoints', () => {
   it('marks one notification read with a POST', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse(null),
-    )
-    vi.stubGlobal('fetch', fetchMock)
+    );
+    vi.stubGlobal('fetch', fetchMock);
 
-    await markNotificationRead('tok', 'abc-123')
+    await markNotificationRead('tok', 'abc-123');
 
-    const [url, init] = fetchMock.mock.calls[0] ?? []
-    expect(String(url)).toContain('/v1/notifications/abc-123/read')
-    expect(init).toMatchObject({ method: 'POST' })
-  })
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toContain('/v1/notifications/abc-123/read');
+    expect(init).toMatchObject({ method: 'POST' });
+  });
 
   it('returns the updated count from read-all', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => okResponse({ updated: 4 })),
-    )
-    await expect(markAllNotificationsRead('tok')).resolves.toBe(4)
-  })
+    );
+    await expect(markAllNotificationsRead('tok')).resolves.toBe(4);
+  });
 
   it('throws an ApiError when read-all returns an unusable count', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => okResponse({ updated: 'four' })),
-    )
+    );
     await expect(markAllNotificationsRead('tok')).rejects.toBeInstanceOf(
       ApiError,
-    )
-  })
+    );
+  });
 
   it.each([-1, 2.5, Number.NaN])(
     'throws an ApiError when read-all returns %s',
@@ -322,31 +322,31 @@ describe('the write endpoints', () => {
       vi.stubGlobal(
         'fetch',
         vi.fn(() => okResponse({ updated })),
-      )
+      );
       await expect(markAllNotificationsRead('tok')).rejects.toBeInstanceOf(
         ApiError,
-      )
+      );
     },
-  )
+  );
 
   it('posts the panel-seen watermark', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse({ seenAt: null }),
-    )
-    vi.stubGlobal('fetch', fetchMock)
+    );
+    vi.stubGlobal('fetch', fetchMock);
 
-    await markPanelSeen('tok')
+    await markPanelSeen('tok');
 
-    const [url, init] = fetchMock.mock.calls[0] ?? []
-    expect(String(url)).toContain('/v1/notifications/mark-panel-seen')
-    expect(init).toMatchObject({ method: 'POST' })
-  })
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
+    expect(String(url)).toContain('/v1/notifications/mark-panel-seen');
+    expect(init).toMatchObject({ method: 'POST' });
+  });
 
   it('throws an ApiError when the watermark is not a parseable date', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => okResponse({ seenAt: 'just now' })),
-    )
-    await expect(markPanelSeen('tok')).rejects.toBeInstanceOf(ApiError)
-  })
-})
+    );
+    await expect(markPanelSeen('tok')).rejects.toBeInstanceOf(ApiError);
+  });
+});

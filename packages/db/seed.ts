@@ -8,14 +8,14 @@ import {
   like,
   ne,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   canonicalizeArtist,
   deriveSourceCategory,
   type GuideChipKey,
-} from '@concert-crawl/types'
-import { db } from './src/client.js'
-import { backfillArtists } from './src/scripts/backfill-artists.js'
+} from '@concert-crawl/types';
+import { db } from './src/client.js';
+import { backfillArtists } from './src/scripts/backfill-artists.js';
 import {
   venues,
   venueGuideChips,
@@ -37,22 +37,22 @@ import {
   auditLog,
   type NewVenue,
   type NewPriceSubmission,
-} from './src/schema/index.js'
+} from './src/schema/index.js';
 
-type EventStatus = (typeof eventStatusEnum.enumValues)[number]
+type EventStatus = (typeof eventStatusEnum.enumValues)[number];
 
 function isEventStatus(value: string | undefined): value is EventStatus {
   return (
     value !== undefined &&
     eventStatusEnum.enumValues.some((status) => status === value)
-  )
+  );
 }
 
 // Narrow seed data's optional `status` to a valid event_status, defaulting to
 // 'upcoming'. Runtime-validated rather than cast, so drifting seed data can't
 // smuggle an invalid enum value past the type checker.
 function toEventStatus(value: string | undefined): EventStatus {
-  return isEventStatus(value) ? value : 'upcoming'
+  return isEventStatus(value) ? value : 'upcoming';
 }
 
 /**
@@ -74,7 +74,7 @@ export function withCanonicalArtist<TRow extends { artist: string }>(
   return rows.map((row) => ({
     ...row,
     canonicalArtist: canonicalizeArtist(row.artist),
-  }))
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -475,7 +475,7 @@ export const SEED_VENUES: NewVenue[] = [
     about:
       'Live Nation’s outdoor room just west of the South Platte, built on a scrapyard lot and named for it. Books arena-scale touring acts under an open sky.',
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // Users — 9 users covering all roles and cred tiers
@@ -500,7 +500,7 @@ const FAKE_USER_IDS = {
   mtncreature: 'user_fake_mtncreature_0013',
   lola: 'user_fake_lola_0014',
   jordan_m: 'user_fake_jordan_m_0015',
-} as const
+} as const;
 
 export const FAKE_USER_PROFILES = [
   {
@@ -616,7 +616,7 @@ export const FAKE_USER_PROFILES = [
     avatarColor: 'warning' as const,
     city: 'Denver',
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // Watcher crowd — "Who else is watching" roster fodder
@@ -642,18 +642,18 @@ const CROWD_HANDLE_WORDS = [
   'soundcheck',
   'tapedeck',
   'lastcall',
-] as const
+] as const;
 
-const CROWD_THEMES = ['electric', 'jade', 'light'] as const
-const CROWD_AVATAR_COLORS = ['signal', 'accent', 'success', 'warning'] as const
+const CROWD_THEMES = ['electric', 'jade', 'light'] as const;
+const CROWD_AVATAR_COLORS = ['signal', 'accent', 'success', 'warning'] as const;
 
 export const FAKE_CROWD_USER_IDS: readonly string[] = Array.from(
   { length: 40 },
   (_, idx) => `user_fake_crowd_${String(idx).padStart(4, '0')}`,
-)
+);
 
 export const FAKE_CROWD_PROFILES = FAKE_CROWD_USER_IDS.map((userId, idx) => {
-  const word = CROWD_HANDLE_WORDS[idx % CROWD_HANDLE_WORDS.length]!
+  const word = CROWD_HANDLE_WORDS[idx % CROWD_HANDLE_WORDS.length]!;
   return {
     userId,
     // Namespaced: handle is globally UNIQUE and the insert is
@@ -663,8 +663,8 @@ export const FAKE_CROWD_PROFILES = FAKE_CROWD_USER_IDS.map((userId, idx) => {
     theme: CROWD_THEMES[idx % CROWD_THEMES.length]!,
     avatarColor: CROWD_AVATAR_COLORS[idx % CROWD_AVATAR_COLORS.length]!,
     city: idx % 3 === 0 ? null : 'Denver',
-  }
-})
+  };
+});
 
 export const FAKE_USER_ROLES = [
   // admin
@@ -786,9 +786,9 @@ export const FAKE_USER_ROLES = [
     grantedBy: 'seed',
     permissions: [] as string[],
   },
-]
+];
 
-const now = new Date()
+const now = new Date();
 
 export const SEED_INVITE_CODES = [
   { code: 'BETA-OPEN-01', createdBy: FAKE_USER_IDS.hugh },
@@ -828,7 +828,7 @@ export const SEED_INVITE_CODES = [
     usedBy: FAKE_USER_IDS.sam,
     usedAt: new Date(now.getTime() - 2 * 86_400_000),
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // Feedback — all 6 statuses × all 4 categories, some with adminNotes/issueUrl
@@ -953,7 +953,7 @@ export const SEED_FEEDBACK = [
     status: 'archived' as const,
     adminNotes: 'Levitt is inactive for winter — explained in FAQ. Archived.',
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // Notifications — unread + read, all admin_alert categories
@@ -1030,7 +1030,7 @@ export const SEED_NOTIFICATIONS = [
     actionUrl: '/admin/venues/bluebird-theater',
     readAt: new Date(now.getTime() - 4 * 86_400_000),
   },
-]
+];
 
 // ---------------------------------------------------------------------------
 // #764 venue first-timer guide fixtures
@@ -1049,16 +1049,16 @@ export const SEED_NOTIFICATIONS = [
 type SeedGuideChip = {
   // Typed to the v1 union so a fixture typo fails at compile time — chip_type
   // is TEXT in the DB, so a bad key would otherwise persist silently.
-  chipType: GuideChipKey
-  body: string
-  isPlaceholder?: boolean
-}
+  chipType: GuideChipKey;
+  body: string;
+  isPlaceholder?: boolean;
+};
 
 type SeedGuide = {
-  venueSlug: string
-  insiderTip: string | null
-  chips: SeedGuideChip[]
-}
+  venueSlug: string;
+  insiderTip: string | null;
+  chips: SeedGuideChip[];
+};
 
 const SEED_VENUE_GUIDES: SeedGuide[] = [
   // Populated — insider tip + accessibility + 4 more chips.
@@ -1106,18 +1106,18 @@ const SEED_VENUE_GUIDES: SeedGuide[] = [
     insiderTip: null,
     chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
   },
-]
+];
 
 async function seedVenueGuides(
   venueBySlug: Record<string, { id: string } | undefined>,
 ): Promise<void> {
   for (const guide of SEED_VENUE_GUIDES) {
-    const venue = venueBySlug[guide.venueSlug]
+    const venue = venueBySlug[guide.venueSlug];
     if (!venue) {
       console.warn(
         `Guide seed: venue ${guide.venueSlug} not found, skipping its guide.`,
-      )
-      continue
+      );
+      continue;
     }
 
     // Replace rather than merge — a chip removed from the fixture above must
@@ -1128,7 +1128,7 @@ async function seedVenueGuides(
     await db.transaction(async (tx) => {
       await tx
         .delete(venueGuideChips)
-        .where(eq(venueGuideChips.venueId, venue.id))
+        .where(eq(venueGuideChips.venueId, venue.id));
 
       await tx.insert(venueGuideChips).values(
         guide.chips.map((chip) => ({
@@ -1137,13 +1137,13 @@ async function seedVenueGuides(
           body: chip.body,
           isPlaceholder: chip.isPlaceholder ?? false,
         })),
-      )
+      );
 
       await tx
         .update(venues)
         .set({ insiderTip: guide.insiderTip, guidePublishedAt: new Date() })
-        .where(eq(venues.id, venue.id))
-    })
+        .where(eq(venues.id, venue.id));
+    });
   }
 
   // On a fresh DB every other venue is left unpublished, so the no-guide
@@ -1153,14 +1153,14 @@ async function seedVenueGuides(
   // existing local DB stays published across a re-seed.
   console.warn(
     `Seeded ${SEED_VENUE_GUIDES.length} venue guides (populated / thin / placeholder).`,
-  )
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Seed function
 // ---------------------------------------------------------------------------
 async function seed() {
-  console.warn('Seeding database...')
+  console.warn('Seeding database...');
 
   // Venues — upsert so re-runs pick up data changes
   await db
@@ -1187,31 +1187,31 @@ async function seed() {
         active: sql`excluded.active`,
         verified: sql`excluded.verified`,
       },
-    })
+    });
 
-  console.warn(`Upserted ${SEED_VENUES.length} venues.`)
+  console.warn(`Upserted ${SEED_VENUES.length} venues.`);
 
-  const insertedVenues = await db.select().from(venues)
+  const insertedVenues = await db.select().from(venues);
   const venueBySlug = Object.fromEntries(
     insertedVenues.map((vn) => [vn.slug, vn]),
-  )
+  );
 
   // Events — only seed if none exist
   const existingEventsCount = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(eventsTable)
-  const hasEvents = (existingEventsCount[0]?.count ?? 0) > 0
+    .from(eventsTable);
+  const hasEvents = (existingEventsCount[0]?.count ?? 0) > 0;
 
   if (!hasEvents) {
     type EventRow = {
-      venueSlug: string
-      title: string
-      artist: string
-      date: string
-      showTime?: string
-      ticketUrl?: string
-      ticketPriceMin?: string
-      ticketPriceMax?: string
+      venueSlug: string;
+      title: string;
+      artist: string;
+      date: string;
+      showTime?: string;
+      ticketUrl?: string;
+      ticketPriceMin?: string;
+      ticketPriceMax?: string;
       priceSource?:
         | 'structured_data'
         | 'ticketmaster'
@@ -1220,12 +1220,12 @@ async function seed() {
         | 'songkick'
         | 'bandsintown'
         | 'seatgeek'
-        | 'community'
-      genre?: string[]
-      status?: 'upcoming' | 'cancelled' | 'postponed'
-      confidenceScore?: string
-      verified?: boolean
-    }
+        | 'community';
+      genre?: string[];
+      status?: 'upcoming' | 'cancelled' | 'postponed';
+      confidenceScore?: string;
+      verified?: boolean;
+    };
 
     // Representative real events from staging, 3–5 per venue
     const SAMPLE_EVENTS: EventRow[] = [
@@ -1675,11 +1675,11 @@ async function seed() {
         confidenceScore: '0.82',
         verified: false,
       },
-    ]
+    ];
 
     const sampleEventRows = SAMPLE_EVENTS.flatMap((ev) => {
-      const venue = venueBySlug[ev.venueSlug]
-      if (!venue) return []
+      const venue = venueBySlug[ev.venueSlug];
+      if (!venue) return [];
       return [
         {
           venueId: venue.id,
@@ -1702,19 +1702,19 @@ async function seed() {
           confidenceScore: ev.confidenceScore ?? null,
           verified: ev.verified ?? false,
         },
-      ]
-    })
+      ];
+    });
 
     const insertedEvents = await db
       .insert(eventsTable)
       .values(withCanonicalArtist(sampleEventRows))
-      .returning()
-    console.warn(`Inserted ${insertedEvents.length} events.`)
+      .returning();
+    console.warn(`Inserted ${insertedEvents.length} events.`);
 
     // Price retrieval log
-    const OUTCOMES = ['hit', 'miss', 'error'] as const
-    const SOURCES = ['structured_data', 'ticketmaster', 'seatgeek'] as const
-    const LATENCIES_MS = [120, 340, 85]
+    const OUTCOMES = ['hit', 'miss', 'error'] as const;
+    const SOURCES = ['structured_data', 'ticketmaster', 'seatgeek'] as const;
+    const LATENCIES_MS = [120, 340, 85];
 
     const logEntries = insertedEvents.flatMap((event) =>
       Array.from({ length: 3 }, (_unused, attemptIdx) => ({
@@ -1725,13 +1725,13 @@ async function seed() {
         latencyMs: LATENCIES_MS[attemptIdx % LATENCIES_MS.length],
         attemptedAt: new Date(Date.now() - attemptIdx * 3_600_000),
       })),
-    )
+    );
 
-    await db.insert(priceRetrievalLog).values(logEntries)
-    console.warn(`Inserted ${logEntries.length} price retrieval log entries.`)
+    await db.insert(priceRetrievalLog).values(logEntries);
+    console.warn(`Inserted ${logEntries.length} price retrieval log entries.`);
 
     // Test events for UI state coverage
-    const venueForTests = venueBySlug['red-rocks-amphitheatre']
+    const venueForTests = venueBySlug['red-rocks-amphitheatre'];
     if (venueForTests) {
       await db
         .insert(eventsTable)
@@ -1761,64 +1761,68 @@ async function seed() {
             },
           ]),
         )
-        .onConflictDoNothing()
-      console.warn('Inserted 3 test events for UI state coverage.')
+        .onConflictDoNothing();
+      console.warn('Inserted 3 test events for UI state coverage.');
     }
   } else {
-    console.warn('Events already seeded, skipping.')
+    console.warn('Events already seeded, skipping.');
   }
 
   // User profiles
   await db
     .insert(userProfiles)
     .values([...FAKE_USER_PROFILES, ...FAKE_CROWD_PROFILES])
-    .onConflictDoNothing()
+    .onConflictDoNothing();
   console.warn(
     `Inserted ${FAKE_USER_PROFILES.length} user profiles + ${FAKE_CROWD_PROFILES.length} watcher-crowd profiles.`,
-  )
+  );
 
   // User roles — only insert missing
   const existingRoleRows = await db
     .select({ userId: userRoles.userId })
-    .from(userRoles)
-  const existingRoleUserIds = new Set(existingRoleRows.map((row) => row.userId))
+    .from(userRoles);
+  const existingRoleUserIds = new Set(
+    existingRoleRows.map((row) => row.userId),
+  );
   const missingRoles = FAKE_USER_ROLES.filter(
     (role) => !existingRoleUserIds.has(role.userId),
-  )
+  );
   if (missingRoles.length > 0) {
-    await db.insert(userRoles).values(missingRoles)
-    console.warn(`Inserted ${missingRoles.length} user roles.`)
+    await db.insert(userRoles).values(missingRoles);
+    console.warn(`Inserted ${missingRoles.length} user roles.`);
   } else {
-    console.warn('All synthetic user roles already present, skipping.')
+    console.warn('All synthetic user roles already present, skipping.');
   }
 
   // Per-user cred (#1012) — cred now lives in `user_cred`, keyed by user_id.
   // Mirror each seeded user's score so local/dev profiles render real cred.
   const existingCredRows = await db
     .select({ userId: userCred.userId })
-    .from(userCred)
-  const existingCredUserIds = new Set(existingCredRows.map((row) => row.userId))
+    .from(userCred);
+  const existingCredUserIds = new Set(
+    existingCredRows.map((row) => row.userId),
+  );
   const missingCred = FAKE_USER_ROLES.filter(
     (role) => !existingCredUserIds.has(role.userId),
-  )
+  );
   if (missingCred.length > 0) {
     await db.insert(userCred).values(
       missingCred.map((role) => ({
         userId: role.userId,
         priceCredScore: role.priceCredScore,
       })),
-    )
-    console.warn(`Inserted ${missingCred.length} user cred rows.`)
+    );
+    console.warn(`Inserted ${missingCred.length} user cred rows.`);
   } else {
-    console.warn('All synthetic user cred rows already present, skipping.')
+    console.warn('All synthetic user cred rows already present, skipping.');
   }
 
   // Invite codes
   await db
     .insert(inviteCodes)
     .values(SEED_INVITE_CODES)
-    .onConflictDoNothing({ target: inviteCodes.code })
-  console.warn(`Inserted ${SEED_INVITE_CODES.length} invite codes.`)
+    .onConflictDoNothing({ target: inviteCodes.code });
+  console.warn(`Inserted ${SEED_INVITE_CODES.length} invite codes.`);
 
   // Waitlist
   await db
@@ -1828,34 +1832,34 @@ async function seed() {
         email: `test+${idx + 1}@example.com`,
       })),
     )
-    .onConflictDoNothing({ target: waitlistEntries.email })
-  console.warn('Inserted 12 waitlist entries.')
+    .onConflictDoNothing({ target: waitlistEntries.email });
+  console.warn('Inserted 12 waitlist entries.');
 
   // Feedback
   const existingFeedbackCount = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(feedback)
-  const hasFeedback = (existingFeedbackCount[0]?.count ?? 0) > 0
+    .from(feedback);
+  const hasFeedback = (existingFeedbackCount[0]?.count ?? 0) > 0;
   if (!hasFeedback) {
-    await db.insert(feedback).values(SEED_FEEDBACK).onConflictDoNothing()
-    console.warn(`Inserted ${SEED_FEEDBACK.length} feedback entries.`)
+    await db.insert(feedback).values(SEED_FEEDBACK).onConflictDoNothing();
+    console.warn(`Inserted ${SEED_FEEDBACK.length} feedback entries.`);
   } else {
-    console.warn('Feedback already seeded, skipping.')
+    console.warn('Feedback already seeded, skipping.');
   }
 
   // Notifications
   const existingNotifCount = await db
     .select({ count: sql<number>`count(*)::int` })
-    .from(notifications)
-  const hasNotifications = (existingNotifCount[0]?.count ?? 0) > 0
+    .from(notifications);
+  const hasNotifications = (existingNotifCount[0]?.count ?? 0) > 0;
   if (!hasNotifications) {
     await db
       .insert(notifications)
       .values(SEED_NOTIFICATIONS)
-      .onConflictDoNothing()
-    console.warn(`Inserted ${SEED_NOTIFICATIONS.length} notifications.`)
+      .onConflictDoNothing();
+    console.warn(`Inserted ${SEED_NOTIFICATIONS.length} notifications.`);
   } else {
-    console.warn('Notifications already seeded, skipping.')
+    console.warn('Notifications already seeded, skipping.');
   }
 
   // -------------------------------------------------------------------------
@@ -1869,22 +1873,22 @@ async function seed() {
     })
     .from(eventsTable)
     .orderBy(desc(eventsTable.date))
-    .limit(50)
+    .limit(50);
 
   if (recentEvents.length === 0) {
     console.warn(
       'No events found — skipping user_events, price_submissions, submission_confirms.',
-    )
+    );
   } else {
-    const eventIds = recentEvents.map((evt) => evt.id)
-    const todayIso = new Date().toISOString().slice(0, 10)
+    const eventIds = recentEvents.map((evt) => evt.id);
+    const todayIso = new Date().toISOString().slice(0, 10);
     // recentEvents is ordered date DESC, so the low eventIds indices are all
     // upcoming. Concert History only shows nights that already happened, so a
     // separate past-only list is needed or local History would render empty.
     const pastIds = recentEvents
       .filter((evt) => evt.date < todayIso)
-      .map((evt) => evt.id)
-    const pastEventIds = new Set(pastIds)
+      .map((evt) => evt.id);
+    const pastEventIds = new Set(pastIds);
 
     // Attendance shapes (#70). `status: 'going'` is retired — attendance is its
     // own timestamp, and Watching is independent of it. A past show becomes an
@@ -1896,7 +1900,7 @@ async function seed() {
       eventId: string,
       savedPrice?: string,
     ) => {
-      const isPast = pastEventIds.has(eventId)
+      const isPast = pastEventIds.has(eventId);
       return {
         userId,
         eventId,
@@ -1905,10 +1909,10 @@ async function seed() {
           ? new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)
           : new Date(),
         ...(savedPrice === undefined ? {} : { savedPrice }),
-      }
-    }
+      };
+    };
 
-    const HISTORY_PRICES = ['28.00', '45.00', '65.00', '85.00', '120.00']
+    const HISTORY_PRICES = ['28.00', '45.00', '65.00', '85.00', '120.00'];
 
     // Showcase events for "Who else is watching". Hugh already watches all
     // three below, which matters because the endpoint excludes the viewer —
@@ -1920,7 +1924,7 @@ async function seed() {
       { eventId: eventIds[0], watchers: 34 },
       { eventId: eventIds[2], watchers: 12 },
       { eventId: eventIds[5], watchers: 1 },
-    ]
+    ];
     const crowdWatchRows = showcases.flatMap(({ eventId, watchers }, idx) =>
       eventId === undefined
         ? []
@@ -1935,7 +1939,7 @@ async function seed() {
             eventId,
             status: 'watching' as const,
           })),
-    )
+    );
 
     // User events
     const userEventRows = [
@@ -2065,17 +2069,17 @@ async function seed() {
       attending(FAKE_USER_IDS.riley, pastIds[1]!),
       attending(FAKE_USER_IDS.riley, pastIds[2]!),
       attending(FAKE_USER_IDS.riley, pastIds[4]!, '120.00'),
-    ].filter((row) => row.eventId !== undefined)
+    ].filter((row) => row.eventId !== undefined);
 
     const existingUserEventsCount = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(userEvents)
-    const hasUserEvents = (existingUserEventsCount[0]?.count ?? 0) > 0
+      .from(userEvents);
+    const hasUserEvents = (existingUserEventsCount[0]?.count ?? 0) > 0;
     if (!hasUserEvents) {
-      await db.insert(userEvents).values(userEventRows).onConflictDoNothing()
-      console.warn(`Inserted ${userEventRows.length} user_events.`)
+      await db.insert(userEvents).values(userEventRows).onConflictDoNothing();
+      console.warn(`Inserted ${userEventRows.length} user_events.`);
     } else {
-      console.warn('User events already seeded, skipping.')
+      console.warn('User events already seeded, skipping.');
     }
 
     // -----------------------------------------------------------------------
@@ -2087,22 +2091,22 @@ async function seed() {
     //   Extras:   multiple submissions same event ✓  priceMin-only ✓  priceMin+priceMax ✓
     // -----------------------------------------------------------------------
     type SubmissionTemplate = {
-      idx: number
-      userId: string
-      priceMin: string
-      priceMax?: string
-      tier: 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
+      idx: number;
+      userId: string;
+      priceMin: string;
+      priceMax?: string;
+      tier: 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn';
       vendor:
         | 'AXS'
         | 'Ticketmaster'
         | 'SeatGeek'
         | 'DICE'
         | 'Eventbrite'
-        | 'VenueBoxOffice'
-      howFound: 'bought_myself' | 'saw_listing' | 'at_the_venue'
-      status: 'pending' | 'corroborated' | 'disputed' | 'stale'
-      corroborationCount: number
-    }
+        | 'VenueBoxOffice';
+      howFound: 'bought_myself' | 'saw_listing' | 'at_the_venue';
+      status: 'pending' | 'corroborated' | 'disputed' | 'stale';
+      corroborationCount: number;
+    };
 
     const submissionTemplates: SubmissionTemplate[] = [
       // Event 0 — three submissions, corroboration chain
@@ -2388,7 +2392,7 @@ async function seed() {
         status: 'pending',
         corroborationCount: 1,
       },
-    ]
+    ];
 
     // Derive source_category from existing (vendor, how_found) via the
     // shared helper. corroborationCount values in submissionTemplates already
@@ -2402,8 +2406,8 @@ async function seed() {
     // the `as string` cast (per CLAUDE.md's "casts are a last resort" rule).
     const submissionRows = submissionTemplates.flatMap(
       ({ idx, vendor, howFound, ...rest }) => {
-        const eventId = eventIds[idx]
-        if (eventId === undefined) return []
+        const eventId = eventIds[idx];
+        if (eventId === undefined) return [];
         return [
           {
             ...rest,
@@ -2412,38 +2416,38 @@ async function seed() {
             sourceCategory: deriveSourceCategory(vendor, howFound),
             eventId,
           },
-        ]
+        ];
       },
-    )
+    );
 
     const existingSubmissionsCount = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(priceSubmissions)
-    const hasSubmissions = (existingSubmissionsCount[0]?.count ?? 0) > 0
+      .from(priceSubmissions);
+    const hasSubmissions = (existingSubmissionsCount[0]?.count ?? 0) > 0;
 
     if (!hasSubmissions) {
       const insertedSubmissions = await db
         .insert(priceSubmissions)
         .values(submissionRows)
-        .returning()
-      console.warn(`Inserted ${insertedSubmissions.length} price submissions.`)
+        .returning();
+      console.warn(`Inserted ${insertedSubmissions.length} price submissions.`);
 
       // Wire disputed submissions to the first corroborated one for the same event
       const disputedSubs = insertedSubmissions.filter(
         (sub) => sub.status === 'disputed',
-      )
+      );
       for (const disputedSub of disputedSubs) {
         const targetSub = insertedSubmissions.find(
           (sub) =>
             sub.status === 'corroborated' &&
             sub.eventId === disputedSub.eventId &&
             sub.id !== disputedSub.id,
-        )
+        );
         if (targetSub) {
           await db
             .update(priceSubmissions)
             .set({ disputedSubmissionId: targetSub.id })
-            .where(eq(priceSubmissions.id, disputedSub.id))
+            .where(eq(priceSubmissions.id, disputedSub.id));
         }
       }
 
@@ -2454,11 +2458,11 @@ async function seed() {
         FAKE_USER_IDS.taylor,
         FAKE_USER_IDS.riley,
         FAKE_USER_IDS.marco,
-      ]
+      ];
 
       const corroboratedSubmissions = insertedSubmissions.filter(
         (sub) => sub.status === 'corroborated',
-      )
+      );
       const confirmRows = corroboratedSubmissions.flatMap((sub) => {
         // corroborationCount stores total observations (submitter + non-
         // submitter confirms) under the 1/2 model. submission_confirms only
@@ -2466,22 +2470,22 @@ async function seed() {
         // Filter the submitter out FIRST, then slice — otherwise a submitter
         // who happens to land in the first N entries would shrink the
         // resulting confirm count below desiredConfirms.
-        const desiredConfirms = Math.max(0, sub.corroborationCount - 1)
+        const desiredConfirms = Math.max(0, sub.corroborationCount - 1);
         const eligibleConfirmers = CONFIRMING_USERS.filter(
           (uid) => uid !== sub.userId,
-        )
-        const count = Math.min(desiredConfirms, eligibleConfirmers.length)
+        );
+        const count = Math.min(desiredConfirms, eligibleConfirmers.length);
         return eligibleConfirmers
           .slice(0, count)
-          .map((uid) => ({ submissionId: sub.id, userId: uid }))
-      })
+          .map((uid) => ({ submissionId: sub.id, userId: uid }));
+      });
 
       if (confirmRows.length > 0) {
         await db
           .insert(submissionConfirms)
           .values(confirmRows)
-          .onConflictDoNothing()
-        console.warn(`Inserted ${confirmRows.length} submission confirms.`)
+          .onConflictDoNothing();
+        console.warn(`Inserted ${confirmRows.length} submission confirms.`);
       }
 
       // (Popularity backfill lifted out of this if-branch — see "Popularity
@@ -2490,7 +2494,7 @@ async function seed() {
       // prior seed never get the marquee multi-source coverage when they pull
       // a branch that adds new popularity targets.)
     } else {
-      console.warn('Price submissions already seeded, skipping.')
+      console.warn('Price submissions already seeded, skipping.');
     }
 
     // -----------------------------------------------------------------------
@@ -2511,16 +2515,16 @@ async function seed() {
         .select({ id: priceSubmissions.id })
         .from(priceSubmissions)
         .where(eq(priceSubmissions.userId, FAKE_USER_IDS.phishfan42))
-        .limit(1)
+        .limit(1);
       if (popularityMarker.length > 0) {
         console.warn(
           'Popularity backfill already applied (phishfan42 marker present), skipping.',
-        )
+        );
       } else {
-        const popularityDayMs = 86_400_000
-        const popularityOlder = new Date(Date.now() - 18 * popularityDayMs)
-        const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs)
-        const popularityFresh = new Date(Date.now() - 1 * popularityDayMs)
+        const popularityDayMs = 86_400_000;
+        const popularityOlder = new Date(Date.now() - 18 * popularityDayMs);
+        const popularityOlderish = new Date(Date.now() - 7 * popularityDayMs);
+        const popularityFresh = new Date(Date.now() - 1 * popularityDayMs);
 
         // Templates omit `eventId` because it's resolved per-target after the
         // events lookup below. Typing the template as Omit<…, 'eventId'>
@@ -2528,8 +2532,8 @@ async function seed() {
         // straight to `db.insert(priceSubmissions)` and inserting a row with
         // `eventId === ''` (would violate the FK to events.id).
         const popularityTargets: ReadonlyArray<{
-          title: string
-          submissions: ReadonlyArray<Omit<NewPriceSubmission, 'eventId'>>
+          title: string;
+          submissions: ReadonlyArray<Omit<NewPriceSubmission, 'eventId'>>;
         }> = [
           {
             title: 'Radiohead at Red Rocks',
@@ -2693,7 +2697,7 @@ async function seed() {
               },
             ],
           },
-        ]
+        ];
 
         // Wrap submissions + confirms in a transaction so a crash between
         // the two inserts rolls back the marker row (phishfan42) as well.
@@ -2703,22 +2707,22 @@ async function seed() {
         // marker is present). The transaction restores all-or-nothing
         // idempotency across re-runs.
         await db.transaction(async (tx) => {
-          const popularityInsertRows: NewPriceSubmission[] = []
+          const popularityInsertRows: NewPriceSubmission[] = [];
           for (const target of popularityTargets) {
             const row = await tx
               .select({ id: eventsTable.id })
               .from(eventsTable)
               .where(eq(eventsTable.title, target.title))
-              .limit(1)
-            const targetId = row[0]?.id
+              .limit(1);
+            const targetId = row[0]?.id;
             if (!targetId) {
               console.warn(
                 `Popularity backfill: target event "${target.title}" not found — skipping (title drift?).`,
-              )
-              continue
+              );
+              continue;
             }
             for (const sub of target.submissions) {
-              popularityInsertRows.push({ ...sub, eventId: targetId })
+              popularityInsertRows.push({ ...sub, eventId: targetId });
             }
           }
 
@@ -2726,7 +2730,7 @@ async function seed() {
             const insertedPopularity = await tx
               .insert(priceSubmissions)
               .values(popularityInsertRows)
-              .returning()
+              .returning();
 
             // Confirms for the corroborated rows — same convention as above
             // (corroborationCount = total observations including submitter).
@@ -2737,45 +2741,45 @@ async function seed() {
               FAKE_USER_IDS.marco,
               FAKE_USER_IDS.riley,
               FAKE_USER_IDS.notyourgf,
-            ]
+            ];
             const popularityConfirmRows = insertedPopularity.flatMap((sub) => {
-              if (sub.status !== 'corroborated') return []
-              const desired = Math.max(0, sub.corroborationCount - 1)
+              if (sub.status !== 'corroborated') return [];
+              const desired = Math.max(0, sub.corroborationCount - 1);
               const eligible = popularityConfirmers.filter(
                 (uid) => uid !== sub.userId,
-              )
+              );
               return eligible
                 .slice(0, Math.min(desired, eligible.length))
                 .map((uid) => ({
                   submissionId: sub.id,
                   userId: uid,
                   method: 'same-vendor' as const,
-                }))
-            })
+                }));
+            });
 
             if (popularityConfirmRows.length > 0) {
               await tx
                 .insert(submissionConfirms)
                 .values(popularityConfirmRows)
-                .onConflictDoNothing()
+                .onConflictDoNothing();
             }
 
             console.warn(
               `Popularity backfill: inserted ${insertedPopularity.length} submissions + ${popularityConfirmRows.length} confirms across ${popularityTargets.length} marquee events.`,
-            )
+            );
           }
-        })
+        });
       }
     }
 
     // Audit log
     const existingAuditCount = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(auditLog)
-    const hasAuditLog = (existingAuditCount[0]?.count ?? 0) > 0
+      .from(auditLog);
+    const hasAuditLog = (existingAuditCount[0]?.count ?? 0) > 0;
     if (!hasAuditLog) {
-      const redRocks = venueBySlug['red-rocks-amphitheatre']
-      const larimer = venueBySlug['larimer-lounge']
+      const redRocks = venueBySlug['red-rocks-amphitheatre'];
+      const larimer = venueBySlug['larimer-lounge'];
 
       await db.insert(auditLog).values([
         {
@@ -2813,10 +2817,10 @@ async function seed() {
           metadata: { count: 3, eventIds: eventIds.slice(0, 3) },
           createdAt: new Date(now.getTime() - 2 * 86_400_000),
         },
-      ])
-      console.warn('Inserted 5 audit log entries.')
+      ]);
+      console.warn('Inserted 5 audit log entries.');
     } else {
-      console.warn('Audit log already seeded, skipping.')
+      console.warn('Audit log already seeded, skipping.');
     }
   }
 
@@ -2826,36 +2830,36 @@ async function seed() {
   const phase85EventsCount = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
-    .where(sql`title LIKE '[P8.5]%'`)
-  const hasPhase85Events = (phase85EventsCount[0]?.count ?? 0) > 0
+    .where(sql`title LIKE '[P8.5]%'`);
+  const hasPhase85Events = (phase85EventsCount[0]?.count ?? 0) > 0;
 
   if (!hasPhase85Events) {
     // Use the first active venue for all Phase 8.5 test events
-    const allVenues = await db.select().from(venues)
-    const ogden = allVenues.find((vn) => vn.slug === 'ogden-theatre')
-    const mission = allVenues.find((vn) => vn.slug === 'mission-ballroom')
-    const bluebird = allVenues.find((vn) => vn.slug === 'bluebird-theater')
-    const gothic = allVenues.find((vn) => vn.slug === 'gothic-theatre')
-    const summit = allVenues.find((vn) => vn.slug === 'summit-music-hall')
-    const marquis = allVenues.find((vn) => vn.slug === 'marquis-theater')
-    const hiDive = allVenues.find((vn) => vn.slug === 'hi-dive')
-    const larimer = allVenues.find((vn) => vn.slug === 'larimer-lounge')
-    const fillmore = allVenues.find((vn) => vn.slug === 'fillmore-auditorium')
+    const allVenues = await db.select().from(venues);
+    const ogden = allVenues.find((vn) => vn.slug === 'ogden-theatre');
+    const mission = allVenues.find((vn) => vn.slug === 'mission-ballroom');
+    const bluebird = allVenues.find((vn) => vn.slug === 'bluebird-theater');
+    const gothic = allVenues.find((vn) => vn.slug === 'gothic-theatre');
+    const summit = allVenues.find((vn) => vn.slug === 'summit-music-hall');
+    const marquis = allVenues.find((vn) => vn.slug === 'marquis-theater');
+    const hiDive = allVenues.find((vn) => vn.slug === 'hi-dive');
+    const larimer = allVenues.find((vn) => vn.slug === 'larimer-lounge');
+    const fillmore = allVenues.find((vn) => vn.slug === 'fillmore-auditorium');
 
     const redRocks = allVenues.find(
       (vn) => vn.slug === 'red-rocks-amphitheatre',
-    )
+    );
 
-    const venueA = ogden ?? allVenues[0]
-    const venueB = mission ?? allVenues[0]
-    const venueC = bluebird ?? allVenues[0]
-    const venueD = gothic ?? allVenues[0]
-    const venueE = summit ?? allVenues[0]
-    const venueF = marquis ?? allVenues[0]
-    const venueG = hiDive ?? allVenues[0]
-    const venueH = larimer ?? allVenues[0]
-    const venueI = fillmore ?? allVenues[0]
-    const venueJ = redRocks ?? allVenues[0]
+    const venueA = ogden ?? allVenues[0];
+    const venueB = mission ?? allVenues[0];
+    const venueC = bluebird ?? allVenues[0];
+    const venueD = gothic ?? allVenues[0];
+    const venueE = summit ?? allVenues[0];
+    const venueF = marquis ?? allVenues[0];
+    const venueG = hiDive ?? allVenues[0];
+    const venueH = larimer ?? allVenues[0];
+    const venueI = fillmore ?? allVenues[0];
+    const venueJ = redRocks ?? allVenues[0];
 
     if (
       !venueA ||
@@ -2869,7 +2873,7 @@ async function seed() {
       !venueI ||
       !venueJ
     ) {
-      console.warn('Phase 8.5: no venues found — skipping.')
+      console.warn('Phase 8.5: no venues found — skipping.');
     } else {
       const phase85EventRows = [
         // A — TwoPendingStack: two pending community submissions at different tiers
@@ -2988,30 +2992,30 @@ async function seed() {
           ticketPriceMax: '45.00',
           priceSource: 'ticketmaster' as const,
         },
-      ]
+      ];
 
       const insertedPhase85Events = await db
         .insert(eventsTable)
         .values(withCanonicalArtist(phase85EventRows))
-        .returning()
+        .returning();
       console.warn(
         `Inserted ${insertedPhase85Events.length} Phase 8.5 test events.`,
-      )
+      );
 
       // Helper to find event by title suffix
       const p85Event = (suffix: string) =>
-        insertedPhase85Events.find((ev) => ev.title === `[P8.5] ${suffix}`)
+        insertedPhase85Events.find((ev) => ev.title === `[P8.5] ${suffix}`);
 
-      const eventA = p85Event('Two Tiers Pending')
-      const eventB = p85Event('Counter Submission')
-      const eventC = p85Event('Gold Pending')
-      const eventD = p85Event('Sold Out Report')
-      const eventE = p85Event('Cancelled Report')
-      const eventF = p85Event('Postponed Report')
-      const eventG = p85Event('Sold Out Live')
-      const eventH = p85Event('Cancelled Live')
-      const eventI = p85Event('Imminent Cancelled')
-      const eventJ = p85Event('Postponed Live')
+      const eventA = p85Event('Two Tiers Pending');
+      const eventB = p85Event('Counter Submission');
+      const eventC = p85Event('Gold Pending');
+      const eventD = p85Event('Sold Out Report');
+      const eventE = p85Event('Cancelled Report');
+      const eventF = p85Event('Postponed Report');
+      const eventG = p85Event('Sold Out Live');
+      const eventH = p85Event('Cancelled Live');
+      const eventI = p85Event('Imminent Cancelled');
+      const eventJ = p85Event('Postponed Live');
 
       // -----------------------------------------------------------------------
       // Price submissions for Phase 8.5 events
@@ -3043,7 +3047,7 @@ async function seed() {
               corroborationCount: 1,
             },
           ]
-        : []
+        : [];
 
       // Event B — one live/corroborated submission + one pending counter-submission
       // Insert the live one first so we can reference its id for disputedSubmissionId
@@ -3064,11 +3068,11 @@ async function seed() {
               note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
             })
             .returning()
-        : null
+        : null;
 
       // Submission confirms for the live B submission (2 confirms)
       if (phase85SubmissionBLive && phase85SubmissionBLive.length > 0) {
-        const liveSub = phase85SubmissionBLive[0]!
+        const liveSub = phase85SubmissionBLive[0]!;
         await db
           .insert(submissionConfirms)
           .values([
@@ -3083,7 +3087,7 @@ async function seed() {
               method: 'same-vendor' as const,
             },
           ])
-          .onConflictDoNothing()
+          .onConflictDoNothing();
       }
 
       // Event B — second corroborated submission (AXS, different price) to enable MultiTierLiveCard
@@ -3102,7 +3106,7 @@ async function seed() {
             status: 'corroborated' as const,
             corroborationCount: 3,
           })
-          .returning()
+          .returning();
 
         if (phase85SubmissionBAlt.length > 0) {
           await db
@@ -3119,7 +3123,7 @@ async function seed() {
                 method: 'same-vendor' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
       }
 
@@ -3141,7 +3145,7 @@ async function seed() {
                 note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
               },
             ]
-          : []
+          : [];
 
       // Event C — pending box-office VIP submission with 1 confirm
       const phase85SubmissionCInserted = eventC
@@ -3161,7 +3165,7 @@ async function seed() {
               note: 'Walked up to the Bluebird box office. GA face value, no fees.',
             })
             .returning()
-        : null
+        : null;
 
       if (phase85SubmissionCInserted && phase85SubmissionCInserted.length > 0) {
         await db
@@ -3171,7 +3175,7 @@ async function seed() {
             userId: FAKE_USER_IDS.marco,
             method: 'box-office' as const,
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
       }
 
       // Events D, E, F — each get one live price submission
@@ -3213,7 +3217,7 @@ async function seed() {
               corroborationCount: 2,
             }
           : null,
-      ].filter((row): row is NonNullable<typeof row> => row !== null)
+      ].filter((row): row is NonNullable<typeof row> => row !== null);
 
       // Batch insert all remaining price submissions
       // Derive sourceCategory at insert time via the shared helper so every
@@ -3226,22 +3230,22 @@ async function seed() {
       ].map((row) => ({
         ...row,
         sourceCategory: deriveSourceCategory(row.vendor, row.howFound),
-      }))
+      }));
 
       if (remainingSubmissions.length > 0) {
         await db
           .insert(priceSubmissions)
           .values(remainingSubmissions)
-          .onConflictDoNothing()
+          .onConflictDoNothing();
         console.warn(
           `Inserted ${remainingSubmissions.length} Phase 8.5 price submissions.`,
-        )
+        );
       }
 
       // -----------------------------------------------------------------------
       // Event reports for Phase 8.5 events
       // -----------------------------------------------------------------------
-      const pastDate = new Date(now.getTime() - 2 * 86_400_000)
+      const pastDate = new Date(now.getTime() - 2 * 86_400_000);
 
       const phase85ReportRows = [
         // D — pending sold-out report
@@ -3310,21 +3314,21 @@ async function seed() {
               resolution: undefined,
             }
           : null,
-      ].filter((row): row is NonNullable<typeof row> => row !== null)
+      ].filter((row): row is NonNullable<typeof row> => row !== null);
 
       if (phase85ReportRows.length > 0) {
         const insertedReports = await db
           .insert(eventReports)
           .values(phase85ReportRows)
-          .returning()
+          .returning();
         console.warn(
           `Inserted ${insertedReports.length} Phase 8.5 event reports.`,
-        )
+        );
 
         // Event G — promoted sold-out gets 3 confirms
         const reportG = insertedReports.find(
           (rpt) => eventG && rpt.eventId === eventG.id,
-        )
+        );
         if (reportG) {
           await db
             .insert(eventReportConfirms)
@@ -3333,13 +3337,13 @@ async function seed() {
               { reportId: reportG.id, userId: FAKE_USER_IDS.riley },
               { reportId: reportG.id, userId: FAKE_USER_IDS.jess },
             ])
-            .onConflictDoNothing()
-          console.warn('Inserted 3 confirms for Event G sold-out report.')
+            .onConflictDoNothing();
+          console.warn('Inserted 3 confirms for Event G sold-out report.');
         }
       }
     }
   } else {
-    console.warn('Phase 8.5 test events already seeded, skipping.')
+    console.warn('Phase 8.5 test events already seeded, skipping.');
   }
 
   // ─── Phase 8.5 full data patch (idempotent — runs every seed) ──────────────
@@ -3350,10 +3354,10 @@ async function seed() {
     const p85Events = await db
       .select({ id: eventsTable.id, title: eventsTable.title })
       .from(eventsTable)
-      .where(sql`title LIKE '[P8.5]%'`)
+      .where(sql`title LIKE '[P8.5]%'`);
 
     const p85 = (suffix: string) =>
-      p85Events.find((ev) => ev.title === `[P8.5] ${suffix}`)
+      p85Events.find((ev) => ev.title === `[P8.5] ${suffix}`);
 
     const ev = {
       A: p85('Two Tiers Pending'),
@@ -3365,14 +3369,14 @@ async function seed() {
       G: p85('Sold Out Live'),
       H: p85('Cancelled Live'),
       I: p85('Imminent Cancelled'),
-    }
+    };
 
     // --- Step 2: patch event price fields ---
     const pricePatch: Array<{
-      id: string | undefined
-      priceMin: string
-      priceMax?: string
-      src: 'community' | 'ticketmaster'
+      id: string | undefined;
+      priceMin: string;
+      priceMax?: string;
+      src: 'community' | 'ticketmaster';
     }> = [
       { id: ev.B?.id, priceMin: '45.00', priceMax: '55.00', src: 'community' },
       { id: ev.D?.id, priceMin: '40.00', src: 'community' },
@@ -3389,10 +3393,10 @@ async function seed() {
         priceMax: '65.00',
         src: 'community',
       },
-    ]
+    ];
 
     for (const patch of pricePatch) {
-      if (!patch.id) continue
+      if (!patch.id) continue;
       await db
         .update(eventsTable)
         .set({
@@ -3402,7 +3406,7 @@ async function seed() {
         })
         .where(
           and(eq(eventsTable.id, patch.id), isNull(eventsTable.ticketPriceMin)),
-        )
+        );
     }
 
     // --- Step 3: ensure price submissions exist ---
@@ -3420,9 +3424,9 @@ async function seed() {
             eq(priceSubmissions.eventId, eventId),
             eq(priceSubmissions.status, status),
           ),
-        )
-      return (row?.total ?? 0) > 0
-    }
+        );
+      return (row?.total ?? 0) > 0;
+    };
 
     // Event A — two pending community submissions
     if (ev.A && !(await hasSubmission(ev.A.id, 'pending'))) {
@@ -3454,8 +3458,8 @@ async function seed() {
             corroborationCount: 1,
           },
         ])
-        .onConflictDoNothing()
-      console.warn('Patched Event A: inserted 2 pending submissions.')
+        .onConflictDoNothing();
+      console.warn('Patched Event A: inserted 2 pending submissions.');
     }
 
     // Event B — primary corroborated (Ticketmaster) + counter-submission
@@ -3475,7 +3479,7 @@ async function seed() {
           corroborationCount: 3,
           note: 'Checked the AXS app day of sale. GA was $45 + $10 fees showed at checkout.',
         })
-        .returning()
+        .returning();
 
       if (primarySub[0]) {
         await db
@@ -3492,7 +3496,7 @@ async function seed() {
               method: 'same-vendor' as const,
             },
           ])
-          .onConflictDoNothing()
+          .onConflictDoNothing();
 
         // Counter-submission disputing the primary
         await db
@@ -3511,11 +3515,11 @@ async function seed() {
             disputedSubmissionId: primarySub[0].id,
             note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
 
         console.warn(
           'Patched Event B: inserted Ticketmaster primary + counter-submission.',
-        )
+        );
       }
     }
 
@@ -3530,7 +3534,7 @@ async function seed() {
               eq(priceSubmissions.status, 'corroborated'),
             ),
           )
-      : [{ total: 2 }]
+      : [{ total: 2 }];
 
     if (ev.B && (bCorrobCount?.total ?? 0) < 2) {
       const altSub = await db
@@ -3547,7 +3551,7 @@ async function seed() {
           status: 'corroborated' as const,
           corroborationCount: 3,
         })
-        .returning()
+        .returning();
 
       if (altSub[0]) {
         await db
@@ -3564,8 +3568,8 @@ async function seed() {
               method: 'same-vendor' as const,
             },
           ])
-          .onConflictDoNothing()
-        console.warn('Patched Event B: inserted AXS alternate submission.')
+          .onConflictDoNothing();
+        console.warn('Patched Event B: inserted AXS alternate submission.');
       }
     }
 
@@ -3581,7 +3585,7 @@ async function seed() {
             eq(priceSubmissions.status, 'corroborated'),
           ),
         )
-        .limit(1)
+        .limit(1);
 
       if (targetSub) {
         await db
@@ -3600,10 +3604,10 @@ async function seed() {
             disputedSubmissionId: targetSub.id,
             note: 'Saw it listed at $65 on SeatGeek resale. Might be different tier.',
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
         console.warn(
           'Patched Event B: inserted counter-submission (pending dispute).',
-        )
+        );
       }
     }
 
@@ -3624,7 +3628,7 @@ async function seed() {
           corroborationCount: 2,
           note: 'Walked up to the Bluebird box office. GA face value, no fees.',
         })
-        .returning()
+        .returning();
 
       if (cSub[0]) {
         await db
@@ -3634,20 +3638,20 @@ async function seed() {
             userId: FAKE_USER_IDS.marco,
             method: 'box-office' as const,
           })
-          .onConflictDoNothing()
-        console.warn('Patched Event C: inserted VIP pending submission.')
+          .onConflictDoNothing();
+        console.warn('Patched Event C: inserted VIP pending submission.');
       }
     }
 
     // Events D, E, F, G — each need 1 corroborated submission
     const defgPatches: Array<{
-      event: (typeof ev)[keyof typeof ev]
-      userId: string
-      priceMin: string
-      priceMax?: string
-      vendor: 'AXS' | 'Ticketmaster'
-      howFound: 'bought_myself' | 'saw_listing'
-      label: string
+      event: (typeof ev)[keyof typeof ev];
+      userId: string;
+      priceMin: string;
+      priceMax?: string;
+      vendor: 'AXS' | 'Ticketmaster';
+      howFound: 'bought_myself' | 'saw_listing';
+      label: string;
     }> = [
       {
         event: ev.D,
@@ -3683,11 +3687,11 @@ async function seed() {
         howFound: 'saw_listing',
         label: 'G',
       },
-    ]
+    ];
 
     for (const patch of defgPatches) {
-      if (!patch.event) continue
-      if (await hasSubmission(patch.event.id, 'corroborated')) continue
+      if (!patch.event) continue;
+      if (await hasSubmission(patch.event.id, 'corroborated')) continue;
 
       await db
         .insert(priceSubmissions)
@@ -3703,10 +3707,10 @@ async function seed() {
           status: 'corroborated' as const,
           corroborationCount: 2,
         })
-        .onConflictDoNothing()
+        .onConflictDoNothing();
       console.warn(
         `Patched Event ${patch.label}: inserted corroborated submission.`,
-      )
+      );
     }
 
     // --- Step 4: ensure event reports and confirms exist ---
@@ -3715,11 +3719,11 @@ async function seed() {
       const [row] = await db
         .select({ total: count() })
         .from(eventReports)
-        .where(eq(eventReports.eventId, eventId))
-      return (row?.total ?? 0) > 0
-    }
+        .where(eq(eventReports.eventId, eventId));
+      return (row?.total ?? 0) > 0;
+    };
 
-    const pastDate = new Date(Date.now() - 2 * 86_400_000)
+    const pastDate = new Date(Date.now() - 2 * 86_400_000);
 
     // D — pending sold-out report
     if (ev.D && !(await hasReport(ev.D.id))) {
@@ -3730,8 +3734,8 @@ async function seed() {
         evidenceMethod: 'venue_site' as const,
         resolvedAt: null,
         resolution: null,
-      })
-      console.warn('Patched Event D: inserted sold-out report.')
+      });
+      console.warn('Patched Event D: inserted sold-out report.');
     }
 
     // E — pending cancelled report
@@ -3743,8 +3747,8 @@ async function seed() {
         evidenceMethod: 'saw_listing' as const,
         resolvedAt: null,
         resolution: null,
-      })
-      console.warn('Patched Event E: inserted cancelled report.')
+      });
+      console.warn('Patched Event E: inserted cancelled report.');
     }
 
     // F — pending postponed report
@@ -3756,8 +3760,8 @@ async function seed() {
         evidenceMethod: 'other' as const,
         resolvedAt: null,
         resolution: null,
-      })
-      console.warn('Patched Event F: inserted postponed report.')
+      });
+      console.warn('Patched Event F: inserted postponed report.');
     }
 
     // G — promoted sold-out report (resolved)
@@ -3772,7 +3776,7 @@ async function seed() {
           resolvedAt: pastDate,
           resolution: 'promoted' as const,
         })
-        .returning()
+        .returning();
 
       if (reportG[0]) {
         await db
@@ -3782,10 +3786,10 @@ async function seed() {
             { reportId: reportG[0].id, userId: FAKE_USER_IDS.riley },
             { reportId: reportG[0].id, userId: FAKE_USER_IDS.jess },
           ])
-          .onConflictDoNothing()
+          .onConflictDoNothing();
         console.warn(
           'Patched Event G: inserted promoted sold-out report + 3 confirms.',
-        )
+        );
       }
     }
 
@@ -3798,8 +3802,8 @@ async function seed() {
         evidenceMethod: 'saw_listing' as const,
         resolvedAt: pastDate,
         resolution: 'promoted' as const,
-      })
-      console.warn('Patched Event H: inserted promoted cancelled report.')
+      });
+      console.warn('Patched Event H: inserted promoted cancelled report.');
     }
 
     // I — pending cancelled report (imminent show, tests 3-confirm threshold)
@@ -3811,11 +3815,11 @@ async function seed() {
         evidenceMethod: 'venue_site' as const,
         resolvedAt: null,
         resolution: null,
-      })
-      console.warn('Patched Event I: inserted imminent cancelled report.')
+      });
+      console.warn('Patched Event I: inserted imminent cancelled report.');
     }
 
-    console.warn('Phase 8.5 full data patch complete.')
+    console.warn('Phase 8.5 full data patch complete.');
   }
 
   // -----------------------------------------------------------------------
@@ -3824,24 +3828,24 @@ async function seed() {
   const phase85KPCount = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(eventsTable)
-    .where(sql`title LIKE '[P8.5] Community Confirm%'`)
-  const hasPhase85KP = (phase85KPCount[0]?.count ?? 0) > 0
+    .where(sql`title LIKE '[P8.5] Community Confirm%'`);
+  const hasPhase85KP = (phase85KPCount[0]?.count ?? 0) > 0;
 
   if (!hasPhase85KP) {
-    const allVenuesKP = await db.select().from(venues)
-    const ogdenKP = allVenuesKP.find((vn) => vn.slug === 'ogden-theatre')
-    const missionKP = allVenuesKP.find((vn) => vn.slug === 'mission-ballroom')
-    const bluebirdKP = allVenuesKP.find((vn) => vn.slug === 'bluebird-theater')
-    const gothicKP = allVenuesKP.find((vn) => vn.slug === 'gothic-theatre')
-    const summitKP = allVenuesKP.find((vn) => vn.slug === 'summit-music-hall')
-    const marquisKP = allVenuesKP.find((vn) => vn.slug === 'marquis-theater')
+    const allVenuesKP = await db.select().from(venues);
+    const ogdenKP = allVenuesKP.find((vn) => vn.slug === 'ogden-theatre');
+    const missionKP = allVenuesKP.find((vn) => vn.slug === 'mission-ballroom');
+    const bluebirdKP = allVenuesKP.find((vn) => vn.slug === 'bluebird-theater');
+    const gothicKP = allVenuesKP.find((vn) => vn.slug === 'gothic-theatre');
+    const summitKP = allVenuesKP.find((vn) => vn.slug === 'summit-music-hall');
+    const marquisKP = allVenuesKP.find((vn) => vn.slug === 'marquis-theater');
 
-    const venueKP_A = ogdenKP ?? allVenuesKP[0]
-    const venueKP_B = missionKP ?? allVenuesKP[0]
-    const venueKP_C = bluebirdKP ?? allVenuesKP[0]
-    const venueKP_D = gothicKP ?? allVenuesKP[0]
-    const venueKP_E = summitKP ?? allVenuesKP[0]
-    const venueKP_F = marquisKP ?? allVenuesKP[0]
+    const venueKP_A = ogdenKP ?? allVenuesKP[0];
+    const venueKP_B = missionKP ?? allVenuesKP[0];
+    const venueKP_C = bluebirdKP ?? allVenuesKP[0];
+    const venueKP_D = gothicKP ?? allVenuesKP[0];
+    const venueKP_E = summitKP ?? allVenuesKP[0];
+    const venueKP_F = marquisKP ?? allVenuesKP[0];
 
     if (
       !venueKP_A ||
@@ -3851,7 +3855,7 @@ async function seed() {
       !venueKP_E ||
       !venueKP_F
     ) {
-      console.warn('Phase 8.5 K–P: no venues found — skipping.')
+      console.warn('Phase 8.5 K–P: no venues found — skipping.');
     } else {
       const phase85KPRows = [
         // K — Community price submitted by another fan (user sees "Confirm price")
@@ -3914,26 +3918,26 @@ async function seed() {
           status: 'upcoming' as const,
           verified: false,
         },
-      ]
+      ];
 
       const insertedKP = await db
         .insert(eventsTable)
         .values(withCanonicalArtist(phase85KPRows))
-        .returning()
-      console.warn(`Inserted ${insertedKP.length} Phase 8.5 K–P test events.`)
+        .returning();
+      console.warn(`Inserted ${insertedKP.length} Phase 8.5 K–P test events.`);
 
       const kpEvent = (suffix: string) =>
-        insertedKP.find((ev) => ev.title === `[P8.5] ${suffix}`)
+        insertedKP.find((ev) => ev.title === `[P8.5] ${suffix}`);
 
-      const eventK = kpEvent('Community Confirm')
-      const eventL = kpEvent('Community Self') // intentionally no submission seeded
-      const eventM = kpEvent('Community Confirmed')
-      const eventN = kpEvent('Box Office Confirm')
-      const eventO = kpEvent('Box Office Self') // intentionally no submission seeded
-      const eventP = kpEvent('Box Office Confirmed')
+      const eventK = kpEvent('Community Confirm');
+      const eventL = kpEvent('Community Self'); // intentionally no submission seeded
+      const eventM = kpEvent('Community Confirmed');
+      const eventN = kpEvent('Box Office Confirm');
+      const eventO = kpEvent('Box Office Self'); // intentionally no submission seeded
+      const eventP = kpEvent('Box Office Confirmed');
 
-      void eventL // no submission needed
-      void eventO // no submission needed
+      void eventL; // no submission needed
+      void eventO; // no submission needed
 
       const kpSubmissions = [
         // K — community GA, submitted by another fake user, with note
@@ -4004,7 +4008,7 @@ async function seed() {
               },
             ]
           : []),
-      ]
+      ];
 
       if (kpSubmissions.length > 0) {
         await db
@@ -4015,12 +4019,12 @@ async function seed() {
               sourceCategory: deriveSourceCategory(row.vendor, row.howFound),
             })),
           )
-          .onConflictDoNothing()
-        console.warn(`Inserted ${kpSubmissions.length} K–P price submissions.`)
+          .onConflictDoNothing();
+        console.warn(`Inserted ${kpSubmissions.length} K–P price submissions.`);
       }
     }
   } else {
-    console.warn('Phase 8.5 K–P test events already seeded, skipping.')
+    console.warn('Phase 8.5 K–P test events already seeded, skipping.');
   }
 
   // -----------------------------------------------------------------------
@@ -4052,12 +4056,12 @@ async function seed() {
     '[PR4] Mixed Tier',
     '[PR4] Reports Caption',
     '[PR4] Admin Defer',
-  ] as const
+  ] as const;
   const pr4ExistingTitles = await db
     .select({ title: eventsTable.title })
     .from(eventsTable)
-    .where(like(eventsTable.title, '[PR4]%'))
-  const pr4ExistingTitleSet = new Set(pr4ExistingTitles.map((ev) => ev.title))
+    .where(like(eventsTable.title, '[PR4]%'));
+  const pr4ExistingTitleSet = new Set(pr4ExistingTitles.map((ev) => ev.title));
   // Marker mirrors the full state #18 requirement: pending counter +
   // admin defer action. If a dev resolves the counter (status != pending),
   // clears the defer (lastAdminActionKind != defer), or removes the
@@ -4077,32 +4081,32 @@ async function seed() {
         isNotNull(priceSubmissions.lastAdminActionAt),
       ),
     )
-    .limit(1)
+    .limit(1);
   const hasPr4Events = PR4_EXPECTED_TITLES.every((title) =>
     pr4ExistingTitleSet.has(title),
-  )
-  const hasPr4EndMarker = pr4AdminDeferMarker.length > 0
-  const hasPr4 = hasPr4Events && hasPr4EndMarker
+  );
+  const hasPr4EndMarker = pr4AdminDeferMarker.length > 0;
+  const hasPr4 = hasPr4Events && hasPr4EndMarker;
 
   if (!hasPr4) {
-    const allVenuesPr4 = await db.select().from(venues)
+    const allVenuesPr4 = await db.select().from(venues);
     // Return undefined when a slug isn't found so the guard below can catch
     // the missing-venue case explicitly. The previous fallback to
     // allVenuesPr4[0] silently assigned PR4 events to an unrelated venue,
     // producing misleading UI states (e.g. "[PR4] Sold Out Resale" landing
     // at Mission Ballroom because Bluebird wasn't seeded).
     const findVenue = (slug: string) =>
-      allVenuesPr4.find((vn) => vn.slug === slug)
+      allVenuesPr4.find((vn) => vn.slug === slug);
 
-    const venueBluebird = findVenue('bluebird-theater')
-    const venueHiDive = findVenue('hi-dive')
-    const venueLarimer = findVenue('larimer-lounge')
-    const venueMarquis = findVenue('marquis-theater')
-    const venueGothic = findVenue('gothic-theatre')
-    const venueMission = findVenue('mission-ballroom')
-    const venueFillmore = findVenue('fillmore-auditorium')
-    const venueOgden = findVenue('ogden-theatre')
-    const venueRedRocks = findVenue('red-rocks-amphitheatre')
+    const venueBluebird = findVenue('bluebird-theater');
+    const venueHiDive = findVenue('hi-dive');
+    const venueLarimer = findVenue('larimer-lounge');
+    const venueMarquis = findVenue('marquis-theater');
+    const venueGothic = findVenue('gothic-theatre');
+    const venueMission = findVenue('mission-ballroom');
+    const venueFillmore = findVenue('fillmore-auditorium');
+    const venueOgden = findVenue('ogden-theatre');
+    const venueRedRocks = findVenue('red-rocks-amphitheatre');
 
     if (
       !venueBluebird ||
@@ -4117,7 +4121,7 @@ async function seed() {
     ) {
       console.warn(
         'PR4: one or more expected venues missing — skipping. Re-run after the venues block populates the standard Denver venue set.',
-      )
+      );
     } else {
       const pr4EventRows = [
         // Q — Sold out with resale ticketLink (decision-tree: sold-out-resale).
@@ -4260,7 +4264,7 @@ async function seed() {
           verified: false,
           priceSource: 'community' as const,
         },
-      ]
+      ];
 
       // Pre-filter against existing PR4 titles so a previous run that
       // inserted some-but-not-all PR4 events (crashed mid-block) can
@@ -4269,11 +4273,11 @@ async function seed() {
       const existingPr4 = await db
         .select()
         .from(eventsTable)
-        .where(like(eventsTable.title, '[PR4]%'))
-      const existingPr4Titles = new Set(existingPr4.map((ev) => ev.title))
+        .where(like(eventsTable.title, '[PR4]%'));
+      const existingPr4Titles = new Set(existingPr4.map((ev) => ev.title));
       const newPr4EventRows = pr4EventRows.filter(
         (row) => !existingPr4Titles.has(row.title),
-      )
+      );
 
       const insertedPr4 =
         newPr4EventRows.length > 0
@@ -4281,24 +4285,24 @@ async function seed() {
               .insert(eventsTable)
               .values(withCanonicalArtist(newPr4EventRows))
               .returning()
-          : []
+          : [];
       console.warn(
         `Inserted ${insertedPr4.length} PR4 test events (${existingPr4.length} already present).`,
-      )
+      );
 
       // Lookup considers BOTH newly-inserted + previously-existing rows so
       // partial prior runs can still wire up their submissions/reports below.
-      const allPr4Events = [...existingPr4, ...insertedPr4]
+      const allPr4Events = [...existingPr4, ...insertedPr4];
       const pr4Event = (suffix: string) =>
-        allPr4Events.find((ev) => ev.title === `[PR4] ${suffix}`)
+        allPr4Events.find((ev) => ev.title === `[PR4] ${suffix}`);
 
-      const evQ = pr4Event('Sold Out Resale')
-      const evR = pr4Event('Sold Out Contribute')
-      const evU = pr4Event('Resale Headline')
-      const evV = pr4Event('Multi Source Mixed')
-      const evW = pr4Event('Mixed Tier')
-      const evX = pr4Event('Reports Caption')
-      const evY = pr4Event('Admin Defer')
+      const evQ = pr4Event('Sold Out Resale');
+      const evR = pr4Event('Sold Out Contribute');
+      const evU = pr4Event('Resale Headline');
+      const evV = pr4Event('Multi Source Mixed');
+      const evW = pr4Event('Mixed Tier');
+      const evX = pr4Event('Reports Caption');
+      const evY = pr4Event('Admin Defer');
       // Events S, T intentionally have no price submissions (no-price states).
 
       // Per-event idempotency: price_submissions DOES have some partial
@@ -4333,9 +4337,9 @@ async function seed() {
               eq(priceSubmissions.userId, finalUserId),
             ),
           )
-          .limit(1)
-        return rows.length > 0
-      }
+          .limit(1);
+        return rows.length > 0;
+      };
       // Treats an event as completed only when a pending counter with an
       // admin defer action exists. State #18 needs all four: pending
       // status, dispute link, lastAdminActionKind='defer', AND
@@ -4357,9 +4361,9 @@ async function seed() {
               isNotNull(priceSubmissions.lastAdminActionAt),
             ),
           )
-          .limit(1)
-        return rows.length > 0
-      }
+          .limit(1);
+        return rows.length > 0;
+      };
 
       // Per-row idempotent insert — used inside each event's submission
       // block so re-running the block (after the outer marker said "redo")
@@ -4370,7 +4374,7 @@ async function seed() {
       const pr4UpsertSubmission = async (
         row: NewPriceSubmission,
       ): Promise<{ id: string } | null> => {
-        if (!row.eventId || !row.userId) return null
+        if (!row.eventId || !row.userId) return null;
         const existing = await db
           .select({ id: priceSubmissions.id })
           .from(priceSubmissions)
@@ -4380,30 +4384,30 @@ async function seed() {
               eq(priceSubmissions.userId, row.userId),
             ),
           )
-          .limit(1)
-        if (existing.length > 0) return existing[0] ?? null
+          .limit(1);
+        if (existing.length > 0) return existing[0] ?? null;
         const inserted = await db
           .insert(priceSubmissions)
           .values(row)
-          .returning({ id: priceSubmissions.id })
-        return inserted[0] ?? null
-      }
+          .returning({ id: priceSubmissions.id });
+        return inserted[0] ?? null;
+      };
 
       // --- Sold-out reports for Q + R (drives priceStatus='soldout' in API) ---
       // Time offsets in ms — used throughout to scatter submittedAt so feeds
       // don't all look like one batch insert. "older" = ~weeks before show,
       // "fresh" = within last few days.
-      const dayMs = 86_400_000
-      const pastDatePr4 = new Date(Date.now() - 2 * dayMs)
-      const olderDatePr4 = new Date(Date.now() - 21 * dayMs)
-      const olderishDatePr4 = new Date(Date.now() - 10 * dayMs)
-      const veryRecentDatePr4 = new Date(Date.now() - 1 * dayMs)
+      const dayMs = 86_400_000;
+      const pastDatePr4 = new Date(Date.now() - 2 * dayMs);
+      const olderDatePr4 = new Date(Date.now() - 21 * dayMs);
+      const olderishDatePr4 = new Date(Date.now() - 10 * dayMs);
+      const veryRecentDatePr4 = new Date(Date.now() - 1 * dayMs);
       const soldOutReportTargets = [
         { event: evQ, reporter: FAKE_USER_IDS.marco, label: 'Q' },
         { event: evR, reporter: FAKE_USER_IDS.taylor, label: 'R' },
-      ]
+      ];
       for (const target of soldOutReportTargets) {
-        if (!target.event) continue
+        if (!target.event) continue;
         // Idempotency: event_reports has a partial-unique index on
         // (event_id) WHERE status='sold-out' AND resolved_at IS NOT NULL
         // AND resolution='promoted' (see migration 0032) — one "active
@@ -4427,12 +4431,12 @@ async function seed() {
               eq(eventReports.resolution, 'promoted'),
             ),
           )
-          .limit(1)
+          .limit(1);
         if (existingReport.length > 0) {
           console.warn(
             `PR4 Event ${target.label}: promoted sold-out report already present, skipping.`,
-          )
-          continue
+          );
+          continue;
         }
         const insertedReport = await db
           .insert(eventReports)
@@ -4444,7 +4448,7 @@ async function seed() {
             resolvedAt: pastDatePr4,
             resolution: 'promoted' as const,
           })
-          .returning()
+          .returning();
         if (insertedReport[0]) {
           await db
             .insert(eventReportConfirms)
@@ -4453,11 +4457,11 @@ async function seed() {
               { reportId: insertedReport[0].id, userId: FAKE_USER_IDS.riley },
               { reportId: insertedReport[0].id, userId: FAKE_USER_IDS.jess },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
         console.warn(
           `PR4 Event ${target.label}: inserted promoted sold-out report + 3 confirms.`,
-        )
+        );
       }
 
       // --- U: resale-only single-tier headline -------------------------------
@@ -4480,7 +4484,7 @@ async function seed() {
           note: 'SeatGeek listings ranged from $95 to $140 face. No box office number yet.',
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (resaleHeadline) {
           await db
             .insert(submissionConfirms)
@@ -4496,7 +4500,7 @@ async function seed() {
                 method: 'same-vendor' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Second resale submission at the same tier from a different fan —
@@ -4515,7 +4519,7 @@ async function seed() {
           note: 'SeatGeek crept up to $160 over the weekend — supply tightening.',
           createdAt: olderishDatePr4,
           updatedAt: olderishDatePr4,
-        })
+        });
         if (uSecondResale) {
           // corroborationCount=2 means submitter + 1 confirmer; insert the
           // matching submission_confirms row so the API-derived confirm
@@ -4527,7 +4531,7 @@ async function seed() {
               userId: FAKE_USER_IDS.bouldergrrl,
               method: 'same-vendor' as const,
             })
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Fresh pending — last 24h, one fan, drives "live, just submitted" feel.
@@ -4548,11 +4552,11 @@ async function seed() {
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
 
         console.warn(
           'PR4 Event U: inserted resale headline + corroborated alt + fresh pending.',
-        )
+        );
       }
 
       // --- V: multi-source mixed (GA boxoffice + GA resale alt + VIP boxoffice)
@@ -4572,7 +4576,7 @@ async function seed() {
           note: 'Walked up to Mission box office — GA was $32 even, no fees.',
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (vGaBoxoffice) {
           await db
             .insert(submissionConfirms)
@@ -4593,7 +4597,7 @@ async function seed() {
                 method: 'box-office' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Same tier (GA), resale alternate — surfaces as TierAlternate in
@@ -4612,7 +4616,7 @@ async function seed() {
           note: 'Ticketmaster Verified Resale showed $52-78. Useful if you do not want to wait for the line.',
           createdAt: olderishDatePr4,
           updatedAt: olderishDatePr4,
-        })
+        });
         if (vGaResale) {
           await db
             .insert(submissionConfirms)
@@ -4621,7 +4625,7 @@ async function seed() {
               userId: FAKE_USER_IDS.taylor,
               method: 'same-vendor' as const,
             })
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // VIP tier — separate boxoffice headline so priceByTier.length > 1.
@@ -4638,7 +4642,7 @@ async function seed() {
           corroborationCount: 3,
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (vVipBoxoffice) {
           await db
             .insert(submissionConfirms)
@@ -4654,7 +4658,7 @@ async function seed() {
                 method: 'box-office' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Fresh pending GA submission from a separate fan — drives "active
@@ -4676,11 +4680,11 @@ async function seed() {
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
 
         console.warn(
           'PR4 Event V: inserted GA boxoffice + GA resale alt + VIP boxoffice + fresh pending GA.',
-        )
+        );
       }
 
       // --- W: mixed-tier (GA corroborated headline, Reserved pending-only) ---
@@ -4700,7 +4704,7 @@ async function seed() {
           note: 'AXS GA pre-sale opened at $42 face.',
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (wGaHeadline) {
           await db
             .insert(submissionConfirms)
@@ -4721,7 +4725,7 @@ async function seed() {
                 method: 'same-vendor' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Second corroborated GA submission — same tier, different submitter +
@@ -4740,7 +4744,7 @@ async function seed() {
           note: 'Same GA, slightly higher on TM after fees rolled in.',
           createdAt: olderishDatePr4,
           updatedAt: olderishDatePr4,
-        })
+        });
         if (wGaSecond) {
           await db
             .insert(submissionConfirms)
@@ -4749,7 +4753,7 @@ async function seed() {
               userId: FAKE_USER_IDS.amy,
               method: 'same-vendor' as const,
             })
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Reserved tier — pending-only, no headline. Drives the per-tier
@@ -4771,10 +4775,10 @@ async function seed() {
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           })
-          .onConflictDoNothing()
+          .onConflictDoNothing();
         console.warn(
           'PR4 Event W: inserted GA corroborated (x2) + Reserved pending.',
-        )
+        );
       }
 
       // --- X: multi-tier reports caption (GA tier with N > 1 reports) --------
@@ -4794,7 +4798,7 @@ async function seed() {
           note: 'GA opened at $38 on AXS, capped at $46 with fees.',
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (xGaHeadline) {
           await db
             .insert(submissionConfirms)
@@ -4820,7 +4824,7 @@ async function seed() {
                 method: 'same-vendor' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
         }
 
         // Several additional GA submissions — different submitters, mix of
@@ -4897,13 +4901,13 @@ async function seed() {
             createdAt: veryRecentDatePr4,
             updatedAt: veryRecentDatePr4,
           },
-        ]
+        ];
         for (const submission of xAdditionalSubmissions) {
-          await pr4UpsertSubmission(submission)
+          await pr4UpsertSubmission(submission);
         }
         console.warn(
           'PR4 Event X: inserted GA corroborated headline + 4 additional GA reports (mix of pending + corroborated).',
-        )
+        );
       }
 
       // --- Y: admin defer engagement pill ------------------------------------
@@ -4929,7 +4933,7 @@ async function seed() {
           note: 'Bought on AXS day-of-sale. GA was $125 face + $40 fees.',
           createdAt: olderDatePr4,
           updatedAt: olderDatePr4,
-        })
+        });
         if (yHeadline) {
           await db
             .insert(submissionConfirms)
@@ -4955,7 +4959,7 @@ async function seed() {
                 method: 'same-vendor' as const,
               },
             ])
-            .onConflictDoNothing()
+            .onConflictDoNothing();
 
           // Counter submission against the headline — admin has deferred for
           // more info (lastAdminActionKind='defer', lastAdminActionAt=past).
@@ -4985,7 +4989,7 @@ async function seed() {
                 eq(priceSubmissions.status, 'pending'),
                 ne(priceSubmissions.userId, FAKE_USER_IDS.jordan_m),
               ),
-            )
+            );
           const counterUpdated = await db
             .update(priceSubmissions)
             .set({
@@ -5011,7 +5015,7 @@ async function seed() {
                 eq(priceSubmissions.userId, FAKE_USER_IDS.jordan_m),
               ),
             )
-            .returning({ id: priceSubmissions.id })
+            .returning({ id: priceSubmissions.id });
           if (counterUpdated.length === 0) {
             await db.insert(priceSubmissions).values({
               eventId: evY.id,
@@ -5033,38 +5037,38 @@ async function seed() {
               // admin action, so updatedAt mirrors lastAdminActionAt and
               // doesn't appear stale relative to the defer event.
               updatedAt: pastDatePr4,
-            })
+            });
           }
         }
         console.warn(
           'PR4 Event Y: inserted GA headline + counter (jordan_m) with admin defer.',
-        )
+        );
       }
     }
   } else {
-    console.warn('PR4 test events already seeded, skipping.')
+    console.warn('PR4 test events already seeded, skipping.');
   }
 
   // -------------------------------------------------------------------------
   // #764 venue first-timer guide fixtures
   // -------------------------------------------------------------------------
-  await seedVenueGuides(venueBySlug)
+  await seedVenueGuides(venueBySlug);
   // Project every seeded artist — headliner and support — into the `artists`
   // table so /artists/{slug} resolves locally and on staging with no manual
   // step (#1115). Idempotent, so it runs unconditionally at the end of the
   // seed, after every event insert above.
-  const artistBackfill = await backfillArtists(db)
+  const artistBackfill = await backfillArtists(db);
   console.warn(
     `Artists projection: ${artistBackfill.inserted} inserted of ${artistBackfill.discovered} discovered.`,
-  )
+  );
 
-  process.exit(0)
+  process.exit(0);
 }
 
 // Only run when executed directly (not when imported by tests)
 if (process.argv[1] === new URL(import.meta.url).pathname) {
   seed().catch((err) => {
-    console.error('Seed failed:', err)
-    process.exit(1)
-  })
+    console.error('Seed failed:', err);
+    process.exit(1);
+  });
 }

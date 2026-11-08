@@ -1,59 +1,59 @@
-'use client'
+'use client';
 
-import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { X, Trash2, Loader2 } from 'lucide-react'
-import { deleteVenue } from '@/lib/actions/venues'
-import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { X, Trash2, Loader2 } from 'lucide-react';
+import { deleteVenue } from '@/lib/actions/venues';
+import { AdminButton, useDialogKeyboard } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface DeleteVenueConfirmProps {
-  venueId: string
-  venueName: string
-  eventsTracked: number
+  venueId: string;
+  venueName: string;
+  eventsTracked: number;
 }
 
 export function DeleteVenueConfirm({
   venueId,
   venueName,
 }: DeleteVenueConfirmProps) {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const [typedValue, setTypedValue] = useState('')
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [typedValue, setTypedValue] = useState('');
   const [deleteState, setDeleteState] = useState<'idle' | 'deleting' | 'error'>(
     'idle',
-  )
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const trimmed = typedValue.trim()
-  const isArmed = trimmed === 'DELETE'
-  const canDelete = isArmed && deleteState === 'idle'
+  const trimmed = typedValue.trim();
+  const isArmed = trimmed === 'DELETE';
+  const canDelete = isArmed && deleteState === 'idle';
 
   function handleClose() {
-    if (deleteState === 'deleting') return
-    setOpen(false)
-    setTypedValue('')
-    setDeleteState('idle')
-    setErrorMessage(null)
+    if (deleteState === 'deleting') return;
+    setOpen(false);
+    setTypedValue('');
+    setDeleteState('idle');
+    setErrorMessage(null);
   }
 
   // Rendered inline behind `open`, so the hook is gated on it rather than
   // holding a document-level Escape listener for this component's whole life.
-  const panelRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null);
   useDialogKeyboard(panelRef, handleClose, {
     enabled: open,
     dismissible: deleteState !== 'deleting',
-  })
+  });
 
   async function handleDelete() {
-    if (!canDelete) return
-    setDeleteState('deleting')
+    if (!canDelete) return;
+    setDeleteState('deleting');
     try {
-      await deleteVenue(venueId)
-      router.push('/admin/venues')
+      await deleteVenue(venueId);
+      router.push('/admin/venues');
     } catch {
-      setDeleteState('error')
-      setErrorMessage(ADMIN_COPY.deleteVenueConfirm.errors.deleteFailed)
+      setDeleteState('error');
+      setErrorMessage(ADMIN_COPY.deleteVenueConfirm.errors.deleteFailed);
     }
   }
 
@@ -86,7 +86,7 @@ export function DeleteVenueConfirm({
             padding: 24,
           }}
           onClick={(evt) => {
-            if (evt.target === evt.currentTarget) handleClose()
+            if (evt.target === evt.currentTarget) handleClose();
           }}
         >
           <div
@@ -380,5 +380,5 @@ export function DeleteVenueConfirm({
         </div>
       )}
     </>
-  )
+  );
 }

@@ -13,25 +13,25 @@
  */
 export const hasGiftedPlanMetadata = (publicMetadata: unknown): boolean => {
   if (typeof publicMetadata !== 'object' || publicMetadata === null) {
-    return false
+    return false;
   }
   if (!('plan' in publicMetadata)) {
-    return false
+    return false;
   }
-  return publicMetadata.plan === 'premium_gifted'
-}
+  return publicMetadata.plan === 'premium_gifted';
+};
 
 /**
  * Redacts an email's local part for operator logs (keeps the first
  * character + domain) so full addresses never land in terminal/CI logs.
  */
 export const redactEmail = (email: string): string => {
-  const atIndex = email.indexOf('@')
+  const atIndex = email.indexOf('@');
   if (atIndex <= 0) {
-    return '(no email)'
+    return '(no email)';
   }
-  return `${email[0]}***@${email.slice(atIndex + 1)}`
-}
+  return `${email[0]}***@${email.slice(atIndex + 1)}`;
+};
 
 /**
  * Resolves the `granted_by` audit value from CLI args. Accepts
@@ -41,11 +41,11 @@ export const redactEmail = (email: string): string => {
 export const resolveGrantedBy = (argv: readonly string[]): string => {
   for (const arg of argv) {
     if (arg.startsWith('--granted-by=')) {
-      const value = arg.slice('--granted-by='.length).trim()
+      const value = arg.slice('--granted-by='.length).trim();
       if (value.length > 0) {
-        return value
+        return value;
       }
     }
   }
-  return 'backfill'
-}
+  return 'backfill';
+};

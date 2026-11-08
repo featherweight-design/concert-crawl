@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 export const AdminTable = ({
   children,
   className,
   minWidth,
 }: {
-  children: React.ReactNode
-  className?: string
-  minWidth?: number | string
+  children: React.ReactNode;
+  className?: string;
+  minWidth?: number | string;
 }) => (
   <div style={{ overflowX: 'auto' }}>
     <table
@@ -25,11 +25,11 @@ export const AdminTable = ({
       {children}
     </table>
   </div>
-)
+);
 
 interface THeadProps {
-  children: React.ReactNode
-  sticky?: boolean
+  children: React.ReactNode;
+  sticky?: boolean;
 }
 
 export const THead = ({ children, sticky = false }: THeadProps) => (
@@ -41,16 +41,16 @@ export const THead = ({ children, sticky = false }: THeadProps) => (
   >
     {children}
   </thead>
-)
+);
 
 export const TR = ({
   children,
   active,
   onClick,
 }: {
-  children: React.ReactNode
-  active?: boolean
-  onClick?: () => void
+  children: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
 }) => (
   <tr
     onClick={onClick}
@@ -58,8 +58,8 @@ export const TR = ({
       ? {
           onKeyDown: (evt: React.KeyboardEvent<HTMLTableRowElement>) => {
             if (evt.key === 'Enter' || evt.key === ' ') {
-              evt.preventDefault()
-              onClick()
+              evt.preventDefault();
+              onClick();
             }
           },
           tabIndex: 0,
@@ -75,21 +75,21 @@ export const TR = ({
     onMouseEnter={(ev) => {
       if (!active)
         (ev.currentTarget as HTMLElement).style.background =
-          'var(--overlay-hover)'
+          'var(--overlay-hover)';
     }}
     onMouseLeave={(ev) => {
-      if (!active) (ev.currentTarget as HTMLElement).style.background = ''
+      if (!active) (ev.currentTarget as HTMLElement).style.background = '';
     }}
   >
     {children}
   </tr>
-)
+);
 
 interface THProps {
-  children?: React.ReactNode
-  align?: 'left' | 'center' | 'right'
-  mono?: boolean
-  width?: number | string
+  children?: React.ReactNode;
+  align?: 'left' | 'center' | 'right';
+  mono?: boolean;
+  width?: number | string;
 }
 
 export const TH = ({ children, align = 'left', mono, width }: THProps) => (
@@ -109,15 +109,15 @@ export const TH = ({ children, align = 'left', mono, width }: THProps) => (
   >
     {children}
   </th>
-)
+);
 
 interface TDProps {
-  children?: React.ReactNode
-  align?: 'left' | 'center' | 'right'
-  mono?: boolean
-  color?: string
-  width?: number | string
-  colSpan?: number
+  children?: React.ReactNode;
+  align?: 'left' | 'center' | 'right';
+  mono?: boolean;
+  color?: string;
+  width?: number | string;
+  colSpan?: number;
 }
 
 export const TD = ({
@@ -141,4 +141,4 @@ export const TD = ({
   >
     {children}
   </td>
-)
+);

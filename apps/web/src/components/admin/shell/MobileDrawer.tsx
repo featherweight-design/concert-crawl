@@ -1,22 +1,22 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useClerk } from '@clerk/nextjs'
-import * as LucideIcons from 'lucide-react'
-import { X, LogOut } from 'lucide-react'
-import { NAV_V2 } from './nav'
-import { CCMark } from '@/components/brand/cc-mark'
-import { CCWordmark } from '@/components/brand/cc-wordmark'
-import { AppSwitcher } from './AppSwitcher'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
+import * as LucideIcons from 'lucide-react';
+import { X, LogOut } from 'lucide-react';
+import { NAV_V2 } from './nav';
+import { CCMark } from '@/components/brand/cc-mark';
+import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { AppSwitcher } from './AppSwitcher';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface MobileDrawerProps {
-  open: boolean
-  onClose: () => void
-  badgeCounts?: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
+  open: boolean;
+  onClose: () => void;
+  badgeCounts?: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -25,20 +25,20 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 const getCount = (
   key: string,
   counts?: { crawl: number; review: number; feedback: number },
 ): number => {
-  if (!counts) return 0
-  if (key === 'crawl') return counts.crawl
-  if (key === 'review') return counts.review
-  if (key === 'feedback') return counts.feedback
-  return 0
-}
+  if (!counts) return 0;
+  if (key === 'crawl') return counts.crawl;
+  if (key === 'review') return counts.review;
+  if (key === 'feedback') return counts.feedback;
+  return 0;
+};
 
 export const MobileDrawer = ({
   open,
@@ -46,23 +46,23 @@ export const MobileDrawer = ({
   badgeCounts,
   user,
 }: MobileDrawerProps) => {
-  const pathname = usePathname()
-  const { signOut } = useClerk()
+  const pathname = usePathname();
+  const { signOut } = useClerk();
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
     const handleKeyDown = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
+      if (evt.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
-  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase()
-  const opsItems = NAV_V2.filter((item) => item.section === 'operations')
-  const accountItems = NAV_V2.filter((item) => item.section === 'account')
+  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase();
+  const opsItems = NAV_V2.filter((item) => item.section === 'operations');
+  const accountItems = NAV_V2.filter((item) => item.section === 'account');
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <>
@@ -164,9 +164,9 @@ export const MobileDrawer = ({
           {opsItems.map((item) => {
             const active =
               pathname === item.href ||
-              (item.href !== '/admin' && pathname.startsWith(item.href))
-            const count = getCount(item.key, badgeCounts)
-            const showBadge = item.badge !== undefined && count > 0
+              (item.href !== '/admin' && pathname.startsWith(item.href));
+            const count = getCount(item.key, badgeCounts);
+            const showBadge = item.badge !== undefined && count > 0;
 
             return (
               <Link
@@ -229,7 +229,7 @@ export const MobileDrawer = ({
                   </span>
                 )}
               </Link>
-            )
+            );
           })}
 
           <div
@@ -248,7 +248,7 @@ export const MobileDrawer = ({
           {accountItems.map((item) => {
             const active =
               pathname === item.href ||
-              (item.href !== '/admin' && pathname.startsWith(item.href))
+              (item.href !== '/admin' && pathname.startsWith(item.href));
 
             return (
               <Link
@@ -287,7 +287,7 @@ export const MobileDrawer = ({
                 <NavIcon name={item.iconName} size={17} />
                 <span style={{ flex: 1 }}>{item.label}</span>
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -372,5 +372,5 @@ export const MobileDrawer = ({
         </div>
       </aside>
     </>
-  )
-}
+  );
+};

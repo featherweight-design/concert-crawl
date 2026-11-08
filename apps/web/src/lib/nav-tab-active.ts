@@ -1,6 +1,6 @@
 interface NavTab {
-  href: string
-  matchPrefixes?: readonly string[]
+  href: string;
+  matchPrefixes?: readonly string[];
 }
 
 // "My shows" owns two routes (/watching and /history), so href alone can no
@@ -9,4 +9,4 @@ interface NavTab {
 export const isTabActive = (tab: NavTab, pathname: string): boolean =>
   [tab.href, ...(tab.matchPrefixes ?? [])].some((prefix) =>
     pathname.startsWith(prefix),
-  )
+  );

@@ -14,26 +14,27 @@
 
 ## File Map
 
-| File | Change |
-|------|--------|
-| `packages/db/src/schema/venues.ts` | Add `crawlWaitForSelector` column |
-| `packages/db/migrations/0018_venue_wait_for_selector.sql` | Create migration |
-| `packages/db/migrations/meta/_journal.json` | Add journal entry |
-| `packages/types/src/index.ts` | Add `crawlWaitForSelector: string \| null` to `Venue` |
-| `packages/crawler-core/src/lib/fetcher.ts` | Add `waitForSelector?` param + `page.waitForSelector` call |
-| `packages/crawler-core/src/lib/fetcher.test.ts` | New: unit tests for waitForSelector behavior |
-| `packages/crawler-core/src/crawl.ts` | Pass `venue.crawlWaitForSelector ?? undefined` to `fetchPage` |
-| `packages/crawler-core/src/crawl.test.ts` | Add test: selector forwarded from venue to fetchPage |
-| `apps/api/src/routes/admin/venues.ts` | Add `crawlWaitForSelector` to `createVenueSchema` |
-| `apps/api/src/routes/admin/venues.test.ts` | Add PATCH test for new field |
-| `apps/web/src/lib/actions/venues.ts` | Read + forward `crawlWaitForSelector` from FormData |
-| `apps/web/src/components/admin/VenueDetailsClient.tsx` | Add text input + state for the new field |
+| File                                                      | Change                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------- |
+| `packages/db/src/schema/venues.ts`                        | Add `crawlWaitForSelector` column                             |
+| `packages/db/migrations/0018_venue_wait_for_selector.sql` | Create migration                                              |
+| `packages/db/migrations/meta/_journal.json`               | Add journal entry                                             |
+| `packages/types/src/index.ts`                             | Add `crawlWaitForSelector: string \| null` to `Venue`         |
+| `packages/crawler-core/src/lib/fetcher.ts`                | Add `waitForSelector?` param + `page.waitForSelector` call    |
+| `packages/crawler-core/src/lib/fetcher.test.ts`           | New: unit tests for waitForSelector behavior                  |
+| `packages/crawler-core/src/crawl.ts`                      | Pass `venue.crawlWaitForSelector ?? undefined` to `fetchPage` |
+| `packages/crawler-core/src/crawl.test.ts`                 | Add test: selector forwarded from venue to fetchPage          |
+| `apps/api/src/routes/admin/venues.ts`                     | Add `crawlWaitForSelector` to `createVenueSchema`             |
+| `apps/api/src/routes/admin/venues.test.ts`                | Add PATCH test for new field                                  |
+| `apps/web/src/lib/actions/venues.ts`                      | Read + forward `crawlWaitForSelector` from FormData           |
+| `apps/web/src/components/admin/VenueDetailsClient.tsx`    | Add text input + state for the new field                      |
 
 ---
 
 ## Task 1: DB migration — add `crawlWaitForSelector` column
 
 **Files:**
+
 - Modify: `packages/db/src/schema/venues.ts`
 - Create: `packages/db/migrations/0018_venue_wait_for_selector.sql`
 - Modify: `packages/db/migrations/meta/_journal.json`
@@ -92,6 +93,7 @@ git commit -m "feat(db): add crawl_wait_for_selector column to venues"
 ## Task 2: Update shared `Venue` type
 
 **Files:**
+
 - Modify: `packages/types/src/index.ts`
 
 - [ ] **Step 1: Add the field to the `Venue` interface**
@@ -99,8 +101,8 @@ git commit -m "feat(db): add crawl_wait_for_selector column to venues"
 In `packages/types/src/index.ts`, in the `Venue` interface, add `crawlWaitForSelector` after `crawlWaitUntil`:
 
 ```typescript
-crawlWaitUntil: 'networkidle' | 'load' | 'domcontentloaded'
-crawlWaitForSelector: string | null
+crawlWaitUntil: 'networkidle' | 'load' | 'domcontentloaded';
+crawlWaitForSelector: string | null;
 ```
 
 - [ ] **Step 2: Verify TypeScript compiles**
@@ -123,6 +125,7 @@ git commit -m "feat(types): add crawlWaitForSelector to Venue interface"
 ## Task 3: fetcher — implement `waitForSelector` support
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/fetcher.ts`
 - Create: `packages/crawler-core/src/lib/fetcher.test.ts`
 
@@ -131,60 +134,68 @@ git commit -m "feat(types): add crawlWaitForSelector to Venue interface"
 Create `packages/crawler-core/src/lib/fetcher.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi } from 'vitest'
-import { fetchPage } from './fetcher.js'
-import type { Browser, BrowserContext, Page, Response } from 'playwright'
+import { describe, it, expect, vi } from 'vitest';
+import { fetchPage } from './fetcher.js';
+import type { Browser, BrowserContext, Page, Response } from 'playwright';
 
 function makeMockPage(overrides: Partial<Page> = {}): Page {
   return {
     on: vi.fn(),
-    goto: vi.fn().mockResolvedValue({ status: () => 200 } as unknown as Response),
+    goto: vi
+      .fn()
+      .mockResolvedValue({ status: () => 200 } as unknown as Response),
     waitForSelector: vi.fn().mockResolvedValue(null),
     content: vi.fn().mockResolvedValue('<html><body>loaded</body></html>'),
     url: vi.fn().mockReturnValue('https://example.com'),
     ...overrides,
-  } as unknown as Page
+  } as unknown as Page;
 }
 
 function makeMockBrowser(page: Page): Browser {
   const context = {
     newPage: vi.fn().mockResolvedValue(page),
     close: vi.fn().mockResolvedValue(undefined),
-  } as unknown as BrowserContext
+  } as unknown as BrowserContext;
   return {
     newContext: vi.fn().mockResolvedValue(context),
-  } as unknown as Browser
+  } as unknown as Browser;
 }
 
 describe('fetchPage — waitForSelector', () => {
   it('calls page.waitForSelector and forces domcontentloaded when selector is provided', async () => {
-    const page = makeMockPage()
-    const browser = makeMockBrowser(page)
+    const page = makeMockPage();
+    const browser = makeMockBrowser(page);
 
-    await fetchPage('https://example.com', browser, 0, 'networkidle', '.event-card')
+    await fetchPage(
+      'https://example.com',
+      browser,
+      0,
+      'networkidle',
+      '.event-card',
+    );
 
     expect(page.goto).toHaveBeenCalledWith('https://example.com', {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
-    })
+    });
     expect(page.waitForSelector).toHaveBeenCalledWith('.event-card', {
       timeout: 30_000,
-    })
-  })
+    });
+  });
 
   it('does not call waitForSelector when no selector is provided', async () => {
-    const page = makeMockPage()
-    const browser = makeMockBrowser(page)
+    const page = makeMockPage();
+    const browser = makeMockBrowser(page);
 
-    await fetchPage('https://example.com', browser, 0, 'networkidle')
+    await fetchPage('https://example.com', browser, 0, 'networkidle');
 
     expect(page.goto).toHaveBeenCalledWith('https://example.com', {
       waitUntil: 'networkidle',
       timeout: 30_000,
-    })
-    expect(page.waitForSelector).not.toHaveBeenCalled()
-  })
-})
+    });
+    expect(page.waitForSelector).not.toHaveBeenCalled();
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -207,26 +218,26 @@ export async function fetchPage(
   waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
   waitForSelector?: string,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
-  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
+  const delay = Math.max(0, jitter(crawlDelayMs));
+  if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
 
   const context = await browser.newContext({
     userAgent: HONEST_USER_AGENT,
-  })
+  });
   try {
-    const page = await context.newPage()
+    const page = await context.newPage();
 
-    console.log(JSON.stringify({ event: 'fetch.start', url }))
+    console.log(JSON.stringify({ event: 'fetch.start', url }));
 
-    let httpStatus = 200
+    let httpStatus = 200;
     page.on('response', (response) => {
       if (
         response.url() === page.url() ||
         response.request().isNavigationRequest()
       ) {
-        httpStatus = response.status()
+        httpStatus = response.status();
       }
-    })
+    });
 
     // When a CSS selector is provided, use domcontentloaded for the
     // navigation (fast connection) and let waitForSelector handle
@@ -234,33 +245,33 @@ export async function fetchPage(
     const response = await page.goto(url, {
       waitUntil: waitForSelector ? 'domcontentloaded' : waitUntil,
       timeout: 30_000,
-    })
+    });
 
     if (waitForSelector) {
-      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
+      await page.waitForSelector(waitForSelector, { timeout: 30_000 });
     }
 
-    const finalStatus = response?.status() ?? httpStatus
+    const finalStatus = response?.status() ?? httpStatus;
 
     if (finalStatus === 403 || finalStatus === 429) {
       console.log(
         JSON.stringify({ event: 'fetch.blocked', url, status: finalStatus }),
-      )
+      );
       throw new CrawlFetchError(
         finalStatus,
         `HTTP ${finalStatus} — venue may have blocked crawler`,
-      )
+      );
     }
 
     if (finalStatus >= 400) {
       console.log(
         JSON.stringify({ event: 'fetch.error', url, status: finalStatus }),
-      )
-      throw new Error(`HTTP ${finalStatus}`)
+      );
+      throw new Error(`HTTP ${finalStatus}`);
     }
 
-    const html = await page.content()
-    const finalUrl = page.url()
+    const html = await page.content();
+    const finalUrl = page.url();
 
     console.log(
       JSON.stringify({
@@ -269,10 +280,10 @@ export async function fetchPage(
         finalUrl,
         status: finalStatus,
       }),
-    )
-    return { html, httpStatus: finalStatus, finalUrl }
+    );
+    return { html, httpStatus: finalStatus, finalUrl };
   } finally {
-    await context.close()
+    await context.close();
   }
 }
 ```
@@ -297,6 +308,7 @@ git commit -m "feat(crawler-core): add waitForSelector support to fetchPage"
 ## Task 4: crawl.ts — pass selector from venue to fetcher
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/crawl.ts`
 - Modify: `packages/crawler-core/src/crawl.test.ts`
 
@@ -306,18 +318,18 @@ In `packages/crawler-core/src/crawl.test.ts`, find the existing `describe('crawl
 
 ```typescript
 it('passes venue crawlWaitForSelector to fetchPage', async () => {
-  const venue = seedVenue({ crawlWaitForSelector: '.event-list-item' })
+  const venue = seedVenue({ crawlWaitForSelector: '.event-list-item' });
   mockFetchPage.mockResolvedValue({
     html: HTML_V1,
     httpStatus: 200,
     finalUrl: venue.websiteUrl,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: [],
     usage: { inputTokens: 0, outputTokens: 0 },
-  })
+  });
 
-  await crawlVenue(venue.id, mockBrowser)
+  await crawlVenue(venue.id, mockBrowser);
 
   expect(mockFetchPage).toHaveBeenCalledWith(
     venue.websiteUrl,
@@ -325,22 +337,22 @@ it('passes venue crawlWaitForSelector to fetchPage', async () => {
     venue.crawlDelayMs,
     venue.crawlWaitUntil,
     '.event-list-item',
-  )
-})
+  );
+});
 
 it('passes undefined to fetchPage when crawlWaitForSelector is null', async () => {
-  const venue = seedVenue({ crawlWaitForSelector: null })
+  const venue = seedVenue({ crawlWaitForSelector: null });
   mockFetchPage.mockResolvedValue({
     html: HTML_V1,
     httpStatus: 200,
     finalUrl: venue.websiteUrl,
-  })
+  });
   mockExtractWithLlm.mockResolvedValue({
     events: [],
     usage: { inputTokens: 0, outputTokens: 0 },
-  })
+  });
 
-  await crawlVenue(venue.id, mockBrowser)
+  await crawlVenue(venue.id, mockBrowser);
 
   expect(mockFetchPage).toHaveBeenCalledWith(
     venue.websiteUrl,
@@ -348,8 +360,8 @@ it('passes undefined to fetchPage when crawlWaitForSelector is null', async () =
     venue.crawlDelayMs,
     venue.crawlWaitUntil,
     undefined,
-  )
-})
+  );
+});
 ```
 
 Note: `seedVenue` accepts overrides — you'll need to add `crawlWaitForSelector` to the `seedVenue` helper's default values (set to `null`).
@@ -383,7 +395,7 @@ const { html, httpStatus, finalUrl } = await fetchPage(
   venue.crawlDelayMs,
   venue.crawlWaitUntil,
   venue.crawlWaitForSelector ?? undefined,
-)
+);
 ```
 
 - [ ] **Step 5: Run tests to confirm they pass**
@@ -406,6 +418,7 @@ git commit -m "feat(crawler-core): forward crawlWaitForSelector from venue to fe
 ## Task 5: API — expose `crawlWaitForSelector` on venues route
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/venues.ts`
 - Modify: `apps/api/src/routes/admin/venues.test.ts`
 
@@ -417,9 +430,9 @@ In `apps/api/src/routes/admin/venues.test.ts`, add a test for the PATCH handler 
 it('PATCH /v1/admin/venues/:id — accepts crawlWaitForSelector', async () => {
   mockDb.returning.mockResolvedValue([
     { ...mockDb._mockVenueRow, crawlWaitForSelector: '.event-card' },
-  ])
+  ]);
 
-  const app = createApp()
+  const app = createApp();
   const response = await app.request('/v1/admin/venues/venue-1', {
     method: 'PATCH',
     headers: {
@@ -427,19 +440,19 @@ it('PATCH /v1/admin/venues/:id — accepts crawlWaitForSelector', async () => {
       Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ crawlWaitForSelector: '.event-card' }),
-  })
+  });
 
-  expect(response.status).toBe(200)
-  const body = await response.json()
-  expect(body.data.crawlWaitForSelector).toBe('.event-card')
-})
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.data.crawlWaitForSelector).toBe('.event-card');
+});
 
 it('PATCH /v1/admin/venues/:id — accepts null crawlWaitForSelector to clear it', async () => {
   mockDb.returning.mockResolvedValue([
     { ...mockDb._mockVenueRow, crawlWaitForSelector: null },
-  ])
+  ]);
 
-  const app = createApp()
+  const app = createApp();
   const response = await app.request('/v1/admin/venues/venue-1', {
     method: 'PATCH',
     headers: {
@@ -447,12 +460,12 @@ it('PATCH /v1/admin/venues/:id — accepts null crawlWaitForSelector to clear it
       Authorization: 'Bearer test-token',
     },
     body: JSON.stringify({ crawlWaitForSelector: null }),
-  })
+  });
 
-  expect(response.status).toBe(200)
-  const body = await response.json()
-  expect(body.data.crawlWaitForSelector).toBeNull()
-})
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.data.crawlWaitForSelector).toBeNull();
+});
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -494,6 +507,7 @@ git commit -m "feat(api): add crawlWaitForSelector to venue update schema"
 ## Task 6: Server action — read and forward `crawlWaitForSelector`
 
 **Files:**
+
 - Modify: `apps/web/src/lib/actions/venues.ts`
 
 - [ ] **Step 1: Update `updateVenue` to read the new field**
@@ -501,11 +515,12 @@ git commit -m "feat(api): add crawlWaitForSelector to venue update schema"
 In `apps/web/src/lib/actions/venues.ts`, inside the `updateVenue` function, add after the `crawlWaitUntil` block:
 
 ```typescript
-const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector')
+const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector');
 const crawlWaitForSelector =
-  crawlWaitForSelectorRaw === null || String(crawlWaitForSelectorRaw).trim() === ''
+  crawlWaitForSelectorRaw === null ||
+  String(crawlWaitForSelectorRaw).trim() === ''
     ? null
-    : String(crawlWaitForSelectorRaw).trim()
+    : String(crawlWaitForSelectorRaw).trim();
 ```
 
 Then include it in the `apiClient.patch` call body alongside the other fields:
@@ -520,7 +535,7 @@ await apiClient.patch<Venue>(`/v1/admin/venues/${id}`, token, {
   crawlWaitUntil,
   crawlDelayMs,
   crawlWaitForSelector,
-})
+});
 ```
 
 - [ ] **Step 2: Verify TypeScript compiles**
@@ -543,6 +558,7 @@ git commit -m "feat(web): forward crawlWaitForSelector in updateVenue action"
 ## Task 7: Admin UI — add `crawlWaitForSelector` text input
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/VenueDetailsClient.tsx`
 
 - [ ] **Step 1: Add state for the new field**
@@ -552,7 +568,7 @@ In `VenueDetailsClient.tsx`, after the `crawlDelayVal` state (around line 199), 
 ```typescript
 const [waitForSelectorVal, setWaitForSelectorVal] = useState(
   venue.crawlWaitForSelector ?? '',
-)
+);
 ```
 
 - [ ] **Step 2: Include the field in `isDirty` check**
@@ -560,7 +576,7 @@ const [waitForSelectorVal, setWaitForSelectorVal] = useState(
 Add to the `isDirty` expression (after `crawlDelayVal !== venue.crawlDelayMs`):
 
 ```typescript
-(waitForSelectorVal || null) !== venue.crawlWaitForSelector
+(waitForSelectorVal || null) !== venue.crawlWaitForSelector;
 ```
 
 So the full expression becomes:
@@ -574,7 +590,7 @@ const isDirty =
   active !== venue.active ||
   waitUntilVal !== venue.crawlWaitUntil ||
   crawlDelayVal !== venue.crawlDelayMs ||
-  (waitForSelectorVal || null) !== venue.crawlWaitForSelector
+  (waitForSelectorVal || null) !== venue.crawlWaitForSelector;
 ```
 
 - [ ] **Step 3: Include the field in `handleDiscard`**
@@ -582,7 +598,7 @@ const isDirty =
 Add after `setCrawlDelayVal(venue.crawlDelayMs)` in `handleDiscard`:
 
 ```typescript
-setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
+setWaitForSelectorVal(venue.crawlWaitForSelector ?? '');
 ```
 
 - [ ] **Step 4: Include the field in `handleSave`**
@@ -590,7 +606,7 @@ setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
 Add after `formData.set('crawlDelayMs', ...)` in `handleSave`:
 
 ```typescript
-formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
+formData.set('crawlWaitForSelector', waitForSelectorVal.trim());
 ```
 
 - [ ] **Step 5: Add the input field to the UI**
@@ -598,14 +614,16 @@ formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
 In the "Crawl settings" section, after the closing `</Field>` for "Crawl delay (ms)" and before the closing `</div>` of the crawl settings section, add:
 
 ```tsx
-{/* Wait for selector */}
+{
+  /* Wait for selector */
+}
 <Field
   label="Wait for selector (optional)"
   htmlFor="edit-venue-wait-for-selector"
   hint={
     <span style={{ fontSize: 11, color: 'var(--fg-muted)', lineHeight: 1.5 }}>
-      CSS selector to wait for after page load — use for SPAs where content
-      is injected by JavaScript. Example:{' '}
+      CSS selector to wait for after page load — use for SPAs where content is
+      injected by JavaScript. Example:{' '}
       <code
         style={{
           fontFamily: 'monospace',
@@ -617,8 +635,8 @@ In the "Crawl settings" section, after the closing `</Field>` for "Crawl delay (
         .event-list-item
       </code>
       . When set, the wait strategy above is ignored and{' '}
-      <strong style={{ color: 'var(--fg)' }}>DOM content loaded</strong> is
-      used for navigation instead.
+      <strong style={{ color: 'var(--fg)' }}>DOM content loaded</strong> is used
+      for navigation instead.
     </span>
   }
 >
@@ -631,7 +649,7 @@ In the "Crawl settings" section, after the closing `</Field>` for "Crawl delay (
     onChange={(evt) => setWaitForSelectorVal(evt.target.value)}
     style={inputStyle(false, isDisabled)}
   />
-</Field>
+</Field>;
 ```
 
 - [ ] **Step 6: Verify TypeScript compiles**

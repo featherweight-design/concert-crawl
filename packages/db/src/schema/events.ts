@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm';
 import {
   boolean,
   date,
@@ -12,8 +12,8 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+} from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 // Typed entry in events.ticketLinks (issue #641). Populated by the crawler
 // (PR 2 of the price-source cycle) from URL host + venue.ticketVendor; consumed
@@ -21,16 +21,16 @@ import { venues } from './venues.js'
 // single ticketUrl during the expand phase; ticketUrl is dropped in a
 // follow-up contract PR once nothing reads it.
 export type TicketLink = {
-  kind: 'boxoffice' | 'primary' | 'resale'
-  vendor: string | null
-  url: string
-}
+  kind: 'boxoffice' | 'primary' | 'resale';
+  vendor: string | null;
+  url: string;
+};
 
 export const eventStatusEnum = pgEnum('event_status', [
   'upcoming',
   'cancelled',
   'postponed',
-])
+]);
 
 export const priceSourceEnum = pgEnum('price_source', [
   'structured_data',
@@ -41,7 +41,7 @@ export const priceSourceEnum = pgEnum('price_source', [
   'bandsintown',
   'seatgeek',
   'community',
-])
+]);
 
 export const events = pgTable(
   'events',
@@ -230,7 +230,7 @@ export const events = pgTable(
       .on(table.venueId, table.date, table.canonicalArtist, table.showTime)
       .where(sql`status = 'upcoming'`),
   }),
-)
+);
 
-export type Event = typeof events.$inferSelect
-export type NewEvent = typeof events.$inferInsert
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;

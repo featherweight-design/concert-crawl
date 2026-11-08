@@ -29,29 +29,29 @@
  * selection.
  */
 
-import { canonicalizeArtist } from '@concert-crawl/types'
-import { and, eq, isNotNull } from 'drizzle-orm'
-import type { Database } from '../client.js'
-import { artists } from '../schema/artists.js'
+import { canonicalizeArtist } from '@concert-crawl/types';
+import { and, eq, isNotNull } from 'drizzle-orm';
+import type { Database } from '../client.js';
+import { artists } from '../schema/artists.js';
 
 export interface PhotoTiebreakResolution {
-  artistId: string
-  name: string
-  spotifyArtistId: string
+  artistId: string;
+  name: string;
+  spotifyArtistId: string;
   /** How many exact-name candidates the snapshot held, photographed or not. */
-  exactCount: number
+  exactCount: number;
 }
 
 export interface PhotoTiebreakResult {
   /** Ambiguous rows carrying a snapshot, as of the read. */
-  considered: number
+  considered: number;
   /** Rows the tiebreak settles. */
-  resolved: number
+  resolved: number;
   /** Rows actually written. Zero on a dry run. */
-  updated: number
+  updated: number;
   /** Why a considered row was passed over, by reason. */
-  skipped: Record<SkipReason, number>
-  resolutions: PhotoTiebreakResolution[]
+  skipped: Record<SkipReason, number>;
+  resolutions: PhotoTiebreakResolution[];
 }
 
 /**
@@ -64,13 +64,13 @@ type SkipReason =
   | 'no-exact-name-match'
   | 'single-exact-candidate'
   | 'no-photographed-candidate'
-  | 'several-photographed-candidates'
+  | 'several-photographed-candidates';
 
-const SAMPLE_SIZE = 25
+const SAMPLE_SIZE = 25;
 
 export type PhotoTiebreakVerdict =
   | { kind: 'resolved'; spotifyArtistId: string; exactCount: number }
-  | { kind: 'skipped'; reason: SkipReason }
+  | { kind: 'skipped'; reason: SkipReason };
 
 /**
  * The decision, with no database around it.
@@ -91,25 +91,25 @@ export const photoTiebreakVerdict = (
   // snapshot's `name` has not.
   const exact = candidates.filter(
     (candidate) => canonicalizeArtist(candidate.name) === canonicalName,
-  )
+  );
 
   if (exact.length === 0)
-    return { kind: 'skipped', reason: 'no-exact-name-match' }
+    return { kind: 'skipped', reason: 'no-exact-name-match' };
   if (exact.length === 1)
-    return { kind: 'skipped', reason: 'single-exact-candidate' }
+    return { kind: 'skipped', reason: 'single-exact-candidate' };
 
-  const photographed = exact.filter((candidate) => candidate.imageUrl !== null)
+  const photographed = exact.filter((candidate) => candidate.imageUrl !== null);
   if (photographed.length === 0)
-    return { kind: 'skipped', reason: 'no-photographed-candidate' }
+    return { kind: 'skipped', reason: 'no-photographed-candidate' };
   if (photographed.length > 1)
-    return { kind: 'skipped', reason: 'several-photographed-candidates' }
+    return { kind: 'skipped', reason: 'several-photographed-candidates' };
 
   return {
     kind: 'resolved',
     spotifyArtistId: photographed[0]!.id,
     exactCount: exact.length,
-  }
-}
+  };
+};
 
 export async function resolvePhotoTiebreak(
   database: Database,
@@ -120,8 +120,8 @@ export async function resolvePhotoTiebreak(
     'single-exact-candidate': 0,
     'no-photographed-candidate': 0,
     'several-photographed-candidates': 0,
-  }
-  const resolutions: PhotoTiebreakResolution[] = []
+  };
+  const resolutions: PhotoTiebreakResolution[] = [];
 
   // Only rows carrying a snapshot are reachable — without one there is nothing
   // to re-judge. Ordered by canonical name so a run truncated by --limit
@@ -140,20 +140,20 @@ export async function resolvePhotoTiebreak(
         isNotNull(artists.spotifyCandidates),
       ),
     )
-    .orderBy(artists.canonicalName)
+    .orderBy(artists.canonicalName);
 
   const rows = await (options.limit === undefined
     ? selection
-    : selection.limit(options.limit))
+    : selection.limit(options.limit));
 
   for (const row of rows) {
     const verdict = photoTiebreakVerdict(
       row.canonicalName,
       row.spotifyCandidates ?? [],
-    )
+    );
     if (verdict.kind === 'skipped') {
-      skipped[verdict.reason]++
-      continue
+      skipped[verdict.reason]++;
+      continue;
     }
 
     resolutions.push({
@@ -161,7 +161,7 @@ export async function resolvePhotoTiebreak(
       name: row.name,
       spotifyArtistId: verdict.spotifyArtistId,
       exactCount: verdict.exactCount,
-    })
+    });
   }
 
   if (options.dryRun || resolutions.length === 0) {
@@ -171,10 +171,10 @@ export async function resolvePhotoTiebreak(
       updated: 0,
       skipped,
       resolutions,
-    }
+    };
   }
 
-  let updated = 0
+  let updated = 0;
   for (const resolution of resolutions) {
     // Guarded on `ambiguous` so a row an admin resolved while this run was
     // walking the queue keeps the human's answer.
@@ -196,8 +196,8 @@ export async function resolvePhotoTiebreak(
           eq(artists.matchStatus, 'ambiguous'),
         ),
       )
-      .returning({ id: artists.id })
-    updated += written.length
+      .returning({ id: artists.id });
+    updated += written.length;
   }
 
   return {
@@ -206,9 +206,9 @@ export async function resolvePhotoTiebreak(
     updated,
     skipped,
     resolutions,
-  }
+  };
 }
 
 export const sampleOf = (
   resolutions: PhotoTiebreakResolution[],
-): PhotoTiebreakResolution[] => resolutions.slice(0, SAMPLE_SIZE)
+): PhotoTiebreakResolution[] => resolutions.slice(0, SAMPLE_SIZE);

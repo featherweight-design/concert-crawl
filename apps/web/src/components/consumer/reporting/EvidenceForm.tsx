@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { ER_POLICY } from '@concert-crawl/types'
-import { fileEventReport } from '@/lib/events'
-import { REPORTING_COPY } from './definitions/copy'
-import { REPORT_TOKENS } from './reportTokens'
-import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { ER_POLICY } from '@concert-crawl/types';
+import { fileEventReport } from '@/lib/events';
+import { REPORTING_COPY } from './definitions/copy';
+import { REPORT_TOKENS } from './reportTokens';
+import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
 
-const copy = REPORTING_COPY.evidenceForm
+const copy = REPORTING_COPY.evidenceForm;
 
-const AZURE = 'oklch(0.62 0.12 240)'
-const NOTES_MAX_CHARS = 280
+const AZURE = 'oklch(0.62 0.12 240)';
+const NOTES_MAX_CHARS = 280;
 
 // ── Evidence method type ──────────────────────────────────────────
 type EvidenceMethod =
-  'got_email' | 'saw_social' | 'venue_posted' | 'was_there' | 'something_else'
+  'got_email' | 'saw_social' | 'venue_posted' | 'was_there' | 'something_else';
 
 type ApiEvidenceMethod =
-  'bought_myself' | 'saw_listing' | 'venue_site' | 'other'
+  'bought_myself' | 'saw_listing' | 'venue_site' | 'other';
 
 const EVIDENCE_METHOD_TO_API: Record<EvidenceMethod, ApiEvidenceMethod> = {
   got_email: 'saw_listing',
@@ -26,15 +26,15 @@ const EVIDENCE_METHOD_TO_API: Record<EvidenceMethod, ApiEvidenceMethod> = {
   venue_posted: 'venue_site',
   was_there: 'bought_myself',
   something_else: 'other',
-}
+};
 
-type ReportType = 'sold-out' | 'cancelled' | 'postponed'
+type ReportType = 'sold-out' | 'cancelled' | 'postponed';
 
 // ── Evidence option data ──────────────────────────────────────────
 interface EvidenceOptionData {
-  method: EvidenceMethod
-  label: string
-  description: string
+  method: EvidenceMethod;
+  label: string;
+  description: string;
 }
 
 const EVIDENCE_OPTIONS: EvidenceOptionData[] = [
@@ -63,13 +63,13 @@ const EVIDENCE_OPTIONS: EvidenceOptionData[] = [
     label: copy.evidenceOptions.somethingElse.label,
     description: copy.evidenceOptions.somethingElse.description,
   },
-]
+];
 
 // ── EvidenceOption (internal) ─────────────────────────────────────
 interface EvidenceOptionProps {
-  option: EvidenceOptionData
-  isSelected: boolean
-  onSelect: (method: EvidenceMethod) => void
+  option: EvidenceOptionData;
+  isSelected: boolean;
+  onSelect: (method: EvidenceMethod) => void;
 }
 
 const EvidenceOption = ({
@@ -85,8 +85,8 @@ const EvidenceOption = ({
       onClick={() => onSelect(option.method)}
       onKeyDown={(evt) => {
         if (evt.key === 'Enter' || evt.key === ' ') {
-          evt.preventDefault()
-          onSelect(option.method)
+          evt.preventDefault();
+          onSelect(option.method);
         }
       }}
       style={{
@@ -164,8 +164,8 @@ const EvidenceOption = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // ── Days until show ───────────────────────────────────────────────
 const getDaysUntil = (eventDate: string): number => {
@@ -173,19 +173,19 @@ const getDaysUntil = (eventDate: string): number => {
     new Date().getUTCFullYear(),
     new Date().getUTCMonth(),
     new Date().getUTCDate(),
-  )
-  const eventUtc = new Date(eventDate).getTime()
-  return Math.ceil((eventUtc - nowUtc) / (1000 * 60 * 60 * 24))
-}
+  );
+  const eventUtc = new Date(eventDate).getTime();
+  return Math.ceil((eventUtc - nowUtc) / (1000 * 60 * 60 * 24));
+};
 
 // ── Props ─────────────────────────────────────────────────────────
 export interface EvidenceFormProps {
-  open: boolean
-  onClose: () => void
-  reportType: ReportType
-  eventId: string
-  eventDate: string
-  onSuccess?: () => void
+  open: boolean;
+  onClose: () => void;
+  reportType: ReportType;
+  eventId: string;
+  eventDate: string;
+  onSuccess?: () => void;
 }
 
 // ── Main component ────────────────────────────────────────────────
@@ -197,37 +197,37 @@ export const EvidenceForm = ({
   eventDate,
   onSuccess,
 }: EvidenceFormProps) => {
-  const { getToken } = useAuth()
+  const { getToken } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<EvidenceMethod | null>(
     null,
-  )
-  const [sourceUrl, setSourceUrl] = useState('')
-  const [notes, setNotes] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
+  );
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const daysUntil = getDaysUntil(eventDate)
+  const daysUntil = getDaysUntil(eventDate);
   // Same window and counts the API applies (event-reports.ts), inclusive of
   // the threshold day.
   const isImminent =
-    daysUntil >= 0 && daysUntil <= ER_POLICY.imminentThresholdDays
+    daysUntil >= 0 && daysUntil <= ER_POLICY.imminentThresholdDays;
   const confirmsNeeded = isImminent
     ? ER_POLICY.confirmsRequiredImminent
-    : ER_POLICY.confirmsRequired
-  const tokens = REPORT_TOKENS[reportType]
+    : ER_POLICY.confirmsRequired;
+  const tokens = REPORT_TOKENS[reportType];
 
   const handleSubmit = async () => {
-    if (selectedMethod === null) return
+    if (selectedMethod === null) return;
 
-    setSubmitting(true)
-    setErrorMsg('')
+    setSubmitting(true);
+    setErrorMsg('');
 
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setErrorMsg('You must be signed in to file a report.')
-        setSubmitting(false)
-        return
+        setErrorMsg('You must be signed in to file a report.');
+        setSubmitting(false);
+        return;
       }
 
       await fileEventReport(
@@ -239,18 +239,18 @@ export const EvidenceForm = ({
           ...(notes.trim() ? { note: notes.trim() } : {}),
         },
         token,
-      )
+      );
 
-      onSuccess?.()
-      onClose()
+      onSuccess?.();
+      onClose();
     } catch (err) {
       setErrorMsg(
         err instanceof Error ? err.message : 'Something went wrong. Try again.',
-      )
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <ModalShell
@@ -315,7 +315,7 @@ export const EvidenceForm = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button
             onClick={() => {
-              void handleSubmit()
+              void handleSubmit();
             }}
             disabled={selectedMethod === null || submitting}
             style={{
@@ -510,7 +510,7 @@ export const EvidenceForm = ({
             value={notes}
             onChange={(evt) => {
               if (evt.target.value.length <= NOTES_MAX_CHARS) {
-                setNotes(evt.target.value)
+                setNotes(evt.target.value);
               }
             }}
             placeholder={copy.notesPlaceholder}
@@ -546,5 +546,5 @@ export const EvidenceForm = ({
         )}
       </div>
     </ModalShell>
-  )
-}
+  );
+};

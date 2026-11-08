@@ -1,4 +1,4 @@
-const MT_TIMEZONE = 'America/Denver'
+const MT_TIMEZONE = 'America/Denver';
 
 /**
  * Given a list of runs ordered newest-first, returns a hint string showing the
@@ -6,20 +6,20 @@ const MT_TIMEZONE = 'America/Denver'
  * as sweep end and the last as sweep start.
  */
 export function formatSweepHint(runs: { createdAt: string }[]): string {
-  if (runs.length === 0) return ''
+  if (runs.length === 0) return '';
 
-  const endRun = runs[0]
-  const startRun = runs[runs.length - 1]
-  if (!endRun || !startRun) return ''
+  const endRun = runs[0];
+  const startRun = runs[runs.length - 1];
+  if (!endRun || !startRun) return '';
 
-  const endDate = new Date(endRun.createdAt)
-  const startDate = new Date(startRun.createdAt)
+  const endDate = new Date(endRun.createdAt);
+  const startDate = new Date(startRun.createdAt);
 
   const dateStr = endDate.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: MT_TIMEZONE,
-  })
+  });
 
   const fmtTime = (date: Date) =>
     date.toLocaleTimeString('en-US', {
@@ -27,10 +27,10 @@ export function formatSweepHint(runs: { createdAt: string }[]): string {
       minute: '2-digit',
       hour12: false,
       timeZone: MT_TIMEZONE,
-    })
+    });
 
-  if (runs.length === 1) return `${dateStr} · ${fmtTime(endDate)}`
-  return `${dateStr} · ${fmtTime(startDate)}–${fmtTime(endDate)}`
+  if (runs.length === 1) return `${dateStr} · ${fmtTime(endDate)}`;
+  return `${dateStr} · ${fmtTime(startDate)}–${fmtTime(endDate)}`;
 }
 
 /**
@@ -40,11 +40,11 @@ export function formatSweepHint(runs: { createdAt: string }[]): string {
  * CrawlRun.status is 'success' | 'skipped' | 'partial' | 'failed' — no 'blocked'.
  */
 export function formatRunsBreakdown(runs: { status: string }[]): string {
-  if (runs.length === 0) return ''
+  if (runs.length === 0) return '';
 
-  const counts: Record<string, number> = {}
+  const counts: Record<string, number> = {};
   for (const run of runs) {
-    counts[run.status] = (counts[run.status] ?? 0) + 1
+    counts[run.status] = (counts[run.status] ?? 0) + 1;
   }
 
   return [
@@ -54,7 +54,7 @@ export function formatRunsBreakdown(runs: { status: string }[]): string {
     counts['failed'] ? `${counts['failed']} failed` : null,
   ]
     .filter(Boolean)
-    .join(' · ')
+    .join(' · ');
 }
 
 /**
@@ -64,9 +64,9 @@ export function formatRunsBreakdown(runs: { status: string }[]): string {
 export function formatLlmCostTotal(
   runs: { llmCostUsd?: number | null }[],
 ): string {
-  const total = runs.reduce((acc, run) => acc + (run.llmCostUsd ?? 0), 0)
-  if (total === 0) return ''
-  return `$${total.toFixed(4)}`
+  const total = runs.reduce((acc, run) => acc + (run.llmCostUsd ?? 0), 0);
+  if (total === 0) return '';
+  return `$${total.toFixed(4)}`;
 }
 
 /**
@@ -74,8 +74,8 @@ export function formatLlmCostTotal(
  * Returns "—" when null or zero.
  */
 export function formatCostValue(cost: number | null | undefined): string {
-  if (cost == null || cost === 0) return '—'
-  return `$${cost.toFixed(4)}`
+  if (cost == null || cost === 0) return '—';
+  return `$${cost.toFixed(4)}`;
 }
 
 /**
@@ -87,9 +87,9 @@ export function formatEventsBreakdown(
   eventsInserted: number,
   eventsUpdated: number,
 ): string {
-  const parts: string[] = []
-  if (eventsFound > 0) parts.push(`${eventsFound} found`)
-  if (eventsInserted > 0) parts.push(`${eventsInserted} inserted`)
-  if (eventsUpdated > 0) parts.push(`${eventsUpdated} updated`)
-  return parts.join(' · ') || '0 found'
+  const parts: string[] = [];
+  if (eventsFound > 0) parts.push(`${eventsFound} found`);
+  if (eventsInserted > 0) parts.push(`${eventsInserted} inserted`);
+  if (eventsUpdated > 0) parts.push(`${eventsUpdated} updated`);
+  return parts.join(' · ') || '0 found';
 }

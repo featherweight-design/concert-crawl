@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // showtime-base.tsx — shared Showtime stage primitives.
 //
@@ -26,7 +26,7 @@
 //   Cool wash:   rgba(122,230,255,0.20)
 //   Accent set:  #7AE6FF · #FF7BD4 · #FFE36B · #A075FF · #C9F26E · #FFB838 · #5DD4D6
 
-import { useEffect } from 'react'
+import { useEffect } from 'react';
 
 // ── Keyframe injection ───────────────────────────────────────────────────────
 // Matches the pc2-keyframes block from passport-concepts-v2.jsx exactly.
@@ -83,21 +83,21 @@ const SHOWTIME_BASE_KEYFRAMES = `
     0%   { opacity: 0; transform: translateY(-6px); letter-spacing: 0.5em; }
     100% { opacity: 1; transform: translateY(0);    letter-spacing: 0.24em; }
   }
-`
+`;
 
-const KEYFRAMES_ID = 'showtime-base-keyframes'
+const KEYFRAMES_ID = 'showtime-base-keyframes';
 
 /** Injects all Showtime keyframe sets once into the document head. */
 export function useShowtimeKeyframes() {
   useEffect(() => {
     if (!document.getElementById(KEYFRAMES_ID)) {
-      const styleEl = document.createElement('style')
-      styleEl.id = KEYFRAMES_ID
-      styleEl.textContent = SHOWTIME_BASE_KEYFRAMES
-      document.head.appendChild(styleEl)
+      const styleEl = document.createElement('style');
+      styleEl.id = KEYFRAMES_ID;
+      styleEl.textContent = SHOWTIME_BASE_KEYFRAMES;
+      document.head.appendChild(styleEl);
     }
-    injectHeroKeyframes()
-  }, [])
+    injectHeroKeyframes();
+  }, []);
 }
 
 // ── ShowtimeBackdrop ─────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ interface ShowtimeBackdropProps {
    * When true, renders a centred gold glow — used by the Founder medallion
    * in the Tier hero to call extra attention to the marquee badge.
    */
-  founderGlow?: boolean
+  founderGlow?: boolean;
 }
 
 /**
@@ -123,7 +123,7 @@ interface ShowtimeBackdropProps {
 export function ShowtimeBackdrop({
   founderGlow = false,
 }: ShowtimeBackdropProps) {
-  useShowtimeKeyframes()
+  useShowtimeKeyframes();
 
   return (
     <div
@@ -188,16 +188,16 @@ export function ShowtimeBackdrop({
         />
       )}
     </div>
-  )
+  );
 }
 
 // ── ShowtimeEyebrow ──────────────────────────────────────────────────────────
 
 interface ShowtimeEyebrowProps {
   /** The label text rendered in JetBrains Mono uppercase. */
-  children: React.ReactNode
+  children: React.ReactNode;
   /** Colour of the pulsing dot. Defaults to Showtime cyan (#7AE6FF). */
-  dotHue?: string
+  dotHue?: string;
 }
 
 /**
@@ -245,22 +245,22 @@ export function ShowtimeEyebrow({
       />
       {children}
     </div>
-  )
+  );
 }
 
 // ── ShowtimeSparkles ─────────────────────────────────────────────────────────
 
 interface ShowtimeSparklesProps {
   /** Stage width. Defaults to 580 (the full hero width). */
-  width?: number
+  width?: number;
   /** Stage height. Defaults to 300 (the full hero height). */
-  height?: number
+  height?: number;
   /**
    * Number of sparkle particles to render.
    * Per design restraint, only the Passport (#14) hero uses the full 12.
    * Pass 0 to suppress entirely (the default for most heroes).
    */
-  count?: number
+  count?: number;
 }
 
 /** Scattered sparkle particle field. Reserved for heroes that opt in. */
@@ -269,16 +269,16 @@ export function ShowtimeSparkles({
   height = 300,
   count = 0,
 }: ShowtimeSparklesProps) {
-  if (count === 0) return null
+  if (count === 0) return null;
 
-  const SPARKLE_HUES = ['#7AE6FF', '#FFE36B', '#FF7BD4', '#FFFFFF'] as const
+  const SPARKLE_HUES = ['#7AE6FF', '#FFE36B', '#FF7BD4', '#FFFFFF'] as const;
 
   const sparkles = Array.from({ length: count }).map((_, idx) => ({
     x: (idx * 47) % width,
     y: (idx * 71) % height,
     delay: (idx * 0.23) % 3,
     hue: SPARKLE_HUES[idx % SPARKLE_HUES.length],
-  }))
+  }));
 
   return (
     <>
@@ -301,7 +301,7 @@ export function ShowtimeSparkles({
         />
       ))}
     </>
-  )
+  );
 }
 
 // ── Palette export ───────────────────────────────────────────────────────────
@@ -318,9 +318,9 @@ export const SHOWTIME_ACCENTS = [
   '#C9F26E', // lime
   '#FFB838', // amber
   '#5DD4D6', // teal
-] as const
+] as const;
 
-export type ShowtimeAccent = (typeof SHOWTIME_ACCENTS)[number]
+export type ShowtimeAccent = (typeof SHOWTIME_ACCENTS)[number];
 
 // ── Additional keyframes (p1 / p2 / compact heroes) ─────────────────────────
 // Injected once alongside the pc2 base set. Separated by id so the base set
@@ -503,17 +503,17 @@ const SHOWTIME_HERO_KEYFRAMES = `
     80%  { opacity: 1; }
     100% { transform: translateY(14px); opacity: 0; }
   }
-`
+`;
 
-const HERO_KEYFRAMES_ID = 'showtime-hero-keyframes'
+const HERO_KEYFRAMES_ID = 'showtime-hero-keyframes';
 
 function injectHeroKeyframes() {
-  if (typeof document === 'undefined') return
-  if (document.getElementById(HERO_KEYFRAMES_ID)) return
-  const styleEl = document.createElement('style')
-  styleEl.id = HERO_KEYFRAMES_ID
-  styleEl.textContent = SHOWTIME_HERO_KEYFRAMES
-  document.head.appendChild(styleEl)
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(HERO_KEYFRAMES_ID)) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = HERO_KEYFRAMES_ID;
+  styleEl.textContent = SHOWTIME_HERO_KEYFRAMES;
+  document.head.appendChild(styleEl);
 }
 
 // ── StubGlyph ────────────────────────────────────────────────────────────────
@@ -522,23 +522,23 @@ function injectHeroKeyframes() {
 // perfect centred. Used by Passport stubs, History stubs, and Calendar stamps.
 
 export interface StubDef {
-  tx: number
-  rot: number
-  sx: number
-  sy: number
-  srot: number
-  body: string
-  accent: string
-  glyph: string
-  subtitle: string
-  top?: boolean
-  delay: number
+  tx: number;
+  rot: number;
+  sx: number;
+  sy: number;
+  srot: number;
+  body: string;
+  accent: string;
+  glyph: string;
+  subtitle: string;
+  top?: boolean;
+  delay: number;
 }
 
 interface StubGlyphProps {
-  kind: string
-  size?: number
-  color: string
+  kind: string;
+  size?: number;
+  color: string;
 }
 
 export function StubGlyph({
@@ -546,13 +546,13 @@ export function StubGlyph({
   size = 36,
   color,
 }: StubGlyphProps): React.ReactElement | null {
-  injectHeroKeyframes()
+  injectHeroKeyframes();
   const svgProps = {
     width: size,
     height: size,
     viewBox: '0 0 24 24',
     style: { display: 'block' as const },
-  }
+  };
   switch (kind) {
     case '★':
       return (
@@ -562,13 +562,13 @@ export function StubGlyph({
             fill={color}
           />
         </svg>
-      )
+      );
     case '△':
       return (
         <svg {...svgProps}>
           <polygon points="12,2 20.66,17 3.34,17" fill={color} />
         </svg>
-      )
+      );
     case '○':
       return (
         <svg {...svgProps}>
@@ -581,7 +581,7 @@ export function StubGlyph({
             strokeWidth="2.8"
           />
         </svg>
-      )
+      );
     case '⬡':
       return (
         <svg {...svgProps}>
@@ -590,13 +590,13 @@ export function StubGlyph({
             fill={color}
           />
         </svg>
-      )
+      );
     case '◆':
       return (
         <svg {...svgProps}>
           <polygon points="12,2 22,12 12,22 2,12" fill={color} />
         </svg>
-      )
+      );
     case '+':
       return (
         <svg {...svgProps}>
@@ -608,7 +608,7 @@ export function StubGlyph({
             fill="none"
           />
         </svg>
-      )
+      );
     case '✦':
       return (
         <svg {...svgProps}>
@@ -617,9 +617,9 @@ export function StubGlyph({
             fill={color}
           />
         </svg>
-      )
+      );
     default:
-      return null
+      return null;
   }
 }
 
@@ -796,7 +796,7 @@ export function ShowtimeStub({ stub }: { stub: StubDef }): React.ReactElement {
         />
       </div>
     </div>
-  )
+  );
 }
 
 // ── TierGlyph ────────────────────────────────────────────────────────────────
@@ -804,10 +804,10 @@ export function ShowtimeStub({ stub }: { stub: StubDef }): React.ReactElement {
 // supporter → + (plus), premium → ★ (star), founder → ♔ (crown)
 
 interface TierGlyphProps {
-  tier: 'supporter' | 'premium' | 'founder' | string
-  size?: number
-  color?: string
-  stroke?: string
+  tier: 'supporter' | 'premium' | 'founder' | string;
+  size?: number;
+  color?: string;
+  stroke?: string;
 }
 
 export function TierGlyph({
@@ -831,7 +831,7 @@ export function TierGlyph({
           strokeLinecap="round"
         />
       </svg>
-    )
+    );
   }
   if (tier === 'premium') {
     return (
@@ -846,7 +846,7 @@ export function TierGlyph({
           fill={color}
         />
       </svg>
-    )
+    );
   }
   if (tier === 'founder') {
     return (
@@ -868,7 +868,7 @@ export function TierGlyph({
         <circle cx="12" cy="6.5" r="0.95" fill={stroke ?? color} />
         <circle cx="16.5" cy="11.2" r="0.95" fill={stroke ?? color} />
       </svg>
-    )
+    );
   }
-  return null
+  return null;
 }

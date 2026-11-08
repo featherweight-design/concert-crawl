@@ -1,9 +1,9 @@
-import type { Venue } from '@concert-crawl/db'
-import { aegFetcher } from './aeg.js'
-import { detailPageFetcher } from './detail-page.js'
-import { liveNationFetcher } from './livenation.js'
-import { venuePilotFetcher } from './venuepilot.js'
-import type { PlatformFetcher } from './index.js'
+import type { Venue } from '@concert-crawl/db';
+import { aegFetcher } from './aeg.js';
+import { detailPageFetcher } from './detail-page.js';
+import { liveNationFetcher } from './livenation.js';
+import { venuePilotFetcher } from './venuepilot.js';
+import type { PlatformFetcher } from './index.js';
 
 // Ordered list of available adapters. Each fetcher owns its own matching
 // via canHandle(); dispatch returns the FIRST that claims the venue, so
@@ -21,7 +21,7 @@ const FETCHERS: readonly PlatformFetcher[] = [
   aegFetcher,
   liveNationFetcher,
   detailPageFetcher,
-] as const
+] as const;
 
 /**
  * Pick the platform fetcher for a venue, or null if the venue should
@@ -31,5 +31,5 @@ const FETCHERS: readonly PlatformFetcher[] = [
  * apiProvider + apiAccountId).
  */
 export function dispatch(venue: Venue): PlatformFetcher | null {
-  return FETCHERS.find((fetcher) => fetcher.canHandle(venue)) ?? null
+  return FETCHERS.find((fetcher) => fetcher.canHandle(venue)) ?? null;
 }

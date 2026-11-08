@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import type { CSSProperties, KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react';
 import {
   useCallback,
   useEffect,
@@ -9,30 +9,30 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react'
+} from 'react';
 import {
   VENDOR_CATCHALL,
   VENDOR_GROUPS,
   VENDOR_PINNED,
   type Vendor,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy'
+import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy';
 
-const TYPEAHEAD_WINDOW_MS = 700
-const POPOVER_GAP_PX = 8
+const TYPEAHEAD_WINDOW_MS = 700;
+const POPOVER_GAP_PX = 8;
 
-const label = (vendor: Vendor): string => VENDOR_PICKER_COPY.vendors[vendor]
+const label = (vendor: Vendor): string => VENDOR_PICKER_COPY.vendors[vendor];
 
 const inDropdown = (vendor: Vendor | null): vendor is Vendor =>
-  vendor !== null && !VENDOR_PINNED.includes(vendor)
+  vendor !== null && !VENDOR_PINNED.includes(vendor);
 
 // Dropdown order, flattened. Drives roving tabindex, arrow keys and typeahead —
 // the visual grouping is presentational, the keyboard walks one list.
 const DROPDOWN_ORDER: readonly Vendor[] = [
   ...VENDOR_GROUPS.flatMap((group) => group.items),
   VENDOR_CATCHALL,
-]
+];
 
 // ChipGroup's classes, plus `inline-flex items-center gap-1.5` so a chip can
 // hold an icon beside its label. These chips sit one row below a ChipGroup in
@@ -51,7 +51,7 @@ const chipClass = (
         : invalid
           ? 'border-warning text-fg hover:border-fg-muted'
           : 'border-border-strong text-fg hover:border-fg-muted',
-  ].join(' ')
+  ].join(' ');
 
 const Caret = ({ open }: { open: boolean }) => (
   <svg
@@ -74,7 +74,7 @@ const Caret = ({ open }: { open: boolean }) => (
       fill="none"
     />
   </svg>
-)
+);
 
 const Check = () => (
   <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true">
@@ -87,7 +87,7 @@ const Check = () => (
       fill="none"
     />
   </svg>
-)
+);
 
 const ClearIcon = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
@@ -99,13 +99,13 @@ const ClearIcon = () => (
       fill="none"
     />
   </svg>
-)
+);
 
 interface VendorListboxProps {
-  value: Vendor | null
-  onPick: (vendor: Vendor) => void
-  onClose: () => void
-  labelledBy: string
+  value: Vendor | null;
+  onPick: (vendor: Vendor) => void;
+  onClose: () => void;
+  labelledBy: string;
 }
 
 const VendorListbox = ({
@@ -117,59 +117,59 @@ const VendorListbox = ({
   const startIndex = useMemo(
     () => Math.max(0, value === null ? 0 : DROPDOWN_ORDER.indexOf(value)),
     [value],
-  )
-  const [active, setActive] = useState(startIndex)
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const typeahead = useRef({ buffer: '', at: 0 })
+  );
+  const [active, setActive] = useState(startIndex);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const typeahead = useRef({ buffer: '', at: 0 });
 
   useEffect(() => {
-    itemRefs.current[startIndex]?.focus()
-  }, [startIndex])
+    itemRefs.current[startIndex]?.focus();
+  }, [startIndex]);
 
   const focusAt = useCallback((index: number) => {
-    const next = (index + DROPDOWN_ORDER.length) % DROPDOWN_ORDER.length
-    setActive(next)
-    itemRefs.current[next]?.focus()
-  }, [])
+    const next = (index + DROPDOWN_ORDER.length) % DROPDOWN_ORDER.length;
+    setActive(next);
+    itemRefs.current[next]?.focus();
+  }, []);
 
   const onKeyDown = (ev: KeyboardEvent) => {
-    const key = ev.key
+    const key = ev.key;
     if (key === 'ArrowDown') {
-      ev.preventDefault()
-      focusAt(active + 1)
+      ev.preventDefault();
+      focusAt(active + 1);
     } else if (key === 'ArrowUp') {
-      ev.preventDefault()
-      focusAt(active - 1)
+      ev.preventDefault();
+      focusAt(active - 1);
     } else if (key === 'Home') {
-      ev.preventDefault()
-      focusAt(0)
+      ev.preventDefault();
+      focusAt(0);
     } else if (key === 'End') {
-      ev.preventDefault()
-      focusAt(DROPDOWN_ORDER.length - 1)
+      ev.preventDefault();
+      focusAt(DROPDOWN_ORDER.length - 1);
     } else if (key === 'Escape') {
-      ev.preventDefault()
+      ev.preventDefault();
       // ModalShell listens on `document`, and React dispatches synthetic
       // events from its own root container — so the synthetic stopPropagation
       // never reaches it. Only stopping the native event keeps the first
       // Escape from tearing down the whole submit modal.
-      ev.nativeEvent.stopPropagation()
-      onClose()
+      ev.nativeEvent.stopPropagation();
+      onClose();
     } else if (key === 'Enter' || key === ' ') {
-      ev.preventDefault()
-      const picked = DROPDOWN_ORDER[active]
-      if (picked) onPick(picked)
+      ev.preventDefault();
+      const picked = DROPDOWN_ORDER[active];
+      if (picked) onPick(picked);
     } else if (key.length === 1 && /\S/.test(key)) {
-      const now = Date.now()
-      const state = typeahead.current
+      const now = Date.now();
+      const state = typeahead.current;
       state.buffer =
-        now - state.at > TYPEAHEAD_WINDOW_MS ? key : state.buffer + key
-      state.at = now
+        now - state.at > TYPEAHEAD_WINDOW_MS ? key : state.buffer + key;
+      state.at = now;
       const hit = DROPDOWN_ORDER.findIndex((vendor) =>
         label(vendor).toLowerCase().startsWith(state.buffer.toLowerCase()),
-      )
-      if (hit >= 0) focusAt(hit)
+      );
+      if (hit >= 0) focusAt(hit);
     }
-  }
+  };
 
   const optionStyle = (selected: boolean): CSSProperties => ({
     boxSizing: 'border-box',
@@ -186,10 +186,10 @@ const VendorListbox = ({
     fontWeight: selected ? 700 : 500,
     letterSpacing: '-0.005em',
     textAlign: 'left',
-  })
+  });
 
   const renderOption = (vendor: Vendor, index: number) => {
-    const selected = value === vendor
+    const selected = value === vendor;
     return (
       // A div, not a button: ARIA-in-HTML forbids role="option" on <button>,
       // and validators flag it. Enter and Space are already handled by the
@@ -199,7 +199,7 @@ const VendorListbox = ({
         role="option"
         aria-selected={selected}
         ref={(node) => {
-          itemRefs.current[index] = node
+          itemRefs.current[index] = node;
         }}
         tabIndex={active === index ? 0 : -1}
         onFocus={() => setActive(index)}
@@ -219,10 +219,10 @@ const VendorListbox = ({
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>{label(vendor)}</span>
       </div>
-    )
-  }
+    );
+  };
 
-  let cursor = -1
+  let cursor = -1;
   return (
     <div
       role="listbox"
@@ -236,7 +236,7 @@ const VendorListbox = ({
       }}
     >
       {VENDOR_GROUPS.map((group) => {
-        const copy = VENDOR_PICKER_COPY.groups[group.id]
+        const copy = VENDOR_PICKER_COPY.groups[group.id];
         return (
           <div
             key={group.id}
@@ -288,12 +288,12 @@ const VendorListbox = ({
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {group.items.map((vendor) => {
-                cursor += 1
-                return renderOption(vendor, cursor)
+                cursor += 1;
+                return renderOption(vendor, cursor);
               })}
             </div>
           </div>
-        )
+        );
       })}
 
       {/* Catch-all — ungrouped and divided off. Text-free by policy: an unnamed
@@ -302,14 +302,14 @@ const VendorListbox = ({
         {renderOption(VENDOR_CATCHALL, cursor + 1)}
       </div>
     </div>
-  )
-}
+  );
+};
 
 interface VendorFieldProps {
-  value: Vendor | null
-  onChange: (vendor: Vendor | null) => void
-  error?: string | undefined
-  disabled?: boolean
+  value: Vendor | null;
+  onChange: (vendor: Vendor | null) => void;
+  error?: string | undefined;
+  disabled?: boolean;
 }
 
 /**
@@ -324,52 +324,52 @@ export const VendorField = ({
   error,
   disabled = false,
 }: VendorFieldProps) => {
-  const [open, setOpen] = useState(false)
-  const [isNarrow, setIsNarrow] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const [open, setOpen] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
   // Ids are per-instance: a second VendorField in the DOM would otherwise
   // duplicate them and silently break every aria-labelledby that points here.
-  const instanceId = useId()
-  const labelId = `${instanceId}-label`
-  const popoverTitleId = `${instanceId}-popover-title`
-  const sheetTitleId = `${instanceId}-sheet-title`
+  const instanceId = useId();
+  const labelId = `${instanceId}-label`;
+  const popoverTitleId = `${instanceId}-popover-title`;
+  const sheetTitleId = `${instanceId}-sheet-title`;
 
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 519px)')
-    setIsNarrow(mql.matches)
-    const listener = (ev: MediaQueryListEvent) => setIsNarrow(ev.matches)
-    mql.addEventListener('change', listener)
-    return () => mql.removeEventListener('change', listener)
-  }, [])
+    const mql = window.matchMedia('(max-width: 519px)');
+    setIsNarrow(mql.matches);
+    const listener = (ev: MediaQueryListEvent) => setIsNarrow(ev.matches);
+    mql.addEventListener('change', listener);
+    return () => mql.removeEventListener('change', listener);
+  }, []);
 
   // Locking the field while a surface is open would leave clickable options
   // behind a disabled control, so the payload could diverge from the UI.
   useEffect(() => {
-    if (disabled) setOpen(false)
-  }, [disabled])
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   const close = useCallback(() => {
-    setOpen(false)
-    triggerRef.current?.focus()
-  }, [])
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   const pick = (vendor: Vendor) => {
-    onChange(vendor)
-    close()
-  }
+    onChange(vendor);
+    close();
+  };
 
   // A pinned chip and the dropdown are one selection, so choosing a chip has to
   // dismiss an open surface. Focus stays where the click left it — on the chip.
   const pickPinned = (vendor: Vendor) => {
-    onChange(vendor)
-    setOpen(false)
-  }
+    onChange(vendor);
+    setOpen(false);
+  };
 
   // Roving tabindex: the radiogroup is one tab stop. The checked chip owns it;
   // with nothing checked the first chip does, per the ARIA radio-group pattern.
-  const pinnedRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const checkedPinned = VENDOR_PINNED.findIndex((vendor) => vendor === value)
-  const pinnedTabStop = checkedPinned === -1 ? 0 : checkedPinned
+  const pinnedRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const checkedPinned = VENDOR_PINNED.findIndex((vendor) => vendor === value);
+  const pinnedTabStop = checkedPinned === -1 ? 0 : checkedPinned;
 
   const movePinned = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -380,58 +380,58 @@ export const VendorField = ({
         ? 1
         : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
           ? -1
-          : 0
-    if (step === 0) return
-    event.preventDefault()
-    const next = (from + step + VENDOR_PINNED.length) % VENDOR_PINNED.length
-    const vendor = VENDOR_PINNED[next]
-    if (!vendor) return
+          : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const next = (from + step + VENDOR_PINNED.length) % VENDOR_PINNED.length;
+    const vendor = VENDOR_PINNED[next];
+    if (!vendor) return;
     // A radiogroup selects as it moves — arrowing is the selection.
-    pickPinned(vendor)
-    pinnedRefs.current[next]?.focus()
-  }
+    pickPinned(vendor);
+    pinnedRefs.current[next]?.focus();
+  };
 
   // Clearing unmounts this button, so focus has to be handed back deliberately
   // or it falls to <body>.
   const clear = () => {
-    onChange(null)
-    close()
-  }
+    onChange(null);
+    close();
+  };
 
-  const fromDropdown = inDropdown(value)
+  const fromDropdown = inDropdown(value);
   const triggerLabel = fromDropdown
     ? label(value)
-    : VENDOR_PICKER_COPY.moreTrigger
+    : VENDOR_PICKER_COPY.moreTrigger;
 
   // Dismiss the popover on an outside click. The sheet has its own scrim.
-  const shellRef = useRef<HTMLDivElement | null>(null)
+  const shellRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!open || isNarrow) return
+    if (!open || isNarrow) return;
     const onDocumentDown = (ev: PointerEvent) => {
       if (ev.target instanceof Node && !shellRef.current?.contains(ev.target)) {
-        setOpen(false)
+        setOpen(false);
       }
-    }
-    document.addEventListener('pointerdown', onDocumentDown)
-    return () => document.removeEventListener('pointerdown', onDocumentDown)
-  }, [open, isNarrow])
+    };
+    document.addEventListener('pointerdown', onDocumentDown);
+    return () => document.removeEventListener('pointerdown', onDocumentDown);
+  }, [open, isNarrow]);
 
   // Collision is measured, not assumed: the field can sit anywhere in a
   // scrolled modal, so the only honest input is where the chip actually is
   // and how tall the list actually rendered.
-  const popoverRef = useRef<HTMLDivElement | null>(null)
-  const [flipped, setFlipped] = useState(false)
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+  const [flipped, setFlipped] = useState(false);
   useLayoutEffect(() => {
-    if (!open || isNarrow) return
-    const shell = shellRef.current
-    const popover = popoverRef.current
-    if (!shell || !popover) return
-    const rect = shell.getBoundingClientRect()
-    const needed = popover.offsetHeight + POPOVER_GAP_PX
+    if (!open || isNarrow) return;
+    const shell = shellRef.current;
+    const popover = popoverRef.current;
+    if (!shell || !popover) return;
+    const rect = shell.getBoundingClientRect();
+    const needed = popover.offsetHeight + POPOVER_GAP_PX;
     setFlipped(
       rect.bottom + needed > window.innerHeight && rect.top - needed > 0,
-    )
-  }, [open, isNarrow, value])
+    );
+  }, [open, isNarrow, value]);
 
   const listbox = (titleId: string) => (
     <VendorListbox
@@ -440,7 +440,7 @@ export const VendorField = ({
       onClose={close}
       labelledBy={titleId}
     />
-  )
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -484,12 +484,12 @@ export const VendorField = ({
           style={{ display: 'contents' }}
         >
           {VENDOR_PINNED.map((vendor, index) => {
-            const active = value === vendor
+            const active = value === vendor;
             return (
               <button
                 key={vendor}
                 ref={(node) => {
-                  pinnedRefs.current[index] = node
+                  pinnedRefs.current[index] = node;
                 }}
                 type="button"
                 role="radio"
@@ -502,7 +502,7 @@ export const VendorField = ({
               >
                 {label(vendor)}
               </button>
-            )
+            );
           })}
         </div>
 
@@ -534,8 +534,8 @@ export const VendorField = ({
             onKeyDown={(event) => {
               // Same native-listener reason as the listbox handler above.
               if (event.key === 'Escape' && open) {
-                event.nativeEvent.stopPropagation()
-                close()
+                event.nativeEvent.stopPropagation();
+                close();
               }
             }}
             className={chipClass(fromDropdown, disabled, Boolean(error))}
@@ -703,5 +703,5 @@ export const VendorField = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

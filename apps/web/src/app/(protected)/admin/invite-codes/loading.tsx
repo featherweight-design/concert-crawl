@@ -61,5 +61,5 @@ export default function AdminInviteCodesLoading() {
         ))}
       </div>
     </div>
-  )
+  );
 }

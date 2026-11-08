@@ -1,49 +1,49 @@
-import { Hono } from 'hono'
-import { requireRole } from '../../middleware/role.js'
-import { clerkAuth } from '../../middleware/auth.js'
-import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db'
-import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm'
-import { venuesAdminRouter } from './venues.js'
-import { inviteCodesAdminRouter } from './invite-codes.js'
-import { crawlAdminRouter } from './crawl.js'
-import { notificationsAdminRouter } from './notifications.js'
-import { eventsAdminRouter } from './events.js'
-import { pricesAdminRouter } from './prices.js'
-import { usersAdminRouter } from './users.js'
-import { feedbackAdminRouter } from './feedback.js'
-import { contestsAdminRouter } from './contests.js'
-import { costsAdminRouter } from './costs.js'
-import { founderWindowAdminRouter } from './founder-window.js'
-import { triageAdminRouter } from './triage.js'
-import { artistsAdminRouter } from './artists.js'
-import { featureFlagsAdminRouter } from './feature-flags.js'
+import { Hono } from 'hono';
+import { requireRole } from '../../middleware/role.js';
+import { clerkAuth } from '../../middleware/auth.js';
+import { db, auditLog, events, priceSubmissions } from '@concert-crawl/db';
+import { and, eq, gte, isNotNull, isNull, sql } from 'drizzle-orm';
+import { venuesAdminRouter } from './venues.js';
+import { inviteCodesAdminRouter } from './invite-codes.js';
+import { crawlAdminRouter } from './crawl.js';
+import { notificationsAdminRouter } from './notifications.js';
+import { eventsAdminRouter } from './events.js';
+import { pricesAdminRouter } from './prices.js';
+import { usersAdminRouter } from './users.js';
+import { feedbackAdminRouter } from './feedback.js';
+import { contestsAdminRouter } from './contests.js';
+import { costsAdminRouter } from './costs.js';
+import { founderWindowAdminRouter } from './founder-window.js';
+import { triageAdminRouter } from './triage.js';
+import { artistsAdminRouter } from './artists.js';
+import { featureFlagsAdminRouter } from './feature-flags.js';
 
 export type AdminVariables = {
   Variables: {
-    auditAction?: string
-    auditTargetId?: string
-    auditActorId?: string
-    auditMeta?: Record<string, unknown>
-  }
-}
+    auditAction?: string;
+    auditTargetId?: string;
+    auditActorId?: string;
+    auditMeta?: Record<string, unknown>;
+  };
+};
 
-export const adminRouter = new Hono<AdminVariables>()
+export const adminRouter = new Hono<AdminVariables>();
 
 // All admin routes require Clerk auth + admin role
-adminRouter.use('*', clerkAuth)
-adminRouter.use('*', requireRole('admin'))
+adminRouter.use('*', clerkAuth);
+adminRouter.use('*', requireRole('admin'));
 
 // Write audit log entry after each mutating request
 adminRouter.use('*', async (ctx, next) => {
-  await next()
+  await next();
 
   // Only write audit log for mutating requests
-  if (['GET', 'HEAD', 'OPTIONS'].includes(ctx.req.method)) return
+  if (['GET', 'HEAD', 'OPTIONS'].includes(ctx.req.method)) return;
 
-  const action = ctx.get('auditAction')
-  const targetId = ctx.get('auditTargetId')
-  const actorId = ctx.get('auditActorId')
-  const auditMeta = ctx.get('auditMeta') ?? null
+  const action = ctx.get('auditAction');
+  const targetId = ctx.get('auditTargetId');
+  const actorId = ctx.get('auditActorId');
+  const auditMeta = ctx.get('auditMeta') ?? null;
 
   if (action && actorId) {
     try {
@@ -52,17 +52,17 @@ adminRouter.use('*', async (ctx, next) => {
         action,
         targetId: targetId ?? null,
         metadata: auditMeta,
-      })
+      });
     } catch (error) {
       console.error('Failed to write admin audit log', {
         actorId,
         action,
         targetId: targetId ?? null,
         error,
-      })
+      });
     }
   }
-})
+});
 
 // GET /v1/admin/review/counts — tab-pill counts for /admin/review and the
 // admin sidebar badge. Four of the five data-bearing Review tabs render
@@ -87,7 +87,7 @@ adminRouter.use('*', async (ctx, next) => {
 adminRouter.get('/review/counts', async (ctx) => {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/Denver',
-  })
+  });
 
   const [eventFlagsResult, pricesResult, missingResult, priceContestsResult] =
     await Promise.all([
@@ -130,7 +130,7 @@ adminRouter.get('/review/counts', async (ctx) => {
             isNotNull(priceSubmissions.disputedSubmissionId),
           ),
         ),
-    ])
+    ]);
   return ctx.json({
     success: true,
     data: {
@@ -139,20 +139,20 @@ adminRouter.get('/review/counts', async (ctx) => {
       missing: missingResult[0]?.total ?? 0,
       priceContests: priceContestsResult[0]?.total ?? 0,
     },
-  })
-})
+  });
+});
 
-adminRouter.route('/venues', venuesAdminRouter)
-adminRouter.route('/invite-codes', inviteCodesAdminRouter)
-adminRouter.route('/crawl', crawlAdminRouter)
-adminRouter.route('/notifications', notificationsAdminRouter)
-adminRouter.route('/events', eventsAdminRouter)
-adminRouter.route('/prices', pricesAdminRouter)
-adminRouter.route('/users', usersAdminRouter)
-adminRouter.route('/feedback', feedbackAdminRouter)
-adminRouter.route('/contests', contestsAdminRouter)
-adminRouter.route('/costs', costsAdminRouter)
-adminRouter.route('/founder-window', founderWindowAdminRouter)
-adminRouter.route('/triage', triageAdminRouter)
-adminRouter.route('/artists', artistsAdminRouter)
-adminRouter.route('/feature-flags', featureFlagsAdminRouter)
+adminRouter.route('/venues', venuesAdminRouter);
+adminRouter.route('/invite-codes', inviteCodesAdminRouter);
+adminRouter.route('/crawl', crawlAdminRouter);
+adminRouter.route('/notifications', notificationsAdminRouter);
+adminRouter.route('/events', eventsAdminRouter);
+adminRouter.route('/prices', pricesAdminRouter);
+adminRouter.route('/users', usersAdminRouter);
+adminRouter.route('/feedback', feedbackAdminRouter);
+adminRouter.route('/contests', contestsAdminRouter);
+adminRouter.route('/costs', costsAdminRouter);
+adminRouter.route('/founder-window', founderWindowAdminRouter);
+adminRouter.route('/triage', triageAdminRouter);
+adminRouter.route('/artists', artistsAdminRouter);
+adminRouter.route('/feature-flags', featureFlagsAdminRouter);

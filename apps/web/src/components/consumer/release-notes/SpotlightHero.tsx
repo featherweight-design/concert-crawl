@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 import {
   TierShowtime,
   HistoryShowtime,
@@ -10,7 +10,7 @@ import {
   WatchersShowtime,
   SpotifyShowtime,
   PassportShowtimeStubs,
-} from './heroes/showtime-heroes-p1'
+} from './heroes/showtime-heroes-p1';
 import {
   FollowingShowtime,
   PriceDropShowtime,
@@ -19,12 +19,12 @@ import {
   LastTimeShowtime,
   SupportActShowtime,
   VenuePassportShowtime,
-} from './heroes/showtime-heroes-p2'
-import { SPOTLIGHT_COMPACT_HEROES } from './heroes/showtime-compact'
+} from './heroes/showtime-heroes-p2';
+import { SPOTLIGHT_COMPACT_HEROES } from './heroes/showtime-compact';
 
 interface SpotlightHeroProps {
-  hero?: string
-  compact?: boolean
+  hero?: string;
+  compact?: boolean;
 }
 
 const FULL_HEROES: Record<string, React.ComponentType> = {
@@ -43,7 +43,7 @@ const FULL_HEROES: Record<string, React.ComponentType> = {
   'support-act': SupportActShowtime,
   passport: PassportShowtimeStubs,
   'venue-passport': VenuePassportShowtime,
-}
+};
 
 export function SpotlightHero({
   hero = 'price',
@@ -51,12 +51,12 @@ export function SpotlightHero({
 }: SpotlightHeroProps) {
   if (compact) {
     const CompactCmp =
-      SPOTLIGHT_COMPACT_HEROES[hero] ?? SPOTLIGHT_COMPACT_HEROES['passport']
-    if (!CompactCmp) return null
-    return <CompactCmp />
+      SPOTLIGHT_COMPACT_HEROES[hero] ?? SPOTLIGHT_COMPACT_HEROES['passport'];
+    if (!CompactCmp) return null;
+    return <CompactCmp />;
   }
 
-  const FullCmp = FULL_HEROES[hero] ?? FULL_HEROES['price']
-  if (!FullCmp) return null
-  return <FullCmp />
+  const FullCmp = FULL_HEROES[hero] ?? FULL_HEROES['price'];
+  if (!FullCmp) return null;
+  return <FullCmp />;
 }

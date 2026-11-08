@@ -1,28 +1,28 @@
-'use client'
+'use client';
 
-import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export type GenerateFieldState =
-  'idle' | 'loading' | 'review' | 'accepted' | 'error'
+  'idle' | 'loading' | 'review' | 'accepted' | 'error';
 
 export interface GenerateFieldResult {
-  content: string
-  costUsd?: number
-  tokensUsed?: number
-  sources?: string[]
+  content: string;
+  costUsd?: number;
+  tokensUsed?: number;
+  sources?: string[];
 }
 
 interface GenerateFieldProps {
-  state: GenerateFieldState
-  result?: GenerateFieldResult | undefined
-  errorMessage?: string | undefined
-  estimatedCostLabel?: string | undefined
-  onGenerate: () => void
-  onRegenerate?: () => void
-  onCancel?: () => void
-  onAccept: (content: string) => void
-  onDiscard: () => void
+  state: GenerateFieldState;
+  result?: GenerateFieldResult | undefined;
+  errorMessage?: string | undefined;
+  estimatedCostLabel?: string | undefined;
+  onGenerate: () => void;
+  onRegenerate?: () => void;
+  onCancel?: () => void;
+  onAccept: (content: string) => void;
+  onDiscard: () => void;
 }
 
 export function GenerateField({
@@ -72,7 +72,7 @@ export function GenerateField({
           {estimatedCostLabel}
         </span>
       </button>
-    )
+    );
   }
 
   if (state === 'loading') {
@@ -132,7 +132,7 @@ export function GenerateField({
           </button>
         )}
       </div>
-    )
+    );
   }
 
   if (state === 'review' && result) {
@@ -296,7 +296,7 @@ export function GenerateField({
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   if (state === 'accepted') {
@@ -330,7 +330,7 @@ export function GenerateField({
         />
         {ADMIN_COPY.generateField.accepted.label}
       </div>
-    )
+    );
   }
 
   if (state === 'error') {
@@ -376,8 +376,8 @@ export function GenerateField({
           {ADMIN_COPY.generateField.error.retry}
         </button>
       </div>
-    )
+    );
   }
 
-  return null
+  return null;
 }

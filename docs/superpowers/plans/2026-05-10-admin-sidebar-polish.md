@@ -17,21 +17,22 @@ All commands should be run from inside the worktree directory unless otherwise n
 
 ## File Map
 
-| File | Change |
-|------|--------|
-| `apps/web/src/app/(protected)/admin/admin.css` | Darken `--warning` in Electric + Jade themes |
-| `apps/web/src/components/consumer/cc-mark/CCMark.tsx` | **Delete** — moving to brand/ |
-| `apps/web/src/components/brand/cc-mark/CCMark.tsx` | **Create** — canonical home for CCMark |
-| `apps/web/src/components/consumer/app-header/AppHeader.tsx` | Update CCMark import path |
-| `apps/web/src/components/admin/shell/AdminSidebar.tsx` | Replace inline SVG + wordmark with CCMark + CCWordmark; add OPERATIONS label |
-| `apps/web/src/components/admin/shell/nav.ts` | `iconName: 'Ticket'` → `iconName: 'Key'` for invite-codes |
-| `apps/web/src/components/admin/shell/nav.test.ts` | New — verifies nav config invariants |
+| File                                                        | Change                                                                       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `apps/web/src/app/(protected)/admin/admin.css`              | Darken `--warning` in Electric + Jade themes                                 |
+| `apps/web/src/components/consumer/cc-mark/CCMark.tsx`       | **Delete** — moving to brand/                                                |
+| `apps/web/src/components/brand/cc-mark/CCMark.tsx`          | **Create** — canonical home for CCMark                                       |
+| `apps/web/src/components/consumer/app-header/AppHeader.tsx` | Update CCMark import path                                                    |
+| `apps/web/src/components/admin/shell/AdminSidebar.tsx`      | Replace inline SVG + wordmark with CCMark + CCWordmark; add OPERATIONS label |
+| `apps/web/src/components/admin/shell/nav.ts`                | `iconName: 'Ticket'` → `iconName: 'Key'` for invite-codes                    |
+| `apps/web/src/components/admin/shell/nav.test.ts`           | New — verifies nav config invariants                                         |
 
 ---
 
 ## Task 1: Fix warning badge contrast in Electric and Jade themes
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/admin/admin.css`
 
 The `--warning` token in Electric and Jade is `#ffd27a` — too bright for white badge text. Change it to `#c97920` (burnt amber, contrast ratio ~5.5:1 against white).
@@ -41,13 +42,13 @@ The `--warning` token in Electric and Jade is `#ffd27a` — too bright for white
 In `apps/web/src/app/(protected)/admin/admin.css`, find the `[data-admin-theme="electric"]` block and change:
 
 ```css
-  --warning: #ffd27a;
+--warning: #ffd27a;
 ```
 
 to:
 
 ```css
-  --warning: #c97920;
+--warning: #c97920;
 ```
 
 - [ ] **Step 2: Update Jade theme warning token**
@@ -55,13 +56,13 @@ to:
 In the same file, find the `[data-admin-theme="jade"]` block and change:
 
 ```css
-  --warning: #ffd27a;
+--warning: #ffd27a;
 ```
 
 to:
 
 ```css
-  --warning: #c97920;
+--warning: #c97920;
 ```
 
 - [ ] **Step 3: Commit**
@@ -76,6 +77,7 @@ git commit -m "fix(admin): darken --warning token in Electric and Jade for badge
 ## Task 2: Move CCMark to components/brand/
 
 **Files:**
+
 - Create: `apps/web/src/components/brand/cc-mark/CCMark.tsx`
 - Delete: `apps/web/src/components/consumer/cc-mark/CCMark.tsx`
 - Modify: `apps/web/src/components/consumer/app-header/AppHeader.tsx`
@@ -88,7 +90,7 @@ Create `apps/web/src/components/brand/cc-mark/CCMark.tsx` with this content (ide
 
 ```tsx
 interface CCMarkProps {
-  size?: number
+  size?: number;
 }
 
 const TRAIL = [
@@ -99,7 +101,7 @@ const TRAIL = [
   { cx: 50, cy: 50, radius: 4 },
   { cx: 58, cy: 42, radius: 5 },
   { cx: 66, cy: 32, radius: 6 },
-]
+];
 
 export function CCMark({ size = 24 }: CCMarkProps) {
   return (
@@ -125,7 +127,7 @@ export function CCMark({ size = 24 }: CCMarkProps) {
         />
       ))}
     </svg>
-  )
+  );
 }
 ```
 
@@ -141,13 +143,13 @@ rmdir apps/web/src/components/consumer/cc-mark
 In `apps/web/src/components/consumer/app-header/AppHeader.tsx`, change:
 
 ```tsx
-import { CCMark } from '../cc-mark'
+import { CCMark } from '../cc-mark';
 ```
 
 to:
 
 ```tsx
-import { CCMark } from '@/components/brand/cc-mark'
+import { CCMark } from '@/components/brand/cc-mark';
 ```
 
 - [ ] **Step 4: Verify no broken imports remain**
@@ -180,6 +182,7 @@ git commit -m "refactor(brand): move CCMark to components/brand — canonical sh
 ## Task 3: Wire CCMark + CCWordmark into AdminSidebar
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/AdminSidebar.tsx`
 
 Replace the duplicate inline SVG logo (appears in both full and rail mode) and the inline wordmark text with `CCMark` and `CCWordmark`. Also add the OPERATIONS section label in this task since it's in the same file.
@@ -193,22 +196,22 @@ Replace the duplicate inline SVG logo (appears in both full and rail mode) and t
 The current import block begins with:
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useClerk } from '@clerk/nextjs'
-import * as LucideIcons from 'lucide-react'
-import { LogOut } from 'lucide-react'
-import { NAV, type NavItem } from './nav'
+import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useClerk } from '@clerk/nextjs';
+import * as LucideIcons from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { NAV, type NavItem } from './nav';
 ```
 
 Add two new imports after the `NAV` import line:
 
 ```tsx
-import { CCMark } from '@/components/brand/cc-mark'
-import { CCWordmark } from '@/components/brand/cc-wordmark'
+import { CCMark } from '@/components/brand/cc-mark';
+import { CCWordmark } from '@/components/brand/cc-wordmark';
 ```
 
 - [ ] **Step 2: Replace the full-mode logo block**
@@ -216,129 +219,129 @@ import { CCWordmark } from '@/components/brand/cc-wordmark'
 Find this block in `AdminSidebar.tsx` (inside the `{effectiveMode === 'full' ? (` branch, starting at the `{/* Logo mark */}` comment):
 
 ```tsx
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Logo mark */}
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#0d0c09',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
-                <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
-                <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
-                <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
-                <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-                <line
-                  x1="3"
-                  y1="4"
-                  x2="9"
-                  y2="9"
-                  stroke="#7ab4ff"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-                <line
-                  x1="9"
-                  y1="9"
-                  x2="14"
-                  y2="14"
-                  stroke="#c89bf0"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-                <line
-                  x1="15"
-                  y1="3"
-                  x2="9"
-                  y2="9"
-                  stroke="#7ab4ff"
-                  strokeWidth="0.75"
-                  opacity="0.4"
-                />
-              </svg>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <div
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontWeight: 800,
-                  fontSize: 13,
-                  lineHeight: 1,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                <span style={{ color: 'var(--fg)' }}>concert</span>
-                <span style={{ color: 'var(--accent)' }}>crawl.</span>
-              </div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 14,
-                  padding: '0 5px',
-                  borderRadius: 999,
-                  background: 'rgba(122,58,168,0.18)',
-                  color: 'var(--accent)',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.08em',
-                  alignSelf: 'flex-start',
-                }}
-              >
-                ADMIN
-              </div>
-            </div>
-          </div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+  {/* Logo mark */}
+  <div
+    style={{
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      background: '#0d0c09',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    }}
+  >
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
+      <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
+      <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
+      <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
+      <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
+      <line
+        x1="3"
+        y1="4"
+        x2="9"
+        y2="9"
+        stroke="#7ab4ff"
+        strokeWidth="0.75"
+        opacity="0.4"
+      />
+      <line
+        x1="9"
+        y1="9"
+        x2="14"
+        y2="14"
+        stroke="#c89bf0"
+        strokeWidth="0.75"
+        opacity="0.4"
+      />
+      <line
+        x1="15"
+        y1="3"
+        x2="9"
+        y2="9"
+        stroke="#7ab4ff"
+        strokeWidth="0.75"
+        opacity="0.4"
+      />
+    </svg>
+  </div>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <div
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        fontWeight: 800,
+        fontSize: 13,
+        lineHeight: 1,
+        letterSpacing: '-0.02em',
+      }}
+    >
+      <span style={{ color: 'var(--fg)' }}>concert</span>
+      <span style={{ color: 'var(--accent)' }}>crawl.</span>
+    </div>
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 14,
+        padding: '0 5px',
+        borderRadius: 999,
+        background: 'rgba(122,58,168,0.18)',
+        color: 'var(--accent)',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 9,
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.08em',
+        alignSelf: 'flex-start',
+      }}
+    >
+      ADMIN
+    </div>
+  </div>
+</div>
 ```
 
 Replace it with:
 
 ```tsx
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}
-            >
-              <CCMark size={32} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <CCWordmark size={13} />
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  height: 14,
-                  padding: '0 5px',
-                  borderRadius: 999,
-                  background: 'rgba(122,58,168,0.18)',
-                  color: 'var(--accent)',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  textTransform: 'uppercase' as const,
-                  letterSpacing: '0.08em',
-                  alignSelf: 'flex-start',
-                }}
-              >
-                ADMIN
-              </div>
-            </div>
-          </div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+  <div
+    style={{
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      overflow: 'hidden',
+      flexShrink: 0,
+    }}
+  >
+    <CCMark size={32} />
+  </div>
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <CCWordmark size={13} />
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 14,
+        padding: '0 5px',
+        borderRadius: 999,
+        background: 'rgba(122,58,168,0.18)',
+        color: 'var(--accent)',
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: 9,
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.08em',
+        alignSelf: 'flex-start',
+      }}
+    >
+      ADMIN
+    </div>
+  </div>
+</div>
 ```
 
 - [ ] **Step 3: Replace the rail-mode logo block**
@@ -346,67 +349,67 @@ Replace it with:
 Find this block (inside the `else` branch of `effectiveMode === 'full'`):
 
 ```tsx
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: '#0d0c09',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
-              <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
-              <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
-              <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
-              <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
-              <line
-                x1="3"
-                y1="4"
-                x2="9"
-                y2="9"
-                stroke="#7ab4ff"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-              <line
-                x1="9"
-                y1="9"
-                x2="14"
-                y2="14"
-                stroke="#c89bf0"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-              <line
-                x1="15"
-                y1="3"
-                x2="9"
-                y2="9"
-                stroke="#7ab4ff"
-                strokeWidth="0.75"
-                opacity="0.4"
-              />
-            </svg>
-          </div>
+<div
+  style={{
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    background: '#0d0c09',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}
+>
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <circle cx="9" cy="9" r="2.5" fill="#c89bf0" />
+    <circle cx="3" cy="4" r="1.5" fill="#7ab4ff" opacity="0.8" />
+    <circle cx="15" cy="3" r="1" fill="#c89bf0" opacity="0.6" />
+    <circle cx="14" cy="14" r="1.5" fill="#7ab4ff" opacity="0.7" />
+    <circle cx="4" cy="13" r="1" fill="#c89bf0" opacity="0.5" />
+    <line
+      x1="3"
+      y1="4"
+      x2="9"
+      y2="9"
+      stroke="#7ab4ff"
+      strokeWidth="0.75"
+      opacity="0.4"
+    />
+    <line
+      x1="9"
+      y1="9"
+      x2="14"
+      y2="14"
+      stroke="#c89bf0"
+      strokeWidth="0.75"
+      opacity="0.4"
+    />
+    <line
+      x1="15"
+      y1="3"
+      x2="9"
+      y2="9"
+      stroke="#7ab4ff"
+      strokeWidth="0.75"
+      opacity="0.4"
+    />
+  </svg>
+</div>
 ```
 
 Replace it with:
 
 ```tsx
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              overflow: 'hidden',
-            }}
-          >
-            <CCMark size={32} />
-          </div>
+<div
+  style={{
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    overflow: 'hidden',
+  }}
+>
+  <CCMark size={32} />
+</div>
 ```
 
 - [ ] **Step 4: Add the OPERATIONS section label**
@@ -414,61 +417,63 @@ Replace it with:
 Find this block in the `NAV.map(...)` render:
 
 ```tsx
-              {isNewSection &&
-                effectiveMode === 'full' &&
-                item.section === 'account' && (
-                  <>
-                    <div
-                      style={{
-                        height: 1,
-                        background: 'var(--border)',
-                        margin: '6px 0',
-                      }}
-                    />
-                    <div
-                      style={{
-                        padding: '4px 10px',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: 'var(--fg-subtle)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                      }}
-                    >
-                      Account
-                    </div>
-                  </>
-                )}
+{
+  isNewSection && effectiveMode === 'full' && item.section === 'account' && (
+    <>
+      <div
+        style={{
+          height: 1,
+          background: 'var(--border)',
+          margin: '6px 0',
+        }}
+      />
+      <div
+        style={{
+          padding: '4px 10px',
+          fontSize: 10,
+          fontWeight: 700,
+          color: 'var(--fg-subtle)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+        }}
+      >
+        Account
+      </div>
+    </>
+  );
+}
 ```
 
 Replace it with:
 
 ```tsx
-              {isNewSection && effectiveMode === 'full' && (
-                <>
-                  {item.section === 'account' && (
-                    <div
-                      style={{
-                        height: 1,
-                        background: 'var(--border)',
-                        margin: '6px 0',
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: 'var(--fg-subtle)',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    {item.section === 'account' ? 'Account' : 'Operations'}
-                  </div>
-                </>
-              )}
+{
+  isNewSection && effectiveMode === 'full' && (
+    <>
+      {item.section === 'account' && (
+        <div
+          style={{
+            height: 1,
+            background: 'var(--border)',
+            margin: '6px 0',
+          }}
+        />
+      )}
+      <div
+        style={{
+          padding: '4px 10px',
+          fontSize: 10,
+          fontWeight: 700,
+          color: 'var(--fg-subtle)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+        }}
+      >
+        {item.section === 'account' ? 'Account' : 'Operations'}
+      </div>
+    </>
+  );
+}
 ```
 
 - [ ] **Step 5: Run typecheck**
@@ -491,6 +496,7 @@ git commit -m "fix(admin): use CCMark/CCWordmark in sidebar header; add OPERATIO
 ## Task 4: Fix Invite Codes icon
 
 **Files:**
+
 - Modify: `apps/web/src/components/admin/shell/nav.ts`
 - Create: `apps/web/src/components/admin/shell/nav.test.ts`
 
@@ -499,27 +505,27 @@ git commit -m "fix(admin): use CCMark/CCWordmark in sidebar header; add OPERATIO
 Create `apps/web/src/components/admin/shell/nav.test.ts`:
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { NAV } from './nav'
+import { describe, it, expect } from 'vitest';
+import { NAV } from './nav';
 
 describe('NAV config', () => {
   it('invite-codes item uses Key icon', () => {
-    const item = NAV.find((navItem) => navItem.key === 'invite-codes')
-    expect(item).toBeDefined()
-    expect(item?.iconName).toBe('Key')
-  })
+    const item = NAV.find((navItem) => navItem.key === 'invite-codes');
+    expect(item).toBeDefined();
+    expect(item?.iconName).toBe('Key');
+  });
 
   it('all operations items come before account items', () => {
-    const sections = NAV.map((navItem) => navItem.section)
-    const firstAccount = sections.indexOf('account')
-    const lastOperations = sections.lastIndexOf('operations')
-    expect(lastOperations).toBeLessThan(firstAccount)
-  })
+    const sections = NAV.map((navItem) => navItem.section);
+    const firstAccount = sections.indexOf('account');
+    const lastOperations = sections.lastIndexOf('operations');
+    expect(lastOperations).toBeLessThan(firstAccount);
+  });
 
   it('dashboard is the first nav item', () => {
-    expect(NAV[0]?.key).toBe('dashboard')
-  })
-})
+    expect(NAV[0]?.key).toBe('dashboard');
+  });
+});
 ```
 
 - [ ] **Step 2: Run the test to confirm it fails**

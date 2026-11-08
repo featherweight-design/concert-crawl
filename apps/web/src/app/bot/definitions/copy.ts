@@ -13,10 +13,10 @@
  * The exact string every crawl request sends, imported rather than restated so
  * the page cannot publish a user agent the crawler has stopped using.
  */
-export { CRAWLER_USER_AGENT as BOT_UA } from '@concert-crawl/types'
+export { CRAWLER_USER_AGENT as BOT_UA } from '@concert-crawl/types';
 
 /** The two lines an operator lifts off the page to block us outright. */
-export const BOT_ROBOTS = ['User-agent: ConcertCrawl', 'Disallow: /']
+export const BOT_ROBOTS = ['User-agent: ConcertCrawl', 'Disallow: /'];
 
 export const BOT_COPY = {
   eyebrow: 'CRAWLER INFO · /BOT',
@@ -166,4 +166,4 @@ export const BOT_COPY = {
   },
 
   contactEmail: 'venues@concertcrawl.app',
-} as const
+} as const;

@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import { BACK_CHIP_COPY } from './definitions/copy'
+import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { BACK_CHIP_COPY } from './definitions/copy';
 
 /**
  * The 44px hit target is 8px wider and taller than the 36px visual disc, so the
@@ -11,20 +11,20 @@ import { BACK_CHIP_COPY } from './definitions/copy'
  * puts the disc back at 14px — exactly where it rendered before the hit area
  * grew. Do not "simplify" either offset away: the disc must not move.
  */
-const HIT_AREA_OFFSET_PX = 4
+const HIT_AREA_OFFSET_PX = 4;
 
 interface BackChipProps {
   /** Distance from the top of the positioned ancestor, px. 56 under device chrome, 14 without. */
-  top?: number
+  top?: number;
   /** Route pushed when there is no history entry to pop. Defaults to `'/events'`. */
-  fallbackHref?: string
+  fallbackHref?: string;
   /**
    * Lay the chip out in flow instead of over artwork — for bars that already
    * provide their own background (the artist page's sticky sub-header). `top`
    * is ignored in this mode.
    */
-  inline?: boolean
-  className?: string
+  inline?: boolean;
+  className?: string;
 }
 
 export function BackChip({
@@ -33,7 +33,7 @@ export function BackChip({
   inline = false,
   className,
 }: BackChipProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   return (
     <button
@@ -46,9 +46,9 @@ export function BackChip({
         // `router.back()` returns the user to wherever they came from, which
         // matches the browser's own back affordance. (#637)
         if (window.history.length <= 1) {
-          router.push(fallbackHref)
+          router.push(fallbackHref);
         } else {
-          router.back()
+          router.back();
         }
       }}
       aria-label={BACK_CHIP_COPY.label}
@@ -84,5 +84,5 @@ export function BackChip({
         </svg>
       </span>
     </button>
-  )
+  );
 }

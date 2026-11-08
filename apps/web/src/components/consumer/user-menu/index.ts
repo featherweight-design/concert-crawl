@@ -1,1 +1,1 @@
-export { UserMenu, AccountMenuProvider } from './UserMenu'
+export { UserMenu, AccountMenuProvider } from './UserMenu';

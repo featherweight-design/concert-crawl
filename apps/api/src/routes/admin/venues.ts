@@ -1,9 +1,9 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { httpUrl } from '../../lib/url-schema.js'
-import { venueSlug } from '../../lib/venue-slug-schema.js'
-import Anthropic from '@anthropic-ai/sdk'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { httpUrl } from '../../lib/url-schema.js';
+import { venueSlug } from '../../lib/venue-slug-schema.js';
+import Anthropic from '@anthropic-ai/sdk';
 import {
   db,
   venues,
@@ -14,7 +14,7 @@ import {
   auditLog,
   notifications,
   venueFaultAcknowledgements,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 import {
   and,
   avg,
@@ -28,29 +28,29 @@ import {
   not,
   or,
   sql,
-} from 'drizzle-orm'
+} from 'drizzle-orm';
 import {
   dispatch,
   AegSchemaError,
   PlatformFetchDeadlineError,
-} from '@concert-crawl/crawler-core/fetchers'
-import { checkRobots } from '@concert-crawl/crawler-core/robots'
+} from '@concert-crawl/crawler-core/fetchers';
+import { checkRobots } from '@concert-crawl/crawler-core/robots';
 import {
   CRAWLER_USER_AGENT,
   VENUE_PLATFORMS,
   platformRequiresVenueId,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import type {
   PlatformProbeResult,
   VenueRobotsStatus,
-} from '@concert-crawl/types'
-import { getAuthUser } from '../../middleware/auth.js'
-import { apiLogger } from '../../lib/logger.js'
-import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
-import { runBackgroundTask } from '../../lib/background-tasks.js'
-import type { AdminVariables } from './index.js'
-import { venueGuideAdminRouter } from './venue-guide.js'
-import { TRIAGE_CONDITIONS } from './lib/triage.js'
+} from '@concert-crawl/types';
+import { getAuthUser } from '../../middleware/auth.js';
+import { apiLogger } from '../../lib/logger.js';
+import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js';
+import { runBackgroundTask } from '../../lib/background-tasks.js';
+import type { AdminVariables } from './index.js';
+import { venueGuideAdminRouter } from './venue-guide.js';
+import { TRIAGE_CONDITIONS } from './lib/triage.js';
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -86,9 +86,9 @@ const createVenueSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => {
-      if (val == null) return val
-      const trimmed = val.trim()
-      return trimmed === '' ? null : trimmed
+      if (val == null) return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? null : trimmed;
     }),
   capacity: z.number().int().positive().nullable().optional(),
   venueType: z
@@ -97,9 +97,9 @@ const createVenueSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => {
-      if (val == null) return val
-      const trimmed = val.trim()
-      return trimmed === '' ? null : trimmed
+      if (val == null) return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? null : trimmed;
     }),
   about: z
     .string()
@@ -107,9 +107,9 @@ const createVenueSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => {
-      if (val == null) return val
-      const trimmed = val.trim()
-      return trimmed === '' ? null : trimmed
+      if (val == null) return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? null : trimmed;
     }),
   neighborhood: z
     .string()
@@ -117,11 +117,11 @@ const createVenueSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => {
-      if (val == null) return val
-      const trimmed = val.trim()
-      return trimmed === '' ? null : trimmed
+      if (val == null) return val;
+      const trimmed = val.trim();
+      return trimmed === '' ? null : trimmed;
     }),
-})
+});
 
 const updateVenueSchema = createVenueSchema
   .partial()
@@ -160,9 +160,9 @@ const updateVenueSchema = createVenueSchema
       .nullable()
       .optional()
       .transform((val) => {
-        if (val == null) return val
-        const trimmed = val.trim()
-        return trimmed === '' ? null : trimmed
+        if (val == null) return val;
+        const trimmed = val.trim();
+        return trimmed === '' ? null : trimmed;
       }),
   })
   .refine(
@@ -191,19 +191,19 @@ const updateVenueSchema = createVenueSchema
       message: 'API account ID is required when an API provider is selected',
       path: ['apiAccountId'],
     },
-  )
+  );
 
-export const venuesAdminRouter = new Hono<AdminVariables>()
+export const venuesAdminRouter = new Hono<AdminVariables>();
 
 // #764 first-timer guide authoring — a distinct resource with its own publish
 // gate, so it lives in its own file rather than growing this one further.
-venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter)
+venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter);
 
 // GET /v1/admin/venues — list all venues with upcoming event counts
 venuesAdminRouter.get('/', async (ctx) => {
-  const allVenues = await db.select().from(venues).orderBy(venues.name)
+  const allVenues = await db.select().from(venues).orderBy(venues.name);
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10);
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)
@@ -214,11 +214,11 @@ venuesAdminRouter.get('/', async (ctx) => {
         isNotNull(events.venueId),
       ),
     )
-    .groupBy(events.venueId)
+    .groupBy(events.venueId);
 
   const countByVenueId = new Map(
     eventCounts.map((row) => [row.venueId, row.total]),
-  )
+  );
 
   // The venue's own columns say whether it is enabled, not whether crawling it
   // is actually producing anything. A venue that has been skipping for weeks
@@ -230,52 +230,52 @@ venuesAdminRouter.get('/', async (ctx) => {
       status: crawlRuns.status,
     })
     .from(crawlRuns)
-    .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
+    .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt));
 
   const statusByVenueId = new Map(
     latestRuns.map((run) => [run.venueId, run.status]),
-  )
+  );
 
   const venuesWithCounts = allVenues.map((venue) => ({
     ...venue,
     eventCount: countByVenueId.get(venue.id) ?? 0,
     lastRunStatus: statusByVenueId.get(venue.id) ?? null,
-  }))
+  }));
 
-  return ctx.json({ success: true, data: venuesWithCounts })
-})
+  return ctx.json({ success: true, data: venuesWithCounts });
+});
 
 // GET /v1/admin/venues/robots-check?url=<encoded> — advisory robots.txt check
 venuesAdminRouter.get('/robots-check', async (ctx) => {
-  const rawUrl = ctx.req.query('url')
+  const rawUrl = ctx.req.query('url');
   if (!rawUrl) {
     return ctx.json(
       { success: false, error: 'Missing required query param: url' },
       400,
-    )
+    );
   }
 
-  let parsedUrl: URL
+  let parsedUrl: URL;
   try {
-    parsedUrl = new URL(rawUrl)
+    parsedUrl = new URL(rawUrl);
   } catch {
-    return ctx.json({ success: false, error: 'Invalid URL format' }, 400)
+    return ctx.json({ success: false, error: 'Invalid URL format' }, 400);
   }
 
   // The same evaluation the crawler runs, so the admin chip can never disagree
   // with what the nightly pass will actually do.
-  const verdict = await checkRobots(parsedUrl.href, CRAWLER_USER_AGENT)
+  const verdict = await checkRobots(parsedUrl.href, CRAWLER_USER_AGENT);
   if (verdict.status === 'unreachable') {
     return ctx.json({
       allowed: null,
       error: 'Could not fetch robots.txt',
-    })
+    });
   }
   return ctx.json({
     allowed: verdict.status === 'allowed',
     checkedAt: new Date().toISOString(),
-  })
-})
+  });
+});
 
 // GET /v1/admin/venues/robots-audit — stored robots.txt status per active venue
 venuesAdminRouter.get('/robots-audit', async (ctx) => {
@@ -290,7 +290,7 @@ venuesAdminRouter.get('/robots-audit', async (ctx) => {
     })
     .from(venues)
     .where(eq(venues.active, true))
-    .orderBy(venues.name)
+    .orderBy(venues.name);
 
   const data: VenueRobotsStatus[] = rows.map((row) => ({
     id: row.id,
@@ -299,24 +299,24 @@ venuesAdminRouter.get('/robots-audit', async (ctx) => {
     websiteUrl: row.websiteUrl,
     robotsTxtAllowed: row.robotsTxtAllowed,
     robotsTxtCheckedAt: row.robotsTxtCheckedAt?.toISOString() ?? null,
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // GET /v1/admin/venues/:id — get single venue with crawl health stats
 venuesAdminRouter.get('/:id', async (ctx) => {
-  const { id } = ctx.req.param()
-  const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+  const { id } = ctx.req.param();
+  const [venue] = await db.select().from(venues).where(eq(venues.id, id));
 
   if (!venue) {
-    return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
   // Last 7 days sparkline
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  sevenDaysAgo.setHours(0, 0, 0, 0)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
 
   const recentRuns = await db
     .select({
@@ -329,59 +329,59 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     .where(
       and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
     )
-    .orderBy(desc(crawlRuns.createdAt))
+    .orderBy(desc(crawlRuns.createdAt));
 
   // Build sparkline: one entry per calendar day over the past 7 days.
   // 'skipped' is healthy alongside 'success' (page-hash dedup), so days
   // ending in either status render green.
-  const dayMap = new Map<string, boolean>()
+  const dayMap = new Map<string, boolean>();
   for (const run of recentRuns) {
-    const dayKey = run.createdAt.toISOString().slice(0, 10)
+    const dayKey = run.createdAt.toISOString().slice(0, 10);
     if (!dayMap.has(dayKey)) {
-      dayMap.set(dayKey, run.status === 'success' || run.status === 'skipped')
+      dayMap.set(dayKey, run.status === 'success' || run.status === 'skipped');
     }
   }
 
-  const sparkline: { date: string; success: boolean; hasRun: boolean }[] = []
+  const sparkline: { date: string; success: boolean; hasRun: boolean }[] = [];
   for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
-    const day = new Date()
-    day.setDate(day.getDate() - dayOffset)
-    const dayKey = day.toISOString().slice(0, 10)
+    const day = new Date();
+    day.setDate(day.getDate() - dayOffset);
+    const dayKey = day.toISOString().slice(0, 10);
     if (dayMap.has(dayKey)) {
       sparkline.push({
         date: dayKey,
         success: dayMap.get(dayKey)!,
         hasRun: true,
-      })
+      });
     } else {
-      sparkline.push({ date: dayKey, success: false, hasRun: false })
+      sparkline.push({ date: dayKey, success: false, hasRun: false });
     }
   }
 
-  const runDays = sparkline.filter((entry) => entry.hasRun).length
-  const successDays = sparkline.filter((entry) => entry.success).length
+  const runDays = sparkline.filter((entry) => entry.hasRun).length;
+  const successDays = sparkline.filter((entry) => entry.success).length;
   const sevenDayPercent =
-    runDays > 0 ? Math.round((successDays / runDays) * 100) : 0
+    runDays > 0 ? Math.round((successDays / runDays) * 100) : 0;
 
   const avgDurationResult = await db
     .select({ avg: avg(crawlRuns.durationMs) })
     .from(crawlRuns)
     .where(
       and(eq(crawlRuns.venueId, id), gte(crawlRuns.createdAt, sevenDaysAgo)),
-    )
+    );
 
   const avgDurationMs = avgDurationResult[0]?.avg
     ? Math.round(Number(avgDurationResult[0].avg))
-    : null
+    : null;
 
   const [eventsCountResult] = await db
     .select({ total: count(events.id) })
     .from(events)
-    .where(eq(events.venueId, id))
+    .where(eq(events.venueId, id));
 
-  const eventsTracked = eventsCountResult?.total ?? 0
+  const eventsTracked = eventsCountResult?.total ?? 0;
 
-  const lastCrawledAt = venue.lastCrawledAt?.toISOString() ?? null
+  const lastCrawledAt = venue.lastCrawledAt?.toISOString() ?? null;
 
   const crawlHealth = {
     sevenDayPercent,
@@ -390,28 +390,28 @@ venuesAdminRouter.get('/:id', async (ctx) => {
     avgDurationMs,
     eventsTracked,
     consecutiveFails: venue.consecutiveFailures,
-  }
+  };
 
-  return ctx.json({ success: true, data: { ...venue, crawlHealth } })
-})
+  return ctx.json({ success: true, data: { ...venue, crawlHealth } });
+});
 
 // POST /v1/admin/venues — create venue with slug uniqueness check
 venuesAdminRouter.post(
   '/',
   zValidator('json', createVenueSchema),
   async (ctx) => {
-    const body = ctx.req.valid('json')
+    const body = ctx.req.valid('json');
 
     const [slugConflict] = await db
       .select({ id: venues.id })
       .from(venues)
-      .where(eq(venues.slug, body.slug))
+      .where(eq(venues.slug, body.slug));
 
     if (slugConflict) {
       return ctx.json(
         { success: false, error: 'Slug already in use', field: 'slug' },
         409,
-      )
+      );
     }
 
     const [venue] = await db
@@ -421,62 +421,65 @@ venuesAdminRouter.post(
         ticketVendor: body.ticketVendor ?? null,
         verified: true,
       })
-      .returning()
+      .returning();
 
     if (!venue) {
       return ctx.json(
         { success: false, error: 'Venue created but no row was returned' },
         500,
-      )
+      );
     }
 
     // Detect vendor in the background — does not block the response
     if (!body.ticketVendor) {
       runBackgroundTask(async () => {
         try {
-          const detectedVendor = await detectTicketVendor(body.websiteUrl)
+          const detectedVendor = await detectTicketVendor(body.websiteUrl);
           await db
             .update(venues)
             .set({ ticketVendor: detectedVendor })
-            .where(eq(venues.id, venue.id))
+            .where(eq(venues.id, venue.id));
         } catch (err) {
-          apiLogger.warn({ err }, 'detectTicketVendor background update failed')
+          apiLogger.warn(
+            { err },
+            'detectTicketVendor background update failed',
+          );
         }
-      })
+      });
     }
 
-    ctx.set('auditAction', 'venue.create')
-    ctx.set('auditTargetId', venue.id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'venue.create');
+    ctx.set('auditTargetId', venue.id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
 
-    return ctx.json({ success: true, data: venue }, 201)
+    return ctx.json({ success: true, data: venue }, 201);
   },
-)
+);
 
 // PATCH /v1/admin/venues/:id — update venue with slug uniqueness check
 venuesAdminRouter.patch(
   '/:id',
   zValidator('json', updateVenueSchema),
   async (ctx) => {
-    const { id } = ctx.req.param()
-    const body = ctx.req.valid('json')
+    const { id } = ctx.req.param();
+    const body = ctx.req.valid('json');
 
-    const [existing] = await db.select().from(venues).where(eq(venues.id, id))
+    const [existing] = await db.select().from(venues).where(eq(venues.id, id));
     if (!existing) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
     if (body.slug && body.slug !== existing.slug) {
       const [slugConflict] = await db
         .select({ id: venues.id })
         .from(venues)
-        .where(and(eq(venues.slug, body.slug), ne(venues.id, id)))
+        .where(and(eq(venues.slug, body.slug), ne(venues.id, id)));
 
       if (slugConflict) {
         return ctx.json(
           { success: false, error: 'Slug already in use', field: 'slug' },
           409,
-        )
+        );
       }
     }
 
@@ -485,14 +488,14 @@ venuesAdminRouter.patch(
         ? { verifiedAt: new Date() }
         : body.verified === false
           ? { verifiedBy: null, verifiedAt: null }
-          : {}
+          : {};
 
     // Ensure only one flagship at a time — clear others before setting this one
     if (body.featured === true) {
       await db
         .update(venues)
         .set({ featured: false })
-        .where(and(eq(venues.featured, true), not(eq(venues.id, id))))
+        .where(and(eq(venues.featured, true), not(eq(venues.id, id))));
     }
 
     // Clear-on-id-less-platform (#721 wins over #665 here — the two issues
@@ -504,16 +507,16 @@ venuesAdminRouter.patch(
     const platformClearFields =
       body.platform !== undefined && !platformRequiresVenueId(body.platform)
         ? { platformVenueId: null }
-        : {}
+        : {};
 
     // Same orphan-prevention as platform (#506): clearing apiProvider forces
     // apiAccountId to null in the same update, so a stale account id can't
     // silently re-activate if the provider is re-set later.
     const apiProviderClearFields =
-      body.apiProvider === null ? { apiAccountId: null } : {}
+      body.apiProvider === null ? { apiAccountId: null } : {};
 
     const nextPlatform =
-      body.platform !== undefined ? body.platform : existing.platform
+      body.platform !== undefined ? body.platform : existing.platform;
     // An id-less platform is treated like a cleared one for this field: a
     // venue switched from AEG to `detail-page` must not keep its old AEG
     // shard id, which would silently re-activate if AEG were re-selected.
@@ -521,7 +524,7 @@ venuesAdminRouter.patch(
       ? null
       : body.platformVenueId !== undefined
         ? body.platformVenueId
-        : existing.platformVenueId
+        : existing.platformVenueId;
 
     // The schema refine only sees the payload; this guards the merged
     // result against orphaned state (id without platform, or platform
@@ -529,7 +532,7 @@ venuesAdminRouter.patch(
     // touches platform fields — unrelated PATCHes (verify, pause, rename)
     // must not start failing on venues with pre-existing orphaned state.
     const touchesPlatformFields =
-      body.platform !== undefined || body.platformVenueId !== undefined
+      body.platform !== undefined || body.platformVenueId !== undefined;
     if (touchesPlatformFields) {
       // Sending an id alongside a platform that has none is a mistake worth
       // reporting rather than silently dropping — the admin believes they
@@ -548,7 +551,7 @@ venuesAdminRouter.patch(
             field: 'platformVenueId',
           },
           400,
-        )
+        );
       }
       if (
         platformRequiresVenueId(nextPlatform) &&
@@ -561,18 +564,18 @@ venuesAdminRouter.patch(
             field: 'platformVenueId',
           },
           400,
-        )
+        );
       }
     }
 
     const nextApiProvider =
-      body.apiProvider !== undefined ? body.apiProvider : existing.apiProvider
+      body.apiProvider !== undefined ? body.apiProvider : existing.apiProvider;
     const nextApiAccountId =
       body.apiProvider === null
         ? null
         : body.apiAccountId !== undefined
           ? body.apiAccountId
-          : existing.apiAccountId
+          : existing.apiAccountId;
 
     // Same merged-state guard as platform (#506): the schema refine only sees
     // the payload, so a partial PATCH — e.g. { apiAccountId: '1105' } against a
@@ -581,7 +584,7 @@ venuesAdminRouter.patch(
     // when the payload touches an API field so unrelated PATCHes never fail on
     // pre-existing orphaned rows.
     const touchesApiFields =
-      body.apiProvider !== undefined || body.apiAccountId !== undefined
+      body.apiProvider !== undefined || body.apiAccountId !== undefined;
     if (touchesApiFields) {
       if (nextApiProvider === null && nextApiAccountId !== null) {
         return ctx.json(
@@ -591,7 +594,7 @@ venuesAdminRouter.patch(
             field: 'apiAccountId',
           },
           400,
-        )
+        );
       }
       if (nextApiProvider !== null && nextApiAccountId === null) {
         return ctx.json(
@@ -602,7 +605,7 @@ venuesAdminRouter.patch(
             field: 'apiAccountId',
           },
           400,
-        )
+        );
       }
     }
 
@@ -628,18 +631,18 @@ venuesAdminRouter.patch(
     // timing race. Unrelated PATCHes (verify, pause, rename) leave every gate
     // field untouched, so the guard never fails on a pre-existing venue.
     const nextCrawlMode =
-      body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode
+      body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode;
     const nextWaitForSelector =
       body.crawlWaitForSelector !== undefined
         ? body.crawlWaitForSelector
-        : existing.crawlWaitForSelector
+        : existing.crawlWaitForSelector;
     const touchesBrowserGate =
       body.crawlMode !== undefined ||
       body.crawlWaitForSelector !== undefined ||
       body.platform !== undefined ||
       body.platformVenueId !== undefined ||
       body.apiProvider !== undefined ||
-      body.apiAccountId !== undefined
+      body.apiAccountId !== undefined;
     const fetcherHandles =
       dispatch({
         ...existing,
@@ -647,7 +650,7 @@ venuesAdminRouter.patch(
         platformVenueId: nextPlatformVenueId,
         apiProvider: nextApiProvider,
         apiAccountId: nextApiAccountId,
-      }) !== null
+      }) !== null;
     if (
       touchesBrowserGate &&
       nextCrawlMode === 'browser' &&
@@ -662,7 +665,7 @@ venuesAdminRouter.patch(
           field: 'crawlWaitForSelector',
         },
         400,
-      )
+      );
     }
 
     const [updated] = await db
@@ -678,17 +681,17 @@ venuesAdminRouter.patch(
         updatedAt: new Date(),
       })
       .where(eq(venues.id, id))
-      .returning()
+      .returning();
 
     // Distinct audit action when platform routing changed, with a
     // before/after snapshot — this config redirects the crawler entirely,
     // so we want the change trail to be greppable.
     const platformChanged =
       nextPlatform !== existing.platform ||
-      nextPlatformVenueId !== existing.platformVenueId
+      nextPlatformVenueId !== existing.platformVenueId;
 
     if (platformChanged) {
-      ctx.set('auditAction', 'venue.platform_changed')
+      ctx.set('auditAction', 'venue.platform_changed');
       ctx.set('auditMeta', {
         before: {
           platform: existing.platform,
@@ -698,23 +701,23 @@ venuesAdminRouter.patch(
           platform: nextPlatform,
           platformVenueId: nextPlatformVenueId,
         },
-      })
+      });
     } else {
-      ctx.set('auditAction', 'venue.update')
+      ctx.set('auditAction', 'venue.update');
     }
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
 
-    return ctx.json({ success: true, data: updated })
+    return ctx.json({ success: true, data: updated });
   },
-)
+);
 
 // A hung platform CDN connection must not pin an API worker slot — the
 // probe aborts and reports fetch_error after this window. This is the
 // whole-probe ceiling, not a per-request one: the Live Nation adapter
 // reads a sitemap plus a calendar page per rolling month, so a per-request
 // value alone would let one probe run for minutes (#1184).
-const PROBE_TIMEOUT_MS = 15_000
+const PROBE_TIMEOUT_MS = 15_000;
 
 const probePlatformSchema = z.object({
   platform: z.enum(VENUE_PLATFORMS).nullable().optional(),
@@ -726,7 +729,7 @@ const probePlatformSchema = z.object({
     .nullable()
     .optional()
     .transform((val) => (val === '' ? null : val)),
-})
+});
 
 // POST /v1/admin/venues/:id/probe-platform — dry-run a platform fetch (#665)
 // Probes the proposed platform config from the body when provided, else the
@@ -736,26 +739,26 @@ venuesAdminRouter.post(
   '/:id/probe-platform',
   zValidator('json', probePlatformSchema),
   async (ctx) => {
-    const { id } = ctx.req.param()
-    const body = ctx.req.valid('json')
+    const { id } = ctx.req.param();
+    const body = ctx.req.valid('json');
 
-    const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+    const [venue] = await db.select().from(venues).where(eq(venues.id, id));
     if (!venue) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
     // A probe fetches the venue's source like a crawl does.
     if (venue.crawlPausedAt !== null) {
       return ctx.json(
         { success: false, error: 'Crawling is paused for this venue' },
         409,
-      )
+      );
     }
 
     // Overlay proposed config (when present in the payload) on the saved
     // venue row. `undefined` means "not proposed — use saved"; `null` means
     // "proposed as cleared".
     const probedPlatform =
-      body.platform !== undefined ? body.platform : venue.platform
+      body.platform !== undefined ? body.platform : venue.platform;
     // Mirror the PATCH route's clear semantics: a platform that takes no
     // venue ID clears it too, so the probe (and its audit metadata) never
     // describes an orphaned { platform, platformVenueId } state.
@@ -763,44 +766,44 @@ venuesAdminRouter.post(
       ? null
       : body.platformVenueId !== undefined
         ? body.platformVenueId
-        : venue.platformVenueId
+        : venue.platformVenueId;
     const candidate = {
       ...venue,
       platform: probedPlatform,
       platformVenueId: probedPlatformVenueId,
-    }
+    };
 
     const probeResult = await (async (): Promise<PlatformProbeResult> => {
-      const fetcher = dispatch(candidate)
+      const fetcher = dispatch(candidate);
       if (!fetcher) {
         return {
           ok: false,
           reason: 'missing_config',
           error:
             'No platform fetcher matches this config — platform is unset or unregistered, or platformVenueId is missing',
-        }
+        };
       }
-      const startedAt = Date.now()
+      const startedAt = Date.now();
       try {
         const result = await fetcher.fetch(candidate, {
           crawlDelayMs: 0,
           perRequestTimeoutMs: PROBE_TIMEOUT_MS,
           overallTimeoutMs: PROBE_TIMEOUT_MS,
-        })
+        });
         return {
           ok: true,
           eventsFound: result.events.length,
           fetchLatencyMs: Date.now() - startedAt,
           sourceUrl: result.sourceUrl,
-        }
+        };
       } catch (err) {
         apiLogger.warn(
           { err, venueId: id, platform: probedPlatform },
           'probe-platform: platform fetch failed',
-        )
-        const message = err instanceof Error ? err.message : String(err)
+        );
+        const message = err instanceof Error ? err.message : String(err);
         if (err instanceof AegSchemaError) {
-          return { ok: false, reason: 'schema_error', error: message }
+          return { ok: false, reason: 'schema_error', error: message };
         }
         // Stays fetch_error rather than earning its own reason: the admin's
         // next step is the same either way, and the message already names
@@ -810,29 +813,29 @@ venuesAdminRouter.post(
             ok: false,
             reason: 'fetch_error',
             error: `${message} — the platform responded too slowly to finish a probe`,
-          }
+          };
         }
-        return { ok: false, reason: 'fetch_error', error: message }
+        return { ok: false, reason: 'fetch_error', error: message };
       }
-    })()
+    })();
 
-    ctx.set('auditAction', 'venue.platform_probe')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'venue.platform_probe');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
       platform: probedPlatform,
       platformVenueId: probedPlatformVenueId,
       outcome: probeResult.ok ? 'ok' : probeResult.reason,
-    })
+    });
 
-    return ctx.json({ success: true, data: probeResult })
+    return ctx.json({ success: true, data: probeResult });
   },
-)
+);
 
 // POST /v1/admin/venues/:id/generate-about — LLM-generate capacity, venueType, neighborhood, and about copy
 // Does NOT persist to DB; returns suggestions for admin review before saving
 venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
-  const { id } = ctx.req.param()
+  const { id } = ctx.req.param();
 
   const [venue] = await db
     .select({
@@ -841,10 +844,10 @@ venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
       venueType: venues.venueType,
     })
     .from(venues)
-    .where(eq(venues.id, id))
+    .where(eq(venues.id, id));
 
   if (!venue) {
-    return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
   const generateResponseSchema = z.object({
@@ -852,7 +855,7 @@ venuesAdminRouter.post('/:id/generate-about', async (ctx) => {
     venueType: z.string().min(1).max(100),
     neighborhood: z.string().min(1).max(100),
     about: z.string().min(10).max(280),
-  })
+  });
 
   const prompt = `You are writing copy for Concert Crawl — a Denver live music calendar for people who actually go to shows, not tourists reading a brochure. Voice: direct, local, slightly irreverent. Short sentences. No fluff.
 
@@ -866,10 +869,10 @@ Generate a JSON object with:
 - "neighborhood": the Denver neighborhood or city where the venue is located (e.g. "Capitol Hill", "RiNo", "LoDo", "South Broadway", "Morrison"). Use well-known local neighborhood names, not zip codes or suburbs.
 - "about": 1-2 punchy sentences — what the room is like, why it matters to Denver music fans. Be specific. No clichés. Max 280 characters.
 
-Respond with only valid JSON, no markdown, no extra text.`
+Respond with only valid JSON, no markdown, no extra text.`;
 
   try {
-    const anthropic = new Anthropic()
+    const anthropic = new Anthropic();
     const message = await anthropic.messages.create(
       {
         model: 'claude-haiku-4-5',
@@ -877,32 +880,32 @@ Respond with only valid JSON, no markdown, no extra text.`
         messages: [{ role: 'user', content: prompt }],
       },
       { signal: AbortSignal.timeout(30_000) },
-    )
+    );
 
-    const textBlock = message.content.find((block) => block.type === 'text')
+    const textBlock = message.content.find((block) => block.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
       return ctx.json(
         { success: false, error: 'No text response from model' },
         503,
-      )
+      );
     }
 
     const rawText = textBlock.text
       .replace(/^```(?:json)?\s*\n?/i, '')
       .replace(/\n?```\s*$/i, '')
-      .trim()
+      .trim();
 
-    let parsed: unknown
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(rawText)
+      parsed = JSON.parse(rawText);
     } catch {
       return ctx.json(
         { success: false, error: 'Model returned invalid JSON' },
         503,
-      )
+      );
     }
 
-    const result = generateResponseSchema.safeParse(parsed)
+    const result = generateResponseSchema.safeParse(parsed);
     if (!result.success) {
       return ctx.json(
         {
@@ -910,26 +913,26 @@ Respond with only valid JSON, no markdown, no extra text.`
           error: 'Model response did not match expected shape',
         },
         503,
-      )
+      );
     }
 
-    return ctx.json({ success: true, data: result.data })
+    return ctx.json({ success: true, data: result.data });
   } catch (err) {
-    apiLogger.error({ err }, 'generate-about: Anthropic call failed')
+    apiLogger.error({ err }, 'generate-about: Anthropic call failed');
     return ctx.json(
       { success: false, error: 'Failed to generate venue description' },
       503,
-    )
+    );
   }
-})
+});
 
 // DELETE /v1/admin/venues/:id — hard delete; nulls venue_id on events, cascades crawl_runs
 venuesAdminRouter.delete('/:id', async (ctx) => {
-  const { id } = ctx.req.param()
+  const { id } = ctx.req.param();
 
-  const [existing] = await db.select().from(venues).where(eq(venues.id, id))
+  const [existing] = await db.select().from(venues).where(eq(venues.id, id));
   if (!existing) {
-    return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    return ctx.json({ success: false, error: 'Venue not found' }, 404);
   }
 
   const eventsDetached = await db.transaction(async (tx) => {
@@ -937,26 +940,29 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
     const [eventCountResult] = await tx
       .select({ total: count(events.id) })
       .from(events)
-      .where(eq(events.venueId, id))
+      .where(eq(events.venueId, id));
 
-    const detachedCount = eventCountResult?.total ?? 0
+    const detachedCount = eventCountResult?.total ?? 0;
 
     // Null out venue_id on events so they remain published
-    await tx.update(events).set({ venueId: null }).where(eq(events.venueId, id))
+    await tx
+      .update(events)
+      .set({ venueId: null })
+      .where(eq(events.venueId, id));
 
     // Hard delete venue; crawl_runs cascade-delete automatically
-    await tx.delete(venues).where(eq(venues.id, id))
+    await tx.delete(venues).where(eq(venues.id, id));
 
-    return detachedCount
-  })
+    return detachedCount;
+  });
 
-  ctx.set('auditAction', 'venue.delete')
-  ctx.set('auditTargetId', id)
-  ctx.set('auditActorId', getAuthUser(ctx).userId)
-  ctx.set('auditMeta', { snapshot: existing, eventsDetached })
+  ctx.set('auditAction', 'venue.delete');
+  ctx.set('auditTargetId', id);
+  ctx.set('auditActorId', getAuthUser(ctx).userId);
+  ctx.set('auditMeta', { snapshot: existing, eventsDetached });
 
-  return ctx.json({ success: true, data: { eventsDetached } })
-})
+  return ctx.json({ success: true, data: { eventsDetached } });
+});
 
 // ---------------------------------------------------------------------------
 // Fault acknowledgements
@@ -976,16 +982,16 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
 // just as silently as a malformed one, so the day and the range are checked
 // rather than only the digit layout.
 const isCalendarDate = (value: string): boolean => {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const parsed = new Date(`${value}T00:00:00Z`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00Z`);
   return (
     !Number.isNaN(parsed.getTime()) &&
     parsed.toISOString().slice(0, 10) === value
-  )
-}
+  );
+};
 
 const isHttpStatus = (value: string): boolean =>
-  /^\d{3}$/.test(value) && Number(value) >= 100 && Number(value) <= 599
+  /^\d{3}$/.test(value) && Number(value) >= 100 && Number(value) <= 599;
 
 // `failed` pins an error class, which is free-form, so it has no check.
 const evidenceValueFormat = (
@@ -995,21 +1001,21 @@ const evidenceValueFormat = (
   const count = {
     isValid: (value: string) => /^\d+$/.test(value),
     describe: 'a count',
-  }
+  };
   switch (condition) {
     case 'ceiling':
       return evidenceKind === 'horizon_shrank'
         ? { isValid: isCalendarDate, describe: 'a YYYY-MM-DD date' }
-        : count
+        : count;
     case 'wentDark':
     case 'coverage':
-      return count
+      return count;
     case 'blocked':
-      return { isValid: isHttpStatus, describe: 'an HTTP status' }
+      return { isValid: isHttpStatus, describe: 'an HTTP status' };
     case 'failed':
-      return null
+      return null;
   }
-}
+};
 
 const faultAcknowledgementSchema = z
   .object({
@@ -1035,7 +1041,7 @@ const faultAcknowledgementSchema = z
   // then suppress nothing, which reads to an operator as the acknowledgement
   // having silently failed. Reject it at the boundary instead.
   .superRefine((value, ctx) => {
-    const needsKind = value.condition === 'ceiling'
+    const needsKind = value.condition === 'ceiling';
     if (needsKind !== (value.evidenceKind !== null)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -1043,7 +1049,7 @@ const faultAcknowledgementSchema = z
         message: needsKind
           ? 'A ceiling acknowledgement must name its evidence kind'
           : `Only a ceiling acknowledgement carries an evidence kind, not ${value.condition}`,
-      })
+      });
     }
     if (value.evidenceValue === null) {
       if (value.condition !== 'blocked') {
@@ -1051,30 +1057,30 @@ const faultAcknowledgementSchema = z
           code: z.ZodIssueCode.custom,
           path: ['evidenceValue'],
           message: `A ${value.condition} acknowledgement always has a figure to pin`,
-        })
+        });
       }
-      return
+      return;
     }
 
-    const expected = evidenceValueFormat(value.condition, value.evidenceKind)
+    const expected = evidenceValueFormat(value.condition, value.evidenceKind);
     if (expected && !expected.isValid(value.evidenceValue)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['evidenceValue'],
         message: `A ${value.condition} acknowledgement pins ${expected.describe}`,
-      })
+      });
     }
-  })
+  });
 
 const crawlPauseParamSchema = z.object({
   id: z.string().uuid(),
-})
+});
 
 const crawlPauseSchema = z.object({
   // Why the venue is paused, kept in the audit log: "venue asked us to stop",
   // "awaiting VenuePilot API access". Required so a pause is never unexplained.
   reason: z.string().trim().min(1).max(500),
-})
+});
 
 // POST /v1/admin/venues/:id/crawl-pause — stop every crawl of a venue while
 // its shows stay published. Idempotent: pausing a paused venue keeps the
@@ -1084,8 +1090,8 @@ venuesAdminRouter.post(
   zValidator('param', crawlPauseParamSchema),
   zValidator('json', crawlPauseSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { reason } = ctx.req.valid('json')
+    const { id } = ctx.req.valid('param');
+    const { reason } = ctx.req.valid('json');
 
     // The row lock makes overlapping pauses serialize, so the second one sees
     // the first's timestamp instead of overwriting it.
@@ -1094,31 +1100,31 @@ venuesAdminRouter.post(
         .select({ crawlPausedAt: venues.crawlPausedAt })
         .from(venues)
         .where(eq(venues.id, id))
-        .for('update')
-      if (!existing) return null
+        .for('update');
+      if (!existing) return null;
       const [updated] = await tx
         .update(venues)
         .set({ crawlPausedAt: existing.crawlPausedAt ?? new Date() })
         .where(eq(venues.id, id))
-        .returning()
-      return { existing, venue: updated }
-    })
+        .returning();
+      return { existing, venue: updated };
+    });
     if (!result) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
-    const { existing, venue } = result
+    const { existing, venue } = result;
 
-    ctx.set('auditAction', 'venue.crawl_pause')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'venue.crawl_pause');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
       reason,
       alreadyPaused: existing.crawlPausedAt !== null,
-    })
+    });
 
-    return ctx.json({ success: true, data: venue })
+    return ctx.json({ success: true, data: venue });
   },
-)
+);
 
 // DELETE /v1/admin/venues/:id/crawl-pause — resume crawling. The next daily
 // run picks the venue up again.
@@ -1126,7 +1132,7 @@ venuesAdminRouter.delete(
   '/:id/crawl-pause',
   zValidator('param', crawlPauseParamSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param');
 
     // Locked like the pause, so the audit names the pause this call removed
     // and not one an overlapping request has already replaced.
@@ -1135,37 +1141,37 @@ venuesAdminRouter.delete(
         .select({ crawlPausedAt: venues.crawlPausedAt })
         .from(venues)
         .where(eq(venues.id, id))
-        .for('update')
-      if (!existing) return null
+        .for('update');
+      if (!existing) return null;
       const [updated] = await tx
         .update(venues)
         .set({ crawlPausedAt: null })
         .where(eq(venues.id, id))
-        .returning()
-      return { existing, venue: updated }
-    })
+        .returning();
+      return { existing, venue: updated };
+    });
     if (!result) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
-    const { existing, venue } = result
+    const { existing, venue } = result;
 
-    ctx.set('auditAction', 'venue.crawl_resume')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'venue.crawl_resume');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
       pausedSince: existing.crawlPausedAt?.toISOString() ?? null,
-    })
+    });
 
-    return ctx.json({ success: true, data: venue })
+    return ctx.json({ success: true, data: venue });
   },
-)
+);
 
 // Notifications that carry or concern a venue's prices, removed with them.
 const PRICE_NOTIFICATION_CATEGORIES = [
   'watch.pricedrop',
   'contest.resolved',
   'contest.needs_info',
-]
+];
 
 // POST /v1/admin/venues/:id/remove — honour a venue's removal request, the
 // one /bot promises within 30 days. Takes the venue's shows off the site
@@ -1181,9 +1187,9 @@ venuesAdminRouter.post(
   zValidator('param', crawlPauseParamSchema),
   zValidator('json', crawlPauseSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const { reason } = ctx.req.valid('json')
-    const actorId = getAuthUser(ctx).userId
+    const { id } = ctx.req.valid('param');
+    const { reason } = ctx.req.valid('json');
+    const actorId = getAuthUser(ctx).userId;
 
     const result = await db.transaction(async (tx) => {
       const [existing] = await tx
@@ -1193,8 +1199,8 @@ venuesAdminRouter.post(
         })
         .from(venues)
         .where(eq(venues.id, id))
-        .for('update')
-      if (!existing) return null
+        .for('update');
+      if (!existing) return null;
 
       const [venue] = await tx
         .update(venues)
@@ -1204,19 +1210,19 @@ venuesAdminRouter.post(
           removedAt: new Date(),
         })
         .where(eq(venues.id, id))
-        .returning()
+        .returning();
 
       const venueEventIds = tx
         .select({ id: events.id })
         .from(events)
-        .where(eq(events.venueId, id))
+        .where(eq(events.venueId, id));
 
       // One statement, so a price check and the submission it challenges go
       // together and the self-reference never blocks the delete.
       const deletedSubmissions = await tx
         .delete(priceSubmissions)
         .where(inArray(priceSubmissions.eventId, venueEventIds))
-        .returning({ id: priceSubmissions.id })
+        .returning({ id: priceSubmissions.id });
 
       const clearedEvents = await tx
         .update(events)
@@ -1231,7 +1237,7 @@ venuesAdminRouter.post(
             ),
           ),
         )
-        .returning({ id: events.id })
+        .returning({ id: events.id });
 
       // The price a user's Watching entry captured when they saved the show
       // is a copy of the venue's price, so it goes too. The entry stays.
@@ -1244,7 +1250,7 @@ venuesAdminRouter.post(
             isNotNull(userEvents.savedPrice),
           ),
         )
-        .returning({ id: userEvents.id })
+        .returning({ id: userEvents.id });
 
       // Price-drop alerts quote the old and new price, and price-check
       // notices are about a deleted submission. Both point at the show.
@@ -1262,14 +1268,14 @@ venuesAdminRouter.post(
             ),
           ),
         )
-        .returning({ id: notifications.id })
+        .returning({ id: notifications.id });
 
       const counts = {
         notificationsDeleted: deletedNotifications.length,
         submissionsDeleted: deletedSubmissions.length,
         eventPricesCleared: clearedEvents.length,
         savedPricesCleared: clearedSavedPrices.length,
-      }
+      };
 
       // Written in the transaction, not by the audit middleware, which runs
       // after commit and swallows its own failures: a deletion this
@@ -1284,40 +1290,40 @@ venuesAdminRouter.post(
           wasCrawlPaused: existing.crawlPausedAt !== null,
           ...counts,
         },
-      })
+      });
 
-      return { venue, ...counts }
-    })
+      return { venue, ...counts };
+    });
     if (!result) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
-    return ctx.json({ success: true, data: result })
+    return ctx.json({ success: true, data: result });
   },
-)
+);
 
 const faultAcknowledgementParamSchema = z.object({
   id: z.string().uuid(),
-})
+});
 
 const faultAcknowledgementDeleteParamSchema = z.object({
   id: z.string().uuid(),
   condition: z.enum(TRIAGE_CONDITIONS),
-})
+});
 
 venuesAdminRouter.post(
   '/:id/fault-acknowledgements',
   zValidator('param', faultAcknowledgementParamSchema),
   zValidator('json', faultAcknowledgementSchema),
   async (ctx) => {
-    const { id } = ctx.req.valid('param')
-    const body = ctx.req.valid('json')
+    const { id } = ctx.req.valid('param');
+    const body = ctx.req.valid('json');
 
-    const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+    const [venue] = await db.select().from(venues).where(eq(venues.id, id));
     if (!venue) {
-      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+      return ctx.json({ success: false, error: 'Venue not found' }, 404);
     }
 
-    const acknowledgedBy = getAuthUser(ctx).userId
+    const acknowledgedBy = getAuthUser(ctx).userId;
 
     // Upsert on the unique key: re-acknowledging at a new figure replaces the
     // old one rather than conflicting, which is what "Summit moved 36 → 41 and
@@ -1345,27 +1351,27 @@ venuesAdminRouter.post(
           acknowledgedAt: new Date(),
         },
       })
-      .returning()
+      .returning();
 
-    ctx.set('auditAction', 'venue.fault.acknowledge')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', acknowledgedBy)
+    ctx.set('auditAction', 'venue.fault.acknowledge');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', acknowledgedBy);
     ctx.set('auditMeta', {
       condition: body.condition,
       evidenceKind: body.evidenceKind,
       evidenceValue: body.evidenceValue,
       reason: body.reason,
-    })
+    });
 
-    return ctx.json({ success: true, data: acknowledgement })
+    return ctx.json({ success: true, data: acknowledgement });
   },
-)
+);
 
 venuesAdminRouter.delete(
   '/:id/fault-acknowledgements/:condition',
   zValidator('param', faultAcknowledgementDeleteParamSchema),
   async (ctx) => {
-    const { id, condition } = ctx.req.valid('param')
+    const { id, condition } = ctx.req.valid('param');
 
     const [removed] = await db
       .delete(venueFaultAcknowledgements)
@@ -1375,25 +1381,25 @@ venuesAdminRouter.delete(
           eq(venueFaultAcknowledgements.condition, condition),
         ),
       )
-      .returning()
+      .returning();
 
     if (!removed) {
       return ctx.json(
         { success: false, error: 'Acknowledgement not found' },
         404,
-      )
+      );
     }
 
-    ctx.set('auditAction', 'venue.fault.unacknowledge')
-    ctx.set('auditTargetId', id)
-    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditAction', 'venue.fault.unacknowledge');
+    ctx.set('auditTargetId', id);
+    ctx.set('auditActorId', getAuthUser(ctx).userId);
     ctx.set('auditMeta', {
       condition,
       evidenceKind: removed.evidenceKind,
       evidenceValue: removed.evidenceValue,
       reason: removed.reason,
-    })
+    });
 
-    return ctx.json({ success: true, data: { condition } })
+    return ctx.json({ success: true, data: { condition } });
   },
-)
+);

@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { Eyebrow } from '@/components/consumer/glyphs'
-import { LadderRow } from './LadderRow'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { Eyebrow } from '@/components/consumer/glyphs';
+import { LadderRow } from './LadderRow';
 
 // Centerpiece of #641. Two-row ladder (resale + ghost box-office) with a
 // `--signal` CTA. Drives the pedagogy that resale price !== face value.
@@ -17,13 +17,13 @@ import { LadderRow } from './LadderRow'
 // the sibling `ContributeFaceValueCard` — NOT a variant of this component.
 // See §9 Q1 lock in the property table.
 
-const copy = CONSUMER_COPY.priceRegion.faceValue
+const copy = CONSUMER_COPY.priceRegion.faceValue;
 
 export interface FaceValueCardProps {
-  variant: 'default' | 'no-price'
-  resaleVendor: string
-  resaleRange?: string
-  onAddPrice: () => void
+  variant: 'default' | 'no-price';
+  resaleVendor: string;
+  resaleRange?: string;
+  onAddPrice: () => void;
 }
 
 export const FaceValueCard = ({
@@ -33,10 +33,10 @@ export const FaceValueCard = ({
   onAddPrice,
 }: FaceValueCardProps) => {
   const headline =
-    variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault
+    variant === 'no-price' ? copy.headlineNoPrice : copy.headlineDefault;
   const ctaLabel =
-    variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault
-  const resaleRight = resaleRange ?? copy.ladderResaleRightFallback
+    variant === 'no-price' ? copy.ctaLabelNoPrice : copy.ctaLabelDefault;
+  const resaleRight = resaleRange ?? copy.ladderResaleRightFallback;
 
   return (
     <div
@@ -160,5 +160,5 @@ export const FaceValueCard = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};

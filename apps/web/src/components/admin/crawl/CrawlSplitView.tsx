@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { ExternalLink, RefreshCw, Filter } from 'lucide-react'
-import { useAdminVenueRuns } from '@/lib/queries/use-admin-venue-runs'
-import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger'
+import { useState, useEffect, useRef } from 'react';
+import { ExternalLink, RefreshCw, Filter } from 'lucide-react';
+import { useAdminVenueRuns } from '@/lib/queries/use-admin-venue-runs';
+import { useTriggerVenueCrawl } from '@/lib/queries/use-admin-crawl-trigger';
 import {
   StatusBadge,
   AdminTable,
@@ -12,46 +12,46 @@ import {
   TH,
   TD,
   CostText,
-} from '@/components/admin/primitives'
-import type { CrawlRun } from '@concert-crawl/types'
-import { formatCostValue } from '@/app/(protected)/admin/crawl/crawl-stats'
-import { InspectorTabs } from '@/components/admin/crawl/InspectorTabs'
-import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs'
-import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel'
-import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
-import { FaultAcknowledgeControl } from '@/components/admin/fault-acknowledge-control/FaultAcknowledgeControl'
-import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
-import { crawlStatusKind } from '@/components/admin/definitions/crawl-status'
+} from '@/components/admin/primitives';
+import type { CrawlRun } from '@concert-crawl/types';
+import { formatCostValue } from '@/app/(protected)/admin/crawl/crawl-stats';
+import { InspectorTabs } from '@/components/admin/crawl/InspectorTabs';
+import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs';
+import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel';
+import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import { FaultAcknowledgeControl } from '@/components/admin/fault-acknowledge-control/FaultAcknowledgeControl';
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge';
+import { crawlStatusKind } from '@/components/admin/definitions/crawl-status';
 
-const MT_TIMEZONE = 'America/Denver'
+const MT_TIMEZONE = 'America/Denver';
 
 interface CrawlStatusRow {
-  venueId: string
-  venueName: string
-  websiteUrl: string
-  status: string
-  lastRunStatus: string
-  lastRunAt: string | null
-  eventsFound: number
-  eventsInserted: number
-  eventsUpdated: number
-  llmCostUsd: number | null
-  durationMs: number | null
-  httpStatusCode: number | null
-  consecutiveFailures: number
-  blockedAt: string | null
-  strategy: string
-  error: string | null
+  venueId: string;
+  venueName: string;
+  websiteUrl: string;
+  status: string;
+  lastRunStatus: string;
+  lastRunAt: string | null;
+  eventsFound: number;
+  eventsInserted: number;
+  eventsUpdated: number;
+  llmCostUsd: number | null;
+  durationMs: number | null;
+  httpStatusCode: number | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
+  strategy: string;
+  error: string | null;
 }
 
 interface Props {
-  initialStatus: CrawlStatusRow[]
-  initialRuns: CrawlRun[]
-  initialSelectedId?: string
-  initialTab?: InspectorTab
+  initialStatus: CrawlStatusRow[];
+  initialRuns: CrawlRun[];
+  initialSelectedId?: string;
+  initialTab?: InspectorTab;
 }
 
 const isFaulted = (row: CrawlStatusRow | undefined): boolean =>
@@ -59,9 +59,9 @@ const isFaulted = (row: CrawlStatusRow | undefined): boolean =>
   (row.status === 'failed' ||
     row.status === 'blocked' ||
     row.lastRunStatus === 'failed' ||
-    row.blockedAt !== null)
+    row.blockedAt !== null);
 
-const STATUS_FILTER_OPTIONS = ADMIN_COPY.crawl.splitView.statusFilterOptions
+const STATUS_FILTER_OPTIONS = ADMIN_COPY.crawl.splitView.statusFilterOptions;
 
 function fmtTimeMT(iso: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -70,44 +70,44 @@ function fmtTimeMT(iso: string): string {
     second: '2-digit',
     hour12: false,
     timeZone: MT_TIMEZONE,
-  })
+  });
 }
 
 function fmtDateTimeMT(iso: string): string {
-  const date = new Date(iso)
+  const date = new Date(iso);
   const nowDateMT = new Date().toLocaleDateString('en-US', {
     timeZone: MT_TIMEZONE,
-  })
+  });
   const thisDateMT = date.toLocaleDateString('en-US', {
     timeZone: MT_TIMEZONE,
-  })
+  });
   const timePart = date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
     timeZone: MT_TIMEZONE,
-  })
+  });
   if (thisDateMT === nowDateMT) {
-    return `Today, ${timePart}`
+    return `Today, ${timePart}`;
   }
   const datePart = date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: MT_TIMEZONE,
-  })
-  return `${datePart}, ${timePart}`
+  });
+  return `${datePart}, ${timePart}`;
 }
 
 function shortRunId(id: string): string {
-  return `R-${id.replace(/-/g, '').slice(0, 8)}`
+  return `R-${id.replace(/-/g, '').slice(0, 8)}`;
 }
 
 interface ErrorBlockProps {
-  errorMessage: string
-  httpStatusCode: number | null
-  consecutiveFailures: number
-  blockedAt: string | null
+  errorMessage: string;
+  httpStatusCode: number | null;
+  consecutiveFailures: number;
+  blockedAt: string | null;
 }
 
 function ErrorBlock({
@@ -118,11 +118,11 @@ function ErrorBlock({
 }: ErrorBlockProps) {
   const isHttpBlock =
     httpStatusCode !== null &&
-    (httpStatusCode === 403 || httpStatusCode === 429)
+    (httpStatusCode === 403 || httpStatusCode === 429);
 
   const title = isHttpBlock
     ? `HTTP ${httpStatusCode} · venue blocked`
-    : ADMIN_COPY.crawl.splitView.errorCrawlFailed
+    : ADMIN_COPY.crawl.splitView.errorCrawlFailed;
 
   return (
     <div>
@@ -214,7 +214,7 @@ function ErrorBlock({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export const CrawlSplitView = ({
@@ -227,63 +227,65 @@ export const CrawlSplitView = ({
     initialSelectedId &&
     initialStatus.some((row) => row.venueId === initialSelectedId)
       ? initialSelectedId
-      : (initialStatus[0]?.venueId ?? null)
+      : (initialStatus[0]?.venueId ?? null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(resolvedInitialId)
+  const [selectedId, setSelectedId] = useState<string | null>(
+    resolvedInitialId,
+  );
   const [activeTab, setActiveTab] = useState<InspectorTab>(
     initialTab ?? 'overview',
-  )
-  const [stagedId, setStagedId] = useState<string | null>(null)
-  const [confirmOpen, setConfirmOpen] = useState(false)
+  );
+  const [stagedId, setStagedId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function selectVenue(venueId: string | null) {
-    setSelectedId(venueId)
+    setSelectedId(venueId);
   }
-  const [statusFilter, setStatusFilter] = useState('')
-  const [venueNameFilter, setVenueNameFilter] = useState('')
-  const [filterOpen, setFilterOpen] = useState(false)
-  const filterRef = useRef<HTMLDivElement>(null)
+  const [statusFilter, setStatusFilter] = useState('');
+  const [venueNameFilter, setVenueNameFilter] = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [recrawlState, setRecrawlState] = useState<
     Record<string, 'triggering' | 'queued' | 'error'>
-  >({})
-  const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
-  const triggerCrawl = useTriggerVenueCrawl()
+  >({});
+  const [recrawlError, setRecrawlError] = useState<Record<string, string>>({});
+  const triggerCrawl = useTriggerVenueCrawl();
   const { data: venueRuns = [], isLoading: venueRunsLoading } =
-    useAdminVenueRuns(selectedId)
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+    useAdminVenueRuns(selectedId);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)')
-    const isMobileNow = mq.matches
-    setIsMobile(isMobileNow)
+    const mq = window.matchMedia('(max-width: 768px)');
+    const isMobileNow = mq.matches;
+    setIsMobile(isMobileNow);
     // On mobile with no explicit venue preselected, show the full list first
     if (isMobileNow && !initialSelectedId) {
-      setSelectedId(null)
+      setSelectedId(null);
     }
-    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [initialSelectedId])
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [initialSelectedId]);
 
   // Sync selectedId when IssuesBanner navigates to a new venueId via router.push
   useEffect(() => {
     if (initialSelectedId !== undefined) {
-      setSelectedId(initialSelectedId)
+      setSelectedId(initialSelectedId);
     }
-  }, [initialSelectedId])
+  }, [initialSelectedId]);
 
   // Reset run selection when the user switches venues
   useEffect(() => {
-    setSelectedRunId(null)
-  }, [selectedId])
+    setSelectedRunId(null);
+  }, [selectedId]);
 
   // Default to diagnostics tab when selected venue has a failed/blocked run.
   // An explicit `?tab=` on the initial venue wins over this default — the
   // triage panel deep-links to the tab holding the evidence that earned the
   // row, and without this guard the effect would overwrite it on mount and
   // land every link on Overview.
-  const honouredInitialTab = useRef(initialTab === undefined)
+  const honouredInitialTab = useRef(initialTab === undefined);
   // Depending on `initialStatus` itself would reset the tab on every
   // `router.refresh()` — it is a server prop, so each refresh hands back a new
   // array identity even when nothing about the venue changed (#1267). The
@@ -291,14 +293,14 @@ export const CrawlSplitView = ({
   // change of fault state, not on server-prop churn.
   const selectedVenueIsFaulted = isFaulted(
     initialStatus.find((sr) => sr.venueId === selectedId),
-  )
+  );
   useEffect(() => {
     if (!honouredInitialTab.current) {
-      honouredInitialTab.current = true
-      return
+      honouredInitialTab.current = true;
+      return;
     }
-    setActiveTab(selectedVenueIsFaulted ? 'diagnostics' : 'overview')
-  }, [selectedId, selectedVenueIsFaulted])
+    setActiveTab(selectedVenueIsFaulted ? 'diagnostics' : 'overview');
+  }, [selectedId, selectedVenueIsFaulted]);
 
   // Close filter panel on outside click
   useEffect(() => {
@@ -307,26 +309,26 @@ export const CrawlSplitView = ({
         filterRef.current &&
         !filterRef.current.contains(event.target as Node)
       ) {
-        setFilterOpen(false)
+        setFilterOpen(false);
       }
     }
     if (filterOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [filterOpen])
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [filterOpen]);
 
   const filteredStatus = initialStatus.filter((row) => {
-    if (statusFilter && row.status !== statusFilter) return false
+    if (statusFilter && row.status !== statusFilter) return false;
     if (
       venueNameFilter &&
       !row.venueName.toLowerCase().includes(venueNameFilter.toLowerCase())
     )
-      return false
-    return true
-  })
+      return false;
+    return true;
+  });
 
-  const filtersActive = statusFilter !== '' || venueNameFilter !== ''
+  const filtersActive = statusFilter !== '' || venueNameFilter !== '';
 
   // Clear selection when the active filter hides the currently selected venue
   useEffect(() => {
@@ -334,50 +336,56 @@ export const CrawlSplitView = ({
       selectedId &&
       !filteredStatus.some((row) => row.venueId === selectedId)
     ) {
-      selectVenue(null)
+      selectVenue(null);
     }
-  }, [statusFilter, venueNameFilter, filteredStatus, selectedId, setSelectedId])
+  }, [
+    statusFilter,
+    venueNameFilter,
+    filteredStatus,
+    selectedId,
+    setSelectedId,
+  ]);
 
   async function handleTrigger(venueId: string) {
-    setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }))
+    setRecrawlState((prev) => ({ ...prev, [venueId]: 'triggering' }));
     setRecrawlError((prev) => {
-      const next = { ...prev }
-      delete next[venueId]
-      return next
-    })
+      const next = { ...prev };
+      delete next[venueId];
+      return next;
+    });
     try {
-      await triggerCrawl.mutateAsync(venueId)
-      setRecrawlState((prev) => ({ ...prev, [venueId]: 'queued' }))
+      await triggerCrawl.mutateAsync(venueId);
+      setRecrawlState((prev) => ({ ...prev, [venueId]: 'queued' }));
     } catch (err) {
       setRecrawlState((prev) => {
-        const next = { ...prev }
-        delete next[venueId]
-        return next
-      })
+        const next = { ...prev };
+        delete next[venueId];
+        return next;
+      });
       setRecrawlError((prev) => ({
         ...prev,
         [venueId]: err instanceof Error ? err.message : 'Crawl trigger failed',
-      }))
+      }));
     }
   }
 
-  const selected = initialStatus.find((row) => row.venueId === selectedId)
+  const selected = initialStatus.find((row) => row.venueId === selectedId);
   const activeRun =
     (selectedId
       ? (venueRuns.find((run) => run.id === selectedRunId) ?? venueRuns[0])
       : null) ??
     initialRuns.find((run) => run.venueId === selectedId) ??
-    null
+    null;
 
-  const venueRecrawlState = selectedId ? recrawlState[selectedId] : undefined
-  const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined
+  const venueRecrawlState = selectedId ? recrawlState[selectedId] : undefined;
+  const venueRecrawlError = selectedId ? recrawlError[selectedId] : undefined;
 
   const hasDiagnostics =
     selected !== undefined &&
     (selected.status === 'failed' ||
       selected.status === 'blocked' ||
       selected.lastRunStatus === 'failed' ||
-      selected.blockedAt !== null)
+      selected.blockedAt !== null);
 
   const diagnosticsRun =
     selected && activeRun
@@ -391,7 +399,7 @@ export const CrawlSplitView = ({
           venueName: selected.venueName,
           websiteUrl: selected.websiteUrl,
         }
-      : null
+      : null;
 
   return (
     <div
@@ -562,8 +570,8 @@ export const CrawlSplitView = ({
                   {filtersActive && (
                     <button
                       onClick={() => {
-                        setStatusFilter('')
-                        setVenueNameFilter('')
+                        setStatusFilter('');
+                        setVenueNameFilter('');
                       }}
                       style={{
                         fontSize: 11,
@@ -1171,11 +1179,11 @@ export const CrawlSplitView = ({
                     run={diagnosticsRun}
                     historyEntries={[]}
                     onStage={(optId) => {
-                      setStagedId(optId)
+                      setStagedId(optId);
                     }}
                     onApply={(optId) => {
-                      setStagedId(optId)
-                      setConfirmOpen(true)
+                      setStagedId(optId);
+                      setConfirmOpen(true);
                     }}
                     onDiscard={() => setStagedId(null)}
                     stagedId={stagedId}
@@ -1212,8 +1220,8 @@ export const CrawlSplitView = ({
                   venueName={selected.venueName}
                   onCancel={() => setConfirmOpen(false)}
                   onApply={() => {
-                    setConfirmOpen(false)
-                    setStagedId(null)
+                    setConfirmOpen(false);
+                    setStagedId(null);
                   }}
                 />
               )}
@@ -1235,8 +1243,8 @@ export const CrawlSplitView = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 export const CrawlRunHistoryTable = ({
   runs: displayRuns,
@@ -1245,11 +1253,11 @@ export const CrawlRunHistoryTable = ({
   selectedRunId,
   onSelectRun,
 }: {
-  runs: CrawlRun[]
-  loading?: boolean
-  selectedVenueName?: string | null
-  selectedRunId?: string | null
-  onSelectRun?: (id: string) => void
+  runs: CrawlRun[];
+  loading?: boolean;
+  selectedVenueName?: string | null;
+  selectedRunId?: string | null;
+  onSelectRun?: (id: string) => void;
 }) => {
   return (
     <div>
@@ -1367,7 +1375,7 @@ export const CrawlRunHistoryTable = ({
                         ? (() => {
                             const alertConfig = resolveCrawlAlertBadge(
                               run.activeAlert,
-                            )
+                            );
                             // title gives mouse-hover context; aria-label
                             // prepends the visible label so screen readers
                             // announce the specific failure mode. The
@@ -1386,7 +1394,7 @@ export const CrawlRunHistoryTable = ({
                               >
                                 {alertConfig.label}
                               </StatusBadge>
-                            )
+                            );
                           })()
                         : null}
                     </span>
@@ -1432,24 +1440,24 @@ export const CrawlRunHistoryTable = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 export const CrawlRunAllButton = () => {
   const [state, setState] = useState<
     'idle' | 'triggering' | 'queued' | 'error'
-  >('idle')
+  >('idle');
 
   async function handleRunAll() {
-    setState('triggering')
+    setState('triggering');
     try {
-      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setState('queued')
-      setTimeout(() => setState('idle'), 5000)
+      const res = await fetch('/api/admin/crawl/run-all', { method: 'POST' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setState('queued');
+      setTimeout(() => setState('idle'), 5000);
     } catch {
-      setState('error')
-      setTimeout(() => setState('idle'), 4000)
+      setState('error');
+      setTimeout(() => setState('idle'), 4000);
     }
   }
 
@@ -1460,7 +1468,7 @@ export const CrawlRunAllButton = () => {
         ? ADMIN_COPY.crawl.splitView.runAllQueued
         : state === 'error'
           ? ADMIN_COPY.crawl.splitView.runAllError
-          : ADMIN_COPY.crawl.splitView.runAllButton
+          : ADMIN_COPY.crawl.splitView.runAllButton;
 
   return (
     <button
@@ -1492,5 +1500,5 @@ export const CrawlRunAllButton = () => {
       <RefreshCw size={15} />
       {label}
     </button>
-  )
-}
+  );
+};

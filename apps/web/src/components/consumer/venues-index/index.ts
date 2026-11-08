@@ -1,5 +1,5 @@
-export { VenueFeatureCard } from './VenueFeatureCard'
-export { VenueFilterBar } from './VenueFilterBar'
-export { VenueIdentityTile } from './VenueIdentityTile'
-export { VenueRow } from './VenueRow'
-export { VenuesIndexClient } from './VenuesIndexClient'
+export { VenueFeatureCard } from './VenueFeatureCard';
+export { VenueFilterBar } from './VenueFilterBar';
+export { VenueIdentityTile } from './VenueIdentityTile';
+export { VenueRow } from './VenueRow';
+export { VenuesIndexClient } from './VenuesIndexClient';

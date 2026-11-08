@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState, type FC } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { AdminEntry } from './AdminEntry'
+import { useEffect, useRef, useState, type FC } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { AdminEntry } from './AdminEntry';
 import {
   useDeferContest,
   useResolveContest,
   useReviewContestDetail,
   type ContestDetailData,
-} from '@/lib/queries/admin-contests'
-import { ApiError } from '@/lib/api'
-import { REVIEW_CONTEST_COPY } from './definitions/copy'
+} from '@/lib/queries/admin-contests';
+import { ApiError } from '@/lib/api';
+import { REVIEW_CONTEST_COPY } from './definitions/copy';
 
 // AdminDisputePanel — 760px two-up adjudication surface mounted at
 // /admin/review/contests/:contestId. Pulls the contest detail from React
@@ -41,20 +41,20 @@ import { REVIEW_CONTEST_COPY } from './definitions/copy'
 // Spec §4.7 — admin reason length bounds. Server enforces via Zod; the
 // client mirrors them so the buttons stay disabled until the minimum is
 // reached and the textarea caps typing at the maximum.
-const REASON_MIN = 10
-const REASON_MAX = 2000
+const REASON_MIN = 10;
+const REASON_MAX = 2000;
 
 // Palette constants — same source pixels as AdminEntry / PriceDisputesQueue
 // (dispute-surfaces.jsx:21–22 GOLD_D + AZ_D). Kept as literals so the
 // button accents match the design source 1-for-1.
-const AZURE_DARK = 'oklch(0.62 0.12 240)'
-const GOLD_DARK = 'oklch(0.66 0.14 78)'
-const INTER = 'Inter, system-ui, sans-serif'
-const MONO = "'JetBrains Mono', monospace"
+const AZURE_DARK = 'oklch(0.62 0.12 240)';
+const GOLD_DARK = 'oklch(0.66 0.14 78)';
+const INTER = 'Inter, system-ui, sans-serif';
+const MONO = "'JetBrains Mono', monospace";
 
 // Where the panel sends the admin after a successful action. Spec §7.8 +
 // the user's brief both pin this as the queue tab.
-const QUEUE_ROUTE = '/admin/review?tab=contests'
+const QUEUE_ROUTE = '/admin/review?tab=contests';
 
 // ───── Props ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ export interface AdminDisputePanelProps {
   // contestId is the parent submission id (the canonical contest key
   // returned by the queue endpoint). The panel calls the detail hook
   // with it and renders off the result.
-  contestId: string
+  contestId: string;
 }
 
 // ───── Type guards / helpers ─────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export interface AdminDisputePanelProps {
 // hinges on this predicate; we keep it pure so tests can re-use it if
 // the gap report ever calls for unit coverage of the rule.
 const isReadOnly = (contest: ContestDetailData): boolean =>
-  contest.parent.status === 'archived' || contest.counter.status !== 'pending'
+  contest.parent.status === 'archived' || contest.counter.status !== 'pending';
 
 // Derives the winner badge target from a read-only contest's row
 // statuses. Counter corroborated ⇒ counter won; otherwise the parent
@@ -81,15 +81,15 @@ const isReadOnly = (contest: ContestDetailData): boolean =>
 const readOnlyWinner = (
   contest: ContestDetailData,
 ): 'original' | 'counter' | null => {
-  if (contest.counter.status === 'corroborated') return 'counter'
-  return 'original'
-}
+  if (contest.counter.status === 'corroborated') return 'counter';
+  return 'original';
+};
 
 // True when the contest was deferred by an admin previously. Engagement
 // signal only — doesn't block action.
 const wasDeferred = (contest: ContestDetailData): boolean =>
   contest.counter.status === 'pending' &&
-  contest.counter.lastAdminActionKind === 'defer'
+  contest.counter.lastAdminActionKind === 'defer';
 
 // Extracts a usable banner message from a mutation rejection. Prefer
 // ApiError.message when present (carries the server's specific reason
@@ -97,10 +97,10 @@ const wasDeferred = (contest: ContestDetailData): boolean =>
 // failure mode instead of a generic copy line. Falls back to the
 // generic copy when the rejection has no readable message.
 const mutationErrorMessage = (err: unknown): string => {
-  if (err instanceof ApiError && err.message.length > 0) return err.message
-  if (err instanceof Error && err.message.length > 0) return err.message
-  return REVIEW_CONTEST_COPY.panel.mutationError
-}
+  if (err instanceof ApiError && err.message.length > 0) return err.message;
+  if (err instanceof Error && err.message.length > 0) return err.message;
+  return REVIEW_CONTEST_COPY.panel.mutationError;
+};
 
 // Returns the side whose `status === 'archived'` so the banner can
 // surface that side's `archivedReason` (the admin's resolution
@@ -109,36 +109,36 @@ const mutationErrorMessage = (err: unknown): string => {
 const archivedSide = (
   contest: ContestDetailData,
 ): 'parent' | 'counter' | null => {
-  if (contest.counter.status === 'archived') return 'counter'
-  if (contest.parent.status === 'archived') return 'parent'
-  return null
-}
+  if (contest.counter.status === 'archived') return 'counter';
+  if (contest.parent.status === 'archived') return 'parent';
+  return null;
+};
 
 // ───── Component ─────────────────────────────────────────────────────────────
 
 export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   contestId,
 }) => {
-  const router = useRouter()
-  const detail = useReviewContestDetail(contestId)
-  const resolve = useResolveContest()
-  const defer = useDeferContest()
-  const [reason, setReason] = useState('')
+  const router = useRouter();
+  const detail = useReviewContestDetail(contestId);
+  const resolve = useResolveContest();
+  const defer = useDeferContest();
+  const [reason, setReason] = useState('');
   // Stores the latest mutation error message so the inline banner can
   // surface the server's specific reason (e.g. "Parent tier GA does not
   // match challenger tier VIP" on a 409 precondition_failed) instead of
   // a static generic copy line. Null when no error is pending; a string
   // when the most recent mutation rejected. Falls back to a generic
   // copy line when the error has no usable message.
-  const [mutationError, setMutationError] = useState<string | null>(null)
+  const [mutationError, setMutationError] = useState<string | null>(null);
   // Optimistic winner preview — set on click before the API commits so
   // the AdminEntry winner border flashes the admin's choice while the
   // mutation is in flight. Cleared on error so the optimistic accent
   // doesn't linger when the action fails.
   const [optimisticWinner, setOptimisticWinner] = useState<
     'original' | 'counter' | null
-  >(null)
-  const firstButtonRef = useRef<HTMLButtonElement | null>(null)
+  >(null);
+  const firstButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // ESC navigates back to the queue. Plan §15 line 3690 — admin's
   // primary escape hatch. Window listener keeps the binding active even
@@ -146,11 +146,11 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   // textarea swallow the key first).
   useEffect(() => {
     const handler = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') router.push(QUEUE_ROUTE)
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [router])
+      if (evt.key === 'Escape') router.push(QUEUE_ROUTE);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [router]);
 
   // Focus the first action button on mount when the panel is actionable.
   // Plan §15 line 3691 — admin lands on the "Need more info" button so
@@ -158,9 +158,9 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   // because the button doesn't exist there.
   useEffect(() => {
     if (detail.data && !isReadOnly(detail.data)) {
-      firstButtonRef.current?.focus()
+      firstButtonRef.current?.focus();
     }
-  }, [detail.data])
+  }, [detail.data]);
 
   // ───── Loading state ───────────────────────────────────────────────
   if (detail.isPending) {
@@ -176,7 +176,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
       >
         {REVIEW_CONTEST_COPY.panel.loading}
       </div>
-    )
+    );
   }
 
   // ───── Error state ─────────────────────────────────────────────────
@@ -186,7 +186,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
     // without a retry affordance (retrying a 404 never succeeds);
     // anything else gets the generic banner + retry button.
     const isNotFound =
-      detail.error instanceof ApiError && detail.error.status === 404
+      detail.error instanceof ApiError && detail.error.status === 404;
     if (isNotFound) {
       return (
         <div
@@ -203,7 +203,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         >
           {REVIEW_CONTEST_COPY.panel.notFound}
         </div>
-      )
+      );
     }
     return (
       <div
@@ -241,25 +241,25 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
           {REVIEW_CONTEST_COPY.panel.errorRetry}
         </button>
       </div>
-    )
+    );
   }
 
   // ───── Data path ───────────────────────────────────────────────────
-  const contest = detail.data
-  const readOnly = isReadOnly(contest)
-  const deferred = wasDeferred(contest)
+  const contest = detail.data;
+  const readOnly = isReadOnly(contest);
+  const deferred = wasDeferred(contest);
   const winner: 'original' | 'counter' | null = readOnly
     ? readOnlyWinner(contest)
-    : optimisticWinner
+    : optimisticWinner;
 
   // Action handlers — each is a single commit-on-click (spec §7.2 ruled
   // out the second-step confirm). Optimistic winner flashes the chosen
   // side; on error we clear it and surface the inline banner. Success
   // navigates back to the queue so the panel unmounts before the cache
   // invalidation refetches it.
-  const reasonValid = reason.trim().length >= REASON_MIN
-  const inFlight = resolve.isPending || defer.isPending
-  const disabled = !reasonValid || inFlight
+  const reasonValid = reason.trim().length >= REASON_MIN;
+  const inFlight = resolve.isPending || defer.isPending;
+  const disabled = !reasonValid || inFlight;
 
   // Trim the reason before sending so persisted rationale matches the
   // validation semantics (the disabled-state check uses `reason.trim()`).
@@ -267,53 +267,53 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
   // whitespace would persist that whitespace into the audit log even
   // though the UI treats it as semantically invisible.
   const onKeep = async () => {
-    setOptimisticWinner('original')
-    setMutationError(null)
+    setOptimisticWinner('original');
+    setMutationError(null);
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'parent_wins',
         reason: reason.trim(),
-      })
-      router.push(QUEUE_ROUTE)
+      });
+      router.push(QUEUE_ROUTE);
     } catch (err) {
-      setOptimisticWinner(null)
-      setMutationError(mutationErrorMessage(err))
+      setOptimisticWinner(null);
+      setMutationError(mutationErrorMessage(err));
     }
-  }
+  };
 
   const onPromote = async () => {
-    setOptimisticWinner('counter')
-    setMutationError(null)
+    setOptimisticWinner('counter');
+    setMutationError(null);
     try {
       await resolve.mutateAsync({
         contestId: contest.contestId,
         resolution: 'challenger_wins',
         reason: reason.trim(),
-      })
-      router.push(QUEUE_ROUTE)
+      });
+      router.push(QUEUE_ROUTE);
     } catch (err) {
-      setOptimisticWinner(null)
-      setMutationError(mutationErrorMessage(err))
+      setOptimisticWinner(null);
+      setMutationError(mutationErrorMessage(err));
     }
-  }
+  };
 
   const onDefer = async () => {
-    setMutationError(null)
+    setMutationError(null);
     try {
       await defer.mutateAsync({
         contestId: contest.contestId,
         reason: reason.trim(),
-      })
-      router.push(QUEUE_ROUTE)
+      });
+      router.push(QUEUE_ROUTE);
     } catch (err) {
-      setMutationError(mutationErrorMessage(err))
+      setMutationError(mutationErrorMessage(err));
     }
-  }
+  };
 
   const title = [contest.eventTitle, contest.venueName, contest.eventDate].join(
     REVIEW_CONTEST_COPY.panel.titleSeparator,
-  )
+  );
 
   return (
     <article
@@ -467,14 +467,14 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
             // submitters"). The reason is captured on the archived row
             // at resolution time and round-trips through the detail
             // endpoint.
-            const side = archivedSide(contest)
+            const side = archivedSide(contest);
             const reasonText =
               side === 'parent'
                 ? contest.parent.archivedReason
                 : side === 'counter'
                   ? contest.counter.archivedReason
-                  : null
-            if (!reasonText) return null
+                  : null;
+            if (!reasonText) return null;
             return (
               <div
                 style={{
@@ -509,7 +509,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
                   {`“${reasonText}”`}
                 </blockquote>
               </div>
-            )
+            );
           })()}
         </div>
       ) : (
@@ -788,5 +788,5 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         </>
       )}
     </article>
-  )
-}
+  );
+};

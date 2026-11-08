@@ -1,7 +1,7 @@
-import { headers } from 'next/headers'
-import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers';
+import type { MetadataRoute } from 'next';
 
-import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin'
+import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin';
 
 /**
  * The app had no robots.txt at all until #1228, which meant every deploy was
@@ -19,9 +19,9 @@ import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin'
  * why the configured value was the wrong source and what it broke in prod.
  */
 export default async function robots(): Promise<MetadataRoute.Robots> {
-  const host = (await headers()).get('host')
+  const host = (await headers()).get('host');
   if (!isCanonicalHost(host)) {
-    return { rules: { userAgent: '*', disallow: '/' } }
+    return { rules: { userAgent: '*', disallow: '/' } };
   }
 
   return {
@@ -37,5 +37,5 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       disallow: ['/api/admin', '/api/revalidate', '/admin'],
     },
     sitemap: `${CANONICAL_ORIGIN}/sitemap.xml`,
-  }
+  };
 }

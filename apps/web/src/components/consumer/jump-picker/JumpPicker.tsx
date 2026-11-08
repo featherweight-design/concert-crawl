@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 /*
  * The `YearMonth`/`MatrixCell` contract uses single-letter fields (`y`, `m`, `d`)
@@ -15,9 +15,9 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
-} from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { RotateCcwGlyph } from './RotateCcwGlyph'
+} from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { RotateCcwGlyph } from './RotateCcwGlyph';
 import {
   addMonths,
   isoOf,
@@ -26,7 +26,7 @@ import {
   ymdKey,
   type MatrixCell,
   type YearMonth,
-} from './date-math'
+} from './date-math';
 
 const MONTHS = [
   'January',
@@ -41,7 +41,7 @@ const MONTHS = [
   'October',
   'November',
   'December',
-]
+];
 const MON3 = [
   'Jan',
   'Feb',
@@ -55,8 +55,8 @@ const MON3 = [
   'Oct',
   'Nov',
   'Dec',
-]
-const DOW1 = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+];
+const DOW1 = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const DOWFULL = [
   'Sunday',
   'Monday',
@@ -65,12 +65,12 @@ const DOWFULL = [
   'Thursday',
   'Friday',
   'Saturday',
-]
+];
 
-const CELL = 38
-const GRID_GAP = 2
+const CELL = 38;
+const GRID_GAP = 2;
 
-const STYLE_ID = 'cjp-styles'
+const STYLE_ID = 'cjp-styles';
 const STYLE_CONTENT = [
   '.cjp-pop{transition:transform .13s cubic-bezier(.2,.7,.3,1),opacity .13s ease}',
   '.cjp-pop.scale{transform:scale(.95);opacity:0;transform-origin:34px -6px}',
@@ -86,21 +86,21 @@ const STYLE_CONTENT = [
   'button.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
   'button.cjp-chev:disabled{opacity:.32;cursor:default}',
   '@media (prefers-reduced-motion: reduce){.cjp-pop{transition:none!important;transform:none!important;opacity:1!important}.cjp-car{transition:none!important}}',
-].join('\n')
+].join('\n');
 
 function ensureStyles(): void {
-  if (typeof document === 'undefined') return
-  if (document.getElementById(STYLE_ID)) return
-  const styleEl = document.createElement('style')
-  styleEl.id = STYLE_ID
-  styleEl.textContent = STYLE_CONTENT
-  document.head.appendChild(styleEl)
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = STYLE_ID;
+  styleEl.textContent = STYLE_CONTENT;
+  document.head.appendChild(styleEl);
 }
 
 const partsOf = (iso: string): { y: number; m: number; d: number } => {
-  const parts = iso.split('-').map(Number)
-  return { y: parts[0] ?? 0, m: (parts[1] ?? 1) - 1, d: parts[2] ?? 1 }
-}
+  const parts = iso.split('-').map(Number);
+  return { y: parts[0] ?? 0, m: (parts[1] ?? 1) - 1, d: parts[2] ?? 1 };
+};
 
 const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
   <svg
@@ -118,31 +118,31 @@ const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 const clampView = (
   ym: YearMonth,
   min: YearMonth,
   max: YearMonth,
 ): YearMonth => {
-  const key = ym.y * 12 + ym.m
-  const minKey = min.y * 12 + min.m
-  const maxKey = max.y * 12 + max.m
-  if (key < minKey) return min
-  if (key > maxKey) return max
-  return ym
-}
+  const key = ym.y * 12 + ym.m;
+  const minKey = min.y * 12 + min.m;
+  const maxKey = max.y * 12 + max.m;
+  if (key < minKey) return min;
+  if (key > maxKey) return max;
+  return ym;
+};
 
 const inWindow = (iso: string, from: string, to: string): boolean =>
-  iso >= from && iso <= to
+  iso >= from && iso <= to;
 
 export interface JumpPickerProps {
-  open: boolean
-  onClose: () => void
-  selectedDate: string
-  today: string
-  availability: Map<string, number>
-  onPick: (iso: string) => void
+  open: boolean;
+  onClose: () => void;
+  selectedDate: string;
+  today: string;
+  availability: Map<string, number>;
+  onPick: (iso: string) => void;
 }
 
 export const JumpPicker = ({
@@ -153,181 +153,181 @@ export const JumpPicker = ({
   availability,
   onPick,
 }: JumpPickerProps) => {
-  const initial = partsOf(selectedDate)
-  const [view, setView] = useState<YearMonth>({ y: initial.y, m: initial.m })
-  const [mounted, setMounted] = useState(false)
-  const [focusIso, setFocusIso] = useState(selectedDate)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const pendingFocus = useRef(false)
+  const initial = partsOf(selectedDate);
+  const [view, setView] = useState<YearMonth>({ y: initial.y, m: initial.m });
+  const [mounted, setMounted] = useState(false);
+  const [focusIso, setFocusIso] = useState(selectedDate);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef(false);
 
   // Inject the one-off style tag after commit, not during render — a
   // render-time DOM mutation would run on every (possibly aborted) render.
-  useEffect(ensureStyles, [])
+  useEffect(ensureStyles, []);
 
-  const { min, max, from: winFrom, to: winTo } = pickerWindow(today)
-  const todayParts = partsOf(today)
-  const todayKey = ymdKey(todayParts.y, todayParts.m, todayParts.d)
+  const { min, max, from: winFrom, to: winTo } = pickerWindow(today);
+  const todayParts = partsOf(today);
+  const todayKey = ymdKey(todayParts.y, todayParts.m, todayParts.d);
 
-  const atMin = view.y === min.y && view.m === min.m
-  const atMax = view.y === max.y && view.m === max.m
+  const atMin = view.y === min.y && view.m === min.m;
+  const atMax = view.y === max.y && view.m === max.m;
 
   // On open, focus the selected day.
   useEffect(() => {
-    if (!open) return
-    setView({ y: initial.y, m: initial.m })
-    setFocusIso(selectedDate)
-    pendingFocus.current = true
+    if (!open) return;
+    setView({ y: initial.y, m: initial.m });
+    setFocusIso(selectedDate);
+    pendingFocus.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, selectedDate])
+  }, [open, selectedDate]);
 
   // Scale-in on the frame after mount.
   useEffect(() => {
     if (!open) {
-      setMounted(false)
-      return
+      setMounted(false);
+      return;
     }
-    const raf = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(raf)
-  }, [open])
+    const raf = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
 
   // Move DOM focus onto the roving-tabindex target when it changes.
   useEffect(() => {
-    if (!open || !pendingFocus.current) return
+    if (!open || !pendingFocus.current) return;
     const node = gridRef.current?.querySelector<HTMLButtonElement>(
       `[data-iso="${focusIso}"]`,
-    )
-    node?.focus()
-    pendingFocus.current = false
-  }, [open, focusIso, view])
+    );
+    node?.focus();
+    pendingFocus.current = false;
+  }, [open, focusIso, view]);
 
-  if (!open) return null
+  if (!open) return null;
 
-  const cells = monthMatrix(view.y, view.m)
+  const cells = monthMatrix(view.y, view.m);
 
   const isDisabled = (cell: MatrixCell): boolean =>
-    !cell.inMonth || ymdKey(cell.y, cell.m, cell.d) < todayKey
+    !cell.inMonth || ymdKey(cell.y, cell.m, cell.d) < todayKey;
 
   const hasInMonthShows = cells.some(
     (cell) =>
       cell.inMonth &&
       !isDisabled(cell) &&
       (availability.get(cell.iso) ?? 0) > 0,
-  )
+  );
 
   const pageMonth = (delta: number, moveDomFocus: boolean) => {
-    const next = clampView(addMonths(view, delta), min, max)
-    setView(next)
+    const next = clampView(addMonths(view, delta), min, max);
+    setView(next);
     // Keep the roving tab-stop inside the newly-viewed month so it never lands
     // on an out-of-month spill cell. In the current month the 1st is in the past
     // (disabled), so land on today instead to avoid a dead tab-stop. Only steal
     // DOM focus for keyboard paging.
-    const isCurrentMonth = next.y === todayParts.y && next.m === todayParts.m
-    setFocusIso(isCurrentMonth ? today : isoOf(next.y, next.m, 1))
+    const isCurrentMonth = next.y === todayParts.y && next.m === todayParts.m;
+    setFocusIso(isCurrentMonth ? today : isoOf(next.y, next.m, 1));
     if (moveDomFocus) {
-      pendingFocus.current = true
+      pendingFocus.current = true;
     }
-  }
+  };
 
   const moveFocus = (deltaDays: number) => {
-    const base = partsOf(focusIso)
-    let cursor = new Date(base.y, base.m, base.d)
+    const base = partsOf(focusIso);
+    let cursor = new Date(base.y, base.m, base.d);
     for (let guard = 0; guard < 366; guard += 1) {
       cursor = new Date(
         cursor.getFullYear(),
         cursor.getMonth(),
         cursor.getDate() + deltaDays,
-      )
-      const cy = cursor.getFullYear()
-      const cm = cursor.getMonth()
-      const cd = cursor.getDate()
-      const iso = isoOf(cy, cm, cd)
-      if (!inWindow(iso, winFrom, winTo)) return
-      const past = ymdKey(cy, cm, cd) < todayKey
-      if (past) continue
-      setFocusIso(iso)
-      pendingFocus.current = true
-      if (cy !== view.y || cm !== view.m) setView({ y: cy, m: cm })
-      return
+      );
+      const cy = cursor.getFullYear();
+      const cm = cursor.getMonth();
+      const cd = cursor.getDate();
+      const iso = isoOf(cy, cm, cd);
+      if (!inWindow(iso, winFrom, winTo)) return;
+      const past = ymdKey(cy, cm, cd) < todayKey;
+      if (past) continue;
+      setFocusIso(iso);
+      pendingFocus.current = true;
+      if (cy !== view.y || cm !== view.m) setView({ y: cy, m: cm });
+      return;
     }
-  }
+  };
 
   const moveToWeekEnd = (toEnd: boolean) => {
-    const base = partsOf(focusIso)
-    const cursor = new Date(base.y, base.m, base.d)
-    const dow = cursor.getDay()
-    const delta = toEnd ? 6 - dow : -dow
+    const base = partsOf(focusIso);
+    const cursor = new Date(base.y, base.m, base.d);
+    const dow = cursor.getDay();
+    const delta = toEnd ? 6 - dow : -dow;
     const target = new Date(
       cursor.getFullYear(),
       cursor.getMonth(),
       cursor.getDate() + delta,
-    )
+    );
     // Walk inward to the nearest enabled day in the desired direction.
-    const step = toEnd ? -1 : 1
-    let probe = target
+    const step = toEnd ? -1 : 1;
+    let probe = target;
     for (let guard = 0; guard < 7; guard += 1) {
-      const py = probe.getFullYear()
-      const pm = probe.getMonth()
-      const pd = probe.getDate()
-      const iso = isoOf(py, pm, pd)
-      const past = ymdKey(py, pm, pd) < todayKey
+      const py = probe.getFullYear();
+      const pm = probe.getMonth();
+      const pd = probe.getDate();
+      const iso = isoOf(py, pm, pd);
+      const past = ymdKey(py, pm, pd) < todayKey;
       if (inWindow(iso, winFrom, winTo) && !past) {
-        setFocusIso(iso)
-        pendingFocus.current = true
-        if (py !== view.y || pm !== view.m) setView({ y: py, m: pm })
-        return
+        setFocusIso(iso);
+        pendingFocus.current = true;
+        if (py !== view.y || pm !== view.m) setView({ y: py, m: pm });
+        return;
       }
-      probe = new Date(py, pm, pd + step)
+      probe = new Date(py, pm, pd + step);
     }
-  }
+  };
 
   const onGridKeyDown = (evt: KeyboardEvent<HTMLDivElement>) => {
     switch (evt.key) {
       case 'ArrowRight':
-        evt.preventDefault()
-        moveFocus(1)
-        break
+        evt.preventDefault();
+        moveFocus(1);
+        break;
       case 'ArrowLeft':
-        evt.preventDefault()
-        moveFocus(-1)
-        break
+        evt.preventDefault();
+        moveFocus(-1);
+        break;
       case 'ArrowDown':
-        evt.preventDefault()
-        moveFocus(7)
-        break
+        evt.preventDefault();
+        moveFocus(7);
+        break;
       case 'ArrowUp':
-        evt.preventDefault()
-        moveFocus(-7)
-        break
+        evt.preventDefault();
+        moveFocus(-7);
+        break;
       case 'Home':
-        evt.preventDefault()
-        moveToWeekEnd(false)
-        break
+        evt.preventDefault();
+        moveToWeekEnd(false);
+        break;
       case 'End':
-        evt.preventDefault()
-        moveToWeekEnd(true)
-        break
+        evt.preventDefault();
+        moveToWeekEnd(true);
+        break;
       case 'PageUp':
-        evt.preventDefault()
-        pageMonth(evt.shiftKey ? -12 : -1, true)
-        break
+        evt.preventDefault();
+        pageMonth(evt.shiftKey ? -12 : -1, true);
+        break;
       case 'PageDown':
-        evt.preventDefault()
-        pageMonth(evt.shiftKey ? 12 : 1, true)
-        break
+        evt.preventDefault();
+        pageMonth(evt.shiftKey ? 12 : 1, true);
+        break;
       // Escape is intentionally not handled here — it bubbles to the dialog
       // root's onKeyDown, which closes once. Handling it in both places fired
       // onClose() twice.
       default:
-        break
+        break;
     }
-  }
+  };
 
   const onRootKeyDown = (evt: KeyboardEvent<HTMLDivElement>) => {
     if (evt.key === 'Escape') {
-      evt.preventDefault()
-      onClose()
+      evt.preventDefault();
+      onClose();
     }
-  }
+  };
 
   const chevBtn: CSSProperties = {
     all: 'unset',
@@ -338,11 +338,11 @@ export const JumpPicker = ({
     alignItems: 'center',
     justifyContent: 'center',
     boxSizing: 'border-box',
-  }
+  };
 
   const footerCopy = hasInMonthShows
     ? CONSUMER_COPY.jumpPickerFooterHint
-    : `${CONSUMER_COPY.jumpPickerEmptyPrefix} ${MON3[view.m]}. ${CONSUMER_COPY.jumpPickerEmptySuffix}`
+    : `${CONSUMER_COPY.jumpPickerEmptyPrefix} ${MON3[view.m]}. ${CONSUMER_COPY.jumpPickerEmptySuffix}`;
 
   return (
     <div
@@ -466,19 +466,19 @@ export const JumpPicker = ({
         }}
       >
         {cells.map((cell) => {
-          const count = availability.get(cell.iso) ?? 0
-          const past = ymdKey(cell.y, cell.m, cell.d) < todayKey
-          const sel = cell.iso === selectedDate
-          const isToday = cell.iso === today
-          const disabled = isDisabled(cell)
-          const isWknd = cell.dow === 0 || cell.dow === 6
+          const count = availability.get(cell.iso) ?? 0;
+          const past = ymdKey(cell.y, cell.m, cell.d) < todayKey;
+          const sel = cell.iso === selectedDate;
+          const isToday = cell.iso === today;
+          const disabled = isDisabled(cell);
+          const isWknd = cell.dow === 0 || cell.dow === 6;
 
-          let background = 'transparent'
+          let background = 'transparent';
           if (sel) {
-            background = 'var(--signal)'
+            background = 'var(--signal)';
           } else if (isWknd && cell.inMonth && !disabled) {
             background =
-              'color-mix(in oklch, var(--surface-2) 60%, transparent)'
+              'color-mix(in oklch, var(--surface-2) 60%, transparent)';
           }
 
           const numColor = sel
@@ -489,15 +489,15 @@ export const JumpPicker = ({
                 ? 'var(--fg-subtle)'
                 : isToday
                   ? 'var(--accent)'
-                  : 'var(--fg)'
+                  : 'var(--fg)';
 
-          const opacity = !cell.inMonth ? 0.4 : past ? 0.45 : 1
+          const opacity = !cell.inMonth ? 0.4 : past ? 0.45 : 1;
           const boxShadow =
-            isToday && !sel ? 'inset 0 0 0 1.5px var(--accent)' : 'none'
+            isToday && !sel ? 'inset 0 0 0 1.5px var(--accent)' : 'none';
 
           const countClause =
-            count > 0 ? `, ${count} show${count > 1 ? 's' : ''}` : ', no shows'
-          const ariaLabel = `${DOWFULL[cell.dow]}, ${MONTHS[cell.m]} ${cell.d}${countClause}${isToday ? ', today' : ''}`
+            count > 0 ? `, ${count} show${count > 1 ? 's' : ''}` : ', no shows';
+          const ariaLabel = `${DOWFULL[cell.dow]}, ${MONTHS[cell.m]} ${cell.d}${countClause}${isToday ? ', today' : ''}`;
 
           return (
             <button
@@ -550,7 +550,7 @@ export const JumpPicker = ({
                 />
               )}
             </button>
-          )
+          );
         })}
       </div>
 
@@ -601,5 +601,5 @@ export const JumpPicker = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};

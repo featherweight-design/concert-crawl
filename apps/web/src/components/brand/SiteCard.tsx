@@ -1,12 +1,12 @@
-import React from 'react'
+import React from 'react';
 
-import { LANDING_COPY } from '@/app/_components/definitions/copy'
-import { BRAND_INK, BRAND_PAPER } from '@/lib/definitions/brand'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { LANDING_COPY } from '@/app/_components/definitions/copy';
+import { BRAND_INK, BRAND_PAPER } from '@/lib/definitions/brand';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 export interface SiteCardProps {
-  width: number
-  height: number
+  width: number;
+  height: number;
 }
 
 /**
@@ -71,4 +71,4 @@ export const SiteCard = ({ width, height }: SiteCardProps) => (
       {LANDING_COPY.hero.subheading}
     </div>
   </div>
-)
+);

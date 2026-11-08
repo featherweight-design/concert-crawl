@@ -1,60 +1,60 @@
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EditField } from '../EditField'
-import { EditLabel } from '../EditLabel'
-import { EditSection } from '../EditSection'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EditField } from '../EditField';
+import { EditLabel } from '../EditLabel';
+import { EditSection } from '../EditSection';
 
 export interface IdentitySectionEvent {
-  title: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  tourName: string | null
+  title: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  tourName: string | null;
 }
 
 // Both-or-neither: an editable tour name needs the draft value AND the
 // change handler. Supplying only the handler would render a controlled input
 // whose value could never update.
 export type IdentitySectionProps = {
-  event: IdentitySectionEvent
+  event: IdentitySectionEvent;
 } & (
   | { editedTourName: string; onTourNameChange: (next: string) => void }
   | { editedTourName?: undefined; onTourNameChange?: undefined }
-)
+);
 
 const formatDate = (yyyyMmDd: string): string => {
-  const parsed = new Date(yyyyMmDd + 'T12:00:00Z')
+  const parsed = new Date(yyyyMmDd + 'T12:00:00Z');
   return parsed.toLocaleDateString('en-US', {
     timeZone: 'America/Denver',
     month: 'short',
     day: 'numeric',
-  })
-}
+  });
+};
 
 const formatTime = (time: string | null): string => {
-  if (!time) return ''
-  const [hh, mm] = time.split(':')
-  const hours = parseInt(hh ?? '0', 10)
-  const minutes = mm ?? '00'
-  const meridiem = hours >= 12 ? 'PM' : 'AM'
-  const display = hours % 12 || 12
-  return `${display}:${minutes} ${meridiem}`
-}
+  if (!time) return '';
+  const [hh, mm] = time.split(':');
+  const hours = parseInt(hh ?? '0', 10);
+  const minutes = mm ?? '00';
+  const meridiem = hours >= 12 ? 'PM' : 'AM';
+  const display = hours % 12 || 12;
+  return `${display}:${minutes} ${meridiem}`;
+};
 
 export const IdentitySection = ({
   event,
   editedTourName,
   onTourNameChange,
 }: IdentitySectionProps) => {
-  const { sections, fields } = ADMIN_COPY.editor
-  const tourNameValue = editedTourName ?? event.tourName ?? ''
+  const { sections, fields } = ADMIN_COPY.editor;
+  const tourNameValue = editedTourName ?? event.tourName ?? '';
   // Trims both sides so the changed dot matches the PATCH diff's own
   // normalization rather than firing on stray stored whitespace.
   const tourNameChanged =
-    tourNameValue.trim() !== (event.tourName?.trim() ?? '')
+    tourNameValue.trim() !== (event.tourName?.trim() ?? '');
   return (
     <EditSection
       number={sections.identityNumber}
@@ -143,5 +143,5 @@ export const IdentitySection = ({
         />
       </div>
     </EditSection>
-  )
-}
+  );
+};

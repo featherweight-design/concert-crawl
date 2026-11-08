@@ -1,7 +1,7 @@
-import { type FC } from 'react'
-import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types'
-import { REVIEW_CONTEST_COPY } from './definitions/copy'
-import { formatPriceRange } from './lib/format-price-range'
+import { type FC } from 'react';
+import type { SourceCategory, Tier, Vendor } from '@concert-crawl/types';
+import { REVIEW_CONTEST_COPY } from './definitions/copy';
+import { formatPriceRange } from './lib/format-price-range';
 
 // Shared per-side card rendered twice inside AdminDisputePanel (parent +
 // counter, side-by-side). Pure presentational: takes props, renders DOM.
@@ -16,52 +16,52 @@ import { formatPriceRange } from './lib/format-price-range'
 export interface AdminEntryProps {
   // Discriminates which side of the dispute this card represents. Drives
   // the winner comparison: `winner === side` ⇒ this card is the winner.
-  side: 'original' | 'counter'
+  side: 'original' | 'counter';
   // Postgres `decimal` columns arrive as strings; parse at the display
   // layer so cents survive the round trip (same convention as
   // PriceDisputesQueue — see PriceDisputesQueue.tsx line ~52).
-  priceMin: string
-  priceMax: string | null
-  tier: Tier
-  vendor: Vendor
+  priceMin: string;
+  priceMax: string | null;
+  tier: Tier;
+  vendor: Vendor;
   // Drives the inline trust pill rendered in the headline row beside
   // price + tier (gold for 'boxoffice', azure-tinted for 'standard',
   // neutral for 'resale'; null hides the pill entirely). The pill mirrors
   // the dispute-surfaces.jsx `PendingTrustPill` reference (design table §3b
   // line 214) and the kind→label map lives in copy.ts adminEntry.trustPill.
-  sourceCategory: SourceCategory | null
-  submitter: { handle: string | null }
+  sourceCategory: SourceCategory | null;
+  submitter: { handle: string | null };
   // ISO timestamp; rendered as raw string per design (§3b line 720
   // citation). The plan defers RelTime polish to a follow-up; the design
   // table doesn't specify relative rendering here.
-  observedAt: string
+  observedAt: string;
   // Free-form structured pair; the display string is built in copy.ts so
   // pluralization stays out of JSX.
-  confirms: { fans: number; admin: number } | null
+  confirms: { fans: number; admin: number } | null;
   // Optional submitter-supplied note. When null, the entire note block
   // is omitted (§3b line 232 — "block omitted entirely").
-  note: string | null
+  note: string | null;
   // Discriminated by side: when `winner === side`, this card gets the
   // 2px accent border + "winner" badge. `null` = unresolved (no badge,
   // no accent on either side).
-  winner: 'original' | 'counter' | null
+  winner: 'original' | 'counter' | null;
 }
 
 // Repeated font stacks pulled out for readability; same convention as
 // PriceDisputesQueue.tsx lines 65–66.
-const INTER = 'Inter, system-ui'
-const MONO = "'JetBrains Mono', monospace"
+const INTER = 'Inter, system-ui';
+const MONO = "'JetBrains Mono', monospace";
 
 // AZ_D from dispute-surfaces.jsx (azure-dark accent). Used directly as
 // a literal rather than a CSS var so the winner border matches the
 // design source pixel-for-pixel. Same convention as the GOLD_Q / AZ_Q
 // palette in PriceDisputesQueue.tsx.
-const AZURE_DARK = 'oklch(0.62 0.12 240)'
+const AZURE_DARK = 'oklch(0.62 0.12 240)';
 // GOLD_D — gold accent for the box-office trust pill. Mirrors the
 // pending-card.jsx pendingTokens map (`GOLD` literal at line 21) and
 // the same constant the AdminDisputePanel uses for the keep-original
 // button border.
-const GOLD_DARK = 'oklch(0.66 0.14 78)'
+const GOLD_DARK = 'oklch(0.66 0.14 78)';
 
 // Trust pill — design property table §3b line 214 routes through the
 // pending-card.jsx `PendingTrustPill` component, which maps a `kind`
@@ -79,7 +79,7 @@ const trustPillStyle = (
       background: `color-mix(in oklab, ${GOLD_DARK} 22%, transparent)`,
       color: GOLD_DARK,
       border: `1px solid color-mix(in oklab, ${GOLD_DARK} 60%, transparent)`,
-    }
+    };
   }
   // 'standard' and 'resale' share the azure community-style treatment;
   // only the label changes (per copy.ts adminEntry.trustPill map).
@@ -87,8 +87,8 @@ const trustPillStyle = (
     background: `color-mix(in oklab, ${AZURE_DARK} 16%, transparent)`,
     color: AZURE_DARK,
     border: 'none',
-  }
-}
+  };
+};
 
 export const AdminEntry: FC<AdminEntryProps> = ({
   side,
@@ -103,22 +103,22 @@ export const AdminEntry: FC<AdminEntryProps> = ({
   note,
   winner,
 }) => {
-  const isWinner = winner === side
+  const isWinner = winner === side;
   const handleDisplay =
-    submitter.handle ?? REVIEW_CONTEST_COPY.adminEntry.anonymousHandle
+    submitter.handle ?? REVIEW_CONTEST_COPY.adminEntry.anonymousHandle;
   const confirmsDisplay = REVIEW_CONTEST_COPY.adminEntry.confirmsValue(
     confirms?.fans ?? 0,
     confirms?.admin ?? 0,
-  )
+  );
   // Trust pill renders only when sourceCategory is known. Null comes
   // from older rows pre-PR #696 (the backfill assigned categories to
   // every row, but the type stays nullable for the wire shape).
   const trustPillTokens =
-    sourceCategory !== null ? trustPillStyle(sourceCategory) : null
+    sourceCategory !== null ? trustPillStyle(sourceCategory) : null;
   const trustPillLabel =
     sourceCategory !== null
       ? REVIEW_CONTEST_COPY.adminEntry.trustPill[sourceCategory]
-      : null
+      : null;
 
   return (
     <div
@@ -313,5 +313,5 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         </div>
       ) : null}
     </div>
-  )
-}
+  );
+};

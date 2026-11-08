@@ -11,15 +11,15 @@
 // run to open at all, so the row degrades to the venue's admin page rather
 // than to a crawl page that would show an empty inspector.
 
-import { CONDITION_META } from '../definitions/meta'
-import type { TriageFault, TriageQueue } from '../definitions/types'
+import { CONDITION_META } from '../definitions/meta';
+import type { TriageFault, TriageQueue } from '../definitions/types';
 
-const venuePath = (venueId: string): string => `/admin/venues/${venueId}`
+const venuePath = (venueId: string): string => `/admin/venues/${venueId}`;
 
 const inspectorPath = (
   venueId: string,
   tab: 'history' | 'diagnostics',
-): string => `/admin/crawl?venueId=${encodeURIComponent(venueId)}&tab=${tab}`
+): string => `/admin/crawl?venueId=${encodeURIComponent(venueId)}&tab=${tab}`;
 
 /**
  * Resolves a fault row's destination. `crawlRunId` is not interpolated into
@@ -27,16 +27,16 @@ const inspectorPath = (
  * is meaningful at all.
  */
 export const faultHref = (fault: TriageFault): string => {
-  const { action } = CONDITION_META[fault.condition]
-  if (action === 'openVenue') return venuePath(fault.venueId)
-  if (fault.crawlRunId === null) return venuePath(fault.venueId)
+  const { action } = CONDITION_META[fault.condition];
+  if (action === 'openVenue') return venuePath(fault.venueId);
+  if (fault.crawlRunId === null) return venuePath(fault.venueId);
   return inspectorPath(
     fault.venueId,
     action === 'openDiagnostics' ? 'diagnostics' : 'history',
-  )
-}
+  );
+};
 
 export const queueHref = (queue: TriageQueue): string =>
   queue.action === 'openReview'
     ? '/admin/review'
-    : '/admin/review?tab=submissions'
+    : '/admin/review?tab=submissions';

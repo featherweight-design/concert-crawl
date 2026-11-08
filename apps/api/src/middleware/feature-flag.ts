@@ -1,8 +1,8 @@
-import type { FeatureFlagKey } from '@concert-crawl/entitlements'
-import type { MiddlewareHandler } from 'hono'
+import type { FeatureFlagKey } from '@concert-crawl/entitlements';
+import type { MiddlewareHandler } from 'hono';
 
-import { isFeatureEnabled } from '../lib/feature-flags.js'
-import { apiLogger } from '../lib/logger.js'
+import { isFeatureEnabled } from '../lib/feature-flags.js';
+import { apiLogger } from '../lib/logger.js';
 
 /**
  * Gates a router on a release flag. Mount this with `router.use('*', ...)` at
@@ -12,20 +12,20 @@ import { apiLogger } from '../lib/logger.js'
  */
 export const requireFlag = (key: FeatureFlagKey): MiddlewareHandler => {
   return async (ctx, next) => {
-    let enabled = false
+    let enabled = false;
     try {
-      enabled = await isFeatureEnabled(key)
+      enabled = await isFeatureEnabled(key);
     } catch (err) {
-      apiLogger.error({ err, key }, 'feature flag gate lookup failed')
+      apiLogger.error({ err, key }, 'feature flag gate lookup failed');
     }
 
     if (!enabled) {
       // ctx.notFound() routes through the app's own not-found handler, so the
       // response is byte-identical to an unrouted path. A bespoke JSON body
       // here would be a tell that the route exists but is switched off.
-      return ctx.notFound()
+      return ctx.notFound();
     }
 
-    await next()
-  }
-}
+    await next();
+  };
+};

@@ -15,10 +15,10 @@ this "the cheapest item in the entire bar and the least skippable."
 Two PRs, in order. PR-A must merge first: it makes a claim on the page true before the page makes
 it.
 
-| PR | Scope | Package |
-| --- | --- | --- |
+| PR    | Scope                       | Package                 |
+| ----- | --------------------------- | ----------------------- |
 | **A** | `Crawl-delay` parsing + cap | `packages/crawler-core` |
-| **B** | The `/bot` page | `apps/web` |
+| **B** | The `/bot` page             | `apps/web`              |
 
 ---
 
@@ -51,11 +51,11 @@ says we honour `Crawl-delay`, so either this ships or that row comes out.
    ```
 
    currently matches only on the last line read: `BingBot` sets both group flags false, so the
-   `Crawl-delay` meant for us is dropped entirely. (A second agent of `*` would *not* show the bug —
+   `Crawl-delay` meant for us is dropped entirely. (A second agent of `*` would _not_ show the bug —
    it lands in the wildcard bucket, which still applies to us.) This is a
    pre-existing `Disallow` bug, not something `Crawl-delay` introduces, but it would silently apply
    the wrong delay and it is a few lines to fix: accumulate agent lines into the active group until
-   the first non-`User-agent:` directive, then treat the group as matching if *any* of them match.
+   the first non-`User-agent:` directive, then treat the group as matching if _any_ of them match.
    Tests cover both directives against a multi-agent group.
 
    **Comment lines must not end a group either.** `robots.ts:29` clears both group flags on a `#`
@@ -69,7 +69,7 @@ says we honour `Crawl-delay`, so either this ships or that row comes out.
    ```
 
    drops the directive today. Same one-line class of fix, same PR, covered by the same tests.
-   Comments *trailing* a directive on the same line stay out of scope; nothing we claim depends on
+   Comments _trailing_ a directive on the same line stay out of scope; nothing we claim depends on
    them.
 
 3. **Resolve once per venue** in `crawl.ts`, next to the existing `isAllowed` call at line 406:
@@ -135,7 +135,7 @@ breakpoint at 560px (168px mono key column above, stacked below).
    "ConcertCrawl bot", and finding nothing reads as "unidentified scraper, block it."
 
 3. **Pin Light without a flash.** `applyTheme` (`apps/web/src/theme/apply-theme.ts:8`) writes tokens as
-   *inline styles on `<html>`*, so a bare `data-theme="light"` wrapper would lose to them. Instead, render
+   _inline styles on `<html>`_, so a bare `data-theme="light"` wrapper would lose to them. Instead, render
    the wrapper with Light's tokens in its own inline `style` — custom properties inherit, so the
    subtree wins for free. Server-rendered, no client JS, no flash for a user whose stored theme is
    dark.
@@ -173,13 +173,13 @@ audit against `origin/main`; Copilot independently reproduced all five. Copy is 
 not a Design call, so these are fixed in place during this build with a `copy-review` pass. No
 Design round-trip.
 
-| Row | Handoff says | Ships as |
-| --- | --- | --- |
+| Row          | Handoff says                                       | Ships as                                                                                                                                                                                |
+| ------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `javascript` | "We don't run it… no headless browser" — **false** | "We render pages in a headless browser (Chromium) because many venue calendars only exist after JavaScript runs. We don't click, submit forms, or log in." (Hugh, option A, 2026-09-01) |
-| `fullPass` | "3:00 AM Mountain" — true half the year | "Once a day at 09:00 UTC." `render.yaml` pins `0 9 * * *` and deliberately doesn't chase DST. UTC is what their logs show. |
-| `triggers` | "Every 10 min we check for signs a page changed" | Rewritten. No change-detection sweep exists — the `*/10` cron drains `crawl_triggers`, whose only writer is an admin pressing a button (`apps/api/src/routes/admin/crawl.ts`). |
-| `weRead` | lists "on-sale status" | Drop it (no such field on `NormalizedEvent`); add `description` and `imageUrl`, which we do extract and the handoff omits. |
-| *(missing)* | — | New retention row: indefinite, stated plainly. There is no event-purge job and the Concerts "Past" section depends on that. Locked 2026-08-29. |
+| `fullPass`   | "3:00 AM Mountain" — true half the year            | "Once a day at 09:00 UTC." `render.yaml` pins `0 9 * * *` and deliberately doesn't chase DST. UTC is what their logs show.                                                              |
+| `triggers`   | "Every 10 min we check for signs a page changed"   | Rewritten. No change-detection sweep exists — the `*/10` cron drains `crawl_triggers`, whose only writer is an admin pressing a button (`apps/api/src/routes/admin/crawl.ts`).          |
+| `weRead`     | lists "on-sale status"                             | Drop it (no such field on `NormalizedEvent`); add `description` and `imageUrl`, which we do extract and the handoff omits.                                                              |
+| _(missing)_  | —                                                  | New retention row: indefinite, stated plainly. There is no event-purge job and the Concerts "Past" section depends on that. Locked 2026-08-29.                                          |
 
 Also: `BOT_COPY` carries ~9 em-dashes. The `no-restricted-syntax` rule on `definitions/copy.ts`
 (`apps/web/eslint.config.mjs:115`) is build-blocking, so these are cleared as part of the copy pass,
@@ -193,7 +193,7 @@ re-check.
 
 **"Never parallel against one host" does not hold, and the readiness review passed it.** The review
 reasoned that `MAX_CONCURRENT = 1` (`apps/crawler/src/run.ts:18`) makes both crawl paths sequential.
-That is true *within* a process and false across the two. The daily pass and the trigger drain are
+That is true _within_ a process and false across the two. The daily pass and the trigger drain are
 separate Render cron jobs, and `crawl.ts:1682` says so explicitly: "the daily cron and the triggers
 cron CAN overlap on the same venue — there's no per-venue lock above this layer."
 
@@ -232,7 +232,7 @@ metadata does **not** carry `robots.index === false`; the Light wrapper carries 
 
 - A removal workflow. The 30-day promise is Hugh at current volume, deliberately.
 - `Allow:` and path-pattern matching (`*` / `$` inside a `Disallow` value) in the robots parser.
-  Neither is claimed on the page. The wildcard *user-agent* (`*`) is already supported and stays.
+  Neither is claimed on the page. The wildcard _user-agent_ (`*`) is already supported and stays.
 - Linking `/bot` from anywhere in the app. Its entry point is the User-Agent string.
 
 ## Blocked on Hugh before ship (not before build)

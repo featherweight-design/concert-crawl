@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // The Browse crew lens (#1226 PR-6, handoff crew-browse-lens.jsx).
 //
@@ -9,20 +9,20 @@
 // thin. So the lens lives in the title-block row that already exists above the
 // chips, and the filter bar's own markup is untouched.
 
-import { useId, useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import type { CrewSummary } from '@concert-crawl/types'
+import { useId, useRef, useState } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { CrewSummary } from '@concert-crawl/types';
 
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport';
 import {
   CCOverlay,
   CCOverlayHost,
   useOverlayTrigger,
-} from '@/components/ui/cc-overlay'
-import { CREWS_COPY } from './definitions/copy'
+} from '@/components/ui/cc-overlay';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY
+const COPY = CREWS_COPY;
 
 export const LensGlyph = ({ size = 13 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
@@ -46,7 +46,7 @@ export const LensGlyph = ({ size = 13 }: { size?: number }) => (
     />
     <circle cx="8" cy="8" r="1.4" fill="currentColor" />
   </svg>
-)
+);
 
 const Chevron = ({ size = 9 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 10 10" aria-hidden="true">
@@ -59,7 +59,7 @@ const Chevron = ({ size = 9 }: { size?: number }) => (
       fill="none"
     />
   </svg>
-)
+);
 
 const PickerCheck = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -72,17 +72,17 @@ const PickerCheck = () => (
       fill="none"
     />
   </svg>
-)
+);
 
 interface CrewPickerRowProps {
   /** null is the "Everyone" reset row, which stands in for "Any date". */
-  crew: CrewSummary | null
-  selected: boolean
-  compact: boolean
+  crew: CrewSummary | null;
+  selected: boolean;
+  compact: boolean;
   /** The group is one tab stop, so only the active row is reachable by Tab. */
-  tabbable: boolean
-  rowRef: (node: HTMLButtonElement | null) => void
-  onSelect: () => void
+  tabbable: boolean;
+  rowRef: (node: HTMLButtonElement | null) => void;
+  onSelect: () => void;
 }
 
 const CrewPickerRow = ({
@@ -164,13 +164,13 @@ const CrewPickerRow = ({
     </span>
     {selected && <PickerCheck />}
   </button>
-)
+);
 
 interface CrewPickerBodyProps {
-  crews: CrewSummary[]
-  selectedId: string | null
-  compact: boolean
-  onSelect: (crewId: string | null) => void
+  crews: CrewSummary[];
+  selectedId: string | null;
+  compact: boolean;
+  onSelect: (crewId: string | null) => void;
 }
 
 const CrewPickerBody = ({
@@ -180,22 +180,22 @@ const CrewPickerBody = ({
   onSelect,
 }: CrewPickerBodyProps) => {
   // `null` first: the options are the reset row followed by the crews.
-  const options: (CrewSummary | null)[] = [null, ...crews]
+  const options: (CrewSummary | null)[] = [null, ...crews];
   const selectedIndex = options.findIndex(
     (option) => (option?.id ?? null) === selectedId,
-  )
+  );
   // A radiogroup is a single tab stop, so Tab lands on the checked row and the
   // arrows move within the group from there.
   const [activeIndex, setActiveIndex] = useState(
     selectedIndex === -1 ? 0 : selectedIndex,
-  )
-  const rowsRef = useRef<(HTMLButtonElement | null)[]>([])
+  );
+  const rowsRef = useRef<(HTMLButtonElement | null)[]>([]);
 
   const moveTo = (index: number) => {
-    const wrapped = (index + options.length) % options.length
-    setActiveIndex(wrapped)
-    rowsRef.current[wrapped]?.focus()
-  }
+    const wrapped = (index + options.length) % options.length;
+    setActiveIndex(wrapped);
+    rowsRef.current[wrapped]?.focus();
+  };
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const step: Record<string, number> = {
@@ -203,18 +203,18 @@ const CrewPickerBody = ({
       ArrowRight: 1,
       ArrowUp: -1,
       ArrowLeft: -1,
-    }
+    };
     if (event.key in step) {
-      event.preventDefault()
-      moveTo(activeIndex + (step[event.key] ?? 0))
+      event.preventDefault();
+      moveTo(activeIndex + (step[event.key] ?? 0));
     } else if (event.key === 'Home') {
-      event.preventDefault()
-      moveTo(0)
+      event.preventDefault();
+      moveTo(0);
     } else if (event.key === 'End') {
-      event.preventDefault()
-      moveTo(options.length - 1)
+      event.preventDefault();
+      moveTo(options.length - 1);
     }
-  }
+  };
 
   return (
     <div
@@ -231,20 +231,20 @@ const CrewPickerBody = ({
           compact={compact}
           tabbable={index === activeIndex}
           rowRef={(node) => {
-            rowsRef.current[index] = node
+            rowsRef.current[index] = node;
           }}
           onSelect={() => onSelect(crew?.id ?? null)}
         />
       ))}
     </div>
-  )
-}
+  );
+};
 
 interface CrewLensPillProps {
-  crews: CrewSummary[]
-  activeCrew: CrewSummary | null
-  onSelect: (crewId: string | null) => void
-  wide: boolean
+  crews: CrewSummary[];
+  activeCrew: CrewSummary | null;
+  onSelect: (crewId: string | null) => void;
+  wide: boolean;
 }
 
 /**
@@ -263,16 +263,16 @@ export const CrewLensPill = ({
   onSelect,
   wide,
 }: CrewLensPillProps) => {
-  const isMobile = useIsMobileViewport()
-  const trigger = useOverlayTrigger({ isMobile })
-  const panelId = useId()
-  const on = activeCrew !== null
+  const isMobile = useIsMobileViewport();
+  const trigger = useOverlayTrigger({ isMobile });
+  const panelId = useId();
+  const on = activeCrew !== null;
 
   // Selecting applies immediately and dismisses, like every shipped sheet.
   const pick = (crewId: string | null) => {
-    trigger.close()
-    onSelect(crewId)
-  }
+    trigger.close();
+    onSelect(crewId);
+  };
 
   const body = (
     <CrewPickerBody
@@ -281,7 +281,7 @@ export const CrewLensPill = ({
       compact={!isMobile}
       onSelect={pick}
     />
-  )
+  );
 
   return (
     <span className="relative inline-flex">
@@ -389,13 +389,13 @@ export const CrewLensPill = ({
           </CCOverlay>
         ))}
     </span>
-  )
-}
+  );
+};
 
 interface CrewLensRailProps {
   /** Null when the lens feed failed to load, where "0 shows" would be a lie. */
-  count: number | null
-  onClear: () => void
+  count: number | null;
+  onClear: () => void;
 }
 
 /**
@@ -455,4 +455,4 @@ export const CrewLensRail = ({ count, onClear }: CrewLensRailProps) => (
       {COPY.glyphs.clear} {COPY.lens.railClear}
     </button>
   </div>
-)
+);

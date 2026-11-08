@@ -1,30 +1,30 @@
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { z } from 'zod'
-import { db, artists, events, userEvents, venues } from '@concert-crawl/db'
-import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
-import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm'
-import { canonicalizeArtist } from '@concert-crawl/types'
-import type { ArtistSearchResult } from '@concert-crawl/types'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { z } from 'zod';
+import { db, artists, events, userEvents, venues } from '@concert-crawl/db';
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events';
+import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { canonicalizeArtist } from '@concert-crawl/types';
+import type { ArtistSearchResult } from '@concert-crawl/types';
 import {
   loadFollowedCanonicalNames,
   loadNextShowByCanonical,
-} from '../lib/artist-follows.js'
+} from '../lib/artist-follows.js';
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   displayHeadliner,
   portraitCanonicalName,
-} from '../lib/event-billing.js'
-import { todayInTimezone } from '../lib/time.js'
+} from '../lib/event-billing.js';
+import { todayInTimezone } from '../lib/time.js';
 
-export const searchRouter = new Hono()
+export const searchRouter = new Hono();
 
 // GET /v1/search/popular — top 5 upcoming events by watcher count, no auth required
 searchRouter.get('/popular', async (ctx) => {
-  const today = todayInTimezone('UTC')
+  const today = todayInTimezone('UTC');
 
-  const watcherCount = sql<number>`cast(count(${userEvents.id}) as int)`
+  const watcherCount = sql<number>`cast(count(${userEvents.id}) as int)`;
 
   const rows = await db
     .select({
@@ -63,7 +63,7 @@ searchRouter.get('/popular', async (ctx) => {
     )
     .groupBy(events.id, venues.name, venues.slug, artists.photoUrl)
     .orderBy(desc(watcherCount), asc(events.date))
-    .limit(5)
+    .limit(5);
 
   const data = rows.map((row) => ({
     id: row.id,
@@ -75,10 +75,10 @@ searchRouter.get('/popular', async (ctx) => {
     ticketPriceMin: row.ticketPriceMin,
     watcherCount: row.watcherCount,
     venue: { name: row.venueName, slug: row.venueSlug },
-  }))
+  }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});
 
 // ── Artist results (#1115 PR-G) ─────────────────────────────────────────────
 // The search palette already derives "artist" rows from matching events; those
@@ -88,30 +88,30 @@ searchRouter.get('/popular', async (ctx) => {
 // Denver is the only market we crawl and an artist's shows span venues, so
 // there is no single venue timezone to pivot "today" on — Mountain Time is the
 // product's display timezone (mirrors artists-public.ts).
-const MT_TIME_ZONE = 'America/Denver'
+const MT_TIME_ZONE = 'America/Denver';
 
 // Artists are a garnish on a search whose primary answer is shows. Three rows
 // is enough to recognise the act you meant without pushing the event and venue
 // sections below the fold on a 320px screen.
-const ARTIST_RESULT_LIMIT = 3
+const ARTIST_RESULT_LIMIT = 3;
 
 // Widened candidate pool so the visible-event filter below has something to
 // work with: an artist whose only events are hidden drops out, and without
 // slack a single such row could empty the section.
-const ARTIST_CANDIDATE_LIMIT = 25
+const ARTIST_CANDIDATE_LIMIT = 25;
 
-const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed'])
+const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed']);
 
 // Two characters is the same floor the client debouncer uses; below it the
 // ILIKE degenerates into "most of the table". Validated as a bare string rather
 // than an object because the param name (`q`) is a single character, which the
 // repo's `id-length` rule bans as an object key.
-const artistSearchQuerySchema = z.string().trim().min(2).max(200)
+const artistSearchQuerySchema = z.string().trim().min(2).max(200);
 
 // `%` and `_` are LIKE metacharacters. Left unescaped, a search for "50%" would
 // silently become a wildcard match rather than a literal one.
 const escapeLikePattern = (raw: string): string =>
-  raw.replace(/[\\%_]/g, (char) => `\\${char}`)
+  raw.replace(/[\\%_]/g, (char) => `\\${char}`);
 
 // GET /v1/search/artists?q= — artists with their own page, no auth required.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so a
@@ -119,13 +119,13 @@ const escapeLikePattern = (raw: string): string =>
 // pass straight through, skip the follow query, and read `following: false`.
 // The route stays PUBLIC — never mount requireAuth here.
 searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
-  const parsed = artistSearchQuerySchema.safeParse(ctx.req.query('q'))
+  const parsed = artistSearchQuerySchema.safeParse(ctx.req.query('q'));
   if (!parsed.success) {
-    return ctx.json({ success: false, error: 'Invalid search query' }, 400)
+    return ctx.json({ success: false, error: 'Invalid search query' }, 400);
   }
-  const query = parsed.data
-  const canonicalQuery = canonicalizeArtist(query)
-  const pattern = `%${escapeLikePattern(query)}%`
+  const query = parsed.data;
+  const canonicalQuery = canonicalizeArtist(query);
+  const pattern = `%${escapeLikePattern(query)}%`;
 
   // Ranking: an exact canonical hit ("Wolf") beats a prefix hit ("Wolf Alice")
   // beats an anywhere-substring hit ("She Wolf"). Name breaks ties so the order
@@ -134,7 +134,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       when ${artists.canonicalName} = ${canonicalQuery} then 0
       when ${artists.canonicalName} like ${`${escapeLikePattern(canonicalQuery)}%`} then 1
       else 2
-    end`
+    end`;
 
   const candidates = await db
     .select({
@@ -152,15 +152,15 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       ),
     )
     .orderBy(asc(matchRank), asc(artists.name))
-    .limit(ARTIST_CANDIDATE_LIMIT)
+    .limit(ARTIST_CANDIDATE_LIMIT);
 
   if (candidates.length === 0) {
-    return ctx.json({ success: true, data: [] })
+    return ctx.json({ success: true, data: [] });
   }
 
-  const canonicalNames = candidates.map((row) => row.canonicalName)
+  const canonicalNames = candidates.map((row) => row.canonicalName);
 
-  const appearsOnBill = billsAnyCanonicalName(canonicalNames)
+  const appearsOnBill = billsAnyCanonicalName(canonicalNames);
 
   // The consumer filter pair every public query applies: non-concert rows are
   // hidden, and crawler-flagged stale rows are suppressed (#607). Aggregating
@@ -191,14 +191,14 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
         eq(events.hiddenFromConsumer, false),
         isNull(events.firstMissingAt),
       ),
-    )
+    );
 
-  const today = todayInTimezone(MT_TIME_ZONE)
-  const hasVisibleEvent = new Set<string>()
-  const upcomingCounts = new Map<string, number>()
+  const today = todayInTimezone(MT_TIME_ZONE);
+  const hasVisibleEvent = new Set<string>();
+  const upcomingCounts = new Map<string, number>();
 
   for (const row of billRows) {
-    const onBill = billedCanonicalNames(row)
+    const onBill = billedCanonicalNames(row);
     // A future date at a deactivated venue appears on NEITHER half of the
     // artist page: its upcoming query filters on `venues.active` and its past
     // query only reaches dates that have been. So a row like that is not
@@ -217,7 +217,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     const isPast =
       row.date < today &&
       row.status !== 'cancelled' &&
-      row.venueRemovedAt === null
+      row.venueRemovedAt === null;
     // Same status triple the artist page's own upcoming section uses
     // (artists-public.ts) — counting only 'upcoming' would undercount, and
     // read "Past shows only" for an artist whose next date is postponed.
@@ -229,11 +229,11 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
     const isUpcoming =
       UPCOMING_STATUSES.has(row.status ?? '') &&
       row.date >= today &&
-      row.venueActive
+      row.venueActive;
     for (const canonical of onBill) {
-      if (isPast || isUpcoming) hasVisibleEvent.add(canonical)
+      if (isPast || isUpcoming) hasVisibleEvent.add(canonical);
       if (isUpcoming) {
-        upcomingCounts.set(canonical, (upcomingCounts.get(canonical) ?? 0) + 1)
+        upcomingCounts.set(canonical, (upcomingCounts.get(canonical) ?? 0) + 1);
       }
     }
   }
@@ -241,10 +241,10 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   // Follow state for the row's inline Follow button. Matched on the canonical
   // name and NOT filtered by `source` — a Spotify-synced follow and a native
   // one are the same product concept, so both read as following.
-  const searchAuth = getAuth(ctx)
+  const searchAuth = getAuth(ctx);
   const followed = searchAuth?.userId
     ? await loadFollowedCanonicalNames(searchAuth.userId)
-    : null
+    : null;
 
   // The soonest date per artist, from the same loader the suggestions endpoint
   // and the follows list use — so a row drawn from search carries the same
@@ -255,10 +255,10 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   // a query per artist — small, and free.
   const visible = candidates.filter((row) =>
     hasVisibleEvent.has(row.canonicalName),
-  )
+  );
   const nextShows = await loadNextShowByCanonical(
     visible.slice(0, ARTIST_RESULT_LIMIT).map((row) => row.canonicalName),
-  )
+  );
 
   // "At least one non-hidden event" is the gate — an artist whose only rows
   // are hidden or stale has a page with nothing on it, so it stays out of
@@ -272,7 +272,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       upcomingShowCount: upcomingCounts.get(row.canonicalName) ?? 0,
       nextShow: nextShows.get(row.canonicalName) ?? null,
       following: followed?.has(row.canonicalName) ?? false,
-    }))
+    }));
 
-  return ctx.json({ success: true, data })
-})
+  return ctx.json({ success: true, data });
+});

@@ -195,7 +195,7 @@ There is no `unavailable` state. An artist with zero Denver shows cannot exist â
 
 ```ts
 export const nfLocked = (state: PlanStateLike): boolean =>
-  !canUseFeature(state, 'following')
+  !canUseFeature(state, 'following');
 ```
 
 A thin negation of the shipped `canUseFeature`, not a reimplementation. Two drafts of this helper were wrong before this one, and both failures came from reaching past the existing entitlement API:

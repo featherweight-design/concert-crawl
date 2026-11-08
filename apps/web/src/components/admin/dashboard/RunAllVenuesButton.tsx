@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useTransition } from 'react'
-import { AdminButton } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { useTransition } from 'react';
+import { AdminButton } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface RunAllVenuesButtonProps {
-  action: () => Promise<void>
+  action: () => Promise<void>;
 }
 
 export const RunAllVenuesButton = ({ action }: RunAllVenuesButtonProps) => {
-  const [isPending, startTransition] = useTransition()
+  const [isPending, startTransition] = useTransition();
 
   return (
     <AdminButton
@@ -18,13 +18,13 @@ export const RunAllVenuesButton = ({ action }: RunAllVenuesButtonProps) => {
       disabled={isPending}
       onClick={() => {
         startTransition(async () => {
-          await action()
-        })
+          await action();
+        });
       }}
     >
       {isPending
         ? ADMIN_COPY.dashboard.runAllVenuesButton.pending
         : ADMIN_COPY.dashboard.runAllVenuesButton.idle}
     </AdminButton>
-  )
-}
+  );
+};

@@ -1,14 +1,14 @@
 interface ProgressDotsProps {
-  total: number
-  index: number
+  total: number;
+  index: number;
 }
 
 export function ProgressDots({ total, index }: ProgressDotsProps) {
   return (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
       {Array.from({ length: total }).map((_, ii) => {
-        const isDone = ii < index
-        const isActive = ii === index
+        const isDone = ii < index;
+        const isActive = ii === index;
         return (
           <span
             key={ii}
@@ -24,8 +24,8 @@ export function ProgressDots({ total, index }: ProgressDotsProps) {
               transition: 'width 0.25s ease, background 0.2s ease',
             }}
           />
-        )
+        );
       })}
     </div>
-  )
+  );
 }

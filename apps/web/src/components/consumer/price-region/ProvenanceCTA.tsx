@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.priceRegion.provenance
-const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)'
-const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)'
+const copy = CONSUMER_COPY.priceRegion.provenance;
+const TIER_COLOR_RESALE = 'oklch(0.65 0.20 25)';
+const TIER_COLOR_BOXOFFICE = 'oklch(0.66 0.14 78)';
 
-export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale'
+export type ProvenanceCTAKind = 'boxoffice' | 'primary' | 'resale';
 
 export interface ProvenanceCTAProps {
-  kind: ProvenanceCTAKind
-  vendor: string
-  href: string
-  outline?: boolean
+  kind: ProvenanceCTAKind;
+  vendor: string;
+  href: string;
+  outline?: boolean;
 }
 
 export const ProvenanceCTA = ({
@@ -21,29 +21,29 @@ export const ProvenanceCTA = ({
   href,
   outline = false,
 }: ProvenanceCTAProps) => {
-  const isResale = kind === 'resale'
-  const label = isResale ? copy.seeResale : copy.getTickets
+  const isResale = kind === 'resale';
+  const label = isResale ? copy.seeResale : copy.getTickets;
   const caption =
     kind === 'boxoffice'
       ? copy.captionBoxoffice(vendor)
       : kind === 'primary'
         ? copy.captionPrimary(vendor)
-        : copy.captionResale(vendor)
+        : copy.captionResale(vendor);
   const ariaLabel =
     kind === 'boxoffice'
       ? copy.ariaLabelBoxoffice(vendor)
       : kind === 'primary'
         ? copy.ariaLabelPrimary(vendor)
-        : copy.ariaLabelResale(vendor)
+        : copy.ariaLabelResale(vendor);
   const dotColor =
     kind === 'boxoffice'
       ? TIER_COLOR_BOXOFFICE
       : kind === 'resale'
         ? TIER_COLOR_RESALE
-        : 'var(--fg-subtle)'
+        : 'var(--fg-subtle)';
   const captionColor = isResale
     ? `color-mix(in oklab, ${TIER_COLOR_RESALE} 92%, var(--fg-muted))`
-    : 'var(--fg-muted)'
+    : 'var(--fg-muted)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -103,5 +103,5 @@ export const ProvenanceCTA = ({
         </span>
       </div>
     </div>
-  )
-}
+  );
+};

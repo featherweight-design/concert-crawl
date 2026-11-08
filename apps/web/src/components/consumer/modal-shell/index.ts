@@ -1,1 +1,1 @@
-export { ModalShell } from './ModalShell'
+export { ModalShell } from './ModalShell';

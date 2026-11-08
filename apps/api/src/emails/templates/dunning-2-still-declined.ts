@@ -2,8 +2,8 @@
 // pass). Same calm signal accent as step 1; step 2 of the tracker. A fresh card
 // skips the remaining wait; Premium stays on.
 
-import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { renderDunning } from './dunning-core.js'
+import type { EmailTemplateVars, TemplateRenderer } from '../types.js';
+import { renderDunning } from './dunning-core.js';
 
 export const renderDunning2StillDeclined: TemplateRenderer<
   EmailTemplateVars['dunning_2_still_declined']
@@ -21,4 +21,4 @@ export const renderDunning2StillDeclined: TemplateRenderer<
       isFinal: false,
     },
     portalUrl,
-  )
+  );

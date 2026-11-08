@@ -162,16 +162,16 @@ launch."
 
 Env vars (prod = **live** values, staging = **sandbox**):
 
-| Key                  | Prod value                                                                                                                                         |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`           | `production`                                                                                                                                       |
-| `DATABASE_URL`       | Neon prod branch direct connection string                                                                                                          |
-| `STRIPE_SECRET_KEY`  | live `sk_live_*` (staging: sandbox key)                                                                                                            |
-| `RESEND_API_KEY`     | Resend key                                                                                                                                         |
-| `CLERK_SECRET_KEY`   | Clerk prod secret (staging: staging secret)                                                                                                        |
-| `SENTRY_DSN`         | API Sentry DSN                                                                                                                                     |
+| Key                  | Prod value                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`           | `production`                                                                                                                              |
+| `DATABASE_URL`       | Neon prod branch direct connection string                                                                                                 |
+| `STRIPE_SECRET_KEY`  | live `sk_live_*` (staging: sandbox key)                                                                                                   |
+| `RESEND_API_KEY`     | Resend key                                                                                                                                |
+| `CLERK_SECRET_KEY`   | Clerk prod secret (staging: staging secret)                                                                                               |
+| `SENTRY_DSN`         | API Sentry DSN                                                                                                                            |
 | `SENTRY_ENVIRONMENT` | `production` (staging: `staging`) — must differ per env so Sentry issues are attributed correctly; don't copy the prod value into staging |
-| `LOG_LEVEL`          | `info`                                                                                                                                             |
+| `LOG_LEVEL`          | `info`                                                                                                                                    |
 
 ### Test it before go-live
 

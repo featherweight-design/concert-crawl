@@ -1,11 +1,11 @@
-import React from 'react'
+import React from 'react';
 
 interface SectionHeadProps {
   /** Anchor target — the player's skip link points at this. */
-  id?: string
-  title: string
+  id?: string;
+  title: string;
   /** Rendered only when non-null; the unit is always SHOWS, never items. */
-  count?: string | null
+  count?: string | null;
 }
 
 /** A real `<h2>` plus a rule. Section structure is announced, not implied. */
@@ -47,4 +47,4 @@ export const SectionHead = ({ id, title, count }: SectionHeadProps) => (
       </span>
     ) : null}
   </div>
-)
+);

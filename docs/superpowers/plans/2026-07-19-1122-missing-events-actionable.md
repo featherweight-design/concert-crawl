@@ -54,9 +54,9 @@ For a missing row at venue `V`, date `D` (both `YYYY-MM-DD`):
 Pure derivation (implemented in Task 1):
 
 ```ts
-if (hasLiveSibling) return 'duplicate'
-if (venueHorizon === null || date > venueHorizon) return 'crawl_gap'
-return 'removed'
+if (hasLiveSibling) return 'duplicate';
+if (venueHorizon === null || date > venueHorizon) return 'crawl_gap';
+return 'removed';
 ```
 
 Date/horizon are `YYYY-MM-DD` strings — lexicographic `>` is correct.
@@ -86,7 +86,7 @@ Add near the other event-related exports:
  * - crawl_gap: event is beyond the furthest date the crawl currently reaches (likely pagination/depth)
  * - duplicate: a live sibling row for the same show is still being crawled
  */
-export type MissingClassification = 'removed' | 'crawl_gap' | 'duplicate'
+export type MissingClassification = 'removed' | 'crawl_gap' | 'duplicate';
 ```
 
 - [ ] **Step 2: Write the failing unit test**
@@ -94,8 +94,8 @@ export type MissingClassification = 'removed' | 'crawl_gap' | 'duplicate'
 Create `apps/api/src/routes/admin/lib/classify-missing.test.ts`:
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { classifyMissing } from './classify-missing'
+import { describe, expect, it } from 'vitest';
+import { classifyMissing } from './classify-missing';
 
 describe('classifyMissing', () => {
   it('returns duplicate when a live sibling exists, regardless of horizon', () => {
@@ -105,8 +105,8 @@ describe('classifyMissing', () => {
         venueHorizon: '2026-12-01',
         hasLiveSibling: true,
       }),
-    ).toBe('duplicate')
-  })
+    ).toBe('duplicate');
+  });
 
   it('returns crawl_gap when the event is beyond the venue horizon', () => {
     expect(
@@ -115,8 +115,8 @@ describe('classifyMissing', () => {
         venueHorizon: '2026-11-30',
         hasLiveSibling: false,
       }),
-    ).toBe('crawl_gap')
-  })
+    ).toBe('crawl_gap');
+  });
 
   it('returns crawl_gap when the venue has no currently-seen future events', () => {
     expect(
@@ -125,8 +125,8 @@ describe('classifyMissing', () => {
         venueHorizon: null,
         hasLiveSibling: false,
       }),
-    ).toBe('crawl_gap')
-  })
+    ).toBe('crawl_gap');
+  });
 
   it('returns removed when the crawl reaches past this date but dropped the show', () => {
     expect(
@@ -135,8 +135,8 @@ describe('classifyMissing', () => {
         venueHorizon: '2026-12-01',
         hasLiveSibling: false,
       }),
-    ).toBe('removed')
-  })
+    ).toBe('removed');
+  });
 
   it('treats an event on the horizon date itself as removed', () => {
     expect(
@@ -145,9 +145,9 @@ describe('classifyMissing', () => {
         venueHorizon: '2026-12-01',
         hasLiveSibling: false,
       }),
-    ).toBe('removed')
-  })
-})
+    ).toBe('removed');
+  });
+});
 ```
 
 - [ ] **Step 3: Run the test to verify it fails**
@@ -160,15 +160,15 @@ Expected: FAIL — cannot find module `./classify-missing`.
 Create `apps/api/src/routes/admin/lib/classify-missing.ts`:
 
 ```ts
-import { type MissingClassification } from '@concert-crawl/types'
+import { type MissingClassification } from '@concert-crawl/types';
 
 export interface MissingClassificationInput {
   /** Event date, YYYY-MM-DD. */
-  date: string
+  date: string;
   /** Max date among the venue's currently-seen future events, YYYY-MM-DD, or null if none. */
-  venueHorizon: string | null
+  venueHorizon: string | null;
   /** True when a live sibling row for the same show is still being crawled. */
-  hasLiveSibling: boolean
+  hasLiveSibling: boolean;
 }
 
 export const classifyMissing = ({
@@ -176,10 +176,10 @@ export const classifyMissing = ({
   venueHorizon,
   hasLiveSibling,
 }: MissingClassificationInput): MissingClassification => {
-  if (hasLiveSibling) return 'duplicate'
-  if (venueHorizon === null || date > venueHorizon) return 'crawl_gap'
-  return 'removed'
-}
+  if (hasLiveSibling) return 'duplicate';
+  if (venueHorizon === null || date > venueHorizon) return 'crawl_gap';
+  return 'removed';
+};
 ```
 
 - [ ] **Step 5: Run the test to verify it passes**
@@ -225,28 +225,28 @@ it('classifies missing events and returns venue cluster counts', async () => {
   const res = await app.request(
     '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
     { headers: adminAuthHeaders },
-  )
-  expect(res.status).toBe(200)
-  const body = await res.json()
+  );
+  expect(res.status).toBe(200);
+  const body = await res.json();
   const rows = body.data.rows as Array<{
-    id: string
-    date: string
-    classification: string
-    clusterCount: number
-  }>
+    id: string;
+    date: string;
+    classification: string;
+    clusterCount: number;
+  }>;
 
-  const byDate = Object.fromEntries(rows.map((r) => [r.date, r]))
-  expect(byDate[withinHorizonDate].classification).toBe('removed')
-  expect(byDate[beyondHorizonDate].classification).toBe('crawl_gap')
-  expect(byDate[siblingDate].classification).toBe('duplicate')
+  const byDate = Object.fromEntries(rows.map((r) => [r.date, r]));
+  expect(byDate[withinHorizonDate].classification).toBe('removed');
+  expect(byDate[beyondHorizonDate].classification).toBe('crawl_gap');
+  expect(byDate[siblingDate].classification).toBe('duplicate');
 
   // All missing rows at this venue share the cluster count (3 admin-visible missing).
-  for (const row of rows) expect(row.clusterCount).toBe(3)
+  for (const row of rows) expect(row.clusterCount).toBe(3);
 
   // Sorted soonest-show-first.
-  const dates = rows.map((r) => r.date)
-  expect(dates).toEqual([...dates].sort())
-})
+  const dates = rows.map((r) => r.date);
+  expect(dates).toEqual([...dates].sort());
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -322,7 +322,7 @@ const missingSelect = db
     )`,
   })
   .from(events)
-  .leftJoin(venues, eq(events.venueId, venues.id))
+  .leftJoin(venues, eq(events.venueId, venues.id));
 ```
 
 > Note: `${events}` inside a raw `sql` template renders the table name; the inner alias (`sib`/`h`/`c`) disambiguates it from the correlated outer reference. If Drizzle's interpolation of `${events}` as a FROM target needs `sql.raw('events')`, the implementer should adjust — verify against the generated SQL in the failing test output.
@@ -342,7 +342,7 @@ const rowsPromise = missing
       .where(whereClause)
       .orderBy(asc(events.date), desc(events.createdAt))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 ```
 
 Then map the classification onto the returned rows before responding. Extract a small mapper so both the `count` and non-`count` paths share it:
@@ -350,9 +350,9 @@ Then map the classification onto the returned rows before responding. Extract a 
 ```ts
 const withClassification = <
   T extends {
-    date: string
-    venueHorizon: string | null
-    hasLiveSibling: boolean
+    date: string;
+    venueHorizon: string | null;
+    hasLiveSibling: boolean;
   },
 >(
   rows: T[],
@@ -364,26 +364,26 @@ const withClassification = <
       venueHorizon,
       hasLiveSibling,
     }),
-  }))
+  }));
 ```
 
 Apply it in both response paths, but only for the missing branch (the standard branch has no `venueHorizon`/`hasLiveSibling`):
 
 ```ts
 if (!count) {
-  const rows = await rowsPromise
+  const rows = await rowsPromise;
   return ctx.json({
     success: true,
     data: missing ? withClassification(rows) : rows,
-  })
+  });
 }
 // ...
-const [rows, countResult] = await Promise.all([rowsPromise, countQuery])
-const total = countResult[0]?.total ?? 0
+const [rows, countResult] = await Promise.all([rowsPromise, countQuery]);
+const total = countResult[0]?.total ?? 0;
 return ctx.json({
   success: true,
   data: { rows: missing ? withClassification(rows) : rows, total },
-})
+});
 ```
 
 `venueHorizon` and `hasLiveSibling` are stripped from the response by the mapper's destructure — they're internal facts, not part of the API contract. `clusterCount` stays.
@@ -393,7 +393,7 @@ return ctx.json({
 Ensure `asc` is imported (it is — used by the standard branch), and add:
 
 ```ts
-import { classifyMissing } from './lib/classify-missing'
+import { classifyMissing } from './lib/classify-missing';
 ```
 
 Update the comment at lines 297–300 to describe the new order (`date ASC`) and the classification/cluster enrichment.
@@ -426,18 +426,18 @@ git commit -m "feat(admin): classify + cluster + soonest-first sort for missing 
 - [ ] **Step 1: Extend `MissingRowEvent`**
 
 ```ts
-import { type MissingClassification } from '@concert-crawl/types'
+import { type MissingClassification } from '@concert-crawl/types';
 
 export interface MissingRowEvent {
-  id: string
-  title: string
-  venueName: string | null
-  date: string
-  showTime: string | null
-  lastSeenAt: string | null
-  firstMissingAt: string
-  classification: MissingClassification
-  clusterCount: number
+  id: string;
+  title: string;
+  venueName: string | null;
+  date: string;
+  showTime: string | null;
+  lastSeenAt: string | null;
+  firstMissingAt: string;
+  classification: MissingClassification;
+  clusterCount: number;
 }
 ```
 
@@ -486,11 +486,11 @@ clusterBadge: (count: number, venue: string) => `${count} missing at ${venue}`,
 Extend props and rendering. Cluster badge shows only when `clusterCount >= 3` (systemic venue issue — singletons and pairs stay quiet):
 
 ```tsx
-import { type MissingClassification } from '@concert-crawl/types'
-import { StatusBadge } from '@/components/admin/primitives'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { type MissingClassification } from '@concert-crawl/types';
+import { StatusBadge } from '@/components/admin/primitives';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-const CLUSTER_THRESHOLD = 3
+const CLUSTER_THRESHOLD = 3;
 
 const classificationBadge: Record<
   MissingClassification,
@@ -508,13 +508,13 @@ const classificationBadge: Record<
     label: ADMIN_COPY.review.missing.classificationDuplicate,
     kind: 'neutral',
   },
-}
+};
 
 export interface MissingChipsProps {
-  missedCount: number
-  classification: MissingClassification
-  clusterCount: number
-  venueName: string | null
+  missedCount: number;
+  classification: MissingClassification;
+  clusterCount: number;
+  venueName: string | null;
 }
 
 export const MissingChips = ({
@@ -523,8 +523,8 @@ export const MissingChips = ({
   clusterCount,
   venueName,
 }: MissingChipsProps) => {
-  const missedKind = missedCount >= 4 ? 'danger' : 'warning'
-  const cls = classificationBadge[classification]
+  const missedKind = missedCount >= 4 ? 'danger' : 'warning';
+  const cls = classificationBadge[classification];
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
       <StatusBadge kind={cls.kind} variant="outline" mono>
@@ -545,8 +545,8 @@ export const MissingChips = ({
         </StatusBadge>
       )}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 3: Pass the new props at both call sites**
@@ -623,39 +623,39 @@ Create `packages/crawler-core/src/reconcile-drift-duplicates.integration.test.ts
 ```ts
 it('reassigns FK rows to the live sibling and deletes the drift orphan', async () => {
   // ...seed per the four rows above...
-  const result = await reconcileDriftDuplicates(venueId)
+  const result = await reconcileDriftDuplicates(venueId);
 
-  expect(result.reconciledLosers).toBe(1)
+  expect(result.reconciledLosers).toBe(1);
 
   // Orphan deleted; sibling + unrelated row survive.
   const remaining = await db
     .select({ id: events.id })
     .from(events)
-    .where(eq(events.venueId, venueId))
-  const ids = remaining.map((r) => r.id)
-  expect(ids).toContain(siblingId)
-  expect(ids).toContain(unrelatedId)
-  expect(ids).not.toContain(orphanId)
+    .where(eq(events.venueId, venueId));
+  const ids = remaining.map((r) => r.id);
+  expect(ids).toContain(siblingId);
+  expect(ids).toContain(unrelatedId);
+  expect(ids).not.toContain(orphanId);
 
   // Watch + price submission now point at the sibling.
   const watch = await db
     .select({ eventId: userEvents.eventId })
     .from(userEvents)
-    .where(eq(userEvents.id, watchId))
-  expect(watch[0]?.eventId).toBe(siblingId)
+    .where(eq(userEvents.id, watchId));
+  expect(watch[0]?.eventId).toBe(siblingId);
 
   const sub = await db
     .select({ eventId: priceSubmissions.eventId })
     .from(priceSubmissions)
-    .where(eq(priceSubmissions.id, submissionId))
-  expect(sub[0]?.eventId).toBe(siblingId)
-})
+    .where(eq(priceSubmissions.id, submissionId));
+  expect(sub[0]?.eventId).toBe(siblingId);
+});
 
 it('is a no-op when there are no drift orphans', async () => {
   // seed a venue with only a live sibling + one genuinely-gone missing row (no containment)
-  const result = await reconcileDriftDuplicates(venueId)
-  expect(result.reconciledLosers).toBe(0)
-})
+  const result = await reconcileDriftDuplicates(venueId);
+  expect(result.reconciledLosers).toBe(0);
+});
 ```
 
 Add the FK-table-set guard test in the same file — the CI replacement for the sweep's `RAISE EXCEPTION`:
@@ -673,10 +673,10 @@ it('EVENT_FK_TABLES matches every FK table referencing events.id', async () => {
       AND ccu.table_schema = 'public'
       AND ccu.table_name = 'events'
       AND ccu.column_name = 'id'
-  `)
-  const actual = [...rows].map((r) => r.table_name).sort()
-  expect(actual).toEqual([...EVENT_FK_TABLES].sort())
-})
+  `);
+  const actual = [...rows].map((r) => r.table_name).sort();
+  expect(actual).toEqual([...EVENT_FK_TABLES].sort());
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -690,11 +690,11 @@ Expected: FAIL — module not found.
 Create `packages/crawler-core/src/reconcile-drift-duplicates.ts`. Runs one transaction: MAP orphans→winners into a temp table (scoped to `venueId`, `date >= Denver-today`), build the `event_target` dedup map, REASSIGN the five FK tables (user_events + spotify_alert_log deduped, the other three plain), DELETE losers, return the loser count.
 
 ```ts
-import { sql } from 'drizzle-orm'
-import { db } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
+import { sql } from 'drizzle-orm';
+import { db } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
 
-const logger = createLogger('reconcile-drift-duplicates')
+const logger = createLogger('reconcile-drift-duplicates');
 
 /**
  * FK tables referencing events.id. Kept in sync with the DB by the
@@ -708,7 +708,7 @@ export const EVENT_FK_TABLES = [
   'price_submissions',
   'spotify_alert_log',
   'user_events',
-] as const
+] as const;
 
 /**
  * Runtime analogue of scripts/2026-07-19-missing-event-orphan-cleanup.sql,
@@ -757,17 +757,17 @@ export const reconcileDriftDuplicates = async (
             OR strpos(o.canonical_title, s.canonical_artist) > 0 )
       )
       SELECT loser_id, winner_id FROM candidates WHERE rn = 1
-    `)
+    `);
 
     const [{ loser_count }] = [
       ...(await tx.execute(
         sql`SELECT COUNT(*)::int AS loser_count FROM orphan_map`,
       )),
-    ] as Array<{ loser_count: number }>
+    ] as Array<{ loser_count: number }>;
 
     if (loser_count === 0) {
       // Temp table is ON COMMIT DROP — nothing to clean up, just return.
-      return { reconciledLosers: 0 }
+      return { reconciledLosers: 0 };
     }
 
     await tx.execute(sql`
@@ -775,7 +775,7 @@ export const reconcileDriftDuplicates = async (
       SELECT loser_id AS event_id, winner_id AS target_id FROM orphan_map
       UNION
       SELECT DISTINCT winner_id AS event_id, winner_id AS target_id FROM orphan_map
-    `)
+    `);
 
     // user_events — dedup on (user_id, target_id) then redirect.
     await tx.execute(sql`
@@ -789,11 +789,11 @@ export const reconcileDriftDuplicates = async (
       )
       DELETE FROM user_events ue USING target_user_rows tur
       WHERE ue.id = tur.ue_id AND tur.group_size > 1 AND tur.rn > 1
-    `)
+    `);
     await tx.execute(sql`
       UPDATE user_events ue SET event_id = om.winner_id
       FROM orphan_map om WHERE ue.event_id = om.loser_id
-    `)
+    `);
 
     // spotify_alert_log — dedup on (user_id, kind, target_id) then redirect.
     await tx.execute(sql`
@@ -807,37 +807,37 @@ export const reconcileDriftDuplicates = async (
       )
       DELETE FROM spotify_alert_log sal USING target_alert_rows tar
       WHERE sal.id = tar.sal_id AND tar.group_size > 1 AND tar.rn > 1
-    `)
+    `);
     await tx.execute(sql`
       UPDATE spotify_alert_log sal SET event_id = om.winner_id
       FROM orphan_map om WHERE sal.event_id = om.loser_id
-    `)
+    `);
 
     // No user-uniqueness — plain redirect.
     await tx.execute(sql`
       UPDATE price_submissions ps SET event_id = om.winner_id
       FROM orphan_map om WHERE ps.event_id = om.loser_id
-    `)
+    `);
     await tx.execute(sql`
       UPDATE price_retrieval_log prl SET event_id = om.winner_id
       FROM orphan_map om WHERE prl.event_id = om.loser_id
-    `)
+    `);
     await tx.execute(sql`
       UPDATE event_reports er SET event_id = om.winner_id
       FROM orphan_map om WHERE er.event_id = om.loser_id
-    `)
+    `);
 
     // DELETE losers — FK rows reassigned, CASCADE has nothing to chase.
     await tx.execute(sql`
       DELETE FROM events e USING orphan_map om WHERE e.id = om.loser_id
-    `)
+    `);
 
     logger.info(
       { venueId, reconciledLosers: loser_count },
       'reconciled drift-duplicate orphans',
-    )
-    return { reconciledLosers: loser_count }
-  })
+    );
+    return { reconciledLosers: loser_count };
+  });
 ```
 
 > The `db.execute` return shape from the `postgres-js` driver is iterable rows; the `[...(await tx.execute(...))]` spread materializes them. If the implementer finds the driver returns a `{ rows }` wrapper instead, adjust the count extraction to match the shape the failing test reveals — do NOT add an `as` cast to force it.
@@ -852,7 +852,7 @@ Expected: PASS (3 tests: reassign+delete, no-op, FK-table-set guard).
 In `packages/crawler-core/src/crawl.ts`, add the import near the other local imports (line ~37):
 
 ```ts
-import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js'
+import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js';
 ```
 
 Immediately after the Pass 2 `if (seenEventCoords.length > 0) { ... }` block (ends ~line 941), add:
@@ -865,13 +865,13 @@ Immediately after the Pass 2 `if (seenEventCoords.length > 0) { ... }` block (en
 // never fail the crawl (crawl resilience is existential) — log and continue.
 if (seenEventCoords.length > 0) {
   try {
-    await reconcileDriftDuplicates(venueId)
+    await reconcileDriftDuplicates(venueId);
   } catch (err) {
     reportFailure({
       error: err,
       context: 'reconcileDriftDuplicates',
       metadata: { venueId, crawlRunId: id },
-    })
+    });
   }
 }
 ```

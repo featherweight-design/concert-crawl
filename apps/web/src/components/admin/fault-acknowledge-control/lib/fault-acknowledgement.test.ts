@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 
-import { acknowledgementEvidence } from './fault-acknowledgement'
-import type { TriageFault } from '@/components/admin/triage/definitions/types'
+import { acknowledgementEvidence } from './fault-acknowledgement';
+import type { TriageFault } from '@/components/admin/triage/definitions/types';
 
 const base = {
   id: 'f-1',
@@ -12,7 +12,7 @@ const base = {
   days: 6,
   dur: '6d',
   crawlRunId: null,
-}
+};
 
 const ceiling = (
   kind: 'pinned_count' | 'horizon_shrank',
@@ -32,22 +32,22 @@ const ceiling = (
     series: [],
   },
   ...overrides,
-})
+});
 
 describe('acknowledgementEvidence', () => {
   it('pins a count ceiling to its count', () => {
     expect(acknowledgementEvidence(ceiling('pinned_count'))).toEqual({
       evidenceKind: 'pinned_count',
       evidenceValue: '36',
-    })
-  })
+    });
+  });
 
   it('pins a shrinking horizon to its furthest date', () => {
     expect(acknowledgementEvidence(ceiling('horizon_shrank'))).toEqual({
       evidenceKind: 'horizon_shrank',
       evidenceValue: '2026-11-08',
-    })
-  })
+    });
+  });
 
   it('pins a dark venue to the count it collapsed to', () => {
     expect(
@@ -64,8 +64,8 @@ describe('acknowledgementEvidence', () => {
           series: [],
         },
       }),
-    ).toEqual({ evidenceKind: null, evidenceValue: '2' })
-  })
+    ).toEqual({ evidenceKind: null, evidenceValue: '2' });
+  });
 
   it('pins a coverage gap to the uncovered count', () => {
     expect(
@@ -74,8 +74,8 @@ describe('acknowledgementEvidence', () => {
         condition: 'coverage',
         evidence: { matched: 4, expected: 12, uncovered: 8, wasWhen: null },
       }),
-    ).toEqual({ evidenceKind: null, evidenceValue: '8' })
-  })
+    ).toEqual({ evidenceKind: null, evidenceValue: '8' });
+  });
 
   it('pins a blocked venue to its http status', () => {
     expect(
@@ -84,8 +84,8 @@ describe('acknowledgementEvidence', () => {
         condition: 'blocked',
         evidence: { status: 403, refusals: 4, lastSuccess: null },
       }),
-    ).toEqual({ evidenceKind: null, evidenceValue: '403' })
-  })
+    ).toEqual({ evidenceKind: null, evidenceValue: '403' });
+  });
 
   it('leaves the figure empty when a blocked venue returned no status', () => {
     expect(
@@ -94,8 +94,8 @@ describe('acknowledgementEvidence', () => {
         condition: 'blocked',
         evidence: { status: null, refusals: 4, lastSuccess: null },
       }),
-    ).toEqual({ evidenceKind: null, evidenceValue: null })
-  })
+    ).toEqual({ evidenceKind: null, evidenceValue: null });
+  });
 
   it('pins a failing venue to its error class', () => {
     expect(
@@ -104,6 +104,6 @@ describe('acknowledgementEvidence', () => {
         condition: 'failed',
         evidence: { failures: 3, errorClass: 'timeout', pauseAt: 3 },
       }),
-    ).toEqual({ evidenceKind: null, evidenceValue: 'timeout' })
-  })
-})
+    ).toEqual({ evidenceKind: null, evidenceValue: 'timeout' });
+  });
+});

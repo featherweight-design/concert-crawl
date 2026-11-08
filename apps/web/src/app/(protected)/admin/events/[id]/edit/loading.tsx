@@ -19,5 +19,5 @@ export default function EventEditorLoading() {
       />
       <div className="admin-skeleton" style={{ height: 140 }} />
     </div>
-  )
+  );
 }

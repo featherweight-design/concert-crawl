@@ -2,9 +2,9 @@
 // claimed count + countdown over a thin progress bar. "Hot" flips the bar
 // and count to accent.
 
-import { TIER_PICKER_COPY } from './definitions/copy'
-import { scarcityTimeText } from './lib/scarcity'
-import type { ScarcityRailData } from './definitions/types'
+import { TIER_PICKER_COPY } from './definitions/copy';
+import { scarcityTimeText } from './lib/scarcity';
+import type { ScarcityRailData } from './definitions/types';
 
 const railEyebrowStyle = (color: string): React.CSSProperties => ({
   fontFamily: 'var(--font-mono)',
@@ -13,7 +13,7 @@ const railEyebrowStyle = (color: string): React.CSSProperties => ({
   textTransform: 'uppercase',
   letterSpacing: '0.14em',
   color,
-})
+});
 
 export const ScarcityRail = ({ rail }: { rail: ScarcityRailData }) => {
   // Clamp so bad backend data (0 total, claimed > total) can't render an
@@ -21,8 +21,8 @@ export const ScarcityRail = ({ rail }: { rail: ScarcityRailData }) => {
   const pct =
     rail.seatsTotal > 0
       ? Math.min(100, Math.max(0, (rail.seatsClaimed / rail.seatsTotal) * 100))
-      : 0
-  const tone = rail.hot ? 'var(--accent)' : 'var(--signal)'
+      : 0;
+  const tone = rail.hot ? 'var(--accent)' : 'var(--signal)';
 
   return (
     <div
@@ -67,5 +67,5 @@ export const ScarcityRail = ({ rail }: { rail: ScarcityRailData }) => {
         />
       </div>
     </div>
-  )
-}
+  );
+};

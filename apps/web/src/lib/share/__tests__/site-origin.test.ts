@@ -1,37 +1,37 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { absoluteUrl, siteOrigin } from '../site-origin'
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { absoluteUrl, siteOrigin } from '../site-origin';
 
 // Read through `process.env` rather than vi.stubEnv so the "absent" case is a
 // genuinely missing key — the resolver treats undefined and '' alike, and both
 // have to fall through.
-const ORIGINAL = { ...process.env }
+const ORIGINAL = { ...process.env };
 
 afterEach(() => {
-  process.env = { ...ORIGINAL }
-})
+  process.env = { ...ORIGINAL };
+});
 
 const setEnv = (vars: Record<string, string | undefined>) => {
   for (const [key, value] of Object.entries(vars)) {
-    if (value === undefined) delete process.env[key]
-    else process.env[key] = value
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
   }
-}
+};
 
 describe('siteOrigin', () => {
   it('prefers the explicitly configured site URL', () => {
     setEnv({
       NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app',
       VERCEL_URL: 'preview-abc.vercel.app',
-    })
+    });
 
-    expect(siteOrigin()).toBe('https://concertcrawl.app')
-  })
+    expect(siteOrigin()).toBe('https://concertcrawl.app');
+  });
 
   it('trims a trailing slash so paths never double up', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app/' })
+    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app/' });
 
-    expect(absoluteUrl('/e/abc')).toBe('https://concertcrawl.app/e/abc')
-  })
+    expect(absoluteUrl('/e/abc')).toBe('https://concertcrawl.app/e/abc');
+  });
 
   // The var Vercel actually sets is unprefixed: it resolves server-side only,
   // in generateMetadata. Reading a NEXT_PUBLIC_ twin would find nothing on a
@@ -40,51 +40,51 @@ describe('siteOrigin', () => {
     setEnv({
       NEXT_PUBLIC_SITE_URL: undefined,
       VERCEL_URL: 'concert-crawl-git-main.vercel.app',
-    })
+    });
 
-    expect(siteOrigin()).toBe('https://concert-crawl-git-main.vercel.app')
-  })
+    expect(siteOrigin()).toBe('https://concert-crawl-git-main.vercel.app');
+  });
 
   it('treats an empty configured value as unset', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: '', VERCEL_URL: 'preview-abc.vercel.app' })
+    setEnv({ NEXT_PUBLIC_SITE_URL: '', VERCEL_URL: 'preview-abc.vercel.app' });
 
-    expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
-  })
+    expect(siteOrigin()).toBe('https://preview-abc.vercel.app');
+  });
 
   // A dashboard-entered variable picks up a stray space far more often than
   // anyone admits, and the resulting URL is unfetchable by every crawler.
   it('tolerates surrounding whitespace on a configured value', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: '  https://concertcrawl.app  ' })
+    setEnv({ NEXT_PUBLIC_SITE_URL: '  https://concertcrawl.app  ' });
 
-    expect(siteOrigin()).toBe('https://concertcrawl.app')
-  })
+    expect(siteOrigin()).toBe('https://concertcrawl.app');
+  });
 
   it('reduces a configured value carrying a path to its origin', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app/events/' })
+    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app/events/' });
 
-    expect(siteOrigin()).toBe('https://concertcrawl.app')
-  })
+    expect(siteOrigin()).toBe('https://concertcrawl.app');
+  });
 
   // Skipping to the next source beats emitting a URL nothing can fetch.
   it('skips a configured value that is not a usable origin', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     setEnv({
       NEXT_PUBLIC_SITE_URL: 'concertcrawl.app',
       VERCEL_URL: 'preview-abc.vercel.app',
-    })
+    });
 
-    expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
-  })
+    expect(siteOrigin()).toBe('https://preview-abc.vercel.app');
+  });
 
   it('refuses a configured value on a non-http scheme', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     setEnv({
       NEXT_PUBLIC_SITE_URL: 'javascript:alert(1)',
       VERCEL_URL: undefined,
-    })
+    });
 
-    expect(siteOrigin()).toBe('http://localhost:3000')
-  })
+    expect(siteOrigin()).toBe('http://localhost:3000');
+  });
 
   // Vercel documents this one as host-only, but a scheme sneaking in must not
   // become `https://https`.
@@ -92,24 +92,24 @@ describe('siteOrigin', () => {
     setEnv({
       NEXT_PUBLIC_SITE_URL: undefined,
       VERCEL_URL: 'https://preview-abc.vercel.app',
-    })
+    });
 
-    expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
-  })
+    expect(siteOrigin()).toBe('https://preview-abc.vercel.app');
+  });
 
   it('falls through to the dev server when nothing is configured', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: undefined, VERCEL_URL: undefined })
+    setEnv({ NEXT_PUBLIC_SITE_URL: undefined, VERCEL_URL: undefined });
 
-    expect(siteOrigin()).toBe('http://localhost:3000')
-  })
-})
+    expect(siteOrigin()).toBe('http://localhost:3000');
+  });
+});
 
 describe('absoluteUrl', () => {
   it('joins a path that carries no leading slash', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
+    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' });
 
     expect(absoluteUrl('share/abc/link')).toBe(
       'https://concertcrawl.app/share/abc/link',
-    )
-  })
-})
+    );
+  });
+});

@@ -1,27 +1,27 @@
-import { notFound } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
-import type { VenueWithEvents, EventWithVenue } from '@concert-crawl/types'
-import { resolveGuideViewerMode } from '@concert-crawl/types'
-import { publicApiClient, apiClient } from '@/lib/api'
-import { fetchWatching } from '@/lib/watching'
-import { SectionHeader } from '@/components/consumer/section-header'
+import { notFound } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
+import type { VenueWithEvents, EventWithVenue } from '@concert-crawl/types';
+import { resolveGuideViewerMode } from '@concert-crawl/types';
+import { publicApiClient, apiClient } from '@/lib/api';
+import { fetchWatching } from '@/lib/watching';
+import { SectionHeader } from '@/components/consumer/section-header';
 import {
   FirstTimerCallout,
   GuideSection,
-} from '@/components/consumer/venue-guide'
-import { EmptyState } from '@/components/consumer/empty-state'
-import { googleMapsUrl } from '@/components/consumer/definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
-import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
-import { StatPill } from '@/components/consumer/venue-profile/StatPill'
-import { BackChip } from '@/components/consumer/back-chip/BackChip'
+} from '@/components/consumer/venue-guide';
+import { EmptyState } from '@/components/consumer/empty-state';
+import { googleMapsUrl } from '@/components/consumer/definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt';
+import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList';
+import { StatPill } from '@/components/consumer/venue-profile/StatPill';
+import { BackChip } from '@/components/consumer/back-chip/BackChip';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
 interface VenueProfilePageProps {
-  params: Promise<{ slug: string }>
-  searchParams: Promise<{ highlight?: string }>
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ highlight?: string }>;
 }
 
 async function fetchVenueWithEvents(
@@ -30,11 +30,11 @@ async function fetchVenueWithEvents(
 ): Promise<VenueWithEvents | null> {
   try {
     if (token) {
-      return await apiClient.get<VenueWithEvents>(`/v1/venues/${slug}`, token)
+      return await apiClient.get<VenueWithEvents>(`/v1/venues/${slug}`, token);
     }
-    return await publicApiClient.get<VenueWithEvents>(`/v1/venues/${slug}`)
+    return await publicApiClient.get<VenueWithEvents>(`/v1/venues/${slug}`);
   } catch {
-    return null
+    return null;
   }
 }
 
@@ -42,19 +42,19 @@ export default async function VenueProfilePage({
   params,
   searchParams,
 }: VenueProfilePageProps) {
-  const { slug } = await params
-  const { highlight } = await searchParams
-  const { getToken } = await auth()
-  const token = await getToken()
+  const { slug } = await params;
+  const { highlight } = await searchParams;
+  const { getToken } = await auth();
+  const token = await getToken();
 
   const [result, watchedShows] = await Promise.all([
     fetchVenueWithEvents(slug, token),
     token ? fetchWatching(token).catch(() => []) : Promise.resolve([]),
-  ])
-  if (!result) notFound()
+  ]);
+  if (!result) notFound();
 
-  const { venue, upcomingEvents } = result
-  const watchedIds = watchedShows.map((show) => show.eventId)
+  const { venue, upcomingEvents } = result;
+  const watchedIds = watchedShows.map((show) => show.eventId);
 
   // Enrich events with venue data so EventCard can render venue links
   const enrichedEvents: EventWithVenue[] = upcomingEvents.map((ev) => ({
@@ -67,17 +67,17 @@ export default async function VenueProfilePage({
       websiteUrl: venue.websiteUrl,
       timezone: venue.timezone,
     },
-  }))
+  }));
 
   const guideViewerMode = resolveGuideViewerMode({
     isSignedIn: token !== null,
     hasAttendedVenue: result.viewerHasAttended,
-  })
+  });
 
-  const mapSearchQuery = `${venue.name}, ${venue.city}`
-  const hasStats = venue.capacity != null || venue.venueType != null
+  const mapSearchQuery = `${venue.name}, ${venue.city}`;
+  const hasStats = venue.capacity != null || venue.venueType != null;
   const capacityFormatted =
-    venue.capacity != null ? venue.capacity.toLocaleString('en-US') : '—'
+    venue.capacity != null ? venue.capacity.toLocaleString('en-US') : '—';
 
   return (
     <>
@@ -268,5 +268,5 @@ export default async function VenueProfilePage({
         </div>
       </div>
     </>
-  )
+  );
 }

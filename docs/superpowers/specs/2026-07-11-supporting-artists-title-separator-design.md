@@ -19,8 +19,12 @@ This brief locks the decisions for restoring visible structure to the "everythin
 - The rendering pattern is **uniform** across surfaces. Wherever it appears:
 
   ```tsx
-  {event.artist}
-  {event.title !== event.artist && <p>{event.title}</p>}
+  {
+    event.artist;
+  }
+  {
+    event.title !== event.artist && <p>{event.title}</p>;
+  }
   ```
 
   Files: `apps/web/src/components/consumer/event-card/EventCard.tsx`, `apps/web/src/components/consumer/hero-event-card/HeroEventCard.tsx`, `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx`.
@@ -70,14 +74,14 @@ Same visual pattern, sized appropriately per surface.
 
 ## What's NOT in this brief
 
-| Concern | Owner |
-|---|---|
+| Concern                                                           | Owner                                                                                                                |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Support Act Spotlight — clickable openers linking to artist pages | [#84](https://github.com/HartiganHM/concert-crawl/issues/84) (separate ticket; this brief just avoids precluding it) |
-| Artist page / opener detail view design | Out of scope — no artist detail page exists yet |
-| LLM extraction prompt changes for opener/tour separation | Eng — build PR owns the crawler-core + LLM prompt change |
-| Backfill strategy for historical events' `title` strings | Eng — build PR owns re-crawl / migration strategy |
-| Headliner name treatment (the `event.artist` line above) | Out of scope — the beta feedback is about the line below the headliner |
-| Featured tag / genre chips / other card metadata | Out of scope — pattern is additive to the openers line only |
+| Artist page / opener detail view design                           | Out of scope — no artist detail page exists yet                                                                      |
+| LLM extraction prompt changes for opener/tour separation          | Eng — build PR owns the crawler-core + LLM prompt change                                                             |
+| Backfill strategy for historical events' `title` strings          | Eng — build PR owns re-crawl / migration strategy                                                                    |
+| Headliner name treatment (the `event.artist` line above)          | Out of scope — the beta feedback is about the line below the headliner                                               |
+| Featured tag / genre chips / other card metadata                  | Out of scope — pattern is additive to the openers line only                                                          |
 
 ## Open for Design to call
 

@@ -1,15 +1,15 @@
-import Link from 'next/link'
-import type { CrewSummary } from '@concert-crawl/types'
+import Link from 'next/link';
+import type { CrewSummary } from '@concert-crawl/types';
 
-import { CrewPatch } from '@/components/consumer/crew-patch'
-import { MemberCluster } from './MemberCluster'
-import { CREWS_COPY } from './definitions/copy'
+import { CrewPatch } from '@/components/consumer/crew-patch';
+import { MemberCluster } from './MemberCluster';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY.list
+const COPY = CREWS_COPY.list;
 
 interface CrewRowProps {
-  crew: CrewSummary
-  wide: boolean
+  crew: CrewSummary;
+  wide: boolean;
 }
 
 /**
@@ -21,7 +21,7 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
   const meta =
     crew.memberCount === 1
       ? COPY.justYou
-      : COPY.upcomingMeta(crew.upcomingCount)
+      : COPY.upcomingMeta(crew.upcomingCount);
 
   return (
     <Link
@@ -109,5 +109,5 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
         />
       </svg>
     </Link>
-  )
-}
+  );
+};

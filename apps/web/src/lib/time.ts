@@ -1,5 +1,5 @@
 /** @deprecated Use venue.timezone directly. Kept for admin components until they are updated. */
-export const DENVER_TIME_ZONE = 'America/Denver'
+export const DENVER_TIME_ZONE = 'America/Denver';
 
 /** Returns the current date as a YYYY-MM-DD string in the given IANA timezone. */
 export function localDateString(timezone: string): string {
@@ -8,17 +8,17 @@ export function localDateString(timezone: string): string {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date())
+  }).formatToParts(new Date());
 
-  const year = parts.find((part) => part.type === 'year')?.value
-  const month = parts.find((part) => part.type === 'month')?.value
-  const day = parts.find((part) => part.type === 'day')?.value
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
 
   if (!year || !month || !day) {
-    throw new Error(`Unable to derive current date for timezone: ${timezone}`)
+    throw new Error(`Unable to derive current date for timezone: ${timezone}`);
   }
 
-  return `${year}-${month}-${day}`
+  return `${year}-${month}-${day}`;
 }
 
 export const formatISODate = (
@@ -35,10 +35,10 @@ export const formatISODate = (
 ): string =>
   new Intl.DateTimeFormat('en-US', { timeZone, ...options }).format(
     new Date(iso),
-  )
+  );
 
 export const formatDurationMs = (ms: number | null): string => {
-  if (ms === null) return '—'
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
-}
+  if (ms === null) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+};

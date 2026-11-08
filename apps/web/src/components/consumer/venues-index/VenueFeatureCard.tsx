@@ -1,29 +1,29 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
+import Link from 'next/link';
 import {
   IdentityArt,
   ia_getInitials,
   ia_isDark,
   identityFor,
-} from '../identity-art/IdentityArt'
+} from '../identity-art/IdentityArt';
 import {
   fmtNum,
   fmtDistance,
   type VenueWithDistance,
-} from './venue-filter-defs'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+} from './venue-filter-defs';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex
+const VENUES_INDEX_COPY = CONSUMER_COPY.venuesIndex;
 
 interface VenueFeatureCardProps {
-  venue: VenueWithDistance
+  venue: VenueWithDistance;
 }
 
 export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
-  const identity = identityFor(venue.name, 'venue')
-  const dark = ia_isDark(identity.palette.bg)
-  const initials = ia_getInitials(venue.name, 2)
+  const identity = identityFor(venue.name, 'venue');
+  const dark = ia_isDark(identity.palette.bg);
+  const initials = ia_getInitials(venue.name, 2);
 
   return (
     <Link href={`/venues/${venue.slug}`} className="group block w-full">
@@ -389,5 +389,5 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
         </div>
       </div>
     </Link>
-  )
+  );
 }

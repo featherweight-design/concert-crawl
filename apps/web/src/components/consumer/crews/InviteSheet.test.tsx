@@ -1,50 +1,56 @@
 // @vitest-environment jsdom
 
-import '@testing-library/jest-dom'
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
+import '@testing-library/jest-dom';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import {
+  render,
+  screen,
+  fireEvent,
+  cleanup,
+  act,
+} from '@testing-library/react';
 
 // One stable `getToken` for the whole file. A fresh function per render would
 // re-fire the sheet's load effect on every render, which no real Clerk hook
 // does, and which quietly hides any bug in that effect's reset branch.
-const getToken = async () => 'tok'
+const getToken = async () => 'tok';
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken }),
-}))
+}));
 
-const fetchCurrentInvite = vi.fn()
-const mintInvite = vi.fn()
-const revokeInvite = vi.fn()
+const fetchCurrentInvite = vi.fn();
+const mintInvite = vi.fn();
+const revokeInvite = vi.fn();
 vi.mock('@/lib/crews', () => ({
   fetchCurrentInvite: (...args: unknown[]) => fetchCurrentInvite(...args),
   mintInvite: (...args: unknown[]) => mintInvite(...args),
   revokeInvite: (...args: unknown[]) => revokeInvite(...args),
-}))
+}));
 
-import { InviteSheet } from './InviteSheet'
-import { CREWS_COPY } from './definitions/copy'
+import { InviteSheet } from './InviteSheet';
+import { CREWS_COPY } from './definitions/copy';
 
-const COPY = CREWS_COPY.invite
+const COPY = CREWS_COPY.invite;
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 const link = {
   id: 'inv-1',
   token: 'tok-abc',
   expiresAt: new Date(Date.now() + 6 * 86_400_000).toISOString(),
-}
+};
 
 beforeEach(() => {
-  fetchCurrentInvite.mockReset().mockResolvedValue(link)
-  mintInvite.mockReset().mockResolvedValue(link)
-  revokeInvite.mockReset()
+  fetchCurrentInvite.mockReset().mockResolvedValue(link);
+  mintInvite.mockReset().mockResolvedValue(link);
+  revokeInvite.mockReset();
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-  }))
-})
+  }));
+});
 
 const mount = (open: boolean) =>
   render(
@@ -56,22 +62,22 @@ const mount = (open: boolean) =>
       patchSalt={1}
       memberCount={2}
     />,
-  )
+  );
 
 describe('InviteSheet (#1226)', () => {
   // A revoke that is still in flight when the sheet is dismissed used to leave
   // `busy` true, so every button on the next open was disabled with nothing
   // running to re-enable them.
   it('re-enables its buttons after being dismissed mid-revoke', async () => {
-    revokeInvite.mockReturnValue(new Promise(() => undefined))
-    const view = mount(true)
-    await screen.findByText(`${COPY.expiry(6)}`)
+    revokeInvite.mockReturnValue(new Promise(() => undefined));
+    const view = mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.revoke }))
-    expect(screen.getByRole('button', { name: COPY.newLink })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: COPY.revoke }));
+    expect(screen.getByRole('button', { name: COPY.newLink })).toBeDisabled();
     // Every button's disabled state matches its handler's own guard, so none
     // of them is a control that looks live and silently does nothing.
-    expect(screen.getByRole('button', { name: COPY.copy })).toBeDisabled()
+    expect(screen.getByRole('button', { name: COPY.copy })).toBeDisabled();
 
     view.rerender(
       <InviteSheet
@@ -82,7 +88,7 @@ describe('InviteSheet (#1226)', () => {
         patchSalt={1}
         memberCount={2}
       />,
-    )
+    );
     view.rerender(
       <InviteSheet
         open
@@ -92,11 +98,11 @@ describe('InviteSheet (#1226)', () => {
         patchSalt={1}
         memberCount={2}
       />,
-    )
+    );
 
-    await screen.findByText(`${COPY.expiry(6)}`)
-    expect(screen.getByRole('button', { name: COPY.newLink })).toBeEnabled()
-  })
+    await screen.findByText(`${COPY.expiry(6)}`);
+    expect(screen.getByRole('button', { name: COPY.newLink })).toBeEnabled();
+  });
 
   // `writeText` throws rather than rejecting on an insecure origin, so the
   // rejection handler alone never runs and the click took the sheet down.
@@ -104,55 +110,55 @@ describe('InviteSheet (#1226)', () => {
     Object.defineProperty(navigator, 'clipboard', {
       value: undefined,
       configurable: true,
-    })
-    mount(true)
-    await screen.findByText(`${COPY.expiry(6)}`)
+    });
+    mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
-    expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed)
-  })
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }));
+    expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed);
+  });
 
   // The failure notice used to outlive the attempt that caused it, so a copy
   // that worked still sat under a message saying it had not.
   it('clears an earlier failure once a later copy succeeds', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined)
+    const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       value: undefined,
       configurable: true,
-    })
-    mount(true)
-    await screen.findByText(`${COPY.expiry(6)}`)
+    });
+    mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
-    expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed)
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }));
+    expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed);
 
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
       configurable: true,
-    })
-    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('tok-abc'))
-  })
+    });
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('tok-abc'));
+  });
 
   // The clipboard promise can resolve after the sheet is gone, which used to
   // set `copied` past the close reset and open the sheet already claiming a
   // copy the customer never made on this visit.
   it('does not report a copy that resolved after the sheet closed', async () => {
-    let settle = (): void => undefined
+    let settle = (): void => undefined;
     const writeText = vi.fn(
       () =>
         new Promise<void>((resolve) => {
-          settle = resolve
+          settle = resolve;
         }),
-    )
+    );
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText },
       configurable: true,
-    })
-    const view = mount(true)
-    await screen.findByText(`${COPY.expiry(6)}`)
-    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
+    });
+    const view = mount(true);
+    await screen.findByText(`${COPY.expiry(6)}`);
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }));
 
     view.rerender(
       <InviteSheet
@@ -163,10 +169,10 @@ describe('InviteSheet (#1226)', () => {
         patchSalt={1}
         memberCount={2}
       />,
-    )
+    );
     await act(async () => {
-      settle()
-    })
+      settle();
+    });
     view.rerender(
       <InviteSheet
         open
@@ -176,10 +182,10 @@ describe('InviteSheet (#1226)', () => {
         patchSalt={1}
         memberCount={2}
       />,
-    )
+    );
 
-    await screen.findByText(`${COPY.expiry(6)}`)
-    expect(writeText).toHaveBeenCalled()
-    expect(screen.queryAllByText(COPY.copied)).toHaveLength(0)
-  })
-})
+    await screen.findByText(`${COPY.expiry(6)}`);
+    expect(writeText).toHaveBeenCalled();
+    expect(screen.queryAllByText(COPY.copied)).toHaveLength(0);
+  });
+});

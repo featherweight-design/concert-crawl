@@ -5,46 +5,46 @@ import type {
   CrewShow,
   CrewSummary,
   PublicCrewInvite,
-} from '@concert-crawl/types'
-import { apiClient } from './api'
+} from '@concert-crawl/types';
+import { apiClient } from './api';
 
 /**
  * The 409 code on join when the crew filled up between the landing render and
  * the tap. Re-exported from the wire contract so the landing reads the same
  * spelling the API sends.
  */
-export { CREW_FULL_CODE } from '@concert-crawl/types'
+export { CREW_FULL_CODE } from '@concert-crawl/types';
 
 /** The three dead-link outcomes the invite endpoints answer 404 with. */
-export type CrewInviteDeadReason = 'unknown' | 'expired' | 'revoked'
+export type CrewInviteDeadReason = 'unknown' | 'expired' | 'revoked';
 
 /** Narrows `ApiError.reason`, which is a plain string on the wire. */
 export const isCrewInviteDeadReason = (
   value: unknown,
 ): value is CrewInviteDeadReason =>
-  value === 'unknown' || value === 'expired' || value === 'revoked'
+  value === 'unknown' || value === 'expired' || value === 'revoked';
 
 export interface CrewJoinResult {
-  crewId: string
-  joined: boolean
-  alreadyMember: boolean
+  crewId: string;
+  joined: boolean;
+  alreadyMember: boolean;
 }
 
 interface CrewsListResponse {
-  crews: CrewSummary[]
+  crews: CrewSummary[];
 }
 
 interface CrewCreateResponse {
-  crew: CrewSummary
+  crew: CrewSummary;
 }
 
 interface CrewShowsResponse {
-  shows: CrewShow[]
+  shows: CrewShow[];
 }
 
 export async function fetchCrews(token: string): Promise<CrewSummary[]> {
-  const data = await apiClient.get<CrewsListResponse>('/v1/crews', token)
-  return data.crews
+  const data = await apiClient.get<CrewsListResponse>('/v1/crews', token);
+  return data.crews;
 }
 
 /**
@@ -61,8 +61,8 @@ export async function createCrew(
     '/v1/crews',
     token,
     crew,
-  )
-  return data.crew
+  );
+  return data.crew;
 }
 
 /** The crew home payload. Throws `ApiError` 403 for a non-member. */
@@ -70,7 +70,7 @@ export async function fetchCrew(
   token: string,
   crewId: string,
 ): Promise<CrewDetail> {
-  return apiClient.get<CrewDetail>(`/v1/crews/${crewId}`, token)
+  return apiClient.get<CrewDetail>(`/v1/crews/${crewId}`, token);
 }
 
 /**
@@ -86,8 +86,8 @@ export async function fetchCrewShows(
   const data = await apiClient.get<CrewShowsResponse>(
     `/v1/crews/${crewId}/shows`,
     token,
-  )
-  return data.shows
+  );
+  return data.shows;
 }
 
 /**
@@ -102,8 +102,8 @@ export async function fetchCurrentInvite(
   const data = await apiClient.get<{ invite: CrewInvite | null }>(
     `/v1/crews/${crewId}/invites/current`,
     token,
-  )
-  return data.invite
+  );
+  return data.invite;
 }
 
 export async function mintInvite(
@@ -114,8 +114,8 @@ export async function mintInvite(
     `/v1/crews/${crewId}/invites`,
     token,
     {},
-  )
-  return data.invite
+  );
+  return data.invite;
 }
 
 export async function revokeInvite(
@@ -127,7 +127,7 @@ export async function revokeInvite(
     `/v1/crews/${crewId}/invites/${inviteId}/revoke`,
     token,
     {},
-  )
+  );
 }
 
 /**
@@ -143,8 +143,8 @@ export async function resolveInvite(
   const data = await apiClient.get<{ invite: PublicCrewInvite }>(
     `/v1/crew-invites/${encodeURIComponent(inviteToken)}`,
     token,
-  )
-  return data.invite
+  );
+  return data.invite;
 }
 
 /**
@@ -160,7 +160,7 @@ export async function joinCrew(
     `/v1/crew-invites/${encodeURIComponent(inviteToken)}/join`,
     token,
     {},
-  )
+  );
 }
 
 /**
@@ -174,9 +174,9 @@ export async function renameCrew(
   name: string,
 ): Promise<Pick<Crew, 'id' | 'name' | 'patchSalt'>> {
   const data = await apiClient.patch<{
-    crew: Pick<Crew, 'id' | 'name' | 'patchSalt'>
-  }>(`/v1/crews/${crewId}`, token, { name })
-  return data.crew
+    crew: Pick<Crew, 'id' | 'name' | 'patchSalt'>;
+  }>(`/v1/crews/${crewId}`, token, { name });
+  return data.crew;
 }
 
 /**
@@ -189,9 +189,9 @@ export async function rerollPatch(
   crewId: string,
 ): Promise<Pick<Crew, 'id' | 'name' | 'patchSalt'>> {
   const data = await apiClient.post<{
-    crew: Pick<Crew, 'id' | 'name' | 'patchSalt'>
-  }>(`/v1/crews/${crewId}/patch/reroll`, token, {})
-  return data.crew
+    crew: Pick<Crew, 'id' | 'name' | 'patchSalt'>;
+  }>(`/v1/crews/${crewId}/patch/reroll`, token, {});
+  return data.crew;
 }
 
 /**
@@ -200,7 +200,7 @@ export async function rerollPatch(
  * two sides cannot disagree about whether a handoff is required.
  */
 export async function leaveCrew(token: string, crewId: string): Promise<void> {
-  await apiClient.post(`/v1/crews/${crewId}/leave`, token, {})
+  await apiClient.post(`/v1/crews/${crewId}/leave`, token, {});
 }
 
 export async function handoffCrew(
@@ -208,7 +208,7 @@ export async function handoffCrew(
   crewId: string,
   newKeeperId: string,
 ): Promise<void> {
-  await apiClient.post(`/v1/crews/${crewId}/handoff`, token, { newKeeperId })
+  await apiClient.post(`/v1/crews/${crewId}/handoff`, token, { newKeeperId });
 }
 
 export async function removeMember(
@@ -216,7 +216,7 @@ export async function removeMember(
   crewId: string,
   memberId: string,
 ): Promise<void> {
-  await apiClient.delete(`/v1/crews/${crewId}/members/${memberId}`, token)
+  await apiClient.delete(`/v1/crews/${crewId}/members/${memberId}`, token);
 }
 
 /**
@@ -234,12 +234,12 @@ export async function setCrewMuted(
   muted: boolean,
 ): Promise<void> {
   if (muted) {
-    await apiClient.put(`/v1/crews/${crewId}/mute`, token, {})
-    return
+    await apiClient.put(`/v1/crews/${crewId}/mute`, token, {});
+    return;
   }
-  await apiClient.delete(`/v1/crews/${crewId}/mute`, token)
+  await apiClient.delete(`/v1/crews/${crewId}/mute`, token);
 }
 
 export async function deleteCrew(token: string, crewId: string): Promise<void> {
-  await apiClient.delete(`/v1/crews/${crewId}`, token)
+  await apiClient.delete(`/v1/crews/${crewId}`, token);
 }

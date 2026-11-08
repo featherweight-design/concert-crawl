@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { classifyMissing } from './classify-missing'
+import { describe, expect, it } from 'vitest';
+import { classifyMissing } from './classify-missing';
 
 describe('classifyMissing', () => {
   it('returns duplicate when a live sibling exists, regardless of horizon', () => {
@@ -10,8 +10,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: true,
         movedCandidateId: null,
       }),
-    ).toBe('duplicate')
-  })
+    ).toBe('duplicate');
+  });
 
   it('returns crawl_gap when the event is beyond the venue horizon', () => {
     expect(
@@ -21,8 +21,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: null,
       }),
-    ).toBe('crawl_gap')
-  })
+    ).toBe('crawl_gap');
+  });
 
   it('returns crawl_gap when the venue has no currently-seen future events', () => {
     expect(
@@ -32,8 +32,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: null,
       }),
-    ).toBe('crawl_gap')
-  })
+    ).toBe('crawl_gap');
+  });
 
   it('returns removed when the crawl reaches past this date but dropped the show', () => {
     expect(
@@ -43,8 +43,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: null,
       }),
-    ).toBe('removed')
-  })
+    ).toBe('removed');
+  });
 
   it('treats an event on the horizon date itself as removed', () => {
     expect(
@@ -54,8 +54,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: null,
       }),
-    ).toBe('removed')
-  })
+    ).toBe('removed');
+  });
 
   it('returns moved when a relocation candidate was matched', () => {
     expect(
@@ -65,8 +65,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: '11111111-1111-4111-8111-111111111111',
       }),
-    ).toBe('moved')
-  })
+    ).toBe('moved');
+  });
 
   it('prefers duplicate over moved when both signals fire', () => {
     expect(
@@ -76,8 +76,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: true,
         movedCandidateId: '11111111-1111-4111-8111-111111111111',
       }),
-    ).toBe('duplicate')
-  })
+    ).toBe('duplicate');
+  });
 
   it('prefers moved over crawl_gap when the event is beyond the horizon', () => {
     expect(
@@ -87,8 +87,8 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: '11111111-1111-4111-8111-111111111111',
       }),
-    ).toBe('moved')
-  })
+    ).toBe('moved');
+  });
 
   it('prefers moved over crawl_gap when the venue horizon is unknown', () => {
     expect(
@@ -98,6 +98,6 @@ describe('classifyMissing', () => {
         hasLiveSibling: false,
         movedCandidateId: '11111111-1111-4111-8111-111111111111',
       }),
-    ).toBe('moved')
-  })
-})
+    ).toBe('moved');
+  });
+});

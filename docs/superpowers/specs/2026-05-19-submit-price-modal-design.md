@@ -38,15 +38,16 @@ Shared primitive extracted from `FeedbackModal`. Handles all chrome that is iden
 - Desktop: fixed centered card, `width: 520`, `borderRadius: 16`
 
 **Props:**
+
 ```ts
 interface ModalShellProps {
-  open: boolean
-  onClose: () => void
-  ariaLabel: string
-  header: React.ReactNode
-  footer?: React.ReactNode
-  children: React.ReactNode
-  sheetHeight?: 'tall' | 'short' // 85% (form) vs 62% (success/error). Default: 'tall'
+  open: boolean;
+  onClose: () => void;
+  ariaLabel: string;
+  header: React.ReactNode;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+  sheetHeight?: 'tall' | 'short'; // 85% (form) vs 62% (success/error). Default: 'tall'
 }
 ```
 
@@ -59,14 +60,15 @@ interface ModalShellProps {
 **Location:** `apps/web/src/components/consumer/submit-price/SubmitPriceModal.tsx`
 
 **Props:**
+
 ```ts
 interface SubmitPriceModalProps {
-  open: boolean
-  onClose: () => void
-  eventId: string
-  artist: string
-  venueName: string
-  date: string // ISO string
+  open: boolean;
+  onClose: () => void;
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string; // ISO string
 }
 ```
 
@@ -75,12 +77,13 @@ interface SubmitPriceModalProps {
 **On open:** a `useEffect` fires when `open` transitions to `true`, sending GET `/v1/events/${eventId}/price-submissions` to check for an existing submission. If found, starts in `alreadySubmitted`; otherwise starts in `form`. A 409 from POST also transitions to `alreadySubmitted`.
 
 **Header:** CCMark + status rail
-| State | Eyebrow | Code |
-|---|---|---|
+
+| State             | Eyebrow                 | Code |
+| ----------------- | ----------------------- | ---- |
 | form / submitting | Community prices · open | OPEN |
-| success | Got it · submitted | SENT |
-| error | Hmm · stalled | ERR |
-| alreadySubmitted | Already submitted | DONE |
+| success           | Got it · submitted      | SENT |
+| error             | Hmm · stalled           | ERR  |
+| alreadySubmitted  | Already submitted       | DONE |
 
 **Views:**
 
@@ -98,6 +101,7 @@ interface SubmitPriceModalProps {
 Converts from a `<Link href="...">` to a `'use client'` button. Holds `isOpen` state. Renders `SubmitPriceModal` inline.
 
 Additional props needed (passed from event detail page):
+
 - `artist: string`
 - `venueName: string`
 - `date: string`

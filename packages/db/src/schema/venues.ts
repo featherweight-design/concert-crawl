@@ -8,19 +8,19 @@ import {
   timestamp,
   uuid,
   varchar,
-} from 'drizzle-orm/pg-core'
+} from 'drizzle-orm/pg-core';
 
 export const extractionStrategyEnum = pgEnum('extraction_strategy', [
   'structured_data',
   'llm',
   'manual',
-])
+]);
 
 export const crawlWaitUntilEnum = pgEnum('crawl_wait_until', [
   'networkidle',
   'load',
   'domcontentloaded',
-])
+]);
 
 export const ticketVendorEnum = pgEnum('ticket_vendor', [
   'axs',
@@ -30,9 +30,9 @@ export const ticketVendorEnum = pgEnum('ticket_vendor', [
   'eventbrite',
   'venue_box_office',
   'unknown',
-])
+]);
 
-export const apiProviderEnum = pgEnum('api_provider', ['venuepilot'])
+export const apiProviderEnum = pgEnum('api_provider', ['venuepilot']);
 
 export const venues = pgTable('venues', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -134,7 +134,7 @@ export const venues = pgTable('venues', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-})
+});
 
-export type Venue = typeof venues.$inferSelect
-export type NewVenue = typeof venues.$inferInsert
+export type Venue = typeof venues.$inferSelect;
+export type NewVenue = typeof venues.$inferInsert;

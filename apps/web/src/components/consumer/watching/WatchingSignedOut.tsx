@@ -1,8 +1,8 @@
-import Link from 'next/link'
-import { Eye } from 'lucide-react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import Link from 'next/link';
+import { Eye } from 'lucide-react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY.watching.signedOut
+const copy = CONSUMER_COPY.watching.signedOut;
 
 /**
  * The teaching state a visitor lands on when they tap the Watching tab with no
@@ -100,7 +100,7 @@ function ExampleList() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
 function FactList() {
@@ -150,7 +150,7 @@ function FactList() {
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 function Head() {
@@ -205,7 +205,7 @@ function Head() {
         {copy.lede}
       </p>
     </div>
-  )
+  );
 }
 
 function Cta() {
@@ -259,7 +259,7 @@ function Cta() {
         {copy.keepBrowsing}
       </Link>
     </div>
-  )
+  );
 }
 
 export function WatchingSignedOut() {
@@ -280,5 +280,5 @@ export function WatchingSignedOut() {
         </div>
       </div>
     </main>
-  )
+  );
 }

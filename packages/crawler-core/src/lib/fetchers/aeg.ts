@@ -20,28 +20,28 @@
 // (Fillmore was originally suspected to be on the same platform but is
 // actually Next.js + AXS, so it's not onboarded here.)
 
-import { z } from 'zod'
-import type { Venue } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
-import type { NormalizedEvent } from '../../types.js'
-import { stripDescriptionHtml } from '../strip-description-html.js'
+import { z } from 'zod';
+import type { Venue } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import type { NormalizedEvent } from '../../types.js';
+import { stripDescriptionHtml } from '../strip-description-html.js';
 import {
   CrawlSkipError,
   getCrawlDelayMs,
   isAllowedOrSkip,
   resolveCrawlDelayMs,
-} from '../robots.js'
-import { createDeadline } from './deadline.js'
-import { jitter } from './jitter.js'
+} from '../robots.js';
+import { createDeadline } from './deadline.js';
+import { jitter } from './jitter.js';
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
-} from './index.js'
+} from './index.js';
 
-const logger = createLogger('aeg-fetcher')
-const BLOB_BASE = 'https://aegwebprod.blob.core.windows.net/json/events'
+const logger = createLogger('aeg-fetcher');
+const BLOB_BASE = 'https://aegwebprod.blob.core.windows.net/json/events';
 
 // Schema validation. Only the fields we actually map are required; we
 // don't validate the full ~50-key event shape AEG ships, to stay tolerant
@@ -52,7 +52,7 @@ const AegMediaItemSchema = z
     width: z.number().optional(),
     file_name: z.string().optional(),
   })
-  .passthrough()
+  .passthrough();
 
 const AegEventSchema = z
   .object({
@@ -90,17 +90,17 @@ const AegEventSchema = z
       .union([z.record(AegMediaItemSchema), z.array(z.unknown())])
       .optional(),
   })
-  .passthrough()
+  .passthrough();
 
 const AegResponseSchema = z
   .object({
     meta: z.object({ total: z.number() }).passthrough(),
     events: z.array(AegEventSchema),
   })
-  .passthrough()
+  .passthrough();
 
-export type AegEvent = z.infer<typeof AegEventSchema>
-export type AegResponse = z.infer<typeof AegResponseSchema>
+export type AegEvent = z.infer<typeof AegEventSchema>;
+export type AegResponse = z.infer<typeof AegResponseSchema>;
 
 export class AegFetchError extends Error {
   constructor(
@@ -108,8 +108,8 @@ export class AegFetchError extends Error {
     public readonly url: string,
     message: string,
   ) {
-    super(message)
-    this.name = 'AegFetchError'
+    super(message);
+    this.name = 'AegFetchError';
   }
 }
 
@@ -119,13 +119,13 @@ export class AegSchemaError extends Error {
     public readonly issues: z.ZodIssue[],
     message: string,
   ) {
-    super(message)
-    this.name = 'AegSchemaError'
+    super(message);
+    this.name = 'AegSchemaError';
   }
 }
 
 export function endpointUrl(shardId: string): string {
-  return `${BLOB_BASE}/${encodeURIComponent(shardId)}/events.json`
+  return `${BLOB_BASE}/${encodeURIComponent(shardId)}/events.json`;
 }
 
 /**
@@ -142,40 +142,40 @@ export function endpointUrl(shardId: string): string {
 function parseEventDate(
   iso: string,
 ): { date: string; showTime: string } | null {
-  const match = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/)
+  const match = iso.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/);
   if (!match) {
-    return null
+    return null;
   }
-  const time = match[2]!.length === 5 ? `${match[2]}:00` : match[2]!
-  return { date: match[1]!, showTime: time }
+  const time = match[2]!.length === 5 ? `${match[2]}:00` : match[2]!;
+  return { date: match[1]!, showTime: time };
 }
 
 function parseDoorTime(naive: string | null): string | undefined {
-  if (!naive) return undefined
-  const match = naive.match(/T(\d{2}:\d{2}(?::\d{2})?)/)
-  if (!match) return undefined
-  return match[1]!.length === 5 ? `${match[1]}:00` : match[1]!
+  if (!naive) return undefined;
+  const match = naive.match(/T(\d{2}:\d{2}(?::\d{2})?)/);
+  if (!match) return undefined;
+  return match[1]!.length === 5 ? `${match[1]}:00` : match[1]!;
 }
 
 function pickImageUrl(
   media: AegEvent['media'] | undefined,
 ): string | undefined {
-  if (!media) return undefined
+  if (!media) return undefined;
   // AEG ships empty media as `[]` (array) instead of `{}` (empty object).
   // Skip the array form — it never contains usable images.
-  if (Array.isArray(media)) return undefined
+  if (Array.isArray(media)) return undefined;
   // Pick the largest available image by width. Falls back to the first
   // item that has a file_name if no widths are populated (defensive
   // against schema drift on AEG's side).
-  let best: { width: number; url: string } | null = null
+  let best: { width: number; url: string } | null = null;
   for (const item of Object.values(media)) {
-    if (!item.file_name) continue
-    const width = item.width ?? 0
+    if (!item.file_name) continue;
+    const width = item.width ?? 0;
     if (best === null || width > best.width) {
-      best = { width, url: item.file_name }
+      best = { width, url: item.file_name };
     }
   }
-  return best?.url
+  return best?.url;
 }
 
 function eventTitle(title: AegEvent['title']): string {
@@ -184,7 +184,7 @@ function eventTitle(title: AegEvent['title']): string {
   // "Artist: Tour" pattern that AEG sometimes embeds in eventTitleText
   // by NOT stripping — the LLM path doesn't strip it either, and the
   // existing dedupe/canonical-artist pipeline handles variants.
-  return title.eventTitleText ?? title.headlinersText ?? '(untitled event)'
+  return title.eventTitleText ?? title.headlinersText ?? '(untitled event)';
 }
 
 function eventDescription(
@@ -202,15 +202,15 @@ function eventDescription(
   // result is uniformly plain text — `tour` and `supportingText` are
   // already plain. An empty post-strip description is treated as absent
   // so we don't emit a trailing blank-line separator.
-  const parts: string[] = []
-  if (title.tour) parts.push(title.tour)
-  if (title.supportingText) parts.push(`Supporting: ${title.supportingText}`)
+  const parts: string[] = [];
+  if (title.tour) parts.push(title.tour);
+  if (title.supportingText) parts.push(`Supporting: ${title.supportingText}`);
   if (description) {
-    const cleanDescription = stripDescriptionHtml(description)
-    if (cleanDescription) parts.push(cleanDescription)
+    const cleanDescription = stripDescriptionHtml(description);
+    if (cleanDescription) parts.push(cleanDescription);
   }
-  if (parts.length === 0) return undefined
-  return parts.join('\n\n')
+  if (parts.length === 0) return undefined;
+  return parts.join('\n\n');
 }
 
 function normalize(
@@ -221,14 +221,14 @@ function normalize(
   // downstream pipeline only sees real upcoming shows. AEG marks
   // cancelled events with active=false; unpublished drafts with
   // publishStatus !== 1.
-  if (!event.active) return null
-  if (event.publishStatus !== 1) return null
-  if (!event.eventDateTimeISO) return null
+  if (!event.active) return null;
+  if (event.publishStatus !== 1) return null;
+  if (!event.eventDateTimeISO) return null;
 
-  const headliner = event.title.headlinersText
-  if (!headliner) return null // can't normalize without an artist
+  const headliner = event.title.headlinersText;
+  if (!headliner) return null; // can't normalize without an artist
 
-  const parsedDate = parseEventDate(event.eventDateTimeISO)
+  const parsedDate = parseEventDate(event.eventDateTimeISO);
   if (!parsedDate) {
     // AEG occasionally ships placeholder strings like "TBD" before a show
     // is officially announced. Skip those rather than failing the whole
@@ -242,24 +242,24 @@ function normalize(
         venueCalendarUrl,
       },
       'aeg: skipping event with unparseable eventDateTimeISO',
-    )
-    return null
+    );
+    return null;
   }
-  const { date, showTime } = parsedDate
-  const doorsTime = parseDoorTime(event.doorDateTime)
+  const { date, showTime } = parsedDate;
+  const doorsTime = parseDoorTime(event.doorDateTime);
   const ticketUrl =
-    event.ticketing?.ticketURL ?? event.ticketing?.url ?? undefined
+    event.ticketing?.ticketURL ?? event.ticketing?.url ?? undefined;
   // `ticketing.eventUrl` is the readable AXS event page; `ticketURL` on the
   // Bluebird and Ogden shards is an opaque cart link, so the two are not
   // interchangeable for the "Get tickets" CTA.
-  const eventUrl = event.ticketing?.eventUrl?.trim() || undefined
-  const imageUrl = pickImageUrl(event.media)
+  const eventUrl = event.ticketing?.eventUrl?.trim() || undefined;
+  const imageUrl = pickImageUrl(event.media);
 
   // Build the result with optional fields only included when populated.
   // tsconfig sets `exactOptionalPropertyTypes: true`, so we can't pass
   // `field: undefined` for `field?: string`.
-  const description = eventDescription(event.title, event.description)
-  const title = eventTitle(event.title)
+  const description = eventDescription(event.title, event.description);
+  const title = eventTitle(event.title);
   return {
     title,
     // Platform JSON ships AEG's own canonical headline — no LLM-style
@@ -289,7 +289,7 @@ function normalize(
     // (any deviation from the AEG schema becomes an AegSchemaError, not
     // a low-confidence row).
     confidence: 1.0,
-  }
+  };
 }
 
 async function fetchAegBlob(url: string, timeoutMs?: number): Promise<unknown> {
@@ -311,15 +311,15 @@ async function fetchAegBlob(url: string, timeoutMs?: number): Promise<unknown> {
     ...(timeoutMs !== undefined
       ? { signal: AbortSignal.timeout(timeoutMs) }
       : {}),
-  })
+  });
   if (!response.ok) {
     throw new AegFetchError(
       response.status,
       url,
       `AEG fetch failed: HTTP ${response.status}`,
-    )
+    );
   }
-  return response.json()
+  return response.json();
 }
 
 async function aegFetch(
@@ -332,14 +332,14 @@ async function aegFetch(
       0,
       '',
       `Venue ${venue.id} has platform='aeg' but no platform_venue_id`,
-    )
+    );
   }
-  const url = endpointUrl(venue.platformVenueId)
+  const url = endpointUrl(venue.platformVenueId);
 
   // Started before the robots gate so a slow robots.txt fetch counts against
   // the overall budget rather than extending it, matching Live Nation and
   // detail-page.
-  const deadline = createDeadline(opts)
+  const deadline = createDeadline(opts);
 
   // crawl.ts gates on venue.websiteUrl only, and the blob lives on a
   // different domain, so the URL we actually fetch has to clear robots.txt
@@ -349,7 +349,7 @@ async function aegFetch(
   // whole run. An unreachable robots.txt skips the run rather than failing
   // the venue. It future-proofs us against AEG serving a policy.
   if (!(await isAllowedOrSkip(url, CRAWLER_USER_AGENT))) {
-    throw new AegFetchError(0, url, `robots.txt disallows ${url}`)
+    throw new AegFetchError(0, url, `robots.txt disallows ${url}`);
   }
 
   // The blob host can state its own Crawl-delay. Take the longer of it and
@@ -358,37 +358,37 @@ async function aegFetch(
     opts.crawlDelayMs,
     await getCrawlDelayMs(url, CRAWLER_USER_AGENT),
     { venueId: venue.id, url },
-  )
+  );
   if (crawlDelayMs === null) {
     throw new CrawlSkipError(
       `robots.txt Crawl-delay for ${url} exceeds the cap; not crawled`,
-    )
+    );
   }
 
   // The budget crawl.ts set was sized from the venue's delay.
   if (opts.budgetFollowsCrawlDelay) {
-    deadline.extend(crawlDelayMs - opts.crawlDelayMs)
+    deadline.extend(crawlDelayMs - opts.crawlDelayMs);
   }
 
-  const fetchedAt = Date.now()
+  const fetchedAt = Date.now();
   // Pace the blob request too. It is on a different domain from the venue's
   // website, but rate-limiting our requests to AEG's CDN is the
   // crawl-ethics-conservative call. Jitter only adds time, so repeat runs
   // don't land on a bot-like fixed interval.
-  await deadline.wait(jitter(crawlDelayMs))
+  await deadline.wait(jitter(crawlDelayMs));
   const raw = await deadline.run('events-blob', (timeoutMs) =>
     fetchAegBlob(url, timeoutMs),
-  )
-  const parseResult = AegResponseSchema.safeParse(raw)
+  );
+  const parseResult = AegResponseSchema.safeParse(raw);
   if (!parseResult.success) {
     throw new AegSchemaError(
       url,
       parseResult.error.issues,
       `AEG response did not match expected schema (${parseResult.error.issues.length} issue(s))`,
-    )
+    );
   }
-  const data = parseResult.data
-  const fetchLatencyMs = Date.now() - fetchedAt
+  const data = parseResult.data;
+  const fetchLatencyMs = Date.now() - fetchedAt;
 
   // Filter to events at THIS venue. AEG's per-shard JSON usually only
   // contains the venue's own events, but the meta.total + an explicit
@@ -397,14 +397,14 @@ async function aegFetch(
   // we compare it against `venue.name` (our DB display-name column).
   const filtered = data.events.filter((event) => {
     const eventVenueName = (event as { venue?: { title?: string } }).venue
-      ?.title
-    return !eventVenueName || eventVenueName === venue.name
-  })
+      ?.title;
+    return !eventVenueName || eventVenueName === venue.name;
+  });
 
-  const events: NormalizedEvent[] = []
+  const events: NormalizedEvent[] = [];
   for (const event of filtered) {
-    const normalized = normalize(event, venue.websiteUrl)
-    if (normalized) events.push(normalized)
+    const normalized = normalize(event, venue.websiteUrl);
+    if (normalized) events.push(normalized);
   }
 
   return {
@@ -416,7 +416,7 @@ async function aegFetch(
       eventsAfterVenueFilter: filtered.length,
       eventsAfterNormalization: events.length,
     },
-  }
+  };
 }
 
 export const aegFetcher: PlatformFetcher = {
@@ -428,7 +428,7 @@ export const aegFetcher: PlatformFetcher = {
       venue.platform === 'aeg' &&
       venue.platformVenueId &&
       venue.platformVenueId.length > 0,
-    )
+    );
   },
   fetch: aegFetch,
-}
+};

@@ -38,18 +38,18 @@ All work is done inside the worktree at `.worktrees/feat/browse-filters`. Every 
 
 ```typescript
 // packages/crawler-core/src/lib/genre-tagger.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const mockCreate = vi.fn()
+const mockCreate = vi.fn();
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(() => ({
     messages: { create: mockCreate },
   })),
-}))
+}));
 
 // Dynamic import after mock registration
-const { classifyGenres } = await import('./genre-tagger.js')
+const { classifyGenres } = await import('./genre-tagger.js');
 
 function makeToolResponse(
   results: { eventId: string; genres: string[] }[],
@@ -70,63 +70,63 @@ function makeToolResponse(
       },
     ],
     usage,
-  }
+  };
 }
 
 describe('classifyGenres', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('returns tagged results with token usage', async () => {
     mockCreate.mockResolvedValue(
       makeToolResponse([{ eventId: 'evt-uuid-1', genres: ['metal', 'rock'] }]),
-    )
+    );
 
     const { results, tokenUsage } = await classifyGenres([
       { id: 'evt-uuid-1', title: 'Metal Night', artist: 'Metallica' },
-    ])
+    ]);
 
-    expect(results).toHaveLength(1)
-    expect(results[0]?.genres).toContain('metal')
-    expect(results[0]?.genres).toContain('rock')
-    expect(tokenUsage.inputTokens).toBe(100)
-    expect(tokenUsage.outputTokens).toBe(50)
-  })
+    expect(results).toHaveLength(1);
+    expect(results[0]?.genres).toContain('metal');
+    expect(results[0]?.genres).toContain('rock');
+    expect(tokenUsage.inputTokens).toBe(100);
+    expect(tokenUsage.outputTokens).toBe(50);
+  });
 
   it('sends system prompt with cache_control ephemeral', async () => {
-    mockCreate.mockResolvedValue(makeToolResponse([]))
+    mockCreate.mockResolvedValue(makeToolResponse([]));
 
     await classifyGenres([
       { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
-    ])
+    ]);
 
-    const call = mockCreate.mock.calls[0]?.[0]
-    expect(Array.isArray(call.system)).toBe(true)
-    expect(call.system[0].cache_control).toEqual({ type: 'ephemeral' })
-  })
+    const call = mockCreate.mock.calls[0]?.[0];
+    expect(Array.isArray(call.system)).toBe(true);
+    expect(call.system[0].cache_control).toEqual({ type: 'ephemeral' });
+  });
 
   it('uses claude-haiku-4-5-20251001 model', async () => {
-    mockCreate.mockResolvedValue(makeToolResponse([]))
+    mockCreate.mockResolvedValue(makeToolResponse([]));
 
     await classifyGenres([
       { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
-    ])
+    ]);
 
-    const call = mockCreate.mock.calls[0]?.[0]
-    expect(call.model).toBe('claude-haiku-4-5-20251001')
-  })
+    const call = mockCreate.mock.calls[0]?.[0];
+    expect(call.model).toBe('claude-haiku-4-5-20251001');
+  });
 
   it('forces tag_genres tool choice', async () => {
-    mockCreate.mockResolvedValue(makeToolResponse([]))
+    mockCreate.mockResolvedValue(makeToolResponse([]));
 
     await classifyGenres([
       { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
-    ])
+    ]);
 
-    const call = mockCreate.mock.calls[0]?.[0]
-    expect(call.tool_choice).toEqual({ type: 'tool', name: 'tag_genres' })
-  })
+    const call = mockCreate.mock.calls[0]?.[0];
+    expect(call.tool_choice).toEqual({ type: 'tool', name: 'tag_genres' });
+  });
 
   it('returns empty results when response has no tool_use block', async () => {
     mockCreate.mockResolvedValue({
@@ -137,14 +137,14 @@ describe('classifyGenres', () => {
         cache_read_input_tokens: 0,
         cache_creation_input_tokens: 0,
       },
-    })
+    });
 
     const { results } = await classifyGenres([
       { id: 'evt-uuid-1', title: 'Test', artist: 'Artist' },
-    ])
+    ]);
 
-    expect(results).toHaveLength(0)
-  })
+    expect(results).toHaveLength(0);
+  });
 
   it('maps cache token usage correctly', async () => {
     mockCreate.mockResolvedValue(
@@ -154,13 +154,13 @@ describe('classifyGenres', () => {
         cache_read_input_tokens: 5000,
         cache_creation_input_tokens: 8000,
       }),
-    )
+    );
 
-    const { tokenUsage } = await classifyGenres([])
-    expect(tokenUsage.cacheReadTokens).toBe(5000)
-    expect(tokenUsage.cacheWriteTokens).toBe(8000)
-  })
-})
+    const { tokenUsage } = await classifyGenres([]);
+    expect(tokenUsage.cacheReadTokens).toBe(5000);
+    expect(tokenUsage.cacheWriteTokens).toBe(8000);
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -184,16 +184,16 @@ Expected: 6 failures — `genre-tagger.js` does not exist yet.
 
 ```typescript
 // packages/crawler-core/src/lib/genre-tagger.ts
-import Anthropic from '@anthropic-ai/sdk'
-import { z } from 'zod'
-import { and, eq, isNull } from 'drizzle-orm'
-import { db, events, costTracking } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { calculateCost } from './cost.js'
-import type { TokenUsage } from '../types.js'
+import Anthropic from '@anthropic-ai/sdk';
+import { z } from 'zod';
+import { and, eq, isNull } from 'drizzle-orm';
+import { db, events, costTracking } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { calculateCost } from './cost.js';
+import type { TokenUsage } from '../types.js';
 
-const logger = createLogger('genre-tagger')
-const MODEL = 'claude-haiku-4-5-20251001'
+const logger = createLogger('genre-tagger');
+const MODEL = 'claude-haiku-4-5-20251001';
 
 export type GenreLabel =
   | 'rock'
@@ -203,17 +203,17 @@ export type GenreLabel =
   | 'country'
   | 'jazz'
   | 'pop'
-  | 'metal'
+  | 'metal';
 
 export interface GenreTagInput {
-  id: string
-  title: string
-  artist: string
+  id: string;
+  title: string;
+  artist: string;
 }
 
 interface GenreTagResult {
-  eventId: string
-  genres: GenreLabel[]
+  eventId: string;
+  genres: GenreLabel[];
 }
 
 const SYSTEM_PROMPT = `You are a music genre classifier. Given concert events, classify each into 1–3 genres from this list only: rock, indie, hip-hop, electronic, country, jazz, pop, metal.
@@ -221,7 +221,7 @@ const SYSTEM_PROMPT = `You are a music genre classifier. Given concert events, c
 Rules:
 - Only use genres from the list above — no other values allowed
 - Prefer fewer genres over more when uncertain
-- Base classification on artist name and event title`
+- Base classification on artist name and event title`;
 
 const TAG_GENRES_TOOL: Anthropic.Tool = {
   name: 'tag_genres',
@@ -259,7 +259,7 @@ const TAG_GENRES_TOOL: Anthropic.Tool = {
     },
     required: ['results'],
   },
-}
+};
 
 const TagResponseSchema = z.object({
   results: z.array(
@@ -279,13 +279,13 @@ const TagResponseSchema = z.object({
       ),
     }),
   ),
-})
+});
 
 export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
-  results: GenreTagResult[]
-  tokenUsage: TokenUsage
+  results: GenreTagResult[];
+  tokenUsage: TokenUsage;
 }> {
-  const client = new Anthropic()
+  const client = new Anthropic();
 
   const response = await client.messages.create({
     model: MODEL,
@@ -311,32 +311,32 @@ export async function classifyGenres(eventInputs: GenreTagInput[]): Promise<{
         )}`,
       },
     ],
-  })
+  });
 
-  const usage = response.usage
+  const usage = response.usage;
   const tokenUsage: TokenUsage = {
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
-  }
+  };
 
-  const toolBlock = response.content.find((bl) => bl.type === 'tool_use')
+  const toolBlock = response.content.find((bl) => bl.type === 'tool_use');
   if (!toolBlock || toolBlock.type !== 'tool_use') {
-    logger.error('genre-tagger: no tool_use block in response')
-    return { results: [], tokenUsage }
+    logger.error('genre-tagger: no tool_use block in response');
+    return { results: [], tokenUsage };
   }
 
-  const parsed = TagResponseSchema.safeParse(toolBlock.input)
+  const parsed = TagResponseSchema.safeParse(toolBlock.input);
   if (!parsed.success) {
     logger.error(
       { error: parsed.error.message },
       'genre-tagger: invalid tool response schema',
-    )
-    return { results: [], tokenUsage }
+    );
+    return { results: [], tokenUsage };
   }
 
-  return { results: parsed.data.results, tokenUsage }
+  return { results: parsed.data.results, tokenUsage };
 }
 
 export async function tagEventsWithGenres(
@@ -346,26 +346,29 @@ export async function tagEventsWithGenres(
   const untagged = await db
     .select({ id: events.id, title: events.title, artist: events.artist })
     .from(events)
-    .where(and(eq(events.venueId, venueId), isNull(events.genre)))
+    .where(and(eq(events.venueId, venueId), isNull(events.genre)));
 
   if (untagged.length === 0) {
-    logger.info({ venueId }, 'No untagged events — skipping genre tagging')
-    return
+    logger.info({ venueId }, 'No untagged events — skipping genre tagging');
+    return;
   }
 
-  logger.info({ venueId, count: untagged.length }, 'Tagging events with genres')
+  logger.info(
+    { venueId, count: untagged.length },
+    'Tagging events with genres',
+  );
 
   try {
-    const { results, tokenUsage } = await classifyGenres(untagged)
+    const { results, tokenUsage } = await classifyGenres(untagged);
 
     for (const { eventId, genres } of results) {
       await db
         .update(events)
         .set({ genre: genres })
-        .where(eq(events.id, eventId))
+        .where(eq(events.id, eventId));
     }
 
-    const costUsd = calculateCost(tokenUsage)
+    const costUsd = calculateCost(tokenUsage);
     await db.insert(costTracking).values({
       service: 'genre-tagger',
       costUsd: costUsd.toFixed(6),
@@ -376,17 +379,17 @@ export async function tagEventsWithGenres(
         eventsTagged: results.length,
         ...tokenUsage,
       }),
-    })
+    });
 
     logger.info(
       { venueId, eventsTagged: results.length, costUsd },
       'Genre tagging complete',
-    )
+    );
   } catch (err) {
     logger.error(
       { err, venueId },
       'Genre tagging failed — events will retry on next crawl',
-    )
+    );
   }
 }
 ```
@@ -421,16 +424,16 @@ Add one line to `packages/crawler-core/src/index.ts`:
 
 ```typescript
 // packages/crawler-core/src/index.ts — full file after edit:
-export type { NormalizedEvent, TokenUsage, LLMResult } from './types.js'
-export { isAllowed } from './lib/robots.js'
-export { fetchPage } from './lib/fetcher.js'
-export type { FetchResult } from './lib/fetcher.js'
-export { extractJsonLd } from './lib/extractors/json-ld.js'
-export { extractWithLlm } from './lib/extractors/llm.js'
-export { calculateCost } from './lib/cost.js'
-export { crawlVenue } from './crawl.js'
-export { tagEventsWithGenres } from './lib/genre-tagger.js'
-export type { GenreLabel, GenreTagInput } from './lib/genre-tagger.js'
+export type { NormalizedEvent, TokenUsage, LLMResult } from './types.js';
+export { isAllowed } from './lib/robots.js';
+export { fetchPage } from './lib/fetcher.js';
+export type { FetchResult } from './lib/fetcher.js';
+export { extractJsonLd } from './lib/extractors/json-ld.js';
+export { extractWithLlm } from './lib/extractors/llm.js';
+export { calculateCost } from './lib/cost.js';
+export { crawlVenue } from './crawl.js';
+export { tagEventsWithGenres } from './lib/genre-tagger.js';
+export type { GenreLabel, GenreTagInput } from './lib/genre-tagger.js';
 ```
 
 - [ ] **Step 2: Wire into run.ts**
@@ -438,33 +441,33 @@ export type { GenreLabel, GenreTagInput } from './lib/genre-tagger.js'
 Replace the import line and add `tagEventsWithGenres` calls in both functions. Full updated `apps/crawler/src/run.ts`:
 
 ```typescript
-import { createLogger } from '@concert-crawl/logger'
-import { db, venues, crawlTriggers } from '@concert-crawl/db'
-import { eq, and } from 'drizzle-orm'
-import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core'
+import { createLogger } from '@concert-crawl/logger';
+import { db, venues, crawlTriggers } from '@concert-crawl/db';
+import { eq, and } from 'drizzle-orm';
+import { crawlVenue, tagEventsWithGenres } from '@concert-crawl/crawler-core';
 
-const logger = createLogger('crawler')
-const MAX_CONCURRENT = 3
+const logger = createLogger('crawler');
+const MAX_CONCURRENT = 3;
 
 export async function runTriggeredCrawls(): Promise<{ processed: number }> {
   const claimed = await db
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(crawlTriggers.status, 'pending'))
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId });
 
   if (claimed.length === 0) {
-    logger.info('No pending crawl triggers')
-    return { processed: 0 }
+    logger.info('No pending crawl triggers');
+    return { processed: 0 };
   }
 
-  logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
+  logger.info({ count: claimed.length }, 'Processing pending crawl triggers');
 
   for (const trigger of claimed) {
     try {
-      const crawlRun = await crawlVenue(trigger.venueId)
-      await tagEventsWithGenres(trigger.venueId, crawlRun.id)
-      const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
+      const crawlRun = await crawlVenue(trigger.venueId);
+      await tagEventsWithGenres(trigger.venueId, crawlRun.id);
+      const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done';
       await db
         .update(crawlTriggers)
         .set({
@@ -472,66 +475,66 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           crawlRunId: crawlRun.id,
           updatedAt: new Date(),
         })
-        .where(eq(crawlTriggers.id, trigger.id))
+        .where(eq(crawlTriggers.id, trigger.id));
     } catch (err) {
       logger.error(
         { err, triggerId: trigger.id, venueId: trigger.venueId },
         'Triggered crawl threw unexpectedly',
-      )
+      );
       await db
         .update(crawlTriggers)
         .set({ status: 'failed', updatedAt: new Date() })
-        .where(eq(crawlTriggers.id, trigger.id))
+        .where(eq(crawlTriggers.id, trigger.id));
     }
   }
 
-  return { processed: claimed.length }
+  return { processed: claimed.length };
 }
 
 export async function runDailyCrawl(): Promise<{
-  succeeded: number
-  failed: number
-  total: number
+  succeeded: number;
+  failed: number;
+  total: number;
 }> {
-  logger.info('Starting daily crawl')
+  logger.info('Starting daily crawl');
 
   const activeVenues = await db
     .select({ id: venues.id, name: venues.name })
     .from(venues)
-    .where(and(eq(venues.active, true), eq(venues.verified, true)))
+    .where(and(eq(venues.active, true), eq(venues.verified, true)));
 
-  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues')
+  logger.info({ venueCount: activeVenues.length }, 'Fetched active venues');
 
-  let succeeded = 0
-  let failed = 0
+  let succeeded = 0;
+  let failed = 0;
 
   for (
     let batchStart = 0;
     batchStart < activeVenues.length;
     batchStart += MAX_CONCURRENT
   ) {
-    const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT)
+    const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT);
     const results = await Promise.allSettled(
       batch.map((venue) => crawlVenue(venue.id)),
-    )
+    );
 
     for (const [idx, result] of results.entries()) {
-      const venue = batch[idx]
+      const venue = batch[idx];
       if (result.status === 'fulfilled') {
-        succeeded++
+        succeeded++;
         logger.info(
           { venueId: venue?.id, name: venue?.name },
           'Crawl succeeded',
-        )
+        );
         if (venue?.id) {
-          await tagEventsWithGenres(venue.id, result.value.id)
+          await tagEventsWithGenres(venue.id, result.value.id);
         }
       } else {
-        failed++
+        failed++;
         logger.error(
           { venueId: venue?.id, name: venue?.name, err: result.reason },
           'Crawl failed',
-        )
+        );
       }
     }
   }
@@ -539,8 +542,8 @@ export async function runDailyCrawl(): Promise<{
   logger.info(
     { succeeded, failed, total: activeVenues.length },
     'Daily crawl complete',
-  )
-  return { succeeded, failed, total: activeVenues.length }
+  );
+  return { succeeded, failed, total: activeVenues.length };
 }
 ```
 
@@ -575,217 +578,217 @@ Append a new `describe` block at the end of `apps/api/src/routes/events.integrat
 ```typescript
 describe('GET /v1/events — filterPrice', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('under-25 returns only events with price < 25', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Cheap Show',
       ticketPriceMin: '15',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Pricey Show',
       ticketPriceMin: '60',
       date: '2027-06-01',
-    })
-    await seedEvent(venue.id, { title: 'No Price', date: '2027-06-01' })
+    });
+    await seedEvent(venue.id, { title: 'No Price', date: '2027-06-01' });
 
-    const res = await app.request('/v1/events?filterPrice=under-25')
+    const res = await app.request('/v1/events?filterPrice=under-25');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[]; total: number }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Cheap Show')
-  })
+      success: boolean;
+      data: { data: { title: string }[]; total: number };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Cheap Show');
+  });
 
   it('25-50 returns events with 25 <= price < 50', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Low Show',
       ticketPriceMin: '10',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Mid Show',
       ticketPriceMin: '35',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Boundary Show',
       ticketPriceMin: '25',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'High Show',
       ticketPriceMin: '75',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=25-50')
+    const res = await app.request('/v1/events?filterPrice=25-50');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Boundary Show', 'Mid Show'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Boundary Show', 'Mid Show']);
+  });
 
   it('50-plus returns events with price >= 50', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Cheap Show',
       ticketPriceMin: '20',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Boundary Show',
       ticketPriceMin: '50',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Pricey Show',
       ticketPriceMin: '120',
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterPrice=50-plus')
+    const res = await app.request('/v1/events?filterPrice=50-plus');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Boundary Show', 'Pricey Show'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Boundary Show', 'Pricey Show']);
+  });
 
   it('tbd returns only events with no price data', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Priced Show',
       ticketPriceMin: '45',
       date: '2027-06-01',
-    })
-    await seedEvent(venue.id, { title: 'TBD Show', date: '2027-06-01' })
+    });
+    await seedEvent(venue.id, { title: 'TBD Show', date: '2027-06-01' });
 
-    const res = await app.request('/v1/events?filterPrice=tbd')
+    const res = await app.request('/v1/events?filterPrice=tbd');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('TBD Show')
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('TBD Show');
+  });
 
   it('returns 400 for an invalid filterPrice value', async () => {
-    const res = await app.request('/v1/events?filterPrice=invalid')
-    expect(res.status).toBe(400)
-  })
-})
+    const res = await app.request('/v1/events?filterPrice=invalid');
+    expect(res.status).toBe(400);
+  });
+});
 
 describe('GET /v1/events — filterVibe', () => {
   beforeEach(async () => {
-    await clearTables()
-  })
+    await clearTables();
+  });
 
   it('returns only events whose genre array contains the selected vibe', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Rock Night',
       genre: ['rock', 'indie'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Jazz Evening',
       genre: ['jazz'],
       date: '2027-06-01',
-    })
-    await seedEvent(venue.id, { title: 'No Genre', date: '2027-06-01' })
+    });
+    await seedEvent(venue.id, { title: 'No Genre', date: '2027-06-01' });
 
-    const res = await app.request('/v1/events?filterVibe=rock')
+    const res = await app.request('/v1/events?filterVibe=rock');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Rock Night')
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Rock Night');
+  });
 
   it('matches events that have the vibe among multiple genres', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Indie Rock Show',
       genre: ['indie', 'rock'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Pure Indie',
       genre: ['indie'],
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Pop Show',
       genre: ['pop'],
       date: '2027-06-01',
-    })
+    });
 
-    const res = await app.request('/v1/events?filterVibe=indie')
+    const res = await app.request('/v1/events?filterVibe=indie');
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(2)
-    const titles = body.data.data.map((ev) => ev.title).sort()
-    expect(titles).toEqual(['Indie Rock Show', 'Pure Indie'])
-  })
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(2);
+    const titles = body.data.data.map((ev) => ev.title).sort();
+    expect(titles).toEqual(['Indie Rock Show', 'Pure Indie']);
+  });
 
   it('returns 400 for an invalid filterVibe value', async () => {
-    const res = await app.request('/v1/events?filterVibe=reggae')
-    expect(res.status).toBe(400)
-  })
+    const res = await app.request('/v1/events?filterVibe=reggae');
+    expect(res.status).toBe(400);
+  });
 
   it('combines filterPrice and filterVibe', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Cheap Rock',
       genre: ['rock'],
       ticketPriceMin: '20',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Pricey Rock',
       genre: ['rock'],
       ticketPriceMin: '80',
       date: '2027-06-01',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Cheap Jazz',
       genre: ['jazz'],
       ticketPriceMin: '15',
       date: '2027-06-01',
-    })
+    });
 
     const res = await app.request(
       '/v1/events?filterVibe=rock&filterPrice=under-25',
-    )
+    );
     const body = (await res.json()) as {
-      success: boolean
-      data: { data: { title: string }[] }
-    }
-    expect(res.status).toBe(200)
-    expect(body.data.data).toHaveLength(1)
-    expect(body.data.data[0]?.title).toBe('Cheap Rock')
-  })
-})
+      success: boolean;
+      data: { data: { title: string }[] };
+    };
+    expect(res.status).toBe(200);
+    expect(body.data.data).toHaveLength(1);
+    expect(body.data.data[0]?.title).toBe('Cheap Rock');
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -809,10 +812,10 @@ Expected: 8 failures — the API does not yet accept these params.
 Replace the full content of `apps/api/src/routes/events.ts`:
 
 ```typescript
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { db, events, venues } from '@concert-crawl/db'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { db, events, venues } from '@concert-crawl/db';
 import {
   type SQL,
   and,
@@ -827,8 +830,8 @@ import {
   lte,
   or,
   sql,
-} from 'drizzle-orm'
-import { todayInTimezone } from '../lib/time.js'
+} from 'drizzle-orm';
+import { todayInTimezone } from '../lib/time.js';
 
 const listEventsSchema = z.object({
   from: z
@@ -856,9 +859,9 @@ const listEventsSchema = z.object({
     .optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
-})
+});
 
-export const eventsRouter = new Hono()
+export const eventsRouter = new Hono();
 
 // GET /v1/events — public event listing with filters and pagination
 eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
@@ -871,15 +874,15 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     filterVibe,
     limit,
     offset,
-  } = ctx.req.valid('query')
+  } = ctx.req.valid('query');
 
   const conditions: SQL[] = [
     eq(events.status, 'upcoming'),
     gte(events.date, from ?? todayInTimezone('UTC')),
-  ]
+  ];
 
   if (to) {
-    conditions.push(lte(events.date, to))
+    conditions.push(lte(events.date, to));
   }
 
   if (venueSlug) {
@@ -887,22 +890,22 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
       .select({ id: venues.id })
       .from(venues)
       .where(eq(venues.slug, venueSlug))
-      .limit(1)
+      .limit(1);
     if (!venue) {
       return ctx.json({
         success: true,
         data: { data: [], total: 0, limit, offset },
-      })
+      });
     }
-    conditions.push(eq(events.venueId, venue.id))
+    conditions.push(eq(events.venueId, venue.id));
   }
 
   if (search) {
     const searchCondition = or(
       ilike(events.title, `%${search}%`),
       ilike(events.artist, `%${search}%`),
-    )
-    if (searchCondition) conditions.push(searchCondition)
+    );
+    if (searchCondition) conditions.push(searchCondition);
   }
 
   const priceCondition =
@@ -921,22 +924,22 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
             )
           : filterPrice === 'tbd'
             ? and(isNull(events.ticketPriceMin), isNull(events.ticketPriceMax))
-            : undefined
+            : undefined;
 
-  if (priceCondition) conditions.push(priceCondition)
+  if (priceCondition) conditions.push(priceCondition);
 
   if (filterVibe) {
-    conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`)
+    conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`);
   }
 
-  const where = and(...conditions)
+  const where = and(...conditions);
 
   const countResult = await db
     .select({ total: count() })
     .from(events)
-    .where(where)
+    .where(where);
 
-  const total = countResult[0]?.total ?? 0
+  const total = countResult[0]?.total ?? 0;
 
   const rows = await db
     .select({
@@ -974,17 +977,17 @@ eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
     .where(where)
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(limit)
-    .offset(offset)
+    .offset(offset);
 
   return ctx.json({
     success: true,
     data: { data: rows, total, limit, offset },
-  })
-})
+  });
+});
 
 // GET /v1/events/:id — single event with venue
 eventsRouter.get('/:id', async (ctx) => {
-  const { id } = ctx.req.param()
+  const { id } = ctx.req.param();
 
   const [row] = await db
     .select({
@@ -1019,14 +1022,14 @@ eventsRouter.get('/:id', async (ctx) => {
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(eq(events.id, id))
+    .where(eq(events.id, id));
 
   if (!row) {
-    return ctx.json({ success: false, error: 'Event not found' }, 404)
+    return ctx.json({ success: false, error: 'Event not found' }, 404);
   }
 
-  return ctx.json({ success: true, data: row })
-})
+  return ctx.json({ success: true, data: row });
+});
 ```
 
 - [ ] **Step 2: Run integration tests to verify they pass**
@@ -1075,17 +1078,17 @@ In `apps/web/src/app/(protected)/events/page.tsx`, inside `fetchEvents()`, add a
 ```typescript
 // existing lines for context:
 if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
-  const parsed = Number(offsetParam)
+  const parsed = Number(offsetParam);
   if (Number.isSafeInteger(parsed) && parsed >= 0)
-    qs.set('offset', String(parsed))
+    qs.set('offset', String(parsed));
 }
 // ADD THESE TWO LINES:
 if (typeof params['filterPrice'] === 'string')
-  qs.set('filterPrice', params['filterPrice'])
+  qs.set('filterPrice', params['filterPrice']);
 if (typeof params['filterVibe'] === 'string')
-  qs.set('filterVibe', params['filterVibe'])
+  qs.set('filterVibe', params['filterVibe']);
 // existing line:
-qs.set('limit', String(PAGE_LIMIT))
+qs.set('limit', String(PAGE_LIMIT));
 ```
 
 - [ ] **Step 2: Type-check**

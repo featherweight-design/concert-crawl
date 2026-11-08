@@ -25,29 +25,29 @@
 ```ts
 // @concert-crawl/logger
 export interface FailureReport {
-  event: string
-  severity: FailureSeverity
+  event: string;
+  severity: FailureSeverity;
   /** Sentry grouping override. Omit for the default: one issue per `event`. */
-  fingerprint?: string[]
-  [key: string]: unknown
+  fingerprint?: string[];
+  [key: string]: unknown;
 }
 // run-health.ts
-export function describeDegradation(degradation: RunDegradation): string
+export function describeDegradation(degradation: RunDegradation): string;
 export function runHealthFingerprints(
   degradations: readonly RunDegradation[],
-): string[][]
+): string[][];
 export async function reportRunHealth(
   degradations: readonly RunDegradation[],
   summary: { failed: number; total: number },
-): Promise<void>
+): Promise<void>;
 // email.ts
 export interface RunDegradedInput {
-  title: string
-  lines: string[]
+  title: string;
+  lines: string[];
 }
 export async function sendRunDegradedEmail(
   input: RunDegradedInput,
-): Promise<void>
+): Promise<void>;
 ```
 
 - [x] **Step 1: Failing tests.**
@@ -60,54 +60,54 @@ it('forwards a fingerprint to Sentry when the report carries one', () => {
     event: 'crawl.run_degraded',
     severity: 'error',
     fingerprint: ['crawl.run_degraded', 'llm_quota'],
-  })
+  });
   expect(captureMessageSpy).toHaveBeenCalledWith(
     'crawl.run_degraded',
     expect.objectContaining({
       fingerprint: ['crawl.run_degraded', 'llm_quota'],
     }),
-  )
-})
+  );
+});
 
 it('keeps the fingerprint out of extra, and out of the context when absent', () => {
   reportFailure({
     event: 'crawl.failed',
     severity: 'error',
     fingerprint: ['crawl.failed', 'k'],
-  })
+  });
   expect(captureMessageSpy.mock.calls.at(-1)?.[1]?.extra).not.toHaveProperty(
     'fingerprint',
-  )
+  );
 
   reportFailure({
     event: 'llm.no_tool_use',
     severity: 'warn',
     sourceUrl: 'https://x.example',
-  })
+  });
   expect(captureMessageSpy.mock.calls.at(-1)?.[1]).not.toHaveProperty(
     'fingerprint',
-  )
-})
+  );
+});
 ```
 
 At the top of `packages/crawler-core/src/lib/run-health.test.ts` (hoisted, so it applies to Task 2's tests too — they don't touch either module):
 
 ```ts
-import { beforeEach, vi } from 'vitest'
+import { beforeEach, vi } from 'vitest';
 
 const { mockSendRunDegradedEmail, mockReportFailure } = vi.hoisted(() => ({
   mockSendRunDegradedEmail: vi.fn(),
   mockReportFailure: vi.fn(),
-}))
+}));
 vi.mock('./email.js', () => ({
   sendRunDegradedEmail: mockSendRunDegradedEmail,
-}))
-vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }))
+}));
+vi.mock('@concert-crawl/logger', () => ({ reportFailure: mockReportFailure }));
 
 beforeEach(() => {
-  vi.clearAllMocks()
-  mockSendRunDegradedEmail.mockResolvedValue(undefined)
-})
+  vi.clearAllMocks();
+  mockSendRunDegradedEmail.mockResolvedValue(undefined);
+});
 ```
 
 Then append:
@@ -118,16 +118,16 @@ const QUOTA_CAUSE: RunDegradation = {
   errorKey: 'llm_quota',
   errorKind: 'llm_quota',
   venueNames: ['Hi-Dive', 'Red Rocks'],
-}
-const RATE: RunDegradation = { kind: 'failure_rate', failed: 8, total: 20 }
+};
+const RATE: RunDegradation = { kind: 'failure_rate', failed: 8, total: 20 };
 
 describe('describeDegradation', () => {
   it('says an llm_quota cause is account-wide, not a venue problem', () => {
-    const line = describeDegradation(QUOTA_CAUSE)
-    expect(line).toContain('account-wide')
-    expect(line).toContain('Hi-Dive, Red Rocks')
-  })
-})
+    const line = describeDegradation(QUOTA_CAUSE);
+    expect(line).toContain('account-wide');
+    expect(line).toContain('Hi-Dive, Red Rocks');
+  });
+});
 
 describe('runHealthFingerprints', () => {
   it('gives each shared cause its own fingerprint, so each is its own Sentry issue', () => {
@@ -135,73 +135,73 @@ describe('runHealthFingerprints', () => {
       ...QUOTA_CAUSE,
       errorKey: 'TypeError: fetch failed',
       errorKind: 'other',
-    }
+    };
     expect(runHealthFingerprints([RATE, other, QUOTA_CAUSE])).toEqual([
       ['crawl.run_degraded', 'TypeError: fetch failed'],
       ['crawl.run_degraded', 'llm_quota'],
-    ])
-  })
+    ]);
+  });
 
   it('falls back to one failure_rate fingerprint when no cause is shared', () => {
     expect(runHealthFingerprints([RATE])).toEqual([
       ['crawl.run_degraded', 'failure_rate'],
-    ])
-  })
-})
+    ]);
+  });
+});
 
 describe('reportRunHealth', () => {
   it('does nothing for a healthy run', async () => {
-    await reportRunHealth([], { failed: 0, total: 20 })
-    expect(mockReportFailure).not.toHaveBeenCalled()
-    expect(mockSendRunDegradedEmail).not.toHaveBeenCalled()
-  })
+    await reportRunHealth([], { failed: 0, total: 20 });
+    expect(mockReportFailure).not.toHaveBeenCalled();
+    expect(mockSendRunDegradedEmail).not.toHaveBeenCalled();
+  });
 
   it('reports to Sentry with the cause fingerprint and emails the admin', async () => {
-    await reportRunHealth([RATE, QUOTA_CAUSE], { failed: 8, total: 20 })
+    await reportRunHealth([RATE, QUOTA_CAUSE], { failed: 8, total: 20 });
     expect(mockReportFailure).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'crawl.run_degraded',
         severity: 'error',
         fingerprint: ['crawl.run_degraded', 'llm_quota'],
       }),
-    )
+    );
     expect(mockSendRunDegradedEmail).toHaveBeenCalledWith({
       title: 'Daily crawl degraded: 8 of 20 venues failed',
       lines: [describeDegradation(RATE), describeDegradation(QUOTA_CAUSE)],
-    })
-  })
+    });
+  });
 
   it('emits one Sentry event per shared cause but sends one email', async () => {
     const other: RunDegradation = {
       ...QUOTA_CAUSE,
       errorKey: 'TypeError: fetch failed',
       errorKind: 'other',
-    }
-    await reportRunHealth([RATE, other, QUOTA_CAUSE], { failed: 8, total: 20 })
+    };
+    await reportRunHealth([RATE, other, QUOTA_CAUSE], { failed: 8, total: 20 });
     expect(
       mockReportFailure.mock.calls.map(([report]) => report.fingerprint),
     ).toEqual([
       ['crawl.run_degraded', 'TypeError: fetch failed'],
       ['crawl.run_degraded', 'llm_quota'],
-    ])
-    expect(mockSendRunDegradedEmail).toHaveBeenCalledTimes(1)
-  })
+    ]);
+    expect(mockSendRunDegradedEmail).toHaveBeenCalledTimes(1);
+  });
 
   it('reports to Sentry before emailing, and survives the email throwing', async () => {
-    mockSendRunDegradedEmail.mockRejectedValueOnce(new Error('resend down'))
+    mockSendRunDegradedEmail.mockRejectedValueOnce(new Error('resend down'));
     await expect(
       reportRunHealth([RATE], { failed: 8, total: 20 }),
-    ).resolves.toBeUndefined()
+    ).resolves.toBeUndefined();
     expect(mockReportFailure).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({ event: 'crawl.run_degraded' }),
-    )
+    );
     expect(mockReportFailure).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ event: 'crawl.email_error' }),
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 - [x] **Step 2: Run to verify they fail** — `pnpm --filter @concert-crawl/logger test` and `pnpm --filter @concert-crawl/crawler-core test -- run-health`.
@@ -211,31 +211,31 @@ describe('reportRunHealth', () => {
 `packages/logger/src/index.ts` — add the optional `fingerprint?: string[]` field to `FailureReport` above the index signature, destructure it out of `extra`, and pass it through only when set:
 
 ```ts
-const { event, severity, fingerprint, ...extra } = report
+const { event, severity, fingerprint, ...extra } = report;
 // …console side unchanged…
 Sentry.captureMessage(event, {
   level: severity === 'error' ? 'error' : 'warning',
   extra,
   ...(fingerprint ? { fingerprint } : {}),
-})
+});
 ```
 
 Append to `run-health.ts`:
 
 ```ts
-import { reportFailure } from '@concert-crawl/logger'
-import { sendRunDegradedEmail } from './email.js'
+import { reportFailure } from '@concert-crawl/logger';
+import { sendRunDegradedEmail } from './email.js';
 
 export function describeDegradation(degradation: RunDegradation): string {
   if (degradation.kind === 'failure_rate') {
-    return `${degradation.failed} of ${degradation.total} venues failed this run.`
+    return `${degradation.failed} of ${degradation.total} venues failed this run.`;
   }
-  const names = degradation.venueNames.join(', ')
-  const count = degradation.venueNames.length
+  const names = degradation.venueNames.join(', ');
+  const count = degradation.venueNames.length;
   if (degradation.errorKind === 'llm_quota') {
-    return `${count} venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: ${names}.`
+    return `${count} venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: ${names}.`;
   }
-  return `${count} venues failed with the same error ("${degradation.errorKey}"): ${names}.`
+  return `${count} venues failed with the same error ("${degradation.errorKey}"): ${names}.`;
 }
 
 /**
@@ -254,19 +254,19 @@ export function runHealthFingerprints(
     .flatMap((degradation) =>
       degradation.kind === 'shared_cause' ? [degradation.errorKey] : [],
     )
-    .sort()
-  const keys = causes.length > 0 ? causes : ['failure_rate']
-  return keys.map((key) => ['crawl.run_degraded', key])
+    .sort();
+  const keys = causes.length > 0 ? causes : ['failure_rate'];
+  return keys.map((key) => ['crawl.run_degraded', key]);
 }
 
 export async function reportRunHealth(
   degradations: readonly RunDegradation[],
   summary: { failed: number; total: number },
 ): Promise<void> {
-  if (degradations.length === 0) return
+  if (degradations.length === 0) return;
 
-  const title = `Daily crawl degraded: ${summary.failed} of ${summary.total} venues failed`
-  const lines = degradations.map(describeDegradation)
+  const title = `Daily crawl degraded: ${summary.failed} of ${summary.total} venues failed`;
+  const lines = degradations.map(describeDegradation);
 
   // Sentry first, one event per cause: reportFailure never throws, so a failed
   // email cannot cost the loud channel. No in-app row: no admin screen lists run-level alerts
@@ -280,17 +280,17 @@ export async function reportRunHealth(
       failed: summary.failed,
       total: summary.total,
       causes: lines.join(' | '),
-    })
+    });
   }
 
   try {
-    await sendRunDegradedEmail({ title, lines })
+    await sendRunDegradedEmail({ title, lines });
   } catch (emailErr) {
     reportFailure({
       event: 'crawl.email_error',
       severity: 'error',
       error: String(emailErr),
-    })
+    });
   }
 }
 ```
@@ -299,21 +299,21 @@ Add to `email.ts`, after `sendCrawlFailureEmail` (`escapeHtml`, `adminCrawlUrl` 
 
 ```ts
 export interface RunDegradedInput {
-  title: string
-  lines: string[]
+  title: string;
+  lines: string[];
 }
 
 export async function sendRunDegradedEmail(
   input: RunDegradedInput,
 ): Promise<void> {
-  const url = adminCrawlUrl()
+  const url = adminCrawlUrl();
   await sendAdminAlert('sendRunDegradedEmail', {
     subject: input.title,
     html: `
       ${input.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('\n')}
       <p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>
     `,
-  })
+  });
 }
 ```
 
@@ -323,15 +323,15 @@ In `apps/api/src/emails/test-fixtures.ts`: add `'run_degraded'` to `OperationalT
 
 ```ts
 function buildRunDegradedSample(): BuiltTestEmail {
-  const url = `${SAMPLE_ADMIN_URL}/admin/crawl`
+  const url = `${SAMPLE_ADMIN_URL}/admin/crawl`;
   const line =
-    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Cervantes, Hi-Dive, Red Rocks."
+    "8 venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: Cervantes, Hi-Dive, Red Rocks.";
   return {
     fromCategory: 'alert',
     subject: 'Daily crawl degraded: 8 of 20 venues failed',
     html: `<p>${line}</p><p>Visit the <a href="${url}">admin crawl dashboard</a> to investigate.</p>`,
     text: `${line} Visit ${url} to investigate.`,
-  }
+  };
 }
 ```
 
@@ -356,15 +356,15 @@ function buildRunDegradedSample(): BuiltTestEmail {
 ```ts
 const mockEvaluateRunHealth = vi.fn<(outcomes: unknown[]) => unknown[]>(
   () => [],
-)
-const mockReportRunHealth = vi.fn().mockResolvedValue(undefined)
+);
+const mockReportRunHealth = vi.fn().mockResolvedValue(undefined);
 ```
 
 In the `runDailyCrawl` describe's `beforeEach` (after `vi.clearAllMocks()`, which keeps implementations), re-pin the defaults so no test's override can leak:
 
 ```ts
-mockEvaluateRunHealth.mockReturnValue([])
-mockReportRunHealth.mockResolvedValue(undefined)
+mockEvaluateRunHealth.mockReturnValue([]);
+mockReportRunHealth.mockResolvedValue(undefined);
 ```
 
 Then, following the file's pattern of importing `./run.js` inside each test (the default `where` mock already serves the four `mockVenues`):
@@ -377,10 +377,10 @@ it('hands one outcome per venue, in order, to the run-health check', async () =>
       status: 'failed',
       errorMessage: 'quota',
     })
-    .mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
-  const { runDailyCrawl } = await import('./run.js')
+    .mockResolvedValue(SUCCESSFUL_CRAWL_RUN);
+  const { runDailyCrawl } = await import('./run.js');
 
-  await runDailyCrawl()
+  await runDailyCrawl();
 
   expect(mockEvaluateRunHealth).toHaveBeenCalledWith(
     mockVenues.map((venue, i) =>
@@ -389,30 +389,30 @@ it('hands one outcome per venue, in order, to the run-health check', async () =>
         errorMessage: i === 0 ? 'quota' : null,
       }),
     ),
-  )
-})
+  );
+});
 
 it('returns degraded when the check finds a degradation', async () => {
   mockEvaluateRunHealth.mockReturnValueOnce([
     { kind: 'failure_rate', failed: 4, total: 4 },
-  ])
-  const { runDailyCrawl } = await import('./run.js')
+  ]);
+  const { runDailyCrawl } = await import('./run.js');
 
-  const result = await runDailyCrawl()
+  const result = await runDailyCrawl();
 
-  expect(mockReportRunHealth).toHaveBeenCalledTimes(1)
-  expect(result.degraded).toBe(true)
-})
+  expect(mockReportRunHealth).toHaveBeenCalledTimes(1);
+  expect(result.degraded).toBe(true);
+});
 
 it('never lets the run-health report break the crawl', async () => {
   mockEvaluateRunHealth.mockReturnValueOnce([
     { kind: 'failure_rate', failed: 4, total: 4 },
-  ])
-  mockReportRunHealth.mockRejectedValueOnce(new Error('resend down'))
-  const { runDailyCrawl } = await import('./run.js')
+  ]);
+  mockReportRunHealth.mockRejectedValueOnce(new Error('resend down'));
+  const { runDailyCrawl } = await import('./run.js');
 
-  await expect(runDailyCrawl()).resolves.toMatchObject({ degraded: true })
-})
+  await expect(runDailyCrawl()).resolves.toMatchObject({ degraded: true });
+});
 ```
 
 `__tests__/exit-code.test.ts` — the default at ~line 39 is `runDailyCrawl.mockResolvedValue(undefined)`, which crashes once `main()` reads `.degraded` off it. Change it to:
@@ -423,7 +423,7 @@ runDailyCrawl.mockResolvedValue({
   failed: 0,
   total: 1,
   degraded: false,
-})
+});
 ```
 
 and add:
@@ -435,14 +435,14 @@ it('exits 1 without reporting a crash when the run is degraded', async () => {
     failed: 8,
     total: 20,
     degraded: true,
-  })
-  const exitSpy = await importEntrypoint()
+  });
+  const exitSpy = await importEntrypoint();
 
-  expect(exitSpy).toHaveBeenCalledTimes(1)
-  expect(exitSpy).toHaveBeenCalledWith(1)
-  expect(captureException).not.toHaveBeenCalled()
-  expect(loggerError).not.toHaveBeenCalled()
-})
+  expect(exitSpy).toHaveBeenCalledTimes(1);
+  expect(exitSpy).toHaveBeenCalledWith(1);
+  expect(captureException).not.toHaveBeenCalled();
+  expect(loggerError).not.toHaveBeenCalled();
+});
 ```
 
 - [x] **Step 2: Run to verify the new cases fail** — `pnpm --filter @concert-crawl/crawler test`.
@@ -459,55 +459,58 @@ After `await requestLandingRevalidationSafely(eventsInserted)`:
 // Run-level health: the only check that sees a failure shared across venues
 // on the night it happens. Evaluation sits inside the try too — monitoring
 // must never break the crawl.
-let degraded = false
+let degraded = false;
 try {
-  const degradations = evaluateRunHealth(outcomes)
-  degraded = degradations.length > 0
-  await reportRunHealth(degradations, { failed, total: activeVenues.length })
+  const degradations = evaluateRunHealth(outcomes);
+  degraded = degradations.length > 0;
+  await reportRunHealth(degradations, { failed, total: activeVenues.length });
 } catch (healthErr: unknown) {
-  Sentry.captureException(healthErr)
-  logger.error({ healthErr }, 'Run-health check failed — crawl data unaffected')
+  Sentry.captureException(healthErr);
+  logger.error(
+    { healthErr },
+    'Run-health check failed — crawl data unaffected',
+  );
 }
 
 logger.info(
   { succeeded, failed, total: activeVenues.length, degraded },
   'Daily crawl complete',
-)
-return { succeeded, failed, total: activeVenues.length, degraded }
+);
+return { succeeded, failed, total: activeVenues.length, degraded };
 ```
 
 In `index.ts`:
 
 ```ts
 async function main(): Promise<{ degraded: boolean }> {
-  const mode = process.env['CRAWL_MODE'] ?? 'all'
+  const mode = process.env['CRAWL_MODE'] ?? 'all';
 
   if (mode !== 'triggers' && mode !== 'daily' && mode !== 'all') {
     logger.error(
       { mode },
       'Unknown CRAWL_MODE; expected triggers | daily | all',
-    )
-    process.exit(1)
+    );
+    process.exit(1);
   }
 
   if (mode === 'triggers' || mode === 'all') {
-    await runTriggeredCrawls()
+    await runTriggeredCrawls();
   }
   if (mode === 'daily' || mode === 'all') {
-    const { degraded } = await runDailyCrawl()
-    return { degraded }
+    const { degraded } = await runDailyCrawl();
+    return { degraded };
   }
   // Triggers-only runs are admin-queued and a handful of venues at most; the
   // run-level check does not apply to them.
-  return { degraded: false }
+  return { degraded: false };
 }
 
 main().then(async ({ degraded }) => {
-  await flushQuietly()
+  await flushQuietly();
   // A degraded run exits 1 so Render marks the cron run failed. Before this,
   // 40% of venues failing still exited 0 and read as a healthy run.
-  process.exit(degraded ? 1 : 0)
-})
+  process.exit(degraded ? 1 : 0);
+});
 ```
 
 (the `.catch` branch is unchanged).

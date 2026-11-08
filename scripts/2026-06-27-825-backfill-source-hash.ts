@@ -80,40 +80,40 @@
  *   WHERE b.id = e.id;
  */
 
-import { pathToFileURL } from 'node:url'
-import { and, eq, gte, sql } from 'drizzle-orm'
-import { db, events } from '@concert-crawl/db'
+import { pathToFileURL } from 'node:url';
+import { and, eq, gte, sql } from 'drizzle-orm';
+import { db, events } from '@concert-crawl/db';
 // Relative source import (not package barrel) so this one-shot script
 // runs against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the
 // `.js` suffix back to the `.ts` source. Mirrors the pattern in
 // scripts/2026-06-27-strip-description-html.ts.
-import { hashEvent } from '../packages/crawler-core/src/lib/hash.js'
+import { hashEvent } from '../packages/crawler-core/src/lib/hash.js';
 
 export interface BackfillSummary {
-  rowsScanned: number
-  rowsNoop: number
-  rowsSnapshotted: number
-  rowsUpdated: number
-  committed: boolean
+  rowsScanned: number;
+  rowsNoop: number;
+  rowsSnapshotted: number;
+  rowsUpdated: number;
+  committed: boolean;
 }
 
 interface CandidateRow {
-  id: string
-  title: string
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  sourceHash: string | null
+  id: string;
+  title: string;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  sourceHash: string | null;
 }
 
 interface DirtyRow extends CandidateRow {
-  newHash: string
-  currentHash: string | null
+  newHash: string;
+  currentHash: string | null;
 }
 
 export async function runBackfill(opts: {
-  commit: boolean
+  commit: boolean;
 }): Promise<BackfillSummary> {
   // 1. Load every still-upcoming verified row. The notification path that
   //    we're protecting (`crawl.verified_event_changed`) only fires for
@@ -130,7 +130,7 @@ export async function runBackfill(opts: {
   //    upcoming — leaving exactly the rows that can still fire false
   //    `crawl.verified_event_changed` alerts at old-format hashes. Keep
   //    this literal in sync with crawl.ts:147.
-  const denverToday = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
+  const denverToday = sql`(NOW() AT TIME ZONE 'America/Denver')::date`;
   const candidates: CandidateRow[] = await db
     .select({
       id: events.id,
@@ -147,32 +147,32 @@ export async function runBackfill(opts: {
         eq(events.status, 'upcoming'),
         gte(events.date, denverToday),
       ),
-    )
+    );
 
   console.log(
     `Loaded ${candidates.length} candidate rows (verified=true, status=upcoming, date>=today Denver tz).`,
-  )
+  );
 
   // 2. Compute new-format hash per row; partition into noop vs dirty.
-  const dirty: DirtyRow[] = []
-  let noopCount = 0
+  const dirty: DirtyRow[] = [];
+  let noopCount = 0;
   for (const row of candidates) {
     const newHash = hashEvent({
       title: row.title,
       date: row.date,
       doorsTime: row.doorsTime,
       showTime: row.showTime,
-    })
+    });
     if (row.sourceHash === newHash) {
-      noopCount += 1
-      continue
+      noopCount += 1;
+      continue;
     }
-    dirty.push({ ...row, newHash, currentHash: row.sourceHash })
+    dirty.push({ ...row, newHash, currentHash: row.sourceHash });
   }
 
   console.log(
     `Of those, ${noopCount} already match the new-format hash and ${dirty.length} need a rewrite.`,
-  )
+  );
 
   if (dirty.length === 0) {
     return {
@@ -186,7 +186,7 @@ export async function runBackfill(opts: {
       // scripts/2026-06-27-strip-description-html.ts and
       // scripts/2026-06-26-cleanup-cross-venue-phantoms.ts.
       committed: false,
-    }
+    };
   }
 
   // Per-row operator log (always — both dry-run and --commit). Keeps the
@@ -204,21 +204,21 @@ export async function runBackfill(opts: {
         `before    = ${row.currentHash ?? '(null)'}`,
         `after     = ${row.newHash}`,
       ].join('\n'),
-    )
+    );
   }
 
   if (!opts.commit) {
-    console.log('---')
+    console.log('---');
     console.log(
       'Dry-run mode — no rows touched. Re-run with --commit to apply.',
-    )
+    );
     return {
       rowsScanned: candidates.length,
       rowsNoop: noopCount,
       rowsSnapshotted: 0,
       rowsUpdated: 0,
       committed: false,
-    }
+    };
   }
 
   // 3. --commit path. Ensure the sidecar backup table exists. Pattern
@@ -230,10 +230,10 @@ export async function runBackfill(opts: {
   //    keeps re-runs idempotent.
   await db.execute(
     sql`CREATE TABLE IF NOT EXISTS events_source_hash_825_backup (LIKE events INCLUDING ALL)`,
-  )
+  );
   await db.execute(
     sql`ALTER TABLE events_source_hash_825_backup ADD COLUMN IF NOT EXISTS snapshot_at timestamptz`,
-  )
+  );
 
   // 4. Per-row snapshot + UPDATE inside a transaction. Mirrors the
   //    transaction-per-row pattern adopted in PR 853 R1's
@@ -247,8 +247,8 @@ export async function runBackfill(opts: {
   //    (e.g. the crawler ran and wrote a fresh new-format hash already),
   //    .returning() yields zero rows and we leave the row alone — the
   //    crawler's write is already correct by definition.
-  let snapshotCount = 0
-  let updatedCount = 0
+  let snapshotCount = 0;
+  let updatedCount = 0;
   for (const row of dirty) {
     await db
       .transaction(async (tx) => {
@@ -259,17 +259,17 @@ export async function runBackfill(opts: {
         await tx.execute(sql`
         INSERT INTO events_source_hash_825_backup
         SELECT e.*, NOW() FROM ${events} e WHERE e.id = ${row.id}
-      `)
+      `);
 
         const lockClause =
           row.currentHash === null
             ? sql`${events.sourceHash} IS NULL`
-            : sql`${events.sourceHash} = ${row.currentHash}`
+            : sql`${events.sourceHash} = ${row.currentHash}`;
         const updated = await tx
           .update(events)
           .set({ sourceHash: row.newHash })
           .where(and(eq(events.id, row.id), lockClause))
-          .returning({ id: events.id })
+          .returning({ id: events.id });
 
         if (updated.length === 0) {
           // Concurrent edit between SELECT and UPDATE — roll back the
@@ -277,31 +277,31 @@ export async function runBackfill(opts: {
           // loop catches and logs; the row stays at whatever value the
           // concurrent writer set (which, if it was the new-deploy crawler,
           // is already the correct new-format hash).
-          throw new ConcurrentEditError(row.id)
+          throw new ConcurrentEditError(row.id);
         }
       })
       .then(
         () => {
-          snapshotCount += 1
-          updatedCount += 1
-          console.log(`Updated ${row.id} → ${row.newHash}`)
+          snapshotCount += 1;
+          updatedCount += 1;
+          console.log(`Updated ${row.id} → ${row.newHash}`);
         },
         (err: unknown) => {
           if (err instanceof ConcurrentEditError) {
             console.log(
               `Skipped ${err.rowId} — source_hash changed between scan and update`,
-            )
-            return
+            );
+            return;
           }
-          throw err
+          throw err;
         },
-      )
+      );
   }
 
-  console.log('---')
+  console.log('---');
   console.log(
     `Committed. Snapshotted ${snapshotCount} rows into events_source_hash_825_backup, updated ${updatedCount} rows in events.`,
-  )
+  );
 
   return {
     rowsScanned: candidates.length,
@@ -311,17 +311,17 @@ export async function runBackfill(opts: {
     // Same semantics as the no-op early-return paths: committed reflects
     // whether writes actually happened, not the flag the operator set.
     committed: updatedCount > 0,
-  }
+  };
 }
 
 // Thrown by the per-row transaction body when the optimistic lock fires;
 // caught by the outer .then() error handler and logged as a skip.
 class ConcurrentEditError extends Error {
-  readonly rowId: string
+  readonly rowId: string;
   constructor(rowId: string) {
-    super(`concurrent edit on row ${rowId}`)
-    this.name = 'ConcurrentEditError'
-    this.rowId = rowId
+    super(`concurrent edit on row ${rowId}`);
+    this.name = 'ConcurrentEditError';
+    this.rowId = rowId;
   }
 }
 
@@ -330,17 +330,17 @@ class ConcurrentEditError extends Error {
 // script URL — same shape as the sibling scripts.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
-  const commit = process.argv.includes('--commit')
+  const commit = process.argv.includes('--commit');
   runBackfill({ commit })
     .then((summary) => {
-      console.log('---')
-      console.log(JSON.stringify(summary, null, 2))
-      process.exit(0)
+      console.log('---');
+      console.log(JSON.stringify(summary, null, 2));
+      process.exit(0);
     })
     .catch((err) => {
-      console.error('Backfill failed:', err)
-      process.exit(1)
-    })
+      console.error('Backfill failed:', err);
+      process.exit(1);
+    });
 }

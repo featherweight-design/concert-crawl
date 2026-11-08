@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // One search result inside the tour.
 //
@@ -9,9 +9,9 @@
 // surface exists to avoid. A result speaks the grid's language or it does not
 // belong in the grid's step.
 
-import { Panel } from '@/components/consumer/image-slot'
-import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import type { PickArtist } from './definitions/types'
+import { Panel } from '@/components/consumer/image-slot';
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy';
+import type { PickArtist } from './definitions/types';
 
 const CheckGlyph = () => (
   <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -23,12 +23,12 @@ const CheckGlyph = () => (
       strokeLinejoin="round"
     />
   </svg>
-)
+);
 
 interface ArtistSearchRowProps {
-  artist: PickArtist
-  selected: boolean
-  onToggle: (slug: string) => void
+  artist: PickArtist;
+  selected: boolean;
+  onToggle: (slug: string) => void;
 }
 
 export const ArtistSearchRow = ({
@@ -109,4 +109,4 @@ export const ArtistSearchRow = ({
       <CheckGlyph />
     </span>
   </button>
-)
+);

@@ -1,14 +1,14 @@
-import type { EventReport } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from './api'
+import type { EventReport } from '@concert-crawl/types';
+import { apiClient, publicApiClient } from './api';
 
 export async function fetchEventReports(
   eventId: string,
   token?: string,
 ): Promise<EventReport[]> {
   if (token) {
-    return apiClient.get<EventReport[]>(`/v1/events/${eventId}/reports`, token)
+    return apiClient.get<EventReport[]>(`/v1/events/${eventId}/reports`, token);
   }
-  return publicApiClient.get<EventReport[]>(`/v1/events/${eventId}/reports`)
+  return publicApiClient.get<EventReport[]>(`/v1/events/${eventId}/reports`);
 }
 
 export async function confirmPriceSubmission(
@@ -17,17 +17,17 @@ export async function confirmPriceSubmission(
   method: 'same-vendor' | 'other-vendor' | 'box-office',
   token: string,
 ): Promise<{
-  confirmed: boolean
-  submissionStatus: string
-  confirmsCount: number
+  confirmed: boolean;
+  submissionStatus: string;
+  confirmsCount: number;
 }> {
   return apiClient.post<{
-    confirmed: boolean
-    submissionStatus: string
-    confirmsCount: number
+    confirmed: boolean;
+    submissionStatus: string;
+    confirmsCount: number;
   }>(`/v1/events/${eventId}/price-submissions/${submissionId}/confirm`, token, {
     method,
-  })
+  });
 }
 
 export async function fileEventReport(
@@ -39,7 +39,7 @@ export async function fileEventReport(
     `/v1/events/${eventId}/reports`,
     token,
     body,
-  )
+  );
 }
 
 export async function confirmEventReport(
@@ -48,10 +48,10 @@ export async function confirmEventReport(
   token: string,
 ): Promise<{ confirmed: boolean; confirmsCount: number; resolved: boolean }> {
   return apiClient.post<{
-    confirmed: boolean
-    confirmsCount: number
-    resolved: boolean
-  }>(`/v1/events/${eventId}/reports/${reportId}/confirm`, token, {})
+    confirmed: boolean;
+    confirmsCount: number;
+    resolved: boolean;
+  }>(`/v1/events/${eventId}/reports/${reportId}/confirm`, token, {});
 }
 
 export async function withdrawEventReport(
@@ -62,5 +62,5 @@ export async function withdrawEventReport(
   await apiClient.delete<void>(
     `/v1/events/${eventId}/reports/${reportId}`,
     token,
-  )
+  );
 }

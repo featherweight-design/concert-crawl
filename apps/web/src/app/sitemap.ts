@@ -1,7 +1,7 @@
-import { headers } from 'next/headers'
-import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers';
+import type { MetadataRoute } from 'next';
 
-import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin'
+import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin';
 
 /**
  * Only the routes we actually want indexed. The app is a private beta, so
@@ -21,8 +21,8 @@ import { isCanonicalHost, CANONICAL_ORIGIN } from '@/lib/share/site-origin'
  * else would contradict the condition that produced it.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const host = (await headers()).get('host')
-  if (!isCanonicalHost(host)) return []
+  const host = (await headers()).get('host');
+  if (!isCanonicalHost(host)) return [];
 
   return [
     { url: `${CANONICAL_ORIGIN}/`, changeFrequency: 'daily', priority: 1 },
@@ -31,5 +31,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
-  ]
+  ];
 }

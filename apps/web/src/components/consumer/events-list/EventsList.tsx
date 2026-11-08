@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { Fragment, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
-import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
-import { useEvents } from '@/lib/queries/use-events'
-import { useWatching } from '@/lib/queries/use-watching'
-import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
-import { dateGroupLabel } from '@/components/consumer/definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { Fragment, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
+import { useEvents } from '@/lib/queries/use-events';
+import { useWatching } from '@/lib/queries/use-watching';
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
+import { dateGroupLabel } from '@/components/consumer/definitions/lib';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
-const copy = CONSUMER_COPY
+const copy = CONSUMER_COPY;
 
-const PAGE_LIMIT = 20
+const PAGE_LIMIT = 20;
 
 export interface EventsListProps {
-  initialEvents: EventWithVenue[]
-  initialOffset: number
-  total: number
-  limit: number
-  initialWatchedIds: string[]
+  initialEvents: EventWithVenue[];
+  initialOffset: number;
+  total: number;
+  limit: number;
+  initialWatchedIds: string[];
 }
 
 export const EventsList = ({
@@ -28,67 +28,67 @@ export const EventsList = ({
   limit,
   initialWatchedIds,
 }: EventsListProps) => {
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParams();
   // Read here rather than passed down from the server page: the list refetches
   // on a client-side filter change, so a server-rendered prop would name the
   // previous filter while the rows below it answer the current one.
-  const filterVibe = searchParams.get('filterVibe') ?? undefined
+  const filterVibe = searchParams.get('filterVibe') ?? undefined;
 
   // Build a stable query key from URL params (strip offset — managed by pagination)
   const searchParamsString = useMemo(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('offset')
-    params.delete('page')
-    return params.toString()
-  }, [searchParams])
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('offset');
+    params.delete('page');
+    return params.toString();
+  }, [searchParams]);
 
   // Seed the cache with the SSR-provided first page
   const initialData: EventsListResponse = useMemo(
     () => ({ data: initialEvents, total, limit, offset: initialOffset }),
     [initialEvents, total, limit, initialOffset],
-  )
+  );
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useEvents({
     searchParamsString,
     limit: limit || PAGE_LIMIT,
     initialData,
     initialOffset,
-  })
+  });
 
-  const { data: watchedShows } = useWatching()
+  const { data: watchedShows } = useWatching();
   const watchedIds = useMemo(
     () => new Set((watchedShows ?? []).map((show) => show.eventId)),
     [watchedShows],
-  )
+  );
 
   // Flatten pages into a single event list
   const events = useMemo(
     () => (data?.pages ?? []).flatMap((page) => page.data),
     [data],
-  )
+  );
 
   // Group events by date for display
   const groups = useMemo(() => {
-    const grouped = new Map<string, EventWithVenue[]>()
+    const grouped = new Map<string, EventWithVenue[]>();
     for (const event of events) {
-      const key = event.date
-      if (!grouped.has(key)) grouped.set(key, [])
-      grouped.get(key)!.push(event)
+      const key = event.date;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(event);
     }
-    return grouped
-  }, [events])
+    return grouped;
+  }, [events]);
 
   // Fall back to initialWatchedIds while the watching cache loads
   const effectiveWatchedIds =
-    watchedShows !== undefined ? watchedIds : new Set(initialWatchedIds)
+    watchedShows !== undefined ? watchedIds : new Set(initialWatchedIds);
 
   return (
     <>
       {groups.size > 0 && (
         <div className="flex flex-col gap-6">
           {Array.from(groups.entries()).map(([date, dateEvents]) => {
-            const label = dateGroupLabel(date)
-            const isTonight = label.toLowerCase() === 'tonight'
+            const label = dateGroupLabel(date);
+            const isTonight = label.toLowerCase() === 'tonight';
             return (
               <section key={date} aria-label={label}>
                 <div
@@ -139,7 +139,7 @@ export const EventsList = ({
                   ))}
                 </div>
               </section>
-            )
+            );
           })}
         </div>
       )}
@@ -209,5 +209,5 @@ export const EventsList = ({
         </div>
       )}
     </>
-  )
-}
+  );
+};

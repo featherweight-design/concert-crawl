@@ -1,13 +1,13 @@
-'use client'
+'use client';
 
 // Settings ▸ Connections — disconnected Spotify entry card (#763 PR 5).
 // Primary connect entry point; the CTA opens the honesty-rail interstitial.
 
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
 
-const COPY = SPOTIFY_COPY.connectEntry
+const COPY = SPOTIFY_COPY.connectEntry;
 
 export const ConnectEntryCard = ({ onConnect }: { onConnect: () => void }) => (
   <div className="flex flex-col">
@@ -43,4 +43,4 @@ export const ConnectEntryCard = ({ onConnect }: { onConnect: () => void }) => (
       {COPY.footer}
     </p>
   </div>
-)
+);

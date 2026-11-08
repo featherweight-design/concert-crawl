@@ -1,38 +1,38 @@
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
-import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient'
-import { type ReviewCounts } from '@/lib/queries/use-admin-review'
-import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions'
-import { FETCH_PAGE_SIZE } from '@/lib/queries/admin-price-submissions.constants'
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
+import { ReviewPageClient } from '@/components/admin/review/ReviewPageClient';
+import { type ReviewCounts } from '@/lib/queries/use-admin-review';
+import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions';
+import { FETCH_PAGE_SIZE } from '@/lib/queries/admin-price-submissions.constants';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 interface CountedSubmissions {
-  rows: PriceSubmissionHistoryRow[]
-  total: number
+  rows: PriceSubmissionHistoryRow[];
+  total: number;
 }
 
 export default async function ReviewPage() {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
   // Above-the-fold SSR: event flags + price submissions for the first paint,
   // plus aggregate counts so the tab pills render with their numbers without
@@ -53,8 +53,8 @@ export default async function ReviewPage() {
       // the client query loads.
       .get<EventFlag[]>('/v1/admin/events?verified=false&limit=20', token)
       .catch((err: unknown): EventFlag[] => {
-        console.error('admin review: event-flags SSR seed failed', err)
-        return []
+        console.error('admin review: event-flags SSR seed failed', err);
+        return [];
       }),
     // The Submissions tab walks the full set client-side; this first page is
     // only what it paints before that resolves. Shares FETCH_PAGE_SIZE with
@@ -65,16 +65,16 @@ export default async function ReviewPage() {
         token,
       )
       .catch((err: unknown): CountedSubmissions => {
-        console.error('admin review: submissions SSR seed failed', err)
-        return { rows: [], total: 0 }
+        console.error('admin review: submissions SSR seed failed', err);
+        return { rows: [], total: 0 };
       }),
     apiClient
       .get<ReviewCounts>('/v1/admin/review/counts', token)
       .catch((err: unknown): ReviewCounts => {
-        console.error('admin review: counts SSR seed failed', err)
-        return { eventFlags: 0, prices: 0, missing: 0, priceContests: 0 }
+        console.error('admin review: counts SSR seed failed', err);
+        return { eventFlags: 0, prices: 0, missing: 0, priceContests: 0 };
       }),
-  ])
+  ]);
 
   return (
     <ReviewPageClient
@@ -83,5 +83,5 @@ export default async function ReviewPage() {
       initialSubmissionsTotal={submissions.total}
       initialCounts={counts}
     />
-  )
+  );
 }

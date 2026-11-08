@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 
-import { EMBED_H } from '../definitions/constants'
-import { ARTIST_COPY } from '../definitions/copy'
+import { EMBED_H } from '../definitions/constants';
+import { ARTIST_COPY } from '../definitions/copy';
 
-import { EmbedRail } from './EmbedRail'
-import { embedPlate, EMBED_LIGHT_PLATE } from './embed-plate'
-import { EmbedSkipLink } from './EmbedSkipLink'
+import { EmbedRail } from './EmbedRail';
+import { embedPlate, EMBED_LIGHT_PLATE } from './embed-plate';
+import { EmbedSkipLink } from './EmbedSkipLink';
 
 interface ArtistEmbedProps {
-  name: string
-  spotifyArtistId: string | null
+  name: string;
+  spotifyArtistId: string | null;
   /** Anchor the skip link targets, or null when the player is the last block. */
-  skipTo: string | null
+  skipTo: string | null;
   /** Active theme key — decides the plate colour we hand the iframe. */
-  themeKey: string
+  themeKey: string;
 }
 
 /**
@@ -39,9 +39,9 @@ export const ArtistEmbed = ({
   // the theme-independent dark plate (right for every light theme, and never
   // wrong enough to read as a fault on a dark one) and the theme's own surface
   // arrives on the next commit.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  const plate = mounted ? embedPlate(themeKey) : EMBED_LIGHT_PLATE
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const plate = mounted ? embedPlate(themeKey) : EMBED_LIGHT_PLATE;
 
   // Absent wins over every other branch — an unresolved Spotify match is a
   // fact about our data, not a loading state.
@@ -66,7 +66,7 @@ export const ArtistEmbed = ({
           </span>
         </p>
       </section>
-    )
+    );
   }
 
   return (
@@ -116,5 +116,5 @@ export const ArtistEmbed = ({
         {ARTIST_COPY.playerPreviewNote}
       </p>
     </section>
-  )
-}
+  );
+};

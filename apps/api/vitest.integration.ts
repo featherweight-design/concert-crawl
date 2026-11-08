@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import { resolveTestDbUrl } from './src/test/setup/test-db'
+import { defineConfig } from 'vitest/config';
+import { resolveTestDbUrl } from './src/test/setup/test-db';
 
 export default defineConfig({
   test: {
@@ -16,4 +16,4 @@ export default defineConfig({
       DATABASE_URL: resolveTestDbUrl(),
     },
   },
-})
+});

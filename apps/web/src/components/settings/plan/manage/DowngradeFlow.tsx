@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // #780 Premium → Supporter downgrade confirmation (design table
 // lifecycle-flows.md). Single shape per the design — Premium's "Change plan"
@@ -7,8 +7,8 @@
 // creditText is the live proration preview; the design defines no loading
 // state, so a quiet placeholder holds the slot while it lands.
 
-import { AMOUNT_PLACEHOLDER, DOWNGRADE_FLOW_COPY } from './definitions/copy'
-import { ChangesDisclosure } from './ChangesDisclosure'
+import { AMOUNT_PLACEHOLDER, DOWNGRADE_FLOW_COPY } from './definitions/copy';
+import { ChangesDisclosure } from './ChangesDisclosure';
 import {
   ErrorLine,
   FinePrint,
@@ -17,19 +17,19 @@ import {
   MathRow,
   MonoEyebrow,
   RailHeader,
-} from './primitives'
+} from './primitives';
 
 interface DowngradeFlowProps {
   /** Formatted credit, e.g. "$2.50" — null while the preview loads. */
-  creditText: string | null
+  creditText: string | null;
   /** Desktop modal layout — larger headline/subhead sizes. */
-  wide: boolean
-  pending: boolean
+  wide: boolean;
+  pending: boolean;
   /** Gates the confirm CTA while the proration preview is still loading. */
-  confirmDisabled?: boolean
-  errorText: string | null
-  onConfirm: () => void
-  onBack: () => void
+  confirmDisabled?: boolean;
+  errorText: string | null;
+  onConfirm: () => void;
+  onBack: () => void;
 }
 
 export const DowngradeFlow = ({
@@ -41,8 +41,8 @@ export const DowngradeFlow = ({
   onConfirm,
   onBack,
 }: DowngradeFlowProps) => {
-  const copy = DOWNGRADE_FLOW_COPY
-  const credit = creditText ?? AMOUNT_PLACEHOLDER
+  const copy = DOWNGRADE_FLOW_COPY;
+  const credit = creditText ?? AMOUNT_PLACEHOLDER;
 
   return (
     <div
@@ -144,5 +144,5 @@ export const DowngradeFlow = ({
       </div>
       <FinePrint>{copy.finePrint}</FinePrint>
     </div>
-  )
-}
+  );
+};

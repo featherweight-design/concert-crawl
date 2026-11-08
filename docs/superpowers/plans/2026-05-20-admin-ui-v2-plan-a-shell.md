@@ -12,23 +12,23 @@
 
 ## File Map
 
-| File                                                       | Action | Purpose                                                                                                 |
+| File | Action | Purpose |
 | ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- | ----------- |
-| `apps/web/src/components/admin/shell/nav.ts`               | Modify | NAV_V2 — add Review + Feedback, remove Events + Prices, fix sections, add signal kind                   |
-| `apps/web/src/components/admin/shell/AdminSidebar.tsx`     | Modify | Remove back-to-app link, update badge key from `events` → `review`, add `feedback` key                  |
-| `apps/web/src/components/admin/shell/AppSwitcher.tsx`      | Create | Segmented pill with `User app                                                                           | Admin` tabs |
-| `apps/web/src/components/admin/shell/AdminTopbar.tsx`      | Modify | Add AppSwitcher (right-aligned), add hamburger button (mobile only)                                     |
-| `apps/web/src/components/admin/shell/MobileDrawer.tsx`     | Create | Full-height sheet drawer with full NAV_V2 including Account section                                     |
-| `apps/web/src/components/admin/shell/MobileBottomBar.tsx`  | Create | Fixed 5-item bottom bar for Dashboard, Venues, Crawl, Review, Feedback                                  |
-| `apps/web/src/components/admin/shell/AdminShellClient.tsx` | Create | Client wrapper that owns hamburger open state + passes it to topbar + drawer                            |
-| `apps/web/src/app/(protected)/admin/layout.tsx`            | Modify | Wire new badge counts (review = flagged events + pending subs, feedback = unread), use AdminShellClient |
-| `apps/web/src/app/(protected)/admin/review/page.tsx`       | Create | Stub page (Plan C will replace with full content)                                                       |
-| `apps/web/src/app/(protected)/admin/feedback/page.tsx`     | Create | Stub page (Plan C will replace with full content)                                                       |
-| `apps/web/src/app/(protected)/admin/events/page.tsx`       | Modify | Redirect to /admin/review                                                                               |
-| `apps/web/src/app/(protected)/admin/prices/page.tsx`       | Modify | Redirect to /admin/review                                                                               |
-| `apps/web/src/components/admin/shell/nav.test.ts`          | Modify | Update tests for NAV_V2 shape                                                                           |
-| `apps/api/src/routes/admin/events.ts`                      | Read   | Verify `/v1/admin/events/count` returns `{ pending }` — used for review badge                           |
-| `apps/api/src/routes/admin/prices.ts`                      | Read   | Verify `/v1/admin/prices/submissions` returns pending submissions                                       |
+| `apps/web/src/components/admin/shell/nav.ts` | Modify | NAV_V2 — add Review + Feedback, remove Events + Prices, fix sections, add signal kind |
+| `apps/web/src/components/admin/shell/AdminSidebar.tsx` | Modify | Remove back-to-app link, update badge key from `events` → `review`, add `feedback` key |
+| `apps/web/src/components/admin/shell/AppSwitcher.tsx` | Create | Segmented pill with `User app                                                                           | Admin` tabs |
+| `apps/web/src/components/admin/shell/AdminTopbar.tsx` | Modify | Add AppSwitcher (right-aligned), add hamburger button (mobile only) |
+| `apps/web/src/components/admin/shell/MobileDrawer.tsx` | Create | Full-height sheet drawer with full NAV_V2 including Account section |
+| `apps/web/src/components/admin/shell/MobileBottomBar.tsx` | Create | Fixed 5-item bottom bar for Dashboard, Venues, Crawl, Review, Feedback |
+| `apps/web/src/components/admin/shell/AdminShellClient.tsx` | Create | Client wrapper that owns hamburger open state + passes it to topbar + drawer |
+| `apps/web/src/app/(protected)/admin/layout.tsx` | Modify | Wire new badge counts (review = flagged events + pending subs, feedback = unread), use AdminShellClient |
+| `apps/web/src/app/(protected)/admin/review/page.tsx` | Create | Stub page (Plan C will replace with full content) |
+| `apps/web/src/app/(protected)/admin/feedback/page.tsx` | Create | Stub page (Plan C will replace with full content) |
+| `apps/web/src/app/(protected)/admin/events/page.tsx` | Modify | Redirect to /admin/review |
+| `apps/web/src/app/(protected)/admin/prices/page.tsx` | Modify | Redirect to /admin/review |
+| `apps/web/src/components/admin/shell/nav.test.ts` | Modify | Update tests for NAV_V2 shape |
+| `apps/api/src/routes/admin/events.ts` | Read | Verify `/v1/admin/events/count` returns `{ pending }` — used for review badge |
+| `apps/api/src/routes/admin/prices.ts` | Read | Verify `/v1/admin/prices/submissions` returns pending submissions |
 
 ---
 
@@ -44,43 +44,43 @@
 Add to `nav.test.ts`:
 
 ```typescript
-import { describe, it, expect } from 'vitest'
-import { NAV } from './nav'
+import { describe, it, expect } from 'vitest';
+import { NAV } from './nav';
 
 describe('NAV', () => {
   it('contains review but not events or prices', () => {
-    const keys = NAV.map((item) => item.key)
-    expect(keys).toContain('review')
-    expect(keys).toContain('feedback')
-    expect(keys).not.toContain('events')
-    expect(keys).not.toContain('prices')
-  })
+    const keys = NAV.map((item) => item.key);
+    expect(keys).toContain('review');
+    expect(keys).toContain('feedback');
+    expect(keys).not.toContain('events');
+    expect(keys).not.toContain('prices');
+  });
 
   it('review is in operations section', () => {
-    const review = NAV.find((item) => item.key === 'review')
-    expect(review?.section).toBe('operations')
-  })
+    const review = NAV.find((item) => item.key === 'review');
+    expect(review?.section).toBe('operations');
+  });
 
   it('feedback is in operations section', () => {
-    const feedback = NAV.find((item) => item.key === 'feedback')
-    expect(feedback?.section).toBe('operations')
-  })
+    const feedback = NAV.find((item) => item.key === 'feedback');
+    expect(feedback?.section).toBe('operations');
+  });
 
   it('invite-codes is in account section', () => {
-    const invites = NAV.find((item) => item.key === 'invite-codes')
-    expect(invites?.section).toBe('account')
-  })
+    const invites = NAV.find((item) => item.key === 'invite-codes');
+    expect(invites?.section).toBe('account');
+  });
 
   it('review badge kind is warning', () => {
-    const review = NAV.find((item) => item.key === 'review')
-    expect(review?.badge?.kind).toBe('warning')
-  })
+    const review = NAV.find((item) => item.key === 'review');
+    expect(review?.badge?.kind).toBe('warning');
+  });
 
   it('feedback badge kind is signal', () => {
-    const feedback = NAV.find((item) => item.key === 'feedback')
-    expect(feedback?.badge?.kind).toBe('signal')
-  })
-})
+    const feedback = NAV.find((item) => item.key === 'feedback');
+    expect(feedback?.badge?.kind).toBe('signal');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -91,18 +91,18 @@ Expected: FAIL — review/feedback not found, events/prices still in NAV
 - [ ] **Step 3: Rewrite nav.ts**
 
 ```typescript
-export type NavKind = 'danger' | 'warning' | 'signal'
+export type NavKind = 'danger' | 'warning' | 'signal';
 
 export interface NavItem {
-  key: string
-  label: string
-  href: string
-  iconName: string
+  key: string;
+  label: string;
+  href: string;
+  iconName: string;
   badge?: {
-    count: number
-    kind: NavKind
-  }
-  section: 'operations' | 'account'
+    count: number;
+    kind: NavKind;
+  };
+  section: 'operations' | 'account';
 }
 
 export const NAV: NavItem[] = [
@@ -158,7 +158,7 @@ export const NAV: NavItem[] = [
     iconName: 'Settings',
     section: 'account',
   },
-]
+];
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -184,22 +184,22 @@ git -C /Users/huey/Projects/concert-crawl/.worktrees/admin-ui-v2 commit -m "feat
 - [ ] **Step 1: Create AppSwitcher.tsx**
 
 ```tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { LayoutDashboard, ExternalLink } from 'lucide-react'
+import Link from 'next/link';
+import { LayoutDashboard, ExternalLink } from 'lucide-react';
 
 interface AppSwitcherProps {
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md';
 }
 
 const sizes = {
   sm: { h: 26, fs: 10, px: 8, gap: 4, iconSize: 12 },
   md: { h: 30, fs: 11, px: 10, gap: 5, iconSize: 13 },
-}
+};
 
 export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
-  const sz = sizes[size]
+  const sz = sizes[size];
 
   return (
     <div
@@ -238,10 +238,10 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
           transition: 'background .12s, color .12s',
         }}
         onMouseEnter={(evt) => {
-          evt.currentTarget.style.background = 'var(--overlay-hover)'
+          evt.currentTarget.style.background = 'var(--overlay-hover)';
         }}
         onMouseLeave={(evt) => {
-          evt.currentTarget.style.background = 'transparent'
+          evt.currentTarget.style.background = 'transparent';
         }}
       >
         <ExternalLink size={sz.iconSize} />
@@ -271,8 +271,8 @@ export const AppSwitcher = ({ size = 'md' }: AppSwitcherProps) => {
         <span>Admin</span>
       </div>
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Commit**
@@ -295,32 +295,32 @@ The topbar needs two additions: AppSwitcher on the right, and a hamburger button
 - [ ] **Step 1: Update AdminTopbar.tsx**
 
 ```tsx
-'use client'
+'use client';
 
-import { usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { Menu } from 'lucide-react'
-import { NAV } from './nav'
-import { buildBreadcrumbs } from './breadcrumbs'
-import { usePageTitle } from './PageTitleContext'
-import { AppSwitcher } from './AppSwitcher'
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { Menu } from 'lucide-react';
+import { NAV } from './nav';
+import { buildBreadcrumbs } from './breadcrumbs';
+import { usePageTitle } from './PageTitleContext';
+import { AppSwitcher } from './AppSwitcher';
 
 const useBreadcrumbs = (pageTitle: string | null) => {
-  const pathname = usePathname()
-  const crumbs = buildBreadcrumbs(pathname, NAV)
+  const pathname = usePathname();
+  const crumbs = buildBreadcrumbs(pathname, NAV);
   if (pageTitle && crumbs.length > 0) {
-    return [...crumbs.slice(0, -1), { label: pageTitle }]
+    return [...crumbs.slice(0, -1), { label: pageTitle }];
   }
-  return crumbs
-}
+  return crumbs;
+};
 
 interface AdminTopbarProps {
-  onMenuOpen?: () => void
+  onMenuOpen?: () => void;
 }
 
 export const AdminTopbar = ({ onMenuOpen }: AdminTopbarProps) => {
-  const { pageTitle } = usePageTitle()
-  const crumbs = useBreadcrumbs(pageTitle)
+  const { pageTitle } = usePageTitle();
+  const crumbs = useBreadcrumbs(pageTitle);
 
   return (
     <header
@@ -433,8 +433,8 @@ export const AdminTopbar = ({ onMenuOpen }: AdminTopbarProps) => {
       {/* App switcher */}
       <AppSwitcher size="md" />
     </header>
-  )
-}
+  );
+};
 ```
 
 Then add to `admin.css`:
@@ -471,18 +471,18 @@ The prop type changes from `{ crawl: number; events: number }` to `{ crawl: numb
 ```tsx
 // Change the interface:
 interface AdminSidebarProps {
-  badgeCounts?: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
+  badgeCounts?: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
 }
 
 // Change getCount:
 const getCount = (key: string): number => {
-  if (!badgeCounts) return 0
-  if (key === 'crawl') return badgeCounts.crawl
-  if (key === 'review') return badgeCounts.review
-  if (key === 'feedback') return badgeCounts.feedback
-  return 0
-}
+  if (!badgeCounts) return 0;
+  if (key === 'crawl') return badgeCounts.crawl;
+  if (key === 'review') return badgeCounts.review;
+  if (key === 'feedback') return badgeCounts.feedback;
+  return 0;
+};
 ```
 
 Remove the entire "Back to app" `<div>` block (lines ~449–473 in the current file, containing the `<Link href="/watching">` element).
@@ -518,22 +518,22 @@ git -C /Users/huey/Projects/concert-crawl/.worktrees/admin-ui-v2 commit -m "feat
 - [ ] **Step 1: Create MobileDrawer.tsx**
 
 ```tsx
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { X } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
-import { NAV, type NavItem } from './nav'
-import { CCMark } from '@/components/brand/cc-mark'
-import { AppSwitcher } from './AppSwitcher'
+import { useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { X } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { NAV, type NavItem } from './nav';
+import { CCMark } from '@/components/brand/cc-mark';
+import { AppSwitcher } from './AppSwitcher';
 
 interface MobileDrawerProps {
-  open: boolean
-  onClose: () => void
-  badgeCounts: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
+  open: boolean;
+  onClose: () => void;
+  badgeCounts: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
 }
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
@@ -542,19 +542,19 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 const getCount = (
   key: string,
   counts: MobileDrawerProps['badgeCounts'],
 ): number => {
-  if (key === 'crawl') return counts.crawl
-  if (key === 'review') return counts.review
-  if (key === 'feedback') return counts.feedback
-  return 0
-}
+  if (key === 'crawl') return counts.crawl;
+  if (key === 'review') return counts.review;
+  if (key === 'feedback') return counts.feedback;
+  return 0;
+};
 
 const DrawerNavLink = ({
   item,
@@ -562,10 +562,10 @@ const DrawerNavLink = ({
   count,
   onClose,
 }: {
-  item: NavItem
-  active: boolean
-  count: number
-  onClose: () => void
+  item: NavItem;
+  active: boolean;
+  count: number;
+  onClose: () => void;
 }) => (
   <Link
     href={item.href}
@@ -609,7 +609,7 @@ const DrawerNavLink = ({
       </span>
     )}
   </Link>
-)
+);
 
 export const MobileDrawer = ({
   open,
@@ -617,28 +617,28 @@ export const MobileDrawer = ({
   badgeCounts,
   user,
 }: MobileDrawerProps) => {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   // Close on route change
   useEffect(() => {
-    onClose()
-  }, [pathname, onClose])
+    onClose();
+  }, [pathname, onClose]);
 
   // Lock body scroll when open
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = ''
+      document.body.style.overflow = '';
     }
     return () => {
-      document.body.style.overflow = ''
-    }
-  }, [open])
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
-  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase()
-  const opItems = NAV.filter((item) => item.section === 'operations')
-  const accountItems = NAV.filter((item) => item.section === 'account')
+  const userInitial = (user.firstName ?? user.email).charAt(0).toUpperCase();
+  const opItems = NAV.filter((item) => item.section === 'operations');
+  const accountItems = NAV.filter((item) => item.section === 'account');
 
   return (
     <>
@@ -826,8 +826,8 @@ export const MobileDrawer = ({
         </div>
       </div>
     </>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Create MobileBottomBar.tsx**
@@ -835,16 +835,16 @@ export const MobileDrawer = ({
 The bottom tab bar shows 5 ops items: Dashboard, Venues, Crawl, Review, Feedback.
 
 ```tsx
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import * as LucideIcons from 'lucide-react'
-import { NAV } from './nav'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import * as LucideIcons from 'lucide-react';
+import { NAV } from './nav';
 
 const BOTTOM_TABS = NAV.filter((item) =>
   ['dashboard', 'venues', 'crawl', 'review', 'feedback'].includes(item.key),
-)
+);
 
 const NavIcon = ({ name, size }: { name: string; size: number }) => {
   const Icon = (
@@ -852,26 +852,26 @@ const NavIcon = ({ name, size }: { name: string; size: number }) => {
       string,
       React.ComponentType<{ size: number }>
     >
-  )[name]
-  return Icon ? <Icon size={size} /> : null
-}
+  )[name];
+  return Icon ? <Icon size={size} /> : null;
+};
 
 interface MobileBottomBarProps {
-  badgeCounts: { crawl: number; review: number; feedback: number }
+  badgeCounts: { crawl: number; review: number; feedback: number };
 }
 
 const getCount = (
   key: string,
   counts: MobileBottomBarProps['badgeCounts'],
 ): number => {
-  if (key === 'crawl') return counts.crawl
-  if (key === 'review') return counts.review
-  if (key === 'feedback') return counts.feedback
-  return 0
-}
+  if (key === 'crawl') return counts.crawl;
+  if (key === 'review') return counts.review;
+  if (key === 'feedback') return counts.feedback;
+  return 0;
+};
 
 export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <nav
@@ -895,9 +895,9 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
       {BOTTOM_TABS.map((item) => {
         const active =
           pathname === item.href ||
-          (item.href !== '/admin' && pathname.startsWith(item.href))
-        const count = getCount(item.key, badgeCounts)
-        const hasBadge = item.badge !== undefined && count > 0
+          (item.href !== '/admin' && pathname.startsWith(item.href));
+        const count = getCount(item.key, badgeCounts);
+        const hasBadge = item.badge !== undefined && count > 0;
 
         return (
           <Link
@@ -936,11 +936,11 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
               {item.label}
             </span>
           </Link>
-        )
+        );
       })}
     </nav>
-  )
-}
+  );
+};
 ```
 
 Add to `admin.css`:
@@ -978,18 +978,18 @@ git -C /Users/huey/Projects/concert-crawl/.worktrees/admin-ui-v2 commit -m "feat
 - [ ] **Step 1: Create AdminShellClient.tsx**
 
 ```tsx
-'use client'
+'use client';
 
-import { useState, useCallback } from 'react'
-import { AdminSidebar } from './AdminSidebar'
-import { AdminTopbar } from './AdminTopbar'
-import { MobileDrawer } from './MobileDrawer'
-import { MobileBottomBar } from './MobileBottomBar'
+import { useState, useCallback } from 'react';
+import { AdminSidebar } from './AdminSidebar';
+import { AdminTopbar } from './AdminTopbar';
+import { MobileDrawer } from './MobileDrawer';
+import { MobileBottomBar } from './MobileBottomBar';
 
 interface AdminShellClientProps {
-  badgeCounts: { crawl: number; review: number; feedback: number }
-  user: { firstName: string | null; email: string }
-  children: React.ReactNode
+  badgeCounts: { crawl: number; review: number; feedback: number };
+  user: { firstName: string | null; email: string };
+  children: React.ReactNode;
 }
 
 export const AdminShellClient = ({
@@ -997,9 +997,9 @@ export const AdminShellClient = ({
   user,
   children,
 }: AdminShellClientProps) => {
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const openDrawer = useCallback(() => setDrawerOpen(true), [])
-  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
@@ -1018,8 +1018,8 @@ export const AdminShellClient = ({
       />
       <MobileBottomBar badgeCounts={badgeCounts} />
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 2: Update layout.tsx**
@@ -1027,78 +1027,78 @@ export const AdminShellClient = ({
 The layout needs to fetch review badge count (pending event flags + pending price submissions) and feedback unread count. For now, use the existing events count endpoint for review, and 0 for feedback (feedback API is Plan C).
 
 ```tsx
-import './admin.css'
-import { requireAdminUser } from '@/lib/auth'
-import { auth } from '@clerk/nextjs/server'
-import { apiClient } from '@/lib/api'
-import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider'
-import { AdminShellClient } from '@/components/admin/shell/AdminShellClient'
+import './admin.css';
+import { requireAdminUser } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
+import { apiClient } from '@/lib/api';
+import { AdminThemeProvider } from '@/components/admin/shell/AdminThemeProvider';
+import { AdminShellClient } from '@/components/admin/shell/AdminShellClient';
 
 interface CrawlStatusVenue {
-  id: string
-  name: string
-  blockedAt: string | null
-  lastRun: { status: string } | null
+  id: string;
+  name: string;
+  blockedAt: string | null;
+  lastRun: { status: string } | null;
 }
 
 interface EventCounts {
-  pending: number
-  approved: number
+  pending: number;
+  approved: number;
 }
 
 interface SubmissionsResponse {
-  data: unknown[]
+  data: unknown[];
 }
 
 export default async function AdminLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const adminUser = await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
+  const adminUser = await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
 
-  let blockedCrawls = 0
-  let pendingReview = 0
+  let blockedCrawls = 0;
+  let pendingReview = 0;
 
   if (token) {
     const [statusRes, countsRes, subsRes] = await Promise.allSettled([
       apiClient.get<CrawlStatusVenue[]>('/v1/admin/crawl/status', token),
       apiClient.get<EventCounts>('/v1/admin/events/count', token),
       apiClient.get<SubmissionsResponse>('/v1/admin/prices/submissions', token),
-    ])
+    ]);
 
     if (statusRes.status === 'fulfilled') {
       blockedCrawls = statusRes.value.filter(
         (venue) =>
           (venue.blockedAt !== null && venue.lastRun?.status !== 'success') ||
           venue.lastRun?.status === 'failed',
-      ).length
+      ).length;
     } else {
       console.warn('[admin layout] crawl status fetch failed', {
         reason: statusRes.reason,
-      })
+      });
     }
 
-    let pendingEvents = 0
-    let pendingSubmissions = 0
+    let pendingEvents = 0;
+    let pendingSubmissions = 0;
 
     if (countsRes.status === 'fulfilled') {
-      pendingEvents = countsRes.value.pending
+      pendingEvents = countsRes.value.pending;
     } else {
       console.warn('[admin layout] event counts fetch failed', {
         reason: countsRes.reason,
-      })
+      });
     }
 
     if (subsRes.status === 'fulfilled') {
       pendingSubmissions = Array.isArray(subsRes.value.data)
         ? subsRes.value.data.length
-        : 0
+        : 0;
     }
 
-    pendingReview = pendingEvents + pendingSubmissions
+    pendingReview = pendingEvents + pendingSubmissions;
   }
 
   return (
@@ -1114,7 +1114,7 @@ export default async function AdminLayout({
         {children}
       </AdminShellClient>
     </AdminThemeProvider>
-  )
+  );
 }
 ```
 
@@ -1161,7 +1161,7 @@ export default function AdminReviewPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1190,7 +1190,7 @@ export default function AdminFeedbackPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -1199,10 +1199,10 @@ export default function AdminFeedbackPage() {
 Replace the entire file:
 
 ```tsx
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
 
 export default function AdminEventsRedirect() {
-  redirect('/admin/review')
+  redirect('/admin/review');
 }
 ```
 
@@ -1211,10 +1211,10 @@ export default function AdminEventsRedirect() {
 Replace the entire file:
 
 ```tsx
-import { redirect } from 'next/navigation'
+import { redirect } from 'next/navigation';
 
 export default function AdminPricesRedirect() {
-  redirect('/admin/review')
+  redirect('/admin/review');
 }
 ```
 

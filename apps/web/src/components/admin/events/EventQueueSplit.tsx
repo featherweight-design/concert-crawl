@@ -1,25 +1,26 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react';
 import {
   useAdminEvents,
   useApproveEvent,
   useRejectEvent,
   useUpdateEvent,
-} from '@/lib/queries/use-admin-events'
+} from '@/lib/queries/use-admin-events';
 import {
   ConfidenceBar,
   AdminButton,
   Kbd,
   StatusBadge,
   MonoLabel,
-} from '@/components/admin/primitives'
-import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
-import type { AdminEvent } from '@/components/admin/events/types'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
+import type { AdminEvent } from '@/components/admin/events/types';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
-type StatusTab = 'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected'
+type StatusTab =
+  'pending' | 'low_conf' | 'duplicates' | 'approved' | 'rejected';
 
 const TAB_KINDS: Record<StatusTab, string> = {
   pending: 'signal',
@@ -27,60 +28,61 @@ const TAB_KINDS: Record<StatusTab, string> = {
   duplicates: 'warning',
   approved: 'success',
   rejected: 'danger',
-}
+};
 
 interface Props {
-  initialEvents: AdminEvent[]
+  initialEvents: AdminEvent[];
 }
 
 function formatDate(dateStr: string) {
-  const parts = dateStr.split('-').map(Number)
+  const parts = dateStr.split('-').map(Number);
   return new Date(
     parts[0] ?? 0,
     (parts[1] ?? 1) - 1,
     parts[2] ?? 1,
-  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  ).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatTime(timeStr: string | null | undefined) {
-  if (!timeStr) return null
-  const parts = timeStr.split(':')
-  const hours = Number(parts[0])
-  const minutes = Number(parts[1])
-  if (isNaN(hours) || isNaN(minutes)) return null
-  const period = hours >= 12 ? 'PM' : 'AM'
-  const displayHours = hours % 12 || 12
-  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`
+  if (!timeStr) return null;
+  const parts = timeStr.split(':');
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+  if (isNaN(hours) || isNaN(minutes)) return null;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
 function formatPrice(min: string | null, max: string | null) {
-  if (!min && !max) return null
-  const low = min ? Math.round(parseFloat(min)) : null
-  const high = max ? Math.round(parseFloat(max)) : null
-  if (low !== null && high !== null && low !== high) return `$${low} – $${high}`
-  if (low !== null) return `$${low}`
-  if (high !== null) return `$${high}`
-  return null
+  if (!min && !max) return null;
+  const low = min ? Math.round(parseFloat(min)) : null;
+  const high = max ? Math.round(parseFloat(max)) : null;
+  if (low !== null && high !== null && low !== high)
+    return `$${low} – $${high}`;
+  if (low !== null) return `$${low}`;
+  if (high !== null) return `$${high}`;
+  return null;
 }
 
 function formatDiscovered(createdAt: string) {
-  const date = new Date(createdAt)
-  const now = new Date()
-  const diffMins = Math.floor((now.getTime() - date.getTime()) / 60000)
-  if (diffMins < 1) return 'just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  const diffHours = Math.floor(diffMins / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
+  const date = new Date(createdAt);
+  const now = new Date();
+  const diffMins = Math.floor((now.getTime() - date.getTime()) / 60000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 }
 
 function SourceBadge({ strategy }: { strategy: string | null }) {
-  if (!strategy) return null
-  const isLlm = strategy === 'llm'
+  if (!strategy) return null;
+  const isLlm = strategy === 'llm';
   return (
     <span
       style={{
@@ -96,15 +98,15 @@ function SourceBadge({ strategy }: { strategy: string | null }) {
     >
       {strategy}
     </span>
-  )
+  );
 }
 
 function FlagBadge({
   kind,
   children,
 }: {
-  kind: 'warning' | 'danger'
-  children: React.ReactNode
+  kind: 'warning' | 'danger';
+  children: React.ReactNode;
 }) {
   return (
     <span
@@ -122,7 +124,7 @@ function FlagBadge({
     >
       {children}
     </span>
-  )
+  );
 }
 
 function VitalCell({
@@ -130,9 +132,9 @@ function VitalCell({
   children,
   noBorder,
 }: {
-  label: string
-  children: React.ReactNode
-  noBorder?: boolean
+  label: string;
+  children: React.ReactNode;
+  noBorder?: boolean;
 }) {
   return (
     <div
@@ -154,7 +156,7 @@ function VitalCell({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 function FieldRow({
@@ -164,11 +166,11 @@ function FieldRow({
   warn,
   tags,
 }: {
-  label: string
-  value?: string | null
-  mono?: boolean
-  warn?: boolean
-  tags?: string[]
+  label: string;
+  value?: string | null;
+  mono?: boolean;
+  warn?: boolean;
+  tags?: string[];
 }) {
   return (
     <div
@@ -241,7 +243,7 @@ function FieldRow({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function EditFieldRow({
@@ -251,11 +253,11 @@ function EditFieldRow({
   mono,
   onChange,
 }: {
-  label: string
-  value: string
-  type?: 'text' | 'date' | 'time' | 'number'
-  mono?: boolean
-  onChange: (val: string) => void
+  label: string;
+  value: string;
+  type?: 'text' | 'date' | 'time' | 'number';
+  mono?: boolean;
+  onChange: (val: string) => void;
 }) {
   return (
     <div
@@ -294,38 +296,38 @@ function EditFieldRow({
           outline: 'none',
         }}
         onFocus={(ev) => {
-          ev.currentTarget.style.borderColor = 'var(--signal)'
+          ev.currentTarget.style.borderColor = 'var(--signal)';
         }}
         onBlur={(ev) => {
-          ev.currentTarget.style.borderColor = 'var(--border)'
+          ev.currentTarget.style.borderColor = 'var(--border)';
         }}
       />
     </div>
-  )
+  );
 }
 
 export const EventQueueSplit = ({ initialEvents }: Props) => {
-  const approveMutation = useApproveEvent()
-  const rejectMutation = useRejectEvent()
-  const updateEvent = useUpdateEvent()
-  const { data: queriedEvents } = useAdminEvents(initialEvents)
-  const [events, setEvents] = useState<AdminEvent[]>(queriedEvents)
+  const approveMutation = useApproveEvent();
+  const rejectMutation = useRejectEvent();
+  const updateEvent = useUpdateEvent();
+  const { data: queriedEvents } = useAdminEvents(initialEvents);
+  const [events, setEvents] = useState<AdminEvent[]>(queriedEvents);
   const [selectedId, setSelectedId] = useState<string | null>(
     initialEvents[0]?.id ?? null,
-  )
-  const [tab, setTab] = useState<StatusTab>('pending')
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  );
+  const [tab, setTab] = useState<StatusTab>('pending');
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [editDraft, setEditDraft] = useState<{
-    title: string
-    artist: string
-    date: string
-    doorsTime: string
-    showTime: string
-    ticketPriceMin: string
-    ticketPriceMax: string
+    title: string;
+    artist: string;
+    date: string;
+    doorsTime: string;
+    showTime: string;
+    ticketPriceMin: string;
+    ticketPriceMax: string;
   }>({
     title: '',
     artist: '',
@@ -334,26 +336,26 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
     showTime: '',
     ticketPriceMin: '',
     ticketPriceMax: '',
-  })
+  });
 
   // Keep local state in sync with background refetches
   useEffect(() => {
-    setEvents(queriedEvents)
-  }, [queriedEvents])
+    setEvents(queriedEvents);
+  }, [queriedEvents]);
 
   // Exit edit mode when a different event is selected
   useEffect(() => {
-    setIsEditing(false)
-  }, [selectedId])
+    setIsEditing(false);
+  }, [selectedId]);
 
-  const pendingEvents = events.filter((ev) => !ev.verified)
+  const pendingEvents = events.filter((ev) => !ev.verified);
   const lowConfEvents = events.filter(
     (ev) =>
       !ev.verified &&
       Number(ev.confidenceScore) > 0 &&
       Number(ev.confidenceScore) < 0.7,
-  )
-  const approvedEvents = events.filter((ev) => ev.verified)
+  );
+  const approvedEvents = events.filter((ev) => ev.verified);
 
   const filtered =
     tab === 'pending'
@@ -366,64 +368,64 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
             ? approvedEvents
             : tab === 'rejected'
               ? []
-              : events
+              : events;
 
-  const selectedIdx = filtered.findIndex((ev) => ev.id === selectedId)
-  const selected = filtered.find((ev) => ev.id === selectedId)
+  const selectedIdx = filtered.findIndex((ev) => ev.id === selectedId);
+  const selected = filtered.find((ev) => ev.id === selectedId);
 
   const approve = useCallback(
     async (id: string) => {
-      setProcessing(id)
-      setActionError(null)
+      setProcessing(id);
+      setActionError(null);
       try {
-        await approveMutation.mutateAsync(id)
+        await approveMutation.mutateAsync(id);
         setEvents((prev) =>
           prev.map((ev) => (ev.id === id ? { ...ev, verified: true } : ev)),
-        )
-        const remaining = filtered.filter((ev) => ev.id !== id)
-        const nextIdx = Math.min(selectedIdx, remaining.length - 1)
-        setSelectedId(remaining[nextIdx]?.id ?? null)
+        );
+        const remaining = filtered.filter((ev) => ev.id !== id);
+        const nextIdx = Math.min(selectedIdx, remaining.length - 1);
+        setSelectedId(remaining[nextIdx]?.id ?? null);
       } catch (err) {
-        console.error('[EventQueueSplit] approve failed:', err)
+        console.error('[EventQueueSplit] approve failed:', err);
         setActionError(
           err instanceof Error
             ? err.message
             : ADMIN_COPY.events.errors.actionFailed,
-        )
+        );
       } finally {
-        setProcessing(null)
+        setProcessing(null);
       }
     },
     [approveMutation, selectedIdx, filtered],
-  )
+  );
 
   const reject = useCallback(
     async (id: string) => {
-      if (!confirm(ADMIN_COPY.events.confirms.deleteEvent)) return
-      setProcessing(id)
-      setActionError(null)
+      if (!confirm(ADMIN_COPY.events.confirms.deleteEvent)) return;
+      setProcessing(id);
+      setActionError(null);
       try {
-        await rejectMutation.mutateAsync(id)
-        setEvents((prev) => prev.filter((ev) => ev.id !== id))
-        const remaining = filtered.filter((ev) => ev.id !== id)
-        const nextIdx = Math.min(selectedIdx, remaining.length - 1)
-        setSelectedId(remaining[nextIdx]?.id ?? null)
+        await rejectMutation.mutateAsync(id);
+        setEvents((prev) => prev.filter((ev) => ev.id !== id));
+        const remaining = filtered.filter((ev) => ev.id !== id);
+        const nextIdx = Math.min(selectedIdx, remaining.length - 1);
+        setSelectedId(remaining[nextIdx]?.id ?? null);
       } catch (err) {
-        console.error('[EventQueueSplit] reject failed:', err)
+        console.error('[EventQueueSplit] reject failed:', err);
         setActionError(
           err instanceof Error
             ? err.message
             : ADMIN_COPY.events.errors.actionFailed,
-        )
+        );
       } finally {
-        setProcessing(null)
+        setProcessing(null);
       }
     },
     [rejectMutation, selectedIdx, filtered],
-  )
+  );
 
   function handleEditStart() {
-    if (!selected) return
+    if (!selected) return;
     setEditDraft({
       title: selected.title,
       artist: selected.artist,
@@ -432,13 +434,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       showTime: selected.showTime ?? '',
       ticketPriceMin: selected.ticketPriceMin ?? '',
       ticketPriceMax: selected.ticketPriceMax ?? '',
-    })
-    setIsEditing(true)
+    });
+    setIsEditing(true);
   }
 
   async function handleEditSave() {
-    if (!selected) return
-    setActionError(null)
+    if (!selected) return;
+    setActionError(null);
     try {
       const payload = {
         ...(editDraft.title ? { title: editDraft.title } : {}),
@@ -448,20 +450,20 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         showTime: editDraft.showTime || null,
         ticketPriceMin: editDraft.ticketPriceMin || null,
         ticketPriceMax: editDraft.ticketPriceMax || null,
-      }
-      await updateEvent.mutateAsync({ id: selected.id, payload })
-      setIsEditing(false)
+      };
+      await updateEvent.mutateAsync({ id: selected.id, payload });
+      setIsEditing(false);
     } catch (err) {
       setActionError(
         err instanceof Error
           ? err.message
           : ADMIN_COPY.events.errors.saveFailed,
-      )
+      );
     }
   }
 
   function handleEditCancel() {
-    setIsEditing(false)
+    setIsEditing(false);
   }
 
   useEffect(() => {
@@ -470,22 +472,22 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         ev.target instanceof HTMLInputElement ||
         ev.target instanceof HTMLTextAreaElement
       )
-        return
+        return;
       if (ev.key === 'j' || ev.key === 'ArrowDown') {
-        const next = filtered[selectedIdx + 1]
-        if (next) setSelectedId(next.id)
+        const next = filtered[selectedIdx + 1];
+        if (next) setSelectedId(next.id);
       } else if (ev.key === 'k' || ev.key === 'ArrowUp') {
-        const prev = filtered[selectedIdx - 1]
-        if (prev) setSelectedId(prev.id)
+        const prev = filtered[selectedIdx - 1];
+        if (prev) setSelectedId(prev.id);
       } else if (ev.key === 'a' && selectedId) {
-        void approve(selectedId)
+        void approve(selectedId);
       } else if (ev.key === 'r' && selectedId) {
-        void reject(selectedId)
+        void reject(selectedId);
       }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [selectedId, selectedIdx, filtered, approve, reject])
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedId, selectedIdx, filtered, approve, reject]);
 
   const TABS: { key: StatusTab; label: string; count: number }[] = [
     {
@@ -505,7 +507,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
       count: approvedEvents.length,
     },
     { key: 'rejected', label: ADMIN_COPY.events.tabs.rejected, count: 0 },
-  ]
+  ];
 
   if (events.length === 0) {
     return (
@@ -526,7 +528,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         </div>
         <div style={{ fontSize: 13 }}>{ADMIN_COPY.events.empty.subtitle}</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -564,13 +566,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
           }}
         >
           {TABS.map((tabItem) => {
-            const active = tab === tabItem.key
-            const kind = TAB_KINDS[tabItem.key]
+            const active = tab === tabItem.key;
+            const kind = TAB_KINDS[tabItem.key];
             return (
               <button
                 key={tabItem.key}
                 onClick={() => {
-                  setTab(tabItem.key)
+                  setTab(tabItem.key);
                   const newFiltered =
                     tabItem.key === 'pending'
                       ? pendingEvents
@@ -578,9 +580,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         ? lowConfEvents
                         : tabItem.key === 'approved'
                           ? approvedEvents
-                          : []
+                          : [];
                   if (!newFiltered.find((ev) => ev.id === selectedId)) {
-                    setSelectedId(newFiltered[0]?.id ?? null)
+                    setSelectedId(newFiltered[0]?.id ?? null);
                   }
                 }}
                 style={{
@@ -616,7 +618,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   {tabItem.count}
                 </span>
               </button>
-            )
+            );
           })}
         </div>
 
@@ -695,9 +697,9 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
               style={{ accentColor: 'var(--signal)' }}
               onChange={(chev) => {
                 if (chev.target.checked) {
-                  setSelectedIds(new Set(filtered.map((ev) => ev.id)))
+                  setSelectedIds(new Set(filtered.map((ev) => ev.id)));
                 } else {
-                  setSelectedIds(new Set())
+                  setSelectedIds(new Set());
                 }
               }}
             />
@@ -712,11 +714,11 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
 
           {/* Event rows */}
           {filtered.map((ev) => {
-            const conf = Number(ev.confidenceScore ?? 0)
-            const isLowConf = conf > 0 && conf < 0.7
-            const missingPrice = !ev.ticketPriceMin && !ev.ticketPriceMax
-            const active = ev.id === selectedId
-            const showTime = formatTime(ev.showTime)
+            const conf = Number(ev.confidenceScore ?? 0);
+            const isLowConf = conf > 0 && conf < 0.7;
+            const missingPrice = !ev.ticketPriceMin && !ev.ticketPriceMax;
+            const active = ev.id === selectedId;
+            const showTime = formatTime(ev.showTime);
 
             return (
               <div
@@ -725,7 +727,8 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                 tabIndex={0}
                 onClick={() => setSelectedId(ev.id)}
                 onKeyDown={(ke) => {
-                  if (ke.key === 'Enter' || ke.key === ' ') setSelectedId(ev.id)
+                  if (ke.key === 'Enter' || ke.key === ' ')
+                    setSelectedId(ev.id);
                 }}
                 style={{
                   width: '100%',
@@ -750,13 +753,13 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   checked={selectedIds.has(ev.id)}
                   style={{ marginTop: 2, accentColor: 'var(--signal)' }}
                   onChange={(chev) => {
-                    chev.stopPropagation()
+                    chev.stopPropagation();
                     setSelectedIds((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(ev.id)) next.delete(ev.id)
-                      else next.add(ev.id)
-                      return next
-                    })
+                      const next = new Set(prev);
+                      if (next.has(ev.id)) next.delete(ev.id);
+                      else next.add(ev.id);
+                      return next;
+                    });
                   }}
                   onClick={(chev) => chev.stopPropagation()}
                 />
@@ -816,7 +819,7 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                   )}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
 
@@ -1457,5 +1460,5 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
         </div>
       )}
     </div>
-  )
-}
+  );
+};

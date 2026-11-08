@@ -10,19 +10,19 @@
 // resale-vs-primary meaning, so a fan-submitted resale price rendered as
 // "Community" and every vendor outside the original six did too.
 
-import { isResaleVendor } from '@concert-crawl/types'
-import type { PriceSource, SourceCategory } from '@concert-crawl/types'
+import { isResaleVendor } from '@concert-crawl/types';
+import type { PriceSource, SourceCategory } from '@concert-crawl/types';
 
-export type SourceKind = 'primary' | 'resale' | 'community' | 'boxoffice'
+export type SourceKind = 'primary' | 'resale' | 'community' | 'boxoffice';
 
 // Legacy path only. Rows predating sourceCategory (#641) have nothing else to
 // go on, so they keep the old vendor inference.
 function kindFromVendor(
   vendor?: string | null,
 ): Exclude<SourceKind, 'primary'> {
-  if (vendor === 'VenueBoxOffice') return 'boxoffice'
-  if (isResaleVendor(vendor)) return 'resale'
-  return 'community'
+  if (vendor === 'VenueBoxOffice') return 'boxoffice';
+  if (isResaleVendor(vendor)) return 'resale';
+  return 'community';
 }
 
 function kindFromSourceCategory(
@@ -31,13 +31,13 @@ function kindFromSourceCategory(
 ): Exclude<SourceKind, 'primary'> {
   switch (sourceCategory) {
     case 'boxoffice':
-      return 'boxoffice'
+      return 'boxoffice';
     case 'resale':
-      return 'resale'
+      return 'resale';
     case 'standard':
-      return 'community'
+      return 'community';
     default:
-      return kindFromVendor(vendor)
+      return kindFromVendor(vendor);
   }
 }
 
@@ -47,14 +47,14 @@ export function resolveSourceKind(
   sourceCategory?: SourceCategory | null,
 ): SourceKind {
   if (source === 'community')
-    return kindFromSourceCategory(sourceCategory, vendor)
-  if (source === 'seatgeek') return 'resale'
-  return 'primary'
+    return kindFromSourceCategory(sourceCategory, vendor);
+  if (source === 'seatgeek') return 'resale';
+  return 'primary';
 }
 
 export function resolveAlternateKind(
   vendor: string | null,
   sourceCategory?: SourceCategory | null,
 ): SourceKind {
-  return kindFromSourceCategory(sourceCategory, vendor)
+  return kindFromSourceCategory(sourceCategory, vendor);
 }

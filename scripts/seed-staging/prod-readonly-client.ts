@@ -21,12 +21,12 @@
  *   }
  */
 
-import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import * as schema from '../../packages/db/src/schema/index.js'
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from '../../packages/db/src/schema/index.js';
 
 // The full drizzle client type (with schema) used internally.
-type FullDb = ReturnType<typeof drizzle<typeof schema>>
+type FullDb = ReturnType<typeof drizzle<typeof schema>>;
 
 /**
  * A Drizzle client narrowed to read-only operations. Downstream callers
@@ -35,7 +35,7 @@ type FullDb = ReturnType<typeof drizzle<typeof schema>>
  * Structural Pick — only the `select` and `query` members survive. TypeScript
  * will reject any attempt to call write methods on a value of this type.
  */
-export type DrizzleReadDb = Pick<FullDb, 'select' | 'query'>
+export type DrizzleReadDb = Pick<FullDb, 'select' | 'query'>;
 
 /**
  * The surface returned by `openProdReadonly`. The only methods present are
@@ -43,9 +43,9 @@ export type DrizzleReadDb = Pick<FullDb, 'select' | 'query'>
  * No write surface exists on this type or at runtime.
  */
 export type ProdReadonlyClient = {
-  select: <T>(fn: (db: DrizzleReadDb) => Promise<T>) => Promise<T>
-  close: () => Promise<void>
-}
+  select: <T>(fn: (db: DrizzleReadDb) => Promise<T>) => Promise<T>;
+  close: () => Promise<void>;
+};
 
 /**
  * Opens a read-only Drizzle client to the given Postgres URL.
@@ -57,13 +57,13 @@ export function openProdReadonly(url: string): ProdReadonlyClient {
   if (!url) {
     throw new Error(
       'openProdReadonly: url must not be empty. Pass the value of NEON_PROD_DIRECT.',
-    )
+    );
   }
 
   // max: 2 — this is a one-shot script; we don't need a large pool.
   // prepare: false — required for compatibility with Neon's connection pooler.
-  const sql = postgres(url, { max: 2, prepare: false, ssl: 'require' })
-  const db = drizzle(sql, { schema })
+  const sql = postgres(url, { max: 2, prepare: false, ssl: 'require' });
+  const db = drizzle(sql, { schema });
 
   // Runtime read-only enforcement: expose a MINIMAL wrapper object with only
   // `select` and `query` bound to the real db, then proxy that wrapper. Any
@@ -79,30 +79,30 @@ export function openProdReadonly(url: string): ProdReadonlyClient {
   const readOnlyWrapper = {
     select: db.select.bind(db),
     query: db.query,
-  }
+  };
 
   const readOnlyProxy = new Proxy(readOnlyWrapper, {
     get(target, prop, receiver) {
       if (prop === 'select' || prop === 'query') {
-        return Reflect.get(target, prop, receiver)
+        return Reflect.get(target, prop, receiver);
       }
       // Allow symbols (Symbol.iterator, Symbol.for('nodejs.util.inspect.custom'))
       // for logging / debugging tools.
       if (typeof prop === 'symbol') {
-        return Reflect.get(target, prop, receiver)
+        return Reflect.get(target, prop, receiver);
       }
       throw new Error(
         `ProdReadonlyClient: attempted to access '${String(prop)}' on the read-only prod client. Only 'select' and 'query' are exposed. Do NOT write to prod.`,
-      )
+      );
     },
-  })
+  });
 
   // Cast to DrizzleReadDb so the type checker enforces read-only access at call sites.
-  const readDb: DrizzleReadDb = readOnlyProxy as unknown as DrizzleReadDb
+  const readDb: DrizzleReadDb = readOnlyProxy as unknown as DrizzleReadDb;
 
   return {
     select: <T>(fn: (db: DrizzleReadDb) => Promise<T>): Promise<T> =>
       fn(readDb),
     close: (): Promise<void> => sql.end(),
-  }
+  };
 }

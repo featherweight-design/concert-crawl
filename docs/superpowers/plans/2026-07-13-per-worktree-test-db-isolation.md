@@ -39,48 +39,50 @@
 ### Task 1: `resolveTestDbUrl()` helper
 
 **Files:**
+
 - Create: `apps/api/src/test/setup/test-db.ts`
 - Test: `apps/api/src/test/setup/test-db.test.ts`
 
 **Interfaces:**
+
 - Produces: `sanitizeWorktreeName(name: string): string`, `resolveTestDbName(toplevel: string): string`, `resolveTestDbUrl(): string`.
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
 // apps/api/src/test/setup/test-db.test.ts
-import { describe, it, expect } from 'vitest'
-import { resolveTestDbName, sanitizeWorktreeName } from './test-db'
+import { describe, it, expect } from 'vitest';
+import { resolveTestDbName, sanitizeWorktreeName } from './test-db';
 
 describe('sanitizeWorktreeName', () => {
   it('lowercases and replaces non [a-z0-9_] with underscore', () => {
-    expect(sanitizeWorktreeName('feat/Bar-Baz')).toBe('feat_bar_baz')
-  })
-})
+    expect(sanitizeWorktreeName('feat/Bar-Baz')).toBe('feat_bar_baz');
+  });
+});
 
 describe('resolveTestDbName', () => {
   it('returns base name for the main repo path', () => {
     expect(resolveTestDbName('/Users/huey/Projects/concert-crawl')).toBe(
       'concert_crawl_test',
-    )
-  })
+    );
+  });
 
   it('derives a suffixed name from a worktree path', () => {
     expect(
       resolveTestDbName(
         '/Users/huey/Projects/concert-crawl/.worktrees/fix-foo',
       ),
-    ).toBe('concert_crawl_test__fix_foo')
-  })
+    ).toBe('concert_crawl_test__fix_foo');
+  });
 
   it('uses only the worktree dir, not deeper path segments', () => {
     expect(
       resolveTestDbName(
         '/Users/huey/Projects/concert-crawl/.worktrees/chore-x/apps/api',
       ),
-    ).toBe('concert_crawl_test__chore_x')
-  })
-})
+    ).toBe('concert_crawl_test__chore_x');
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -92,44 +94,44 @@ Expected: FAIL — cannot find module `./test-db`.
 
 ```ts
 // apps/api/src/test/setup/test-db.ts
-import { execSync } from 'node:child_process'
+import { execSync } from 'node:child_process';
 
 const DEFAULT_TEST_DB_URL =
-  'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
-const BASE_DB_NAME = 'concert_crawl_test'
-const WORKTREE_MARKER = '/.worktrees/'
+  'postgresql://postgres:postgres@localhost:5433/concert_crawl_test';
+const BASE_DB_NAME = 'concert_crawl_test';
+const WORKTREE_MARKER = '/.worktrees/';
 
 // Must stay identical to the sanitize used in scripts/prune-test-dbs-helpers.ts
 export const sanitizeWorktreeName = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+  name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
 export const resolveTestDbName = (toplevel: string): string => {
-  const markerIdx = toplevel.indexOf(WORKTREE_MARKER)
-  if (markerIdx === -1) return BASE_DB_NAME
+  const markerIdx = toplevel.indexOf(WORKTREE_MARKER);
+  if (markerIdx === -1) return BASE_DB_NAME;
   const worktreeDir = toplevel
     .slice(markerIdx + WORKTREE_MARKER.length)
-    .split('/')[0]
-  return `${BASE_DB_NAME}__${sanitizeWorktreeName(worktreeDir)}`
-}
+    .split('/')[0];
+  return `${BASE_DB_NAME}__${sanitizeWorktreeName(worktreeDir)}`;
+};
 
 export const resolveTestDbUrl = (): string => {
-  const override = process.env['DATABASE_URL_TEST']
-  if (override) return override
+  const override = process.env['DATABASE_URL_TEST'];
+  if (override) return override;
 
-  let toplevel = ''
+  let toplevel = '';
   try {
     toplevel = execSync('git rev-parse --show-toplevel', {
       encoding: 'utf-8',
-    }).trim()
+    }).trim();
   } catch (err) {
-    console.warn('[test-db] git rev-parse failed; using default test DB:', err)
-    return DEFAULT_TEST_DB_URL
+    console.warn('[test-db] git rev-parse failed; using default test DB:', err);
+    return DEFAULT_TEST_DB_URL;
   }
 
-  const url = new URL(DEFAULT_TEST_DB_URL)
-  url.pathname = `/${resolveTestDbName(toplevel)}`
-  return url.toString()
-}
+  const url = new URL(DEFAULT_TEST_DB_URL);
+  url.pathname = `/${resolveTestDbName(toplevel)}`;
+  return url.toString();
+};
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -149,10 +151,12 @@ git commit -m "test(api): #748 resolveTestDbUrl helper for per-worktree DB names
 ### Task 2: Wire helper into integration config + auto-create DB
 
 **Files:**
+
 - Modify: `apps/api/vitest.integration.ts`
 - Modify: `apps/api/src/test/setup/global-setup.ts`
 
 **Interfaces:**
+
 - Consumes: `resolveTestDbUrl()` from Task 1.
 
 - [ ] **Step 1: Point the vitest env at the helper**
@@ -160,8 +164,8 @@ git commit -m "test(api): #748 resolveTestDbUrl helper for per-worktree DB names
 Replace the `env` block in `apps/api/vitest.integration.ts`:
 
 ```ts
-import { defineConfig } from 'vitest/config'
-import { resolveTestDbUrl } from './src/test/setup/test-db'
+import { defineConfig } from 'vitest/config';
+import { resolveTestDbUrl } from './src/test/setup/test-db';
 
 export default defineConfig({
   test: {
@@ -179,7 +183,7 @@ export default defineConfig({
       DATABASE_URL: resolveTestDbUrl(),
     },
   },
-})
+});
 ```
 
 - [ ] **Step 2: Auto-create the DB in global-setup**
@@ -187,41 +191,41 @@ export default defineConfig({
 Rewrite `setup()` in `apps/api/src/test/setup/global-setup.ts` (imports and `MIGRATIONS_FOLDER` unchanged, plus add the helper import):
 
 ```ts
-import { resolveTestDbUrl } from './test-db'
+import { resolveTestDbUrl } from './test-db';
 
 export async function setup(): Promise<void> {
-  const testDbUrl = resolveTestDbUrl()
-  const parsed = new URL(testDbUrl)
-  const dbName = parsed.pathname.replace(/^\//, '')
+  const testDbUrl = resolveTestDbUrl();
+  const parsed = new URL(testDbUrl);
+  const dbName = parsed.pathname.replace(/^\//, '');
 
   // Create the target DB if missing, via the postgres maintenance DB.
-  const adminUrl = new URL(testDbUrl)
-  adminUrl.pathname = '/postgres'
-  const admin = postgres(adminUrl.toString(), { max: 1 })
+  const adminUrl = new URL(testDbUrl);
+  adminUrl.pathname = '/postgres';
+  const admin = postgres(adminUrl.toString(), { max: 1 });
   try {
     const existing = await admin<
       { datname: string }[]
-    >`SELECT datname FROM pg_database WHERE datname = ${dbName}`
+    >`SELECT datname FROM pg_database WHERE datname = ${dbName}`;
     if (existing.length === 0) {
-      console.log(`[test] Creating test DB "${dbName}"...`)
+      console.log(`[test] Creating test DB "${dbName}"...`);
       // dbName is derived from our own worktree path, not user input.
-      await admin.unsafe(`CREATE DATABASE "${dbName}"`)
+      await admin.unsafe(`CREATE DATABASE "${dbName}"`);
     }
   } finally {
-    await admin.end()
+    await admin.end();
   }
 
-  console.log('[test] Running migrations on test DB...')
-  const client = postgres(testDbUrl, { max: 1 })
-  const db = drizzle(client)
+  console.log('[test] Running migrations on test DB...');
+  const client = postgres(testDbUrl, { max: 1 });
+  const db = drizzle(client);
   try {
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
-    await client.end()
-    console.log('[test] Migrations complete.')
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
+    await client.end();
+    console.log('[test] Migrations complete.');
   } catch (error) {
-    console.error('[test] Migration failed:', error)
-    await client.end()
-    throw error
+    console.error('[test] Migration failed:', error);
+    await client.end();
+    throw error;
   }
 }
 ```
@@ -248,50 +252,50 @@ git commit -m "test(api): #748 auto-create per-worktree integration DB"
 ### Task 3: `selectOrphanedTestDbs` pure helper
 
 **Files:**
+
 - Create: `scripts/prune-test-dbs-helpers.ts`
 - Test: `scripts/prune-test-dbs.test.ts`
 
 **Interfaces:**
+
 - Produces: `selectOrphanedTestDbs(allDbNames: string[], survivingWorktreeNames: string[]): string[]`.
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
 // scripts/prune-test-dbs.test.ts
-import { describe, it, expect } from 'vitest'
-import { selectOrphanedTestDbs } from './prune-test-dbs-helpers'
+import { describe, it, expect } from 'vitest';
+import { selectOrphanedTestDbs } from './prune-test-dbs-helpers';
 
 describe('selectOrphanedTestDbs', () => {
   it('drops DBs whose worktree no longer exists', () => {
     const result = selectOrphanedTestDbs(
       ['concert_crawl_test__gone', 'concert_crawl_test__alive'],
       ['alive'],
-    )
-    expect(result).toEqual(['concert_crawl_test__gone'])
-  })
+    );
+    expect(result).toEqual(['concert_crawl_test__gone']);
+  });
 
   it('never returns the base test DB', () => {
-    expect(selectOrphanedTestDbs(['concert_crawl_test'], [])).toEqual([])
-  })
+    expect(selectOrphanedTestDbs(['concert_crawl_test'], [])).toEqual([]);
+  });
 
   it('ignores unrelated databases', () => {
-    expect(
-      selectOrphanedTestDbs(['concert_crawl_db', 'postgres'], []),
-    ).toEqual([])
-  })
+    expect(selectOrphanedTestDbs(['concert_crawl_db', 'postgres'], [])).toEqual(
+      [],
+    );
+  });
 
   it('matches worktree names using the same sanitization', () => {
     expect(
       selectOrphanedTestDbs(['concert_crawl_test__feat_foo'], ['feat/Foo']),
-    ).toEqual([])
-  })
+    ).toEqual([]);
+  });
 
   it('returns empty when every DB has a surviving worktree', () => {
-    expect(
-      selectOrphanedTestDbs(['concert_crawl_test__a'], ['a']),
-    ).toEqual([])
-  })
-})
+    expect(selectOrphanedTestDbs(['concert_crawl_test__a'], ['a'])).toEqual([]);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -303,26 +307,26 @@ Expected: FAIL — cannot find module `./prune-test-dbs-helpers`.
 
 ```ts
 // scripts/prune-test-dbs-helpers.ts
-const BASE_TEST_DB = 'concert_crawl_test'
-const WORKTREE_DB_PREFIX = 'concert_crawl_test__'
+const BASE_TEST_DB = 'concert_crawl_test';
+const WORKTREE_DB_PREFIX = 'concert_crawl_test__';
 
 // Must stay identical to sanitizeWorktreeName in
 // apps/api/src/test/setup/test-db.ts — a mismatch would orphan or spare the
 // wrong DBs.
 const sanitize = (name: string): string =>
-  name.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+  name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
 
 export const selectOrphanedTestDbs = (
   allDbNames: string[],
   survivingWorktreeNames: string[],
 ): string[] => {
-  const survivors = new Set(survivingWorktreeNames.map(sanitize))
+  const survivors = new Set(survivingWorktreeNames.map(sanitize));
   return allDbNames.filter((name) => {
-    if (name === BASE_TEST_DB) return false
-    if (!name.startsWith(WORKTREE_DB_PREFIX)) return false
-    return !survivors.has(name.slice(WORKTREE_DB_PREFIX.length))
-  })
-}
+    if (name === BASE_TEST_DB) return false;
+    if (!name.startsWith(WORKTREE_DB_PREFIX)) return false;
+    return !survivors.has(name.slice(WORKTREE_DB_PREFIX.length));
+  });
+};
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -342,76 +346,80 @@ git commit -m "test(scripts): #748 selectOrphanedTestDbs helper"
 ### Task 4: Prune runner + wrapper + package script
 
 **Files:**
+
 - Create: `scripts/prune-test-dbs.ts`
 - Create: `scripts/worktree-prune.sh`
 - Modify: `package.json` (root)
 
 **Interfaces:**
+
 - Consumes: `selectOrphanedTestDbs()` from Task 3.
 
 - [ ] **Step 1: Write the runner**
 
 ```ts
 // scripts/prune-test-dbs.ts
-import postgres from 'postgres'
-import { execSync } from 'node:child_process'
-import { selectOrphanedTestDbs } from './prune-test-dbs-helpers'
+import postgres from 'postgres';
+import { execSync } from 'node:child_process';
+import { selectOrphanedTestDbs } from './prune-test-dbs-helpers';
 
-const WORKTREE_MARKER = '/.worktrees/'
-const dryRun = process.argv.includes('--dry-run')
+const WORKTREE_MARKER = '/.worktrees/';
+const dryRun = process.argv.includes('--dry-run');
 
 const listWorktreeNames = (): string[] => {
-  const out = execSync('git worktree list --porcelain', { encoding: 'utf-8' })
-  const names: string[] = []
+  const out = execSync('git worktree list --porcelain', { encoding: 'utf-8' });
+  const names: string[] = [];
   for (const line of out.split('\n')) {
-    if (!line.startsWith('worktree ')) continue
-    const wtPath = line.slice('worktree '.length)
-    const markerIdx = wtPath.indexOf(WORKTREE_MARKER)
+    if (!line.startsWith('worktree ')) continue;
+    const wtPath = line.slice('worktree '.length);
+    const markerIdx = wtPath.indexOf(WORKTREE_MARKER);
     if (markerIdx !== -1) {
-      names.push(wtPath.slice(markerIdx + WORKTREE_MARKER.length).split('/')[0])
+      names.push(
+        wtPath.slice(markerIdx + WORKTREE_MARKER.length).split('/')[0],
+      );
     }
   }
-  return names
-}
+  return names;
+};
 
 const main = async (): Promise<void> => {
   const adminUrl = new URL(
     process.env['DATABASE_URL_TEST'] ??
       'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
-  )
-  adminUrl.pathname = '/postgres'
-  const admin = postgres(adminUrl.toString(), { max: 1 })
+  );
+  adminUrl.pathname = '/postgres';
+  const admin = postgres(adminUrl.toString(), { max: 1 });
   try {
     const rows = await admin<{ datname: string }[]>`
       SELECT datname FROM pg_database
       WHERE datname LIKE 'concert_crawl_test__%'
-    `
+    `;
     const orphans = selectOrphanedTestDbs(
       rows.map((row) => row.datname),
       listWorktreeNames(),
-    )
+    );
     if (orphans.length === 0) {
-      console.log('[prune-test-dbs] No orphaned test databases.')
-      return
+      console.log('[prune-test-dbs] No orphaned test databases.');
+      return;
     }
     for (const name of orphans) {
       if (dryRun) {
-        console.log(`[prune-test-dbs] Would drop: ${name}`)
-        continue
+        console.log(`[prune-test-dbs] Would drop: ${name}`);
+        continue;
       }
-      console.log(`[prune-test-dbs] Dropping: ${name}`)
+      console.log(`[prune-test-dbs] Dropping: ${name}`);
       // name comes from pg_database filtered to our prefix — not user input.
-      await admin.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`)
+      await admin.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
     }
   } finally {
-    await admin.end()
+    await admin.end();
   }
-}
+};
 
 main().catch((err) => {
-  console.error('[prune-test-dbs] Failed:', err)
-  process.exit(1)
-})
+  console.error('[prune-test-dbs] Failed:', err);
+  process.exit(1);
+});
 ```
 
 - [ ] **Step 2: Write the wrapper**
@@ -458,6 +466,7 @@ git commit -m "feat(scripts): #748 worktree:prune drops orphaned test DBs"
 ### Task 5: Docs — CLAUDE.md hygiene rule + naming note
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 - [ ] **Step 1: Add the post-merge hygiene rule**

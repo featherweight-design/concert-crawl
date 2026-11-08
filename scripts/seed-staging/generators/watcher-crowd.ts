@@ -23,34 +23,34 @@
 import {
   userEvents,
   userProfiles,
-} from '../../../packages/db/src/schema/index.js'
-import type { DrizzleWriteDb } from '../sync-venues.js'
-import type { createRng } from '../seeded-rng.js'
+} from '../../../packages/db/src/schema/index.js';
+import type { DrizzleWriteDb } from '../sync-venues.js';
+import type { createRng } from '../seeded-rng.js';
 
 export type WatcherCrowdDeps = {
-  staging: DrizzleWriteDb
-  crowdUserIds: readonly string[]
-  ownerUserId: string
-  eventIds: readonly string[]
-  pastEventIds: readonly string[]
-  rng: ReturnType<typeof createRng>
-}
+  staging: DrizzleWriteDb;
+  crowdUserIds: readonly string[];
+  ownerUserId: string;
+  eventIds: readonly string[];
+  pastEventIds: readonly string[];
+  rng: ReturnType<typeof createRng>;
+};
 
 export type WatcherCrowdResult = {
-  insertedProfiles: number
-  insertedUserEvents: number
-  showcaseEventIds: readonly string[]
-}
+  insertedProfiles: number;
+  insertedUserEvents: number;
+  showcaseEventIds: readonly string[];
+};
 
 /** Watchers per showcase event, in showcase order: deep, mixed, single. */
-export const SHOWCASE_WATCHER_COUNTS = [34, 12, 1] as const
+export const SHOWCASE_WATCHER_COUNTS = [34, 12, 1] as const;
 
 /**
  * How many of the `mixed` showcase's watchers have no handle. They are counted
  * in `total` and omitted from `named` — the privacy opt-out, which is a cleared
  * handle rather than a flag.
  */
-export const MIXED_SHOWCASE_HANDLELESS = 5
+export const MIXED_SHOWCASE_HANDLELESS = 5;
 
 const HANDLE_WORDS = [
   'reverb',
@@ -63,7 +63,7 @@ const HANDLE_WORDS = [
   'soundcheck',
   'tapedeck',
   'lastcall',
-] as const
+] as const;
 
 const CITIES = [
   'Denver, CO',
@@ -71,12 +71,12 @@ const CITIES = [
   'Aurora, CO',
   'Fort Collins, CO',
   'Colorado Springs, CO',
-] as const
+] as const;
 
-const AVATAR_COLORS = ['signal', 'accent', 'success', 'warning'] as const
+const AVATAR_COLORS = ['signal', 'accent', 'success', 'warning'] as const;
 
 /** PATCH /v1/users/me caps handles here, so seeded ones must fit too. */
-const MAX_HANDLE_LENGTH = 20
+const MAX_HANDLE_LENGTH = 20;
 
 /**
  * Readable handles, deliberately unlike the layout-hostile ones in
@@ -91,44 +91,44 @@ const MAX_HANDLE_LENGTH = 20
  * suffix keeps them apart from each other (two rng-drawn words out of ten
  * collide readily across forty members).
  */
-const HANDLE_PREFIX = 'sc_'
+const HANDLE_PREFIX = 'sc_';
 
 const buildHandle = (
   rng: ReturnType<typeof createRng>,
   idx: number,
 ): string => {
-  const suffix = String(idx)
-  const bodyLength = MAX_HANDLE_LENGTH - HANDLE_PREFIX.length - suffix.length
+  const suffix = String(idx);
+  const bodyLength = MAX_HANDLE_LENGTH - HANDLE_PREFIX.length - suffix.length;
   const body = `${rng.pick(HANDLE_WORDS)}_${rng.pick(HANDLE_WORDS)}`.slice(
     0,
     bodyLength,
-  )
+  );
   return idx % 4 === 3
     ? `${HANDLE_PREFIX}${body.padEnd(bodyLength, 'x')}${suffix}`
-    : `${HANDLE_PREFIX}${body}${suffix}`
-}
+    : `${HANDLE_PREFIX}${body}${suffix}`;
+};
 
 export const generateWatcherCrowd = async (
   deps: WatcherCrowdDeps,
 ): Promise<WatcherCrowdResult> => {
   const { staging, crowdUserIds, ownerUserId, eventIds, pastEventIds, rng } =
-    deps
+    deps;
 
   if (crowdUserIds.length === 0 || eventIds.length === 0) {
-    return { insertedProfiles: 0, insertedUserEvents: 0, showcaseEventIds: [] }
+    return { insertedProfiles: 0, insertedUserEvents: 0, showcaseEventIds: [] };
   }
 
   // Prefer upcoming events; fall back to the full list so a staging DB with
   // only past events still produces rosters instead of silently skipping.
-  const pastEventIdSet = new Set(pastEventIds)
-  const upcoming = eventIds.filter((eventId) => !pastEventIdSet.has(eventId))
+  const pastEventIdSet = new Set(pastEventIds);
+  const upcoming = eventIds.filter((eventId) => !pastEventIdSet.has(eventId));
   const pool =
-    upcoming.length >= SHOWCASE_WATCHER_COUNTS.length ? upcoming : eventIds
+    upcoming.length >= SHOWCASE_WATCHER_COUNTS.length ? upcoming : eventIds;
 
-  const showcaseEventIds: string[] = []
+  const showcaseEventIds: string[] = [];
   for (const eventId of pool) {
-    if (showcaseEventIds.length >= SHOWCASE_WATCHER_COUNTS.length) break
-    showcaseEventIds.push(eventId)
+    if (showcaseEventIds.length >= SHOWCASE_WATCHER_COUNTS.length) break;
+    showcaseEventIds.push(eventId);
   }
 
   // The mixed showcase needs more handle-less crowd members than it has
@@ -137,7 +137,7 @@ export const generateWatcherCrowd = async (
   const handlelessCount = Math.min(
     MIXED_SHOWCASE_HANDLELESS,
     Math.max(0, crowdUserIds.length - 1),
-  )
+  );
 
   const profileRows = crowdUserIds.map((userId, idx) => ({
     userId,
@@ -145,16 +145,16 @@ export const generateWatcherCrowd = async (
     handle: idx < handlelessCount ? null : buildHandle(rng, idx),
     city: rng.int(0, 9) < 3 ? null : rng.pick(CITIES),
     avatarColor: rng.pick(AVATAR_COLORS),
-  }))
+  }));
 
-  await staging.insert(userProfiles).values(profileRows)
+  await staging.insert(userProfiles).values(profileRows);
 
   const watchRows: { userId: string; eventId: string; status: 'watching' }[] =
-    []
+    [];
 
   showcaseEventIds.forEach((eventId, showcaseIdx) => {
-    const requested = SHOWCASE_WATCHER_COUNTS[showcaseIdx] ?? 0
-    const count = Math.min(requested, crowdUserIds.length)
+    const requested = SHOWCASE_WATCHER_COUNTS[showcaseIdx] ?? 0;
+    const count = Math.min(requested, crowdUserIds.length);
 
     // The mixed showcase draws from the head of the pool so it picks up the
     // handle-less members; the others draw from the tail so their rosters are
@@ -162,16 +162,16 @@ export const generateWatcherCrowd = async (
     const members =
       showcaseIdx === 1
         ? crowdUserIds.slice(0, count)
-        : crowdUserIds.slice(-count)
+        : crowdUserIds.slice(-count);
 
     for (const userId of members) {
-      watchRows.push({ userId, eventId, status: 'watching' })
+      watchRows.push({ userId, eventId, status: 'watching' });
     }
 
     // The viewer is excluded from their own roster — without this the owner
     // never sees the counts at all.
-    watchRows.push({ userId: ownerUserId, eventId, status: 'watching' })
-  })
+    watchRows.push({ userId: ownerUserId, eventId, status: 'watching' });
+  });
 
   if (watchRows.length > 0) {
     await staging.insert(userEvents).values(
@@ -181,12 +181,12 @@ export const generateWatcherCrowd = async (
         status,
         attendingAt: null,
       })),
-    )
+    );
   }
 
   return {
     insertedProfiles: profileRows.length,
     insertedUserEvents: watchRows.length,
     showcaseEventIds,
-  }
-}
+  };
+};

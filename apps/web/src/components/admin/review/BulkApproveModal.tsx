@@ -1,37 +1,37 @@
-'use client'
+'use client';
 
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react';
 import {
   confidenceColor,
   KIND_COLORS,
-} from '@/components/admin/primitives/utils'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives/utils';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface EventSummary {
-  id: string
-  title: string
-  venueName: string | null
-  date: string
-  confidenceScore: number | null
+  id: string;
+  title: string;
+  venueName: string | null;
+  date: string;
+  confidenceScore: number | null;
 }
 
 interface BulkApproveModalProps {
-  events: EventSummary[]
-  onConfirm: () => void
-  onCancel: () => void
+  events: EventSummary[];
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
-const LOW_CONFIDENCE_THRESHOLD = 0.7
+const LOW_CONFIDENCE_THRESHOLD = 0.7;
 
 function formatEventDate(iso: string): string {
   try {
-    const [year, month, day] = iso.split('-').map(Number)
+    const [year, month, day] = iso.split('-').map(Number);
     return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(
       'en-US',
       { month: 'short', day: 'numeric' },
-    )
+    );
   } catch {
-    return iso
+    return iso;
   }
 }
 
@@ -42,7 +42,7 @@ export const BulkApproveModal = ({
 }: BulkApproveModalProps) => {
   const lowConfidenceCount = events.filter(
     (ev) => (ev.confidenceScore ?? 0) < LOW_CONFIDENCE_THRESHOLD,
-  ).length
+  ).length;
 
   return (
     <>
@@ -136,9 +136,9 @@ export const BulkApproveModal = ({
           </div>
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
             {events.map((ev) => {
-              const score = ev.confidenceScore ?? 0
-              const kind = confidenceColor(score)
-              const barColor = KIND_COLORS[kind].fg
+              const score = ev.confidenceScore ?? 0;
+              const kind = confidenceColor(score);
+              const barColor = KIND_COLORS[kind].fg;
 
               return (
                 <div
@@ -217,7 +217,7 @@ export const BulkApproveModal = ({
                     </span>
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -306,5 +306,5 @@ export const BulkApproveModal = ({
         </div>
       </div>
     </>
-  )
-}
+  );
+};

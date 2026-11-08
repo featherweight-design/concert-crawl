@@ -4,7 +4,7 @@
 // Callers own their pending/error UI state; throws on missing auth or
 // session failure so each surface can present its own copy.
 
-import { createPortalSession } from '@/lib/billing'
+import { createPortalSession } from '@/lib/billing';
 
 // Defense-in-depth: only follow an absolute https URL — a relative,
 // malformed, or non-https (e.g. javascript:) value from the API must never
@@ -12,27 +12,27 @@ import { createPortalSession } from '@/lib/billing'
 const resolvePortalUrl = async (
   getToken: () => Promise<string | null>,
 ): Promise<string> => {
-  const token = await getToken()
-  if (!token) throw new Error('Not authenticated')
-  const { url } = await createPortalSession(token)
-  let parsed: URL
+  const token = await getToken();
+  if (!token) throw new Error('Not authenticated');
+  const { url } = await createPortalSession(token);
+  let parsed: URL;
   try {
-    parsed = new URL(url)
+    parsed = new URL(url);
   } catch (parseErr) {
     throw new Error('Portal session returned a malformed URL', {
       cause: parseErr,
-    })
+    });
   }
   if (parsed.protocol !== 'https:') {
-    throw new Error('Portal session returned a non-HTTPS URL')
+    throw new Error('Portal session returned a non-HTTPS URL');
   }
-  return parsed.toString()
-}
+  return parsed.toString();
+};
 
 export async function navigateToPortalSession(
   getToken: () => Promise<string | null>,
 ): Promise<void> {
-  window.location.assign(await resolvePortalUrl(getToken))
+  window.location.assign(await resolvePortalUrl(getToken));
 }
 
 /**
@@ -44,18 +44,18 @@ export async function navigateToPortalSession(
 export async function openPortalSessionInNewTab(
   getToken: () => Promise<string | null>,
 ): Promise<void> {
-  const portalTab = window.open('about:blank', '_blank')
-  if (portalTab) portalTab.opener = null
+  const portalTab = window.open('about:blank', '_blank');
+  if (portalTab) portalTab.opener = null;
   try {
-    const portalUrl = await resolvePortalUrl(getToken)
+    const portalUrl = await resolvePortalUrl(getToken);
     if (portalTab) {
-      portalTab.location.href = portalUrl
+      portalTab.location.href = portalUrl;
     } else {
       // Popup blocked — fall back to same-tab so the action still works.
-      window.location.assign(portalUrl)
+      window.location.assign(portalUrl);
     }
   } catch (err) {
-    portalTab?.close()
-    throw err
+    portalTab?.close();
+    throw err;
   }
 }

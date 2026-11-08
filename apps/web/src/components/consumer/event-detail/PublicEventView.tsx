@@ -1,7 +1,7 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import { track } from '@/lib/analytics'
+import { useEffect, useRef } from 'react';
+import { track } from '@/lib/analytics';
 
 /**
  * Records that a poster link actually landed somebody on the public mirror.
@@ -11,7 +11,7 @@ import { track } from '@/lib/analytics'
  * ends at "link copied" and never shows whether anyone opened it.
  */
 export interface PublicEventViewProps {
-  eventId: string
+  eventId: string;
 }
 
 /**
@@ -23,19 +23,19 @@ export interface PublicEventViewProps {
  * carries none of that.
  */
 const referrerHost = (): string | null => {
-  if (typeof document === 'undefined') return null
-  const raw = document.referrer
-  if (raw === '') return null
+  if (typeof document === 'undefined') return null;
+  const raw = document.referrer;
+  if (raw === '') return null;
   try {
     // `about:`, `file:` and other opaque schemes parse fine but carry no host.
     // An empty string would sit in the analytics column looking like a value.
-    const { host } = new URL(raw)
-    return host === '' ? null : host
+    const { host } = new URL(raw);
+    return host === '' ? null : host;
   } catch (err) {
-    console.error('analytics: unparseable referrer', err)
-    return null
+    console.error('analytics: unparseable referrer', err);
+    return null;
   }
-}
+};
 
 export const PublicEventView = ({ eventId }: PublicEventViewProps) => {
   // A view is one event per show. Strict Mode runs effects twice in development,
@@ -44,13 +44,13 @@ export const PublicEventView = ({ eventId }: PublicEventViewProps) => {
   // Keyed by `eventId` rather than a bare boolean: React can reuse this instance
   // across a client-side navigation between two mirrors, and a boolean that only
   // ever flips once would swallow the view of every show after the first.
-  const firedFor = useRef<string | null>(null)
+  const firedFor = useRef<string | null>(null);
 
   useEffect(() => {
-    if (firedFor.current === eventId) return
-    firedFor.current = eventId
-    track('public_event_viewed', { eventId, referrer: referrerHost() })
-  }, [eventId])
+    if (firedFor.current === eventId) return;
+    firedFor.current = eventId;
+    track('public_event_viewed', { eventId, referrer: referrerHost() });
+  }, [eventId]);
 
-  return null
-}
+  return null;
+};

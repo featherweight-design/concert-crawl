@@ -24,100 +24,100 @@ Add a new `describe` block at the bottom of `apps/api/src/routes/admin/prices.in
 ```typescript
 describe('GET /v1/admin/prices/events', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns only missing-price events by default', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2026-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2026-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].priceMin).toBeNull()
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].priceMin).toBeNull();
+  });
 
   it('returns all upcoming events when missingOnly=false', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2026-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2026-07-02',
       status: 'upcoming',
       ticketPriceMin: '25.00',
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events?missingOnly=false', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
+  });
 
   it('respects limit and offset', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     // Seed 5 events without prices, ordered by date
     for (let idx = 1; idx <= 5; idx++) {
       await seedEvent(venue.id, {
         date: `2026-07-0${idx}`,
         status: 'upcoming',
         ticketPriceMin: null,
-      })
+      });
     }
 
     const res = await app.request(
       '/v1/admin/prices/events?missingOnly=true&limit=2&offset=2',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
     // Third and fourth events by date
-    expect(body.data[0].date).toBe('2026-07-03')
-    expect(body.data[1].date).toBe('2026-07-04')
-  })
+    expect(body.data[0].date).toBe('2026-07-03');
+    expect(body.data[1].date).toBe('2026-07-04');
+  });
 
   it('excludes past events', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: '2020-01-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
     await seedEvent(venue.id, {
       date: '2026-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
-    })
+    });
 
     const res = await app.request('/v1/admin/prices/events', {
       headers: ADMIN_HEADERS,
-    })
-    const body = await res.json()
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0].date).toBe('2026-07-01')
-  })
-})
+    });
+    const body = await res.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].date).toBe('2026-07-01');
+  });
+});
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
@@ -149,7 +149,7 @@ pricesAdminRouter.get(
     }),
   ),
   async (ctx) => {
-    const { missingOnly, limit, offset } = ctx.req.valid('query')
+    const { missingOnly, limit, offset } = ctx.req.valid('query');
 
     const latestLog = db
       .select({
@@ -163,17 +163,17 @@ pricesAdminRouter.get(
       })
       .from(priceRetrievalLog)
       .groupBy(priceRetrievalLog.eventId)
-      .as('latest_log')
+      .as('latest_log');
 
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
 
     const conditions = [
       eq(events.status, 'upcoming'),
       gte(events.date, today),
       ...(missingOnly ? [isNull(events.ticketPriceMin)] : []),
-    ]
+    ];
 
     const rows = await db
       .select({
@@ -195,17 +195,17 @@ pricesAdminRouter.get(
       .where(and(...conditions))
       .orderBy(asc(events.date))
       .limit(limit)
-      .offset(offset)
+      .offset(offset);
 
-    return ctx.json({ success: true, data: rows } as const)
+    return ctx.json({ success: true, data: rows } as const);
   },
-)
+);
 ```
 
 Also add the missing imports at the top of the file. The route needs `isNull`, `gte`, `and` from drizzle-orm. Check the existing import line and add any that are missing:
 
 ```typescript
-import { eq, max, sql, asc, isNull, gte, and } from 'drizzle-orm'
+import { eq, max, sql, asc, isNull, gte, and } from 'drizzle-orm';
 ```
 
 - [ ] **Step 4: Run tests to confirm they pass**
@@ -240,10 +240,10 @@ In `ReviewPageClient.tsx`, replace the price-events `useEffect` (lines ~113-133)
 
 ```typescript
 // New state — add after the existing priceEventsLoading declaration
-const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
-const [priceOffset, setPriceOffset] = useState(0)
-const [isFetchingMorePrices, setIsFetchingMorePrices] = useState(false)
-const [hasMorePriceEvents, setHasMorePriceEvents] = useState(true)
+const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing');
+const [priceOffset, setPriceOffset] = useState(0);
+const [isFetchingMorePrices, setIsFetchingMorePrices] = useState(false);
+const [hasMorePriceEvents, setHasMorePriceEvents] = useState(true);
 ```
 
 Replace the existing price-events `useEffect` with a function that re-fetches when the filter changes, and an initial call:
@@ -251,61 +251,61 @@ Replace the existing price-events `useEffect` with a function that re-fetches wh
 ```typescript
 const fetchPriceEvents = useCallback(
   async (missingOnly: boolean, offset: number, append: boolean) => {
-    if (isFetchingMorePrices) return
-    setIsFetchingMorePrices(true)
-    if (!append) setPriceEventsLoading(true)
+    if (isFetchingMorePrices) return;
+    setIsFetchingMorePrices(true);
+    if (!append) setPriceEventsLoading(true);
     try {
-      const token = await getToken()
-      if (!token) return
+      const token = await getToken();
+      if (!token) return;
       const params = new URLSearchParams({
         missingOnly: String(missingOnly),
         limit: '50',
         offset: String(offset),
-      })
+      });
       const rows = await apiClient.get<PriceEvent[]>(
         `/v1/admin/prices/events?${params.toString()}`,
         token,
-      )
+      );
       if (append) {
         setPriceEvents((prev) => {
-          const seen = new Set(prev.map((ev) => ev.eventId))
-          return [...prev, ...rows.filter((ev) => !seen.has(ev.eventId))]
-        })
+          const seen = new Set(prev.map((ev) => ev.eventId));
+          return [...prev, ...rows.filter((ev) => !seen.has(ev.eventId))];
+        });
       } else {
-        setPriceEvents(rows)
+        setPriceEvents(rows);
       }
-      setHasMorePriceEvents(rows.length === 50)
+      setHasMorePriceEvents(rows.length === 50);
     } catch (fetchErr) {
-      console.error('Failed to load price coverage data', fetchErr)
-      setHasMorePriceEvents(false)
+      console.error('Failed to load price coverage data', fetchErr);
+      setHasMorePriceEvents(false);
     } finally {
-      setIsFetchingMorePrices(false)
-      setPriceEventsLoading(false)
+      setIsFetchingMorePrices(false);
+      setPriceEventsLoading(false);
     }
   },
   [isFetchingMorePrices, getToken],
-)
+);
 
 // Initial load + re-fetch when filter changes
 useEffect(() => {
-  setPriceOffset(0)
-  setPriceEvents([])
-  setHasMorePriceEvents(true)
-  void fetchPriceEvents(priceFilter === 'missing', 0, false)
+  setPriceOffset(0);
+  setPriceEvents([]);
+  setHasMorePriceEvents(true);
+  void fetchPriceEvents(priceFilter === 'missing', 0, false);
   // fetchPriceEvents excluded from deps intentionally — it's recreated only
   // when getToken changes, which is effectively once per mount.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [priceFilter])
+}, [priceFilter]);
 
 const loadMorePriceEvents = useCallback(() => {
-  const nextOffset = priceOffset + 50
-  setPriceOffset(nextOffset)
-  void fetchPriceEvents(priceFilter === 'missing', nextOffset, true)
-}, [priceOffset, priceFilter, fetchPriceEvents])
+  const nextOffset = priceOffset + 50;
+  setPriceOffset(nextOffset);
+  void fetchPriceEvents(priceFilter === 'missing', nextOffset, true);
+}, [priceOffset, priceFilter, fetchPriceEvents]);
 
 const togglePriceFilter = useCallback(() => {
-  setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'))
-}, [])
+  setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'));
+}, []);
 ```
 
 - [ ] **Step 2: Thread new props down to `PriceCoverageTable` and `AdminReviewMobile`**
@@ -376,20 +376,20 @@ Replace the `PriceCoverageTableProps` interface:
 
 ```typescript
 interface PriceCoverageTableProps {
-  events: PriceEvent[]
-  loading?: boolean
+  events: PriceEvent[];
+  loading?: boolean;
   onAddPrice?: (
     eventId: string,
     priceMin: string,
     priceMax: string | null,
     vendor: SubmissionVendor,
     howFound: SubmissionHowFound,
-  ) => Promise<void>
-  showMissingOnly: boolean
-  onToggleMissingOnly: () => void
-  hasMore: boolean
-  onLoadMore: () => void
-  isFetchingMore: boolean
+  ) => Promise<void>;
+  showMissingOnly: boolean;
+  onToggleMissingOnly: () => void;
+  hasMore: boolean;
+  onLoadMore: () => void;
+  isFetchingMore: boolean;
 }
 ```
 
@@ -458,7 +458,7 @@ const panelAction = !loading ? (
   >
     {ADMIN_COPY.review.priceCoverage.missingOnly}
   </AdminButton>
-) : null
+) : null;
 ```
 
 - [ ] **Step 4: Add a Load More row at the bottom of the table**
@@ -480,7 +480,7 @@ Just before the closing `</Panel>` tag, inside the scrollable area after the `<A
           : ADMIN_COPY.review.priceCoverage.loadMore}
       </AdminButton>
     </div>
-  )
+  );
 }
 ```
 
@@ -521,26 +521,26 @@ Add the new props to the interface:
 
 ```typescript
 interface AdminReviewMobileProps {
-  events: EventFlag[]
-  submissions: PriceSubmission[]
-  priceEvents: PriceEvent[]
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
-  onApproveSubmission: (id: string) => void
-  onDenySubmission: (id: string) => void
+  events: EventFlag[];
+  submissions: PriceSubmission[];
+  priceEvents: PriceEvent[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
+  onApproveSubmission: (id: string) => void;
+  onDenySubmission: (id: string) => void;
   onAddPrice?: (
     eventId: string,
     priceMin: string,
     priceMax: string | null,
     vendor: string,
     howFound: string,
-  ) => Promise<void>
-  initialTab?: 'flags' | 'prices'
-  showMissingPricesOnly: boolean
-  onToggleMissingPricesOnly: () => void
-  hasMorePriceEvents: boolean
-  onLoadMorePriceEvents: () => void
-  isFetchingMorePriceEvents: boolean
+  ) => Promise<void>;
+  initialTab?: 'flags' | 'prices';
+  showMissingPricesOnly: boolean;
+  onToggleMissingPricesOnly: () => void;
+  hasMorePriceEvents: boolean;
+  onLoadMorePriceEvents: () => void;
+  isFetchingMorePriceEvents: boolean;
 }
 ```
 
@@ -573,25 +573,25 @@ Delete the local `showMissingOnly` state:
 
 ```typescript
 // DELETE this line:
-const [showMissingOnly, setShowMissingOnly] = useState(false)
+const [showMissingOnly, setShowMissingOnly] = useState(false);
 ```
 
 Replace the three lines that compute `missingPriceEvents`, `visiblePriceEvents`, and `priceCount`:
 
 ```typescript
 // BEFORE:
-const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null)
-const visiblePriceEvents = showMissingOnly ? missingPriceEvents : priceEvents
-const priceCount = submissions.length + missingPriceEvents.length
+const missingPriceEvents = priceEvents.filter((ev) => ev.priceMin === null);
+const visiblePriceEvents = showMissingOnly ? missingPriceEvents : priceEvents;
+const priceCount = submissions.length + missingPriceEvents.length;
 
 // AFTER:
 // Server applies the missing-only filter; when the filter is on, every row in
 // priceEvents is missing a price, so priceEvents.length IS the missing count.
 const missingCount = showMissingPricesOnly
   ? priceEvents.length
-  : priceEvents.filter((ev) => ev.priceMin === null).length
-const visiblePriceEvents = priceEvents
-const priceCount = submissions.length + missingCount
+  : priceEvents.filter((ev) => ev.priceMin === null).length;
+const visiblePriceEvents = priceEvents;
+const priceCount = submissions.length + missingCount;
 ```
 
 In the "Needs price" section header, replace the toggle button:
@@ -638,7 +638,7 @@ After the `visiblePriceEvents.map(...)` block, just before the closing `</div>` 
           : ADMIN_COPY.review.adminReviewMobile.loadMore}
       </AdminButton>
     </div>
-  )
+  );
 }
 ```
 
@@ -681,34 +681,34 @@ In `ReviewPageClient.tsx`, find the `fetchMoreEvents` callback (the one for even
 
 ```typescript
 const fetchMoreEvents = useCallback(async () => {
-  if (isFetchingMoreEvents || !hasMoreEvents) return
-  setIsFetchingMoreEvents(true)
+  if (isFetchingMoreEvents || !hasMoreEvents) return;
+  setIsFetchingMoreEvents(true);
   try {
-    const token = await getToken()
+    const token = await getToken();
     if (!token) {
-      setHasMoreEvents(false) // can't fetch without a token; stop the loop
-      return
+      setHasMoreEvents(false); // can't fetch without a token; stop the loop
+      return;
     }
     const batch = await apiClient.get<EventFlag[]>(
       '/v1/admin/events?verified=false&limit=10',
       token,
-    )
+    );
     if (batch.length === 0) {
-      setHasMoreEvents(false)
+      setHasMoreEvents(false);
     } else {
       setEvents((prev) => {
-        const seen = new Set(prev.map((ev) => ev.id))
-        return [...prev, ...batch.filter((ev) => !seen.has(ev.id))]
-      })
-      if (batch.length < 10) setHasMoreEvents(false)
+        const seen = new Set(prev.map((ev) => ev.id));
+        return [...prev, ...batch.filter((ev) => !seen.has(ev.id))];
+      });
+      if (batch.length < 10) setHasMoreEvents(false);
     }
   } catch (fetchErr) {
-    console.error('Failed to fetch more events', fetchErr)
-    setHasMoreEvents(false) // stop the loop on persistent error
+    console.error('Failed to fetch more events', fetchErr);
+    setHasMoreEvents(false); // stop the loop on persistent error
   } finally {
-    setIsFetchingMoreEvents(false)
+    setIsFetchingMoreEvents(false);
   }
-}, [isFetchingMoreEvents, hasMoreEvents, getToken])
+}, [isFetchingMoreEvents, hasMoreEvents, getToken]);
 ```
 
 - [ ] **Step 2: Verify TypeScript**

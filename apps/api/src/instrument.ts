@@ -1,9 +1,9 @@
-import * as Sentry from '@sentry/hono/node'
-import { scrubEvent } from './lib/sentry-scrub.js'
+import * as Sentry from '@sentry/hono/node';
+import { scrubEvent } from './lib/sentry-scrub.js';
 
 // `||` rather than `??`: a variable that exists but is blank must still read
 // as local, or the gate below would send from an unnamed environment.
-const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local'
+const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
@@ -16,4 +16,4 @@ Sentry.init({
   tracesSampleRate: 0.1,
   enableLogs: true,
   beforeSend: scrubEvent,
-})
+});

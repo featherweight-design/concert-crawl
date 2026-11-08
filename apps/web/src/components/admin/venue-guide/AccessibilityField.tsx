@@ -1,23 +1,23 @@
-'use client'
+'use client';
 
-import { GUIDE_FIELD_MAX_LENGTH, deriveChipState } from '@concert-crawl/types'
-import { ADMIN_COPY } from '../definitions/copy'
-import { ChipStateDot } from './ChipStateDot'
-import { GuideIcon } from './GuideIcon'
+import { GUIDE_FIELD_MAX_LENGTH, deriveChipState } from '@concert-crawl/types';
+import { ADMIN_COPY } from '../definitions/copy';
+import { ChipStateDot } from './ChipStateDot';
+import { GuideIcon } from './GuideIcon';
 
-const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
+const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide;
 
 interface AccessibilityFieldProps {
-  value: string
-  onChange: (next: string) => void
-  placeholderMode: boolean
-  onTogglePlaceholder: () => void
-  error: boolean
-  disabled?: boolean
+  value: string;
+  onChange: (next: string) => void;
+  placeholderMode: boolean;
+  onTogglePlaceholder: () => void;
+  error: boolean;
+  disabled?: boolean;
 }
 
-const FIELD_ID = 'venue-guide-accessibility'
-const HELP_ID = 'venue-guide-accessibility-help'
+const FIELD_ID = 'venue-guide-accessibility';
+const HELP_ID = 'venue-guide-accessibility-help';
 
 export const AccessibilityField = ({
   value,
@@ -27,7 +27,10 @@ export const AccessibilityField = ({
   error,
   disabled = false,
 }: AccessibilityFieldProps) => {
-  const state = deriveChipState({ body: value, isPlaceholder: placeholderMode })
+  const state = deriveChipState({
+    body: value,
+    isPlaceholder: placeholderMode,
+  });
 
   return (
     <div
@@ -213,5 +216,5 @@ export const AccessibilityField = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};

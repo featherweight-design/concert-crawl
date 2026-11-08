@@ -1,8 +1,8 @@
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from '@sentry/nextjs';
 
-import { beforeBreadcrumb, beforeSend } from './src/lib/sentry-redact'
+import { beforeBreadcrumb, beforeSend } from './src/lib/sentry-redact';
 
-const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local'
+const environment = process.env['SENTRY_ENVIRONMENT']?.trim() || 'local';
 
 Sentry.init({
   dsn: process.env['SENTRY_DSN'],
@@ -14,4 +14,4 @@ Sentry.init({
   enableLogs: true,
   beforeBreadcrumb,
   beforeSend,
-})
+});

@@ -77,101 +77,103 @@ Final task block (after Task 6): pre-push checks, design-review, push + PR + Cop
 
   ```ts
   export interface ReviewTabDescriptor {
-    key: string
-    label: string
-    count?: number
+    key: string;
+    label: string;
+    count?: number;
   }
   export interface ReviewTabsProps {
-    tabs: ReadonlyArray<ReviewTabDescriptor>
-    activeTab: string
-    onChange: (key: string) => void
-    'aria-label'?: string
+    tabs: ReadonlyArray<ReviewTabDescriptor>;
+    activeTab: string;
+    onChange: (key: string) => void;
+    'aria-label'?: string;
   }
-  export const ReviewTabs: (props: ReviewTabsProps) => JSX.Element
+  export const ReviewTabs: (props: ReviewTabsProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Write the failing test file**
 
 ```tsx
 // apps/web/src/components/admin/review/ReviewTabs.test.tsx
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs';
 
 const TABS: ReadonlyArray<ReviewTabDescriptor> = [
   { key: 'event-flags', label: 'Event flags', count: 3 },
   { key: 'prices', label: 'Prices', count: 5 },
   { key: 'all-events', label: 'All events' },
-]
+];
 
 describe('ReviewTabs', () => {
   it('renders every tab label and its count badge when count > 0', () => {
     render(
       <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={() => {}} />,
-    )
-    expect(screen.getByRole('tab', { name: /Event flags/ })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /Prices/ })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /All events/ })).toBeInTheDocument()
-    expect(screen.getByText('3')).toBeInTheDocument()
-    expect(screen.getByText('5')).toBeInTheDocument()
-  })
+    );
+    expect(
+      screen.getByRole('tab', { name: /Event flags/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /Prices/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /All events/ })).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+  });
 
   it('marks the active tab with aria-selected="true" and others with "false"', () => {
-    render(<ReviewTabs tabs={TABS} activeTab="prices" onChange={() => {}} />)
+    render(<ReviewTabs tabs={TABS} activeTab="prices" onChange={() => {}} />);
     expect(screen.getByRole('tab', { name: /Event flags/ })).toHaveAttribute(
       'aria-selected',
       'false',
-    )
+    );
     expect(screen.getByRole('tab', { name: /Prices/ })).toHaveAttribute(
       'aria-selected',
       'true',
-    )
-  })
+    );
+  });
 
   it('fires onChange with the tab key when an inactive tab is clicked', () => {
-    const onChange = vi.fn()
+    const onChange = vi.fn();
     render(
       <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={onChange} />,
-    )
-    fireEvent.click(screen.getByRole('tab', { name: /Prices/ }))
-    expect(onChange).toHaveBeenCalledWith('prices')
-  })
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /Prices/ }));
+    expect(onChange).toHaveBeenCalledWith('prices');
+  });
 
   it('moves focus to the next tab on ArrowRight and wraps to first', () => {
-    const onChange = vi.fn()
+    const onChange = vi.fn();
     render(
       <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={onChange} />,
-    )
-    const lastTab = screen.getByRole('tab', { name: /All events/ })
-    lastTab.focus()
-    fireEvent.keyDown(lastTab, { key: 'ArrowRight' })
-    expect(onChange).toHaveBeenCalledWith('event-flags')
-  })
+    );
+    const lastTab = screen.getByRole('tab', { name: /All events/ });
+    lastTab.focus();
+    fireEvent.keyDown(lastTab, { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledWith('event-flags');
+  });
 
   it('moves focus to the previous tab on ArrowLeft and wraps to last', () => {
-    const onChange = vi.fn()
+    const onChange = vi.fn();
     render(
       <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={onChange} />,
-    )
-    const firstTab = screen.getByRole('tab', { name: /Event flags/ })
-    firstTab.focus()
-    fireEvent.keyDown(firstTab, { key: 'ArrowLeft' })
-    expect(onChange).toHaveBeenCalledWith('all-events')
-  })
+    );
+    const firstTab = screen.getByRole('tab', { name: /Event flags/ });
+    firstTab.focus();
+    fireEvent.keyDown(firstTab, { key: 'ArrowLeft' });
+    expect(onChange).toHaveBeenCalledWith('all-events');
+  });
 
   it('activates the focused tab on Enter and Space', () => {
-    const onChange = vi.fn()
+    const onChange = vi.fn();
     render(
       <ReviewTabs tabs={TABS} activeTab="event-flags" onChange={onChange} />,
-    )
-    const pricesTab = screen.getByRole('tab', { name: /Prices/ })
-    pricesTab.focus()
-    fireEvent.keyDown(pricesTab, { key: 'Enter' })
-    expect(onChange).toHaveBeenCalledWith('prices')
-    onChange.mockClear()
-    fireEvent.keyDown(pricesTab, { key: ' ' })
-    expect(onChange).toHaveBeenCalledWith('prices')
-  })
+    );
+    const pricesTab = screen.getByRole('tab', { name: /Prices/ });
+    pricesTab.focus();
+    fireEvent.keyDown(pricesTab, { key: 'Enter' });
+    expect(onChange).toHaveBeenCalledWith('prices');
+    onChange.mockClear();
+    fireEvent.keyDown(pricesTab, { key: ' ' });
+    expect(onChange).toHaveBeenCalledWith('prices');
+  });
 
   it('exposes role="tablist" on the container with the provided aria-label', () => {
     render(
@@ -181,13 +183,13 @@ describe('ReviewTabs', () => {
         onChange={() => {}}
         aria-label="Review sections"
       />,
-    )
+    );
     expect(screen.getByRole('tablist')).toHaveAttribute(
       'aria-label',
       'Review sections',
-    )
-  })
-})
+    );
+  });
+});
 ```
 
 - [ ] **Step 2: Run test, expect failure (module missing)**
@@ -199,21 +201,21 @@ Expected: FAIL with "Cannot find module './ReviewTabs'" or similar.
 
 ```tsx
 // apps/web/src/components/admin/review/ReviewTabs.tsx
-'use client'
+'use client';
 
-import { useCallback, type KeyboardEvent } from 'react'
+import { useCallback, type KeyboardEvent } from 'react';
 
 export interface ReviewTabDescriptor {
-  key: string
-  label: string
-  count?: number
+  key: string;
+  label: string;
+  count?: number;
 }
 
 export interface ReviewTabsProps {
-  tabs: ReadonlyArray<ReviewTabDescriptor>
-  activeTab: string
-  onChange: (key: string) => void
-  'aria-label'?: string
+  tabs: ReadonlyArray<ReviewTabDescriptor>;
+  activeTab: string;
+  onChange: (key: string) => void;
+  'aria-label'?: string;
 }
 
 export const ReviewTabs = ({
@@ -224,23 +226,23 @@ export const ReviewTabs = ({
 }: ReviewTabsProps) => {
   const handleKeyDown = useCallback(
     (evt: KeyboardEvent<HTMLButtonElement>, focusedKey: string) => {
-      const idx = tabs.findIndex((tab) => tab.key === focusedKey)
-      if (idx === -1) return
+      const idx = tabs.findIndex((tab) => tab.key === focusedKey);
+      if (idx === -1) return;
       if (evt.key === 'ArrowRight') {
-        evt.preventDefault()
-        const next = tabs[(idx + 1) % tabs.length]
-        if (next) onChange(next.key)
+        evt.preventDefault();
+        const next = tabs[(idx + 1) % tabs.length];
+        if (next) onChange(next.key);
       } else if (evt.key === 'ArrowLeft') {
-        evt.preventDefault()
-        const next = tabs[(idx - 1 + tabs.length) % tabs.length]
-        if (next) onChange(next.key)
+        evt.preventDefault();
+        const next = tabs[(idx - 1 + tabs.length) % tabs.length];
+        if (next) onChange(next.key);
       } else if (evt.key === 'Enter' || evt.key === ' ') {
-        evt.preventDefault()
-        onChange(focusedKey)
+        evt.preventDefault();
+        onChange(focusedKey);
       }
     },
     [tabs, onChange],
-  )
+  );
 
   return (
     <div
@@ -256,7 +258,7 @@ export const ReviewTabs = ({
       }}
     >
       {tabs.map(({ key, label, count }) => {
-        const isActive = key === activeTab
+        const isActive = key === activeTab;
         return (
           <button
             key={key}
@@ -306,11 +308,11 @@ export const ReviewTabs = ({
               </span>
             )}
           </button>
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 ```
 
 - [ ] **Step 4: Run test, verify pass**
@@ -387,13 +389,13 @@ git commit -m "feat(admin): add review tab labels and All-events placeholder cop
 
   ```ts
   export interface EventFlagsTabContentProps {
-    events: EventFlag[] // imported from ../EventFlagsSection
-    onApprove: (id: string) => void
-    onReject: (id: string) => void
+    events: EventFlag[]; // imported from ../EventFlagsSection
+    onApprove: (id: string) => void;
+    onReject: (id: string) => void;
   }
   export const EventFlagsTabContent: (
     props: EventFlagsTabContentProps,
-  ) => JSX.Element
+  ) => JSX.Element;
   ```
 
 - [ ] **Step 1: Find the `EventFlag` shape and props for `EventFlagsSection`**
@@ -405,32 +407,32 @@ Expected: the `EventFlag` interface (which already exists in that file) and the 
 
 ```tsx
 // apps/web/src/components/admin/review/_tabs/EventFlagsTabContent.tsx
-'use client'
+'use client';
 
-import { EventFlagsSection } from '../EventFlagsSection'
+import { EventFlagsSection } from '../EventFlagsSection';
 
 interface EventFlag {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  genre: string[] | null
-  createdAt: string
-  venueId: string
-  venueName: string | null
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  genre: string[] | null;
+  createdAt: string;
+  venueId: string;
+  venueName: string | null;
 }
 
 export interface EventFlagsTabContentProps {
-  events: EventFlag[]
-  onApprove: (id: string) => void
-  onReject: (id: string) => void
+  events: EventFlag[];
+  onApprove: (id: string) => void;
+  onReject: (id: string) => void;
 }
 
 export const EventFlagsTabContent = ({
@@ -443,7 +445,7 @@ export const EventFlagsTabContent = ({
     onApprove={onApprove}
     onReject={onReject}
   />
-)
+);
 ```
 
 - [ ] **Step 3: Verify typecheck**
@@ -473,25 +475,25 @@ git commit -m "feat(admin): add EventFlagsTabContent wrapper for tab shell"
 
   ```ts
   export interface PricesTabContentProps {
-    submissions: PriceSubmission[]
-    onApproveSubmission: (id: string) => void
-    onDenySubmission: (id: string) => void
-    priceEvents: PriceEvent[]
-    priceEventsLoading: boolean
-    hasMorePriceEvents: boolean
-    priceLoadingMore: boolean
-    pricesMissingOnly: boolean
-    onTogglePriceFilter: () => void
-    onLoadMorePriceEvents: () => void
+    submissions: PriceSubmission[];
+    onApproveSubmission: (id: string) => void;
+    onDenySubmission: (id: string) => void;
+    priceEvents: PriceEvent[];
+    priceEventsLoading: boolean;
+    hasMorePriceEvents: boolean;
+    priceLoadingMore: boolean;
+    pricesMissingOnly: boolean;
+    onTogglePriceFilter: () => void;
+    onLoadMorePriceEvents: () => void;
     onAddPrice: (
       eventId: string,
       priceMin: string,
       priceMax: string | null,
       vendor: string,
       howFound: string,
-    ) => Promise<void>
+    ) => Promise<void>;
   }
-  export const PricesTabContent: (props: PricesTabContentProps) => JSX.Element
+  export const PricesTabContent: (props: PricesTabContentProps) => JSX.Element;
   ```
 
 - [ ] **Step 1: Read the props for `PendingSubmissionsPanel` and `PriceCoverageTable`**
@@ -506,58 +508,58 @@ This is the exact JSX from `ReviewPageClient.tsx` lines 461–480, lifted into a
 
 ```tsx
 // apps/web/src/components/admin/review/_tabs/PricesTabContent.tsx
-'use client'
+'use client';
 
-import { PendingSubmissionsPanel } from '../PendingSubmissionsPanel'
-import { PriceCoverageTable } from '../PriceCoverageTable'
+import { PendingSubmissionsPanel } from '../PendingSubmissionsPanel';
+import { PriceCoverageTable } from '../PriceCoverageTable';
 
 interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string | null
-  priceMax: string | null
-  note?: string | null
-  status: string
-  createdAt: string
-  eventTitle: string | null
-  eventDate: string | null
-  ticketUrl: string | null
-  venueName: string | null
+  id: string;
+  eventId: string;
+  userId: string;
+  priceMin: string | null;
+  priceMax: string | null;
+  note?: string | null;
+  status: string;
+  createdAt: string;
+  eventTitle: string | null;
+  eventDate: string | null;
+  ticketUrl: string | null;
+  venueName: string | null;
 }
 
 interface PriceEvent {
-  eventId: string
-  eventTitle: string
-  artist: string | null
-  venueName: string | null
-  date: string
-  ticketUrl: string | null
-  priceMin: string | null
-  priceMax: string | null
-  priceSource: string | null
-  lastRetrievedAt: string | null
-  lastOutcome: string | null
+  eventId: string;
+  eventTitle: string;
+  artist: string | null;
+  venueName: string | null;
+  date: string;
+  ticketUrl: string | null;
+  priceMin: string | null;
+  priceMax: string | null;
+  priceSource: string | null;
+  lastRetrievedAt: string | null;
+  lastOutcome: string | null;
 }
 
 export interface PricesTabContentProps {
-  submissions: PriceSubmission[]
-  onApproveSubmission: (id: string) => void
-  onDenySubmission: (id: string) => void
-  priceEvents: PriceEvent[]
-  priceEventsLoading: boolean
-  hasMorePriceEvents: boolean
-  priceLoadingMore: boolean
-  pricesMissingOnly: boolean
-  onTogglePriceFilter: () => void
-  onLoadMorePriceEvents: () => void
+  submissions: PriceSubmission[];
+  onApproveSubmission: (id: string) => void;
+  onDenySubmission: (id: string) => void;
+  priceEvents: PriceEvent[];
+  priceEventsLoading: boolean;
+  hasMorePriceEvents: boolean;
+  priceLoadingMore: boolean;
+  pricesMissingOnly: boolean;
+  onTogglePriceFilter: () => void;
+  onLoadMorePriceEvents: () => void;
   onAddPrice: (
     eventId: string,
     priceMin: string,
     priceMax: string | null,
     vendor: string,
     howFound: string,
-  ) => Promise<void>
+  ) => Promise<void>;
 }
 
 export const PricesTabContent = ({
@@ -593,7 +595,7 @@ export const PricesTabContent = ({
       onLoadMore={onLoadMorePriceEvents}
     />
   </div>
-)
+);
 ```
 
 - [ ] **Step 3: Verify typecheck**
@@ -622,16 +624,16 @@ git commit -m "feat(admin): add PricesTabContent wrapper for tab shell"
 - Produces:
 
   ```ts
-  export const AllEventsTabContent: () => JSX.Element
+  export const AllEventsTabContent: () => JSX.Element;
   ```
 
 - [ ] **Step 1: Implement the stub**
 
 ```tsx
 // apps/web/src/components/admin/review/_tabs/AllEventsTabContent.tsx
-'use client'
+'use client';
 
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 export const AllEventsTabContent = () => (
   <div
@@ -667,7 +669,7 @@ export const AllEventsTabContent = () => (
       {ADMIN_COPY.review.tabs.allEventsPlaceholderBody}
     </div>
   </div>
-)
+);
 ```
 
 - [ ] **Step 2: Verify typecheck**
@@ -705,11 +707,11 @@ Expected: see lines 450–483 (the `return (` for desktop branch with stacked pa
 Add to the existing import block (preserve order — `next/navigation` already imports `useRouter`, just add `useSearchParams`):
 
 ```tsx
-import { useRouter, useSearchParams } from 'next/navigation'
-import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
-import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
-import { PricesTabContent } from './_tabs/PricesTabContent'
-import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs';
+import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent';
+import { PricesTabContent } from './_tabs/PricesTabContent';
+import { AllEventsTabContent } from './_tabs/AllEventsTabContent';
 ```
 
 (Note: `useRouter` is already imported on line 5 — keep one import line; just add `useSearchParams` alongside it.)
@@ -719,24 +721,24 @@ import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 Add near the top of the file (after the existing type declarations but outside the component):
 
 ```tsx
-type ReviewTabKey = 'event-flags' | 'prices' | 'all-events'
+type ReviewTabKey = 'event-flags' | 'prices' | 'all-events';
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
   'prices',
   'all-events',
-])
+]);
 
 const isValidTabKey = (value: string | null): value is ReviewTabKey =>
-  value !== null && VALID_TAB_KEYS.has(value)
+  value !== null && VALID_TAB_KEYS.has(value);
 
 const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
-  const tab = params.get('tab')
-  if (isValidTabKey(tab)) return tab
+  const tab = params.get('tab');
+  if (isValidTabKey(tab)) return tab;
   // Back-compat: legacy `?section=submissions` → prices tab
-  if (params.get('section') === 'submissions') return 'prices'
-  return 'event-flags'
-}
+  if (params.get('section') === 'submissions') return 'prices';
+  return 'event-flags';
+};
 ```
 
 - [ ] **Step 4: Wire URL-driven active tab inside the component**
@@ -744,21 +746,21 @@ const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
 Inside `ReviewPageClient`, after the existing `const router = useRouter()` line, add:
 
 ```tsx
-const searchParams = useSearchParams()
+const searchParams = useSearchParams();
 const activeTab: ReviewTabKey = resolveTabFromSearchParams(
   new URLSearchParams(searchParams?.toString() ?? ''),
-)
+);
 
 const setActiveTab = useCallback(
   (next: string) => {
-    if (!isValidTabKey(next)) return
-    const params = new URLSearchParams(searchParams?.toString() ?? '')
-    params.set('tab', next)
-    params.delete('section') // retire legacy key once user navigates
-    router.push(`?${params.toString()}`, { scroll: false })
+    if (!isValidTabKey(next)) return;
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.set('tab', next);
+    params.delete('section'); // retire legacy key once user navigates
+    router.push(`?${params.toString()}`, { scroll: false });
   },
   [router, searchParams],
-)
+);
 ```
 
 - [ ] **Step 5: Build the desktop tab descriptors**
@@ -778,7 +780,7 @@ const tabs: ReadonlyArray<ReviewTabDescriptor> = [
     count: submissions.length,
   },
   { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
-]
+];
 ```
 
 - [ ] **Step 6: Replace the desktop `return` block (lines 450–483)**
@@ -818,7 +820,7 @@ return (
       />
     </div>
   </div>
-)
+);
 ```
 
 …with the tabbed version:
@@ -862,7 +864,7 @@ return (
 
     {activeTab === 'all-events' && <AllEventsTabContent />}
   </div>
-)
+);
 ```
 
 - [ ] **Step 7: Remove now-unused imports**
@@ -875,9 +877,9 @@ Expected: zero matches after edit (the wrappers handle the imports now).
 Delete the three lines:
 
 ```tsx
-import { EventFlagsSection } from './EventFlagsSection'
-import { PendingSubmissionsPanel } from './PendingSubmissionsPanel'
-import { PriceCoverageTable } from './PriceCoverageTable'
+import { EventFlagsSection } from './EventFlagsSection';
+import { PendingSubmissionsPanel } from './PendingSubmissionsPanel';
+import { PriceCoverageTable } from './PriceCoverageTable';
 ```
 
 - [ ] **Step 8: Run typecheck + lint + test**

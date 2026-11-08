@@ -1,26 +1,26 @@
-'use client'
+'use client';
 
-import { useCallback, useRef, type KeyboardEvent } from 'react'
+import { useCallback, useRef, type KeyboardEvent } from 'react';
 
-export type ReviewTabKind = 'warning' | 'signal' | 'danger'
+export type ReviewTabKind = 'warning' | 'signal' | 'danger';
 
 export interface ReviewTabDescriptor {
-  key: string
-  label: string
-  count?: number
+  key: string;
+  label: string;
+  count?: number;
   /**
    * Drives the active-badge background colour. Maps to a CSS token via
    * `var(--{kind})`. Optional — when omitted, the active badge falls back
    * to `var(--signal)`.
    */
-  kind?: ReviewTabKind
+  kind?: ReviewTabKind;
 }
 
 export interface ReviewTabsProps {
-  tabs: ReadonlyArray<ReviewTabDescriptor>
-  activeTab: string
-  onChange: (key: string) => void
-  'aria-label'?: string
+  tabs: ReadonlyArray<ReviewTabDescriptor>;
+  activeTab: string;
+  onChange: (key: string) => void;
+  'aria-label'?: string;
 }
 
 export const ReviewTabs = ({
@@ -32,37 +32,37 @@ export const ReviewTabs = ({
   // Refs keyed by tab key so arrow navigation can move both selection AND DOM
   // focus — required by WAI-ARIA tabs pattern. Without this, focus stays on
   // the original tab even after it loses tabIndex=0.
-  const tabRefs = useRef(new Map<string, HTMLButtonElement>())
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const focusTab = useCallback((key: string) => {
-    tabRefs.current.get(key)?.focus()
-  }, [])
+    tabRefs.current.get(key)?.focus();
+  }, []);
 
   const handleKeyDown = useCallback(
     (evt: KeyboardEvent<HTMLButtonElement>, focusedKey: string) => {
-      const idx = tabs.findIndex((tab) => tab.key === focusedKey)
-      if (idx === -1) return
+      const idx = tabs.findIndex((tab) => tab.key === focusedKey);
+      if (idx === -1) return;
       if (evt.key === 'ArrowRight') {
-        evt.preventDefault()
-        const next = tabs[(idx + 1) % tabs.length]
+        evt.preventDefault();
+        const next = tabs[(idx + 1) % tabs.length];
         if (next) {
-          onChange(next.key)
-          focusTab(next.key)
+          onChange(next.key);
+          focusTab(next.key);
         }
       } else if (evt.key === 'ArrowLeft') {
-        evt.preventDefault()
-        const next = tabs[(idx - 1 + tabs.length) % tabs.length]
+        evt.preventDefault();
+        const next = tabs[(idx - 1 + tabs.length) % tabs.length];
         if (next) {
-          onChange(next.key)
-          focusTab(next.key)
+          onChange(next.key);
+          focusTab(next.key);
         }
       } else if (evt.key === 'Enter' || evt.key === ' ') {
-        evt.preventDefault()
-        onChange(focusedKey)
+        evt.preventDefault();
+        onChange(focusedKey);
       }
     },
     [tabs, onChange, focusTab],
-  )
+  );
 
   return (
     <>
@@ -106,15 +106,15 @@ export const ReviewTabs = ({
         }}
       >
         {tabs.map(({ key, label, count, kind }) => {
-          const isActive = key === activeTab
+          const isActive = key === activeTab;
           const activeBadgeBg =
-            kind !== undefined ? `var(--${kind})` : 'var(--signal)'
+            kind !== undefined ? `var(--${kind})` : 'var(--signal)';
           return (
             <button
               key={key}
               ref={(el) => {
-                if (el) tabRefs.current.set(key, el)
-                else tabRefs.current.delete(key)
+                if (el) tabRefs.current.set(key, el);
+                else tabRefs.current.delete(key);
               }}
               type="button"
               role="tab"
@@ -165,9 +165,9 @@ export const ReviewTabs = ({
                 </span>
               )}
             </button>
-          )
+          );
         })}
       </div>
     </>
-  )
-}
+  );
+};

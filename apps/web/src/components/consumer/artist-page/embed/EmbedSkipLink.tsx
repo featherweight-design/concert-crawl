@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import React from 'react'
+import React from 'react';
 
-import { ARTIST_COPY } from '../definitions/copy'
+import { ARTIST_COPY } from '../definitions/copy';
 
 /**
  * A labelled route past the iframe. We do not own Spotify's internal tab
@@ -14,7 +14,7 @@ import { ARTIST_COPY } from '../definitions/copy'
  * `.ap-skip` — a `:focus` rule cannot be expressed inline.
  */
 export const EmbedSkipLink = ({ targetId }: { targetId: string | null }) => {
-  if (!targetId) return null
+  if (!targetId) return null;
 
   // A bare fragment href only scrolls — the next Tab would resume from the
   // link, i.e. straight back into Spotify's tab stops, which is the exact
@@ -23,18 +23,18 @@ export const EmbedSkipLink = ({ targetId }: { targetId: string | null }) => {
   // and not natively focusable, hence tabIndex -1 (programmatic focus only,
   // never a stop of its own).
   const skip = (evt: React.MouseEvent<HTMLAnchorElement>) => {
-    const target = document.getElementById(targetId)
-    if (!target) return
-    evt.preventDefault()
-    target.tabIndex = -1
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    evt.preventDefault();
+    target.tabIndex = -1;
     // focus() scrolls the target into view on its own, so the cancelled
     // fragment navigation costs us nothing.
-    target.focus()
-  }
+    target.focus();
+  };
 
   return (
     <a className="ap-skip" href={`#${targetId}`} onClick={skip}>
       {ARTIST_COPY.playerSkip}
     </a>
-  )
-}
+  );
+};

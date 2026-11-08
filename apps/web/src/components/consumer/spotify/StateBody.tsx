@@ -2,16 +2,16 @@
 // stack) shared by the Spotify empty/failure/success screens (#763 PR 5).
 // Mirrors StateBody/GreenDisc from the design handoff's spotify-states.jsx.
 
-type EyebrowTone = 'muted' | 'signal' | 'danger' | 'warning'
+type EyebrowTone = 'muted' | 'signal' | 'danger' | 'warning';
 
 const EYEBROW_COLOR: Record<EyebrowTone, string> = {
   muted: 'var(--fg-subtle)',
   signal: 'var(--signal)',
   danger: 'var(--danger)',
   warning: 'var(--warning)',
-}
+};
 
-type DiscTone = 'signal' | 'muted' | 'danger'
+type DiscTone = 'signal' | 'muted' | 'danger';
 
 const DISC_STYLE: Record<DiscTone, { background: string; border: string }> = {
   signal: {
@@ -26,14 +26,14 @@ const DISC_STYLE: Record<DiscTone, { background: string; border: string }> = {
     background: 'color-mix(in oklch, var(--danger) 16%, var(--surface-1))',
     border: '1px solid color-mix(in oklch, var(--danger) 36%, transparent)',
   },
-}
+};
 
 export const StateGlyphDisc = ({
   tone = 'signal',
   children,
 }: {
-  tone?: DiscTone
-  children: React.ReactNode
+  tone?: DiscTone;
+  children: React.ReactNode;
 }) => (
   <div
     className="flex h-[72px] w-[72px] items-center justify-center rounded-[20px]"
@@ -41,15 +41,15 @@ export const StateGlyphDisc = ({
   >
     {children}
   </div>
-)
+);
 
 interface StateBodyProps {
-  glyph: React.ReactNode
-  eyebrow: string
-  eyebrowTone?: EyebrowTone
-  title: string
-  body: React.ReactNode
-  children?: React.ReactNode
+  glyph: React.ReactNode;
+  eyebrow: string;
+  eyebrowTone?: EyebrowTone;
+  title: string;
+  body: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export const StateBody = ({
@@ -60,7 +60,7 @@ export const StateBody = ({
   body,
   children,
 }: StateBodyProps) => {
-  const eyebrowColor = EYEBROW_COLOR[eyebrowTone]
+  const eyebrowColor = EYEBROW_COLOR[eyebrowTone];
   return (
     <div className="my-auto flex flex-col items-center text-center">
       <div className="mb-[18px]">{glyph}</div>
@@ -87,5 +87,5 @@ export const StateBody = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

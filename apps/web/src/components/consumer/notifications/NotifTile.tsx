@@ -4,19 +4,19 @@
 // spelled out in the row's metadata line and in the row's accessible name.
 // The ink lives here (a graphic, 3:1) and never on text.
 
-import { categoryFor } from './definitions/categories'
-import { NotifGlyph } from './glyphs'
+import { categoryFor } from './definitions/categories';
+import { NotifGlyph } from './glyphs';
 
 export const NotifTile = ({
   category,
   read = false,
   size = 28,
 }: {
-  category: string
-  read?: boolean | undefined
-  size?: number | undefined
+  category: string;
+  read?: boolean | undefined;
+  size?: number | undefined;
 }) => {
-  const { ink, glyph } = categoryFor(category)
+  const { ink, glyph } = categoryFor(category);
   return (
     <span
       aria-hidden="true"
@@ -38,5 +38,5 @@ export const NotifTile = ({
     >
       <NotifGlyph name={glyph} size={size * 0.57} />
     </span>
-  )
-}
+  );
+};

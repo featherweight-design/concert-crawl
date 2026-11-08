@@ -1,5 +1,5 @@
-import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy'
-import { DENVER_TIME_ZONE } from '@/lib/time'
+import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
+import { DENVER_TIME_ZONE } from '@/lib/time';
 
 /**
  * Deterministic ±2° tilt per show, so the wall reads as stamped rather than
@@ -13,25 +13,25 @@ import { DENVER_TIME_ZONE } from '@/lib/time'
  * ±2.2° and keeps the tilt evenly spread across the nine buckets.
  */
 export const passportRotation = (id: string): number => {
-  let hash = 0
+  let hash = 0;
   for (let i = 0; i < id.length; i++) {
-    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0
+    hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
   }
-  return ((Math.abs(hash) % 9) - 4) * 0.55
-}
+  return ((Math.abs(hash) % 9) - 4) * 0.55;
+};
 
 export interface StampDateParts {
   /** Uppercase short month, e.g. `FEB`. */
-  month: string
+  month: string;
   /** Zero-padded day of month, e.g. `28`. */
-  day: string
+  day: string;
 }
 
 const STAMP_FORMAT = new Intl.DateTimeFormat('en-US', {
   timeZone: DENVER_TIME_ZONE,
   month: 'short',
   day: '2-digit',
-})
+});
 
 /**
  * The date punched into a stamp, from the event's local `YYYY-MM-DD`.
@@ -44,16 +44,16 @@ const STAMP_FORMAT = new Intl.DateTimeFormat('en-US', {
  * that never occurred together.
  */
 export const stampDateParts = (date: string): StampDateParts | null => {
-  const at = new Date(`${date}T12:00:00Z`)
-  if (Number.isNaN(at.getTime())) return null
+  const at = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(at.getTime())) return null;
 
-  const parts = STAMP_FORMAT.formatToParts(at)
-  const month = parts.find((part) => part.type === 'month')?.value
-  const day = parts.find((part) => part.type === 'day')?.value
-  if (month === undefined || day === undefined) return null
+  const parts = STAMP_FORMAT.formatToParts(at);
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  if (month === undefined || day === undefined) return null;
 
-  return { month: month.toUpperCase(), day }
-}
+  return { month: month.toUpperCase(), day };
+};
 
 /**
  * The handle printed on the card.
@@ -64,7 +64,7 @@ export const stampDateParts = (date: string): StampDateParts | null => {
  * variant — so an absent handle falls back rather than suppressing the header.
  */
 export const passportHandle = (handle: string | null | undefined): string => {
-  const trimmed = handle?.trim() ?? ''
-  if (trimmed === '' || trimmed === '@') return PASSPORT_COPY.fallbackHandle
-  return trimmed.startsWith('@') ? trimmed : `@${trimmed}`
-}
+  const trimmed = handle?.trim() ?? '';
+  if (trimmed === '' || trimmed === '@') return PASSPORT_COPY.fallbackHandle;
+  return trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
+};

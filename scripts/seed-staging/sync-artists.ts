@@ -31,7 +31,7 @@
  * keeps `slug` out of the update path completely.
  */
 
-import { eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm';
 // Source-relative, like the schema import below. The root workspace does not
 // declare @concert-crawl/types as a dependency, so the package specifier
 // resolves here only when pnpm happens to hoist it as a transitive of
@@ -39,32 +39,34 @@ import { eq } from 'drizzle-orm'
 import {
   artistSlug,
   resolveSlug,
-} from '../../packages/types/src/artist-slug.js'
-import { artists } from '../../packages/db/src/schema/index.js'
-import type { ProdReadonlyClient } from './prod-readonly-client.js'
-import type { DrizzleWriteDb } from './sync-venues.js'
+} from '../../packages/types/src/artist-slug.js';
+import { artists } from '../../packages/db/src/schema/index.js';
+import type { ProdReadonlyClient } from './prod-readonly-client.js';
+import type { DrizzleWriteDb } from './sync-venues.js';
 
 export async function syncArtists(deps: {
-  prod: ProdReadonlyClient
-  staging: DrizzleWriteDb
-  dryRun: boolean
+  prod: ProdReadonlyClient;
+  staging: DrizzleWriteDb;
+  dryRun: boolean;
 }): Promise<{ scanned: number; processed: number }> {
-  const { prod, staging, dryRun } = deps
+  const { prod, staging, dryRun } = deps;
 
-  const prodRows = await prod.select((db) => db.select().from(artists))
+  const prodRows = await prod.select((db) => db.select().from(artists));
 
   const stagingRows = await staging
     .select({ canonicalName: artists.canonicalName, slug: artists.slug })
-    .from(artists)
-  const takenSlugs = new Set(stagingRows.map((row) => row.slug))
-  const existingCanonical = new Set(stagingRows.map((row) => row.canonicalName))
+    .from(artists);
+  const takenSlugs = new Set(stagingRows.map((row) => row.slug));
+  const existingCanonical = new Set(
+    stagingRows.map((row) => row.canonicalName),
+  );
 
-  const scanned = prodRows.length
+  const scanned = prodRows.length;
   // `processed` counts rows we attempted to upsert (or, in dry-run, would
   // attempt) — not rows that actually changed. ON CONFLICT UPDATE fires even
   // when incoming values match stored ones. Same naming rationale as
   // sync-venues.ts.
-  let processed = 0
+  let processed = 0;
 
   for (const row of prodRows) {
     // Every mutable column except `slug`, which staging owns. Shared by both
@@ -82,34 +84,34 @@ export async function syncArtists(deps: {
       spotifyCandidates: row.spotifyCandidates,
       spotifyCandidatesFetchedAt: row.spotifyCandidatesFetchedAt,
       updatedAt: row.updatedAt,
-    }
+    };
 
     if (existingCanonical.has(row.canonicalName)) {
       if (!dryRun) {
         await staging
           .update(artists)
           .set(mutable)
-          .where(eq(artists.canonicalName, row.canonicalName))
+          .where(eq(artists.canonicalName, row.canonicalName));
       }
     } else {
       const slug = resolveSlug(
         artistSlug(row.canonicalName),
         takenSlugs,
         row.canonicalName,
-      )
-      takenSlugs.add(slug)
-      existingCanonical.add(row.canonicalName)
+      );
+      takenSlugs.add(slug);
+      existingCanonical.add(row.canonicalName);
 
       if (!dryRun) {
         await staging.insert(artists).values({
           ...mutable,
           canonicalName: row.canonicalName,
           slug,
-        })
+        });
       }
     }
-    processed++
+    processed++;
   }
 
-  return { scanned, processed }
+  return { scanned, processed };
 }

@@ -1,31 +1,31 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { useClerk, useUser } from '@clerk/nextjs'
-import { Avatar } from './Avatar'
-import { CredChip } from './CredChip'
-import { PlanPanel } from './plan'
-import { ThemePickerInline } from './ThemePickerInline'
-import { MySubmissionsList } from './MySubmissionsList'
-import { DangerZone } from './DangerZone'
-import { DataExportRow } from './DataExportRow'
-import { LegalLinksCard } from './LegalLinksCard'
-import { EditProfileForm } from './EditProfileForm'
-import { ConnectionsPanel } from './connections'
-import { NotificationsSection } from './notifications/NotificationsSection'
-import { NOTIFICATIONS_COPY } from './notifications/definitions/copy'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useClerk, useUser } from '@clerk/nextjs';
+import { Avatar } from './Avatar';
+import { CredChip } from './CredChip';
+import { PlanPanel } from './plan';
+import { ThemePickerInline } from './ThemePickerInline';
+import { MySubmissionsList } from './MySubmissionsList';
+import { DangerZone } from './DangerZone';
+import { DataExportRow } from './DataExportRow';
+import { LegalLinksCard } from './LegalLinksCard';
+import { EditProfileForm } from './EditProfileForm';
+import { ConnectionsPanel } from './connections';
+import { NotificationsSection } from './notifications/NotificationsSection';
+import { NOTIFICATIONS_COPY } from './notifications/definitions/copy';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy';
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
 import type {
   UserProfileResponse,
   UserSubmissionItem,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 type NavSection =
   | 'profile'
@@ -35,7 +35,7 @@ type NavSection =
   | 'notifications'
   | 'submissions'
   | 'account'
-  | 'danger'
+  | 'danger';
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: SETTINGS_COPY.profileSection },
@@ -46,7 +46,7 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'connections', label: SPOTIFY_COPY.connectEntry.sectionTitle },
   { key: 'account', label: SETTINGS_COPY.accountSection },
   { key: 'danger', label: SETTINGS_COPY.dangerSection },
-]
+];
 
 // Resolved against the sections actually on screen. With spotify-sync off,
 // `?section=connections` would otherwise select a section whose panel renders
@@ -55,11 +55,11 @@ export const resolveSection = (
   param: string | null,
   spotifyEnabled: boolean,
 ): NavSection => {
-  const match = NAV_ITEMS.find((item) => item.key === param)
-  if (!match) return 'profile'
-  if (match.key === 'connections' && !spotifyEnabled) return 'profile'
-  return match.key
-}
+  const match = NAV_ITEMS.find((item) => item.key === param);
+  if (!match) return 'profile';
+  if (match.key === 'connections' && !spotifyEnabled) return 'profile';
+  return match.key;
+};
 
 const NAV_ICONS: Record<NavSection, React.ReactNode> = {
   profile: (
@@ -155,18 +155,18 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
       />
     </svg>
   ),
-}
+};
 
 interface SettingsRouteDesktopProps {
-  profile: UserProfileResponse
-  submissions: UserSubmissionItem[]
-  scaRegion: boolean
+  profile: UserProfileResponse;
+  submissions: UserSubmissionItem[];
+  scaRegion: boolean;
   /**
    * The `spotify-sync` release flag, resolved server-side on `/me` and passed
    * to both settings routes so mobile and desktop never disagree and the
    * Connections section does not flash in before the client read lands.
    */
-  spotifyEnabled: boolean
+  spotifyEnabled: boolean;
 }
 
 export function SettingsRouteDesktop({
@@ -175,44 +175,44 @@ export function SettingsRouteDesktop({
   scaRegion,
   spotifyEnabled,
 }: SettingsRouteDesktopProps) {
-  const { openUserProfile } = useClerk()
-  const { user } = useUser()
-  const searchParams = useSearchParams()
-  const sectionParam = searchParams.get('section')
+  const { openUserProfile } = useClerk();
+  const { user } = useUser();
+  const searchParams = useSearchParams();
+  const sectionParam = searchParams.get('section');
   const [activeSection, setActiveSection] = useState<NavSection>(() =>
     resolveSection(sectionParam, spotifyEnabled),
-  )
-  const [editOpen, setEditOpen] = useState(false)
+  );
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     setActiveSection(
       resolveSection(searchParams.get('section'), spotifyEnabled),
-    )
-  }, [searchParams, spotifyEnabled])
+    );
+  }, [searchParams, spotifyEnabled]);
 
   // The Connections section holds nothing but the Spotify link, and its own
   // heading copy is Spotify's, so the flag takes the whole section rather than
   // leaving an empty one behind.
   const navItems = NAV_ITEMS.filter(
     (item) => spotifyEnabled || item.key !== 'connections',
-  )
+  );
 
-  const openEdit = useCallback(() => setEditOpen(true), [])
-  const closeEdit = useCallback(() => setEditOpen(false), [])
+  const openEdit = useCallback(() => setEditOpen(true), []);
+  const closeEdit = useCallback(() => setEditOpen(false), []);
 
   useEffect(() => {
-    if (!editOpen) return
+    if (!editOpen) return;
     function handleKey(ev: KeyboardEvent) {
-      if (ev.key === 'Escape') setEditOpen(false)
+      if (ev.key === 'Escape') setEditOpen(false);
     }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [editOpen])
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [editOpen]);
 
-  const isAnon = !profile.handle
+  const isAnon = !profile.handle;
   const confirmedCount = submissions.filter(
     (sub) => sub.status === 'confirmed',
-  ).length
+  ).length;
 
   const profilePanel = (
     <div className="flex flex-col gap-5">
@@ -306,7 +306,7 @@ export function SettingsRouteDesktop({
         </div>
       )}
     </div>
-  )
+  );
 
   const submissionsPanel = (
     <div className="flex flex-col gap-5">
@@ -326,7 +326,7 @@ export function SettingsRouteDesktop({
         cap={submissions.length}
       />
     </div>
-  )
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -706,5 +706,5 @@ export function SettingsRouteDesktop({
         </>
       )}
     </div>
-  )
+  );
 }

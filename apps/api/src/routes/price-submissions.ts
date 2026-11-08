@@ -1,21 +1,21 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
-import { z } from 'zod'
-import { and, desc, eq, gt, ne, sql } from 'drizzle-orm'
-import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
+import { Hono } from 'hono';
+import { zValidator } from '@hono/zod-validator';
+import { z } from 'zod';
+import { and, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { db, events, priceSubmissions, venues } from '@concert-crawl/db';
 import {
   SP_POLICY,
   VENDOR_VALUES,
   deriveSourceCategory,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 import {
   clerkAuth,
   requireAuth,
   getAuthUser,
   getAuthOptional,
-} from '../middleware/auth.js'
-import { moderateNote } from '../lib/moderate-note.js'
-import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js'
+} from '../middleware/auth.js';
+import { moderateNote } from '../lib/moderate-note.js';
+import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
 
 const submissionBodySchema = z
   .object({
@@ -38,7 +38,7 @@ const submissionBodySchema = z
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
     path: ['priceMax'],
-  })
+  });
 
 // Batch bundle schema (#832). Per-row rules mirror submissionBodySchema's
 // price fields exactly; bundle-level fields are shared across every row.
@@ -53,7 +53,7 @@ const batchTierRowSchema = z
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",
     path: ['priceMax'],
-  })
+  });
 
 const batchBodySchema = z
   .object({
@@ -68,14 +68,14 @@ const batchBodySchema = z
     (data) =>
       new Set(data.tiers.map((row) => row.tier)).size === data.tiers.length,
     { message: 'Tiers must be unique within a batch.', path: ['tiers'] },
-  )
+  );
 
-const RATE_LIMIT_ERROR = `Rate limit: ${SP_POLICY.rateLimitMaxSubmissions} submissions per event per ${SP_POLICY.rateLimitHours}h`
+const RATE_LIMIT_ERROR = `Rate limit: ${SP_POLICY.rateLimitMaxSubmissions} submissions per event per ${SP_POLICY.rateLimitHours}h`;
 
 // Executor type covering both the root db handle and a transaction handle,
 // so countRecentActs can run inside the advisory-locked transactions below.
 type DbExecutor =
-  typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0]
+  typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // Serializes concurrent submission attempts for one (user, event) pair. The
 // check-then-insert sequences below are racy across API processes without
@@ -94,8 +94,8 @@ const acquireSubmissionLock = async (
     // than one hash of the concatenated pair. A collision only costs
     // needless serialization, never correctness.
     sql`SELECT pg_advisory_xact_lock(hashtext(${eventId}), hashtext(${userId}))`,
-  )
-}
+  );
+};
 
 // One "contribution act" = one distinct created_at per (user, event) inside
 // the 24h window (#876). All rows of a batch bundle land in one multi-row
@@ -109,7 +109,7 @@ const countRecentActs = async (
 ): Promise<number> => {
   const cutoff = new Date(
     Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
-  )
+  );
   const [row] = await executor
     .select({
       acts: sql<number>`COUNT(DISTINCT ${priceSubmissions.createdAt})::int`,
@@ -121,17 +121,17 @@ const countRecentActs = async (
         eq(priceSubmissions.userId, userId),
         gt(priceSubmissions.createdAt, cutoff),
       ),
-    )
-  return row ? Number(row.acts) : 0
-}
+    );
+  return row ? Number(row.acts) : 0;
+};
 
-export const priceSubmissionsRouter = new Hono()
+export const priceSubmissionsRouter = new Hono();
 
 // GET /v1/events/:id/price-submissions — optional auth; returns all non-stale submissions
 priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
-  const { id: eventId } = ctx.req.param()
-  const authUser = getAuthOptional(ctx)
-  const userId = authUser?.userId ?? null
+  const { id: eventId } = ctx.req.param();
+  const authUser = getAuthOptional(ctx);
+  const userId = authUser?.userId ?? null;
 
   const subRows = await db
     .select({
@@ -166,7 +166,7 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
         ne(priceSubmissions.status, 'stale'),
       ),
     )
-    .orderBy(desc(priceSubmissions.createdAt))
+    .orderBy(desc(priceSubmissions.createdAt));
 
   // #794 opened this route to anonymous callers. The only thing that reads
   // `userId` is the caller's own "yours" affordance, so a caller sees their own
@@ -177,21 +177,21 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
     userId: userId != null && row.userId === userId ? row.userId : null,
     confirms: Number(row.confirms),
     byYou: Boolean(row.byYou),
-  }))
+  }));
 
   const userSubmission =
     userId != null
       ? (submissions.find(
           (sub) => sub.userId === userId && sub.status === 'pending',
         ) ?? null)
-      : null
+      : null;
 
   // Block resubmission if the user has any non-stale submission within the last 24h,
   // including approved (corroborated) ones. This prevents the submit form from
   // reappearing after an admin approves the user's price.
   const rateLimitCutoff = new Date(
     Date.now() - SP_POLICY.rateLimitHours * 60 * 60 * 1000,
-  )
+  );
   const recentSubmission =
     userId != null
       ? (submissions.find(
@@ -200,16 +200,16 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
             (sub.status === 'pending' || sub.status === 'corroborated') &&
             new Date(sub.createdAt) > rateLimitCutoff,
         ) ?? null)
-      : null
+      : null;
 
   // #876 — how many contribution acts the caller has left for this event.
   // Separate count query: the list above excludes stale rows, but stale acts
   // still consume allowance. Anonymous callers get the full allowance.
-  const actsUsed = userId != null ? await countRecentActs(eventId, userId) : 0
+  const actsUsed = userId != null ? await countRecentActs(eventId, userId) : 0;
   const submissionsRemaining = Math.max(
     0,
     SP_POLICY.rateLimitMaxSubmissions - actsUsed,
-  )
+  );
 
   return ctx.json({
     success: true,
@@ -219,8 +219,8 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
       submissionsRemaining,
       userSubmission,
     },
-  })
-})
+  });
+});
 
 // POST /v1/events/:id/price-submissions — authenticated users submit price data.
 // @deprecated for the consumer submit form — SubmitPriceModal now posts to
@@ -239,21 +239,21 @@ priceSubmissionsRouter.post(
           details: result.error.flatten(),
         },
         422,
-      )
+      );
   }),
   async (ctx) => {
-    const { id: eventId } = ctx.req.param()
-    const { userId } = getAuthUser(ctx)
-    const body = ctx.req.valid('json')
+    const { id: eventId } = ctx.req.param();
+    const { userId } = getAuthUser(ctx);
+    const body = ctx.req.valid('json');
 
     // Content moderation for note
     if (body.note) {
-      const modResult = moderateNote(body.note)
+      const modResult = moderateNote(body.note);
       if (!modResult.ok) {
         return ctx.json(
           { success: false, error: modResult.reason ?? 'Note rejected.' },
           422,
-        )
+        );
       }
     }
 
@@ -267,9 +267,9 @@ priceSubmissionsRouter.post(
         and(eq(venues.id, events.venueId), eq(venues.active, true)),
       )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-      .limit(1)
+      .limit(1);
     if (!event)
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
 
     // Counter-creation path (CounterSubmitSheet posts here when challenging
     // a corroborated parent). This path has its own contract:
@@ -307,12 +307,12 @@ priceSubmissionsRouter.post(
             eq(priceSubmissions.eventId, eventId),
           ),
         )
-        .limit(1)
+        .limit(1);
       if (!disputed) {
         return ctx.json(
           { success: false, error: 'Disputed submission not found' },
           404,
-        )
+        );
       }
 
       // Self-dispute guard. Mirrors POST /v1/submissions/:id/dispute at
@@ -325,7 +325,7 @@ priceSubmissionsRouter.post(
         return ctx.json(
           { success: false, error: 'Cannot dispute your own submission' },
           403,
-        )
+        );
       }
 
       // 1-pending-counter-per-parent invariant (spec §4.6). Checked BEFORE
@@ -350,7 +350,7 @@ priceSubmissionsRouter.post(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
-        .limit(1)
+        .limit(1);
       if (existingCounter) {
         return ctx.json(
           {
@@ -359,7 +359,7 @@ priceSubmissionsRouter.post(
               'Another challenge is already pending against this submission.',
           },
           409,
-        )
+        );
       }
 
       if (disputed.status !== 'corroborated') {
@@ -369,7 +369,7 @@ priceSubmissionsRouter.post(
             error: 'Can only dispute a corroborated submission',
           },
           400,
-        )
+        );
       }
 
       // Slot identity inherits from parent. `sourceCategory` may be NULL on
@@ -377,12 +377,12 @@ priceSubmissionsRouter.post(
       // same fallback the dispute route uses at submissions.ts:197-199 — so
       // every counter lands with a non-null source_category that matches the
       // partial unique index semantics.
-      const inheritedTier = disputed.tier
-      const inheritedVendor = disputed.vendor
+      const inheritedTier = disputed.tier;
+      const inheritedVendor = disputed.vendor;
       const inheritedSourceCategory =
         disputed.sourceCategory ??
-        deriveSourceCategory(disputed.vendor, disputed.howFound)
-      const parentId = body.disputedSubmissionId
+        deriveSourceCategory(disputed.vendor, disputed.howFound);
+      const parentId = body.disputedSubmissionId;
 
       try {
         const created = await db.transaction(async (tx) => {
@@ -407,21 +407,21 @@ priceSubmissionsRouter.post(
               disputedSubmissionId: parentId,
               status: 'pending',
             })
-            .returning()
+            .returning();
 
           if (!child) {
-            throw new Error('Counter insert returned no rows')
+            throw new Error('Counter insert returned no rows');
           }
 
           await tx
             .update(priceSubmissions)
             .set({ status: 'disputed', updatedAt: sql`now()` })
-            .where(eq(priceSubmissions.id, parentId))
+            .where(eq(priceSubmissions.id, parentId));
 
-          return child
-        })
+          return child;
+        });
 
-        return ctx.json({ success: true, data: created }, 201)
+        return ctx.json({ success: true, data: created }, 201);
       } catch (err) {
         // Belt-and-braces: translate the DB unique_violation on the partial
         // unique index into the same clean 409 the pre-insert SELECT returns.
@@ -433,9 +433,9 @@ priceSubmissionsRouter.post(
                 'Another challenge is already pending against this submission.',
             },
             409,
-          )
+          );
         }
-        throw err
+        throw err;
       }
     }
 
@@ -445,20 +445,20 @@ priceSubmissionsRouter.post(
     // status is mapped from the outcome after commit.
     type SingleOutcome =
       | {
-          kind: 'already_submitted'
-          submission: typeof priceSubmissions.$inferSelect
+          kind: 'already_submitted';
+          submission: typeof priceSubmissions.$inferSelect;
         }
       | { kind: 'rate_limited' }
       // .returning() types its rows as possibly-undefined under
       // noUncheckedIndexedAccess; pass that through unchanged (the previous
       // non-transactional code did the same).
       | {
-          kind: 'created'
-          submission: typeof priceSubmissions.$inferSelect | undefined
-        }
+          kind: 'created';
+          submission: typeof priceSubmissions.$inferSelect | undefined;
+        };
 
     const outcome = await db.transaction<SingleOutcome>(async (tx) => {
-      await acquireSubmissionLock(tx, eventId, userId)
+      await acquireSubmissionLock(tx, eventId, userId);
 
       // 409 — existing pending submission
       const existing = await tx
@@ -471,17 +471,17 @@ priceSubmissionsRouter.post(
             eq(priceSubmissions.status, 'pending'),
           ),
         )
-        .limit(1)
-      const [existingRow] = existing
+        .limit(1);
+      const [existingRow] = existing;
       if (existingRow) {
-        return { kind: 'already_submitted', submission: existingRow }
+        return { kind: 'already_submitted', submission: existingRow };
       }
 
       // 429 — rate limit: SP_POLICY.rateLimitMaxSubmissions contribution
       // acts per (user, event) per 24h (#876).
-      const actsUsed = await countRecentActs(eventId, userId, tx)
+      const actsUsed = await countRecentActs(eventId, userId, tx);
       if (actsUsed >= SP_POLICY.rateLimitMaxSubmissions) {
-        return { kind: 'rate_limited' }
+        return { kind: 'rate_limited' };
       }
 
       const [created] = await tx
@@ -516,10 +516,10 @@ priceSubmissionsRouter.post(
           // than any previously committed serialized act.
           createdAt: sql`statement_timestamp()`,
         })
-        .returning()
+        .returning();
 
-      return { kind: 'created', submission: created }
-    })
+      return { kind: 'created', submission: created };
+    });
 
     if (outcome.kind === 'already_submitted') {
       return ctx.json(
@@ -529,14 +529,14 @@ priceSubmissionsRouter.post(
           submission: outcome.submission,
         },
         409,
-      )
+      );
     }
     if (outcome.kind === 'rate_limited') {
-      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429)
+      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429);
     }
-    return ctx.json({ success: true, data: outcome.submission }, 201)
+    return ctx.json({ success: true, data: outcome.submission }, 201);
   },
-)
+);
 
 // POST /v1/events/:id/price-submissions/batch — atomic multi-tier bundle
 // (#832). A bundle of N tiers inserts as N ordinary pending rows in one
@@ -553,10 +553,10 @@ priceSubmissionsRouter.post(
       // Issues outside tiers[<n>] (bundle-level fields, uniqueness refine)
       // stay in `details` only.
       const rowErrors = result.error.issues.flatMap((issue) => {
-        const [rootKey, rowIndex] = issue.path
-        if (rootKey !== 'tiers' || typeof rowIndex !== 'number') return []
-        return [{ index: rowIndex, tier: null, error: issue.message }]
-      })
+        const [rootKey, rowIndex] = issue.path;
+        if (rootKey !== 'tiers' || typeof rowIndex !== 'number') return [];
+        return [{ index: rowIndex, tier: null, error: issue.message }];
+      });
       return ctx.json(
         {
           success: false,
@@ -565,13 +565,13 @@ priceSubmissionsRouter.post(
           details: result.error.flatten(),
         },
         422,
-      )
+      );
     }
   }),
   async (ctx) => {
-    const { id: eventId } = ctx.req.param()
-    const { userId } = getAuthUser(ctx)
-    const body = ctx.req.valid('json')
+    const { id: eventId } = ctx.req.param();
+    const { userId } = getAuthUser(ctx);
+    const body = ctx.req.valid('json');
 
     const [event] = await db
       .select({ id: events.id })
@@ -583,26 +583,26 @@ priceSubmissionsRouter.post(
         and(eq(venues.id, events.venueId), eq(venues.active, true)),
       )
       .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
-      .limit(1)
+      .limit(1);
     if (!event)
-      return ctx.json({ success: false, error: 'Event not found' }, 404)
+      return ctx.json({ success: false, error: 'Event not found' }, 404);
 
     // Content moderation for the bundle-level note — moderated once, exactly
     // like the single POST (spec §2: note is shared across all rows).
     if (body.note) {
-      const modResult = moderateNote(body.note)
+      const modResult = moderateNote(body.note);
       if (!modResult.ok) {
         return ctx.json(
           { success: false, error: modResult.reason ?? 'Note rejected.' },
           422,
-        )
+        );
       }
     }
 
     // Shared bundle-level derivation — identical for every row, mirroring
     // the single POST's expand-phase fallback.
     const sourceCategory =
-      body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound)
+      body.sourceCategory ?? deriveSourceCategory(body.vendor, body.howFound);
 
     // Check-then-insert runs inside an advisory-locked transaction (same
     // TOCTOU fix as the single POST) so concurrent batches for the same
@@ -611,18 +611,18 @@ priceSubmissionsRouter.post(
     // wrapper adds serialization, not atomicity.
     type BatchOutcome =
       | {
-          kind: 'duplicate_tiers'
-          errors: { index: number; tier: string; error: string }[]
+          kind: 'duplicate_tiers';
+          errors: { index: number; tier: string; error: string }[];
         }
       | { kind: 'rate_limited' }
       | {
-          kind: 'created'
-          rows: (typeof priceSubmissions.$inferSelect)[]
-          actsUsed: number
-        }
+          kind: 'created';
+          rows: (typeof priceSubmissions.$inferSelect)[];
+          actsUsed: number;
+        };
 
     const outcome = await db.transaction<BatchOutcome>(async (tx) => {
-      await acquireSubmissionLock(tx, eventId, userId)
+      await acquireSubmissionLock(tx, eventId, userId);
 
       // 422 — one pending submission per (event, user, tier). The single
       // POST checks per (event, user); the batch contract is per-tier (spec
@@ -637,24 +637,24 @@ priceSubmissionsRouter.post(
             eq(priceSubmissions.userId, userId),
             eq(priceSubmissions.status, 'pending'),
           ),
-        )
-      const pendingTiers = new Set(pendingRows.map((row) => row.tier))
+        );
+      const pendingTiers = new Set(pendingRows.map((row) => row.tier));
       const duplicateErrors = body.tiers.flatMap((row, rowIndex) =>
         pendingTiers.has(row.tier)
           ? [{ index: rowIndex, tier: row.tier, error: 'already_submitted' }]
           : [],
-      )
+      );
       if (duplicateErrors.length > 0) {
-        return { kind: 'duplicate_tiers', errors: duplicateErrors }
+        return { kind: 'duplicate_tiers', errors: duplicateErrors };
       }
 
       // 429 — the batch is ONE rate-limit hit (one contribution act) no
       // matter how many tier rows it inserts. Same distinct-createdAt count
       // as the single POST (#876); a batch over the limit is blocked as a
       // unit.
-      const actsUsed = await countRecentActs(eventId, userId, tx)
+      const actsUsed = await countRecentActs(eventId, userId, tx);
       if (actsUsed >= SP_POLICY.rateLimitMaxSubmissions) {
-        return { kind: 'rate_limited' }
+        return { kind: 'rate_limited' };
       }
 
       const created = await tx
@@ -682,16 +682,16 @@ priceSubmissionsRouter.post(
             createdAt: sql`statement_timestamp()`,
           })),
         )
-        .returning()
+        .returning();
 
-      return { kind: 'created', rows: created, actsUsed }
-    })
+      return { kind: 'created', rows: created, actsUsed };
+    });
 
     if (outcome.kind === 'duplicate_tiers') {
-      return ctx.json({ success: false, errors: outcome.errors }, 422)
+      return ctx.json({ success: false, errors: outcome.errors }, 422);
     }
     if (outcome.kind === 'rate_limited') {
-      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429)
+      return ctx.json({ success: false, error: RATE_LIMIT_ERROR }, 429);
     }
 
     // submissionsRemaining lets the success surface (MTAddTierSuccess) gate
@@ -700,11 +700,11 @@ priceSubmissionsRouter.post(
     const submissionsRemaining = Math.max(
       0,
       SP_POLICY.rateLimitMaxSubmissions - (outcome.actsUsed + 1),
-    )
+    );
 
     return ctx.json(
       { success: true, data: outcome.rows, submissionsRemaining },
       201,
-    )
+    );
   },
-)
+);

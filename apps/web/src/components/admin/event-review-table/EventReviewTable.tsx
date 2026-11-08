@@ -1,82 +1,82 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { useAuth } from '@clerk/nextjs'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { apiClient, ApiError } from '@/lib/api'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+import { useState } from 'react';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { useAuth } from '@clerk/nextjs';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { apiClient, ApiError } from '@/lib/api';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
 type Event = {
-  id: string
-  venueId: string
-  title: string
-  artist: string
-  date: string
-  confidenceScore: string | null
-  extractionStrategy: string | null
-  sourceUrl: string | null
-  verified: boolean
-}
+  id: string;
+  venueId: string;
+  title: string;
+  artist: string;
+  date: string;
+  confidenceScore: string | null;
+  extractionStrategy: string | null;
+  sourceUrl: string | null;
+  verified: boolean;
+};
 
 type Props = {
-  initialEvents: Event[]
-}
+  initialEvents: Event[];
+};
 
 export const EventReviewTable = ({ initialEvents }: Props) => {
-  const { getToken } = useAuth()
-  const [events, setEvents] = useState(initialEvents)
-  const [processing, setProcessing] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { getToken } = useAuth();
+  const [events, setEvents] = useState(initialEvents);
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const approveEvent = async (id: string) => {
-    setProcessing(id)
-    setError(null)
+    setProcessing(id);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) return
-      await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {})
-      setEvents((prev) => prev.filter((ev) => ev.id !== id))
+      const token = await getToken();
+      if (!token) return;
+      await apiClient.patch(`/v1/admin/events/${id}/verify`, token, {});
+      setEvents((prev) => prev.filter((ev) => ev.id !== id));
     } catch (err) {
       const message =
         err instanceof ApiError
           ? err.message
-          : ADMIN_COPY.eventReviewTable.errors.approveFailed
-      console.error('approveEvent error:', err)
-      setError(message)
+          : ADMIN_COPY.eventReviewTable.errors.approveFailed;
+      console.error('approveEvent error:', err);
+      setError(message);
     } finally {
-      setProcessing(null)
+      setProcessing(null);
     }
-  }
+  };
 
   const rejectEvent = async (id: string) => {
-    if (!confirm(ADMIN_COPY.eventReviewTable.confirms.deleteEvent)) return
-    setProcessing(id)
-    setError(null)
+    if (!confirm(ADMIN_COPY.eventReviewTable.confirms.deleteEvent)) return;
+    setProcessing(id);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) return
-      await apiClient.delete(`/v1/admin/events/${id}`, token)
-      setEvents((prev) => prev.filter((ev) => ev.id !== id))
+      const token = await getToken();
+      if (!token) return;
+      await apiClient.delete(`/v1/admin/events/${id}`, token);
+      setEvents((prev) => prev.filter((ev) => ev.id !== id));
     } catch (err) {
       const message =
         err instanceof ApiError
           ? err.message
-          : ADMIN_COPY.eventReviewTable.errors.deleteFailed
-      console.error('rejectEvent error:', err)
-      setError(message)
+          : ADMIN_COPY.eventReviewTable.errors.deleteFailed;
+      console.error('rejectEvent error:', err);
+      setError(message);
     } finally {
-      setProcessing(null)
+      setProcessing(null);
     }
-  }
+  };
 
   if (events.length === 0) {
     return (
       <p className="text-sm text-fg-muted">
         {ADMIN_COPY.eventReviewTable.empty}
       </p>
-    )
+    );
   }
 
   return (
@@ -113,11 +113,11 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
               const confidenceNum =
                 ev.confidenceScore !== null
                   ? parseFloat(ev.confidenceScore)
-                  : null
+                  : null;
               const isLowConfidence =
-                confidenceNum !== null && confidenceNum < 0.7
-              const isLlm = ev.extractionStrategy === 'llm'
-              const isProcessing = processing === ev.id
+                confidenceNum !== null && confidenceNum < 0.7;
+              const isLlm = ev.extractionStrategy === 'llm';
+              const isProcessing = processing === ev.id;
 
               return (
                 <tr key={ev.id} className="bg-bg hover:bg-surface-1">
@@ -186,11 +186,11 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
                     </div>
                   </td>
                 </tr>
-              )
+              );
             })}
           </tbody>
         </table>
       </div>
     </div>
-  )
-}
+  );
+};

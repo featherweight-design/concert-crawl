@@ -1,17 +1,17 @@
-'use client'
+'use client';
 
-import { useState, useCallback, useEffect } from 'react'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { useAuth } from '@clerk/nextjs'
-import { ShieldCheck } from 'lucide-react'
-import { ModalShell } from '@/components/consumer/modal-shell'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { CCMark } from '@/components/brand/cc-mark'
-import { SPNumberField } from '../SPNumberField'
-import { ChipGroup } from '../ChipGroup'
-import { VendorField } from './VendorField'
-import { validateSubmission } from '@/lib/sp-policy'
+import { useState, useCallback, useEffect } from 'react';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useAuth } from '@clerk/nextjs';
+import { ShieldCheck } from 'lucide-react';
+import { ModalShell } from '@/components/consumer/modal-shell';
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy';
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants';
+import { CCMark } from '@/components/brand/cc-mark';
+import { SPNumberField } from '../SPNumberField';
+import { ChipGroup } from '../ChipGroup';
+import { VendorField } from './VendorField';
+import { validateSubmission } from '@/lib/sp-policy';
 import {
   deriveSourceCategory,
   VENDOR_VALUES,
@@ -21,7 +21,7 @@ import {
   type PriceSubmission,
   type SourceCategory,
   type SubmissionWithMeta,
-} from '@concert-crawl/types'
+} from '@concert-crawl/types';
 
 // Derive the API-required `howFound` from the new `sourceCategory` field.
 // The API still requires howFound on POST (price-submissions.ts:29) — this
@@ -29,7 +29,7 @@ import {
 // the chip group. boxoffice (bought-it-myself) is the strong signal; standard
 // + resale collapse to saw_listing because the form no longer asks "how".
 const howFoundForSource = (source: SourceCategory): HowFound =>
-  source === 'boxoffice' ? 'bought_myself' : 'saw_listing'
+  source === 'boxoffice' ? 'bought_myself' : 'saw_listing';
 
 // Pick the sourceCategory to pre-fill on the Edit form. Prefer the explicit
 // row value when present; otherwise derive from (vendor, howFound) using the
@@ -42,12 +42,12 @@ const fallbackSourceCategory = (
   submission: Pick<PriceSubmission, 'sourceCategory' | 'vendor' | 'howFound'>,
 ): SourceCategory =>
   submission.sourceCategory ??
-  deriveSourceCategory(submission.vendor, submission.howFound)
+  deriveSourceCategory(submission.vendor, submission.howFound);
 
 // Vendor auto-fill when source = boxoffice. Keeps the VenueBoxOffice enum
 // value for the API (contract-PR drops the value later); consumer display
 // label is "Venue" per round-3 locked decision #2.
-const VENDOR_BOXOFFICE_AUTOFILL: Vendor = 'VenueBoxOffice'
+const VENDOR_BOXOFFICE_AUTOFILL: Vendor = 'VenueBoxOffice';
 
 // Type guards for fetch() JSON responses. CLAUDE.md flags `as` casts as a
 // last resort; these read-only guards verify the discriminator + shape we
@@ -55,61 +55,61 @@ const VENDOR_BOXOFFICE_AUTOFILL: Vendor = 'VenueBoxOffice'
 // runtime validator (preserves existing test mocks).
 type PriceSubmissionResponse =
   | { success: true; data: PriceSubmission }
-  | { success?: false; error?: string; submission?: PriceSubmission }
+  | { success?: false; error?: string; submission?: PriceSubmission };
 
-const TIERS: readonly Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
+const TIERS: readonly Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn'];
 const SOURCE_CATEGORIES: readonly SourceCategory[] = [
   'boxoffice',
   'standard',
   'resale',
-]
+];
 
 // Sets rather than array `.includes`: a `readonly Tier[]` won't accept an
 // arbitrary string without an `as` cast, and Set<string> narrows honestly.
-const TIER_SET = new Set<string>(TIERS)
-const VENDOR_SET = new Set<string>(VENDOR_VALUES)
-const SOURCE_CATEGORY_SET = new Set<string>(SOURCE_CATEGORIES)
+const TIER_SET = new Set<string>(TIERS);
+const VENDOR_SET = new Set<string>(VENDOR_VALUES);
+const SOURCE_CATEGORY_SET = new Set<string>(SOURCE_CATEGORIES);
 
 function isTier(value: string): value is Tier {
-  return TIER_SET.has(value)
+  return TIER_SET.has(value);
 }
 
 function isVendor(value: string | null): value is Vendor {
-  return value !== null && VENDOR_SET.has(value)
+  return value !== null && VENDOR_SET.has(value);
 }
 
 function isSourceCategory(value: string): value is SourceCategory {
-  return SOURCE_CATEGORY_SET.has(value)
+  return SOURCE_CATEGORY_SET.has(value);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object'
+  return value !== null && typeof value === 'object';
 }
 
 function isPriceSubmissionResponse(
   value: unknown,
 ): value is PriceSubmissionResponse {
-  if (!isObject(value)) return false
+  if (!isObject(value)) return false;
   // Permissive: a response missing `success` is treated as a failure shape so
   // callers fall through to the error branch without crashing on undefined
   // access. The `data` field is only required when `success === true`.
   if (value['success'] === true) {
-    return isObject(value['data'])
+    return isObject(value['data']);
   }
-  return true
+  return true;
 }
 
 interface BatchRowError {
-  index: number
-  tier: string | null
-  error: string
+  index: number;
+  tier: string | null;
+  error: string;
 }
 
 type BatchSubmissionResponse =
   // submissionsRemaining (#876): acts left for this (user, event) after this
   // batch. Optional for deploy skew — an older API omits it.
   | { success: true; data: PriceSubmission[]; submissionsRemaining?: number }
-  | { success?: false; error?: string; errors?: BatchRowError[] }
+  | { success?: false; error?: string; errors?: BatchRowError[] };
 
 function isBatchRowError(value: unknown): value is BatchRowError {
   return (
@@ -117,60 +117,60 @@ function isBatchRowError(value: unknown): value is BatchRowError {
     typeof value['index'] === 'number' &&
     (value['tier'] === null || typeof value['tier'] === 'string') &&
     typeof value['error'] === 'string'
-  )
+  );
 }
 
 function isBatchSubmissionResponse(
   value: unknown,
 ): value is BatchSubmissionResponse {
-  if (!isObject(value)) return false
+  if (!isObject(value)) return false;
   if (value['success'] === true) {
     const remainingOk =
       value['submissionsRemaining'] === undefined ||
-      typeof value['submissionsRemaining'] === 'number'
+      typeof value['submissionsRemaining'] === 'number';
     return (
       Array.isArray(value['data']) &&
       value['data'].every(isObject) &&
       remainingOk
-    )
+    );
   }
   // Non-success arm: every field the handler reads must be well-typed when
   // present. A bare `{}` is still valid — an `ok` response with an empty
   // body lands on the success view, matching the single-POST behavior.
   const errorOk =
-    value['error'] === undefined || typeof value['error'] === 'string'
+    value['error'] === undefined || typeof value['error'] === 'string';
   const errorsOk =
     value['errors'] === undefined ||
-    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError))
-  return errorOk && errorsOk
+    (Array.isArray(value['errors']) && value['errors'].every(isBatchRowError));
+  return errorOk && errorsOk;
 }
 
 type SubmissionsListResponse = {
-  success: boolean
+  success: boolean;
   data: {
-    alreadySubmitted: boolean
-    userSubmission: SubmissionWithMeta | null
+    alreadySubmitted: boolean;
+    userSubmission: SubmissionWithMeta | null;
     // #876 — acts left in the 24h window. Optional for deploy skew: when an
     // older API omits it, the modal falls back to the alreadySubmitted gate.
-    submissionsRemaining?: number
-  }
-}
+    submissionsRemaining?: number;
+  };
+};
 
 function isSubmissionsListResponse(
   value: unknown,
 ): value is SubmissionsListResponse {
-  if (!isObject(value)) return false
-  if (typeof value['success'] !== 'boolean') return false
-  const data = value['data']
-  if (!isObject(data)) return false
-  if (typeof data['alreadySubmitted'] !== 'boolean') return false
+  if (!isObject(value)) return false;
+  if (typeof value['success'] !== 'boolean') return false;
+  const data = value['data'];
+  if (!isObject(data)) return false;
+  if (typeof data['alreadySubmitted'] !== 'boolean') return false;
   if (
     data['submissionsRemaining'] !== undefined &&
     typeof data['submissionsRemaining'] !== 'number'
   ) {
-    return false
+    return false;
   }
-  return true
+  return true;
 }
 
 type ModalState =
@@ -179,38 +179,38 @@ type ModalState =
   | 'submitting'
   | 'success'
   | 'error'
-  | 'alreadySubmitted'
+  | 'alreadySubmitted';
 
 export interface SubmitPriceResult {
-  isEdit: boolean
-  id: string
-  priceMin: string
-  priceMax: string | null
-  tier: string
-  vendor: string
-  howFound: string
-  sourceCategory: SourceCategory | null
+  isEdit: boolean;
+  id: string;
+  priceMin: string;
+  priceMax: string | null;
+  tier: string;
+  vendor: string;
+  howFound: string;
+  sourceCategory: SourceCategory | null;
 }
 
 interface SubmitPriceModalProps {
-  open: boolean
-  onClose: () => void
-  eventId: string
-  artist: string
-  venueName: string
-  date: string
-  openInEditMode?: boolean
+  open: boolean;
+  onClose: () => void;
+  eventId: string;
+  artist: string;
+  venueName: string;
+  date: string;
+  openInEditMode?: boolean;
   // When set, the tier picker is pre-populated (still editable so the user
   // can correct it). Used by EventDetailClient when the user clicks "+ Add
   // <tier>" on MTAddTierSuccess.
-  preselectedTier?: Tier | null
+  preselectedTier?: Tier | null;
   // submissionsRemaining is only known on the batch path (#876); edit/PATCH
   // doesn't consume a contribution act, so it passes undefined.
   onSuccess?: (
     results: SubmitPriceResult[],
     submissionsRemaining?: number,
-  ) => void
-  onWithdrawSuccess?: (submissionId: string) => void
+  ) => void;
+  onWithdrawSuccess?: (submissionId: string) => void;
 }
 
 const TIER_OPTIONS = [
@@ -219,40 +219,40 @@ const TIER_OPTIONS = [
   { value: 'VIP', label: 'VIP' },
   { value: 'Pit', label: 'Pit' },
   { value: 'Lawn', label: 'Lawn' },
-]
+];
 
 const SOURCE_CATEGORY_OPTIONS = [
   { value: 'boxoffice', label: 'Box office' },
   { value: 'standard', label: 'Standard ticket' },
   { value: 'resale', label: 'Resale' },
-]
+];
 
 // One repeatable tier panel of the bundle form (#832). Bundle-level fields
 // (sourceCategory, vendor) live in BundleFieldsState — asked once, shared by
 // every row on submit.
 interface TierPanelState {
   /** Stable identity for React keys — panels can be removed from the middle of the list. */
-  uid: number
-  tier: string | null
-  floor: string
-  ceiling: string
+  uid: number;
+  tier: string | null;
+  floor: string;
+  ceiling: string;
 }
 
 interface BundleFieldsState {
-  sourceCategory: SourceCategory | null
-  vendor: string | null
+  sourceCategory: SourceCategory | null;
+  vendor: string | null;
 }
 
-let nextPanelUid = 0
+let nextPanelUid = 0;
 
 const emptyPanel = (tier: Tier | null = null): TierPanelState => ({
   uid: nextPanelUid++,
   tier,
   floor: '',
   ceiling: '',
-})
+});
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? '';
 
 export function SubmitPriceModal({
   open,
@@ -266,84 +266,86 @@ export function SubmitPriceModal({
   onSuccess,
   onWithdrawSuccess,
 }: SubmitPriceModalProps) {
-  const { getToken, isLoaded, isSignedIn } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth();
 
   const [resolvedModalState, setModalState] =
-    useState<ModalState>('loading-check')
+    useState<ModalState>('loading-check');
   // Clerk answers asynchronously. Until it does, the modal holds its checking
   // state: rendering the form in that window would flash a submission surface
   // at a signed-out visitor before the gate below gets to decide.
-  const modalState: ModalState = isLoaded ? resolvedModalState : 'loading-check'
-  const [isEditMode, setIsEditMode] = useState(false)
+  const modalState: ModalState = isLoaded
+    ? resolvedModalState
+    : 'loading-check';
+  const [isEditMode, setIsEditMode] = useState(false);
   const [bundleState, setBundleState] = useState<BundleFieldsState>({
     sourceCategory: null,
     vendor: null,
-  })
+  });
   const [panels, setPanels] = useState<TierPanelState[]>([
     emptyPanel(preselectedTier),
-  ])
+  ]);
   const [bundleErrors, setBundleErrors] = useState<
     Partial<Record<string, string>>
-  >({})
+  >({});
   const [panelErrors, setPanelErrors] = useState<
     Array<Partial<Record<string, string>>>
-  >([{}])
+  >([{}]);
   const [panelWarnings, setPanelWarnings] = useState<
     Array<Partial<Record<string, string>>>
-  >([{}])
+  >([{}]);
   // SubmissionWithMeta rather than PriceSubmission: the only writer is the
   // `userSubmission` field of the submissions-list response, whose `userId` is
   // null for anonymous callers since #794.
   const [existingSubmission, setExistingSubmission] =
-    useState<SubmissionWithMeta | null>(null)
+    useState<SubmissionWithMeta | null>(null);
   const [withdrawError, setWithdrawError] = useState<'network' | 'api' | null>(
     null,
-  )
+  );
 
   useEffect(() => {
     // `getToken()` transiently returns null before Clerk loads, which would
     // resolve a signed-in visitor straight to the form with no existing-
     // submission check.
-    if (!open || !isLoaded) return
-    setModalState('loading-check')
-    setIsEditMode(false)
-    setBundleErrors({})
-    setPanelErrors([{}])
-    setPanelWarnings([{}])
+    if (!open || !isLoaded) return;
+    setModalState('loading-check');
+    setIsEditMode(false);
+    setBundleErrors({});
+    setPanelErrors([{}]);
+    setPanelWarnings([{}]);
     // Reset the per-session error + existing-submission state on every open.
     // Without this, a previous session's withdraw-error or alreadySubmitted
     // payload could leak into a fresh session and surface the wrong error
     // copy (e.g. withdraw-specific message after a submit failure).
-    setWithdrawError(null)
-    setExistingSubmission(null)
+    setWithdrawError(null);
+    setExistingSubmission(null);
     // Reset the form on each open. Without this, the modal — which stays
     // mounted across open/close — would carry over the previous tier
     // selection, defeating the `preselectedTier` from the "+ Add VIP" loop
     // in MTAddTierSuccess (Q4-eng session flow). The edit-mode branch below
     // overwrites these with the existing submission's values.
-    setBundleState({ sourceCategory: null, vendor: null })
-    setPanels([emptyPanel(preselectedTier)])
+    setBundleState({ sourceCategory: null, vendor: null });
+    setPanels([emptyPanel(preselectedTier)]);
 
     const checkExisting = async () => {
       try {
-        const token = await getToken()
+        const token = await getToken();
         if (!token) {
-          setModalState('form')
-          return
+          setModalState('form');
+          return;
         }
         const res = await fetch(
           `${API_URL}/v1/events/${eventId}/price-submissions`,
           { headers: { Authorization: `Bearer ${token}` } },
-        )
+        );
         if (res.ok) {
-          const raw: unknown = await res.json()
+          const raw: unknown = await res.json();
           if (!isSubmissionsListResponse(raw)) {
-            setModalState('form')
-            return
+            setModalState('form');
+            return;
           }
-          const body = raw
+          const body = raw;
           if (body.data.userSubmission) {
-            setExistingSubmission(body.data.userSubmission)
+            setExistingSubmission(body.data.userSubmission);
           }
           if (openInEditMode && body.data.userSubmission) {
             // Skip the "Already in." screen — go straight to the edit form.
@@ -354,7 +356,7 @@ export function SubmitPriceModal({
             setBundleState({
               vendor: body.data.userSubmission.vendor,
               sourceCategory: fallbackSourceCategory(body.data.userSubmission),
-            })
+            });
             setPanels([
               {
                 ...emptyPanel(),
@@ -362,10 +364,10 @@ export function SubmitPriceModal({
                 floor: body.data.userSubmission.priceMin,
                 ceiling: body.data.userSubmission.priceMax ?? '',
               },
-            ])
-            setIsEditMode(true)
-            setModalState('form')
-            return
+            ]);
+            setIsEditMode(true);
+            setModalState('form');
+            return;
           }
           // #876 — up to 3 contribution acts per (user, event)/24h. When the
           // API reports acts remaining, gate on that: a pending submission no
@@ -377,39 +379,39 @@ export function SubmitPriceModal({
           const exhausted =
             body.data.submissionsRemaining !== undefined
               ? body.data.submissionsRemaining <= 0
-              : body.data.alreadySubmitted
+              : body.data.alreadySubmitted;
           if (exhausted) {
-            setModalState('alreadySubmitted')
-            return
+            setModalState('alreadySubmitted');
+            return;
           }
         }
       } catch (err) {
-        console.error('Failed to check existing submission', err)
+        console.error('Failed to check existing submission', err);
       }
-      setModalState('form')
-    }
-    void checkExisting()
-  }, [open, isLoaded, eventId, getToken, openInEditMode, preselectedTier])
+      setModalState('form');
+    };
+    void checkExisting();
+  }, [open, isLoaded, eventId, getToken, openInEditMode, preselectedTier]);
 
   const addPanel = () => {
-    setPanels((prev) => [...prev, emptyPanel()])
-    setPanelErrors((prev) => [...prev, {}])
-    setPanelWarnings((prev) => [...prev, {}])
-  }
+    setPanels((prev) => [...prev, emptyPanel()]);
+    setPanelErrors((prev) => [...prev, {}]);
+    setPanelWarnings((prev) => [...prev, {}]);
+  };
 
   const removePanel = (panelIndex: number) => {
-    setPanels((prev) => prev.filter((_row, idx) => idx !== panelIndex))
-    setPanelErrors((prev) => prev.filter((_row, idx) => idx !== panelIndex))
-    setPanelWarnings((prev) => prev.filter((_row, idx) => idx !== panelIndex))
-  }
+    setPanels((prev) => prev.filter((_row, idx) => idx !== panelIndex));
+    setPanelErrors((prev) => prev.filter((_row, idx) => idx !== panelIndex));
+    setPanelWarnings((prev) => prev.filter((_row, idx) => idx !== panelIndex));
+  };
 
   const updatePanel = (panelIndex: number, patch: Partial<TierPanelState>) => {
     setPanels((prev) =>
       prev.map((panel, idx) =>
         idx === panelIndex ? { ...panel, ...patch } : panel,
       ),
-    )
-  }
+    );
+  };
 
   // Tiers already selected in OTHER panels are disabled — the same tier can
   // never appear twice in a bundle (mirrors the API's uniqueness refine).
@@ -428,17 +430,17 @@ export function SubmitPriceModal({
           (panel, idx) => idx !== panelIndex && panel.tier === option.value,
         ) ||
         (!isEditMode && existingSubmission?.tier === option.value),
-    }))
+    }));
 
   const handleSubmit = useCallback(async () => {
     // Validate every panel through the shared single-submission validator,
     // injecting the bundle-level fields into each panel's input. Bundle-field
     // errors (sourceCategory, vendor) are hoisted out of the per-panel maps so
     // they render once at the top of the form.
-    const nextPanelErrors: Array<Partial<Record<string, string>>> = []
-    const nextPanelWarnings: Array<Partial<Record<string, string>>> = []
-    const nextBundleErrors: Partial<Record<string, string>> = {}
-    let allValid = true
+    const nextPanelErrors: Array<Partial<Record<string, string>>> = [];
+    const nextPanelWarnings: Array<Partial<Record<string, string>>> = [];
+    const nextBundleErrors: Partial<Record<string, string>> = {};
+    let allValid = true;
     for (const panel of panels) {
       const validation = validateSubmission({
         floor: panel.floor,
@@ -446,22 +448,22 @@ export function SubmitPriceModal({
         tier: panel.tier,
         vendor: bundleState.vendor,
         sourceCategory: bundleState.sourceCategory,
-      })
+      });
       const {
         sourceCategory: sourceError,
         vendor: vendorError,
         ...rowErrors
-      } = validation.errors
-      if (sourceError) nextBundleErrors['sourceCategory'] = sourceError
-      if (vendorError) nextBundleErrors['vendor'] = vendorError
-      nextPanelErrors.push(rowErrors)
-      nextPanelWarnings.push(validation.warnings)
-      if (!validation.valid) allValid = false
+      } = validation.errors;
+      if (sourceError) nextBundleErrors['sourceCategory'] = sourceError;
+      if (vendorError) nextBundleErrors['vendor'] = vendorError;
+      nextPanelErrors.push(rowErrors);
+      nextPanelWarnings.push(validation.warnings);
+      if (!validation.valid) allValid = false;
     }
-    setPanelErrors(nextPanelErrors)
-    setPanelWarnings(nextPanelWarnings)
-    setBundleErrors(nextBundleErrors)
-    if (!allValid) return
+    setPanelErrors(nextPanelErrors);
+    setPanelWarnings(nextPanelWarnings);
+    setBundleErrors(nextBundleErrors);
+    if (!allValid) return;
 
     // Runtime enum guards — validateSubmission guarantees non-null but not
     // enum membership (no `as` casts per CLAUDE.md).
@@ -473,49 +475,49 @@ export function SubmitPriceModal({
       console.error(
         'Submit reached non-null guard with invalid bundle fields',
         bundleState,
-      )
-      setModalState('error')
-      return
+      );
+      setModalState('error');
+      return;
     }
-    const sourceCategory: SourceCategory = bundleState.sourceCategory
+    const sourceCategory: SourceCategory = bundleState.sourceCategory;
 
     const tierRows: Array<{ tier: Tier; priceMin: number; priceMax?: number }> =
-      []
+      [];
     for (const panel of panels) {
       if (panel.tier === null || !isTier(panel.tier)) {
-        console.error('Submit reached non-null guard with invalid tier', panel)
-        setModalState('error')
-        return
+        console.error('Submit reached non-null guard with invalid tier', panel);
+        setModalState('error');
+        return;
       }
       tierRows.push({
         tier: panel.tier,
         priceMin: Number(panel.floor),
         ...(panel.ceiling ? { priceMax: Number(panel.ceiling) } : {}),
-      })
+      });
     }
 
-    setModalState('submitting')
+    setModalState('submitting');
     try {
-      const token = await getToken()
+      const token = await getToken();
       if (!token) {
-        setModalState('error')
-        return
+        setModalState('error');
+        return;
       }
 
       const vendor: Vendor =
         sourceCategory === 'boxoffice'
           ? VENDOR_BOXOFFICE_AUTOFILL
-          : bundleState.vendor
-      const howFound: HowFound = howFoundForSource(sourceCategory)
+          : bundleState.vendor;
+      const howFound: HowFound = howFoundForSource(sourceCategory);
 
       // Edit mode → PATCH the existing single submission (spec §4: editing
       // never converts a single into a bundle; the form is locked to one
       // panel in edit mode).
       if (isEditMode && existingSubmission) {
-        const firstPanel = tierRows[0]
+        const firstPanel = tierRows[0];
         if (!firstPanel) {
-          setModalState('error')
-          return
+          setModalState('error');
+          return;
         }
         const res = await fetch(
           `${API_URL}/v1/submissions/${existingSubmission.id}`,
@@ -535,16 +537,16 @@ export function SubmitPriceModal({
               howFound,
             }),
           },
-        )
-        const patchRaw: unknown = await res.json()
+        );
+        const patchRaw: unknown = await res.json();
         if (!isPriceSubmissionResponse(patchRaw)) {
-          throw new Error('Edit failed (invalid response shape)')
+          throw new Error('Edit failed (invalid response shape)');
         }
-        const patchResponse = patchRaw
+        const patchResponse = patchRaw;
         if (!res.ok || !patchResponse.success) {
           throw new Error(
             (!patchResponse.success && patchResponse.error) || 'Edit failed',
-          )
+          );
         }
         onSuccess?.([
           {
@@ -558,9 +560,9 @@ export function SubmitPriceModal({
             howFound,
             sourceCategory: patchResponse.data.sourceCategory,
           },
-        ])
-        setModalState('success')
-        return
+        ]);
+        setModalState('success');
+        return;
       }
 
       // Bundle POST — one atomic request, all rows or none (spec §2).
@@ -579,39 +581,39 @@ export function SubmitPriceModal({
             tiers: tierRows,
           }),
         },
-      )
-      const rawResponse: unknown = await res.json()
+      );
+      const rawResponse: unknown = await res.json();
       if (!isBatchSubmissionResponse(rawResponse)) {
-        throw new Error('Submission failed (invalid response shape)')
+        throw new Error('Submission failed (invalid response shape)');
       }
       if (!res.ok) {
         const rowErrors =
-          rawResponse.success !== true ? (rawResponse.errors ?? []) : []
+          rawResponse.success !== true ? (rawResponse.errors ?? []) : [];
         if (res.status === 422 && rowErrors.length > 0) {
           // Per-row 422 → annotate the exact panel and stay on the form with
           // every value intact (spec §3: atomic rejection never wipes input).
           setPanelErrors((prev) => {
-            const next = prev.map((panelError) => ({ ...panelError }))
+            const next = prev.map((panelError) => ({ ...panelError }));
             for (const rowError of rowErrors) {
-              const target = next[rowError.index]
-              if (!target) continue
+              const target = next[rowError.index];
+              if (!target) continue;
               target['tier'] =
                 rowError.error === 'already_submitted'
                   ? CONSUMER_COPY.submitPriceV2.multiTier.errorAlreadySubmitted.replace(
                       '{tier}',
                       rowError.tier ?? '',
                     )
-                  : rowError.error
+                  : rowError.error;
             }
-            return next
-          })
-          setModalState('form')
-          return
+            return next;
+          });
+          setModalState('form');
+          return;
         }
         throw new Error(
           (rawResponse.success !== true && rawResponse.error) ||
             'Submission failed',
-        )
+        );
       }
       if (rawResponse.success === true) {
         onSuccess?.(
@@ -626,12 +628,12 @@ export function SubmitPriceModal({
             sourceCategory: row.sourceCategory,
           })),
           rawResponse.submissionsRemaining,
-        )
+        );
       }
-      setModalState('success')
+      setModalState('success');
     } catch (err) {
-      console.error('Price submission failed', err)
-      setModalState('error')
+      console.error('Price submission failed', err);
+      setModalState('error');
     }
   }, [
     panels,
@@ -641,45 +643,45 @@ export function SubmitPriceModal({
     getToken,
     eventId,
     onSuccess,
-  ])
+  ]);
 
   const handleWithdraw = useCallback(async () => {
-    if (!existingSubmission) return
+    if (!existingSubmission) return;
     try {
-      const token = await getToken()
+      const token = await getToken();
       const res = await fetch(
         `${API_URL}/v1/submissions/${existingSubmission.id}`,
         {
           method: 'DELETE',
           headers: { Authorization: `Bearer ${token ?? ''}` },
         },
-      )
+      );
       if (!res.ok) {
-        setWithdrawError('api')
-        setModalState('error')
-        return
+        setWithdrawError('api');
+        setModalState('error');
+        return;
       }
-      onWithdrawSuccess?.(existingSubmission.id)
-      onClose()
+      onWithdrawSuccess?.(existingSubmission.id);
+      onClose();
     } catch (err) {
-      console.error('Withdraw failed', err)
-      setWithdrawError('network')
-      setModalState('error')
+      console.error('Withdraw failed', err);
+      setWithdrawError('network');
+      setModalState('error');
     }
-  }, [existingSubmission, getToken, onWithdrawSuccess, onClose])
+  }, [existingSubmission, getToken, onWithdrawSuccess, onClose]);
 
   const dateStr = new Date(date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     timeZone: 'America/Denver',
-  })
+  });
 
-  const showForm = modalState === 'form' || modalState === 'submitting'
+  const showForm = modalState === 'form' || modalState === 'submitting';
   const isShort =
     modalState === 'success' ||
     modalState === 'error' ||
-    modalState === 'alreadySubmitted'
+    modalState === 'alreadySubmitted';
 
   const header = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -707,7 +709,7 @@ export function SubmitPriceModal({
         <CloseIcon />
       </button>
     </div>
-  )
+  );
 
   const submitLabel = isEditMode
     ? CONSUMER_COPY.submitPriceV2.multiTier.submitButtonEdit
@@ -716,13 +718,13 @@ export function SubmitPriceModal({
           '{count}',
           String(panels.length),
         )
-      : CONSUMER_COPY.submitPrice.form.submitButton
+      : CONSUMER_COPY.submitPrice.form.submitButton;
 
   const footer = showForm ? (
     <SubmitButton loading={modalState === 'submitting'} onClick={handleSubmit}>
       {submitLabel}
     </SubmitButton>
-  ) : undefined
+  ) : undefined;
 
   // Gated here rather than at each trigger: four surfaces open this modal, and
   // before #794 a signed-out visitor could fill the whole form only to have the
@@ -739,7 +741,7 @@ export function SubmitPriceModal({
         scaRegion
         entry="logged-out-price"
       />
-    )
+    );
   }
 
   return (
@@ -773,8 +775,8 @@ export function SubmitPriceModal({
       {modalState === 'error' && (
         <ErrorState
           onReset={() => {
-            setWithdrawError(null)
-            setModalState('form')
+            setWithdrawError(null);
+            setModalState('form');
           }}
           onClose={onClose}
           withdrawError={withdrawError}
@@ -789,7 +791,7 @@ export function SubmitPriceModal({
               setBundleState({
                 vendor: existingSubmission.vendor,
                 sourceCategory: fallbackSourceCategory(existingSubmission),
-              })
+              });
               setPanels([
                 {
                   ...emptyPanel(),
@@ -797,13 +799,13 @@ export function SubmitPriceModal({
                   floor: existingSubmission.priceMin,
                   ceiling: existingSubmission.priceMax ?? '',
                 },
-              ])
+              ]);
             }
-            setBundleErrors({})
-            setPanelErrors([{}])
-            setPanelWarnings([{}])
-            setIsEditMode(true)
-            setModalState('form')
+            setBundleErrors({});
+            setPanelErrors([{}]);
+            setPanelWarnings([{}]);
+            setIsEditMode(true);
+            setModalState('form');
           }}
           onWithdraw={handleWithdraw}
         />
@@ -900,26 +902,26 @@ export function SubmitPriceModal({
               setBundleState((prev) => {
                 // ChipGroup is generic; narrow to the SourceCategory enum
                 // (ignore the change if somehow an out-of-enum value arrives).
-                if (!isSourceCategory(val)) return prev
-                const nextSource = val
+                if (!isSourceCategory(val)) return prev;
+                const nextSource = val;
                 // When source flips to boxoffice, auto-fill the vendor so the
                 // user doesn't have to pick it twice. When the source flips
                 // AWAY from boxoffice AND the vendor was the auto-fill value,
                 // clear it so the user doesn't accidentally submit e.g. a
                 // resale price with vendor='VenueBoxOffice'.
-                let nextVendor: string | null
+                let nextVendor: string | null;
                 if (nextSource === 'boxoffice') {
-                  nextVendor = VENDOR_BOXOFFICE_AUTOFILL
+                  nextVendor = VENDOR_BOXOFFICE_AUTOFILL;
                 } else if (prev.vendor === VENDOR_BOXOFFICE_AUTOFILL) {
-                  nextVendor = null
+                  nextVendor = null;
                 } else {
-                  nextVendor = prev.vendor
+                  nextVendor = prev.vendor;
                 }
                 return {
                   ...prev,
                   sourceCategory: nextSource,
                   vendor: nextVendor,
-                }
+                };
               })
             }
             error={bundleErrors['sourceCategory']}
@@ -1119,7 +1121,7 @@ export function SubmitPriceModal({
         </div>
       )}
     </ModalShell>
-  )
+  );
 }
 
 // ── Sub-views ────────────────────────────────────────────────────────────────
@@ -1168,7 +1170,7 @@ function SuccessState({ onClose }: { onClose: () => void }) {
         </PrimaryButton>
       </div>
     </div>
-  )
+  );
 }
 
 function ErrorState({
@@ -1176,16 +1178,16 @@ function ErrorState({
   onClose,
   withdrawError,
 }: {
-  onReset: () => void
-  onClose: () => void
-  withdrawError?: 'network' | 'api' | null
+  onReset: () => void;
+  onClose: () => void;
+  withdrawError?: 'network' | 'api' | null;
 }) {
   const errorMessage =
     withdrawError === 'network'
       ? CONSUMER_COPY.submitPrice.error.networkWithdrawError
       : withdrawError === 'api'
         ? CONSUMER_COPY.submitPrice.error.apiWithdrawError
-        : CONSUMER_COPY.submitPrice.error.defaultError
+        : CONSUMER_COPY.submitPrice.error.defaultError;
 
   return (
     <div
@@ -1234,7 +1236,7 @@ function ErrorState({
         </GhostButton>
       </div>
     </div>
-  )
+  );
 }
 
 function AlreadySubmittedState({
@@ -1242,9 +1244,9 @@ function AlreadySubmittedState({
   onEdit,
   onWithdraw,
 }: {
-  submission: SubmissionWithMeta | null
-  onEdit: () => void
-  onWithdraw: () => void
+  submission: SubmissionWithMeta | null;
+  onEdit: () => void;
+  onWithdraw: () => void;
 }) {
   return (
     <div
@@ -1308,36 +1310,36 @@ function AlreadySubmittedState({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // ── Primitive atoms ───────────────────────────────────────────────────────────
 
 function PriceHeaderRail({ state }: { state: ModalState }) {
-  const isError = state === 'error'
-  const isSuccess = state === 'success'
-  const isDone = state === 'alreadySubmitted'
+  const isError = state === 'error';
+  const isSuccess = state === 'success';
+  const isDone = state === 'alreadySubmitted';
   const accent = isError
     ? 'var(--warning)'
     : isSuccess
       ? 'var(--signal)'
-      : 'var(--accent)'
+      : 'var(--accent)';
   const eyebrow = isError
     ? CONSUMER_COPY.submitPrice.header.eyebrow.error
     : isSuccess
       ? CONSUMER_COPY.submitPrice.header.eyebrow.success
       : isDone
         ? CONSUMER_COPY.submitPrice.header.eyebrow.alreadySubmitted
-        : CONSUMER_COPY.submitPrice.header.eyebrow.open
+        : CONSUMER_COPY.submitPrice.header.eyebrow.open;
   const code = isError
     ? CONSUMER_COPY.submitPrice.header.code.error
     : isSuccess
       ? CONSUMER_COPY.submitPrice.header.code.success
       : isDone
         ? CONSUMER_COPY.submitPrice.header.code.alreadySubmitted
-        : CONSUMER_COPY.submitPrice.header.code.open
+        : CONSUMER_COPY.submitPrice.header.code.open;
   const pulse =
-    state === 'form' || state === 'submitting' || state === 'loading-check'
+    state === 'form' || state === 'submitting' || state === 'loading-check';
 
   return (
     <div
@@ -1381,11 +1383,11 @@ function PriceHeaderRail({ state }: { state: ModalState }) {
         {code}
       </span>
     </div>
-  )
+  );
 }
 
 function StatusRail({ tone }: { tone: 'error' }) {
-  const accent = tone === 'error' ? 'var(--warning)' : 'var(--signal)'
+  const accent = tone === 'error' ? 'var(--warning)' : 'var(--signal)';
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%' }}
@@ -1426,7 +1428,7 @@ function StatusRail({ tone }: { tone: 'error' }) {
         {CONSUMER_COPY.submitPrice.statusRail.errorCode}
       </span>
     </div>
-  )
+  );
 }
 
 function PrimaryButton({
@@ -1434,9 +1436,9 @@ function PrimaryButton({
   onClick,
   loading = false,
 }: {
-  children: React.ReactNode
-  onClick: () => void
-  loading?: boolean
+  children: React.ReactNode;
+  onClick: () => void;
+  loading?: boolean;
 }) {
   return (
     <button
@@ -1466,17 +1468,17 @@ function PrimaryButton({
     >
       {children}
     </button>
-  )
+  );
 }
 
-const SubmitButton = PrimaryButton
+const SubmitButton = PrimaryButton;
 
 function GhostButton({
   children,
   onClick,
 }: {
-  children: React.ReactNode
-  onClick: () => void
+  children: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
     <button
@@ -1502,7 +1504,7 @@ function GhostButton({
     >
       {children}
     </button>
-  )
+  );
 }
 
 function CloseIcon() {
@@ -1515,5 +1517,5 @@ function CloseIcon() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }

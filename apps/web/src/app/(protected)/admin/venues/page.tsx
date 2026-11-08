@@ -1,65 +1,68 @@
-import { ExternalLink } from 'lucide-react'
-import Link from 'next/link'
-import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
+import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { auth, requireAdminUser } from '@/lib/auth';
+import { apiClient } from '@/lib/api';
 import {
   SectionHead,
   StatCard,
   Panel,
   AdminButton,
-} from '@/components/admin/primitives'
-import type { VenueWithEventCount } from '@concert-crawl/types'
-import { VenueTableClient } from '@/components/admin/venue-table-client'
-import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
-import { AddVenueButton } from '@/components/admin/venues/AddVenueButton'
-import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/admin/primitives';
+import type { VenueWithEventCount } from '@concert-crawl/types';
+import { VenueTableClient } from '@/components/admin/venue-table-client';
+import {
+  deriveVenueStatus,
+  venueHealthPercent,
+} from '@/lib/admin/venue-status';
+import { AddVenueButton } from '@/components/admin/venues/AddVenueButton';
+import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
 interface Props {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function AdminVenuesPage({ searchParams }: Props) {
-  await requireAdminUser()
-  const { getToken } = await auth()
-  const token = await getToken()
-  if (!token) return null
+  await requireAdminUser();
+  const { getToken } = await auth();
+  const token = await getToken();
+  if (!token) return null;
 
-  const resolvedParams = await searchParams
-  const rawStatus = resolvedParams.status
-  const statusFilter = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus
+  const resolvedParams = await searchParams;
+  const rawStatus = resolvedParams.status;
+  const statusFilter = Array.isArray(rawStatus) ? rawStatus[0] : rawStatus;
 
   const venues = await apiClient
     .get<VenueWithEventCount[]>('/v1/admin/venues', token)
     .catch((err: unknown) => {
       throw new Error(
         `Failed to load venues: ${err instanceof Error ? err.message : String(err)}`,
-      )
-    })
+      );
+    });
 
   const activeCount = venues.filter(
     (venue) => deriveVenueStatus(venue) === 'active',
-  ).length
+  ).length;
   const blockedCount = venues.filter(
     (venue) => deriveVenueStatus(venue) === 'blocked',
-  ).length
+  ).length;
   const pausedBlockedCount = venues.filter(
     (venue) => deriveVenueStatus(venue) !== 'active',
-  ).length
+  ).length;
   const avgHealth =
     venues.length > 0
       ? Math.round(
           venues.reduce((sum, venue) => sum + venueHealthPercent(venue), 0) /
             venues.length,
         )
-      : 0
+      : 0;
 
   const filtered =
     statusFilter === 'active' ||
     statusFilter === 'paused' ||
     statusFilter === 'blocked'
       ? venues.filter((venue) => deriveVenueStatus(venue) === statusFilter)
-      : venues
+      : venues;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -131,5 +134,5 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
         <VenueTableClient venues={filtered} />
       </Panel>
     </div>
-  )
+  );
 }

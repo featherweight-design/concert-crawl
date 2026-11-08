@@ -47,30 +47,30 @@
 // returns `skipped: 'unconfigured'` without touching a row. That is the
 // designed PR-C-skipped state, not a failure.
 
-import { pathToFileURL } from 'node:url'
-import * as Sentry from '@sentry/hono/node'
-import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm'
-import { artists, db } from '@concert-crawl/db'
-import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js'
-import { matchArtist } from '../lib/artist-match.js'
-import { apiLogger } from '../lib/logger.js'
-import { describeDbError } from '../lib/pg-errors.js'
-import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js'
+import { pathToFileURL } from 'node:url';
+import * as Sentry from '@sentry/hono/node';
+import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm';
+import { artists, db } from '@concert-crawl/db';
+import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js';
+import { matchArtist } from '../lib/artist-match.js';
+import { apiLogger } from '../lib/logger.js';
+import { describeDbError } from '../lib/pg-errors.js';
+import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js';
 import {
   createSpotifyAppClient,
   type SpotifyAppClient,
-} from '../lib/spotify-app-client.js'
+} from '../lib/spotify-app-client.js';
 import {
   SpotifyAuthError,
   SpotifyRateLimitError,
   SpotifyTimeoutError,
-} from '../lib/spotify.js'
+} from '../lib/spotify.js';
 
 /** Rows touched per run. Spotify's app-token search quota is the constraint. */
-export const MATCH_BATCH_SIZE = 100
+export const MATCH_BATCH_SIZE = 100;
 
 /** Cached Spotify photo URLs older than this are re-fetched. */
-export const PHOTO_REFETCH_DAYS = 7
+export const PHOTO_REFETCH_DAYS = 7;
 
 /**
  * How long a 'no_match' verdict stands before the job asks Spotify again.
@@ -78,7 +78,7 @@ export const PHOTO_REFETCH_DAYS = 7
  * gaining the artist — which is slow — and every retry spends the search quota
  * that MATCH_BATCH_SIZE exists to ration.
  */
-export const NO_MATCH_RETRY_DAYS = 30
+export const NO_MATCH_RETRY_DAYS = 30;
 
 /**
  * How long an 'ambiguous' verdict stands before the job asks Spotify again.
@@ -92,34 +92,34 @@ export const NO_MATCH_RETRY_DAYS = 30
  * two recurring populations into the same batch and squeeze the unmatched rows
  * that MATCH_BATCH_SIZE exists to serve.
  */
-export const AMBIGUOUS_RECHECK_DAYS = 14
+export const AMBIGUOUS_RECHECK_DAYS = 14;
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface MatchArtistsSummary {
-  skipped: 'unconfigured' | null
-  considered: number
-  matched: number
-  ambiguous: number
-  noMatch: number
-  photosRefreshed: number
-  failures: number
-  abortedReason: 'rate_limit' | 'auth' | 'timeout' | null
-  spotifyCalls: number
+  skipped: 'unconfigured' | null;
+  considered: number;
+  matched: number;
+  ambiguous: number;
+  noMatch: number;
+  photosRefreshed: number;
+  failures: number;
+  abortedReason: 'rate_limit' | 'auth' | 'timeout' | null;
+  spotifyCalls: number;
 }
 
 export interface RunMatchArtistsOptions {
-  batchSize?: number
+  batchSize?: number;
   /** Injected in tests; production mints its own app-token client. */
-  client?: SpotifyAppClient | null
-  now?: () => Date
+  client?: SpotifyAppClient | null;
+  now?: () => Date;
 }
 
 export const runMatchArtists = async (
   options: RunMatchArtistsOptions = {},
 ): Promise<MatchArtistsSummary> => {
-  const now = options.now ?? (() => new Date())
-  const batchSize = options.batchSize ?? MATCH_BATCH_SIZE
+  const now = options.now ?? (() => new Date());
+  const batchSize = options.batchSize ?? MATCH_BATCH_SIZE;
 
   const summary: MatchArtistsSummary = {
     skipped: null,
@@ -131,19 +131,19 @@ export const runMatchArtists = async (
     failures: 0,
     abortedReason: null,
     spotifyCalls: 0,
-  }
+  };
 
   const client =
     options.client !== undefined
       ? options.client
-      : await createSpotifyAppClient()
+      : await createSpotifyAppClient();
 
   if (client === null) {
-    summary.skipped = 'unconfigured'
+    summary.skipped = 'unconfigured';
     apiLogger.info(
       'match-artists: SPOTIFY_CLIENT_ID/SECRET unset — skipping (dormant)',
-    )
-    return summary
+    );
+    return summary;
   }
 
   // One instant for both cutoffs. They describe a single batch's selection
@@ -151,10 +151,12 @@ export const runMatchArtists = async (
   // halves of the same query disagreeing about when "now" was. The per-row
   // now() calls below are deliberately separate: those stamp when each row was
   // actually checked, which is not the same question.
-  const selectedAt = now().getTime()
-  const staleBefore = new Date(selectedAt - PHOTO_REFETCH_DAYS * DAY_MS)
-  const retryBefore = new Date(selectedAt - NO_MATCH_RETRY_DAYS * DAY_MS)
-  const ambiguousBefore = new Date(selectedAt - AMBIGUOUS_RECHECK_DAYS * DAY_MS)
+  const selectedAt = now().getTime();
+  const staleBefore = new Date(selectedAt - PHOTO_REFETCH_DAYS * DAY_MS);
+  const retryBefore = new Date(selectedAt - NO_MATCH_RETRY_DAYS * DAY_MS);
+  const ambiguousBefore = new Date(
+    selectedAt - AMBIGUOUS_RECHECK_DAYS * DAY_MS,
+  );
 
   const rows = await db
     .select({
@@ -197,22 +199,22 @@ export const runMatchArtists = async (
     // matchCheckedAt, so they always sort ahead and a backlog of retries can
     // only ever spend budget the first-pass work didn't want.
     .orderBy(sql`${artists.matchCheckedAt} asc nulls first`, artists.createdAt)
-    .limit(batchSize)
+    .limit(batchSize);
 
   for (const row of rows) {
-    summary.considered += 1
-    const isRefresh = row.matchStatus === 'matched'
+    summary.considered += 1;
+    const isRefresh = row.matchStatus === 'matched';
     try {
       const result = await matchArtist(
         row.canonicalName,
         { search: client.searchArtists },
         row.name,
-      )
+      );
 
       // One instant per row. Every timestamp below records the same pass, and
       // a "cached at" that reads later than its own "checked at" is confusing
       // for no reason.
-      const checkedAt = now()
+      const checkedAt = now();
 
       if (isRefresh && result.status !== 'matched') {
         // Don't downgrade an established identity on a flaky re-search. The
@@ -227,8 +229,8 @@ export const runMatchArtists = async (
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
           })
-          .where(eq(artists.id, row.id))
-        continue
+          .where(eq(artists.id, row.id));
+        continue;
       }
 
       if (result.status === 'matched') {
@@ -247,13 +249,13 @@ export const runMatchArtists = async (
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
           })
-          .where(eq(artists.id, row.id))
+          .where(eq(artists.id, row.id));
         if (isRefresh) {
-          summary.photosRefreshed += 1
+          summary.photosRefreshed += 1;
         } else {
-          summary.matched += 1
+          summary.matched += 1;
         }
-        continue
+        continue;
       }
 
       await db
@@ -267,11 +269,11 @@ export const runMatchArtists = async (
           spotifyCandidatesFetchedAt: checkedAt,
           updatedAt: checkedAt,
         })
-        .where(eq(artists.id, row.id))
+        .where(eq(artists.id, row.id));
       if (result.status === 'ambiguous') {
-        summary.ambiguous += 1
+        summary.ambiguous += 1;
       } else {
-        summary.noMatch += 1
+        summary.noMatch += 1;
       }
     } catch (err) {
       // A rate limit or a rejected app token is a whole-batch condition. Rows
@@ -280,74 +282,74 @@ export const runMatchArtists = async (
       // remainder, and we decline to write a verdict for the current row, so
       // the untouched rows retry on the next run rather than being poisoned.
       if (err instanceof SpotifyRateLimitError) {
-        summary.abortedReason = 'rate_limit'
-        summary.considered -= 1
+        summary.abortedReason = 'rate_limit';
+        summary.considered -= 1;
         // `err` carries the Retry-After Spotify asked for. It is the only
         // signal for how long the cooldown runs, and dropping it leaves an
         // operator guessing whether to retry in minutes or tomorrow.
         apiLogger.warn(
           { err, artistId: row.id },
           'match-artists: rate limited — aborting batch',
-        )
-        break
+        );
+        break;
       }
       if (err instanceof SpotifyTimeoutError) {
         // A stalled Spotify would otherwise cost the full timeout on every
         // remaining row, turning one hang into a batch-long one.
-        summary.abortedReason = 'timeout'
-        summary.considered -= 1
+        summary.abortedReason = 'timeout';
+        summary.considered -= 1;
         apiLogger.error(
           { err, artistId: row.id },
           'match-artists: Spotify timed out — aborting batch',
-        )
-        Sentry.captureException(err, { tags: { job: 'match-artists' } })
-        break
+        );
+        Sentry.captureException(err, { tags: { job: 'match-artists' } });
+        break;
       }
       if (err instanceof SpotifyAuthError) {
-        summary.abortedReason = 'auth'
-        summary.considered -= 1
+        summary.abortedReason = 'auth';
+        summary.considered -= 1;
         apiLogger.error(
           { err, artistId: row.id },
           'match-artists: app token rejected — aborting batch',
-        )
-        Sentry.captureException(err, { tags: { job: 'match-artists' } })
-        break
+        );
+        Sentry.captureException(err, { tags: { job: 'match-artists' } });
+        break;
       }
-      summary.failures += 1
+      summary.failures += 1;
       apiLogger.error(
         { err, artistId: row.id },
         'match-artists: match failed for artist',
-      )
+      );
       Sentry.captureException(err, {
         tags: { job: 'match-artists' },
         extra: { artistId: row.id },
-      })
+      });
     }
   }
 
-  summary.spotifyCalls = client.getCallCount()
-  apiLogger.info({ summary }, 'match-artists: run complete')
-  return summary
-}
+  summary.spotifyCalls = client.getCallCount();
+  apiLogger.info({ summary }, 'match-artists: run complete');
+  return summary;
+};
 
 // CLI entry guard — same shape as spotify-weekly.ts. Runs only when executed
 // directly, so tests can import runMatchArtists without auto-running.
 const invokedUrl = process.argv[1]
   ? pathToFileURL(process.argv[1]).href
-  : undefined
+  : undefined;
 if (invokedUrl && import.meta.url === invokedUrl) {
   const main = async (): Promise<number> => {
     // The cron runs this file directly, never through index.ts, so Sentry is
     // only initialised if the entrypoint does it. Loaded here rather than as a
     // static import so tests importing runMatchArtists never initialise it.
-    await import('../instrument.js')
-    let exitCode = 0
+    await import('../instrument.js');
+    let exitCode = 0;
     try {
-      await runMatchArtists()
-      apiLogger.info('match-artists: done')
+      await runMatchArtists();
+      apiLogger.info('match-artists: done');
     } catch (err) {
-      apiLogger.error({ err }, 'match-artists: catastrophic failure')
-      exitCode = 1
+      apiLogger.error({ err }, 'match-artists: catastrophic failure');
+      exitCode = 1;
     }
 
     // Rides on this cron because it is the API's only daily job that runs in
@@ -355,14 +357,17 @@ if (invokedUrl && import.meta.url === invokedUrl) {
     // does, so this is what bounds how long an expired bucket can linger.
     // Housekeeping never fails the run; the next night tries again.
     try {
-      const swept = await sweepExpiredRateLimitBuckets()
+      const swept = await sweepExpiredRateLimitBuckets();
       apiLogger.info(
         { swept },
         'match-artists: swept expired rate-limit buckets',
-      )
+      );
     } catch (err) {
-      const error = describeDbError(err)
-      apiLogger.warn({ error }, 'match-artists: rate-limit bucket sweep failed')
+      const error = describeDbError(err);
+      apiLogger.warn(
+        { error },
+        'match-artists: rate-limit bucket sweep failed',
+      );
       Sentry.captureMessage('rate-limit bucket sweep failed', {
         level: 'warning',
         tags: {
@@ -370,11 +375,11 @@ if (invokedUrl && import.meta.url === invokedUrl) {
           errorClass: error.errorClass,
           errorCode: error.code ?? 'none',
         },
-      })
+      });
     }
     // process.exit drops anything still queued in the Sentry transport.
-    await Sentry.flush(2000)
-    return exitCode
-  }
-  void main().then((code) => process.exit(code))
+    await Sentry.flush(2000);
+    return exitCode;
+  };
+  void main().then((code) => process.exit(code));
 }

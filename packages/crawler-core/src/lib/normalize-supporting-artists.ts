@@ -16,8 +16,8 @@ export function normalizeSupportingArtists(
   artist: string,
   names: readonly string[],
 ): string[] {
-  const headlinerKey = artist.trim().toLowerCase()
+  const headlinerKey = artist.trim().toLowerCase();
   return names
     .map((name) => name.trim())
-    .filter((name) => name.length > 0 && name.toLowerCase() !== headlinerKey)
+    .filter((name) => name.length > 0 && name.toLowerCase() !== headlinerKey);
 }

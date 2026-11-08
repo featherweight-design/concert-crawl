@@ -20,26 +20,26 @@
 // through Claude would put us on the wrong side of a rule the site states
 // explicitly. Structured data, fetched as ourselves, is the only path here.
 
-import type { Venue } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
-import type { NormalizedEvent } from '../../types.js'
-import { extractJsonLd } from '../extractors/json-ld.js'
-import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js'
+import type { Venue } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types';
+import type { NormalizedEvent } from '../../types.js';
+import { extractJsonLd } from '../extractors/json-ld.js';
+import { CrawlSkipError, isAllowed, isAllowedOrSkip } from '../robots.js';
 import {
   fetchFollowingRobots,
   RobotsDisallowedError,
   type RobotsFetchResult,
-} from '../robots-fetch.js'
-import { createDeadline } from './deadline.js'
-import { jitter } from './jitter.js'
+} from '../robots-fetch.js';
+import { createDeadline } from './deadline.js';
+import { jitter } from './jitter.js';
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
   PlatformFetchResult,
-} from './index.js'
+} from './index.js';
 
-const logger = createLogger('detail-page-fetcher')
+const logger = createLogger('detail-page-fetcher');
 
 /**
  * Ceiling on how many detail pages one run will visit.
@@ -51,7 +51,7 @@ const logger = createLogger('detail-page-fetcher')
  * mode we care about is a heuristic that starts claiming every page on a
  * site, and a hard cap is what keeps that from becoming a hammering.
  */
-export const MAX_DETAIL_PAGES = 60
+export const MAX_DETAIL_PAGES = 60;
 
 /**
  * How many individual detail-page HTTP failures a run tolerates before it
@@ -63,12 +63,12 @@ export const MAX_DETAIL_PAGES = 60
  * dropped half its pages would mark real upcoming shows missing. Three is
  * "a page or two moved", anything more is "the site changed or is sick".
  */
-const MAX_DETAIL_FAILURES = 3
+const MAX_DETAIL_FAILURES = 3;
 
 // File extensions that are never an event detail page. Cheap pre-filter so
 // a stylesheet or favicon link never costs a request against the budget.
 const NON_PAGE_EXTENSION =
-  /\.(?:css|js|mjs|json|xml|txt|ico|png|jpe?g|gif|svg|webp|avif|pdf|zip|mp3|mp4|woff2?|ttf|eot)$/i
+  /\.(?:css|js|mjs|json|xml|txt|ico|png|jpe?g|gif|svg|webp|avif|pdf|zip|mp3|mp4|woff2?|ttf|eot)$/i;
 
 export class DetailPageFetchError extends Error {
   constructor(
@@ -76,8 +76,8 @@ export class DetailPageFetchError extends Error {
     public readonly url: string,
     message: string,
   ) {
-    super(message)
-    this.name = 'DetailPageFetchError'
+    super(message);
+    this.name = 'DetailPageFetchError';
   }
 }
 
@@ -86,7 +86,7 @@ async function fetchText(
   crawlDelayMs: number,
   timeoutMs?: number,
 ): Promise<string> {
-  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs)).html
+  return (await fetchTextLanded(url, crawlDelayMs, timeoutMs)).html;
 }
 
 // Like fetchText, but also returns the URL the body actually came from after
@@ -99,8 +99,8 @@ async function fetchTextLanded(
   crawlDelayMs: number,
   timeoutMs?: number,
 ): Promise<{ html: string; landedUrl: string }> {
-  const origin = new URL(url).origin
-  let fetched: RobotsFetchResult
+  const origin = new URL(url).origin;
+  let fetched: RobotsFetchResult;
   try {
     fetched = await fetchFollowingRobots(url, {
       headers: { Accept: 'text/html,application/xhtml+xml,application/xml' },
@@ -118,21 +118,21 @@ async function fetchTextLanded(
             0,
             url,
             `Detail-page fetch for ${url} redirected off-origin to ${to}`,
-          )
+          );
         }
       },
-    })
+    });
   } catch (err) {
     if (err instanceof RobotsDisallowedError) {
       throw new DetailPageFetchError(
         0,
         url,
         `Detail-page fetch for ${url} redirected to ${err.url}, which robots.txt disallows`,
-      )
+      );
     }
-    throw err
+    throw err;
   }
-  const { response, finalUrl } = fetched
+  const { response, finalUrl } = fetched;
   if (!response.ok) {
     throw new DetailPageFetchError(
       response.status,
@@ -141,9 +141,9 @@ async function fetchTextLanded(
       // failed — otherwise a bad detail page is indistinguishable from a
       // bad site.
       `Detail-page fetch failed: HTTP ${response.status} for ${url}`,
-    )
+    );
   }
-  return { html: await response.text(), landedUrl: finalUrl }
+  return { html: await response.text(), landedUrl: finalUrl };
 }
 
 /**
@@ -168,26 +168,26 @@ export function normalizeCandidateUrl(
   href: string,
   listingUrl: string,
 ): string | null {
-  let resolved: URL
+  let resolved: URL;
   try {
-    resolved = new URL(href, listingUrl)
+    resolved = new URL(href, listingUrl);
   } catch (err) {
     logger.debug(
       { href, listingUrl, err },
       'detail-page: skipping an unparseable href',
-    )
-    return null
+    );
+    return null;
   }
-  const listingOrigin = new URL(listingUrl).origin
+  const listingOrigin = new URL(listingUrl).origin;
   // Covers `mailto:`, `tel:`, `javascript:` and friends implicitly — none of
   // them produce an origin that can match the listing's.
-  if (resolved.origin !== listingOrigin) return null
-  if (NON_PAGE_EXTENSION.test(resolved.pathname)) return null
+  if (resolved.origin !== listingOrigin) return null;
+  if (NON_PAGE_EXTENSION.test(resolved.pathname)) return null;
 
-  let path = resolved.pathname.replace(/\/tickets\/?$/i, '')
-  path = path.replace(/\/+$/, '')
-  if (path === '') path = '/'
-  return `${listingOrigin}${path}`
+  let path = resolved.pathname.replace(/\/tickets\/?$/i, '');
+  path = path.replace(/\/+$/, '');
+  if (path === '') path = '/';
+  return `${listingOrigin}${path}`;
 }
 
 /**
@@ -204,16 +204,16 @@ export function extractCandidateUrls(
   html: string,
   listingUrl: string,
 ): string[] {
-  const self = normalizeCandidateUrl(listingUrl, listingUrl)
-  const seen = new Set<string>()
-  const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi
+  const self = normalizeCandidateUrl(listingUrl, listingUrl);
+  const seen = new Set<string>();
+  const pattern = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
   for (const match of html.matchAll(pattern)) {
-    const url = normalizeCandidateUrl(match[1]!, listingUrl)
-    if (url === null) continue
-    if (url === self) continue
-    seen.add(url)
+    const url = normalizeCandidateUrl(match[1]!, listingUrl);
+    if (url === null) continue;
+    if (url === self) continue;
+    seen.add(url);
   }
-  return [...seen]
+  return [...seen];
 }
 
 /**
@@ -224,23 +224,23 @@ export function parseSitemapUrls(
   sitemapXml: string,
   listingUrl: string,
 ): Set<string> {
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   for (const match of sitemapXml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)) {
-    const url = normalizeCandidateUrl(match[1]!, listingUrl)
-    if (url !== null) seen.add(url)
+    const url = normalizeCandidateUrl(match[1]!, listingUrl);
+    if (url !== null) seen.add(url);
   }
-  return seen
+  return seen;
 }
 
 async function detailPageFetch(
   venue: Venue,
   opts: PlatformFetchOptions,
 ): Promise<PlatformFetchResult> {
-  const listingUrl = venue.websiteUrl
-  const origin = new URL(listingUrl).origin
-  const sitemapUrl = `${origin}/sitemap.xml`
-  const startedAt = Date.now()
-  const deadline = createDeadline(opts)
+  const listingUrl = venue.websiteUrl;
+  const origin = new URL(listingUrl).origin;
+  const sitemapUrl = `${origin}/sitemap.xml`;
+  const startedAt = Date.now();
+  const deadline = createDeadline(opts);
 
   // crawl.ts gates on venue.websiteUrl only, and robots.txt rules are
   // per-path — a site can allow the calendar index and disallow /e/. Every
@@ -251,7 +251,7 @@ async function detailPageFetch(
       0,
       listingUrl,
       `robots.txt disallows ${listingUrl}`,
-    )
+    );
   }
 
   // The sitemap is an allowlist, not the discovery source. Reading it as the
@@ -262,7 +262,7 @@ async function detailPageFetch(
   // own links keeps discovery scoped to what the venue is currently
   // advertising while guaranteeing we only ever request pages the site
   // itself publishes as crawlable.
-  let sitemapUrls = new Set<string>()
+  let sitemapUrls = new Set<string>();
   if (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT)) {
     try {
       sitemapUrls = parseSitemapUrls(
@@ -270,110 +270,110 @@ async function detailPageFetch(
           fetchText(sitemapUrl, opts.crawlDelayMs, timeoutMs),
         ),
         listingUrl,
-      )
+      );
     } catch (err) {
       // Optional by design — plenty of venues publish no sitemap, and a
       // missing one must not fail a run that the listing page alone can
       // serve. A budget breach is not optional, though: it means the whole
       // fetch is out of time, so let it propagate. Nor is a skip: robots.txt
       // couldn't be read, so nothing more may be fetched this run.
-      if (err instanceof CrawlSkipError) throw err
+      if (err instanceof CrawlSkipError) throw err;
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
         logger.warn(
           { venueId: venue.id, sitemapUrl, err },
           'detail-page: budget exhausted while reading the sitemap',
-        )
-        throw err
+        );
+        throw err;
       }
       logger.debug(
         { venueId: venue.id, sitemapUrl, err },
         'detail-page: no usable sitemap, falling back to listing anchors',
-      )
+      );
     }
   }
 
-  await deadline.wait(jitter(opts.crawlDelayMs))
+  await deadline.wait(jitter(opts.crawlDelayMs));
   const listingHtml = await deadline.run('listing', (timeoutMs) =>
     fetchText(listingUrl, opts.crawlDelayMs, timeoutMs),
-  )
-  const candidates = extractCandidateUrls(listingHtml, listingUrl)
+  );
+  const candidates = extractCandidateUrls(listingHtml, listingUrl);
   if (candidates.length === 0) {
     throw new DetailPageFetchError(
       0,
       listingUrl,
       `Detail-page listing ${listingUrl} contained no same-origin links to follow`,
-    )
+    );
   }
 
-  const inSitemap = candidates.filter((url) => sitemapUrls.has(url))
+  const inSitemap = candidates.filter((url) => sitemapUrls.has(url));
   // An empty intersection means the sitemap and the calendar disagree — a
   // stale or partial sitemap. Trusting it then would zero the run, so the
   // anchors win and the disagreement is logged.
-  const allowlisted = inSitemap.length > 0 ? inSitemap : candidates
+  const allowlisted = inSitemap.length > 0 ? inSitemap : candidates;
   if (sitemapUrls.size > 0 && inSitemap.length === 0) {
     logger.warn(
       { venueId: venue.id, sitemapUrl, candidateCount: candidates.length },
       'detail-page: sitemap matched none of the listing links — ignoring it',
-    )
+    );
   }
 
   // Checked one at a time and stopped at the cap: a link-heavy listing can
   // yield hundreds of candidates, and only MAX_DETAIL_PAGES of them will ever
   // be fetched. Resolving robots.txt for the rest is wasted work and noise.
-  const detailUrls: string[] = []
-  let examinedCount = 0
-  let robotsSkippedCount = 0
+  const detailUrls: string[] = [];
+  let examinedCount = 0;
+  let robotsSkippedCount = 0;
   for (const url of allowlisted) {
-    if (detailUrls.length >= MAX_DETAIL_PAGES) break
-    examinedCount++
+    if (detailUrls.length >= MAX_DETAIL_PAGES) break;
+    examinedCount++;
     if (await isAllowed(url, CRAWLER_USER_AGENT)) {
-      detailUrls.push(url)
+      detailUrls.push(url);
     } else {
-      robotsSkippedCount++
+      robotsSkippedCount++;
     }
   }
   if (robotsSkippedCount > 0) {
     logger.warn(
       { venueId: venue.id, robotsSkippedCount, examinedCount, origin },
       'detail-page: robots.txt disallowed some detail pages — skipping them',
-    )
+    );
   }
 
-  const truncatedCount = allowlisted.length - examinedCount
+  const truncatedCount = allowlisted.length - examinedCount;
   if (truncatedCount > 0) {
     // Worth an alert rather than a debug line: past the cap we are certainly
     // missing events, and the cap is the thing to revisit.
     logger.warn(
       { venueId: venue.id, origin, truncatedCount, cap: MAX_DETAIL_PAGES },
       'detail-page: more candidate pages than the per-run cap — truncating',
-    )
+    );
   }
 
-  const events: NormalizedEvent[] = []
-  let pagesWithoutEvents = 0
-  let failedPageCount = 0
+  const events: NormalizedEvent[] = [];
+  let pagesWithoutEvents = 0;
+  let failedPageCount = 0;
 
   for (const detailUrl of detailUrls) {
     // Every detail page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
-    await deadline.wait(jitter(opts.crawlDelayMs))
-    let html: string
-    let landedUrl: string
+    await deadline.wait(jitter(opts.crawlDelayMs));
+    let html: string;
+    let landedUrl: string;
     try {
-      ;({ html, landedUrl } = await deadline.run(
+      ({ html, landedUrl } = await deadline.run(
         `detail ${detailUrl}`,
         (timeoutMs) => fetchTextLanded(detailUrl, opts.crawlDelayMs, timeoutMs),
-      ))
+      ));
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
         logger.warn(
           { venueId: venue.id, detailUrl, eventCount: events.length, err },
           'detail-page: budget exhausted partway through the detail pages',
-        )
-        throw err
+        );
+        throw err;
       }
       // A skip means robots.txt couldn't be read: the run stops, unpenalized.
-      if (err instanceof CrawlSkipError) throw err
+      if (err instanceof CrawlSkipError) throw err;
       // A block or a rate limit is never a per-page problem. Continuing would
       // keep hitting a site that just told us to stop, so it ends the run
       // immediately and surfaces as a blocked venue.
@@ -384,10 +384,10 @@ async function detailPageFetch(
         logger.warn(
           { venueId: venue.id, detailUrl, httpStatus: err.httpStatus, err },
           'detail-page: venue blocked or rate-limited us — aborting the run',
-        )
-        throw err
+        );
+        throw err;
       }
-      failedPageCount++
+      failedPageCount++;
       if (failedPageCount > MAX_DETAIL_FAILURES) {
         throw new DetailPageFetchError(
           err instanceof DetailPageFetchError ? err.httpStatus : 0,
@@ -395,13 +395,13 @@ async function detailPageFetch(
           `Detail-page fetch gave up after ${failedPageCount} failed pages (last: ${
             err instanceof Error ? err.message : String(err)
           })`,
-        )
+        );
       }
       logger.warn(
         { venueId: venue.id, detailUrl, failedPageCount, err },
         'detail-page: skipping a detail page that failed to fetch',
-      )
-      continue
+      );
+      continue;
     }
 
     // A page with no Event JSON-LD is simply not an event page. On a generic
@@ -409,12 +409,12 @@ async function detailPageFetch(
     // not raised.
     // The landed URL, not the link we followed: after a same-origin redirect
     // it is where the text came from, so it is what the AI gate must judge.
-    const pageEvents = extractJsonLd(html, landedUrl, venue.timezone)
+    const pageEvents = extractJsonLd(html, landedUrl, venue.timezone);
     if (pageEvents.length === 0) {
-      pagesWithoutEvents++
-      continue
+      pagesWithoutEvents++;
+      continue;
     }
-    events.push(...pageEvents)
+    events.push(...pageEvents);
   }
 
   return {
@@ -432,7 +432,7 @@ async function detailPageFetch(
       failedPageCount,
       eventsAfterNormalization: events.length,
     },
-  }
+  };
 }
 
 export const detailPageFetcher: PlatformFetcher = {
@@ -446,7 +446,7 @@ export const detailPageFetcher: PlatformFetcher = {
       venue.platform === 'detail-page' &&
       venue.websiteUrl &&
       venue.websiteUrl.length > 0,
-    )
+    );
   },
   fetch: detailPageFetch,
-}
+};

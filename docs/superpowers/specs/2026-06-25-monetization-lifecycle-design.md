@@ -38,17 +38,17 @@ Per #780's "Deliverables we expect" + this brief's amendments:
 
 In-app for emotional moments (where Sour Patch voice matters and retention plays a role). Stripe portal for tooling (where Stripe's edge-case coverage wins). Decision: **hybrid split.**
 
-| Action | Owner |
-|---|---|
-| Cancel subscription | **In-app** (with light retention prompt) |
-| Downgrade Premium → Supporter | **In-app** (with proration disclosure) |
-| Upgrade Supporter → Premium | **In-app** (with proration disclosure) |
-| Resubscribe (Free → paid tier) | **In-app** (the tier picker, owned by #781) |
-| Account deletion while subscribed | **In-app** (with cancel-sub-only off-ramp) |
-| Change payment method | **Stripe portal** (new tab) |
-| View invoices / receipts | **Stripe portal** (new tab) |
-| Change billing email | **Stripe portal** (new tab) |
-| Update tax / region | **Stripe portal** (new tab) |
+| Action                            | Owner                                       |
+| --------------------------------- | ------------------------------------------- |
+| Cancel subscription               | **In-app** (with light retention prompt)    |
+| Downgrade Premium → Supporter     | **In-app** (with proration disclosure)      |
+| Upgrade Supporter → Premium       | **In-app** (with proration disclosure)      |
+| Resubscribe (Free → paid tier)    | **In-app** (the tier picker, owned by #781) |
+| Account deletion while subscribed | **In-app** (with cancel-sub-only off-ramp)  |
+| Change payment method             | **Stripe portal** (new tab)                 |
+| View invoices / receipts          | **Stripe portal** (new tab)                 |
+| Change billing email              | **Stripe portal** (new tab)                 |
+| Update tax / region               | **Stripe portal** (new tab)                 |
 
 The "Manage subscription" CTA in the existing Plan card opens an in-app **Manage sheet** that lists all of the above options with route hints (a `→ portal` chip on the portal-bound rows). Design's call on the visual grouping — list-with-chips vs visually separated sections.
 
@@ -77,13 +77,13 @@ The trial-end takeover triggers on the user's **next session open after `trial_e
 
 When a user downgrades from a Premium-and-up tier (Premium / Founder / Gifted) to Supporter or Free (via downgrade, cancel-grace expiry, or trial-end-without-upgrade), Premium-only data is preserved for 90 days, then purged by a background job.
 
-| Data | Behavior |
-|---|---|
-| **Watching** (saved shows — the heart) | NEVER purged. Free for everyone signed-in per the R6 amendment to the §6 matrix. |
-| **Concert history** (attended) | Preserved 90 days. After purge, the user's attended-show records are removed. Exact storage shape (`user_events` rows, status enum value, or new table) is #775's call. |
-| **Following** (artists) | Preserved 90 days. After purge, `user_artist_follows` rows removed. |
-| **Alerts** (new-show + price-drop) | Preserved 90 days (subscription state, prefs). After purge, prefs deleted; user is unsubscribed. |
-| **Spotify sync** state | Preserved 90 days (Clerk OAuth token, last-sync timestamp). After purge, token revoked / disconnected. |
+| Data                                   | Behavior                                                                                                                                                                |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Watching** (saved shows — the heart) | NEVER purged. Free for everyone signed-in per the R6 amendment to the §6 matrix.                                                                                        |
+| **Concert history** (attended)         | Preserved 90 days. After purge, the user's attended-show records are removed. Exact storage shape (`user_events` rows, status enum value, or new table) is #775's call. |
+| **Following** (artists)                | Preserved 90 days. After purge, `user_artist_follows` rows removed.                                                                                                     |
+| **Alerts** (new-show + price-drop)     | Preserved 90 days (subscription state, prefs). After purge, prefs deleted; user is unsubscribed.                                                                        |
+| **Spotify sync** state                 | Preserved 90 days (Clerk OAuth token, last-sync timestamp). After purge, token revoked / disconnected.                                                                  |
 
 Re-upgrade within 90 days = instant restore (data was never deleted). Re-upgrade after purge = empty-state in the relevant surface.
 
@@ -115,7 +115,7 @@ Behavior:
 ### 7. Account deletion while subscribed — in-scope with off-ramp
 
 - **Trigger:** user navigates Settings → Delete account while their tier is Supporter / Premium / Founder.
-- **First sheet (warning):** locked headline-direction "*You're on Premium until Jul 15.*" Body explains:
+- **First sheet (warning):** locked headline-direction "_You're on Premium until Jul 15._" Body explains:
   - Deleting cancels the subscription effective immediately (no grace period — this overrides §3's default).
   - Removes everything: saved shows (Watching), Concert history, Following, account record, all data.
   - Cannot be undone.
@@ -139,18 +139,18 @@ This concern belongs to the plan PR scheduling, not Design's surfaces.
 
 Design produces these variants on top of #781's existing Plan card shell:
 
-| Variant | Trigger | Key elements |
-|---|---|---|
-| **Active Premium** | `tier=premium, status=active` | Existing R6 card + new "Manage subscription" CTA that opens the in-app Manage sheet |
-| **Active Supporter** | `tier=supporter, status=active` | Same as Premium variant, voice/copy adjusted |
-| **Active Founder** | `tier=founder, status=active` | Same shape + locked-forever stamp (from #781) |
-| **Premium trial — day 1–12** | `tier=premium, on_trial=true, now < trial_ends_at - 48h` | Existing R6 trial card + countdown eyebrow |
-| **Premium trial — day 13 (ends-tomorrow window)** | `tier=premium, on_trial=true, trial_ends_at - 48h <= now < trial_ends_at - 24h` | Emphasis eyebrow "Trial ends tomorrow · Lock it in" + inline CTA |
-| **Premium trial — day 14 (ends-today window)** | `tier=premium, on_trial=true, trial_ends_at - 24h <= now < trial_ends_at` | Emphasis eyebrow "Trial ends today · Lock it in" + inline CTA |
-| **Cancel-grace** | `cancel_at_period_end=true, days_until_period_end > 0` | "Premium until {date} · You won't be charged again" + "Resubscribe" affordance + still shows Manage sheet |
-| **Post-cancel-grace Free** | recently rolled to Free from cancel | "You were Premium until {date}. Come back?" — context eyebrow decays after Design-chosen window |
-| **Post-trial-expired Free** | trial ended without upgrade | "Your trial ended. Want to upgrade?" — context eyebrow decays after Design-chosen window |
-| **Gifted** | per #781 R6 | Locked from #781, untouched by #780 |
+| Variant                                           | Trigger                                                                         | Key elements                                                                                              |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Active Premium**                                | `tier=premium, status=active`                                                   | Existing R6 card + new "Manage subscription" CTA that opens the in-app Manage sheet                       |
+| **Active Supporter**                              | `tier=supporter, status=active`                                                 | Same as Premium variant, voice/copy adjusted                                                              |
+| **Active Founder**                                | `tier=founder, status=active`                                                   | Same shape + locked-forever stamp (from #781)                                                             |
+| **Premium trial — day 1–12**                      | `tier=premium, on_trial=true, now < trial_ends_at - 48h`                        | Existing R6 trial card + countdown eyebrow                                                                |
+| **Premium trial — day 13 (ends-tomorrow window)** | `tier=premium, on_trial=true, trial_ends_at - 48h <= now < trial_ends_at - 24h` | Emphasis eyebrow "Trial ends tomorrow · Lock it in" + inline CTA                                          |
+| **Premium trial — day 14 (ends-today window)**    | `tier=premium, on_trial=true, trial_ends_at - 24h <= now < trial_ends_at`       | Emphasis eyebrow "Trial ends today · Lock it in" + inline CTA                                             |
+| **Cancel-grace**                                  | `cancel_at_period_end=true, days_until_period_end > 0`                          | "Premium until {date} · You won't be charged again" + "Resubscribe" affordance + still shows Manage sheet |
+| **Post-cancel-grace Free**                        | recently rolled to Free from cancel                                             | "You were Premium until {date}. Come back?" — context eyebrow decays after Design-chosen window           |
+| **Post-trial-expired Free**                       | trial ended without upgrade                                                     | "Your trial ended. Want to upgrade?" — context eyebrow decays after Design-chosen window                  |
+| **Gifted**                                        | per #781 R6                                                                     | Locked from #781, untouched by #780                                                                       |
 
 ## New in-app surfaces
 
@@ -241,20 +241,20 @@ The brief intentionally leaves these to Design:
 
 These were considered and explicitly scoped to other tickets. Future iterations should not pull them back into #780 without coordinated re-scope:
 
-| Concern | Owner |
-|---|---|
-| Past-due / payment-failure UX, 3DS / SCA challenges, retry-with-different-card, multi-card edge cases | #782 |
-| A11y annotations across the new lifecycle surfaces (focus traps, ARIA, screen-reader walkthrough) | #782 |
-| Required microcopy disclosures (auto-renewal, SCA-region, price-change policy) | #782 |
-| Welcome / renewal-receipt / dunning / cancel-ack / win-back emails (incl. day-13 email, pre-purge email) | #783 |
-| Stripe wiring (checkout, customer portal endpoint, webhook handler) | #775 |
-| Schema expansion (`cancel_at_period_end`, `trial_ends_at`, `last_trial_ended_shown_at`, `day_thirteen_banner_dismissed_at`, `premium_data_expires_at`, `downgrade_credit_balance`) | #775 |
-| The 90-day-purge background job + the trial-end check + the day-13 banner trigger evaluation | #775 |
-| `DELETE /v1/users/me` Stripe-cleanup branch | #775 |
-| Tier vocabulary + entitlements matrix + tier picker surfaces | #781 (✅ done) |
-| Founder seat counter, gifted comp mechanic | #781 (✅ done) |
-| Logged-out broader UX (nav, header, browse-only) | #794 |
-| Admin refund tooling | Separate ticket (different audience) |
+| Concern                                                                                                                                                                            | Owner                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Past-due / payment-failure UX, 3DS / SCA challenges, retry-with-different-card, multi-card edge cases                                                                              | #782                                 |
+| A11y annotations across the new lifecycle surfaces (focus traps, ARIA, screen-reader walkthrough)                                                                                  | #782                                 |
+| Required microcopy disclosures (auto-renewal, SCA-region, price-change policy)                                                                                                     | #782                                 |
+| Welcome / renewal-receipt / dunning / cancel-ack / win-back emails (incl. day-13 email, pre-purge email)                                                                           | #783                                 |
+| Stripe wiring (checkout, customer portal endpoint, webhook handler)                                                                                                                | #775                                 |
+| Schema expansion (`cancel_at_period_end`, `trial_ends_at`, `last_trial_ended_shown_at`, `day_thirteen_banner_dismissed_at`, `premium_data_expires_at`, `downgrade_credit_balance`) | #775                                 |
+| The 90-day-purge background job + the trial-end check + the day-13 banner trigger evaluation                                                                                       | #775                                 |
+| `DELETE /v1/users/me` Stripe-cleanup branch                                                                                                                                        | #775                                 |
+| Tier vocabulary + entitlements matrix + tier picker surfaces                                                                                                                       | #781 (✅ done)                       |
+| Founder seat counter, gifted comp mechanic                                                                                                                                         | #781 (✅ done)                       |
+| Logged-out broader UX (nav, header, browse-only)                                                                                                                                   | #794                                 |
+| Admin refund tooling                                                                                                                                                               | Separate ticket (different audience) |
 
 ## Decisions inherited
 

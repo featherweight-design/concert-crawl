@@ -11,13 +11,13 @@
  * there is no upper bound — "past 30 days → all future".
  */
 export function rollingWindow(now: Date): { fromDate: string } {
-  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
-  const from = new Date(now.getTime() - THIRTY_DAYS_MS)
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const from = new Date(now.getTime() - THIRTY_DAYS_MS);
 
   // Format as YYYY-MM-DD using UTC components to avoid local-timezone drift.
-  const year = from.getUTCFullYear()
-  const month = String(from.getUTCMonth() + 1).padStart(2, '0')
-  const day = String(from.getUTCDate()).padStart(2, '0')
+  const year = from.getUTCFullYear();
+  const month = String(from.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(from.getUTCDate()).padStart(2, '0');
 
-  return { fromDate: `${year}-${month}-${day}` }
+  return { fromDate: `${year}-${month}-${day}` };
 }

@@ -10,10 +10,10 @@
 // matrix actually resolves, so a repriced or renamed tier can never leave a
 // stale name on a paywall.
 
-import { CREW_INVITE_TTL_DAYS, CREW_MEMBER_CAP } from '@concert-crawl/types'
+import { CREW_INVITE_TTL_DAYS, CREW_MEMBER_CAP } from '@concert-crawl/types';
 
 const plural = (count: number, one: string, many: string): string =>
-  count === 1 ? one : many
+  count === 1 ? one : many;
 
 export const CREWS_COPY = {
   // Rendered glyphs. Here rather than inline in JSX for the same reason every
@@ -359,4 +359,4 @@ export const CREWS_COPY = {
         ? `Going: ${names.join(', ')} and ${others} more`
         : `Going: ${names.join(', ')}`,
   },
-} as const
+} as const;

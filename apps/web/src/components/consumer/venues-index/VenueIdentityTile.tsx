@@ -3,23 +3,23 @@ import {
   ia_getInitials,
   ia_isDark,
   identityFor,
-} from '../identity-art/IdentityArt'
+} from '../identity-art/IdentityArt';
 
 interface VenueIdentityTileProps {
-  name: string
-  size?: number
+  name: string;
+  size?: number;
 }
 
 export function VenueIdentityTile({ name, size = 72 }: VenueIdentityTileProps) {
-  const identity = identityFor(name, 'venue')
-  const dark = ia_isDark(identity.palette.bg)
-  const initials = ia_getInitials(name, 2)
+  const identity = identityFor(name, 'venue');
+  const dark = ia_isDark(identity.palette.bg);
+  const initials = ia_getInitials(name, 2);
 
-  const small = size <= 56
-  const chipOffset = small ? 4 : 6
-  const chipPaddingH = small ? 5 : 6
-  const chipBorderRadius = small ? 4 : 5
-  const tileRadius = small ? 9 : 10
+  const small = size <= 56;
+  const chipOffset = small ? 4 : 6;
+  const chipPaddingH = small ? 5 : 6;
+  const chipBorderRadius = small ? 4 : 5;
+  const tileRadius = small ? 9 : 10;
 
   return (
     <div
@@ -64,5 +64,5 @@ export function VenueIdentityTile({ name, size = 72 }: VenueIdentityTileProps) {
         {initials}
       </div>
     </div>
-  )
+  );
 }

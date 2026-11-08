@@ -1,20 +1,20 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuth } from '@clerk/nextjs'
-import { fetchMe } from '@/lib/users'
-import { isTabActive } from '@/lib/nav-tab-active'
-import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
-import type { AvatarColor } from '@concert-crawl/types'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
-import { useAccountMenu } from '@/components/consumer/user-menu/account-menu-context'
-import { NotifPip } from '@/components/consumer/notifications/NotifPip'
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
+import { fetchMe } from '@/lib/users';
+import { isTabActive } from '@/lib/nav-tab-active';
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags';
+import type { AvatarColor } from '@concert-crawl/types';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { AnonDisc } from '@/components/consumer/app-header/AnonDisc';
+import { useAccountMenu } from '@/components/consumer/user-menu/account-menu-context';
+import { NotifPip } from '@/components/consumer/notifications/NotifPip';
 
-const COPY = CONSUMER_COPY.bottomNav
-const MENU_LABELS = CONSUMER_COPY.userMenu.ariaLabels
+const COPY = CONSUMER_COPY.bottomNav;
+const MENU_LABELS = CONSUMER_COPY.userMenu.ariaLabels;
 
 const STATIC_TABS = [
   {
@@ -119,19 +119,19 @@ const STATIC_TABS = [
       </svg>
     ),
   },
-] as const
+] as const;
 
 interface MeAvatarProps {
-  handle: string
-  avatarColor: AvatarColor | null
-  isActive: boolean
+  handle: string;
+  avatarColor: AvatarColor | null;
+  isActive: boolean;
 }
 
 function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
-  const letter = handle.charAt(0).toUpperCase()
-  const tone = avatarColor ?? 'signal'
-  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`
-  const tintBorder = `color-mix(in oklch, var(--${tone}) 50%, transparent)`
+  const letter = handle.charAt(0).toUpperCase();
+  const tone = avatarColor ?? 'signal';
+  const tintBg = `color-mix(in oklch, var(--${tone}) 22%, var(--surface-1))`;
+  const tintBorder = `color-mix(in oklch, var(--${tone}) 50%, transparent)`;
 
   return (
     <div
@@ -156,7 +156,7 @@ function MeAvatar({ handle, avatarColor, isActive }: MeAvatarProps) {
     >
       {letter}
     </div>
-  )
+  );
 }
 
 function MeAvatarSkeleton() {
@@ -172,7 +172,7 @@ function MeAvatarSkeleton() {
         background: 'var(--surface-2)',
       }}
     />
-  )
+  );
 }
 
 function PersonIcon() {
@@ -186,66 +186,66 @@ function PersonIcon() {
         strokeLinecap="round"
       />
     </svg>
-  )
+  );
 }
 
 export function BottomNav() {
-  const pathname = usePathname()
-  const { getToken, isSignedIn } = useAuth()
-  const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
-  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
-  const [profileLoaded, setProfileLoaded] = useState(false)
+  const pathname = usePathname();
+  const { getToken, isSignedIn } = useAuth();
+  const [avatarHandle, setAvatarHandle] = useState<string | null>(null);
+  const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const {
     open: menuOpen,
     toggleFrom,
     unreadCount,
     hasUnseen,
-  } = useAccountMenu()
-  const menuTriggerRef = useRef<HTMLButtonElement>(null)
-  const { enabled: crewsEnabled } = useFeatureFlag('crews')
-  const tabs = STATIC_TABS.filter((tab) => crewsEnabled || tab.key !== 'crews')
+  } = useAccountMenu();
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const { enabled: crewsEnabled } = useFeatureFlag('crews');
+  const tabs = STATIC_TABS.filter((tab) => crewsEnabled || tab.key !== 'crews');
 
   useEffect(() => {
     if (!isSignedIn) {
-      setAvatarHandle(null)
-      setAvatarColor(null)
-      setProfileLoaded(true)
-      return
+      setAvatarHandle(null);
+      setAvatarColor(null);
+      setProfileLoaded(true);
+      return;
     }
-    let cancelled = false
+    let cancelled = false;
     void (async () => {
-      const token = await getToken()
+      const token = await getToken();
       if (!token || cancelled) {
-        if (!cancelled) setProfileLoaded(true)
-        return
+        if (!cancelled) setProfileLoaded(true);
+        return;
       }
       try {
-        const profile = await fetchMe(token)
+        const profile = await fetchMe(token);
         if (!cancelled) {
-          setAvatarHandle(profile.handle)
-          setAvatarColor(profile.avatarColor)
+          setAvatarHandle(profile.handle);
+          setAvatarColor(profile.avatarColor);
         }
       } catch (err) {
-        console.warn('BottomNav: could not load profile', err)
+        console.warn('BottomNav: could not load profile', err);
       } finally {
-        if (!cancelled) setProfileLoaded(true)
+        if (!cancelled) setProfileLoaded(true);
       }
-    })()
+    })();
     return () => {
-      cancelled = true
-    }
-  }, [getToken, isSignedIn])
+      cancelled = true;
+    };
+  }, [getToken, isSignedIn]);
 
-  const isMeActive = pathname.startsWith('/me')
+  const isMeActive = pathname.startsWith('/me');
   // Signed-in only, and guarded here rather than trusting the provider alone —
   // an anonymous visitor must never see a pip on the account slot.
   //
   // UNSEEN draws the dot (it clears on panel open); UNREAD is still what the
   // accessible name announces, since that is what is waiting inside.
-  const piped = isSignedIn === true && hasUnseen
+  const piped = isSignedIn === true && hasUnseen;
   // Deliberately NOT `piped` — see the same split on the desktop trigger. The
   // dot is "something arrived"; the label is "something is still waiting".
-  const announcesUnread = isSignedIn === true && unreadCount > 0
+  const announcesUnread = isSignedIn === true && unreadCount > 0;
 
   return (
     <nav
@@ -257,7 +257,7 @@ export function BottomNav() {
       aria-label={COPY.nav.ariaLabel}
     >
       {tabs.map((tab) => {
-        const isActive = isTabActive(tab, pathname)
+        const isActive = isTabActive(tab, pathname);
         return (
           <Link
             key={tab.key}
@@ -285,7 +285,7 @@ export function BottomNav() {
               {tab.label}
             </span>
           </Link>
-        )
+        );
       })}
       {/* Slot 4 opens the account menu in both auth states. Signed in it used to
           link straight to /me, which skipped past every other destination the
@@ -339,5 +339,5 @@ export function BottomNav() {
         </span>
       </button>
     </nav>
-  )
+  );
 }

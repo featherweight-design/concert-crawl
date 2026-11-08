@@ -1,6 +1,6 @@
 // Single source of truth for all admin UI copy
 
-import { TRIAGE_NO_SWEEP as NO_SWEEP } from '@concert-crawl/types'
+import { TRIAGE_NO_SWEEP as NO_SWEEP } from '@concert-crawl/types';
 
 // The crawler's `classifyCrawlError` identifiers, written out for the triage
 // panel. Anything unrecognised falls back to the raw identifier rather than
@@ -14,7 +14,7 @@ const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
   parse_failure: 'Could not parse the page',
   crawl_error: 'Crawl error',
   unknown: 'Unclassified error',
-}
+};
 
 export const ADMIN_COPY = {
   dashboard: {
@@ -2362,10 +2362,10 @@ export const ADMIN_COPY = {
         was: number | null,
         wasWhen: string | null,
       ) => {
-        const head = `${runs} ${runs === 1 ? 'run' : 'runs'} at the same count`
-        if (was === null) return `${head} · no different count on record`
-        if (wasWhen === null) return `${head} · ${was} before that`
-        return `${head} · ${was} before ${wasWhen}`
+        const head = `${runs} ${runs === 1 ? 'run' : 'runs'} at the same count`;
+        if (was === null) return `${head} · no different count on record`;
+        if (wasWhen === null) return `${head} · ${was} before that`;
+        return `${head} · ${was} before ${wasWhen}`;
       },
 
       // Ceiling variant 2 — the furthest show on sale pulled back toward now.
@@ -2380,8 +2380,8 @@ export const ADMIN_COPY = {
         const head =
           shrankDays === null
             ? 'horizon pulled back'
-            : `horizon pulled back ${shrankDays} days`
-        return best === null ? head : `${head} · reached ${best} before`
+            : `horizon pulled back ${shrankDays} days`;
+        return best === null ? head : `${head} · reached ${best} before`;
       },
 
       // Coverage states the covered figure — the panel's evidence line is
@@ -2398,10 +2398,10 @@ export const ADMIN_COPY = {
       coverageStat: (matched: number, expected: number) =>
         `${matched} of ${expected} events have a ticket link`,
       coverageDetail: (uncovered: number, wasWhen: string | null) => {
-        const head = `${uncovered} have neither a ticket nor an event link`
+        const head = `${uncovered} have neither a ticket nor an event link`;
         return wasWhen === null
           ? head
-          : `${head} · last fully covered ${wasWhen}`
+          : `${head} · last fully covered ${wasWhen}`;
       },
     },
 
@@ -2464,9 +2464,9 @@ export const ADMIN_COPY = {
         const head =
           faults === 0 && queued === 0
             ? 'Nothing is broken. Both queues are clear.'
-            : `${faults} ${faults === 1 ? 'fault' : 'faults'}, ${queued} ${queued === 1 ? 'item' : 'items'} in the queues.`
-        if (acknowledged === 0) return head
-        return `${head} ${acknowledged} ${acknowledged === 1 ? 'fault' : 'faults'} marked expected.`
+            : `${faults} ${faults === 1 ? 'fault' : 'faults'}, ${queued} ${queued === 1 ? 'item' : 'items'} in the queues.`;
+        if (acknowledged === 0) return head;
+        return `${head} ${acknowledged} ${acknowledged === 1 ? 'fault' : 'faults'} marked expected.`;
       },
       checking: 'Checking venue health…',
       degraded: 'Venue health could not be checked.',
@@ -2526,4 +2526,4 @@ export const ADMIN_COPY = {
       failed: "Couldn't save that. Nothing was changed.",
     },
   },
-} as const
+} as const;

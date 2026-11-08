@@ -1,4 +1,4 @@
-const SKELETON_ROWS = 4
+const SKELETON_ROWS = 4;
 
 function SkeletonRow({ delay }: { delay: number }) {
   return (
@@ -47,7 +47,7 @@ function SkeletonRow({ delay }: { delay: number }) {
         />
       </div>
     </div>
-  )
+  );
 }
 
 export function SearchLoadingState() {
@@ -57,5 +57,5 @@ export function SearchLoadingState() {
         <SkeletonRow key={idx} delay={idx * 0.1} />
       ))}
     </div>
-  )
+  );
 }

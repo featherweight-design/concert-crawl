@@ -1,17 +1,17 @@
-'use client'
-import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+'use client';
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url';
 
-import { useState, useRef, useTransition, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useState, useRef, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type {
   ApiProvider,
   PlatformProbeResult,
   VenueGuide,
   VenuePlatform,
   VenueWithCrawlHealth,
-} from '@concert-crawl/types'
-import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types'
+} from '@concert-crawl/types';
+import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types';
 import {
   updateVenue,
   pauseVenue,
@@ -19,35 +19,35 @@ import {
   setVenueFeatured,
   generateVenueAbout,
   probeVenuePlatform,
-} from '@/lib/actions/venues'
+} from '@/lib/actions/venues';
 import {
   AdminButton,
   MonoLabel,
   StatusBadge,
   RelTime,
   SectionHead,
-} from '@/components/admin/primitives'
-import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock'
-import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge'
-import { deriveVenueStatus } from '@/lib/admin/venue-status'
+} from '@/components/admin/primitives';
+import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
+import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
+import { deriveVenueStatus } from '@/lib/admin/venue-status';
 import {
   IdentityArt,
   ia_getInitials,
   ia_isDark,
   identityFor,
-} from '@/components/consumer/identity-art/IdentityArt'
-import { DeleteVenueConfirm } from './DeleteVenueConfirm'
-import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl'
-import { RemoveVenueControl } from './remove-venue-control/RemoveVenueControl'
-import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+} from '@/components/consumer/identity-art/IdentityArt';
+import { DeleteVenueConfirm } from './DeleteVenueConfirm';
+import { CrawlPauseControl } from './crawl-pause-control/CrawlPauseControl';
+import { RemoveVenueControl } from './remove-venue-control/RemoveVenueControl';
+import { WAIT_UNTIL_VALUES } from '@/components/admin/definitions/constants';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 import {
   GenerateField,
   type GenerateFieldState,
   type GenerateFieldResult,
-} from './generate-field/GenerateField'
-import { CrawlTriggerButton } from './crawl-trigger-button/CrawlTriggerButton'
-import { usePageTitle } from '@/components/admin/shell/PageTitleContext'
+} from './generate-field/GenerateField';
+import { CrawlTriggerButton } from './crawl-trigger-button/CrawlTriggerButton';
+import { usePageTitle } from '@/components/admin/shell/PageTitleContext';
 import {
   ExternalLink,
   RefreshCw,
@@ -59,7 +59,7 @@ import {
   Loader2,
   ChevronRight,
   Sparkles,
-} from 'lucide-react'
+} from 'lucide-react';
 
 function slugify(name: string): string {
   return name
@@ -69,22 +69,22 @@ function slugify(name: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
-    .slice(0, 60)
+    .slice(0, 60);
 }
 
 function strategyLabel(strategy: string | null): string {
-  if (strategy === 'structured_data') return 'structured'
-  if (strategy === 'llm') return 'llm'
-  if (strategy === 'manual') return 'manual'
-  return 'auto'
+  if (strategy === 'structured_data') return 'structured';
+  if (strategy === 'llm') return 'llm';
+  if (strategy === 'manual') return 'manual';
+  return 'auto';
 }
 
 function strategyKind(
   strategy: string | null,
 ): 'signal' | 'accent' | 'neutral' {
-  if (strategy === 'structured_data') return 'signal'
-  if (strategy === 'llm') return 'accent'
-  return 'neutral'
+  if (strategy === 'structured_data') return 'signal';
+  if (strategy === 'llm') return 'accent';
+  return 'neutral';
 }
 
 // Platform probe (#665) — single-POST status machine, mirroring
@@ -93,26 +93,26 @@ type ProbeStatus =
   | { kind: 'idle' }
   | { kind: 'pending' }
   | { kind: 'done'; result: PlatformProbeResult }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string };
 
 const probeReasonLabel = (
   reason: 'missing_config' | 'fetch_error' | 'schema_error',
 ): string => {
   const reasons =
-    ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe.reasons
-  if (reason === 'missing_config') return reasons.missingConfig
-  if (reason === 'schema_error') return reasons.schemaError
-  return reasons.fetchError
-}
+    ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe.reasons;
+  if (reason === 'missing_config') return reasons.missingConfig;
+  if (reason === 'schema_error') return reasons.schemaError;
+  return reasons.fetchError;
+};
 
 // ── VD Primitives ─────────────────────────────────────────────
 
 interface VDSectionProps {
-  eyebrow: string
-  title: string
-  subtitle?: React.ReactNode
-  danger?: boolean
-  children: React.ReactNode
+  eyebrow: string;
+  title: string;
+  subtitle?: React.ReactNode;
+  danger?: boolean;
+  children: React.ReactNode;
 }
 
 function VDSection({
@@ -174,22 +174,22 @@ function VDSection({
       </div>
       <div style={{ padding: 22 }}>{children}</div>
     </div>
-  )
+  );
 }
 
 interface VDFieldProps {
-  label: string
-  htmlFor: string
-  description?: React.ReactNode
-  hint?: React.ReactNode
-  labelRight?: React.ReactNode
-  error?: string
-  children: React.ReactNode
+  label: string;
+  htmlFor: string;
+  description?: React.ReactNode;
+  hint?: React.ReactNode;
+  labelRight?: React.ReactNode;
+  error?: string;
+  children: React.ReactNode;
   // For composite controls (e.g. a segmented toggle) where `htmlFor` points
   // at a `role="group"` container rather than a single focusable input.
   // Renders the label as a non-interactive `<span id={`${htmlFor}-label`}>`
   // so the group can reference it via aria-labelledby.
-  labelAs?: 'label' | 'group'
+  labelAs?: 'label' | 'group';
 }
 
 function VDField({
@@ -208,7 +208,7 @@ function VDField({
     fontWeight: 700,
     letterSpacing: '-0.005em',
     color: 'var(--fg)',
-  }
+  };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div
@@ -272,25 +272,25 @@ function VDField({
         </div>
       )}
     </div>
-  )
+  );
 }
 
 interface VDInputProps {
-  id: string
-  type?: string
-  value?: string | number
-  defaultValue?: string | number
-  placeholder?: string
-  disabled?: boolean
-  hasError?: boolean
-  min?: number
-  max?: number
-  step?: number
-  list?: string
-  inputRef?: React.RefObject<HTMLInputElement | null>
-  onChange?: React.ChangeEventHandler<HTMLInputElement>
-  onBlur?: React.FocusEventHandler<HTMLInputElement>
-  style?: React.CSSProperties
+  id: string;
+  type?: string;
+  value?: string | number;
+  defaultValue?: string | number;
+  placeholder?: string;
+  disabled?: boolean;
+  hasError?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  list?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onChange?: React.ChangeEventHandler<HTMLInputElement>;
+  onBlur?: React.FocusEventHandler<HTMLInputElement>;
+  style?: React.CSSProperties;
 }
 
 function VDInput({
@@ -310,17 +310,17 @@ function VDInput({
   onBlur,
   style,
 }: VDInputProps) {
-  const [focused, setFocused] = useState(false)
+  const [focused, setFocused] = useState(false);
   const borderColor = hasError
     ? 'var(--danger)'
     : focused
       ? 'var(--signal)'
-      : 'var(--border-strong)'
+      : 'var(--border-strong)';
   const ring = focused
     ? hasError
       ? '0 0 0 3px color-mix(in oklab, var(--danger) 18%, transparent)'
       : '0 0 0 3px color-mix(in oklab, var(--signal) 22%, transparent)'
-    : 'none'
+    : 'none';
 
   return (
     <input
@@ -340,8 +340,8 @@ function VDInput({
       onChange={onChange}
       onFocus={() => setFocused(true)}
       onBlur={(evt) => {
-        setFocused(false)
-        onBlur?.(evt)
+        setFocused(false);
+        onBlur?.(evt);
       }}
       style={{
         width: '100%',
@@ -363,19 +363,19 @@ function VDInput({
         ...style,
       }}
     />
-  )
+  );
 }
 
 interface VDSelectProps {
-  id: string
-  value: string
-  disabled?: boolean
-  onChange: React.ChangeEventHandler<HTMLSelectElement>
-  children: React.ReactNode
+  id: string;
+  value: string;
+  disabled?: boolean;
+  onChange: React.ChangeEventHandler<HTMLSelectElement>;
+  children: React.ReactNode;
 }
 
 function VDSelect({ id, value, disabled, onChange, children }: VDSelectProps) {
-  const [focused, setFocused] = useState(false)
+  const [focused, setFocused] = useState(false);
   return (
     <select
       id={id}
@@ -411,16 +411,16 @@ function VDSelect({ id, value, disabled, onChange, children }: VDSelectProps) {
     >
       {children}
     </select>
-  )
+  );
 }
 
 interface VDSegToggleProps {
-  options: { value: string; label: string }[]
-  value: string
-  onChange: (val: string) => void
-  disabled?: boolean
-  id?: string
-  ariaLabelledBy?: string
+  options: { value: string; label: string }[];
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  id?: string;
+  ariaLabelledBy?: string;
 }
 
 function VDSegToggle({
@@ -446,7 +446,7 @@ function VDSegToggle({
       }}
     >
       {options.map((opt) => {
-        const isActive = opt.value === value
+        const isActive = opt.value === value;
         return (
           <button
             key={opt.value}
@@ -469,10 +469,10 @@ function VDSegToggle({
           >
             {opt.label}
           </button>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 // ── Other local helpers ───────────────────────────────────────
@@ -483,105 +483,105 @@ function RobotsHint({ allowed }: { allowed: boolean | null }) {
       <StatusBadge kind="neutral" variant="mono">
         {ADMIN_COPY.venueDetailsClient.robots.unchecked}
       </StatusBadge>
-    )
+    );
   if (allowed)
     return (
       <StatusBadge kind="success" variant="mono">
         {ADMIN_COPY.venueDetailsClient.robots.allowed}
       </StatusBadge>
-    )
+    );
   return (
     <StatusBadge kind="danger" variant="mono">
       {ADMIN_COPY.venueDetailsClient.robots.blocked}
     </StatusBadge>
-  )
+  );
 }
 
 // ── Main component ───────────────────────────────────────────
 
 interface Props {
-  venue: VenueWithCrawlHealth
+  venue: VenueWithCrawlHealth;
   /** #764 first-timer guide draft, fetched server-side alongside the venue. */
-  guide?: VenueGuide
+  guide?: VenueGuide;
   /** True when that fetch failed — authoring is disabled so an empty fallback
       draft can't be saved over real chips. */
-  guideLoadFailed?: boolean
+  guideLoadFailed?: boolean;
 }
 
 const EMPTY_GUIDE: VenueGuide = {
   chips: [],
   insiderTip: null,
   publishedAt: null,
-}
+};
 
 export function VenueDetailsClient({
   venue,
   guide = EMPTY_GUIDE,
   guideLoadFailed = false,
 }: Props) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
-  const { setPageTitle } = usePageTitle()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const { setPageTitle } = usePageTitle();
 
   useEffect(() => {
-    setPageTitle(venue.name)
-    return () => setPageTitle(null)
-  }, [venue.name, setPageTitle])
+    setPageTitle(venue.name);
+    return () => setPageTitle(null);
+  }, [venue.name, setPageTitle]);
 
   // Form refs (uncontrolled inputs)
-  const nameRef = useRef<HTMLInputElement>(null)
-  const slugRef = useRef<HTMLInputElement>(null)
-  const websiteUrlRef = useRef<HTMLInputElement>(null)
-  const cityRef = useRef<HTMLInputElement>(null)
-  const addressRef = useRef<HTMLInputElement>(null)
-  const crawlDelayRef = useRef<HTMLInputElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
+  const websiteUrlRef = useRef<HTMLInputElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const crawlDelayRef = useRef<HTMLInputElement>(null);
 
   // Controlled state
-  const [nameVal, setNameVal] = useState(venue.name)
-  const [slugVal, setSlugVal] = useState(venue.slug)
-  const [urlVal, setUrlVal] = useState(venue.websiteUrl)
-  const [cityVal, setCityVal] = useState(venue.city)
-  const [addressVal, setAddressVal] = useState(venue.address ?? '')
-  const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil)
-  const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs)
+  const [nameVal, setNameVal] = useState(venue.name);
+  const [slugVal, setSlugVal] = useState(venue.slug);
+  const [urlVal, setUrlVal] = useState(venue.websiteUrl);
+  const [cityVal, setCityVal] = useState(venue.city);
+  const [addressVal, setAddressVal] = useState(venue.address ?? '');
+  const [waitUntilVal, setWaitUntilVal] = useState(venue.crawlWaitUntil);
+  const [crawlDelayVal, setCrawlDelayVal] = useState(venue.crawlDelayMs);
   const [waitForSelectorVal, setWaitForSelectorVal] = useState(
     venue.crawlWaitForSelector ?? '',
-  )
+  );
   const [ticketVendorVal, setTicketVendorVal] = useState<string | null>(
     venue.ticketVendor ?? null,
-  )
-  const [priceUrlVal, setPriceUrlVal] = useState(venue.priceUrl ?? '')
+  );
+  const [priceUrlVal, setPriceUrlVal] = useState(venue.priceUrl ?? '');
   const [crawlModeVal, setCrawlModeVal] = useState<'http' | 'browser' | null>(
     venue.crawlMode ?? null,
-  )
+  );
   const [extractionStrategyVal, setExtractionStrategyVal] = useState<
     'structured_data' | 'llm' | 'manual' | null
-  >(venue.extractionStrategy ?? null)
+  >(venue.extractionStrategy ?? null);
   const [platformVal, setPlatformVal] = useState<VenuePlatform | null>(
     venue.platform ?? null,
-  )
+  );
   const [platformVenueIdVal, setPlatformVenueIdVal] = useState(
     venue.platformVenueId ?? '',
-  )
+  );
   const [apiProviderVal, setApiProviderVal] = useState<ApiProvider | null>(
     venue.apiProvider ?? null,
-  )
+  );
   const [apiAccountIdVal, setApiAccountIdVal] = useState(
     venue.apiAccountId ?? '',
-  )
+  );
   const [debugCaptureHtmlVal, setDebugCaptureHtmlVal] = useState(
     venue.debugCaptureHtml,
-  )
+  );
   const [capacityVal, setCapacityVal] = useState<string>(
     venue.capacity != null ? String(venue.capacity) : '',
-  )
-  const [venueTypeVal, setVenueTypeVal] = useState(venue.venueType ?? '')
-  const [aboutVal, setAboutVal] = useState(venue.about ?? '')
+  );
+  const [venueTypeVal, setVenueTypeVal] = useState(venue.venueType ?? '');
+  const [aboutVal, setAboutVal] = useState(venue.about ?? '');
   const [neighborhoodVal, setNeighborhoodVal] = useState(
     venue.neighborhood ?? '',
-  )
-  const [slugManual, setSlugManual] = useState(true)
-  const [slugFocused, setSlugFocused] = useState(false)
+  );
+  const [slugManual, setSlugManual] = useState(true);
+  const [slugFocused, setSlugFocused] = useState(false);
   const dirtyFields: string[] = [
     ...(nameVal !== venue.name ? ['Name'] : []),
     ...(slugVal !== venue.slug ? ['Slug'] : []),
@@ -618,54 +618,55 @@ export function VenueDetailsClient({
     ...(venueTypeVal !== (venue.venueType ?? '') ? ['Type'] : []),
     ...(aboutVal !== (venue.about ?? '') ? ['About'] : []),
     ...(neighborhoodVal !== (venue.neighborhood ?? '') ? ['Neighborhood'] : []),
-  ]
-  const isDirty = dirtyFields.length > 0
+  ];
+  const isDirty = dirtyFields.length > 0;
   const browserGateDirty =
     (waitForSelectorVal.trim() || null) !== venue.crawlWaitForSelector ||
     crawlModeVal !== (venue.crawlMode ?? null) ||
     platformVal !== (venue.platform ?? null) ||
     platformVenueIdVal.trim() !== (venue.platformVenueId ?? '') ||
     apiProviderVal !== (venue.apiProvider ?? null) ||
-    apiAccountIdVal.trim() !== (venue.apiAccountId ?? '')
+    apiAccountIdVal.trim() !== (venue.apiAccountId ?? '');
 
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'error'
-  >('idle')
-  const [saveError, setSaveError] = useState<string | null>(null)
+  >('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{
-    slug?: string | undefined
-    platformVenueId?: string | undefined
-    apiAccountId?: string | undefined
-    crawlWaitForSelector?: string | undefined
-  }>({})
+    slug?: string | undefined;
+    platformVenueId?: string | undefined;
+    apiAccountId?: string | undefined;
+    crawlWaitForSelector?: string | undefined;
+  }>({});
 
   // Responsive breakpoint
-  const [isMobile, setIsMobile] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)')
-    setIsMobile(mq.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // Identity art preview state
-  const [artNamespace, setArtNamespace] = useState<'venue' | 'artist'>('venue')
-  const [artSeedNum, setArtSeedNum] = useState(0)
+  const [artNamespace, setArtNamespace] = useState<'venue' | 'artist'>('venue');
+  const [artSeedNum, setArtSeedNum] = useState(0);
   const artSeedStr =
-    artSeedNum === 0 ? venue.name : `${venue.name}·${artSeedNum}`
+    artSeedNum === 0 ? venue.name : `${venue.name}·${artSeedNum}`;
 
   // Generate-about state
-  const [generateState, setGenerateState] = useState<GenerateFieldState>('idle')
+  const [generateState, setGenerateState] =
+    useState<GenerateFieldState>('idle');
   const [generateResult, setGenerateResult] = useState<
     GenerateFieldResult | undefined
-  >()
-  const [generateError, setGenerateError] = useState<string | undefined>()
-  const [capacityGenerated, setCapacityGenerated] = useState(false)
-  const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false)
+  >();
+  const [generateError, setGenerateError] = useState<string | undefined>();
+  const [capacityGenerated, setCapacityGenerated] = useState(false);
+  const [neighborhoodGenerated, setNeighborhoodGenerated] = useState(false);
 
   // Platform probe state (#665)
-  const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' })
+  const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' });
 
   const runPlatformProbe = async () => {
     // An id-bearing platform without a venue ID can only ever come back
@@ -683,15 +684,15 @@ export function VenueDetailsClient({
             ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
               .requiredError,
         },
-      })
-      return
+      });
+      return;
     }
-    setProbeStatus({ kind: 'pending' })
+    setProbeStatus({ kind: 'pending' });
     try {
       const result = await probeVenuePlatform(venue.id, {
         platform: platformVal,
         platformVenueId: platformVenueIdVal.trim() || null,
-      })
+      });
       if (!result.success || !result.data) {
         setProbeStatus({
           kind: 'error',
@@ -699,98 +700,98 @@ export function VenueDetailsClient({
             result.error ??
             ADMIN_COPY.venueDetailsClient.fields.platformRouting.probe
               .requestFailed,
-        })
-        return
+        });
+        return;
       }
-      setProbeStatus({ kind: 'done', result: result.data })
+      setProbeStatus({ kind: 'done', result: result.data });
     } catch (err) {
-      console.error('probeVenuePlatform failed', err)
+      console.error('probeVenuePlatform failed', err);
       setProbeStatus({
         kind: 'error',
         message: err instanceof Error ? err.message : String(err),
-      })
+      });
     }
-  }
+  };
 
   async function handleGenerateAbout() {
-    setGenerateState('loading')
-    setGenerateError(undefined)
-    setGenerateResult(undefined)
+    setGenerateState('loading');
+    setGenerateError(undefined);
+    setGenerateResult(undefined);
     try {
-      const result = await generateVenueAbout(venue.id)
+      const result = await generateVenueAbout(venue.id);
       if (!result.success || !result.data) {
         setGenerateError(
           result.error ?? ADMIN_COPY.venueDetailsClient.errors.generationFailed,
-        )
-        setGenerateState('error')
-        return
+        );
+        setGenerateState('error');
+        return;
       }
-      const { capacity, venueType, neighborhood, about } = result.data
-      setGenerateResult({ content: about })
-      setGenerateState('review')
+      const { capacity, venueType, neighborhood, about } = result.data;
+      setGenerateResult({ content: about });
+      setGenerateState('review');
       // Pre-fill other fields
-      setCapacityVal(capacity != null ? String(capacity) : '')
-      setCapacityGenerated(true)
-      setVenueTypeVal(venueType)
-      setNeighborhoodVal(neighborhood)
-      setNeighborhoodGenerated(true)
+      setCapacityVal(capacity != null ? String(capacity) : '');
+      setCapacityGenerated(true);
+      setVenueTypeVal(venueType);
+      setNeighborhoodVal(neighborhood);
+      setNeighborhoodGenerated(true);
     } catch {
-      setGenerateError(ADMIN_COPY.venueDetailsClient.errors.networkError)
-      setGenerateState('error')
+      setGenerateError(ADMIN_COPY.venueDetailsClient.errors.networkError);
+      setGenerateState('error');
     }
   }
 
   function handleGenerateAccept(content: string) {
-    setAboutVal(content)
-    setGenerateState('accepted')
-    setTimeout(() => setGenerateState('idle'), 4000)
+    setAboutVal(content);
+    setGenerateState('accepted');
+    setTimeout(() => setGenerateState('idle'), 4000);
   }
 
   function handleGenerateDiscard() {
-    setGenerateState('idle')
-    setGenerateResult(undefined)
+    setGenerateState('idle');
+    setGenerateResult(undefined);
   }
 
-  const isDisabled = saveState === 'saving'
+  const isDisabled = saveState === 'saving';
 
   function handleDiscard() {
-    setNameVal(venue.name)
-    setSlugVal(venue.slug)
-    setUrlVal(venue.websiteUrl)
-    setCityVal(venue.city)
-    setAddressVal(venue.address ?? '')
-    setWaitUntilVal(venue.crawlWaitUntil)
-    setCrawlDelayVal(venue.crawlDelayMs)
-    setWaitForSelectorVal(venue.crawlWaitForSelector ?? '')
-    setTicketVendorVal(venue.ticketVendor ?? null)
-    setPriceUrlVal(venue.priceUrl ?? '')
-    setCrawlModeVal(venue.crawlMode ?? null)
-    setExtractionStrategyVal(venue.extractionStrategy ?? null)
-    setPlatformVal(venue.platform ?? null)
-    setPlatformVenueIdVal(venue.platformVenueId ?? '')
-    setApiProviderVal(venue.apiProvider ?? null)
-    setApiAccountIdVal(venue.apiAccountId ?? '')
-    setProbeStatus({ kind: 'idle' })
-    setDebugCaptureHtmlVal(venue.debugCaptureHtml)
-    setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
-    setVenueTypeVal(venue.venueType ?? '')
-    setAboutVal(venue.about ?? '')
-    setNeighborhoodVal(venue.neighborhood ?? '')
-    setSaveState('idle')
-    setSaveError(null)
-    setFieldErrors({})
-    if (nameRef.current) nameRef.current.value = venue.name
-    if (slugRef.current) slugRef.current.value = venue.slug
-    if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl
-    if (cityRef.current) cityRef.current.value = venue.city
-    if (addressRef.current) addressRef.current.value = venue.address ?? ''
+    setNameVal(venue.name);
+    setSlugVal(venue.slug);
+    setUrlVal(venue.websiteUrl);
+    setCityVal(venue.city);
+    setAddressVal(venue.address ?? '');
+    setWaitUntilVal(venue.crawlWaitUntil);
+    setCrawlDelayVal(venue.crawlDelayMs);
+    setWaitForSelectorVal(venue.crawlWaitForSelector ?? '');
+    setTicketVendorVal(venue.ticketVendor ?? null);
+    setPriceUrlVal(venue.priceUrl ?? '');
+    setCrawlModeVal(venue.crawlMode ?? null);
+    setExtractionStrategyVal(venue.extractionStrategy ?? null);
+    setPlatformVal(venue.platform ?? null);
+    setPlatformVenueIdVal(venue.platformVenueId ?? '');
+    setApiProviderVal(venue.apiProvider ?? null);
+    setApiAccountIdVal(venue.apiAccountId ?? '');
+    setProbeStatus({ kind: 'idle' });
+    setDebugCaptureHtmlVal(venue.debugCaptureHtml);
+    setCapacityVal(venue.capacity != null ? String(venue.capacity) : '');
+    setVenueTypeVal(venue.venueType ?? '');
+    setAboutVal(venue.about ?? '');
+    setNeighborhoodVal(venue.neighborhood ?? '');
+    setSaveState('idle');
+    setSaveError(null);
+    setFieldErrors({});
+    if (nameRef.current) nameRef.current.value = venue.name;
+    if (slugRef.current) slugRef.current.value = venue.slug;
+    if (websiteUrlRef.current) websiteUrlRef.current.value = venue.websiteUrl;
+    if (cityRef.current) cityRef.current.value = venue.city;
+    if (addressRef.current) addressRef.current.value = venue.address ?? '';
     if (crawlDelayRef.current)
-      crawlDelayRef.current.value = String(venue.crawlDelayMs)
+      crawlDelayRef.current.value = String(venue.crawlDelayMs);
   }
 
   async function handleSave() {
-    setSaveError(null)
-    setFieldErrors({})
+    setSaveError(null);
+    setFieldErrors({});
 
     // Client-side guard mirroring the API's Zod refine: an id-bearing
     // platform without a venue ID is unroutable, so block the save inline.
@@ -802,116 +803,116 @@ export function VenueDetailsClient({
         platformVenueId:
           ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
             .requiredError,
-      })
-      setSaveState('error')
-      return
+      });
+      setSaveState('error');
+      return;
     }
 
-    setSaveState('saving')
+    setSaveState('saving');
 
-    const formData = new FormData()
-    formData.set('name', nameVal.trim())
-    formData.set('slug', slugVal.trim())
-    formData.set('websiteUrl', urlVal.trim())
-    formData.set('city', cityVal.trim() || 'Denver')
-    formData.set('address', addressVal.trim())
-    formData.set('crawlWaitUntil', waitUntilVal)
-    formData.set('crawlDelayMs', String(crawlDelayVal))
+    const formData = new FormData();
+    formData.set('name', nameVal.trim());
+    formData.set('slug', slugVal.trim());
+    formData.set('websiteUrl', urlVal.trim());
+    formData.set('city', cityVal.trim() || 'Denver');
+    formData.set('address', addressVal.trim());
+    formData.set('crawlWaitUntil', waitUntilVal);
+    formData.set('crawlDelayMs', String(crawlDelayVal));
     // `active` is left out on purpose: Pause and Activate own it. Resending the
     // value this page loaded with would let a stale tab reactivate a venue
     // paused or removed since.
     if (ticketVendorVal !== null) {
-      formData.set('ticketVendor', ticketVendorVal)
+      formData.set('ticketVendor', ticketVendorVal);
     }
-    formData.set('extractionStrategy', extractionStrategyVal ?? '')
+    formData.set('extractionStrategy', extractionStrategyVal ?? '');
     // The API re-checks the browser-mode selector rule whenever any of these
     // fields is in the body, so send them only when one changed. Otherwise a
     // pre-existing browser venue without a selector could never save anything.
     if (browserGateDirty) {
-      formData.set('crawlWaitForSelector', waitForSelectorVal.trim())
-      formData.set('crawlMode', crawlModeVal ?? '')
-      formData.set('platform', platformVal ?? '')
-      formData.set('platformVenueId', platformVenueIdVal.trim())
-      formData.set('apiProvider', apiProviderVal ?? '')
-      formData.set('apiAccountId', apiAccountIdVal.trim())
+      formData.set('crawlWaitForSelector', waitForSelectorVal.trim());
+      formData.set('crawlMode', crawlModeVal ?? '');
+      formData.set('platform', platformVal ?? '');
+      formData.set('platformVenueId', platformVenueIdVal.trim());
+      formData.set('apiProvider', apiProviderVal ?? '');
+      formData.set('apiAccountId', apiAccountIdVal.trim());
     }
-    formData.set('debugCaptureHtml', String(debugCaptureHtmlVal))
-    formData.set('capacity', capacityVal.trim())
-    formData.set('venueType', venueTypeVal.trim())
-    formData.set('about', aboutVal.trim())
-    formData.set('neighborhood', neighborhoodVal.trim())
-    formData.set('priceUrl', priceUrlVal.trim())
+    formData.set('debugCaptureHtml', String(debugCaptureHtmlVal));
+    formData.set('capacity', capacityVal.trim());
+    formData.set('venueType', venueTypeVal.trim());
+    formData.set('about', aboutVal.trim());
+    formData.set('neighborhood', neighborhoodVal.trim());
+    formData.set('priceUrl', priceUrlVal.trim());
 
     try {
-      const result = await updateVenue(venue.id, formData)
+      const result = await updateVenue(venue.id, formData);
       if (!result.success) {
         if (result.field === 'slug') {
           setFieldErrors({
             slug:
               result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
-          })
+          });
         } else if (result.field === 'apiAccountId') {
           setFieldErrors({
             apiAccountId:
               result.error ??
               ADMIN_COPY.venueDetailsClient.fields.apiAccountId.errorRequired,
-          })
+          });
         } else if (
           (result.field === 'crawlWaitForSelector' ||
             result.field === 'platformVenueId') &&
           result.error !== undefined
         ) {
           // The API names the field and the rule; mark the input with it.
-          setFieldErrors({ [result.field]: result.error })
+          setFieldErrors({ [result.field]: result.error });
         } else {
           setSaveError(
             result.error ?? ADMIN_COPY.venueDetailsClient.errors.saveFailed,
-          )
+          );
         }
-        setSaveState('error')
-        return
+        setSaveState('error');
+        return;
       }
-      setSaveState('saved')
+      setSaveState('saved');
       setTimeout(() => {
-        setSaveState('idle')
-        router.refresh()
-      }, 1200)
+        setSaveState('idle');
+        router.refresh();
+      }, 1200);
     } catch {
-      setSaveError(ADMIN_COPY.venueDetailsClient.errors.unexpected)
-      setSaveState('error')
+      setSaveError(ADMIN_COPY.venueDetailsClient.errors.unexpected);
+      setSaveState('error');
     }
   }
 
   function handlePauseToggle() {
     startTransition(async () => {
       if (venue.active) {
-        await pauseVenue(venue.id)
+        await pauseVenue(venue.id);
       } else {
-        await activateVenue(venue.id)
+        await activateVenue(venue.id);
       }
-      router.refresh()
-    })
+      router.refresh();
+    });
   }
 
   function handleFeaturedToggle() {
     startTransition(async () => {
-      await setVenueFeatured(venue.id, !venue.featured)
-      router.refresh()
-    })
+      await setVenueFeatured(venue.id, !venue.featured);
+      router.refresh();
+    });
   }
 
   function handleStatusChange(newStatus: 'active' | 'paused') {
     startTransition(async () => {
       if (newStatus === 'active') {
-        await activateVenue(venue.id)
+        await activateVenue(venue.id);
       } else {
-        await pauseVenue(venue.id)
+        await pauseVenue(venue.id);
       }
-      router.refresh()
-    })
+      router.refresh();
+    });
   }
 
-  const { crawlHealth } = venue
+  const { crawlHealth } = venue;
 
   return (
     <div
@@ -950,7 +951,7 @@ export function VenueDetailsClient({
 
       {/* Venue header summary card */}
       {(() => {
-        const venueStatus = deriveVenueStatus(venue)
+        const venueStatus = deriveVenueStatus(venue);
         return (
           <div
             style={{
@@ -1090,7 +1091,7 @@ export function VenueDetailsClient({
               )}
             </div>
           </div>
-        )
+        );
       })()}
 
       {/* Error banner */}
@@ -1140,12 +1141,12 @@ export function VenueDetailsClient({
                   defaultValue={venue.name}
                   disabled={isDisabled}
                   onChange={(evt) => {
-                    const val = evt.target.value
-                    setNameVal(val)
+                    const val = evt.target.value;
+                    setNameVal(val);
                     if (!slugManual && slugRef.current) {
-                      const generated = slugify(val)
-                      slugRef.current.value = generated
-                      setSlugVal(generated)
+                      const generated = slugify(val);
+                      slugRef.current.value = generated;
+                      setSlugVal(generated);
                     }
                   }}
                 />
@@ -1214,9 +1215,9 @@ export function VenueDetailsClient({
                     defaultValue={venue.slug}
                     disabled={isDisabled}
                     onChange={(evt) => {
-                      setSlugVal(evt.target.value)
-                      setSlugManual(true)
-                      setFieldErrors((prev) => ({ ...prev, slug: undefined }))
+                      setSlugVal(evt.target.value);
+                      setSlugManual(true);
+                      setFieldErrors((prev) => ({ ...prev, slug: undefined }));
                     }}
                     style={{
                       all: 'unset',
@@ -1235,14 +1236,14 @@ export function VenueDetailsClient({
                     type="button"
                     onClick={() => {
                       if (nameRef.current && slugRef.current) {
-                        const generated = slugify(nameRef.current.value)
-                        slugRef.current.value = generated
-                        setSlugVal(generated)
-                        setSlugManual(false)
+                        const generated = slugify(nameRef.current.value);
+                        slugRef.current.value = generated;
+                        setSlugVal(generated);
+                        setSlugManual(false);
                         setFieldErrors((prev) => ({
                           ...prev,
                           slug: undefined,
-                        }))
+                        }));
                       }
                     }}
                     disabled={isDisabled}
@@ -1329,7 +1330,7 @@ export function VenueDetailsClient({
                 htmlFor="venue-status-toggle"
               >
                 {(() => {
-                  const currentStatus = deriveVenueStatus(venue)
+                  const currentStatus = deriveVenueStatus(venue);
                   const statuses = [
                     {
                       value: 'active' as const,
@@ -1347,7 +1348,7 @@ export function VenueDetailsClient({
                         ADMIN_COPY.venueDetailsClient.fields.status.blocked,
                       dot: 'var(--danger)',
                     },
-                  ]
+                  ];
                   return (
                     <div style={{ alignSelf: 'flex-start' }}>
                       <div
@@ -1365,8 +1366,8 @@ export function VenueDetailsClient({
                         }}
                       >
                         {statuses.map(({ value, label, dot }) => {
-                          const isActive = currentStatus === value
-                          const isBlocked = value === 'blocked'
+                          const isActive = currentStatus === value;
+                          const isBlocked = value === 'blocked';
                           return (
                             <button
                               key={value}
@@ -1416,11 +1417,11 @@ export function VenueDetailsClient({
                               />
                               {label}
                             </button>
-                          )
+                          );
                         })}
                       </div>
                     </div>
-                  )
+                  );
                 })()}
               </VDField>
             </div>
@@ -1567,18 +1568,18 @@ export function VenueDetailsClient({
                   onChange={(evt) => {
                     const nextPlatform = isVenuePlatform(evt.target.value)
                       ? evt.target.value
-                      : null
-                    setPlatformVal(nextPlatform)
+                      : null;
+                    setPlatformVal(nextPlatform);
                     // Switching to a platform that takes no venue ID drops a
                     // stale one rather than leaving it in a hidden field.
                     if (!platformRequiresVenueId(nextPlatform)) {
-                      setPlatformVenueIdVal('')
+                      setPlatformVenueIdVal('');
                     }
-                    setProbeStatus({ kind: 'idle' })
+                    setProbeStatus({ kind: 'idle' });
                     setFieldErrors((prev) => ({
                       ...prev,
                       platformVenueId: undefined,
-                    }))
+                    }));
                   }}
                 >
                   <option value="">
@@ -1641,14 +1642,14 @@ export function VenueDetailsClient({
                     disabled={isDisabled}
                     hasError={Boolean(fieldErrors.platformVenueId)}
                     onChange={(evt) => {
-                      setPlatformVenueIdVal(evt.target.value)
+                      setPlatformVenueIdVal(evt.target.value);
                       // A probe result describes the ID it was run against —
                       // editing the ID makes it stale
-                      setProbeStatus({ kind: 'idle' })
+                      setProbeStatus({ kind: 'idle' });
                       setFieldErrors((prev) => ({
                         ...prev,
                         platformVenueId: undefined,
-                      }))
+                      }));
                     }}
                     style={{ fontFamily: "'JetBrains Mono', monospace" }}
                   />
@@ -1755,14 +1756,14 @@ export function VenueDetailsClient({
                     // Map only supported option values so the union stays
                     // narrow; anything unexpected collapses to None.
                     const nextProvider: ApiProvider | null =
-                      evt.target.value === 'venuepilot' ? 'venuepilot' : null
-                    setApiProviderVal(nextProvider)
+                      evt.target.value === 'venuepilot' ? 'venuepilot' : null;
+                    setApiProviderVal(nextProvider);
                     if (nextProvider === null) {
-                      setApiAccountIdVal('')
+                      setApiAccountIdVal('');
                       setFieldErrors((prev) => ({
                         ...prev,
                         apiAccountId: undefined,
-                      }))
+                      }));
                     }
                   }}
                 >
@@ -1801,12 +1802,12 @@ export function VenueDetailsClient({
                       disabled={isDisabled}
                       hasError={Boolean(fieldErrors.apiAccountId)}
                       onChange={(evt) => {
-                        setApiAccountIdVal(evt.target.value)
+                        setApiAccountIdVal(evt.target.value);
                         if (fieldErrors.apiAccountId) {
                           setFieldErrors((prev) => ({
                             ...prev,
                             apiAccountId: undefined,
-                          }))
+                          }));
                         }
                       }}
                     />
@@ -1876,12 +1877,12 @@ export function VenueDetailsClient({
                     max={30000}
                     step={500}
                     onChange={(evt) => {
-                      const parsed = Number(evt.target.value)
+                      const parsed = Number(evt.target.value);
                       setCrawlDelayVal(
                         Number.isFinite(parsed) && Number.isInteger(parsed)
                           ? parsed
                           : NaN,
-                      )
+                      );
                     }}
                     style={{
                       borderTopRightRadius: 0,
@@ -2048,8 +2049,8 @@ export function VenueDetailsClient({
                     onChange={(val) => {
                       const match = WAIT_UNTIL_VALUES.find(
                         (option) => option === val,
-                      )
-                      if (match) setWaitUntilVal(match)
+                      );
+                      if (match) setWaitUntilVal(match);
                     }}
                     disabled={isDisabled}
                   />
@@ -2116,12 +2117,12 @@ export function VenueDetailsClient({
                   disabled={isDisabled}
                   hasError={Boolean(fieldErrors.crawlWaitForSelector)}
                   onChange={(evt) => {
-                    setWaitForSelectorVal(evt.target.value)
+                    setWaitForSelectorVal(evt.target.value);
                     if (fieldErrors.crawlWaitForSelector) {
                       setFieldErrors((prev) => ({
                         ...prev,
                         crawlWaitForSelector: undefined,
-                      }))
+                      }));
                     }
                   }}
                   style={{ fontFamily: "'JetBrains Mono', monospace" }}
@@ -2320,8 +2321,8 @@ export function VenueDetailsClient({
                 disabled={isDisabled}
                 min={1}
                 onChange={(evt) => {
-                  setCapacityVal(evt.target.value)
-                  setCapacityGenerated(false)
+                  setCapacityVal(evt.target.value);
+                  setCapacityGenerated(false);
                 }}
               />
               {capacityGenerated && (
@@ -2374,8 +2375,8 @@ export function VenueDetailsClient({
                 }
                 disabled={isDisabled}
                 onChange={(evt) => {
-                  setNeighborhoodVal(evt.target.value)
-                  setNeighborhoodGenerated(false)
+                  setNeighborhoodVal(evt.target.value);
+                  setNeighborhoodGenerated(false);
                 }}
               />
               {neighborhoodGenerated && (
@@ -2470,9 +2471,9 @@ export function VenueDetailsClient({
                     preview mirrors the venues index, which keeps its own
                     overlay — venue imagery is a separate handoff. */}
                 {(() => {
-                  const identity = identityFor(artSeedStr, artNamespace)
-                  const dark = ia_isDark(identity.palette.bg)
-                  const initials = ia_getInitials(artSeedStr, 2)
+                  const identity = identityFor(artSeedStr, artNamespace);
+                  const dark = ia_isDark(identity.palette.bg);
+                  const initials = ia_getInitials(artSeedStr, 2);
                   return (
                     <div
                       style={{
@@ -2495,7 +2496,7 @@ export function VenueDetailsClient({
                     >
                       {initials}
                     </div>
-                  )
+                  );
                 })()}
               </div>
 
@@ -2871,5 +2872,5 @@ export function VenueDetailsClient({
         </div>
       )}
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
+import { useState } from 'react';
 import {
   ExternalLink,
   Check,
@@ -11,31 +11,31 @@ import {
   X,
   LayoutGrid,
   Copy,
-} from 'lucide-react'
-import { MonoLabel } from '@/components/admin/primitives'
-import type { FeedbackItem } from './FeedbackRow'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+} from 'lucide-react';
+import { MonoLabel } from '@/components/admin/primitives';
+import type { FeedbackItem } from './FeedbackRow';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink';
 
-const REPO = 'featherweight-design/concert-crawl'
-const MT_TIMEZONE = 'America/Denver'
+const REPO = 'featherweight-design/concert-crawl';
+const MT_TIMEZONE = 'America/Denver';
 
 interface FeedbackExpandedProps {
-  item: FeedbackItem
-  onStatusChange: (id: string, status: FeedbackItem['status']) => void
-  onNotesChange: (id: string, notes: string) => void
+  item: FeedbackItem;
+  onStatusChange: (id: string, status: FeedbackItem['status']) => void;
+  onNotesChange: (id: string, notes: string) => void;
 }
 
 function buildGitHubIssueUrl(item: FeedbackItem): string {
-  const meta = item.metadata ?? {}
+  const meta = item.metadata ?? {};
   const route = (() => {
     try {
-      return new URL(item.pageUrl).pathname
+      return new URL(item.pageUrl).pathname;
     } catch {
-      return item.pageUrl
+      return item.pageUrl;
     }
-  })()
-  const title = `[${item.category}] ${item.message.slice(0, 72)}`
+  })();
+  const title = `[${item.category}] ${item.message.slice(0, 72)}`;
   const body = [
     `**User feedback:**`,
     item.message,
@@ -49,9 +49,9 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
     `- Submitted: ${new Date(item.createdAt).toISOString()}`,
   ]
     .filter(Boolean)
-    .join('\n')
+    .join('\n');
 
-  return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(`type: bug,source: beta-feedback,phase: beta,priority: normal`)}`
+  return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${encodeURIComponent(`type: bug,source: beta-feedback,phase: beta,priority: normal`)}`;
 }
 
 function formatSubmitted(iso: string): string {
@@ -68,7 +68,7 @@ function formatSubmitted(iso: string): string {
         timeZone: MT_TIMEZONE,
       })
       .replace(',', '') + ' MT'
-  )
+  );
 }
 
 const CONTEXT_ROW_STYLE: React.CSSProperties = {
@@ -80,7 +80,7 @@ const CONTEXT_ROW_STYLE: React.CSSProperties = {
   color: 'var(--fg-subtle)',
   flexShrink: 0,
   paddingTop: 1,
-}
+};
 
 const CONTEXT_VALUE_STYLE: React.CSSProperties = {
   flex: 1,
@@ -88,55 +88,55 @@ const CONTEXT_VALUE_STYLE: React.CSSProperties = {
   color: 'var(--fg)',
   wordBreak: 'break-all',
   lineHeight: 1.4,
-}
+};
 
 export function FeedbackExpanded({
   item,
   onStatusChange,
   onNotesChange,
 }: FeedbackExpandedProps) {
-  const [notes, setNotes] = useState(item.adminNotes ?? '')
-  const [isSaving, setIsSaving] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  const isUnread = item.status === 'unread'
-  const isFlagged = item.status === 'flagged'
+  const [notes, setNotes] = useState(item.adminNotes ?? '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const isUnread = item.status === 'unread';
+  const isFlagged = item.status === 'flagged';
 
   const handleNotesBlur = async () => {
-    if (notes === (item.adminNotes ?? '')) return
-    setIsSaving(true)
+    if (notes === (item.adminNotes ?? '')) return;
+    setIsSaving(true);
     try {
-      await onNotesChange(item.id, notes)
+      await onNotesChange(item.id, notes);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleCopyIssueUrl = async () => {
-    if (!item.issueUrl) return
+    if (!item.issueUrl) return;
     try {
-      await navigator.clipboard.writeText(item.issueUrl)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 1500)
+      await navigator.clipboard.writeText(item.issueUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1500);
     } catch {
       // clipboard write unavailable in this context
     }
-  }
+  };
 
-  const meta = item.metadata ?? {}
+  const meta = item.metadata ?? {};
   const screenshot =
     (meta['screenshot'] as string | null | undefined) ??
-    (meta['screenshotDataUrl'] as string | null | undefined)
+    (meta['screenshotDataUrl'] as string | null | undefined);
 
   const route = (() => {
     try {
-      return new URL(item.pageUrl).pathname
+      return new URL(item.pageUrl).pathname;
     } catch {
-      return item.pageUrl
+      return item.pageUrl;
     }
-  })()
+  })();
 
-  const ghUrl = buildGitHubIssueUrl(item)
-  const handle = `@${item.userId.slice(0, 10)}`
+  const ghUrl = buildGitHubIssueUrl(item);
+  const handle = `@${item.userId.slice(0, 10)}`;
 
   const contextRows: { label: string; value: string | null | undefined }[] = [
     {
@@ -163,7 +163,7 @@ export function FeedbackExpanded({
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.userId,
       value: item.userId,
     },
-  ]
+  ];
 
   return (
     <div
@@ -568,7 +568,7 @@ export function FeedbackExpanded({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function actionButtonStyle(
@@ -587,21 +587,21 @@ function actionButtonStyle(
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     background: 'transparent',
-  }
+  };
   if (variant === 'outline')
     return {
       ...base,
       color: 'var(--fg)',
       border: '1px solid var(--border-strong)',
-    }
+    };
   if (variant === 'success')
     return {
       ...base,
       color: 'var(--success)',
       border: '1px solid rgba(47,122,77,0.3)',
       background: 'rgba(47,122,77,0.08)',
-    }
-  return { ...base, color: 'var(--fg-muted)', border: '1px solid transparent' }
+    };
+  return { ...base, color: 'var(--fg-muted)', border: '1px solid transparent' };
 }
 
 function actionLinkStyle(_variant: 'ghost'): React.CSSProperties {
@@ -621,5 +621,5 @@ function actionLinkStyle(_variant: 'ghost'): React.CSSProperties {
     color: 'var(--fg-muted)',
     border: '1px solid transparent',
     textDecoration: 'none',
-  }
+  };
 }

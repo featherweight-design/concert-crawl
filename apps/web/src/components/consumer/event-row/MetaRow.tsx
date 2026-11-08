@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { RowMetaChip } from './RowMetaChip'
-import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { EVENT_ROW_COPY } from './definitions/copy'
-import { fitChips } from './lib/fit-chips'
-import type { ChipSpec } from './lib/row-chips'
+import { useEffect, useRef, useState } from 'react';
+import { RowMetaChip } from './RowMetaChip';
+import { SpotifyLogo } from '@/components/brand/spotify-logo';
+import { EVENT_ROW_COPY } from './definitions/copy';
+import { fitChips } from './lib/fit-chips';
+import type { ChipSpec } from './lib/row-chips';
 
-const CHIP_GAP = 5
+const CHIP_GAP = 5;
 
 // The mark widens the chip, so the measure copy has to carry it too or the fit
 // pass sizes against a chip narrower than the one it renders.
 const chipMark = (chip: ChipSpec) =>
-  chip.mark === 'spotify' ? <SpotifyLogo size={11} /> : undefined
+  chip.mark === 'spotify' ? <SpotifyLogo size={11} /> : undefined;
 
 interface MetaRowProps {
-  chips: ChipSpec[]
+  chips: ChipSpec[];
   /** Rule 2's budget, applied before the measure pass ever runs. */
-  budget: number
-  className?: string
+  budget: number;
+  className?: string;
 }
 
 /**
@@ -37,75 +37,76 @@ interface MetaRowProps {
  * content-sized span, which never overflows.
  */
 export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
-  const boxRef = useRef<HTMLDivElement>(null)
-  const measureRef = useRef<HTMLDivElement>(null)
-  const collapsedRef = useRef<HTMLSpanElement>(null)
-  const [visibleCount, setVisibleCount] = useState(chips.length)
-  const [paired, setPaired] = useState(true)
+  const boxRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const collapsedRef = useRef<HTMLSpanElement>(null);
+  const [visibleCount, setVisibleCount] = useState(chips.length);
+  const [paired, setPaired] = useState(true);
 
-  const candidates = chips.slice(0, budget)
+  const candidates = chips.slice(0, budget);
   const pairIndex = candidates.findIndex(
     (chip) => chip.secondaryLabel !== undefined,
-  )
-  const pairChip = pairIndex === -1 ? undefined : candidates[pairIndex]
+  );
+  const pairChip = pairIndex === -1 ? undefined : candidates[pairIndex];
   // Re-measure when the chip set itself changes, not just when the box resizes.
   // The label is part of the signature because a chip can keep its key and
   // still change width — the freshness chip's relative time does exactly that.
   const chipKeys = candidates
     .map((chip) => `${chip.key}:${chip.label}:${chip.secondaryLabel ?? ''}`)
-    .join('|')
+    .join('|');
 
   useEffect(() => {
-    const box = boxRef.current
-    const measure = measureRef.current
-    if (!box || !measure) return
+    const box = boxRef.current;
+    const measure = measureRef.current;
+    if (!box || !measure) return;
 
     const remeasure = () => {
       const pairedWidths = Array.from(measure.children).map(
         (child) => child.getBoundingClientRect().width,
-      )
-      const available = box.getBoundingClientRect().width
+      );
+      const available = box.getBoundingClientRect().width;
 
       if (fitChips(pairedWidths, available, CHIP_GAP) === pairedWidths.length) {
-        setPaired(true)
-        setVisibleCount(pairedWidths.length)
-        return
+        setPaired(true);
+        setVisibleCount(pairedWidths.length);
+        return;
       }
 
       // Collapsing costs half a genre; dropping costs a whole chip, so the
       // cheaper concession is tried first and the drop pass then runs against
       // the collapsed widths rather than the ones it just gave up on.
-      const collapsedWidth = collapsedRef.current?.getBoundingClientRect().width
+      const collapsedWidth =
+        collapsedRef.current?.getBoundingClientRect().width;
       const widths =
         collapsedWidth === undefined
           ? pairedWidths
           : pairedWidths.map((width, index) =>
               index === pairIndex ? collapsedWidth : width,
-            )
-      setPaired(false)
-      setVisibleCount(fitChips(widths, available, CHIP_GAP))
-    }
+            );
+      setPaired(false);
+      setVisibleCount(fitChips(widths, available, CHIP_GAP));
+    };
 
-    remeasure()
+    remeasure();
     // The first pass is what the row actually needs; live remeasurement is an
     // enhancement, so a runtime without ResizeObserver renders rather than
     // throws.
-    if (typeof ResizeObserver === 'undefined') return
+    if (typeof ResizeObserver === 'undefined') return;
     // Collapsing the pair changes the meta line's own height, so an unguarded
     // observer would re-fire on the mutation its own last pass caused. Only a
     // width change can change the answer, so only a width change re-runs it.
-    let lastWidth = box.getBoundingClientRect().width
+    let lastWidth = box.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
-      const width = box.getBoundingClientRect().width
-      if (width === lastWidth) return
-      lastWidth = width
-      remeasure()
-    })
-    observer.observe(box)
-    return () => observer.disconnect()
-  }, [chipKeys, pairIndex])
+      const width = box.getBoundingClientRect().width;
+      if (width === lastWidth) return;
+      lastWidth = width;
+      remeasure();
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [chipKeys, pairIndex]);
 
-  if (candidates.length === 0) return null
+  if (candidates.length === 0) return null;
 
   return (
     <div ref={boxRef} className={className} style={{ position: 'relative' }}>
@@ -115,7 +116,7 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
         style={{ gap: CHIP_GAP }}
       >
         {candidates.slice(0, visibleCount).map((chip) => {
-          const showsPair = paired && chip.secondaryLabel !== undefined
+          const showsPair = paired && chip.secondaryLabel !== undefined;
           return (
             <RowMetaChip
               key={chip.key}
@@ -130,7 +131,7 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
                   : undefined
               }
             />
-          )
+          );
         })}
       </div>
       <div
@@ -180,5 +181,5 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
         </span>
       ) : null}
     </div>
-  )
-}
+  );
+};

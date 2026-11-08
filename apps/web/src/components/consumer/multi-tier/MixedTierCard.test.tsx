@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { MixedTierCard } from './MixedTierCard'
+import React from 'react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import { MixedTierCard } from './MixedTierCard';
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 describe('MixedTierCard', () => {
   it('renders a boxoffice headline + a resale alternate (coral)', () => {
@@ -28,20 +28,20 @@ describe('MixedTierCard', () => {
           },
         ]}
       />,
-    )
+    );
 
-    expect(screen.getByText('$25')).toBeDefined()
-    expect(screen.getByText('Box office')).toBeDefined()
-    expect(screen.getByText('$150')).toBeDefined()
+    expect(screen.getByText('$25')).toBeDefined();
+    expect(screen.getByText('Box office')).toBeDefined();
+    expect(screen.getByText('$150')).toBeDefined();
 
     const dots = Array.from(
       container.querySelectorAll('div[style*="border-radius: 2.5px"]'),
-    )
+    );
     const coral = dots.find((dot) =>
       (dot as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
-    )
-    expect(coral).toBeDefined()
-  })
+    );
+    expect(coral).toBeDefined();
+  });
 
   it('renders a resale headline (coral PendingTrustPill)', () => {
     render(
@@ -54,10 +54,10 @@ describe('MixedTierCard', () => {
         }}
         alternates={[]}
       />,
-    )
-    const pill = screen.getByText('Resale')
-    expect(pill).toBeDefined()
-    const pillEl = pill as HTMLElement
-    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)')
-  })
-})
+    );
+    const pill = screen.getByText('Resale');
+    expect(pill).toBeDefined();
+    const pillEl = pill as HTMLElement;
+    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)');
+  });
+});

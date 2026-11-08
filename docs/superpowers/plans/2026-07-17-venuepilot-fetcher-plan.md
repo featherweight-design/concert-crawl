@@ -48,12 +48,14 @@
 ### Task 1: Rename `PlatformFetcher.platform` → `source` across the registry
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/fetchers/index.ts`
 - Modify: `packages/crawler-core/src/lib/fetchers/aeg.ts:377-386`
 - Modify: `packages/crawler-core/src/crawl.ts:264,278,298`
 - Modify: `packages/crawler-core/src/lib/fetchers/dispatch.test.ts:30`
 
 **Interfaces:**
+
 - Produces: `PlatformFetcher.source: 'aeg' | 'venuepilot'` (was `platform: VenuePlatform`). `PlatformFetchResult` unchanged. `dispatch()` signature unchanged.
 
 - [ ] **Step 1: Update the failing assertion in `dispatch.test.ts`**
@@ -61,13 +63,13 @@
 In `packages/crawler-core/src/lib/fetchers/dispatch.test.ts`, change the AEG assertion from `.platform` to `.source`:
 
 ```typescript
-  it('returns the AEG fetcher for an AEG-configured venue', () => {
-    const fetcher = dispatch(
-      makeVenue({ platform: 'aeg', platformVenueId: '2' }),
-    )
-    expect(fetcher).not.toBeNull()
-    expect(fetcher?.source).toBe('aeg')
-  })
+it('returns the AEG fetcher for an AEG-configured venue', () => {
+  const fetcher = dispatch(
+    makeVenue({ platform: 'aeg', platformVenueId: '2' }),
+  );
+  expect(fetcher).not.toBeNull();
+  expect(fetcher?.source).toBe('aeg');
+});
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -87,14 +89,14 @@ export interface PlatformFetcher {
    * is an apiProvider, not a venues.platform value, so this is a
    * fetcher-local union rather than `VenuePlatform`.
    */
-  readonly source: 'aeg' | 'venuepilot'
+  readonly source: 'aeg' | 'venuepilot';
   /** Returns false if this fetcher can't handle the venue
    * (e.g. missing platformVenueId / apiAccountId). */
-  canHandle(venue: Venue): boolean
+  canHandle(venue: Venue): boolean;
   fetch(
     venue: Venue,
     opts: { crawlDelayMs: number; timeoutMs?: number },
-  ): Promise<PlatformFetchResult>
+  ): Promise<PlatformFetchResult>;
 }
 ```
 
@@ -110,10 +112,10 @@ export const aegFetcher: PlatformFetcher = {
       venue.platform === 'aeg' &&
       venue.platformVenueId &&
       venue.platformVenueId.length > 0,
-    )
+    );
   },
   fetch: aegFetch,
-}
+};
 ```
 
 - [ ] **Step 5: Update `crawl.ts` — strategy type, strategy value, log key**
@@ -121,11 +123,11 @@ export const aegFetcher: PlatformFetcher = {
 In `packages/crawler-core/src/crawl.ts`, widen the local `ExtractionResult.strategy` union (it currently uses `` `platform:${VenuePlatform}` ``) and rename the two `platformFetcher.platform` reads:
 
 ```typescript
-    type ExtractionResult = {
-      normalizedEvents: NormalizedEvent[]
-      strategy: 'structured_data' | 'llm' | `platform:${'aeg' | 'venuepilot'}`
-      tokenUsage: TokenUsage | undefined
-    }
+type ExtractionResult = {
+  normalizedEvents: NormalizedEvent[];
+  strategy: 'structured_data' | 'llm' | `platform:${'aeg' | 'venuepilot'}`;
+  tokenUsage: TokenUsage | undefined;
+};
 ```
 
 In the `if (platformFetcher) {` branch, the strategy assignment:
@@ -137,16 +139,16 @@ In the `if (platformFetcher) {` branch, the strategy assignment:
 And the structured log — rename the `platform` key to `source`:
 
 ```typescript
-      console.log(
-        JSON.stringify({
-          event: 'crawl.platform_fetch',
-          venueId,
-          source: platformFetcher.source,
-          endpoint: platformResult.sourceUrl,
-          eventsFound: platformResult.events.length,
-          meta: platformResult.meta,
-        }),
-      )
+console.log(
+  JSON.stringify({
+    event: 'crawl.platform_fetch',
+    venueId,
+    source: platformFetcher.source,
+    endpoint: platformResult.sourceUrl,
+    eventsFound: platformResult.events.length,
+    meta: platformResult.meta,
+  }),
+);
 ```
 
 If `VenuePlatform` is now unused in `crawl.ts`, remove it from that file's imports (check with the type-check in Step 6; leave other imports untouched).
@@ -168,11 +170,13 @@ git commit -m "refactor(crawler): rename PlatformFetcher.platform to source"
 ### Task 2: VenuePilot adapter — Zod schema, errors, normalize, fetch
 
 **Files:**
+
 - Create: `packages/crawler-core/src/lib/fetchers/__fixtures__/venuepilot-levitt.json`
 - Create: `packages/crawler-core/src/lib/fetchers/venuepilot.ts`
 - Test: `packages/crawler-core/src/lib/fetchers/venuepilot.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PlatformFetcher`, `PlatformFetchResult` from `./index.js`; `NormalizedEvent` from `../../types.js`; `stripDescriptionHtml` from `../strip-description-html.js`; `isAllowed` from `../robots.js`; `Venue` from `@concert-crawl/db`.
 - Produces: `venuePilotFetcher: PlatformFetcher` (`source: 'venuepilot'`); `VenuePilotFetchError`, `VenuePilotSchemaError`; `type VenuePilotEvent`.
 
@@ -195,34 +199,34 @@ Verify it has `data.paginatedEvents.collection` (array) and `.metadata.totalPage
 Create `packages/crawler-core/src/lib/fetchers/venuepilot.test.ts`:
 
 ```typescript
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import path from 'path'
-import { isAllowed } from '../robots.js'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { isAllowed } from '../robots.js';
 import {
   venuePilotFetcher,
   VenuePilotFetchError,
   VenuePilotSchemaError,
-} from './venuepilot.js'
-import type { Venue } from '@concert-crawl/db'
+} from './venuepilot.js';
+import type { Venue } from '@concert-crawl/db';
 
 // Mock the robots helper so fetch tests don't issue a real robots.txt request
 // (which would otherwise consume a fetch call and leak the module-level cache
 // across tests). Defaults to allowed; gate tests override per-case.
 vi.mock('../robots.js', () => ({
   isAllowed: vi.fn(async () => true),
-}))
-const isAllowedMock = vi.mocked(isAllowed)
+}));
+const isAllowedMock = vi.mocked(isAllowed);
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '__fixtures__',
-)
+);
 function loadFixture(name: string): string {
-  return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8')
+  return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8');
 }
-const LEVITT_FIXTURE = loadFixture('venuepilot-levitt.json')
+const LEVITT_FIXTURE = loadFixture('venuepilot-levitt.json');
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -241,7 +245,7 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     apiProvider: 'venuepilot',
     apiAccountId: '1105',
     ...overrides,
-  } as Venue
+  } as Venue;
 }
 
 // Build a single-page GraphQL response body from an array of events.
@@ -262,49 +266,49 @@ function graphqlBody(
         },
       },
     },
-  })
+  });
 }
 
 describe('venuePilotFetcher.canHandle', () => {
   it('returns true for a venuepilot venue with an account id', () => {
-    expect(venuePilotFetcher.canHandle(makeVenue())).toBe(true)
-  })
+    expect(venuePilotFetcher.canHandle(makeVenue())).toBe(true);
+  });
 
   it('returns false when apiProvider is not venuepilot', () => {
-    expect(
-      venuePilotFetcher.canHandle(makeVenue({ apiProvider: null })),
-    ).toBe(false)
-  })
+    expect(venuePilotFetcher.canHandle(makeVenue({ apiProvider: null }))).toBe(
+      false,
+    );
+  });
 
   it('returns false when apiAccountId is missing', () => {
-    expect(
-      venuePilotFetcher.canHandle(makeVenue({ apiAccountId: null })),
-    ).toBe(false)
-  })
+    expect(venuePilotFetcher.canHandle(makeVenue({ apiAccountId: null }))).toBe(
+      false,
+    );
+  });
 
   it('returns false when apiAccountId is empty', () => {
-    expect(
-      venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '' })),
-    ).toBe(false)
-  })
+    expect(venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '' }))).toBe(
+      false,
+    );
+  });
 
   it('returns false when apiAccountId is whitespace-only', () => {
     expect(
       venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '   ' })),
-    ).toBe(false)
-  })
-})
+    ).toBe(false);
+  });
+});
 
 describe('venuePilotFetcher.fetch', () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    fetchSpy = vi.spyOn(globalThis, 'fetch')
-    isAllowedMock.mockResolvedValue(true)
-  })
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+    isAllowedMock.mockResolvedValue(true);
+  });
   afterEach(() => {
-    fetchSpy.mockRestore()
-  })
+    fetchSpy.mockRestore();
+  });
 
   function mockFetchOk(body: string): void {
     fetchSpy.mockResolvedValue(
@@ -312,44 +316,44 @@ describe('venuePilotFetcher.fetch', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }) as Response,
-    )
+    );
   }
 
   it('POSTs the GraphQL endpoint with accountIds + honest UA', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
+    });
 
-    expect(fetchSpy).toHaveBeenCalledOnce()
-    const [calledUrl, init] = fetchSpy.mock.calls[0]!
-    expect(String(calledUrl)).toBe('https://www.venuepilot.co/graphql')
-    expect(init?.method).toBe('POST')
-    const headers = new Headers(init?.headers)
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    const [calledUrl, init] = fetchSpy.mock.calls[0]!;
+    expect(String(calledUrl)).toBe('https://www.venuepilot.co/graphql');
+    expect(init?.method).toBe('POST');
+    const headers = new Headers(init?.headers);
     expect(headers.get('User-Agent')).toBe(
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-    const body = JSON.parse(String(init?.body))
-    expect(body.variables.args.accountIds).toEqual([1105])
-    expect(result.sourceUrl).toBe('https://www.venuepilot.co/graphql')
-  })
+    );
+    const body = JSON.parse(String(init?.body));
+    expect(body.variables.args.accountIds).toEqual([1105]);
+    expect(result.sourceUrl).toBe('https://www.venuepilot.co/graphql');
+  });
 
   it('normalizes the Levitt fixture into NormalizedEvent rows', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
+    });
 
-    expect(result.events.length).toBeGreaterThan(0)
-    const first = result.events[0]!
-    expect(first.title).toBeTruthy()
-    expect(first.rawTitle).toBe(first.title)
-    expect(first.artist).toBeTruthy()
-    expect(first.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(first.showTime).toMatch(/^\d{2}:\d{2}:\d{2}$/)
-    expect(first.confidence).toBe(1.0)
-    expect(first.sourceUrl).toBe('https://levittdenver.org/')
-  })
+    expect(result.events.length).toBeGreaterThan(0);
+    const first = result.events[0]!;
+    expect(first.title).toBeTruthy();
+    expect(first.rawTitle).toBe(first.title);
+    expect(first.artist).toBeTruthy();
+    expect(first.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(first.showTime).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+    expect(first.confidence).toBe(1.0);
+    expect(first.sourceUrl).toBe('https://levittdenver.org/');
+  });
 
   it('trims trailing whitespace on the title', async () => {
     mockFetchOk(
@@ -367,12 +371,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.title).toBe('Trailing Space Show')
-  })
+    });
+    expect(result.events[0]!.title).toBe('Trailing Space Show');
+  });
 
   it('falls back to the title for artist when announceArtists is empty', async () => {
     mockFetchOk(
@@ -390,12 +394,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.artist).toBe('No Artist Listed')
-  })
+    });
+    expect(result.events[0]!.artist).toBe('No Artist Listed');
+  });
 
   it('omits imageUrl when there are no images', async () => {
     mockFetchOk(
@@ -413,12 +417,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.imageUrl).toBeUndefined()
-  })
+    });
+    expect(result.events[0]!.imageUrl).toBeUndefined();
+  });
 
   it('picks the cover variant of the highlighted image', async () => {
     mockFetchOk(
@@ -448,12 +452,12 @@ describe('venuePilotFetcher.fetch', () => {
           ],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.imageUrl).toBe('https://x/cover-b.png')
-  })
+    });
+    expect(result.events[0]!.imageUrl).toBe('https://x/cover-b.png');
+  });
 
   it('skips an event with a whitespace-only name', async () => {
     mockFetchOk(
@@ -471,12 +475,12 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events.length).toBe(0)
-  })
+    });
+    expect(result.events.length).toBe(0);
+  });
 
   it('strips HTML — including VenuePilot <iframe-embed> — from the description', async () => {
     mockFetchOk(
@@ -498,14 +502,14 @@ describe('venuePilotFetcher.fetch', () => {
           announceImages: [],
         },
       ]),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events[0]!.description).toBe('Hello world')
-    expect(result.events[0]!.description).not.toContain('<')
-    expect(result.events[0]!.description).not.toContain('iframe-embed')
-  })
+    });
+    expect(result.events[0]!.description).toBe('Hello world');
+    expect(result.events[0]!.description).not.toContain('<');
+    expect(result.events[0]!.description).not.toContain('iframe-embed');
+  });
 
   it('passes an abort signal only when timeoutMs is set', async () => {
     fetchSpy.mockImplementation(
@@ -514,86 +518,93 @@ describe('venuePilotFetcher.fetch', () => {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
-    )
-    const venue = makeVenue()
+    );
+    const venue = makeVenue();
 
-    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0, timeoutMs: 15_000 })
-    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+    await venuePilotFetcher.fetch(venue, {
+      crawlDelayMs: 0,
+      timeoutMs: 15_000,
+    });
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
 
-    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0 })
-    expect(fetchSpy.mock.calls[1]?.[1]?.signal).toBeUndefined()
-  })
+    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0 });
+    expect(fetchSpy.mock.calls[1]?.[1]?.signal).toBeUndefined();
+  });
 
   it('throws VenuePilotFetchError on a non-200 response', async () => {
     fetchSpy.mockResolvedValue(
       new Response('nope', { status: 502 }) as Response,
-    )
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+  });
 
   it('throws VenuePilotFetchError when the body carries GraphQL errors on 200', async () => {
     fetchSpy.mockResolvedValue(
-      new Response(
-        JSON.stringify({ errors: [{ message: 'boom' }] }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ) as Response,
-    )
+      new Response(JSON.stringify({ errors: [{ message: 'boom' }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }) as Response,
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+  });
 
   it('throws VenuePilotSchemaError when the response shape is wrong', async () => {
-    mockFetchOk(JSON.stringify({ data: { paginatedEvents: { collection: 'not-an-array' } } }))
+    mockFetchOk(
+      JSON.stringify({
+        data: { paginatedEvents: { collection: 'not-an-array' } },
+      }),
+    );
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotSchemaError)
-  })
+    ).rejects.toBeInstanceOf(VenuePilotSchemaError);
+  });
 
   it('throws VenuePilotFetchError for a whitespace-only apiAccountId without fetching', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     await expect(
       venuePilotFetcher.fetch(makeVenue({ apiAccountId: '   ' }), {
         crawlDelayMs: 0,
       }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it('throws VenuePilotFetchError for a non-positive apiAccountId', async () => {
-    mockFetchOk(LEVITT_FIXTURE)
+    mockFetchOk(LEVITT_FIXTURE);
     await expect(
       venuePilotFetcher.fetch(makeVenue({ apiAccountId: '0' }), {
         crawlDelayMs: 0,
       }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it('throws VenuePilotFetchError and issues no GraphQL request when robots.txt disallows', async () => {
-    isAllowedMock.mockResolvedValue(false)
-    mockFetchOk(LEVITT_FIXTURE)
+    isAllowedMock.mockResolvedValue(false);
+    mockFetchOk(LEVITT_FIXTURE);
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
+    ).rejects.toBeInstanceOf(VenuePilotFetchError);
     expect(isAllowedMock).toHaveBeenCalledWith(
       'https://www.venuepilot.co/graphql',
       'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 
   it('proceeds with the fetch when robots.txt allows', async () => {
-    isAllowedMock.mockResolvedValue(true)
-    mockFetchOk(LEVITT_FIXTURE)
+    isAllowedMock.mockResolvedValue(true);
+    mockFetchOk(LEVITT_FIXTURE);
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(result.events.length).toBeGreaterThan(0)
-    expect(fetchSpy).toHaveBeenCalledOnce()
-  })
+    });
+    expect(result.events.length).toBeGreaterThan(0);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
 
   it('loops pages up to metadata.totalPages and concatenates', async () => {
     const pageEvent = (id: number) => ({
@@ -607,27 +618,33 @@ describe('venuePilotFetcher.fetch', () => {
       status: 'BUY TICKETS',
       announceArtists: [{ name: `A${id}` }],
       announceImages: [],
-    })
+    });
     fetchSpy
       .mockResolvedValueOnce(
-        new Response(graphqlBody([pageEvent(1)], { totalPages: 2, currentPage: 1 }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }) as Response,
+        new Response(
+          graphqlBody([pageEvent(1)], { totalPages: 2, currentPage: 1 }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ) as Response,
       )
       .mockResolvedValueOnce(
-        new Response(graphqlBody([pageEvent(2)], { totalPages: 2, currentPage: 2 }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }) as Response,
-      )
+        new Response(
+          graphqlBody([pageEvent(2)], { totalPages: 2, currentPage: 2 }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ) as Response,
+      );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(fetchSpy).toHaveBeenCalledTimes(2)
-    expect(result.events.length).toBe(2)
-    expect(result.meta?.pagesFetched).toBe(2)
-  })
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(result.events.length).toBe(2);
+    expect(result.meta?.pagesFetched).toBe(2);
+  });
 
   it('caps pagination at MAX_PAGES against a runaway totalPages', async () => {
     fetchSpy.mockImplementation(
@@ -652,16 +669,16 @@ describe('venuePilotFetcher.fetch', () => {
           ),
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
-    )
+    );
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
-    })
-    expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(50)
+    });
+    expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(50);
     // Truncation must be visible in meta so operators can alert on partial fetches.
-    expect(result.meta?.truncated).toBe(true)
-    expect(result.meta?.totalPages).toBe(9999)
-  })
-})
+    expect(result.meta?.truncated).toBe(true);
+    expect(result.meta?.totalPages).toBe(9999);
+  });
+});
 ```
 
 - [ ] **Step 3: Run the test to verify it fails**
@@ -687,25 +704,25 @@ Create `packages/crawler-core/src/lib/fetchers/venuepilot.ts`:
 // Default page size is 100 (metadata.limitValue); there is no perPage
 // argument.
 
-import { z } from 'zod'
-import type { Venue } from '@concert-crawl/db'
-import { createLogger } from '@concert-crawl/logger'
-import type { NormalizedEvent } from '../../types.js'
-import { stripDescriptionHtml } from '../strip-description-html.js'
-import { isAllowed } from '../robots.js'
-import type { PlatformFetcher, PlatformFetchResult } from './index.js'
+import { z } from 'zod';
+import type { Venue } from '@concert-crawl/db';
+import { createLogger } from '@concert-crawl/logger';
+import type { NormalizedEvent } from '../../types.js';
+import { stripDescriptionHtml } from '../strip-description-html.js';
+import { isAllowed } from '../robots.js';
+import type { PlatformFetcher, PlatformFetchResult } from './index.js';
 
-const logger = createLogger('venuepilot-fetcher')
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
-const ENDPOINT = 'https://www.venuepilot.co/graphql'
+const logger = createLogger('venuepilot-fetcher');
+const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)';
+const ENDPOINT = 'https://www.venuepilot.co/graphql';
 // Guard against a runaway metadata.totalPages pinning the crawl.
-const MAX_PAGES = 50
+const MAX_PAGES = 50;
 
 // Jitter the crawl delay (±500ms) so paged requests don't hit VenuePilot on a
 // bot-like fixed interval — mirrors the cascade fetcher (lib/fetcher.ts). AEG
 // still uses a flat delay; #985 backfills jitter there too.
 function jitter(ms: number): number {
-  return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
+  return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500);
 }
 
 const EVENTS_QUERY = `query($args: EventsApiArguments!) {
@@ -724,21 +741,21 @@ const EVENTS_QUERY = `query($args: EventsApiArguments!) {
     }
     metadata { totalCount totalPages currentPage limitValue }
   }
-}`
+}`;
 
 // Only the fields we map are required; `.passthrough()` tolerates the
 // rest of VenuePilot's event shape. Nullable/optional where the live API
 // omits values.
 const VariantSchema = z
   .object({ variant: z.string(), src: z.string() })
-  .passthrough()
+  .passthrough();
 
 const ImageSchema = z
   .object({
     highlighted: z.boolean().optional(),
     variants: z.array(VariantSchema).optional(),
   })
-  .passthrough()
+  .passthrough();
 
 const VenuePilotEventSchema = z
   .object({
@@ -755,7 +772,7 @@ const VenuePilotEventSchema = z
       .optional(),
     announceImages: z.array(ImageSchema).optional(),
   })
-  .passthrough()
+  .passthrough();
 
 const ResponseSchema = z
   .object({
@@ -773,16 +790,16 @@ const ResponseSchema = z
       }),
     }),
   })
-  .passthrough()
+  .passthrough();
 
 // GraphQL can return HTTP 200 with a top-level `errors` array and no
 // `data`. This partial schema recognizes that shape so we can surface it
 // as a fetch error rather than a schema error.
 const GraphQLErrorsSchema = z.object({
   errors: z.array(z.object({ message: z.string() }).passthrough()).min(1),
-})
+});
 
-export type VenuePilotEvent = z.infer<typeof VenuePilotEventSchema>
+export type VenuePilotEvent = z.infer<typeof VenuePilotEventSchema>;
 
 export class VenuePilotFetchError extends Error {
   constructor(
@@ -790,8 +807,8 @@ export class VenuePilotFetchError extends Error {
     public readonly url: string,
     message: string,
   ) {
-    super(message)
-    this.name = 'VenuePilotFetchError'
+    super(message);
+    this.name = 'VenuePilotFetchError';
   }
 }
 
@@ -801,8 +818,8 @@ export class VenuePilotSchemaError extends Error {
     public readonly issues: z.ZodIssue[],
     message: string,
   ) {
-    super(message)
-    this.name = 'VenuePilotSchemaError'
+    super(message);
+    this.name = 'VenuePilotSchemaError';
   }
 }
 
@@ -815,7 +832,7 @@ function todayInTimezone(timezone: string): string {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date())
+  }).format(new Date());
 }
 
 // Pick the display image: prefer the highlighted image, else the first
@@ -824,12 +841,12 @@ function todayInTimezone(timezone: string): string {
 function pickImageUrl(
   images: VenuePilotEvent['announceImages'],
 ): string | undefined {
-  if (!images || images.length === 0) return undefined
-  const chosen = images.find((image) => image.highlighted) ?? images[0]
-  const variants = chosen?.variants
-  if (!variants || variants.length === 0) return undefined
-  const cover = variants.find((variant) => variant.variant === 'cover')
-  return (cover ?? variants[0])?.src
+  if (!images || images.length === 0) return undefined;
+  const chosen = images.find((image) => image.highlighted) ?? images[0];
+  const variants = chosen?.variants;
+  if (!variants || variants.length === 0) return undefined;
+  const cover = variants.find((variant) => variant.variant === 'cover');
+  return (cover ?? variants[0])?.src;
 }
 
 // VenuePilot descriptions embed a custom <iframe-embed> element. The shared
@@ -839,42 +856,42 @@ function pickImageUrl(
 // whole element here — its inner content is embed chrome, not prose — before
 // handing the string to the shared stripper. Runs on the raw markup VenuePilot
 // serves (real tags, not entity-encoded, per the live 1105 probe).
-const IFRAME_EMBED_BLOCK = /<iframe-embed\b[^>]*>[\s\S]*?<\/iframe-embed>/gi
-const IFRAME_EMBED_TAG = /<\/?iframe-embed\b[^>]*>/gi
+const IFRAME_EMBED_BLOCK = /<iframe-embed\b[^>]*>[\s\S]*?<\/iframe-embed>/gi;
+const IFRAME_EMBED_TAG = /<\/?iframe-embed\b[^>]*>/gi;
 
 function stripVenuePilotDescription(html: string | null | undefined): string {
-  if (!html) return ''
+  if (!html) return '';
   const withoutEmbeds = html
     .replace(IFRAME_EMBED_BLOCK, ' ')
-    .replace(IFRAME_EMBED_TAG, ' ')
-  return stripDescriptionHtml(withoutEmbeds)
+    .replace(IFRAME_EMBED_TAG, ' ');
+  return stripDescriptionHtml(withoutEmbeds);
 }
 
 function normalize(
   event: VenuePilotEvent,
   venueCalendarUrl: string,
 ): NormalizedEvent | null {
-  const title = event.name.trim()
+  const title = event.name.trim();
   if (!title) {
     logger.warn(
       { eventId: event.id, venueCalendarUrl },
       'venuepilot: skipping event with empty/whitespace-only name',
-    )
-    return null
+    );
+    return null;
   }
 
-  const headliner = event.announceArtists?.[0]?.name?.trim()
-  const artist = headliner && headliner.length > 0 ? headliner : title
+  const headliner = event.announceArtists?.[0]?.name?.trim();
+  const artist = headliner && headliner.length > 0 ? headliner : title;
 
-  const showTime = event.startTime ?? undefined
-  const doorsTime = event.doorTime ?? undefined
+  const showTime = event.startTime ?? undefined;
+  const doorsTime = event.doorTime ?? undefined;
   const ticketUrl =
     event.ticketsUrl && event.ticketsUrl.length > 0
       ? event.ticketsUrl
-      : undefined
-  const imageUrl = pickImageUrl(event.announceImages)
-  const cleaned = stripVenuePilotDescription(event.description)
-  const description = cleaned.length > 0 ? cleaned : undefined
+      : undefined;
+  const imageUrl = pickImageUrl(event.announceImages);
+  const cleaned = stripVenuePilotDescription(event.description);
+  const description = cleaned.length > 0 ? cleaned : undefined;
 
   return {
     title,
@@ -891,7 +908,7 @@ function normalize(
     ...(description !== undefined ? { description } : {}),
     sourceUrl: venueCalendarUrl,
     confidence: 1.0,
-  }
+  };
 }
 
 async function fetchPage(
@@ -914,61 +931,61 @@ async function fetchPage(
     ...(timeoutMs !== undefined
       ? { signal: AbortSignal.timeout(timeoutMs) }
       : {}),
-  })
+  });
   if (!response.ok) {
     throw new VenuePilotFetchError(
       response.status,
       ENDPOINT,
       `VenuePilot fetch failed: HTTP ${response.status}`,
-    )
+    );
   }
-  const raw: unknown = await response.json()
+  const raw: unknown = await response.json();
 
   // GraphQL errors come back on HTTP 200 with a top-level `errors` array.
-  const errorsResult = GraphQLErrorsSchema.safeParse(raw)
+  const errorsResult = GraphQLErrorsSchema.safeParse(raw);
   if (errorsResult.success) {
-    const first = errorsResult.data.errors[0]!.message
+    const first = errorsResult.data.errors[0]!.message;
     throw new VenuePilotFetchError(
       200,
       ENDPOINT,
       `VenuePilot GraphQL error: ${first}`,
-    )
+    );
   }
 
-  const parsed = ResponseSchema.safeParse(raw)
+  const parsed = ResponseSchema.safeParse(raw);
   if (!parsed.success) {
     throw new VenuePilotSchemaError(
       ENDPOINT,
       parsed.error.issues,
       `VenuePilot response did not match expected schema (${parsed.error.issues.length} issue(s))`,
-    )
+    );
   }
-  return parsed.data.data.paginatedEvents
+  return parsed.data.data.paginatedEvents;
 }
 
 async function venuePilotFetch(
   venue: Venue,
   opts: { crawlDelayMs: number; timeoutMs?: number },
 ): Promise<PlatformFetchResult> {
-  const rawAccountId = venue.apiAccountId?.trim() ?? ''
+  const rawAccountId = venue.apiAccountId?.trim() ?? '';
   if (rawAccountId === '') {
     // canHandle() should have caught this; be defensive.
     throw new VenuePilotFetchError(
       0,
       ENDPOINT,
       `Venue ${venue.id} has apiProvider='venuepilot' but no api_account_id`,
-    )
+    );
   }
   // Number('  ') coerces to 0 and Number.isInteger(0) is true, so trim first
   // and require a positive integer — otherwise a blank/zero id would silently
   // fetch account 0 instead of failing loudly.
-  const accountId = Number(rawAccountId)
+  const accountId = Number(rawAccountId);
   if (!Number.isInteger(accountId) || accountId <= 0) {
     throw new VenuePilotFetchError(
       0,
       ENDPOINT,
       `Venue ${venue.id} has an invalid api_account_id: ${venue.apiAccountId}`,
-    )
+    );
   }
 
   // Honor robots.txt for the endpoint domain we actually fetch (in addition to
@@ -979,21 +996,21 @@ async function venuePilotFetch(
       0,
       ENDPOINT,
       `robots.txt disallows ${USER_AGENT} at ${ENDPOINT}`,
-    )
+    );
   }
 
-  const startDate = todayInTimezone(venue.timezone)
-  const startedAt = Date.now()
-  const events: NormalizedEvent[] = []
-  let totalCount = 0
-  let totalPages = 1
-  let pagesFetched = 0
+  const startDate = todayInTimezone(venue.timezone);
+  const startedAt = Date.now();
+  const events: NormalizedEvent[] = [];
+  let totalCount = 0;
+  let totalPages = 1;
+  let pagesFetched = 0;
 
   for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
     if (opts.crawlDelayMs > 0) {
-      const delay = jitter(opts.crawlDelayMs)
+      const delay = jitter(opts.crawlDelayMs);
       if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay))
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
     const paginated = await fetchPage(
@@ -1001,25 +1018,25 @@ async function venuePilotFetch(
       startDate,
       page,
       opts.timeoutMs,
-    )
-    pagesFetched += 1
-    totalCount = paginated.metadata.totalCount
-    totalPages = paginated.metadata.totalPages
+    );
+    pagesFetched += 1;
+    totalCount = paginated.metadata.totalCount;
+    totalPages = paginated.metadata.totalPages;
     for (const event of paginated.collection) {
-      const normalized = normalize(event, venue.websiteUrl)
-      if (normalized) events.push(normalized)
+      const normalized = normalize(event, venue.websiteUrl);
+      if (normalized) events.push(normalized);
     }
   }
 
   // totalPages > MAX_PAGES means we stopped short of the full set — surface it
   // in meta (which is logged) so operators can alert on partial fetches rather
   // than silently serving truncated data.
-  const truncated = totalPages > MAX_PAGES
+  const truncated = totalPages > MAX_PAGES;
   if (truncated) {
     logger.warn(
       { venueId: venue.id, totalPages, pagesFetched, cap: MAX_PAGES },
       'VenuePilot pagination hit MAX_PAGES cap — event set is truncated',
-    )
+    );
   }
 
   return {
@@ -1033,7 +1050,7 @@ async function venuePilotFetch(
       truncated,
       eventsAfterNormalization: events.length,
     },
-  }
+  };
 }
 
 export const venuePilotFetcher: PlatformFetcher = {
@@ -1044,10 +1061,10 @@ export const venuePilotFetcher: PlatformFetcher = {
       venue.apiProvider === 'venuepilot' &&
       venue.apiAccountId &&
       venue.apiAccountId.trim().length > 0,
-    )
+    );
   },
   fetch: venuePilotFetch,
-}
+};
 ```
 
 - [ ] **Step 5: Run the tests to verify they pass**
@@ -1072,11 +1089,13 @@ git commit -m "feat(crawler): add VenuePilot GraphQL fetcher"
 ### Task 3: Wire VenuePilot into dispatch
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/fetchers/dispatch.ts`
 - Modify: `packages/crawler-core/src/lib/fetchers/index.ts`
 - Modify: `packages/crawler-core/src/lib/fetchers/dispatch.test.ts`
 
 **Interfaces:**
+
 - Consumes: `venuePilotFetcher` from `./venuepilot.js` (Task 2).
 - Produces: `dispatch(venue)` returns `venuePilotFetcher` for a venuepilot venue, `aegFetcher` for an AEG venue, `null` otherwise. `venuePilotFetcher` re-exported from `index.ts`.
 
@@ -1099,37 +1118,37 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     apiProvider: null,
     apiAccountId: null,
     ...overrides,
-  } as Venue
+  } as Venue;
 }
 ```
 
 New cases inside `describe('dispatch', ...)`:
 
 ```typescript
-  it('routes a venuepilot venue to the VenuePilot fetcher', () => {
-    const fetcher = dispatch(
-      makeVenue({ apiProvider: 'venuepilot', apiAccountId: '1105' }),
-    )
-    expect(fetcher).not.toBeNull()
-    expect(fetcher?.source).toBe('venuepilot')
-  })
+it('routes a venuepilot venue to the VenuePilot fetcher', () => {
+  const fetcher = dispatch(
+    makeVenue({ apiProvider: 'venuepilot', apiAccountId: '1105' }),
+  );
+  expect(fetcher).not.toBeNull();
+  expect(fetcher?.source).toBe('venuepilot');
+});
 
-  it('returns null for a venuepilot venue with no apiAccountId', () => {
-    expect(
-      dispatch(makeVenue({ apiProvider: 'venuepilot', apiAccountId: null })),
-    ).toBeNull()
-  })
+it('returns null for a venuepilot venue with no apiAccountId', () => {
+  expect(
+    dispatch(makeVenue({ apiProvider: 'venuepilot', apiAccountId: null })),
+  ).toBeNull();
+});
 
-  it('still routes an AEG venue to the AEG fetcher (regression)', () => {
-    const fetcher = dispatch(
-      makeVenue({ platform: 'aeg', platformVenueId: '2' }),
-    )
-    expect(fetcher?.source).toBe('aeg')
-  })
+it('still routes an AEG venue to the AEG fetcher (regression)', () => {
+  const fetcher = dispatch(
+    makeVenue({ platform: 'aeg', platformVenueId: '2' }),
+  );
+  expect(fetcher?.source).toBe('aeg');
+});
 
-  it('returns null for a venue with neither platform nor apiProvider', () => {
-    expect(dispatch(makeVenue())).toBeNull()
-  })
+it('returns null for a venue with neither platform nor apiProvider', () => {
+  expect(dispatch(makeVenue())).toBeNull();
+});
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -1142,10 +1161,10 @@ Expected: FAIL — venuepilot venue routes to `null` (dispatcher still platform-
 Replace the body of `packages/crawler-core/src/lib/fetchers/dispatch.ts`:
 
 ```typescript
-import type { Venue } from '@concert-crawl/db'
-import { aegFetcher } from './aeg.js'
-import { venuePilotFetcher } from './venuepilot.js'
-import type { PlatformFetcher } from './index.js'
+import type { Venue } from '@concert-crawl/db';
+import { aegFetcher } from './aeg.js';
+import { venuePilotFetcher } from './venuepilot.js';
+import type { PlatformFetcher } from './index.js';
 
 // Ordered list of available adapters. Each fetcher owns its own matching
 // via canHandle(); dispatch returns the first that claims the venue.
@@ -1154,7 +1173,7 @@ import type { PlatformFetcher } from './index.js'
 const FETCHERS: readonly PlatformFetcher[] = [
   aegFetcher,
   venuePilotFetcher,
-] as const
+] as const;
 
 /**
  * Pick the platform fetcher for a venue, or null if the venue should
@@ -1163,7 +1182,7 @@ const FETCHERS: readonly PlatformFetcher[] = [
  * platformVenueId; VenuePilot: apiProvider + apiAccountId).
  */
 export function dispatch(venue: Venue): PlatformFetcher | null {
-  return FETCHERS.find((fetcher) => fetcher.canHandle(venue)) ?? null
+  return FETCHERS.find((fetcher) => fetcher.canHandle(venue)) ?? null;
 }
 ```
 
@@ -1172,9 +1191,9 @@ export function dispatch(venue: Venue): PlatformFetcher | null {
 In `packages/crawler-core/src/lib/fetchers/index.ts`, add next to the AEG export:
 
 ```typescript
-export { aegFetcher } from './aeg.js'
-export { venuePilotFetcher } from './venuepilot.js'
-export { dispatch } from './dispatch.js'
+export { aegFetcher } from './aeg.js';
+export { venuePilotFetcher } from './venuepilot.js';
+export { dispatch } from './dispatch.js';
 ```
 
 - [ ] **Step 5: Run dispatch tests + full fetcher suite**
@@ -1194,6 +1213,7 @@ git commit -m "feat(crawler): route venuepilot venues through dispatch"
 ### Task 4: Full quality gate + progress row
 
 **Files:**
+
 - Modify: `docs/superpowers/progress.md`
 
 - [ ] **Step 1: Run the full crawler-core quality gate**

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { dispatch } from './dispatch.js'
-import type { Venue } from '@concert-crawl/db'
+import { describe, it, expect } from 'vitest';
+import { dispatch } from './dispatch.js';
+import type { Venue } from '@concert-crawl/db';
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -45,27 +45,27 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
-  } satisfies Venue
+  } satisfies Venue;
 }
 
 describe('dispatch', () => {
   it('returns null when venue.platform is null', () => {
-    expect(dispatch(makeVenue())).toBeNull()
-  })
+    expect(dispatch(makeVenue())).toBeNull();
+  });
 
   it('returns the AEG fetcher for an AEG-configured venue', () => {
     const fetcher = dispatch(
       makeVenue({ platform: 'aeg', platformVenueId: '2' }),
-    )
-    expect(fetcher).not.toBeNull()
-    expect(fetcher?.source).toBe('aeg')
-  })
+    );
+    expect(fetcher).not.toBeNull();
+    expect(fetcher?.source).toBe('aeg');
+  });
 
   it('returns null when AEG fetcher rejects via canHandle (missing platformVenueId)', () => {
     expect(
       dispatch(makeVenue({ platform: 'aeg', platformVenueId: null })),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('returns null when platform value has no registered fetcher (defensive)', () => {
     expect(
@@ -75,47 +75,47 @@ describe('dispatch', () => {
           platformVenueId: '1',
         }),
       ),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('routes a venuepilot venue to the VenuePilot fetcher', () => {
     const fetcher = dispatch(
       makeVenue({ apiProvider: 'venuepilot', apiAccountId: '1105' }),
-    )
-    expect(fetcher).not.toBeNull()
-    expect(fetcher?.source).toBe('venuepilot')
-  })
+    );
+    expect(fetcher).not.toBeNull();
+    expect(fetcher?.source).toBe('venuepilot');
+  });
 
   it('returns null for a venuepilot venue with no apiAccountId', () => {
     expect(
       dispatch(makeVenue({ apiProvider: 'venuepilot', apiAccountId: null })),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('still routes an AEG venue to the AEG fetcher (regression)', () => {
     const fetcher = dispatch(
       makeVenue({ platform: 'aeg', platformVenueId: '2' }),
-    )
-    expect(fetcher?.source).toBe('aeg')
-  })
+    );
+    expect(fetcher?.source).toBe('aeg');
+  });
 
   it('returns null for a venue with neither platform nor apiProvider', () => {
-    expect(dispatch(makeVenue())).toBeNull()
-  })
+    expect(dispatch(makeVenue())).toBeNull();
+  });
 
   it('routes a livenation venue to the Live Nation fetcher', () => {
     const fetcher = dispatch(
       makeVenue({ platform: 'livenation', platformVenueId: 'KovZpZAE6eJA' }),
-    )
-    expect(fetcher).not.toBeNull()
-    expect(fetcher?.source).toBe('livenation')
-  })
+    );
+    expect(fetcher).not.toBeNull();
+    expect(fetcher?.source).toBe('livenation');
+  });
 
   it('falls back to the cascade for a livenation venue with no platformVenueId', () => {
     expect(
       dispatch(makeVenue({ platform: 'livenation', platformVenueId: null })),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('prefers VenuePilot over Live Nation when both columns are set (misconfig)', () => {
     const fetcher = dispatch(
@@ -125,9 +125,9 @@ describe('dispatch', () => {
         apiProvider: 'venuepilot',
         apiAccountId: '1105',
       }),
-    )
-    expect(fetcher?.source).toBe('venuepilot')
-  })
+    );
+    expect(fetcher?.source).toBe('venuepilot');
+  });
 
   it('prefers VenuePilot when both platform and apiProvider are set (misconfig)', () => {
     const fetcher = dispatch(
@@ -137,7 +137,7 @@ describe('dispatch', () => {
         apiProvider: 'venuepilot',
         apiAccountId: '1105',
       }),
-    )
-    expect(fetcher?.source).toBe('venuepilot')
-  })
-})
+    );
+    expect(fetcher?.source).toBe('venuepilot');
+  });
+});

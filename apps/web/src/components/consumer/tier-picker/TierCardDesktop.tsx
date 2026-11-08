@@ -1,32 +1,32 @@
-'use client'
+'use client';
 
 // Desktop tier card — translated from the handoff's TierStateCard: tone
 // shell, current-plan banner, founder scarcity rail, header, rationale
 // rail, feature list, price-promise line, CTA.
 
-import type { FounderWindowState } from '@concert-crawl/types'
-import { TIER_PICKER_COPY } from './definitions/copy'
-import { resolveTierCta } from './lib/resolve-tier-cta'
-import { tierShell, isNeutralAccent, stampColor } from './lib/tier-shell'
-import { TierBadge } from './TierBadge'
-import { ScarcityRail } from './ScarcityRail'
-import { TierCtaButton } from './TierCtaButton'
-import { TierRationale, TierFeatureList, TierMonoNote } from './TierCardDetail'
+import type { FounderWindowState } from '@concert-crawl/types';
+import { TIER_PICKER_COPY } from './definitions/copy';
+import { resolveTierCta } from './lib/resolve-tier-cta';
+import { tierShell, isNeutralAccent, stampColor } from './lib/tier-shell';
+import { TierBadge } from './TierBadge';
+import { ScarcityRail } from './ScarcityRail';
+import { TierCtaButton } from './TierCtaButton';
+import { TierRationale, TierFeatureList, TierMonoNote } from './TierCardDetail';
 import type {
   PickerState,
   ScarcityRailData,
   TierCta,
   TierDefinition,
   TierKey,
-} from './definitions/types'
+} from './definitions/types';
 
 interface TierCardDesktopProps {
-  tier: TierDefinition
-  state: PickerState
-  founderWindowState: FounderWindowState
-  scarcityRail: ScarcityRailData | null
-  onSelect: (tierKey: TierKey, cta: TierCta) => void
-  autoFocusCta?: boolean
+  tier: TierDefinition;
+  state: PickerState;
+  founderWindowState: FounderWindowState;
+  scarcityRail: ScarcityRailData | null;
+  onSelect: (tierKey: TierKey, cta: TierCta) => void;
+  autoFocusCta?: boolean;
 }
 
 export const TierCardDesktop = ({
@@ -37,11 +37,11 @@ export const TierCardDesktop = ({
   onSelect,
   autoFocusCta = false,
 }: TierCardDesktopProps) => {
-  const shell = tierShell(tier.key)
-  const isCurrent = state === tier.key
-  const cta = resolveTierCta(tier.key, state, founderWindowState)
-  const neutral = isNeutralAccent(shell)
-  const stamp = stampColor(shell)
+  const shell = tierShell(tier.key);
+  const isCurrent = state === tier.key;
+  const cta = resolveTierCta(tier.key, state, founderWindowState);
+  const neutral = isNeutralAccent(shell);
+  const stamp = stampColor(shell);
 
   return (
     <div
@@ -196,5 +196,5 @@ export const TierCardDesktop = ({
         />
       </div>
     </div>
-  )
-}
+  );
+};

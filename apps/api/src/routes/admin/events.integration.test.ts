@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { and, eq, inArray, or } from 'drizzle-orm'
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { and, eq, inArray, or } from 'drizzle-orm';
 import {
   auditLog,
   eventReports,
@@ -8,24 +8,24 @@ import {
   priceRetrievalLog,
   priceSubmissions,
   userEvents,
-} from '@concert-crawl/db'
+} from '@concert-crawl/db';
 
 const { authState } = vi.hoisted(() => ({
   authState: {
     current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
+      userId: string;
+      sessionClaims: { metadata?: { role?: string } };
     } | null,
   },
-}))
+}));
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
   getAuth: () => authState.current,
-}))
+}));
 
-import { createApp } from '../../app.js'
+import { createApp } from '../../app.js';
 import {
   clearTables,
   seedEvent,
@@ -34,47 +34,47 @@ import {
   seedPriceSubmission,
   seedUserEvent,
   seedVenue,
-} from '../../test/helpers/seed.js'
-import { testDb } from '../../test/helpers/db.js'
+} from '../../test/helpers/seed.js';
+import { testDb } from '../../test/helpers/db.js';
 
-const app = createApp()
+const app = createApp();
 
-const ADMIN_USER_ID = 'admin_user'
-const NON_ADMIN_USER_ID = 'fan_user'
+const ADMIN_USER_ID = 'admin_user';
+const NON_ADMIN_USER_ID = 'fan_user';
 
 function setAdminAuth(): void {
   authState.current = {
     userId: ADMIN_USER_ID,
     sessionClaims: { metadata: { role: 'admin' } },
-  }
+  };
 }
 
 function setNonAdminAuth(): void {
   authState.current = {
     userId: NON_ADMIN_USER_ID,
     sessionClaims: { metadata: { role: 'user' } },
-  }
+  };
 }
 
 const ADMIN_HEADERS = {
   Authorization: 'Bearer admin-token',
   'Content-Type': 'application/json',
-}
+};
 
 const NON_ADMIN_HEADERS = {
   Authorization: 'Bearer fan-token',
   'Content-Type': 'application/json',
-}
+};
 
 describe('POST /v1/admin/events/:id/sold-out', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('creates a promoted sold-out report and returns 201', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-04' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-04' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
@@ -84,97 +84,97 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
         evidenceUrl: 'https://venue.example.com/show',
         note: 'Venue confirmed via website',
       }),
-    })
+    });
 
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        id: string
-        eventId: string
-        reporterId: string
-        status: string
-        evidenceMethod: string
-        evidenceUrl: string | null
-        note: string | null
-        resolution: string | null
-        resolvedAt: string | null
-        adminNote: string | null
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.eventId).toBe(event.id)
-    expect(body.data.reporterId).toBe(ADMIN_USER_ID)
-    expect(body.data.status).toBe('sold-out')
-    expect(body.data.evidenceMethod).toBe('venue_site')
-    expect(body.data.evidenceUrl).toBe('https://venue.example.com/show')
-    expect(body.data.note).toBe('Venue confirmed via website')
-    expect(body.data.resolution).toBe('promoted')
-    expect(body.data.resolvedAt).not.toBeNull()
+        id: string;
+        eventId: string;
+        reporterId: string;
+        status: string;
+        evidenceMethod: string;
+        evidenceUrl: string | null;
+        note: string | null;
+        resolution: string | null;
+        resolvedAt: string | null;
+        adminNote: string | null;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.eventId).toBe(event.id);
+    expect(body.data.reporterId).toBe(ADMIN_USER_ID);
+    expect(body.data.status).toBe('sold-out');
+    expect(body.data.evidenceMethod).toBe('venue_site');
+    expect(body.data.evidenceUrl).toBe('https://venue.example.com/show');
+    expect(body.data.note).toBe('Venue confirmed via website');
+    expect(body.data.resolution).toBe('promoted');
+    expect(body.data.resolvedAt).not.toBeNull();
     expect(body.data.adminNote).toBe(
       'admin-authored — auto-promoted on creation',
-    )
+    );
 
     // Confirm row is actually in the DB.
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows).toHaveLength(1)
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(1);
+  });
 
   it('defaults evidenceMethod to "other" when body is empty', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-05' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-05' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
     const body = (await res.json()) as {
-      success: boolean
-      data: { evidenceMethod: string }
-    }
-    expect(body.data.evidenceMethod).toBe('other')
-  })
+      success: boolean;
+      data: { evidenceMethod: string };
+    };
+    expect(body.data.evidenceMethod).toBe('other');
+  });
 
   it('is idempotent — second call returns 200 with the existing report', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-06' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-06' });
 
     const first = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ evidenceMethod: 'saw_listing' }),
-    })
-    expect(first.status).toBe(201)
+    });
+    expect(first.status).toBe(201);
     const firstBody = (await first.json()) as {
-      data: { id: string }
-    }
-    const originalReportId = firstBody.data.id
+      data: { id: string };
+    };
+    const originalReportId = firstBody.data.id;
 
     const second = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ evidenceMethod: 'bought_myself' }),
-    })
-    expect(second.status).toBe(200)
+    });
+    expect(second.status).toBe(200);
     const secondBody = (await second.json()) as {
-      data: { id: string; evidenceMethod: string }
-    }
-    expect(secondBody.data.id).toBe(originalReportId)
+      data: { id: string; evidenceMethod: string };
+    };
+    expect(secondBody.data.id).toBe(originalReportId);
     // Evidence method from the second call is ignored — the existing row wins.
-    expect(secondBody.data.evidenceMethod).toBe('saw_listing')
+    expect(secondBody.data.evidenceMethod).toBe('saw_listing');
 
     // Still only one row.
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows).toHaveLength(1)
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(1);
+  });
 
   it('returns 404 when the event does not exist', async () => {
     const res = await app.request(
@@ -184,56 +184,56 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({}),
       },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('returns 403 for non-admin users', async () => {
-    setNonAdminAuth()
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-07' })
+    setNonAdminAuth();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-07' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: NON_ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(403)
+    });
+    expect(res.status).toBe(403);
 
     // Nothing should have been written.
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows).toHaveLength(0)
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(0);
+  });
 
   it('rejects invalid evidenceUrl (422)', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-08' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-08' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ evidenceUrl: 'not-a-url' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('fans out watch.soldout notifications to status=watching users only', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-08-01' })
-    const WATCHER = 'user_admin_soldout_watcher'
-    const GOING = 'user_admin_soldout_going'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
-    await seedUserEvent(GOING, event.id, { status: 'going' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-08-01' });
+    const WATCHER = 'user_admin_soldout_watcher';
+    const GOING = 'user_admin_soldout_going';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+    await seedUserEvent(GOING, event.id, { status: 'going' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(201)
+    });
+    expect(res.status).toBe(201);
 
     const rows = await testDb
       .select({
@@ -241,27 +241,27 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
         category: notifications.category,
       })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.soldout'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
-})
+      .where(eq(notifications.category, 'watch.soldout'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
+});
 
 describe('POST /v1/admin/events/:id/available', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('flips the active sold-out report to rejected and returns 204', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-10' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-10' });
 
     const markRes = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(markRes.status).toBe(201)
+    });
+    expect(markRes.status).toBe(201);
 
     const availableRes = await app.request(
       `/v1/admin/events/${event.id}/available`,
@@ -270,29 +270,29 @@ describe('POST /v1/admin/events/:id/available', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ note: 'tickets released again' }),
       },
-    )
-    expect(availableRes.status).toBe(204)
+    );
+    expect(availableRes.status).toBe(204);
 
     // The row stays — its resolution is flipped to 'rejected'.
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows).toHaveLength(1)
-    expect(rows[0]?.status).toBe('sold-out')
-    expect(rows[0]?.resolution).toBe('rejected')
-    expect(rows[0]?.adminNote).toBe('tickets released again')
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe('sold-out');
+    expect(rows[0]?.resolution).toBe('rejected');
+    expect(rows[0]?.adminNote).toBe('tickets released again');
+  });
 
   it('uses default admin note when no body is supplied', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-11' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-11' });
 
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
+    });
 
     const availableRes = await app.request(
       `/v1/admin/events/${event.id}/available`,
@@ -301,37 +301,37 @@ describe('POST /v1/admin/events/:id/available', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({}),
       },
-    )
-    expect(availableRes.status).toBe(204)
+    );
+    expect(availableRes.status).toBe(204);
 
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows[0]?.adminNote).toBe('admin marked available')
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows[0]?.adminNote).toBe('admin marked available');
+  });
 
   it('returns 204 (no-op) when no active sold-out report exists', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-12' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-12' });
 
     const res = await app.request(`/v1/admin/events/${event.id}/available`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(204)
+    });
+    expect(res.status).toBe(204);
 
     const rows = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, event.id))
-    expect(rows).toHaveLength(0)
-  })
+      .where(eq(eventReports.eventId, event.id));
+    expect(rows).toHaveLength(0);
+  });
 
   it('returns 403 for non-admin users', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-07-13' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-07-13' });
 
     // Pre-seed an admin sold-out report so we can assert it survives a
     // forbidden call.
@@ -339,15 +339,15 @@ describe('POST /v1/admin/events/:id/available', () => {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
+    });
 
-    setNonAdminAuth()
+    setNonAdminAuth();
     const res = await app.request(`/v1/admin/events/${event.id}/available`, {
       method: 'POST',
       headers: NON_ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
-    expect(res.status).toBe(403)
+    });
+    expect(res.status).toBe(403);
 
     const rows = await testDb
       .select()
@@ -357,15 +357,15 @@ describe('POST /v1/admin/events/:id/available', () => {
           eq(eventReports.eventId, event.id),
           eq(eventReports.resolution, 'promoted'),
         ),
-      )
-    expect(rows).toHaveLength(1)
-  })
+      );
+    expect(rows).toHaveLength(1);
+  });
 
   it('fans out watch.backonsale to watchers when clearing an active sold-out report', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-08-05' })
-    const WATCHER = 'user_admin_backonsale_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-08-05' });
+    const WATCHER = 'user_admin_backonsale_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
 
     // Seed the active sold-out report first — the admin/available handler
     // only fans out when it actually clears something.
@@ -373,11 +373,11 @@ describe('POST /v1/admin/events/:id/available', () => {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
+    });
     // Clear the notifications table so we only see the backonsale rows.
     await testDb
       .delete(notifications)
-      .where(eq(notifications.category, 'watch.soldout'))
+      .where(eq(notifications.category, 'watch.soldout'));
 
     const availableRes = await app.request(
       `/v1/admin/events/${event.id}/available`,
@@ -386,58 +386,58 @@ describe('POST /v1/admin/events/:id/available', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({}),
       },
-    )
-    expect(availableRes.status).toBe(204)
+    );
+    expect(availableRes.status).toBe(204);
 
     const rows = await testDb
       .select({ userId: notifications.userId })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.backonsale'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
-})
+      .where(eq(notifications.category, 'watch.backonsale'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
+});
 
 describe('GET /v1/admin/events?missing=true — moved-candidate detection', () => {
   const addDays = (base: string, days: number): string => {
-    const dt = new Date(base + 'T12:00:00Z')
-    dt.setUTCDate(dt.getUTCDate() + days)
-    return dt.toISOString().slice(0, 10)
-  }
+    const dt = new Date(base + 'T12:00:00Z');
+    dt.setUTCDate(dt.getUTCDate() + days);
+    return dt.toISOString().slice(0, 10);
+  };
   const today = (): string =>
-    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' })
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
 
   interface MissingRow {
-    id: string
-    date: string
-    classification: string
+    id: string;
+    date: string;
+    classification: string;
     movedCandidate: {
-      id: string
-      reason: string
-      title: string
-      date: string
-      venueName: string | null
-    } | null
+      id: string;
+      reason: string;
+      title: string;
+      date: string;
+      venueName: string | null;
+    } | null;
   }
 
   const fetchMissing = async (): Promise<MissingRow[]> => {
     const res = await app.request(
       '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
-    const body: { data: { rows: MissingRow[] } } = await res.json()
-    return body.data.rows
-  }
+    );
+    expect(res.status).toBe(200);
+    const body: { data: { rows: MissingRow[] } } = await res.json();
+    return body.data.rows;
+  };
 
-  const HOUR = 60 * 60 * 1000
-  const DAY = 24 * HOUR
-  const ago = (ms: number): Date => new Date(Date.now() - ms)
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  const ago = (ms: number): Date => new Date(Date.now() - ms);
 
   // Timestamps mirror the real sequence: the orphan was first crawled a month
   // back (createdAt), kept being returned until an hour ago (lastSeenAt), and
   // has now stopped (firstMissingAt).
-  const ORPHAN_CREATED = (): Date => ago(30 * DAY)
-  const ORPHAN_LAST_SEEN = (): Date => ago(1 * HOUR)
+  const ORPHAN_CREATED = (): Date => ago(30 * DAY);
+  const ORPHAN_LAST_SEEN = (): Date => ago(1 * HOUR);
 
   const seedOrphan = async (
     venueId: string,
@@ -455,7 +455,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
       hiddenFromConsumer: false,
       createdAt: overrides.createdAt ?? ORPHAN_CREATED(),
       lastSeenAt: overrides.lastSeenAt ?? ORPHAN_LAST_SEEN(),
-    })
+    });
 
   const seedCandidate = async (
     venueId: string,
@@ -471,44 +471,44 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
       status: 'upcoming',
       firstMissingAt: null,
       ...overrides,
-    })
+    });
 
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('suggests a date move: same venue, new night, announced after the orphan', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'moved-date-venue' })
+    const base = today();
+    const venue = await seedVenue({ slug: 'moved-date-venue' });
 
-    const orphan = await seedOrphan(venue.id, addDays(base, 10))
-    const replacement = await seedCandidate(venue.id, addDays(base, 45))
+    const orphan = await seedOrphan(venue.id, addDays(base, 10));
+    const replacement = await seedCandidate(venue.id, addDays(base, 45));
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('moved')
-    expect(row?.movedCandidate?.reason).toBe('date')
-    expect(row?.movedCandidate?.id).toBe(replacement.id)
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('moved');
+    expect(row?.movedCandidate?.reason).toBe('date');
+    expect(row?.movedCandidate?.id).toBe(replacement.id);
     // Enough to name the show in the confirm step without a second request.
-    expect(row?.movedCandidate?.title).toBe('Moved Artist Live')
-    expect(row?.movedCandidate?.date).toBe(addDays(base, 45))
-    expect(row?.movedCandidate?.venueName).toBe(venue.name)
-  })
+    expect(row?.movedCandidate?.title).toBe('Moved Artist Live');
+    expect(row?.movedCandidate?.date).toBe(addDays(base, 45));
+    expect(row?.movedCandidate?.venueName).toBe(venue.name);
+  });
 
   it('suggests a venue move: same night, different room', async () => {
-    const base = today()
-    const fromVenue = await seedVenue({ slug: 'moved-from-venue' })
-    const toVenue = await seedVenue({ slug: 'moved-to-venue' })
-    const showDate = addDays(base, 20)
+    const base = today();
+    const fromVenue = await seedVenue({ slug: 'moved-from-venue' });
+    const toVenue = await seedVenue({ slug: 'moved-to-venue' });
+    const showDate = addDays(base, 20);
 
-    const orphan = await seedOrphan(fromVenue.id, showDate)
-    const relocated = await seedCandidate(toVenue.id, showDate)
+    const orphan = await seedOrphan(fromVenue.id, showDate);
+    const relocated = await seedCandidate(toVenue.id, showDate);
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('moved')
-    expect(row?.movedCandidate?.reason).toBe('venue')
-    expect(row?.movedCandidate?.id).toBe(relocated.id)
-  })
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('moved');
+    expect(row?.movedCandidate?.reason).toBe('venue');
+    expect(row?.movedCandidate?.id).toBe(relocated.id);
+  });
 
   // The ordinary publishing sequence, and the one an earlier
   // `created_at >= last_seen_at` rule got wrong. crawl.ts Pass 1 refreshes
@@ -516,78 +516,78 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
   // first_missing_at once it stops, so a venue that posts the new date while
   // the old listing is still up yields created_at(new) < last_seen_at(old).
   it('suggests a move when the replacement was posted while the old listing was still live', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'overlap-listing-venue' })
+    const base = today();
+    const venue = await seedVenue({ slug: 'overlap-listing-venue' });
 
-    const orphan = await seedOrphan(venue.id, addDays(base, 10))
+    const orphan = await seedOrphan(venue.id, addDays(base, 10));
     const replacement = await seedCandidate(venue.id, addDays(base, 45), {
       // Announced five days ago; the orphan kept being crawled until an hour ago.
       createdAt: ago(5 * DAY),
-    })
+    });
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('moved')
-    expect(row?.movedCandidate?.id).toBe(replacement.id)
-  })
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('moved');
+    expect(row?.movedCandidate?.id).toBe(replacement.id);
+  });
 
   // Residency falsifier. A venue announcing a multi-night run creates every
   // night in one crawl, so the other nights match on venue and artist exactly
   // as a reschedule would. What separates them is that they are the SAME
   // announcement, not a later one.
   it('does not treat another night of the same announcement as a move', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'residency-venue' })
-    const announced = ago(30 * DAY)
+    const base = today();
+    const venue = await seedVenue({ slug: 'residency-venue' });
+    const announced = ago(30 * DAY);
 
     const orphan = await seedOrphan(venue.id, addDays(base, 10), {
       createdAt: announced,
-    })
+    });
     await seedCandidate(venue.id, addDays(base, 17), {
       createdAt: announced,
-    })
+    });
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('removed')
-    expect(row?.movedCandidate).toBeNull()
-  })
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('removed');
+    expect(row?.movedCandidate).toBeNull();
+  });
 
   // The other freshness falsifier: a genuinely separate booking, announced
   // later than the orphan but long before the orphan went anywhere.
   it('does not treat a long-earlier separate booking as a move', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'separate-booking-venue' })
+    const base = today();
+    const venue = await seedVenue({ slug: 'separate-booking-venue' });
 
     const orphan = await seedOrphan(venue.id, addDays(base, 10), {
       createdAt: ago(300 * DAY),
-    })
+    });
     await seedCandidate(venue.id, addDays(base, 45), {
       // Later than the orphan's announcement, but 100 days before it vanished.
       createdAt: ago(100 * DAY),
-    })
+    });
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('removed')
-    expect(row?.movedCandidate).toBeNull()
-  })
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('removed');
+    expect(row?.movedCandidate).toBeNull();
+  });
 
   it('does not suggest a candidate beyond the date window', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'far-future-venue' })
+    const base = today();
+    const venue = await seedVenue({ slug: 'far-future-venue' });
 
-    const orphan = await seedOrphan(venue.id, addDays(base, 10))
-    await seedCandidate(venue.id, addDays(base, 200))
+    const orphan = await seedOrphan(venue.id, addDays(base, 10));
+    await seedCandidate(venue.id, addDays(base, 200));
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.movedCandidate).toBeNull()
-    expect(row?.classification).not.toBe('moved')
-  })
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.movedCandidate).toBeNull();
+    expect(row?.classification).not.toBe('moved');
+  });
 
   it('keeps duplicate ahead of moved when both signals fire', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'dup-beats-moved-venue' })
-    const showDate = addDays(base, 10)
+    const base = today();
+    const venue = await seedVenue({ slug: 'dup-beats-moved-venue' });
+    const showDate = addDays(base, 10);
 
-    const orphan = await seedOrphan(venue.id, showDate)
+    const orphan = await seedOrphan(venue.id, showDate);
     // Live sibling on the orphan's own date -> duplicate.
     await seedEvent(venue.id, {
       title: 'Moved Artist And Friends',
@@ -598,56 +598,56 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
       status: 'upcoming',
       firstMissingAt: null,
       showTime: '21:00:00',
-    })
+    });
     // And a plausible relocation on another night -> would be 'moved' alone.
-    await seedCandidate(venue.id, addDays(base, 45))
+    await seedCandidate(venue.id, addDays(base, 45));
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.classification).toBe('duplicate')
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.classification).toBe('duplicate');
     // The suggestion is still carried so the admin can see the alternative.
-    expect(row?.movedCandidate).not.toBeNull()
-  })
+    expect(row?.movedCandidate).not.toBeNull();
+  });
 
   it('ignores a candidate that is itself missing or admin-hidden', async () => {
-    const base = today()
-    const venue = await seedVenue({ slug: 'unusable-candidate-venue' })
+    const base = today();
+    const venue = await seedVenue({ slug: 'unusable-candidate-venue' });
 
-    const orphan = await seedOrphan(venue.id, addDays(base, 10))
+    const orphan = await seedOrphan(venue.id, addDays(base, 10));
     await seedCandidate(venue.id, addDays(base, 45), {
       firstMissingAt: new Date(),
-    })
+    });
     await seedCandidate(venue.id, addDays(base, 50), {
       canonicalTitle: 'moved artist late show',
       hiddenFromConsumer: true,
-    })
+    });
 
-    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.movedCandidate).toBeNull()
-  })
-})
+    const row = (await fetchMissing()).find((cur) => cur.id === orphan.id);
+    expect(row?.movedCandidate).toBeNull();
+  });
+});
 
 describe('GET /v1/admin/events?missing=true — classification + cluster', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('classifies missing events and returns venue cluster counts', async () => {
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     const addDays = (base: string, days: number): string => {
-      const dt = new Date(base + 'T12:00:00Z')
-      dt.setUTCDate(dt.getUTCDate() + days)
-      return dt.toISOString().slice(0, 10)
-    }
+      const dt = new Date(base + 'T12:00:00Z');
+      dt.setUTCDate(dt.getUTCDate() + days);
+      return dt.toISOString().slice(0, 10);
+    };
 
-    const withinHorizonDate = addDays(today, 10)
-    const beyondHorizonDate = addDays(today, 120)
-    const siblingDate = addDays(today, 30)
-    const horizonAnchorDate = addDays(today, 60) // currently-seen event that sets the horizon
+    const withinHorizonDate = addDays(today, 10);
+    const beyondHorizonDate = addDays(today, 120);
+    const siblingDate = addDays(today, 30);
+    const horizonAnchorDate = addDays(today, 60); // currently-seen event that sets the horizon
 
-    const venue = await seedVenue({ slug: 'classify-test-venue' })
+    const venue = await seedVenue({ slug: 'classify-test-venue' });
 
     // Horizon anchor: a live (first_missing_at = null) upcoming event that sets
     // the venue's crawl horizon to today+60.
@@ -657,7 +657,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       date: horizonAnchorDate,
       status: 'upcoming',
       firstMissingAt: null,
-    })
+    });
 
     // Missing within horizon → expect 'removed'
     await seedEvent(venue.id, {
@@ -667,7 +667,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
 
     // Missing beyond horizon → expect 'crawl_gap'
     await seedEvent(venue.id, {
@@ -677,7 +677,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
 
     // Live sibling for the duplicate case: a currently-seen row at siblingDate
     // whose canonical_title contains the missing row's canonical_artist.
@@ -689,7 +689,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       date: siblingDate,
       status: 'upcoming',
       firstMissingAt: null,
-    })
+    });
 
     // Missing row with a live sibling (same venue+date, headliner containment)
     // → expect 'duplicate'
@@ -702,57 +702,57 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body: {
-      success: boolean
+      success: boolean;
       data: {
         rows: Array<{
-          id: string
-          date: string
-          classification: string
-          clusterCount: number
-        }>
-        total: number
-      }
-    } = await res.json()
+          id: string;
+          date: string;
+          classification: string;
+          clusterCount: number;
+        }>;
+        total: number;
+      };
+    } = await res.json();
 
-    const rows = body.data.rows
+    const rows = body.data.rows;
 
-    const byDate = Object.fromEntries(rows.map((row) => [row.date, row]))
-    expect(byDate[withinHorizonDate]?.classification).toBe('removed')
-    expect(byDate[beyondHorizonDate]?.classification).toBe('crawl_gap')
-    expect(byDate[siblingDate]?.classification).toBe('duplicate')
+    const byDate = Object.fromEntries(rows.map((row) => [row.date, row]));
+    expect(byDate[withinHorizonDate]?.classification).toBe('removed');
+    expect(byDate[beyondHorizonDate]?.classification).toBe('crawl_gap');
+    expect(byDate[siblingDate]?.classification).toBe('duplicate');
 
     // All missing rows at this venue share the cluster count (3 admin-visible missing).
-    for (const row of rows) expect(row.clusterCount).toBe(3)
+    for (const row of rows) expect(row.clusterCount).toBe(3);
 
     // Sorted soonest-show-first.
-    const dates = rows.map((row) => row.date)
-    expect(dates).toEqual([...dates].sort())
-  })
+    const dates = rows.map((row) => row.date);
+    expect(dates).toEqual([...dates].sort());
+  });
 
   it('excludes hidden-from-consumer rows from horizon and sibling signals', async () => {
     const today = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Denver',
-    })
+    });
     const addDays = (base: string, days: number): string => {
-      const dt = new Date(base + 'T12:00:00Z')
-      dt.setUTCDate(dt.getUTCDate() + days)
-      return dt.toISOString().slice(0, 10)
-    }
+      const dt = new Date(base + 'T12:00:00Z');
+      dt.setUTCDate(dt.getUTCDate() + days);
+      return dt.toISOString().slice(0, 10);
+    };
 
-    const visibleHorizonDate = addDays(today, 60)
-    const hiddenHorizonDate = addDays(today, 120)
-    const beyondVisibleHorizonDate = addDays(today, 90)
-    const siblingDate = addDays(today, 30)
+    const visibleHorizonDate = addDays(today, 60);
+    const hiddenHorizonDate = addDays(today, 120);
+    const beyondVisibleHorizonDate = addDays(today, 90);
+    const siblingDate = addDays(today, 30);
 
-    const venue = await seedVenue({ slug: 'classify-hidden-venue' })
+    const venue = await seedVenue({ slug: 'classify-hidden-venue' });
 
     // Visible live anchor sets the real horizon to today+60.
     await seedEvent(venue.id, {
@@ -762,7 +762,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: null,
       hiddenFromConsumer: false,
-    })
+    });
 
     // Hidden live event further out must NOT extend the horizon (the missing
     // list filters to hidden_from_consumer = false, so its signals must too).
@@ -773,7 +773,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: null,
       hiddenFromConsumer: true,
-    })
+    });
 
     // Missing beyond the VISIBLE horizon → 'crawl_gap'. Would misclassify as
     // 'removed' if the hidden anchor were counted toward the horizon.
@@ -784,7 +784,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
 
     // Hidden live sibling (same venue+date, headliner containment) must NOT
     // count as a live sibling.
@@ -797,7 +797,7 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: null,
       hiddenFromConsumer: true,
-    })
+    });
 
     // Missing row whose only sibling is hidden → NOT 'duplicate'. Within the
     // visible horizon (today+30 <= today+60) → 'removed'.
@@ -810,110 +810,110 @@ describe('GET /v1/admin/events?missing=true — classification + cluster', () =>
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body: {
       data: {
-        rows: Array<{ date: string; classification: string }>
-      }
-    } = await res.json()
+        rows: Array<{ date: string; classification: string }>;
+      };
+    } = await res.json();
 
     const byDate = Object.fromEntries(
       body.data.rows.map((row) => [row.date, row]),
-    )
-    expect(byDate[beyondVisibleHorizonDate]?.classification).toBe('crawl_gap')
-    expect(byDate[siblingDate]?.classification).toBe('removed')
-  })
-})
+    );
+    expect(byDate[beyondVisibleHorizonDate]?.classification).toBe('crawl_gap');
+    expect(byDate[siblingDate]?.classification).toBe('removed');
+  });
+});
 
 describe('GET /v1/admin/events — isSoldOut derivation', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('reflects isSoldOut state as sold-out reports are marked and cleared', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     // Use a date well in the future so it appears in the default
     // verified=false list query (which filters to today onward).
     const event = await seedEvent(venue.id, {
       date: '2026-12-01',
       verified: false,
-    })
+    });
 
     // Initial state: not sold out.
     const listBefore = await app.request('/v1/admin/events', {
       headers: ADMIN_HEADERS,
-    })
-    expect(listBefore.status).toBe(200)
+    });
+    expect(listBefore.status).toBe(200);
     const bodyBefore = (await listBefore.json()) as {
-      data: Array<{ id: string; isSoldOut: boolean }>
-    }
-    const rowBefore = bodyBefore.data.find((row) => row.id === event.id)
-    expect(rowBefore).toBeDefined()
-    expect(rowBefore?.isSoldOut).toBe(false)
+      data: Array<{ id: string; isSoldOut: boolean }>;
+    };
+    const rowBefore = bodyBefore.data.find((row) => row.id === event.id);
+    expect(rowBefore).toBeDefined();
+    expect(rowBefore?.isSoldOut).toBe(false);
 
     // Mark sold out.
     await app.request(`/v1/admin/events/${event.id}/sold-out`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
+    });
 
     const listSold = await app.request('/v1/admin/events', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const bodySold = (await listSold.json()) as {
-      data: Array<{ id: string; isSoldOut: boolean }>
-    }
-    const rowSold = bodySold.data.find((row) => row.id === event.id)
-    expect(rowSold?.isSoldOut).toBe(true)
+      data: Array<{ id: string; isSoldOut: boolean }>;
+    };
+    const rowSold = bodySold.data.find((row) => row.id === event.id);
+    expect(rowSold?.isSoldOut).toBe(true);
 
     // Mark available again.
     await app.request(`/v1/admin/events/${event.id}/available`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({}),
-    })
+    });
 
     const listAfter = await app.request('/v1/admin/events', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const bodyAfter = (await listAfter.json()) as {
-      data: Array<{ id: string; isSoldOut: boolean }>
-    }
-    const rowAfter = bodyAfter.data.find((row) => row.id === event.id)
-    expect(rowAfter?.isSoldOut).toBe(false)
-  })
-})
+      data: Array<{ id: string; isSoldOut: boolean }>;
+    };
+    const rowAfter = bodyAfter.data.find((row) => row.id === event.id);
+    expect(rowAfter?.isSoldOut).toBe(false);
+  });
+});
 
 function futureDate(daysFromNow: number): string {
-  const now = new Date()
-  now.setUTCDate(now.getUTCDate() + daysFromNow)
-  return now.toISOString().slice(0, 10)
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + daysFromNow);
+  return now.toISOString().slice(0, 10);
 }
 
 describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
   beforeEach(async () => {
-    setAdminAuth()
-    await clearTables()
-  })
+    setAdminAuth();
+    await clearTables();
+  });
 
   it('returns only rows with first_missing_at NOT NULL, ordered by date ASC', async () => {
     const venue = await seedVenue({
       name: 'Stale Test Venue',
       slug: 'stale-test-venue',
-    })
+    });
 
     // Three rows: one currently-seen, two missing at different dates.
     // The missing pair lets us verify ordering (soonest show first).
-    const earlier = new Date(Date.now() - 48 * 60 * 60 * 1000)
-    const later = new Date(Date.now() - 1 * 60 * 60 * 1000)
+    const earlier = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const later = new Date(Date.now() - 1 * 60 * 60 * 1000);
 
     await seedEvent(venue.id, {
       title: 'Currently Seen Show',
@@ -923,7 +923,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       date: futureDate(14),
       status: 'upcoming',
       firstMissingAt: null,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Sooner Disappearance',
       artist: 'Artist Sooner',
@@ -932,7 +932,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       date: futureDate(21),
       status: 'upcoming',
       firstMissingAt: earlier,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Later Disappearance',
       artist: 'Artist Later',
@@ -941,21 +941,21 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       date: futureDate(28),
       status: 'upcoming',
       firstMissingAt: later,
-    })
+    });
 
-    const res = await app.request('/v1/admin/events?missing=true')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/admin/events?missing=true');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string; firstMissingAt: string | null }[]
-    }
-    expect(body.success).toBe(true)
-    expect(body.data).toHaveLength(2)
+      success: boolean;
+      data: { title: string; firstMissingAt: string | null }[];
+    };
+    expect(body.success).toBe(true);
+    expect(body.data).toHaveLength(2);
     // Sorted soonest show date first (date ASC).
-    expect(body.data[0]?.title).toBe('Sooner Disappearance')
-    expect(body.data[1]?.title).toBe('Later Disappearance')
-    expect(body.data.every((row) => row.firstMissingAt !== null)).toBe(true)
-  })
+    expect(body.data[0]?.title).toBe('Sooner Disappearance');
+    expect(body.data[1]?.title).toBe('Later Disappearance');
+    expect(body.data.every((row) => row.firstMissingAt !== null)).toBe(true);
+  });
 
   it('excludes past-date events even when first_missing_at is set', async () => {
     // Belt-and-braces against accidental surfacing of historical shows.
@@ -965,7 +965,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     const venue = await seedVenue({
       name: 'Past Event Venue',
       slug: 'past-event-venue',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Old Disappeared Show',
       artist: 'Artist Past',
@@ -974,16 +974,16 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       date: futureDate(-30),
       status: 'upcoming',
       firstMissingAt: new Date(),
-    })
+    });
 
-    const res = await app.request('/v1/admin/events?missing=true')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/admin/events?missing=true');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: unknown[]
-    }
-    expect(body.data).toHaveLength(0)
-  })
+      success: boolean;
+      data: unknown[];
+    };
+    expect(body.data).toHaveLength(0);
+  });
 
   // Regression for #712: events admins have marked non-concert
   // (hidden_from_consumer=true) must not appear in the missing queue when
@@ -993,7 +993,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     const venue = await seedVenue({
       name: 'Hidden Filter Venue',
       slug: 'hidden-filter-venue',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Visible Missing Show',
       artist: 'Visible Artist',
@@ -1003,7 +1003,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: false,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Missing Show',
       artist: 'Hidden Artist',
@@ -1013,18 +1013,18 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       status: 'upcoming',
       firstMissingAt: new Date(),
       hiddenFromConsumer: true,
-    })
+    });
 
-    const res = await app.request('/v1/admin/events?missing=true')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/admin/events?missing=true');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string; hiddenFromConsumer: boolean }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Visible Missing Show')
-    expect(body.data[0]?.hiddenFromConsumer).toBe(false)
-  })
+      success: boolean;
+      data: { title: string; hiddenFromConsumer: boolean }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Visible Missing Show');
+    expect(body.data[0]?.hiddenFromConsumer).toBe(false);
+  });
 
   it('exposes lastSeenAt and firstMissingAt on the standard list response', async () => {
     // Regression test for the admin Review UI: the missing tab renders
@@ -1033,7 +1033,7 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     const venue = await seedVenue({
       name: 'Field Exposure Venue',
       slug: 'field-exposure-venue',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist Verified',
@@ -1042,164 +1042,164 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       date: futureDate(14),
       status: 'upcoming',
       verified: true,
-    })
+    });
 
-    const res = await app.request('/v1/admin/events?verified=true')
-    expect(res.status).toBe(200)
+    const res = await app.request('/v1/admin/events?verified=true');
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        title: string
-        lastSeenAt: string
-        firstMissingAt: string | null
-      }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]).toHaveProperty('lastSeenAt')
-    expect(body.data[0]).toHaveProperty('firstMissingAt')
-    expect(typeof body.data[0]?.lastSeenAt).toBe('string')
-    expect(body.data[0]?.firstMissingAt).toBeNull()
-  })
-})
+        title: string;
+        lastSeenAt: string;
+        firstMissingAt: string | null;
+      }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toHaveProperty('lastSeenAt');
+    expect(body.data[0]).toHaveProperty('firstMissingAt');
+    expect(typeof body.data[0]?.lastSeenAt).toBe('string');
+    expect(body.data[0]?.firstMissingAt).toBeNull();
+  });
+});
 
 describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('sets a tour name on an event that has none', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-09-01' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-09-01' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: 'The Rising Tide Tour' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       success: true,
       data: { tourName: 'The Rising Tide Tour' },
-    })
-  })
+    });
+  });
 
   it('trims surrounding whitespace before storing', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-09-02' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-09-02' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: '  Midnight Run  ' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       data: { tourName: 'Midnight Run' },
-    })
-  })
+    });
+  });
 
   it('clears to NULL (not an empty string) when given a blank value', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-09-03',
       tourName: 'Old Tour',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: '   ' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const [row] = await testDb
       .select({ tourName: events.tourName })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(row?.tourName).toBeNull()
-  })
+      .where(eq(events.id, event.id));
+    expect(row?.tourName).toBeNull();
+  });
 
   it('clears to NULL when given an explicit null', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-09-04',
       tourName: 'Old Tour',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: null }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const [row] = await testDb
       .select({ tourName: events.tourName })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(row?.tourName).toBeNull()
-  })
+      .where(eq(events.id, event.id));
+    expect(row?.tourName).toBeNull();
+  });
 
   it('leaves tourName untouched when the PATCH omits the field', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-09-05',
       tourName: 'Keep Me Tour',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ status: 'postponed' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const [row] = await testDb
       .select({ tourName: events.tourName })
       .from(events)
-      .where(eq(events.id, event.id))
-    expect(row?.tourName).toBe('Keep Me Tour')
-  })
+      .where(eq(events.id, event.id));
+    expect(row?.tourName).toBe('Keep Me Tour');
+  });
 
   it('rejects a tour name longer than 200 characters', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-09-06' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-09-06' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: 'x'.repeat(201) }),
-    })
+    });
 
-    expect(res.status).toBe(400)
-  })
+    expect(res.status).toBe(400);
+  });
 
   it('rejects a non-string tourName', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-09-07' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-09-07' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: 42 }),
-    })
+    });
 
-    expect(res.status).toBe(400)
-  })
+    expect(res.status).toBe(400);
+  });
 
   it('writes an event.update audit row for a tour-name edit', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-09-08' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-09-08' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ tourName: 'Audited Tour' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({
@@ -1208,238 +1208,238 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
         targetId: auditLog.targetId,
       })
       .from(auditLog)
-      .where(eq(auditLog.targetId, event.id))
+      .where(eq(auditLog.targetId, event.id));
     expect(rows).toContainEqual({
       action: 'event.update',
       actorId: ADMIN_USER_ID,
       targetId: event.id,
-    })
-  })
+    });
+  });
 
   it('returns tourName from GET /v1/admin/events/:id so the editor can hydrate it', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-09-09',
       tourName: 'Hydrate Tour',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       headers: ADMIN_HEADERS,
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({
       data: { tourName: 'Hydrate Tour' },
-    })
-  })
-})
+    });
+  });
+});
 
 describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('clears firstMissingAt when given { firstMissingAt: null } (Dismiss)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-01',
       firstMissingAt: new Date('2026-06-15T03:00:00Z'),
       lastSeenAt: new Date('2026-06-14T03:00:00Z'),
       verified: true,
-    })
-    expect(event.firstMissingAt).not.toBeNull()
+    });
+    expect(event.firstMissingAt).not.toBeNull();
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ firstMissingAt: null }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { firstMissingAt: string | null }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.firstMissingAt).toBeNull()
-  })
+      success: boolean;
+      data: { firstMissingAt: string | null };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.firstMissingAt).toBeNull();
+  });
 
   it('transitions status from upcoming to postponed (Mark postponed)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-02',
       verified: true,
       status: 'upcoming',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ status: 'postponed' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { status: string }
-    }
-    expect(body.data.status).toBe('postponed')
-  })
+      success: boolean;
+      data: { status: string };
+    };
+    expect(body.data.status).toBe('postponed');
+  });
 
   it('transitions status to cancelled (Mark cancelled)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-03',
       verified: true,
       status: 'upcoming',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ status: 'cancelled' }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { status: string }
-    }
-    expect(body.data.status).toBe('cancelled')
-  })
+      success: boolean;
+      data: { status: string };
+    };
+    expect(body.data.status).toBe('cancelled');
+  });
 
   it('rejects non-null values for firstMissingAt', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-04',
       firstMissingAt: new Date('2026-06-15T03:00:00Z'),
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ firstMissingAt: '2026-06-15T03:00:00Z' }),
-    })
+    });
 
-    expect(res.status).toBe(400)
-  })
+    expect(res.status).toBe(400);
+  });
 
   it('fans out watch.cancelled to status=watching users when PATCH flips status to cancelled', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-05',
       verified: true,
       status: 'upcoming',
-    })
-    const WATCHER = 'user_patch_cancel_watcher'
-    const GOING = 'user_patch_cancel_going'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
-    await seedUserEvent(GOING, event.id, { status: 'going' })
+    });
+    const WATCHER = 'user_patch_cancel_watcher';
+    const GOING = 'user_patch_cancel_going';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
+    await seedUserEvent(GOING, event.id, { status: 'going' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ status: 'cancelled' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({ userId: notifications.userId })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.cancelled'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
+      .where(eq(notifications.category, 'watch.cancelled'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
 
   it('notifies again on a genuine re-cancel: cancelled -> upcoming -> cancelled (#1311)', async () => {
     // Product ruling 2026-10-28: dedupe suppresses replays of one transition,
     // never a later genuine one. Each PATCH commits its own updated_at, which
     // is the marker, so the second cancel is a new key.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-05',
       verified: true,
       status: 'upcoming',
-    })
-    const WATCHER = 'user_patch_recancel_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    });
+    const WATCHER = 'user_patch_recancel_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
 
     for (const status of ['cancelled', 'upcoming', 'cancelled']) {
       const res = await app.request(`/v1/admin/events/${event.id}`, {
         method: 'PATCH',
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ status }),
-      })
-      expect(res.status).toBe(200)
+      });
+      expect(res.status).toBe(200);
     }
 
     const rows = await testDb
       .select({ userId: notifications.userId })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.cancelled'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER, WATCHER])
-  })
+      .where(eq(notifications.category, 'watch.cancelled'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER, WATCHER]);
+  });
 
   it('fans out watch.postponed on PATCH status flip to postponed', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-06',
       verified: true,
       status: 'upcoming',
-    })
-    const WATCHER = 'user_patch_postpone_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    });
+    const WATCHER = 'user_patch_postpone_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ status: 'postponed' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({ userId: notifications.userId })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
 
   it('fans out watch.postponed on PATCH date change alone (no status change)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-07',
       verified: true,
       status: 'upcoming',
-    })
-    const WATCHER = 'user_patch_date_watcher'
-    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    });
+    const WATCHER = 'user_patch_date_watcher';
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ date: '2026-08-14' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({ userId: notifications.userId })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER]);
+  });
 
   it('does not fan out on a PATCH that explicitly re-sends the current status and date', async () => {
     // Explicitly PATCH with the same status + date so the handler's pre-
     // state read + category computation actually run (a PATCH that only
     // touches title/artist skips those entirely via the touchesTransitionField
     // gate, which wouldn't exercise the dedup guarantee).
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-08',
       verified: true,
       status: 'upcoming',
-    })
-    await seedUserEvent('user_noop_watcher', event.id, { status: 'watching' })
+    });
+    await seedUserEvent('user_noop_watcher', event.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
@@ -1448,8 +1448,8 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
         status: 'upcoming',
         date: '2026-08-08',
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({ id: notifications.id })
@@ -1459,47 +1459,47 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
           eq(notifications.category, 'watch.cancelled'),
           eq(notifications.category, 'watch.postponed'),
         ),
-      )
-    expect(rows).toHaveLength(0)
-  })
+      );
+    expect(rows).toHaveLength(0);
+  });
 
   it('does not fan out watch.postponed on a date change to an already-cancelled event', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-09',
       verified: true,
       status: 'cancelled',
-    })
+    });
     await seedUserEvent('user_cancelled_watcher', event.id, {
       status: 'watching',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ date: '2026-08-15' }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({ id: notifications.id })
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows).toHaveLength(0)
-  })
-})
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows).toHaveLength(0);
+  });
+});
 
 describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns both verified and unverified events when verified is omitted', async () => {
     // PR 4's All-events tab needs to surface every event regardless of
     // verification state. The legacy default of `verified=false` masked
     // verified rows from this endpoint, blocking the new view.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
@@ -1507,7 +1507,7 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(14),
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
@@ -1515,23 +1515,23 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(15),
       verified: false,
-    })
+    });
 
     const res = await app.request('/v1/admin/events', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ title: string; verified: boolean }>
-    }
-    expect(body.success).toBe(true)
-    const titles = body.data.map((row) => row.title).sort()
-    expect(titles).toEqual(['Unverified Show', 'Verified Show'])
-  })
+      success: boolean;
+      data: Array<{ title: string; verified: boolean }>;
+    };
+    expect(body.success).toBe(true);
+    const titles = body.data.map((row) => row.title).sort();
+    expect(titles).toEqual(['Unverified Show', 'Verified Show']);
+  });
 
   it('still filters when verified=true is provided explicitly', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
@@ -1539,7 +1539,7 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(14),
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
@@ -1547,23 +1547,23 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(15),
       verified: false,
-    })
+    });
 
     const res = await app.request('/v1/admin/events?verified=true', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ title: string; verified: boolean }>
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Verified Show')
-    expect(body.data[0]?.verified).toBe(true)
-  })
+      success: boolean;
+      data: Array<{ title: string; verified: boolean }>;
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Verified Show');
+    expect(body.data[0]?.verified).toBe(true);
+  });
 
   it('still filters when verified=false is provided explicitly', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
@@ -1571,7 +1571,7 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(14),
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
@@ -1579,172 +1579,172 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
       tourName: null,
       date: futureDate(15),
       verified: false,
-    })
+    });
 
     const res = await app.request('/v1/admin/events?verified=false', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: Array<{ title: string; verified: boolean }>
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Unverified Show')
-    expect(body.data[0]?.verified).toBe(false)
-  })
-})
+      success: boolean;
+      data: Array<{ title: string; verified: boolean }>;
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Unverified Show');
+    expect(body.data[0]?.verified).toBe(false);
+  });
+});
 
 describe('GET /v1/admin/events — PR 5 filters', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('filters by query matching title (case-insensitive)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Lord Huron Live',
       artist: 'Lord Huron',
       supportingArtists: null,
       tourName: null,
       date: futureDate(14),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Other Show',
       artist: 'Some Band',
       supportingArtists: null,
       tourName: null,
       date: futureDate(15),
-    })
+    });
 
     const res = await app.request('/v1/admin/events?query=lord+huron', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Lord Huron Live')
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Lord Huron Live');
+  });
 
   it('filters by query matching artist', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Set A',
       artist: 'Bon Iver',
       supportingArtists: null,
       tourName: null,
       date: futureDate(14),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Set B',
       artist: 'King Krule',
       supportingArtists: null,
       tourName: null,
       date: futureDate(15),
-    })
+    });
 
     const res = await app.request('/v1/admin/events?query=Bon', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Set A')
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Set A');
+  });
 
   it('filters by query matching venue name', async () => {
     const targetVenue = await seedVenue({
       name: 'Mission Ballroom',
       slug: 'mission-ballroom',
-    })
+    });
     const otherVenue = await seedVenue({
       name: 'Bluebird Theater',
       slug: 'bluebird-theater',
-    })
+    });
     await seedEvent(targetVenue.id, {
       title: 'At Mission',
       artist: 'Artist X',
       supportingArtists: null,
       tourName: null,
       date: futureDate(14),
-    })
+    });
     await seedEvent(otherVenue.id, {
       title: 'At Bluebird',
       artist: 'Artist Y',
       supportingArtists: null,
       tourName: null,
       date: futureDate(15),
-    })
+    });
 
     const res = await app.request('/v1/admin/events?query=mission', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('At Mission')
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('At Mission');
+  });
 
   it('filters by dateFrom (inclusive) overriding the today default', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Past Show',
       artist: 'Artist A',
       supportingArtists: null,
       tourName: null,
       date: futureDate(-30),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Recent Show',
       artist: 'Artist B',
       supportingArtists: null,
       tourName: null,
       date: futureDate(-5),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Upcoming Show',
       artist: 'Artist C',
       supportingArtists: null,
       tourName: null,
       date: futureDate(7),
-    })
+    });
 
-    const dateFrom = futureDate(-10)
+    const dateFrom = futureDate(-10);
     const res = await app.request(`/v1/admin/events?dateFrom=${dateFrom}`, {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    const titles = body.data.map((row) => row.title).sort()
-    expect(titles).toEqual(['Recent Show', 'Upcoming Show'])
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    const titles = body.data.map((row) => row.title).sort();
+    expect(titles).toEqual(['Recent Show', 'Upcoming Show']);
+  });
 
   it('filters by dateTo (inclusive)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Near Show',
       artist: 'Artist A',
       supportingArtists: null,
       tourName: null,
       date: futureDate(5),
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Far Show',
       artist: 'Artist B',
       supportingArtists: null,
       tourName: null,
       date: futureDate(30),
-    })
+    });
 
-    const dateTo = futureDate(10)
+    const dateTo = futureDate(10);
     const res = await app.request(`/v1/admin/events?dateTo=${dateTo}`, {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Near Show')
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Near Show');
+  });
 
   it('filters by genre (single tag, array overlap)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Indie Show',
       artist: 'Artist A',
@@ -1752,7 +1752,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(7),
       genre: ['indie', 'folk'],
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Metal Show',
       artist: 'Artist B',
@@ -1760,18 +1760,18 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(8),
       genre: ['metal'],
-    })
+    });
 
     const res = await app.request('/v1/admin/events?genre=indie', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Indie Show')
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Indie Show');
+  });
 
   it('filters by genre (multiple tags, OR)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Indie Show',
       artist: 'Artist A',
@@ -1779,7 +1779,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(7),
       genre: ['indie'],
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Metal Show',
       artist: 'Artist B',
@@ -1787,7 +1787,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(8),
       genre: ['metal'],
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Jazz Show',
       artist: 'Artist C',
@@ -1795,18 +1795,18 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(9),
       genre: ['jazz'],
-    })
+    });
 
     const res = await app.request('/v1/admin/events?genre=indie,metal', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    const titles = body.data.map((row) => row.title).sort()
-    expect(titles).toEqual(['Indie Show', 'Metal Show'])
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    const titles = body.data.map((row) => row.title).sort();
+    expect(titles).toEqual(['Indie Show', 'Metal Show']);
+  });
 
   it('filters by missingData=no-price', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Priced Show',
       artist: 'Artist A',
@@ -1814,7 +1814,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(7),
       ticketPriceMin: '25',
-    })
+    });
     await seedEvent(venue.id, {
       title: 'No Price Show',
       artist: 'Artist B',
@@ -1822,18 +1822,18 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       tourName: null,
       date: futureDate(8),
       ticketPriceMin: null,
-    })
+    });
 
     const res = await app.request('/v1/admin/events?missingData=no-price', {
       headers: ADMIN_HEADERS,
-    })
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('No Price Show')
-  })
+    });
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('No Price Show');
+  });
 
   it('filters by missingData=no-show-time + no-genre combined (AND)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Full Show',
       artist: 'Artist A',
@@ -1842,7 +1842,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(7),
       showTime: '20:00',
       genre: ['indie'],
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Missing Both',
       artist: 'Artist B',
@@ -1851,7 +1851,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(8),
       showTime: null,
       genre: null,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Missing Genre Only',
       artist: 'Artist C',
@@ -1860,19 +1860,19 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(9),
       showTime: '21:00',
       genre: null,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?missingData=no-show-time,no-genre',
       { headers: ADMIN_HEADERS },
-    )
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Missing Both')
-  })
+    );
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Missing Both');
+  });
 
   it('combines query + genre + verified across params', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Lord Huron Indie',
       artist: 'Lord Huron',
@@ -1881,7 +1881,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(7),
       genre: ['indie'],
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Lord Huron Folk',
       artist: 'Lord Huron',
@@ -1890,7 +1890,7 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(8),
       genre: ['folk'],
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Other Indie',
       artist: 'Some Band',
@@ -1899,95 +1899,95 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
       date: futureDate(9),
       genre: ['indie'],
       verified: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?query=lord+huron&genre=indie&verified=true',
       { headers: ADMIN_HEADERS },
-    )
-    const body = (await res.json()) as { data: Array<{ title: string }> }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Lord Huron Indie')
-  })
-})
+    );
+    const body = (await res.json()) as { data: Array<{ title: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Lord Huron Indie');
+  });
+});
 
 describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('DELETE /:id now removes a verified event (legacy guard dropped)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       verified: true,
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'DELETE',
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean }
-    expect(body.success).toBe(true)
-  })
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean };
+    expect(body.success).toBe(true);
+  });
 
   it('PATCH /:id sets hiddenFromConsumer=true', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: futureDate(7) })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: futureDate(7) });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ hiddenFromConsumer: true }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { hiddenFromConsumer: boolean }
-    }
-    expect(body.data.hiddenFromConsumer).toBe(true)
-  })
+      data: { hiddenFromConsumer: boolean };
+    };
+    expect(body.data.hiddenFromConsumer).toBe(true);
+  });
 
   it('PATCH /:id can flip hiddenFromConsumer back to false', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'PATCH',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ hiddenFromConsumer: false }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { hiddenFromConsumer: boolean }
-    }
-    expect(body.data.hiddenFromConsumer).toBe(false)
-  })
+      data: { hiddenFromConsumer: boolean };
+    };
+    expect(body.data.hiddenFromConsumer).toBe(false);
+  });
 
   it('GET /:id projection includes hiddenFromConsumer', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'GET',
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { hiddenFromConsumer: boolean }
-    }
-    expect(body.data.hiddenFromConsumer).toBe(true)
-  })
+      data: { hiddenFromConsumer: boolean };
+    };
+    expect(body.data.hiddenFromConsumer).toBe(true);
+  });
 
   it('admin GET / surfaces hidden events (no consumer filter)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Hidden Show',
       artist: 'Artist Hidden',
@@ -1995,7 +1995,7 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
       tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Visible Show',
       artist: 'Artist Visible',
@@ -2003,27 +2003,27 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
       tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: false,
-    })
+    });
 
     const res = await app.request('/v1/admin/events', {
       headers: ADMIN_HEADERS,
-    })
+    });
     const body = (await res.json()) as {
-      data: Array<{ title: string; hiddenFromConsumer: boolean }>
-    }
-    const titles = body.data.map((row) => row.title).sort()
-    expect(titles).toEqual(['Hidden Show', 'Visible Show'])
-  })
-})
+      data: Array<{ title: string; hiddenFromConsumer: boolean }>;
+    };
+    const titles = body.data.map((row) => row.title).sort();
+    expect(titles).toEqual(['Hidden Show', 'Visible Show']);
+  });
+});
 
 describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns only events where hidden_from_consumer=true AND is_concert_review_needed=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Visible Concert',
       artist: 'Artist Visible',
@@ -2032,7 +2032,7 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
       date: futureDate(7),
       hiddenFromConsumer: false,
       isConcertReviewNeeded: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Unflagged',
       artist: 'Artist Unflagged',
@@ -2041,7 +2041,7 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
       date: futureDate(8),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: false,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Flagged Borderline',
       artist: 'Artist Borderline',
@@ -2050,71 +2050,71 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
       date: futureDate(9),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?view=hidden-flagged-for-review',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string }[]
-    }
-    expect(body.data).toHaveLength(1)
-    expect(body.data[0]?.title).toBe('Hidden Flagged Borderline')
-  })
+      success: boolean;
+      data: { title: string }[];
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.title).toBe('Hidden Flagged Borderline');
+  });
 
   it('GET /:id projection includes isConcertReviewNeeded', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { isConcertReviewNeeded: boolean }
-    }
-    expect(body.data.isConcertReviewNeeded).toBe(true)
-  })
+      success: boolean;
+      data: { isConcertReviewNeeded: boolean };
+    };
+    expect(body.data.isConcertReviewNeeded).toBe(true);
+  });
 
   it('list projection includes isConcertReviewNeeded', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?view=hidden-flagged-for-review',
       { headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(200)
+    );
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { isConcertReviewNeeded: boolean }[]
-    }
-    expect(body.data[0]?.isConcertReviewNeeded).toBe(true)
-  })
-})
+      success: boolean;
+      data: { isConcertReviewNeeded: boolean }[];
+    };
+    expect(body.data[0]?.isConcertReviewNeeded).toBe(true);
+  });
+});
 
 describe('GET /v1/admin/events — view=non-concert', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   // The superset the review queue misses: an event hidden by hand carries no
   // review flag, so a concert wrongly marked non-concert never surfaces there.
   it('returns every hidden event regardless of the review flag', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       title: 'Visible Concert',
       artist: 'Artist Visible',
@@ -2123,7 +2123,7 @@ describe('GET /v1/admin/events — view=non-concert', () => {
       date: futureDate(7),
       hiddenFromConsumer: false,
       isConcertReviewNeeded: true,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Unflagged',
       artist: 'Artist Unflagged',
@@ -2132,7 +2132,7 @@ describe('GET /v1/admin/events — view=non-concert', () => {
       date: futureDate(8),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: false,
-    })
+    });
     await seedEvent(venue.id, {
       title: 'Hidden Flagged Borderline',
       artist: 'Artist Borderline',
@@ -2141,38 +2141,38 @@ describe('GET /v1/admin/events — view=non-concert', () => {
       date: futureDate(9),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/events?view=non-concert', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { title: string }[]
-    }
+      success: boolean;
+      data: { title: string }[];
+    };
     expect(body.data.map((row) => row.title).sort()).toEqual([
       'Hidden Flagged Borderline',
       'Hidden Unflagged',
-    ])
-  })
+    ]);
+  });
 
   it('rejects an unrecognized view value', async () => {
     const res = await app.request('/v1/admin/events?view=not-a-view', {
       headers: ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(400)
-  })
-})
+    });
+    expect(res.status).toBe(400);
+  });
+});
 
 describe('PR 10 — bulk endpoints', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('POST /bulk/unverify flips verified=false and writes per-event audit', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt1 = await seedEvent(venue.id, {
       title: 'Show 1',
       artist: 'Artist 1',
@@ -2180,7 +2180,7 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(7),
       verified: true,
-    })
+    });
     const evt2 = await seedEvent(venue.id, {
       title: 'Show 2',
       artist: 'Artist 2',
@@ -2188,58 +2188,58 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(8),
       verified: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/events/bulk/unverify', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      data: { count: number }
-    }
-    expect(body.data.count).toBe(2)
+      data: { count: number };
+    };
+    expect(body.data.count).toBe(2);
 
     const rows = await testDb
       .select({ id: events.id, verified: events.verified })
       .from(events)
-      .where(inArray(events.id, [evt1.id, evt2.id]))
-    expect(rows.every((row) => row.verified === false)).toBe(true)
+      .where(inArray(events.id, [evt1.id, evt2.id]));
+    expect(rows.every((row) => row.verified === false)).toBe(true);
 
     const audits = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.bulk_unverify'))
-    expect(audits).toHaveLength(2)
+      .where(eq(auditLog.action, 'event.bulk_unverify'));
+    expect(audits).toHaveLength(2);
     expect(audits.map((row) => row.targetId).sort()).toEqual(
       [evt1.id, evt2.id].sort(),
-    )
-  })
+    );
+  });
 
   it('POST /bulk/mark-non-concert sets hiddenFromConsumer=true', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt1 = await seedEvent(venue.id, {
       title: 'A',
       artist: 'A',
       supportingArtists: null,
       tourName: null,
       date: futureDate(7),
-    })
+    });
     const evt2 = await seedEvent(venue.id, {
       title: 'B',
       artist: 'B',
       supportingArtists: null,
       tourName: null,
       date: futureDate(8),
-    })
+    });
 
     const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select({
@@ -2247,15 +2247,15 @@ describe('PR 10 — bulk endpoints', () => {
         hiddenFromConsumer: events.hiddenFromConsumer,
       })
       .from(events)
-      .where(inArray(events.id, [evt1.id, evt2.id]))
-    expect(rows.every((row) => row.hiddenFromConsumer === true)).toBe(true)
-  })
+      .where(inArray(events.id, [evt1.id, evt2.id]));
+    expect(rows.every((row) => row.hiddenFromConsumer === true)).toBe(true);
+  });
 
   it('POST /bulk/mark-non-concert only flips + audits currently-visible rows (#815)', async () => {
     // Mirror of the #814 R2 test: an already-hidden row left in a stale
     // cross-page selection must not bump updatedAt or write an audit entry.
-    const venue = await seedVenue()
-    const seededAt = new Date('2026-01-01T00:00:00Z')
+    const venue = await seedVenue();
+    const seededAt = new Date('2026-01-01T00:00:00Z');
     const visibleEvent = await seedEvent(venue.id, {
       title: 'Visible',
       artist: 'A',
@@ -2264,7 +2264,7 @@ describe('PR 10 — bulk endpoints', () => {
       date: futureDate(7),
       hiddenFromConsumer: false,
       updatedAt: seededAt,
-    })
+    });
     const hiddenEvent = await seedEvent(venue.id, {
       title: 'Hidden',
       artist: 'B',
@@ -2272,20 +2272,20 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: true,
-    })
+    });
     const hiddenBefore = await testDb
       .select({ updatedAt: events.updatedAt })
       .from(events)
-      .where(eq(events.id, hiddenEvent.id))
-    const hiddenUpdatedAtBefore = hiddenBefore[0]?.updatedAt
+      .where(eq(events.id, hiddenEvent.id));
+    const hiddenUpdatedAtBefore = hiddenBefore[0]?.updatedAt;
 
     const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [visibleEvent.id, hiddenEvent.id] }),
-    })
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ success: true, data: { count: 1 } })
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, data: { count: 1 } });
 
     const [visibleAfter] = await testDb
       .select({
@@ -2293,28 +2293,28 @@ describe('PR 10 — bulk endpoints', () => {
         updatedAt: events.updatedAt,
       })
       .from(events)
-      .where(eq(events.id, visibleEvent.id))
-    expect(visibleAfter?.hiddenFromConsumer).toBe(true)
+      .where(eq(events.id, visibleEvent.id));
+    expect(visibleAfter?.hiddenFromConsumer).toBe(true);
     expect(visibleAfter?.updatedAt.getTime()).toBeGreaterThan(
       seededAt.getTime(),
-    )
+    );
 
     const hiddenAfter = await testDb
       .select({ updatedAt: events.updatedAt })
       .from(events)
-      .where(eq(events.id, hiddenEvent.id))
-    expect(hiddenAfter[0]?.updatedAt).toEqual(hiddenUpdatedAtBefore)
+      .where(eq(events.id, hiddenEvent.id));
+    expect(hiddenAfter[0]?.updatedAt).toEqual(hiddenUpdatedAtBefore);
 
     const audits = await testDb
       .select({ targetId: auditLog.targetId })
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.bulk_mark_non_concert'))
-    expect(audits).toHaveLength(1)
-    expect(audits[0]?.targetId).toBe(visibleEvent.id)
-  })
+      .where(eq(auditLog.action, 'event.bulk_mark_non_concert'));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.targetId).toBe(visibleEvent.id);
+  });
 
   it('POST /bulk/mark-as-concert sets hiddenFromConsumer=false (#809)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt1 = await seedEvent(venue.id, {
       title: 'A',
       artist: 'A',
@@ -2322,7 +2322,7 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
     const evt2 = await seedEvent(venue.id, {
       title: 'B',
       artist: 'B',
@@ -2330,19 +2330,19 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { count: number }
-    }
-    expect(body.data.count).toBe(2)
+      success: boolean;
+      data: { count: number };
+    };
+    expect(body.data.count).toBe(2);
 
     const rows = await testDb
       .select({
@@ -2350,14 +2350,14 @@ describe('PR 10 — bulk endpoints', () => {
         hiddenFromConsumer: events.hiddenFromConsumer,
       })
       .from(events)
-      .where(inArray(events.id, [evt1.id, evt2.id]))
-    expect(rows.every((row) => row.hiddenFromConsumer === false)).toBe(true)
-  })
+      .where(inArray(events.id, [evt1.id, evt2.id]));
+    expect(rows.every((row) => row.hiddenFromConsumer === false)).toBe(true);
+  });
 
   it('POST /bulk/mark-as-concert does NOT touch is_concert_review_needed (#809)', async () => {
     // The flag reflects the LLM's view, not the admin's resolution.
     // Confirms the spec's invariant: bulk action only flips visibility.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt = await seedEvent(venue.id, {
       title: 'Flagged Hidden Event',
       artist: 'Test',
@@ -2366,14 +2366,14 @@ describe('PR 10 — bulk endpoints', () => {
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
-    })
+    });
 
     const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt.id] }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const [row] = await testDb
       .select({
@@ -2381,27 +2381,27 @@ describe('PR 10 — bulk endpoints', () => {
         isConcertReviewNeeded: events.isConcertReviewNeeded,
       })
       .from(events)
-      .where(eq(events.id, evt.id))
-    expect(row?.hiddenFromConsumer).toBe(false)
-    expect(row?.isConcertReviewNeeded).toBe(true) // unchanged
-  })
+      .where(eq(events.id, evt.id));
+    expect(row?.hiddenFromConsumer).toBe(false);
+    expect(row?.isConcertReviewNeeded).toBe(true); // unchanged
+  });
 
   it('POST /bulk/mark-as-concert writes event.bulk_mark_as_concert audit entries (#809)', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt1 = await seedEvent(venue.id, {
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
     const evt2 = await seedEvent(venue.id, {
       date: futureDate(8),
       hiddenFromConsumer: true,
-    })
+    });
 
     await app.request('/v1/admin/events/bulk/mark-as-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt1.id, evt2.id] }),
-    })
+    });
 
     const audits = await testDb
       .select({
@@ -2409,11 +2409,11 @@ describe('PR 10 — bulk endpoints', () => {
         targetId: auditLog.targetId,
       })
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'))
-    expect(audits).toHaveLength(2)
-    const targetIds = audits.map((entry) => entry.targetId).sort()
-    expect(targetIds).toEqual([evt1.id, evt2.id].sort())
-  })
+      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'));
+    expect(audits).toHaveLength(2);
+    const targetIds = audits.map((entry) => entry.targetId).sort();
+    expect(targetIds).toEqual([evt1.id, evt2.id].sort());
+  });
 
   it('POST /bulk/mark-as-concert only flips + audits currently-hidden rows (#814 R2)', async () => {
     // Mixed selection: 1 hidden row that needs flipping + 1 already-visible
@@ -2421,7 +2421,7 @@ describe('PR 10 — bulk endpoints', () => {
     // WHERE filter must skip the visible row entirely — no updatedAt bump,
     // no audit entry, and the response count reflects only the row that
     // actually transitioned.
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const hiddenEvent = await seedEvent(venue.id, {
       title: 'Hidden',
       artist: 'A',
@@ -2429,7 +2429,7 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
-    })
+    });
     const visibleEvent = await seedEvent(venue.id, {
       title: 'Visible',
       artist: 'B',
@@ -2437,24 +2437,24 @@ describe('PR 10 — bulk endpoints', () => {
       tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: false,
-    })
+    });
     const visibleBefore = await testDb
       .select({ updatedAt: events.updatedAt })
       .from(events)
-      .where(eq(events.id, visibleEvent.id))
-    const visibleUpdatedAtBefore = visibleBefore[0]?.updatedAt
+      .where(eq(events.id, visibleEvent.id));
+    const visibleUpdatedAtBefore = visibleBefore[0]?.updatedAt;
 
     const res = await app.request('/v1/admin/events/bulk/mark-as-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [hiddenEvent.id, visibleEvent.id] }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { count: number }
-    }
-    expect(body.data.count).toBe(1)
+      success: boolean;
+      data: { count: number };
+    };
+    expect(body.data.count).toBe(1);
 
     const visibleAfter = await testDb
       .select({
@@ -2462,406 +2462,406 @@ describe('PR 10 — bulk endpoints', () => {
         updatedAt: events.updatedAt,
       })
       .from(events)
-      .where(eq(events.id, visibleEvent.id))
-    expect(visibleAfter[0]?.hiddenFromConsumer).toBe(false)
-    expect(visibleAfter[0]?.updatedAt).toEqual(visibleUpdatedAtBefore)
+      .where(eq(events.id, visibleEvent.id));
+    expect(visibleAfter[0]?.hiddenFromConsumer).toBe(false);
+    expect(visibleAfter[0]?.updatedAt).toEqual(visibleUpdatedAtBefore);
 
     const audits = await testDb
       .select({ targetId: auditLog.targetId })
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'))
-    expect(audits).toHaveLength(1)
-    expect(audits[0]?.targetId).toBe(hiddenEvent.id)
-  })
+      .where(eq(auditLog.action, 'event.bulk_mark_as_concert'));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]?.targetId).toBe(hiddenEvent.id);
+  });
 
   it('POST /bulk/delete requires confirmation=DELETE', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const evt = await seedEvent(venue.id, {
       title: 'D',
       artist: 'D',
       supportingArtists: null,
       tourName: null,
       date: futureDate(7),
-    })
+    });
 
     const noConfirm = await app.request('/v1/admin/events/bulk/delete', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt.id] }),
-    })
-    expect(noConfirm.status).toBe(422)
+    });
+    expect(noConfirm.status).toBe(422);
 
     const wrongConfirm = await app.request('/v1/admin/events/bulk/delete', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt.id], confirmation: 'delete' }),
-    })
-    expect(wrongConfirm.status).toBe(422)
+    });
+    expect(wrongConfirm.status).toBe(422);
 
     const ok = await app.request('/v1/admin/events/bulk/delete', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt.id], confirmation: 'DELETE' }),
-    })
-    expect(ok.status).toBe(200)
+    });
+    expect(ok.status).toBe(200);
 
     const remaining = await testDb
       .select({ id: events.id })
       .from(events)
-      .where(eq(events.id, evt.id))
-    expect(remaining).toHaveLength(0)
-  })
+      .where(eq(events.id, evt.id));
+    expect(remaining).toHaveLength(0);
+  });
 
   it('rejects bulk payloads with more than 100 ids', async () => {
     const ids = Array.from(
       { length: 101 },
       (_, idx) => `00000000-0000-0000-0000-${String(idx).padStart(12, '0')}`,
-    )
+    );
 
     const res = await app.request('/v1/admin/events/bulk/unverify', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects bulk payloads with an empty ids array', async () => {
     const res = await app.request('/v1/admin/events/bulk/mark-non-concert', {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ ids: [] }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects non-admin callers with 403', async () => {
-    const venue = await seedVenue()
-    const evt = await seedEvent(venue.id, { date: futureDate(7) })
-    setNonAdminAuth()
+    const venue = await seedVenue();
+    const evt = await seedEvent(venue.id, { date: futureDate(7) });
+    setNonAdminAuth();
 
     const res = await app.request('/v1/admin/events/bulk/unverify', {
       method: 'POST',
       headers: NON_ADMIN_HEADERS,
       body: JSON.stringify({ ids: [evt.id] }),
-    })
-    expect(res.status).toBe(403)
-  })
-})
+    });
+    expect(res.status).toBe(403);
+  });
+});
 
 describe('GET /v1/admin/events/:id — single-event editor payload', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns the full event projection with venue joined', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const event = await seedEvent(venue.id, {
       date: '2026-08-10',
       verified: true,
       status: 'upcoming',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'GET',
       headers: ADMIN_HEADERS,
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        id: string
-        title: string
-        artist: string | null
-        date: string
-        verified: boolean
-        status: string
-        venueId: string
-        venueName: string | null
-        firstMissingAt: string | null
-        isSoldOut: boolean
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.id).toBe(event.id)
-    expect(body.data.venueId).toBe(venue.id)
-    expect(body.data.venueName).toBe(venue.name)
-    expect(body.data.verified).toBe(true)
-    expect(body.data.status).toBe('upcoming')
-    expect(body.data.isSoldOut).toBe(false)
-  })
+        id: string;
+        title: string;
+        artist: string | null;
+        date: string;
+        verified: boolean;
+        status: string;
+        venueId: string;
+        venueName: string | null;
+        firstMissingAt: string | null;
+        isSoldOut: boolean;
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.id).toBe(event.id);
+    expect(body.data.venueId).toBe(venue.id);
+    expect(body.data.venueName).toBe(venue.name);
+    expect(body.data.verified).toBe(true);
+    expect(body.data.status).toBe('upcoming');
+    expect(body.data.isSoldOut).toBe(false);
+  });
 
   it('returns 404 for a non-existent event id', async () => {
     const res = await app.request(
       `/v1/admin/events/00000000-0000-0000-0000-000000000000`,
       { method: 'GET', headers: ADMIN_HEADERS },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('rejects non-admin callers with 403', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2026-08-11' })
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-08-11' });
 
-    setNonAdminAuth()
+    setNonAdminAuth();
 
     const res = await app.request(`/v1/admin/events/${event.id}`, {
       method: 'GET',
       headers: NON_ADMIN_HEADERS,
-    })
-    expect(res.status).toBe(403)
-  })
-})
+    });
+    expect(res.status).toBe(403);
+  });
+});
 
 describe('POST /v1/admin/events/:id/merge', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('moves user_events, reports, submissions, and price logs to target then deletes source', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     const source = await seedEvent(venue.id, {
       title: 'Source Show',
       artist: 'Source Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-09-01',
-    })
+    });
     const target = await seedEvent(venue.id, {
       title: 'Target Show',
       artist: 'Target Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-09-02',
-    })
+    });
 
-    await seedUserEvent('user-a', source.id)
-    await seedUserEvent('user-b', source.id, { status: 'going' })
-    await seedEventReport(source.id, 'reporter-a', { status: 'cancelled' })
-    await seedPriceSubmission(source.id, 'price-user-a')
-    await seedPriceRetrievalLog(source.id, venue.id)
+    await seedUserEvent('user-a', source.id);
+    await seedUserEvent('user-b', source.id, { status: 'going' });
+    await seedEventReport(source.id, 'reporter-a', { status: 'cancelled' });
+    await seedPriceSubmission(source.id, 'price-user-a');
+    await seedPriceRetrievalLog(source.id, venue.id);
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
+    });
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        mergedInto: string
+        mergedInto: string;
         referencesMoved: {
-          userEventsMoved: number
-          userEventsDropped: number
-          reportsMoved: number
-          submissionsMoved: number
-          priceLogsMoved: number
-        }
-      }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.mergedInto).toBe(target.id)
-    expect(body.data.referencesMoved.userEventsMoved).toBe(2)
-    expect(body.data.referencesMoved.userEventsDropped).toBe(0)
-    expect(body.data.referencesMoved.reportsMoved).toBe(1)
-    expect(body.data.referencesMoved.submissionsMoved).toBe(1)
-    expect(body.data.referencesMoved.priceLogsMoved).toBe(1)
+          userEventsMoved: number;
+          userEventsDropped: number;
+          reportsMoved: number;
+          submissionsMoved: number;
+          priceLogsMoved: number;
+        };
+      };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.mergedInto).toBe(target.id);
+    expect(body.data.referencesMoved.userEventsMoved).toBe(2);
+    expect(body.data.referencesMoved.userEventsDropped).toBe(0);
+    expect(body.data.referencesMoved.reportsMoved).toBe(1);
+    expect(body.data.referencesMoved.submissionsMoved).toBe(1);
+    expect(body.data.referencesMoved.priceLogsMoved).toBe(1);
 
     // Source row is gone.
     const sourceRows = await testDb
       .select()
       .from(events)
-      .where(eq(events.id, source.id))
-    expect(sourceRows).toHaveLength(0)
+      .where(eq(events.id, source.id));
+    expect(sourceRows).toHaveLength(0);
 
     // References point at the target.
     const movedUserEvents = await testDb
       .select()
       .from(userEvents)
-      .where(eq(userEvents.eventId, target.id))
-    expect(movedUserEvents).toHaveLength(2)
+      .where(eq(userEvents.eventId, target.id));
+    expect(movedUserEvents).toHaveLength(2);
     const movedReports = await testDb
       .select()
       .from(eventReports)
-      .where(eq(eventReports.eventId, target.id))
-    expect(movedReports).toHaveLength(1)
+      .where(eq(eventReports.eventId, target.id));
+    expect(movedReports).toHaveLength(1);
     const movedSubmissions = await testDb
       .select()
       .from(priceSubmissions)
-      .where(eq(priceSubmissions.eventId, target.id))
-    expect(movedSubmissions).toHaveLength(1)
+      .where(eq(priceSubmissions.eventId, target.id));
+    expect(movedSubmissions).toHaveLength(1);
     const movedLogs = await testDb
       .select()
       .from(priceRetrievalLog)
-      .where(eq(priceRetrievalLog.eventId, target.id))
-    expect(movedLogs).toHaveLength(1)
-  })
+      .where(eq(priceRetrievalLog.eventId, target.id));
+    expect(movedLogs).toHaveLength(1);
+  });
 
   it('drops the source user_events row when the same user already has the target on their list', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Source' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Source' });
     const target = await seedEvent(venue.id, {
       artist: 'Target',
       supportingArtists: null,
       tourName: null,
       date: '2026-10-01',
-    })
+    });
 
     // user-a has both, user-b has only source.
-    await seedUserEvent('user-a', source.id, { status: 'watching' })
-    await seedUserEvent('user-a', target.id, { status: 'going' })
-    await seedUserEvent('user-b', source.id, { status: 'interested' })
+    await seedUserEvent('user-a', source.id, { status: 'watching' });
+    await seedUserEvent('user-a', target.id, { status: 'going' });
+    await seedUserEvent('user-b', source.id, { status: 'interested' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
+      success: boolean;
       data: {
-        referencesMoved: { userEventsMoved: number; userEventsDropped: number }
-      }
-    }
-    expect(body.data.referencesMoved.userEventsMoved).toBe(1)
-    expect(body.data.referencesMoved.userEventsDropped).toBe(1)
+        referencesMoved: { userEventsMoved: number; userEventsDropped: number };
+      };
+    };
+    expect(body.data.referencesMoved.userEventsMoved).toBe(1);
+    expect(body.data.referencesMoved.userEventsDropped).toBe(1);
 
     // Target ends up with 2 user_events: user-a's original 'going' (preserved)
     // and user-b's moved row.
     const targetRows = await testDb
       .select()
       .from(userEvents)
-      .where(eq(userEvents.eventId, target.id))
-    expect(targetRows).toHaveLength(2)
+      .where(eq(userEvents.eventId, target.id));
+    expect(targetRows).toHaveLength(2);
     const userAStatus = targetRows.find(
       (row) => row.userId === 'user-a',
-    )?.status
+    )?.status;
     // The conflict-winner is user-a's pre-existing target row, so the
     // surviving status is 'going', not the source's 'watching'.
-    expect(userAStatus).toBe('going')
-  })
+    expect(userAStatus).toBe('going');
+  });
 
   it('coalesces attending_at onto the surviving target row (#70)', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Dup Source' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Dup Source' });
     const target = await seedEvent(venue.id, {
       artist: 'Dup Target',
       supportingArtists: null,
       tourName: null,
       date: '2026-10-05',
-    })
+    });
 
-    const earlier = new Date('2026-06-01T00:00:00.000Z')
+    const earlier = new Date('2026-06-01T00:00:00.000Z');
 
     // user-a attended on the source row and is only watching the target: the
     // merge must not lose the night they actually went to.
     await seedUserEvent('user-a', source.id, {
       status: null,
       attendingAt: earlier,
-    })
-    await seedUserEvent('user-a', target.id, { status: 'watching' })
+    });
+    await seedUserEvent('user-a', target.id, { status: 'watching' });
     // user-b has attendance on the target only — the merge must not clear it.
     await seedUserEvent('user-b', target.id, {
       status: 'watching',
       attendingAt: earlier,
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const targetRows = await testDb
       .select()
       .from(userEvents)
-      .where(eq(userEvents.eventId, target.id))
-    expect(targetRows).toHaveLength(2)
+      .where(eq(userEvents.eventId, target.id));
+    expect(targetRows).toHaveLength(2);
 
-    const userA = targetRows.find((row) => row.userId === 'user-a')
-    expect(userA?.status).toBe('watching')
-    expect(userA?.attendingAt?.toISOString()).toBe(earlier.toISOString())
+    const userA = targetRows.find((row) => row.userId === 'user-a');
+    expect(userA?.status).toBe('watching');
+    expect(userA?.attendingAt?.toISOString()).toBe(earlier.toISOString());
 
-    const userB = targetRows.find((row) => row.userId === 'user-b')
-    expect(userB?.attendingAt?.toISOString()).toBe(earlier.toISOString())
-  })
+    const userB = targetRows.find((row) => row.userId === 'user-b');
+    expect(userB?.attendingAt?.toISOString()).toBe(earlier.toISOString());
+  });
 
   it('writes one audit-log row with source + counts metadata', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Src' });
     const target = await seedEvent(venue.id, {
       artist: 'Tgt',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('user-a', source.id)
+    });
+    await seedUserEvent('user-a', source.id);
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const auditRows = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.merge'))
-    expect(auditRows).toHaveLength(1)
-    const row = auditRows[0]!
-    expect(row.targetId).toBe(target.id)
+      .where(eq(auditLog.action, 'event.merge'));
+    expect(auditRows).toHaveLength(1);
+    const row = auditRows[0]!;
+    expect(row.targetId).toBe(target.id);
     const metadata = row.metadata as {
-      sourceId: string
-      referencesMoved: { userEventsMoved: number }
-    }
-    expect(metadata.sourceId).toBe(source.id)
-    expect(metadata.referencesMoved.userEventsMoved).toBe(1)
-  })
+      sourceId: string;
+      referencesMoved: { userEventsMoved: number };
+    };
+    expect(metadata.sourceId).toBe(source.id);
+    expect(metadata.referencesMoved.userEventsMoved).toBe(1);
+  });
 
   it('stays silent by default: an ordinary de-dup merge notifies nobody', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Src' });
     const target = await seedEvent(venue.id, {
       artist: 'Tgt',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows).toHaveLength(0)
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows).toHaveLength(0);
+  });
 
   it('notifies watchers of a date move with the new-night copy', async () => {
-    const venue = await seedVenue({ name: 'Bluebird Theater' })
-    const source = await seedEvent(venue.id, { artist: 'Moved Artist' })
+    const venue = await seedVenue({ name: 'Bluebird Theater' });
+    const source = await seedEvent(venue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(venue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
       showTime: '21:00:00',
-    })
-    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
@@ -2871,21 +2871,21 @@ describe('POST /v1/admin/events/:id/merge', () => {
         notifyWatchers: true,
         suggestion: { reason: 'date' },
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows).toHaveLength(1)
-    const row = rows[0]!
-    expect(row.userId).toBe('watcher-a')
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows).toHaveLength(1);
+    const row = rows[0]!;
+    expect(row.userId).toBe('watcher-a');
     // Fired on the TARGET, so the deep link resolves — the source row is gone.
-    expect(row.actionUrl).toBe(`/events/${target.id}`)
-    expect(row.body).toBe('Same tickets, new night.')
-    expect(row.body).not.toContain('Refund')
-  })
+    expect(row.actionUrl).toBe(`/events/${target.id}`);
+    expect(row.body).toBe('Same tickets, new night.');
+    expect(row.body).not.toContain('Refund');
+  });
 
   // The venue variant cannot be built from the usual "<artist> at <venue>"
   // template: the fan-out reads the target, whose venue is already the new
@@ -2894,16 +2894,16 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const fromVenue = await seedVenue({
       slug: 'from-room',
       name: 'Larimer Lounge',
-    })
-    const toVenue = await seedVenue({ slug: 'to-room', name: 'Globe Hall' })
-    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    });
+    const toVenue = await seedVenue({ slug: 'to-room', name: 'Globe Hall' });
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(toVenue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
@@ -2913,31 +2913,31 @@ describe('POST /v1/admin/events/:id/merge', () => {
         notifyWatchers: true,
         suggestion: { reason: 'venue' },
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows).toHaveLength(1)
-    const row = rows[0]!
-    expect(row.title).toBe('Moved Artist at Larimer Lounge moved.')
-    expect(row.body).toBe('Your ticket still works. New room: Globe Hall.')
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows).toHaveLength(1);
+    const row = rows[0]!;
+    expect(row.title).toBe('Moved Artist at Larimer Lounge moved.');
+    expect(row.body).toBe('Your ticket still works. New room: Globe Hall.');
+  });
 
   // The caller's claimed reason is provenance for the audit row. It must not
   // pick the copy — that is derived from the two venue ids.
   it('ignores a suggestion reason that contradicts the rows', async () => {
-    const venue = await seedVenue({ name: 'Bluebird Theater' })
-    const source = await seedEvent(venue.id, { artist: 'Moved Artist' })
+    const venue = await seedVenue({ name: 'Bluebird Theater' });
+    const source = await seedEvent(venue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(venue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
@@ -2948,15 +2948,15 @@ describe('POST /v1/admin/events/:id/merge', () => {
         // Claims a venue move; both rows are at the same venue.
         suggestion: { reason: 'venue' },
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows[0]!.body).toBe('Same tickets, new night.')
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows[0]!.body).toBe('Same tickets, new night.');
+  });
 
   // The watch rows move onto the target before the fan-out runs, so reading
   // watchers off the target notifies people who only ever watched the target
@@ -2966,33 +2966,33 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const fromVenue = await seedVenue({
       slug: 'notify-from',
       name: 'Larimer Lounge',
-    })
-    const toVenue = await seedVenue({ slug: 'notify-to', name: 'Globe Hall' })
-    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    });
+    const toVenue = await seedVenue({ slug: 'notify-to', name: 'Globe Hall' });
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(toVenue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-moved', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-moved', source.id, { status: 'watching' });
     await seedUserEvent('watcher-already-there', target.id, {
       status: 'watching',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows.map((row) => row.userId)).toEqual(['watcher-moved'])
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows.map((row) => row.userId)).toEqual(['watcher-moved']);
+  });
 
   // A user watching BOTH listings keeps their target row and loses the source
   // one to the (user_id, event_id) conflict. They are still notified, exactly
@@ -3004,32 +3004,32 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const fromVenue = await seedVenue({
       slug: 'both-from',
       name: 'Larimer Lounge',
-    })
-    const toVenue = await seedVenue({ slug: 'both-to', name: 'Globe Hall' })
-    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    });
+    const toVenue = await seedVenue({ slug: 'both-to', name: 'Globe Hall' });
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(toVenue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-both', source.id, { status: 'watching' })
-    await seedUserEvent('watcher-both', target.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-both', source.id, { status: 'watching' });
+    await seedUserEvent('watcher-both', target.id, { status: 'watching' });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows).toHaveLength(1)
-    expect(rows[0]!.userId).toBe('watcher-both')
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.userId).toBe('watcher-both');
+  });
 
   // `events.venue_id` is ON DELETE SET NULL. Falling back to the date
   // template when the old room's name is gone would tell watchers the NIGHT
@@ -3038,45 +3038,47 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const toVenue = await seedVenue({
       slug: 'surviving-room',
       name: 'Globe Hall',
-    })
-    const source = await seedEvent(toVenue.id, { artist: 'Moved Artist' })
+    });
+    const source = await seedEvent(toVenue.id, { artist: 'Moved Artist' });
     const target = await seedEvent(toVenue.id, {
       artist: 'Moved Artist',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
-    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    });
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' });
     // Detach the source from its venue, as the FK's SET NULL would.
     await testDb
       .update(events)
       .set({ venueId: null })
-      .where(eq(events.id, source.id))
+      .where(eq(events.id, source.id));
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const rows = await testDb
       .select()
       .from(notifications)
-      .where(eq(notifications.category, 'watch.postponed'))
-    expect(rows[0]!.title).toBe('Moved Artist: new venue.')
-    expect(rows[0]!.body).toBe('Your ticket still works. New room: Globe Hall.')
-  })
+      .where(eq(notifications.category, 'watch.postponed'));
+    expect(rows[0]!.title).toBe('Moved Artist: new venue.');
+    expect(rows[0]!.body).toBe(
+      'Your ticket still works. New room: Globe Hall.',
+    );
+  });
 
   it('records suggestion provenance and the notify flag on the audit row', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Src' });
     const target = await seedEvent(venue.id, {
       artist: 'Tgt',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
+    });
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
@@ -3086,66 +3088,66 @@ describe('POST /v1/admin/events/:id/merge', () => {
         notifyWatchers: true,
         suggestion: { reason: 'date' },
       }),
-    })
-    expect(res.status).toBe(200)
+    });
+    expect(res.status).toBe(200);
 
     const auditRows = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.merge'))
+      .where(eq(auditLog.action, 'event.merge'));
     const metadata = auditRows[0]!.metadata as {
-      suggestion: { reason: string } | null
-      notifyWatchers: boolean
-    }
-    expect(metadata.suggestion?.reason).toBe('date')
-    expect(metadata.notifyWatchers).toBe(true)
-  })
+      suggestion: { reason: string } | null;
+      notifyWatchers: boolean;
+    };
+    expect(metadata.suggestion?.reason).toBe('date');
+    expect(metadata.notifyWatchers).toBe(true);
+  });
 
   // Without this the denominator the matcher is calibrated against is missing:
   // a hand-searched merge must be distinguishable from a confirmed suggestion.
   it('records a null suggestion for a hand-searched merge', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id, { artist: 'Src' });
     const target = await seedEvent(venue.id, {
       artist: 'Tgt',
       supportingArtists: null,
       tourName: null,
       date: '2026-11-01',
-    })
+    });
 
     await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
+    });
 
     const auditRows = await testDb
       .select()
       .from(auditLog)
-      .where(eq(auditLog.action, 'event.merge'))
+      .where(eq(auditLog.action, 'event.merge'));
     const metadata = auditRows[0]!.metadata as {
-      suggestion: unknown
-      notifyWatchers: boolean
-    }
-    expect(metadata.suggestion).toBeNull()
-    expect(metadata.notifyWatchers).toBe(false)
-  })
+      suggestion: unknown;
+      notifyWatchers: boolean;
+    };
+    expect(metadata.suggestion).toBeNull();
+    expect(metadata.notifyWatchers).toBe(false);
+  });
 
   it('rejects merging an event with itself (422)', async () => {
-    const venue = await seedVenue()
-    const event = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id);
 
     const res = await app.request(`/v1/admin/events/${event.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: event.id }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('returns 404 when the source event does not exist', async () => {
-    const venue = await seedVenue()
-    const target = await seedEvent(venue.id, { artist: 'Target' })
+    const venue = await seedVenue();
+    const target = await seedEvent(venue.id, { artist: 'Target' });
 
     const res = await app.request(
       `/v1/admin/events/00000000-0000-0000-0000-000000000000/merge`,
@@ -3154,13 +3156,13 @@ describe('POST /v1/admin/events/:id/merge', () => {
         headers: ADMIN_HEADERS,
         body: JSON.stringify({ targetId: target.id }),
       },
-    )
-    expect(res.status).toBe(404)
-  })
+    );
+    expect(res.status).toBe(404);
+  });
 
   it('returns 404 when the target event does not exist', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id);
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
@@ -3168,127 +3170,127 @@ describe('POST /v1/admin/events/:id/merge', () => {
       body: JSON.stringify({
         targetId: '00000000-0000-0000-0000-000000000000',
       }),
-    })
-    expect(res.status).toBe(404)
+    });
+    expect(res.status).toBe(404);
 
     // Source must still exist — the failed validation must not have deleted it.
     const remaining = await testDb
       .select()
       .from(events)
-      .where(eq(events.id, source.id))
-    expect(remaining).toHaveLength(1)
-  })
+      .where(eq(events.id, source.id));
+    expect(remaining).toHaveLength(1);
+  });
 
   it('rejects an invalid targetId payload (422)', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id);
 
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: ADMIN_HEADERS,
       body: JSON.stringify({ targetId: 'not-a-uuid' }),
-    })
-    expect(res.status).toBe(422)
-  })
+    });
+    expect(res.status).toBe(422);
+  });
 
   it('rejects non-admin callers with 403', async () => {
-    const venue = await seedVenue()
-    const source = await seedEvent(venue.id)
+    const venue = await seedVenue();
+    const source = await seedEvent(venue.id);
     const target = await seedEvent(venue.id, {
       artist: 'Target',
       supportingArtists: null,
       tourName: null,
       date: '2026-12-01',
-    })
-    setNonAdminAuth()
+    });
+    setNonAdminAuth();
     const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
       method: 'POST',
       headers: NON_ADMIN_HEADERS,
       body: JSON.stringify({ targetId: target.id }),
-    })
-    expect(res.status).toBe(403)
-  })
-})
+    });
+    expect(res.status).toBe(403);
+  });
+});
 
 describe('GET /v1/admin/events?count=true', () => {
   beforeEach(() => {
-    setAdminAuth()
-    return clearTables()
-  })
+    setAdminAuth();
+    return clearTables();
+  });
 
   it('returns { rows, total } with total ignoring limit/offset', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     // Dates are relative to today, not hardcoded: the endpoint defaults to
     // upcoming events, so a fixed window silently starts dropping rows once the
     // calendar reaches it, and the count assertion below fails a day at a time.
     for (let idx = 0; idx < 5; idx++) {
-      const date = new Date()
-      date.setUTCDate(date.getUTCDate() + idx + 1)
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + idx + 1);
       await seedEvent(venue.id, {
         artist: `Artist ${idx}`,
         supportingArtists: null,
         tourName: null,
         date: date.toISOString().slice(0, 10),
-      })
+      });
     }
 
     const res = await app.request(
       '/v1/admin/events?count=true&limit=2&offset=0',
       { method: 'GET', headers: ADMIN_HEADERS },
-    )
+    );
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: { id: string }[]; total: number }
-    }
-    expect(body.success).toBe(true)
-    expect(body.data.rows.length).toBe(2)
-    expect(body.data.total).toBe(5)
-  })
+      success: boolean;
+      data: { rows: { id: string }[]; total: number };
+    };
+    expect(body.success).toBe(true);
+    expect(body.data.rows.length).toBe(2);
+    expect(body.data.total).toBe(5);
+  });
 
   it('keeps legacy array response when count is omitted', async () => {
-    const venue = await seedVenue()
-    await seedEvent(venue.id, { artist: 'Solo', date: futureDate(1) })
+    const venue = await seedVenue();
+    await seedEvent(venue.id, { artist: 'Solo', date: futureDate(1) });
 
     const res = await app.request('/v1/admin/events?limit=10', {
       method: 'GET',
       headers: ADMIN_HEADERS,
-    })
+    });
 
-    expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: unknown }
-    expect(Array.isArray(body.data)).toBe(true)
-  })
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { success: boolean; data: unknown };
+    expect(Array.isArray(body.data)).toBe(true);
+  });
 
   it('applies the same WHERE clauses to the count as to the rows', async () => {
-    const venue = await seedVenue()
+    const venue = await seedVenue();
     await seedEvent(venue.id, {
       artist: 'Verified Artist',
       supportingArtists: null,
       tourName: null,
       date: futureDate(1),
       verified: true,
-    })
+    });
     await seedEvent(venue.id, {
       artist: 'Unverified Artist',
       supportingArtists: null,
       tourName: null,
       date: futureDate(2),
       verified: false,
-    })
+    });
 
     const res = await app.request(
       '/v1/admin/events?count=true&verified=false&limit=10',
       { method: 'GET', headers: ADMIN_HEADERS },
-    )
+    );
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      success: boolean
-      data: { rows: { id: string }[]; total: number }
-    }
-    expect(body.data.rows.length).toBe(1)
-    expect(body.data.total).toBe(1)
-  })
-})
+      success: boolean;
+      data: { rows: { id: string }[]; total: number };
+    };
+    expect(body.data.rows.length).toBe(1);
+    expect(body.data.total).toBe(1);
+  });
+});

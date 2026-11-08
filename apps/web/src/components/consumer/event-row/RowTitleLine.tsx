@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { EVENT_ROW_COPY } from './definitions/copy'
-import { tourClauseFits } from './lib/tour-clause'
+import { useEffect, useRef, useState } from 'react';
+import { EVENT_ROW_COPY } from './definitions/copy';
+import { tourClauseFits } from './lib/tour-clause';
 
 /**
  * The row's own type ramp for line 1. It used to live in `EventTitleBlock`'s
@@ -23,41 +23,41 @@ const RAMP = {
    * an aside, large enough to survive the mono face.
    */
   clauseDrop: 4,
-} as const
+} as const;
 
 /** Flex gap between the headliner and the clause. */
-const GAP = 7
+const GAP = 7;
 
 /**
  * Ceiling 1 — a per-mount write budget that nothing but a remount clears. A
  * pathological layout terminates because it runs out of writes, not because it
  * settles.
  */
-const MAX_WRITES = 12
+const MAX_WRITES = 12;
 
 /**
  * Ceiling 2 — a per-width episode cap. It resets when the observed width
  * actually moves, which is what keeps a normal resize responsive; the outer
  * budget is what makes the whole thing provably terminate.
  */
-const MAX_STEPS_PER_WIDTH = 3
+const MAX_STEPS_PER_WIDTH = 3;
 
 /** Below this the observer treats the callback as its own echo. */
-const WIDTH_EPSILON = 1
+const WIDTH_EPSILON = 1;
 
 interface RowTitleLineProps {
-  headliner: string
-  tourName: string | null
+  headliner: string;
+  tourName: string | null;
   /** Rule 1 — the surface decides whether a tour name is worth line 1's room. */
-  showsTour: boolean
+  showsTour: boolean;
   /**
    * Rule 1's corollary — the surface already states the artist, so the tour
    * name takes the title slot outright. Falls back to the headliner when the
    * show has no tour name.
    */
-  promotesTour?: boolean
+  promotesTour?: boolean;
   /** The ≤360px step of the row ramp. */
-  narrow?: boolean
+  narrow?: boolean;
 }
 
 /**
@@ -77,22 +77,22 @@ export const RowTitleLine = ({
   promotesTour = false,
   narrow = false,
 }: RowTitleLineProps) => {
-  const boxRef = useRef<HTMLDivElement>(null)
-  const measureRef = useRef<HTMLSpanElement>(null)
-  const [fits, setFits] = useState(true)
+  const boxRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [fits, setFits] = useState(true);
   // State is mirrored into a ref so the measure pass can compare against the
   // current answer without making itself depend on the render that produced it.
-  const fitsRef = useRef(true)
-  const writesRef = useRef(0)
-  const stepsRef = useRef(0)
-  const lastWidthRef = useRef<number | null>(null)
-  const frameRef = useRef<number | null>(null)
+  const fitsRef = useRef(true);
+  const writesRef = useRef(0);
+  const stepsRef = useRef(0);
+  const lastWidthRef = useRef<number | null>(null);
+  const frameRef = useRef<number | null>(null);
 
-  const clause = showsTour && tourName ? tourName : null
-  const promoted = promotesTour && tourName ? tourName : null
-  const title = promoted ?? headliner
-  const headSize = narrow ? RAMP.narrowHead : RAMP.head
-  const clauseSize = headSize - RAMP.clauseDrop
+  const clause = showsTour && tourName ? tourName : null;
+  const promoted = promotesTour && tourName ? tourName : null;
+  const title = promoted ?? headliner;
+  const headSize = narrow ? RAMP.narrowHead : RAMP.head;
+  const clauseSize = headSize - RAMP.clauseDrop;
 
   const titleStyle = {
     fontSize: headSize,
@@ -101,7 +101,7 @@ export const RowTitleLine = ({
     // 1.35 is load-bearing, not taste: `truncate` clips to the line box, so a
     // tighter leading shears accented caps and descenders.
     lineHeight: 1.35,
-  } as const
+  } as const;
 
   const clauseStyle = {
     fontFamily: 'var(--font-mono)',
@@ -112,72 +112,72 @@ export const RowTitleLine = ({
     // height to the line box it sits in.
     lineHeight: 1.35,
     whiteSpace: 'nowrap',
-  } as const
+  } as const;
 
   useEffect(() => {
-    const box = boxRef.current
-    const measure = measureRef.current
+    const box = boxRef.current;
+    const measure = measureRef.current;
     // No clause, no measuring copies, nothing to decide.
-    if (!box || !measure) return
+    if (!box || !measure) return;
 
     // A changed headliner, clause or type size is a new question, so the width
     // episode starts over. The write budget deliberately does not.
-    lastWidthRef.current = null
-    stepsRef.current = 0
+    lastWidthRef.current = null;
+    stepsRef.current = 0;
 
     const decide = (available: number) => {
       const [titleWidth, clauseWidth] = Array.from(measure.children).map(
         (child) => child.getBoundingClientRect().width,
-      )
+      );
       const next = tourClauseFits(
         titleWidth ?? 0,
         clauseWidth ?? 0,
         available,
         GAP,
-      )
-      if (next === fitsRef.current) return
+      );
+      if (next === fitsRef.current) return;
       // Both ceilings gate the same single write path, so no state change can
       // route around them.
-      if (writesRef.current >= MAX_WRITES) return
-      if (stepsRef.current >= MAX_STEPS_PER_WIDTH) return
-      writesRef.current += 1
-      stepsRef.current += 1
-      fitsRef.current = next
-      setFits(next)
-    }
+      if (writesRef.current >= MAX_WRITES) return;
+      if (stepsRef.current >= MAX_STEPS_PER_WIDTH) return;
+      writesRef.current += 1;
+      stepsRef.current += 1;
+      fitsRef.current = next;
+      setFits(next);
+    };
 
     const remeasure = () => {
-      const { width } = box.getBoundingClientRect()
-      const last = lastWidthRef.current
+      const { width } = box.getBoundingClientRect();
+      const last = lastWidthRef.current;
       // The observed box is parent-driven, so a callback reporting the same
       // width is this pass hearing its own echo. Ignore it.
-      if (last !== null && Math.abs(width - last) < WIDTH_EPSILON) return
-      lastWidthRef.current = width
-      stepsRef.current = 0
-      decide(width)
-    }
+      if (last !== null && Math.abs(width - last) < WIDTH_EPSILON) return;
+      lastWidthRef.current = width;
+      stepsRef.current = 0;
+      decide(width);
+    };
 
-    remeasure()
+    remeasure();
     // The first pass is what the row actually needs; live remeasurement is an
     // enhancement, so a runtime without ResizeObserver renders rather than
     // throws.
-    if (typeof ResizeObserver === 'undefined') return
+    if (typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => {
       // One measurement per frame at most, and never a synchronous write from
       // inside the observer callback.
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
       frameRef.current = requestAnimationFrame(() => {
-        frameRef.current = null
-        remeasure()
-      })
-    })
-    observer.observe(box)
+        frameRef.current = null;
+        remeasure();
+      });
+    });
+    observer.observe(box);
     return () => {
-      observer.disconnect()
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
-      frameRef.current = null
-    }
-  }, [title, clause, headSize, clauseSize])
+      observer.disconnect();
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    };
+  }, [title, clause, headSize, clauseSize]);
 
   return (
     <div
@@ -258,5 +258,5 @@ export const RowTitleLine = ({
         </span>
       )}
     </div>
-  )
-}
+  );
+};

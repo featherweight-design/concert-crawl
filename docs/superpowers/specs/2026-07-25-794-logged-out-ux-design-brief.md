@@ -13,7 +13,7 @@ Concert Crawl has never had a logged-out state. Every consumer surface sits behi
 
 This brief covers the shape of the app for a visitor with no account: what they can reach, what the navigation looks like when half of it is about a user who doesn't exist yet, and how they cross the line into having an account without being nagged across every screen.
 
-**The problem, stated plainly:** the app's navigation assumes a signed-in user, so every slot that describes *you* degrades rather than adapts — a mobile profile entry that disappears, a nav tab stubbed with a placeholder glyph, a desktop menu whose trigger works but whose contents are written for somebody with an account, a Watching page that returns `null`, and no route at all from the front door into the calendar.
+**The problem, stated plainly:** the app's navigation assumes a signed-in user, so every slot that describes _you_ degrades rather than adapts — a mobile profile entry that disappears, a nav tab stubbed with a placeholder glyph, a desktop menu whose trigger works but whose contents are written for somebody with an account, a Watching page that returns `null`, and no route at all from the front door into the calendar.
 
 ---
 
@@ -31,15 +31,16 @@ This brief covers the shape of the app for a visitor with no account: what they 
 - **The API is public-capable, behind one global flag.** `REQUIRE_BETA_AUTH` is not a venues-only switch — when it is `'true'` each of four routers installs its own auth middleware via a router-level `use('*')`: **events** (`events.ts` — so list, `/:id`, `/genres`, and `/availability` all gate together), **search** (`search.ts`), **venues** (`venues-public.ts`), and **price submissions** (`price-submissions.ts`). The middleware is not uniform — events uses `serviceOrClerkAuth`, which also admits a service token, while the other three require a real user session (`requireAuth`). Same flag, four call sites, two different bars. With the flag off, all of those serve unauthenticated requests; integration tests cover both states.
 
   So the data layer needs no new endpoints — but **flipping this one flag is the switch that makes the API public**, and it is the highest-risk line in the whole vertical. Its disposition is an eng-plan decision, not a design one. Design should assume public reads are available.
-- **The landing page is ISR-cached** (`revalidate = 300`), fetches `/v1/events?limit=4` through `publicApiClient`, and renders the results through `LandingPoster` as **display only — the posters are not links.** Its CTAs are primary *"I have a code"* → `/auth/code`, secondary *waitlist* (modal), tertiary *"Sign in"* → `/sign-in`. All three are beta-era artifacts.
+
+- **The landing page is ISR-cached** (`revalidate = 300`), fetches `/v1/events?limit=4` through `publicApiClient`, and renders the results through `LandingPoster` as **display only — the posters are not links.** Its CTAs are primary _"I have a code"_ → `/auth/code`, secondary _waitlist_ (modal), tertiary _"Sign in"_ → `/sign-in`. All three are beta-era artifacts.
 - **A logged-out tier-picker state already ships.** `components/consumer/tier-picker/definitions/copy.ts` carries `loggedOutEyebrow`. #794 extends something real rather than inventing it.
-- **The onboarding flow is six steps and runs pre-auth.** `OnboardingShell.tsx` sequences `welcome → how → today → notyet → theme → done` (founder note, price-source honesty, what it does today, what's missing, theme picker, you're in) and then calls `router.push('/sign-up')`. Its copy is heavily beta-insider — *"This is a private beta"*, *"Friends, you're here early on purpose"* — and `BetaPill` appears throughout.
+- **The onboarding flow is six steps and runs pre-auth.** `OnboardingShell.tsx` sequences `welcome → how → today → notyet → theme → done` (founder note, price-source honesty, what it does today, what's missing, theme picker, you're in) and then calls `router.push('/sign-up')`. Its copy is heavily beta-insider — _"This is a private beta"_, _"Friends, you're here early on purpose"_ — and `BetaPill` appears throughout.
 - **No Clerk `<SignedIn>` / `<SignedOut>` components are used anywhere.** Auth branching goes through `useAuth()` / `useUser()` hooks.
 
 ### Vocabulary — non-negotiable
 
 - **Watching** is the only show-tracking concept. Never "Saved", "Favorites", or "Following". There is no "Saved" concept in this product.
-- **The Watching affordance is an eye.** `WatchShowButton.tsx` imports `Eye` from `lucide-react`. There is **no heart icon anywhere in this application** — do not write "heart" in any handoff artifact. Say *the Watch eye* or *the Watching affordance*.
+- **The Watching affordance is an eye.** `WatchShowButton.tsx` imports `Eye` from `lucide-react`. There is **no heart icon anywhere in this application** — do not write "heart" in any handoff artifact. Say _the Watch eye_ or _the Watching affordance_.
 - **Submitted prices** for a user's own submissions; **price check** for the admin review.
 
 Note for the handoff: `tier-picker/definitions/copy.ts` currently reads `loggedOutEyebrow: 'Save a show · sign in'`, which violates the rule above. Design should propose replacement copy; the fix itself is a one-line edit for the eng plan.
@@ -58,45 +59,45 @@ Each of these was decided in the 2026-07-25 brainstorm and signed off row by row
 
 Browse, Venues, Event detail, Venue detail, and Artist detail are all public and complete. Gated: Watching, `/me`, submitted prices, settings.
 
-*Why-not a metered window* (public browse capped to a short horizon): it buys conversion pressure by making the product look thinner than it is, and it breaks shared links unpredictably — the same URL works or doesn't depending on when someone opens it.
+_Why-not a metered window_ (public browse capped to a short horizon): it buys conversion pressure by making the product look thinner than it is, and it breaks shared links unpredictably — the same URL works or doesn't depending on when someone opens it.
 
-*Why-not gating detail pages:* every gated page is a page no search engine can index and no friend can share.
+_Why-not gating detail pages:_ every gated page is a page no search engine can index and no friend can share.
 
 ### 3.2 — **One shell** with signed-out variants, not a separate public shell
 
-Identical structure across the auth boundary: same header, same bottom nav, same four tab slots in the same positions. The slots that render `null` today get purposeful signed-out content. Signing in *fills things in*; it does not move you to a different product.
+Identical structure across the auth boundary: same header, same bottom nav, same four tab slots in the same positions. The slots that render `null` today get purposeful signed-out content. Signing in _fills things in_; it does not move you to a different product.
 
-*Why-not a distinct marketing shell:* two navigations to design, test, and maintain, and signing in would feel like entering a different application.
+_Why-not a distinct marketing shell:_ two navigations to design, test, and maintain, and signing in would feel like entering a different application.
 
-*Why-not hybrid by breakpoint* (app shell on mobile, marketing header on desktop): mobile/desktop parity is non-negotiable in this project, and a breakpoint-dependent navigation is exactly what that rule exists to prevent.
+_Why-not hybrid by breakpoint_ (app shell on mobile, marketing header on desktop): mobile/desktop parity is non-negotiable in this project, and a breakpoint-dependent navigation is exactly what that rule exists to prevent.
 
 ### 3.3 — The **Watching tab navigates**, to a designed signed-out state
 
 Tab 3 behaves like a tab. It routes to `/watching`, which renders a real signed-out state: what Watching is, what it does for the visitor, and a sign-up CTA.
 
-*Why:* it is the one screen a visitor reaches by deliberately asking *what is this?* — the best teaching surface in the app.
+_Why:_ it is the one screen a visitor reaches by deliberately asking _what is this?_ — the best teaching surface in the app.
 
-*Why-not firing the tier-picker sheet from the tab:* a sheet that dismisses back to nothing wastes that intent, and it makes a nav tab that never navigates.
+_Why-not firing the tier-picker sheet from the tab:_ a sheet that dismisses back to nothing wastes that intent, and it makes a nav tab that never navigates.
 
 ### 3.4 — The **account menu still opens** when logged out
 
 Tab 4 and the desktop `UserMenu` remain menus. They carry the auth-independent items — **theme picker**, legal links, version/build — with **Sign up / Sign in** occupying the position the identity card holds when signed in.
 
-*Why:* theme is a device preference, not an account feature, and nine themes off one token set is the most memorable thing in this app. Keeping the menu a menu also means the slot behaves consistently across the auth boundary.
+_Why:_ theme is a device preference, not an account feature, and nine themes off one token set is the most memorable thing in this app. Keeping the menu a menu also means the slot behaves consistently across the auth boundary.
 
-*Why-not relocating the theme picker out of the menu entirely:* conceptually the cleanest option, but it edits a shipped signed-in surface and widens #794's blast radius past its own scope.
+_Why-not relocating the theme picker out of the menu entirely:_ conceptually the cleanest option, but it edits a shipped signed-in surface and widens #794's blast radius past its own scope.
 
 ### 3.5 — Header CTA leans **sign up**
 
 One filled **Sign up** as the primary; **Sign in** as a quiet adjacent text link.
 
-*Why:* launch traffic arriving logged-out skews new, and returning users already know where the door is.
+_Why:_ launch traffic arriving logged-out skews new, and returning users already know where the door is.
 
 ### 3.6 — **No persistent signup nudge.** Conversion is contextual only
 
 No sticky strip, no banner, no dismissible first-visit interstitial, no end-of-list block. Three mechanisms carry all conversion: the header CTA, the inherited tier-picker-on-tap, and the `/watching` signed-out state.
 
-*Why-not a persistent strip:* the mobile baseline here is 320px, where a sticky bar is a material share of the viewport — and the product's entire argument *is* the calendar. Covering the calendar to advertise the calendar argues against itself.
+_Why-not a persistent strip:_ the mobile baseline here is 320px, where a sticky bar is a material share of the viewport — and the product's entire argument _is_ the calendar. Covering the calendar to advertise the calendar argues against itself.
 
 ### 3.7 — Onboarding becomes a **post-auth welcome**, skippable and permanently reachable
 
@@ -104,9 +105,9 @@ Account creation comes first and stays fast. The retooled flow then runs as a we
 
 Surviving content: the **theme step** and the **price-source honesty material** (box office / community / resale, verifications expire). The beta-insider voice is rewritten for a public audience.
 
-*Why-not keeping it pre-auth:* six screens between *"I want to watch this show"* and *"I have an account"* is where you lose people, particularly a visitor who arrived on a shared event link.
+_Why-not keeping it pre-auth:_ six screens between _"I want to watch this show"_ and _"I have an account"_ is where you lose people, particularly a visitor who arrived on a shared event link.
 
-*Why-not decoupling it entirely:* many users would never see it, so anything load-bearing inside would need a second home.
+_Why-not decoupling it entirely:_ many users would never see it, so anything load-bearing inside would need a second home.
 
 ### 3.8 — `/` stays the **marketing landing** for logged-out visitors
 
@@ -114,21 +115,21 @@ It is the surface that can carry a pitch without taxing the app, and it is what 
 
 ### 3.9 — The landing page's **primary CTA becomes "Browse shows"**
 
-Primary *Browse shows* → `/events`. Secondary *Sign up*. The *"I have a code"* and *waitlist* CTAs retire. **The four hero posters become live links** into their own event detail pages.
+Primary _Browse shows_ → `/events`. Secondary _Sign up_. The _"I have a code"_ and _waitlist_ CTAs retire. **The four hero posters become live links** into their own event detail pages.
 
-*Why:* consistent with 3.6 — the landing page's job is to get people into the calendar, where the product argues for itself, not to extract an account first.
+_Why:_ consistent with 3.6 — the landing page's job is to get people into the calendar, where the product argues for itself, not to extract an account first.
 
-*Why-not posters-only as the entry:* too implicit. A visitor uninterested in those four shows may never learn there is a whole calendar behind them.
+_Why-not posters-only as the entry:_ too implicit. A visitor uninterested in those four shows may never learn there is a whole calendar behind them.
 
 ### 3.10 — Gated affordances look **identical to signed-in** at rest
 
 Full-strength Watch eye. No lock glyph, no dimming, no muted token. The tier picker appears **on tap**, with feature-anchored copy.
 
-*Why-not a lock glyph:* the eye appears on every card in a dense calendar; a repeated lock mark makes a fully-working read-only app look half-broken.
+_Why-not a lock glyph:_ the eye appears on every card in a dense calendar; a repeated lock mark makes a fully-working read-only app look half-broken.
 
-*Why-not dimming:* muted interactive controls read as "broken" or "loading", and reduced-contrast interactive targets are an accessibility defect.
+_Why-not dimming:_ muted interactive controls read as "broken" or "loading", and reduced-contrast interactive targets are an accessibility defect.
 
-*Why-not hiding active affordances* (extending #781's background-features-hidden rule): it would remove every contextual conversion moment, leaving the header CTA to do the whole job alone.
+_Why-not hiding active affordances_ (extending #781's background-features-hidden rule): it would remove every contextual conversion moment, leaving the header CTA to do the whole job alone.
 
 **Constraint this creates, and Design owns it:** when the pixels are identical, the **accessible name must still be honest**. A screen-reader user must not be told they are activating something that will instead open a tier picker.
 
@@ -203,7 +204,7 @@ From **#1115** (artist page): the page is Free tier and fully usable signed-out.
 
 ## 8. Open for Design to call
 
-- How the "slots fill in" relationship is made legible — whether the signed-out header and nav read as *incomplete* or simply as *different*, and which is better here.
+- How the "slots fill in" relationship is made legible — whether the signed-out header and nav read as _incomplete_ or simply as _different_, and which is better here.
 - The `/watching` signed-out state's structure: does it teach with copy, with a representation of what a populated Watching list looks like, or both.
 - Whether the Sign up / Sign in pair in the account menu sits where the identity card sits, or somewhere more prominent within the menu.
 - The skip affordance's weight in the retooled onboarding — how easy skipping should be, and whether it reads differently for someone who arrived mid-intent.

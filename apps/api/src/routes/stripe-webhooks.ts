@@ -15,21 +15,24 @@
 // row back atomically so Stripe's retry re-processes instead of
 // short-circuiting as a duplicate.
 
-import { Hono } from 'hono'
-import { db, processedStripeEvents } from '@concert-crawl/db'
-import type { BillingStripeClient, StripeVerifiedEvent } from '../lib/stripe.js'
-import type { DbExecutor } from '../lib/db-executor.js'
+import { Hono } from 'hono';
+import { db, processedStripeEvents } from '@concert-crawl/db';
+import type {
+  BillingStripeClient,
+  StripeVerifiedEvent,
+} from '../lib/stripe.js';
+import type { DbExecutor } from '../lib/db-executor.js';
 import {
   handleInvoicePaymentFailed,
   handleInvoicePaymentSucceeded,
   handlePaymentIntentFailed,
   handleSubscriptionDeleted,
   handleSubscriptionUpdated,
-} from '../lib/stripe-webhook-handlers.js'
-import { sendTransactionalEmail } from '../lib/email.js'
-import { runBackgroundTask } from '../lib/background-tasks.js'
-import type { TransactionalEmailParams } from '../emails/types.js'
-import { apiLogger } from '../lib/logger.js'
+} from '../lib/stripe-webhook-handlers.js';
+import { sendTransactionalEmail } from '../lib/email.js';
+import { runBackgroundTask } from '../lib/background-tasks.js';
+import type { TransactionalEmailParams } from '../emails/types.js';
+import { apiLogger } from '../lib/logger.js';
 
 // The exact event set the webhook endpoint registers for
 // (scripts/stripe-provision.ts --webhooks keeps enabled_events in lockstep).
@@ -42,52 +45,52 @@ export const HANDLED_STRIPE_EVENTS = [
   'payment_intent.payment_failed',
   'customer.updated',
   'payment_method.attached',
-] as const
+] as const;
 
 // Present-but-empty is as unconfigured as absent — an empty secret would
 // fail every signature check with a 400, silently stopping Stripe retries.
 const readWebhookSecretFromEnv = (): string | null => {
-  const secret = process.env['STRIPE_WEBHOOK_SECRET']
-  return secret !== undefined && secret.length > 0 ? secret : null
-}
+  const secret = process.env['STRIPE_WEBHOOK_SECRET'];
+  return secret !== undefined && secret.length > 0 ? secret : null;
+};
 
 export const createStripeWebhooksRouter = (
   getStripe: () => BillingStripeClient,
   getWebhookSecret: () => string | null = readWebhookSecretFromEnv,
 ): Hono => {
-  const webhooksRouter = new Hono()
+  const webhooksRouter = new Hono();
 
   webhooksRouter.post('/', async (ctx) => {
-    const signature = ctx.req.header('stripe-signature')
+    const signature = ctx.req.header('stripe-signature');
     if (!signature) {
       return ctx.json(
         { success: false, error: 'Missing stripe-signature header' },
         400,
-      )
+      );
     }
 
-    const webhookSecret = getWebhookSecret()
+    const webhookSecret = getWebhookSecret();
     if (webhookSecret === null) {
       // Configuration failure, not a bad request — 500 so Stripe retries
       // once the env var is placed.
       apiLogger.error(
         {},
         'stripe-webhooks: STRIPE_WEBHOOK_SECRET is not set — cannot verify',
-      )
-      return ctx.json({ success: false, error: 'Webhook not configured' }, 500)
+      );
+      return ctx.json({ success: false, error: 'Webhook not configured' }, 500);
     }
 
-    const rawBody = await ctx.req.text()
-    let event: StripeVerifiedEvent
+    const rawBody = await ctx.req.text();
+    let event: StripeVerifiedEvent;
     try {
       event = getStripe().webhooks.constructEvent(
         rawBody,
         signature,
         webhookSecret,
-      )
+      );
     } catch (err) {
-      apiLogger.warn({ err }, 'stripe-webhooks: signature verification failed')
-      return ctx.json({ success: false, error: 'Invalid signature' }, 400)
+      apiLogger.warn({ err }, 'stripe-webhooks: signature verification failed');
+      return ctx.json({ success: false, error: 'Invalid signature' }, 400);
     }
 
     // Idempotency (Part 1 Decision 4): insert-first, in the SAME transaction
@@ -98,23 +101,23 @@ export const createStripeWebhooksRouter = (
     try {
       // Handlers queue emails here; fired only after the transaction commits
       // (spec §4.4) — a rollback must never leave a sent email behind.
-      const postCommitEmails: TransactionalEmailParams[] = []
+      const postCommitEmails: TransactionalEmailParams[] = [];
       const outcome = await db.transaction(async (tx) => {
         const inserted = await tx
           .insert(processedStripeEvents)
           .values({ eventId: event.id, type: event.type })
           .onConflictDoNothing()
-          .returning({ eventId: processedStripeEvents.eventId })
-        if (inserted.length === 0) return 'duplicate'
-        await dispatchEvent(event, getStripe, tx, postCommitEmails)
-        return 'handled'
-      })
+          .returning({ eventId: processedStripeEvents.eventId });
+        if (inserted.length === 0) return 'duplicate';
+        await dispatchEvent(event, getStripe, tx, postCommitEmails);
+        return 'handled';
+      });
       if (outcome === 'duplicate') {
         apiLogger.info(
           { stripeEventId: event.id, type: event.type },
           'stripe-webhooks: duplicate event — already processed',
-        )
-        return ctx.json({ success: true, duplicate: true })
+        );
+        return ctx.json({ success: true, duplicate: true });
       }
       for (const emailParams of postCommitEmails) {
         // Fire-and-forget: sendTransactionalEmail catches and logs all its
@@ -122,21 +125,21 @@ export const createStripeWebhooksRouter = (
         // affect the webhook response. Routed through runBackgroundTask so a
         // serverless host keeps the invocation alive until the send settles.
         runBackgroundTask(async () => {
-          await sendTransactionalEmail(emailParams)
-        })
+          await sendTransactionalEmail(emailParams);
+        });
       }
-      return ctx.json({ success: true })
+      return ctx.json({ success: true });
     } catch (err) {
       apiLogger.error(
         { err, stripeEventId: event.id, type: event.type },
         'stripe-webhooks: event processing failed — rolled back, Stripe will retry',
-      )
-      return ctx.json({ success: false, error: 'Processing failed' }, 500)
+      );
+      return ctx.json({ success: false, error: 'Processing failed' }, 500);
     }
-  })
+  });
 
-  return webhooksRouter
-}
+  return webhooksRouter;
+};
 
 const dispatchEvent = async (
   event: StripeVerifiedEvent,
@@ -149,7 +152,7 @@ const dispatchEvent = async (
     stripeEventId: event.id,
     dbClient,
     postCommitEmails,
-  }
+  };
   switch (event.type) {
     case 'checkout.session.completed':
       // Not used — no hosted Checkout in this architecture (Decision 2).
@@ -157,18 +160,18 @@ const dispatchEvent = async (
       apiLogger.info(
         { stripeEventId: event.id },
         'stripe-webhooks: checkout.session.completed — no-op (no hosted Checkout, Decision 2)',
-      )
-      return
+      );
+      return;
     case 'invoice.payment_succeeded':
-      return handleInvoicePaymentSucceeded(event.data.object, handlerContext)
+      return handleInvoicePaymentSucceeded(event.data.object, handlerContext);
     case 'invoice.payment_failed':
-      return handleInvoicePaymentFailed(event.data.object, handlerContext)
+      return handleInvoicePaymentFailed(event.data.object, handlerContext);
     case 'customer.subscription.updated':
-      return handleSubscriptionUpdated(event.data.object, handlerContext)
+      return handleSubscriptionUpdated(event.data.object, handlerContext);
     case 'customer.subscription.deleted':
-      return handleSubscriptionDeleted(event.data.object, handlerContext)
+      return handleSubscriptionDeleted(event.data.object, handlerContext);
     case 'payment_intent.payment_failed':
-      return handlePaymentIntentFailed(event.data.object, handlerContext)
+      return handlePaymentIntentFailed(event.data.object, handlerContext);
     case 'customer.updated':
     case 'payment_method.attached':
       // Spec §5.1 refreshes cached card metadata for the card-expiry timer,
@@ -177,14 +180,14 @@ const dispatchEvent = async (
       apiLogger.info(
         { stripeEventId: event.id, type: event.type },
         'stripe-webhooks: card-metadata event — no-op until card cache lands (spec §5.1)',
-      )
-      return
+      );
+      return;
     default:
       // Unregistered event types can still arrive (dashboard-side sends,
       // manual replays) — log + acknowledge, never 500.
       apiLogger.warn(
         { stripeEventId: event.id, type: event.type },
         'stripe-webhooks: unhandled event type — acknowledged without processing',
-      )
+      );
   }
-}
+};

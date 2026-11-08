@@ -1,16 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createRng } from '../seeded-rng.js'
-import { generateUserProfiles } from './user-profiles.js'
-import { generateUserEvents } from './user-events.js'
-import { generateFeedback } from './feedback.js'
-import { generatePriceSubmissions } from './price-submissions.js'
-import { generateNotifications } from './notifications.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createRng } from '../seeded-rng.js';
+import { generateUserProfiles } from './user-profiles.js';
+import { generateUserEvents } from './user-events.js';
+import { generateFeedback } from './feedback.js';
+import { generatePriceSubmissions } from './price-submissions.js';
+import { generateNotifications } from './notifications.js';
 
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
 
-const SEED = 202607_12
+const SEED = 202607_12;
 
 const fixtureUserIds = [
   'user_2fixture_alpha',
@@ -18,18 +18,18 @@ const fixtureUserIds = [
   'user_2fixture_charlie',
   'user_2fixture_delta',
   'user_2fixture_echo',
-] as const
+] as const;
 
 // 50 distinct event IDs — enough for power-user tests (25+ unique rows per user)
 const eventIds = Array.from(
   { length: 50 },
   (_, idx) =>
     `evt-00000000-0000-0000-0000-${String(idx + 1).padStart(12, '0')}`,
-)
+);
 
 // Half the fixture events already happened, so the user_events generator can
 // reach all three attendance shapes (#70) — attendance only lands on past shows.
-const pastEventIds = eventIds.slice(0, 25)
+const pastEventIds = eventIds.slice(0, 25);
 
 // ---------------------------------------------------------------------------
 // Staging mock builder
@@ -41,13 +41,13 @@ const pastEventIds = eventIds.slice(0, 25)
  * Returns the spy so tests can inspect captured args.
  */
 function buildStagingMock() {
-  const valuesSpy = vi.fn().mockResolvedValue([])
+  const valuesSpy = vi.fn().mockResolvedValue([]);
   const staging = {
     insert: vi.fn().mockReturnValue({
       values: valuesSpy,
     }),
-  }
-  return { staging, valuesSpy }
+  };
+  return { staging, valuesSpy };
 }
 
 // ---------------------------------------------------------------------------
@@ -56,83 +56,83 @@ function buildStagingMock() {
 
 describe('generateUserProfiles', () => {
   it('inserts exactly one row per fixture user', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserProfiles({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    expect(valuesSpy).toHaveBeenCalledTimes(1)
-    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
-    expect(rows).toHaveLength(fixtureUserIds.length)
-  })
+    });
+    expect(valuesSpy).toHaveBeenCalledTimes(1);
+    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0];
+    expect(rows).toHaveLength(fixtureUserIds.length);
+  });
 
   it('every row userId is in fixtureUserIds', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserProfiles({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(fixtureUserIds).toContain(row.userId)
+      expect(fixtureUserIds).toContain(row.userId);
     }
-  })
+  });
 
   it('produces deterministic output for the same seed', async () => {
-    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock()
+    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock();
     await generateUserProfiles({
       staging: stagingA as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
-    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock()
+    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock();
     await generateUserProfiles({
       staging: stagingB as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
     expect(JSON.stringify(spyA.mock.calls)).toBe(
       JSON.stringify(spyB.mock.calls),
-    )
-  })
+    );
+  });
 
   it('includes a mix of city=null and city set rows', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserProfiles({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { city: string | null }[] = valuesSpy.mock.calls[0]![0]
-    const hasNull = rows.some((row) => row.city === null)
-    const hasCity = rows.some((row) => row.city !== null)
-    expect(hasNull).toBe(true)
-    expect(hasCity).toBe(true)
-  })
+    });
+    const rows: { city: string | null }[] = valuesSpy.mock.calls[0]![0];
+    const hasNull = rows.some((row) => row.city === null);
+    const hasCity = rows.some((row) => row.city !== null);
+    expect(hasNull).toBe(true);
+    expect(hasCity).toBe(true);
+  });
 
   it('handle is a long slug prefixed with seededHandle_', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserProfiles({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { handle: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { handle: string }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(row.handle).toMatch(/^seededHandle_[a-z0-9]{40}$/)
+      expect(row.handle).toMatch(/^seededHandle_[a-z0-9]{40}$/);
     }
-  })
-})
+  });
+});
 
 // ---------------------------------------------------------------------------
 // generateUserEvents
@@ -140,133 +140,133 @@ describe('generateUserProfiles', () => {
 
 describe('generateUserEvents', () => {
   it('every row userId is in fixtureUserIds', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(fixtureUserIds).toContain(row.userId)
+      expect(fixtureUserIds).toContain(row.userId);
     }
-  })
+  });
 
   it('every row eventId is in eventIds', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
-    const rows: { eventId: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { eventId: string }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(eventIds).toContain(row.eventId)
+      expect(eventIds).toContain(row.eventId);
     }
-  })
+  });
 
   it('produces deterministic output for the same seed', async () => {
-    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock()
+    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock();
     await generateUserEvents({
       staging: stagingA as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
+    });
 
-    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock()
+    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock();
     await generateUserEvents({
       staging: stagingB as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
+    });
 
     expect(JSON.stringify(spyA.mock.calls)).toBe(
       JSON.stringify(spyB.mock.calls),
-    )
-  })
+    );
+  });
 
   it('at least one user has 25+ user_events rows (layout-hostile)', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
-    const countsByUser = new Map<string, number>()
+    });
+    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0];
+    const countsByUser = new Map<string, number>();
     for (const row of rows) {
-      countsByUser.set(row.userId, (countsByUser.get(row.userId) ?? 0) + 1)
+      countsByUser.set(row.userId, (countsByUser.get(row.userId) ?? 0) + 1);
     }
-    const maxCount = Math.max(...countsByUser.values())
-    expect(maxCount).toBeGreaterThanOrEqual(25)
-  })
+    const maxCount = Math.max(...countsByUser.values());
+    expect(maxCount).toBeGreaterThanOrEqual(25);
+  });
 
   it('covers all three attendance shapes', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: { status: string | null; attendingAt: Date | null }[] =
-      valuesSpy.mock.calls[0]![0]
+      valuesSpy.mock.calls[0]![0];
 
     const shapes = new Set(
       rows.map((row) => {
-        if (row.attendingAt === null) return 'watching-only'
-        return row.status === null ? 'attending-only' : 'watching-attending'
+        if (row.attendingAt === null) return 'watching-only';
+        return row.status === null ? 'attending-only' : 'watching-attending';
       }),
-    )
-    expect(shapes).toContain('watching-only')
-    expect(shapes).toContain('watching-attending')
-    expect(shapes).toContain('attending-only')
-  })
+    );
+    expect(shapes).toContain('watching-only');
+    expect(shapes).toContain('watching-attending');
+    expect(shapes).toContain('attending-only');
+  });
 
   it("never writes the retired 'going' or 'interested' status", async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
-    const rows: { status: string | null }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { status: string | null }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(row.status === 'watching' || row.status === null).toBe(true)
+      expect(row.status === 'watching' || row.status === null).toBe(true);
     }
-  })
+  });
 
   it('only puts attendance on past-dated events', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       pastEventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: { eventId: string; attendingAt: Date | null }[] =
-      valuesSpy.mock.calls[0]![0]
+      valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
       if (row.attendingAt !== null) {
-        expect(pastEventIds).toContain(row.eventId)
+        expect(pastEventIds).toContain(row.eventId);
       }
     }
-  })
-})
+  });
+});
 
 // ---------------------------------------------------------------------------
 // generateFeedback
@@ -274,51 +274,51 @@ describe('generateUserEvents', () => {
 
 describe('generateFeedback', () => {
   it('every row userId is in fixtureUserIds', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(fixtureUserIds).toContain(row.userId)
+      expect(fixtureUserIds).toContain(row.userId);
     }
-  })
+  });
 
   it('produces deterministic output for the same seed', async () => {
-    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock()
+    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock();
     await generateFeedback({
       staging: stagingA as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
-    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock()
+    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock();
     await generateFeedback({
       staging: stagingB as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
     expect(JSON.stringify(spyA.mock.calls)).toBe(
       JSON.stringify(spyB.mock.calls),
-    )
-  })
+    );
+  });
 
   it('covers all feedback_status enum values', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { status: string }[] = valuesSpy.mock.calls[0]![0]
-    const statuses = new Set(rows.map((row) => row.status))
+    });
+    const rows: { status: string }[] = valuesSpy.mock.calls[0]![0];
+    const statuses = new Set(rows.map((row) => row.status));
     for (const val of [
       'unread',
       'read',
@@ -327,82 +327,82 @@ describe('generateFeedback', () => {
       'resolved',
       'archived',
     ]) {
-      expect(statuses).toContain(val)
+      expect(statuses).toContain(val);
     }
-  })
+  });
 
   it('covers all feedback_category enum values', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { category: string }[] = valuesSpy.mock.calls[0]![0]
-    const categories = new Set(rows.map((row) => row.category))
+    });
+    const rows: { category: string }[] = valuesSpy.mock.calls[0]![0];
+    const categories = new Set(rows.map((row) => row.category));
     for (const val of ['bug', 'idea', 'praise', 'other']) {
-      expect(categories).toContain(val)
+      expect(categories).toContain(val);
     }
-  })
+  });
 
   it('at least one message has a ≥200-char no-whitespace substring (layout-hostile)', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { message: string }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { message: string }[] = valuesSpy.mock.calls[0]![0];
     const hasLongToken = rows.some((row) => {
       // Split on whitespace and check if any token is ≥200 chars
-      const tokens = row.message.split(/\s+/)
-      return tokens.some((token) => token.length >= 200)
-    })
-    expect(hasLongToken).toBe(true)
-  })
+      const tokens = row.message.split(/\s+/);
+      return tokens.some((token) => token.length >= 200);
+    });
+    expect(hasLongToken).toBe(true);
+  });
 
   it('at least one row has metadata with a mobile user-agent string', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { metadata: unknown }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { metadata: unknown }[] = valuesSpy.mock.calls[0]![0];
     const hasMobileUa = rows.some((row) => {
       if (row.metadata === null || typeof row.metadata !== 'object')
-        return false
-      const meta = row.metadata as Record<string, unknown>
+        return false;
+      const meta = row.metadata as Record<string, unknown>;
       return (
         typeof meta['userAgent'] === 'string' &&
         meta['userAgent'].includes('Mobile')
-      )
-    })
-    expect(hasMobileUa).toBe(true)
-  })
+      );
+    });
+    expect(hasMobileUa).toBe(true);
+  });
 
   it('at least one row has adminNotes populated', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateFeedback({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: { adminNotes: string | null | undefined }[] =
-      valuesSpy.mock.calls[0]![0]
+      valuesSpy.mock.calls[0]![0];
     const hasAdminNotes = rows.some(
       (row) =>
         row.adminNotes !== null &&
         row.adminNotes !== undefined &&
         row.adminNotes !== '',
-    )
-    expect(hasAdminNotes).toBe(true)
-  })
-})
+    );
+    expect(hasAdminNotes).toBe(true);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // generatePriceSubmissions
@@ -415,110 +415,110 @@ describe('generateFeedback', () => {
  * independently.
  */
 function buildMultiInsertStagingMock() {
-  const submissionValuesSpy = vi.fn().mockResolvedValue([])
-  const confirmsValuesSpy = vi.fn().mockResolvedValue([])
-  let insertCallCount = 0
+  const submissionValuesSpy = vi.fn().mockResolvedValue([]);
+  const confirmsValuesSpy = vi.fn().mockResolvedValue([]);
+  let insertCallCount = 0;
   const staging = {
     insert: vi.fn().mockImplementation(() => {
-      insertCallCount++
+      insertCallCount++;
       return {
         values: insertCallCount === 1 ? submissionValuesSpy : confirmsValuesSpy,
-      }
+      };
     }),
-  }
-  return { staging, submissionValuesSpy, confirmsValuesSpy }
+  };
+  return { staging, submissionValuesSpy, confirmsValuesSpy };
 }
 
 describe('generatePriceSubmissions', () => {
   it('every submission userId is in fixtureUserIds', async () => {
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string }[] = submissionValuesSpy.mock.calls[0]![0]
+    });
+    const rows: { userId: string }[] = submissionValuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(fixtureUserIds).toContain(row.userId)
+      expect(fixtureUserIds).toContain(row.userId);
     }
-  })
+  });
 
   it('produces deterministic output for the same seed', async () => {
-    const mockA = buildMultiInsertStagingMock()
+    const mockA = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: mockA.staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
-    const mockB = buildMultiInsertStagingMock()
+    const mockB = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: mockB.staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
     expect(JSON.stringify(mockA.submissionValuesSpy.mock.calls)).toBe(
       JSON.stringify(mockB.submissionValuesSpy.mock.calls),
-    )
+    );
     expect(JSON.stringify(mockA.confirmsValuesSpy.mock.calls)).toBe(
       JSON.stringify(mockB.confirmsValuesSpy.mock.calls),
-    )
-  })
+    );
+  });
 
   it('at least one submission has a linked confirm (confirms insert spy called with rows)', async () => {
-    const { staging, confirmsValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, confirmsValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    expect(confirmsValuesSpy).toHaveBeenCalledTimes(1)
+    });
+    expect(confirmsValuesSpy).toHaveBeenCalledTimes(1);
     const confirmRows: { submissionId: string }[] =
-      confirmsValuesSpy.mock.calls[0]![0]
-    expect(confirmRows.length).toBeGreaterThan(0)
-  })
+      confirmsValuesSpy.mock.calls[0]![0];
+    expect(confirmRows.length).toBeGreaterThan(0);
+  });
 
   it('at least one submission has priceMin = "0.50"', async () => {
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { priceMin: string }[] = submissionValuesSpy.mock.calls[0]![0]
-    const hasCents = rows.some((row) => row.priceMin === '0.50')
-    expect(hasCents).toBe(true)
-  })
+    });
+    const rows: { priceMin: string }[] = submissionValuesSpy.mock.calls[0]![0];
+    const hasCents = rows.some((row) => row.priceMin === '0.50');
+    expect(hasCents).toBe(true);
+  });
 
   it('at least one submission has priceMin >= 999', async () => {
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { priceMin: string }[] = submissionValuesSpy.mock.calls[0]![0]
-    const hasHighPrice = rows.some((row) => parseFloat(row.priceMin) >= 999)
-    expect(hasHighPrice).toBe(true)
-  })
+    });
+    const rows: { priceMin: string }[] = submissionValuesSpy.mock.calls[0]![0];
+    const hasHighPrice = rows.some((row) => parseFloat(row.priceMin) >= 999);
+    expect(hasHighPrice).toBe(true);
+  });
 
   it('covers all price_submission_status enum values', async () => {
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { status: string }[] = submissionValuesSpy.mock.calls[0]![0]
-    const statuses = new Set(rows.map((row) => row.status))
+    });
+    const rows: { status: string }[] = submissionValuesSpy.mock.calls[0]![0];
+    const statuses = new Set(rows.map((row) => row.status));
     for (const val of [
       'pending',
       'corroborated',
@@ -526,9 +526,9 @@ describe('generatePriceSubmissions', () => {
       'stale',
       'archived',
     ]) {
-      expect(statuses).toContain(val)
+      expect(statuses).toContain(val);
     }
-  })
+  });
 
   it('produces one open price contest: a pending counter referencing a disputed parent', async () => {
     // The admin Contests queue pivots on the COUNTER row
@@ -536,19 +536,19 @@ describe('generatePriceSubmissions', () => {
     // disputedSubmissionId points at the disputed PARENT. This is the exact
     // shape apps/api/src/routes/admin/contests.ts queries — asserting it
     // here guards against the seeder regressing to an empty Contests UI.
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: {
-      id: string
-      status: string
-      disputedSubmissionId: string | null
-      userId: string
-    }[] = submissionValuesSpy.mock.calls[0]![0]
+      id: string;
+      status: string;
+      disputedSubmissionId: string | null;
+      userId: string;
+    }[] = submissionValuesSpy.mock.calls[0]![0];
 
     // Assert EXACTLY one open contest — a filter+length check, not a find:
     // the admin Contests UI is calibrated around a single seeded dispute, and
@@ -556,35 +556,35 @@ describe('generatePriceSubmissions', () => {
     // generator regressed to emitting several counters.
     const counters = rows.filter(
       (row) => row.status === 'pending' && row.disputedSubmissionId !== null,
-    )
-    expect(counters).toHaveLength(1)
-    const counter = counters[0]!
+    );
+    expect(counters).toHaveLength(1);
+    const counter = counters[0]!;
 
-    const parent = rows.find((row) => row.id === counter.disputedSubmissionId)
-    expect(parent).toBeDefined()
-    expect(parent!.status).toBe('disputed')
+    const parent = rows.find((row) => row.id === counter.disputedSubmissionId);
+    expect(parent).toBeDefined();
+    expect(parent!.status).toBe('disputed');
     // A fan disputes someone else's price, never their own.
-    expect(counter.userId).not.toBe(parent!.userId)
-  })
+    expect(counter.userId).not.toBe(parent!.userId);
+  });
 
   it('every note fits within the varchar(280) column limit', async () => {
     // Regression guard for the varchar(280) DB constraint on
     // price_submissions.note — longer strings fail the insert at runtime.
-    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: { note: string | null }[] =
-      submissionValuesSpy.mock.calls[0]![0]
+      submissionValuesSpy.mock.calls[0]![0];
     for (const row of rows) {
       if (row.note !== null) {
-        expect(row.note.length).toBeLessThanOrEqual(280)
+        expect(row.note.length).toBeLessThanOrEqual(280);
       }
     }
-  })
+  });
 
   it('single fixture user: no confirms inserted (empty guard, no throw)', async () => {
     // Cleanup helper explicitly allows a narrowed fixture-user subset. A
@@ -592,19 +592,19 @@ describe('generatePriceSubmissions', () => {
     // otherUsers pool is empty. Previously this crashed with
     // rng.int(1, Math.min(4, 0)) → min > max. Verify graceful skip.
     const { staging, submissionValuesSpy, confirmsValuesSpy } =
-      buildMultiInsertStagingMock()
+      buildMultiInsertStagingMock();
     await generatePriceSubmissions({
       staging: staging as any,
       fixtureUserIds: ['user_2fixture_alpha'] as const,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
     // Submissions still get inserted.
-    expect(submissionValuesSpy).toHaveBeenCalledTimes(1)
+    expect(submissionValuesSpy).toHaveBeenCalledTimes(1);
     // Confirms insert is SKIPPED entirely (no empty-values call).
-    expect(confirmsValuesSpy).not.toHaveBeenCalled()
-  })
-})
+    expect(confirmsValuesSpy).not.toHaveBeenCalled();
+  });
+});
 
 // ---------------------------------------------------------------------------
 // generateNotifications
@@ -617,83 +617,83 @@ describe('generateNotifications', () => {
     // catches them on re-run. Nullable userId would make NULL IN (...) return
     // NULL (not TRUE), leaking rows across every run. See notifications.ts
     // header comment for the full trade-off.
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateNotifications({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { userId: string | null }[] = valuesSpy.mock.calls[0]![0]
+    });
+    const rows: { userId: string | null }[] = valuesSpy.mock.calls[0]![0];
     for (const row of rows) {
-      expect(row.userId).not.toBeNull()
-      expect(fixtureUserIds).toContain(row.userId)
+      expect(row.userId).not.toBeNull();
+      expect(fixtureUserIds).toContain(row.userId);
     }
-  })
+  });
 
   it('produces deterministic output for the same seed', async () => {
-    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock()
+    const { staging: stagingA, valuesSpy: spyA } = buildStagingMock();
     await generateNotifications({
       staging: stagingA as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
-    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock()
+    const { staging: stagingB, valuesSpy: spyB } = buildStagingMock();
     await generateNotifications({
       staging: stagingB as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
 
     expect(JSON.stringify(spyA.mock.calls)).toBe(
       JSON.stringify(spyB.mock.calls),
-    )
-  })
+    );
+  });
 
   it('at least one notification has readAt = null', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateNotifications({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { readAt: Date | null }[] = valuesSpy.mock.calls[0]![0]
-    const hasUnread = rows.some((row) => row.readAt === null)
-    expect(hasUnread).toBe(true)
-  })
+    });
+    const rows: { readAt: Date | null }[] = valuesSpy.mock.calls[0]![0];
+    const hasUnread = rows.some((row) => row.readAt === null);
+    expect(hasUnread).toBe(true);
+  });
 
   it('covers both notification type enum values', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateNotifications({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
-    const rows: { type: string }[] = valuesSpy.mock.calls[0]![0]
-    const types = new Set(rows.map((row) => row.type))
-    expect(types).toContain('admin_alert')
-    expect(types).toContain('user_notification')
-  })
+    });
+    const rows: { type: string }[] = valuesSpy.mock.calls[0]![0];
+    const types = new Set(rows.map((row) => row.type));
+    expect(types).toContain('admin_alert');
+    expect(types).toContain('user_notification');
+  });
 
   it('at least one row per fixture user has a long title (≥80 chars)', async () => {
-    const { staging, valuesSpy } = buildStagingMock()
+    const { staging, valuesSpy } = buildStagingMock();
     await generateNotifications({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
       rng: createRng(SEED),
-    })
+    });
     const rows: { userId: string | null; title: string }[] =
-      valuesSpy.mock.calls[0]![0]
+      valuesSpy.mock.calls[0]![0];
     for (const userId of fixtureUserIds) {
-      const userRows = rows.filter((row) => row.userId === userId)
-      const hasLongTitle = userRows.some((row) => row.title.length >= 80)
-      expect(hasLongTitle).toBe(true)
+      const userRows = rows.filter((row) => row.userId === userId);
+      const hasLongTitle = userRows.some((row) => row.title.length >= 80);
+      expect(hasLongTitle).toBe(true);
     }
-  })
-})
+  });
+});

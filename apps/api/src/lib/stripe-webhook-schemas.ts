@@ -4,15 +4,15 @@
 // (eng infra spec Part 2 §1.5). Stripe objects cross a system boundary, so
 // every field is safeParse'd — no structural trust, no casts.
 
-import { z } from 'zod'
+import { z } from 'zod';
 
 // Stripe sometimes delivers related objects as bare IDs and sometimes as
 // expanded objects — normalize both to the ID string.
 const stripeIdSchema = z
   .union([z.string(), z.object({ id: z.string() })])
-  .transform((value) => (typeof value === 'string' ? value : value.id))
+  .transform((value) => (typeof value === 'string' ? value : value.id));
 
-const metadataSchema = z.record(z.string()).nullish()
+const metadataSchema = z.record(z.string()).nullish();
 
 // Subscription items carry the price + period bounds. The current_period_*
 // fields moved off the subscription onto the item in the 2025 basil release,
@@ -28,7 +28,7 @@ const subscriptionItemSchema = z.object({
   }),
   current_period_start: z.number().nullish(),
   current_period_end: z.number().nullish(),
-})
+});
 
 export const stripeSubscriptionSchema = z.object({
   id: z.string(),
@@ -37,11 +37,11 @@ export const stripeSubscriptionSchema = z.object({
   cancel_at_period_end: z.boolean().nullish(),
   metadata: metadataSchema,
   items: z.object({ data: z.array(subscriptionItemSchema) }).nullish(),
-})
+});
 
 export type StripeSubscriptionSnapshot = z.infer<
   typeof stripeSubscriptionSchema
->
+>;
 
 // Invoice slice. `parent.subscription_details` is the dahlia-era home of the
 // subscription pointer; the legacy top-level `subscription` field is kept as
@@ -65,9 +65,9 @@ export const stripeInvoiceSchema = z.object({
         .nullish(),
     })
     .nullish(),
-})
+});
 
-export type StripeInvoiceSnapshot = z.infer<typeof stripeInvoiceSchema>
+export type StripeInvoiceSnapshot = z.infer<typeof stripeInvoiceSchema>;
 
 export const stripePaymentIntentSchema = z.object({
   id: z.string(),
@@ -79,11 +79,11 @@ export const stripePaymentIntentSchema = z.object({
       decline_code: z.string().nullish(),
     })
     .nullish(),
-})
+});
 
 export type StripePaymentIntentSnapshot = z.infer<
   typeof stripePaymentIntentSchema
->
+>;
 
 /** The subscription ID an invoice belongs to, across payload shapes. */
 export const resolveInvoiceSubscriptionId = (
@@ -91,10 +91,10 @@ export const resolveInvoiceSubscriptionId = (
 ): string | null =>
   invoice.parent?.subscription_details?.subscription ??
   invoice.subscription ??
-  null
+  null;
 
 /** Epoch-seconds → Date; null-safe (Stripe timestamps are epoch seconds). */
 export const epochSecondsToDate = (
   seconds: number | null | undefined,
 ): Date | null =>
-  typeof seconds === 'number' ? new Date(seconds * 1000) : null
+  typeof seconds === 'number' ? new Date(seconds * 1000) : null;

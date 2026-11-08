@@ -96,4 +96,4 @@ export const FOLLOWING_COPY = {
   // row cannot say: what an absence here does and does not mean.
   searchRailNoDates:
     "An artist with nothing booked is still worth following. Acts who have never played Denver aren't in here at all.",
-} as const
+} as const;

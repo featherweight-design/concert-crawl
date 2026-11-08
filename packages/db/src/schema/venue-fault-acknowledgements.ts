@@ -1,5 +1,5 @@
-import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
-import { venues } from './venues.js'
+import { pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { venues } from './venues.js';
 
 // An operator's judgement that a triage fault is expected and unfixable — the
 // permanent Live Nation list cap on Summit, a seasonal venue whose calendar
@@ -34,9 +34,9 @@ export const venueFaultAcknowledgements = pgTable(
       'venue_fault_acknowledgements_venue_condition_uniq',
     ).on(table.venueId, table.condition),
   }),
-)
+);
 
 export type VenueFaultAcknowledgement =
-  typeof venueFaultAcknowledgements.$inferSelect
+  typeof venueFaultAcknowledgements.$inferSelect;
 export type NewVenueFaultAcknowledgement =
-  typeof venueFaultAcknowledgements.$inferInsert
+  typeof venueFaultAcknowledgements.$inferInsert;

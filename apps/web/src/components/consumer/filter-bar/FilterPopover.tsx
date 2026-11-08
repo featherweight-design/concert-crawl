@@ -1,18 +1,18 @@
-'use client'
+'use client';
 
-import { useEffect, useRef } from 'react'
-import type { FilterOption } from './filter-defs'
+import { useEffect, useRef } from 'react';
+import type { FilterOption } from './filter-defs';
 
 interface FilterPopoverProps {
-  open: boolean
-  title: string
-  placeholder: string
-  options: FilterOption[]
-  value: string
-  anchorRect: DOMRect | null
-  alwaysOn?: boolean
-  onSelect: (nextValue: string) => void
-  onClose: () => void
+  open: boolean;
+  title: string;
+  placeholder: string;
+  options: FilterOption[];
+  value: string;
+  anchorRect: DOMRect | null;
+  alwaysOn?: boolean;
+  onSelect: (nextValue: string) => void;
+  onClose: () => void;
 }
 
 export function FilterPopover({
@@ -26,32 +26,32 @@ export function FilterPopover({
   onSelect,
   onClose,
 }: FilterPopoverProps) {
-  const popoverRef = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
+      if (event.key === 'Escape') onClose();
+    };
 
     const onPointerDown = (event: PointerEvent) => {
-      const target = event.target
-      if (!(target instanceof Node)) return
-      if (popoverRef.current?.contains(target)) return
-      onClose()
-    }
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (popoverRef.current?.contains(target)) return;
+      onClose();
+    };
 
-    window.addEventListener('keydown', onKeyDown)
-    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('pointerdown', onPointerDown);
 
     return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('pointerdown', onPointerDown)
-    }
-  }, [open, onClose])
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [open, onClose]);
 
-  if (!open || !anchorRect) return null
+  if (!open || !anchorRect) return null;
 
   return (
     <div
@@ -72,8 +72,8 @@ export function FilterPopover({
           label={placeholder}
           active={!value}
           onClick={() => {
-            onSelect('')
-            onClose()
+            onSelect('');
+            onClose();
           }}
         />
       )}
@@ -84,19 +84,19 @@ export function FilterPopover({
           label={option.label}
           active={value === option.value}
           onClick={() => {
-            onSelect(option.value)
-            onClose()
+            onSelect(option.value);
+            onClose();
           }}
         />
       ))}
     </div>
-  )
+  );
 }
 
 interface OptionButtonProps {
-  label: string
-  active: boolean
-  onClick: () => void
+  label: string;
+  active: boolean;
+  onClick: () => void;
 }
 
 function OptionButton({ label, active, onClick }: OptionButtonProps) {
@@ -113,12 +113,12 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
         background: active ? 'var(--surface-2)' : 'transparent',
       }}
       onMouseEnter={(event) => {
-        if (active) return
-        event.currentTarget.style.background = 'var(--overlay-hover)'
+        if (active) return;
+        event.currentTarget.style.background = 'var(--overlay-hover)';
       }}
       onMouseLeave={(event) => {
-        if (active) return
-        event.currentTarget.style.background = 'transparent'
+        if (active) return;
+        event.currentTarget.style.background = 'transparent';
       }}
     >
       <span>{label}</span>
@@ -134,5 +134,5 @@ function OptionButton({ label, active, onClick }: OptionButtonProps) {
         </svg>
       ) : null}
     </button>
-  )
+  );
 }

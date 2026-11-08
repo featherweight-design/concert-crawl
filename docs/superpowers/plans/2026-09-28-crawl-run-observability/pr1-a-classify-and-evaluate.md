@@ -14,76 +14,76 @@
 **Interfaces — Produces:**
 
 ```ts
-export type CrawlErrorKind = 'llm_quota' | 'other'
+export type CrawlErrorKind = 'llm_quota' | 'other';
 export interface CrawlErrorClass {
-  kind: CrawlErrorKind
-  key: string
+  kind: CrawlErrorKind;
+  key: string;
 }
-export function normalizeErrorMessage(message: string): string
-export function classifyCrawlError(message: string): CrawlErrorClass
+export function normalizeErrorMessage(message: string): string;
+export function classifyCrawlError(message: string): CrawlErrorClass;
 ```
 
 - [x] **Step 1: Write the failing test**
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 import {
   classifyCrawlError,
   normalizeErrorMessage,
-} from './crawl-error-class.js'
+} from './crawl-error-class.js';
 
 // Verbatim from Sentry CONCERT-CRAWL-CRAWLER-2, 2026-09-28.
 const QUOTA =
-  'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."},"request_id":"req_011CfVZygV4btimyebqFAtze"}'
+  'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."},"request_id":"req_011CfVZygV4btimyebqFAtze"}';
 
 describe('classifyCrawlError', () => {
   it('recognises the account usage-limit refusal', () => {
     expect(classifyCrawlError(QUOTA)).toEqual({
       kind: 'llm_quota',
       key: 'llm_quota',
-    })
-  })
+    });
+  });
 
   it('recognises the exhausted-credit refusal as the same class', () => {
     const credit =
-      'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API."}}'
-    expect(classifyCrawlError(credit).kind).toBe('llm_quota')
-  })
+      'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API."}}';
+    expect(classifyCrawlError(credit).kind).toBe('llm_quota');
+  });
 
   it('keys an unknown error on its normalized message', () => {
     expect(classifyCrawlError('TypeError: fetch failed')).toEqual({
       kind: 'other',
       key: 'TypeError: fetch failed',
-    })
-  })
-})
+    });
+  });
+});
 
 describe('normalizeErrorMessage', () => {
   it('collapses per-venue URLs and long numbers so one cause shares one key', () => {
     const first = normalizeErrorMessage(
       'TimeoutError: page.goto: Timeout 30000ms exceeded navigating to https://a.example.com/events',
-    )
+    );
     const second = normalizeErrorMessage(
       'TimeoutError: page.goto: Timeout 30000ms exceeded navigating to https://b.example.com/shows',
-    )
-    expect(first).toBe(second)
-  })
+    );
+    expect(first).toBe(second);
+  });
 
   it('keeps short status codes apart — HTTP 403 and HTTP 500 are different causes', () => {
     expect(normalizeErrorMessage('HTTP 403')).not.toBe(
       normalizeErrorMessage('HTTP 500'),
-    )
-  })
+    );
+  });
 
   it('strips request ids and uuids and caps the length', () => {
     const out = normalizeErrorMessage(
       `req_011CfVZygV4btimyebqFAtze 3f2b1c9e-8d4a-4f6b-9c1d-2e3f4a5b6c7d ${'x'.repeat(400)}`,
-    )
-    expect(out).not.toContain('req_011')
-    expect(out).not.toContain('3f2b1c9e')
-    expect(out.length).toBeLessThanOrEqual(160)
-  })
-})
+    );
+    expect(out).not.toContain('req_011');
+    expect(out).not.toContain('3f2b1c9e');
+    expect(out.length).toBeLessThanOrEqual(160);
+  });
+});
 ```
 
 - [x] **Step 2: Run to verify it fails**
@@ -99,12 +99,12 @@ Expected: FAIL — cannot resolve `./crawl-error-class.js`.
 // and the three-strikes path (crawl.ts), so all three agree on what "the same
 // failure" means.
 
-export type CrawlErrorKind = 'llm_quota' | 'other'
+export type CrawlErrorKind = 'llm_quota' | 'other';
 
 export interface CrawlErrorClass {
-  kind: CrawlErrorKind
+  kind: CrawlErrorKind;
   /** The kind itself for a known class; the normalized message otherwise. */
-  key: string
+  key: string;
 }
 
 // Anthropic's two account-level refusals, matched on their message text as the
@@ -113,10 +113,10 @@ export interface CrawlErrorClass {
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
   /reached your specified API usage limits/i,
   /credit balance is too low/i,
-]
+];
 
-const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
-const MAX_KEY_LENGTH = 160
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const MAX_KEY_LENGTH = 160;
 
 /**
  * Strips what varies per venue or per request, so one cause across several
@@ -131,14 +131,14 @@ export function normalizeErrorMessage(message: string): string {
     .replace(/\d{4,}/g, '#')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, MAX_KEY_LENGTH)
+    .slice(0, MAX_KEY_LENGTH);
 }
 
 export function classifyCrawlError(message: string): CrawlErrorClass {
   if (LLM_QUOTA_PATTERNS.some((pattern) => pattern.test(message))) {
-    return { kind: 'llm_quota', key: 'llm_quota' }
+    return { kind: 'llm_quota', key: 'llm_quota' };
   }
-  return { kind: 'other', key: normalizeErrorMessage(message) }
+  return { kind: 'other', key: normalizeErrorMessage(message) };
 }
 ```
 
@@ -161,51 +161,51 @@ git commit -m "feat(crawler): classify crawl errors into a shared kind and group
 **Interfaces — Consumes:** `classifyCrawlError`, `CrawlErrorKind` (Task 1). **Produces:**
 
 ```ts
-export const RUN_FAILURE_MIN_VENUES = 3
-export const RUN_FAILURE_RATE = 0.25
-export const SHARED_CAUSE_MIN_VENUES = 2
+export const RUN_FAILURE_MIN_VENUES = 3;
+export const RUN_FAILURE_RATE = 0.25;
+export const SHARED_CAUSE_MIN_VENUES = 2;
 export interface VenueRunOutcome {
-  venueId: string
-  venueName: string
-  errorMessage: string | null
+  venueId: string;
+  venueName: string;
+  errorMessage: string | null;
 }
 export type RunDegradation =
   | { kind: 'failure_rate'; failed: number; total: number }
   | {
-      kind: 'shared_cause'
-      errorKey: string
-      errorKind: CrawlErrorKind
-      venueNames: string[]
-    }
+      kind: 'shared_cause';
+      errorKey: string;
+      errorKind: CrawlErrorKind;
+      venueNames: string[];
+    };
 export function evaluateRunHealth(
   outcomes: readonly VenueRunOutcome[],
-): RunDegradation[]
+): RunDegradation[];
 ```
 
 - [x] **Step 1: Write the failing test**
 
 ```ts
-import { describe, it, expect } from 'vitest'
-import { evaluateRunHealth, type VenueRunOutcome } from './run-health.js'
+import { describe, it, expect } from 'vitest';
+import { evaluateRunHealth, type VenueRunOutcome } from './run-health.js';
 
 const QUOTA =
-  'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}'
+  'Error: 400 {"error":{"message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}';
 
 const ok = (name: string): VenueRunOutcome => ({
   venueId: name,
   venueName: name,
   errorMessage: null,
-})
+});
 const failed = (name: string, message: string): VenueRunOutcome => ({
   venueId: name,
   venueName: name,
   errorMessage: message,
-})
+});
 
 describe('evaluateRunHealth', () => {
   it('reports nothing for a clean run', () => {
-    expect(evaluateRunHealth([ok('A'), ok('B'), ok('C')])).toEqual([])
-  })
+    expect(evaluateRunHealth([ok('A'), ok('B'), ok('C')])).toEqual([]);
+  });
 
   it('reports the 2026-09-28 run as both a failure rate and a shared cause', () => {
     const names = [
@@ -217,50 +217,51 @@ describe('evaluateRunHealth', () => {
       'Lost Lake',
       'Ball Arena',
       'Meow Wolf',
-    ]
+    ];
     const outcomes = [
       ...names.map((name) => failed(name, QUOTA)),
       ...Array.from({ length: 12 }, (_, i) => ok(`ok-${i}`)),
-    ]
-    const result = evaluateRunHealth(outcomes)
+    ];
+    const result = evaluateRunHealth(outcomes);
     expect(result).toContainEqual({
       kind: 'failure_rate',
       failed: 8,
       total: 20,
-    })
+    });
     expect(result).toContainEqual({
       kind: 'shared_cause',
       errorKey: 'llm_quota',
       errorKind: 'llm_quota',
       venueNames: [...names].sort(),
-    })
-  })
+    });
+  });
 
   it('stays quiet for one venue failing, which is ordinary (3 such days in 91)', () => {
     const outcomes = [
       failed('Larimer', 'TypeError: fetch failed'),
       ...Array.from({ length: 19 }, (_, i) => ok(`ok-${i}`)),
-    ]
-    expect(evaluateRunHealth(outcomes)).toEqual([])
-  })
+    ];
+    expect(evaluateRunHealth(outcomes)).toEqual([]);
+  });
 
   it('counts distinct venues, not outcomes — one venue twice is not a shared cause', () => {
     // Defensive: the daily loop crawls each venue once, but a caller that merged
     // triggered and daily outcomes would not. Prod's only repeated-error day
     // (2026-07-18, Levitt Pavilion) was exactly that shape across two runs.
-    const robots = 'VenuePilotFetchError: robots.txt disallows ConcertCrawl/1.0'
+    const robots =
+      'VenuePilotFetchError: robots.txt disallows ConcertCrawl/1.0';
     const outcomes = [
       failed('Levitt', robots),
       failed('Levitt', robots),
       ok('A'),
       ok('B'),
-    ]
+    ];
     expect(
       evaluateRunHealth(outcomes).filter(
         (degradation) => degradation.kind === 'shared_cause',
       ),
-    ).toEqual([])
-  })
+    ).toEqual([]);
+  });
 
   it('flags two different venues failing on the same normalized error', () => {
     const outcomes = [
@@ -273,21 +274,21 @@ describe('evaluateRunHealth', () => {
         'TimeoutError: Timeout 30000ms exceeded navigating to https://b.example.com',
       ),
       ...Array.from({ length: 18 }, (_, i) => ok(`ok-${i}`)),
-    ]
+    ];
     const shared = evaluateRunHealth(outcomes).filter(
       (degradation) => degradation.kind === 'shared_cause',
-    )
-    expect(shared).toHaveLength(1)
-  })
+    );
+    expect(shared).toHaveLength(1);
+  });
 
   it('needs 3 failures before the rate alone fires, so a tiny run cannot trip it', () => {
     expect(
       evaluateRunHealth([failed('A', 'x'), failed('B', 'y'), ok('C')]).filter(
         (degradation) => degradation.kind === 'failure_rate',
       ),
-    ).toEqual([])
-  })
-})
+    ).toEqual([]);
+  });
+});
 ```
 
 - [x] **Step 2: Run to verify it fails** — `pnpm --filter @concert-crawl/crawler-core test -- run-health`; expected FAIL, module not found.
@@ -305,47 +306,50 @@ describe('evaluateRunHealth', () => {
 // one failure, one with the same venue failing twice, and 2026-09-28. These
 // values fire on that last day only.
 
-import { classifyCrawlError, type CrawlErrorKind } from './crawl-error-class.js'
+import {
+  classifyCrawlError,
+  type CrawlErrorKind,
+} from './crawl-error-class.js';
 
 /** The failure rate alone never fires below this many failed venues. */
-export const RUN_FAILURE_MIN_VENUES = 3
-export const RUN_FAILURE_RATE = 0.25
+export const RUN_FAILURE_MIN_VENUES = 3;
+export const RUN_FAILURE_RATE = 0.25;
 /** Distinct venues sharing one error key before it counts as a shared cause. */
-export const SHARED_CAUSE_MIN_VENUES = 2
+export const SHARED_CAUSE_MIN_VENUES = 2;
 
 export interface VenueRunOutcome {
-  venueId: string
-  venueName: string
+  venueId: string;
+  venueName: string;
   /** null when the venue crawled successfully. */
-  errorMessage: string | null
+  errorMessage: string | null;
 }
 
 export type RunDegradation =
   | { kind: 'failure_rate'; failed: number; total: number }
   | {
-      kind: 'shared_cause'
-      errorKey: string
-      errorKind: CrawlErrorKind
-      venueNames: string[]
-    }
+      kind: 'shared_cause';
+      errorKey: string;
+      errorKind: CrawlErrorKind;
+      venueNames: string[];
+    };
 
-type FailedOutcome = VenueRunOutcome & { errorMessage: string }
+type FailedOutcome = VenueRunOutcome & { errorMessage: string };
 
 const isFailed = (outcome: VenueRunOutcome): outcome is FailedOutcome =>
-  outcome.errorMessage !== null
+  outcome.errorMessage !== null;
 
 export function evaluateRunHealth(
   outcomes: readonly VenueRunOutcome[],
 ): RunDegradation[] {
-  const failures = outcomes.filter(isFailed)
-  const total = outcomes.length
-  const degradations: RunDegradation[] = []
+  const failures = outcomes.filter(isFailed);
+  const total = outcomes.length;
+  const degradations: RunDegradation[] = [];
 
   if (
     failures.length >= RUN_FAILURE_MIN_VENUES &&
     failures.length / total >= RUN_FAILURE_RATE
   ) {
-    degradations.push({ kind: 'failure_rate', failed: failures.length, total })
+    degradations.push({ kind: 'failure_rate', failed: failures.length, total });
   }
 
   // Keyed by venue id, defensively: the daily loop never crawls a venue twice,
@@ -354,15 +358,15 @@ export function evaluateRunHealth(
   const byKey = new Map<
     string,
     { errorKind: CrawlErrorKind; venues: Map<string, string> }
-  >()
+  >();
   for (const failure of failures) {
-    const { kind, key } = classifyCrawlError(failure.errorMessage)
+    const { kind, key } = classifyCrawlError(failure.errorMessage);
     const group = byKey.get(key) ?? {
       errorKind: kind,
       venues: new Map<string, string>(),
-    }
-    group.venues.set(failure.venueId, failure.venueName)
-    byKey.set(key, group)
+    };
+    group.venues.set(failure.venueId, failure.venueName);
+    byKey.set(key, group);
   }
   for (const [errorKey, group] of byKey) {
     if (group.venues.size >= SHARED_CAUSE_MIN_VENUES) {
@@ -371,10 +375,10 @@ export function evaluateRunHealth(
         errorKey,
         errorKind: group.errorKind,
         venueNames: [...group.venues.values()].sort(),
-      })
+      });
     }
   }
-  return degradations
+  return degradations;
 }
 ```
 

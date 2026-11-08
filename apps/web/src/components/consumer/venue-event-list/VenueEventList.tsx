@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { Fragment, useEffect, useMemo, useRef } from 'react'
-import type { EventWithVenue } from '@concert-crawl/types'
-import { EventRow, fromEventWithVenue } from '../event-row'
-import { CONSUMER_COPY } from '../definitions/copy'
-import { dateGroupLabel } from '../definitions/lib'
+import { Fragment, useEffect, useMemo, useRef } from 'react';
+import type { EventWithVenue } from '@concert-crawl/types';
+import { EventRow, fromEventWithVenue } from '../event-row';
+import { CONSUMER_COPY } from '../definitions/copy';
+import { dateGroupLabel } from '../definitions/lib';
 
 interface VenueEventListProps {
-  events: EventWithVenue[]
-  highlightId?: string
-  watchedIds?: string[]
+  events: EventWithVenue[];
+  highlightId?: string;
+  watchedIds?: string[];
 }
 
 export function VenueEventList({
@@ -17,45 +17,45 @@ export function VenueEventList({
   highlightId,
   watchedIds = [],
 }: VenueEventListProps) {
-  const highlightRef = useRef<HTMLDivElement>(null)
-  const watchedSet = new Set(watchedIds)
+  const highlightRef = useRef<HTMLDivElement>(null);
+  const watchedSet = new Set(watchedIds);
 
   const groups = useMemo(() => {
-    const grouped = new Map<string, EventWithVenue[]>()
+    const grouped = new Map<string, EventWithVenue[]>();
     for (const event of events) {
-      const key = event.date
-      if (!grouped.has(key)) grouped.set(key, [])
-      grouped.get(key)!.push(event)
+      const key = event.date;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(event);
     }
-    return grouped
-  }, [events])
+    return grouped;
+  }, [events]);
 
   useEffect(() => {
-    if (!highlightId || !highlightRef.current) return
-    const el = highlightRef.current
+    if (!highlightId || !highlightRef.current) return;
+    const el = highlightRef.current;
     const reducedMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
-    ).matches
+    ).matches;
     el.scrollIntoView({
       behavior: reducedMotion ? 'instant' : 'smooth',
       block: 'center',
-    })
+    });
     if (!reducedMotion) {
-      el.dataset['highlighted'] = 'true'
+      el.dataset['highlighted'] = 'true';
       const timer = setTimeout(() => {
-        delete el.dataset['highlighted']
-      }, 2000)
-      return () => clearTimeout(timer)
+        delete el.dataset['highlighted'];
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [highlightId])
+  }, [highlightId]);
 
-  if (groups.size === 0) return null
+  if (groups.size === 0) return null;
 
   return (
     <div className="flex flex-col gap-6">
       {Array.from(groups.entries()).map(([date, dateEvents]) => {
-        const label = dateGroupLabel(date)
-        const isTonight = label.toLowerCase() === 'tonight'
+        const label = dateGroupLabel(date);
+        const isTonight = label.toLowerCase() === 'tonight';
         return (
           <section key={date} aria-label={label}>
             <div
@@ -109,8 +109,8 @@ export function VenueEventList({
               ))}
             </div>
           </section>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

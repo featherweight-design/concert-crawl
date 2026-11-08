@@ -22,30 +22,30 @@ export type UserDataDisposition =
   // 17(3)(b)). `reason` must name the obligation.
   | 'retain'
   // Table holds no user-owned data at all.
-  | 'none'
+  | 'none';
 
 export interface UserDataEntry {
-  tableName: string
-  disposition: UserDataDisposition
+  tableName: string;
+  disposition: UserDataDisposition;
   // The column naming the row's SUBJECT — the person the row is about.
   // Deletion and export both scope on this column.
-  userIdColumn: string | null
+  userIdColumn: string | null;
   // Every OTHER column on the table that can hold a Clerk ID — inviters,
   // revokers, granters, the admin who acted, the user an admin acted *on*.
   // These never scope an export and never drive a row's disposition; they are
   // declared because the registry claims to be the whole cascade, and a Clerk
   // ID nobody wrote down is one that survives forever. Each entry's `reason`
   // states what happens to them.
-  otherUserIdColumns: readonly string[]
-  exportKey: string | null
+  otherUserIdColumns: readonly string[];
+  exportKey: string | null;
   // Explicit allowlist of columns that appear in the GDPR export, per #527.
   // NEVER export with SELECT *: it would ship internal IDs, admin notes, and
   // any column a future migration adds, silently. `null` iff exportKey is
   // null. `user_id` is deliberately never listed — the requester knows who
   // they are, and echoing it back turns an export into an identifier leak if
   // the file is shared.
-  exportColumns: readonly string[] | null
-  reason: string
+  exportColumns: readonly string[] | null;
+  reason: string;
 }
 
 export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
@@ -556,7 +556,7 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     exportColumns: null,
     reason: 'LLM/infra spend telemetry.',
   },
-]
+];
 
 // Crews are the one export the registry cannot express, and the exception is
 // deliberate rather than an oversight.
@@ -574,7 +574,7 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
 // those crews." No member list, no roles, not even a member count — a count
 // is small but it is still a fact about other people, and a data-subject
 // right must not become a way to enumerate them.
-export const CREW_EXPORT_KEY = 'crews'
+export const CREW_EXPORT_KEY = 'crews';
 
 // Watching is the second exception, for the same structural reason as crews.
 //
@@ -589,4 +589,4 @@ export const CREW_EXPORT_KEY = 'crews'
 // included: it postdates #527's table and is the difference between a show you
 // watched and a show you went to. That is the user's own fact about themselves
 // and belongs in their copy.
-export const WATCHING_EXPORT_KEY = 'watching'
+export const WATCHING_EXPORT_KEY = 'watching';

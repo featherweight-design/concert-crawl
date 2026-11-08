@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { PendingStack } from './PendingStack'
-import type { PendingCardBProps } from '@/components/consumer/PendingCardB'
+import React from 'react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import { PendingStack } from './PendingStack';
+import type { PendingCardBProps } from '@/components/consumer/PendingCardB';
 
 const buildCard = (
   overrides: Partial<PendingCardBProps> = {},
@@ -24,17 +24,17 @@ const buildCard = (
   onWithdraw: vi.fn(),
   onEdit: vi.fn(),
   ...overrides,
-})
+});
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 describe('PendingStack', () => {
   it('renders a single card', () => {
-    render(<PendingStack cards={[buildCard({ floor: 25 })]} />)
-    expect(screen.getByText('$25')).toBeTruthy()
-  })
+    render(<PendingStack cards={[buildCard({ floor: 25 })]} />);
+    expect(screen.getByText('$25')).toBeTruthy();
+  });
 
   it('renders two cards', () => {
     render(
@@ -44,10 +44,10 @@ describe('PendingStack', () => {
           buildCard({ floor: 50, tier: 'Pit' }),
         ]}
       />,
-    )
-    expect(screen.getByText('$25')).toBeTruthy()
-    expect(screen.getByText('$50')).toBeTruthy()
-  })
+    );
+    expect(screen.getByText('$25')).toBeTruthy();
+    expect(screen.getByText('$50')).toBeTruthy();
+  });
 
   // Regression: a batch of 3+ tiers must show every card. The old
   // implementation hard-rendered only cards[0]/cards[1], silently dropping
@@ -62,9 +62,9 @@ describe('PendingStack', () => {
           buildCard({ floor: 99, tier: 'VIP' }),
         ]}
       />,
-    )
-    expect(screen.getByText('$25')).toBeTruthy()
-    expect(screen.getByText('$50')).toBeTruthy()
-    expect(screen.getByText('$99')).toBeTruthy()
-  })
-})
+    );
+    expect(screen.getByText('$25')).toBeTruthy();
+    expect(screen.getByText('$50')).toBeTruthy();
+    expect(screen.getByText('$99')).toBeTruthy();
+  });
+});

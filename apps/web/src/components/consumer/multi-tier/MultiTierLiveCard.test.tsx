@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 
-import React from 'react'
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { MultiTierLiveCard } from './MultiTierLiveCard'
+import React from 'react';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import { MultiTierLiveCard } from './MultiTierLiveCard';
 
 afterEach(() => {
-  cleanup()
-})
+  cleanup();
+});
 
 describe('MultiTierLiveCard', () => {
   it('renders boxoffice headline with PendingTrustPill kind=boxoffice (gold pill)', () => {
@@ -21,13 +21,13 @@ describe('MultiTierLiveCard', () => {
         }}
         alternates={[]}
       />,
-    )
-    expect(screen.getByText('$25')).toBeDefined()
-    expect(screen.getByText('GA')).toBeDefined()
+    );
+    expect(screen.getByText('$25')).toBeDefined();
+    expect(screen.getByText('GA')).toBeDefined();
     // PendingTrustPill renders "Box office" when kind=boxoffice
-    expect(screen.getByText('Box office')).toBeDefined()
-    expect(screen.getByText('seen on Bluebird')).toBeDefined()
-  })
+    expect(screen.getByText('Box office')).toBeDefined();
+    expect(screen.getByText('seen on Bluebird')).toBeDefined();
+  });
 
   it('renders community headline with PendingTrustPill kind=community', () => {
     render(
@@ -40,9 +40,9 @@ describe('MultiTierLiveCard', () => {
         }}
         alternates={[]}
       />,
-    )
-    expect(screen.getByText('Community')).toBeDefined()
-  })
+    );
+    expect(screen.getByText('Community')).toBeDefined();
+  });
 
   it('renders resale headline with PendingTrustPill kind=resale (coral pill)', () => {
     render(
@@ -55,14 +55,14 @@ describe('MultiTierLiveCard', () => {
         }}
         alternates={[]}
       />,
-    )
+    );
     // PendingTrustPill renders "Resale" when kind=resale
-    const pill = screen.getByText('Resale')
-    expect(pill).toBeDefined()
+    const pill = screen.getByText('Resale');
+    expect(pill).toBeDefined();
     // Coral pill background — JSDOM normalizes 0.20 → 0.2.
-    const pillEl = pill as HTMLElement
-    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)')
-  })
+    const pillEl = pill as HTMLElement;
+    expect(pillEl.style.background).toContain('oklch(0.65 0.2 25)');
+  });
 
   it('appends "· N reports" to the meta line when reports > 1 (§8 state #19)', () => {
     render(
@@ -76,10 +76,10 @@ describe('MultiTierLiveCard', () => {
         alternates={[]}
         reports={3}
       />,
-    )
+    );
     // Single text node: "seen on AXS · 3 reports"
-    expect(screen.getByText('seen on AXS · 3 reports')).toBeDefined()
-  })
+    expect(screen.getByText('seen on AXS · 3 reports')).toBeDefined();
+  });
 
   it('suppresses the reports caption when reports === 1 (single observation)', () => {
     render(
@@ -93,10 +93,10 @@ describe('MultiTierLiveCard', () => {
         alternates={[]}
         reports={1}
       />,
-    )
-    expect(screen.getByText('seen on AXS')).toBeDefined()
-    expect(screen.queryByText(/reports/)).toBeNull()
-  })
+    );
+    expect(screen.getByText('seen on AXS')).toBeDefined();
+    expect(screen.queryByText(/reports/)).toBeNull();
+  });
 
   it('suppresses the reports caption when reports is undefined', () => {
     render(
@@ -109,10 +109,10 @@ describe('MultiTierLiveCard', () => {
         }}
         alternates={[]}
       />,
-    )
-    expect(screen.getByText('seen on AXS')).toBeDefined()
-    expect(screen.queryByText(/reports/)).toBeNull()
-  })
+    );
+    expect(screen.getByText('seen on AXS')).toBeDefined();
+    expect(screen.queryByText(/reports/)).toBeNull();
+  });
 
   it('renders alternates including kind=resale (coral dot)', () => {
     const { container } = render(
@@ -132,20 +132,20 @@ describe('MultiTierLiveCard', () => {
           },
         ]}
       />,
-    )
+    );
     // Alternate row vendor + price visible
-    expect(screen.getByText('StubHub')).toBeDefined()
-    expect(screen.getByText('$150')).toBeDefined()
+    expect(screen.getByText('StubHub')).toBeDefined();
+    expect(screen.getByText('$150')).toBeDefined();
     // Look for the coral dot in the alternate row.
     const dots = Array.from(
       container.querySelectorAll('div[style*="border-radius: 2.5px"]'),
-    )
+    );
     const coral = dots.find((dot) =>
       (dot as HTMLElement).style.background.includes('oklch(0.65 0.2 25)'),
-    )
-    expect(coral).toBeDefined()
-  })
-})
+    );
+    expect(coral).toBeDefined();
+  });
+});
 
 // #1366 — this card was the only price surface with no staleness tell, so an
 // old price read as current on the event page while Watching flagged it.
@@ -157,24 +157,24 @@ describe('MultiTierLiveCard staleness marker', () => {
         alternates={[]}
         observedAt={observedAt}
       />,
-    )
+    );
 
   it('warns when the headline price is older than a day', () => {
     const eightDaysAgo = new Date(
       Date.now() - 8 * 24 * 60 * 60 * 1000,
-    ).toISOString()
-    renderAt(eightDaysAgo)
-    expect(screen.getByText('as of 8d ago, could be stale')).toBeDefined()
-  })
+    ).toISOString();
+    renderAt(eightDaysAgo);
+    expect(screen.getByText('as of 8d ago, could be stale')).toBeDefined();
+  });
 
   it('states the age without the warning when the price is fresh', () => {
-    const anHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    renderAt(anHourAgo)
-    expect(screen.getByText('as of 1h ago')).toBeDefined()
-  })
+    const anHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    renderAt(anHourAgo);
+    expect(screen.getByText('as of 1h ago')).toBeDefined();
+  });
 
   it('renders no stamp when the observation time is unknown', () => {
-    renderAt(null)
-    expect(screen.queryByText(/as of/)).toBeNull()
-  })
-})
+    renderAt(null);
+    expect(screen.queryByText(/as of/)).toBeNull();
+  });
+});

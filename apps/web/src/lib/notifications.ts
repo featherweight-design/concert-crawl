@@ -12,7 +12,7 @@
 // client that parses or constructs one will silently serve page 1 to someone
 // who asked for page 3. Echo `nextCursor` back verbatim, never build one.
 
-import { apiClient, ApiError } from './api'
+import { apiClient, ApiError } from './api';
 
 /**
  * Mirrors `UserNotificationCategorySchema`
@@ -38,7 +38,7 @@ export const NOTIFICATION_CATEGORIES = [
   'crew.going',
   'crew.joined',
   'crew.left',
-] as const
+] as const;
 
 /**
  * Derived from the array above, not declared alongside it: the runtime guard
@@ -46,59 +46,59 @@ export const NOTIFICATION_CATEGORIES = [
  * copies drift silently — a real category added to only one of them would be
  * rejected by `isNotificationCategory` at runtime while typechecking fine.
  */
-export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number]
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
-const CATEGORY_LOOKUP: ReadonlySet<string> = new Set(NOTIFICATION_CATEGORIES)
+const CATEGORY_LOOKUP: ReadonlySet<string> = new Set(NOTIFICATION_CATEGORIES);
 
 export const isNotificationCategory = (
   value: unknown,
 ): value is NotificationCategory =>
-  typeof value === 'string' && CATEGORY_LOOKUP.has(value)
+  typeof value === 'string' && CATEGORY_LOOKUP.has(value);
 
 export interface ConsumerNotification {
-  id: string
+  id: string;
   /**
    * The raw string, not the narrowed union: the API deliberately passes an
    * unknown/legacy category through rather than dropping the row, so the
    * panel falls back to a neutral presentation instead of hiding real news.
    */
-  category: string
-  title: string
-  body: string
-  actionUrl: string | null
+  category: string;
+  title: string;
+  body: string;
+  actionUrl: string | null;
   /** ISO string, or null when the row has never been opened. */
-  readAt: string | null
+  readAt: string | null;
   /** ISO string. */
-  createdAt: string
-  metadata: Record<string, unknown> | null
+  createdAt: string;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface NotificationListResult {
-  items: ConsumerNotification[]
+  items: ConsumerNotification[];
   /** Uncapped by design — the visible affordance is a dot, this is for speech. */
-  unreadCount: number
-  hasMore: boolean
+  unreadCount: number;
+  hasMore: boolean;
   /** Opaque. Echo back, never parse. */
-  nextCursor: string | null
+  nextCursor: string | null;
   /**
    * When the panel was last opened. `null` means "nothing seen yet" — the
    * majority case at launch, since no user has ever opened this panel. It
    * does NOT mean "everything is backfill".
    */
-  seenAt: string | null
+  seenAt: string | null;
 }
 
 /** Matches the API's own default and max-useful page (NOTIFICATION_PAGE_SIZE). */
-export const NOTIFICATION_PAGE_SIZE = 20
+export const NOTIFICATION_PAGE_SIZE = 20;
 
 export type ParseResult<T> =
-  { success: true; data: T } | { success: false; error: string }
+  { success: true; data: T } | { success: false; error: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const isNullableString = (value: unknown): value is string | null =>
-  value === null || typeof value === 'string'
+  value === null || typeof value === 'string';
 
 /**
  * `actionUrl` is untrusted: it is written by backend fan-outs into a DB column
@@ -112,9 +112,9 @@ const isNullableString = (value: unknown): value is string | null =>
  * A leading `//` is rejected because it is protocol-relative, not a path.
  */
 const sameOriginPathOrNull = (raw: string | null): string | null => {
-  if (raw === null || !raw.startsWith('/') || raw.startsWith('//')) return null
-  return raw
-}
+  if (raw === null || !raw.startsWith('/') || raw.startsWith('//')) return null;
+  return raw;
+};
 
 /**
  * A timestamp has to be PARSEABLE, not merely a string. `relTime`, `dayKey`
@@ -123,10 +123,10 @@ const sameOriginPathOrNull = (raw: string | null): string | null => {
  * crashed panel, not a degraded row, so it is caught at the boundary.
  */
 const isTimestamp = (value: unknown): value is string =>
-  typeof value === 'string' && !Number.isNaN(Date.parse(value))
+  typeof value === 'string' && !Number.isNaN(Date.parse(value));
 
 const isNullableTimestamp = (value: unknown): value is string | null =>
-  value === null || isTimestamp(value)
+  value === null || isTimestamp(value);
 
 /**
  * Counts render verbatim in the header and the pip, so "-1 new" or "2.5 new"
@@ -134,22 +134,22 @@ const isNullableTimestamp = (value: unknown): value is string | null =>
  * here.
  */
 const isCount = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 0
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
 const parseItem = (value: unknown): ConsumerNotification | null => {
-  if (!isRecord(value)) return null
+  if (!isRecord(value)) return null;
   const { id, category, title, body, actionUrl, readAt, createdAt, metadata } =
-    value
+    value;
 
-  if (typeof id !== 'string') return null
-  if (typeof category !== 'string') return null
-  if (typeof title !== 'string') return null
-  if (typeof body !== 'string') return null
-  if (!isTimestamp(createdAt)) return null
-  if (!isNullableString(actionUrl)) return null
-  const safeActionUrl = sameOriginPathOrNull(actionUrl)
-  if (readAt !== null && !isTimestamp(readAt)) return null
-  if (metadata !== null && !isRecord(metadata)) return null
+  if (typeof id !== 'string') return null;
+  if (typeof category !== 'string') return null;
+  if (typeof title !== 'string') return null;
+  if (typeof body !== 'string') return null;
+  if (!isTimestamp(createdAt)) return null;
+  if (!isNullableString(actionUrl)) return null;
+  const safeActionUrl = sameOriginPathOrNull(actionUrl);
+  if (readAt !== null && !isTimestamp(readAt)) return null;
+  if (metadata !== null && !isRecord(metadata)) return null;
   return {
     id,
     category,
@@ -159,30 +159,30 @@ const parseItem = (value: unknown): ConsumerNotification | null => {
     readAt,
     createdAt,
     metadata,
-  }
-}
+  };
+};
 
 export const safeParseNotificationList = (
   value: unknown,
 ): ParseResult<NotificationListResult> => {
   if (!isRecord(value)) {
-    return { success: false, error: 'Notification payload is not an object' }
+    return { success: false, error: 'Notification payload is not an object' };
   }
-  const { items, unreadCount, hasMore, nextCursor, seenAt } = value
+  const { items, unreadCount, hasMore, nextCursor, seenAt } = value;
   if (!Array.isArray(items)) {
-    return { success: false, error: 'Notification payload has no items array' }
+    return { success: false, error: 'Notification payload has no items array' };
   }
   if (!isCount(unreadCount)) {
     return {
       success: false,
       error: 'Notification unreadCount is not a non-negative integer',
-    }
+    };
   }
   if (typeof hasMore !== 'boolean') {
-    return { success: false, error: 'Notification hasMore is not a boolean' }
+    return { success: false, error: 'Notification hasMore is not a boolean' };
   }
   if (!isNullableString(nextCursor)) {
-    return { success: false, error: 'Notification nextCursor is not a string' }
+    return { success: false, error: 'Notification nextCursor is not a string' };
   }
   // Not merely a string: `seenAt` is a watermark that gets compared against
   // row timestamps, so an unparseable one fails downstream rather than here.
@@ -190,7 +190,7 @@ export const safeParseNotificationList = (
     return {
       success: false,
       error: 'Notification seenAt is not a parseable timestamp',
-    }
+    };
   }
 
   // A single bad row is SKIPPED, not fatal. Rejecting the payload would blank
@@ -201,13 +201,16 @@ export const safeParseNotificationList = (
   // The exception is a payload whose rows ALL fail: that is not one bad
   // record, it is a broken contract, and silently rendering "All quiet." over
   // it would tell the user they have no news when they may have plenty.
-  const parsed: ConsumerNotification[] = []
+  const parsed: ConsumerNotification[] = [];
   for (const raw of items) {
-    const item = parseItem(raw)
-    if (item !== null) parsed.push(item)
+    const item = parseItem(raw);
+    if (item !== null) parsed.push(item);
   }
   if (items.length > 0 && parsed.length === 0) {
-    return { success: false, error: 'Every notification row failed validation' }
+    return {
+      success: false,
+      error: 'Every notification row failed validation',
+    };
   }
 
   // `hasMore: true` with `nextCursor: null` is a contradiction the route should
@@ -223,8 +226,8 @@ export const safeParseNotificationList = (
   // not a cursor the route can resolve, and every truthiness check downstream
   // reads it as "no cursor" — i.e. page 1. Normalised to null here so the one
   // fix covers the whole chain rather than each consumer re-deriving it.
-  const cursor = nextCursor === '' ? null : nextCursor
-  const canPage = hasMore && cursor !== null
+  const cursor = nextCursor === '' ? null : nextCursor;
+  const canPage = hasMore && cursor !== null;
 
   return {
     success: true,
@@ -235,8 +238,8 @@ export const safeParseNotificationList = (
       nextCursor: cursor,
       seenAt,
     },
-  }
-}
+  };
+};
 
 export async function fetchNotifications(
   token: string,
@@ -249,16 +252,16 @@ export async function fetchNotifications(
   const query =
     cursor === undefined
       ? `?limit=${NOTIFICATION_PAGE_SIZE}`
-      : `?limit=${NOTIFICATION_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
-  const body = await apiClient.get<unknown>(`/v1/notifications${query}`, token)
-  const result = safeParseNotificationList(body)
+      : `?limit=${NOTIFICATION_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`;
+  const body = await apiClient.get<unknown>(`/v1/notifications${query}`, token);
+  const result = safeParseNotificationList(body);
   if (!result.success) {
     // 502: the transport succeeded, the upstream shape did not. Surfacing it
     // as an ApiError puts it on the same error path as every other API
     // failure, which is what the panel's error state renders.
-    throw new ApiError(502, result.error)
+    throw new ApiError(502, result.error);
   }
-  return result.data
+  return result.data;
 }
 
 export async function markNotificationRead(
@@ -269,7 +272,7 @@ export async function markNotificationRead(
     `/v1/notifications/${encodeURIComponent(id)}/read`,
     token,
     {},
-  )
+  );
 }
 
 export async function markAllNotificationsRead(token: string): Promise<number> {
@@ -277,11 +280,11 @@ export async function markAllNotificationsRead(token: string): Promise<number> {
     '/v1/notifications/read-all',
     token,
     {},
-  )
+  );
   if (!isRecord(body) || !isCount(body['updated'])) {
-    throw new ApiError(502, 'read-all returned no usable updated count')
+    throw new ApiError(502, 'read-all returned no usable updated count');
   }
-  return body['updated']
+  return body['updated'];
 }
 
 export async function markPanelSeen(token: string): Promise<string | null> {
@@ -289,9 +292,9 @@ export async function markPanelSeen(token: string): Promise<string | null> {
     '/v1/notifications/mark-panel-seen',
     token,
     {},
-  )
+  );
   if (!isRecord(body) || !isNullableTimestamp(body['seenAt'])) {
-    throw new ApiError(502, 'mark-panel-seen returned no usable watermark')
+    throw new ApiError(502, 'mark-panel-seen returned no usable watermark');
   }
-  return body['seenAt']
+  return body['seenAt'];
 }

@@ -1,16 +1,16 @@
-import { Hono } from 'hono'
-import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { collectUserData } from '../lib/user-data.js'
-import { checkRateLimit } from '../lib/rate-limit.js'
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
+import { collectUserData } from '../lib/user-data.js';
+import { checkRateLimit } from '../lib/rate-limit.js';
 
-export const usersExportRouter = new Hono()
+export const usersExportRouter = new Hono();
 
 // The app mounts no global Clerk middleware — each authenticated router mounts
 // its own, as usersRouter does. Without this, getAuth returns null and the
 // route 401s for everyone.
-usersExportRouter.use('*', clerkMiddleware())
+usersExportRouter.use('*', clerkMiddleware());
 
-const EXPORT_WINDOW_MS = 60 * 60 * 1000
+const EXPORT_WINDOW_MS = 60 * 60 * 1000;
 
 // GET /v1/users/me/export — GDPR-style data export (#527).
 //
@@ -18,9 +18,9 @@ const EXPORT_WINDOW_MS = 60 * 60 * 1000
 // one user's rows are kilobytes, so a queue plus object storage would add two
 // failure surfaces to buy nothing.
 usersExportRouter.get('/me/export', async (ctx) => {
-  const auth = getAuth(ctx)
+  const auth = getAuth(ctx);
   if (!auth?.userId) {
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
   }
 
   // One query per exported table, so an unthrottled endpoint is a self-service
@@ -33,9 +33,9 @@ usersExportRouter.get('/me/export', async (ctx) => {
     1,
     EXPORT_WINDOW_MS,
     { onStoreError: 'allow', userId: auth.userId },
-  )
+  );
   if (!limit.allowed) {
-    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
+    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)));
     return ctx.json(
       {
         success: false,
@@ -44,22 +44,22 @@ usersExportRouter.get('/me/export', async (ctx) => {
         error: 'You can request one export per hour.',
       },
       429,
-    )
+    );
   }
 
-  const data = await collectUserData(auth.userId)
+  const data = await collectUserData(auth.userId);
 
-  ctx.header('Content-Type', 'application/json; charset=utf-8')
+  ctx.header('Content-Type', 'application/json; charset=utf-8');
   // This body is the single most sensitive response the API produces. Keep it
   // out of every cache between here and the browser.
-  ctx.header('Cache-Control', 'private, no-store')
+  ctx.header('Cache-Control', 'private, no-store');
   // Fixed filename. A date-stamped name reads as helpful and is not: the
   // timestamp is already inside the payload as `exportedAt`.
   ctx.header(
     'Content-Disposition',
     'attachment; filename="concertcrawl-data-export.json"',
-  )
+  );
   return ctx.body(
     JSON.stringify({ exportedAt: new Date().toISOString(), data }, null, 2),
-  )
-})
+  );
+});

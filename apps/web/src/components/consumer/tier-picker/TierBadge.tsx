@@ -1,23 +1,23 @@
 // Tier badge — Supporter (accent +), Premium (signal star), Founder
 // (gradient crown). Free renders nothing. From monetization-shared.jsx.
 
-import { TIER_PICKER_COPY } from './definitions/copy'
-import type { TierKey } from './definitions/types'
+import { TIER_PICKER_COPY } from './definitions/copy';
+import type { TierKey } from './definitions/types';
 
 interface TierBadgeProps {
-  tier: TierKey
-  size?: 'sm' | 'md' | 'lg'
+  tier: TierKey;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const SIZES = {
   sm: { pad: '3px 7px', fontSize: 9, glyph: 8, gap: 5, radius: 4 },
   md: { pad: '4px 9px', fontSize: 10, glyph: 9, gap: 5, radius: 5 },
   lg: { pad: '5px 11px', fontSize: 11, glyph: 10, gap: 6, radius: 6 },
-} as const
+} as const;
 
 export const TierBadge = ({ tier, size = 'md' }: TierBadgeProps) => {
-  if (tier === 'free') return null
-  const sz = SIZES[size]
+  if (tier === 'free') return null;
+  const sz = SIZES[size];
 
   const styles = {
     supporter: {
@@ -63,7 +63,7 @@ export const TierBadge = ({ tier, size = 'md' }: TierBadgeProps) => {
         </svg>
       ),
     },
-  }[tier]
+  }[tier];
 
   return (
     <span
@@ -88,5 +88,5 @@ export const TierBadge = ({ tier, size = 'md' }: TierBadgeProps) => {
       {styles.glyph}
       <span>{styles.label}</span>
     </span>
-  )
-}
+  );
+};

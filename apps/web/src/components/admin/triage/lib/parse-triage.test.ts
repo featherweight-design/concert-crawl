@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from 'vitest';
 
-import { parseFault, parseQueue, parseTriageResponse } from './parse-triage'
+import { parseFault, parseQueue, parseTriageResponse } from './parse-triage';
 
 const base = {
   id: 'f-1',
@@ -11,13 +11,13 @@ const base = {
   days: 6,
   dur: '6d',
   crawlRunId: '22222222-2222-2222-2222-222222222222',
-}
+};
 
 const blocked = {
   ...base,
   condition: 'blocked',
   evidence: { status: 403, refusals: 4, lastSuccess: 'Jul 24' },
-}
+};
 
 const sweep = {
   venues: 30,
@@ -25,7 +25,7 @@ const sweep = {
   atIso: '2026-07-30T09:04:00.000Z',
   events: 812,
   next: 'tomorrow 3:00 AM',
-}
+};
 
 describe('parseFault', () => {
   it('accepts each of the five conditions', () => {
@@ -69,9 +69,9 @@ describe('parseFault', () => {
         condition: 'coverage',
         evidence: { matched: 9, expected: 14, uncovered: 5, wasWhen: 'Jul 12' },
       },
-    ]
-    for (const row of conditions) expect(parseFault(row)).not.toBeNull()
-  })
+    ];
+    for (const row of conditions) expect(parseFault(row)).not.toBeNull();
+  });
 
   // A sixth alert category can ship crawler-side before the panel knows about
   // it. The row is dropped; the panel must not throw and must not blank.
@@ -80,10 +80,10 @@ describe('parseFault', () => {
       ...base,
       condition: 'certificateExpired',
       evidence: { daysLeft: 3 },
-    }
-    expect(() => parseFault(unknown)).not.toThrow()
-    expect(parseFault(unknown)).toBeNull()
-  })
+    };
+    expect(() => parseFault(unknown)).not.toThrow();
+    expect(parseFault(unknown)).toBeNull();
+  });
 
   it('accepts null for every nullable evidence field', () => {
     expect(
@@ -93,7 +93,7 @@ describe('parseFault', () => {
         condition: 'blocked',
         evidence: { status: null, refusals: 2, lastSuccess: null },
       }),
-    ).not.toBeNull()
+    ).not.toBeNull();
     expect(
       parseFault({
         ...base,
@@ -110,27 +110,27 @@ describe('parseFault', () => {
           series: [30, 25],
         },
       }),
-    ).not.toBeNull()
+    ).not.toBeNull();
     expect(
       parseFault({
         ...base,
         condition: 'coverage',
         evidence: { matched: 9, expected: 14, uncovered: 5, wasWhen: null },
       }),
-    ).not.toBeNull()
-  })
+    ).not.toBeNull();
+  });
 
   // An absent key reads as `undefined` and would interpolate the literal
   // string "undefined". The API declares these explicitly-null, so a missing
   // key is a contract break, not a null.
   it('rejects an absent nullable key', () => {
-    const withoutStatus: Record<string, unknown> = { ...blocked.evidence }
-    delete withoutStatus.status
-    expect(parseFault({ ...blocked, evidence: withoutStatus })).toBeNull()
-  })
+    const withoutStatus: Record<string, unknown> = { ...blocked.evidence };
+    delete withoutStatus.status;
+    expect(parseFault({ ...blocked, evidence: withoutStatus })).toBeNull();
+  });
 
   it('rejects a malformed band, a non-array series and a non-object row', () => {
-    expect(parseFault({ ...blocked, band: 'critical' })).toBeNull()
+    expect(parseFault({ ...blocked, band: 'critical' })).toBeNull();
     expect(
       parseFault({
         ...base,
@@ -145,11 +145,11 @@ describe('parseFault', () => {
           series: 'nope',
         },
       }),
-    ).toBeNull()
-    expect(parseFault(null)).toBeNull()
-    expect(parseFault('blocked')).toBeNull()
-  })
-})
+    ).toBeNull();
+    expect(parseFault(null)).toBeNull();
+    expect(parseFault('blocked')).toBeNull();
+  });
+});
 
 describe('parseQueue', () => {
   it('accepts both queue kinds and rejects an unknown action', () => {
@@ -161,7 +161,7 @@ describe('parseQueue', () => {
         breakdown: 'Bluebird 3',
         action: 'openReview',
       }),
-    ).not.toBeNull()
+    ).not.toBeNull();
     expect(
       parseQueue({
         id: 'q-prices',
@@ -170,7 +170,7 @@ describe('parseQueue', () => {
         breakdown: 'Khruangbin @ Ogden · 2 more',
         action: 'openSubmissions',
       }),
-    ).not.toBeNull()
+    ).not.toBeNull();
     expect(
       parseQueue({
         id: 'q-x',
@@ -179,9 +179,9 @@ describe('parseQueue', () => {
         breakdown: '',
         action: 'openSomethingElse',
       }),
-    ).toBeNull()
-  })
-})
+    ).toBeNull();
+  });
+});
 
 describe('parseTriageResponse', () => {
   it('keeps the good rows when one row is unrecognised', () => {
@@ -213,10 +213,10 @@ describe('parseTriageResponse', () => {
         },
       ],
       sweep,
-    })
-    expect(parsed?.faults.map((fault) => fault.id)).toEqual(['f-1', 'f-3'])
-    expect(parsed?.queues).toHaveLength(1)
-  })
+    });
+    expect(parsed?.faults.map((fault) => fault.id)).toEqual(['f-1', 'f-3']);
+    expect(parsed?.queues).toHaveLength(1);
+  });
 
   it('preserves the server ordering rather than re-sorting', () => {
     const parsed = parseTriageResponse({
@@ -237,12 +237,12 @@ describe('parseTriageResponse', () => {
       ],
       queues: [],
       sweep,
-    })
+    });
     expect(parsed?.faults.map((fault) => fault.id)).toEqual([
       'f-suspect',
       'f-hard',
-    ])
-  })
+    ]);
+  });
 
   it('parses acknowledged faults with their provenance', () => {
     const acknowledgement = {
@@ -251,16 +251,16 @@ describe('parseTriageResponse', () => {
       acknowledgedAt: '2026-08-14T03:00:00.000Z',
       evidenceKind: null,
       evidenceValue: '2',
-    }
+    };
     const parsed = parseTriageResponse({
       faults: [],
       acknowledged: [{ ...blocked, acknowledgement }],
       queues: [],
       sweep,
-    })
-    expect(parsed?.acknowledged).toHaveLength(1)
-    expect(parsed?.acknowledged[0]?.acknowledgement).toEqual(acknowledgement)
-  })
+    });
+    expect(parsed?.acknowledged).toHaveLength(1);
+    expect(parsed?.acknowledged[0]?.acknowledgement).toEqual(acknowledgement);
+  });
 
   // Web and API deploy independently, so the panel can run ahead of the
   // serializer that added the evidence fields. Absent keys read as "no figure
@@ -270,17 +270,17 @@ describe('parseTriageResponse', () => {
       reason: 'Permanent Live Nation listing cap.',
       acknowledgedBy: 'user_admin_1',
       acknowledgedAt: '2026-08-14T03:00:00.000Z',
-    }
+    };
     const parsed = parseTriageResponse({
       faults: [],
       acknowledged: [{ ...blocked, acknowledgement }],
       queues: [],
       sweep,
-    })
-    expect(parsed?.acknowledged).toHaveLength(1)
-    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceKind).toBeNull()
-    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceValue).toBeNull()
-  })
+    });
+    expect(parsed?.acknowledged).toHaveLength(1);
+    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceKind).toBeNull();
+    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceValue).toBeNull();
+  });
 
   it('still drops an acknowledged row whose evidence is the wrong type', () => {
     const parsed = parseTriageResponse({
@@ -298,9 +298,9 @@ describe('parseTriageResponse', () => {
       ],
       queues: [],
       sweep,
-    })
-    expect(parsed?.acknowledged).toEqual([])
-  })
+    });
+    expect(parsed?.acknowledged).toEqual([]);
+  });
 
   it('drops an acknowledged row whose provenance is unusable', () => {
     const parsed = parseTriageResponse({
@@ -308,42 +308,42 @@ describe('parseTriageResponse', () => {
       acknowledged: [{ ...blocked, acknowledgement: { reason: 'Expected.' } }],
       queues: [],
       sweep,
-    })
-    expect(parsed?.acknowledged).toEqual([])
-  })
+    });
+    expect(parsed?.acknowledged).toEqual([]);
+  });
 
   it('treats a payload without acknowledged as none, not unusable', () => {
-    const parsed = parseTriageResponse({ faults: [], queues: [], sweep })
-    expect(parsed?.acknowledged).toEqual([])
-  })
+    const parsed = parseTriageResponse({ faults: [], queues: [], sweep });
+    expect(parsed?.acknowledged).toEqual([]);
+  });
 
   // Absent means an older API. Present but not a list means the contract broke,
   // and reporting that as "nothing is acknowledged" would hide live state.
   it('rejects a payload whose acknowledged is present but not a list', () => {
     expect(
       parseTriageResponse({ faults: [], acknowledged: {}, queues: [], sweep }),
-    ).toBeNull()
-  })
+    ).toBeNull();
+  });
 
   it('returns null only when the envelope itself is unusable', () => {
-    expect(parseTriageResponse(null)).toBeNull()
-    expect(parseTriageResponse({ faults: [], queues: [] })).toBeNull()
+    expect(parseTriageResponse(null)).toBeNull();
+    expect(parseTriageResponse({ faults: [], queues: [] })).toBeNull();
     expect(
       parseTriageResponse({ faults: 'none', queues: [], sweep }),
-    ).toBeNull()
+    ).toBeNull();
     expect(
       parseTriageResponse({
         faults: [],
         queues: [],
         sweep: { ...sweep, atIso: undefined },
       }),
-    ).toBeNull()
+    ).toBeNull();
     expect(
       parseTriageResponse({
         faults: [],
         queues: [],
         sweep: { ...sweep, atIso: null },
       }),
-    ).not.toBeNull()
-  })
-})
+    ).not.toBeNull();
+  });
+});

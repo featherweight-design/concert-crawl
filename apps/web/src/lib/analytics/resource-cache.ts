@@ -18,28 +18,28 @@
  */
 export const wasServedFromCache = (url: string): boolean => {
   try {
-    if (typeof performance === 'undefined') return false
-    if (typeof performance.getEntriesByName !== 'function') return false
+    if (typeof performance === 'undefined') return false;
+    if (typeof performance.getEntriesByName !== 'function') return false;
     // "Cannot tell" is an expected outcome off the browser, not a failure, so
     // it returns before the catch below turns it into a logged error.
-    if (typeof window === 'undefined') return false
+    if (typeof window === 'undefined') return false;
 
     // Relative srcs are resolved against the document before they are recorded.
-    const resolved = new URL(url, window.location.href).href
-    const entries = performance.getEntriesByName(resolved, 'resource')
-    const latest = entries.at(-1)
-    if (latest === undefined) return false
+    const resolved = new URL(url, window.location.href).href;
+    const entries = performance.getEntriesByName(resolved, 'resource');
+    const latest = entries.at(-1);
+    if (latest === undefined) return false;
 
     // `transferSize` is only on PerformanceResourceTiming, and `getEntriesByName`
     // is typed as returning the base entry — narrow rather than cast.
-    if (!('transferSize' in latest)) return false
-    const { transferSize } = latest
-    if (typeof transferSize !== 'number') return false
+    if (!('transferSize' in latest)) return false;
+    const { transferSize } = latest;
+    if (typeof transferSize !== 'number') return false;
 
-    return transferSize === 0
+    return transferSize === 0;
   } catch (err) {
     // A timing read must never surface to the UI it was measuring.
-    console.error('analytics: cache-hit detection failed', err)
-    return false
+    console.error('analytics: cache-hit detection failed', err);
+    return false;
   }
-}
+};

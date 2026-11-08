@@ -15,12 +15,12 @@ Four targeted fixes to bring the admin sidebar into alignment with the design sp
 
 ## Scope
 
-| # | Item | File(s) |
-|---|------|---------|
-| 1 | Badge contrast on "Event review" | `admin.css` |
-| 2 | Logo centralization + AdminSidebar fix | `CCMark.tsx`, `AppHeader.tsx`, `AdminSidebar.tsx` |
-| 3 | Invite Codes icon: `Ticket` → `Key` | `nav.ts` |
-| 4 | Missing "OPERATIONS" section label | `AdminSidebar.tsx` |
+| #   | Item                                   | File(s)                                           |
+| --- | -------------------------------------- | ------------------------------------------------- |
+| 1   | Badge contrast on "Event review"       | `admin.css`                                       |
+| 2   | Logo centralization + AdminSidebar fix | `CCMark.tsx`, `AppHeader.tsx`, `AdminSidebar.tsx` |
+| 3   | Invite Codes icon: `Ticket` → `Key`    | `nav.ts`                                          |
+| 4   | Missing "OPERATIONS" section label     | `AdminSidebar.tsx`                                |
 
 ---
 
@@ -37,6 +37,7 @@ Four targeted fixes to bring the admin sidebar into alignment with the design sp
 **Problem:** `CCMark` (the canonical logomark SVG) lives in `components/consumer/cc-mark/` — a consumer-scoped directory. The AdminSidebar has its own divergent inline SVG. Both `CCMark` and `CCWordmark` should live together under `components/brand/`.
 
 **Fix:**
+
 1. Move `CCMark.tsx` from `components/consumer/cc-mark/` → `components/brand/cc-mark/`.
 2. Update the one existing import in `AppHeader.tsx` to the new path.
 3. Replace the AdminSidebar's inline SVG + inline wordmark text with `<CCMark>` and `<CCWordmark>` from `components/brand/`.

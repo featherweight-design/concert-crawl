@@ -12,8 +12,8 @@ export interface ShelfArtist {
    * carries the other's. Each is unique within its own list, which is all a
    * key needs — the two never populate the same shelf.
    */
-  key: string
-  name: string
+  key: string;
+  name: string;
   /**
    * Null is NORMAL, not an error: a Spotify-synced act never billed in Denver
    * has no projection row and so no page. The card drops the follow badge,
@@ -21,25 +21,25 @@ export interface ShelfArtist {
    * next show is matched by canonical name against `events` and never consults
    * the projection, so a slug-less row with a date still opens that date.
    */
-  slug: string | null
-  photoUrl: string | null
+  slug: string | null;
+  photoUrl: string | null;
   /**
    * The show `dateLine` describes. The card links HERE first: a card about a
    * night the viewer can buy tickets to should open that night, not a profile.
    * Null when nothing is on the books, which is also when `dateLine` is null.
    */
-  eventId: string | null
+  eventId: string | null;
   /** "Venue · Sep 12", or null when nothing is on the books. */
-  dateLine: string | null
+  dateLine: string | null;
   /**
    * Cheapest known ticket price for `dateLine`'s show, or null when no price
    * is known — the card owns how it words that.
    * Raw rather than preformatted because the card colours the row on the
    * null-vs-priced distinction, which a formatted string has already thrown away.
    */
-  price: number | null
+  price: number | null;
   /** Whether the viewer already follows this artist. */
-  following: boolean
+  following: boolean;
 }
 
 /**
@@ -47,4 +47,4 @@ export interface ShelfArtist {
  * named the source. It went because a follow is a follow: how it got onto the
  * list is not something the shelf owes the person who built it.
  */
-export type ShelfMode = 'zero' | 'some'
+export type ShelfMode = 'zero' | 'some';

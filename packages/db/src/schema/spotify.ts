@@ -8,14 +8,14 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
-} from 'drizzle-orm/pg-core'
-import { events } from './events.js'
+} from 'drizzle-orm/pg-core';
+import { events } from './events.js';
 
 export const spotifyConnectionStatusEnum = pgEnum('spotify_connection_status', [
   'connected',
   'error',
   'revoked',
-])
+]);
 
 // One row per user with a linked Spotify account. Disconnect (user-initiated)
 // DELETEs the row; an externally revoked grant keeps the row with
@@ -45,7 +45,7 @@ export const userSpotifyConnections = pgTable(
       table.userId,
     ),
   }),
-)
+);
 
 export const pushSubscriptions = pgTable(
   'push_subscriptions',
@@ -70,7 +70,7 @@ export const pushSubscriptions = pgTable(
     ),
     userIdIdx: index('push_subscriptions_user_id_idx').on(table.userId),
   }),
-)
+);
 
 // Idempotency ledger for fan-out (spec §10): a (user, event, kind) row is
 // claimed before the side effect fires, so retries never double-send.
@@ -94,11 +94,11 @@ export const spotifyAlertLog = pgTable(
       table.kind,
     ),
   }),
-)
+);
 
-export type UserSpotifyConnection = typeof userSpotifyConnections.$inferSelect
+export type UserSpotifyConnection = typeof userSpotifyConnections.$inferSelect;
 export type NewUserSpotifyConnection =
-  typeof userSpotifyConnections.$inferInsert
-export type PushSubscription = typeof pushSubscriptions.$inferSelect
-export type NewPushSubscription = typeof pushSubscriptions.$inferInsert
-export type SpotifyAlertLogRow = typeof spotifyAlertLog.$inferSelect
+  typeof userSpotifyConnections.$inferInsert;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscription = typeof pushSubscriptions.$inferInsert;
+export type SpotifyAlertLogRow = typeof spotifyAlertLog.$inferSelect;

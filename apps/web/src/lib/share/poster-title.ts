@@ -16,10 +16,10 @@
  * fraction of the font size. Measured off rendered posters rather than from the
  * font tables, so it already includes the negative tracking.
  */
-const UPPERCASE_ADVANCE_RATIO = 0.66
+const UPPERCASE_ADVANCE_RATIO = 0.66;
 
 /** Below this fraction of the locked size the title stops reading as display type. */
-const MIN_SCALE = 0.45
+const MIN_SCALE = 0.45;
 
 /**
  * The largest font size at which the title's longest *word* still fits one
@@ -39,14 +39,14 @@ export const fitTitleSize = (
     .reduce(
       (longest, word) => (word.length > longest ? word.length : longest),
       0,
-    )
+    );
 
-  if (longestWord === 0) return baseSize
+  if (longestWord === 0) return baseSize;
 
-  const fitting = availableWidth / (longestWord * UPPERCASE_ADVANCE_RATIO)
-  const floor = baseSize * MIN_SCALE
+  const fitting = availableWidth / (longestWord * UPPERCASE_ADVANCE_RATIO);
+  const floor = baseSize * MIN_SCALE;
 
   // Floor, not round: rounding up can push the estimate back past the width it
   // was computed to respect, which is the whole failure this guards against.
-  return Math.floor(Math.max(floor, Math.min(baseSize, fitting)))
-}
+  return Math.floor(Math.max(floor, Math.min(baseSize, fitting)));
+};

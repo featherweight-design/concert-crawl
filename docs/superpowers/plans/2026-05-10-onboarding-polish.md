@@ -12,14 +12,14 @@
 
 ## File Map
 
-| Action | Path | Purpose |
-|--------|------|---------|
-| Create | `apps/web/src/components/brand/cc-cluster-mark/CCClusterMark.tsx` | SVG cluster mark icon |
-| Modify | `apps/web/src/app/layout.tsx` | Add Caveat font via `next/font/google` |
-| Modify | `apps/web/src/components/onboarding/OnboardingShell.tsx` | Full layout refactor — mobile + desktop |
-| Modify | `apps/web/src/components/onboarding/steps/YoureIn.tsx` | Step 5 copy (#138) |
-| Modify | `apps/web/src/middleware.ts` | Returning-user redirect (#80) |
-| Modify | `apps/web/src/middleware.test.ts` | Unit test for returning-user redirect |
+| Action | Path                                                              | Purpose                                 |
+| ------ | ----------------------------------------------------------------- | --------------------------------------- |
+| Create | `apps/web/src/components/brand/cc-cluster-mark/CCClusterMark.tsx` | SVG cluster mark icon                   |
+| Modify | `apps/web/src/app/layout.tsx`                                     | Add Caveat font via `next/font/google`  |
+| Modify | `apps/web/src/components/onboarding/OnboardingShell.tsx`          | Full layout refactor — mobile + desktop |
+| Modify | `apps/web/src/components/onboarding/steps/YoureIn.tsx`            | Step 5 copy (#138)                      |
+| Modify | `apps/web/src/middleware.ts`                                      | Returning-user redirect (#80)           |
+| Modify | `apps/web/src/middleware.test.ts`                                 | Unit test for returning-user redirect   |
 
 ---
 
@@ -28,6 +28,7 @@
 The cluster mark is an SVG that appears in the onboarding top chrome (mobile + desktop) and as the faint desktop watermark. It does not exist as a production component yet.
 
 **Files:**
+
 - Create: `apps/web/src/components/brand/cc-cluster-mark/CCClusterMark.tsx`
 
 - [ ] **Step 1.1: Create the component**
@@ -35,11 +36,11 @@ The cluster mark is an SVG that appears in the onboarding top chrome (mobile + d
 ```tsx
 // apps/web/src/components/brand/cc-cluster-mark/CCClusterMark.tsx
 interface CCClusterMarkProps {
-  size?: number
-  color?: string
-  glow?: string | null
-  className?: string
-  style?: React.CSSProperties
+  size?: number;
+  color?: string;
+  glow?: string | null;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function CCClusterMark({
@@ -49,7 +50,7 @@ export function CCClusterMark({
   className,
   style,
 }: CCClusterMarkProps) {
-  const glowColor = glow ?? color
+  const glowColor = glow ?? color;
   const trail = [
     { cx: 14, cy: 76, r: 1.5 },
     { cx: 24, cy: 70, r: 2 },
@@ -58,7 +59,7 @@ export function CCClusterMark({
     { cx: 50, cy: 50, r: 4 },
     { cx: 58, cy: 42, r: 5 },
     { cx: 66, cy: 32, r: 6 },
-  ]
+  ];
   return (
     <svg
       width={size}
@@ -82,7 +83,7 @@ export function CCClusterMark({
         />
       ))}
     </svg>
-  )
+  );
 }
 ```
 
@@ -100,6 +101,7 @@ git commit -m "feat(brand): add CCClusterMark SVG component"
 Caveat is referenced in `FounderNote.tsx` for the `— Hugh` sign-off but is not loaded — it currently falls back to Inter, rendering as sans-serif instead of script.
 
 **Files:**
+
 - Modify: `apps/web/src/app/layout.tsx`
 
 - [ ] **Step 2.1: Add Caveat to font imports**
@@ -107,7 +109,7 @@ Caveat is referenced in `FounderNote.tsx` for the `— Hugh` sign-off but is not
 In `apps/web/src/app/layout.tsx`, add Caveat to the existing `next/font/google` imports:
 
 ```tsx
-import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
+import { Inter, JetBrains_Mono, Caveat } from 'next/font/google';
 ```
 
 - [ ] **Step 2.2: Configure the font**
@@ -119,7 +121,7 @@ const caveat = Caveat({
   subsets: ['latin'],
   variable: '--font-handwriting',
   weight: ['400', '600', '700'],
-})
+});
 ```
 
 - [ ] **Step 2.3: Apply the variable to the html element**
@@ -154,9 +156,11 @@ git commit -m "fix(onboarding): load Caveat font for founder sign-off script sty
 ## Task 3: Update YoureIn step 5 copy (#138)
 
 **Files:**
+
 - Modify: `apps/web/src/components/onboarding/steps/YoureIn.tsx`
 
 Changes:
+
 1. Subtitle line 2: `Tell us when we're wrong.` → `You'll be shaping the app.`
 2. Expand the lede paragraph
 3. Remove the `BETA CHANNEL · ALWAYS OPEN` box (which contains the email)
@@ -165,7 +169,7 @@ Changes:
 
 ```tsx
 // apps/web/src/components/onboarding/steps/YoureIn.tsx
-import { Eyebrow, Lede, StepHeading } from './_primitives'
+import { Eyebrow, Lede, StepHeading } from './_primitives';
 
 export function YoureIn() {
   return (
@@ -179,9 +183,9 @@ export function YoureIn() {
         </span>
       </StepHeading>
       <Lede>
-        You&apos;re not just here to use the thing — you&apos;re here to make
-        it better. When something changes, we&apos;ll ask what you think.
-        When something breaks, we want to know.
+        You&apos;re not just here to use the thing — you&apos;re here to make it
+        better. When something changes, we&apos;ll ask what you think. When
+        something breaks, we want to know.
       </Lede>
       <Lede>
         The Give Feedback button lives in your menu — always there, never
@@ -189,7 +193,7 @@ export function YoureIn() {
         free-form message field. Thirty seconds. I read every one.
       </Lede>
     </div>
-  )
+  );
 }
 ```
 
@@ -207,6 +211,7 @@ git commit -m "fix(onboarding): update step 5 copy — feedback nudge, remove em
 This task fixes the mobile layout: adds top chrome, restructures the nav to match the spec (Next button full-width, then a secondary row with the back link + step counter), and reskins the back button as a text link.
 
 **Files:**
+
 - Modify: `apps/web/src/components/onboarding/OnboardingShell.tsx`
 
 The back button must now be **always rendered** (disabled on step 1 with `opacity: 0.4` and `cursor: default`) rather than conditionally mounted. The step counter format changes from `1 / 5` to `STEP 1 OF 5`.
@@ -216,22 +221,22 @@ The back button must now be **always rendered** (disabled on step 1 with `opacit
 Replace the full file content:
 
 ```tsx
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { ProgressDots } from './ProgressDots'
-import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
-import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
-import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
-import { FounderNote } from './steps/FounderNote'
-import { HowItWorks } from './steps/HowItWorks'
-import { WhatItDoesToday } from './steps/WhatItDoesToday'
-import { WhatItDoesntYet } from './steps/WhatItDoesntYet'
-import { YoureIn } from './steps/YoureIn'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ProgressDots } from './ProgressDots';
+import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark';
+import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark';
+import { BetaPill } from '@/components/brand/beta-pill/BetaPill';
+import { FounderNote } from './steps/FounderNote';
+import { HowItWorks } from './steps/HowItWorks';
+import { WhatItDoesToday } from './steps/WhatItDoesToday';
+import { WhatItDoesntYet } from './steps/WhatItDoesntYet';
+import { YoureIn } from './steps/YoureIn';
 
-const FLOW = ['welcome', 'how', 'today', 'notyet', 'done'] as const
-type StepKey = (typeof FLOW)[number]
+const FLOW = ['welcome', 'how', 'today', 'notyet', 'done'] as const;
+type StepKey = (typeof FLOW)[number];
 
 const STEP_LABELS: Record<StepKey, string> = {
   welcome: 'WELCOME',
@@ -239,39 +244,39 @@ const STEP_LABELS: Record<StepKey, string> = {
   today: 'TODAY',
   notyet: 'NOT YET',
   done: "YOU'RE IN",
-}
+};
 
 // Steps whose desktop card is wider (620px instead of 520px)
-const WIDE_STEPS = new Set<StepKey>(['welcome', 'today', 'notyet'])
+const WIDE_STEPS = new Set<StepKey>(['welcome', 'today', 'notyet']);
 
 function StepContent({ stepKey }: { stepKey: StepKey }) {
-  if (stepKey === 'welcome') return <FounderNote />
-  if (stepKey === 'how') return <HowItWorks />
-  if (stepKey === 'today') return <WhatItDoesToday />
-  if (stepKey === 'notyet') return <WhatItDoesntYet />
-  if (stepKey === 'done') return <YoureIn />
-  return null
+  if (stepKey === 'welcome') return <FounderNote />;
+  if (stepKey === 'how') return <HowItWorks />;
+  if (stepKey === 'today') return <WhatItDoesToday />;
+  if (stepKey === 'notyet') return <WhatItDoesntYet />;
+  if (stepKey === 'done') return <YoureIn />;
+  return null;
 }
 
 export function OnboardingShell() {
-  const [index, setIndex] = useState(0)
-  const router = useRouter()
-  const total = FLOW.length
-  const isFirst = index === 0
-  const isLast = index === total - 1
-  const stepKey = FLOW[index]!
+  const [index, setIndex] = useState(0);
+  const router = useRouter();
+  const total = FLOW.length;
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
+  const stepKey = FLOW[index]!;
 
   function goNext() {
     if (isLast) {
-      router.push('/sign-up')
-      return
+      router.push('/sign-up');
+      return;
     }
-    setIndex((ii) => Math.min(ii + 1, total - 1))
+    setIndex((ii) => Math.min(ii + 1, total - 1));
   }
 
   function goBack() {
-    if (isFirst) return
-    setIndex((ii) => ii - 1)
+    if (isFirst) return;
+    setIndex((ii) => ii - 1);
   }
 
   return (
@@ -299,7 +304,11 @@ export function OnboardingShell() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CCClusterMark size={22} color="var(--signal)" glow="var(--accent)" />
+            <CCClusterMark
+              size={22}
+              color="var(--signal)"
+              glow="var(--accent)"
+            />
             <CCWordmark size={16} />
           </div>
           <BetaPill />
@@ -407,10 +416,7 @@ export function OnboardingShell() {
       </div>
 
       {/* Desktop layout (≥ 1240px) — same content, centered card */}
-      <div
-        style={{ display: 'none' }}
-        className="onboarding-desktop"
-      >
+      <div style={{ display: 'none' }} className="onboarding-desktop">
         <OnboardingDesktop
           index={index}
           total={total}
@@ -422,17 +428,17 @@ export function OnboardingShell() {
         />
       </div>
     </>
-  )
+  );
 }
 
 interface DesktopProps {
-  index: number
-  total: number
-  isFirst: boolean
-  isLast: boolean
-  stepKey: StepKey
-  onNext: () => void
-  onBack: () => void
+  index: number;
+  total: number;
+  isFirst: boolean;
+  isLast: boolean;
+  stepKey: StepKey;
+  onNext: () => void;
+  onBack: () => void;
 }
 
 function OnboardingDesktop({
@@ -444,7 +450,7 @@ function OnboardingDesktop({
   onNext,
   onBack,
 }: DesktopProps) {
-  const cardWidth = WIDE_STEPS.has(stepKey) ? 620 : 520
+  const cardWidth = WIDE_STEPS.has(stepKey) ? 620 : 520;
 
   return (
     <div
@@ -473,7 +479,12 @@ function OnboardingDesktop({
         <CCClusterMark
           size={380}
           color="var(--fg)"
-          style={{ opacity: 0.07, transform: 'rotate(-12deg)' } as React.CSSProperties}
+          style={
+            {
+              opacity: 0.07,
+              transform: 'rotate(-12deg)',
+            } as React.CSSProperties
+          }
         />
       </div>
 
@@ -649,7 +660,7 @@ function OnboardingDesktop({
         </div>
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -659,12 +670,20 @@ The mobile/desktop toggle uses CSS classes. Add the following to `apps/web/src/a
 
 ```css
 /* Onboarding responsive layout */
-.onboarding-mobile { display: flex; }
-.onboarding-desktop { display: none; }
+.onboarding-mobile {
+  display: flex;
+}
+.onboarding-desktop {
+  display: none;
+}
 
 @media (min-width: 1240px) {
-  .onboarding-mobile { display: none !important; }
-  .onboarding-desktop { display: block !important; }
+  .onboarding-mobile {
+    display: none !important;
+  }
+  .onboarding-desktop {
+    display: block !important;
+  }
 }
 ```
 
@@ -692,6 +711,7 @@ git commit -m "fix(onboarding): layout overhaul — chrome, desktop card, back b
 Users who redeemed an invite code but never completed sign-up will have the `invite_verified` cookie set but no Clerk session. When they land on `/` they currently see the public landing page. This adds a redirect to `/onboarding` for that case.
 
 **Files:**
+
 - Modify: `apps/web/src/middleware.ts`
 - Modify (or create): `apps/web/src/middleware.test.ts`
 
@@ -701,8 +721,8 @@ Check if a test file exists first: `ls apps/web/src/middleware.test.ts`. If it d
 
 ```ts
 // apps/web/src/middleware.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NextRequest, NextResponse } from 'next/server'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Minimal stub — we test only the redirect logic, not Clerk internals
 vi.mock('@clerk/nextjs/server', () => ({
@@ -710,43 +730,47 @@ vi.mock('@clerk/nextjs/server', () => ({
     handler,
   createRouteMatcher: (patterns: string[]) => (req: NextRequest) =>
     patterns.some((p) => {
-      const base = p.replace(/\(.*\)/, '')
-      return req.nextUrl.pathname.startsWith(base)
+      const base = p.replace(/\(.*\)/, '');
+      return req.nextUrl.pathname.startsWith(base);
     }),
-}))
+}));
 
 describe('middleware — returning-user redirect', () => {
   it('redirects unauthenticated users with invite cookie from / to /onboarding', async () => {
-    const { default: middleware } = await import('./middleware')
+    const { default: middleware } = await import('./middleware');
 
     const req = new NextRequest('http://localhost/', {
       headers: { cookie: 'invite_verified=abc123' },
-    })
+    });
 
     // Cast: our stub exposes the handler directly
-    const result = await (middleware as unknown as (auth: { userId: null }, req: NextRequest) => Promise<NextResponse>)(
-      { userId: null },
-      req,
-    )
+    const result = await (
+      middleware as unknown as (
+        auth: { userId: null },
+        req: NextRequest,
+      ) => Promise<NextResponse>
+    )({ userId: null }, req);
 
-    expect(result).toBeInstanceOf(NextResponse)
-    expect(result?.headers.get('location')).toContain('/onboarding')
-  })
+    expect(result).toBeInstanceOf(NextResponse);
+    expect(result?.headers.get('location')).toContain('/onboarding');
+  });
 
   it('does not redirect unauthenticated users without invite cookie from /', async () => {
-    const { default: middleware } = await import('./middleware')
+    const { default: middleware } = await import('./middleware');
 
-    const req = new NextRequest('http://localhost/')
+    const req = new NextRequest('http://localhost/');
 
-    const result = await (middleware as unknown as (auth: { userId: null }, req: NextRequest) => Promise<NextResponse | undefined>)(
-      { userId: null },
-      req,
-    )
+    const result = await (
+      middleware as unknown as (
+        auth: { userId: null },
+        req: NextRequest,
+      ) => Promise<NextResponse | undefined>
+    )({ userId: null }, req);
 
     // isAlwaysPublic — should return undefined (no redirect)
-    expect(result).toBeUndefined()
-  })
-})
+    expect(result).toBeUndefined();
+  });
+});
 ```
 
 - [ ] **Step 5.2: Run the test to confirm it fails**
@@ -765,9 +789,9 @@ In `apps/web/src/middleware.ts`, add the check immediately **after** the `if (us
 // Returning users: redeemed code but never completed sign-up
 // invite_verified cookie is set but no Clerk session → send them to onboarding
 if (!userId && req.nextUrl.pathname === '/') {
-  const hasInviteCookie = req.cookies.has('invite_verified')
+  const hasInviteCookie = req.cookies.has('invite_verified');
   if (hasInviteCookie) {
-    return NextResponse.redirect(new URL('/onboarding', req.url))
+    return NextResponse.redirect(new URL('/onboarding', req.url));
   }
 }
 ```
@@ -776,35 +800,35 @@ The updated handler should look like:
 
 ```ts
 export default clerkMiddleware(async (auth, req) => {
-  const { userId } = await auth()
+  const { userId } = await auth();
 
   if (userId) {
     if (isPreAuth(req)) {
-      return NextResponse.redirect(new URL('/events', req.url))
+      return NextResponse.redirect(new URL('/events', req.url));
     }
-    return
+    return;
   }
 
   // Returning users: redeemed code but never completed sign-up
   if (!userId && req.nextUrl.pathname === '/') {
-    const hasInviteCookie = req.cookies.has('invite_verified')
+    const hasInviteCookie = req.cookies.has('invite_verified');
     if (hasInviteCookie) {
-      return NextResponse.redirect(new URL('/onboarding', req.url))
+      return NextResponse.redirect(new URL('/onboarding', req.url));
     }
   }
 
-  if (isAlwaysPublic(req)) return
+  if (isAlwaysPublic(req)) return;
 
   if (isInviteGated(req)) {
-    const cookieValue = req.cookies.get('invite_verified')?.value
+    const cookieValue = req.cookies.get('invite_verified')?.value;
     if (!cookieValue) {
-      return NextResponse.redirect(new URL('/auth/code', req.url))
+      return NextResponse.redirect(new URL('/auth/code', req.url));
     }
-    return
+    return;
   }
 
-  await auth.protect()
-})
+  await auth.protect();
+});
 ```
 
 - [ ] **Step 5.4: Run the test to confirm it passes**
@@ -861,6 +885,7 @@ Expected: no errors.
 - [ ] **Step 6.4: Open the app locally and walk through all 5 onboarding steps**
 
 Verify visually on both mobile viewport (375px wide) and desktop viewport (≥1240px):
+
 - Top chrome present: cluster mark + wordmark left, PRIVATE BETA pill right
 - Progress dots advance correctly on each step
 - Step 1: back button rendered but visually muted (opacity 0.4), disabled

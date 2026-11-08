@@ -1,61 +1,61 @@
-'use client'
+'use client';
 
-import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { useRouter } from 'next/navigation'
-import { ApiError, apiClient } from '@/lib/api'
-import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { EditorHeader, type EditorHeaderEvent } from './EditorHeader'
-import { type LifecycleStatus } from './LifecycleBadge'
-import { IdentitySection } from './sections/IdentitySection'
-import { PricingSection } from './sections/PricingSection'
-import { ClassificationSection } from './sections/ClassificationSection'
-import { StatusSection } from './sections/StatusSection'
-import { ArtSection } from './sections/ArtSection'
-import { DangerZoneSection } from './sections/DangerZoneSection'
-import { type SoldOutProvenance } from './sections/StatusSection'
-import { SaveBar } from './SaveBar'
-import { EventConfirmModal } from '@/components/admin/review/all/EventConfirmModal'
-import { MergeEventDialog } from './MergeEventDialog'
-import { editEventHref } from '@/lib/admin/edit-event-link'
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { ApiError, apiClient } from '@/lib/api';
+import { ADMIN_COPY } from '@/components/admin/definitions/copy';
+import { EditorHeader, type EditorHeaderEvent } from './EditorHeader';
+import { type LifecycleStatus } from './LifecycleBadge';
+import { IdentitySection } from './sections/IdentitySection';
+import { PricingSection } from './sections/PricingSection';
+import { ClassificationSection } from './sections/ClassificationSection';
+import { StatusSection } from './sections/StatusSection';
+import { ArtSection } from './sections/ArtSection';
+import { DangerZoneSection } from './sections/DangerZoneSection';
+import { type SoldOutProvenance } from './sections/StatusSection';
+import { SaveBar } from './SaveBar';
+import { EventConfirmModal } from '@/components/admin/review/all/EventConfirmModal';
+import { MergeEventDialog } from './MergeEventDialog';
+import { editEventHref } from '@/lib/admin/edit-event-link';
 
 export interface EditorEvent {
-  id: string
-  title: string
-  artist: string | null
-  date: string
-  doorsTime: string | null
-  showTime: string | null
-  tourName: string | null
-  ticketPriceMin: string | null
-  ticketPriceMax: string | null
-  confidenceScore: number | null
-  verified: boolean
-  status: LifecycleStatus
-  extractionStrategy: string | null
-  genre: string[] | null
-  updatedAt: string | null
-  venueId: string | null
-  venueName: string | null
-  isSoldOut: boolean
-  hiddenFromConsumer: boolean
-  isConcertReviewNeeded: boolean
+  id: string;
+  title: string;
+  artist: string | null;
+  date: string;
+  doorsTime: string | null;
+  showTime: string | null;
+  tourName: string | null;
+  ticketPriceMin: string | null;
+  ticketPriceMax: string | null;
+  confidenceScore: number | null;
+  verified: boolean;
+  status: LifecycleStatus;
+  extractionStrategy: string | null;
+  genre: string[] | null;
+  updatedAt: string | null;
+  venueId: string | null;
+  venueName: string | null;
+  isSoldOut: boolean;
+  hiddenFromConsumer: boolean;
+  isConcertReviewNeeded: boolean;
 }
 
 interface DraftState {
-  status: LifecycleStatus
-  verified: boolean
-  date: string
-  isSoldOut: boolean
-  provenance: SoldOutProvenance
-  tourName: string
+  status: LifecycleStatus;
+  verified: boolean;
+  date: string;
+  isSoldOut: boolean;
+  provenance: SoldOutProvenance;
+  tourName: string;
 }
 
 const emptyProvenance = (): SoldOutProvenance => ({
   method: 'other',
   url: '',
   note: '',
-})
+});
 
 const toDraft = (event: EditorEvent): DraftState => ({
   status: event.status,
@@ -64,63 +64,63 @@ const toDraft = (event: EditorEvent): DraftState => ({
   isSoldOut: event.isSoldOut,
   provenance: emptyProvenance(),
   tourName: event.tourName ?? '',
-})
+});
 
 interface PatchBody {
-  status?: LifecycleStatus
-  verified?: boolean
-  date?: string
-  tourName?: string | null
+  status?: LifecycleStatus;
+  verified?: boolean;
+  date?: string;
+  tourName?: string | null;
 }
 
 const computePatchDiff = (
   draft: DraftState,
   original: EditorEvent,
 ): PatchBody => {
-  const body: PatchBody = {}
-  if (draft.status !== original.status) body.status = draft.status
-  if (draft.verified !== original.verified) body.verified = draft.verified
-  if (draft.date !== original.date) body.date = draft.date
+  const body: PatchBody = {};
+  if (draft.status !== original.status) body.status = draft.status;
+  if (draft.verified !== original.verified) body.verified = draft.verified;
+  if (draft.date !== original.date) body.date = draft.date;
   // Blank (or whitespace-only) input clears the tour name to NULL rather than
   // persisting '' — the consumer kicker keys off `tourName !== null` (#992).
   // Both sides are trimmed before comparing, so a stored value with stray
   // whitespace doesn't read as a pending edit the moment the editor opens.
-  const trimmedTourName = draft.tourName.trim()
-  const nextTourName = trimmedTourName === '' ? null : trimmedTourName
-  const storedTourName = original.tourName?.trim() || null
-  if (nextTourName !== storedTourName) body.tourName = nextTourName
-  return body
-}
+  const trimmedTourName = draft.tourName.trim();
+  const nextTourName = trimmedTourName === '' ? null : trimmedTourName;
+  const storedTourName = original.tourName?.trim() || null;
+  if (nextTourName !== storedTourName) body.tourName = nextTourName;
+  return body;
+};
 
 const provenanceToBody = (provenance: SoldOutProvenance) => {
   const body: {
-    evidenceMethod: SoldOutProvenance['method']
-    evidenceUrl?: string
-    note?: string
-  } = { evidenceMethod: provenance.method }
-  if (provenance.url.trim()) body.evidenceUrl = provenance.url.trim()
-  if (provenance.note.trim()) body.note = provenance.note.trim()
-  return body
-}
+    evidenceMethod: SoldOutProvenance['method'];
+    evidenceUrl?: string;
+    note?: string;
+  } = { evidenceMethod: provenance.method };
+  if (provenance.url.trim()) body.evidenceUrl = provenance.url.trim();
+  if (provenance.note.trim()) body.note = provenance.note.trim();
+  return body;
+};
 
 export interface EventEditorClientProps {
-  event: EditorEvent
+  event: EditorEvent;
 }
 
 export const EventEditorClient = ({ event }: EventEditorClientProps) => {
-  const router = useRouter()
-  const { getToken } = useAuth()
-  const [isDesktop, setIsDesktop] = useState(true)
-  const [draft, setDraft] = useState<DraftState>(() => toDraft(event))
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [pendingDanger, setPendingDanger] = useState<'delete' | null>(null)
-  const [dangerPending, setDangerPending] = useState(false)
+  const router = useRouter();
+  const { getToken } = useAuth();
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [draft, setDraft] = useState<DraftState>(() => toDraft(event));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pendingDanger, setPendingDanger] = useState<'delete' | null>(null);
+  const [dangerPending, setDangerPending] = useState(false);
   const [pendingClassification, setPendingClassification] = useState<
     'mark-non-concert' | 'mark-as-concert' | null
-  >(null)
-  const [classificationPending, setClassificationPending] = useState(false)
-  const [mergeOpen, setMergeOpen] = useState(false)
+  >(null);
+  const [classificationPending, setClassificationPending] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
 
   // Reset the draft whenever the event prop identity changes (post-save
   // router.refresh() yields a fresh server-fetched event). The trade-off:
@@ -128,17 +128,17 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
   // acceptable here because the parent (server component) only re-renders
   // after a successful save or a true navigation.
   useEffect(() => {
-    setDraft(toDraft(event))
-    setError(null)
-  }, [event])
+    setDraft(toDraft(event));
+    setError(null);
+  }, [event]);
 
   useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    setIsDesktop(mq.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
+    const mq = window.matchMedia('(min-width: 1024px)');
+    setIsDesktop(mq.matches);
+    const handler = (evt: MediaQueryListEvent) => setIsDesktop(evt.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const headerEvent: EditorHeaderEvent = {
     id: event.id,
@@ -148,21 +148,21 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     showTime: event.showTime,
     status: event.status,
     verified: event.verified,
-  }
+  };
 
-  const patchDiff = computePatchDiff(draft, event)
-  const soldOutChanged = draft.isSoldOut !== event.isSoldOut
-  const dirty = Object.keys(patchDiff).length > 0 || soldOutChanged
+  const patchDiff = computePatchDiff(draft, event);
+  const soldOutChanged = draft.isSoldOut !== event.isSoldOut;
+  const dirty = Object.keys(patchDiff).length > 0 || soldOutChanged;
 
   const onSave = useCallback(async () => {
-    if (!dirty || saving) return
-    setSaving(true)
-    setError(null)
+    if (!dirty || saving) return;
+    setSaving(true);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
       if (Object.keys(patchDiff).length > 0) {
-        await apiClient.patch(`/v1/admin/events/${event.id}`, token, patchDiff)
+        await apiClient.patch(`/v1/admin/events/${event.id}`, token, patchDiff);
       }
       if (soldOutChanged) {
         if (draft.isSoldOut) {
@@ -170,25 +170,25 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
             `/v1/admin/events/${event.id}/sold-out`,
             token,
             provenanceToBody(draft.provenance),
-          )
+          );
         } else {
           await apiClient.post(
             `/v1/admin/events/${event.id}/available`,
             token,
             {},
-          )
+          );
         }
       }
-      router.refresh()
+      router.refresh();
     } catch (saveErr) {
       const message =
         saveErr instanceof ApiError
           ? saveErr.message
-          : ADMIN_COPY.editor.saveBar.saveFailed
-      console.error('EventEditorClient save error:', saveErr)
-      setError(message)
+          : ADMIN_COPY.editor.saveBar.saveFailed;
+      console.error('EventEditorClient save error:', saveErr);
+      setError(message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }, [
     draft.isSoldOut,
@@ -200,65 +200,65 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
     router,
     saving,
     soldOutChanged,
-  ])
+  ]);
 
   const onDiscard = useCallback(() => {
-    setDraft(toDraft(event))
-    setError(null)
-  }, [event])
+    setDraft(toDraft(event));
+    setError(null);
+  }, [event]);
 
   const onConfirmDanger = useCallback(async () => {
-    if (pendingDanger !== 'delete') return
-    setDangerPending(true)
-    setError(null)
+    if (pendingDanger !== 'delete') return;
+    setDangerPending(true);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      await apiClient.delete(`/v1/admin/events/${event.id}`, token)
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      await apiClient.delete(`/v1/admin/events/${event.id}`, token);
       // Clear the pending state BEFORE redirecting so the modal can't be
       // re-armed if navigation is delayed (would otherwise allow a second
       // DELETE on the now-deleted row).
-      setPendingDanger(null)
-      router.push('/admin/review?tab=all-events')
+      setPendingDanger(null);
+      router.push('/admin/review?tab=all-events');
     } catch (dangerErr) {
       const message =
         dangerErr instanceof ApiError
           ? dangerErr.message
-          : ADMIN_COPY.editor.saveBar.saveFailed
-      console.error('EventEditorClient danger action error:', dangerErr)
-      setError(message)
+          : ADMIN_COPY.editor.saveBar.saveFailed;
+      console.error('EventEditorClient danger action error:', dangerErr);
+      setError(message);
     } finally {
-      setDangerPending(false)
+      setDangerPending(false);
     }
-  }, [event.id, getToken, pendingDanger, router])
+  }, [event.id, getToken, pendingDanger, router]);
 
   const onConfirmClassification = useCallback(async () => {
-    if (!pendingClassification) return
-    setClassificationPending(true)
-    setError(null)
+    if (!pendingClassification) return;
+    setClassificationPending(true);
+    setError(null);
     try {
-      const token = await getToken()
-      if (!token) throw new ApiError(401, 'Unauthorized')
-      const hiddenFromConsumer = pendingClassification === 'mark-non-concert'
+      const token = await getToken();
+      if (!token) throw new ApiError(401, 'Unauthorized');
+      const hiddenFromConsumer = pendingClassification === 'mark-non-concert';
       await apiClient.patch(`/v1/admin/events/${event.id}`, token, {
         hiddenFromConsumer,
-      })
-      setPendingClassification(null)
-      router.refresh()
+      });
+      setPendingClassification(null);
+      router.refresh();
     } catch (classificationErr) {
       const message =
         classificationErr instanceof ApiError
           ? classificationErr.message
-          : ADMIN_COPY.editor.saveBar.saveFailed
+          : ADMIN_COPY.editor.saveBar.saveFailed;
       console.error(
         'EventEditorClient classification action error:',
         classificationErr,
-      )
-      setError(message)
+      );
+      setError(message);
     } finally {
-      setClassificationPending(false)
+      setClassificationPending(false);
     }
-  }, [event.id, getToken, pendingClassification, router])
+  }, [event.id, getToken, pendingClassification, router]);
 
   return (
     <div
@@ -371,11 +371,11 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
           onCancel={() => setMergeOpen(false)}
           onMerged={(targetId) => {
             // Source is gone — point the admin at the canonical target's editor.
-            setMergeOpen(false)
-            router.push(editEventHref(targetId))
+            setMergeOpen(false);
+            router.push(editEventHref(targetId));
           }}
         />
       )}
     </div>
-  )
-}
+  );
+};

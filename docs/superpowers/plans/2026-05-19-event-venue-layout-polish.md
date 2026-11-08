@@ -15,9 +15,9 @@
 
 ## Files Modified
 
-| File | What changes |
-|------|-------------|
-| `apps/web/src/app/(protected)/events/[id]/page.tsx` | Remove desktop breadcrumb (lines 132–162); remove `sm:hidden` from back button (line 113); move InfoRow chevron inline |
+| File                                                  | What changes                                                                                                                                                      |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/app/(protected)/events/[id]/page.tsx`   | Remove desktop breadcrumb (lines 132–162); remove `sm:hidden` from back button (line 113); move InfoRow chevron inline                                            |
 | `apps/web/src/app/(protected)/venues/[slug]/page.tsx` | Remove desktop breadcrumb (lines 99–129); remove `sm:hidden` from back button (line 80); add `max-w-[880px] mx-auto` inner content wrapper; add `sm:px-8` padding |
 
 ---
@@ -25,36 +25,39 @@
 ## Task 1: EventDetail — remove desktop breadcrumb, extend back button to desktop
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/events/[id]/page.tsx:110–162`
 
 - [ ] **Step 1: Remove `sm:hidden` from the back button**
 
   In `apps/web/src/app/(protected)/events/[id]/page.tsx`, find the back button `<Link>` at line 110. Change:
+
   ```tsx
-  className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+  className =
+    'absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden';
   ```
+
   To:
+
   ```tsx
-  className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
+  className =
+    'absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full';
   ```
 
 - [ ] **Step 2: Delete the desktop breadcrumb block**
 
   Delete the entire comment + div from line 132 to line 163 (inclusive):
+
   ```tsx
-  {/* Desktop: breadcrumb over hero */}
+  {
+    /* Desktop: breadcrumb over hero */
+  }
   <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
     <Link
       href="/events"
       className="flex items-center gap-1.5 text-fg-muted transition-colors hover:text-fg"
     >
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 16 16"
-        fill="none"
-        aria-hidden
-      >
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
         <path
           d="M11 4L5 8l6 4"
           stroke="currentColor"
@@ -72,7 +75,7 @@
       /
     </span>
     <span className="font-medium text-fg">{event.artist}</span>
-  </div>
+  </div>;
   ```
 
 - [ ] **Step 3: Verify types and lint**
@@ -80,6 +83,7 @@
   ```bash
   cd .worktrees/polish/issues-387-390 && pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web lint
   ```
+
   Expected: no errors.
 
 - [ ] **Step 4: Commit**
@@ -95,36 +99,39 @@
 ## Task 2: Venue page — remove desktop breadcrumb, extend back button, add max-width
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/venues/[slug]/page.tsx:77–246`
 
 - [ ] **Step 1: Remove `sm:hidden` from the back button**
 
   In `apps/web/src/app/(protected)/venues/[slug]/page.tsx`, find the back button `<Link>` at line 77. Change:
+
   ```tsx
-  className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden"
+  className =
+    'absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full sm:hidden';
   ```
+
   To:
+
   ```tsx
-  className="absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full"
+  className =
+    'absolute left-3.5 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-full';
   ```
 
 - [ ] **Step 2: Delete the desktop breadcrumb block**
 
   Delete the entire comment + div from line 99 to line 130 (inclusive):
+
   ```tsx
-  {/* Desktop: breadcrumb */}
+  {
+    /* Desktop: breadcrumb */
+  }
   <div className="absolute bottom-4 left-6 hidden items-center gap-1.5 text-[13px] sm:flex">
     <Link
       href="/events"
       className="flex items-center gap-1.5 text-fg-muted transition-colors hover:text-fg"
     >
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 16 16"
-        fill="none"
-        aria-hidden
-      >
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
         <path
           d="M11 4L5 8l6 4"
           stroke="currentColor"
@@ -142,12 +149,13 @@
       /
     </span>
     <span className="font-medium text-fg">{venue.name}</span>
-  </div>
+  </div>;
   ```
 
 - [ ] **Step 3: Add max-width wrapper and responsive padding to content section**
 
   Find the content section opening at line 132:
+
   ```tsx
   {/* Content */}
   <div className="relative -mt-5 flex-1 px-[18px] pb-10">
@@ -156,6 +164,7 @@
   ```
 
   Replace with:
+
   ```tsx
   {/* Content */}
   <div className="relative -mt-5 flex-1 pb-10">
@@ -165,6 +174,7 @@
   ```
 
   Then close the new inner `<div>` before the outer `</div>` at the end of the content section. The outer closing `</div>` is at line 245. The structure becomes:
+
   ```tsx
   {/* Content */}
   <div className="relative -mt-5 flex-1 pb-10">
@@ -192,6 +202,7 @@
   ```bash
   cd .worktrees/polish/issues-387-390 && pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web lint
   ```
+
   Expected: no errors.
 
 - [ ] **Step 5: Commit**
@@ -207,11 +218,13 @@
 ## Task 3: EventDetail InfoRow — move venue chevron inline with value
 
 **Files:**
+
 - Modify: `apps/web/src/app/(protected)/events/[id]/page.tsx:514–553`
 
 - [ ] **Step 1: Move the chevron SVG inside the value `<p>` tag**
 
   Find the `InfoRow` `inner` variable (around line 514). The current structure is:
+
   ```tsx
   const inner = (
     <>
@@ -253,10 +266,11 @@
         </svg>
       )}
     </>
-  )
+  );
   ```
 
   Replace with:
+
   ```tsx
   const inner = (
     <>
@@ -302,7 +316,7 @@
         </p>
       </div>
     </>
-  )
+  );
   ```
 
 - [ ] **Step 2: Verify types and lint**
@@ -310,6 +324,7 @@
   ```bash
   cd .worktrees/polish/issues-387-390 && pnpm --filter @concert-crawl/web typecheck && pnpm --filter @concert-crawl/web lint
   ```
+
   Expected: no errors.
 
 - [ ] **Step 3: Commit**
@@ -362,6 +377,7 @@
   ```bash
   cd .worktrees/polish/issues-387-390 && pnpm typecheck && pnpm lint && pnpm test
   ```
+
   Expected: all pass.
 
 - [ ] **Step 5: Rebase and push**

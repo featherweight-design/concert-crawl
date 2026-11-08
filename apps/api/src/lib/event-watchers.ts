@@ -1,11 +1,11 @@
-import { db, userEvents, userProfiles } from '@concert-crawl/db'
-import { and, count, desc, eq, isNotNull, ne } from 'drizzle-orm'
-import type { EventWatcher, EventWatchersResponse } from '@concert-crawl/types'
+import { db, userEvents, userProfiles } from '@concert-crawl/db';
+import { and, count, desc, eq, isNotNull, ne } from 'drizzle-orm';
+import type { EventWatcher, EventWatchersResponse } from '@concert-crawl/types';
 
 // Server-side LIMIT on the named roster. At beta scale (50-200 users) this
 // never truncates; beyond it, extra named watchers fold into the anonymous
 // tail — less specific, still honest.
-export const ROSTER_CAP = 25
+export const ROSTER_CAP = 25;
 
 /**
  * Watchers of an event other than the viewer.
@@ -22,12 +22,12 @@ export async function getEventWatchers(
     eq(userEvents.eventId, eventId),
     eq(userEvents.status, 'watching'),
     ne(userEvents.userId, viewerUserId),
-  )
+  );
 
   const [countRow] = await db
     .select({ total: count() })
     .from(userEvents)
-    .where(isOtherWatcher)
+    .where(isOtherWatcher);
 
   const rows = await db
     .select({
@@ -38,11 +38,11 @@ export async function getEventWatchers(
     .innerJoin(userProfiles, eq(userEvents.userId, userProfiles.userId))
     .where(and(isOtherWatcher, isNotNull(userProfiles.handle)))
     .orderBy(desc(userEvents.createdAt))
-    .limit(ROSTER_CAP)
+    .limit(ROSTER_CAP);
 
   // Drizzle still types `handle` as nullable under isNotNull; narrow with a
   // guard rather than a cast.
-  const named = rows.filter((row): row is EventWatcher => row.handle !== null)
+  const named = rows.filter((row): row is EventWatcher => row.handle !== null);
 
-  return { total: countRow?.total ?? 0, named }
+  return { total: countRow?.total ?? 0, named };
 }

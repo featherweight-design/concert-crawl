@@ -38,10 +38,10 @@
 
 ## Sequencing lock
 
-| PR   | Scope                                                          | Depends on                                      |
-| ---- | -------------------------------------------------------------- | ----------------------------------------------- |
-| PR-A | API — `GET /v1/events/:id/watchers` + shared types             | none                                            |
-| PR-B | Web — surface, copy, WatchZone, count retirement, release notes | PR-A merged (the endpoint must exist to fetch)  |
+| PR   | Scope                                                           | Depends on                                     |
+| ---- | --------------------------------------------------------------- | ---------------------------------------------- |
+| PR-A | API — `GET /v1/events/:id/watchers` + shared types              | none                                           |
+| PR-B | Web — surface, copy, WatchZone, count retirement, release notes | PR-A merged (the endpoint must exist to fetch) |
 
 PR-A ships alone and changes no user-visible behavior — a dead endpoint for one merge cycle. PR-B is the visible change and carries `Closes #762`.
 
@@ -51,7 +51,7 @@ PR-A ships alone and changes no user-visible behavior — a dead endpoint for on
 
 Brief §5 and READINESS §Sequencing both specify adding `data.watchers` as a sibling field on the existing `GET /v1/events/:id` payload, LIMIT-capped to `NAMED_CAP`. **This plan uses a dedicated endpoint instead.** Four reasons, all discovered in the code:
 
-1. **The roster expansion can't be served by a `NAMED_CAP` list.** Roster expansion (`WatchersRoster`, `watchers-surface.jsx:150-180`) is a Design-introduced feature that post-dates brief §5 — it lists *every* named watcher, not the three shown in the sentence. A payload capped at 3 makes the expander a lie.
+1. **The roster expansion can't be served by a `NAMED_CAP` list.** Roster expansion (`WatchersRoster`, `watchers-surface.jsx:150-180`) is a Design-introduced feature that post-dates brief §5 — it lists _every_ named watcher, not the three shown in the sentence. A payload capped at 3 makes the expander a lie.
 2. **`GET /v1/events/:id` is already the slow route.** It runs ~10 sequential queries (`apps/api/src/routes/events.ts:568-1082`) and carries a documented perf incident (#833, see the comment at `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx:65-70`). Adding a join to it makes every event-detail SSR slower for a below-the-fold social row.
 3. **The skeleton state only exists if the fetch is separate.** The handoff ships a loading skeleton (§2) with `aria-busy` and a reserved 28px row. Server-rendered data has no loading state — the artboard would be unreachable.
 4. **Privacy has one testable surface.** Three negatives (no self, no handle-less identity, no `userId`) are asserted against one small handler instead of being buried in a 500-line response builder.
@@ -63,15 +63,15 @@ Brief §5 and READINESS §Sequencing both specify adding `data.watchers` as a si
 ```ts
 // packages/types/src/index.ts
 export interface EventWatcher {
-  handle: string          // never null — handle-less watchers are never listed
-  avatarColor: AvatarColor | null
+  handle: string; // never null — handle-less watchers are never listed
+  avatarColor: AvatarColor | null;
 }
 
 export interface EventWatchersResponse {
   /** Count of OTHER watchers (excludes the viewer; includes handle-less users). */
-  total: number
+  total: number;
   /** Handle-bearing other watchers, most-recent-first, capped at ROSTER_CAP. */
-  named: EventWatcher[]
+  named: EventWatcher[];
 }
 ```
 
@@ -107,12 +107,12 @@ Extracted into `lib/` rather than inlined so it can be unit-tested and so `event
 **Interfaces:**
 
 ```ts
-export const ROSTER_CAP = 25
+export const ROSTER_CAP = 25;
 
 export async function getEventWatchers(
   eventId: string,
   viewerUserId: string,
-): Promise<EventWatchersResponse>
+): Promise<EventWatchersResponse>;
 ```
 
 **Steps:**
@@ -131,7 +131,7 @@ export async function getEventWatchers(
 **Steps:**
 
 - [ ] **Step 1 — validate.** `uuidSchema.safeParse(ctx.req.param('id'))` (already declared in this file, used at `events.ts:570`). Invalid → `404 { success: false, error: 'Event not found' }`, matching the sibling handler's shape.
-- [ ] **Step 2 — require auth.** `const authInfo = getAuth(ctx)`; if `!authInfo?.userId` → `401 { success: false, error: 'Unauthorized' }`. Brief lock Q5: signed-out users see nothing this cycle. Note the neighbouring `'/:id'` handler uses *optional* auth (`events.ts:641-643`) — this endpoint is deliberately stricter. See the #794 contract below.
+- [ ] **Step 2 — require auth.** `const authInfo = getAuth(ctx)`; if `!authInfo?.userId` → `401 { success: false, error: 'Unauthorized' }`. Brief lock Q5: signed-out users see nothing this cycle. Note the neighbouring `'/:id'` handler uses _optional_ auth (`events.ts:641-643`) — this endpoint is deliberately stricter. See the #794 contract below.
 - [ ] **Step 3 — 404 on unknown/hidden events.** Reuse the same visibility predicate as `'/:id'` (`eq(events.hiddenFromConsumer, false)`, `isNull(events.firstMissingAt)`, `events.ts:622-628`) so a hidden event's watcher roster isn't readable when its detail page 404s.
 - [ ] **Step 4 — call** `getEventWatchers(id, authInfo.userId)` and return `ctx.json({ success: true, data })`.
 - [ ] **Step 5 — no shared cache.** `ctx.header('Cache-Control', 'private, no-store')`. The response is viewer-specific (self-exclusion), so the `public, max-age=300` treatment used on `/availability` (`events.ts:562`) would cross-serve one user's exclusion set to another.
@@ -189,25 +189,26 @@ Ports the handoff's builder so display text and screen-reader text are generated
 **Interfaces:**
 
 ```ts
-export const NAMED_CAP = 3
+export const NAMED_CAP = 3;
 
-export type SentencePart = { kind: 'name'; value: string } | { kind: 'text'; value: string }
+export type SentencePart =
+  { kind: 'name'; value: string } | { kind: 'text'; value: string };
 
-export function watcherInitial(handle: string): string
-export function watcherTone(watcher: EventWatcher): AvatarColor
+export function watcherInitial(handle: string): string;
+export function watcherTone(watcher: EventWatcher): AvatarColor;
 export function buildWatchers(response: EventWatchersResponse): {
-  shown: EventWatcher[]
-  others: number
-  total: number
-  anonOnly: boolean
-}
+  shown: EventWatcher[];
+  others: number;
+  total: number;
+  anonOnly: boolean;
+};
 export function watchersToParts(response: EventWatchersResponse): {
-  parts: SentencePart[]
-  aria: string
-  others: number
-  anonOnly: boolean
-  total: number
-}
+  parts: SentencePart[];
+  aria: string;
+  others: number;
+  anonOnly: boolean;
+  total: number;
+};
 ```
 
 Ported from `watchers-data.jsx:40-102` and `watchers-surface.jsx:101-119`, with three adaptations: the discriminant is `kind`/`value` (the handoff's `t`/`v` violates the ESLint `id-length` 2-char minimum), the input is the API response rather than a flat fixture array (`anonOnly` becomes `named.length === 0 && total > 0`), and the deterministic djb2 tone hash (`w_hash`, `watchers-data.jsx:40-44`) is kept as the fallback when `avatarColor` is null.
@@ -258,10 +259,12 @@ Ported from `watchers-data.jsx:40-102` and `watchers-surface.jsx:101-119`, with 
 **Interfaces:**
 
 ```ts
-export const eventWatchersQueryKey = (eventId: string, userId: string | null | undefined) =>
-  ['event-watchers', eventId, userId ?? null] as const
+export const eventWatchersQueryKey = (
+  eventId: string,
+  userId: string | null | undefined,
+) => ['event-watchers', eventId, userId ?? null] as const;
 
-export function useEventWatchers(eventId: string)
+export function useEventWatchers(eventId: string);
 ```
 
 **Steps:**
@@ -269,11 +272,11 @@ export function useEventWatchers(eventId: string)
 - [ ] **Step 1 — key by viewer.** The response is self-excluded, so the key includes `userId` — the same account-switch reasoning documented at `apps/web/src/lib/queries/use-taste-picks.ts:11-15`. A shared key would serve the previous account's exclusion set after a switch.
 - [ ] **Step 2 — fetch.** `apiClient.get<EventWatchersResponse>('/v1/events/${eventId}/watchers', token)`; `enabled: !!isSignedIn`; `staleTime: 60_000`. Follows `use-watching.ts:14-30`.
 - [ ] **Step 3 — validate the boundary.** Zod `safeParse` the response (`z.object({ total: z.number().int().nonnegative(), named: z.array(z.object({ handle: z.string(), avatarColor: z.enum(['signal','accent','success','warning']).nullable() })) })`); throw on failure so React Query surfaces an error state rather than rendering unvalidated data. No `as`.
-- [ ] **Step 4 — refresh on toggle.** In `apps/web/src/lib/queries/use-watch-toggle.ts:76-78`, extend `onSettled` to also `invalidateQueries({ queryKey: ['event-watchers'] })` (prefix match). Self-exclusion means the viewer's own toggle doesn't change their own numbers — but it does change what *other* viewers see, and invalidating keeps a long-lived tab honest at near-zero cost.
+- [ ] **Step 4 — refresh on toggle.** In `apps/web/src/lib/queries/use-watch-toggle.ts:76-78`, extend `onSettled` to also `invalidateQueries({ queryKey: ['event-watchers'] })` (prefix match). Self-exclusion means the viewer's own toggle doesn't change their own numbers — but it does change what _other_ viewers see, and invalidating keeps a long-lived tab honest at near-zero cost.
 
 ### Task 10: `WatchZone` — retire the count, rehome the hint
 
-**⚠️ Scope trap found in the code.** `WatchShowButton` is mounted on three surfaces — event detail (`page.tsx:175`), `EventCard.tsx:144`, and `HeroEventCard.tsx:117`. The two card surfaces pass no `watchingCount`, so today's count tail already never renders there. If the rehomed `watchHint` were added *inside* `WatchShowButton`, it would appear under every card in every list — a visual regression across the whole browse grid. **The hint therefore lives in `WatchZone`, not in the button.**
+**⚠️ Scope trap found in the code.** `WatchShowButton` is mounted on three surfaces — event detail (`page.tsx:175`), `EventCard.tsx:144`, and `HeroEventCard.tsx:117`. The two card surfaces pass no `watchingCount`, so today's count tail already never renders there. If the rehomed `watchHint` were added _inside_ `WatchShowButton`, it would appear under every card in every list — a visual regression across the whole browse grid. **The hint therefore lives in `WatchZone`, not in the button.**
 
 **Files:**
 
@@ -302,7 +305,7 @@ export function useEventWatchers(eventId: string)
 
 **Files:**
 
-- Modify: `apps/web/src/lib/definitions/releases.ts` — new `kind: 'added'` item on the current release: *"See who else is watching a show — named handles from the crawl, right under the Watch button."* No spotlight (no asset exists in `design/design_handoff_spotlight_heroes/` for this ticket).
+- Modify: `apps/web/src/lib/definitions/releases.ts` — new `kind: 'added'` item on the current release: _"See who else is watching a show — named handles from the crawl, right under the Watch button."_ No spotlight (no asset exists in `design/design_handoff_spotlight_heroes/` for this ticket).
 - Modify: `docs/superpowers/progress.md` — one ✅ Complete row dated 2026-07-27.
 
 **Steps:**
@@ -318,35 +321,35 @@ export function useEventWatchers(eventId: string)
 
 **Create**
 
-| File | Role |
-| --- | --- |
-| `apps/api/src/lib/event-watchers.ts` | `getEventWatchers()` + `ROSTER_CAP` |
-| `apps/api/src/routes/event-watchers.integration.test.ts` | privacy negatives + positives |
-| `apps/web/src/lib/watchers.ts` | headless sentence model, `NAMED_CAP` |
-| `apps/web/src/lib/watchers.test.ts` | model unit tests |
-| `apps/web/src/lib/queries/use-event-watchers.ts` | React Query hook + Zod boundary |
-| `apps/web/src/components/consumer/watchers/WatchersSurface.tsx` | the surface (4 states + hide) |
-| `apps/web/src/components/consumer/watchers/WatcherAvatarStack.tsx` | overlapping stack + `+N` chip |
-| `apps/web/src/components/consumer/watchers/WatchersRoster.tsx` | expanded roster |
-| `apps/web/src/components/consumer/watchers/WatchersSkeleton.tsx` | loading skeleton |
-| `apps/web/src/components/consumer/watchers/WatchZone.tsx` | button + hint + surface composite |
-| `apps/web/src/components/consumer/watchers/index.ts` | barrel |
-| `apps/web/src/components/consumer/watchers/*.test.tsx` | surface / stack / zone tests |
+| File                                                               | Role                                 |
+| ------------------------------------------------------------------ | ------------------------------------ |
+| `apps/api/src/lib/event-watchers.ts`                               | `getEventWatchers()` + `ROSTER_CAP`  |
+| `apps/api/src/routes/event-watchers.integration.test.ts`           | privacy negatives + positives        |
+| `apps/web/src/lib/watchers.ts`                                     | headless sentence model, `NAMED_CAP` |
+| `apps/web/src/lib/watchers.test.ts`                                | model unit tests                     |
+| `apps/web/src/lib/queries/use-event-watchers.ts`                   | React Query hook + Zod boundary      |
+| `apps/web/src/components/consumer/watchers/WatchersSurface.tsx`    | the surface (4 states + hide)        |
+| `apps/web/src/components/consumer/watchers/WatcherAvatarStack.tsx` | overlapping stack + `+N` chip        |
+| `apps/web/src/components/consumer/watchers/WatchersRoster.tsx`     | expanded roster                      |
+| `apps/web/src/components/consumer/watchers/WatchersSkeleton.tsx`   | loading skeleton                     |
+| `apps/web/src/components/consumer/watchers/WatchZone.tsx`          | button + hint + surface composite    |
+| `apps/web/src/components/consumer/watchers/index.ts`               | barrel                               |
+| `apps/web/src/components/consumer/watchers/*.test.tsx`             | surface / stack / zone tests         |
 
 **Modify**
 
-| File | Change |
-| --- | --- |
-| `packages/types/src/index.ts` | `EventWatcher`, `EventWatchersResponse` |
-| `apps/api/src/routes/events.ts` | `GET /:id/watchers` handler |
-| `apps/web/src/components/consumer/definitions/copy.ts` | add `watchers`; delete `watchShowButton.watchingCount` |
-| `apps/web/src/components/consumer/watch-show-button/WatchShowButton.tsx` | remove count block + `watchingCount` prop |
-| `apps/web/src/components/consumer/watch-show-button/WatchShowButton.test.tsx` | drop count assertions |
-| `apps/web/src/lib/queries/use-watch-toggle.ts` | invalidate `['event-watchers']` |
-| `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx` | `WatchShowButton` → `WatchZone` |
-| `apps/web/src/app/globals.css` | `wShimmer` keyframes + reduced-motion guard |
-| `apps/web/src/lib/definitions/releases.ts` | release entry (PR-B) |
-| `docs/superpowers/progress.md` | ✅ row (PR-B) |
+| File                                                                          | Change                                                 |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `packages/types/src/index.ts`                                                 | `EventWatcher`, `EventWatchersResponse`                |
+| `apps/api/src/routes/events.ts`                                               | `GET /:id/watchers` handler                            |
+| `apps/web/src/components/consumer/definitions/copy.ts`                        | add `watchers`; delete `watchShowButton.watchingCount` |
+| `apps/web/src/components/consumer/watch-show-button/WatchShowButton.tsx`      | remove count block + `watchingCount` prop              |
+| `apps/web/src/components/consumer/watch-show-button/WatchShowButton.test.tsx` | drop count assertions                                  |
+| `apps/web/src/lib/queries/use-watch-toggle.ts`                                | invalidate `['event-watchers']`                        |
+| `apps/web/src/app/(protected)/(main)/events/[id]/page.tsx`                    | `WatchShowButton` → `WatchZone`                        |
+| `apps/web/src/app/globals.css`                                                | `wShimmer` keyframes + reduced-motion guard            |
+| `apps/web/src/lib/definitions/releases.ts`                                    | release entry (PR-B)                                   |
+| `docs/superpowers/progress.md`                                                | ✅ row (PR-B)                                          |
 
 ---
 
@@ -374,7 +377,7 @@ export function useEventWatchers(eventId: string)
 - **Signed-out treatment** — #794 (contract named above).
 - **Follow graph, "people you trust" ordering** — no graph exists; `createdAt DESC` is the ordering, and a graph would only change the sort.
 - **User profile pages** — handles are plain text, never links (gap-report #2).
-- **A per-watch privacy opt-out** — setting/clearing the handle *is* the mechanism (lock Q2), proven by Negative 5.
+- **A per-watch privacy opt-out** — setting/clearing the handle _is_ the mechanism (lock Q2), proven by Negative 5.
 - **"A new watcher joined" notifications**, watcher activity feed — different tickets.
 - **Changing the Watching feature itself** — the toggle, the list page, and the `Eye` affordance are untouched.
 - **Removing `EventDetailResponse.watching`** — the field stays (published type, `packages/types/src/index.ts:679`) and simply loses its UI consumer. A later cleanup PR can drop it and its query at `events.ts:634-639` once nothing external reads it.

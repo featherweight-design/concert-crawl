@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 // Notifications mode for the account menu (#737).
 //
@@ -14,26 +14,26 @@
 // per-row read rails — the bell stops shouting the moment you look, the rails
 // keep answering "which of these have I dealt with" on the next visit.
 
-import { useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import type { ConsumerNotification } from '@/lib/notifications'
+import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import type { ConsumerNotification } from '@/lib/notifications';
 import {
   useNotifications,
   useNotificationMutations,
   flattenNotifications,
   unreadCountOf,
-} from '@/lib/queries/use-notifications'
-import { NMono } from './NMono'
-import { NotifBody, type NotifPanelState } from './NotifBody'
+} from '@/lib/queries/use-notifications';
+import { NMono } from './NMono';
+import { NotifBody, type NotifPanelState } from './NotifBody';
 import {
   NOTIFICATIONS_COPY,
   NOTIFICATIONS_EMPTY_ACTION_HREF,
-} from './definitions/copy'
+} from './definitions/copy';
 
 export const panelStateOf = (
   isPending: boolean,
   isError: boolean,
-): NotifPanelState => (isPending ? 'loading' : isError ? 'error' : 'ready')
+): NotifPanelState => (isPending ? 'loading' : isError ? 'error' : 'ready');
 
 export const NotifMenuPanel = ({
   onBack,
@@ -41,56 +41,56 @@ export const NotifMenuPanel = ({
   onClose,
   maxHeight,
 }: {
-  onBack: () => void
+  onBack: () => void;
   /** Dismisses the menu after a row navigates away from under it. */
-  onNavigate: () => void
+  onNavigate: () => void;
   /**
    * Dismisses the whole menu from inside the panel. Supplied by the mobile
    * sheet only: the desktop popover answers Escape, so a second dismiss there
    * would be a redundant control, but on a touch sheet `‹ Menu` is the only
    * way out and it costs two gestures — back, then dismiss.
    */
-  onClose?: () => void
-  maxHeight?: number
+  onClose?: () => void;
+  maxHeight?: number;
 }) => {
-  const router = useRouter()
-  const query = useNotifications()
-  const { markRead, markAllRead, markSeen } = useNotificationMutations()
-  const surfaceRef = useRef<HTMLDivElement>(null)
+  const router = useRouter();
+  const query = useNotifications();
+  const { markRead, markAllRead, markSeen } = useNotificationMutations();
+  const surfaceRef = useRef<HTMLDivElement>(null);
 
   // Held in a ref so the seen-write effect can run exactly once per entry:
   // the mutation object is a fresh identity on every render, so depending on
   // it directly would re-fire the write on each keystroke in the panel.
-  const markSeenRef = useRef(markSeen.mutateAsync)
-  markSeenRef.current = markSeen.mutateAsync
+  const markSeenRef = useRef(markSeen.mutateAsync);
+  markSeenRef.current = markSeen.mutateAsync;
 
   useEffect(() => {
     void (async () => {
       try {
-        await markSeenRef.current()
+        await markSeenRef.current();
       } catch (err) {
         // Non-fatal: the pip simply stays up until the next successful open.
-        console.warn('Notifications: could not mark the panel seen', err)
+        console.warn('Notifications: could not mark the panel seen', err);
       }
-    })()
-  }, [])
+    })();
+  }, []);
 
   // Focus follows the mode switch. The shell's trap fired on open and will not
   // fire again, so without this a keyboard user's focus would still be parked
   // on the menu body that just unmounted.
   useEffect(() => {
-    surfaceRef.current?.focus()
-  }, [])
+    surfaceRef.current?.focus();
+  }, []);
 
   const open = (item: ConsumerNotification): void => {
-    if (item.readAt === null) markRead.mutate(item.id)
+    if (item.readAt === null) markRead.mutate(item.id);
     // `actionUrl` is already narrowed to a same-origin path at parse time
     // (safeParseNotification), so there is nothing left to validate here.
     if (item.actionUrl !== null) {
-      onNavigate()
-      router.push(item.actionUrl)
+      onNavigate();
+      router.push(item.actionUrl);
     }
-  }
+  };
 
   return (
     <div
@@ -167,11 +167,11 @@ export const NotifMenuPanel = ({
           ? { notice: NOTIFICATIONS_COPY.actionFailed }
           : {})}
         onAction={() => {
-          onNavigate()
-          router.push(NOTIFICATIONS_EMPTY_ACTION_HREF)
+          onNavigate();
+          router.push(NOTIFICATIONS_EMPTY_ACTION_HREF);
         }}
         {...(maxHeight === undefined ? {} : { maxHeight })}
       />
     </div>
-  )
-}
+  );
+};

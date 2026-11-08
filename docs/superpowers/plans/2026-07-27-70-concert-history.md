@@ -287,39 +287,39 @@ Everything the UI needs, with server-side entitlement enforcement. No UI in this
 ```ts
 // Attendance mutation — PUT/DELETE /v1/attending/:eventId
 export interface AttendingToggleResponse {
-  going: boolean
-  attendingAt: string | null // ISO, null when released
+  going: boolean;
+  attendingAt: string | null; // ISO, null when released
 }
 
 // One attended night — GET /v1/history
 export interface HistoryShow {
-  eventId: string
-  artist: string
-  venueName: string
-  venueSlug: string
-  neighborhood: string | null
-  date: string // YYYY-MM-DD, event local date
-  dateLabel: string // pre-formatted "Mon, Oct 20" — Mountain Time
-  showTime: string | null // pre-formatted "8:00 PM"
-  priceFinal: number | null // last observed face price
-  genre: string | null // single word, drives "top genre"
-  attendingAt: string // ISO — non-null by construction on this surface
+  eventId: string;
+  artist: string;
+  venueName: string;
+  venueSlug: string;
+  neighborhood: string | null;
+  date: string; // YYYY-MM-DD, event local date
+  dateLabel: string; // pre-formatted "Mon, Oct 20" — Mountain Time
+  showTime: string | null; // pre-formatted "8:00 PM"
+  priceFinal: number | null; // last observed face price
+  genre: string | null; // single word, drives "top genre"
+  attendingAt: string; // ISO — non-null by construction on this surface
 }
 
 export interface HistoryStats {
-  nights: number
-  venues: number
-  artists: number
-  topGenre: string | null
-  topVenue: string | null
-  first: string | null // YYYY-MM-DD
-  last: string | null
-  totalSpent: number | null // null when no row has priceFinal
+  nights: number;
+  venues: number;
+  artists: number;
+  topGenre: string | null;
+  topVenue: string | null;
+  first: string | null; // YYYY-MM-DD
+  last: string | null;
+  totalSpent: number | null; // null when no row has priceFinal
 }
 
 export interface HistoryResponse {
-  shows: HistoryShow[]
-  stats: HistoryStats
+  shows: HistoryShow[];
+  stats: HistoryStats;
 }
 ```
 
@@ -511,7 +511,7 @@ export const GOING_COPY = {
     failed: "Couldn't save that. Try again.", // READINESS 🎭 flag — no error state was drawn
   },
   nudge: {/* PR-4 */},
-} as const
+} as const;
 ```
 
 The error string closes the READINESS "no error state drawn" gap at the mutation layer, as that finding anticipated.

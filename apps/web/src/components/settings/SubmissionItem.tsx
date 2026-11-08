@@ -1,35 +1,35 @@
-import Link from 'next/link'
-import { StatusPill } from './StatusPill'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import type { UserSubmissionItem } from '@concert-crawl/types'
+import Link from 'next/link';
+import { StatusPill } from './StatusPill';
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import type { UserSubmissionItem } from '@concert-crawl/types';
 
-const SETTINGS_COPY = CONSUMER_COPY.settings
+const SETTINGS_COPY = CONSUMER_COPY.settings;
 
 interface SubmissionItemProps {
-  submission: UserSubmissionItem
-  isLast?: boolean
+  submission: UserSubmissionItem;
+  isLast?: boolean;
 }
 
 function formatPrice(cents: number): string {
-  return `$${Math.round(cents / 100)}`
+  return `$${Math.round(cents / 100)}`;
 }
 
 function formatDate(iso: string): string {
-  if (!iso) return ''
-  const date = new Date(iso + 'T00:00:00')
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  if (!iso) return '';
+  const date = new Date(iso + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 60) return `${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h`
-  const days = Math.floor(hrs / 24)
-  if (days < 7) return `${days}d`
-  const weeks = Math.floor(days / 7)
-  return `${weeks}w`
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
 }
 
 export function SubmissionItem({
@@ -38,9 +38,9 @@ export function SubmissionItem({
 }: SubmissionItemProps) {
   const priceLabel = submission.priceMax
     ? `${formatPrice(submission.priceMin)}–${formatPrice(submission.priceMax)}`
-    : formatPrice(submission.priceMin)
-  const ago = formatAgo(submission.submittedAt)
-  const confirms = submission.corroborationCount
+    : formatPrice(submission.priceMin);
+  const ago = formatAgo(submission.submittedAt);
+  const confirms = submission.corroborationCount;
 
   return (
     <Link
@@ -112,5 +112,5 @@ export function SubmissionItem({
         </span>
       )}
     </Link>
-  )
+  );
 }

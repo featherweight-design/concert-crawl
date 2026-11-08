@@ -1,18 +1,18 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import {
   verifyInviteCookie,
   INVITE_COOKIE_NAME,
   RETURN_PATH_COOKIE_NAME,
-} from '@/lib/invite-cookie'
+} from '@/lib/invite-cookie';
 import {
   appendPendingTier,
   DEFAULT_RETURN_PATH,
   PENDING_TIER_PARAM,
   sanitizeReturnPath,
-} from '@/lib/auth/intent'
-import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
+} from '@/lib/auth/intent';
+import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier';
 
 /**
  * Whether a sanitized destination already points at the tour. Compared as a
@@ -20,33 +20,33 @@ import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending
  * treat it as one of ours.
  */
 const isOnboardingPath = (destination: string): boolean => {
-  const { pathname } = new URL(destination, 'https://placeholder.invalid')
-  return pathname === '/onboarding' || pathname.startsWith('/onboarding/')
-}
+  const { pathname } = new URL(destination, 'https://placeholder.invalid');
+  return pathname === '/onboarding' || pathname.startsWith('/onboarding/');
+};
 
 interface AuthCompletePageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function AuthCompletePage({
   searchParams,
 }: AuthCompletePageProps) {
-  const { userId, getToken } = await auth()
-  if (!userId) redirect('/sign-in')
+  const { userId, getToken } = await auth();
+  if (!userId) redirect('/sign-in');
 
-  const secret = process.env.INVITE_COOKIE_SECRET
+  const secret = process.env.INVITE_COOKIE_SECRET;
   if (!secret) {
-    redirect(DEFAULT_RETURN_PATH)
+    redirect(DEFAULT_RETURN_PATH);
   }
 
-  const cookieStore = await cookies()
-  const cookieValue = cookieStore.get(INVITE_COOKIE_NAME)?.value
-  const verified = cookieValue ? verifyInviteCookie(cookieValue, secret) : null
+  const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(INVITE_COOKIE_NAME)?.value;
+  const verified = cookieValue ? verifyInviteCookie(cookieValue, secret) : null;
 
   if (verified) {
     try {
-      const token = await getToken()
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+      const token = await getToken();
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
       const res = await fetch(`${apiUrl}/v1/auth/redeem-code`, {
         method: 'POST',
         headers: {
@@ -54,10 +54,10 @@ export default async function AuthCompletePage({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ code: verified.code }),
-      })
+      });
       // Clear cookie only after a definitive response (success or already-used)
       if (res.ok || res.status === 409) {
-        cookieStore.delete(INVITE_COOKIE_NAME)
+        cookieStore.delete(INVITE_COOKIE_NAME);
       } else {
         // Non-OK, non-409 (e.g. 400 bad JSON, 500 API error) — the fetch
         // resolved so `catch` doesn't fire, but redemption still failed.
@@ -66,7 +66,7 @@ export default async function AuthCompletePage({
         // signup through this page.
         console.warn('[auth/complete] redeem-code returned non-OK', {
           status: res.status,
-        })
+        });
       }
     } catch (err) {
       // Network failure — leave cookie so the next load can retry. This
@@ -74,7 +74,7 @@ export default async function AuthCompletePage({
       // server runtime logs (surfaced in Vercel logs / Sentry), not the
       // browser console. Silent swallow used to hide these entirely; now
       // that #1113 routes every new signup through here they need a trail.
-      console.warn('[auth/complete] redeem-code fetch failed', { err })
+      console.warn('[auth/complete] redeem-code fetch failed', { err });
     }
   }
 
@@ -86,23 +86,23 @@ export default async function AuthCompletePage({
   // Clearing keys off the cookie being PRESENT, not off its value being
   // truthy: `Cookie: invite_return_path=` is a cookie whose value is `''`,
   // which verifies to nothing and would otherwise survive every visit.
-  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME)
+  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME);
   const pendingReturn = returnCookie?.value
     ? verifyInviteCookie(returnCookie.value, secret)
-    : null
-  if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME)
+    : null;
+  if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME);
 
   // The launched funnel has no invite step, so nothing writes the cookie and
   // the destination rides a query param forwarded by /sign-up instead. The
   // cookie still wins where both exist: it is signed, and an invite link is a
   // stronger claim on where someone was headed than a param anyone can append.
-  const params = await searchParams
-  const rawReturn = params['return']
+  const params = await searchParams;
+  const rawReturn = params['return'];
 
   // A tier chosen before signing up rides on to the destination, where the
   // picker reopens on it (#1284). Validated against the tier keys rather than
   // forwarded blind: it lands in a `Location` header.
-  const rawTier = params[PENDING_TIER_PARAM]
+  const rawTier = params[PENDING_TIER_PARAM];
 
   // Every visitor reaching this page has just CREATED an account — Clerk's
   // `SignUp` is the only thing that routes here — so this is the one place that
@@ -112,7 +112,7 @@ export default async function AuthCompletePage({
   // that loses where the visitor was headed.
   const destination = sanitizeReturnPath(
     pendingReturn?.code ?? (typeof rawReturn === 'string' ? rawReturn : null),
-  )
+  );
 
   // A destination that IS the tour is passed through rather than wrapped. The
   // signed-out Watch and Follow buttons build their own
@@ -122,12 +122,12 @@ export default async function AuthCompletePage({
   // eight steps twice before replaying the watch they clicked.
   const landing = isOnboardingPath(destination)
     ? destination
-    : `/onboarding?${new URLSearchParams({ return: destination }).toString()}`
+    : `/onboarding?${new URLSearchParams({ return: destination }).toString()}`;
 
   redirect(
     appendPendingTier(
       landing,
       decodePendingTier(typeof rawTier === 'string' ? rawTier : null),
     ),
-  )
+  );
 }

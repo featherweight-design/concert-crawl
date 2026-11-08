@@ -7,9 +7,9 @@
 // the day-13 banner, the trial-ended takeover and the 90-day preserve clock
 // all key off that one timestamp.
 
-export const TRIAL_DAYS = 14
+export const TRIAL_DAYS = 14;
 
-const DAY_MS = 24 * 60 * 60 * 1000
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The trial expiry to seed for an account, or null when it gets no trial.
@@ -31,7 +31,7 @@ export const resolveTrialEndsAt = (
   accountCreatedAt: Date,
   monetizationLiveAt: Date | null,
 ): Date | null => {
-  if (monetizationLiveAt === null) return null
-  if (accountCreatedAt.getTime() < monetizationLiveAt.getTime()) return null
-  return new Date(accountCreatedAt.getTime() + TRIAL_DAYS * DAY_MS)
-}
+  if (monetizationLiveAt === null) return null;
+  if (accountCreatedAt.getTime() < monetizationLiveAt.getTime()) return null;
+  return new Date(accountCreatedAt.getTime() + TRIAL_DAYS * DAY_MS);
+};

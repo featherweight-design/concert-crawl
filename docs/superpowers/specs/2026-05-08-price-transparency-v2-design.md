@@ -8,7 +8,7 @@
 
 ## Overview
 
-Price Transparency v2 replaces the inline freeform price submission form on the event detail page with a structured, community-driven flow. Fans submit prices they actually saw; two peer confirms move a submission from *pending* to *corroborated*. Disputes require an alternate price + vendor, not a simple flag.
+Price Transparency v2 replaces the inline freeform price submission form on the event detail page with a structured, community-driven flow. Fans submit prices they actually saw; two peer confirms move a submission from _pending_ to _corroborated_. Disputes require an alternate price + vendor, not a simple flag.
 
 This phase ships:
 
@@ -25,12 +25,12 @@ This phase ships:
 
 Four decisions were made before spec was written:
 
-| # | Topic | Decision |
-|---|-------|----------|
-| 1 | Corroboration model | Explicit confirms only (`submission_confirms` join table). Auto-corroboration on POST removed. Price-tolerance check kept as a **soft outlier warning** only (yellow, not an error, does not block submit or change status). |
-| 2 | Schema migration style | **Clean-cut** — no expand/contract needed. No production data exists. Drop `tierLabel`/`sourceNote` (freeform text); add `tier`, `vendor`, `howFound` enums; add `disputedSubmissionId` nullable self-ref FK; new `submission_confirms` table. |
-| 3 | Dispute storage | Disputes are stored as rows in `priceSubmissions` with a non-null `disputedSubmissionId` FK pointing to the submission being disputed. Not a separate table. |
-| 4 | Confirm idempotency | `submission_confirms` join table: `{ submissionId, userId, confirmedAt }`, unique constraint on `(submissionId, userId)`. Insert-or-ignore on confirm. |
+| #   | Topic                  | Decision                                                                                                                                                                                                                                       |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Corroboration model    | Explicit confirms only (`submission_confirms` join table). Auto-corroboration on POST removed. Price-tolerance check kept as a **soft outlier warning** only (yellow, not an error, does not block submit or change status).                   |
+| 2   | Schema migration style | **Clean-cut** — no expand/contract needed. No production data exists. Drop `tierLabel`/`sourceNote` (freeform text); add `tier`, `vendor`, `howFound` enums; add `disputedSubmissionId` nullable self-ref FK; new `submission_confirms` table. |
+| 3   | Dispute storage        | Disputes are stored as rows in `priceSubmissions` with a non-null `disputedSubmissionId` FK pointing to the submission being disputed. Not a separate table.                                                                                   |
+| 4   | Confirm idempotency    | `submission_confirms` join table: `{ submissionId, userId, confirmedAt }`, unique constraint on `(submissionId, userId)`. Insert-or-ignore on confirm.                                                                                         |
 
 ---
 
@@ -39,16 +39,19 @@ Four decisions were made before spec was written:
 ### `priceSubmissions` table changes
 
 **Remove:**
+
 - `tierLabel` (text) — replaced by `tier` enum
 - `sourceNote` (text) — replaced by `howFound` enum
 
 **Add:**
+
 - `tier` — enum `('GA', 'Reserved', 'VIP', 'Pit', 'Lawn')`, not null
 - `vendor` — enum `('AXS', 'Ticketmaster', 'SeatGeek', 'DICE', 'Eventbrite', 'VenueBoxOffice')`, not null
 - `howFound` — enum `('bought_myself', 'saw_listing', 'at_the_venue')`, not null
 - `disputedSubmissionId` — `uuid` nullable FK → `priceSubmissions.id` (self-referential; null = original, non-null = dispute)
 
 **Keep unchanged:**
+
 - `id`, `eventId`, `userId`, `priceMin`, `priceMax`, `status`, `corroborationCount`, `createdAt`, `updatedAt`
 
 **Status enum stays as-is:** `pending | corroborated | disputed | stale`
@@ -77,6 +80,7 @@ Single migration file. Drop old columns, add new columns + enums, create `submis
 ### Existing endpoints — changes
 
 **`POST /v1/events/:id/price-submissions`**
+
 - Request body changes: replace `tierLabel`/`sourceNote` with `tier`/`vendor`/`howFound` (all required)
 - Remove auto-corroboration logic on POST
 - Add server-side validation matching `SP_POLICY` (see Validation section)
@@ -84,12 +88,14 @@ Single migration file. Drop old columns, add new columns + enums, create `submis
 - New `alreadySubmitted` check: if the user has an existing pending submission for this event, return `409` with the existing submission in the body
 
 **`GET /v1/events/:id/price-submissions`**
+
 - Response shape: include `confirms` count, `byYou` boolean, `disputedSubmissionId`, `howFound`, `tier`, `vendor`
 - Add `alreadySubmitted` top-level boolean + `userSubmission` object (null if none)
 
 ### New endpoints
 
 **`POST /v1/submissions/:id/confirm`**
+
 - Auth: required
 - Insert into `submission_confirms`; on unique conflict do nothing (idempotent)
 - Increment `priceSubmissions.corroborationCount`
@@ -98,11 +104,13 @@ Single migration file. Drop old columns, add new columns + enums, create `submis
 - Response: `{ confirms: number, status: SubmissionStatus }`
 
 **`GET /v1/submissions/:id`**
+
 - Auth: required
 - Returns a single submission by ID (used by `DisputePage` to load the disputed submission)
 - Response: full submission row including `eventId`, `tier`, `vendor`, `howFound`, `priceMin`, `priceMax`, `status`, `createdAt`
 
 **`POST /v1/submissions/:id/dispute`**
+
 - Auth: required
 - Body: `{ floor: number, ceiling?: number, vendor: Vendor }`
 - Validates `floor` (required, 1–2000), `ceiling` (optional, ≤ 2000), `vendor` (required)
@@ -112,12 +120,14 @@ Single migration file. Drop old columns, add new columns + enums, create `submis
 - Response: the newly created dispute row
 
 **`PATCH /v1/submissions/:id`**
+
 - Auth: required, own submission only
 - Body: partial `{ floor?, ceiling?, tier?, vendor?, howFound? }`
 - Only allowed while `status = 'pending'` (400 if corroborated or disputed)
 - Response: updated submission row
 
 **`DELETE /v1/submissions/:id`**
+
 - Auth: required, own submission only
 - Soft-delete or hard-delete (hard delete is fine; no production audit required yet)
 - Response: 204
@@ -128,19 +138,19 @@ Single migration file. Drop old columns, add new columns + enums, create `submis
 
 Server enforces canonically; client mirrors for UX feedback.
 
-| Rule | Value | Error / Behavior |
-|------|-------|-----------------|
-| `floorMin` | 1 | "Has to be at least $1." (error, blocks submit) |
-| `floorMax` | 2000 | "Cap is $2000 — pick a number that exists." (error) |
-| `ceilingMax` | 2000 | "Cap is $2000." (error) |
-| Ceiling < floor | — | "Ceiling can't be below floor." (error) |
-| `tier` required | — | "Pick a tier." (error) |
-| `vendor` required | — | "Pick where it's listed." (error) |
-| `howFound` required | — | "Pick how you found out." (error) |
-| Outlier low | floor < 0.4 × avg of peer submissions for event | **Soft warning** (yellow border + "Other fans reported around $X. Sure about this one?") — does not block submit |
-| Outlier high | floor > 2.5 × avg | Same soft warning |
-| `confirmsRequired` | 2 | Pending → corroborated after 2 unique user confirms |
-| `rateLimitHours` | 24 | 1 submission per user per event per 24h (429 on violation) |
+| Rule                | Value                                           | Error / Behavior                                                                                                 |
+| ------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `floorMin`          | 1                                               | "Has to be at least $1." (error, blocks submit)                                                                  |
+| `floorMax`          | 2000                                            | "Cap is $2000 — pick a number that exists." (error)                                                              |
+| `ceilingMax`        | 2000                                            | "Cap is $2000." (error)                                                                                          |
+| Ceiling < floor     | —                                               | "Ceiling can't be below floor." (error)                                                                          |
+| `tier` required     | —                                               | "Pick a tier." (error)                                                                                           |
+| `vendor` required   | —                                               | "Pick where it's listed." (error)                                                                                |
+| `howFound` required | —                                               | "Pick how you found out." (error)                                                                                |
+| Outlier low         | floor < 0.4 × avg of peer submissions for event | **Soft warning** (yellow border + "Other fans reported around $X. Sure about this one?") — does not block submit |
+| Outlier high        | floor > 2.5 × avg                               | Same soft warning                                                                                                |
+| `confirmsRequired`  | 2                                               | Pending → corroborated after 2 unique user confirms                                                              |
+| `rateLimitHours`    | 24                                              | 1 submission per user per event per 24h (429 on violation)                                                       |
 
 No freeform inputs. Tier, vendor, and howFound are all enum chips. No "Other…" option.
 
@@ -148,10 +158,10 @@ No freeform inputs. Tier, vendor, and howFound are all enum chips. No "Other…"
 
 ## Web Routes
 
-| Route | Component | Notes |
-|-------|-----------|-------|
-| `/events/[id]/submit-price` | `SubmitPricePage` | Full-screen submit route; shows `alreadySubmitted` state if applicable |
-| `/events/[id]/submissions/[submissionId]/dispute` | `DisputePage` | Receives `submissionId` as a route param; loads submission via API |
+| Route                                             | Component         | Notes                                                                  |
+| ------------------------------------------------- | ----------------- | ---------------------------------------------------------------------- |
+| `/events/[id]/submit-price`                       | `SubmitPricePage` | Full-screen submit route; shows `alreadySubmitted` state if applicable |
+| `/events/[id]/submissions/[submissionId]/dispute` | `DisputePage`     | Receives `submissionId` as a route param; loads submission via API     |
 
 Both routes are under `(protected)` — require auth.
 
@@ -164,22 +174,32 @@ Both routes are under `(protected)` — require auth.
 Server component shell. Fetches event + checks `alreadySubmitted` via `GET /v1/events/:id/price-submissions`. Passes data to `SubmitForm`.
 
 **Mobile layout (default):**
+
 - Header: `← Back` (JetBrains Mono 11/700 uppercase, `--fg-muted`), CC cluster mark + wordmark right
 - Scrollable body, `12px 20px 16px` padding
 
 **Desktop layout (≥ 640px):**
+
 - Header: logo left, `← Back to {artist}` right
 - Centered `max-w-[520px]` column, `padding: 32px 32px 40px`
 
 ### `SubmitForm` (`components/consumer/SubmitForm.tsx`)
 
 Client component. Internal state:
+
 ```ts
-type FormState = { floor: string; ceiling: string; tier: Tier | null; vendor: Vendor | null; howFound: HowFound | null }
-type Phase = 'empty' | 'submitting' | 'success' | 'error' | 'alreadySubmitted'
+type FormState = {
+  floor: string;
+  ceiling: string;
+  tier: Tier | null;
+  vendor: Vendor | null;
+  howFound: HowFound | null;
+};
+type Phase = 'empty' | 'submitting' | 'success' | 'error' | 'alreadySubmitted';
 ```
 
 Sections (vertical stack, gap 18px):
+
 1. `DetailContextHeader` — "Submit a price" label, artist name, venue · date
 2. Anti-abuse banner — shield icon, copy about $2000 cap and 2-confirm rule
 3. Floor + Ceiling row — two `SPNumberField` side by side
@@ -206,6 +226,7 @@ Props: `label`, `options: { value, label }[]`, `value`, `onChange`, `error?: str
 Replaces the current `PriceSubmissionForm` inline block on the event detail page. Shown whenever there is at least one community submission for the event (regardless of status).
 
 Card structure (`--surface-1` bg, 1px `--border`, 12px radius, 14/14 padding, gap 10):
+
 - Pill row: `community` pill + ConfirmedPill or PendingPill
 - Price line: `$floor` (Inter 28/900) optionally `– $ceiling`, tier label (mono uppercase)
 - Vendor line: "seen on {vendor}" (mono 11)
@@ -229,6 +250,7 @@ Bottom sheet triggered by the "{N} reports →" link. Client component.
 List of submissions fetched from `GET /v1/events/:id/price-submissions`.
 
 Per card:
+
 - Pill row: ConfirmedPill or PendingPill + optional `you` pill + timestamp right-aligned
 - Price line: `$floor` / `– $ceiling` / tier
 - Vendor + source line (mono)
@@ -240,13 +262,14 @@ Per card:
 Loads the disputed submission via `GET /v1/submissions/:submissionId`.
 
 Layout:
+
 - Header: "← Cancel" left, "Dispute price" centered, 60px spacer right
 - Body: `DetailContextHeader`, "You're disputing" card, explanatory copy, `DisputeForm`
 
 ### `DisputeForm` (`components/consumer/DisputeForm.tsx`)
 
 - `--danger` border container
-- "What did *you* see instead?" title
+- "What did _you_ see instead?" title
 - Floor + Ceiling row
 - Vendor chip group
 - Cancel + "File dispute" buttons
@@ -269,11 +292,11 @@ Layout:
 
 All copy strings are final from the design handoff. Key strings:
 
-- Anti-abuse banner: "Prices are capped at **$2000**. Submissions stay *pending* until 2 fans confirm."
-- Footer hint: "Anonymous to other fans. Goes out as *pending* until 2 confirm. We rate-limit at 1 per show per 24h."
+- Anti-abuse banner: "Prices are capped at **$2000**. Submissions stay _pending_ until 2 fans confirm."
+- Footer hint: "Anonymous to other fans. Goes out as _pending_ until 2 confirm. We rate-limit at 1 per show per 24h."
 - Success body: "Your price is in. It'll show up tagged **pending** until 2 other fans corroborate it. We'll let you know if anyone confirms or disputes."
 - `alreadySubmitted` hint: "You can submit one price per show every 24h."
-- Verify sheet lead: "Confirm what you saw, dispute what looks off. Two confirms move a price out of *pending*."
+- Verify sheet lead: "Confirm what you saw, dispute what looks off. Two confirms move a price out of _pending_."
 - Dispute explainer: "A dispute needs an alternate price + vendor. If you saw something different, log it — that's how we find the truth."
 - Dispute form sub: "Disputes have to come with a price and a vendor. Keeps it honest."
 - Dispute success: "Logged. Your alternate price will show up alongside this one."
@@ -284,35 +307,37 @@ All copy strings are final from the design handoff. Key strings:
 
 Electric theme (default dark). All tokens already exist in the codebase's theme system:
 
-| Design token | Tailwind / CSS var equivalent |
-|---|---|
-| `--bg` | `bg` |
-| `--bg-elevated` | `bg-elevated` |
-| `--surface-1` | `surface-1` |
-| `--surface-2` | `surface-2` |
-| `--surface-3` | `surface-3` |
-| `--border` | `border` |
-| `--border-strong` | `border-strong` |
-| `--fg` | `fg` |
-| `--fg-muted` | `fg-muted` |
-| `--fg-subtle` | `fg-subtle` |
-| `--accent` | `accent` (pink) |
-| `--signal` | `signal` (cyan) |
-| `--success` | `success` |
-| `--warning` | `warning` |
-| `--danger` | `danger` |
-| `--fg-on-accent` | `fg-on-accent` |
+| Design token      | Tailwind / CSS var equivalent |
+| ----------------- | ----------------------------- |
+| `--bg`            | `bg`                          |
+| `--bg-elevated`   | `bg-elevated`                 |
+| `--surface-1`     | `surface-1`                   |
+| `--surface-2`     | `surface-2`                   |
+| `--surface-3`     | `surface-3`                   |
+| `--border`        | `border`                      |
+| `--border-strong` | `border-strong`               |
+| `--fg`            | `fg`                          |
+| `--fg-muted`      | `fg-muted`                    |
+| `--fg-subtle`     | `fg-subtle`                   |
+| `--accent`        | `accent` (pink)               |
+| `--signal`        | `signal` (cyan)               |
+| `--success`       | `success`                     |
+| `--warning`       | `warning`                     |
+| `--danger`        | `danger`                      |
+| `--fg-on-accent`  | `fg-on-accent`                |
 
 ---
 
 ## Testing
 
 ### Unit tests (Vitest)
+
 - `SP_POLICY` validation rules — cover all error + warning branches
 - Confirm idempotency — same `userId` + `submissionId` should not double-count
 - Dispute logic — parent status transitions to `disputed` on dispute creation
 
 ### Integration tests (Vitest + real Postgres)
+
 - `POST /v1/events/:id/price-submissions` — creates row, enforces rate limit, returns 409 on duplicate
 - `POST /v1/submissions/:id/confirm` — increments count, transitions to `corroborated` at 2, blocks own-submission confirm
 - `POST /v1/submissions/:id/dispute` — creates dispute row, sets parent `disputed`, validates required fields
@@ -320,6 +345,7 @@ Electric theme (default dark). All tokens already exist in the codebase's theme 
 - `DELETE /v1/submissions/:id` — deletes own, rejects on wrong owner
 
 ### E2E tests (Playwright, staging)
+
 - Submit flow: fill form → submit → see success state
 - `alreadySubmitted` state: submit → navigate back → see existing submission card
 - Confirm flow: peer confirms a submission → confirm count increments

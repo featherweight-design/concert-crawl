@@ -7,20 +7,20 @@
 // such a name is simply not followable and is dropped rather than rendered as
 // a control that cannot write.
 
-import type { EventDetailResponse, FollowedArtist } from '@concert-crawl/types'
+import type { EventDetailResponse, FollowedArtist } from '@concert-crawl/types';
 
 export interface BillArtist {
   /** Never null — a slug-less name is dropped upstream, not rendered inert. */
-  slug: string
-  name: string
-  following: boolean
+  slug: string;
+  name: string;
+  following: boolean;
 }
 
 /** The fields of an event detail response the bill block actually reads. */
 export type BillSource = Pick<
   EventDetailResponse,
   'artist' | 'artistSlug' | 'supportingArtists' | 'supportingArtistSlugs'
->
+>;
 
 /**
  * Slugs the viewer already follows, from whatever source. `undefined` means
@@ -31,12 +31,12 @@ export type BillSource = Pick<
 export const followedSlugSet = (
   follows: FollowedArtist[] | undefined,
 ): ReadonlySet<string> => {
-  const slugs = new Set<string>()
+  const slugs = new Set<string>();
   for (const follow of follows ?? []) {
-    if (follow.slug !== null) slugs.add(follow.slug)
+    if (follow.slug !== null) slugs.add(follow.slug);
   }
-  return slugs
-}
+  return slugs;
+};
 
 /**
  * Headliner first, then the support in billed order. Deduped by slug: a
@@ -47,8 +47,8 @@ export const billArtists = (
   event: BillSource,
   followedSlugs: ReadonlySet<string>,
 ): BillArtist[] => {
-  const supporting = event.supportingArtists ?? []
-  const supportingSlugs = event.supportingArtistSlugs ?? []
+  const supporting = event.supportingArtists ?? [];
+  const supportingSlugs = event.supportingArtistSlugs ?? [];
 
   const candidates: Array<{ name: string; slug: string | null }> = [
     { name: event.artist, slug: event.artistSlug },
@@ -56,19 +56,19 @@ export const billArtists = (
       name,
       slug: supportingSlugs[index] ?? null,
     })),
-  ]
+  ];
 
-  const seen = new Set<string>()
-  const rows: BillArtist[] = []
+  const seen = new Set<string>();
+  const rows: BillArtist[] = [];
   for (const candidate of candidates) {
-    const { slug } = candidate
-    if (slug === null || seen.has(slug)) continue
-    seen.add(slug)
+    const { slug } = candidate;
+    if (slug === null || seen.has(slug)) continue;
+    seen.add(slug);
     rows.push({
       slug,
       name: candidate.name,
       following: followedSlugs.has(slug),
-    })
+    });
   }
-  return rows
-}
+  return rows;
+};
