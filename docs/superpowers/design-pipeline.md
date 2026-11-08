@@ -1,6 +1,6 @@
 # Concert Crawl — Design Pipeline
 
-The Concert Crawl product runs a structured design pipeline that ensures every shipped feature comes with a workshopped design brief, a readiness-audited handoff, and a Copilot-reviewed implementation plan — before any production code is written. This document is the canonical reference for the workflow. CLAUDE.md links here.
+The Concert Crawl product runs a structured design pipeline that ensures every shipped feature comes with a workshopped design brief, a readiness-audited handoff, and a reviewed implementation plan — before any production code is written. This document is the canonical reference for the workflow. CLAUDE.md links here.
 
 Established 2026-06-23 in a dedicated design-track session.
 
@@ -54,8 +54,8 @@ The fix is a two-track pipeline with explicit gates between phases.
 │  └────────┬─────────────┘    │   │  └────────────┬───────────┘    │
 │           │                  │   │               │                 │
 │  ┌────────▼─────────────┐    │   │  ┌────────────▼───────────┐    │
-│  │ Copilot review loop  │    │   │  │ Design Readiness       │    │
-│  │ (canonical bar —    │    │   │  │ Review (parity gate)   │    │
+│  │ Review (doc PR: own  │    │   │  │ Design Readiness       │    │
+│  │ diff, green CI —    │    │   │  │ Review (parity gate)   │    │
 │  │ see Cadence rules)  │    │   │  └────────────┬───────────┘    │
 │  └────────┬─────────────┘    │   │               └─→ to Track 1   │
 │           │                  │   └─────────────────────────────────┘
@@ -68,7 +68,7 @@ The fix is a two-track pipeline with explicit gates between phases.
 └──────────────────────────────┘
 ```
 
-Both tracks converge on the same plan-PR-and-Copilot-review step. Track 2 designs go through Readiness Review at the end as a parity gate — even handoffs produced through the new workflow get audited before they exit the design phase.
+Both tracks converge on the same plan-PR-and-review step. Track 2 designs go through Readiness Review at the end as a parity gate — even handoffs produced through the new workflow get audited before they exit the design phase.
 
 ---
 
@@ -76,7 +76,7 @@ Both tracks converge on the same plan-PR-and-Copilot-review step. Track 2 design
 
 - **A ticket that needs Design input gets a tracker row, not just a label.** Standing rule (Hugh, 2026-08-04). Opening an issue that asks Design to decide something means two steps: label it `type: design`, **and** add a row to `docs/superpowers/design-pipeline-status.md` — under 🕰️ Backlog, not left sitting in the ⏳ untriaged inbox, which `design-status` does not report. The second step is the one that matters — the `design-status` skill parses that file section by section and **never queries GitHub labels**, so a correctly-labelled ticket with no row simply does not exist as far as the pipeline is concerned. Judge by the fix rather than the label: if answering the ticket means deciding a missing affordance, a placement, or a new surface, it is design work even when it was filed as `bug` or `polish`. This fires most often inside `epic-run` and `complete-and-ship`, which spin out design questions as a side effect of building — fold the tracker row into the branch already in flight rather than opening a PR just for it.
 - **No WIP limit on design tickets.** Hugh wants Design throughput high so the roadmap stays predictable and eng work doesn't block on design. Instead, track *throughput* (designs merged per week) as a health signal — if backpressure shows up, revisit.
-- **Plan PR Copilot review exit criteria:** the merge bar and cadence live in the canonical Copilot-review policy in `~/.claude/CLAUDE.md` (user scope) — apply that. Design-track local note: apply valid Low/Nits, skip invalid ones, do NOT iterate to zero.
+- **Plan PR review exit criteria:** the merge bar lives in the fwd `pr-review` skill (`~/.claude/fwd/skills/pr-review/SKILL.md`). A plan PR is a doc PR: no review round; the author reads their own diff, fixes it, and merges on green CI.
 - **Plan PRs live in `docs/superpowers/plans/`.** Keep after the feature ships — they make valuable session-start context.
 - **Traceability chain:** design ticket → design handoff folder → plan PR → implementation PR(s). All cross-linked in PR bodies and GH issue references.
 - **Update the changelog on user-facing PRs** — per `feedback_release_notes_on_major_pr.md`, any PR shipping a meaningful user-facing feature must add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch.
@@ -235,7 +235,7 @@ No solution language. No "decisions needed" section.>
 | Hugh + me audit | Readiness Review | `design/design_handoff_X/READINESS.md` |
 | Copy-writer persona audits | Copy review of the handoff's strings — findings applied in place, never returned to Design | Build PR (see "Who owns copy") |
 | Hugh + me workshop | Implementation plan | `docs/superpowers/plans/<feature>.md` (plan PR) |
-| Copilot reviews | Review threads on plan PR | GitHub PR |
+| Hugh + me review | Review of the plan PR diff | GitHub PR |
 | Eng builds | Implementation PR(s) | GitHub PR — references plan PR |
 | Eng adds | Changelog entry | `apps/web/src/lib/definitions/releases.ts` (same branch as impl PR) |
 
@@ -275,6 +275,6 @@ These are Claude memory notes (not in-repo) living at `~/.claude/projects/.../me
 - `feedback_release_notes_on_major_pr.md` — changelog rule
 - `feedback_mobile_desktop_parity.md` — parity is non-negotiable
 - `feedback_api_contract_before_ui.md` — state reachability gate
-- `~/.claude/CLAUDE.md` (canonical) + `feedback_copilot_review_protocol.md` — Copilot review loop / merge bar
+- `~/.claude/CLAUDE.md` + the fwd `pr-review` skill (canonical) — review and merge bar
 - `user_designer_background.md` — visual quality bar
 - `project_monetization_high_rigor.md` — monetization-specific notes

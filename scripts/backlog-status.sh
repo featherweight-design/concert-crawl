@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # Fail loudly on the hard dependencies rather than a bare "command not found" from
-# the first call deep in the script, matching scripts/request-copilot-review.sh.
+# the first call deep in the script.
 for dep in gh jq; do
   if ! command -v "$dep" >/dev/null 2>&1; then
     echo "ERROR: '$dep' is required but was not found in PATH." >&2
@@ -13,8 +13,8 @@ for dep in gh jq; do
   fi
 done
 
-# Derive the repo from the checkout rather than hardcoding it, again matching
-# request-copilot-review.sh — keeps this correct across forks, renames, transfers.
+# Derive the repo from the checkout rather than hardcoding it, which keeps this
+# correct across forks, renames and transfers.
 if ! REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner); then
   echo "ERROR: Could not determine the repo via gh (see gh output above)." >&2
   exit 1

@@ -32,7 +32,7 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 ## Git and PRs
 
 - Conventional commits; branches `feat/…` and `fix/…`. Never commit to `main` directly, never commit `.env` files, always open a PR for code changes, and never skip pre-commit hooks (`--no-verify`).
-- **Reviews follow the `pr-review` skill**, plus this repo's `.claude/fwd/pr-review.md` (the standing pre-open review grant, `./scripts/request-copilot-review.sh`, the PR template). Run its gate rather than recalling the state.
+- **Reviews follow the `pr-review` skill**, plus this repo's `.claude/fwd/pr-review.md` (the standing pre-open review grant, no Copilot, the PR template). Run its gate rather than recalling the state.
 - **All feature work in a worktree under `.worktrees/`** (`git worktree add .worktrees/<branch> -b <branch>`), never the `EnterWorktree` tool. **The main checkout (`/Users/huey/Projects/concert-crawl`) must always be clean**: check `git -C /Users/huey/Projects/concert-crawl status` before every push and at session end.
 - **After a merge, prune only your own worktrees and test DBs:** `pnpm worktree:prune [--dry-run] <branch>...`. Never sweep other worktrees; `--all` is the user's.
 - Read the part of a large file you need (`sed -n`, `grep -n`, `rg`, `offset`/`limit`); delegate whole-file reads to a subagent. This overrides the preference for dedicated file tools, for large files only.
