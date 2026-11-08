@@ -7,6 +7,9 @@ export default [
     files: ['**/*.ts', '**/*.tsx'],
     rules: {
       'no-undef': 'off',
+      // typescript-eslint's eslint-recommended turns this off as covered by tsc,
+      // but tsc only reports unreachable code when allowUnreachableCode is false.
+      'no-unreachable': 'error',
       // Stricter than the kit: type annotations may not import either. The
       // options are spelled out because a severity-only override keeps the
       // kit's { disallowTypeAnnotations: false }.
