@@ -1,11 +1,11 @@
-import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import kitNext from '@fwd-stack/eslint-config/next'
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   { ignores: ['.next/**', 'dist/**', 'next-env.d.ts'] },
-  // eslint-config-next 16 ships a native flat config; the FlatCompat bridge
-  // it replaced cannot load it (circular `plugins.react` reference).
-  ...nextCoreWebVitals,
+  // The kit's next preset: eslint-config-next 16's core-web-vitals and
+  // typescript flat configs plus the fwd-stack shared TypeScript rules.
+  ...kitNext,
   {
     // eslint-config-next 16 moves to eslint-plugin-react-hooks 7, whose
     // recommended set adds the React Compiler rules. The first five below flag
