@@ -495,9 +495,16 @@ describe('ArtistPicker — search mode', () => {
     }).parentElement
     // jsdom no longer resolves `border-radius` or a var() `background` in
     // computed style, so assert on the serialised inline style instead.
-    const style = field?.getAttribute('style')
-    expect(style).toContain(`height: ${SEARCH_FIELD_BOX.height}px`)
-    expect(style).toContain(`border-radius: ${SEARCH_FIELD_BOX.borderRadius}px`)
-    expect(style).toContain(`background: ${SEARCH_FIELD_BOX.background}`)
+    // Split into declarations so `height` cannot match `min-height`.
+    const declarations = (field?.getAttribute('style') ?? '')
+      .split(';')
+      .map((declaration) => declaration.trim())
+    expect(declarations).toEqual(
+      expect.arrayContaining([
+        `height: ${SEARCH_FIELD_BOX.height}px`,
+        `border-radius: ${SEARCH_FIELD_BOX.borderRadius}px`,
+        `background: ${SEARCH_FIELD_BOX.background}`,
+      ]),
+    )
   })
 })
