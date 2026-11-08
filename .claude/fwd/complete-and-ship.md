@@ -10,6 +10,5 @@
   - The `react/jsx-no-literals` lint rule (`apps/web/eslint.config.mjs`) forbids inline literals, so a clean lint satisfies the inline-string trigger.
   - Frozen: merged `releases.ts` entries are a historical record. Flag drift there, never edit. Price-region copy is editable like any other copy; update the string tests that assert it in the same PR, keeping their behavioural checks.
   - Why the gate exists: the 2026-08 copy audit was 191 findings, all of which entered through un-reviewed PRs.
-- PR body: never include "Generated with Claude Code" or any AI attribution.
 - Force-push only when the rebase rewrote commits (`feedback_force_push_only_when_needed`).
 - Design follow-ups: label `type: design` (also `bug`/`polish` tickets that are design work); tracker `docs/superpowers/design-pipeline-status.md`.
