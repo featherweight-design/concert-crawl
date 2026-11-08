@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
+    "@fwd-stack/eslint-config": "github:featherweight-design/fwd-stack#path:/packages/eslint-config",
     "@tailwindcss/postcss": "^4.3.4",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

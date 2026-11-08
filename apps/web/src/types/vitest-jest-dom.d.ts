@@ -15,6 +15,9 @@
 import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers'
 
 declare module 'vitest' {
+  // Declaration merging needs an interface, and its body is empty because
+  // every member comes from the extended type.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface Matchers<
     R extends void | Promise<void> = void | Promise<void>,
     T = unknown,
