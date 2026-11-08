@@ -51,6 +51,7 @@ import { runBackgroundTask } from '../../lib/background-tasks.js';
 import type { AdminVariables } from './index.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -1073,7 +1074,7 @@ const faultAcknowledgementSchema = z
   });
 
 const crawlPauseParamSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
 });
 
 const crawlPauseSchema = z.object({
@@ -1302,11 +1303,11 @@ venuesAdminRouter.post(
 );
 
 const faultAcknowledgementParamSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
 });
 
 const faultAcknowledgementDeleteParamSchema = z.object({
-  id: z.string().uuid(),
+  id: idSchema,
   condition: z.enum(TRIAGE_CONDITIONS),
 });
 

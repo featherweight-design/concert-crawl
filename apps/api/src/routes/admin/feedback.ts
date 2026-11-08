@@ -6,8 +6,9 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { db, feedback } from '@concert-crawl/db';
 import { getAuthUser } from '../../middleware/auth.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
-const feedbackIdSchema = z.object({ id: z.string().uuid() });
+const feedbackIdSchema = z.object({ id: idSchema });
 
 const listQuerySchema = z.object({
   status: z

@@ -23,6 +23,7 @@ import {
   type PriceDrop,
 } from '../../lib/price-drop.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 const logger = createLogger('admin:prices');
 
@@ -555,7 +556,7 @@ pricesAdminRouter.get('/activity', async (ctx) => {
 });
 
 const postAdminSubmissionSchema = z.object({
-  eventId: z.string().uuid(),
+  eventId: idSchema,
   priceMin: z.string(),
   priceMax: z.string().optional(),
   vendor: z.enum(VENDOR_VALUES),

@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
 import { and, eq, exists, isNull, sql } from 'drizzle-orm';
 import { db, events, priceSubmissions, venues } from '@concert-crawl/db';
 import { STALE_AFTER_MS } from '@concert-crawl/types';
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js';
+import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = idSchema;
 
 export const priceSubmissionStillAccurateRouter = new Hono();
 

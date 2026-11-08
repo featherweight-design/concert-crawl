@@ -20,6 +20,7 @@ import {
   type PriceDrop,
 } from '../../lib/price-drop.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 export const contestsAdminRouter = new Hono<AdminVariables>();
 
@@ -232,7 +233,7 @@ contestsAdminRouter.get(
 );
 
 const detailParamsSchema = z.object({
-  contestId: z.string().uuid(),
+  contestId: idSchema,
 });
 
 // GET /v1/admin/contests/prices/:contestId — full detail for one contest.
@@ -429,7 +430,7 @@ contestsAdminRouter.get(
 );
 
 const resolveParamsSchema = z.object({
-  contestId: z.string().uuid(),
+  contestId: idSchema,
 });
 
 const resolveBodySchema = z.object({
@@ -871,7 +872,7 @@ contestsAdminRouter.post(
 );
 
 const deferParamsSchema = z.object({
-  contestId: z.string().uuid(),
+  contestId: idSchema,
 });
 
 const deferBodySchema = z.object({

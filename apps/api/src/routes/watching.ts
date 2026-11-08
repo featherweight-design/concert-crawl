@@ -2,7 +2,6 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { eq, and, gte, asc, isNull } from 'drizzle-orm';
-import { z } from 'zod';
 import { db, userEvents, events, venues, artists } from '@concert-crawl/db';
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
 import { apiLogger } from '../lib/logger.js';
@@ -19,8 +18,9 @@ import {
   displayHeadliner,
   portraitCanonicalName,
 } from '../lib/event-billing.js';
+import { idSchema } from '../lib/id-schema.js';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = idSchema;
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;

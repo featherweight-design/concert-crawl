@@ -30,6 +30,7 @@ import {
 } from '../../lib/spotify-app-client.js';
 import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js';
 import type { AdminVariables } from './index.js';
+import { idSchema } from '../../lib/id-schema.js';
 
 const logger = createLogger('admin:artists');
 
@@ -99,7 +100,7 @@ const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
       ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
       : eq(artists.matchStatus, status);
 
-const artistIdSchema = z.object({ id: z.string().uuid() });
+const artistIdSchema = z.object({ id: idSchema });
 
 const patchBodySchema = z
   .object({

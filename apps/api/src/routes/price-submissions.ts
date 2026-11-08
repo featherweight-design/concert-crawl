@@ -16,6 +16,7 @@ import {
 } from '../middleware/auth.js';
 import { moderateNote } from '../lib/moderate-note.js';
 import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js';
+import { idSchema } from '../lib/id-schema.js';
 
 const submissionBodySchema = z
   .object({
@@ -33,7 +34,7 @@ const submissionBodySchema = z
     // backfilled all rows that existed before this PR).
     sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
     note: z.string().max(280).optional(),
-    disputedSubmissionId: z.string().uuid().optional(),
+    disputedSubmissionId: idSchema.optional(),
   })
   .refine((data) => !data.priceMax || data.priceMax >= data.priceMin, {
     message: "Ceiling can't be below floor.",

@@ -34,6 +34,7 @@ import {
   NOTIFICATION_PAGE_SIZE,
   NOTIFICATION_PAGE_SIZE_MAX,
 } from '../lib/definitions/notification-windows.js';
+import { idSchema } from '../lib/id-schema.js';
 
 export const notificationsRouter = new Hono();
 
@@ -89,10 +90,7 @@ const decodeCursor = (
   if (createdAtText === undefined || id === undefined || rest.length > 0) {
     return null;
   }
-  if (
-    !PG_TIMESTAMPTZ.test(createdAtText) ||
-    !z.string().uuid().safeParse(id).success
-  ) {
+  if (!PG_TIMESTAMPTZ.test(createdAtText) || !idSchema.safeParse(id).success) {
     return null;
   }
   return { createdAtText, id };
@@ -295,7 +293,7 @@ notificationsRouter.post('/:id/read', async (ctx) => {
   const userId = authInfo?.userId ?? null;
   if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const idParam = z.string().uuid().safeParse(ctx.req.param('id'));
+  const idParam = idSchema.safeParse(ctx.req.param('id'));
   if (!idParam.success) {
     return ctx.json({ success: false, error: 'Invalid notification id' }, 400);
   }
