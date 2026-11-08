@@ -1,0 +1,4 @@
+# Formatting-only commits, skipped by `git blame --ignore-revs-file` and by GitHub blame.
+
+# Repo-wide reformat to the fwd-stack Prettier config, semi: true (#40).
+e02d8899d28b2fb2074b6503e2a0ab95b793595d
