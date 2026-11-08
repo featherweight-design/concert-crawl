@@ -67,7 +67,7 @@ changes that weaken these protections; do not report existing jitter or the exac
 ## PR conventions
 
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
-- **Do not add a "Generated with Claude Code" footer** to PR descriptions.
+- PR descriptions end with the "🤖 Generated with [Claude Code](https://claude.com/claude-code)" footer, as in every FWD repo (Hugh, 2026-11-08).
 - New env vars must be documented in the PR body (name, purpose, creation steps). Never place real
   secrets in any tracked file — `.env.example` uses placeholders only.
 - User-facing feature PRs add an entry to `apps/web/src/lib/definitions/releases.ts` on the same
