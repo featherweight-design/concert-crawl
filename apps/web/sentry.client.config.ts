@@ -1,3 +1,4 @@
+import { SENTRY_DATA_COLLECTION } from '@concert-crawl/types';
 import * as Sentry from '@sentry/nextjs';
 
 import { beforeBreadcrumb, beforeSend } from './src/lib/sentry-redact';
@@ -11,8 +12,10 @@ Sentry.init({
   // See apps/api/src/instrument.ts — local runs never send, so dev noise
   // cannot bury real production errors.
   enabled: environment !== 'local',
-  tracesSampleRate: 0.1,
-  enableLogs: true,
+  // Errors only: no tracing, and no default personal data (see the constant).
+  dataCollection: SENTRY_DATA_COLLECTION,
+  // See apps/api/src/instrument.ts: keeps captureMessage grouping unchanged.
+  attachStacktrace: false,
   beforeBreadcrumb,
   beforeSend,
 });
