@@ -37,7 +37,7 @@ feedbackRouter.post('/', async (ctx) => {
       {
         success: false,
         error: 'Invalid input',
-        details: parsed.error.flatten(),
+        details: z.flattenError(parsed.error),
       },
       422,
     );

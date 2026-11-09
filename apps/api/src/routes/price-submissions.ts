@@ -237,7 +237,7 @@ priceSubmissionsRouter.post(
         {
           success: false,
           error: 'Invalid input',
-          details: result.error.flatten(),
+          details: z.flattenError(result.error),
         },
         422,
       );
@@ -563,7 +563,7 @@ priceSubmissionsRouter.post(
           success: false,
           error: 'Invalid input',
           errors: rowErrors,
-          details: result.error.flatten(),
+          details: z.flattenError(result.error),
         },
         422,
       );

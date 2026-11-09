@@ -9,4 +9,4 @@ import { z } from 'zod';
  * have, so the Zod 4 upgrade switches this to `z.guid()`, which keeps the shape
  * check.
  */
-export const idSchema = z.string().uuid();
+export const idSchema = z.guid();
