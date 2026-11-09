@@ -59,7 +59,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
     >
       {/* Desktop layout */}
       <div
-        className="hidden sm:grid items-center px-2 py-4 group-hover:bg-overlay-hover transition-colors"
+        className="hidden lg:grid items-center px-2 py-4 group-hover:bg-overlay-hover transition-colors"
         style={{ gridTemplateColumns: '88px 1fr 120px 120px 24px', gap: 20 }}
       >
         <VenueIdentityTile name={venue.name} size={72} />
@@ -164,7 +164,7 @@ export function VenueRow({ venue, last = false }: VenueRowProps) {
       </div>
 
       {/* Mobile layout */}
-      <div className="flex sm:hidden items-center gap-3.5 px-4 py-3 group-hover:bg-overlay-hover transition-colors">
+      <div className="flex lg:hidden items-center gap-3.5 px-4 py-3 group-hover:bg-overlay-hover transition-colors">
         <VenueIdentityTile name={venue.name} size={56} />
         <div className="flex-1 min-w-0">
           <div

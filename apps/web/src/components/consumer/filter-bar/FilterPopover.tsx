@@ -3,6 +3,34 @@
 import { useEffect, useRef } from 'react';
 import type { FilterOption } from './filter-defs';
 
+const ANCHOR_GAP = 6;
+const VIEWPORT_MARGIN = 16;
+const MIN_ROOM_BELOW = 240;
+
+export type PopoverPlacement =
+  { top: number; maxHeight: number } | { bottom: number; maxHeight: number };
+
+/**
+ * Opens the menu below its chip, capped to the room left above the viewport
+ * edge. It flips above the chip only when the room below is under
+ * MIN_ROOM_BELOW and the room above is larger.
+ */
+export function getPopoverPlacement(
+  anchorRect: Pick<DOMRect, 'top' | 'bottom'>,
+  viewportHeight: number,
+): PopoverPlacement {
+  const roomBelow =
+    viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_MARGIN;
+  const roomAbove = anchorRect.top - ANCHOR_GAP - VIEWPORT_MARGIN;
+  if (roomBelow < MIN_ROOM_BELOW && roomAbove > roomBelow) {
+    return {
+      bottom: viewportHeight - anchorRect.top + ANCHOR_GAP,
+      maxHeight: roomAbove,
+    };
+  }
+  return { top: anchorRect.bottom + ANCHOR_GAP, maxHeight: roomBelow };
+}
+
 interface FilterPopoverProps {
   open: boolean;
   title: string;
@@ -42,25 +70,37 @@ export function FilterPopover({
       onClose();
     };
 
+    // The menu is fixed at the chip's position when it opened, so a page
+    // scroll or resize would leave it floating away from the chip. Closing is
+    // simpler than tracking the chip. A non-capturing window listener never
+    // hears the menu's own scroll, since scroll events do not bubble.
+    const onViewportChange = () => onClose();
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('scroll', onViewportChange, { passive: true });
+    window.addEventListener('resize', onViewportChange);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('scroll', onViewportChange);
+      window.removeEventListener('resize', onViewportChange);
     };
   }, [open, onClose]);
 
   if (!open || !anchorRect) return null;
+
+  const placement = getPopoverPlacement(anchorRect, window.innerHeight);
 
   return (
     <div
       ref={popoverRef}
       role="dialog"
       aria-label={`${title} filter`}
-      className="fixed z-50 hidden min-w-[240px] border border-border-strong bg-bg-elevated sm:block"
+      className="fixed z-50 hidden min-w-[240px] overflow-y-auto overscroll-contain border border-border-strong bg-bg-elevated sm:block"
       style={{
-        top: anchorRect.bottom + 6,
+        ...placement,
         left: anchorRect.left,
         borderRadius: 10,
         padding: 6,

@@ -95,7 +95,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
       {/* Column headers — desktop only */}
       {listVenues.length > 0 && (
         <div
-          className="hidden sm:grid px-2 border-b border-border"
+          className="hidden lg:grid px-2 border-b border-border"
           style={{
             paddingTop: 20,
             paddingBottom: 10,

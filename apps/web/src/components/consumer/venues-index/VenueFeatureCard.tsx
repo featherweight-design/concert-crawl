@@ -29,7 +29,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
     <Link href={`/venues/${venue.slug}`} className="group block w-full">
       {/* Desktop — horizontal card */}
       <div
-        className="hidden sm:grid rounded-[14px] overflow-hidden border border-border group-hover:border-border-strong bg-surface-1 group-hover:bg-surface-2 transition-all"
+        className="hidden lg:grid rounded-[14px] overflow-hidden border border-border group-hover:border-border-strong bg-surface-1 group-hover:bg-surface-2 transition-all"
         style={{ gridTemplateColumns: '360px 1fr' }}
       >
         {/* Left — identity art panel */}
@@ -133,13 +133,13 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               </span>
             )}
             <div
-              className="mt-2.5 text-[34px] font-extrabold text-fg leading-[1.05]"
+              className="mt-2.5 line-clamp-2 text-[34px] font-extrabold text-fg leading-[1.05]"
               style={{ letterSpacing: '-0.03em' }}
             >
               {venue.name}
             </div>
             <div
-              className="mt-2 flex items-center gap-2.5"
+              className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 12,
@@ -152,7 +152,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
               </span>
               <span style={{ color: 'var(--fg-subtle)' }}>·</span>
               <span
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 whitespace-nowrap"
                 style={{ color: 'var(--signal)' }}
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
@@ -229,7 +229,7 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
       </div>
 
       {/* Mobile — vertical card */}
-      <div className="sm:hidden mx-4 rounded-[14px] overflow-hidden border border-border bg-surface-1">
+      <div className="lg:hidden mx-4 rounded-[14px] overflow-hidden border border-border bg-surface-1">
         <div
           className="relative"
           style={{ height: 180, background: identity.palette.bg }}
