@@ -1,3 +1,10 @@
+## [1.305.1](https://github.com/featherweight-design/concert-crawl/compare/v1.305.0...v1.305.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **deps:** raise the vite override to ^6.4.5 ([02066c1](https://github.com/featherweight-design/concert-crawl/commit/02066c18b634b4c0fa0c298f01630069db3c98b6))
+
 # [1.305.0](https://github.com/featherweight-design/concert-crawl/compare/v1.304.3...v1.305.0) (2026-11-08)
 
 
