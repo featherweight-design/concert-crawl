@@ -1,3 +1,10 @@
+# [1.306.0](https://github.com/featherweight-design/concert-crawl/compare/v1.305.1...v1.306.0) (2026-11-09)
+
+
+### Features
+
+* **deps:** move crawler-core, db, push and e2e to Zod 4 ([20ceeb7](https://github.com/featherweight-design/concert-crawl/commit/20ceeb71dcd00e3d8ff81022021c0c999e59b00a))
+
 ## [1.305.1](https://github.com/featherweight-design/concert-crawl/compare/v1.305.0...v1.305.1) (2026-11-09)
 
 
