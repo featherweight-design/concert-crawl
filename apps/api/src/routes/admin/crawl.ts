@@ -20,10 +20,10 @@ import { idSchema } from '../../lib/id-schema.js';
 const logger = createLogger('admin:crawl');
 
 const venueIdSchema = z.object({
-  venueId: z.string().uuid('venueId must be a UUID'),
+  venueId: z.guid('venueId must be a UUID'),
 });
-const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') });
-const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') });
+const crawlRunIdSchema = z.object({ id: z.guid('id must be a UUID') });
+const triggerIdSchema = z.object({ id: z.guid('id must be a UUID') });
 
 // Optional trigger body. Both crawl-trigger endpoints historically take no
 // body (the admin UI posts nothing), so we tolerate an empty/absent body and
