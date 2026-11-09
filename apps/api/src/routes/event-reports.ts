@@ -98,7 +98,7 @@ eventReportsRouter.post(
         {
           success: false,
           error: 'Invalid input',
-          details: result.error.flatten(),
+          details: z.flattenError(result.error),
         },
         422,
       );

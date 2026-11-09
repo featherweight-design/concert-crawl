@@ -170,7 +170,7 @@ submissionsRouter.post(
         {
           success: false,
           error: 'Invalid input',
-          details: result.error.flatten(),
+          details: z.flattenError(result.error),
         },
         400,
       );
@@ -322,7 +322,7 @@ submissionsRouter.patch(
         {
           success: false,
           error: 'Invalid input',
-          details: result.error.flatten(),
+          details: z.flattenError(result.error),
         },
         400,
       );
