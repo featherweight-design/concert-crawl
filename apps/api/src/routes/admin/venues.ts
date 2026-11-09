@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import { venueSlug } from '../../lib/venue-slug-schema.js';
@@ -399,7 +400,7 @@ venuesAdminRouter.get('/:id', async (ctx) => {
 // POST /v1/admin/venues — create venue with slug uniqueness check
 venuesAdminRouter.post(
   '/',
-  zValidator('json', createVenueSchema),
+  zValidator('json', createVenueSchema, validationHook),
   async (ctx) => {
     const body = ctx.req.valid('json');
 
@@ -460,7 +461,7 @@ venuesAdminRouter.post(
 // PATCH /v1/admin/venues/:id — update venue with slug uniqueness check
 venuesAdminRouter.patch(
   '/:id',
-  zValidator('json', updateVenueSchema),
+  zValidator('json', updateVenueSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.param();
     const body = ctx.req.valid('json');
@@ -738,7 +739,7 @@ const probePlatformSchema = z.object({
 // the admin gets a { ok, ... } diagnosis envelope with HTTP 200 either way.
 venuesAdminRouter.post(
   '/:id/probe-platform',
-  zValidator('json', probePlatformSchema),
+  zValidator('json', probePlatformSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.param();
     const body = ctx.req.valid('json');
@@ -1088,8 +1089,8 @@ const crawlPauseSchema = z.object({
 // original timestamp.
 venuesAdminRouter.post(
   '/:id/crawl-pause',
-  zValidator('param', crawlPauseParamSchema),
-  zValidator('json', crawlPauseSchema),
+  zValidator('param', crawlPauseParamSchema, validationHook),
+  zValidator('json', crawlPauseSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const { reason } = ctx.req.valid('json');
@@ -1131,7 +1132,7 @@ venuesAdminRouter.post(
 // run picks the venue up again.
 venuesAdminRouter.delete(
   '/:id/crawl-pause',
-  zValidator('param', crawlPauseParamSchema),
+  zValidator('param', crawlPauseParamSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
@@ -1185,8 +1186,8 @@ const PRICE_NOTIFICATION_CATEGORIES = [
 // deactivation alone keeps (#1299). Prices do not come back on reactivation.
 venuesAdminRouter.post(
   '/:id/remove',
-  zValidator('param', crawlPauseParamSchema),
-  zValidator('json', crawlPauseSchema),
+  zValidator('param', crawlPauseParamSchema, validationHook),
+  zValidator('json', crawlPauseSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const { reason } = ctx.req.valid('json');
@@ -1313,8 +1314,8 @@ const faultAcknowledgementDeleteParamSchema = z.object({
 
 venuesAdminRouter.post(
   '/:id/fault-acknowledgements',
-  zValidator('param', faultAcknowledgementParamSchema),
-  zValidator('json', faultAcknowledgementSchema),
+  zValidator('param', faultAcknowledgementParamSchema, validationHook),
+  zValidator('json', faultAcknowledgementSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
@@ -1370,7 +1371,7 @@ venuesAdminRouter.post(
 
 venuesAdminRouter.delete(
   '/:id/fault-acknowledgements/:condition',
-  zValidator('param', faultAcknowledgementDeleteParamSchema),
+  zValidator('param', faultAcknowledgementDeleteParamSchema, validationHook),
   async (ctx) => {
     const { id, condition } = ctx.req.valid('param');
 

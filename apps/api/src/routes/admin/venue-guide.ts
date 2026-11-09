@@ -1,5 +1,6 @@
 import { Hono, type Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { db, venueGuideChips, venues } from '@concert-crawl/db';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -187,7 +188,7 @@ venueGuideAdminRouter.get('/', async (ctx) => {
 // PUT /v1/admin/venues/:id/guide — save draft. Never touches guidePublishedAt.
 venueGuideAdminRouter.put(
   '/',
-  zValidator('json', saveGuideSchema),
+  zValidator('json', saveGuideSchema, validationHook),
   async (ctx) => {
     const id = readVenueId(ctx);
     if (!id) {

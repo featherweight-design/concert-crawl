@@ -8,6 +8,7 @@
 import { Hono } from 'hono';
 import { createLogger } from '@concert-crawl/logger';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { and, asc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm';
 import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
@@ -120,7 +121,7 @@ export const artistsAdminRouter = new Hono<AdminVariables>();
 // have guessed, which is why they are searching rather than scanning.
 artistsAdminRouter.get(
   '/',
-  zValidator('query', listQuerySchema),
+  zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
     const { status, search, limit, offset, upcoming } = ctx.req.valid('query');
 
@@ -187,7 +188,11 @@ artistsAdminRouter.get(
 // number the table it opens cannot produce is worse than no number at all.
 artistsAdminRouter.get(
   '/counts',
-  zValidator('query', z.object({ upcoming: upcomingParamSchema })),
+  zValidator(
+    'query',
+    z.object({ upcoming: upcomingParamSchema }),
+    validationHook,
+  ),
   async (ctx) => {
     const { upcoming } = ctx.req.valid('query');
 
@@ -234,8 +239,8 @@ artistsAdminRouter.get(
 // was resolved.
 artistsAdminRouter.patch(
   '/:id',
-  zValidator('param', artistIdSchema),
-  zValidator('json', patchBodySchema),
+  zValidator('param', artistIdSchema, validationHook),
+  zValidator('json', patchBodySchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
@@ -435,7 +440,7 @@ const hydrateCandidateDetails = async (
 // snapshot asserting a match the matcher would no longer make.
 artistsAdminRouter.get(
   '/:id/candidates',
-  zValidator('param', artistIdSchema),
+  zValidator('param', artistIdSchema, validationHook),
   zValidator(
     'query',
     z.object({
@@ -452,6 +457,7 @@ artistsAdminRouter.get(
         .optional()
         .transform((value) => value === 'true'),
     }),
+    validationHook,
   ),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
@@ -594,8 +600,12 @@ artistsAdminRouter.get(
 // match job, so restoring it needs no repair pass.
 artistsAdminRouter.patch(
   '/:id/visibility',
-  zValidator('param', artistIdSchema),
-  zValidator('json', z.object({ hidden: z.boolean() }).strict()),
+  zValidator('param', artistIdSchema, validationHook),
+  zValidator(
+    'json',
+    z.object({ hidden: z.boolean() }).strict(),
+    validationHook,
+  ),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const { hidden } = ctx.req.valid('json');

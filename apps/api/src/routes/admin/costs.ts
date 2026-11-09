@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { desc, eq, sql } from 'drizzle-orm';
 import { db, crawlRuns, venues } from '@concert-crawl/db';
@@ -86,7 +87,7 @@ export const costsAdminRouter = new Hono<AdminVariables>();
 // coalesce(sum(...), 0) — the endpoint always returns numbers.
 costsAdminRouter.get(
   '/daily',
-  zValidator('query', daysQuerySchema),
+  zValidator('query', daysQuerySchema, validationHook),
   async (ctx) => {
     const { days } = ctx.req.valid('query');
 
@@ -129,7 +130,7 @@ costsAdminRouter.get(
 // remainder row (venueId: null). Venues with zero spend are excluded.
 costsAdminRouter.get(
   '/top-venues',
-  zValidator('query', daysQuerySchema),
+  zValidator('query', daysQuerySchema, validationHook),
   async (ctx) => {
     const { days } = ctx.req.valid('query');
 

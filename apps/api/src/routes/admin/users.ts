@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { getAuth } from '@hono/clerk-auth';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { createClerkClient } from '@clerk/backend';
 import { desc, eq, sql } from 'drizzle-orm';
 import {
@@ -78,7 +79,7 @@ usersAdminRouter.get('/', async (ctx) => {
 // no param-capture conflict.
 usersAdminRouter.get(
   '/:userId',
-  zValidator('param', userIdParamSchema),
+  zValidator('param', userIdParamSchema, validationHook),
   async (ctx) => {
     const { userId } = ctx.req.valid('param');
 
@@ -259,7 +260,7 @@ usersAdminRouter.get(
 // PATCH /v1/admin/users/:id/role — assign a role to a Clerk user
 usersAdminRouter.patch(
   '/:id/role',
-  zValidator('json', patchRoleSchema),
+  zValidator('json', patchRoleSchema, validationHook),
   async (ctx) => {
     const auth = getAuth(ctx);
     const targetUserId = ctx.req.param('id');

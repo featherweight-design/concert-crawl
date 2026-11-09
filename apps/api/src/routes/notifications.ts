@@ -13,6 +13,7 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import {
   and,
   count,
@@ -147,7 +148,7 @@ const parseMetadata = (
 // the client can draw the fresh/backfill divider without a second call.
 notificationsRouter.get(
   '/',
-  zValidator('query', listQuerySchema),
+  zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
     const authInfo = getAuth(ctx);
     const userId = authInfo?.userId ?? null;

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { and, eq, desc, asc, inArray, isNull } from 'drizzle-orm';
 import {
@@ -176,7 +177,7 @@ crawlAdminRouter.post('/', async (ctx) => {
 // POST /v1/admin/crawl/:venueId — queue a crawl trigger and wake the crawler
 crawlAdminRouter.post(
   '/:venueId',
-  zValidator('param', venueIdSchema),
+  zValidator('param', venueIdSchema, validationHook),
   async (ctx) => {
     const { venueId } = ctx.req.valid('param');
 
@@ -223,7 +224,7 @@ crawlAdminRouter.post(
 // GET /v1/admin/crawl/triggers/:id — poll a single trigger by ID
 crawlAdminRouter.get(
   '/triggers/:id',
-  zValidator('param', triggerIdSchema),
+  zValidator('param', triggerIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const [trigger] = await db
@@ -240,7 +241,7 @@ crawlAdminRouter.get(
 // GET /v1/admin/crawl/runs/:id — poll a single crawl run by ID
 crawlAdminRouter.get(
   '/runs/:id',
-  zValidator('param', crawlRunIdSchema),
+  zValidator('param', crawlRunIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
@@ -273,7 +274,7 @@ const listQuerySchema = z.object({
 
 crawlAdminRouter.get(
   '/runs',
-  zValidator('query', listQuerySchema),
+  zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
     const { venueId, limit, hasAlert } = ctx.req.valid('query');
 

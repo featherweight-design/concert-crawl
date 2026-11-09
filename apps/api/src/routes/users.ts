@@ -4,6 +4,7 @@ import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { eq, count, ne, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import {
   db,
   founderWindow,
@@ -251,70 +252,74 @@ const patchSchema = z.object({
     .optional(),
 });
 
-usersRouter.patch('/me', zValidator('json', patchSchema), async (ctx) => {
-  const auth = getAuth(ctx);
-  if (!auth?.userId)
-    return ctx.json({ success: false, error: 'Unauthorized' }, 401);
+usersRouter.patch(
+  '/me',
+  zValidator('json', patchSchema, validationHook),
+  async (ctx) => {
+    const auth = getAuth(ctx);
+    if (!auth?.userId)
+      return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const body = ctx.req.valid('json');
+    const body = ctx.req.valid('json');
 
-  if (body.handle !== undefined && body.handle !== null) {
-    if (RESERVED_HANDLES.has(body.handle)) {
-      return ctx.json(
-        { success: false, error: 'Handle is reserved', code: 'reserved' },
-        422,
-      );
+    if (body.handle !== undefined && body.handle !== null) {
+      if (RESERVED_HANDLES.has(body.handle)) {
+        return ctx.json(
+          { success: false, error: 'Handle is reserved', code: 'reserved' },
+          422,
+        );
+      }
+      const [existingHandle] = await db
+        .select({ id: userProfiles.id })
+        .from(userProfiles)
+        .where(
+          and(
+            eq(userProfiles.handle, body.handle),
+            ne(userProfiles.userId, auth.userId),
+          ),
+        )
+        .limit(1);
+      if (existingHandle) {
+        return ctx.json(
+          { success: false, error: 'Handle is taken', code: 'taken' },
+          409,
+        );
+      }
     }
-    const [existingHandle] = await db
+
+    const updateValues: Partial<typeof userProfiles.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+    if (body.handle !== undefined) updateValues.handle = body.handle;
+    if (body.city !== undefined) updateValues.city = body.city;
+    if (body.avatarColor !== undefined)
+      updateValues.avatarColor = body.avatarColor;
+    if (body.theme !== undefined) updateValues.theme = body.theme;
+
+    const [existingProfile] = await db
       .select({ id: userProfiles.id })
       .from(userProfiles)
-      .where(
-        and(
-          eq(userProfiles.handle, body.handle),
-          ne(userProfiles.userId, auth.userId),
-        ),
-      )
+      .where(eq(userProfiles.userId, auth.userId))
       .limit(1);
-    if (existingHandle) {
-      return ctx.json(
-        { success: false, error: 'Handle is taken', code: 'taken' },
-        409,
-      );
+
+    if (existingProfile) {
+      await db
+        .update(userProfiles)
+        .set(updateValues)
+        .where(eq(userProfiles.userId, auth.userId));
+    } else {
+      await db.insert(userProfiles).values({
+        userId: auth.userId,
+        handle: body.handle ?? null,
+        city: body.city ?? null,
+        avatarColor: body.avatarColor ?? null,
+        theme: body.theme ?? 'electric',
+      });
     }
-  }
 
-  const updateValues: Partial<typeof userProfiles.$inferInsert> = {
-    updatedAt: new Date(),
-  };
-  if (body.handle !== undefined) updateValues.handle = body.handle;
-  if (body.city !== undefined) updateValues.city = body.city;
-  if (body.avatarColor !== undefined)
-    updateValues.avatarColor = body.avatarColor;
-  if (body.theme !== undefined) updateValues.theme = body.theme;
-
-  const [existingProfile] = await db
-    .select({ id: userProfiles.id })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, auth.userId))
-    .limit(1);
-
-  if (existingProfile) {
-    await db
-      .update(userProfiles)
-      .set(updateValues)
-      .where(eq(userProfiles.userId, auth.userId));
-  } else {
-    await db.insert(userProfiles).values({
-      userId: auth.userId,
-      handle: body.handle ?? null,
-      city: body.city ?? null,
-      avatarColor: body.avatarColor ?? null,
-      theme: body.theme ?? 'electric',
-    });
-  }
-
-  return ctx.json({ success: true });
-});
+    return ctx.json({ success: true });
+  },
+);
 
 // GET /v1/users/me/submissions/count — count of non-stale price submissions for current user
 usersRouter.get('/me/submissions/count', async (ctx) => {
