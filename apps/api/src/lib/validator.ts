@@ -11,14 +11,16 @@ import type { Context } from 'hono';
  * version is installed.
  */
 export function validationHook(
-  result: { success: boolean; error?: { issues: unknown } },
+  result:
+    | { success: true }
+    | { success: false; error: { issues: readonly unknown[] } },
   ctx: Context,
 ): Response | undefined {
   if (result.success) return undefined;
   return ctx.json(
     {
       success: false,
-      error: { issues: result.error?.issues ?? [], name: 'ZodError' },
+      error: { issues: result.error.issues, name: 'ZodError' },
     },
     400,
   );
