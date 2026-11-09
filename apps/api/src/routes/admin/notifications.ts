@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
@@ -45,7 +46,7 @@ notificationsAdminRouter.get('/test-email/options', (ctx) => {
 // backward compatibility with the original single-button caller. Audited.
 notificationsAdminRouter.post(
   '/test-email',
-  zValidator('json', testEmailBodySchema),
+  zValidator('json', testEmailBodySchema, validationHook),
   async (ctx) => {
     const { userId } = getAuthUser(ctx);
     const { emailKey } = ctx.req.valid('json');

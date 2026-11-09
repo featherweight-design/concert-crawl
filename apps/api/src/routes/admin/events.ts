@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -337,7 +338,7 @@ eventsAdminRouter.patch(
 // `movedCandidate` of { id, reason: 'date' | 'venue', title, date, venueName }.
 eventsAdminRouter.get(
   '/',
-  zValidator('query', listQuerySchema),
+  zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
     const {
       count,
@@ -624,6 +625,7 @@ eventsAdminRouter.post(
     z.object({
       confidenceThreshold: z.number().min(0).max(1).default(0.7),
     }),
+    validationHook,
   ),
   async (ctx) => {
     const { confidenceThreshold } = ctx.req.valid('json');
@@ -654,7 +656,7 @@ eventsAdminRouter.post(
 // PATCH /v1/admin/events/:id/verify — approve an event (set verified=true)
 eventsAdminRouter.patch(
   '/:id/verify',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
@@ -682,7 +684,7 @@ eventsAdminRouter.patch(
 // section from a single payload.
 eventsAdminRouter.get(
   '/:id',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
@@ -731,7 +733,7 @@ eventsAdminRouter.get(
 // PATCH /v1/admin/events/:id — partial update (verified, status, content fields)
 eventsAdminRouter.patch(
   '/:id',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   zValidator(
     'json',
     z.object({
@@ -771,6 +773,7 @@ eventsAdminRouter.patch(
       // route audit.
       hiddenFromConsumer: z.boolean().optional(),
     }),
+    validationHook,
   ),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
@@ -878,7 +881,7 @@ eventsAdminRouter.patch(
 // verified events too (every delete is audit-logged).
 eventsAdminRouter.delete(
   '/:id',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
 
@@ -915,7 +918,7 @@ const markSoldOutSchema = z.object({
 
 eventsAdminRouter.post(
   '/:id/sold-out',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   zValidator('json', markSoldOutSchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json({ success: false, error: 'Invalid input' }, 422);
@@ -1066,7 +1069,7 @@ const markAvailableSchema = z.object({
 
 eventsAdminRouter.post(
   '/:id/available',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   zValidator('json', markAvailableSchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json({ success: false, error: 'Invalid input' }, 422);
@@ -1364,7 +1367,7 @@ const mergeSchema = z.object({
 // wins and the count is reported separately as `userEventsDropped`.
 eventsAdminRouter.post(
   '/:id/merge',
-  zValidator('param', eventIdSchema),
+  zValidator('param', eventIdSchema, validationHook),
   zValidator('json', mergeSchema, (result, ctx) => {
     if (!result.success) {
       return ctx.json({ success: false, error: 'Invalid input' }, 422);

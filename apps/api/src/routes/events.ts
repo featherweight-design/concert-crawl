@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import { z } from 'zod';
 import {
   db,
@@ -141,7 +142,7 @@ export const eventsRouter = new Hono();
 eventsRouter.get(
   '/',
   clerkMiddleware(),
-  zValidator('query', listEventsSchema),
+  zValidator('query', listEventsSchema, validationHook),
   async (ctx) => {
     const {
       from,

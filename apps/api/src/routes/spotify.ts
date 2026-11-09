@@ -7,6 +7,7 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import { createClerkClient } from '@clerk/backend';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -479,7 +480,7 @@ const tastePicksQuerySchema = z.object({
 spotifyRouter.get(
   '/taste-picks',
   requireFeature('spotify-sync'),
-  zValidator('query', tastePicksQuerySchema),
+  zValidator('query', tastePicksQuerySchema, validationHook),
   async (ctx) => {
     const auth = getAuth(ctx);
     // requireFeature already rejected anonymous requests — defensive only.

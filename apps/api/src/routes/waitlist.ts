@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import { z } from 'zod';
 import { db, waitlistEntries } from '@concert-crawl/db';
 import { checkRateLimit } from '../lib/rate-limit.js';
@@ -10,23 +11,30 @@ const waitlistSchema = z.object({
 
 export const waitlistRouter = new Hono();
 
-waitlistRouter.post('/', zValidator('json', waitlistSchema), async (ctx) => {
-  const ip =
-    ctx.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
-  // Fail open: the insert below is idempotent per email and the response never
-  // reveals anything, so a brief unthrottled window only risks junk rows.
-  const limit = await checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000, {
-    onStoreError: 'allow',
-  });
-  if (!limit.allowed) {
-    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)));
-    return ctx.json({ success: false, error: 'Too many requests' }, 429);
-  }
+waitlistRouter.post(
+  '/',
+  zValidator('json', waitlistSchema, validationHook),
+  async (ctx) => {
+    const ip =
+      ctx.req.header('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+    // Fail open: the insert below is idempotent per email and the response never
+    // reveals anything, so a brief unthrottled window only risks junk rows.
+    const limit = await checkRateLimit(`waitlist:${ip}`, 5, 60 * 60 * 1000, {
+      onStoreError: 'allow',
+    });
+    if (!limit.allowed) {
+      ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)));
+      return ctx.json({ success: false, error: 'Too many requests' }, 429);
+    }
 
-  const { email } = ctx.req.valid('json');
+    const { email } = ctx.req.valid('json');
 
-  await db.insert(waitlistEntries).values({ email, ip }).onConflictDoNothing();
+    await db
+      .insert(waitlistEntries)
+      .values({ email, ip })
+      .onConflictDoNothing();
 
-  // Always return 200 — no email enumeration
-  return ctx.json({ success: true });
-});
+    // Always return 200 — no email enumeration
+    return ctx.json({ success: true });
+  },
+);

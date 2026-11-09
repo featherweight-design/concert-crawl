@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { db, giftedComps, inviteCodes } from '@concert-crawl/db';
 import { isGiftLive } from '@concert-crawl/entitlements';
@@ -112,89 +113,93 @@ const mirrorBetaComp = async (userId: string): Promise<void> => {
 
 export const redeemCodeRouter = new Hono().use(clerkAuth).use(requireAuth);
 
-redeemCodeRouter.post('/', zValidator('json', redeemSchema), async (ctx) => {
-  const { userId } = getAuthUser(ctx);
-  const { code } = ctx.req.valid('json');
+redeemCodeRouter.post(
+  '/',
+  zValidator('json', redeemSchema, validationHook),
+  async (ctx) => {
+    const { userId } = getAuthUser(ctx);
+    const { code } = ctx.req.valid('json');
 
-  const [invite] = await db
-    .select()
-    .from(inviteCodes)
-    .where(eq(inviteCodes.code, code));
+    const [invite] = await db
+      .select()
+      .from(inviteCodes)
+      .where(eq(inviteCodes.code, code));
 
-  if (!invite) {
-    return ctx.json({ success: false, error: 'notfound' }, 404);
-  }
+    if (!invite) {
+      return ctx.json({ success: false, error: 'notfound' }, 404);
+    }
 
-  // Idempotent: already redeemed by this user. The grant runs here too, but
-  // only covers a REPEAT of the same trip — a retried POST, a double submit,
-  // a reload of /auth/complete while the invite cookie is still live. It does
-  // NOT reach a tester who redeemed before this shipped: this handler is only
-  // called from /auth/complete, which runs on sign-up alone and only while the
-  // signed `invite_verified` cookie is present, and that cookie is deleted on
-  // the first successful redemption and cannot be re-minted for a code that
-  // already has a `used_by`. Those accounts need the backfill in the PR body.
-  if (invite.usedBy === userId) {
-    const live = await grantBetaComp(db, userId, new Date());
-    if (live) await mirrorBetaComp(userId);
+    // Idempotent: already redeemed by this user. The grant runs here too, but
+    // only covers a REPEAT of the same trip — a retried POST, a double submit,
+    // a reload of /auth/complete while the invite cookie is still live. It does
+    // NOT reach a tester who redeemed before this shipped: this handler is only
+    // called from /auth/complete, which runs on sign-up alone and only while the
+    // signed `invite_verified` cookie is present, and that cookie is deleted on
+    // the first successful redemption and cannot be re-minted for a code that
+    // already has a `used_by`. Those accounts need the backfill in the PR body.
+    if (invite.usedBy === userId) {
+      const live = await grantBetaComp(db, userId, new Date());
+      if (live) await mirrorBetaComp(userId);
+      return ctx.json({ ok: true });
+    }
+
+    // Already used by someone else
+    if (invite.usedBy) {
+      return ctx.json({ success: false, error: 'used' }, 409);
+    }
+
+    if (invite.revokedAt) {
+      return ctx.json({ success: false, error: 'revoked' }, 410);
+    }
+
+    const now = new Date();
+    if (invite.expiresAt && invite.expiresAt < now) {
+      return ctx.json({ success: false, error: 'expired' }, 410);
+    }
+
+    // One transaction, because the claim and the grant are one act. Split, a
+    // crash between them leaves a code marked used by an account that never got
+    // the Premium it was redeemed for — and the code cannot be redeemed again to
+    // try, which makes it unrepairable without an admin.
+    //
+    // The conditional update stays the concurrency guard and still runs FIRST:
+    // a grant written ahead of it would hand Premium to the loser of a race for
+    // the last code, and rolling back afterwards would not help, because the
+    // winner's transaction has already committed by then.
+    const claimed = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(inviteCodes)
+        .set({ usedBy: userId, usedAt: now })
+        .where(
+          and(
+            eq(inviteCodes.id, invite.id),
+            isNull(inviteCodes.usedBy),
+            isNull(inviteCodes.revokedAt),
+            or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
+          ),
+        )
+        .returning({ id: inviteCodes.id });
+
+      if (updated.length === 0) return { claimed: false, live: false };
+
+      const live = await grantBetaComp(tx, userId, now);
+      return { claimed: true, live };
+    });
+
+    if (!claimed.claimed) {
+      return ctx.json({ success: false, error: 'used' }, 409);
+    }
+
+    // Outside the transaction: Clerk is a third-party write that cannot be
+    // rolled back with the database, and holding a transaction open across a
+    // network call to it would be the worse trade.
+    //
+    // Only for a LIVE comp. An admin revoke is a decision the insert already
+    // respects, and mirroring unconditionally would put Clerk back to
+    // `premium_gifted` over a row that derives `free` — a disagreement no later
+    // read repairs, with the JWT-fast path on the wrong side of it.
+    if (claimed.live) await mirrorBetaComp(userId);
+
     return ctx.json({ ok: true });
-  }
-
-  // Already used by someone else
-  if (invite.usedBy) {
-    return ctx.json({ success: false, error: 'used' }, 409);
-  }
-
-  if (invite.revokedAt) {
-    return ctx.json({ success: false, error: 'revoked' }, 410);
-  }
-
-  const now = new Date();
-  if (invite.expiresAt && invite.expiresAt < now) {
-    return ctx.json({ success: false, error: 'expired' }, 410);
-  }
-
-  // One transaction, because the claim and the grant are one act. Split, a
-  // crash between them leaves a code marked used by an account that never got
-  // the Premium it was redeemed for — and the code cannot be redeemed again to
-  // try, which makes it unrepairable without an admin.
-  //
-  // The conditional update stays the concurrency guard and still runs FIRST:
-  // a grant written ahead of it would hand Premium to the loser of a race for
-  // the last code, and rolling back afterwards would not help, because the
-  // winner's transaction has already committed by then.
-  const claimed = await db.transaction(async (tx) => {
-    const updated = await tx
-      .update(inviteCodes)
-      .set({ usedBy: userId, usedAt: now })
-      .where(
-        and(
-          eq(inviteCodes.id, invite.id),
-          isNull(inviteCodes.usedBy),
-          isNull(inviteCodes.revokedAt),
-          or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
-        ),
-      )
-      .returning({ id: inviteCodes.id });
-
-    if (updated.length === 0) return { claimed: false, live: false };
-
-    const live = await grantBetaComp(tx, userId, now);
-    return { claimed: true, live };
-  });
-
-  if (!claimed.claimed) {
-    return ctx.json({ success: false, error: 'used' }, 409);
-  }
-
-  // Outside the transaction: Clerk is a third-party write that cannot be
-  // rolled back with the database, and holding a transaction open across a
-  // network call to it would be the worse trade.
-  //
-  // Only for a LIVE comp. An admin revoke is a decision the insert already
-  // respects, and mirroring unconditionally would put Clerk back to
-  // `premium_gifted` over a row that derives `free` — a disagreement no later
-  // read repairs, with the JWT-fast path on the wrong side of it.
-  if (claimed.live) await mirrorBetaComp(userId);
-
-  return ctx.json({ ok: true });
-});
+  },
+);

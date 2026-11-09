@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { db, inviteCodes } from '@concert-crawl/db';
 import { eq } from 'drizzle-orm';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { getAuthUser } from '../../middleware/auth.js';
 import { randomBytes } from 'crypto';
@@ -35,7 +36,7 @@ inviteCodesAdminRouter.get('/', async (ctx) => {
 // POST /v1/admin/invite-codes — generate a new code
 inviteCodesAdminRouter.post(
   '/',
-  zValidator('json', generateCodeSchema),
+  zValidator('json', generateCodeSchema, validationHook),
   async (ctx) => {
     const { userId } = getAuthUser(ctx);
     const { expiresAt, recipientEmail } = ctx.req.valid('json');

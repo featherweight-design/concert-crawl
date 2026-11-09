@@ -3,6 +3,7 @@
 import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../lib/validator.js';
 import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
@@ -67,7 +68,7 @@ const requireVapid = () => {
 // POST /v1/me/push/subscriptions — upsert on endpoint. Returns { id }.
 mePushRouter.post(
   '/push/subscriptions',
-  zValidator('json', subscribeSchema),
+  zValidator('json', subscribeSchema, validationHook),
   async (ctx) => {
     const authInfo = getAuth(ctx);
     const userId = authInfo?.userId ?? null;
@@ -198,7 +199,7 @@ mePushRouter.get('/notification-preferences', async (ctx) => {
 // PATCH /v1/me/notification-preferences — upsert partial flags.
 mePushRouter.patch(
   '/notification-preferences',
-  zValidator('json', preferencesSchema),
+  zValidator('json', preferencesSchema, validationHook),
   async (ctx) => {
     const authInfo = getAuth(ctx);
     const userId = authInfo?.userId ?? null;

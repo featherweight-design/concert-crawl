@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
+import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import { eq, desc, sql } from 'drizzle-orm';
@@ -30,7 +31,7 @@ export const feedbackAdminRouter = new Hono<AdminVariables>();
 // GET /v1/admin/feedback?status=unread&limit=100
 feedbackAdminRouter.get(
   '/',
-  zValidator('query', listQuerySchema),
+  zValidator('query', listQuerySchema, validationHook),
   async (ctx) => {
     const { status, limit } = ctx.req.valid('query');
 
@@ -57,8 +58,8 @@ feedbackAdminRouter.get('/counts', async (ctx) => {
 // PATCH /v1/admin/feedback/:id — update status, adminNotes, issueUrl
 feedbackAdminRouter.patch(
   '/:id',
-  zValidator('param', feedbackIdSchema),
-  zValidator('json', patchBodySchema),
+  zValidator('param', feedbackIdSchema, validationHook),
+  zValidator('json', patchBodySchema, validationHook),
   async (ctx) => {
     const { id } = ctx.req.valid('param');
     const body = ctx.req.valid('json');
