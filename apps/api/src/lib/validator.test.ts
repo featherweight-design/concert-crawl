@@ -40,17 +40,4 @@ describe('validationHook', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
   });
-
-  // On Zod 3 the hook must change nothing: zValidator's own default answer
-  // serialises the ZodError to the same body. This case is removed with the
-  // Zod 4 upgrade, whose ZodError serialises to { name, message } instead.
-  it('matches zValidator’s default 400 body on Zod 3', async () => {
-    const withoutHook = new Hono().post(
-      '/',
-      zValidator('json', schema),
-      (ctx) => ctx.json({ ok: true }),
-    );
-    const expected = await (await post(withoutHook, {})).json();
-    expect(await (await post(withHook, {})).json()).toEqual(expected);
-  });
 });

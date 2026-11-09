@@ -1,3 +1,4 @@
+import './lib/zod-messages.js';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { requestLogger } from '@concert-crawl/logger';
