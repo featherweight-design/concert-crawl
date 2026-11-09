@@ -1,3 +1,4 @@
+import './zod-messages.js';
 import type { Context } from 'hono';
 
 /**
