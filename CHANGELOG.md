@@ -1,3 +1,11 @@
+## [1.307.1](https://github.com/featherweight-design/concert-crawl/compare/v1.307.0...v1.307.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **web:** close filter menu on any chip-moving scroll, clamp its height ([2e47389](https://github.com/featherweight-design/concert-crawl/commit/2e47389fb06af455b11efc23e8777fa658036954))
+* **web:** keep filter menus on screen and fix venues mid-width layout ([acae87f](https://github.com/featherweight-design/concert-crawl/commit/acae87f63429bbb4c1da84d955c6f0d0d42b32a3))
+
 # [1.307.0](https://github.com/featherweight-design/concert-crawl/compare/v1.306.1...v1.307.0) (2026-11-09)
 
 
