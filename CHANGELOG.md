@@ -1,3 +1,11 @@
+## [1.306.1](https://github.com/featherweight-design/concert-crawl/compare/v1.306.0...v1.306.1) (2026-11-09)
+
+
+### Bug Fixes
+
+* **ci:** allow-list the update types Dependabot auto-merge accepts ([f5f3bbe](https://github.com/featherweight-design/concert-crawl/commit/f5f3bbeffd952654244efe715b6b93d250e4cc84))
+* **ci:** make Dependabot auto-merge actually match its PRs ([c649480](https://github.com/featherweight-design/concert-crawl/commit/c649480d3487468458ebb6382d8d48f8455f72c2)), closes [#7](https://github.com/featherweight-design/concert-crawl/issues/7)
+
 # [1.306.0](https://github.com/featherweight-design/concert-crawl/compare/v1.305.1...v1.306.0) (2026-11-09)
 
 
