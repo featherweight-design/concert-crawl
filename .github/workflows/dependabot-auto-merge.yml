@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   auto-merge:
-    name: Auto-merge patch updates
+    name: Auto-merge low-risk updates
     runs-on: ubuntu-latest
     # pull_request_target runs with a write token, so gate on the PR itself, not
     # only the triggering actor: the PR must be opened by Dependabot from a branch
@@ -29,22 +29,21 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Single-package npm patch bumps: auto-approve and merge after CI passes.
-      # Grouped PRs are skipped even when every bump in them is a patch, so a
-      # human always reviews the weekly batch (see dependabot.yml).
-      - name: Auto-approve and merge npm patch updates
-        if: |
-          steps.metadata.outputs.package-ecosystem == 'npm' &&
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
-          steps.metadata.outputs.dependency-group == ''
-        run: |
-          gh pr review "$PR_URL" --approve --body "Auto-approving npm patch update."
-          gh pr merge "$PR_URL" --auto --rebase
+      # fetch-metadata reports ecosystems as npm_and_yarn and github_actions.
+      # No approval step: the ruleset requires none, and GITHUB_TOKEN cannot
+      # approve here. `--auto` waits for the required checks before merging.
 
-      # GH Actions bumps (any semver tier): auto-approve and merge after CI passes.
-      # Actions version bumps carry low application risk.
-      - name: Auto-approve and merge GitHub Actions updates
-        if: steps.metadata.outputs.package-ecosystem == 'github-actions'
-        run: |
-          gh pr review "$PR_URL" --approve --body "Auto-approving GitHub Actions update."
-          gh pr merge "$PR_URL" --auto --rebase
+      # The weekly npm-patch group only. Minor bumps (npm-minor) and every
+      # major bump are reviewed by a human.
+      - name: Auto-merge the npm patch group
+        if: |
+          steps.metadata.outputs.package-ecosystem == 'npm_and_yarn' &&
+          steps.metadata.outputs.dependency-group == 'npm-patch'
+        run: gh pr merge "$PR_URL" --auto --rebase
+
+      # GitHub Actions patch and minor bumps. A major bump is reviewed.
+      - name: Auto-merge GitHub Actions patch and minor updates
+        if: |
+          steps.metadata.outputs.package-ecosystem == 'github_actions' &&
+          steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge "$PR_URL" --auto --rebase
