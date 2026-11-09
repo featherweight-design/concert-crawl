@@ -87,7 +87,7 @@ export function VenuesIndexClient({ venues }: VenuesIndexClientProps) {
 
       {/* Flagship card */}
       {featured && (
-        <div className="mb-[18px] sm:mb-8">
+        <div className="mb-[18px] lg:mb-8">
           <VenueFeatureCard venue={featured} />
         </div>
       )}
