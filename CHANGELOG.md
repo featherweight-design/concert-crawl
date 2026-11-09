@@ -1,3 +1,17 @@
+# [1.307.0](https://github.com/featherweight-design/concert-crawl/compare/v1.306.1...v1.307.0) (2026-11-09)
+
+
+### Bug Fixes
+
+* **api:** complete the Zod 3 wording map and drop the config drift ([99db2d6](https://github.com/featherweight-design/concert-crawl/commit/99db2d61b3dc02273f4cdb070185527d9c710e37))
+* **api:** keep venue PATCH from resetting defaulted fields on Zod 4 ([124cd3f](https://github.com/featherweight-design/concert-crawl/commit/124cd3fcd96524d400b71cb8025287ad32d79767))
+* **api:** keep Zod 3's message wording on Zod 4 ([2f44874](https://github.com/featherweight-design/concert-crawl/commit/2f44874673ec9dada1525ae2b33be4249581bdb4))
+
+
+### Features
+
+* **api:** move the API to Zod 4 ([83fd607](https://github.com/featherweight-design/concert-crawl/commit/83fd607d0b3dbbcbd54008ce9fb6eb67579d14c2))
+
 ## [1.306.1](https://github.com/featherweight-design/concert-crawl/compare/v1.306.0...v1.306.1) (2026-11-09)
 
 
