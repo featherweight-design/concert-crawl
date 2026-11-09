@@ -8,9 +8,8 @@ updates:
       day: saturday
       time: '06:00'
       timezone: America/Denver
-    # Cap the fuse — a runaway "dependabot storm" that fills 20 open PRs
-    # (and, at 2 Render builds per PR, chews through the workspace build
-    # budget) should surface as backpressure, not silently absorb.
+    # Cap the fuse: a runaway run of update PRs should surface as
+    # backpressure, not quietly fill the queue.
     open-pull-requests-limit: 5
     labels:
       - dependencies

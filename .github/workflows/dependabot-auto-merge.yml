@@ -38,12 +38,15 @@ jobs:
       - name: Auto-merge the npm patch group
         if: |
           steps.metadata.outputs.package-ecosystem == 'npm_and_yarn' &&
-          steps.metadata.outputs.dependency-group == 'npm-patch'
+          steps.metadata.outputs.dependency-group == 'npm-patch' &&
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
         run: gh pr merge "$PR_URL" --auto --rebase
 
-      # GitHub Actions patch and minor bumps. A major bump is reviewed.
+      # GitHub Actions patch and minor bumps. A major bump is reviewed, and so
+      # is any update fetch-metadata cannot classify (an empty update-type).
       - name: Auto-merge GitHub Actions patch and minor updates
         if: |
           steps.metadata.outputs.package-ecosystem == 'github_actions' &&
-          steps.metadata.outputs.update-type != 'version-update:semver-major'
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
         run: gh pr merge "$PR_URL" --auto --rebase
