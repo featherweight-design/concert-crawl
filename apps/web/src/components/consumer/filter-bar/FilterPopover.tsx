@@ -11,17 +11,20 @@ export type PopoverPlacement =
   { top: number; maxHeight: number } | { bottom: number; maxHeight: number };
 
 /**
- * Opens the menu below its chip, capped to the room left above the viewport
- * edge. It flips above the chip only when the room below is under
- * MIN_ROOM_BELOW and the room above is larger.
+ * Opens the menu below its chip, its height capped to the room between the
+ * chip and the viewport's bottom margin. It flips above the chip, capped to
+ * the room above, only when the room below is under MIN_ROOM_BELOW and the
+ * room above is larger.
  */
-export function getPopoverPlacement(
+export const getPopoverPlacement = (
   anchorRect: Pick<DOMRect, 'top' | 'bottom'>,
   viewportHeight: number,
-): PopoverPlacement {
-  const roomBelow =
-    viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_MARGIN;
-  const roomAbove = anchorRect.top - ANCHOR_GAP - VIEWPORT_MARGIN;
+): PopoverPlacement => {
+  const roomBelow = Math.max(
+    0,
+    viewportHeight - anchorRect.bottom - ANCHOR_GAP - VIEWPORT_MARGIN,
+  );
+  const roomAbove = Math.max(0, anchorRect.top - ANCHOR_GAP - VIEWPORT_MARGIN);
   if (roomBelow < MIN_ROOM_BELOW && roomAbove > roomBelow) {
     return {
       bottom: viewportHeight - anchorRect.top + ANCHOR_GAP,
@@ -29,7 +32,7 @@ export function getPopoverPlacement(
     };
   }
   return { top: anchorRect.bottom + ANCHOR_GAP, maxHeight: roomBelow };
-}
+};
 
 interface FilterPopoverProps {
   open: boolean;
@@ -70,22 +73,37 @@ export function FilterPopover({
       onClose();
     };
 
-    // The menu is fixed at the chip's position when it opened, so a page
-    // scroll or resize would leave it floating away from the chip. Closing is
-    // simpler than tracking the chip. A non-capturing window listener never
-    // hears the menu's own scroll, since scroll events do not bubble.
-    const onViewportChange = () => onClose();
+    // The menu is fixed where the chip was when it opened, so any scroll that
+    // moves the chip (the page, or the chip strip scrolling sideways) or a
+    // resize would leave it floating. Closing is simpler than following the
+    // chip. Scroll events do not bubble, so the listener captures, and it
+    // ignores the menu's own list scrolling. A resize that only changes the
+    // height (a soft keyboard or browser toolbar) keeps the menu open.
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Node && popoverRef.current?.contains(target)) {
+        return;
+      }
+      onClose();
+    };
+    const openWidth = window.innerWidth;
+    const onResize = () => {
+      if (window.innerWidth !== openWidth) onClose();
+    };
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('scroll', onViewportChange, { passive: true });
-    window.addEventListener('resize', onViewportChange);
+    window.addEventListener('scroll', onScroll, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener('resize', onResize);
 
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('scroll', onViewportChange);
-      window.removeEventListener('resize', onViewportChange);
+      window.removeEventListener('scroll', onScroll, { capture: true });
+      window.removeEventListener('resize', onResize);
     };
   }, [open, onClose]);
 
