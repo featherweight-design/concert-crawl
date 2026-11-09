@@ -125,9 +125,18 @@ const createVenueSchema = z.object({
     }),
 });
 
-const updateVenueSchema = createVenueSchema
+// Zod 4 applies a default inside .partial(), so every field that carries a
+// create-time default is redeclared here without one. Otherwise a PATCH that
+// only toggles `verified` would reset the venue's city, crawl delay and wait
+// strategy to the create defaults.
+export const updateVenueSchema = createVenueSchema
   .partial()
   .extend({
+    city: z.string().optional(),
+    crawlDelayMs: z.number().int().min(1000).max(30000).optional(),
+    crawlWaitUntil: z
+      .enum(['networkidle', 'load', 'domcontentloaded'])
+      .optional(),
     active: z.boolean().optional(),
     verified: z.boolean().optional(),
     verifiedBy: z.string().max(200).nullable().optional(),
