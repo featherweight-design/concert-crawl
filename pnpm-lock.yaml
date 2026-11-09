@@ -34,10 +34,10 @@ importers:
         version: link:packages/db
       '@fwd-stack/commitlint-config':
         specifier: github:featherweight-design/fwd-stack#path:/packages/commitlint-config
-        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/commitlint-config(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))
+        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/commitlint-config(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))
       '@fwd-stack/prettier-config':
         specifier: github:featherweight-design/fwd-stack#path:/packages/prettier-config
-        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/prettier-config(prettier@3.9.10)
+        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/prettier-config(prettier@3.9.10)
       '@semantic-release/changelog':
         specifier: 7.0.0
         version: 7.0.0(semantic-release@25.0.9(typescript@6.0.3))
@@ -338,7 +338,7 @@ importers:
         version: link:../../packages/config
       '@fwd-stack/eslint-config':
         specifier: github:featherweight-design/fwd-stack#path:/packages/eslint-config
-        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/eslint-config(eslint-config-next@16.4.5(@typescript-eslint/parser@8.72.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
+        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/eslint-config(eslint-config-next@16.4.5(@typescript-eslint/parser@8.72.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
       '@tailwindcss/postcss':
         specifier: ^4.3.4
         version: 4.3.4
@@ -392,10 +392,10 @@ importers:
     devDependencies:
       '@fwd-stack/eslint-config':
         specifier: github:featherweight-design/fwd-stack#path:/packages/eslint-config
-        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/eslint-config(eslint-config-next@16.4.5(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
+        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/eslint-config(eslint-config-next@16.4.5(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)
       '@fwd-stack/tsconfig':
         specifier: github:featherweight-design/fwd-stack#path:/packages/tsconfig
-        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/tsconfig
+        version: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/tsconfig
       eslint:
         specifier: ^9.39.5
         version: 9.39.5(jiti@2.7.0)
@@ -1265,14 +1265,14 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@fwd-stack/commitlint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/commitlint-config':
-    resolution: {path: /packages/commitlint-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c}
+  '@fwd-stack/commitlint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/commitlint-config':
+    resolution: {path: /packages/commitlint-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819}
     version: 0.1.0
     peerDependencies:
       '@commitlint/cli': '>=21.0.0'
 
-  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/eslint-config':
-    resolution: {path: /packages/eslint-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c}
+  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/eslint-config':
+    resolution: {path: /packages/eslint-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819}
     version: 0.1.0
     peerDependencies:
       eslint: ^9.0.0
@@ -1281,14 +1281,14 @@ packages:
       eslint-config-next:
         optional: true
 
-  '@fwd-stack/prettier-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/prettier-config':
-    resolution: {path: /packages/prettier-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c}
+  '@fwd-stack/prettier-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/prettier-config':
+    resolution: {path: /packages/prettier-config, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819}
     version: 0.1.0
     peerDependencies:
       prettier: ^3.0.0
 
-  '@fwd-stack/tsconfig@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/tsconfig':
-    resolution: {path: /packages/tsconfig, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c}
+  '@fwd-stack/tsconfig@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/tsconfig':
+    resolution: {path: /packages/tsconfig, tarball: https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819}
     version: 0.1.0
 
   '@hono/clerk-auth@2.0.1':
@@ -7238,12 +7238,12 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@fwd-stack/commitlint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/commitlint-config(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))':
+  '@fwd-stack/commitlint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/commitlint-config(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))':
     dependencies:
       '@commitlint/cli': 21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3)
       '@commitlint/config-conventional': 21.2.4
 
-  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/eslint-config(eslint-config-next@16.4.5(@typescript-eslint/parser@8.72.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)':
+  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/eslint-config(eslint-config-next@16.4.5(@typescript-eslint/parser@8.72.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 9.39.5
       eslint: 9.39.5(jiti@2.7.0)
@@ -7255,7 +7255,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/eslint-config(eslint-config-next@16.4.5(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)':
+  '@fwd-stack/eslint-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/eslint-config(eslint-config-next@16.4.5(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0))(typescript@6.0.3)':
     dependencies:
       '@eslint/js': 9.39.5
       eslint: 9.39.5(jiti@2.7.0)
@@ -7267,11 +7267,11 @@ snapshots:
       - supports-color
       - typescript
 
-  '@fwd-stack/prettier-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/prettier-config(prettier@3.9.10)':
+  '@fwd-stack/prettier-config@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/prettier-config(prettier@3.9.10)':
     dependencies:
       prettier: 3.9.10
 
-  '@fwd-stack/tsconfig@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/96947b05bc7306d65afecfdcf443ce5d471e3a0c#path:/packages/tsconfig': {}
+  '@fwd-stack/tsconfig@https://codeload.github.com/featherweight-design/fwd-stack/tar.gz/c9f8bf3368f3244becdc4999f15eb5e6c2279819#path:/packages/tsconfig': {}
 
   '@hono/clerk-auth@2.0.1(@clerk/backend@2.33.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(hono@4.13.16)':
     dependencies:
@@ -9756,7 +9756,7 @@ snapshots:
       tinyglobby: 0.2.17
       unrs-resolver: 1.13.0
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.72.1(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.39.5(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 

@@ -38,6 +38,16 @@ describe('Zod 3 message wording on Zod 4', () => {
       'Pit',
       "Invalid enum value. Expected 'GA' | 'VIP', received 'Pit'",
     ],
+    [z.object({ tier: z.enum(['GA', 'VIP']) }), {}, 'Required'],
+    [z.enum(['GA', 'VIP']), 5, "Expected 'GA' | 'VIP', received number"],
+    [z.literal('DELETE'), 'delete', 'Invalid literal value, expected "DELETE"'],
+    [z.string().length(3), 'ab', 'String must contain exactly 3 character(s)'],
+    [
+      z.object({}).strict(),
+      { extra: 1 },
+      "Unrecognized key(s) in object: 'extra'",
+    ],
+    [z.record(z.string(), z.string()), 'x', 'Expected object, received string'],
   ] as const)('%#: keeps Zod 3 text', (schema, input, expected) => {
     expect(firstMessage(schema, input)).toBe(expected);
   });
