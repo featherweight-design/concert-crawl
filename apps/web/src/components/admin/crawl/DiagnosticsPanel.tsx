@@ -8,6 +8,7 @@ import {
   RefreshCw,
   FileEdit,
 } from 'lucide-react';
+import { crawlErrorKind } from '@concert-crawl/crawler-core/crawl-error-class';
 import { StatusBadge, AdminButton } from '@/components/admin/primitives';
 import { ADMIN_COPY } from '@/components/admin/definitions/copy';
 
@@ -31,7 +32,13 @@ export interface StrategyHistoryEntry {
 }
 
 type ErrorClass =
-  'bot_detection' | 'rate_limit' | 'parse_failure' | 'timeout' | 'unknown';
+  | 'bot_detection'
+  | 'rate_limit'
+  | 'parse_failure'
+  | 'timeout'
+  | 'llm_quota'
+  | 'llm_rate_limit'
+  | 'unknown';
 
 const ERROR_REASONS = ADMIN_COPY.crawl.diagnostics.errorReasons;
 
@@ -60,6 +67,12 @@ function getErrLabel(run: CrawlRunForDiagnostics): string {
 }
 
 function classifyError(run: CrawlRunForDiagnostics): ErrorClass {
+  // An account-wide LLM refusal comes first, read by the crawler's own
+  // classifier: it is the account's, not this venue's, so no venue fix applies.
+  if (run.errorMessage) {
+    const kind = crawlErrorKind(run.errorMessage);
+    if (kind !== 'other') return kind;
+  }
   if (run.httpStatusCode === 403 || run.httpStatusCode === 429) {
     return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection';
   }
