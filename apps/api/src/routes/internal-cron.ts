@@ -1,6 +1,7 @@
 // Scheduled-job triggers for a serverless host (Vercel Cron), which invokes a
-// URL on a schedule instead of running a CLI process. These routes are the
-// only runner for every job they trigger.
+// URL on a schedule instead of running a CLI process. Vercel Cron is the only
+// scheduler for these jobs, except crawler-daily, which GitHub also schedules
+// later each morning as a backup.
 //
 // Auth: Vercel Cron sends `Authorization: Bearer ${CRON_SECRET}`. The header
 // is compared in constant time. With CRON_SECRET unset the routes answer 404,
