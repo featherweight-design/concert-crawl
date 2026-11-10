@@ -41,6 +41,17 @@ describe('server-side getFeatureFlags', () => {
     expect(order).toEqual(['connection', 'fetch']);
   });
 
+  // Next interrupts prerendering by throwing from connection(). That has to
+  // propagate: swallowed by the fetch's fallback, it would return the defaults
+  // and a flag-off build would bake the 404 again.
+  it('lets the prerender interrupt propagate instead of falling back', async () => {
+    const interrupt = new Error('DYNAMIC_SERVER_USAGE');
+    connection.mockRejectedValueOnce(interrupt);
+
+    await expect(isFeatureEnabled('crews')).rejects.toBe(interrupt);
+    expect(get).not.toHaveBeenCalled();
+  });
+
   it('returns the map the API gave it', async () => {
     get.mockResolvedValue({
       'spotify-sync': false,
