@@ -1,3 +1,17 @@
+# [1.311.0](https://github.com/featherweight-design/concert-crawl/compare/v1.310.1...v1.311.0) (2026-11-10)
+
+
+### Bug Fixes
+
+* **admin:** drop the confirm's 409 branch from markNotAnArtist ([fef59d1](https://github.com/featherweight-design/concert-crawl/commit/fef59d1d4e236dd011695b29ea4759a09a96f6ed))
+* **admin:** guard Looks right against a stale page and audit it as a confirm ([6461a3a](https://github.com/featherweight-design/concert-crawl/commit/6461a3a8a418ed47f5a548850fc6f2ca63bcb7c6))
+* **admin:** re-check a Looks right confirm at the write, reload on 409 ([60c5707](https://github.com/featherweight-design/concert-crawl/commit/60c570799ac8e3927cfeaecd595613913bbb1dc1))
+
+
+### Features
+
+* **admin:** an Auto-matched queue to check best-effort artist picks ([8f3b763](https://github.com/featherweight-design/concert-crawl/commit/8f3b763e791df4bb01ab6daad68f3a0a48e096cc))
+
 ## [1.310.1](https://github.com/featherweight-design/concert-crawl/compare/v1.310.0...v1.310.1) (2026-11-10)
 
 
