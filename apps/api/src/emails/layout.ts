@@ -71,10 +71,10 @@ ${bodyRows}
 </body>
 </html>`;
 
-// 'digest' (#763 spec §8.2) and 'product' (#967) both carry a signed one-click
-// unsubscribe URL in place of the Settings link, supplied by the template via
-// `unsubscribeUrl`. 'billing' has no opt-out: receipts and dunning are
-// transactional and stop only when the subscription does.
+// 'digest' (#763 spec §8.2) carries a signed one-click unsubscribe URL in
+// place of the Settings link, supplied by the template via `unsubscribeUrl`.
+// Since going free (2026-11-10) only the digest sends; 'product' and
+// 'billing' remain for the unsubscribe links in emails already delivered.
 export type EmailFamily = 'billing' | 'product' | 'digest';
 
 export const familyUnsubscribeLabel = (family: EmailFamily): string =>
