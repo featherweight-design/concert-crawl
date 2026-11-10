@@ -27,6 +27,7 @@
 import { sql } from 'drizzle-orm';
 import { artistSlug, resolveSlug } from '@concert-crawl/types';
 import { artists } from '../schema/artists.js';
+import { foldedArtistName } from './artist-name-fold.js';
 import type { Database } from '../client.js';
 
 export interface BackfillArtistsResult {
@@ -89,8 +90,8 @@ export async function backfillArtists(
         -- cannot be paired by ordinality. They are paired by VALUE instead,
         -- in order of trust:
         --
-        -- 1. A raw headliner that folds to exactly this canonical name (case
-        --    and whitespace only). That is the act's own billed spelling on
+        -- 1. A raw headliner that folds to exactly this canonical name (case,
+        --    accents and whitespace only; see foldedArtistName). That is the act's own billed spelling on
         --    a co-headline bill: "Clipse" and "J.I.D", where both used to
         --    take a wrong name, the first the whole "Clipse & J.I.D" billing
         --    from the artist column and the second its lowercased canonical.
@@ -117,6 +118,7 @@ export async function backfillArtists(
             THEN btrim(headliners[1])
           WHEN headliner.value = canonical_artist
                AND cardinality(canonical_headliners) = 1
+               AND COALESCE(cardinality(headliners), 0) = 0
             THEN artist
           ELSE headliner.value
         END AS display_name
@@ -125,8 +127,8 @@ export async function backfillArtists(
       LEFT JOIN LATERAL (
         SELECT btrim(raw.value) AS raw
         FROM unnest(headliners) AS raw(value)
-        WHERE lower(regexp_replace(btrim(raw.value), '[[:space:]]+', ' ', 'g')) = headliner.value
-        ORDER BY btrim(raw.value) ASC
+        WHERE ${foldedArtistName(sql`raw.value`)} = headliner.value
+        ORDER BY btrim(raw.value) COLLATE "C" ASC
         LIMIT 1
       ) AS paired ON true
       WHERE canonical_headliners IS NOT NULL

@@ -349,9 +349,10 @@ export async function rederiveEventArtists(
       if (options.dryRun) continue;
 
       // All four artist columns move together. The display arrays are written
-      // as well as the canonical ones because the projection reads
-      // `headliners[1]` to recover the raw spelling a single-act bill's
-      // canonical form stripped — canonical-only would project 'kokoroko'.
+      // as well as the canonical ones because the projection pairs each
+      // canonical headliner with its raw spelling from `headliners`, the
+      // casing and accents canonical form stripped: canonical-only would
+      // project 'kokoroko'.
       await db
         .update(events)
         .set({

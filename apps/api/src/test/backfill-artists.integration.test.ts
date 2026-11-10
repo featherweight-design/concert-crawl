@@ -244,6 +244,21 @@ describe('backfill-artists integration', () => {
       });
     });
 
+    it('pairs a co-headliner whose billing carries accents', async () => {
+      const venue = await seedVenue({ slug: `accent-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Beyoncé & JAY-Z',
+        canonicalArtist: 'beyonce',
+        headliners: ['Beyoncé', 'JAY-Z'],
+        canonicalHeadliners: ['beyonce', 'jay-z'],
+      });
+
+      await backfillArtists(testDb);
+
+      const names = (await listArtists()).map((row) => row.name);
+      expect(names).toEqual(['Beyoncé', 'JAY-Z']);
+    });
+
     it('keeps a single act whose own name holds an ampersand whole', async () => {
       // "Simon & Garfunkel" is one act. Its canonical is truncated at the
       // ampersand, so the value fold cannot pair it, and the one-act bill
