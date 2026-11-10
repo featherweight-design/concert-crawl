@@ -58,4 +58,19 @@ describe('beforeSend', () => {
     );
     expect(result.transaction).toBe('/crew/join/[redacted]');
   });
+
+  it('redacts the token from the Next.js request context', () => {
+    const result = beforeSend({
+      contexts: {
+        nextjs: {
+          request_path: `/crew/join/${TOKEN}`,
+          router_kind: 'App Router',
+        },
+      },
+    });
+    expect(result.contexts?.['nextjs']).toEqual({
+      request_path: '/crew/join/[redacted]',
+      router_kind: 'App Router',
+    });
+  });
 });
