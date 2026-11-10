@@ -15,7 +15,7 @@ const redeemSchema = z.object({
 // `gifted_comps.grantedBy` is an admin Clerk ID everywhere else — an audit
 // trail for who gave what. A code redemption has no admin behind it, so it
 // records the funnel instead. Nothing surfaces this to a reader: the gift
-// emails deliberately do not name a granter (billing-daily.ts, #910).
+// emails deliberately do not name a granter (#910).
 const BETA_GRANTED_BY = 'system:invite-code';
 
 /**
@@ -79,9 +79,8 @@ const grantBetaComp = async (
  * without it makes every later `/v1/users/me` log a drift warning about a
  * gift that is perfectly correct.
  *
- * Mirrors `repairGiftMirror` in billing-daily, from the other direction, and
- * fails the same way: the grant has already committed, so a mirror that could
- * not be written logs and stands. Nothing repairs it on a READ — plan.ts logs
+ * The grant has already committed, so a mirror that could not be written logs
+ * and stands. Nothing repairs it on a READ — plan.ts logs
  * the disagreement and lets the table win — so it is corrected the next time
  * an admin gifting flow touches the account, and the warning until then is
  * noise rather than a wrong entitlement.

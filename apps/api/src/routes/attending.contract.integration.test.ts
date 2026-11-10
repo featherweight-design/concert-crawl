@@ -5,7 +5,7 @@
 // remains *writable* even though nothing should write it. This test is the thing
 // standing between that and a silent regression: a reintroduced 'going' write
 // would leave attendance invisible to /v1/history, which reads
-// `attending_at IS NOT NULL`, and to the 90-day purge in billing-daily.
+// `attending_at IS NOT NULL`.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 interface MockAuth {

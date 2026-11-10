@@ -1,5 +1,11 @@
 # Monetization Review
 
+> **Going free (2026-11-10).** Concert Crawl is going free, so this runbook is
+> historical. The daily billing job (`billing-daily`) was deleted on 2026-11-10
+> (#23); its card-expiry, dunning, winback, trial-end and 90-day-purge sends will
+> never run. Checkout, the billing portal and the Stripe webhook are being removed
+> next. Billing tables and plan resolution stay.
+
 Your get-up-to-speed doc for the monetization epic. It covers **what shipped**,
 **what's live vs. dormant right now**, and — most importantly — **the tasks that
 need you** before and at launch. Read this once, then work the checklist.
@@ -38,9 +44,8 @@ is human-owned and has no code. The shipped code is live; most of it stays
   doesn't offer the founder tier, no real charges happen, and the launch smoke
   self-skips. Nothing bills a real card until you (a) put Stripe in live mode and
   (b) open the window.
-- **Not yet running:** the daily billing cron. The code (`apps/api/src/jobs/billing-daily.ts`)
-  is merged, but it has **no scheduler** (#23; Render, its original home, was retired
-  on 2026-11-07). See §3, C.
+- **Deleted:** the daily billing cron (`billing-daily`), on 2026-11-10 (#23). It never
+  had a production scheduler.
 
 ---
 
@@ -106,16 +111,7 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 
 ### C. Daily billing cron
 
-- [ ] Give billing-daily a production scheduler (#23). It was designed as a Render
-      cron; Render was retired on 2026-11-07. Schedule `0 15 * * *` (UTC: **9 AM MDT /
-      8 AM MST**, intentionally not adjusted for DST; if 9 AM local ever becomes a hard
-      requirement, use `0 16 * * *` during MST months). The job is
-      `node apps/api/dist/jobs/billing-daily.js` from the API build, no `tsx` at
-      runtime. Settings and env vars: `monetization-launch.md`, "Deploy and test the
-      billing-jobs cron".
-- [ ] Optionally give it a **staging** scheduler too (test Stripe key) to dry-run it.
-- [ ] The job is **idempotent** — safe to trigger manually once to confirm it runs
-      clean before the schedule takes over.
+Deleted on 2026-11-10 (#23). Nothing to do.
 
 ### D. PostHog — analytics (once #6.2 merges)
 
