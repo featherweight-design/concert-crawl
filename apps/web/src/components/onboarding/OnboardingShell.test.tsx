@@ -388,6 +388,10 @@ const goToArtists = async () => {
 const tile = (name: RegExp) =>
   screen.getAllByRole('checkbox', { name, hidden: true })[0]!;
 
+/** `tile`, for a tile that may not be drawn yet. */
+const findTile = async (name: RegExp) =>
+  (await screen.findAllByRole('checkbox', { name, hidden: true }))[0]!;
+
 describe('OnboardingShell — genres then artists', () => {
   it('offers the two picker steps before the send-off, both skippable', async () => {
     renderShell();
@@ -597,13 +601,20 @@ describe('OnboardingShell — genres then artists', () => {
         );
       await waitFor(() => expect(readMark()).toEqual(['ghost']));
 
+      // Each click waits for the tile it clicks, not for the mark: the mark is
+      // written on the pick itself, before the grid has redrawn with the
+      // appended tile once the field closes, so a bare lookup straight after
+      // the mark's wait raced that redraw and flaked under CI load.
+
       // Unticked from its appended tile: no longer a pick, so no longer marked.
-      act(() => fireEvent.click(tile(/ghost/i)));
+      const appended = await findTile(/ghost/i);
+      act(() => fireEvent.click(appended));
       await waitFor(() => expect(readMark()).toEqual([]));
 
       // And re-ticked from the same tile, which the grid still draws. The
       // suggestions never held `ghost`, so the mark has to come back with it.
-      act(() => fireEvent.click(tile(/ghost/i)));
+      const redrawn = await findTile(/ghost/i);
+      act(() => fireEvent.click(redrawn));
       await waitFor(() => expect(readMark()).toEqual(['ghost']));
     } finally {
       fetchSpy.mockRestore();
