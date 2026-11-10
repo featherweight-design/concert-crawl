@@ -26,8 +26,12 @@ const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
 // other app on the account, and the SDK has already retried it (twice, with
 // backoff) before it reaches the crawl. It keeps its own class so Sentry and
 // the run alert name the right remedy. Matched on the API's error type, never
-// on a bare 429: a venue's own 429 is a block and must stay one.
-const LLM_RATE_LIMIT_PATTERN = /"type"\s*:\s*"rate_limit_error"/;
+// on a bare status: a venue's own 429 is a block and must stay one.
+//
+// Anthropic's 529 `overloaded_error` joins it. It is the API's capacity, not
+// the venue, and the SDK retries it the same way before giving up.
+const LLM_RATE_LIMIT_PATTERN =
+  /"type"\s*:\s*"(rate_limit_error|overloaded_error)"/;
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const MAX_KEY_LENGTH = 160;
