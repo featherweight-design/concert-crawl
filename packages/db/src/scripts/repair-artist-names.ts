@@ -10,9 +10,11 @@
  * Ca$ino Tour`. Their `canonical_name` is already correct (`dogstar`,
  * `baby keem`); only the string a human reads is stale.
  *
- * So this is not a new naming rule. It is the backfill's own rule for a
- * single-act bill — "`headliners[1]` is that name's raw spelling" — applied to
- * the rows the conflict-do-nothing insert could never revise.
+ * So this is not a new naming rule. It is the backfill's own pairing — a raw
+ * headliner that folds to the canonical name, or `headliners[1]` on a single-act
+ * bill — applied to the rows the conflict-do-nothing insert could never revise.
+ * The pairing covers co-headline bills too: `Clipse & J.I.D` was the primary
+ * act's name on a bill billing `Clipse` and `J.I.D` separately.
  *
  * `canonical_name` is deliberately NOT touched. It is uniquely indexed and is
  * the join key against `events`, and `slug` is derived from it, so rewriting it
@@ -64,19 +66,29 @@ interface RepairRow extends Record<string, unknown> {
 const SAMPLE_SIZE = 25;
 
 /**
- * The billing is only usable when the event names exactly one act.
+ * The event's own spelling of this artist, paired by value rather than by
+ * position: `canonical_headliners` is deduped and sorted, so it is NOT aligned
+ * with the raw `headliners` array.
  *
- * `canonical_headliners` is deduped and sorted, so it is NOT positionally
- * aligned with the raw `headliners` array and the two cannot be paired by index
- * in general. At cardinality one there is no ordering to get wrong. Both arrays
- * are checked because `headliners` is not deduped: `['Kokoroko', 'Kokoroko']`
- * canonicalizes to a single element while the raw array still holds two.
+ * Two pairings, the backfill's own. On a single-act bill there is no ordering
+ * to get wrong, so `headliners[1]` is the spelling (both cardinalities checked,
+ * because `headliners` is not deduped: `['Kokoroko', 'Kokoroko']` canonicalizes
+ * to one element). On any bill, a raw headliner that folds to exactly the
+ * canonical name by case and whitespace alone is that act's spelling, which is
+ * what reaches each act on a co-headline bill. The fold has no separator split,
+ * so it never pairs a name with a different act's billing.
  */
-const SINGLE_ACT_BILL = sql`
-  cardinality(events.canonical_headliners) = 1
-  AND cardinality(events.headliners) = 1
-  AND events.headliners[1] IS NOT NULL
-  AND btrim(events.headliners[1]) <> ''
+const BILLINGS = sql`
+  SELECT btrim(events.headliners[1]) AS billed_name
+  WHERE cardinality(events.canonical_headliners) = 1
+    AND cardinality(events.headliners) = 1
+    AND events.headliners[1] IS NOT NULL
+    AND btrim(events.headliners[1]) <> ''
+  UNION
+  SELECT btrim(raw.value)
+  FROM unnest(events.headliners) AS raw(value)
+  WHERE lower(regexp_replace(btrim(raw.value), '[[:space:]]+', ' ', 'g'))
+    = artists.canonical_name
 `;
 
 /**
@@ -88,8 +100,8 @@ const SINGLE_ACT_BILL = sql`
  * to escape. Same reasoning as `strpos` in `prune-artists`.
  */
 const NAME_EXTENDS_BILLING = sql`
-  left(lower(artists.name), length(lower(btrim(events.headliners[1]))))
-    = lower(btrim(events.headliners[1]))
+  left(lower(artists.name), length(lower(billing.billed_name)))
+    = lower(billing.billed_name)
 `;
 
 /**
@@ -104,9 +116,9 @@ const NAME_EXTENDS_BILLING = sql`
  * one is a name that gets actively worse.
  */
 const CORROBORATED = sql`
-  btrim(events.headliners[1]) <> artists.name
+  billing.billed_name <> artists.name
   AND (
-    lower(btrim(events.headliners[1])) = lower(artists.name)
+    lower(billing.billed_name) = lower(artists.name)
     OR ${NAME_EXTENDS_BILLING}
   )
 `;
@@ -125,19 +137,21 @@ const CANDIDATES = sql`
       artists.id,
       artists.slug,
       artists.name AS current_name,
-      btrim(events.headliners[1]) AS billed_name,
+      billing.billed_name,
       CASE
-        WHEN lower(btrim(events.headliners[1])) = lower(artists.name) THEN 'recase'
+        WHEN lower(billing.billed_name) = lower(artists.name) THEN 'recase'
         ELSE 'shorten'
       END AS kind,
       COUNT(*) AS seen_count
     FROM artists
     JOIN events
-      ON events.canonical_headliners[1] = artists.canonical_name
+      ON artists.canonical_name = ANY(events.canonical_headliners)
       AND events.hidden_from_consumer = false
-      AND ${SINGLE_ACT_BILL}
-    WHERE ${CORROBORATED}
-    GROUP BY artists.id, artists.slug, artists.name, btrim(events.headliners[1])
+    CROSS JOIN LATERAL (${BILLINGS}) AS billing
+    WHERE billing.billed_name IS NOT NULL
+      AND billing.billed_name <> ''
+      AND ${CORROBORATED}
+    GROUP BY artists.id, artists.slug, artists.name, billing.billed_name
   ),
   ranked AS (
     SELECT

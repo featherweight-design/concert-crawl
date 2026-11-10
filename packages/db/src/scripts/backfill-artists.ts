@@ -86,32 +86,49 @@ export async function backfillArtists(
         headliner.value AS canonical_name,
         -- canonical_headliners is deduped and sorted, so it is NOT
         -- positionally aligned with the raw headliners array and the two
-        -- cannot be paired by ordinality in general.
+        -- cannot be paired by ordinality. They are paired by VALUE instead,
+        -- in order of trust:
         --
-        -- Two cases escape that. The primary act's raw spelling is in the
-        -- artist column under a known canonical key. And a bill of exactly
-        -- one headliner has no ordering to get wrong: both arrays hold a
-        -- single element, so headliners[1] is that name's raw spelling.
-        -- Both cardinalities are checked because headliners is not deduped —
-        -- ['Kokoroko', 'Kokoroko'] canonicalizes to one element.
+        -- 1. A raw headliner that folds to exactly this canonical name (case
+        --    and whitespace only). That is the act's own billed spelling on
+        --    a co-headline bill: "Clipse" and "J.I.D", where both used to
+        --    take a wrong name, the first the whole "Clipse & J.I.D" billing
+        --    from the artist column and the second its lowercased canonical.
+        --    Deliberately an exact fold with no separator split, so it never
+        --    pairs a name with a different act's billing.
+        -- 2. A bill of exactly one headliner has no ordering to get wrong:
+        --    both arrays hold a single element, so headliners[1] is that
+        --    name's raw spelling even where (1) cannot see it (diacritics,
+        --    a single act named with an ampersand). Both cardinalities are
+        --    checked because headliners is not deduped: ['Kokoroko',
+        --    'Kokoroko'] canonicalizes to one element.
+        -- 3. The artist column, only on a one-act bill whose canonical_artist
+        --    is this name: a row whose raw array is missing. Never on a
+        --    co-headline bill, where artist is the whole billing string.
         --
-        -- That second case is precisely the derived headliner: an event
-        -- titled "Jazz Series presents" leaves canonical_artist tracking the
-        -- title, so without it Kokoroko would be projected as 'kokoroko',
-        -- stripped of casing and diacritics the raw array already had.
-        -- Remaining co-headliners take their canonical string, exactly as a
+        -- Anything else takes its canonical string, exactly as a
         -- support-only artist does.
         CASE
-          WHEN headliner.value = canonical_artist THEN artist
+          WHEN paired.raw IS NOT NULL THEN paired.raw
           WHEN cardinality(canonical_headliners) = 1
                AND cardinality(headliners) = 1
                AND headliners[1] IS NOT NULL
-               AND headliners[1] <> ''
-            THEN headliners[1]
+               AND btrim(headliners[1]) <> ''
+            THEN btrim(headliners[1])
+          WHEN headliner.value = canonical_artist
+               AND cardinality(canonical_headliners) = 1
+            THEN artist
           ELSE headliner.value
         END AS display_name
       FROM events
       CROSS JOIN LATERAL unnest(canonical_headliners) AS headliner(value)
+      LEFT JOIN LATERAL (
+        SELECT btrim(raw.value) AS raw
+        FROM unnest(headliners) AS raw(value)
+        WHERE lower(regexp_replace(btrim(raw.value), '[[:space:]]+', ' ', 'g')) = headliner.value
+        ORDER BY btrim(raw.value) ASC
+        LIMIT 1
+      ) AS paired ON true
       WHERE canonical_headliners IS NOT NULL
         AND headliner.value IS NOT NULL AND headliner.value <> ''
         AND hidden_from_consumer = false

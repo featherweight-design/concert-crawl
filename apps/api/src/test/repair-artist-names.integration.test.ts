@@ -94,19 +94,26 @@ describe('repair-artist-names integration', () => {
 
   // A multi-act bill cannot be used: canonical_headliners is deduped and
   // sorted, so headliners[1] is not guaranteed to be the same act.
-  it('ignores a bill naming more than one act', async () => {
+  it('repairs each act on a co-headline bill from its own billing', async () => {
+    // Regression: "Clipse & J.I.D". The primary act was born with the whole
+    // billing as its name and the second act with its lowercase canonical.
     const venue = await seedVenue({ slug: `repair-multi-${Date.now()}` });
     await seedEvent(venue.id, {
-      artist: 'Arch Enemy',
-      canonicalArtist: 'arch enemy',
-      headliners: ['Arch Enemy', 'The Black Dahlia Murder'],
-      canonicalHeadliners: ['arch enemy', 'the black dahlia murder'],
+      artist: 'Clipse & J.I.D',
+      canonicalArtist: 'clipse',
+      headliners: ['Clipse', 'J.I.D'],
+      canonicalHeadliners: ['clipse', 'j.i.d'],
     });
-    await seedArtist('Arch Enemy: Wrath Across North America', 'arch enemy');
+    await seedArtist('Clipse & J.I.D', 'clipse');
+    await seedArtist('j.i.d', 'j.i.d');
 
     const result = await repairArtistNames(testDb, { dryRun: false });
 
-    expect(result.candidates).toBe(0);
+    expect(result.byKind).toEqual({ shorten: 1, recase: 1 });
+    expect((await listArtists()).map((row) => row.name)).toEqual([
+      'Clipse',
+      'J.I.D',
+    ]);
   });
 
   it('skips an event an admin has hidden', async () => {
