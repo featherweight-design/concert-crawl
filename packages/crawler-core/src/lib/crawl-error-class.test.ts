@@ -38,6 +38,12 @@ describe('classifyCrawlError', () => {
     expect(classifyCrawlError(tierCap).kind).toBe('llm_quota');
   });
 
+  it('recognises the spend-cap error_code even if the wording changes', () => {
+    const reworded =
+      'Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Monthly spend cap reached.","details":{"error_code":"enforced_spend_limit_reached"}}}';
+    expect(classifyCrawlError(reworded).kind).toBe('llm_quota');
+  });
+
   it('leaves an ordinary rate-limit 429 as a venue-level failure', () => {
     const rateLimit =
       'Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
