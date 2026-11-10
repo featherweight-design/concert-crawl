@@ -53,7 +53,18 @@ function buildGitHubIssueUrl(item: FeedbackItem): string {
     `- Route: ${route}`,
     meta['theme'] ? `- Theme: ${String(meta['theme'])}` : null,
     meta['build'] ? `- Build: ${String(meta['build'])}` : null,
-    meta['userAgent'] ? `- Device: ${String(meta['userAgent'])}` : null,
+    metaString(meta, 'doing')
+      ? `- Was doing: ${metaString(meta, 'doing')}`
+      : null,
+    metaString(meta, 'digest')
+      ? `- Error digest: ${metaString(meta, 'digest')}`
+      : null,
+    metaString(meta, 'sentryEventId')
+      ? `- Sentry event: ${metaString(meta, 'sentryEventId')}`
+      : null,
+    (metaString(meta, 'userAgent') ?? metaString(meta, 'device'))
+      ? `- Device: ${metaString(meta, 'userAgent') ?? metaString(meta, 'device')}`
+      : null,
     `- User ID: ${item.userId}`,
     `- Submitted: ${new Date(item.createdAt).toISOString()}`,
   ]

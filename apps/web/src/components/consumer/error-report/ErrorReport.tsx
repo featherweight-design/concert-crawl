@@ -6,8 +6,9 @@ import { useAuth } from '@clerk/nextjs';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ErrorReportForm } from './ErrorReportForm';
 
-// A boundary can mount again with the same error (a retry that throws again),
-// and each mount must not file another Sentry event.
+// The same error instance can reach a boundary more than once (a remount, a
+// development double effect), and must file one Sentry event. A retry that
+// throws again throws a new error, which is a new event, as it should be.
 const captured = new WeakMap<Error, string>();
 
 /**
@@ -20,6 +21,9 @@ const eventIdFor = (error: Error & { digest?: string }): string | undefined => {
   const seen = captured.get(error);
   if (seen !== undefined) return seen;
   const eventId = Sentry.captureException(error);
+  // With Sentry off (local, or no DSN) the id is minted but nothing is sent,
+  // so a report must not point the team at an event that does not exist.
+  if (!Sentry.isEnabled()) return undefined;
   captured.set(error, eventId);
   return eventId;
 };

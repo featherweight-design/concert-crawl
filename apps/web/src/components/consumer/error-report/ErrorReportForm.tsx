@@ -68,6 +68,16 @@ export function ErrorReportForm({
 
   const canSend = what.trim().length > 0 && state !== 'sending';
 
+  // Each opening is a fresh report: a closed form forgets what it sent.
+  const close = () => {
+    onClose();
+    if (state === 'sent') {
+      setWhat('');
+      setDoing('');
+      setState('form');
+    }
+  };
+
   const send = async () => {
     if (!canSend) return;
     setState('sending');
@@ -107,7 +117,7 @@ export function ErrorReportForm({
 
   const footer =
     state === 'sent' ? (
-      <button type="button" onClick={onClose} style={primaryButton}>
+      <button type="button" onClick={close} style={primaryButton}>
         {copy.close}
       </button>
     ) : (
@@ -128,7 +138,7 @@ export function ErrorReportForm({
   return (
     <ModalShell
       open={open}
-      onClose={onClose}
+      onClose={close}
       ariaLabel={copy.ariaLabel}
       sheetHeight={state === 'sent' ? 'short' : 'tall'}
       header={
