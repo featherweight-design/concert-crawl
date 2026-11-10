@@ -28,5 +28,15 @@ describe('deviceSummary', () => {
         'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/131.0 Mobile/15E148 Safari/604.1',
       ),
     ).toBe('Chrome on iPhone');
+    expect(
+      deviceSummary(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36 Edg/131.0',
+      ),
+    ).toBe('Edge on Windows');
+    expect(
+      deviceSummary(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 FxiOS/132.0 Mobile/15E148 Safari/605.1.15',
+      ),
+    ).toBe('Firefox on iPhone');
   });
 });

@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { ModalShell } from '@/components/consumer/modal-shell';
-import { deviceSummary, reportPage } from './lib/report-context';
+import {
+  deviceSummary,
+  isReportableId,
+  reportPage,
+} from './lib/report-context';
 
 const copy = CONSUMER_COPY.errorReport;
 
@@ -54,12 +58,12 @@ const labelStyle: React.CSSProperties = {
  * already holds. The reporter's words go only to our own table, never to
  * Sentry.
  */
-export function ErrorReportForm({
+export const ErrorReportForm = ({
   open,
   onClose,
   digest,
   sentryEventId,
-}: ErrorReportFormProps) {
+}: ErrorReportFormProps) => {
   const { getToken } = useAuth();
   const pathname = usePathname();
   const [what, setWhat] = useState('');
@@ -68,15 +72,19 @@ export function ErrorReportForm({
 
   const canSend = what.trim().length > 0 && state !== 'sending';
 
-  // Each opening is a fresh report: a closed form forgets what it sent.
-  const close = () => {
-    onClose();
-    if (state === 'sent') {
+  // Each opening is a fresh report: a form reopened after a sent report, even
+  // one that finished sending after it was closed, starts empty. Keyed on the
+  // opening itself, so the sent screen still shows while the form is open.
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (opening && state === 'sent') {
       setWhat('');
       setDoing('');
       setState('form');
     }
-  };
+  }, [open, state]);
 
   const send = async () => {
     if (!canSend) return;
@@ -102,8 +110,8 @@ export function ErrorReportForm({
                 ? 'unknown'
                 : deviceSummary(navigator.userAgent),
             ...(doing.trim() === '' ? {} : { doing: doing.trim() }),
-            ...(digest === undefined ? {} : { digest }),
-            ...(sentryEventId === undefined ? {} : { sentryEventId }),
+            ...(isReportableId(digest) ? { digest } : {}),
+            ...(isReportableId(sentryEventId) ? { sentryEventId } : {}),
           },
         }),
       });
@@ -117,7 +125,7 @@ export function ErrorReportForm({
 
   const footer =
     state === 'sent' ? (
-      <button type="button" onClick={close} style={primaryButton}>
+      <button type="button" onClick={onClose} style={primaryButton}>
         {copy.close}
       </button>
     ) : (
@@ -138,7 +146,7 @@ export function ErrorReportForm({
   return (
     <ModalShell
       open={open}
-      onClose={close}
+      onClose={onClose}
       ariaLabel={copy.ariaLabel}
       sheetHeight={state === 'sent' ? 'short' : 'tall'}
       header={
@@ -196,7 +204,7 @@ export function ErrorReportForm({
       )}
     </ModalShell>
   );
-}
+};
 
 const primaryButton: React.CSSProperties = {
   width: '100%',

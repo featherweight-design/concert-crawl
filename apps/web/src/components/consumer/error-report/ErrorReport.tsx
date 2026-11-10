@@ -33,7 +33,11 @@ const eventIdFor = (error: Error & { digest?: string }): string | undefined => {
  * reported to Sentry, and, for a signed-in visitor, a quiet way to tell us
  * what happened. Self-contained so each boundary keeps its own look.
  */
-export function ErrorReport({ error }: { error: Error & { digest?: string } }) {
+export const ErrorReport = ({
+  error,
+}: {
+  error: Error & { digest?: string };
+}) => {
   const { isSignedIn } = useAuth();
   const [reporting, setReporting] = useState(false);
   const [sentryEventId, setSentryEventId] = useState<string | undefined>();
@@ -71,4 +75,4 @@ export function ErrorReport({ error }: { error: Error & { digest?: string } }) {
       />
     </>
   );
-}
+};

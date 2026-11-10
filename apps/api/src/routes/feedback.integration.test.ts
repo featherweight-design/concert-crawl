@@ -161,6 +161,21 @@ describe('POST /v1/feedback', () => {
     expect(res.status).toBe(422);
   });
 
+  it('accepts only the error source it knows', async () => {
+    setAuth('user-error-report-source');
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'bug',
+        message: 'x',
+        pageUrl: '/crews',
+        metadata: { source: 'anything' },
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+
   it('accepts metadata.screenshot: null (backwards-compat for stale clients)', async () => {
     const userId = `screenshot-null-user-${Date.now()}`;
     setAuth(userId);
