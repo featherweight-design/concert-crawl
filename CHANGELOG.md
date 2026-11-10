@@ -1,3 +1,10 @@
+## [1.308.5](https://github.com/featherweight-design/concert-crawl/compare/v1.308.4...v1.308.5) (2026-11-10)
+
+
+### Bug Fixes
+
+* **crawler:** stop an Anthropic 529 overload counting as a venue strike ([5324fae](https://github.com/featherweight-design/concert-crawl/commit/5324fae50c965474dff7f16a89c4ba322677d208))
+
 ## [1.308.4](https://github.com/featherweight-design/concert-crawl/compare/v1.308.3...v1.308.4) (2026-11-10)
 
 
