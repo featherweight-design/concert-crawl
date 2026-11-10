@@ -1,3 +1,10 @@
+## [1.307.2](https://github.com/featherweight-design/concert-crawl/compare/v1.307.1...v1.307.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **crawler:** count Anthropic spend limits and the tier cap as account-wide ([2218920](https://github.com/featherweight-design/concert-crawl/commit/2218920d3da9e110a7fb403e343516a607537abf))
+
 ## [1.307.1](https://github.com/featherweight-design/concert-crawl/compare/v1.307.0...v1.307.1) (2026-11-09)
 
 
