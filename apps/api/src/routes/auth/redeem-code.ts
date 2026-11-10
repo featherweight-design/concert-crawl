@@ -2,9 +2,14 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { db, giftedComps, inviteCodes } from '@concert-crawl/db';
+import {
+  db,
+  giftedComps,
+  inviteCodeRedemptions,
+  inviteCodes,
+} from '@concert-crawl/db';
 import { isGiftLive } from '@concert-crawl/entitlements';
-import { and, eq, gt, isNull, or } from 'drizzle-orm';
+import { and, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { apiLogger } from '../../lib/logger.js';
 import { clerkAuth, requireAuth, getAuthUser } from '../../middleware/auth.js';
 
@@ -108,6 +113,9 @@ const mirrorBetaComp = async (userId: string): Promise<void> => {
   }
 };
 
+/** Thrown inside the claim to roll it back: this person already holds a seat. */
+class AlreadyRedeemed extends Error {}
+
 export const redeemCodeRouter = new Hono().use(clerkAuth).use(requireAuth);
 
 redeemCodeRouter.post(
@@ -134,14 +142,23 @@ redeemCodeRouter.post(
     // signed `invite_verified` cookie is present, and that cookie is deleted on
     // the first successful redemption and cannot be re-minted for a code that
     // already has a `used_by`. Those accounts need the backfill in the PR body.
-    if (invite.usedBy === userId) {
+    const [ownRedemption] = await db
+      .select({ id: inviteCodeRedemptions.id })
+      .from(inviteCodeRedemptions)
+      .where(
+        and(
+          eq(inviteCodeRedemptions.codeId, invite.id),
+          eq(inviteCodeRedemptions.userId, userId),
+        ),
+      );
+    if (ownRedemption || invite.usedBy === userId) {
       const live = await grantBetaComp(db, userId, new Date());
       if (live) await mirrorBetaComp(userId);
       return ctx.json({ ok: true });
     }
 
-    // Already used by someone else
-    if (invite.usedBy) {
+    // Every seat already taken by someone else.
+    if (invite.useCount >= invite.maxUses) {
       return ctx.json({ success: false, error: 'used' }, 409);
     }
 
@@ -163,25 +180,51 @@ redeemCodeRouter.post(
     // a grant written ahead of it would hand Premium to the loser of a race for
     // the last code, and rolling back afterwards would not help, because the
     // winner's transaction has already committed by then.
-    const claimed = await db.transaction(async (tx) => {
-      const updated = await tx
-        .update(inviteCodes)
-        .set({ usedBy: userId, usedAt: now })
-        .where(
-          and(
-            eq(inviteCodes.id, invite.id),
-            isNull(inviteCodes.usedBy),
-            isNull(inviteCodes.revokedAt),
-            or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
-          ),
-        )
-        .returning({ id: inviteCodes.id });
+    //
+    // A seat is claimed by incrementing `use_count` only while it is below
+    // `max_uses`, in the UPDATE itself, so two people racing for the last seat
+    // cannot both win. The ledger row then records who took it; its unique
+    // (code, user) pair turns a concurrent second claim by the SAME person
+    // into a rollback rather than a second seat. `used_by` keeps naming the
+    // first redeemer, as every single-use reader expects.
+    const claimed = await db
+      .transaction(async (tx) => {
+        const updated = await tx
+          .update(inviteCodes)
+          .set({
+            useCount: sql`${inviteCodes.useCount} + 1`,
+            usedBy: sql`coalesce(${inviteCodes.usedBy}, ${userId})`,
+            usedAt: sql`coalesce(${inviteCodes.usedAt}, ${now.toISOString()}::timestamptz)`,
+          })
+          .where(
+            and(
+              eq(inviteCodes.id, invite.id),
+              lt(inviteCodes.useCount, inviteCodes.maxUses),
+              isNull(inviteCodes.revokedAt),
+              or(isNull(inviteCodes.expiresAt), gt(inviteCodes.expiresAt, now)),
+            ),
+          )
+          .returning({ id: inviteCodes.id });
 
-      if (updated.length === 0) return { claimed: false, live: false };
+        if (updated.length === 0) return { claimed: false, live: false };
 
-      const live = await grantBetaComp(tx, userId, now);
-      return { claimed: true, live };
-    });
+        const ledger = await tx
+          .insert(inviteCodeRedemptions)
+          .values({ codeId: invite.id, userId, redeemedAt: now })
+          .onConflictDoNothing()
+          .returning({ id: inviteCodeRedemptions.id });
+        if (ledger.length === 0) throw new AlreadyRedeemed();
+
+        const live = await grantBetaComp(tx, userId, now);
+        return { claimed: true, live };
+      })
+      .catch((err: unknown) => {
+        // The same person won a concurrent claim: the seat goes back, and
+        // their redemption stands.
+        if (err instanceof AlreadyRedeemed)
+          return { claimed: true, live: false };
+        throw err;
+      });
 
     if (!claimed.claimed) {
       return ctx.json({ success: false, error: 'used' }, 409);

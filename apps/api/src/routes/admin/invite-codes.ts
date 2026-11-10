@@ -20,6 +20,9 @@ function generateCode(): string {
 const generateCodeSchema = z.object({
   expiresAt: z.string().datetime({ offset: true }).optional(),
   recipientEmail: z.string().email().optional(),
+  // A poster code admits many people; a personal code (the default) admits one.
+  label: z.string().trim().min(1).max(120).optional(),
+  maxUses: z.number().int().min(1).max(500).optional(),
 });
 
 export const inviteCodesAdminRouter = new Hono<AdminVariables>();
@@ -39,7 +42,7 @@ inviteCodesAdminRouter.post(
   zValidator('json', generateCodeSchema, validationHook),
   async (ctx) => {
     const { userId } = getAuthUser(ctx);
-    const { expiresAt, recipientEmail } = ctx.req.valid('json');
+    const { expiresAt, recipientEmail, label, maxUses } = ctx.req.valid('json');
 
     const [code] = await db
       .insert(inviteCodes)
@@ -47,6 +50,8 @@ inviteCodesAdminRouter.post(
         code: generateCode(),
         createdBy: userId,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
+        label: label ?? null,
+        maxUses: maxUses ?? 1,
       })
       .returning();
 
@@ -64,6 +69,7 @@ inviteCodesAdminRouter.post(
     ctx.set('auditAction', 'invite_code.create');
     ctx.set('auditTargetId', code.id);
     ctx.set('auditActorId', userId);
+    ctx.set('auditMeta', { label: code.label, maxUses: code.maxUses });
 
     if (recipientEmail) {
       runBackgroundTask(async () => {

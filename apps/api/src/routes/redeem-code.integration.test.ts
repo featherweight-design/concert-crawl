@@ -41,11 +41,20 @@ vi.mock('@clerk/backend', () => ({
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
     next(),
-  getAuth: () => authState.current,
+  // A request may name its own user, which lets two concurrent requests in one
+  // test carry different accounts without racing on the shared state.
+  getAuth: (ctx: { req: { header: (name: string) => string | undefined } }) => {
+    const userId = ctx.req.header('x-test-user');
+    return userId ? { userId } : authState.current;
+  },
 }));
 
 import { eq } from 'drizzle-orm';
-import { giftedComps, inviteCodes } from '@concert-crawl/db';
+import {
+  giftedComps,
+  inviteCodeRedemptions,
+  inviteCodes,
+} from '@concert-crawl/db';
 import { createApp } from '../app.js';
 import { testDb } from '../test/helpers/db.js';
 import { clearTables } from '../test/helpers/seed.js';
@@ -55,10 +64,10 @@ const app = createApp();
 const USER_ID = 'user_redeem_comp';
 const CODE = 'BETA-3C41-8BC0';
 
-const seedCode = async (code = CODE): Promise<void> => {
+const seedCode = async (code = CODE, maxUses = 1): Promise<void> => {
   await testDb
     .insert(inviteCodes)
-    .values({ code, createdBy: 'user_test_admin' });
+    .values({ code, createdBy: 'user_test_admin', maxUses });
 };
 
 const redeem = async (code = CODE): Promise<Response> =>
@@ -192,5 +201,95 @@ describe('POST /v1/auth/redeem-code — the beta comp', () => {
     // The first account keeps its own, so the 409 is about the claim rather
     // than about the grant failing for everyone.
     expect(await comps('user_first')).toHaveLength(1);
+  });
+});
+
+// A poster code admits up to `max_uses` accounts. The seat count is the claim,
+// so every case here reads it back from the row rather than trusting the
+// status alone.
+describe('POST /v1/auth/redeem-code — multi-use codes', () => {
+  const POSTER = 'BETA-P0ST-ER01';
+
+  const asUser = async (userId: string): Promise<Response> => {
+    authState.current = { userId };
+    return redeem(POSTER);
+  };
+
+  const seats = async (): Promise<number> => {
+    const [row] = await testDb
+      .select({ useCount: inviteCodes.useCount })
+      .from(inviteCodes)
+      .where(eq(inviteCodes.code, POSTER));
+    return row!.useCount;
+  };
+
+  beforeEach(async () => {
+    mirrorCalls.length = 0;
+    vi.stubEnv('CLERK_SECRET_KEY', 'sk_test_fixture');
+    await clearTables();
+  });
+
+  it('admits several accounts, then refuses once every seat is taken', async () => {
+    await seedCode(POSTER, 2);
+
+    expect((await asUser('user_a')).status).toBe(200);
+    expect((await asUser('user_b')).status).toBe(200);
+    expect((await asUser('user_c')).status).toBe(409);
+
+    expect(await seats()).toBe(2);
+    expect(await comps('user_a')).toHaveLength(1);
+    expect(await comps('user_b')).toHaveLength(1);
+    expect(await comps('user_c')).toHaveLength(0);
+    const ledger = await testDb.select().from(inviteCodeRedemptions);
+    expect(ledger.map((row) => row.userId).sort()).toEqual([
+      'user_a',
+      'user_b',
+    ]);
+  });
+
+  it('spends one seat however often the same account redeems', async () => {
+    await seedCode(POSTER, 3);
+
+    expect((await asUser('user_a')).status).toBe(200);
+    expect((await asUser('user_a')).status).toBe(200);
+
+    expect(await seats()).toBe(1);
+    expect(await comps('user_a')).toHaveLength(1);
+  });
+
+  it('gives the last seat to exactly one of two concurrent redeems', async () => {
+    // Two different accounts race for one remaining seat. A read-then-write
+    // increment lets both through; the conditional UPDATE lets one.
+    await seedCode(POSTER, 2);
+    expect((await asUser('user_a')).status).toBe(200);
+
+    const race = (userId: string): Promise<Response> =>
+      app.request('/v1/auth/redeem-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer fake-token',
+          'x-test-user': userId,
+        },
+        body: JSON.stringify({ code: POSTER }),
+      });
+    const statuses = (await Promise.all([race('user_b'), race('user_c')])).map(
+      (res) => res.status,
+    );
+
+    expect(statuses.sort()).toEqual([200, 409]);
+    expect(await seats()).toBe(2);
+  });
+
+  it('reports a full code as used at validate time', async () => {
+    await seedCode(POSTER, 1);
+    expect((await asUser('user_a')).status).toBe(200);
+
+    const res = await app.request('/v1/auth/validate-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: POSTER }),
+    });
+    expect(res.status).toBe(409);
   });
 });
