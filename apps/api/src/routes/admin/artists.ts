@@ -319,6 +319,9 @@ artistsAdminRouter.patch(
         // is no longer the current question. Resetting keeps `exhausted`
         // meaning "the job stopped asking" rather than accumulating history.
         matchAttempts: 0,
+        // A human answer, even one confirming the same pick, replaces the
+        // best-effort rule's.
+        autoMatchedAt: null,
         updatedAt: new Date(),
         ...photoFields,
         // `not_an_artist` and `hidden` say the same thing about the same row —

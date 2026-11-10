@@ -15,8 +15,11 @@
 //      press photo wins, but only if it is the only one. Spotify's February
 //      2026 developer-access change removed `popularity` and `followers` from
 //      the artist object, so artwork is the sole remaining signal. Two
-//      photographed namesakes → `ambiguous`, resolved by a human from the admin
-//      queue; guessing there would put a stranger's photo on a public page.
+//      photographed namesakes → `ambiguous`. The match job then applies the
+//      best-effort rule (`pickBestEffortCandidate`, Hugh 2026-11-10: a wrong
+//      artist is easier to fix than an unmatched one), which takes Spotify's
+//      top result when it is plainly the act and marks it `autoMatchedAt` so
+//      admin can correct it. What the rule declines stays for a human.
 //   3. Nothing clears (1) → `no_match`. There is deliberately NO fuzzy tier:
 //      a wrong photo is worse than no photo, and the brief's §3.3 fallback
 //      (IdentityArt plate) is a designed, shipped-quality state.

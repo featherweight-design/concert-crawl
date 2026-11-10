@@ -124,6 +124,13 @@ export const artists = pgTable(
      */
     matchAttempts: integer('match_attempts').notNull().default(0),
     /**
+     * Set while the current match came from the best-effort rule
+     * (`pickBestEffortCandidate`) rather than the matcher's exact answer or a
+     * human pick, so admin can find and correct it. Any admin write to the
+     * match clears it: a human answer replaces the rule's.
+     */
+    autoMatchedAt: timestamp('auto_matched_at', { withTimezone: true }),
+    /**
      * What Spotify returned the last time this row was searched.
      *
      * Written on every verdict, not just the unresolved ones: the picker is
@@ -136,7 +143,8 @@ export const artists = pgTable(
      *
      * Deliberately a cache, not a source of truth. It goes stale the moment an
      * artist edits their Spotify profile, so the picker offers an explicit
-     * refresh and nothing auto-resolves from it.
+     * refresh. The one thing resolved from it is the best-effort pick
+     * (`autoMatchedAt`), which admin can always see and undo.
      */
     spotifyCandidates:
       jsonb('spotify_candidates').$type<SpotifyCandidateSnapshot[]>(),
