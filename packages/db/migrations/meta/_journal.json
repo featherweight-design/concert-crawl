@@ -652,6 +652,13 @@
       "when": 1793491200000,
       "tag": "0092_artist_auto_matched_at",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1793577600000,
+      "tag": "0093_multi_use_invite_codes",
+      "breakpoints": true
     }
   ]
 }

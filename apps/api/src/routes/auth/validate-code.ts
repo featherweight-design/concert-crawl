@@ -51,7 +51,9 @@ validateCodeRouter.post(
     if (invite.expiresAt && invite.expiresAt < new Date()) {
       return ctx.json({ success: false, error: 'expired' }, 410);
     }
-    if (invite.usedBy) {
+    // Full once every seat is taken: a single-use code after its one
+    // redemption, a poster code after its last.
+    if (invite.useCount >= invite.maxUses) {
       return ctx.json({ success: false, error: 'used' }, 409);
     }
 

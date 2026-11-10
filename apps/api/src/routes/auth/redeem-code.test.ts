@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockGetAuth, mockCode, mockDb } = vi.hoisted(() => ({
+const { mockGetAuth, mockCode, mockDb, REDEMPTIONS } = vi.hoisted(() => ({
+  // The redemptions ledger: a table sentinel so the select chain can tell a
+  // ledger lookup (this user has no redemption yet) from the code lookup.
+  REDEMPTIONS: { table: 'invite_code_redemptions' },
   mockGetAuth: vi.fn(),
   // Hoisted with the rest: `vi.mock`'s factory runs before any module-scope
   // const, so a db stub declared below is not in scope when it is read.
@@ -15,8 +18,12 @@ const { mockGetAuth, mockCode, mockDb } = vi.hoisted(() => ({
     code: 'BETA-3C41-8BC0',
     usedBy: null,
     usedAt: null,
+    maxUses: 1,
+    useCount: 0,
   },
 }));
+
+let lastFrom: unknown = null;
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -31,9 +38,12 @@ const mockSelectChain: {
   where: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
 } = {
-  from: vi.fn(() => mockSelectChain),
+  from: vi.fn((table: unknown) => {
+    lastFrom = table;
+    return mockSelectChain;
+  }),
   where: vi.fn(() =>
-    Object.assign(Promise.resolve([mockCode]), {
+    Object.assign(Promise.resolve(lastFrom === REDEMPTIONS ? [] : [mockCode]), {
       limit: mockSelectChain.limit,
     }),
   ),
@@ -48,7 +58,12 @@ const mockUpdateChain = {
 };
 // The beta comp write. `values` is what the assertions read, so the chain
 // records rather than just resolving.
-const mockOnConflict = vi.fn().mockResolvedValue(undefined);
+const mockLedgerReturning = vi.fn(async () => [{ id: 'redemption-1' }]);
+const mockOnConflict = vi.fn(() =>
+  Object.assign(Promise.resolve(undefined), {
+    returning: mockLedgerReturning,
+  }),
+);
 const mockInsertChain = {
   values: vi.fn().mockReturnValue({ onConflictDoNothing: mockOnConflict }),
 };
@@ -65,6 +80,7 @@ mockDb.transaction.mockImplementation(
 vi.mock('@concert-crawl/db', () => ({
   db: mockDb,
   inviteCodes: {},
+  inviteCodeRedemptions: REDEMPTIONS,
   giftedComps: { userId: 'gifted_comps.user_id' },
 }));
 
@@ -82,6 +98,8 @@ vi.mock('drizzle-orm', () => ({
   isNull: vi.fn(),
   or: vi.fn(),
   gt: vi.fn(),
+  lt: vi.fn(),
+  sql: vi.fn(() => ({})),
 }));
 
 import { createApp } from '../../app.js';
@@ -199,7 +217,12 @@ describe('POST /v1/auth/redeem-code', () => {
     mockSelectChain.where.mockReturnValueOnce(
       Object.assign(
         Promise.resolve([
-          { ...mockCode, usedBy: 'user_other', usedAt: new Date() },
+          {
+            ...mockCode,
+            usedBy: 'user_other',
+            usedAt: new Date(),
+            useCount: 1,
+          },
         ]),
         { limit: mockSelectChain.limit },
       ),

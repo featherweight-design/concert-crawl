@@ -5,6 +5,8 @@ const { mockInviteCode } = vi.hoisted(() => ({
     id: 'code-id-1',
     code: 'BETA-3C41-8BC0',
     usedBy: null,
+    maxUses: 1,
+    useCount: 0,
     usedAt: null,
     expiresAt: null,
     revokedAt: null,
@@ -57,7 +59,12 @@ describe('POST /v1/auth/validate-code', () => {
   it('returns 409 with error "used" for already-redeemed code', async () => {
     const { db } = await import('@concert-crawl/db');
     vi.mocked(db.select().from(inviteCodes).where).mockResolvedValueOnce([
-      { ...mockInviteCode, usedBy: 'user_abc', usedAt: new Date() },
+      {
+        ...mockInviteCode,
+        usedBy: 'user_abc',
+        usedAt: new Date(),
+        useCount: 1,
+      },
     ]);
     const res = await app.request('/v1/auth/validate-code', {
       method: 'POST',
