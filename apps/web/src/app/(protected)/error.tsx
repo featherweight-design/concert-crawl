@@ -1,32 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import * as Sentry from '@sentry/nextjs';
-import { useAuth, useClerk } from '@clerk/nextjs';
+import { useEffect } from 'react';
+import { useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
-import { ErrorReportForm } from '@/components/consumer/error-report';
+import { ErrorReport } from '@/components/consumer/error-report';
 
 const copy = CONSUMER_COPY.error;
-
-// A boundary can re-render with the same error (a retry that throws again
-// lands here once more), and each render must not file another Sentry event.
-const captured = new WeakMap<Error, string>();
-
-/**
- * The id the team can find this failure by. A server throw arrives with a
- * `digest` and was already reported by instrumentation's onRequestError, so
- * only a browser throw is captured here, once.
- */
-const eventIdFor = (error: Error & { digest?: string }): string | undefined => {
-  if (error.digest) return undefined;
-  const seen = captured.get(error);
-  if (seen !== undefined) return seen;
-  const eventId = Sentry.captureException(error);
-  captured.set(error, eventId);
-  return eventId;
-};
 
 interface ProtectedErrorProps {
   error: Error & { digest?: string };
@@ -37,13 +18,9 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
   const { signOut } = useClerk();
   const router = useRouter();
   const retry = useErrorBoundaryRetry(reset);
-  const { isSignedIn } = useAuth();
-  const [reporting, setReporting] = useState(false);
-  const [sentryEventId, setSentryEventId] = useState<string | undefined>();
 
   useEffect(() => {
     console.error('[app error]', error);
-    setSentryEventId(eventIdFor(error));
   }, [error]);
 
   function handleSignOut() {
@@ -145,31 +122,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
           {copy.signOutButton}
         </button>
       </div>
-      {isSignedIn === true && (
-        <button
-          type="button"
-          onClick={() => setReporting(true)}
-          style={{
-            minHeight: 44,
-            padding: '0 8px',
-            border: 'none',
-            background: 'none',
-            color: 'var(--fg-muted)',
-            fontFamily: 'var(--font-ui)',
-            fontSize: 13,
-            textDecoration: 'underline',
-            cursor: 'pointer',
-          }}
-        >
-          {copy.reportLink}
-        </button>
-      )}
-      <ErrorReportForm
-        open={reporting}
-        onClose={() => setReporting(false)}
-        digest={error.digest}
-        sentryEventId={sentryEventId}
-      />
+      <ErrorReport error={error} />
     </div>
   );
 }

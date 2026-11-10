@@ -12,6 +12,10 @@ vi.mock('next/navigation', () => ({
 import CrewJoinError from './error';
 import { CREWS_COPY } from '@/components/consumer/crews';
 
+// The boundary's report link reads the session; a signed-out visitor sees none.
+vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({ isSignedIn: false }) }));
+vi.mock('@sentry/nextjs', () => ({ captureException: () => 'evt' }));
+
 afterEach(cleanup);
 beforeEach(() => {
   refresh.mockReset();

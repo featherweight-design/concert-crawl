@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { EmptyState } from '@/components/consumer/empty-state';
 import { CREWS_COPY } from '@/components/consumer/crews';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
+import { ErrorReport } from '@/components/consumer/error-report';
 
 export default function CrewError({
   error,
@@ -46,6 +47,7 @@ export default function CrewError({
       >
         {CREWS_COPY.net.retry}
       </button>
+      <ErrorReport error={error} />
     </div>
   );
 }

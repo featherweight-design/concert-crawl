@@ -11,11 +11,13 @@ import { redactInviteTokens } from '@/lib/sentry-redact';
 export const reportPage = (pathname: string): string =>
   redactInviteTokens(pathname.split(/[?#]/)[0] ?? '').slice(0, 2048);
 
+// iOS browsers carry Safari's engine token plus their own (CriOS, FxiOS,
+// EdgiOS), so theirs is matched first. Brave sends a plain Chrome agent and
+// reads as Chrome; there is nothing in it to tell them apart.
 const BROWSERS: readonly [RegExp, string][] = [
-  [/Edg\//, 'Edge'],
-  [/Brave/, 'Brave'],
-  [/Firefox\//, 'Firefox'],
-  [/Chrome\//, 'Chrome'],
+  [/Edg\/|EdgiOS\//, 'Edge'],
+  [/Firefox\/|FxiOS\//, 'Firefox'],
+  [/Chrome\/|CriOS\//, 'Chrome'],
   [/Safari\//, 'Safari'],
 ];
 
