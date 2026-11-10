@@ -324,12 +324,6 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
-    id: 'admin-founder-window',
-    path: '/admin/founder-window',
-    tags: ['admin'],
-    auth: 'admin',
-  },
-  {
     id: 'admin-users',
     path: '/admin/users',
     tags: ['admin'],

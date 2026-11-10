@@ -21,13 +21,11 @@ const BETA_GRANTED_BY = 'system:invite-code';
 /**
  * Premium for the beta cohort, granted when the code is claimed.
  *
- * Without it a new tester derives `free`: the card-less trial is seeded only
- * for accounts created AFTER `founder_window.opensAt`, which is NULL until
- * launch day, so nobody redeeming a code today is trial-eligible. That left
- * every invited tester locked out of the four Premium features they were
- * invited to test — following, alerts, price-drop alerts and Spotify sync —
- * and it is the shape the monetization spec already assumes, which describes
- * the pre-cutover cohort as "gifted Premium outright" (apps/api/src/lib/trial.ts).
+ * Without it a new tester derives `free`: nothing seeds a trial (the
+ * card-less trial was removed on 2026-11-10, going free). That would leave
+ * every invited tester locked out of the Premium features they were invited
+ * to test, and it is the shape the monetization spec already assumed, which
+ * describes the pre-cutover cohort as "gifted Premium outright".
  *
  * NULL `expiresAt` is lifetime, which is what the schema calls the beta
  * cohort's shape. The daily gift job only scans rows with a finite expiry, so

@@ -99,9 +99,8 @@ describe('POST /v1/auth/redeem-code — the beta comp', () => {
     expect(comp!.expiresAt).toBeNull();
     expect(comp!.revokedAt).toBeNull();
 
-    // The point of the grant: without it this reads `free`, because the
-    // card-less trial is seeded only for accounts created after the founder
-    // window opens and that instant is NULL until launch day.
+    // The point of the grant: without it this reads `free`, because nothing
+    // seeds a trial.
     const { planState } = await loadPlanContext(USER_ID, undefined);
     expect(planState.plan).toBe('gifted');
   });

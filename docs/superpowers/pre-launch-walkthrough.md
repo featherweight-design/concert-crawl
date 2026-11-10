@@ -103,8 +103,7 @@ states, tiers, background systems and edge cases a straight walk will not reach.
 3. **Do not smoke-test the Vercel WAF `block-scanner-paths` rule.** Tripping it locks your own IP
    out for 15 minutes.
 
-**One-way actions, flagged where they appear:** the founder-window cutover button, real card
-charges, and account deletion. Do the destructive ones last, on a throwaway account.
+**One-way actions, flagged where they appear:** real card charges and account deletion. Do the destructive ones last, on a throwaway account.
 
 ---
 
@@ -261,15 +260,12 @@ Mobile and desktop are separate components. Walk both.
 - [ ] Scarcity rail
 - [ ] Founder claim takeover
 - [ ] Checkout panel, SCA notice region, legal microcopy
-- [ ] Card-less trial start
 - [ ] Gifted thank-you surface
 - [ ] Failure surface — **staging only, Stripe in test mode**, using a decline test card. Test
       cards do nothing in live mode, and the live alternative is a real declined charge.
 - [ ] Stripe portal out and back
 - [ ] Multi-tier: mixed-tier card, pending stack, alternate row, add-tier success
 - [ ] Lifecycle nudges: day-13 banner, past-due banner, trial-ended takeover
-- [ ] ⚠️ **The founder-window cutover button is one-way and unrepairable.** Do not press it as
-      part of a test pass.
 
 ## 12. Tier and flag matrix
 
@@ -307,7 +303,6 @@ different tier thresholds — check both.)
 - [ ] Users list, user detail
 - [ ] Feedback
 - [ ] Feature flags
-- [ ] Founder window
 - [ ] Invite codes — generate, redeem, exhaust
 - [ ] Settings / cost panel
 - [ ] Admin error boundary
