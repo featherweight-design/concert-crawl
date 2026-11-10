@@ -224,6 +224,14 @@ export const ADMIN_COPY = {
           label: 'Timeout',
           body: 'Request did not complete in time. Often a JavaScript-heavy page that never goes network-idle. If it fetches with a browser and has no Wait selector, set its Wait until to Load on its settings page.',
         },
+        llm_quota: {
+          label: 'LLM usage limit (account-wide)',
+          body: 'The LLM account hit its spend or usage limit, so every LLM-extracted venue fails until it resets or the limit is raised. Nothing is wrong with this venue, and the failure never counts toward its pause.',
+        },
+        llm_rate_limit: {
+          label: 'LLM rate limit or overload (account-wide)',
+          body: "The LLM API refused the request after its own retries: the account's rate limit, or Anthropic's capacity. It clears on its own. Nothing is wrong with this venue, and the failure never counts toward its pause.",
+        },
         unknown: {
           label: 'Unclassified failure',
           body: "The error doesn't match a known pattern. Open the raw response and inspect manually.",
@@ -243,6 +251,9 @@ export const ADMIN_COPY = {
         rate_limit: [],
         parse_failure: [],
         timeout: [],
+        // Account-wide: there is no venue-level fix to stage.
+        llm_quota: [],
+        llm_rate_limit: [],
         // An unclassified failure records no block, so there is no crawl to
         // leave off; errorReasons.unknown already says to inspect it.
         unknown: [],

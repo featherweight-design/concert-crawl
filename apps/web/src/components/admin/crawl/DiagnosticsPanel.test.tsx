@@ -48,6 +48,17 @@ describe('DiagnosticsPanel', () => {
     expect(screen.queryByText(COPY.optionsLabel)).toBeNull();
   });
 
+  it('reads an account-wide LLM refusal as the account, with no venue fix', () => {
+    renderPanel({
+      errorMessage:
+        'RateLimitError: 429 {"type":"error","error":{"type":"rate_limit_error","message":"rate limit"}}',
+    });
+    expect(
+      screen.getByText(COPY.errorReasons.llm_rate_limit.body),
+    ).toBeTruthy();
+    expect(screen.queryByText(COPY.optionsLabel)).toBeNull();
+  });
+
   it('offers no staged options for a timed-out run', () => {
     renderPanel({ errorMessage: 'TimeoutError: page.goto: Timeout 60000ms' });
     expect(screen.queryByText(COPY.optionsLabel)).toBeNull();
