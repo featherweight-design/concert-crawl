@@ -52,7 +52,7 @@ describe('auto-match-ambiguous integration', () => {
   const read = async (id: string) =>
     (await testDb.select().from(artists).where(eq(artists.id, id)))[0];
 
-  it('matches the top candidate, marks it, clears the photo and audits it', async () => {
+  it('matches the top candidate, marks it, takes its photo and audits it', async () => {
     const id = await seedAmbiguous('tori-rose', {
       matchAttempts: MATCH_ATTEMPT_LIMIT,
     });
@@ -65,7 +65,7 @@ describe('auto-match-ambiguous integration', () => {
     expect(row?.spotifyArtistId).toBe('top');
     expect(row?.autoMatchedAt).toBeInstanceOf(Date);
     expect(row?.matchAttempts).toBe(0);
-    expect(row?.photoUrl).toBeNull();
+    expect(row?.photoUrl).toBe('https://i/top.jpg');
     const audits = await testDb.select().from(auditLog);
     expect(audits).toHaveLength(1);
     expect(audits[0]).toMatchObject({

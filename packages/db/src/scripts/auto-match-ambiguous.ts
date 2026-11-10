@@ -8,8 +8,8 @@
  * that exhausted them says the name is shared, not that Spotify's top hit is
  * wrong, and the ruling accepts that risk because the pick is marked.
  *
- * A pick writes what the admin picker writes (`PATCH /v1/admin/artists/:id`)
- * plus `autoMatchedAt`, and one `audit_log` row per artist so a bad pick can be
+ * A pick writes what the match job writes for one (the chosen act's photo,
+ * `autoMatchedAt`), and one `audit_log` row per artist so a bad pick can be
  * traced to the pass that made it. The write is guarded on the row still being
  * `ambiguous`, so a human answer given mid-run wins, and a re-run is a no-op.
  */
@@ -38,6 +38,7 @@ export interface AutoMatchResult {
     name: string;
     spotifyArtistId: string;
     spotifyName: string;
+    photoUrl: string | null;
   }[];
 }
 
@@ -83,6 +84,7 @@ export async function autoMatchAmbiguousArtists(
       name: row.name,
       spotifyArtistId: verdict.picked.id,
       spotifyName: verdict.picked.name,
+      photoUrl: verdict.picked.imageUrl,
     });
   }
 
@@ -99,9 +101,10 @@ export async function autoMatchAmbiguousArtists(
             matchConfidence: null,
             matchCheckedAt: now,
             matchAttempts: 0,
-            // Cleared so the photo job fetches the chosen act's own.
-            photoUrl: null,
-            photoFetchedAt: null,
+            // The pick always has a photo; nothing else would fetch one for a
+            // matched row with none.
+            photoUrl: pick.photoUrl,
+            photoFetchedAt: now,
             autoMatchedAt: now,
             updatedAt: now,
           })

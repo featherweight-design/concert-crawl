@@ -50,7 +50,11 @@
 import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
 import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm';
-import { artists, db } from '@concert-crawl/db';
+import { artists, auditLog, db } from '@concert-crawl/db';
+import {
+  AUTO_MATCH_ACTOR,
+  AUTO_MATCH_AUDIT_ACTION,
+} from '@concert-crawl/db/scripts/auto-match-ambiguous';
 import { pickBestEffortCandidate } from '@concert-crawl/types';
 import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js';
 import { matchArtist } from '../lib/artist-match.js';
@@ -168,6 +172,9 @@ export const runMatchArtists = async (
       name: artists.name,
       canonicalName: artists.canonicalName,
       matchStatus: artists.matchStatus,
+      spotifyArtistId: artists.spotifyArtistId,
+      hidden: artists.hidden,
+      autoMatchedAt: artists.autoMatchedAt,
     })
     .from(artists)
     .where(
@@ -225,9 +232,26 @@ export const runMatchArtists = async (
         // snapshot is still written: it means "what the last search returned",
         // and holding a matched row's old list back would be the one exception
         // the picker has no way to know about.
+        //
+        // An auto-matched row lands here on every refresh, because its name is
+        // ambiguous by definition. Its photo is refreshed from the same pick,
+        // and its refresh clock always advances, or it would be re-searched
+        // every night for good.
+        const repick =
+          row.autoMatchedAt === null
+            ? null
+            : pickBestEffortCandidate(result.candidates, row);
+        const samePick =
+          repick !== null &&
+          'picked' in repick &&
+          repick.picked.id === row.spotifyArtistId;
         await db
           .update(artists)
           .set({
+            ...(samePick ? { photoUrl: repick.picked.imageUrl } : {}),
+            ...(row.autoMatchedAt === null
+              ? {}
+              : { photoFetchedAt: checkedAt }),
             matchCheckedAt: checkedAt,
             spotifyCandidates: result.candidates,
             spotifyCandidatesFetchedAt: checkedAt,
@@ -267,10 +291,10 @@ export const runMatchArtists = async (
       // Ambiguous is not the end of the road: the best-effort rule takes
       // Spotify's top result when it is plainly the act, marked so admin can
       // find and correct it (plan 2026-11-10-ambiguous-artist-auto-match).
-      if (result.status === 'ambiguous') {
+      if (result.status === 'ambiguous' && !row.hidden) {
         const verdict = pickBestEffortCandidate(result.candidates, row);
         if ('picked' in verdict) {
-          await db
+          const picked = await db
             .update(artists)
             .set({
               matchStatus: 'matched',
@@ -285,8 +309,26 @@ export const runMatchArtists = async (
               spotifyCandidatesFetchedAt: checkedAt,
               updatedAt: checkedAt,
             })
-            .where(eq(artists.id, row.id));
-          summary.autoMatched += 1;
+            // A human answer given while Spotify was searching wins.
+            .where(
+              and(
+                eq(artists.id, row.id),
+                eq(artists.matchStatus, row.matchStatus),
+              ),
+            )
+            .returning({ id: artists.id });
+          if (picked.length > 0) {
+            await db.insert(auditLog).values({
+              actorId: AUTO_MATCH_ACTOR,
+              action: AUTO_MATCH_AUDIT_ACTION,
+              targetId: row.id,
+              metadata: {
+                spotifyArtistId: verdict.picked.id,
+                rule: 'top-exact-with-photo',
+              },
+            });
+            summary.autoMatched += 1;
+          }
           continue;
         }
       }

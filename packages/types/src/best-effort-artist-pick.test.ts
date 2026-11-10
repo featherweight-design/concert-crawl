@@ -37,6 +37,15 @@ describe('pickBestEffortCandidate', () => {
     ).toEqual({ declined: 'top-not-exact' });
   });
 
+  it('declines a top result whose name only starts with the act', () => {
+    expect(
+      pickBestEffortCandidate([candidate('Pearl & The Oysters')], {
+        name: 'Pearl',
+        canonicalName: 'pearl',
+      }),
+    ).toEqual({ declined: 'top-not-exact' });
+  });
+
   it('declines a top result with no photo', () => {
     expect(
       pickBestEffortCandidate([candidate('Krugah', null)], {

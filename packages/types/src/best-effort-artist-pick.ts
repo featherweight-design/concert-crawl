@@ -1,4 +1,4 @@
-import { canonicalizeArtist, normalizeArtistName } from './canonical-artist.js';
+import { normalizeArtistName } from './canonical-artist.js';
 
 /** The fields of a Spotify candidate snapshot the rule reads. */
 export interface BestEffortCandidate {
@@ -39,7 +39,9 @@ export function pickBestEffortCandidate<C extends BestEffortCandidate>(
   if (normalizeArtistName(row.name).trim() !== row.canonicalName) {
     return { declined: 'not-a-whole-act' };
   }
-  if (canonicalizeArtist(top.name) !== row.canonicalName) {
+  // The whole name, folded but never cut at a separator: `Pearl & The
+  // Oysters` is a different act from `Pearl`.
+  if (normalizeArtistName(top.name).trim() !== row.canonicalName) {
     return { declined: 'top-not-exact' };
   }
   if (top.imageUrl === null || top.imageUrl === '') {
