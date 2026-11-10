@@ -2323,7 +2323,7 @@ describe('crawlVenue — debug HTML capture', () => {
   });
 });
 
-describe('crawlVenue — account-wide LLM quota', () => {
+describe('crawlVenue — account-wide LLM refusals', () => {
   // The in-memory update() builder Object.assigns the set() payload verbatim
   // and drizzle-orm is not mocked, so a real three-strikes update leaves a
   // Drizzle SQL object in consecutiveFailures. "Still the number 2" is
@@ -2344,9 +2344,15 @@ describe('crawlVenue — account-wide LLM quota', () => {
   const TIER_CAP =
     'Error: 429 {"error":{"type":"rate_limit_error","message":"You have reached your API usage limits.","details":{"error_code":"enforced_spend_limit_reached"}}}';
 
+  // An ordinary per-minute rate limit, as the SDK throws it once its own
+  // retries are spent: transient, but the organization's, not the venue's.
+  const RATE_LIMIT =
+    'RateLimitError: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
+
   it.each([
     ['spend limit', QUOTA],
     ['tier spend cap', TIER_CAP],
+    ['rate limit', RATE_LIMIT],
   ])(
     'records a %s as failed without touching the three-strikes counter',
     async (_label, message) => {

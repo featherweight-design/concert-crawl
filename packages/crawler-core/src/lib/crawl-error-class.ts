@@ -2,7 +2,7 @@
 // the same for one cause however many venues it hits. Any code asking "is this
 // the same failure?" should ask it here, so the answers never drift apart.
 
-export type CrawlErrorKind = 'llm_quota' | 'other';
+export type CrawlErrorKind = 'llm_quota' | 'llm_rate_limit' | 'other';
 
 export interface CrawlErrorClass {
   kind: CrawlErrorKind;
@@ -14,13 +14,20 @@ export interface CrawlErrorClass {
 // it. None says anything about the venue: every LLM-extracted venue fails
 // identically until the account recovers (2026-09-28: 8 of 20). The spend
 // limits (org or workspace, a 400) and the tier's monthly spend cap (a 429
-// carrying `enforced_spend_limit_reached`) are all the same class. An ordinary
-// rate-limit 429 is not: it is transient, so it stays an ordinary failure.
+// carrying `enforced_spend_limit_reached`) are all the same class.
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
   /reached your (specified (workspace )?)?API usage limits/i,
   /enforced_spend_limit_reached/i,
   /credit balance is too low/i,
 ];
+
+// An ordinary rate-limit 429 is transient rather than a spend limit, but it is
+// just as account-wide: the limit is the organization's, shared with every
+// other app on the account, and the SDK has already retried it (twice, with
+// backoff) before it reaches the crawl. It keeps its own class so Sentry and
+// the run alert name the right remedy. Matched on the API's error type, never
+// on a bare 429: a venue's own 429 is a block and must stay one.
+const LLM_RATE_LIMIT_PATTERN = /"type"\s*:\s*"rate_limit_error"/;
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 const MAX_KEY_LENGTH = 160;
@@ -41,9 +48,20 @@ export function normalizeErrorMessage(message: string): string {
     .slice(0, MAX_KEY_LENGTH);
 }
 
+/**
+ * True when the failure belongs to the LLM account rather than the venue, so it
+ * must not count toward the venue's three strikes.
+ */
+export function isAccountWideKind(kind: CrawlErrorKind): boolean {
+  return kind === 'llm_quota' || kind === 'llm_rate_limit';
+}
+
 export function classifyCrawlError(message: string): CrawlErrorClass {
   if (LLM_QUOTA_PATTERNS.some((pattern) => pattern.test(message))) {
     return { kind: 'llm_quota', key: 'llm_quota' };
+  }
+  if (LLM_RATE_LIMIT_PATTERN.test(message)) {
+    return { kind: 'llm_rate_limit', key: 'llm_rate_limit' };
   }
   return { kind: 'other', key: normalizeErrorMessage(message) };
 }

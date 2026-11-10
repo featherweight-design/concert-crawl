@@ -35,7 +35,10 @@ import { RobotsDisallowedError } from './lib/robots-fetch.js';
 import { extractJsonLd } from './lib/extractors/json-ld.js';
 import { extractTicketure } from './lib/extractors/ticketure.js';
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js';
-import { classifyCrawlError } from './lib/crawl-error-class.js';
+import {
+  classifyCrawlError,
+  isAccountWideKind,
+} from './lib/crawl-error-class.js';
 import {
   deriveArtists,
   mergeObservedSupporting,
@@ -1829,7 +1832,8 @@ export async function crawlVenue(
       });
     }
 
-    // An account-wide LLM refusal (usage limit, exhausted credit) says nothing
+    // An account-wide LLM refusal (usage limit, exhausted credit, the org's
+    // rate limit once the SDK's retries are spent) says nothing
     // about this venue: every LLM venue fails identically until the account
     // recovers. Counting it toward the three strikes would pause venues that
     // were never broken — on 2026-09-28 it would have deactivated eight, ~15
@@ -1839,9 +1843,11 @@ export async function crawlVenue(
     // several venues hit it in the daily run — the run-level alert
     // (lib/run-health.ts). A lone quota failure on a trigger-queued crawl gets
     // the Sentry event only.
-    const isAccountQuota = classifyCrawlError(String(err)).kind === 'llm_quota';
+    const isAccountWide = isAccountWideKind(
+      classifyCrawlError(String(err)).kind,
+    );
 
-    if (!isAccountQuota) {
+    if (!isAccountWide) {
       const isHttpBlocked =
         err instanceof CrawlFetchError &&
         (err.httpStatus === 403 || err.httpStatus === 429);

@@ -133,6 +133,17 @@ describe('describeDegradation', () => {
     expect(line).toContain('account-wide');
     expect(line).toContain('Hi-Dive, Red Rocks');
   });
+
+  it('names the rate limit, not the usage limit, for an llm_rate_limit cause', () => {
+    const line = describeDegradation({
+      ...QUOTA_CAUSE,
+      errorKey: 'llm_rate_limit',
+      errorKind: 'llm_rate_limit',
+    });
+    expect(line).toContain('rate limit');
+    expect(line).not.toContain('usage limit');
+    expect(line).toContain('account-wide');
+  });
 });
 
 describe('runHealthFingerprints', () => {
