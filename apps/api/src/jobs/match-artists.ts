@@ -51,6 +51,7 @@ import { pathToFileURL } from 'node:url';
 import * as Sentry from '@sentry/hono/node';
 import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm';
 import { artists, db } from '@concert-crawl/db';
+import { pickBestEffortCandidate } from '@concert-crawl/types';
 import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js';
 import { matchArtist } from '../lib/artist-match.js';
 import { apiLogger } from '../lib/logger.js';
@@ -101,6 +102,8 @@ export interface MatchArtistsSummary {
   considered: number;
   matched: number;
   ambiguous: number;
+  /** Ambiguous verdicts the best-effort rule resolved; counted apart from `matched`. */
+  autoMatched: number;
   noMatch: number;
   photosRefreshed: number;
   failures: number;
@@ -126,6 +129,7 @@ export const runMatchArtists = async (
     considered: 0,
     matched: 0,
     ambiguous: 0,
+    autoMatched: 0,
     noMatch: 0,
     photosRefreshed: 0,
     failures: 0,
@@ -245,6 +249,8 @@ export const runMatchArtists = async (
             photoFetchedAt: result.photoUrl === null ? null : checkedAt,
             matchCheckedAt: checkedAt,
             matchAttempts: 0,
+            // An exact answer supersedes a best-effort one.
+            autoMatchedAt: null,
             spotifyCandidates: result.candidates,
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
@@ -256,6 +262,33 @@ export const runMatchArtists = async (
           summary.matched += 1;
         }
         continue;
+      }
+
+      // Ambiguous is not the end of the road: the best-effort rule takes
+      // Spotify's top result when it is plainly the act, marked so admin can
+      // find and correct it (plan 2026-11-10-ambiguous-artist-auto-match).
+      if (result.status === 'ambiguous') {
+        const verdict = pickBestEffortCandidate(result.candidates, row);
+        if ('picked' in verdict) {
+          await db
+            .update(artists)
+            .set({
+              matchStatus: 'matched',
+              spotifyArtistId: verdict.picked.id,
+              matchConfidence: null,
+              photoUrl: verdict.picked.imageUrl,
+              photoFetchedAt: checkedAt,
+              matchCheckedAt: checkedAt,
+              matchAttempts: 0,
+              autoMatchedAt: checkedAt,
+              spotifyCandidates: result.candidates,
+              spotifyCandidatesFetchedAt: checkedAt,
+              updatedAt: checkedAt,
+            })
+            .where(eq(artists.id, row.id));
+          summary.autoMatched += 1;
+          continue;
+        }
       }
 
       await db

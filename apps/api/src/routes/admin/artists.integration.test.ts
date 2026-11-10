@@ -529,6 +529,28 @@ describe('admin artists routes', () => {
       expect(audits[0]?.targetId).toBe(id);
     });
 
+    it('clears the auto-match mark when an admin confirms the same pick', async () => {
+      const id = await seedArtist({
+        canonicalName: 'bahamas',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_bahamas',
+        autoMatchedAt: new Date('2026-11-10T00:00:00Z'),
+      });
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: 'sp_bahamas' }),
+      });
+
+      expect(res.status).toBe(200);
+      const [row] = await testDb
+        .select({ autoMatchedAt: artists.autoMatchedAt })
+        .from(artists)
+        .where(eq(artists.id, id));
+      expect(row?.autoMatchedAt).toBeNull();
+    });
+
     it('demotes to no_match when the id is cleared', async () => {
       const id = await seedArtist({
         canonicalName: 'nirvana',

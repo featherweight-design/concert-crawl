@@ -30,6 +30,10 @@
       "import": "./dist/scripts/repair-artist-names.js",
       "types": "./dist/scripts/repair-artist-names.d.ts"
     },
+    "./scripts/auto-match-ambiguous": {
+      "import": "./dist/scripts/auto-match-ambiguous.js",
+      "types": "./dist/scripts/auto-match-ambiguous.d.ts"
+    },
     "./scripts/musicbrainz-disambiguate": {
       "import": "./dist/scripts/musicbrainz-disambiguate.js",
       "types": "./dist/scripts/musicbrainz-disambiguate.d.ts"
@@ -49,6 +53,7 @@
     "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts",
     "db:prune-artists": "tsx src/scripts/run-prune-artists.ts",
     "db:repair-artist-names": "tsx src/scripts/run-repair-artist-names.ts",
+    "db:auto-match-ambiguous": "tsx src/scripts/run-auto-match-ambiguous.ts",
     "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts",
     "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts"
   },

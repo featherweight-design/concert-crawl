@@ -645,6 +645,13 @@
       "when": 1793404800000,
       "tag": "0091_notification_dedupe_key",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1793491200000,
+      "tag": "0092_artist_auto_matched_at",
+      "breakpoints": true
     }
   ]
 }

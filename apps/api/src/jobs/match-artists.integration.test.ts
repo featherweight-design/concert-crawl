@@ -49,6 +49,61 @@ describe('runMatchArtists', () => {
     await testDb.delete(artists);
   });
 
+  it("auto-matches Spotify's top result when two photographed namesakes tie", async () => {
+    const id = await seedArtist({ name: 'Bahamas', canonicalName: 'bahamas' });
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_bahamas_top',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/top' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+        {
+          id: 'sp_bahamas_other',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/other' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    });
+
+    expect(summary).toMatchObject({ autoMatched: 1, ambiguous: 0, matched: 0 });
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('matched');
+    expect(row?.spotifyArtistId).toBe('sp_bahamas_top');
+    expect(row?.photoUrl).toBe('https://i.scdn.co/image/top');
+    expect(row?.autoMatchedAt).toEqual(NOW);
+    expect(row?.matchConfidence).toBeNull();
+  });
+
+  it('clears the auto-match mark when an exact answer supersedes it', async () => {
+    const id = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'unmatched',
+      autoMatchedAt: new Date('2026-07-01T00:00:00Z'),
+    });
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_khru',
+          name: 'Khruangbin',
+          images: [{ url: 'https://i.scdn.co/image/khru' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    });
+
+    expect((await readArtist(id))?.autoMatchedAt).toBeNull();
+  });
+
   it('no-ops when the app-token client is unavailable (credentials unset)', async () => {
     const id = await seedArtist({ canonicalName: 'khruangbin' });
 
