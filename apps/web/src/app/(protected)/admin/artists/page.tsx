@@ -33,7 +33,7 @@ type MatchStatus =
  * answered — but it is a queue the admin filters by, so the two share a type
  * here and nowhere else.
  */
-type QueueFilter = MatchStatus | 'exhausted';
+type QueueFilter = MatchStatus | 'exhausted' | 'auto_matched';
 
 interface AdminArtist {
   id: string;
@@ -45,6 +45,8 @@ interface AdminArtist {
   photoUrl: string | null;
   matchCheckedAt: string | null;
   hidden: boolean;
+  /** Set while the match is the best-effort rule's, until a human confirms it. */
+  autoMatchedAt: string | null;
   isExhausted: boolean;
 }
 
@@ -63,6 +65,7 @@ type PatchedArtist = Omit<AdminArtist, 'isExhausted'>;
 
 const STATUS_CHIPS: QueueFilter[] = [
   'ambiguous',
+  'auto_matched',
   'unmatched',
   'no_match',
   'matched',
@@ -72,7 +75,11 @@ const STATUS_CHIPS: QueueFilter[] = [
 
 /** The chip a row is listed under, which outranks its match status. */
 const bucketOf = (row: AdminArtist): QueueFilter =>
-  row.isExhausted ? 'exhausted' : row.matchStatus;
+  row.isExhausted
+    ? 'exhausted'
+    : row.matchStatus === 'matched' && row.autoMatchedAt !== null
+      ? 'auto_matched'
+      : row.matchStatus;
 
 const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
   ambiguous: 'warning',
@@ -110,6 +117,7 @@ const EMPTY_COUNTS: Record<QueueFilter, number> = {
   matched: 0,
   not_an_artist: 0,
   exhausted: 0,
+  auto_matched: 0,
 };
 
 export default function AdminArtistsPage() {
@@ -569,6 +577,13 @@ export default function AdminArtistsPage() {
                               {COPY.hiddenBadge}
                             </StatusBadge>
                           )}
+                          {/* The best-effort rule's guess, not a confirmed
+                            match: it stays marked until a human answers. */}
+                          {row.autoMatchedAt !== null && (
+                            <StatusBadge kind="warning">
+                              {COPY.autoBadge}
+                            </StatusBadge>
+                          )}
                         </div>
                       </TD>
                       {/* Read-only since #1345 gave every row a picker: an
@@ -603,6 +618,21 @@ export default function AdminArtistsPage() {
                           >
                             {COPY.clear}
                           </AdminButton>
+                          {/* Confirms the best-effort pick as it stands: the
+                            identity PATCH with the same id, which clears the
+                            mark and moves the row to Matched. */}
+                          {row.autoMatchedAt !== null &&
+                            row.spotifyArtistId !== null && (
+                              <AdminButton
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  void save(row, row.spotifyArtistId)
+                                }
+                              >
+                                {COPY.looksRight}
+                              </AdminButton>
+                            )}
                           {/* On every row, including `matched`: a matched row can
                             still be matched to the wrong artist, and this is
                             the only way to see the alternatives. */}

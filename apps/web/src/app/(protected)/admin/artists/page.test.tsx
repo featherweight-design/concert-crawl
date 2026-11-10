@@ -33,6 +33,7 @@ interface ListRow {
   photoUrl: string | null;
   matchCheckedAt: string | null;
   hidden: boolean;
+  autoMatchedAt: string | null;
   isExhausted: boolean;
 }
 
@@ -46,6 +47,7 @@ const row = (overrides: Partial<ListRow> = {}): ListRow => ({
   photoUrl: null,
   matchCheckedAt: null,
   hidden: false,
+  autoMatchedAt: null,
   isExhausted: false,
   ...overrides,
 });
@@ -57,6 +59,7 @@ const COUNTS = {
   matched: 9,
   not_an_artist: 0,
   exhausted: 2,
+  auto_matched: 4,
 };
 
 const json = (body: unknown) => ({ ok: true, json: async () => body });
@@ -132,6 +135,36 @@ describe('AdminArtistsPage', () => {
     // round trip. No GET means no blanking.
     expect(getCount()).toBe(getsAfterLoad);
     expect(screen.queryByText('Loading artists…')).toBeNull();
+  });
+
+  it('confirms an auto-matched row with its own pick and moves it to Matched', async () => {
+    const auto = row({
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_bahamas',
+      autoMatchedAt: '2026-11-10T00:00:00.000Z',
+    });
+    harness.list = [auto];
+    harness.patched = { ...auto, autoMatchedAt: null };
+    await renderLoaded();
+
+    const line = rowFor('Bingo Night');
+    expect(within(line).getByText('Auto')).toBeDefined();
+    fireEvent.click(within(line).getByRole('button', { name: 'Looks right' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Matched (10)' }),
+      ).toBeDefined(),
+    );
+    expect(
+      screen.getByRole('button', { name: 'Auto-matched (3)' }),
+    ).toBeDefined();
+    const patch = fetchMock.mock.calls.find(
+      ([, init]) => init?.method === 'PATCH',
+    );
+    expect(JSON.parse(String(patch?.[1]?.body))).toEqual({
+      spotifyArtistId: 'sp_bahamas',
+    });
   });
 
   it('moves both counts when a row changes bucket', async () => {

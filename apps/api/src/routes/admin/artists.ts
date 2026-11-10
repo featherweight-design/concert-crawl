@@ -52,7 +52,14 @@ const matchStatusSchema = z.enum([
  * here because the admin surface is a set of queues, and "rows I no longer need
  * to see in the ambiguous queue" is one of them.
  */
-const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')]);
+const listFilterSchema = z.union([
+  matchStatusSchema,
+  z.literal('exhausted'),
+  // Matched by the best-effort rule and not yet confirmed by a human: the
+  // queue an admin checks them in. Disjoint from `matched`, as `exhausted` is
+  // from its statuses, so every row is listed and counted in one tab.
+  z.literal('auto_matched'),
+]);
 
 /**
  * Whether to hide artists with no show left to see. Defaults ON.
@@ -94,12 +101,19 @@ const listQuerySchema = z.object({
  * `exhausted` filter took any row at the cap, a leftover counter on a `matched`
  * row would list it in two queues while `/counts` credited it to one.
  */
+const isAutoMatchedExpr = (): SQL =>
+  sql`${eq(artists.matchStatus, 'matched')} and ${artists.autoMatchedAt} is not null`;
+
 const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
   status === 'exhausted'
     ? isExhaustedBucketExpr()
-    : isExhaustibleStatus(status)
-      ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
-      : eq(artists.matchStatus, status);
+    : status === 'auto_matched'
+      ? isAutoMatchedExpr()
+      : status === 'matched'
+        ? sql`${eq(artists.matchStatus, 'matched')} and ${artists.autoMatchedAt} is null`
+        : isExhaustibleStatus(status)
+          ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
+          : eq(artists.matchStatus, status);
 
 const artistIdSchema = z.object({ id: idSchema });
 
@@ -149,6 +163,7 @@ artistsAdminRouter.get(
         photoUrl: artists.photoUrl,
         matchCheckedAt: artists.matchCheckedAt,
         hidden: artists.hidden,
+        autoMatchedAt: artists.autoMatchedAt,
         // Which chip the row belongs to, which is not always its matchStatus.
         // The page keeps its counts honest by walking the single row that
         // changed, and it can only do that if it knows the bucket it came from.
@@ -205,6 +220,7 @@ artistsAdminRouter.get(
         matchStatus: artists.matchStatus,
         total: sql<number>`count(*)::int`,
         exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
+        autoMatched: sql<number>`count(*) filter (where ${isAutoMatchedExpr()})::int`,
       })
       .from(artists)
       .where(upcoming ? hasUpcomingShowExpr() : undefined)
@@ -217,13 +233,15 @@ artistsAdminRouter.get(
       no_match: 0,
       not_an_artist: 0,
       exhausted: 0,
+      auto_matched: 0,
     };
     for (const row of rows) {
       // The aggregate already applies the same status gate `statusFilter` does,
       // so a non-exhaustible status contributes 0 here and this subtraction is a
       // no-op for it.
       counts.exhausted += row.exhausted;
-      counts[row.matchStatus] += row.total - row.exhausted;
+      counts.auto_matched += row.autoMatched;
+      counts[row.matchStatus] += row.total - row.exhausted - row.autoMatched;
     }
 
     return ctx.json({ success: true, data: counts });
