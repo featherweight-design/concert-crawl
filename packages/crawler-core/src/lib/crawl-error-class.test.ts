@@ -23,6 +23,27 @@ describe('classifyCrawlError', () => {
     expect(classifyCrawlError(credit).kind).toBe('llm_quota');
   });
 
+  // Both verbatim from https://platform.claude.com/docs/en/api/rate-limits
+  // (2026-11-10). A workspace spend limit and the tier's monthly spend cap are
+  // as account-wide as the org limit: no venue caused them.
+  it('recognises the workspace spend-limit refusal', () => {
+    const workspace =
+      'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified workspace API usage limits. You will regain access on 2026-12-01 at 00:00 UTC."}}';
+    expect(classifyCrawlError(workspace).kind).toBe('llm_quota');
+  });
+
+  it('recognises the tier spend-cap 429 as quota, not a rate limit', () => {
+    const tierCap =
+      'Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"You have reached your API usage limits: your organization has crossed its monthly API usage threshold, set based on your organization\'s API tier. You will regain access on 2026-09-01 at 00:00 UTC.","details":{"error_code":"enforced_spend_limit_reached"}},"request_id":"req_018EeWyXxfu5pfWkrYcMdjWG"}';
+    expect(classifyCrawlError(tierCap).kind).toBe('llm_quota');
+  });
+
+  it('leaves an ordinary rate-limit 429 as a venue-level failure', () => {
+    const rateLimit =
+      'Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
+    expect(classifyCrawlError(rateLimit).kind).toBe('other');
+  });
+
   it('keys an unknown error on its normalized message', () => {
     expect(classifyCrawlError('TypeError: fetch failed')).toEqual({
       kind: 'other',

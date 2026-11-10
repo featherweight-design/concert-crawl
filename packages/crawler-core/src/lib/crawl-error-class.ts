@@ -10,11 +10,15 @@ export interface CrawlErrorClass {
   key: string;
 }
 
-// Anthropic's two account-level refusals, matched on their message text as the
-// API returns it. Neither says anything about the venue: every LLM-extracted
-// venue fails identically until the account recovers (2026-09-28: 8 of 20).
+// Anthropic's account-level refusals, matched on their text as the API returns
+// it. None says anything about the venue: every LLM-extracted venue fails
+// identically until the account recovers (2026-09-28: 8 of 20). The spend
+// limits (org or workspace, a 400) and the tier's monthly spend cap (a 429
+// carrying `enforced_spend_limit_reached`) are all the same class; an ordinary
+// rate-limit 429 is not, since it clears within the run.
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
-  /reached your specified API usage limits/i,
+  /reached your (specified (workspace )?)?API usage limits/i,
+  /enforced_spend_limit_reached/i,
   /credit balance is too low/i,
 ];
 
