@@ -197,6 +197,16 @@ crawlAdminRouter.post(
       );
     }
 
+    // A queued trigger on a paused venue would only write a skipped run, so
+    // say so now. The crawler pauses a venue itself at its third failure;
+    // resuming it is the recovery step.
+    if (venue.crawlPausedAt !== null) {
+      return ctx.json(
+        { success: false, error: 'Crawling is paused for this venue' },
+        409,
+      );
+    }
+
     const force = await parseForce(ctx);
     const inserted = await db
       .insert(crawlTriggers)

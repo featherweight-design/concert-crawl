@@ -58,6 +58,7 @@ const mockVenue = {
   active: true,
   verified: true,
   consecutiveFailures: 0,
+  crawlPausedAt: null,
   crawlDelayMs: 3000,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -295,6 +296,18 @@ describe('Admin crawl routes', () => {
         method: 'POST',
       });
       expect(res.status).toBe(400);
+    });
+
+    it("returns 409 when the venue's crawl is paused", async () => {
+      adminAuth();
+      const { db } = await import('@concert-crawl/db');
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { ...mockVenue, crawlPausedAt: new Date() },
+      ]);
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+      });
+      expect(res.status).toBe(409);
     });
 
     it('returns 202 with triggerId and queues crawl trigger for valid venue', async () => {

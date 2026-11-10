@@ -27,7 +27,7 @@ pnpm monorepo on Turborepo: `apps/web` (Next.js App Router, UI and admin), `apps
 
 - Check `robots.txt` before crawling; never override a disallow. User agent: `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)`.
 - Minimum 3-second delay between requests plus jitter, enforced per venue crawl in `fetchPage`, **not** per hostname. Do not restore a per-domain claim on `/bot` without building the coordination to back it.
-- Daily crawl at 3 AM MT. 3 consecutive failures pause the venue and notify admin; an account-wide LLM refusal is not a venue failure and does not count. A 403 or 429 flags the venue blocked immediately and notifies admin.
+- Daily crawl at 3 AM MT. 3 consecutive failures pause the crawl (`crawl_paused_at`; the venue stays published) and notify admin; an account-wide LLM refusal is not a venue failure and does not count. A 403 or 429 flags the venue blocked immediately and notifies admin.
 
 ## Git and PRs
 

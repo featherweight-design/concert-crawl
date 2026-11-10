@@ -432,7 +432,7 @@ export async function crawlVenue(
         robotsTxtBlocked: 'unchecked',
         eventsFound: 0,
         eventsInserted: 0,
-        errorMessage: 'Crawling paused by an admin; not crawled',
+        errorMessage: 'Crawling paused; not crawled',
         durationMs: Date.now() - startedAt,
       })
       .returning();
@@ -1867,7 +1867,7 @@ export async function crawlVenue(
         venue.consecutiveFailures >= 2; // becomes 3 after the increment below
       const isBlocked = isHttpBlocked || isTimeoutBlock;
 
-      // CLAUDE.md crawl rule: "3 consecutive failures → pause venue + notify
+      // CLAUDE.md crawl rule: "3 consecutive failures → pause the crawl + notify
       // admin". Use a SQL increment + CASE so the increment, the auto-pause
       // flip, and the threshold-derivation all serialize on the row UPDATE.
       // This is what gives the auto-pause + crawl-failure email exactly-once
@@ -1875,20 +1875,18 @@ export async function crawlVenue(
       // (the daily cron and the triggers cron CAN overlap on the same venue —
       // there's no per-venue lock above this layer). The crawl.failed
       // notification still inserts on every failure where newFailureCount >=
-      // 3 — that's intentional re-alerting; only the "venue auto-paused"
+      // 3 — that's intentional re-alerting; only the "crawl paused"
       // wording is gated to the === 3 transition.
       //
       // Block vs auto-pause are intentionally separate signals: HTTP blocks
       // (403/429) and TimeoutErrors set `blockedAt`, while non-block
-      // failures (schema errors, parse errors, etc.) auto-pause via
-      // `active = false`. Conflating them would prevent admins from
-      // manually queuing a recovery trigger on a blocked venue (the admin
-      // trigger endpoint rejects when !active), forcing an extra Admin UI
-      // un-pause step before retry. The CASE on `active` is therefore gated
-      // to the non-block branch, and an admin who manually re-activates a
-      // still-broken venue isn't fought by the crawler on the next failure
-      // (because newFailureCount === 4 doesn't satisfy the CASE). (#743,
-      // round-3 review on PR #746)
+      // failures (schema errors, parse errors, etc.) pause the crawl via
+      // `crawl_paused_at`. The auto-pause never sets `active = false`: that
+      // unpublishes the venue and its shows, and a broken crawl is no reason
+      // to hide shows already listed. The CASE is gated to the non-block
+      // branch, and an admin who resumes a still-broken venue isn't fought
+      // by the crawler on the next failure (newFailureCount === 4 doesn't
+      // satisfy the CASE). (#743, round-3 review on PR #746)
       const [updatedVenue] = await db
         .update(venues)
         .set({
@@ -1896,7 +1894,7 @@ export async function crawlVenue(
           ...(isBlocked
             ? { blockedAt: new Date() }
             : {
-                active: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN false ELSE ${venues.active} END`,
+                crawlPausedAt: sql`CASE WHEN ${venues.consecutiveFailures} + 1 = 3 THEN coalesce(${venues.crawlPausedAt}, now()) ELSE ${venues.crawlPausedAt} END`,
               }),
           updatedAt: new Date(),
         })
@@ -1904,13 +1902,13 @@ export async function crawlVenue(
         .returning();
 
       const newFailureCount = updatedVenue?.consecutiveFailures ?? 0;
-      // Auto-pause side-effects (active flip, email, "auto-paused" wording)
+      // Auto-pause side-effects (crawl pause, email, "crawl paused" wording)
       // align on a single gate: non-block 3rd consecutive failure only.
       const shouldAutoPause = !isBlocked && newFailureCount === 3;
 
       if (newFailureCount >= 3) {
         const notificationBody = shouldAutoPause
-          ? `${newFailureCount} consecutive failures for ${venue.name} — venue auto-paused`
+          ? `${newFailureCount} consecutive failures for ${venue.name} — crawl paused`
           : `${newFailureCount} consecutive failures for ${venue.name}`;
         // Include crawlRunId in metadata so the admin UI can surface an
         // alert badge on the specific failing row (see #804). A
