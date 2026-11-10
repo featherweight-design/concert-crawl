@@ -491,7 +491,7 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
     .values({ userId, grantedBy: 'user_test_admin' });
   await testDb.insert(emailSendLog).values({
     userId,
-    templateKey: 'welcome_paid',
+    templateKey: 'spotify_digest',
     dedupeKey: `dedupe_${nonce}`,
     status: 'sent',
   });

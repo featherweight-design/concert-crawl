@@ -168,7 +168,7 @@ describe('POST /v1/admin/notifications/test-email', () => {
     adminAuth();
     mockSendTestEmail.mockResolvedValueOnce({
       sent: true,
-      resendId: 'resend_welcome',
+      resendId: 'resend_digest',
     });
 
     const res = await createApp().request(
@@ -176,14 +176,14 @@ describe('POST /v1/admin/notifications/test-email', () => {
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ emailKey: 'welcome_paid' }),
+        body: JSON.stringify({ emailKey: 'spotify_digest' }),
       },
     );
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.data).toEqual({ sent: true, resendId: 'resend_welcome' });
-    expect(mockSendTestEmail).toHaveBeenCalledWith('welcome_paid');
+    expect(body.data).toEqual({ sent: true, resendId: 'resend_digest' });
+    expect(mockSendTestEmail).toHaveBeenCalledWith('spotify_digest');
     expect(mockSendAdminAlertEmail).not.toHaveBeenCalled();
   });
 
@@ -202,6 +202,24 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(res.status).toBe(400);
     expect(mockSendTestEmail).not.toHaveBeenCalled();
     expect(mockSendAdminAlertEmail).not.toHaveBeenCalled();
+  });
+
+  // Retired 2026-11-10 (go-free): the key stays in the db enum for old rows,
+  // but there is no template left to send.
+  it('rejects a retired template key with 400', async () => {
+    adminAuth();
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ emailKey: 'welcome_paid' }),
+      },
+    );
+
+    expect(res.status).toBe(400);
+    expect(mockSendTestEmail).not.toHaveBeenCalled();
   });
 });
 

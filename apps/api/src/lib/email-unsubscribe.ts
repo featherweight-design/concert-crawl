@@ -17,10 +17,9 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 // cause the silent involuntary churn it was written to prevent. A user who
 // wants no billing mail cancels the subscription, which stops it at source.
 //
-// 'product' IS here because winback.ts is a commercial message whose primary
-// purpose is selling a subscription. That needs a working opt-out regardless
-// of the relationship, and gifting-ending-notice and welcome-gifted share the
-// family.
+// 'product' covered win-back, gifting-ending-notice and welcome-gifted. Those
+// templates were retired 2026-11-10 (go-free) and nothing sends the family any
+// more, but it stays here so links in emails already delivered still verify.
 export const UNSUBSCRIBE_FAMILIES = ['digest', 'product'] as const;
 export type UnsubscribeFamily = (typeof UNSUBSCRIBE_FAMILIES)[number];
 

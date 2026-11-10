@@ -157,11 +157,11 @@ describe('sendTransactionalEmail', () => {
   const originalEnv = process.env;
 
   const sendParams = {
-    templateKey: 'welcome_paid',
+    templateKey: 'spotify_digest' as const,
     userId: 'user_1',
-    dedupeKey: 'sub:sub_123',
-    vars: { tier: 'premium' },
-  } as const;
+    dedupeKey: 'digest:2026-W45',
+    vars: { shows: [], tastePicks: [], unsubscribeUrl: null },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -253,9 +253,9 @@ describe('sendTransactionalEmail', () => {
 
     expect(mockInsertValues).toHaveBeenCalledOnce();
     expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
-      templateKey: 'welcome_paid',
+      templateKey: 'spotify_digest',
       userId: 'user_1',
-      dedupeKey: 'sub:sub_123',
+      dedupeKey: 'digest:2026-W45',
       status: 'suppressed',
     });
     // A pre-existing 'failed' claim flips to 'suppressed' on conflict.
@@ -264,42 +264,6 @@ describe('sendTransactionalEmail', () => {
       set: { status: 'suppressed' },
     });
     expect(mockSend).not.toHaveBeenCalled();
-  });
-
-  // #967. The gate lives in sendTransactionalEmail rather than at each call
-  // site, so a product template added later cannot ship without it.
-  const winbackParams = {
-    templateKey: 'winback',
-    userId: 'user_1',
-    dedupeKey: 'winback:2026-08',
-    vars: { tierName: 'Premium', unsubscribeUrl: null },
-  } as const;
-
-  it('suppresses a product-family send when the user opted out', async () => {
-    mockSelectLimit.mockResolvedValueOnce([{ enabled: false }]);
-
-    await expect(sendTransactionalEmail(winbackParams)).resolves.toBe(
-      'suppressed',
-    );
-
-    expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
-      templateKey: 'winback',
-      status: 'suppressed',
-    });
-    expect(mockSend).not.toHaveBeenCalled();
-  });
-
-  it('sends a product-family email when no preferences row exists', async () => {
-    mockSelectLimit.mockResolvedValueOnce([]);
-
-    await expect(sendTransactionalEmail(winbackParams)).resolves.toBe('sent');
-    expect(mockSend).toHaveBeenCalledOnce();
-  });
-
-  it('does not read the product preference for a billing template', async () => {
-    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent');
-    // One select only: the per-template kill switch.
-    expect(mockSelectLimit).toHaveBeenCalledOnce();
   });
 
   it('skips the send when the dedupe key is already consumed', async () => {
@@ -315,8 +279,8 @@ describe('sendTransactionalEmail', () => {
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent');
 
     expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
-      templateKey: 'welcome_paid',
-      dedupeKey: 'sub:sub_123',
+      templateKey: 'spotify_digest',
+      dedupeKey: 'digest:2026-W45',
       status: 'failed',
     });
     expect(mockSend).toHaveBeenCalledOnce();
