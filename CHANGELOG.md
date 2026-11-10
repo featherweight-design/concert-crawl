@@ -1,3 +1,11 @@
+## [1.308.3](https://github.com/featherweight-design/concert-crawl/compare/v1.308.2...v1.308.3) (2026-11-10)
+
+
+### Bug Fixes
+
+* **web:** bucket Watching rows on Denver's today, not the browser's ([26814e6](https://github.com/featherweight-design/concert-crawl/commit/26814e6d354ceb3950ee9b2bb441efeb192b45de))
+* **web:** count Denver days from Denver's today, not UTC's ([34f60e1](https://github.com/featherweight-design/concert-crawl/commit/34f60e143fc81f20a1ffeacd7772bc4469b872a9))
+
 ## [1.308.2](https://github.com/featherweight-design/concert-crawl/compare/v1.308.1...v1.308.2) (2026-11-10)
 
 
