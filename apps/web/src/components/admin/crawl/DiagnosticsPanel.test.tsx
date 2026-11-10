@@ -59,6 +59,22 @@ describe('DiagnosticsPanel', () => {
     expect(screen.queryByText(COPY.optionsLabel)).toBeNull();
   });
 
+  it('reads an LLM usage-limit refusal as account-wide', () => {
+    renderPanel({
+      errorMessage:
+        'Error: 400 {"error":{"message":"You have reached your specified API usage limits."}}',
+    });
+    expect(screen.getByText(COPY.errorReasons.llm_quota.body)).toBeTruthy();
+  });
+
+  it("keeps a venue's own 429 a venue rate limit, whatever its text", () => {
+    renderPanel({
+      httpStatusCode: 429,
+      errorMessage: '{"type":"rate_limit_error"}',
+    });
+    expect(screen.getByText(COPY.errorReasons.rate_limit.body)).toBeTruthy();
+  });
+
   it('offers no staged options for a timed-out run', () => {
     renderPanel({ errorMessage: 'TimeoutError: page.goto: Timeout 60000ms' });
     expect(screen.queryByText(COPY.optionsLabel)).toBeNull();

@@ -67,14 +67,16 @@ function getErrLabel(run: CrawlRunForDiagnostics): string {
 }
 
 function classifyError(run: CrawlRunForDiagnostics): ErrorClass {
-  // An account-wide LLM refusal comes first, read by the crawler's own
-  // classifier: it is the account's, not this venue's, so no venue fix applies.
+  // A status the venue itself answered with is the venue's, whatever the text
+  // says, as crawl.ts treats a fetch error.
+  if (run.httpStatusCode === 403 || run.httpStatusCode === 429) {
+    return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection';
+  }
+  // Then an account-wide LLM refusal, read by the crawler's own classifier: it
+  // is the account's, not this venue's, so no venue fix applies.
   if (run.errorMessage) {
     const kind = crawlErrorKind(run.errorMessage);
     if (kind !== 'other') return kind;
-  }
-  if (run.httpStatusCode === 403 || run.httpStatusCode === 429) {
-    return run.httpStatusCode === 429 ? 'rate_limit' : 'bot_detection';
   }
   if (run.errorMessage?.toLowerCase().includes('timeout')) return 'timeout';
   if (run.errorMessage?.toLowerCase().includes('parse')) return 'parse_failure';
