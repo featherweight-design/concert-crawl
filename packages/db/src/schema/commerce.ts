@@ -198,8 +198,8 @@ export const subscriptionEvents = pgTable(
 );
 
 // Webhook idempotency (spec §6): INSERT … ON CONFLICT DO NOTHING on the
-// Stripe event ID; handler runs only when the insert lands. Rows older than
-// 90 days are pruned by the daily billing job.
+// Stripe event ID; handler runs only when the insert lands. Nothing prunes
+// old rows since the daily billing job was deleted (2026-11-10).
 export const processedStripeEvents = pgTable('processed_stripe_events', {
   eventId: text('event_id').primaryKey(),
   type: text('type').notNull(),

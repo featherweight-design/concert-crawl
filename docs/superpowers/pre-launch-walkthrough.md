@@ -79,9 +79,8 @@ states, tiers, background systems and edge cases a straight walk will not reach.
   routes, render from genuinely different components per breakpoint — desktop passing tells you
   nothing about mobile.
 - Have the admin Feature Flags page open in a third tab; several sections below ask you to toggle.
-- **No billing cron exists in either environment** (#23): the staging one ran on Render, which was
-  retired on 2026-11-07. So the _scheduled_ billing checks in section 16 will not fire, and no
-  billing mail sends on its own in either environment.
+- **There is no billing cron** (#23): the daily billing job was deleted on 2026-11-10 (going
+  free), so no scheduled billing mail sends in either environment.
   Section 17 is unaffected: those 12 samples come from the Admin ▸ Settings test-email picker,
   which sends directly. Verified against the live Render API on 2026-09-19.
 - **Paid account states need staging.** There is no admin control that grants a tier, so supporter,
