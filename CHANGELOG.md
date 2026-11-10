@@ -1,3 +1,14 @@
+## [1.308.6](https://github.com/featherweight-design/concert-crawl/compare/v1.308.5...v1.308.6) (2026-11-10)
+
+
+### Bug Fixes
+
+* **artists:** name each co-headliner by its own billing ([c2980d1](https://github.com/featherweight-design/concert-crawl/commit/c2980d1f2c3546e7c133be198d6721bd0b4f5a81))
+* **artists:** never trade a cased artist name for a single-case billing ([3362113](https://github.com/featherweight-design/concert-crawl/commit/3362113ca0a04208ea4cdb9c0cd71943738276bc))
+* **artists:** pair accented co-headliners and scope the case guard to recases ([f9eea60](https://github.com/featherweight-design/concert-crawl/commit/f9eea6059384e5dd2a4ce08fa7adfb35a496f0de))
+* **artists:** rank cased spellings first and read repeated one-act bills ([8de38a0](https://github.com/featherweight-design/concert-crawl/commit/8de38a09358828da0f16ba6d2c2d3d94a7e48fa9))
+* **artists:** tie the SQL fold to the JS one and settle the repair ([3d4be64](https://github.com/featherweight-design/concert-crawl/commit/3d4be647a0c6c1d877ee61f2cd17a3b58c089a3f))
+
 ## [1.308.5](https://github.com/featherweight-design/concert-crawl/compare/v1.308.4...v1.308.5) (2026-11-10)
 
 
