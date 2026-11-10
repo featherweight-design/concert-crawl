@@ -1,3 +1,10 @@
+# [1.308.0](https://github.com/featherweight-design/concert-crawl/compare/v1.307.2...v1.308.0) (2026-11-10)
+
+
+### Features
+
+* **api:** run the notification prune as its own Vercel cron ([91350f3](https://github.com/featherweight-design/concert-crawl/commit/91350f34134ecfb77fb7c06593619dc1e407917d))
+
 ## [1.307.2](https://github.com/featherweight-design/concert-crawl/compare/v1.307.1...v1.307.2) (2026-11-10)
 
 
