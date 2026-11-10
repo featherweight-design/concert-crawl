@@ -244,6 +244,37 @@ describe('backfill-artists integration', () => {
       });
     });
 
+    it('keeps a one-act bill whole when the raw array repeats it', async () => {
+      const venue = await seedVenue({ slug: `ewf-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Earth, Wind & Fire',
+        canonicalArtist: 'earth, wind',
+        headliners: ['Earth, Wind & Fire', 'Earth, Wind & Fire'],
+        canonicalHeadliners: ['earth, wind'],
+      });
+
+      await backfillArtists(testDb);
+
+      expect((await listArtists())[0]?.name).toBe('Earth, Wind & Fire');
+    });
+
+    it('prefers a cased spelling over a shouted one for the same act', async () => {
+      const venue = await seedVenue({ slug: `cased-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'KOKOROKO & Nubiyan Twist',
+        canonicalArtist: 'kokoroko',
+        headliners: ['KOKOROKO', 'Kokoroko', 'Nubiyan Twist'],
+        canonicalHeadliners: ['kokoroko', 'nubiyan twist'],
+      });
+
+      await backfillArtists(testDb);
+
+      const rows = await listArtists();
+      expect(rows.find((row) => row.canonicalName === 'kokoroko')?.name).toBe(
+        'Kokoroko',
+      );
+    });
+
     it('pairs a co-headliner whose billing carries accents', async () => {
       const venue = await seedVenue({ slug: `accent-${Date.now()}` });
       await seedEvent(venue.id, {

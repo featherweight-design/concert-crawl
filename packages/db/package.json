@@ -22,6 +22,10 @@
       "import": "./dist/scripts/prune-artists.js",
       "types": "./dist/scripts/prune-artists.d.ts"
     },
+    "./scripts/artist-name-fold": {
+      "import": "./dist/scripts/artist-name-fold.js",
+      "types": "./dist/scripts/artist-name-fold.d.ts"
+    },
     "./scripts/repair-artist-names": {
       "import": "./dist/scripts/repair-artist-names.js",
       "types": "./dist/scripts/repair-artist-names.d.ts"
