@@ -194,6 +194,25 @@ describe('POST /v1/admin/venues/:id/fault-acknowledgements', () => {
     expect(await testDb.select().from(venueFaultAcknowledgements)).toEqual([]);
   });
 
+  it('rejects a bare account-wide class, which would never match', async () => {
+    setAuth('admin');
+    const venue = await seedVenue({ name: 'Summit', slug: 'summit' });
+
+    const bare = await acknowledge(venue.id, {
+      ...wentDarkAck,
+      condition: 'failed',
+      evidenceValue: 'llm_quota',
+    });
+    expect(bare.status).toBe(400);
+
+    const keyed = await acknowledge(venue.id, {
+      ...wentDarkAck,
+      condition: 'failed',
+      evidenceValue: 'llm_quota@2026-07-29T09:00:00.000Z',
+    });
+    expect(keyed.status).toBe(200);
+  });
+
   it('rejects an unknown condition', async () => {
     setAuth('admin');
     const venue = await seedVenue({ name: 'Summit', slug: 'summit' });
