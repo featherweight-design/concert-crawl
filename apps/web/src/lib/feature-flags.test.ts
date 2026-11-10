@@ -5,6 +5,9 @@ vi.mock('server-only', () => ({}));
 const get = vi.fn();
 vi.mock('@/lib/api', () => ({ publicApiClient: { get } }));
 
+const connection = vi.fn(async () => {});
+vi.mock('next/server', () => ({ connection }));
+
 const { getFeatureFlags, isFeatureEnabled } =
   await import('./feature-flags.js');
 
@@ -18,6 +21,24 @@ describe('server-side getFeatureFlags', () => {
   // torn down by hand or it stacks across tests and files.
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // Regression: production /crews served a build-time static 404 after the
+  // flag was turned on. Reading a flag must opt the route into dynamic
+  // rendering before anything else, or a gated page prerenders.
+  it('opts the route into dynamic rendering before reading the flags', async () => {
+    const order: string[] = [];
+    connection.mockImplementationOnce(async () => {
+      order.push('connection');
+    });
+    get.mockImplementationOnce(async () => {
+      order.push('fetch');
+      return { 'spotify-sync': false, crews: true, 'release-notes': true };
+    });
+
+    await isFeatureEnabled('crews');
+
+    expect(order).toEqual(['connection', 'fetch']);
   });
 
   it('returns the map the API gave it', async () => {

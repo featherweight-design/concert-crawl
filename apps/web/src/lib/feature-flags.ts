@@ -7,6 +7,8 @@ import {
   type FeatureFlagView,
 } from '@concert-crawl/entitlements';
 
+import { connection } from 'next/server';
+
 import { publicApiClient } from '@/lib/api';
 
 // apps/web has no zod dependency, so the boundary is narrowed with the same
@@ -20,6 +22,14 @@ function isFeatureFlagView(value: unknown): value is FeatureFlagView {
 }
 
 export const getFeatureFlags = async (): Promise<FeatureFlagView> => {
+  // A flag is a per-request answer, so reading one opts the route out of
+  // static prerendering. Without this a gated page with nothing dynamic BEFORE
+  // its check (crews: the check runs first, then auth and headers) prerenders
+  // at build time; a build with the flag off bakes a static 404, and every
+  // ISR re-render after the flip reaches auth(), throws DYNAMIC_SERVER_USAGE,
+  // and keeps serving the stale 404. Production /crews did exactly that
+  // (2026-11-10). Here rather than on each page, so no new gate can miss it.
+  await connection();
   try {
     // Without a directive Next.js caches a server-component fetch for the life
     // of the build, which would freeze the flag map and make a flip in the
