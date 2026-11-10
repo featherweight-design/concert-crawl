@@ -159,7 +159,7 @@ beforeEach(async () => {
 });
 
 describe('runArtistFanout — channel gating (#763 §10.1)', () => {
-  it('free tier gets auto-watch only; premium gets push + tray row', async () => {
+  it('free tier now gets push + tray row alongside auto-watch, like premium', async () => {
     const venueId = await seedVenue('Fillmore');
     const eventId = await seedEvent({
       venueId,
@@ -190,11 +190,12 @@ describe('runArtistFanout — channel gating (#763 §10.1)', () => {
       newEvents: 1,
       matchedPairs: 2,
       autoWatched: 1,
-      pushesClaimed: 1,
+      pushesClaimed: 2,
       failures: 0,
     });
 
-    // Free user: watching row, no push, no tray row.
+    // Free user: watching row, plus the push and tray row `following` now
+    // grants every signed-in plan.
     const freeWatch = await db
       .select()
       .from(userEvents)
@@ -205,10 +206,16 @@ describe('runArtistFanout — channel gating (#763 §10.1)', () => {
       .select()
       .from(notifications)
       .where(eq(notifications.userId, FREE_USER));
-    expect(freeTray).toHaveLength(0);
+    expect(freeTray).toHaveLength(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: FREE_USER,
+        category: 'artist.new_show',
+      }),
+    );
 
     // Premium user: push fired with the highlight (autoWatch-off) copy.
-    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(sendPush).toHaveBeenCalledTimes(2);
     expect(sendPush).toHaveBeenCalledWith({
       userId: PREMIUM_USER,
       category: 'artist.new_show',
@@ -228,9 +235,9 @@ describe('runArtistFanout — channel gating (#763 §10.1)', () => {
       actionUrl: `/events/${eventId}`,
     });
 
-    // Ledger: one auto_watch claim (free) + one push claim (premium).
+    // Ledger: auto_watch + push claims (free) + one push claim (premium).
     const ledger = await db.select().from(spotifyAlertLog);
-    expect(ledger).toHaveLength(2);
+    expect(ledger).toHaveLength(3);
   });
 
   it('premium user with autoWatch on gets both channels and the Watching copy variant', async () => {
@@ -476,8 +483,8 @@ describe('runArtistFanout — matching + idempotency', () => {
       matchedPairs: 1,
       // The stored preference outlives the revoked connection.
       autoWatched: 1,
-      // Alerts default on, but this user has no paid plan.
-      pushesClaimed: 0,
+      // Alerts default on, and `following` is unlocked for the free plan.
+      pushesClaimed: 1,
     });
   });
 });
@@ -820,7 +827,7 @@ describe('runArtistFanout — native follows', () => {
     expect(watching).toHaveLength(1);
   });
 
-  it('sends no push to a manual follower on the free plan', async () => {
+  it('pushes to a manual follower on the free plan now that following is unlocked', async () => {
     const venueId = await seedVenue('Fillmore');
     const eventId = await seedEvent({
       venueId,
@@ -838,7 +845,15 @@ describe('runArtistFanout — native follows', () => {
       getRole: noRole,
     });
 
-    expect(summary?.pushesClaimed).toBe(0);
-    expect(sendPush).not.toHaveBeenCalled();
+    expect(summary?.pushesClaimed).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(1);
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: FREE_USER }),
+    );
+    const tray = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, FREE_USER));
+    expect(tray).toHaveLength(1);
   });
 });

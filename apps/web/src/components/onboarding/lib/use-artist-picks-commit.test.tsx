@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type * as EntitlementsModule from '@concert-crawl/entitlements';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { PlanState } from '@concert-crawl/types';
@@ -22,6 +23,19 @@ vi.mock('@/lib/following', () => ({
 vi.mock('@/lib/users', () => ({
   fetchMe: (token: string) => fetchMe(token),
 }));
+
+// Going free (2026-10-29) left no signed-in plan the matrix denies following,
+// so the "upgrade did not land" case forces the entitlement answer. It is kept
+// for a future re-gate; with `regate.denied` false the real matrix answers.
+const regate = vi.hoisted(() => ({ denied: false }));
+vi.mock('@concert-crawl/entitlements', async (importOriginal) => {
+  const actual = await importOriginal<typeof EntitlementsModule>();
+  return {
+    ...actual,
+    canUseFeature: (...args: Parameters<typeof actual.canUseFeature>) =>
+      !regate.denied && actual.canUseFeature(...args),
+  };
+});
 
 import { ApiError } from '@/lib/api';
 import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history';
@@ -63,6 +77,7 @@ const entitlementError = () =>
   new ApiError(403, 'Premium required', ENTITLEMENT_REQUIRED_CODE);
 
 beforeEach(() => {
+  regate.denied = false;
   followArtistsBulk.mockReset();
   fetchMe.mockReset();
   window.sessionStorage.clear();
@@ -160,6 +175,7 @@ describe('useArtistPicksCommit', () => {
     const onDone = vi.fn();
     followArtistsBulk.mockRejectedValue(entitlementError());
     fetchMe.mockResolvedValue({ planState: FREE });
+    regate.denied = true;
     writePicks(ARTIST_PICKS_KEY, ['aa']);
     writePicks(GENRE_PICKS_KEY, ['punk']);
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {

@@ -2,6 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type * as UseEntitlementModule from '@/lib/queries/use-entitlement';
 import {
   render,
   screen,
@@ -10,6 +11,10 @@ import {
   fireEvent,
 } from '@testing-library/react';
 import type { PlanState } from '@concert-crawl/types';
+import type {
+  EntitlementCell,
+  PremiumFeature,
+} from '@concert-crawl/entitlements';
 import type * as ApiModule from '@/lib/api';
 
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy';
@@ -54,6 +59,22 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: planState.current, isPending: false }),
 }));
 
+// Going free (2026-10-29) left no signed-in plan the matrix denies following,
+// so the locked branch is driven by forcing the hook's answer. It is kept for
+// a future re-gate; with `regate.surface` null the real hook answers.
+const regate = vi.hoisted(() => ({
+  surface: null as EntitlementCell | null,
+}));
+vi.mock('@/lib/queries/use-entitlement', async (importOriginal) => {
+  const actual = await importOriginal<typeof UseEntitlementModule>();
+  return {
+    useEntitlement: (feature: PremiumFeature) =>
+      regate.surface === null
+        ? actual.useEntitlement(feature)
+        : { isLoading: false, active: false, surface: regate.surface },
+  };
+});
+
 // useEntitlement also reads the release-flag map, a react-query hook. These
 // cases render without a QueryClientProvider, so the map is stubbed at the
 // registry defaults; no flag names `following`, so the seam is inert here.
@@ -84,6 +105,7 @@ const TARGET: FollowNudgeTarget = {
 
 beforeEach(() => {
   planState.current = plan();
+  regate.surface = null;
   apiPost.mockResolvedValue({ following: true });
   apiDelete.mockResolvedValue({ following: false });
 });
@@ -178,10 +200,27 @@ describe('FollowNudgeCard', () => {
     expect(onAnswer).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['free', 'supporter'] as const)(
+    'gives a %s viewer a live CTA with no lock (going free, 2026-10-29)',
+    (tier) => {
+      planState.current = plan({ plan: tier });
+      render(
+        <FollowNudgeCard
+          target={TARGET}
+          variant="inline"
+          scaRegion={false}
+          onAnswer={vi.fn()}
+        />,
+      );
+      expect(followButton().querySelector('[data-glyph="lock"]')).toBeNull();
+      expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
+    },
+  );
+
   // Step 1: "Free tier still sees it, with the lock on the CTA." The card is
   // the pitch, so withholding it from the tier being pitched to is backwards.
-  it('shows a free viewer the same card with the lock on the CTA', () => {
-    planState.current = plan({ plan: 'free' });
+  it('shows a denied viewer the same card with the lock on the CTA', () => {
+    regate.surface = 'paywall-on-tap';
     render(
       <FollowNudgeCard
         target={TARGET}
@@ -200,7 +239,7 @@ describe('FollowNudgeCard', () => {
   });
 
   it('opens the tier picker on a locked tap and writes nothing', () => {
-    planState.current = plan({ plan: 'supporter' });
+    regate.surface = 'paywall-on-tap';
     render(
       <FollowNudgeCard
         target={TARGET}

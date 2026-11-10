@@ -81,8 +81,17 @@ export async function loadPlanContext(
   const mirrorSaysGifted = metadata.plan === 'premium_gifted';
   // gifted_comps is the source of truth; the Clerk mirror is the JWT-fast
   // path. Disagreement is repaired by the gifting admin flows — here we log
-  // so drift is visible (eng infra spec Part 1 §7).
-  if (giftLive !== mirrorSaysGifted) {
+  // so drift is visible (eng infra spec Part 1 §7). One disagreement is
+  // expected and stays quiet: a gift that simply expired (not revoked) whose
+  // mirror still says gifted, since nothing clears it now that the daily job
+  // that did was deleted going free. A revoked gift or a mirror with no row
+  // still warns.
+  const giftExpiredUnrevoked =
+    giftRow !== undefined &&
+    giftRow.revokedAt === null &&
+    giftRow.expiresAt !== null &&
+    giftRow.expiresAt <= now;
+  if (giftLive !== mirrorSaysGifted && !giftExpiredUnrevoked) {
     apiLogger.warn(
       { userId, giftLive, mirrorSaysGifted },
       'gifted_comps and Clerk publicMetadata.plan mirror disagree — table wins',

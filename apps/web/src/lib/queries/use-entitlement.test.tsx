@@ -74,11 +74,27 @@ describe('useEntitlement', () => {
     signedIn = true;
     currentUserId = 'user_test';
     mockGetToken.mockResolvedValue('test-token');
+    mockFlagsResult = { data: featureFlagDefaults(), isPending: false };
   });
 
-  it('locks concert-history for a free user with paywall-on-tap routing', async () => {
+  it('activates concert-history for a free user (going free, 2026-10-29)', async () => {
     setProfilePlan(planState('free'));
     const { result } = renderHook(() => useEntitlement('concert-history'), {
+      wrapper: withProvider(),
+    });
+    await waitFor(() => expect(result.current.active).toBe(true));
+    expect(result.current.surface).toBe('visible-active');
+  });
+
+  // spotify-sync is the one feature the matrix still denies a signed-in
+  // account, so it carries the paywall-on-tap routing coverage.
+  it('locks spotify-sync for a free user with paywall-on-tap routing', async () => {
+    setProfilePlan(planState('free'));
+    mockFlagsResult = {
+      data: { ...featureFlagDefaults(), 'spotify-sync': true },
+      isPending: false,
+    };
+    const { result } = renderHook(() => useEntitlement('spotify-sync'), {
       wrapper: withProvider(),
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
@@ -95,14 +111,17 @@ describe('useEntitlement', () => {
     expect(result.current.surface).toBe('visible-active');
   });
 
-  it('locks following for a supporter (Premium keeps the active-cost features)', async () => {
-    setProfilePlan(planState('supporter', { status: 'active' }));
-    const { result } = renderHook(() => useEntitlement('following'), {
-      wrapper: withProvider(),
-    });
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.active).toBe(false);
-    expect(result.current.surface).toBe('paywall-on-tap');
+  it('activates following for a supporter and a free user (going free, 2026-10-29)', async () => {
+    for (const plan of ['supporter', 'free'] as const) {
+      setProfilePlan(planState(plan, { status: 'active' }));
+      const { result, unmount } = renderHook(
+        () => useEntitlement('following'),
+        { wrapper: withProvider() },
+      );
+      await waitFor(() => expect(result.current.active).toBe(true));
+      expect(result.current.surface).toBe('visible-active');
+      unmount();
+    }
   });
 
   it('activates concert-history for premium', async () => {
@@ -239,19 +258,19 @@ describe('useEntitlement flag seam', () => {
   });
 
   it('leaves the matrix answer alone when the flag is on', async () => {
-    mockSignedIn({ plan: 'free', roleComped: false });
+    mockSignedOut();
     mockFlags({ crews: true });
     const { result } = renderHook(() => useEntitlement('crews'), {
       wrapper: withProvider(),
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.surface).toBe('paywall-on-tap');
+    expect(result.current.surface).toBe('tier-picker-on-tap');
   });
 
   it('never grants a feature the matrix denies, flag on', async () => {
     mockSignedIn({ plan: 'free', roleComped: false });
-    mockFlags({ crews: true });
-    const { result } = renderHook(() => useEntitlement('alerts'), {
+    mockFlags({ 'spotify-sync': true });
+    const { result } = renderHook(() => useEntitlement('spotify-sync'), {
       wrapper: withProvider(),
     });
     await waitFor(() => expect(result.current.isLoading).toBe(false));

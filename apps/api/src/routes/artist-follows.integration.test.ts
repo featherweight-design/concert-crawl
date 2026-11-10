@@ -54,9 +54,10 @@ const follow = async (slug: string): Promise<Response> =>
 const unfollow = async (slug: string): Promise<Response> =>
   app.request(`/v1/artists/${slug}/follow`, { method: 'DELETE' });
 
-// POST is gated on the `following` entitlement, which is premium-and-up. The
-// free plan is modelled by the ABSENCE of a subscriptions row, so every test
-// that expects a successful follow has to seed one.
+// POST is gated on the `following` entitlement, which every signed-in plan now
+// holds (free included). The free plan is modelled by the ABSENCE of a
+// subscriptions row; tests that seed premium keep doing so to exercise the
+// paid path, not because free would be denied.
 const seedPremiumPlan = async (userId = USER_ID): Promise<void> => {
   await testDb.insert(subscriptions).values({
     userId,
@@ -91,9 +92,8 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
   });
 
   it('404s an unknown slug', async () => {
-    // Premium, because the entitlement gate runs BEFORE the artist lookup. A
-    // free user probing slugs gets 403 and learns nothing about what exists.
-    await seedPremiumPlan();
+    // A free account (no billing rows) passes the gate since going free, so
+    // it reaches the artist lookup like anyone signed in.
     authState.current = { userId: USER_ID };
     const res = await follow('no-such-artist');
     expect(res.status).toBe(404);
@@ -202,17 +202,14 @@ describe('POST /v1/artists/:slug/follow — entitlement gate', () => {
     await clearTables();
   });
 
-  it('returns 403 with entitlement_required for a free plan', async () => {
+  it('lets a free plan follow now that following is unlocked', async () => {
     const artist = await seedArtist({ name: 'Big Head Todd' });
     // No subscriptions row at all: the default free plan.
     authState.current = { userId: USER_ID };
 
     const res = await follow(artist.slug);
-    expect(res.status).toBe(403);
-    const body: { code: string; feature: string } = await res.json();
-    expect(body.code).toBe('entitlement_required');
-    expect(body.feature).toBe('following');
-    expect(await followRows()).toHaveLength(0);
+    expect(res.status).toBe(200);
+    expect(await followRows()).toHaveLength(1);
   });
 
   it('lets a premium plan follow', async () => {

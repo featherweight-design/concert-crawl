@@ -15,9 +15,10 @@
 //
 //   1. DIGEST — every non-revoked connection with digestEnabled, gated at
 //               send time by canUseFeature(planState, 'spotify-sync') (§7:
-//               Premium-only) — or, under NATIVE_DIGEST_ENABLED, every
-//               follower whatever the follow source (see the generalized
-//               digest note below).
+//               Premium-only) — or, under NATIVE_DIGEST_ENABLED, by
+//               'following', which every signed-in plan has since going
+//               free, so every follower gets it (see the generalized digest
+//               note below).
 //               Matches = events in the next 7 Denver-local
 //               days whose canonical_artist equals — or canonical_supporting
 //               overlaps — the user's followed canonical names (§9.1).

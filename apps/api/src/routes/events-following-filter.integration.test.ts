@@ -109,12 +109,20 @@ describe('following=1 filter on GET /v1/events', () => {
     expect(body.data.followingApplied).toBe(false);
   });
 
-  it('403s a free user with the typed entitlement code', async () => {
+  it('applies the filter for a free user now that following is unlocked', async () => {
+    const venue = await seedVenue();
+    const match = await seedEvent(venue.id, {
+      artist: 'Phoebe Bridgers',
+      date: FUTURE_DATE,
+    });
+    await seedEvent(venue.id, { artist: 'Some Other Band', date: FUTURE_DATE });
+    await seedFollow('Phoebe Bridgers');
     signIn();
+
     const { status, body } = await fetchFollowing();
-    expect(status).toBe(403);
-    expect(body.code).toBe('entitlement_required');
-    expect(body.feature).toBe('following');
+    expect(status).toBe(200);
+    expect(body.data.followingApplied).toBe(true);
+    expect(body.data.data.map((row) => row.id)).toEqual([match.id]);
   });
 
   // The gate must run before any filter can short-circuit the handler — an

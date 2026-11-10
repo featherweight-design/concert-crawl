@@ -274,14 +274,15 @@ describe('POST /v1/me/artist-follows/bulk', () => {
     expect(status).toBe(401);
   });
 
-  it('403s a free-tier user with the typed entitlement code', async () => {
+  it('follows for a free-tier user now that following is unlocked', async () => {
     await seedArtist({ name: 'Phoebe Bridgers' });
     signIn();
 
     const { status, body } = await postBulk(['phoebe-bridgers']);
-    expect(status).toBe(403);
-    expect(body.code).toBe('entitlement_required');
-    expect(body.feature).toBe('following');
+    expect(status).toBe(200);
+    expect(body.data?.followedCount).toBe(1);
+    const rows = await testDb.select().from(userArtistFollows);
+    expect(rows).toHaveLength(1);
   });
 
   it('rejects a malformed body with 400', async () => {

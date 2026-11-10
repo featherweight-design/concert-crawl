@@ -210,7 +210,8 @@ export const processedStripeEvents = pgTable('processed_stripe_events', {
 
 // Source of truth for gifted Premium (spec §7, Decision 10). Clerk
 // publicMetadata.plan = 'premium_gifted' remains the JWT-fast mirror;
-// if they disagree, this table wins and the mirror is repaired (logged).
+// if they disagree, this table wins. The grant and revoke flows repair the
+// mirror; an expired, unrevoked gift leaves it stale and is not logged (plan.ts).
 export const giftedComps = pgTable(
   'gifted_comps',
   {

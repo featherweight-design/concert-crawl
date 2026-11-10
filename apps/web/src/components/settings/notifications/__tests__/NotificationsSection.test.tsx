@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
+import type * as EntitlementsModule from '@concert-crawl/entitlements';
 import {
   render,
   screen,
@@ -69,6 +70,19 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => usePlanStateMock(),
 }));
 
+// Going free (2026-10-29) left no signed-in plan the matrix denies following,
+// so the locked card is driven by re-gating chosen tiers in nfLocked. It is
+// kept for a future re-gate; roleComped still wins, as it does in the matrix.
+const regate = vi.hoisted(() => ({ plans: new Set<string>() }));
+vi.mock('@concert-crawl/entitlements', async (importOriginal) => {
+  const actual = await importOriginal<typeof EntitlementsModule>();
+  return {
+    ...actual,
+    nfLocked: (state: Parameters<typeof actual.nfLocked>[0]) =>
+      regate.plans.has(state.plan) ? !state.roleComped : actual.nfLocked(state),
+  };
+});
+
 const useSpotifyConnectionMock = vi.fn();
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   useSpotifyConnection: () => useSpotifyConnectionMock(),
@@ -107,6 +121,7 @@ beforeEach(() => {
   unsubscribeFromPushMock.mockReset();
   usePlanStateMock.mockReset();
   useSpotifyConnectionMock.mockReset();
+  regate.plans.clear();
   // Default: loaded, master off, sub-toggles default true, supported.
   useNotificationPreferencesMock.mockReturnValue({
     data: {
@@ -524,8 +539,33 @@ describe('NotificationsSection — Artists you follow', () => {
   });
 
   it.each(['free', 'supporter'] as const)(
-    'shows one locked card and zero artist switches on %s',
+    'shows the artist switches and no locked card on %s (going free, 2026-10-29)',
     async (plan) => {
+      masterOn();
+      usePlanStateMock.mockReturnValue({
+        data: planOn(plan),
+        isPending: false,
+      });
+      render(withClient(<NotificationsSection />));
+      await waitFor(() => {
+        expect(
+          screen.getByRole('switch', { name: ARTISTS.alerts.label }),
+        ).not.toBeNull();
+      });
+      expect(
+        screen.getByRole('switch', { name: ARTISTS.autoWatch.label }),
+      ).not.toBeNull();
+      expect(
+        screen.getByRole('switch', { name: ARTISTS.digest.label }),
+      ).not.toBeNull();
+      expect(screen.queryByText(ARTISTS.locked.detail)).toBeNull();
+    },
+  );
+
+  it.each(['free', 'supporter'] as const)(
+    'shows one locked card and zero artist switches on a re-gated %s',
+    async (plan) => {
+      regate.plans.add(plan);
       masterOn();
       usePlanStateMock.mockReturnValue({
         data: planOn(plan),
@@ -546,6 +586,7 @@ describe('NotificationsSection — Artists you follow', () => {
   );
 
   it('opens the tier picker from the locked card CTA', async () => {
+    regate.plans.add('free');
     usePlanStateMock.mockReturnValue({
       data: planOn('free'),
       isPending: false,
