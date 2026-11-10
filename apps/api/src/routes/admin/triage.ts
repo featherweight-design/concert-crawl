@@ -241,9 +241,9 @@ triageAdminRouter.get('/', async (ctx) => {
   const now = new Date();
 
   // Verified venues only — an unverified draft has never been crawled and has
-  // nothing to be broken about. Deliberately NOT filtered on `active`: crawl.ts
-  // deactivates a venue at three consecutive failures, and that venue is the
-  // most broken thing on the list.
+  // nothing to be broken about. Deliberately NOT filtered on `active`: a venue
+  // an admin unpublished can still be broken, and crawls it had before it
+  // was unpublished still tell the operator so.
   const venueRowsPromise = db
     .select({
       id: venues.id,

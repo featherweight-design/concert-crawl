@@ -143,7 +143,7 @@ export const ADMIN_COPY = {
       errorHttpBlock: 'HTTP {code} · venue blocked',
       errorCrawlFailed: 'Crawl failed',
       errorConsecutiveFailures: 'Consecutive failures:',
-      errorWillPause: ' · Will pause venue on next failure.',
+      errorWillPause: ' · Will pause its crawl on next failure.',
       errorHttpFirstObserved: 'HTTP {code} first observed:',
       errorIpAllowlist: ' · Try requesting a new IP allowlist.',
       eventsSectionLabel: 'Events',

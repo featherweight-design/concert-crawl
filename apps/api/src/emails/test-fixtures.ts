@@ -296,7 +296,7 @@ function buildCrawlFailureSample(): BuiltTestEmail {
     subject: `Crawl failing: ${venueName}`,
     html: `
       <p><strong>${venueName}</strong> has failed 3 consecutive crawls.</p>
-      <p>The venue has been flagged for review. Visit the
+      <p>Its crawl is paused until you resume it. Visit the
       <a href="${url}">admin crawl dashboard</a>
       to investigate and take action.</p>
     `,

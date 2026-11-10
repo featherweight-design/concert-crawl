@@ -419,7 +419,8 @@ export async function crawlVenue(
     throw new Error(`Venue ${venueId} not found or not active/verified`);
   }
 
-  // An admin pause stops every path, manual triggers included, and is not a
+  // A crawl pause (an admin's, or the crawler's own at the third consecutive
+  // failure) stops every path, manual triggers included, and is not a
   // failure: no strike, no block, and the venue's shows stay published.
   if (venue.crawlPausedAt !== null) {
     console.log(JSON.stringify({ event: 'crawl.paused', venueId }));

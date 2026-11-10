@@ -37,7 +37,7 @@ import { MT_TIME_ZONE } from '../../../lib/time.js';
 // shallow enough that 200 venues stays one small query.
 export const TRIAGE_HISTORY_RUN_COUNT = 30;
 
-// venues.consecutive_failures at which crawl.ts deactivates the venue.
+// venues.consecutive_failures at which crawl.ts pauses the venue's crawl.
 // Surfaced in the evidence line so an operator can see how much runway is left.
 export const FAILURE_PAUSE_AT = 3;
 
