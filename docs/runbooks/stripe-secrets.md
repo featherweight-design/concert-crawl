@@ -6,11 +6,11 @@ where each lives, how to rotate each, and the test-vs-live rules.
 
 ## Where each secret lives
 
-| Secret                               | Where it is set                              | Staging value                         | Prod value                            |
-| ------------------------------------ | -------------------------------------------- | ------------------------------------- | ------------------------------------- |
-| `STRIPE_SECRET_KEY`                  | Render API service + billing cron (env vars) | test-mode key (`sk_test_…`)           | live-mode key (`sk_live_…`)           |
-| `STRIPE_WEBHOOK_SECRET`              | Render API service (env var)                 | test-mode endpoint secret (`whsec_…`) | live-mode endpoint secret (`whsec_…`) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel web project (env var)                 | test-mode key (`pk_test_…`)           | live-mode key (`pk_live_…`)           |
+| Secret                               | Where it is set              | Staging value                         | Prod value                            |
+| ------------------------------------ | ---------------------------- | ------------------------------------- | ------------------------------------- |
+| `STRIPE_SECRET_KEY`                  | API service (env var)        | test-mode key (`sk_test_…`)           | live-mode key (`sk_live_…`)           |
+| `STRIPE_WEBHOOK_SECRET`              | Render API service (env var) | test-mode endpoint secret (`whsec_…`) | live-mode endpoint secret (`whsec_…`) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel web project (env var) | test-mode key (`pk_test_…`)           | live-mode key (`pk_live_…`)           |
 
 - **GitHub Actions has NO Stripe keys.** CI tests use a dummy key with the
   SDK stubbed at the dependency-injected client boundary; webhook signature
@@ -58,8 +58,7 @@ Create the replacement BEFORE revoking the old key so API calls never gap:
    restricted key scoped to what the API actually uses: Customers,
    Subscriptions, Prices, Billing Portal, Webhook Endpoints, PaymentIntents
    (read).
-2. Render Dashboard → API service AND billing cron → Environment → update
-   `STRIPE_SECRET_KEY` → save → redeploy each service.
+2. Update `STRIPE_SECRET_KEY` on the API service → save → redeploy it.
 3. Verify checkout works (staging: run a test-mode checkout; prod: watch
    Sentry + Stripe request logs for auth errors).
 4. Stripe Dashboard → revoke/delete the old key.

@@ -174,12 +174,12 @@ const dispatchEvent = async (
       return handlePaymentIntentFailed(event.data.object, handlerContext);
     case 'customer.updated':
     case 'payment_method.attached':
-      // Spec §5.1 refreshes cached card metadata for the card-expiry timer,
-      // but no card-cache columns exist yet (the daily billing job, PR 5.x,
-      // ships them). Logged no-op until then — do NOT invent schema.
+      // Spec §5.1 refreshed cached card metadata for the card-expiry timer,
+      // which went with the daily billing job (deleted 2026-11-10). Logged
+      // no-op — do NOT invent schema.
       apiLogger.info(
         { stripeEventId: event.id, type: event.type },
-        'stripe-webhooks: card-metadata event — no-op until card cache lands (spec §5.1)',
+        'stripe-webhooks: card-metadata event — no-op (spec §5.1)',
       );
       return;
     default:
