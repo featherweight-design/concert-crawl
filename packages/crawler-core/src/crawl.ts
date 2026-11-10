@@ -1843,9 +1843,11 @@ export async function crawlVenue(
     // several venues hit it in the daily run — the run-level alert
     // (lib/run-health.ts). A lone quota failure on a trigger-queued crawl gets
     // the Sentry event only.
-    const isAccountWide = isAccountWideKind(
-      classifyCrawlError(String(err)).kind,
-    );
+    // A venue's own fetch error is never the LLM account's, whatever its text:
+    // its 429 is a block and must reach the block branch below.
+    const isAccountWide =
+      !(err instanceof CrawlFetchError) &&
+      isAccountWideKind(classifyCrawlError(String(err)).kind);
 
     if (!isAccountWide) {
       const isHttpBlocked =
