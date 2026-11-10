@@ -2,8 +2,9 @@
 
 > **Going free (2026-11-10).** Concert Crawl is going free, so this runbook is
 > historical. The daily billing job (`billing-daily`) was deleted on 2026-11-10
-> (#23); its card-expiry, dunning, winback, trial-end and 90-day-purge sends will
-> never run. Checkout, the billing portal and the Stripe webhook are being removed
+> (#23); its card-expiry, gift-ending, winback, trial-end, 90-day-purge and
+> dunning-fallback tasks will never run. The webhook's own dunning emails still
+> send until the webhook is removed. Checkout, the billing portal and the Stripe webhook are being removed
 > next. Billing tables and plan resolution stay.
 
 **What this is:** the operational sequence for opening the founder window and taking

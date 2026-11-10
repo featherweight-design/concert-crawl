@@ -56,7 +56,8 @@ const NINETY_DAYS_MS = 90 * DAY_MS;
 const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder'];
 
 // Tiers whose cancellation starts the 90-day preserve-then-purge clock.
-// Supporter joined in #1229.
+// Supporter joined in #1229. The clock is recorded but dormant: its only
+// enforcer, the billing-daily purge, was deleted on 2026-11-10 (going free).
 const PURGE_CLOCK_TIERS: readonly DbSubscriptionTier[] = [
   'supporter',
   'premium',
@@ -458,8 +459,8 @@ export const handleInvoicePaymentSucceeded = async (
 
   // Re-upgrade to premium-and-up clears the 90-day preserve-then-purge clock
   // (#780 §5). Supporter payments must NOT clear it — a premium→supporter
-  // downgrade starts the clock (§5.3), and the user's premium data still
-  // purges after 90 days while they pay for supporter.
+  // downgrade starts the clock (§5.3). Nothing purges on it any more (see
+  // PURGE_CLOCK_TIERS).
   if (tier !== null && PREMIUM_AND_UP.includes(tier)) {
     await ctx.dbClient
       .update(userBilling)
@@ -693,9 +694,9 @@ export const handleSubscriptionDeleted = async (
     return;
   }
 
-  // Every paid tier starts the 90-day preserve-then-purge clock (#780 §5).
-  // Supporter included since #1229: its logged Concerts purge like everyone
-  // else's. (Calendar export holds no data of its own; it reads Concerts.)
+  // Every paid tier starts the 90-day preserve-then-purge clock (#780 §5),
+  // Supporter included since #1229. The clock is recorded only; nothing
+  // purges on it since billing-daily was deleted (see PURGE_CLOCK_TIERS).
   if (tier !== null && PURGE_CLOCK_TIERS.includes(tier)) {
     const premiumDataExpiresAt = new Date(Date.now() + NINETY_DAYS_MS);
     await ctx.dbClient

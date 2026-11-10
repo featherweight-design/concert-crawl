@@ -4,8 +4,7 @@
 // Decision 6, §3). The trial is OUR concept, not Stripe's: no card, no
 // subscription object, no charge. It exists solely as
 // `user_billing.trialEndsAt`, seeded once per account and never cleared —
-// the day-13 banner, the trial-ended takeover and the 90-day preserve clock
-// all key off that one timestamp.
+// the day-13 banner and the trial-ended takeover key off that one timestamp.
 
 export const TRIAL_DAYS = 14;
 
