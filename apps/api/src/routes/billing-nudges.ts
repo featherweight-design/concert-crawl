@@ -4,7 +4,7 @@
 // (eng infra spec Part 2 §1.4, §6; execution plan PR 4.2).
 //
 // Write-side of the lifecycle nudge predicates evaluated by GET /v1/users/me
-// (lib/nudges.ts). Sibling router to billing.ts (same /v1/billing mount) —
+// (lib/nudges.ts). Shares the /v1/billing mount with the founder-window read —
 // no Stripe dependency, kept separate so each file stays reviewable.
 
 import { Hono } from 'hono';

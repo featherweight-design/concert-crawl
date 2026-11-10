@@ -29,7 +29,7 @@ import type {
 import { displayHeadliner } from '../lib/event-billing.js';
 import { apiLogger } from '../lib/logger.js';
 import { deleteUserData } from '../lib/user-data.js';
-import { getStripeClient } from '../lib/stripe.js';
+import { getStripeClient, isStripeConfigured } from '../lib/stripe.js';
 import { isClerkNotFound } from '../lib/clerk-errors.js';
 import { evaluateNudgeFlags } from '../lib/nudges.js';
 import { loadPlanContext } from '../lib/plan.js';
@@ -448,14 +448,43 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
     .from(subscriptions)
     .where(eq(subscriptions.userId, userId));
 
-  for (const row of rows) {
-    if (!CHARGEABLE_SUBSCRIPTION_STATUSES.includes(row.status)) continue;
+  const chargeable = rows.filter((row) =>
+    CHARGEABLE_SUBSCRIPTION_STATUSES.includes(row.status),
+  );
+  if (chargeable.length === 0) return true;
+
+  // Going free: once the Stripe key is gone there is nothing to cancel
+  // through, and refusing the deletion would trap the account for ever. Log
+  // the rows so any subscription still live in Stripe can be cancelled there
+  // by hand.
+  if (!isStripeConfigured()) {
+    apiLogger.error(
+      {
+        userId,
+        subscriptionIds: chargeable.map((row) => row.stripeSubscriptionId),
+      },
+      'Stripe not configured at account deletion — skipped the cancel',
+    );
+    return true;
+  }
+
+  for (const row of chargeable) {
     try {
       await getStripeClient().subscriptions.cancel(row.stripeSubscriptionId);
     } catch (err) {
-      // Our mirror lags Stripe until the deletion webhook lands. A retry after
-      // a cancel that already went through would otherwise be refused here
-      // for ever, so ask Stripe what the subscription's state really is.
+      // A key that is set but no longer accepted (rolled or revoked while the
+      // env var lingers) is the same as no key: nothing can be cancelled
+      // through it, so log and carry on rather than trap the account.
+      if (isStripeAuthFailure(err)) {
+        apiLogger.error(
+          { err, userId, subscriptionId: row.stripeSubscriptionId },
+          'Stripe refused the key at account deletion — skipped the cancel',
+        );
+        continue;
+      }
+      // Nothing updates our subscriptions mirror since the webhook was
+      // deleted, so a cancel that already went through (an earlier attempt,
+      // or by hand in Stripe) only shows up by asking Stripe.
       if (await isEndedInStripe(row.stripeSubscriptionId)) continue;
       apiLogger.error(
         { err, userId, subscriptionId: row.stripeSubscriptionId },
@@ -465,6 +494,19 @@ const cancelLiveSubscription = async (userId: string): Promise<boolean> => {
     }
   }
   return true;
+};
+
+const StripeErrorType = z.object({ type: z.string() });
+
+// The Stripe SDK tags errors with a `type`; these two mean the key itself was
+// refused rather than anything about the subscription.
+const isStripeAuthFailure = (err: unknown): boolean => {
+  const parsed = StripeErrorType.safeParse(err);
+  return (
+    parsed.success &&
+    (parsed.data.type === 'StripeAuthenticationError' ||
+      parsed.data.type === 'StripePermissionError')
+  );
 };
 
 const StripeSubscriptionStatus = z.object({ status: z.string() });

@@ -29,20 +29,11 @@ import { spotifyRouter } from './spotify.js';
 import { mePushRouter } from './me-push.js';
 import { notificationsRouter } from './notifications.js';
 import { emailUnsubscribeRouter } from './email-unsubscribe.js';
-import { createBillingRouter } from './billing.js';
-import { createBillingManageRouter } from './billing-manage.js';
-import { createBillingLifecycleRouter } from './billing-lifecycle.js';
 import { createFounderWindowRouter } from './billing-founder-window.js';
 import { createBillingNudgesRouter } from './billing-nudges.js';
-import { createStripeWebhooksRouter } from './stripe-webhooks.js';
 import { createInternalCronRouter } from './internal-cron.js';
-import { getStripeClient } from '../lib/stripe.js';
 
 export function registerRoutes(app: Hono) {
-  // Mounted FIRST and with no Clerk/audit middleware — Stripe signature
-  // verification needs the raw body and the request is not user-initiated
-  // (eng infra spec Part 2 §1.5).
-  app.route('/v1/webhooks/stripe', createStripeWebhooksRouter(getStripeClient));
   app.route('/v1/health', healthRouter);
   // Scheduled-job triggers, authed by CRON_SECRET and 404 when it is unset.
   // No Clerk/audit middleware: the caller is the host's scheduler, not a user.
@@ -78,9 +69,6 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/notifications', notificationsRouter);
   // Signed one-click unsubscribe — no auth by design (#763 §8.2).
   app.route('/v1/email', emailUnsubscribeRouter);
-  app.route('/v1/billing', createBillingRouter(getStripeClient));
-  app.route('/v1/billing', createBillingManageRouter(getStripeClient));
-  app.route('/v1/billing', createBillingLifecycleRouter(getStripeClient));
   app.route('/v1/billing', createFounderWindowRouter());
   app.route('/v1/billing', createBillingNudgesRouter());
 }

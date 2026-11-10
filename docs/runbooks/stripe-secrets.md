@@ -1,5 +1,12 @@
 # Stripe Secrets — Placement + Rotation Runbook
 
+> **Going free (2026-11-10).** Checkout, the billing portal and the Stripe
+> webhook route were deleted. Only account deletion still calls Stripe (to
+> cancel any subscription row still chargeable), and it skips that when
+> `STRIPE_SECRET_KEY` is unset. The webhook steps below are historical:
+> `stripe-provision.ts --webhooks` now refuses to run. **Hugh:** delete the
+> Stripe webhook endpoints (live and test) in the dashboard.
+
 Source of truth: monetization eng infra spec Part 2 §9 (env-var matrix) and
 §10 (CI + secret handling). This runbook covers the three Stripe secrets:
 where each lives, how to rotate each, and the test-vs-live rules.
@@ -29,25 +36,7 @@ endpoints are registered separately per mode.
 
 ## Rotating `STRIPE_WEBHOOK_SECRET`
 
-Stripe lets you roll an endpoint's signing secret with a grace window during
-which BOTH the old and new secrets' signatures are delivered (dual-delivery),
-so rotation is zero-downtime:
-
-1. Stripe Dashboard → Developers → Webhooks → select the endpoint
-   (`https://<api-host>/v1/webhooks/stripe`) → **Roll secret**. Choose a
-   grace window (e.g. 24h) — Stripe signs with both secrets until it ends.
-2. Copy the NEW `whsec_…` value (shown once).
-3. Render Dashboard → API service → Environment → update
-   `STRIPE_WEBHOOK_SECRET` → save.
-4. Redeploy the API service (Builds → Manual Deploy) so the new value is
-   picked up.
-5. Verify: Stripe Dashboard → the endpoint's recent deliveries show 2xx
-   responses after the deploy. A 400 spike means the env var didn't land —
-   the old secret is still valid inside the grace window, so re-check step 3
-   and redeploy.
-
-Repeat per environment (staging test-mode endpoint, prod live-mode endpoint)
-— each endpoint has its own secret.
+Retired 2026-11-10: the webhook route is deleted; delete the endpoints in the Stripe dashboard.
 
 ## Rotating `STRIPE_SECRET_KEY`
 
@@ -78,20 +67,4 @@ needed:
 
 ## Registering webhook endpoints (initial setup, not rotation)
 
-Endpoint registration is scripted and idempotent:
-
-```bash
-# Staging (test mode):
-STRIPE_SECRET_KEY=$STAGING_STRIPE_KEY tsx scripts/stripe-provision.ts \
-  --mode test --webhooks https://<staging-api-host>/v1/webhooks/stripe --commit
-
-# Prod (live mode):
-STRIPE_SECRET_KEY=$PROD_STRIPE_KEY tsx scripts/stripe-provision.ts \
-  --mode live --webhooks https://<prod-api-host>/v1/webhooks/stripe --commit
-```
-
-The script prints the signing secret ONCE on creation — place it as
-`STRIPE_WEBHOOK_SECRET` on the Render API service immediately (it is not
-retrievable from the script later; the dashboard can reveal it if lost).
-Re-running against an existing URL is a logged no-op and warns if the
-endpoint's `enabled_events` drifted from the handled set.
+Retired 2026-11-10: the webhook route is deleted; delete the endpoints in the Stripe dashboard.
