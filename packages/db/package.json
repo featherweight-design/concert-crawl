@@ -7,40 +7,49 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./upcoming-events": {
+      "types": "./dist/lib/upcoming-events.d.ts",
       "import": "./dist/lib/upcoming-events.js",
-      "types": "./dist/lib/upcoming-events.d.ts"
+      "default": "./dist/lib/upcoming-events.js"
     },
     "./scripts/backfill-artists": {
+      "types": "./dist/scripts/backfill-artists.d.ts",
       "import": "./dist/scripts/backfill-artists.js",
-      "types": "./dist/scripts/backfill-artists.d.ts"
+      "default": "./dist/scripts/backfill-artists.js"
     },
     "./scripts/prune-artists": {
+      "types": "./dist/scripts/prune-artists.d.ts",
       "import": "./dist/scripts/prune-artists.js",
-      "types": "./dist/scripts/prune-artists.d.ts"
+      "default": "./dist/scripts/prune-artists.js"
     },
     "./scripts/artist-name-fold": {
+      "types": "./dist/scripts/artist-name-fold.d.ts",
       "import": "./dist/scripts/artist-name-fold.js",
-      "types": "./dist/scripts/artist-name-fold.d.ts"
+      "default": "./dist/scripts/artist-name-fold.js"
     },
     "./scripts/repair-artist-names": {
+      "types": "./dist/scripts/repair-artist-names.d.ts",
       "import": "./dist/scripts/repair-artist-names.js",
-      "types": "./dist/scripts/repair-artist-names.d.ts"
+      "default": "./dist/scripts/repair-artist-names.js"
     },
     "./scripts/auto-match-ambiguous": {
+      "types": "./dist/scripts/auto-match-ambiguous.d.ts",
       "import": "./dist/scripts/auto-match-ambiguous.js",
-      "types": "./dist/scripts/auto-match-ambiguous.d.ts"
+      "default": "./dist/scripts/auto-match-ambiguous.js"
     },
     "./scripts/musicbrainz-disambiguate": {
+      "types": "./dist/scripts/musicbrainz-disambiguate.d.ts",
       "import": "./dist/scripts/musicbrainz-disambiguate.js",
-      "types": "./dist/scripts/musicbrainz-disambiguate.d.ts"
+      "default": "./dist/scripts/musicbrainz-disambiguate.js"
     },
     "./scripts/resolve-photo-tiebreak": {
+      "types": "./dist/scripts/resolve-photo-tiebreak.d.ts",
       "import": "./dist/scripts/resolve-photo-tiebreak.js",
-      "types": "./dist/scripts/resolve-photo-tiebreak.d.ts"
+      "default": "./dist/scripts/resolve-photo-tiebreak.js"
     }
   },
   "scripts": {

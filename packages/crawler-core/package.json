@@ -7,36 +7,44 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "default": "./dist/index.js"
     },
     "./fetchers": {
       "types": "./dist/fetchers.d.ts",
-      "import": "./dist/fetchers.js"
+      "import": "./dist/fetchers.js",
+      "default": "./dist/fetchers.js"
     },
     "./crawl-error-class": {
       "types": "./dist/lib/crawl-error-class.d.ts",
-      "import": "./dist/lib/crawl-error-class.js"
+      "import": "./dist/lib/crawl-error-class.js",
+      "default": "./dist/lib/crawl-error-class.js"
     },
     "./triage-conditions": {
       "types": "./dist/lib/triage-conditions.d.ts",
-      "import": "./dist/lib/triage-conditions.js"
+      "import": "./dist/lib/triage-conditions.js",
+      "default": "./dist/lib/triage-conditions.js"
     },
     "./canonical": {
       "types": "./dist/lib/canonical-artist.d.ts",
-      "import": "./dist/lib/canonical-artist.js"
+      "import": "./dist/lib/canonical-artist.js",
+      "default": "./dist/lib/canonical-artist.js"
     },
     "./robots": {
       "types": "./dist/lib/robots.d.ts",
-      "import": "./dist/lib/robots.js"
+      "import": "./dist/lib/robots.js",
+      "default": "./dist/lib/robots.js"
     },
     "./robots-fetch": {
       "types": "./dist/lib/robots-fetch.d.ts",
-      "import": "./dist/lib/robots-fetch.js"
+      "import": "./dist/lib/robots-fetch.js",
+      "default": "./dist/lib/robots-fetch.js"
     },
     "./jitter": {
       "types": "./dist/lib/fetchers/jitter.d.ts",
-      "import": "./dist/lib/fetchers/jitter.js"
+      "import": "./dist/lib/fetchers/jitter.js",
+      "default": "./dist/lib/fetchers/jitter.js"
     }
   },
   "scripts": {
