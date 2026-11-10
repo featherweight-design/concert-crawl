@@ -137,4 +137,32 @@ describe('ProtectedError', () => {
     expect(screen.queryByText(COPY.sentTitle)).toBeNull();
     expect(screen.getAllByRole('textbox')[0]).toHaveProperty('value', '');
   });
+
+  it('carries a server throw by its digest, and an id of another shape not at all', async () => {
+    const error = Object.assign(new Error('server'), { digest: '4242' });
+    render(<ProtectedError error={error} reset={vi.fn()} />);
+    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
+      target: { value: 'Blank' },
+    });
+    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(
+      JSON.parse(fetchMock.mock.calls[0]?.[1]?.body ?? '{}'),
+    ).toMatchObject({
+      metadata: { digest: '4242' },
+    });
+
+    cleanup();
+    fetchMock.mockClear();
+    const odd = Object.assign(new Error('lib'), { digest: 'NEXT:REDIRECT;x' });
+    render(<ProtectedError error={odd} reset={vi.fn()} />);
+    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
+      target: { value: 'Blank' },
+    });
+    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('digest');
+  });
 });
