@@ -94,6 +94,9 @@ export function describeDegradation(degradation: RunDegradation): string {
   if (degradation.errorKind === 'llm_quota') {
     return `${count} venues failed on the LLM account's usage limit. This is account-wide, not a venue problem: ${names}.`;
   }
+  if (degradation.errorKind === 'llm_rate_limit') {
+    return `${count} venues failed on the LLM account's rate limit after retries. This is account-wide, not a venue problem: ${names}.`;
+  }
   return `${count} venues failed with the same error ("${degradation.errorKey}"): ${names}.`;
 }
 

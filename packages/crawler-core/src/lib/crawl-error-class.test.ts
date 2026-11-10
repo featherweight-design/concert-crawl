@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyCrawlError,
   crawlFailureGrouping,
+  isAccountWideKind,
   normalizeErrorMessage,
 } from './crawl-error-class.js';
 
@@ -44,10 +45,25 @@ describe('classifyCrawlError', () => {
     expect(classifyCrawlError(reworded).kind).toBe('llm_quota');
   });
 
-  it('leaves an ordinary rate-limit 429 as a venue-level failure', () => {
+  it('classes an ordinary rate-limit 429 as the account rate limit', () => {
     const rateLimit =
-      'Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
-    expect(classifyCrawlError(rateLimit).kind).toBe('other');
+      'RateLimitError: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"},"request_id":"req_011CfVZygV4btimyebqFAtze"}';
+    expect(classifyCrawlError(rateLimit)).toEqual({
+      kind: 'llm_rate_limit',
+      key: 'llm_rate_limit',
+    });
+  });
+
+  it("leaves a venue's own 429 as an ordinary failure", () => {
+    expect(classifyCrawlError('CrawlFetchError: HTTP 429').kind).toBe('other');
+  });
+});
+
+describe('isAccountWideKind', () => {
+  it('holds the quota and the rate limit against the account, not the venue', () => {
+    expect(isAccountWideKind('llm_quota')).toBe(true);
+    expect(isAccountWideKind('llm_rate_limit')).toBe(true);
+    expect(isAccountWideKind('other')).toBe(false);
   });
 
   it('keys an unknown error on its normalized message', () => {

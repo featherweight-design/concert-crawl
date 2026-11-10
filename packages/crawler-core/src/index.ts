@@ -66,5 +66,6 @@ export type { RunDegradation, VenueRunOutcome } from './lib/run-health.js';
 export {
   classifyCrawlError,
   crawlFailureGrouping,
+  isAccountWideKind,
 } from './lib/crawl-error-class.js';
 export type { CrawlErrorKind } from './lib/crawl-error-class.js';
