@@ -221,7 +221,7 @@ case "${command_name}" in
       (.crons // {}) as $c
       | if ($c.disabledAt // 0) > ($c.enabledAt // 0) then "yes" else "no" end')
     if [ "${crons_off}" = "yes" ]; then
-      unhealthy "Cron Jobs are disabled on the project, so match-artists, spotify-weekly and the crawler-daily dispatch are not running. Re-enable them under Settings → Cron Jobs."
+      unhealthy "Cron Jobs are disabled on the project, so match-artists, spotify-weekly, the notification prune and the crawler-daily dispatch are not running. Re-enable them under Settings → Cron Jobs."
     fi
 
     echo "✓ concert-crawl-api: ${host} serves ${current_id} (${current_sha:0:9}), READY; crons enabled"
