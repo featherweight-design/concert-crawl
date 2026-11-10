@@ -6,8 +6,8 @@
 // rather than a 401 or a 403 that would confirm the feature exists.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Hoisted auth state so the Clerk mock can swap callers between tests. Same
-// pattern as admin/founder-window.integration.test.ts. Leaving it null is what
+// Hoisted auth state so the Clerk mock can swap callers between tests.
+// Leaving it null is what
 // makes the unauthenticated cases below exercise the real 401/403 path — the
 // real clerkMiddleware needs a secret key and 500s without one, which would let
 // the "flag is on" case pass for the wrong reason.

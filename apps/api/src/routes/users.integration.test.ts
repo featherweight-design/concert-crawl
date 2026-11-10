@@ -385,115 +385,34 @@ describe('GET /v1/users/me', () => {
   });
 });
 
-describe('GET /v1/users/me — card-less trial seeding', () => {
-  // Opening the founder window IS the monetization cutover — there is no
-  // separate switch, so the trial clock keys off founder_window.opensAt.
-  const FOUNDER_WINDOW_OPENS_AT = new Date('2026-09-01T00:00:00.000Z');
+describe('GET /v1/users/me — no card-less trial', () => {
+  // Going free: an account that signs up after the founder window opened used
+  // to get a 14-day trial seeded on first touch. Nothing seeds one now.
   const DAY_MS = 86400000;
-  const TRIAL_DAYS = 14;
-  // Relative to the real clock, not a calendar date. The route judges the
-  // trial against now, so a fixed sign-up of 2026-09-10 made these tests pass
-  // until 2026-09-24 and fail on every PR after it. Two days ago stays inside
-  // the 14-day trial forever, and after the window opened for as long as the
-  // window's date is in the past.
-  let signedUpAt: Date;
-  let expectedTrialEnd: Date;
-
-  const readBillingRow = async () => {
-    const [row] = await testDb
-      .select({ trialEndsAt: userBilling.trialEndsAt })
-      .from(userBilling)
-      .where(eq(userBilling.userId, 'user_test123'))
-      .limit(1);
-    return row;
-  };
 
   beforeEach(async () => {
     clearAuth();
     clerkState.role = 'user';
     clerkState.plan = undefined;
-    signedUpAt = new Date(Date.now() - 2 * DAY_MS);
-    expectedTrialEnd = new Date(signedUpAt.getTime() + TRIAL_DAYS * DAY_MS);
-    clerkState.createdAt = signedUpAt.getTime();
+    clerkState.createdAt = Date.now() - 2 * DAY_MS;
     await clearTables();
     await clearBillingTables();
-    await setFounderWindow({ opensAt: FOUNDER_WINDOW_OPENS_AT });
+    await setFounderWindow({
+      opensAt: new Date(Date.now() - 30 * DAY_MS),
+    });
   });
 
-  it('starts the 14-day clock on first touch and reports the trial', async () => {
+  it('never starts a trial clock, even for an account newer than the window', async () => {
     setAuth();
     const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('premium');
-    expect(body.data.planState.onTrial).toBe(true);
-    expect(body.data.planState.trialEndsAt).toBe(
-      expectedTrialEnd.toISOString(),
-    );
-    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd);
-  });
-
-  it('never re-seeds — a second read cannot extend the trial', async () => {
-    setAuth();
-    await fetchMe();
-    const seeded = (await readBillingRow())?.trialEndsAt;
-    clerkState.createdAt = Date.now();
-    await fetchMe();
-    expect((await readBillingRow())?.trialEndsAt).toEqual(seeded);
-  });
-
-  it('grants nothing to the pre-monetization beta cohort', async () => {
-    setAuth();
-    clerkState.createdAt = new Date('2026-04-01').getTime();
-    const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('free');
     expect(body.data.planState.onTrial).toBe(false);
-    expect(await readBillingRow()).toBeUndefined();
-  });
-
-  it('grants nothing while the founder window is unopened', async () => {
-    setAuth();
-    await setFounderWindow({ opensAt: null });
-    const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('free');
-    expect(await readBillingRow()).toBeUndefined();
-  });
-
-  // A mis-seeded environment must fail closed. The account here is created
-  // well after any plausible cutover, so a trial would appear if the missing
-  // row were treated as anything other than "not launched".
-  it('grants nothing when the founder_window singleton row is missing', async () => {
-    setAuth();
-    await testDb.execute(sql`TRUNCATE founder_window`);
-    const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('free');
-    expect(body.data.planState.onTrial).toBe(false);
-    expect(await readBillingRow()).toBeUndefined();
-  });
-
-  // The row outlives the trial, so an expired trial must not re-seed.
-  it('leaves an existing row alone even when its trial has lapsed', async () => {
-    setAuth();
-    const lapsed = new Date(Date.now() - DAY_MS);
-    await testDb
-      .insert(userBilling)
-      .values({ userId: 'user_test123', trialEndsAt: lapsed });
-    const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('free');
-    expect((await readBillingRow())?.trialEndsAt).toEqual(lapsed);
-  });
-
-  // billing-nudges, the daily job and the Stripe webhooks all upsert
-  // user_billing for their own columns. If one lands before the user's first
-  // read, gating the seed on a missing row would drop their trial for good.
-  it('still seeds when another writer created the row without a trial', async () => {
-    setAuth();
-    await testDb
-      .insert(userBilling)
-      .values({ userId: 'user_test123', pastDueBannerDismissedAt: new Date() });
-
-    const body = await fetchMe();
-    expect(body.data.planState.plan).toBe('premium');
-    expect(body.data.planState.onTrial).toBe(true);
-    expect((await readBillingRow())?.trialEndsAt).toEqual(expectedTrialEnd);
+    expect(body.data.planState.trialEndsAt).toBeNull();
+    const [row] = await testDb
+      .select({ trialEndsAt: userBilling.trialEndsAt })
+      .from(userBilling)
+      .where(eq(userBilling.userId, 'user_test123'))
+      .limit(1);
+    expect(row?.trialEndsAt ?? null).toBeNull();
   });
 });
 

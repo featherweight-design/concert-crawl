@@ -131,9 +131,8 @@ describe('POST /v1/auth/redeem-code', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
 
-    // Premium for the beta cohort. Without it the tester derives `free` —
-    // the card-less trial is seeded only for accounts created after the
-    // founder window opens, which is NULL until launch day.
+    // Premium for the beta cohort. Without it the tester derives `free`:
+    // nothing seeds a trial.
     expect(mockInsertChain.values).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user_123',

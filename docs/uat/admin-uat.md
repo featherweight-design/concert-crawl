@@ -26,7 +26,7 @@ live state are marked ⚠️.
 7. [User management](#7-user-management)
 8. [Feedback triage](#8-feedback-triage)
 9. [Invite codes](#9-invite-codes)
-10. [Founder window](#10-founder-window)
+10. [Founder window (retired)](#10-founder-window)
 11. [Admin settings](#11-admin-settings)
 
 ---
@@ -496,36 +496,7 @@ code is genuinely redeemable at sign-up.
 
 ## 10. Founder window
 
-`/admin/founder-window` controls the beta founder program — the window during
-which new users are granted lifetime Premium. This is a high-impact control:
-opening it changes what every new signup receives.
-
-### ADM-31 — Founder window state
-
-**Precondition:** On `/admin/founder-window`.
-**Steps:**
-
-1. Read the current window (start/end dates, open/closed, active beta-user count).
-
-**Expected:** The window's state and metrics render clearly.
-**Result:** ⬜ Pass / Fail / Blocked / N/A
-**Notes:**
-
-### ADM-32 — Adjust founder window ⚠️
-
-**Precondition:** On `/admin/founder-window`.
-**High-impact — only change this if you intend to.** Otherwise read the controls and mark N/A.
-**Steps:**
-
-1. If intended, adjust the window dates or toggle open/closed.
-2. Save.
-
-**Expected:** The change persists and the displayed state updates. Prefer N/A
-unless you're deliberately managing the program.
-**Result:** ⬜ Pass / Fail / Blocked / N/A
-**Notes:**
-
----
+Removed on 2026-11-10 (going free): the admin founder-window page and its routes no longer exist. ADM-31 and ADM-32 are retired.
 
 ## 11. Admin settings
 
@@ -572,7 +543,7 @@ you run completes and reports success.
 | 7. User management     |      |      |         |     |
 | 8. Feedback triage     |      |      |         |     |
 | 9. Invite codes        |      |      |         |     |
-| 10. Founder window     |      |      |         |     |
+| 10. Founder window     |      |      |         | ✓   |
 | 11. Admin settings     |      |      |         |     |
 
 **Tester:** ________________ **Date:** ____________ **Device/browser:** ____________

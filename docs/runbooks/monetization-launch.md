@@ -5,7 +5,9 @@
 > (#23); its card-expiry, gift-ending, winback, trial-end, 90-day-purge and
 > dunning-fallback tasks will never run. The webhook's own dunning emails still
 > send until the webhook is removed. Checkout, the billing portal and the Stripe webhook are being removed
-> next. Billing tables and plan resolution stay.
+> next. The admin founder-window page and routes, the founder-launch smoke and
+> the card-less trial start were removed on 2026-11-10 too. Billing tables and
+> plan resolution stay.
 
 **What this is:** the operational sequence for opening the founder window and taking
 paid subscriptions live in production. This is the Phase 7 launch trigger from the

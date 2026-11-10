@@ -103,13 +103,8 @@ const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {
   closesAt: null,
 };
 
-// `opensAt` is the launch instant twice over: it drives the founder-window
-// view AND is the monetization cutover the trial clock is measured against
-// (lib/trial.ts). One read serves both, so the trial costs no extra query.
-// A missing or unreadable row yields null, i.e. nobody is trial-eligible.
-async function loadFounderWindow(
-  now: Date,
-): Promise<{ view: FounderWindowView; opensAt: Date | null }> {
+// A missing or unreadable row yields the fallback view.
+async function loadFounderWindow(now: Date): Promise<FounderWindowView> {
   try {
     const [windowRow] = await db
       .select()
@@ -118,15 +113,12 @@ async function loadFounderWindow(
       .limit(1);
     if (!windowRow) {
       apiLogger.error({}, 'users/me: founder_window singleton row missing');
-      return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null };
+      return FOUNDER_WINDOW_FALLBACK;
     }
-    return {
-      view: resolveFounderWindowView(windowRow, now),
-      opensAt: windowRow.opensAt,
-    };
+    return resolveFounderWindowView(windowRow, now);
   } catch (err) {
     apiLogger.error({ err }, 'users/me: founder_window read failed');
-    return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null };
+    return FOUNDER_WINDOW_FALLBACK;
   }
 }
 
@@ -145,8 +137,7 @@ usersRouter.get('/me', async (ctx) => {
     .limit(1);
 
   const now = new Date();
-  const { view: founderWindowView, opensAt: monetizationLiveAt } =
-    await loadFounderWindow(now);
+  const founderWindowView = await loadFounderWindow(now);
 
   const accountCreatedAt =
     clerkUser.createdAt === undefined || clerkUser.createdAt === null
@@ -155,9 +146,6 @@ usersRouter.get('/me', async (ctx) => {
   const planContext = await loadPlanContext(
     auth.userId,
     clerkUser.publicMetadata,
-    accountCreatedAt === null
-      ? undefined
-      : { accountCreatedAt, monetizationLiveAt },
   );
   const { planState } = planContext;
 

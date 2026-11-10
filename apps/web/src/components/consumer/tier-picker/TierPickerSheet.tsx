@@ -105,6 +105,7 @@ const pickerStateFrom = (planState: PlanState): PickerState => {
   // Checked before plan: a trial derives plan 'premium', and treating it as
   // the current plan would offer "Manage subscription" — a portal call that
   // 404s with no_customer, because a card-less trial has no Stripe customer.
+  // No trial starts any more, but rows seeded before 2026-11-10 still read.
   if (planState.onTrial) return 'trial';
   return planState.plan;
 };
