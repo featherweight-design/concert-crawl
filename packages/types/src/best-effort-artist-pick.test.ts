@@ -22,9 +22,9 @@ describe('pickBestEffortCandidate', () => {
   });
 
   it('folds case, accents and stray whitespace on the candidate', () => {
-    const top = candidate('Lotus ');
+    const top = candidate(' MANÁ  ');
     expect(
-      pickBestEffortCandidate([top], { name: 'Lotus', canonicalName: 'lotus' }),
+      pickBestEffortCandidate([top], { name: 'Maná', canonicalName: 'mana' }),
     ).toEqual({ picked: top });
   });
 
