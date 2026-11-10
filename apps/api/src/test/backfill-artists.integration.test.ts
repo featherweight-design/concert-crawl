@@ -244,6 +244,20 @@ describe('backfill-artists integration', () => {
       });
     });
 
+    it('takes the artist column on a one-act bill with no raw array', async () => {
+      const venue = await seedVenue({ slug: `no-raw-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Sigur Rós',
+        canonicalArtist: 'sigur ros',
+        headliners: [],
+        canonicalHeadliners: ['sigur ros'],
+      });
+
+      await backfillArtists(testDb);
+
+      expect((await listArtists())[0]?.name).toBe('Sigur Rós');
+    });
+
     it('keeps a one-act bill whole when the raw array repeats it', async () => {
       const venue = await seedVenue({ slug: `ewf-${Date.now()}` });
       await seedEvent(venue.id, {

@@ -59,9 +59,9 @@ export const events = pgTable(
     // signal is `canonical_headliners` below, where NULL means the ladder has
     // never touched the row and the projection falls back to
     // `canonical_artist`. The projection reads this column for one thing only:
-    // a bill of exactly one headliner has no ordering to get wrong, so
-    // `headliners[1]` recovers the raw spelling the canonical form stripped.
-    // See `backfill-artists.ts`.
+    // each act's raw spelling, paired with its canonical name by value (or, on
+    // a one-act bill, its one distinct value), recovering the casing and
+    // accents the canonical form stripped. See `backfill-artists.ts`.
     //
     // `headliners[0] === artist` is NOT an invariant. The upsert takes the
     // derived array wholesale and only preserves the stored value when the new
