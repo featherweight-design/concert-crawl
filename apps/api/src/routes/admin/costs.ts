@@ -10,6 +10,7 @@ import type {
   TopSpendVenue,
 } from '@concert-crawl/types';
 import type { AdminVariables } from './index.js';
+import { MT_TIME_ZONE } from '../../lib/time.js';
 
 // GET-only router — the admin audit-log middleware skips GET requests, so
 // no audit wiring is needed here (#112, #114).
@@ -17,8 +18,6 @@ import type { AdminVariables } from './index.js';
 const daysQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(30),
 });
-
-const MT_TIME_ZONE = 'America/Denver';
 
 // Displayed when a crawl run's venue row is missing (deleted venue with
 // surviving runs). Purely defensive — venue_id is a real FK in practice.

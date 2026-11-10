@@ -33,18 +33,14 @@ import {
   isGuideChipKey,
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types';
-import { todayInTimezone } from '../lib/time.js';
 import {
   displayHeadliner,
   portraitCanonicalName,
 } from '../lib/event-billing.js';
 
-// Matches history.ts — "already happened" is a Mountain Time calendar-day call,
-// not a UTC one, or a late show reads as past hours before it starts.
-const MT_TIME_ZONE = 'America/Denver';
-
 import { venueSlug } from '../lib/venue-slug-schema.js';
 import { aggregateByTier } from '../lib/price-aggregation/index.js';
+import { MT_TIME_ZONE, todayInDenver, todayInTimezone } from '../lib/time.js';
 
 export const venuesPublicRouter = new Hono();
 
@@ -78,7 +74,7 @@ venuesPublicRouter.get('/', async (ctx) => {
     .where(eq(venues.active, true))
     .orderBy(asc(venues.name));
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInDenver();
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)

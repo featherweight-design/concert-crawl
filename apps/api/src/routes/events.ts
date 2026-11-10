@@ -56,7 +56,7 @@ import {
   displayHeadliner,
   portraitCanonicalName,
 } from '../lib/event-billing.js';
-import { isImminentEvent, todayInTimezone } from '../lib/time.js';
+import { isImminentEvent, todayInDenver } from '../lib/time.js';
 import { apiLogger } from '../lib/logger.js';
 import {
   aggregateByTier,
@@ -109,7 +109,6 @@ const listClaimsSchema = z.object({
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_WINDOW_DAYS = 400;
-const MT_TIME_ZONE = 'America/Denver';
 
 // Regex alone accepts impossible calendar dates (e.g. 2026-02-31), which
 // Date.parse silently rolls over to a different day rather than rejecting.
@@ -248,7 +247,7 @@ eventsRouter.get(
     // a visible dupe (BASS BINGO – Wooli Edition showed 3 rows for one show on
     // 2026-06-18).
     const conditions: SQL[] = upcomingEventConditions({
-      from: from ?? todayInTimezone('UTC'),
+      from: from ?? todayInDenver(),
       statuses: SCHEDULED_STATUSES,
     });
 
@@ -526,7 +525,7 @@ eventsRouter.get('/availability', async (ctx) => {
   // events.date holds event-local (Mountain Time) calendar dates, so default
   // the window start to today in MT — not UTC. During MT evening UTC has already
   // rolled to tomorrow, which would drop same-day shows from the calendar.
-  const from = parsed.data.from ?? todayInTimezone(MT_TIME_ZONE);
+  const from = parsed.data.from ?? todayInDenver();
   const { to } = parsed.data;
   if (to < from) {
     return ctx.json(
@@ -1230,7 +1229,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
   const relatedConditions: SQL[] = [
     eq(events.venueId, sourceEvent.venueId),
     ...upcomingEventConditions({
-      from: todayInTimezone('UTC'),
+      from: todayInDenver(),
       statuses: SCHEDULED_STATUSES,
     }),
     sql`${events.id} != ${eventId}`,

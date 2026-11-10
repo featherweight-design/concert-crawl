@@ -40,15 +40,9 @@ import {
   lowestHeadlinePrice,
 } from '../lib/price-aggregation/index.js';
 import { parsePrice } from '../lib/price.js';
-import { todayInTimezone } from '../lib/time.js';
+import { todayInDenver } from '../lib/time.js';
 
 export const artistsPublicRouter = new Hono();
-
-// Denver is the only market we crawl, and an artist's shows span venues, so
-// there is no single venue timezone to pivot "today" on the way
-// venues-public.ts does. Mountain Time is the product's display timezone
-// (see history.ts, ics.ts).
-const MT_TIME_ZONE = 'America/Denver';
 
 // Past shows are capped so an artist with a decade of history can't produce an
 // unbounded response. EXTENSION POINT (Item 3): when the page grows a
@@ -155,7 +149,7 @@ artistsPublicRouter.get(
   }),
   async (ctx) => {
     const { limit, genres } = ctx.req.valid('query');
-    const today = todayInTimezone(MT_TIME_ZONE);
+    const today = todayInDenver();
 
     // Bucket taxonomy (#1101), same expansion the browse Vibe filter applies
     // in events.ts: 'punk' widens to every sub-genre in the bucket, and an
@@ -296,7 +290,7 @@ artistsPublicRouter.get(
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
-    const today = todayInTimezone(MT_TIME_ZONE);
+    const today = todayInDenver();
 
     const appearsOnBill = billsCanonicalName(artist.canonicalName);
 

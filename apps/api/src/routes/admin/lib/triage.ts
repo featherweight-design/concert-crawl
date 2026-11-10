@@ -30,7 +30,7 @@ import {
 } from '@concert-crawl/crawler-core/triage-conditions';
 import { TRIAGE_NO_SWEEP } from '@concert-crawl/types';
 
-export const MT_TIME_ZONE = 'America/Denver';
+import { MT_TIME_ZONE } from '../../../lib/time.js';
 
 // How many crawl_runs rows per venue the endpoint reads. Deep enough to walk
 // back through a multi-day incident and find where the current streak started,

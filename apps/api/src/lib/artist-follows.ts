@@ -31,13 +31,7 @@ import {
   lowestHeadlinePrice,
 } from './price-aggregation/index.js';
 import { parsePrice } from './price.js';
-import { todayInTimezone } from './time.js';
-
-// events.date holds event-local (Mountain Time) calendar dates. Denver is the
-// only market we crawl and an artist's shows span venues, so there is no
-// single venue timezone to pivot "today" on — same reasoning as
-// routes/artists-public.ts.
-const MT_TIME_ZONE = 'America/Denver';
+import { todayInDenver } from './time.js';
 
 // Cancelled and postponed shows stay: a followed artist's date must not vanish
 // from the list at the moment it is cancelled, which is the moment the user
@@ -98,7 +92,7 @@ export async function loadNextShowByCanonical(
   const nextShows = new Map<string, FollowedArtistNextShow>();
   if (canonicalNames.length === 0) return nextShows;
 
-  const today = todayInTimezone(MT_TIME_ZONE);
+  const today = todayInDenver();
 
   const rows = await db
     .select({

@@ -7,9 +7,7 @@
 import { sql, type SQL } from 'drizzle-orm';
 import { artists, events, venues } from '@concert-crawl/db';
 import { billsCanonicalName } from './event-billing.js';
-import { todayInTimezone } from './time.js';
-
-const MT_TIME_ZONE = 'America/Denver';
+import { todayInDenver } from './time.js';
 
 /**
  * Correlated EXISTS against the `artists` row in the enclosing query.
@@ -42,6 +40,6 @@ export const hasUpcomingShowExpr = (): SQL<boolean> => {
       AND ${events.hiddenFromConsumer} = false
       AND ${events.firstMissingAt} IS NULL
       AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')
-      AND ${events.date} >= ${todayInTimezone(MT_TIME_ZONE)}
+      AND ${events.date} >= ${todayInDenver()}
   )`;
 };

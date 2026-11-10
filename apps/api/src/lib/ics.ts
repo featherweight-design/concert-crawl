@@ -5,8 +5,8 @@
 // unauthenticated, which is a whole new auth surface for a keepsake feature.
 
 import type { HistoryShow } from '@concert-crawl/types';
+import { MT_TIME_ZONE } from './time.js';
 
-const MT_TIME_ZONE = 'America/Denver';
 const CRLF = '\r\n';
 
 /**

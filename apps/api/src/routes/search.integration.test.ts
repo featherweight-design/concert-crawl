@@ -527,3 +527,26 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('GET /v1/search/popular — Denver today', () => {
+  beforeEach(async () => {
+    await clearTables();
+  });
+
+  // 2026-11-10T04:30:00Z is 2026-11-09 21:30 in Denver (MST): UTC's "today"
+  // is already the 10th, and a UTC bound would drop tonight's show.
+  it("keeps tonight's show after the UTC rollover", async () => {
+    const venue = await seedVenue({ slug: 'bluebird', name: 'Bluebird' });
+    await seedEvent(venue.id, { artist: 'Tonight Show', date: '2026-11-09' });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-10T04:30:00Z'));
+    try {
+      const res = await app.request('/v1/search/popular');
+      const body = (await res.json()) as { data: { date: string }[] };
+      expect(body.data.map((row) => row.date)).toEqual(['2026-11-09']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

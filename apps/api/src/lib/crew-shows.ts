@@ -18,8 +18,7 @@ import {
 } from '@concert-crawl/db';
 import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types';
 import { displayHeadliner, portraitCanonicalName } from './event-billing.js';
-
-const MT_TIME_ZONE = 'America/Denver';
+import { MT_TIME_ZONE } from './time.js';
 
 /**
  * The tense rule (locked decision 2). Upcoming needs at least one member
