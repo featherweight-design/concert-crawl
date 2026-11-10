@@ -13,7 +13,8 @@
 //                  UI's onError swap is the safety net, this job is the
 //                  repair. A refresh never downgrades an established
 //                  identity: if the re-search no longer resolves, the row
-//                  keeps its spotifyArtistId and matchStatus and only
+//                  keeps its spotifyArtistId and matchStatus (an auto-matched
+//                  row may take its same pick's fresh photo) and only
 //                  matchCheckedAt moves.
 //   3. RETRY     — 'no_match' rows last checked more than NO_MATCH_RETRY_DAYS
 //                  ago, and 'ambiguous' rows past AMBIGUOUS_RECHECK_DAYS, in
@@ -32,8 +33,10 @@
 // cannot break that tie on its own, which is why this used to be terminal — but
 // the tie is a property of the catalogue, not of the question: an act that has
 // since gained a disambiguating release resolves cleanly on the next look. The
-// attempt budget is what keeps that from becoming a standing tax, and the admin
-// candidate picker is still the answer for the rows it never resolves.
+// attempt budget is what keeps that from becoming a standing tax. Since
+// 2026-11-10 the best-effort rule (`pickBestEffortCandidate`) resolves most
+// ties by taking Spotify's top result, marked `autoMatchedAt`; the admin picker
+// is the answer for what it declines, and the correction for what it picks.
 //
 // Every verdict also snapshots the search's candidate list onto
 // artists.spotifyCandidates, so the picker can open on a search this job
@@ -122,6 +125,11 @@ export interface RunMatchArtistsOptions {
   now?: () => Date;
 }
 
+// Postgres keeps microseconds and a JS Date only milliseconds, so the token
+// read back from a select is compared at the precision it survived in.
+const unchangedSince = (updatedAt: Date) =>
+  sql`date_trunc('milliseconds', ${artists.updatedAt}) = ${updatedAt.toISOString()}::timestamptz`;
+
 export const runMatchArtists = async (
   options: RunMatchArtistsOptions = {},
 ): Promise<MatchArtistsSummary> => {
@@ -175,6 +183,10 @@ export const runMatchArtists = async (
       spotifyArtistId: artists.spotifyArtistId,
       hidden: artists.hidden,
       autoMatchedAt: artists.autoMatchedAt,
+      // The concurrency token for the best-effort writes: every admin write
+      // moves it, so a write guarded on it never lands on a row a human
+      // touched while Spotify was searching.
+      updatedAt: artists.updatedAt,
     })
     .from(artists)
     .where(
@@ -234,9 +246,11 @@ export const runMatchArtists = async (
         // the picker has no way to know about.
         //
         // An auto-matched row lands here on every refresh, because its name is
-        // ambiguous by definition. Its photo is refreshed from the same pick,
-        // and its refresh clock always advances, or it would be re-searched
-        // every night for good.
+        // ambiguous by definition. When Spotify's top result is still the same
+        // act, its photo is refreshed from it and the refresh clock advances;
+        // otherwise only the snapshot moves, so a stale photo is never stamped
+        // fresh. Guarded on `updatedAt` so a human repoint mid-batch never
+        // receives the old pick's photo.
         const repick =
           row.autoMatchedAt === null
             ? null
@@ -248,16 +262,19 @@ export const runMatchArtists = async (
         await db
           .update(artists)
           .set({
-            ...(samePick ? { photoUrl: repick.picked.imageUrl } : {}),
-            ...(row.autoMatchedAt === null
-              ? {}
-              : { photoFetchedAt: checkedAt }),
+            ...(samePick
+              ? { photoUrl: repick.picked.imageUrl, photoFetchedAt: checkedAt }
+              : {}),
             matchCheckedAt: checkedAt,
             spotifyCandidates: result.candidates,
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
           })
-          .where(eq(artists.id, row.id));
+          .where(
+            row.autoMatchedAt === null
+              ? eq(artists.id, row.id)
+              : and(eq(artists.id, row.id), unchangedSince(row.updatedAt)),
+          );
         continue;
       }
 
@@ -294,41 +311,46 @@ export const runMatchArtists = async (
       if (result.status === 'ambiguous' && !row.hidden) {
         const verdict = pickBestEffortCandidate(result.candidates, row);
         if ('picked' in verdict) {
-          const picked = await db
-            .update(artists)
-            .set({
-              matchStatus: 'matched',
-              spotifyArtistId: verdict.picked.id,
-              matchConfidence: null,
-              photoUrl: verdict.picked.imageUrl,
-              photoFetchedAt: checkedAt,
-              matchCheckedAt: checkedAt,
-              matchAttempts: 0,
-              autoMatchedAt: checkedAt,
-              spotifyCandidates: result.candidates,
-              spotifyCandidatesFetchedAt: checkedAt,
-              updatedAt: checkedAt,
-            })
-            // A human answer given while Spotify was searching wins.
-            .where(
-              and(
-                eq(artists.id, row.id),
-                eq(artists.matchStatus, row.matchStatus),
-              ),
-            )
-            .returning({ id: artists.id });
-          if (picked.length > 0) {
-            await db.insert(auditLog).values({
-              actorId: AUTO_MATCH_ACTOR,
-              action: AUTO_MATCH_AUDIT_ACTION,
-              targetId: row.id,
-              metadata: {
+          const picked = await db.transaction(async (tx) => {
+            const written = await tx
+              .update(artists)
+              .set({
+                matchStatus: 'matched',
                 spotifyArtistId: verdict.picked.id,
-                rule: 'top-exact-with-photo',
-              },
-            });
-            summary.autoMatched += 1;
-          }
+                matchConfidence: null,
+                photoUrl: verdict.picked.imageUrl,
+                photoFetchedAt: checkedAt,
+                matchCheckedAt: checkedAt,
+                matchAttempts: 0,
+                autoMatchedAt: checkedAt,
+                spotifyCandidates: result.candidates,
+                spotifyCandidatesFetchedAt: checkedAt,
+                updatedAt: checkedAt,
+              })
+              // A human answer given while Spotify was searching wins,
+              // whatever it changed: status, identity or visibility.
+              .where(
+                and(
+                  eq(artists.id, row.id),
+                  unchangedSince(row.updatedAt),
+                  eq(artists.hidden, false),
+                ),
+              )
+              .returning({ id: artists.id });
+            if (written.length > 0) {
+              await tx.insert(auditLog).values({
+                actorId: AUTO_MATCH_ACTOR,
+                action: AUTO_MATCH_AUDIT_ACTION,
+                targetId: row.id,
+                metadata: {
+                  spotifyArtistId: verdict.picked.id,
+                  rule: 'top-exact-with-photo',
+                },
+              });
+            }
+            return written.length;
+          });
+          if (picked > 0) summary.autoMatched += 1;
           continue;
         }
       }

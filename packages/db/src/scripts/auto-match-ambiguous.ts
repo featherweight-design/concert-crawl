@@ -39,6 +39,7 @@ export interface AutoMatchResult {
     spotifyArtistId: string;
     spotifyName: string;
     photoUrl: string | null;
+    photoSeenAt: Date | null;
   }[];
 }
 
@@ -52,6 +53,7 @@ export async function autoMatchAmbiguousArtists(
       name: artists.name,
       canonicalName: artists.canonicalName,
       spotifyCandidates: artists.spotifyCandidates,
+      spotifyCandidatesFetchedAt: artists.spotifyCandidatesFetchedAt,
     })
     .from(artists)
     .where(
@@ -85,6 +87,7 @@ export async function autoMatchAmbiguousArtists(
       spotifyArtistId: verdict.picked.id,
       spotifyName: verdict.picked.name,
       photoUrl: verdict.picked.imageUrl,
+      photoSeenAt: row.spotifyCandidatesFetchedAt,
     });
   }
 
@@ -104,7 +107,9 @@ export async function autoMatchAmbiguousArtists(
             // The pick always has a photo; nothing else would fetch one for a
             // matched row with none.
             photoUrl: pick.photoUrl,
-            photoFetchedAt: now,
+            // When the snapshot saw it, not now: an old URL stays due for the
+            // match job's photo refresh.
+            photoFetchedAt: pick.photoSeenAt,
             autoMatchedAt: now,
             updatedAt: now,
           })
@@ -112,6 +117,7 @@ export async function autoMatchAmbiguousArtists(
             and(
               eq(artists.id, pick.artistId),
               eq(artists.matchStatus, 'ambiguous'),
+              eq(artists.hidden, false),
             ),
           )
           .returning({ id: artists.id });
