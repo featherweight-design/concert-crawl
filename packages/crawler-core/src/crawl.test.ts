@@ -1959,6 +1959,12 @@ describe('crawlVenue — crawlMode orchestration', () => {
         .mockResolvedValue(mockBrowser);
 
       await crawlVenue(venue.id, getBrowser);
+      // The in-memory update() stores the failure path's CASE expression
+      // verbatim, so crawlPausedAt reads non-null here although Postgres
+      // would leave it null on a first failure. Clear it so the second crawl
+      // is not skipped as paused.
+      const stored = stores.venues.find((row) => row.id === venue.id);
+      if (stored) stored.crawlPausedAt = null;
       await crawlVenue(venue.id, getBrowser);
 
       expect(getBrowser).toHaveBeenCalledTimes(2);

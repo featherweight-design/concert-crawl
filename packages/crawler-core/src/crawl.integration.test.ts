@@ -1428,12 +1428,15 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     const [row] = await db
       .select({
         active: venues.active,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.consecutiveFailures).toBe(3);
-    expect(row?.active).toBe(false);
+    // The crawl pauses; the venue and its shows stay published.
+    expect(row?.active).toBe(true);
+    expect(row?.crawlPausedAt).toBeInstanceOf(Date);
   });
 
   it('does not auto-pause before the 3rd consecutive failure', async () => {
@@ -1445,19 +1448,21 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     const [row] = await db
       .select({
         active: venues.active,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.consecutiveFailures).toBe(2);
     expect(row?.active).toBe(true);
+    expect(row?.crawlPausedAt).toBeNull();
   });
 
   it('does not re-pause a venue an admin has re-activated (count goes 3 → 4)', async () => {
     // Admin manually un-paused after the initial auto-pause. The venue's
     // bug hasn't been fixed yet, so the next crawl still fails. The CASE
-    // guard in the UPDATE must NOT flip `active` back to false (otherwise
-    // the auto-pause would fight every admin re-activation indefinitely).
+    // guard in the UPDATE must NOT pause the crawl again (otherwise the
+    // auto-pause would fight every admin resume indefinitely).
     const venue = await seedVenueWithCount(3, true);
     mockFetchPage.mockRejectedValue(new Error('generic schema error'));
 
@@ -1466,12 +1471,14 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     const [row] = await db
       .select({
         active: venues.active,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.consecutiveFailures).toBe(4);
     expect(row?.active).toBe(true);
+    expect(row?.crawlPausedAt).toBeNull();
   });
 
   it('sends the crawl-failure email exactly once, at the 3rd failure', async () => {
@@ -1513,7 +1520,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(rows.length).toBe(1);
-    expect(String(rows[0]?.body)).toMatch(/auto-paused/i);
+    expect(String(rows[0]?.body)).toMatch(/crawl paused/i);
   });
 
   it('notification body does NOT mention auto-pause on subsequent failures', async () => {
@@ -1528,7 +1535,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(rows.length).toBe(1);
-    expect(String(rows[0]?.body)).not.toMatch(/auto-paused/i);
+    expect(String(rows[0]?.body)).not.toMatch(/crawl paused/i);
   });
 
   it('fires the email exactly once when two concurrent crawls hit the threshold simultaneously', async () => {
@@ -1536,18 +1543,18 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     // triggers cron) both read consecutiveFailures=2, both fail to fetch.
     // Without the SQL increment + CASE, both would compute
     // newFailureCount=3 and both would fire the auto-pause flip + the
-    // crawl-failure email + the "auto-paused"-wording notification. With
+    // crawl-failure email + the "crawl paused"-wording notification. With
     // the atomic UPDATE + RETURNING, exactly one worker sees the row land
     // on 3 (the other sees 4) and fires those threshold-only side-effects
     // once. The plain crawl.failed notification still inserts on both
     // workers — that's intentional re-alerting and is exercised by the
-    // assertions below (two notifications, only one with "auto-paused").
+    // assertions below (two notifications, only one with "crawl paused").
     //
     // We deliberately use a deferred-rejection mock so both workers reach
     // the failure path *together*. Using mockRejectedValue would let worker
-    // A's failure path commit (including the auto-pause that flips active
-    // to false) before worker B's initial venue SELECT — which would throw
-    // "venue not active" on B and never reach the race.
+    // A's failure path commit (including the auto-pause that sets
+    // crawl_paused_at) before worker B's initial venue SELECT — which would
+    // then skip B as paused and never reach the race.
     const { sendCrawlFailureEmail } = await import('./lib/email.js');
     const mockSendEmail = vi.mocked(sendCrawlFailureEmail);
     const venue = await seedVenueWithCount(2);
@@ -1555,10 +1562,9 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     // 50ms delay before the throw guarantees both workers complete their
     // initial venue SELECT (where active=true) before either reaches the
     // failure path. Without this, A's mockRejectedValue would synchronously
-    // fail in the same microtask cycle, letting A's UPDATE (which flips
-    // active to false) commit before B's SELECT even runs — and B would
-    // throw `Venue ${venueId} not found or not active/verified`
-    // (crawl.ts:196) instead of racing through the threshold.
+    // fail in the same microtask cycle, letting A's UPDATE (which sets
+    // crawl_paused_at) commit before B's SELECT even runs — and B would be
+    // skipped as paused instead of racing through the threshold.
     mockFetchPage.mockImplementation(
       () =>
         new Promise<never>((_, reject) =>
@@ -1574,12 +1580,15 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     const [row] = await db
       .select({
         active: venues.active,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.consecutiveFailures).toBe(4);
-    expect(row?.active).toBe(false);
+    // The crawl pauses; the venue and its shows stay published.
+    expect(row?.active).toBe(true);
+    expect(row?.crawlPausedAt).toBeInstanceOf(Date);
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
     expect(mockSendEmail).toHaveBeenCalledWith({
       venueName: venue.name,
@@ -1594,7 +1603,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .where(eq(notifications.category, 'crawl.failed'));
     expect(noteRows.length).toBe(2);
     const autoPausedNotes = noteRows.filter((rr) =>
-      /auto-paused/i.test(String(rr.body)),
+      /crawl paused/i.test(String(rr.body)),
     );
     expect(autoPausedNotes.length).toBe(1);
   });
@@ -1618,15 +1627,17 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .select({
         active: venues.active,
         blockedAt: venues.blockedAt,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
       .where(eq(venues.id, venue.id));
     expect(row?.consecutiveFailures).toBe(3);
-    // The fix: a 403 at the 3rd consecutive failure sets blockedAt but
-    // leaves `active` alone, so the admin trigger endpoint still accepts
-    // a recovery trigger without an extra un-pause step.
+    // A 403 at the 3rd consecutive failure sets blockedAt and does not
+    // pause the crawl, so the admin trigger endpoint still accepts a
+    // recovery trigger without an extra resume step.
     expect(row?.active).toBe(true);
+    expect(row?.crawlPausedAt).toBeNull();
     expect(row?.blockedAt).not.toBeNull();
     expect(mockSendEmail).not.toHaveBeenCalled();
 
@@ -1636,7 +1647,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(noteRows.length).toBe(1);
-    expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i);
+    expect(String(noteRows[0]?.body)).not.toMatch(/crawl paused/i);
   });
 
   it('does NOT auto-pause when the 3rd failure is a TimeoutError', async () => {
@@ -1655,6 +1666,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .select({
         active: venues.active,
         blockedAt: venues.blockedAt,
+        crawlPausedAt: venues.crawlPausedAt,
         consecutiveFailures: venues.consecutiveFailures,
       })
       .from(venues)
@@ -1662,6 +1674,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     expect(row?.consecutiveFailures).toBe(3);
     expect(row?.active).toBe(true);
     expect(row?.blockedAt).not.toBeNull();
+    expect(row?.crawlPausedAt).toBeNull();
     expect(mockSendEmail).not.toHaveBeenCalled();
 
     const { notifications } = await import('@concert-crawl/db');
@@ -1670,7 +1683,7 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .from(notifications)
       .where(eq(notifications.category, 'crawl.failed'));
     expect(noteRows.length).toBe(1);
-    expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i);
+    expect(String(noteRows[0]?.body)).not.toMatch(/crawl paused/i);
   });
 });
 
