@@ -1,3 +1,11 @@
+## [1.308.4](https://github.com/featherweight-design/concert-crawl/compare/v1.308.3...v1.308.4) (2026-11-10)
+
+
+### Bug Fixes
+
+* **crawler:** keep a venue's own 429 a block whatever its text ([e5432a1](https://github.com/featherweight-design/concert-crawl/commit/e5432a13baedf785a64bf27821e20b8317666f7f))
+* **crawler:** stop an Anthropic rate-limit 429 counting as a venue strike ([d956d7f](https://github.com/featherweight-design/concert-crawl/commit/d956d7f0a773452cd0b9d4b414aad1a6746ccf43))
+
 ## [1.308.3](https://github.com/featherweight-design/concert-crawl/compare/v1.308.2...v1.308.3) (2026-11-10)
 
 
