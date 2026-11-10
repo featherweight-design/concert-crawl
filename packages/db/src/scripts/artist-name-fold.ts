@@ -2,7 +2,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import { latinExtendedSql } from '@concert-crawl/types';
 
 /**
- * A raw billed name folded the way `normalizeArtistName` folds it, minus the
+ * A raw billed name folded the way `normalizeArtistName` folds Latin names, minus the
  * separator split: NFD with combining marks stripped, the Latin Extended map
  * applied, lowercased, whitespace collapsed and trimmed. Used to pair a raw
  * headliner with the canonical name it belongs to, so `Beyoncé` pairs with
@@ -14,8 +14,12 @@ import { latinExtendedSql } from '@concert-crawl/types';
  * The same expression shape the canonical migrations and their parity test use
  * (`latinExtendedSql` around the NFD strip), so it stays tied to the JS map.
  * `chr()` builds the U+0300–U+036F combining-mark range so no escape has to
- * survive a template literal. `column` is always a fixed column reference in
- * this package, never input, which is what makes `sql.raw` safe here.
+ * survive a template literal. `column` is typed to a fixed set of column
+ * references, never input, which is what makes `sql.raw` safe here.
+ *
+ * Marks outside U+0300–U+036F are not stripped (JS strips every `\p{M}`), so
+ * a name carrying one, such as Japanese dakuten or an Indic vowel sign, does
+ * not pair and falls back as it did before this fold existed.
  * `artist-name-fold.integration.test.ts` pins it to the JS fold.
  */
 // JS `\s`, which `normalizeArtistName` collapses: Postgres `[[:space:]]` alone
@@ -27,7 +31,11 @@ const JS_WHITESPACE_RUN = `'[[:space:]' || ${[
   .map((code) => `chr(${code})`)
   .join(' || ')} || ']+'`;
 
-export const foldedArtistName = (column: string): SQL => {
+/** The fixed column references the fold is applied to; never input. */
+export type FoldableColumn =
+  'raw.value' | 'billing.billed_name' | 'input.value';
+
+export const foldedArtistName = (column: FoldableColumn): SQL => {
   const marksStripped = `regexp_replace(normalize(${column}, NFD), '[' || chr(768) || '-' || chr(879) || ']', '', 'g')`;
   return sql.raw(
     `btrim(regexp_replace(lower(${latinExtendedSql(marksStripped)}), ${JS_WHITESPACE_RUN}, ' ', 'g'))`,

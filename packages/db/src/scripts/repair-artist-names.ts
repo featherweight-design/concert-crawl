@@ -72,19 +72,18 @@ const SAMPLE_SIZE = 25;
  * with the raw `headliners` array.
  *
  * Two pairings, the backfill's own. On a single-act bill there is no ordering
- * to get wrong, so `headliners[1]` is the spelling (both cardinalities checked,
- * because `headliners` is not deduped: `['Kokoroko', 'Kokoroko']` canonicalizes
- * to one element). On any bill, a raw headliner that folds to exactly the
+ * to get wrong, so its one distinct raw value is the spelling (distinct, because
+ * `headliners` is not deduped: `['Kokoroko', 'Kokoroko']` is still one act). On any bill, a raw headliner that folds to exactly the
  * canonical name by case, accents and whitespace alone is that act's spelling, which is
  * what reaches each act on a co-headline bill. The fold has no separator split,
  * so it never pairs a name with a different act's billing.
  */
 const BILLINGS = sql`
-  SELECT btrim(events.headliners[1]) AS billed_name
+  SELECT min(btrim(raw.value)) AS billed_name
+  FROM unnest(events.headliners) AS raw(value)
   WHERE cardinality(events.canonical_headliners) = 1
-    AND cardinality(events.headliners) = 1
-    AND events.headliners[1] IS NOT NULL
-    AND btrim(events.headliners[1]) <> ''
+    AND btrim(raw.value) <> ''
+  HAVING count(DISTINCT btrim(raw.value)) = 1
   UNION
   SELECT btrim(raw.value)
   FROM unnest(events.headliners) AS raw(value)
@@ -158,8 +157,9 @@ const CORROBORATED = sql`
 `;
 
 /**
- * One billing per artist, chosen the way `backfillArtists` chooses one: most
- * frequently seen, ties broken alphabetically so two runs agree.
+ * One billing per artist: a cased spelling before a single-case one (as the
+ * backfill pairs), then most frequently seen, then byte order so two runs and
+ * two databases agree.
  *
  * Nothing guarantees a single answer — an act can be billed two ways across two
  * events — and picking arbitrarily would make the script's output depend on
@@ -193,7 +193,12 @@ const CANDIDATES = sql`
       id, slug, current_name, billed_name, kind,
       ROW_NUMBER() OVER (
         PARTITION BY id
-        ORDER BY seen_count DESC, billed_name ASC
+        -- A cased spelling outranks a shouted or whispered one, so an all-caps
+        -- name the venue mostly shouts is still fixed by a cased billing.
+        ORDER BY (billed_name = upper(billed_name)
+                  OR billed_name = lower(billed_name)) ASC,
+                 seen_count DESC,
+                 billed_name COLLATE "C" ASC
       ) AS rank
     FROM billings
   )

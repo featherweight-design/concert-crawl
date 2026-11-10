@@ -170,6 +170,31 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('ReZZ');
   });
 
+  it('fixes an all-caps name even when the venue mostly shouts it', async () => {
+    for (let i = 0; i < 5; i += 1) await seedSingleActBill('REZZ', 'rezz');
+    await seedSingleActBill('Rezz', 'rezz');
+    await seedArtist('REZZ', 'rezz');
+
+    await repairArtistNames(testDb, { dryRun: false });
+
+    expect((await listArtists())[0]?.name).toBe('Rezz');
+  });
+
+  it('reads a one-act bill whose raw array repeats the act', async () => {
+    const venue = await seedVenue({ slug: `repair-ewf-${Date.now()}` });
+    await seedEvent(venue.id, {
+      artist: 'Earth, Wind & Fire',
+      canonicalArtist: 'earth, wind',
+      headliners: ['Earth, Wind & Fire', 'Earth, Wind & Fire'],
+      canonicalHeadliners: ['earth, wind'],
+    });
+    await seedArtist('Earth, Wind & Fire: Final Tour', 'earth, wind');
+
+    await repairArtistNames(testDb, { dryRun: false });
+
+    expect((await listArtists())[0]?.name).toBe('Earth, Wind & Fire');
+  });
+
   it('skips an event an admin has hidden', async () => {
     const venue = await seedVenue({ slug: `repair-hidden-${Date.now()}` });
     await seedEvent(venue.id, {
