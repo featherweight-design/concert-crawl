@@ -19,6 +19,8 @@ const { stripeState } = vi.hoisted(() => ({
   stripeState: {
     cancelled: [] as string[],
     cancelFails: false,
+    cancelAuthFails: false,
+    configured: true,
     // What `subscriptions.retrieve` reports after a refused cancel.
     statusInStripe: 'active',
   },
@@ -27,9 +29,17 @@ const { stripeState } = vi.hoisted(() => ({
 // Account deletion cancels billing through the shared client.
 vi.mock('../lib/stripe.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/stripe.js')>()),
+  isStripeConfigured: () => stripeState.configured,
   getStripeClient: () => ({
     subscriptions: {
       cancel: (subscriptionId: string) => {
+        if (stripeState.cancelAuthFails) {
+          return Promise.reject(
+            Object.assign(new Error('Invalid API Key provided'), {
+              type: 'StripeAuthenticationError',
+            }),
+          );
+        }
         if (stripeState.cancelFails) {
           return Promise.reject(new Error('stripe unavailable'));
         }
@@ -790,6 +800,45 @@ describe('DELETE /v1/users/me', () => {
     });
     expect(res.status).toBe(200);
     expect(stripeState.cancelled).toEqual(['sub_user_test123']);
+  });
+
+  // Going free removes STRIPE_SECRET_KEY. A live-looking subscription row
+  // must not trap the account: skip the cancel, log it, delete anyway.
+  it('deletes without calling Stripe when Stripe is not configured', async () => {
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123');
+    stripeState.cancelled = [];
+    stripeState.configured = false;
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      });
+      expect(res.status).toBe(200);
+      expect(stripeState.cancelled).toEqual([]);
+    } finally {
+      stripeState.configured = true;
+    }
+  });
+
+  // A key still set but rolled in Stripe must not trap the account either.
+  it('deletes when Stripe refuses the key, without a 502', async () => {
+    setAuth();
+    await clearTables();
+    await seedUserProfile('user_test123');
+    await seedSubscription('user_test123');
+    stripeState.cancelAuthFails = true;
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      stripeState.cancelAuthFails = false;
+    }
   });
 
   it('does not call Stripe for a subscription that already ended', async () => {

@@ -321,10 +321,11 @@ below). Production custom domains are not covered by the project's Standard
 Deployment Protection (`ssoProtection` is `all_except_custom_domains`), so unlike
 the staging custom-environment domain, it needed no exception.
 
-**Stripe webhook.** At the cutover, edit the live Stripe webhook endpoint's URL to
-`https://api.concertcrawl.app/v1/webhooks/stripe`. Edit the existing endpoint
-rather than creating a new one: editing the URL keeps its signing secret, so
-`STRIPE_WEBHOOK_SECRET` does not change.
+**Stripe webhook: retired.** The API's `/v1/webhooks/stripe` route was deleted
+going free (2026-11-10). **Hugh:** delete the webhook endpoints in the Stripe
+dashboard, live and test mode, so Stripe stops retrying deliveries and sending
+failure emails. `STRIPE_WEBHOOK_SECRET` is then unused and can be removed from
+every environment.
 
 ### Crawler (prod) — GitHub Actions
 

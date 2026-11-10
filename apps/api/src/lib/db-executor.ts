@@ -1,10 +1,8 @@
 // apps/api/src/lib/db-executor.ts
 //
-// Query executor accepted by billing/webhook persistence helpers: either the
-// shared Drizzle client or a transaction handle. The webhook route runs each
-// event's idempotency insert + handler writes in ONE transaction so a handler
-// failure rolls back the processed_stripe_events row and Stripe's retry
-// re-processes the event.
+// Query executor accepted by persistence helpers that may run inside a
+// caller's transaction: either the shared Drizzle client or a transaction
+// handle.
 
 import type { Database } from '@concert-crawl/db';
 
