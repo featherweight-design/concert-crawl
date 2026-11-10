@@ -1,3 +1,16 @@
+# [1.310.0](https://github.com/featherweight-design/concert-crawl/compare/v1.309.0...v1.310.0) (2026-11-10)
+
+
+### Bug Fixes
+
+* **artists:** guard best-effort writes on the row being untouched ([8ab5173](https://github.com/featherweight-design/concert-crawl/commit/8ab5173b83fb354e13c2eb79d7015dc43a6b3b67))
+* **artists:** guard, audit and photo the job's auto-matches; compare whole names ([5247ecc](https://github.com/featherweight-design/concert-crawl/commit/5247eccd2c2a6db0e4f89e7c0c0cfbcb042e726a))
+
+
+### Features
+
+* **artists:** best-effort auto-match for ambiguous artists ([8299e1f](https://github.com/featherweight-design/concert-crawl/commit/8299e1fd96cc3b7f1ecfd9c1427e20cef1b46004))
+
 # [1.309.0](https://github.com/featherweight-design/concert-crawl/compare/v1.308.7...v1.309.0) (2026-11-10)
 
 
