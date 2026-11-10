@@ -3,7 +3,7 @@
 // (per-worktree test DB), so every verdict is asserted against actual rows.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { asc, eq } from 'drizzle-orm';
-import { artists } from '@concert-crawl/db';
+import { artists, auditLog } from '@concert-crawl/db';
 import { testDb } from '../test/helpers/db.js';
 import { apiLogger } from '../lib/logger.js';
 import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js';
@@ -79,6 +79,41 @@ describe('runMatchArtists', () => {
     expect(row?.photoUrl).toBe('https://i.scdn.co/image/top');
     expect(row?.autoMatchedAt).toEqual(NOW);
     expect(row?.matchConfidence).toBeNull();
+    const audits = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.targetId, id));
+    expect(audits.map((audit) => audit.action)).toEqual(['artist.match.auto']);
+  });
+
+  it('never auto-matches a hidden row', async () => {
+    const id = await seedArtist({
+      name: 'Bahamas',
+      canonicalName: 'bahamas',
+      hidden: true,
+    });
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_a',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/a' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+        {
+          id: 'sp_b',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/b' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    });
+
+    expect((await readArtist(id))?.matchStatus).toBe('ambiguous');
   });
 
   it('clears the auto-match mark when an exact answer supersedes it', async () => {
