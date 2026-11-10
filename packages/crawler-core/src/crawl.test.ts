@@ -2340,7 +2340,8 @@ describe('crawlVenue — account-wide LLM refusals', () => {
       finalUrl: venue.websiteUrl,
     });
 
-  // The tier's monthly spend cap: a 429 that is not a rate limit.
+  // The tier's monthly spend cap: a rate_limit_error 429 that is really a
+  // spend limit, so it classes as quota.
   const TIER_CAP =
     'Error: 429 {"error":{"type":"rate_limit_error","message":"You have reached your API usage limits.","details":{"error_code":"enforced_spend_limit_reached"}}}';
 
@@ -2370,6 +2371,19 @@ describe('crawlVenue — account-wide LLM refusals', () => {
       expect(storedVenue(venue.id)?.active).toBe(true);
     },
   );
+
+  it("still blocks a venue on its own 429, even when the text reads like the LLM's", async () => {
+    const venue = seedVenue({ consecutiveFailures: 0 });
+    const { CrawlFetchError } = await import('./lib/fetcher.js');
+    mockFetchPage.mockRejectedValue(
+      new CrawlFetchError(429, `HTTP 429 ${RATE_LIMIT}`),
+    );
+
+    const run = await crawlVenue(venue.id, mockBrowser);
+
+    expect(run.status).toBe('failed');
+    expect(storedVenue(venue.id)?.blockedAt).not.toBeNull();
+  });
 
   it('still runs the three-strikes update for an ordinary failure (control)', async () => {
     const venue = seedVenue({ consecutiveFailures: 2 });
