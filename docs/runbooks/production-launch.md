@@ -2,7 +2,7 @@
 
 Steps to bring the production environment fully online. Complete these in order — later steps depend on earlier ones.
 
-This runbook reflects the architecture after the Render exit: **web and API on Vercel, Postgres on Neon, the crawler on GitHub Actions**. The prod API is the Vercel project `concert-crawl-api` (production, `https://api.concertcrawl.app`), with match-artists and spotify-weekly as Vercel Cron Jobs inside it. Render was retired on 2026-11-07, when every Render service was deleted. See `docs/superpowers/progress.md` for the migration history.
+This runbook reflects the architecture after the Render exit: **web and API on Vercel, Postgres on Neon, the crawler on GitHub Actions**. The prod API is the Vercel project `concert-crawl-api` (production, `https://api.concertcrawl.app`), with match-artists, spotify-weekly and notification-prune as Vercel Cron Jobs inside it. Render was retired on 2026-11-07, when every Render service was deleted. See `docs/superpowers/progress.md` for the migration history.
 
 ---
 
@@ -555,7 +555,7 @@ Smoke tests run on a schedule but are gated by `SMOKE_ENABLED`. Enable only at p
 If a deploy breaks production:
 
 - **Web (Vercel):** Deployments tab → click any previous deploy → **Instant Rollback** (older UIs say **Promote to Production**). No rebuild.
-- **API (Vercel):** dispatch **Rollback Production (manual)** (`rollback-prod.yml`), which runs `vercel rollback` on `concert-crawl-api`, or use Instant Rollback in that project's dashboard. This also rolls back match-artists and spotify-weekly, which run inside the API. After a rollback the project stops giving new production deployments the domain until one is promoted; `deploy-prod.yml` does that promote itself.
+- **API (Vercel):** dispatch **Rollback Production (manual)** (`rollback-prod.yml`), which runs `vercel rollback` on `concert-crawl-api`, or use Instant Rollback in that project's dashboard. This also rolls back match-artists, spotify-weekly and notification-prune, which run inside the API. After a rollback the project stops giving new production deployments the domain until one is promoted; `deploy-prod.yml` does that promote itself.
 - **Crawler (GitHub Actions):** follows the API. It runs the commit the production API serves, so rolling the API back rolls the crawler back on its next run.
 - **DB:** see `docs/runbooks/db-rollback.md`.
 

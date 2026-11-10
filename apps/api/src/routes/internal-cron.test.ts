@@ -13,7 +13,9 @@ vi.mock('../lib/prune-notifications.js', () => ({
 }));
 vi.mock('@concert-crawl/db', () => ({ db: {}, auditLog: {} }));
 
+import { readFileSync } from 'node:fs';
 import { Hono } from 'hono';
+import { pruneNotifications } from '../lib/prune-notifications.js';
 import {
   createInternalCronRouter,
   isAuthorizedCronRequest,
@@ -260,5 +262,60 @@ describe('isAuthorizedCronRequest', () => {
     expect(isAuthorizedCronRequest(`bearer ${SECRET}`, SECRET)).toBe(false);
     expect(isAuthorizedCronRequest(undefined, SECRET)).toBe(false);
     expect(isAuthorizedCronRequest('', SECRET)).toBe(false);
+  });
+});
+
+const withCronSecret = () => {
+  const original = process.env['CRON_SECRET'];
+  beforeEach(() => {
+    process.env['CRON_SECRET'] = SECRET;
+  });
+  afterEach(() => {
+    if (original === undefined) delete process.env['CRON_SECRET'];
+    else process.env['CRON_SECRET'] = original;
+  });
+};
+
+describe('vercel.json crons', () => {
+  withCronSecret();
+
+  // The schedule is the only thing that makes these jobs run, so a cron whose
+  // path drifts from the router would stop with no error anywhere.
+  const vercelConfig: { crons: { path: string }[] } = JSON.parse(
+    readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'),
+  );
+
+  it('schedules every route the router serves', () => {
+    expect(vercelConfig.crons.map((cron) => cron.path).sort()).toEqual(
+      [...PATHS].sort(),
+    );
+  });
+
+  it.each(vercelConfig.crons.map((cron) => cron.path))(
+    '%s reaches a route',
+    async (path) => {
+      const res = await makeApp(makeJobs()).request(path, {
+        headers: { authorization: `Bearer ${SECRET}` },
+      });
+      expect(res.status).not.toBe(404);
+    },
+  );
+});
+
+describe('default jobs', () => {
+  withCronSecret();
+
+  it('prunes notifications against the app database at the current time', async () => {
+    vi.mocked(pruneNotifications).mockResolvedValueOnce({ deleted: 0 });
+    const before = Date.now();
+    const app = new Hono();
+    app.route('/v1/internal/cron', createInternalCronRouter());
+    const res = await app.request(PATHS[3], {
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(res.status).toBe(200);
+    const [database, now] = vi.mocked(pruneNotifications).mock.calls[0] ?? [];
+    expect(database).toEqual({});
+    expect(now?.getTime()).toBeGreaterThanOrEqual(before);
   });
 });

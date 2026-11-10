@@ -10,7 +10,7 @@ Two repo configurations gate the pipeline; see the "Enabling the pipeline" secti
 
 **This page describes prod after the Render exit.** The prod API runs on
 Vercel (project `concert-crawl-api`, production, `https://api.concertcrawl.app`),
-and match-artists and spotify-weekly run as Vercel Cron Jobs inside it. The
+and match-artists, spotify-weekly and notification-prune run as Vercel Cron Jobs inside it. The
 crawler runs on GitHub Actions (`crawler-daily.yml`, `crawler-triggers.yml`) at
 the commit the production API serves, so it ships and rolls back with the API
 with no step of its own. See `docs/runbooks/crawler-github-actions.md`. Render
@@ -62,10 +62,11 @@ merge to main
                        automatically.
 ```
 
-match-artists and spotify-weekly are not in the tree because they are part of
-the API: Vercel Cron Jobs in `concert-crawl-api` (`0 16 * * *` and
-`30 15 * * 1`, calling `GET /v1/internal/cron/match-artists` and
-`GET /v1/internal/cron/spotify-weekly` with a `CRON_SECRET` bearer). They ship
+match-artists, spotify-weekly and notification-prune are not in the tree
+because they are part of the API: Vercel Cron Jobs in `concert-crawl-api`
+(`0 16 * * *`, `30 15 * * 1` and `30 10 * * *`, calling
+`GET /v1/internal/cron/match-artists`, `GET /v1/internal/cron/spotify-weekly`
+and `GET /v1/internal/cron/notification-prune` with a `CRON_SECRET` bearer). They ship
 with every API deploy.
 
 ### The promotion flow, in words
@@ -575,7 +576,7 @@ What it checks, from the prod cutover:
   `PROD_API_URL`'s hostname serves is READY; it is not a Git-integration build
   (that would mean a push reached prod without a promotion); no production
   deploy newer than it ended in ERROR; and Cron Jobs are enabled on the
-  project, since match-artists and spotify-weekly stop silently when they are
+  project, since match-artists, spotify-weekly and notification-prune stop silently when they are
   not.
 - **The daily crawl** (`crawler-daily.yml`): reported unhealthy when the
   repository variable `CRAWLER_GHA_DAILY_ENABLED` is not `true`, or when no
@@ -657,7 +658,7 @@ issue rather than to raise the thresholds. Raising them hides the next real one.
   Someone flipping it back reopens a push-to-prod path. `prod-deploy-health`
   flags a Git-integration build only once it is serving prod, within two hours.
 - **Vercel Cron Jobs are a project-level switch.** If they are off,
-  match-artists and spotify-weekly stop with no error anywhere except the
+  match-artists, spotify-weekly and notification-prune stop with no error anywhere except the
   deploy-health check.
 - **DB schema rollback is out of scope.** Per the expand/contract migration
   policy in `CLAUDE.md`, an app-only rollback is always schema-safe — the

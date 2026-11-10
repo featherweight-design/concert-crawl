@@ -213,9 +213,9 @@ case "${command_name}" in
       unhealthy "the newest production deploy (${failed}) ended in ERROR and ${current_id} is still serving. Promoted code is not reaching prod."
     fi
 
-    # match-artists, spotify-weekly and the crawler-daily dispatch run as
-    # Vercel Cron. Cron Jobs are a project-level switch, and one that is off
-    # stops all three without any error anywhere.
+    # match-artists, spotify-weekly, the notification prune and the
+    # crawler-daily dispatch run as Vercel Cron. Cron Jobs are a project-level
+    # switch, and one that is off stops all four without any error anywhere.
     project=$(vercel_get "/v9/projects/${project_id}?teamId=${VERCEL_ORG_ID}") || exit 1
     crons_off=$(echo "${project}" | jq -r '
       (.crons // {}) as $c
