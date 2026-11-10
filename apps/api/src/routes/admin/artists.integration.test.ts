@@ -273,7 +273,44 @@ describe('admin artists routes', () => {
         no_match: 0,
         not_an_artist: 0,
         exhausted: 0,
+        auto_matched: 0,
       });
+    });
+
+    it('counts and lists an auto-matched row apart from matched', async () => {
+      await seedArtist({ canonicalName: 'ccc', matchStatus: 'matched' });
+      await seedArtist({
+        canonicalName: 'bahamas',
+        matchStatus: 'matched',
+        autoMatchedAt: new Date('2026-11-10T00:00:00Z'),
+      });
+
+      const counts = await (
+        await app.request('/v1/admin/artists/counts?upcoming=false', {
+          headers: ADMIN_HEADERS,
+        })
+      ).json();
+      expect(counts.data).toMatchObject({ matched: 1, auto_matched: 1 });
+
+      const listed = await (
+        await app.request(
+          '/v1/admin/artists?status=auto_matched&upcoming=false',
+          { headers: ADMIN_HEADERS },
+        )
+      ).json();
+      expect(
+        listed.data.map((row: { canonicalName: string }) => row.canonicalName),
+      ).toEqual(['bahamas']);
+      expect(listed.data[0].autoMatchedAt).not.toBeNull();
+
+      const matched = await (
+        await app.request('/v1/admin/artists?status=matched&upcoming=false', {
+          headers: ADMIN_HEADERS,
+        })
+      ).json();
+      expect(
+        matched.data.map((row: { canonicalName: string }) => row.canonicalName),
+      ).toEqual(['ccc']);
     });
 
     it('counts a not_an_artist row', async () => {
@@ -318,6 +355,7 @@ describe('admin artists routes', () => {
         no_match: 0,
         not_an_artist: 0,
         exhausted: 2,
+        auto_matched: 0,
       });
     });
   });

@@ -2145,6 +2145,7 @@ export const ADMIN_COPY = {
       matched: 'Matched',
       not_an_artist: 'Not an artist',
       exhausted: 'Given up',
+      auto_matched: 'Auto-matched',
     },
     exhaustedNotice:
       'Given up holds rows the match job stopped searching after three tries. They keep their public page, and resolving one by hand puts it back in the rotation.',
@@ -2179,6 +2180,8 @@ export const ADMIN_COPY = {
     clear: 'Clear',
     hide: 'Hide',
     restore: 'Restore',
+    autoBadge: 'Auto',
+    looksRight: 'Looks right',
     hiddenBadge: 'Hidden',
     visibilityError: 'Could not change that artist’s visibility.',
     findOnSpotify: 'Find on Spotify',
