@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const loaded: string[] = [];
+
+const setTag = vi.fn();
+const captureRequestError = vi.fn();
+vi.mock('@sentry/nextjs', () => ({
+  withScope: (callback: (scope: { setTag: typeof setTag }) => void) =>
+    callback({ setTag }),
+  captureRequestError: (...args: unknown[]) => captureRequestError(...args),
+}));
 vi.mock('../sentry.server.config', () => {
   loaded.push('server');
   return {};
@@ -34,9 +42,19 @@ describe('instrumentation register', () => {
     expect(loaded).toEqual(['edge']);
   });
 
-  it('reports request errors through Sentry', async () => {
-    const Sentry = await import('@sentry/nextjs');
+  it('reports a request error tagged with its digest', async () => {
     const { onRequestError } = await import('./instrumentation');
-    expect(onRequestError).toBe(Sentry.captureRequestError);
+    const error = Object.assign(new Error('boom'), { digest: '4242' });
+    const request = { path: '/crews', method: 'GET', headers: {} };
+    const context = {
+      routerKind: 'App Router',
+      routePath: '/crews',
+      routeType: 'render',
+    } as const;
+
+    await onRequestError(error, request, context);
+
+    expect(setTag).toHaveBeenCalledWith('digest', '4242');
+    expect(captureRequestError).toHaveBeenCalledWith(error, request, context);
   });
 });

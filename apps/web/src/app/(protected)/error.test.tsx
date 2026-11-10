@@ -14,7 +14,9 @@ import ProtectedError from './error';
 const captureException = vi.fn((_error: unknown) => 'evt123');
 vi.mock('@sentry/nextjs', () => ({
   captureException: (error: unknown) => captureException(error),
+  isEnabled: () => sentryEnabled.current,
 }));
+const sentryEnabled = { current: true };
 
 const auth = { isSignedIn: true, getToken: vi.fn(async () => 'token') };
 vi.mock('@clerk/nextjs', () => ({
@@ -44,6 +46,7 @@ beforeEach(() => {
     })),
   });
   captureException.mockClear();
+  sentryEnabled.current = true;
   fetchMock.mockClear();
   auth.isSignedIn = true;
   vi.stubGlobal('fetch', fetchMock);
@@ -105,5 +108,33 @@ describe('ProtectedError', () => {
     await waitFor(() =>
       expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
     );
+  });
+
+  it('records no event id when Sentry is off, so none points nowhere', async () => {
+    sentryEnabled.current = false;
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
+      target: { value: 'Blank' },
+    });
+    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock.mock.calls[0]?.[1]?.body).not.toContain('sentryEventId');
+  });
+
+  it('opens a fresh form after one report was sent', async () => {
+    render(<ProtectedError error={new Error('x')} reset={vi.fn()} />);
+    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
+    fireEvent.change(screen.getAllByRole('textbox')[0]!, {
+      target: { value: 'Blank' },
+    });
+    fireEvent.click(screen.getAllByText(COPY.send)[0]!);
+    await waitFor(() =>
+      expect(screen.getAllByText(COPY.sentTitle).length).toBeGreaterThan(0),
+    );
+    fireEvent.click(screen.getAllByText(COPY.close)[0]!);
+    fireEvent.click(screen.getByText(CONSUMER_COPY.error.reportLink));
+    expect(screen.queryByText(COPY.sentTitle)).toBeNull();
+    expect(screen.getAllByRole('textbox')[0]).toHaveProperty('value', '');
   });
 });

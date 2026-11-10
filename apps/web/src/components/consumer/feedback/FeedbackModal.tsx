@@ -7,6 +7,7 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import { useTheme } from '@/theme/ThemeProvider';
 import { CCMark } from '@/components/brand/cc-mark';
 import { ModalShell } from '@/components/consumer/modal-shell';
+import { deviceSummary } from '@/components/consumer/error-report/lib/report-context';
 import { clearDraft, loadDraft, saveDraft } from '@/lib/feedback-draft';
 
 type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other';
@@ -188,9 +189,11 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
       return;
     }
 
+    // The same coarse summary a problem report sends, so admin's Device
+    // column reads one way and never stores a fingerprintable agent.
     const device =
       typeof navigator !== 'undefined'
-        ? navigator.userAgent.slice(0, 120)
+        ? deviceSummary(navigator.userAgent)
         : 'unknown';
 
     try {
