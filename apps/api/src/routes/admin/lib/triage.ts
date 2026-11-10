@@ -20,6 +20,10 @@
 // cooldown window is still broken and must still produce a row.
 
 import {
+  classifyCrawlError as classifyCrawlerError,
+  isAccountWideKind,
+} from '@concert-crawl/crawler-core/crawl-error-class';
+import {
   BASELINE_RUN_COUNT,
   CEILING_HISTORY_RUN_COUNT,
   SOFT_DROP_RATIO,
@@ -332,10 +336,19 @@ export const formatMtTime = (value: Date): string =>
 // column — crawl.ts stores a free-text errorMessage — so this buckets the
 // message into something an operator can scan. Unrecognised messages read
 // 'unknown' rather than leaking a raw stack line into the panel.
+//
+// An account-wide LLM refusal comes first and keeps the crawler's own kind
+// (`llm_quota`, `llm_rate_limit`), asked of the crawler's classifier so the two
+// can never disagree. It is one cause across every venue it hits, not a
+// generic crawl_error per venue, and it never pauses a venue.
 export const classifyCrawlError = (
   errorMessage: string | null,
   httpStatusCode: number | null,
 ): string => {
+  if (errorMessage !== null) {
+    const { kind } = classifyCrawlerError(errorMessage);
+    if (isAccountWideKind(kind)) return kind;
+  }
   if (httpStatusCode === 403 || httpStatusCode === 429) return 'bot_detection';
   if (httpStatusCode !== null && httpStatusCode >= 500) return 'server_error';
   const message = errorMessage ?? '';

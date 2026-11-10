@@ -18,6 +18,10 @@ import type { TriageFault } from '../definitions/types';
 
 const EV = ADMIN_COPY.triage.evidence;
 
+// The API's account-wide classes (`classifyCrawlError` in admin/lib/triage.ts),
+// which carry the crawler's own kinds.
+const ACCOUNT_WIDE_ERROR_CLASSES = new Set(['llm_quota', 'llm_rate_limit']);
+
 export interface EvidenceLines {
   stat: string;
   detail: string;
@@ -41,6 +45,12 @@ export const evidenceLines = (fault: TriageFault): EvidenceLines => {
     }
     case 'failed': {
       const { failures, errorClass, pauseAt } = fault.evidence;
+      if (ACCOUNT_WIDE_ERROR_CLASSES.has(errorClass)) {
+        return {
+          stat: EV.failedAccountWideStat,
+          detail: EV.failedAccountWideDetail(errorClass),
+        };
+      }
       return {
         stat: EV.failedStat(failures),
         detail: EV.failedDetail(errorClass, pauseAt),

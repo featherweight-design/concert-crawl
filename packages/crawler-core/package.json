@@ -14,6 +14,10 @@
       "types": "./dist/fetchers.d.ts",
       "import": "./dist/fetchers.js"
     },
+    "./crawl-error-class": {
+      "types": "./dist/lib/crawl-error-class.d.ts",
+      "import": "./dist/lib/crawl-error-class.js"
+    },
     "./triage-conditions": {
       "types": "./dist/lib/triage-conditions.d.ts",
       "import": "./dist/lib/triage-conditions.js"

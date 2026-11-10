@@ -191,6 +191,26 @@ describe('TriagePanel — evidence per condition', () => {
     expect(screen.getByText('Bot detection · pauses itself at 3')).toBeTruthy();
   });
 
+  it('renders an account-wide LLM refusal as one cause, not a strike', () => {
+    render(
+      <TriagePanel
+        data={data([
+          {
+            ...failed,
+            evidence: { failures: 0, errorClass: 'llm_quota', pauseAt: 3 },
+          },
+        ])}
+      />,
+    );
+    expect(screen.getByText('Account-wide LLM refusal')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'LLM usage limit · account-wide · never pauses the venue',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText('0 failures in a row')).toBeNull();
+  });
+
   it('renders a went-dark row with runs (not days) and the payload threshold', () => {
     render(<TriagePanel data={data([wentDark])} />);
     expect(screen.getByText('18 → 2 events')).toBeTruthy();

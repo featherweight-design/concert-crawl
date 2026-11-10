@@ -99,6 +99,19 @@ describe('classifyCrawlError', () => {
     );
     expect(classifyCrawlError(null, null)).toBe('unknown');
   });
+
+  it("keeps an account-wide LLM refusal as the crawler's own cause", () => {
+    const quota =
+      'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}';
+    const rateLimit =
+      'RateLimitError: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
+    expect(classifyCrawlError(quota, 200)).toBe('llm_quota');
+    expect(classifyCrawlError(rateLimit, 200)).toBe('llm_rate_limit');
+    // A venue's own 429 stays a block.
+    expect(
+      classifyCrawlError('HTTP 429 — venue may have blocked crawler', 429),
+    ).toBe('bot_detection');
+  });
 });
 
 describe('nextNightlySweep', () => {
