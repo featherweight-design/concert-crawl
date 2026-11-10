@@ -10,7 +10,16 @@ import { createLogger } from '@concert-crawl/logger';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
 import { z } from 'zod';
-import { and, asc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
 import { getAuthUser } from '../../middleware/auth.js';
@@ -100,12 +109,16 @@ const listQuerySchema = z.object({
 
 /**
  * Exhausted rows move OUT of the queue they came from rather than sitting in
- * both, and so do auto-matched rows (out of `matched`). The point of giving up on a row is that the admin's ambiguous count
+ * both, and so do auto-matched rows (out of `matched`). The point of giving
+ * up on a row is that the admin's ambiguous count
  * visibly drops; a row counted twice never delivers that.
  *
- * Both branches gate on EXHAUSTIBLE_STATUSES, and they have to agree: if the
- * `exhausted` filter took any row at the cap, a leftover counter on a `matched`
- * row would list it in two queues while `/counts` credited it to one.
+ * The `exhausted` branch and the exhaustible-status branch both gate on
+ * EXHAUSTIBLE_STATUSES, and they have to agree: if the `exhausted` filter took
+ * any row at the cap, a leftover counter on a `matched` row would list it in
+ * two queues while `/counts` credited it to one. `matched` and `auto_matched`
+ * split on `auto_matched_at` through lib/artist-auto-match.ts, for the same
+ * reason.
  */
 const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
   status === 'exhausted'
@@ -375,11 +388,29 @@ artistsAdminRouter.patch(
         // not un-hide it, because unhiding is its own deliberate admin action.
         ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
       })
-      .where(eq(artists.id, id))
+      // A confirm re-checks at the write, not just at the read above: the
+      // match job can repoint the row in between.
+      .where(
+        body.confirmAutoMatch === true
+          ? and(
+              eq(artists.id, id),
+              isNotNull(artists.autoMatchedAt),
+              eq(artists.spotifyArtistId, body.spotifyArtistId ?? ''),
+            )
+          : eq(artists.id, id),
+      )
       .returning();
 
     if (!updated) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404);
+      return body.confirmAutoMatch === true
+        ? ctx.json(
+            {
+              success: false,
+              error: 'The auto-match has changed since it was loaded',
+            },
+            409,
+          )
+        : ctx.json({ success: false, error: 'Artist not found' }, 404);
     }
 
     const actor = getAuthUser(ctx);
