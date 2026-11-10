@@ -30,9 +30,9 @@ export const userNotificationPreferences = pgTable(
     weeklyDigestEnabled: boolean('weekly_digest_enabled')
       .notNull()
       .default(true),
-    // #967. Gates the 'product' email family (winback, gifting-ending-notice,
-    // welcome-gifted). Defaults true: existing users opted into product mail
-    // by signing up, and this column exists to let them out, not to re-ask.
+    // #967. Gated the 'product' email family (winback, gifting-ending-notice,
+    // welcome-gifted), all retired 2026-11-10 going free, so nothing reads it
+    // now. Kept, with its Settings toggle, until the redesign decides.
     //
     // There is deliberately no matching billingEmailsEnabled — receipts,
     // dunning, and card-expiring notices are transactional and stay

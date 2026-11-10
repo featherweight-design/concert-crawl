@@ -7,7 +7,12 @@ import {
 } from './test-fixtures.js';
 import type { LiveEmailTemplateKey } from './types.js';
 
-const LIVE_TEMPLATE_KEYS: readonly LiveEmailTemplateKey[] = ['spotify_digest'];
+// A Record over the type, so adding a live key fails typecheck here until it
+// is listed, and the picker test below then covers it.
+const LIVE_KEY_SET: Record<LiveEmailTemplateKey, true> = {
+  spotify_digest: true,
+};
+const LIVE_TEMPLATE_KEYS = Object.keys(LIVE_KEY_SET);
 
 describe('test-fixtures', () => {
   it('lists every live transactional template key in the picker', () => {
