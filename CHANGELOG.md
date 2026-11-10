@@ -1,3 +1,10 @@
+## [1.308.7](https://github.com/featherweight-design/concert-crawl/compare/v1.308.6...v1.308.7) (2026-11-10)
+
+
+### Bug Fixes
+
+* **crawler:** the 3-failure auto-pause pauses the crawl, never unpublishes ([f1bc1bc](https://github.com/featherweight-design/concert-crawl/commit/f1bc1bcd89e94c4997e61e73497baa5eeb7ed8b3))
+
 ## [1.308.6](https://github.com/featherweight-design/concert-crawl/compare/v1.308.5...v1.308.6) (2026-11-10)
 
 
