@@ -13,6 +13,8 @@ const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
   network_error: 'Network error',
   parse_failure: 'Could not parse the page',
   crawl_error: 'Crawl error',
+  llm_quota: 'LLM usage limit',
+  llm_rate_limit: 'LLM rate limit',
   unknown: 'Unclassified error',
 };
 
@@ -2278,6 +2280,11 @@ export const ADMIN_COPY = {
           : `${refusals} refusals in a row · last success ${lastSuccess}`,
 
       failedStat: (failures: number) => `${failures} failures in a row`,
+      // An account-wide LLM refusal is the account's, not the venue's: it
+      // never counts toward the pause, so the strike count would mislead.
+      failedAccountWideStat: 'Account-wide LLM refusal',
+      failedAccountWideDetail: (errorClass: string) =>
+        `${TRIAGE_ERROR_CLASS_LABELS[errorClass] ?? errorClass} · account-wide · never pauses the venue`,
       failedDetail: (errorClass: string, pauseAt: number) =>
         `${TRIAGE_ERROR_CLASS_LABELS[errorClass] ?? errorClass} · pauses itself at ${pauseAt}`,
 
