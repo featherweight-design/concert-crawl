@@ -589,6 +589,44 @@ describe('admin artists routes', () => {
       expect(row?.autoMatchedAt).toBeNull();
     });
 
+    it('refuses a stale Looks right and audits a fresh one as a confirm', async () => {
+      const id = await seedArtist({
+        canonicalName: 'bahamas',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_new',
+        autoMatchedAt: null,
+      });
+
+      const stale = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: 'sp_old',
+          confirmAutoMatch: true,
+        }),
+      });
+      expect(stale.status).toBe(409);
+
+      await testDb
+        .update(artists)
+        .set({ autoMatchedAt: new Date('2026-11-10T00:00:00Z') })
+        .where(eq(artists.id, id));
+      const fresh = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: 'sp_new',
+          confirmAutoMatch: true,
+        }),
+      });
+      expect(fresh.status).toBe(200);
+      const audits = await testDb
+        .select()
+        .from(auditLog)
+        .where(eq(auditLog.action, 'artist.match.confirm_auto'));
+      expect(audits.map((audit) => audit.targetId)).toEqual([id]);
+    });
+
     it('demotes to no_match when the id is cleared', async () => {
       const id = await seedArtist({
         canonicalName: 'nirvana',

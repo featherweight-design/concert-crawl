@@ -15,6 +15,10 @@ import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db';
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical';
 import { getAuthUser } from '../../middleware/auth.js';
 import {
+  isAutoMatchedExpr,
+  isConfirmedMatchExpr,
+} from '../../lib/artist-auto-match.js';
+import {
   isExhaustedBucketExpr,
   isExhaustibleStatus,
   isNotExhaustedExpr,
@@ -45,7 +49,9 @@ const matchStatusSchema = z.enum([
 
 /**
  * What the admin queue can be filtered by: the five verdicts, plus the
- * derived `exhausted` bucket.
+ * derived `exhausted` and `auto_matched` buckets. `matched` lists only
+ * confirmed matches; a best-effort pick sits under `auto_matched` until a
+ * human answers it.
  *
  * `exhausted` is not a matchStatus and never will be — it says the job stopped
  * asking, which is orthogonal to what the last answer was. It is a filter value
@@ -94,23 +100,20 @@ const listQuerySchema = z.object({
 
 /**
  * Exhausted rows move OUT of the queue they came from rather than sitting in
- * both. The point of giving up on a row is that the admin's ambiguous count
+ * both, and so do auto-matched rows (out of `matched`). The point of giving up on a row is that the admin's ambiguous count
  * visibly drops; a row counted twice never delivers that.
  *
  * Both branches gate on EXHAUSTIBLE_STATUSES, and they have to agree: if the
  * `exhausted` filter took any row at the cap, a leftover counter on a `matched`
  * row would list it in two queues while `/counts` credited it to one.
  */
-const isAutoMatchedExpr = (): SQL =>
-  sql`${eq(artists.matchStatus, 'matched')} and ${artists.autoMatchedAt} is not null`;
-
 const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
   status === 'exhausted'
     ? isExhaustedBucketExpr()
     : status === 'auto_matched'
       ? isAutoMatchedExpr()
       : status === 'matched'
-        ? sql`${eq(artists.matchStatus, 'matched')} and ${artists.autoMatchedAt} is null`
+        ? isConfirmedMatchExpr()
         : isExhaustibleStatus(status)
           ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
           : eq(artists.matchStatus, status);
@@ -122,6 +125,10 @@ const patchBodySchema = z
     spotifyArtistId: z.union([z.string().trim().min(1).max(64), z.null()]),
     matchStatus: matchStatusSchema.optional(),
     photoUrl: z.union([httpUrl(), z.null()]).optional(),
+    // "Looks right" on an auto-matched row: confirm the pick only if it is
+    // still the row's current, unconfirmed answer. A stale page must never
+    // write an old guess over a newer match.
+    confirmAutoMatch: z.literal(true).optional(),
   })
   .strict();
 
@@ -197,8 +204,9 @@ artistsAdminRouter.get(
 );
 
 // GET /v1/admin/artists/counts — queue sizes per match status, plus the
-// derived `exhausted` bucket. Every count matches what its tab lists, which
-// means exhausted rows are counted once, under `exhausted`.
+// derived `exhausted` and `auto_matched` buckets. Every count matches what its
+// tab lists, so exhausted and auto-matched rows are each counted once, under
+// their own bucket.
 // It takes the same `upcoming` param as the list, and has to: a chip reading a
 // number the table it opens cannot produce is worse than no number at all.
 artistsAdminRouter.get(
@@ -236,9 +244,10 @@ artistsAdminRouter.get(
       auto_matched: 0,
     };
     for (const row of rows) {
-      // The aggregate already applies the same status gate `statusFilter` does,
-      // so a non-exhaustible status contributes 0 here and this subtraction is a
-      // no-op for it.
+      // Each row is counted once, under the tab `statusFilter` lists it in:
+      // exhausted rows leave their status's count, and auto-matched rows leave
+      // `matched` (the aggregates apply the same gates, so either subtraction
+      // is 0 for a status it cannot touch).
       counts.exhausted += row.exhausted;
       counts.auto_matched += row.autoMatched;
       counts[row.matchStatus] += row.total - row.exhausted - row.autoMatched;
@@ -300,12 +309,28 @@ artistsAdminRouter.patch(
     }
 
     const [existing] = await db
-      .select({ spotifyArtistId: artists.spotifyArtistId })
+      .select({
+        spotifyArtistId: artists.spotifyArtistId,
+        autoMatchedAt: artists.autoMatchedAt,
+      })
       .from(artists)
       .where(eq(artists.id, id));
 
     if (!existing) {
       return ctx.json({ success: false, error: 'Artist not found' }, 404);
+    }
+    if (
+      body.confirmAutoMatch === true &&
+      (existing.autoMatchedAt === null ||
+        existing.spotifyArtistId !== body.spotifyArtistId)
+    ) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'The auto-match has changed since it was loaded',
+        },
+        409,
+      );
     }
 
     // The cached photo belongs to the Spotify identity it was fetched for, so
@@ -358,12 +383,20 @@ artistsAdminRouter.patch(
     }
 
     const actor = getAuthUser(ctx);
-    ctx.set('auditAction', 'artist.match.update');
+    ctx.set(
+      'auditAction',
+      body.confirmAutoMatch === true
+        ? 'artist.match.confirm_auto'
+        : 'artist.match.update',
+    );
     ctx.set('auditTargetId', id);
     ctx.set('auditActorId', actor.userId);
     ctx.set('auditMeta', {
       spotifyArtistId: body.spotifyArtistId,
       matchStatus: nextStatus,
+      // Which answer this replaced, so a confirmed or repointed best-effort
+      // pick can be traced.
+      previousAutoMatchedAt: existing.autoMatchedAt,
     });
 
     return ctx.json({ success: true, data: updated });

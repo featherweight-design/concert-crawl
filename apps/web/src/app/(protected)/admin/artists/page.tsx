@@ -133,6 +133,9 @@ export default function AdminArtistsPage() {
   const [counts, setCounts] =
     useState<Record<QueueFilter, number>>(EMPTY_COUNTS);
   const [rows, setRows] = useState<AdminArtist[]>([]);
+  const [confirming, setConfirming] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // One row at a time — every open picker spends a Spotify search.
@@ -289,6 +292,7 @@ export default function AdminArtistsPage() {
     previous: AdminArtist,
     spotifyArtistId: string | null,
     photoUrl?: string | null,
+    confirmAutoMatch = false,
   ) => {
     // Read before the round trip: it is the list this write was issued
     // against, and only that list can safely receive it.
@@ -305,11 +309,11 @@ export default function AdminArtistsPage() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(
-          photoUrl === undefined
-            ? { spotifyArtistId }
-            : { spotifyArtistId, photoUrl },
-        ),
+        body: JSON.stringify({
+          spotifyArtistId,
+          ...(photoUrl === undefined ? {} : { photoUrl }),
+          ...(confirmAutoMatch ? { confirmAutoMatch: true } : {}),
+        }),
       });
       if (!resp.ok) {
         setError(COPY.saveError);
@@ -324,6 +328,22 @@ export default function AdminArtistsPage() {
     } catch (err) {
       console.error('[admin artists] save failed', err);
       setError(COPY.saveError);
+    }
+  };
+
+  // "Looks right": confirms the best-effort pick only if the server still holds
+  // it, so a page loaded before a newer match can never write the old guess
+  // back (a 409 surfaces as the save error).
+  const confirmAutoMatch = async (row: AdminArtist) => {
+    setConfirming((prev) => new Set(prev).add(row.id));
+    try {
+      await save(row, row.spotifyArtistId, undefined, true);
+    } finally {
+      setConfirming((prev) => {
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
     }
   };
 
@@ -579,7 +599,7 @@ export default function AdminArtistsPage() {
                           )}
                           {/* The best-effort rule's guess, not a confirmed
                             match: it stays marked until a human answers. */}
-                          {row.autoMatchedAt !== null && (
+                          {bucketOf(row) === 'auto_matched' && (
                             <StatusBadge kind="warning">
                               {COPY.autoBadge}
                             </StatusBadge>
@@ -621,14 +641,15 @@ export default function AdminArtistsPage() {
                           {/* Confirms the best-effort pick as it stands: the
                             identity PATCH with the same id, which clears the
                             mark and moves the row to Matched. */}
-                          {row.autoMatchedAt !== null &&
+                          {bucketOf(row) === 'auto_matched' &&
                             row.spotifyArtistId !== null && (
                               <AdminButton
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  void save(row, row.spotifyArtistId)
-                                }
+                                // One confirm in flight per row: a double-click
+                                // would move the counts twice.
+                                disabled={confirming.has(row.id)}
+                                onClick={() => void confirmAutoMatch(row)}
                               >
                                 {COPY.looksRight}
                               </AdminButton>
