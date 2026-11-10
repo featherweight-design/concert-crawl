@@ -21,7 +21,6 @@ const webOrigin = (): string =>
 // issue for the missing unsubscribe UI.
 export const notificationsUrl = (): string => `${webOrigin()}/me`;
 export const planUrl = (): string => `${webOrigin()}/me?section=plan`;
-export const profileUrl = (): string => `${webOrigin()}/me?section=profile`;
 export const appUrl = (): string => webOrigin();
 
 export const LEGAL_LINE = 'Concert Crawl · Denver, CO';

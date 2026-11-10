@@ -5,11 +5,27 @@ import {
   TEST_EMAIL_OPTIONS,
   buildTestEmail,
 } from './test-fixtures.js';
+import type { LiveEmailTemplateKey } from './types.js';
+
+const LIVE_TEMPLATE_KEYS: readonly LiveEmailTemplateKey[] = ['spotify_digest'];
 
 describe('test-fixtures', () => {
-  it('lists every transactional template key in the picker', () => {
-    for (const key of EMAIL_TEMPLATE_KEYS) {
+  it('lists every live transactional template key in the picker', () => {
+    for (const key of LIVE_TEMPLATE_KEYS) {
       expect(TEST_EMAIL_KEYS, `missing picker entry for ${key}`).toContain(key);
+    }
+  });
+
+  // The billing and lifecycle templates were retired 2026-11-10 (go-free);
+  // their keys stay in the db enum for existing rows but have no renderer.
+  it('offers no retired template key', () => {
+    const live: readonly string[] = LIVE_TEMPLATE_KEYS;
+    const retired = EMAIL_TEMPLATE_KEYS.filter((key) => !live.includes(key));
+    expect(retired.length).toBeGreaterThan(0);
+    for (const key of retired) {
+      expect(TEST_EMAIL_KEYS, `retired key ${key} still offered`).not.toContain(
+        key,
+      );
     }
   });
 

@@ -2,15 +2,12 @@ import { Resend } from 'resend';
 import { eq, sql } from 'drizzle-orm';
 import { createClerkClient } from '@clerk/backend';
 import * as Sentry from '@sentry/hono/node';
-import {
-  db,
-  emailSendLog,
-  emailTemplateConfig,
-  userNotificationPreferences,
-  type EmailTemplateKey,
-} from '@concert-crawl/db';
+import { db, emailSendLog, emailTemplateConfig } from '@concert-crawl/db';
 import { getTemplateRenderer } from '../emails/registry.js';
-import type { EmailTemplateVars } from '../emails/types.js';
+import type {
+  EmailTemplateVars,
+  LiveEmailTemplateKey,
+} from '../emails/types.js';
 import {
   buildTestEmail,
   type TestEmailFromCategory,
@@ -107,20 +104,6 @@ export async function sendAdminAlertEmail(
 export type TransactionalSendOutcome =
   'sent' | 'not-registered' | 'suppressed' | 'deduped' | 'failed';
 
-// The 'product' email family (#967) — the templates whose footers carry the
-// signed one-click unsubscribe. The gate lives here rather than at each call
-// site because an unsubscribe link that records a preference nothing reads is
-// worse than no link at all, and a fourth product template added later would
-// otherwise ship unguarded.
-//
-// Billing templates are deliberately absent: receipts and dunning are
-// transactional and stop only by cancelling the subscription.
-const PRODUCT_FAMILY_TEMPLATES: ReadonlySet<EmailTemplateKey> = new Set([
-  'winback',
-  'gifting_ending_notice',
-  'welcome_gifted',
-]);
-
 // Staging runs every cron on the same schedule as production against its own
 // database, so a user who exists in both environments receives each
 // transactional email twice. The email_send_log dedupe key cannot catch that:
@@ -128,7 +111,7 @@ const PRODUCT_FAMILY_TEMPLATES: ReadonlySet<EmailTemplateKey> = new Set([
 //
 // Unset counts as production deliberately. render.yaml is descriptive rather
 // than blueprint-synced, and the live prod API service carries no environment
-// marker — failing closed here would silence prod receipts and invites. Only an
+// marker — failing closed here would silence prod digests and invites. Only an
 // environment that positively identifies as something other than production is
 // suppressed.
 const isNonProductionEnvironment = (): boolean => {
@@ -137,26 +120,15 @@ const isNonProductionEnvironment = (): boolean => {
   return environment !== 'production';
 };
 
-// Absent row means the user never touched their preferences, which is the
-// default-on state — only an explicit false suppresses.
-const productEmailsAllowed = async (userId: string): Promise<boolean> => {
-  const [prefs] = await db
-    .select({ enabled: userNotificationPreferences.productEmailsEnabled })
-    .from(userNotificationPreferences)
-    .where(eq(userNotificationPreferences.userId, userId))
-    .limit(1);
-  return prefs?.enabled ?? true;
-};
-
 /**
  * Transactional send pipeline (eng infra spec Part 2 §4.3): non-production
- * suppression → registry lookup → product-family opt-out → per-template kill
- * switch → dedupe-key idempotency → Clerk recipient resolution → Resend send.
- * NEVER throws — callers are webhook handlers whose responses must not depend
- * on email delivery.
+ * suppression → registry lookup → per-template kill switch → dedupe-key
+ * idempotency → Clerk recipient resolution → Resend send.
+ * NEVER throws — callers are jobs whose runs must not depend on email
+ * delivery.
  */
 export async function sendTransactionalEmail<
-  K extends EmailTemplateKey,
+  K extends LiveEmailTemplateKey,
 >(params: {
   templateKey: K;
   userId: string;
@@ -186,28 +158,6 @@ export async function sendTransactionalEmail<
       return 'not-registered';
     }
 
-    if (
-      PRODUCT_FAMILY_TEMPLATES.has(templateKey) &&
-      !(await productEmailsAllowed(userId))
-    ) {
-      // Same claim-then-suppress shape as the kill switch: consuming the
-      // dedupe key means re-subscribing does not replay months of skipped
-      // winbacks at them.
-      await db
-        .insert(emailSendLog)
-        .values({ templateKey, userId, dedupeKey, status: 'suppressed' })
-        .onConflictDoUpdate({
-          target: [emailSendLog.templateKey, emailSendLog.dedupeKey],
-          set: { status: 'suppressed' },
-          setWhere: sql`${emailSendLog.status} = 'failed'`,
-        });
-      apiLogger.info(
-        logContext,
-        'sendTransactionalEmail: user unsubscribed from product emails — suppressed',
-      );
-      return 'suppressed';
-    }
-
     const [config] = await db
       .select({ enabled: emailTemplateConfig.enabled })
       .from(emailTemplateConfig)
@@ -216,7 +166,7 @@ export async function sendTransactionalEmail<
     if (config !== undefined && !config.enabled) {
       // Suppression still consumes the dedupe key — re-enabling the template
       // must not replay every send it suppressed. A pre-existing 'failed'
-      // claim flips to 'suppressed' so the daily retry sweep skips it; a
+      // claim flips to 'suppressed' so it reads as deliberate, not failed; a
       // 'sent' row is never rewritten.
       await db
         .insert(emailSendLog)
@@ -235,7 +185,9 @@ export async function sendTransactionalEmail<
 
     // Claim-then-flip: the row is inserted as 'failed' to consume the dedupe
     // key before the send, then flipped to 'sent' on success — a crash
-    // mid-send leaves 'failed', which the daily-job retry sweep handles.
+    // mid-send leaves 'failed'. Nothing retries it (the daily job that was
+    // meant to was deleted going free); the next send under a new dedupe key
+    // goes out as normal.
     const claimed = await db
       .insert(emailSendLog)
       .values({ templateKey, userId, dedupeKey, status: 'failed' })

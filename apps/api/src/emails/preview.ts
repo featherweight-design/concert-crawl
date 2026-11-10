@@ -1,7 +1,7 @@
 // Dev-only email preview + test-send harness.
 //
-// The 10 transactional lifecycle templates (registry.ts) render to HTML from
-// TypeScript — there's no route that renders them for a human. This script
+// The transactional templates (registry.ts) render to HTML from TypeScript —
+// there's no route that renders them for a human. This script
 // renders every template with representative sample vars so you can review the
 // real output, and can test-send any one of them through Resend.
 //
@@ -10,7 +10,7 @@
 //
 // Test-send one template to yourself (needs RESEND_API_KEY in the shell):
 //   RESEND_API_KEY=re_... pnpm --filter @concert-crawl/api email:preview -- \
-//     --send you@example.com --only welcome_paid
+//     --send you@example.com --only spotify_digest
 //
 // Omit --only with --send to send the whole set. This is a dev tool: it is not
 // imported by the app and never runs in prod.
@@ -19,9 +19,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Resend } from 'resend';
-import type { EmailTemplateKey } from '@concert-crawl/db';
 import { getTemplateRenderer } from './registry.js';
-import type { EmailTemplateVars, RenderedEmail } from './types.js';
+import type {
+  EmailTemplateVars,
+  LiveEmailTemplateKey,
+  RenderedEmail,
+} from './types.js';
 
 const FROM = 'Concert Crawl <billing@concertcrawl.app>';
 const REPLY_TO = 'support@concertcrawl.app';
@@ -32,58 +35,14 @@ const OUTPUT_DIR = join(
   dirname(fileURLToPath(import.meta.url)),
   '../../.email-preview',
 );
-const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview';
 
-// One representative vars set per template — based on the fixtures in
+// One representative vars set per template, based on the fixtures in
 // src/emails/templates/templates.test.ts so the preview closely tracks what the
-// suite asserts (a few values differ, e.g. welcome_gifted uses a non-null
-// giftEndsAt here).
-// Exhaustive (non-optional) by design: adding a new EmailTemplateKey breaks
+// suite asserts.
+// Exhaustive (non-optional) by design: adding a new LiveEmailTemplateKey breaks
 // this at compile time until its sample vars are supplied here, so the harness
 // can never silently drop a template.
-const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
-  welcome_paid: { tier: 'founder', founderSeatNumber: 7 },
-  welcome_gifted: {
-    gifterName: 'Sam',
-    giftEndsAt: '2026-12-01T12:00:00Z',
-    unsubscribeUrl: null,
-  },
-  renewal_receipt_monthly: {
-    periodLabel: 'June 2026',
-    amount: '$5.00',
-    tierName: 'Premium (monthly)',
-    periodEnd: '2026-07-15T12:00:00Z',
-    chargeDate: '2026-06-15T12:00:00Z',
-    customerId: 'cus_preview123',
-    stripeReceiptUrl: 'https://pay.stripe.com/receipts/preview123',
-  },
-  renewal_receipt_annual: {
-    periodLabel: 'June 2026 – June 2027',
-    amount: '$50.00',
-    tierName: 'Premium',
-    periodEnd: '2027-06-15T12:00:00Z',
-    chargeDate: '2026-06-15T12:00:00Z',
-    customerId: 'cus_preview123',
-    stripeReceiptUrl: 'https://pay.stripe.com/receipts/preview123',
-  },
-  cancellation_ack: {
-    tierName: 'Premium',
-    accessEndsAt: '2026-07-15T12:00:00Z',
-  },
-  dunning_1_card_declined: { tierName: 'Premium', portalUrl: PORTAL_URL },
-  dunning_2_still_declined: { tierName: 'Premium', portalUrl: PORTAL_URL },
-  dunning_3_final_warning: { tierName: 'Premium', portalUrl: PORTAL_URL },
-  card_expiring_soon: {
-    tierName: 'Premium',
-    daysRemaining: 30,
-    card: { brand: 'visa', last4: '4242', expMonth: 8, expYear: 2026 },
-  },
-  gifting_ending_notice: {
-    gifterName: 'Sam',
-    giftEndsAt: '2026-12-01T12:00:00Z',
-    unsubscribeUrl: null,
-  },
-  winback: { tierName: 'Premium', unsubscribeUrl: null },
+const sampleVars: { [K in LiveEmailTemplateKey]: EmailTemplateVars[K] } = {
   spotify_digest: {
     shows: [
       {
@@ -150,7 +109,7 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const renderOne = <K extends EmailTemplateKey>(
+const renderOne = <K extends LiveEmailTemplateKey>(
   templateKey: K,
 ): RenderedEmail | null => {
   const renderer = getTemplateRenderer(templateKey);
@@ -158,7 +117,7 @@ const renderOne = <K extends EmailTemplateKey>(
   return renderer(sampleVars[templateKey]);
 };
 
-const writePreviews = (keys: EmailTemplateKey[]): void => {
+const writePreviews = (keys: LiveEmailTemplateKey[]): void => {
   mkdirSync(OUTPUT_DIR, { recursive: true });
   const indexRows: string[] = [];
   for (const templateKey of keys) {
@@ -187,7 +146,7 @@ const writePreviews = (keys: EmailTemplateKey[]): void => {
 };
 
 const sendPreviews = async (
-  keys: EmailTemplateKey[],
+  keys: LiveEmailTemplateKey[],
   sendTo: string,
 ): Promise<void> => {
   const apiKey = process.env.RESEND_API_KEY;
@@ -232,7 +191,7 @@ const sendPreviews = async (
 
 const main = async (): Promise<void> => {
   const { sendTo, only } = parseArgs(process.argv.slice(2));
-  const allKeys = Object.keys(sampleVars) as EmailTemplateKey[];
+  const allKeys = Object.keys(sampleVars) as LiveEmailTemplateKey[];
   const keys =
     only === null
       ? allKeys

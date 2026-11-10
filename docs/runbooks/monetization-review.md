@@ -68,6 +68,8 @@ real account, a real key, or a human judgment call. Do them in roughly this orde
 
 ### B. Email — Resend + deliverability
 
+> **Retired 2026-11-10.** The billing and lifecycle templates below were deleted; `spotify_digest` is the only template left, so `email:preview` renders and `--only` accepts just that key.
+
 **Where the templates live.** All 10 transactional templates are TypeScript
 render functions in `apps/api/src/emails/templates/` (welcome-paid, welcome-gifted,
 renewal-receipt-monthly, cancellation-ack, dunning-1/2/3, card-expiring-soon,

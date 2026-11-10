@@ -6,13 +6,13 @@
 // renders in a real inbox before launch.
 //
 // Comprehensiveness guarantee: TRANSACTIONAL_TEST_VARS is a mapped type over
-// EmailTemplateKey, so adding a new transactional template without a fixture
-// fails to compile. The operational entries (admin alert, invite, crawler
+// LiveEmailTemplateKey, so adding a new transactional template without a
+// fixture fails to compile. The billing and lifecycle templates were retired
+// 2026-11-10 (go-free) and are no longer offered. The operational entries (admin alert, invite, crawler
 // alerts) are enumerated explicitly below.
 
-import type { EmailTemplateKey } from '@concert-crawl/db';
 import { getTemplateRenderer } from './registry.js';
-import type { EmailTemplateVars } from './types.js';
+import type { EmailTemplateVars, LiveEmailTemplateKey } from './types.js';
 
 // Operational (non-transactional) sends the app makes outside the template
 // registry. crawl_failure / event_count_drop mirror the crawler-side alerts
@@ -27,7 +27,7 @@ type OperationalTestKey =
   | 'event_count_drop'
   | 'run_degraded';
 
-export type TestEmailKey = EmailTemplateKey | OperationalTestKey;
+export type TestEmailKey = LiveEmailTemplateKey | OperationalTestKey;
 
 // From-address category — sendTestEmail maps this to the real sender so the
 // test exercises the same domain/identity the live send would use.
@@ -50,49 +50,6 @@ export interface TestEmailOption {
 // Sourced from the same key set the send path validates, so the menu can never
 // list a key the backend can't build, or omit one it can.
 export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
-  { key: 'welcome_paid', label: 'Welcome — paid', group: 'Customer' },
-  { key: 'welcome_gifted', label: 'Welcome — gifted', group: 'Customer' },
-  {
-    key: 'renewal_receipt_monthly',
-    label: 'Renewal receipt (monthly)',
-    group: 'Customer',
-  },
-  {
-    key: 'renewal_receipt_annual',
-    label: 'Renewal receipt (annual)',
-    group: 'Customer',
-  },
-  {
-    key: 'dunning_1_card_declined',
-    label: 'Dunning 1 — card declined',
-    group: 'Customer',
-  },
-  {
-    key: 'dunning_2_still_declined',
-    label: 'Dunning 2 — still declined',
-    group: 'Customer',
-  },
-  {
-    key: 'dunning_3_final_warning',
-    label: 'Dunning 3 — final warning',
-    group: 'Customer',
-  },
-  {
-    key: 'card_expiring_soon',
-    label: 'Card expiring soon',
-    group: 'Customer',
-  },
-  {
-    key: 'cancellation_ack',
-    label: 'Cancellation acknowledgement',
-    group: 'Customer',
-  },
-  {
-    key: 'gifting_ending_notice',
-    label: 'Gift ending notice',
-    group: 'Customer',
-  },
-  { key: 'winback', label: 'Win-back', group: 'Customer' },
   {
     key: 'spotify_digest',
     label: 'Spotify weekly digest',
@@ -124,61 +81,10 @@ export const TEST_EMAIL_KEYS: readonly TestEmailKey[] = TEST_EMAIL_OPTIONS.map(
 );
 
 // Realistic sample vars for each transactional template. Mapped over
-// EmailTemplateKey so a new template without a fixture is a compile error.
+// LiveEmailTemplateKey so a new template without a fixture is a compile error.
 const TRANSACTIONAL_TEST_VARS: {
-  [K in EmailTemplateKey]: EmailTemplateVars[K];
+  [K in LiveEmailTemplateKey]: EmailTemplateVars[K];
 } = {
-  welcome_paid: { tier: 'premium' },
-  welcome_gifted: {
-    gifterName: 'Alex Rivera',
-    giftEndsAt: '2026-08-15T00:00:00.000Z',
-    unsubscribeUrl: null,
-  },
-  renewal_receipt_monthly: {
-    periodLabel: 'July 2026',
-    amount: '$5.00',
-    tierName: 'Premium',
-    periodEnd: '2026-08-13T00:00:00.000Z',
-    chargeDate: '2026-07-13T00:00:00.000Z',
-    customerId: 'cus_TEST0000000000',
-    stripeReceiptUrl: 'https://pay.stripe.com/receipts/test_sample',
-  },
-  renewal_receipt_annual: {
-    periodLabel: 'July 2026 – July 2027',
-    amount: '$50.00',
-    tierName: 'Premium',
-    periodEnd: '2027-07-13T00:00:00.000Z',
-    chargeDate: '2026-07-13T00:00:00.000Z',
-    customerId: 'cus_TEST0000000000',
-    stripeReceiptUrl: 'https://pay.stripe.com/receipts/test_sample',
-  },
-  dunning_1_card_declined: {
-    tierName: 'Premium',
-    portalUrl: 'https://billing.stripe.com/p/session/test_sample',
-  },
-  dunning_2_still_declined: {
-    tierName: 'Premium',
-    portalUrl: 'https://billing.stripe.com/p/session/test_sample',
-  },
-  dunning_3_final_warning: {
-    tierName: 'Premium',
-    portalUrl: 'https://billing.stripe.com/p/session/test_sample',
-  },
-  card_expiring_soon: {
-    tierName: 'Premium',
-    daysRemaining: 6,
-    card: { brand: 'visa', last4: '4242', expMonth: 8, expYear: 2026 },
-  },
-  cancellation_ack: {
-    tierName: 'Premium',
-    accessEndsAt: '2026-08-13T00:00:00.000Z',
-  },
-  gifting_ending_notice: {
-    gifterName: 'Alex Rivera',
-    giftEndsAt: '2026-07-20T00:00:00.000Z',
-    unsubscribeUrl: null,
-  },
-  winback: { tierName: 'Premium', unsubscribeUrl: null },
   spotify_digest: {
     shows: [
       {
@@ -239,12 +145,12 @@ const TRANSACTIONAL_TEST_VARS: {
 // module evaluates even when API route tests mock that package with partial
 // factories — a missing named export would otherwise break module evaluation
 // before the test runs. The mapped type on TRANSACTIONAL_TEST_VARS already
-// guarantees these keys are exactly EmailTemplateKey.
+// guarantees these keys are exactly LiveEmailTemplateKey.
 const TRANSACTIONAL_KEYS: ReadonlySet<string> = new Set(
   Object.keys(TRANSACTIONAL_TEST_VARS),
 );
 
-function isTransactionalKey(key: TestEmailKey): key is EmailTemplateKey {
+function isTransactionalKey(key: TestEmailKey): key is LiveEmailTemplateKey {
   return TRANSACTIONAL_KEYS.has(key);
 }
 
