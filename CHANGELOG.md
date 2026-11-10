@@ -1,3 +1,17 @@
+# [1.312.0](https://github.com/featherweight-design/concert-crawl/compare/v1.311.2...v1.312.0) (2026-11-10)
+
+
+### Bug Fixes
+
+* **web:** make a problem report's ids findable, and the form reusable ([9a7f363](https://github.com/featherweight-design/concert-crawl/commit/9a7f36386797a3e7c3e32fdbbb89809bb00481a1))
+* **web:** put the error report in every consumer boundary; read iOS browsers ([7aa24d2](https://github.com/featherweight-design/concert-crawl/commit/7aa24d22f6ac8e6712c30f85d0e8f7816d2e466c))
+* **web:** reopen the report fresh, drop odd-shaped ids, pin the edges ([5d534a0](https://github.com/featherweight-design/concert-crawl/commit/5d534a07ca24202174388a2abae650b7f115de78))
+
+
+### Features
+
+* **web:** let someone who hits an error page tell us what happened ([4b0e207](https://github.com/featherweight-design/concert-crawl/commit/4b0e207ae827d685224aa2cede712c98f612e9e4))
+
 ## [1.311.2](https://github.com/featherweight-design/concert-crawl/compare/v1.311.1...v1.311.2) (2026-11-10)
 
 
