@@ -92,8 +92,9 @@ describe('repair-artist-names integration', () => {
     expect(row?.name).toBe('Acid Bath');
   });
 
-  // A multi-act bill cannot be used: canonical_headliners is deduped and
-  // sorted, so headliners[1] is not guaranteed to be the same act.
+  // A multi-act bill is paired by value, not position: canonical_headliners is
+  // deduped and sorted, so headliners[1] is not guaranteed to be the same act,
+  // but a raw headliner that folds to the canonical name is.
   it('repairs each act on a co-headline bill from its own billing', async () => {
     // Regression: "Clipse & J.I.D". The primary act was born with the whole
     // billing as its name and the second act with its lowercase canonical.
@@ -114,6 +115,32 @@ describe('repair-artist-names integration', () => {
       'Clipse',
       'J.I.D',
     ]);
+  });
+
+  it.each([
+    ['Rezz', 'rezz', 'REZZ'],
+    ['Maná', 'mana', 'MANÁ'],
+    ['Ivri', 'ivri', 'ivri'],
+  ])(
+    'never trades a cased name for a single-case billing (%s)',
+    async (name, canonical, billed) => {
+      await seedSingleActBill(billed, canonical);
+      await seedArtist(name, canonical);
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe(name);
+    },
+  );
+
+  it('never shortens a cased name into an all-caps billing', async () => {
+    await seedSingleActBill('REZZ', 'rezz');
+    await seedArtist('Rezz Live Tour', 'rezz');
+
+    const result = await repairArtistNames(testDb, { dryRun: false });
+
+    expect(result.candidates).toBe(0);
   });
 
   it('skips an event an admin has hidden', async () => {

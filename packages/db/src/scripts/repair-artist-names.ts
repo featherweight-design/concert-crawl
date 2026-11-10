@@ -105,6 +105,25 @@ const NAME_EXTENDS_BILLING = sql`
 `;
 
 /**
+ * The casing changes the repair refuses: a single-case billing over a name that
+ * is already cased. Venues shout (`REZZ`, `MANÁ`, `GRYFFIN`) and sometimes
+ * whisper (`ivri`), and a row that reads `Rezz` or `Ivri` was cased by
+ * someone, so trading it for either makes it worse. A lowercase name is the
+ * canonical fallback and holds no casing worth keeping, so `j.i.d` still
+ * becomes `J.I.D`, and a mixed-case billing still fixes an all-caps name.
+ * Compared on the stretch of the name the billing covers, so a shorten
+ * cannot change case this way either.
+ */
+const FLATTENS_CASED_NAME = sql`
+  (billing.billed_name = upper(billing.billed_name)
+    OR billing.billed_name = lower(billing.billed_name))
+  AND upper(billing.billed_name) <> lower(billing.billed_name)
+  AND left(artists.name, length(billing.billed_name))
+    <> lower(left(artists.name, length(billing.billed_name)))
+  AND left(artists.name, length(billing.billed_name)) <> billing.billed_name
+`;
+
+/**
  * The safety property: the repair only ever shortens or re-cases, never
  * lengthens.
  *
@@ -121,6 +140,7 @@ const CORROBORATED = sql`
     lower(billing.billed_name) = lower(artists.name)
     OR ${NAME_EXTENDS_BILLING}
   )
+  AND NOT (${FLATTENS_CASED_NAME})
 `;
 
 /**
