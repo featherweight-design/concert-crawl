@@ -1,10 +1,9 @@
 // apps/api/src/jobs/spotify-weekly.ts
 //
-// The weekly Spotify job (#763 eng spec §8.1). Runs as the Render Cron Job
-// `concert-crawl-spotify-weekly` (staging + prod) on `30 15 * * 1` — Monday
-// 15:30 UTC (9:30 AM MDT / 8:30 AM MST), just after the daily billing job.
-// Same build-artifact pattern as billing-daily: the cron builds the API via
-// `turbo build` and runs `node apps/api/dist/jobs/spotify-weekly.js`.
+// The weekly Spotify job (#763 eng spec §8.1). Runs as a Vercel Cron Job
+// (routes/internal-cron.ts, /spotify-weekly) on `30 15 * * 1`: Monday 15:30
+// UTC (9:30 AM MDT / 8:30 AM MST). The CLI entry below runs it by hand with
+// `node apps/api/dist/jobs/spotify-weekly.js` from the API build.
 //
 // The job does NOT import from Spotify. Spec §8.1 phase 1 ran a sync over
 // every live connection, which re-added artists the user had unfollowed here
@@ -433,7 +432,7 @@ export const runSpotifyWeekly = async (
   // never breaks module evaluation for the rest of the run.
   if (digestEnabled) {
     try {
-      // Fail fast once (billing-daily pattern) instead of erroring per-user.
+      // Fail fast once instead of erroring per-user.
       const clerkSecretKey = process.env['CLERK_SECRET_KEY'];
       if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
         throw new Error('CLERK_SECRET_KEY not set — digest phase skipped');
@@ -510,7 +509,7 @@ export const runSpotifyWeekly = async (
   apiLogger.info({ summary }, 'spotify-weekly: run complete');
 };
 
-// CLI entry guard — same shape as billing-daily.ts. Runs only when executed
+// CLI entry guard. Runs only when executed
 // directly, so tests import runSpotifyWeekly without auto-running. Exits
 // non-zero only on a catastrophic failure (the orchestrator itself throwing —
 // per-user failures are swallowed and logged inside).

@@ -56,7 +56,7 @@ const NINETY_DAYS_MS = 90 * DAY_MS;
 const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder'];
 
 // Tiers whose cancellation starts the 90-day preserve-then-purge clock.
-// Supporter joined in #1229. Mirrors PURGE_CLOCK_TIERS in jobs/billing-daily.ts.
+// Supporter joined in #1229.
 const PURGE_CLOCK_TIERS: readonly DbSubscriptionTier[] = [
   'supporter',
   'premium',

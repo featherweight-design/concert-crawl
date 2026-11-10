@@ -325,9 +325,6 @@ Not clickable, but launch depends on them. Verify from admin, logs, or your inbo
 - [ ] Crawl triggers fire every 10 minutes
 - [ ] Nightly crawl runs at 3 AM MT
 - [ ] `/api/revalidate` fires after a crawl (it had never once fired in prod)
-- [ ] `billing-daily` — one scheduled job; confirm it covers its Stripe reads, card-expiry and
-      dunning sub-tasks (`billing-daily-stripe.ts` is a module it imports, not a separate cron).
-      It has no scheduler in either environment yet (#23).
 - [ ] `match-artists`
 - [ ] `spotify-weekly` digest
 - [ ] Stripe webhooks: checkout, renewal, cancellation, payment failure
