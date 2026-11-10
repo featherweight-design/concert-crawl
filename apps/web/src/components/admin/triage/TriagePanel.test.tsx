@@ -204,11 +204,27 @@ describe('TriagePanel — evidence per condition', () => {
     );
     expect(screen.getByText('Account-wide LLM refusal')).toBeTruthy();
     expect(
-      screen.getByText(
-        'LLM usage limit · account-wide · never pauses the venue',
-      ),
+      screen.getByText('LLM usage limit · account-wide, never a strike'),
     ).toBeTruthy();
     expect(screen.queryByText('0 failures in a row')).toBeNull();
+  });
+
+  it("still shows a venue's own strikes under an account-wide refusal", () => {
+    render(
+      <TriagePanel
+        data={data([
+          {
+            ...failed,
+            evidence: { failures: 2, errorClass: 'llm_quota', pauseAt: 3 },
+          },
+        ])}
+      />,
+    );
+    expect(
+      screen.getByText(
+        'LLM usage limit · account-wide, never a strike · 2 earlier failures, pauses itself at 3',
+      ),
+    ).toBeTruthy();
   });
 
   it('renders a went-dark row with runs (not days) and the payload threshold', () => {

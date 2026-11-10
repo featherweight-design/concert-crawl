@@ -6,6 +6,7 @@
 // which reads as the acknowledgement having silently failed. The API re-derives
 // and validates the same figure, so this is a convenience, not the authority.
 
+import { isAccountWideErrorClass } from '@concert-crawl/crawler-core/crawl-error-class';
 import type { TriageFault } from '@/components/admin/triage/definitions/types';
 
 export interface AcknowledgementEvidence {
@@ -42,6 +43,13 @@ export const acknowledgementEvidence = (
           fault.evidence.status === null ? null : String(fault.evidence.status),
       };
     case 'failed':
-      return { evidenceKind: null, evidenceValue: fault.evidence.errorClass };
+      // Mirrors the API's failedEvidenceValue: an account-wide class is keyed
+      // with its streak start, so acknowledging one outage never hides the next.
+      return {
+        evidenceKind: null,
+        evidenceValue: isAccountWideErrorClass(fault.evidence.errorClass)
+          ? `${fault.evidence.errorClass}@${fault.persistedSince}`
+          : fault.evidence.errorClass,
+      };
   }
 };
