@@ -106,4 +106,16 @@ describe('acknowledgementEvidence', () => {
       }),
     ).toEqual({ evidenceKind: null, evidenceValue: 'timeout' });
   });
+
+  it('pins an account-wide refusal to its outage, as the API keys it', () => {
+    const fault = {
+      ...base,
+      condition: 'failed' as const,
+      evidence: { failures: 0, errorClass: 'llm_rate_limit', pauseAt: 3 },
+    };
+    expect(acknowledgementEvidence(fault)).toEqual({
+      evidenceKind: null,
+      evidenceValue: `llm_rate_limit@${fault.persistedSince}`,
+    });
+  });
 });

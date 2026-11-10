@@ -57,17 +57,32 @@ export function normalizeErrorMessage(message: string): string {
  * must not count toward the venue's three strikes.
  */
 export function isAccountWideKind(kind: CrawlErrorKind): boolean {
-  return kind === 'llm_quota' || kind === 'llm_rate_limit';
+  return isAccountWideErrorClass(kind);
+}
+
+/** The kind alone, without building the normalized key. */
+export function crawlErrorKind(message: string): CrawlErrorKind {
+  if (LLM_QUOTA_PATTERNS.some((pattern) => pattern.test(message))) {
+    return 'llm_quota';
+  }
+  if (LLM_RATE_LIMIT_PATTERN.test(message)) return 'llm_rate_limit';
+  return 'other';
+}
+
+/**
+ * The same test for a string that may be any class name, as an admin surface
+ * receives it over the wire.
+ */
+export function isAccountWideErrorClass(errorClass: string): boolean {
+  return errorClass === 'llm_quota' || errorClass === 'llm_rate_limit';
 }
 
 export function classifyCrawlError(message: string): CrawlErrorClass {
-  if (LLM_QUOTA_PATTERNS.some((pattern) => pattern.test(message))) {
-    return { kind: 'llm_quota', key: 'llm_quota' };
-  }
-  if (LLM_RATE_LIMIT_PATTERN.test(message)) {
-    return { kind: 'llm_rate_limit', key: 'llm_rate_limit' };
-  }
-  return { kind: 'other', key: normalizeErrorMessage(message) };
+  const kind = crawlErrorKind(message);
+  return {
+    kind,
+    key: kind === 'other' ? normalizeErrorMessage(message) : kind,
+  };
 }
 
 /**

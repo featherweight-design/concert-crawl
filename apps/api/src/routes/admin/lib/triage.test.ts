@@ -4,6 +4,7 @@ import {
   bandForCondition,
   classifyCrawlError,
   deriveSweep,
+  deriveFaults,
   faultAcknowledgementKey,
   formatDuration,
   nextNightlySweep,
@@ -105,12 +106,13 @@ describe('classifyCrawlError', () => {
       'Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits. You will regain access on 2026-10-01 at 00:00 UTC."}}';
     const rateLimit =
       'RateLimitError: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of request tokens has exceeded your per-minute rate limit"}}';
-    expect(classifyCrawlError(quota, 200)).toBe('llm_quota');
-    expect(classifyCrawlError(rateLimit, 200)).toBe('llm_rate_limit');
-    // A venue's own 429 stays a block.
+    // Failed crawl_runs rows store no status, so these arrive with null.
+    expect(classifyCrawlError(quota, null)).toBe('llm_quota');
+    expect(classifyCrawlError(rateLimit, null)).toBe('llm_rate_limit');
+    // A venue's own 429 text is not the LLM's.
     expect(
-      classifyCrawlError('HTTP 429 — venue may have blocked crawler', 429),
-    ).toBe('bot_detection');
+      classifyCrawlError('HTTP 429 — venue may have blocked crawler', null),
+    ).not.toMatch(/^llm_/);
   });
 });
 
@@ -336,6 +338,21 @@ describe('faultAcknowledgementKey', () => {
     });
   });
 
+  it('keys an account-wide refusal on its outage, so the next one is new', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'hard',
+        condition: 'failed',
+        evidence: { failures: 0, errorClass: 'llm_quota', pauseAt: 3 },
+      }),
+    ).toEqual({
+      condition: 'failed',
+      evidenceKind: null,
+      evidenceValue: 'llm_quota@2026-07-20T09:00:00Z',
+    });
+  });
+
   it('keys a failing crawl on the error class', () => {
     expect(
       faultAcknowledgementKey({
@@ -349,5 +366,48 @@ describe('faultAcknowledgementKey', () => {
       evidenceKind: null,
       evidenceValue: 'timeout',
     });
+  });
+});
+
+describe('deriveFaults: an account-wide refusal', () => {
+  const QUOTA =
+    'Error: 400 {"error":{"message":"You have reached your specified API usage limits."}}';
+  const venue = {
+    id: '00000000-0000-0000-0000-0000000000aa',
+    name: 'Hi-Dive',
+    blockedAt: null,
+    consecutiveFailures: 2,
+    lastUrlCoverageAlertAt: null,
+    lastUrlCoverageOkAt: null,
+  };
+
+  it('dates its streak from the refusal, not the venue failures before it', () => {
+    const [fault] = deriveFaults({
+      venues: [venue],
+      runs: [
+        runRow({
+          status: 'failed',
+          errorMessage: QUOTA,
+          createdAt: new Date('2026-07-30T09:00:00Z'),
+        }),
+        runRow({
+          status: 'failed',
+          errorMessage: 'Failed to parse JSON-LD block',
+          createdAt: new Date('2026-07-25T09:00:00Z'),
+        }),
+      ],
+      coverage: [],
+      now: new Date('2026-07-30T12:00:00Z'),
+    });
+
+    expect(fault?.condition).toBe('failed');
+    expect(fault?.persistedSince).toBe('2026-07-30T09:00:00.000Z');
+    if (fault?.condition === 'failed') {
+      expect(fault.evidence).toEqual({
+        failures: 2,
+        errorClass: 'llm_quota',
+        pauseAt: 3,
+      });
+    }
   });
 });

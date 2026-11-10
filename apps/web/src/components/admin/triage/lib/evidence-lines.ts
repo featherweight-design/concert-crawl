@@ -13,14 +13,11 @@
 // would fail typecheck here rather than render blank. Rows the parser did not
 // recognise never reach this function at all.
 
+import { isAccountWideErrorClass } from '@concert-crawl/crawler-core/crawl-error-class';
 import { ADMIN_COPY } from '../../definitions/copy';
 import type { TriageFault } from '../definitions/types';
 
 const EV = ADMIN_COPY.triage.evidence;
-
-// The API's account-wide classes (`classifyCrawlError` in admin/lib/triage.ts),
-// which carry the crawler's own kinds.
-const ACCOUNT_WIDE_ERROR_CLASSES = new Set(['llm_quota', 'llm_rate_limit']);
 
 export interface EvidenceLines {
   stat: string;
@@ -45,10 +42,10 @@ export const evidenceLines = (fault: TriageFault): EvidenceLines => {
     }
     case 'failed': {
       const { failures, errorClass, pauseAt } = fault.evidence;
-      if (ACCOUNT_WIDE_ERROR_CLASSES.has(errorClass)) {
+      if (isAccountWideErrorClass(errorClass)) {
         return {
           stat: EV.failedAccountWideStat,
-          detail: EV.failedAccountWideDetail(errorClass),
+          detail: EV.failedAccountWideDetail(errorClass, failures, pauseAt),
         };
       }
       return {

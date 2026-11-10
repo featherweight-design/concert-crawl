@@ -20,7 +20,8 @@
 // cooldown window is still broken and must still produce a row.
 
 import {
-  classifyCrawlError as classifyCrawlerError,
+  crawlErrorKind,
+  isAccountWideErrorClass,
   isAccountWideKind,
 } from '@concert-crawl/crawler-core/crawl-error-class';
 import {
@@ -293,10 +294,23 @@ export const faultAcknowledgementKey = (
       return {
         condition: fault.condition,
         evidenceKind: null,
-        evidenceValue: fault.evidence.errorClass,
+        evidenceValue: failedEvidenceValue(fault),
       };
   }
 };
+
+/**
+ * An account-wide class is a constant, so keying an acknowledgement on it alone
+ * would hide every later outage at the venue for good. Its streak start is part
+ * of the key: acknowledging one outage never acknowledges the next. Mirrored by
+ * the web's `fault-acknowledgement.ts`.
+ */
+const failedEvidenceValue = (
+  fault: Extract<TriageFault, { condition: 'failed' }>,
+): string =>
+  isAccountWideErrorClass(fault.evidence.errorClass)
+    ? `${fault.evidence.errorClass}@${fault.persistedSince}`
+    : fault.evidence.errorClass;
 
 // ---------------------------------------------------------------------------
 // Formatting
@@ -338,15 +352,15 @@ export const formatMtTime = (value: Date): string =>
 // 'unknown' rather than leaking a raw stack line into the panel.
 //
 // An account-wide LLM refusal comes first and keeps the crawler's own kind
-// (`llm_quota`, `llm_rate_limit`), asked of the crawler's classifier so the two
-// can never disagree. It is one cause across every venue it hits, not a
-// generic crawl_error per venue, and it never pauses a venue.
+// (`llm_quota`, `llm_rate_limit`), asked of the crawler's classifier so both
+// read the same message text the same way. It is one cause across every venue
+// it hits, not a generic crawl_error per venue, and it never pauses a venue.
 export const classifyCrawlError = (
   errorMessage: string | null,
   httpStatusCode: number | null,
 ): string => {
   if (errorMessage !== null) {
-    const { kind } = classifyCrawlerError(errorMessage);
+    const kind = crawlErrorKind(errorMessage);
     if (isAccountWideKind(kind)) return kind;
   }
   if (httpStatusCode === 403 || httpStatusCode === 429) return 'bot_detection';
@@ -534,10 +548,23 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
 
     const latest = runs[0];
     if (latest && latest.status === 'failed') {
+      const errorClass = classifyCrawlError(
+        latest.errorMessage,
+        latest.httpStatusCode,
+      );
+      // An account-wide refusal's streak is that refusal alone: venue failures
+      // before it are not the outage, and must not lend it their age.
+      const accountWide = isAccountWideErrorClass(errorClass);
       const since = streakStart(
         runs,
         0,
-        (index) => runs[index]!.status === 'failed',
+        (index) =>
+          runs[index]!.status === 'failed' &&
+          (!accountWide ||
+            classifyCrawlError(
+              runs[index]!.errorMessage,
+              runs[index]!.httpStatusCode,
+            ) === errorClass),
       );
       push({
         venueId: venue.id,
@@ -547,10 +574,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
         crawlRunId: latest.id,
         evidence: {
           failures: venue.consecutiveFailures,
-          errorClass: classifyCrawlError(
-            latest.errorMessage,
-            latest.httpStatusCode,
-          ),
+          errorClass,
           pauseAt: FAILURE_PAUSE_AT,
         },
       });
