@@ -14,8 +14,8 @@ export interface CrawlErrorClass {
 // it. None says anything about the venue: every LLM-extracted venue fails
 // identically until the account recovers (2026-09-28: 8 of 20). The spend
 // limits (org or workspace, a 400) and the tier's monthly spend cap (a 429
-// carrying `enforced_spend_limit_reached`) are all the same class; an ordinary
-// rate-limit 429 is not, since it clears within the run.
+// carrying `enforced_spend_limit_reached`) are all the same class. An ordinary
+// rate-limit 429 is not: it is transient, so it stays an ordinary failure.
 const LLM_QUOTA_PATTERNS: readonly RegExp[] = [
   /reached your (specified (workspace )?)?API usage limits/i,
   /enforced_spend_limit_reached/i,

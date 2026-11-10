@@ -2340,20 +2340,30 @@ describe('crawlVenue — account-wide LLM quota', () => {
       finalUrl: venue.websiteUrl,
     });
 
-  it('records the run as failed without touching the three-strikes counter', async () => {
-    const venue = seedVenue({ consecutiveFailures: 2 });
-    arrangeLlmPath(venue);
-    mockExtractWithLlm.mockRejectedValueOnce(new Error(QUOTA));
+  // The tier's monthly spend cap: a 429 that is not a rate limit.
+  const TIER_CAP =
+    'Error: 429 {"error":{"type":"rate_limit_error","message":"You have reached your API usage limits.","details":{"error_code":"enforced_spend_limit_reached"}}}';
 
-    const run = await crawlVenue(venue.id, mockBrowser);
+  it.each([
+    ['spend limit', QUOTA],
+    ['tier spend cap', TIER_CAP],
+  ])(
+    'records a %s as failed without touching the three-strikes counter',
+    async (_label, message) => {
+      const venue = seedVenue({ consecutiveFailures: 2 });
+      arrangeLlmPath(venue);
+      mockExtractWithLlm.mockRejectedValueOnce(new Error(message));
 
-    // The rejection must actually have been consumed: a crawl that took the
-    // JSON-LD or unchanged-hash path would never reach the catch block.
-    expect(mockExtractWithLlm).toHaveBeenCalled();
-    expect(run.status).toBe('failed');
-    expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2);
-    expect(storedVenue(venue.id)?.active).toBe(true);
-  });
+      const run = await crawlVenue(venue.id, mockBrowser);
+
+      // The rejection must actually have been consumed: a crawl that took the
+      // JSON-LD or unchanged-hash path would never reach the catch block.
+      expect(mockExtractWithLlm).toHaveBeenCalled();
+      expect(run.status).toBe('failed');
+      expect(storedVenue(venue.id)?.consecutiveFailures).toBe(2);
+      expect(storedVenue(venue.id)?.active).toBe(true);
+    },
+  );
 
   it('still runs the three-strikes update for an ordinary failure (control)', async () => {
     const venue = seedVenue({ consecutiveFailures: 2 });
