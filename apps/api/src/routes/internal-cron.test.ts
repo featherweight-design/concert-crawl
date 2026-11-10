@@ -8,6 +8,9 @@ vi.mock('../lib/rate-limit.js', () => ({
   sweepExpiredRateLimitBuckets: vi.fn(),
 }));
 vi.mock('../lib/crawler-dispatch.js', () => ({ startDailyCrawl: vi.fn() }));
+vi.mock('../lib/prune-notifications.js', () => ({
+  pruneNotifications: vi.fn(),
+}));
 vi.mock('@concert-crawl/db', () => ({ db: {}, auditLog: {} }));
 
 import { Hono } from 'hono';
@@ -31,6 +34,9 @@ const makeJobs = () => ({
     outcome: 'dispatched' as const,
   })),
   auditDailyCrawl: vi.fn<InternalCronJobs['auditDailyCrawl']>(async () => {}),
+  pruneNotifications: vi.fn<InternalCronJobs['pruneNotifications']>(
+    async () => ({ deleted: 3 }),
+  ),
 });
 
 const makeApp = (jobs: InternalCronJobs) => {
@@ -43,6 +49,7 @@ const PATHS = [
   '/v1/internal/cron/match-artists',
   '/v1/internal/cron/spotify-weekly',
   '/v1/internal/cron/crawler-daily',
+  '/v1/internal/cron/notification-prune',
 ] as const;
 
 const expectNothingRan = (jobs: ReturnType<typeof makeJobs>) => {
@@ -50,6 +57,7 @@ const expectNothingRan = (jobs: ReturnType<typeof makeJobs>) => {
   expect(jobs.spotifyWeekly).not.toHaveBeenCalled();
   expect(jobs.startDailyCrawl).not.toHaveBeenCalled();
   expect(jobs.auditDailyCrawl).not.toHaveBeenCalled();
+  expect(jobs.pruneNotifications).not.toHaveBeenCalled();
 };
 
 describe('internal cron routes', () => {
@@ -157,6 +165,20 @@ describe('internal cron routes', () => {
     expect(jobs.spotifyWeekly).toHaveBeenCalledTimes(1);
     const [now] = jobs.spotifyWeekly.mock.calls[0] ?? [];
     expect(now).toBeInstanceOf(Date);
+    expect(now?.getTime()).toBeGreaterThanOrEqual(before);
+    expect(jobs.matchArtists).not.toHaveBeenCalled();
+  });
+
+  it('runs the notification prune with the current time and reports the count', async () => {
+    const jobs = makeJobs();
+    const before = Date.now();
+    const res = await makeApp(jobs).request(PATHS[3], {
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ success: true, deleted: 3 });
+    expect(jobs.pruneNotifications).toHaveBeenCalledTimes(1);
+    const [now] = jobs.pruneNotifications.mock.calls[0] ?? [];
     expect(now?.getTime()).toBeGreaterThanOrEqual(before);
     expect(jobs.matchArtists).not.toHaveBeenCalled();
   });

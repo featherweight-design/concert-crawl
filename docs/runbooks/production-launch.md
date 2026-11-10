@@ -287,10 +287,12 @@ values it was built with. Never paste values into chat or this file.
 | `NATIVE_DIGEST_ENABLED`    | Optional, copied from the spotify-weekly service. `1` digests every follower, not just Spotify ones                                                                                                                                                                                                                                                                                    |
 | `SPOTIFY_SYNC_DRY_RUN`     | Optional, copied from the spotify-weekly service. `1` makes a log-only cycle (no writes, no emails)                                                                                                                                                                                                                                                                                    |
 
-**Cron Jobs.** `vercel.json` in the API project defines three Vercel Cron Jobs:
+**Cron Jobs.** `vercel.json` in the API project defines four Vercel Cron Jobs:
 `0 16 * * *` → `GET /v1/internal/cron/match-artists`, `30 15 * * 1` →
-`GET /v1/internal/cron/spotify-weekly`, and `7 9 * * *` →
-`GET /v1/internal/cron/crawler-daily`. They run only on production deployments.
+`GET /v1/internal/cron/spotify-weekly`, `7 9 * * *` →
+`GET /v1/internal/cron/crawler-daily`, and `30 10 * * *` →
+`GET /v1/internal/cron/notification-prune` (deletes user notifications past the
+retention window). They run only on production deployments.
 The project is on the team's Pro plan, so each fires within its minute (Hobby
 would allow these once-a-day schedules too, but anywhere in the hour). Cron Jobs
 were **disabled** on the project at first, because Vercel counted the first

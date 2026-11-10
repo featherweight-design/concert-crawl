@@ -1,7 +1,6 @@
 // Scheduled-job triggers for a serverless host (Vercel Cron), which invokes a
-// URL on a schedule instead of running a CLI process. On Render the same jobs
-// still run as cron services executing jobs/*.ts directly; these routes are
-// dormant there because CRON_SECRET is unset.
+// URL on a schedule instead of running a CLI process. These routes are the
+// only runner for every job they trigger.
 //
 // Auth: Vercel Cron sends `Authorization: Bearer ${CRON_SECRET}`. The header
 // is compared in constant time. With CRON_SECRET unset the routes answer 404,
@@ -20,6 +19,7 @@ import {
 } from '../lib/crawler-dispatch.js';
 import { apiLogger } from '../lib/logger.js';
 import { describeDbError } from '../lib/pg-errors.js';
+import { pruneNotifications } from '../lib/prune-notifications.js';
 import { sweepExpiredRateLimitBuckets } from '../lib/rate-limit.js';
 
 export interface InternalCronJobs {
@@ -28,6 +28,7 @@ export interface InternalCronJobs {
   sweepRateLimitBuckets: () => Promise<number>;
   startDailyCrawl: (now: Date) => Promise<DailyCrawlResult>;
   auditDailyCrawl: (result: DailyCrawlResult) => Promise<void>;
+  pruneNotifications: (now: Date) => Promise<{ deleted: number }>;
 }
 
 // The audit_log actor for an action no person took. Admin rows carry a Clerk
@@ -50,6 +51,7 @@ const defaultJobs: InternalCronJobs = {
   sweepRateLimitBuckets: () => sweepExpiredRateLimitBuckets(),
   startDailyCrawl: (now) => startDailyCrawl(now),
   auditDailyCrawl,
+  pruneNotifications: (now) => pruneNotifications(db, now),
 };
 
 // A skip is a correct outcome. A failure answers 503 so it shows as failed in
@@ -153,6 +155,12 @@ export const createInternalCronRouter = (
 
     const status = DAILY_CRAWL_STATUS[result.outcome];
     return ctx.json({ success: status === 200, result }, status);
+  });
+
+  // Retention prune for user notifications (#737). It logs its own count.
+  router.get('/notification-prune', async (ctx) => {
+    const { deleted } = await jobs.pruneNotifications(new Date());
+    return ctx.json({ success: true, deleted });
   });
 
   router.get('/spotify-weekly', async (ctx) => {
