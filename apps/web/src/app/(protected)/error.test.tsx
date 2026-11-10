@@ -59,12 +59,13 @@ afterEach(() => {
 const COPY = CONSUMER_COPY.errorReport;
 
 describe('ProtectedError', () => {
-  it('reports a browser throw to Sentry once, however often it renders', () => {
+  it('reports a browser throw to Sentry once, however often it mounts', () => {
+    // A retry that throws the same error mounts the boundary afresh, which
+    // re-runs its effect; only the cache keeps that to one event.
     const error = new Error('boom');
-    const { rerender } = render(
-      <ProtectedError error={error} reset={vi.fn()} />,
-    );
-    rerender(<ProtectedError error={error} reset={vi.fn()} />);
+    const first = render(<ProtectedError error={error} reset={vi.fn()} />);
+    first.unmount();
+    render(<ProtectedError error={error} reset={vi.fn()} />);
     expect(captureException).toHaveBeenCalledTimes(1);
   });
 

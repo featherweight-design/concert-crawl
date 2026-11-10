@@ -13,6 +13,7 @@ import {
   primaryButtonStyle,
 } from '@/components/consumer/crews';
 import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry';
+import { ErrorReport } from '@/components/consumer/error-report';
 
 /**
  * Our failure, stated as ours. Deliberately not the expired or retired dead
@@ -52,6 +53,7 @@ export default function CrewJoinError({
         </button>
         <BrowseInstead />
       </div>
+      <ErrorReport error={error} />
     </InviteShell>
   );
 }

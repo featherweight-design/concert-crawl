@@ -23,5 +23,10 @@ describe('deviceSummary', () => {
         'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
       ),
     ).toBe('Safari on iPhone');
+    expect(
+      deviceSummary(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/131.0 Mobile/15E148 Safari/604.1',
+      ),
+    ).toBe('Chrome on iPhone');
   });
 });
