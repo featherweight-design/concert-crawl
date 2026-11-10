@@ -106,7 +106,8 @@ consequence, not a UI choice.
   concurrent marks can commit out of order; `greatest` stops the later writer stamping
   an earlier timestamp and walking the watermark backwards.
 - **Retention** — nothing pruned `notifications` before this PR; rows were permanent.
-  `apps/api/src/lib/prune-notifications.ts` now runs as task 8 of `jobs/billing-daily.ts`,
+  `apps/api/src/lib/prune-notifications.ts` now runs as its own Vercel cron
+  (`/v1/internal/cron/notification-prune`; it was task 8 of `jobs/billing-daily.ts` until 2026-11-10),
   and the list query is bounded to the same backfill window, so a row leaving the
   window disappears from the panel before it is deleted. Covered by
   `prune-notifications.integration.test.ts`.
