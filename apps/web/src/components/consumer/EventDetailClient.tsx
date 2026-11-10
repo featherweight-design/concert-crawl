@@ -55,6 +55,7 @@ import {
   type ProvenanceCTAKind,
 } from '@/components/consumer/price-region';
 import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree';
+import { denverTodayUtcMs } from '@/lib/time';
 
 // Without the fallback an unset var interpolates as the literal `undefined`,
 // which resolves relative and 404s rather than failing loudly.
@@ -106,12 +107,7 @@ function corroborationConfirmsRequired(eventDate: string): number {
     return SP_POLICY.confirmsRequired;
   }
   const eventMs = Date.UTC(year, month - 1, day);
-  const now = new Date();
-  const todayMs = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
+  const todayMs = denverTodayUtcMs();
   const diffDays = (eventMs - todayMs) / (1000 * 60 * 60 * 24);
   const isImminent =
     diffDays >= 0 && diffDays <= SP_POLICY.imminentThresholdDays;

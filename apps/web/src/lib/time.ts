@@ -21,6 +21,14 @@ export function localDateString(timezone: string): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * UTC midnight of Denver's today, for day arithmetic against event dates
+ * (`YYYY-MM-DD`, written in Denver's calendar). On a Denver evening UTC's own
+ * today is already tomorrow, so day counts must start here, as the API's do.
+ */
+export const denverTodayUtcMs = (): number =>
+  Date.parse(`${localDateString(DENVER_TIME_ZONE)}T00:00:00Z`);
+
 export const formatISODate = (
   iso: string,
   timeZone: string,

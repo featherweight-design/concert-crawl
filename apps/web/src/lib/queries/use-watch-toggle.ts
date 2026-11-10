@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types';
 import { apiClient } from '@/lib/api';
+import { DENVER_TIME_ZONE, localDateString } from '@/lib/time';
 import { watchingQueryKey } from './use-watching';
 import { eventWatchersEventKey } from './use-event-watchers';
 import { OPTIMISTIC_ID_PREFIX } from './optimistic-watch-row';
@@ -40,7 +41,8 @@ export function useWatchToggle() {
       // A prefixed, per-event userEventId placeholder: unique across concurrent
       // optimistic entries, and recognisable as not-yet-real via
       // isOptimisticWatchRow until the server's id replaces it.
-      const todayIso = new Date().toISOString().slice(0, 10);
+      // Denver's date, not UTC's: in the evening UTC is already tomorrow.
+      const todayIso = localDateString(DENVER_TIME_ZONE);
       const optimisticStub: WatchingShow = {
         userEventId: `${OPTIMISTIC_ID_PREFIX}${eventId}`,
         eventId,
