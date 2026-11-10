@@ -42,11 +42,7 @@ import {
   resolveDisplayPrice,
 } from './price-aggregation/index.js';
 import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js';
-import { todayInTimezone } from './time.js';
-
-// events.date holds event-local (Mountain Time) calendar dates — see the
-// events route for the same reasoning.
-const MT_TIME_ZONE = 'America/Denver';
+import { todayInDenver } from './time.js';
 
 export interface SpotifyMatchSummary {
   denverArtistCount: number;
@@ -107,7 +103,7 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
   return (
     and(
       eq(events.status, 'upcoming'),
-      gte(events.date, todayInTimezone(MT_TIME_ZONE)),
+      gte(events.date, todayInDenver()),
       eq(events.hiddenFromConsumer, false),
       isNull(events.firstMissingAt),
       // A deactivated venue's shows must not drive fan-out or recommendations

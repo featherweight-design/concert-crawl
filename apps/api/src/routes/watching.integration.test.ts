@@ -116,6 +116,29 @@ describe('GET /v1/watching', () => {
     expect(body.data).toHaveLength(0);
   });
 
+  // 2026-11-10T04:30:00Z is 2026-11-09 21:30 in Denver (MST): UTC's "today"
+  // is already the 10th, and a UTC bound would drop tonight's show.
+  it("keeps tonight's watched show after the UTC rollover", async () => {
+    setAuth('user_abc');
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' });
+    const event = await seedEvent(venue.id, {
+      artist: 'Tonight Show',
+      date: '2026-11-09',
+      status: 'upcoming',
+    });
+    await seedUserEvent('user_abc', event.id, { status: 'watching' });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-10T04:30:00Z'));
+    try {
+      const res = await app.request('/v1/watching');
+      const body = (await res.json()) as { data: { eventId: string }[] };
+      expect(body.data.map((row) => row.eventId)).toEqual([event.id]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('returns watched upcoming shows after watching an event', async () => {
     setAuth('user_abc');
     const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' });

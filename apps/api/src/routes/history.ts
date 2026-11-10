@@ -39,8 +39,7 @@ import {
 import { computeHistoryStats } from '../lib/history-stats.js';
 import { buildHistoryIcs } from '../lib/ics.js';
 import { parsePrice } from '../lib/price.js';
-
-const MT_TIME_ZONE = 'America/Denver';
+import { MT_TIME_ZONE } from '../lib/time.js';
 
 const dateLabelFormatter = new Intl.DateTimeFormat('en-US', {
   weekday: 'short',

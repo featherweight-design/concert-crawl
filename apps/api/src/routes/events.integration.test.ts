@@ -2144,3 +2144,48 @@ describe('GET /v1/events — artistPhotoUrl join', () => {
     expect(relatedBody.data.data[0]?.artistPhotoUrl).toBe(PORTRAIT);
   });
 });
+
+// 2026-11-10T04:30:00Z is 2026-11-09 21:30 in Denver (MST, UTC-7). UTC's
+// "today" is already the 10th, so a UTC bound drops that night's shows.
+describe('GET /v1/events — tonight stays listed after the UTC rollover', () => {
+  const MT_EVENING = new Date('2026-11-10T04:30:00Z');
+
+  beforeEach(async () => {
+    await clearTables();
+  });
+
+  const atMtEvening = async (path: string): Promise<Response> => {
+    // Fake only Date so the DB calls still settle.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(MT_EVENING);
+    try {
+      return await app.request(path);
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+
+  it('lists a show dated Denver-today in the default window', async () => {
+    const venue = await seedVenue({ slug: 'bluebird', name: 'Bluebird' });
+    await seedEvent(venue.id, { artist: 'Tonight Show', date: '2026-11-09' });
+
+    const res = await atMtEvening('/v1/events');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { data: { date: string }[] } };
+    expect(body.data.data.map((row) => row.date)).toEqual(['2026-11-09']);
+  });
+
+  it("keeps tonight's show among a venue's related shows", async () => {
+    const venue = await seedVenue({ slug: 'bluebird', name: 'Bluebird' });
+    const source = await seedEvent(venue.id, {
+      artist: 'Later Show',
+      date: '2026-12-01',
+    });
+    await seedEvent(venue.id, { artist: 'Tonight Show', date: '2026-11-09' });
+
+    const res = await atMtEvening(`/v1/events/${source.id}/related`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { data: { date: string }[] } };
+    expect(body.data.data.map((row) => row.date)).toEqual(['2026-11-09']);
+  });
+});

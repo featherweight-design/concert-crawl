@@ -53,6 +53,7 @@ import type { AdminVariables } from './index.js';
 import { venueGuideAdminRouter } from './venue-guide.js';
 import { TRIAGE_CONDITIONS } from './lib/triage.js';
 import { idSchema } from '../../lib/id-schema.js';
+import { todayInDenver } from '../../lib/time.js';
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -212,7 +213,7 @@ venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter);
 venuesAdminRouter.get('/', async (ctx) => {
   const allVenues = await db.select().from(venues).orderBy(venues.name);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInDenver();
   const eventCounts = await db
     .select({ venueId: events.venueId, total: count(events.id) })
     .from(events)

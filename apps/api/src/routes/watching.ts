@@ -19,6 +19,7 @@ import {
   portraitCanonicalName,
 } from '../lib/event-billing.js';
 import { idSchema } from '../lib/id-schema.js';
+import { todayInDenver } from '../lib/time.js';
 
 // Watching is FREE for all signed-in plans (locked decision, #781 R6 —
 // ENTITLEMENTS_MATRIX.watching). Do NOT add a requireFeature() gate here;
@@ -40,7 +41,7 @@ watchingRouter.get('/', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInDenver();
 
   const rows = await db
     .select({

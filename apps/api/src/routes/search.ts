@@ -16,13 +16,13 @@ import {
   displayHeadliner,
   portraitCanonicalName,
 } from '../lib/event-billing.js';
-import { todayInTimezone } from '../lib/time.js';
+import { todayInDenver } from '../lib/time.js';
 
 export const searchRouter = new Hono();
 
 // GET /v1/search/popular — top 5 upcoming events by watcher count, no auth required
 searchRouter.get('/popular', async (ctx) => {
-  const today = todayInTimezone('UTC');
+  const today = todayInDenver();
 
   const watcherCount = sql<number>`cast(count(${userEvents.id}) as int)`;
 
@@ -84,11 +84,6 @@ searchRouter.get('/popular', async (ctx) => {
 // The search palette already derives "artist" rows from matching events; those
 // route to a filtered browse query. This endpoint is the other thing entirely:
 // artists that have a PAGE, routed to `/artists/{slug}`.
-
-// Denver is the only market we crawl and an artist's shows span venues, so
-// there is no single venue timezone to pivot "today" on — Mountain Time is the
-// product's display timezone (mirrors artists-public.ts).
-const MT_TIME_ZONE = 'America/Denver';
 
 // Artists are a garnish on a search whose primary answer is shows. Three rows
 // is enough to recognise the act you meant without pushing the event and venue
@@ -193,7 +188,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
       ),
     );
 
-  const today = todayInTimezone(MT_TIME_ZONE);
+  const today = todayInDenver();
   const hasVisibleEvent = new Set<string>();
   const upcomingCounts = new Map<string, number>();
 
