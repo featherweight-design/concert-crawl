@@ -1,3 +1,17 @@
+# [1.309.0](https://github.com/featherweight-design/concert-crawl/compare/v1.308.7...v1.309.0) (2026-11-10)
+
+
+### Bug Fixes
+
+* **admin:** key account-wide acks per outage and keep the venue's strikes visible ([8529c8f](https://github.com/featherweight-design/concert-crawl/commit/8529c8f57e3c3704e7cdbd447a7774a8cd87b67d))
+* **admin:** reject a bare account-wide ack and pin a multi-night outage ([a5a8aeb](https://github.com/featherweight-design/concert-crawl/commit/a5a8aeb186c9cc91dfb762b1b9ae1e0cc8d45c3d))
+* **admin:** show an account-wide LLM refusal as its own cause in Needs attention ([048ae0b](https://github.com/featherweight-design/concert-crawl/commit/048ae0b5d42293c94adb2a8431f56721017978c8))
+
+
+### Features
+
+* **entitlements:** unlock every feature for free and supporter accounts ([5401fbb](https://github.com/featherweight-design/concert-crawl/commit/5401fbb4357d5f61c680fcf31c2f966ee3e7c0ae))
+
 ## [1.308.7](https://github.com/featherweight-design/concert-crawl/compare/v1.308.6...v1.308.7) (2026-11-10)
 
 
