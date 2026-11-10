@@ -35,7 +35,6 @@ import {
   seedEvent,
   seedUserEvent,
 } from '../test/helpers/seed.js';
-import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 
 const app = createApp();
 const USER_ID = 'user_attending_test';
@@ -77,7 +76,7 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 with the typed code for a plan the matrix denies', async () => {
+  it('marks going for a free user now that concert-history is unlocked', async () => {
     setAuth();
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: '2026-01-01' });
@@ -85,26 +84,23 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     const res = await app.request(`/v1/attending/${event.id}`, {
       method: 'PUT',
     });
-    expect(res.status).toBe(403);
-    const body = (await res.json()) as { code: string; feature: string };
-    expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
-    expect(body.feature).toBe('concert-history');
+    expect(res.status).toBe(200);
+    const row = await rowFor(USER_ID, event.id);
+    expect(row?.attendingAt).not.toBeNull();
   });
 
-  // A free account (no subscription, gift or role) is denied on removal
-  // too: the gate covers every /v1/attending route, not only PUT.
-  it('returns 403 on DELETE for a free account', async () => {
+  // Going free: a free account (no subscription, gift or role) can remove a
+  // concert too, not only add one.
+  it('lets a free account DELETE an attended show', async () => {
     setAuth();
     const venue = await seedVenue();
     const event = await seedEvent(venue.id, { date: '2026-01-01' });
+    await app.request(`/v1/attending/${event.id}`, { method: 'PUT' });
 
     const res = await app.request(`/v1/attending/${event.id}`, {
       method: 'DELETE',
     });
-    expect(res.status).toBe(403);
-    const body = (await res.json()) as { code: string; feature: string };
-    expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
-    expect(body.feature).toBe('concert-history');
+    expect(res.status).toBe(200);
   });
 
   it('returns 400 for a non-UUID event id', async () => {

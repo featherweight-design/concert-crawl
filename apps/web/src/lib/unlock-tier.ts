@@ -16,14 +16,16 @@ import type {
 // cheapest 'visible-active' hit is the cheapest lane that unlocks the feature.
 // Plans that aren't purchasable picker tiers are skipped rather than returned:
 // 'logged-out' is not a lane at all, and 'gifted' can't be bought, so neither
-// can be offered as an upgrade target.
+// can be offered as an upgrade target. 'free' is skipped too: since going free
+// it unlocks most features, but it is not an upgrade, and a locked surface
+// offering "Pick Free" would sell the plan the viewer already has.
 const isTierKey = (plan: string): plan is TierKey => plan in TIER_DEFINITIONS;
 
 export const unlockTierFor = (
   feature: PremiumFeature,
 ): TierDefinition | null => {
   for (const plan of USER_PLANS) {
-    if (plan === 'logged-out' || !isTierKey(plan)) continue;
+    if (plan === 'logged-out' || plan === 'free' || !isTierKey(plan)) continue;
     if (ENTITLEMENTS_MATRIX[feature][plan] !== 'visible-active') continue;
     return TIER_DEFINITIONS[plan];
   }

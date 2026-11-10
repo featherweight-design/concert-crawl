@@ -29,7 +29,6 @@ import {
   seedEvent,
   seedUserEvent,
 } from '../test/helpers/seed.js';
-import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 
 const app = createApp();
 const USER_ID = 'user_history_test';
@@ -87,13 +86,12 @@ describe('GET /v1/history', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns 403 with the typed code for a plan the matrix denies', async () => {
+  it('serves a free user now that concert-history is unlocked', async () => {
     setAuth();
-    const res = await app.request('/v1/history');
-    expect(res.status).toBe(403);
-    const body = (await res.json()) as { code: string; feature: string };
-    expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
-    expect(body.feature).toBe('concert-history');
+    const body = await getHistory();
+    expect(body.success).toBe(true);
+    expect(body.data.past).toEqual([]);
+    expect(body.data.upcoming).toEqual([]);
   });
 
   it('returns an empty history with zeroed stats', async () => {
@@ -413,12 +411,13 @@ describe('GET /v1/history/export.ics', () => {
     );
   });
 
-  it('returns 403 for a plan the matrix denies calendar export', async () => {
+  it('serves a free user now that calendar export is unlocked', async () => {
     setAuth();
     const res = await app.request('/v1/history/export.ics');
-    expect(res.status).toBe(403);
-    const body = (await res.json()) as { feature: string };
-    expect(body.feature).toBe('calendar-export');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe(
+      'text/calendar; charset=utf-8',
+    );
   });
 
   it('serves a calendar attachment for an entitled user', async () => {

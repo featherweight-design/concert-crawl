@@ -20,11 +20,9 @@ import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 /**
  * Follow / unfollow an artist (#1115, PR-D).
  *
- * Following is a PREMIUM feature. The entitlements matrix has always said so
- * (`following` is paywall-on-tap for free/supporter); this router shipped
- * ungated on the strength of design brief #1115 §3.6, which Hugh retired on
- * 2026-08-04. POST carries requireFeature('following'); free and supporter get
- * a 403 the client turns into the paywall.
+ * POST carries requireFeature('following'). Since going free (2026-10-29)
+ * every signed-in plan has `following`; the gate stays so the matrix remains
+ * the one place that decides, and a denied plan still gets the typed 403.
  *
  * DELETE is deliberately NOT gated. A user who downgrades must still be able
  * to unfollow, or they are stranded with rows they cannot remove.
@@ -295,9 +293,8 @@ const bulkFollowSchema = z.object({
 
 /**
  * POST /v1/me/artist-follows/bulk — commit a whole selection in one write
- * (§9.3). `requireFeature('following')` gated: free/supporter select freely in
- * the UI, and only the commit is paywalled, so the 403 here is the moment the
- * paywall opens.
+ * (§9.3). `requireFeature('following')` gated, like single follows; every
+ * signed-in plan passes it since going free.
  *
  * Returns a PER-SLUG result so a partial failure is visible rather than
  * swallowed, and is idempotent: a slug the user already follows comes back

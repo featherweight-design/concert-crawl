@@ -34,4 +34,13 @@ describe('unlockTierFor', () => {
 
     expect(tier?.features.length).toBeGreaterThan(0);
   });
+
+  // Free unlocks these since going free, but a locked surface must never
+  // offer the plan the viewer already has as an upgrade.
+  it.each(['concert-history', 'crews', 'following'] as const)(
+    'never offers Free as the unlock for %s',
+    (feature) => {
+      expect(unlockTierFor(feature)?.key).not.toBe('free');
+    },
+  );
 });

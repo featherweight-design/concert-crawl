@@ -46,8 +46,8 @@ export function requireFeature(
     const planState = await loadPlanState(auth.userId, metadata);
 
     if (!canUseFeature(planState, feature)) {
-      // debug, not info: denials are expected traffic (free/supporter users
-      // tapping paid surfaces) and would flood default LOG_LEVEL=info.
+      // debug, not info: denials are expected traffic (a plan tapping a
+      // surface the matrix denies) and would flood default LOG_LEVEL=info.
       apiLogger.debug(
         { userId: auth.userId, feature, plan: planState.plan },
         'entitlement gate denied',

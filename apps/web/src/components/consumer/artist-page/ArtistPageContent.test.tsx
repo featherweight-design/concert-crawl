@@ -8,6 +8,7 @@ import type {
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type * as EntitlementsModule from '@concert-crawl/entitlements';
 
 import { ArtistPageContent } from './ArtistPageContent';
 import { AP_STICKY_AFTER, AP_STICKY_BAR_H } from './definitions/constants';
@@ -33,6 +34,19 @@ const { plan } = vi.hoisted(
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: plan.current }),
 }));
+
+// Going free (2026-10-29) left no signed-in plan the matrix denies following,
+// so the locked skin is driven by re-gating chosen tiers in nfLocked. It is
+// kept for a future re-gate; roleComped still wins, as it does in the matrix.
+const regate = vi.hoisted(() => ({ plans: new Set<string>() }));
+vi.mock('@concert-crawl/entitlements', async (importOriginal) => {
+  const actual = await importOriginal<typeof EntitlementsModule>();
+  return {
+    ...actual,
+    nfLocked: (state: Parameters<typeof actual.nfLocked>[0]) =>
+      regate.plans.has(state.plan) ? !state.roleComped : actual.nfLocked(state),
+  };
+});
 
 const planOn = (tier: PlanState['plan'], roleComped = false): PlanState => ({
   plan: tier,
@@ -140,6 +154,7 @@ beforeEach(() => {
   setViewport(false);
   window.scrollY = 0;
   plan.current = undefined;
+  regate.plans.clear();
 });
 
 afterEach(cleanup);
@@ -297,10 +312,20 @@ describe('ArtistPageContent', () => {
       container.querySelector('[data-glyph="lock"]');
 
     it('locks a plan that cannot follow', () => {
+      regate.plans.add('supporter');
       plan.current = planOn('supporter');
       const { container } = render(<ArtistPageContent data={signedIn} />);
       expect(lockGlyph(container)).not.toBeNull();
     });
+
+    it.each(['free', 'supporter'] as const)(
+      'leaves a %s plan live (going free, 2026-10-29)',
+      (tier) => {
+        plan.current = planOn(tier);
+        const { container } = render(<ArtistPageContent data={signedIn} />);
+        expect(lockGlyph(container)).toBeNull();
+      },
+    );
 
     it('leaves a premium plan live', () => {
       plan.current = planOn('premium');
@@ -311,6 +336,7 @@ describe('ArtistPageContent', () => {
     it('leaves a comped free account live', () => {
       // roleComped is an override the matrix does not encode, which is why the
       // page asks nfLocked(planState) and never `plan === 'free'`.
+      regate.plans.add('free');
       plan.current = planOn('free', true);
       const { container } = render(<ArtistPageContent data={signedIn} />);
       expect(lockGlyph(container)).toBeNull();
@@ -326,6 +352,7 @@ describe('ArtistPageContent', () => {
       // Eng spec §3.2: downgrading never deletes follows, and DELETE is
       // unentitled by design. A locked skin here would strand the follow on
       // the one surface a user would go to to remove it.
+      regate.plans.add('free');
       plan.current = planOn('free');
       const { container } = render(
         <ArtistPageContent data={{ ...withShows, following: true }} />,

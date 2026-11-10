@@ -2,6 +2,7 @@
 
 import '@testing-library/jest-dom';
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
+import type * as UseEntitlementModule from '@/lib/queries/use-entitlement';
 import {
   render,
   screen,
@@ -10,6 +11,10 @@ import {
   fireEvent,
 } from '@testing-library/react';
 import type { BulkFollowResponse, PlanState } from '@concert-crawl/types';
+import type {
+  EntitlementCell,
+  PremiumFeature,
+} from '@concert-crawl/entitlements';
 import type * as ApiModule from '@/lib/api';
 
 import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants';
@@ -63,6 +68,22 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: planState.current, isPending: false }),
 }));
 
+// Going free (2026-10-29) left no signed-in plan the matrix denies following,
+// so the locked branch is driven by forcing the hook's answer. It is kept for
+// a future re-gate; with `regate.surface` null the real hook answers.
+const regate = vi.hoisted(() => ({
+  surface: null as EntitlementCell | null,
+}));
+vi.mock('@/lib/queries/use-entitlement', async (importOriginal) => {
+  const actual = await importOriginal<typeof UseEntitlementModule>();
+  return {
+    useEntitlement: (feature: PremiumFeature) =>
+      regate.surface === null
+        ? actual.useEntitlement(feature)
+        : { isLoading: false, active: false, surface: regate.surface },
+  };
+});
+
 // useEntitlement also reads the release-flag map, a react-query hook. These
 // cases render without a QueryClientProvider, so the map is stubbed at the
 // registry defaults; no flag names `following`, so the seam is inert here.
@@ -104,6 +125,7 @@ const followButtons = () =>
 
 beforeEach(() => {
   planState.current = plan();
+  regate.surface = null;
   followArtistsBulk.mockReset();
   apiPost.mockReset();
   apiDelete.mockReset();
@@ -212,8 +234,8 @@ describe('BillFollowBlock — the name is the way to the artist', () => {
 });
 
 describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
-  it('gives a Supporter a single locked action instead of a lock per act', async () => {
-    planState.current = plan({ plan: 'supporter' });
+  it('gives a denied plan a single locked action instead of a lock per act', async () => {
+    regate.surface = 'paywall-on-tap';
     render(<BillFollowBlock artists={BILL} scaRegion={false} />);
 
     // The whole point: three acts must not mean three walls.
@@ -258,8 +280,21 @@ describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
     expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
   });
 
-  it('locks a free account as one unit too', () => {
-    planState.current = plan({ plan: 'free' });
+  it.each(['free', 'supporter'] as const)(
+    'gives a %s account independent rows and no gate (going free, 2026-10-29)',
+    (tier) => {
+      planState.current = plan({ plan: tier });
+      render(<BillFollowBlock artists={BILL} scaRegion={false} />);
+
+      expect(followButtons()).toHaveLength(3);
+      expect(screen.queryByText(FOLLOWING_COPY.followGate)).toBeNull();
+    },
+  );
+
+  // Signed in, but the plan fetch settled empty: useEntitlement fails closed
+  // with the logged-out surface, and that still locks as one unit.
+  it('locks as one unit when the plan fails closed for a signed-in viewer', () => {
+    planState.current = null;
     render(<BillFollowBlock artists={BILL} scaRegion={false} />);
 
     expect(followButtons()).toHaveLength(0);
@@ -461,9 +496,9 @@ describe('BillFollowBlock — "Follow all N"', () => {
     ).toBeInTheDocument();
   });
 
-  // ...unless the rows are not drawn at all, which is every act below Premium.
+  // ...unless the rows are not drawn at all, which is every act while locked.
   it('survives on a one-act bill while locked, as the only control there', () => {
-    planState.current = plan({ plan: 'supporter' });
+    regate.surface = 'paywall-on-tap';
 
     render(<BillFollowBlock artists={[BILL[0]!]} scaRegion={false} />);
 
@@ -475,7 +510,7 @@ describe('BillFollowBlock — "Follow all N"', () => {
   // there is nothing left to commit — but nothing is reachable either, and a
   // block with no control in it is a dead surface.
   it('keeps the locked action even when the viewer follows every act', () => {
-    planState.current = plan({ plan: 'supporter' });
+    regate.surface = 'paywall-on-tap';
 
     render(
       <BillFollowBlock

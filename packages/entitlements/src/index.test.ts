@@ -14,7 +14,8 @@ import {
 // Independent literal copy of #781 §6, including the R6 Watching-is-Free
 // amendment, the #763 §7 (E8) spotify-sync override, and the 2026-07-29
 // Supporter-unlocks amendment (concert-history + calendar-export), and the
-// 2026-08-05 crews decision (Supporter unlocks crews) — so several
+// 2026-08-05 crews decision (Supporter unlocks crews), and the 2026-10-29
+// going-free ruling (free and supporter unlock everything but spotify-sync) — so several
 // rows are no longer verbatim #781. A matrix edit fails these tests until this
 // table is updated in lockstep — that friction is intentional (eng infra spec
 // Part 1).
@@ -32,7 +33,7 @@ const EXPECTED_CELLS: Record<
   },
   'concert-history': {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
@@ -40,7 +41,7 @@ const EXPECTED_CELLS: Record<
   },
   'calendar-export': {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
@@ -48,16 +49,16 @@ const EXPECTED_CELLS: Record<
   },
   following: {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
   },
   alerts: {
     'logged-out': 'hidden',
-    free: 'hidden',
-    supporter: 'hidden',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
@@ -72,15 +73,15 @@ const EXPECTED_CELLS: Record<
   },
   'price-drop-alerts': {
     'logged-out': 'hidden',
-    free: 'hidden',
-    supporter: 'hidden',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
   },
   crews: {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
@@ -160,14 +161,11 @@ describe('lockedSurface', () => {
 });
 
 describe('nfLocked', () => {
-  it.each<UserPlan>(['logged-out', 'free', 'supporter'])(
-    'locks following for %s',
-    (plan) => {
-      expect(nfLocked({ plan, roleComped: false })).toBe(true);
-    },
-  );
+  it('locks following only when logged out', () => {
+    expect(nfLocked({ plan: 'logged-out', roleComped: false })).toBe(true);
+  });
 
-  it.each<UserPlan>(['premium', 'founder', 'gifted'])(
+  it.each<UserPlan>(['free', 'supporter', 'premium', 'founder', 'gifted'])(
     'unlocks following for %s',
     (plan) => {
       expect(nfLocked({ plan, roleComped: false })).toBe(false);

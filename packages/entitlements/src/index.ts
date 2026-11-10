@@ -63,6 +63,9 @@ export const USER_PLANS: readonly UserPlan[] = [
 //     ongoing cost (following, alerts, price-drop-alerts, spotify-sync).
 //   - 2026-08-05 crews decision (#1226): supporter is visible-active on the
 //     same test — a crew carries no per-crew marginal cost.
+//   - 2026-10-29 going free (Hugh): every feature is visible-active for free
+//     and supporter accounts, except spotify-sync (sync retired 2026-10-29).
+//     Logged-out cells are unchanged: anything personal needs an account.
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
@@ -79,7 +82,7 @@ export const ENTITLEMENTS_MATRIX: Record<
   },
   'concert-history': {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
@@ -87,7 +90,7 @@ export const ENTITLEMENTS_MATRIX: Record<
   },
   'calendar-export': {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
@@ -95,16 +98,16 @@ export const ENTITLEMENTS_MATRIX: Record<
   },
   following: {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
   },
   alerts: {
     'logged-out': 'hidden',
-    free: 'hidden',
-    supporter: 'hidden',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
@@ -119,8 +122,8 @@ export const ENTITLEMENTS_MATRIX: Record<
   },
   'price-drop-alerts': {
     'logged-out': 'hidden',
-    free: 'hidden',
-    supporter: 'hidden',
+    free: 'visible-active',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
@@ -131,7 +134,7 @@ export const ENTITLEMENTS_MATRIX: Record<
   // the design, not an oversight. Do not "fix" it by gating reads.
   crews: {
     'logged-out': 'tier-picker-on-tap',
-    free: 'paywall-on-tap',
+    free: 'visible-active',
     supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',

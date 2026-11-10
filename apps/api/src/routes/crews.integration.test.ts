@@ -1,9 +1,10 @@
 // Integration tests for /v1/crews (#1226 PR-2).
 //
 // Two guarantees carry the most weight here and both are asserted explicitly:
-//   1. The entitlement shape. Create 403s on free; list, read, leave, and mute
-//      all 200 on free, which is what lets a lapsed creator keep every crew
-//      they already made (plan D6).
+//   1. The entitlement shape. Every crew route, create included, is open on
+//      free (crews unlocked for free accounts); list, read, leave, and mute
+//      staying open is what lets a lapsed creator keep every crew they already
+//      made (plan D6).
 //   2. The tense rule. Upcoming needs >= 1 member going; a past night needs
 //      >= 2 (locked decision 2), including at the exact boundaries.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -24,7 +25,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import { randomUUID } from 'node:crypto';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { crewMembers, crews, subscriptions } from '@concert-crawl/db';
 import type {
   CrewDetail,
@@ -42,7 +43,6 @@ import {
   seedVenue,
 } from '../test/helpers/seed.js';
 import { setFeatureFlag } from '../test/helpers/feature-flags.js';
-import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js';
 import {
   CREW_HANDOFF_REQUIRED_CODE,
   CREW_LAST_MEMBER_CODE,
@@ -144,17 +144,21 @@ describe('/v1/crews', () => {
       }
     });
 
-    it('403s create on the free plan with the typed code', async () => {
+    it('creates on the free plan now that crews is unlocked for free', async () => {
       setAuth();
       const res = await app.request('/v1/crews', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ name: 'The Regulars' }),
       });
-      expect(res.status).toBe(403);
-      const body = (await res.json()) as { code: string; feature: string };
-      expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
-      expect(body.feature).toBe('crews');
+      expect(res.status).toBe(201);
+      const body = (await res.json()) as { data: { crew: CrewSummary } };
+      expect(body.data.crew.isKeeper).toBe(true);
+      const rows = await testDb
+        .select()
+        .from(crews)
+        .where(eq(crews.keeperId, KEEPER));
+      expect(rows).toHaveLength(1);
     });
 
     // The single most important test in the PR: a lapsed creator keeps every

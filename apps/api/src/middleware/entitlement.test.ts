@@ -86,10 +86,10 @@ describe('requireFeature', () => {
   it('logs denials at debug, not info (expected traffic must not flood prod logs)', async () => {
     setAuth();
     setPlan({ plan: 'free' });
-    const app = buildApp('concert-history');
+    const app = buildApp('spotify-sync');
     await app.request('/probe');
     expect(debugLogMock).toHaveBeenCalledWith(
-      expect.objectContaining({ feature: 'concert-history', plan: 'free' }),
+      expect.objectContaining({ feature: 'spotify-sync', plan: 'free' }),
       'entitlement gate denied',
     );
     expect(infoLogMock).not.toHaveBeenCalled();
@@ -102,10 +102,12 @@ describe('requireFeature', () => {
     expect(loadPlanStateMock).not.toHaveBeenCalled();
   });
 
-  it('returns 403 with a typed error code for a free user on a paid feature', async () => {
+  // Since going free (2026-10-29) spotify-sync is the only feature the matrix
+  // still denies a signed-in free or supporter account.
+  it('returns 403 with a typed error code for a free user on a denied feature', async () => {
     setAuth();
     setPlan({ plan: 'free' });
-    const app = buildApp('concert-history');
+    const app = buildApp('spotify-sync');
     const res = await app.request('/probe');
     expect(res.status).toBe(403);
     const body = (await res.json()) as {
@@ -115,7 +117,7 @@ describe('requireFeature', () => {
     };
     expect(body.success).toBe(false);
     expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
-    expect(body.feature).toBe('concert-history');
+    expect(body.feature).toBe('spotify-sync');
   });
 
   it('passes supporter on calendar-export (a Supporter unlock since 2026-07-29)', async () => {
@@ -126,13 +128,32 @@ describe('requireFeature', () => {
     expect(res.status).toBe(200);
   });
 
-  it('returns 403 for supporter on following (Premium keeps the active-cost features)', async () => {
+  it('returns 403 for supporter on spotify-sync (retired, never unlocked)', async () => {
     setAuth();
     setPlan({ plan: 'supporter', status: 'active' });
-    const app = buildApp('following');
+    const app = buildApp('spotify-sync');
     const res = await app.request('/probe');
     expect(res.status).toBe(403);
   });
+
+  it.each([
+    'concert-history',
+    'calendar-export',
+    'following',
+    'alerts',
+    'price-drop-alerts',
+    'crews',
+  ] as const)(
+    'passes free and supporter on %s (going free, 2026-10-29)',
+    async (feature) => {
+      setAuth();
+      for (const plan of ['free', 'supporter'] as const) {
+        setPlan({ plan });
+        const res = await buildApp(feature).request('/probe');
+        expect(res.status).toBe(200);
+      }
+    },
+  );
 
   it('passes premium users through and exposes planState on context', async () => {
     setAuth();
@@ -155,7 +176,8 @@ describe('requireFeature', () => {
   it('roleComped short-circuits even on a free plan', async () => {
     setAuth('admin');
     setPlan({ plan: 'free', roleComped: true });
-    const app = buildApp('concert-history');
+    // spotify-sync, because it is the one feature free is still denied.
+    const app = buildApp('spotify-sync');
     const res = await app.request('/probe');
     expect(res.status).toBe(200);
   });

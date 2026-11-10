@@ -627,7 +627,9 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     expect(resendState.sends).toHaveLength(0);
   });
 
-  it('gates on the following entitlement, not spotify-sync', async () => {
+  // Free holds `following` but is still denied `spotify-sync`, so a free
+  // follower receiving the digest proves the gate reads the former.
+  it('gates on the following entitlement, not spotify-sync (free now sends)', async () => {
     vi.stubEnv('NATIVE_DIGEST_ENABLED', '1');
     clerkState.emails.set(USER, 'free-native@example.com');
     const venue = await seedVenue({ slug: `venue-${USER}` });
@@ -640,7 +642,10 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
 
     await runSpotifyWeekly(NOW);
 
-    expect(await getDigestLogRows(USER)).toHaveLength(0);
+    const rows = await getDigestLogRows(USER);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe('sent');
+    expect(resendState.sends).toHaveLength(1);
     const costs = await testDb
       .select()
       .from(costTracking)
@@ -648,7 +653,7 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
     const summary = costs.find((row) =>
       (row.metadata ?? '').includes('"job":"spotify-weekly"'),
     );
-    expect(summary?.metadata).toContain('"digestSkippedEntitlement":1');
+    expect(summary?.metadata).toContain('"digestSkippedEntitlement":0');
     expect(summary?.metadata).toContain('"nativeDigest":true');
   });
 
