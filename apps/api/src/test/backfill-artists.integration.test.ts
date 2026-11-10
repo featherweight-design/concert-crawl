@@ -206,16 +206,60 @@ describe('backfill-artists integration', () => {
         'the womack sisters',
         'thee sacred souls',
       ]);
-      // The primary act keeps its raw spelling because `artist` holds it under
-      // a known canonical key. The other two cannot be paired back to a raw
-      // spelling, so they take the canonical string until an admin fixes it.
-      const primary = rows.find(
-        (row) => row.canonicalName === 'thee sacred souls',
-      );
-      expect(primary?.name).toBe('Thee Sacred Souls');
-      expect(rows.find((row) => row.canonicalName === 'la lom')?.name).toBe(
-        'la lom',
-      );
+      // Every act is paired with its own raw spelling by value, so none falls
+      // back to its lowercased canonical string.
+      expect(
+        Object.fromEntries(rows.map((row) => [row.canonicalName, row.name])),
+      ).toEqual({
+        'la lom': 'LA LOM',
+        'the womack sisters': 'The Womack Sisters',
+        'thee sacred souls': 'Thee Sacred Souls',
+      });
+    });
+
+    it('names each co-headliner by its own billing, never the whole bill', async () => {
+      // Regression: "Clipse & J.I.D" at Red Rocks. canonical_artist is the
+      // billing's first segment, so it equals 'clipse' and the primary act used
+      // to take the whole billing string as its name, while J.I.D took the
+      // lowercase canonical 'j.i.d'.
+      const venue = await seedVenue({ slug: `clipse-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Clipse & J.I.D',
+        canonicalArtist: 'clipse',
+        headliners: ['Clipse', 'J.I.D'],
+        canonicalHeadliners: ['clipse', 'j.i.d'],
+        supportingArtists: ['Samara Cyn'],
+        canonicalSupporting: ['samara cyn'],
+      });
+
+      await backfillArtists(testDb);
+
+      const rows = await listArtists();
+      expect(
+        Object.fromEntries(rows.map((row) => [row.canonicalName, row.name])),
+      ).toEqual({
+        clipse: 'Clipse',
+        'j.i.d': 'J.I.D',
+        'samara cyn': 'samara cyn',
+      });
+    });
+
+    it('keeps a single act whose own name holds an ampersand whole', async () => {
+      // "Simon & Garfunkel" is one act. Its canonical is truncated at the
+      // ampersand, so the value fold cannot pair it, and the one-act bill
+      // supplies the spelling instead.
+      const venue = await seedVenue({ slug: `one-act-amp-${Date.now()}` });
+      await seedEvent(venue.id, {
+        artist: 'Simon & Garfunkel',
+        canonicalArtist: 'simon',
+        headliners: ['Simon & Garfunkel'],
+        canonicalHeadliners: ['simon'],
+      });
+
+      await backfillArtists(testDb);
+
+      const rows = await listArtists();
+      expect(rows.map((row) => row.name)).toEqual(['Simon & Garfunkel']);
     });
 
     it('keeps the raw spelling of a headliner derived behind an event title', async () => {
