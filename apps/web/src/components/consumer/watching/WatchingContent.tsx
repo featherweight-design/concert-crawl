@@ -8,6 +8,7 @@ import { WatchingRow } from './WatchingRow';
 import { WatchingEmpty } from './WatchingEmpty';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs';
+import { denverTodayUtcMs } from '@/lib/time';
 
 const COPY = CONSUMER_COPY.watching;
 
@@ -46,21 +47,22 @@ function countChanges(shows: WatchingShow[]): {
 type DateBucket =
   'tonight' | 'thisWeek' | 'nextWeek' | { month: string; year: number };
 
-function classifyDate(dateStr: string): DateBucket {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const showDate = new Date(`${dateStr}T00:00:00`);
-  showDate.setHours(0, 0, 0, 0);
-  const daysUntil = Math.round(
-    (showDate.getTime() - today.getTime()) / 86400000,
-  );
+// Show dates are Denver calendar dates, so "tonight" is Denver's today
+// whatever the viewer's own clock says. Both sides sit at UTC midnight, so
+// the arithmetic never meets a DST or local-zone offset.
+export function classifyDate(dateStr: string): DateBucket {
+  const showMs = Date.parse(`${dateStr}T00:00:00Z`);
+  const daysUntil = Math.round((showMs - denverTodayUtcMs()) / 86400000);
   if (daysUntil === 0) return 'tonight';
   if (daysUntil < 7) return 'thisWeek';
   if (daysUntil < 14) return 'nextWeek';
-  const date = new Date(`${dateStr}T00:00:00`);
+  const date = new Date(showMs);
   return {
-    month: date.toLocaleDateString('en-US', { month: 'long' }),
-    year: date.getFullYear(),
+    month: date.toLocaleDateString('en-US', {
+      month: 'long',
+      timeZone: 'UTC',
+    }),
+    year: date.getUTCFullYear(),
   };
 }
 
