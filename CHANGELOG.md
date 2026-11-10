@@ -1,3 +1,10 @@
+## [1.308.2](https://github.com/featherweight-design/concert-crawl/compare/v1.308.1...v1.308.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **web:** load the server and edge Sentry configs ([45354ea](https://github.com/featherweight-design/concert-crawl/commit/45354eabd17fb6f04abf8807569a95302a36e3a0))
+
 ## [1.308.1](https://github.com/featherweight-design/concert-crawl/compare/v1.308.0...v1.308.1) (2026-11-10)
 
 
