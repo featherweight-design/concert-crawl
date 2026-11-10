@@ -43,7 +43,12 @@ describe('workspace package exports', () => {
   it.each(exportEntries())(
     '%s %s resolves for require() as well as import',
     (_name, _subpath, conditions) => {
+      // The same file either way: a CommonJS consumer must load exactly what
+      // an ESM one does.
       expect(conditions['default'] ?? conditions['require']).toBeDefined();
+      expect(conditions['default'] ?? conditions['require']).toBe(
+        conditions['import'],
+      );
     },
   );
 });
