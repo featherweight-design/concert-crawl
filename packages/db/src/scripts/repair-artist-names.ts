@@ -119,24 +119,24 @@ const IS_RECASE = sql`
 `;
 
 /**
- * The casing changes the repair refuses: a single-case billing over a name that
- * is already cased. Venues shout (`REZZ`, `MANÁ`, `GRYFFIN`) and sometimes
- * whisper (`ivri`), and a row that reads `Rezz` or `Ivri` was cased by
- * someone, so trading it for either makes it worse. A lowercase name is the
- * canonical fallback and holds no casing worth keeping, so `j.i.d` still
- * becomes `J.I.D`, and a mixed-case billing still fixes an all-caps name.
+ * The casing changes the repair refuses. Only a single-case name is ever
+ * re-cased: a name that already mixes cases (`Book of Love`, `Rezz`) was cased
+ * by someone, and a venue's spelling (`Book Of Love`) is no better evidence
+ * than theirs. Of the single-case names, an all-caps one (`CHIEF KEEF`) takes
+ * only a mixed-case billing, since venues shout (`REZZ`, `MANÁ`) and sometimes
+ * whisper (`ivri`). A lowercase name is the canonical fallback and holds no
+ * casing worth keeping, so `j.i.d` still becomes `J.I.D`.
  *
  * A pure recase only. A shorten still takes a single-case billing: stripping
  * `Dogstar: ALL IN NOW TOUR` to `DOGSTAR` loses casing but removes the tour
  * title, which is the worse error.
  */
-const FLATTENS_CASED_NAME = sql`
+const REFUSED_RECASE = sql`
   billing.billed_name <> artists.name
   AND lower(billing.billed_name) = lower(artists.name)
-  AND (billing.billed_name = upper(billing.billed_name)
-    OR billing.billed_name = lower(billing.billed_name))
-  AND upper(billing.billed_name) <> lower(billing.billed_name)
   AND artists.name <> lower(artists.name)
+  AND (artists.name <> upper(artists.name)
+    OR billing.billed_name = lower(billing.billed_name))
 `;
 
 /**
@@ -153,7 +153,7 @@ const FLATTENS_CASED_NAME = sql`
  */
 const CORROBORATED = sql`
   (${IS_RECASE} OR ${NAME_EXTENDS_BILLING})
-  AND NOT (${FLATTENS_CASED_NAME})
+  AND NOT (${REFUSED_RECASE})
 `;
 
 /**

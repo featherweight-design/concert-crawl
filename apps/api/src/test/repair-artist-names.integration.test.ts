@@ -158,10 +158,29 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('Beyoncé');
   });
 
+  // Regression: "Book of Love" became "Book Of Love". A mixed-case name was
+  // cased by someone, and a venue's capitalisation is no better evidence.
+  it.each([
+    ['Book of Love', 'book of love', 'Book Of Love'],
+    ['Rezz', 'rezz', 'ReZZ'],
+    ['Chief Keef', 'chief keef', 'CHIEF Keef'],
+  ])(
+    'never re-cases a name that already mixes cases (%s)',
+    async (name, canonical, billed) => {
+      await seedSingleActBill(billed, canonical);
+      await seedArtist(name, canonical);
+
+      const result = await repairArtistNames(testDb, { dryRun: false });
+
+      expect(result.candidates).toBe(0);
+      expect((await listArtists())[0]?.name).toBe(name);
+    },
+  );
+
   it('settles: the current name votes, so two spellings never swap each run', async () => {
     for (let i = 0; i < 3; i += 1) await seedSingleActBill('Rezz', 'rezz');
     for (let i = 0; i < 5; i += 1) await seedSingleActBill('ReZZ', 'rezz');
-    await seedArtist('Rezz', 'rezz');
+    await seedArtist('REZZ', 'rezz');
 
     await repairArtistNames(testDb, { dryRun: false });
     const second = await repairArtistNames(testDb, { dryRun: false });
