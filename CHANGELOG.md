@@ -1,3 +1,10 @@
+## [1.308.1](https://github.com/featherweight-design/concert-crawl/compare/v1.308.0...v1.308.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **api:** bound "today" on Denver's calendar, not UTC's ([ea909b4](https://github.com/featherweight-design/concert-crawl/commit/ea909b47e68abe4e14e5256f4a8b3221aa1d8c37))
+
 # [1.308.0](https://github.com/featherweight-design/concert-crawl/compare/v1.307.2...v1.308.0) (2026-11-10)
 
 
