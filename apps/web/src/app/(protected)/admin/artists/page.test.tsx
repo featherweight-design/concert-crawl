@@ -164,6 +164,7 @@ describe('AdminArtistsPage', () => {
     );
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({
       spotifyArtistId: 'sp_bahamas',
+      confirmAutoMatch: true,
     });
   });
 
