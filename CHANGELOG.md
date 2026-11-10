@@ -1,3 +1,10 @@
+## [1.311.2](https://github.com/featherweight-design/concert-crawl/compare/v1.311.1...v1.311.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **packages:** let CommonJS consumers resolve every workspace export ([0698636](https://github.com/featherweight-design/concert-crawl/commit/0698636dc665637bd69649fe6f4600e67c963943))
+
 ## [1.311.1](https://github.com/featherweight-design/concert-crawl/compare/v1.311.0...v1.311.1) (2026-11-10)
 
 
