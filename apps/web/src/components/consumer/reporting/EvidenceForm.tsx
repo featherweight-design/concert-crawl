@@ -7,6 +7,7 @@ import { fileEventReport } from '@/lib/events';
 import { REPORTING_COPY } from './definitions/copy';
 import { REPORT_TOKENS } from './reportTokens';
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell';
+import { denverTodayUtcMs } from '@/lib/time';
 
 const copy = REPORTING_COPY.evidenceForm;
 
@@ -169,11 +170,7 @@ const EvidenceOption = ({
 
 // ── Days until show ───────────────────────────────────────────────
 const getDaysUntil = (eventDate: string): number => {
-  const nowUtc = Date.UTC(
-    new Date().getUTCFullYear(),
-    new Date().getUTCMonth(),
-    new Date().getUTCDate(),
-  );
+  const nowUtc = denverTodayUtcMs();
   const eventUtc = new Date(eventDate).getTime();
   return Math.ceil((eventUtc - nowUtc) / (1000 * 60 * 60 * 24));
 };

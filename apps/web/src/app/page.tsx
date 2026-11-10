@@ -1,5 +1,6 @@
 import LandingClientShell from './_components/LandingClientShell';
 import { publicApiClient, ApiError } from '@/lib/api';
+import { denverTodayUtcMs } from '@/lib/time';
 import type { EventsListResponse } from '@concert-crawl/types';
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
 
@@ -38,11 +39,12 @@ function formatDateShort(date: string): string {
   return `${month} ${dd.getDate().toString().padStart(2, '0')}`;
 }
 
-// Day arithmetic and serialization both run in UTC. Mixing local setDate with
-// a UTC toISOString slice shifts the YYYY-MM-DD by a day depending on the
-// runtime's timezone and time of day, which would skew the "this week" count.
+// Counts from Denver's today, the calendar event dates are written in; on a
+// Denver evening UTC's today is already tomorrow. The arithmetic then runs on
+// that date pinned to UTC midnight, so the runtime's own timezone and DST
+// never shift the YYYY-MM-DD and skew the "this week" count.
 function futureDateString(daysFromNow: number): string {
-  const dd = new Date();
+  const dd = new Date(denverTodayUtcMs());
   dd.setUTCDate(dd.getUTCDate() + daysFromNow);
   return dd.toISOString().slice(0, 10);
 }
