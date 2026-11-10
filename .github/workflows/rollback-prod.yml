@@ -8,8 +8,8 @@ name: Rollback Production (manual)
 #     named in the `api_deployment` input;
 #   - the crawler (GitHub Actions, crawler-run.yml) runs the commit the
 #     production API serves, so it follows the API back with no step here.
-# match-artists and spotify-weekly run inside the API project as Vercel Cron
-# Jobs, so the API rollback covers them.
+# match-artists, spotify-weekly and notification-prune run inside the API
+# project as Vercel Cron Jobs, so the API rollback covers them.
 #
 # Manual-only by design. The AUTO rollback path (triggered when the
 # prod post-deploy smoke fails) is now a job inside `deploy-prod.yml`

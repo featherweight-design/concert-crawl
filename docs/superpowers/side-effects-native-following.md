@@ -127,12 +127,12 @@ shape that would produce over-delivery. Searched for one; it does not exist.
 
 ## Lifecycle
 
-| Question           | Answer                                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------ |
-| What marks it seen | `user_profiles.notifications_seen_at` — a timestamp, so it is per user, not per row                    |
-| What marks it read | `notifications.read_at` — per row                                                                      |
-| Second device      | Both are server-side, so a read on the phone is read on the laptop                                     |
-| Old records        | Pruned. `runNotificationPrune()` in the daily `billing-daily` cron, `NOTIFICATION_RETENTION_DAYS = 90` |
+| Question           | Answer                                                                                   |
+| ------------------ | ---------------------------------------------------------------------------------------- |
+| What marks it seen | `user_profiles.notifications_seen_at` — a timestamp, so it is per user, not per row      |
+| What marks it read | `notifications.read_at` — per row                                                        |
+| Second device      | Both are server-side, so a read on the phone is read on the laptop                       |
+| Old records        | Pruned daily by the `notification-prune` Vercel cron, `NOTIFICATION_RETENTION_DAYS = 90` |
 
 Seen and read are deliberately different things and are stored differently: seen
 is "you have looked at the list", read is "you have opened this one". The badge
