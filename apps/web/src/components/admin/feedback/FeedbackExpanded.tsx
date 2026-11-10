@@ -26,6 +26,15 @@ interface FeedbackExpandedProps {
   onNotesChange: (id: string, notes: string) => void;
 }
 
+/** A metadata field as a string, or nothing: the jsonb is free-form. */
+const metaString = (
+  meta: Record<string, unknown>,
+  key: string,
+): string | undefined => {
+  const value = meta[key];
+  return typeof value === 'string' ? value : undefined;
+};
+
 function buildGitHubIssueUrl(item: FeedbackItem): string {
   const meta = item.metadata ?? {};
   const route = (() => {
@@ -154,6 +163,20 @@ export function FeedbackExpanded({
     {
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.device,
       value: (meta['userAgent'] ?? meta['device']) as string | undefined,
+    },
+    // A report filed from an error page: what the reporter was doing, and
+    // the id to find the failure by in Sentry (server digest or browser event).
+    {
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.doing,
+      value: metaString(meta, 'doing'),
+    },
+    {
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.errorDigest,
+      value: metaString(meta, 'digest'),
+    },
+    {
+      label: ADMIN_COPY.feedback.expanded.contextRowLabels.sentryEvent,
+      value: metaString(meta, 'sentryEventId'),
     },
     {
       label: ADMIN_COPY.feedback.expanded.contextRowLabels.submitted,

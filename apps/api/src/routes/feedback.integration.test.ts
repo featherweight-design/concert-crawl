@@ -116,6 +116,51 @@ describe('POST /v1/feedback', () => {
     });
   });
 
+  it('stores a problem report from an error page with its ids', async () => {
+    setAuth('user-error-report');
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'bug',
+        message: 'The page went blank',
+        pageUrl: '/crews',
+        metadata: {
+          source: 'error',
+          doing: 'Opening my crew',
+          digest: '1234567890',
+          sentryEventId: 'a1b2c3d4e5f6',
+        },
+      }),
+    });
+    expect(res.status).toBe(201);
+    const [row] = await testDb
+      .select()
+      .from(feedback)
+      .where(eq(feedback.userId, 'user-error-report'));
+    expect(row?.metadata).toMatchObject({
+      source: 'error',
+      doing: 'Opening my crew',
+      digest: '1234567890',
+      sentryEventId: 'a1b2c3d4e5f6',
+    });
+  });
+
+  it('rejects an error id that is not an id', async () => {
+    setAuth('user-error-report-bad');
+    const res = await app.request('/v1/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'bug',
+        message: 'x',
+        pageUrl: '/crews',
+        metadata: { source: 'error', digest: 'not an id; drop table' },
+      }),
+    });
+    expect(res.status).toBe(422);
+  });
+
   it('accepts metadata.screenshot: null (backwards-compat for stale clients)', async () => {
     const userId = `screenshot-null-user-${Date.now()}`;
     setAuth(userId);

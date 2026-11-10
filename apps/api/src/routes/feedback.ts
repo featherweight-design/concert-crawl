@@ -6,6 +6,8 @@ import { db, feedback } from '@concert-crawl/db';
 import { checkRateLimit } from '../lib/rate-limit.js';
 import { apiLogger } from '../lib/logger.js';
 
+const errorIdSchema = z.string().regex(/^[\w-]{1,64}$/);
+
 const feedbackSchema = z.object({
   category: z.enum(['bug', 'idea', 'praise', 'other']),
   message: z.string().min(1, 'Message is required').max(2000),
@@ -16,6 +18,14 @@ const feedbackSchema = z.object({
       build: z.string().optional(),
       device: z.string().optional(),
       screenshot: z.string().nullish(),
+      // A problem report filed from an error page. The ids tie it to what the
+      // team already holds (the server digest, or the browser's Sentry event)
+      // and are shape-checked so the column only ever carries an id. The
+      // reporter's own words stay here, never in Sentry.
+      source: z.literal('error').optional(),
+      doing: z.string().trim().max(1000).optional(),
+      digest: errorIdSchema.optional(),
+      sentryEventId: errorIdSchema.optional(),
     })
     .optional(),
 });
