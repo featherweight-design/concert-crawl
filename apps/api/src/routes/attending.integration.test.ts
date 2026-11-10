@@ -91,6 +91,22 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     expect(body.feature).toBe('concert-history');
   });
 
+  // A free account (no subscription, gift or role) is denied on removal
+  // too: the gate covers every /v1/attending route, not only PUT.
+  it('returns 403 on DELETE for a free account', async () => {
+    setAuth();
+    const venue = await seedVenue();
+    const event = await seedEvent(venue.id, { date: '2026-01-01' });
+
+    const res = await app.request(`/v1/attending/${event.id}`, {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(403);
+    const body = (await res.json()) as { code: string; feature: string };
+    expect(body.code).toBe(ENTITLEMENT_REQUIRED_CODE);
+    expect(body.feature).toBe('concert-history');
+  });
+
   it('returns 400 for a non-UUID event id', async () => {
     setAuth();
     await seedSupporter();
