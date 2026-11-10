@@ -86,6 +86,77 @@ describe('runMatchArtists', () => {
     expect(audits.map((audit) => audit.action)).toEqual(['artist.match.auto']);
   });
 
+  it('leaves a row alone when an admin answers it while Spotify searches', async () => {
+    const id = await seedArtist({ name: 'Bahamas', canonicalName: 'bahamas' });
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        await testDb
+          .update(artists)
+          .set({ matchStatus: 'no_match', updatedAt: new Date() })
+          .where(eq(artists.id, id));
+        return [
+          {
+            id: 'sp_a',
+            name: 'Bahamas',
+            images: [{ url: 'https://i.scdn.co/image/a' }],
+            genres: [],
+            spotifyUrl: null,
+          },
+          {
+            id: 'sp_b',
+            name: 'Bahamas',
+            images: [{ url: 'https://i.scdn.co/image/b' }],
+            genres: [],
+            spotifyUrl: null,
+          },
+        ];
+      }),
+    });
+
+    const row = await readArtist(id);
+    expect(row?.matchStatus).toBe('no_match');
+    expect(row?.autoMatchedAt).toBeNull();
+  });
+
+  it("refreshes an auto-matched row's photo from the same pick", async () => {
+    const id = await seedArtist({
+      name: 'Bahamas',
+      canonicalName: 'bahamas',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_a',
+      photoUrl: 'https://i.scdn.co/image/old',
+      photoFetchedAt: new Date('2026-01-01T00:00:00Z'),
+      autoMatchedAt: new Date('2026-01-01T00:00:00Z'),
+    });
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_a',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/new' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+        {
+          id: 'sp_b',
+          name: 'Bahamas',
+          images: [{ url: 'https://i.scdn.co/image/b' }],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    });
+
+    const row = await readArtist(id);
+    expect(row?.spotifyArtistId).toBe('sp_a');
+    expect(row?.photoUrl).toBe('https://i.scdn.co/image/new');
+    expect(row?.photoFetchedAt).toEqual(NOW);
+  });
+
   it('never auto-matches a hidden row', async () => {
     const id = await seedArtist({
       name: 'Bahamas',

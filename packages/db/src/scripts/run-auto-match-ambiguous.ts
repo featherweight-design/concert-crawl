@@ -18,6 +18,12 @@ const isEntrypoint = (): boolean => {
 };
 
 function parseLimit(argv: string[]): number | undefined {
+  // A cap that silently failed to apply would turn a bounded write into a full
+  // one, so the space-separated form is an error rather than ignored.
+  if (argv.includes('--limit')) {
+    console.error('[auto-match] use --limit=N');
+    process.exit(1);
+  }
   const flag = argv.find((arg) => arg.startsWith('--limit='));
   if (flag === undefined) return undefined;
   const raw = flag.slice('--limit='.length);
