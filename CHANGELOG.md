@@ -1,3 +1,11 @@
+## [1.310.1](https://github.com/featherweight-design/concert-crawl/compare/v1.310.0...v1.310.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **admin:** let a venue's own status outrank LLM text in diagnostics ([f99f450](https://github.com/featherweight-design/concert-crawl/commit/f99f450d766b1311055b5ac258dd47ef5eb5cf03))
+* **admin:** read an account-wide LLM refusal as the account in crawl diagnostics ([d39ca91](https://github.com/featherweight-design/concert-crawl/commit/d39ca91d3709c032d56b36e986fbddca21f018b8))
+
 # [1.310.0](https://github.com/featherweight-design/concert-crawl/compare/v1.309.0...v1.310.0) (2026-11-10)
 
 
