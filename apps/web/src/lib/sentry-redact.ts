@@ -43,11 +43,31 @@ export const beforeBreadcrumb = <
 };
 
 export const beforeSend = <
-  T extends { request?: { url?: string }; transaction?: string },
+  T extends {
+    request?: { url?: string };
+    transaction?: string;
+    contexts?: Record<string, Record<string, unknown> | undefined>;
+  },
 >(
   event: T,
 ): T => {
   const next = { ...event };
+  // Server request errors (instrumentation.ts onRequestError) carry the route
+  // path in contexts.nextjs.request_path, outside request.url.
+  if (next.contexts) {
+    next.contexts = Object.fromEntries(
+      Object.entries(next.contexts).map(([name, context]) => [
+        name,
+        context &&
+          Object.fromEntries(
+            Object.entries(context).map(([key, value]) => [
+              key,
+              redactUnknown(value),
+            ]),
+          ),
+      ]),
+    );
+  }
   if (next.request?.url) {
     next.request = {
       ...next.request,
