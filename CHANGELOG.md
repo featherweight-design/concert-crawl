@@ -1,3 +1,10 @@
+## [1.311.1](https://github.com/featherweight-design/concert-crawl/compare/v1.311.0...v1.311.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **web:** render flag-gated routes per request so a flipped flag reaches them ([a6672c2](https://github.com/featherweight-design/concert-crawl/commit/a6672c25689a8b486f3a240ed7d62aae73987bd5))
+
 # [1.311.0](https://github.com/featherweight-design/concert-crawl/compare/v1.310.1...v1.311.0) (2026-11-10)
 
 
