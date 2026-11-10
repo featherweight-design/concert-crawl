@@ -29,6 +29,13 @@ export const getFeatureFlags = async (): Promise<FeatureFlagView> => {
   // ISR re-render after the flip reaches auth(), throws DYNAMIC_SERVER_USAGE,
   // and keeps serving the stale 404. Production /crews did exactly that
   // (2026-11-10). Here rather than on each page, so no new gate can miss it.
+  //
+  // Outside the try on purpose: during prerendering connection() throws to
+  // interrupt static generation, and catching that would fall back to the
+  // defaults (crews off) and bake the 404 again. A route reading a flag must
+  // never set `dynamic = 'force-static'`, which turns this into a no-op. A
+  // test that renders a gated page must mock this module (or next/server):
+  // outside a request, connection() throws.
   await connection();
   try {
     // Without a directive Next.js caches a server-component fetch for the life
