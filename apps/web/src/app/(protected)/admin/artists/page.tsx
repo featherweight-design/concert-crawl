@@ -315,6 +315,13 @@ export default function AdminArtistsPage() {
           ...(confirmAutoMatch ? { confirmAutoMatch: true } : {}),
         }),
       });
+      if (resp.status === 409 && confirmAutoMatch) {
+        // The pick changed under the page. Reload rather than leave a row
+        // whose badge and button can only ever fail again.
+        setError(COPY.autoMatchChanged);
+        void load();
+        return;
+      }
       if (!resp.ok) {
         setError(COPY.saveError);
         return;
@@ -375,6 +382,13 @@ export default function AdminArtistsPage() {
           matchStatus: 'not_an_artist',
         }),
       });
+      if (resp.status === 409 && confirmAutoMatch) {
+        // The pick changed under the page. Reload rather than leave a row
+        // whose badge and button can only ever fail again.
+        setError(COPY.autoMatchChanged);
+        void load();
+        return;
+      }
       if (!resp.ok) {
         setError(COPY.saveError);
         return;

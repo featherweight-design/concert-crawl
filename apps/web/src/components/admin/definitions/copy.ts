@@ -2182,6 +2182,8 @@ export const ADMIN_COPY = {
     restore: 'Restore',
     autoBadge: 'Auto',
     looksRight: 'Looks right',
+    autoMatchChanged:
+      'That artist changed since the page loaded. The list has been refreshed.',
     hiddenBadge: 'Hidden',
     visibilityError: 'Could not change that artist’s visibility.',
     findOnSpotify: 'Find on Spotify',

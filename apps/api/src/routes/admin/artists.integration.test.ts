@@ -589,42 +589,52 @@ describe('admin artists routes', () => {
       expect(row?.autoMatchedAt).toBeNull();
     });
 
-    it('refuses a stale Looks right and audits a fresh one as a confirm', async () => {
+    const confirm = (id: string, spotifyArtistId: string) =>
+      app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId, confirmAutoMatch: true }),
+      });
+
+    it('refuses Looks right when the pick has moved to another id', async () => {
+      const id = await seedArtist({
+        canonicalName: 'bahamas',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_new',
+        autoMatchedAt: new Date('2026-11-10T00:00:00Z'),
+      });
+      expect((await confirm(id, 'sp_old')).status).toBe(409);
+    });
+
+    it('refuses Looks right when a human or exact match already answered', async () => {
       const id = await seedArtist({
         canonicalName: 'bahamas',
         matchStatus: 'matched',
         spotifyArtistId: 'sp_new',
         autoMatchedAt: null,
       });
+      expect((await confirm(id, 'sp_new')).status).toBe(409);
+    });
 
-      const stale = await app.request(`/v1/admin/artists/${id}`, {
-        method: 'PATCH',
-        headers: ADMIN_HEADERS,
-        body: JSON.stringify({
-          spotifyArtistId: 'sp_old',
-          confirmAutoMatch: true,
-        }),
+    it('confirms a current pick and audits it as a confirm', async () => {
+      const auto = new Date('2026-11-10T00:00:00Z');
+      const id = await seedArtist({
+        canonicalName: 'bahamas',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_new',
+        autoMatchedAt: auto,
       });
-      expect(stale.status).toBe(409);
 
-      await testDb
-        .update(artists)
-        .set({ autoMatchedAt: new Date('2026-11-10T00:00:00Z') })
-        .where(eq(artists.id, id));
-      const fresh = await app.request(`/v1/admin/artists/${id}`, {
-        method: 'PATCH',
-        headers: ADMIN_HEADERS,
-        body: JSON.stringify({
-          spotifyArtistId: 'sp_new',
-          confirmAutoMatch: true,
-        }),
-      });
-      expect(fresh.status).toBe(200);
+      expect((await confirm(id, 'sp_new')).status).toBe(200);
       const audits = await testDb
         .select()
         .from(auditLog)
         .where(eq(auditLog.action, 'artist.match.confirm_auto'));
-      expect(audits.map((audit) => audit.targetId)).toEqual([id]);
+      expect(audits).toHaveLength(1);
+      expect(audits[0]?.targetId).toBe(id);
+      expect(audits[0]?.metadata).toMatchObject({
+        previousAutoMatchedAt: auto.toISOString(),
+      });
     });
 
     it('demotes to no_match when the id is cleared', async () => {
