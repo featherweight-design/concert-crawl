@@ -134,13 +134,28 @@ describe('repair-artist-names integration', () => {
     },
   );
 
-  it('never shortens a cased name into an all-caps billing', async () => {
-    await seedSingleActBill('REZZ', 'rezz');
-    await seedArtist('Rezz Live Tour', 'rezz');
+  it('still shortens a tour title to a single-case billing', async () => {
+    await seedSingleActBill('DOGSTAR', 'dogstar');
+    await seedArtist('Dogstar: ALL IN NOW TOUR', 'dogstar');
 
-    const result = await repairArtistNames(testDb, { dryRun: false });
+    await repairArtistNames(testDb, { dryRun: false });
 
-    expect(result.candidates).toBe(0);
+    expect((await listArtists())[0]?.name).toBe('DOGSTAR');
+  });
+
+  it('pairs a co-headliner whose billing carries accents', async () => {
+    const venue = await seedVenue({ slug: `repair-accent-${Date.now()}` });
+    await seedEvent(venue.id, {
+      artist: 'Beyoncé & JAY-Z',
+      canonicalArtist: 'beyonce',
+      headliners: ['Beyoncé', 'JAY-Z'],
+      canonicalHeadliners: ['beyonce', 'jay-z'],
+    });
+    await seedArtist('beyonce', 'beyonce');
+
+    await repairArtistNames(testDb, { dryRun: false });
+
+    expect((await listArtists())[0]?.name).toBe('Beyoncé');
   });
 
   it('skips an event an admin has hidden', async () => {

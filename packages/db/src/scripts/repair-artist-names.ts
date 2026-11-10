@@ -31,6 +31,7 @@
 
 import { sql } from 'drizzle-orm';
 import type { Database } from '../client.js';
+import { foldedArtistName } from './artist-name-fold.js';
 
 export interface RepairArtistNamesResult {
   /** Rows whose billing contradicts their stored name, as of the read. */
@@ -74,7 +75,7 @@ const SAMPLE_SIZE = 25;
  * to get wrong, so `headliners[1]` is the spelling (both cardinalities checked,
  * because `headliners` is not deduped: `['Kokoroko', 'Kokoroko']` canonicalizes
  * to one element). On any bill, a raw headliner that folds to exactly the
- * canonical name by case and whitespace alone is that act's spelling, which is
+ * canonical name by case, accents and whitespace alone is that act's spelling, which is
  * what reaches each act on a co-headline bill. The fold has no separator split,
  * so it never pairs a name with a different act's billing.
  */
@@ -87,8 +88,7 @@ const BILLINGS = sql`
   UNION
   SELECT btrim(raw.value)
   FROM unnest(events.headliners) AS raw(value)
-  WHERE lower(regexp_replace(btrim(raw.value), '[[:space:]]+', ' ', 'g'))
-    = artists.canonical_name
+  WHERE ${foldedArtistName(sql`raw.value`)} = artists.canonical_name
 `;
 
 /**
@@ -105,22 +105,33 @@ const NAME_EXTENDS_BILLING = sql`
 `;
 
 /**
+ * A row still named by its canonical fallback (`beyonce`) takes the billing
+ * that folds to exactly that canonical (`Beyoncé`): the fold proves it is the
+ * same name with its accents and casing restored, never a longer one.
+ */
+const RESTORES_FALLBACK_NAME = sql`
+  artists.name = artists.canonical_name
+  AND ${foldedArtistName(sql`billing.billed_name`)} = artists.canonical_name
+`;
+
+/**
  * The casing changes the repair refuses: a single-case billing over a name that
  * is already cased. Venues shout (`REZZ`, `MANÁ`, `GRYFFIN`) and sometimes
  * whisper (`ivri`), and a row that reads `Rezz` or `Ivri` was cased by
  * someone, so trading it for either makes it worse. A lowercase name is the
  * canonical fallback and holds no casing worth keeping, so `j.i.d` still
  * becomes `J.I.D`, and a mixed-case billing still fixes an all-caps name.
- * Compared on the stretch of the name the billing covers, so a shorten
- * cannot change case this way either.
+ *
+ * A pure recase only. A shorten still takes a single-case billing: stripping
+ * `Dogstar: ALL IN NOW TOUR` to `DOGSTAR` loses casing but removes the tour
+ * title, which is the worse error.
  */
 const FLATTENS_CASED_NAME = sql`
-  (billing.billed_name = upper(billing.billed_name)
+  lower(billing.billed_name) = lower(artists.name)
+  AND (billing.billed_name = upper(billing.billed_name)
     OR billing.billed_name = lower(billing.billed_name))
   AND upper(billing.billed_name) <> lower(billing.billed_name)
-  AND left(artists.name, length(billing.billed_name))
-    <> lower(left(artists.name, length(billing.billed_name)))
-  AND left(artists.name, length(billing.billed_name)) <> billing.billed_name
+  AND artists.name <> lower(artists.name)
 `;
 
 /**
@@ -130,7 +141,8 @@ const FLATTENS_CASED_NAME = sql`
  * A longer name is how the bad rows were made in the first place, so adopting
  * one would be the bug rather than the fix. Anything that is neither a pure
  * casing change nor a suffix strip — a genuinely different spelling, an
- * abbreviation, a co-headliner the ladder folded in — is left for a human. The
+ * abbreviation — is left for a human. A co-headliner folded into the name
+ * (`Clipse & J.I.D`) is a suffix strip, so it is repaired. The
  * cost of skipping one is a name that stays slightly wrong; the cost of taking
  * one is a name that gets actively worse.
  */
@@ -139,6 +151,7 @@ const CORROBORATED = sql`
   AND (
     lower(billing.billed_name) = lower(artists.name)
     OR ${NAME_EXTENDS_BILLING}
+    OR ${RESTORES_FALLBACK_NAME}
   )
   AND NOT (${FLATTENS_CASED_NAME})
 `;
@@ -159,7 +172,8 @@ const CANDIDATES = sql`
       artists.name AS current_name,
       billing.billed_name,
       CASE
-        WHEN lower(billing.billed_name) = lower(artists.name) THEN 'recase'
+        WHEN lower(billing.billed_name) = lower(artists.name)
+          OR ${RESTORES_FALLBACK_NAME} THEN 'recase'
         ELSE 'shorten'
       END AS kind,
       COUNT(*) AS seen_count
