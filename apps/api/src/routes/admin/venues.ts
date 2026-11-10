@@ -1,3 +1,4 @@
+import { isAccountWideErrorClass } from '@concert-crawl/crawler-core/crawl-error-class';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
@@ -1023,7 +1024,17 @@ const evidenceValueFormat = (
     case 'blocked':
       return { isValid: isHttpStatus, describe: 'an HTTP status' };
     case 'failed':
-      return null;
+      // Free-form, except that an account-wide class is always keyed with its
+      // outage's start (faultAcknowledgementKey): a bare `llm_quota` would be
+      // stored and never match anything.
+      return {
+        isValid: (value: string) =>
+          !isAccountWideErrorClass(value) &&
+          (!/^llm_/.test(value) ||
+            /^llm_(quota|rate_limit)@\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(value)),
+        describe:
+          'an error class, or an account-wide class with its outage start',
+      };
   }
 };
 

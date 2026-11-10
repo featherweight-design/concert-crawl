@@ -2292,7 +2292,7 @@ export const ADMIN_COPY = {
       ) =>
         `${TRIAGE_ERROR_CLASS_LABELS[errorClass] ?? errorClass} · account-wide, never a strike` +
         (failures > 0
-          ? ` · ${failures} earlier failures, pauses itself at ${pauseAt}`
+          ? ` · ${failures} earlier ${failures === 1 ? 'failure' : 'failures'}, pauses itself at ${pauseAt}`
           : ''),
       failedDetail: (errorClass: string, pauseAt: number) =>
         `${TRIAGE_ERROR_CLASS_LABELS[errorClass] ?? errorClass} · pauses itself at ${pauseAt}`,

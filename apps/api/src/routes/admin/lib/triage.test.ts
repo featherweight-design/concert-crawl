@@ -402,6 +402,48 @@ describe('deriveFaults: an account-wide refusal', () => {
 
     expect(fault?.condition).toBe('failed');
     expect(fault?.persistedSince).toBe('2026-07-30T09:00:00.000Z');
+  });
+
+  it('dates a multi-night outage from its first refusal', () => {
+    const [fault] = deriveFaults({
+      venues: [venue],
+      runs: [
+        runRow({
+          status: 'failed',
+          errorMessage: QUOTA,
+          createdAt: new Date('2026-07-30T09:00:00Z'),
+        }),
+        runRow({
+          status: 'failed',
+          errorMessage: QUOTA,
+          createdAt: new Date('2026-07-29T09:00:00Z'),
+        }),
+        runRow({
+          status: 'failed',
+          errorMessage: 'Failed to parse JSON-LD block',
+          createdAt: new Date('2026-07-28T09:00:00Z'),
+        }),
+      ],
+      coverage: [],
+      now: new Date('2026-07-30T12:00:00Z'),
+    });
+
+    expect(fault?.persistedSince).toBe('2026-07-29T09:00:00.000Z');
+  });
+
+  it('keeps the evidence of the latest refusal', () => {
+    const [fault] = deriveFaults({
+      venues: [venue],
+      runs: [
+        runRow({
+          status: 'failed',
+          errorMessage: QUOTA,
+          createdAt: new Date('2026-07-30T09:00:00Z'),
+        }),
+      ],
+      coverage: [],
+      now: new Date('2026-07-30T12:00:00Z'),
+    });
     if (fault?.condition === 'failed') {
       expect(fault.evidence).toEqual({
         failures: 2,
