@@ -1,22 +1,35 @@
 import { sql, type SQL } from 'drizzle-orm';
+import { latinExtendedSql } from '@concert-crawl/types';
 
 /**
  * A raw billed name folded the way `normalizeArtistName` folds it, minus the
- * separator split: NFD with combining marks stripped, lowercased, whitespace
- * collapsed. Used to pair a raw headliner with the canonical name it belongs
- * to, so `Beyoncé` pairs with `beyonce` and `Clipse` with `clipse`.
+ * separator split: NFD with combining marks stripped, the Latin Extended map
+ * applied, lowercased, whitespace collapsed and trimmed. Used to pair a raw
+ * headliner with the canonical name it belongs to, so `Beyoncé` pairs with
+ * `beyonce`, `Røyksopp` with `royksopp` and `Clipse` with `clipse`.
  *
  * Deliberately no separator split: an exact fold can never pair one act with a
- * billing that names another. The Latin Extended letters that do not decompose
- * (`Ø`, `ł`) are not mapped here, so a name carrying one simply does not pair
- * and falls back as it did before.
+ * billing that names another.
  *
- * `chr()` builds the U+0300–U+036F combining-mark range so no backslash escape
- * has to survive the template literal.
+ * The same expression shape the canonical migrations and their parity test use
+ * (`latinExtendedSql` around the NFD strip), so it stays tied to the JS map.
+ * `chr()` builds the U+0300–U+036F combining-mark range so no escape has to
+ * survive a template literal. `column` is always a fixed column reference in
+ * this package, never input, which is what makes `sql.raw` safe here.
+ * `artist-name-fold.integration.test.ts` pins it to the JS fold.
  */
-export const foldedArtistName = (raw: SQL): SQL => sql`
-  lower(regexp_replace(
-    regexp_replace(normalize(btrim(${raw}), NFD), '[' || chr(768) || '-' || chr(879) || ']', '', 'g'),
-    '[[:space:]]+', ' ', 'g'
-  ))
-`;
+// JS `\s`, which `normalizeArtistName` collapses: Postgres `[[:space:]]` alone
+// misses the Unicode spaces (no-break, ideographic, the U+2000 block, BOM).
+const JS_WHITESPACE_RUN = `'[[:space:]' || ${[
+  0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007,
+  0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+]
+  .map((code) => `chr(${code})`)
+  .join(' || ')} || ']+'`;
+
+export const foldedArtistName = (column: string): SQL => {
+  const marksStripped = `regexp_replace(normalize(${column}, NFD), '[' || chr(768) || '-' || chr(879) || ']', '', 'g')`;
+  return sql.raw(
+    `btrim(regexp_replace(lower(${latinExtendedSql(marksStripped)}), ${JS_WHITESPACE_RUN}, ' ', 'g'))`,
+  );
+};

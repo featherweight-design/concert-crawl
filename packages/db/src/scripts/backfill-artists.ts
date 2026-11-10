@@ -98,11 +98,10 @@ export async function backfillArtists(
         --    Deliberately an exact fold with no separator split, so it never
         --    pairs a name with a different act's billing.
         -- 2. A bill of exactly one headliner has no ordering to get wrong:
-        --    both arrays hold a single element, so headliners[1] is that
-        --    name's raw spelling even where (1) cannot see it (diacritics,
-        --    a single act named with an ampersand). Both cardinalities are
-        --    checked because headliners is not deduped: ['Kokoroko',
-        --    'Kokoroko'] canonicalizes to one element.
+        --    its one distinct raw value is that name's spelling even where
+        --    (1) cannot see it (a single act named with an ampersand, a
+        --    letter the fold does not map). Distinct, because headliners is
+        --    not deduped: ['Kokoroko', 'Kokoroko'] is still one act.
         -- 3. The artist column, only on a one-act bill whose canonical_artist
         --    is this name: a row whose raw array is missing. Never on a
         --    co-headline bill, where artist is the whole billing string.
@@ -112,10 +111,8 @@ export async function backfillArtists(
         CASE
           WHEN paired.raw IS NOT NULL THEN paired.raw
           WHEN cardinality(canonical_headliners) = 1
-               AND cardinality(headliners) = 1
-               AND headliners[1] IS NOT NULL
-               AND btrim(headliners[1]) <> ''
-            THEN btrim(headliners[1])
+               AND single_raw.value IS NOT NULL
+            THEN single_raw.value
           WHEN headliner.value = canonical_artist
                AND cardinality(canonical_headliners) = 1
                AND COALESCE(cardinality(headliners), 0) = 0
@@ -127,10 +124,20 @@ export async function backfillArtists(
       LEFT JOIN LATERAL (
         SELECT btrim(raw.value) AS raw
         FROM unnest(headliners) AS raw(value)
-        WHERE ${foldedArtistName(sql`raw.value`)} = headliner.value
-        ORDER BY btrim(raw.value) COLLATE "C" ASC
+        WHERE ${foldedArtistName('raw.value')} = headliner.value
+        -- A cased spelling beats a shouted or whispered one, then byte order.
+        ORDER BY (btrim(raw.value) = upper(btrim(raw.value))
+                  OR btrim(raw.value) = lower(btrim(raw.value))) ASC,
+                 btrim(raw.value) COLLATE "C" ASC
         LIMIT 1
       ) AS paired ON true
+      -- The bill's one distinct raw headliner, if it has exactly one.
+      LEFT JOIN LATERAL (
+        SELECT min(btrim(raw.value)) AS value
+        FROM unnest(headliners) AS raw(value)
+        WHERE btrim(raw.value) <> ''
+        HAVING count(DISTINCT btrim(raw.value)) = 1
+      ) AS single_raw ON true
       WHERE canonical_headliners IS NOT NULL
         AND headliner.value IS NOT NULL AND headliner.value <> ''
         AND hidden_from_consumer = false

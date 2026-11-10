@@ -158,6 +158,18 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('Beyoncé');
   });
 
+  it('settles: the current name votes, so two spellings never swap each run', async () => {
+    for (let i = 0; i < 3; i += 1) await seedSingleActBill('Rezz', 'rezz');
+    for (let i = 0; i < 5; i += 1) await seedSingleActBill('ReZZ', 'rezz');
+    await seedArtist('Rezz', 'rezz');
+
+    await repairArtistNames(testDb, { dryRun: false });
+    const second = await repairArtistNames(testDb, { dryRun: false });
+
+    expect(second.candidates).toBe(0);
+    expect((await listArtists())[0]?.name).toBe('ReZZ');
+  });
+
   it('skips an event an admin has hidden', async () => {
     const venue = await seedVenue({ slug: `repair-hidden-${Date.now()}` });
     await seedEvent(venue.id, {

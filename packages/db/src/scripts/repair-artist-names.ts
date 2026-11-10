@@ -88,7 +88,7 @@ const BILLINGS = sql`
   UNION
   SELECT btrim(raw.value)
   FROM unnest(events.headliners) AS raw(value)
-  WHERE ${foldedArtistName(sql`raw.value`)} = artists.canonical_name
+  WHERE ${foldedArtistName('raw.value')} = artists.canonical_name
 `;
 
 /**
@@ -111,7 +111,12 @@ const NAME_EXTENDS_BILLING = sql`
  */
 const RESTORES_FALLBACK_NAME = sql`
   artists.name = artists.canonical_name
-  AND ${foldedArtistName(sql`billing.billed_name`)} = artists.canonical_name
+  AND ${foldedArtistName('billing.billed_name')} = artists.canonical_name
+`;
+
+/** A pure casing change, or a fallback name getting its accents back. */
+const IS_RECASE = sql`
+  (lower(billing.billed_name) = lower(artists.name) OR ${RESTORES_FALLBACK_NAME})
 `;
 
 /**
@@ -127,7 +132,8 @@ const RESTORES_FALLBACK_NAME = sql`
  * title, which is the worse error.
  */
 const FLATTENS_CASED_NAME = sql`
-  lower(billing.billed_name) = lower(artists.name)
+  billing.billed_name <> artists.name
+  AND lower(billing.billed_name) = lower(artists.name)
   AND (billing.billed_name = upper(billing.billed_name)
     OR billing.billed_name = lower(billing.billed_name))
   AND upper(billing.billed_name) <> lower(billing.billed_name)
@@ -147,12 +153,7 @@ const FLATTENS_CASED_NAME = sql`
  * one is a name that gets actively worse.
  */
 const CORROBORATED = sql`
-  billing.billed_name <> artists.name
-  AND (
-    lower(billing.billed_name) = lower(artists.name)
-    OR ${NAME_EXTENDS_BILLING}
-    OR ${RESTORES_FALLBACK_NAME}
-  )
+  (${IS_RECASE} OR ${NAME_EXTENDS_BILLING})
   AND NOT (${FLATTENS_CASED_NAME})
 `;
 
@@ -162,7 +163,9 @@ const CORROBORATED = sql`
  *
  * Nothing guarantees a single answer — an act can be billed two ways across two
  * events — and picking arbitrarily would make the script's output depend on
- * scan order.
+ * scan order. The current name is one of the votes, and a row whose winner is
+ * already its name is left alone: otherwise two corroborated spellings would
+ * swap places on every run.
  */
 const CANDIDATES = sql`
   WITH billings AS (
@@ -171,15 +174,13 @@ const CANDIDATES = sql`
       artists.slug,
       artists.name AS current_name,
       billing.billed_name,
-      CASE
-        WHEN lower(billing.billed_name) = lower(artists.name)
-          OR ${RESTORES_FALLBACK_NAME} THEN 'recase'
-        ELSE 'shorten'
-      END AS kind,
+      CASE WHEN ${IS_RECASE} THEN 'recase' ELSE 'shorten' END AS kind,
       COUNT(*) AS seen_count
     FROM artists
     JOIN events
-      ON artists.canonical_name = ANY(events.canonical_headliners)
+      -- Containment rather than = ANY(...): only @> can use the GIN index
+      -- events_canonical_headliners_idx (migration 0074).
+      ON events.canonical_headliners @> ARRAY[artists.canonical_name]
       AND events.hidden_from_consumer = false
     CROSS JOIN LATERAL (${BILLINGS}) AS billing
     WHERE billing.billed_name IS NOT NULL
@@ -199,6 +200,7 @@ const CANDIDATES = sql`
   SELECT id, slug, current_name, billed_name, kind
   FROM ranked
   WHERE rank = 1
+    AND billed_name <> current_name
 `;
 
 export async function repairArtistNames(
