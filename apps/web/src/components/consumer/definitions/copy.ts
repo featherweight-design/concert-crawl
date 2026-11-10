@@ -1026,6 +1026,29 @@ export const CONSUMER_COPY = {
       'An error occurred loading this page. Try again, or sign out and back in.',
     tryAgainButton: 'Try again',
     signOutButton: 'Sign out',
+    // The quiet way in to a problem report, under the buttons.
+    reportLink: 'Tell us what happened',
+  },
+
+  // ── Problem report (from an error page) ─────────────────────────
+  // Asks what broke while it is fresh. Lands in admin feedback as a bug, with
+  // the error's id so the team can find the matching report.
+  errorReport: {
+    ariaLabel: 'Tell us what happened',
+    title: 'Tell us what happened',
+    whatLabel: 'What happened?',
+    whatPlaceholder: 'The page went blank after I…',
+    doingLabel: 'What were you doing?',
+    doingHint: 'Optional',
+    attach:
+      'We add the page you were on, your device, and the error code if there was one.',
+    send: 'Send',
+    sending: 'Sending…',
+    sentTitle: 'Sent. Thank you.',
+    sentBody: 'We read every one.',
+    close: 'Close',
+    failed: "Couldn't send that. Your words are still here.",
+    retry: 'Try again',
   },
 
   // ── Route not-found ─────────────────────────────────────────────
