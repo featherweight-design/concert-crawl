@@ -1833,7 +1833,7 @@ export async function crawlVenue(
     }
 
     // An account-wide LLM refusal (usage limit, exhausted credit, the org's
-    // rate limit once the SDK's retries are spent) says nothing
+    // rate limit or the API's 529 overload once the SDK's retries are spent) says nothing
     // about this venue: every LLM venue fails identically until the account
     // recovers. Counting it toward the three strikes would pause venues that
     // were never broken — on 2026-09-28 it would have deactivated eight, ~15

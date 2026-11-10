@@ -54,6 +54,15 @@ describe('classifyCrawlError', () => {
     });
   });
 
+  it('classes an Anthropic 529 overload with the rate limit', () => {
+    const overloaded =
+      'InternalServerError: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"},"request_id":"req_011CfVZygV4btimyebqFAtze"}';
+    expect(classifyCrawlError(overloaded)).toEqual({
+      kind: 'llm_rate_limit',
+      key: 'llm_rate_limit',
+    });
+  });
+
   it("leaves a venue's own 429 as an ordinary failure", () => {
     expect(classifyCrawlError('CrawlFetchError: HTTP 429').kind).toBe('other');
   });

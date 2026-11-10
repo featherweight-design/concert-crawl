@@ -2354,6 +2354,10 @@ describe('crawlVenue — account-wide LLM refusals', () => {
     ['spend limit', QUOTA],
     ['tier spend cap', TIER_CAP],
     ['rate limit', RATE_LIMIT],
+    [
+      'API overload',
+      'InternalServerError: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}',
+    ],
   ])(
     'records a %s as failed without touching the three-strikes counter',
     async (_label, message) => {
