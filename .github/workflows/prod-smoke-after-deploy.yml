@@ -39,7 +39,10 @@ permissions:
 jobs:
   smoke:
     name: Smoke prod, rollback on failure
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
+    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
+    # the 26.04 image resolves it.
+    runs-on: ubuntu-24.04
     # 20 min: ~3 min pnpm/Playwright install (cold cache) + ~7 min
     # smoke = ~10 min worst case now that the Render wait is gone.
     # 20 leaves a wide safety margin.

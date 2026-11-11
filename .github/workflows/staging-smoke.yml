@@ -46,7 +46,10 @@ permissions:
 jobs:
   smoke:
     name: Wait for staging API deploy, smoke staging
-    runs-on: ubuntu-latest
+    # Pinned: on ubuntu-latest (26.04) apt cannot resolve archive.ubuntu.com,
+    # so `playwright install --with-deps` and apt-based builds hang. Unpin once
+    # the 26.04 image resolves it.
+    runs-on: ubuntu-24.04
     # 35 min: up to 20 min deploy wait + ~3 min pnpm/Playwright install
     # (cold cache) + ~10 min smoke worst case.
     timeout-minutes: 35
