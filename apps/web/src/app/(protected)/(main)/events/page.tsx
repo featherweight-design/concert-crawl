@@ -573,7 +573,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           have no purchase on. Everything below is Browse's own list. */}
       {lensActive && (
         <CrewLensList
+          crewId={lensCrew.id}
           crewName={lensCrew.name}
+          patchSalt={lensCrew.patchSalt}
           shows={lensShows}
           failed={lensFailed}
           clearLensHref={clearLensHref}

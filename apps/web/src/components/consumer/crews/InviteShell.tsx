@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { CCMark } from '@/components/brand/cc-mark';
 import { CCWordmark } from '@/components/brand/cc-wordmark';
+import { gradientEdgeCard, pillGhost, pillPrimary } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
@@ -40,14 +41,52 @@ export const InviteShell = ({
   </main>
 );
 
+/** The patch's size on the landing card; half of it overhangs the top edge. */
+export const INVITE_MARK_SIZE = 96;
+
+/**
+ * B+ draws every state of the invite as one card with a cyan-to-pink edge and
+ * the crew's patch (or, on a dead link, a blank stand-in) sitting on its top
+ * edge. The card holds the words and the one action; the shell around it
+ * holds the brand.
+ */
+export const InviteCard = ({
+  mark,
+  children,
+}: {
+  mark: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div
+    className="relative flex w-full max-w-[400px] flex-col items-center gap-4 px-5 pb-6 sm:max-w-[440px] sm:px-6"
+    style={{
+      ...gradientEdgeCard,
+      marginTop: INVITE_MARK_SIZE / 2,
+      paddingTop: INVITE_MARK_SIZE / 2 + 20,
+      borderRadius: 24,
+      boxShadow: '0 24px 60px -30px rgb(0 0 0 / 0.6)',
+    }}
+  >
+    <span
+      aria-hidden="true"
+      className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2"
+    >
+      {mark}
+    </span>
+    {children}
+  </div>
+);
+
 interface EyebrowProps {
   /** `count` is the member tally, which the handoff sets a step wider and louder. */
-  tone: 'signal' | 'warning' | 'subtle' | 'count';
+  tone: 'signal' | 'accent' | 'warning' | 'subtle' | 'count';
   children: string;
 }
 
 const EYEBROW_TONES = {
   signal: { color: 'var(--signal)', fontSize: 9.5, letterSpacing: '0.18em' },
+  // The open invite's eyebrow (B+ draws YOU'RE INVITED in pink).
+  accent: { color: 'var(--accent)', fontSize: 9.5, letterSpacing: '0.18em' },
   warning: { color: 'var(--warning)', fontSize: 9.5, letterSpacing: '0.18em' },
   subtle: { color: 'var(--fg-subtle)', fontSize: 9.5, letterSpacing: '0.14em' },
   count: { color: 'var(--fg-muted)', fontSize: 10, letterSpacing: '0.14em' },
@@ -96,35 +135,20 @@ export const InviteBody = ({ children }: { children: string }) => (
   </p>
 );
 
-// Geometry from the handoff's shared `Btn` atom, which every other crews
-// surface is drawn against. A pill here would make this route the only one
-// with a different button.
-const buttonBase: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: 46,
-  padding: '0 18px',
-  borderRadius: 10,
-  fontFamily: 'var(--font-ui)',
-  fontSize: 14.5,
-  fontWeight: 700,
-  letterSpacing: '-0.01em',
-  textDecoration: 'none',
-};
-
+// The crews pills (B+), a step taller here: the landing's action is the whole
+// page's point, and it sits alone at the foot of the card.
 export const ghostButtonStyle: React.CSSProperties = {
-  ...buttonBase,
-  background: 'transparent',
-  border: '1px solid var(--border-strong)',
-  color: 'var(--fg)',
+  ...pillGhost,
+  minHeight: 48,
+  fontSize: 14.5,
+  color: 'var(--fg-muted)',
 };
 
 export const primaryButtonStyle: React.CSSProperties = {
-  ...buttonBase,
-  background: 'var(--signal)',
-  border: '1px solid var(--signal)',
-  color: 'var(--fg-on-accent)',
+  ...pillPrimary,
+  minHeight: 52,
+  borderRadius: 16,
+  fontSize: 15,
 };
 
 /**
@@ -145,9 +169,27 @@ export const BrowseInstead = ({ wide = false }: { wide?: boolean }) => (
   </Link>
 );
 
-/** The dimmed mark that stands in for a patch we are not allowed to draw. */
+/**
+ * The stand-in for a patch we are not allowed to draw: the patch's blank
+ * squircle with the dimmed brand mark in it, so the card keeps its shape and
+ * the dead link still carries no crew identity.
+ */
 export const DimmedMark = () => (
-  <span aria-hidden="true" style={{ opacity: 0.5 }}>
-    <CCMark size={76} />
+  <span
+    aria-hidden="true"
+    style={{
+      width: INVITE_MARK_SIZE,
+      height: INVITE_MARK_SIZE,
+      borderRadius: 27,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--surface-2)',
+      border: '2px solid var(--border-strong)',
+    }}
+  >
+    <span style={{ opacity: 0.45, filter: 'grayscale(1)' }}>
+      <CCMark size={56} />
+    </span>
   </span>
 );

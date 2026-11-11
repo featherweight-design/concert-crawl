@@ -4,12 +4,15 @@
 // paint over the very thing the customer came to look at.
 
 interface CrewNoticeProps {
-  eyebrow: string;
+  /** Omitted where the title alone places you (B+'s crew of one). */
+  eyebrow?: string;
   title: string;
   body: string;
   /** Any theme token name; the dot and the border are tinted from it. */
   tone?: 'signal' | 'warning';
   children?: React.ReactNode;
+  /** Drawn to the left of the words, vertically centred on them. */
+  lead?: React.ReactNode;
 }
 
 export const CrewNotice = ({
@@ -18,6 +21,7 @@ export const CrewNotice = ({
   body,
   tone = 'signal',
   children,
+  lead,
 }: CrewNoticeProps) => {
   const accent = `var(--${tone})`;
 
@@ -25,61 +29,66 @@ export const CrewNotice = ({
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
-        gap: 7,
+        alignItems: 'center',
+        gap: 16,
         padding: '16px 16px 15px',
-        borderRadius: 12,
-        background: 'var(--surface-1)',
-        border: `1px solid color-mix(in oklch, ${accent} 28%, var(--border))`,
+        borderRadius: 16,
+        background: `color-mix(in oklch, ${accent} 5%, var(--surface-1))`,
+        border: `1px solid color-mix(in oklch, ${accent} 34%, var(--border))`,
       }}
     >
-      <span
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 7,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9.5,
-          fontWeight: 700,
-          letterSpacing: '0.14em',
-          color: accent,
-        }}
-      >
+      {lead}
+      <div className="flex min-w-0 flex-1 flex-col" style={{ gap: 5 }}>
+        {eyebrow !== undefined && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9.5,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              color: accent,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 6,
+                background: accent,
+                boxShadow: `0 0 8px ${accent}`,
+              }}
+            />
+            {eyebrow}
+          </span>
+        )}
         <span
-          aria-hidden="true"
           style={{
-            width: 6,
-            height: 6,
-            borderRadius: 6,
-            background: accent,
-            boxShadow: `0 0 8px ${accent}`,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 17,
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg)',
           }}
-        />
-        {eyebrow}
-      </span>
-      <span
-        style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: 17,
-          fontWeight: 800,
-          letterSpacing: '-0.02em',
-          color: 'var(--fg)',
-        }}
-      >
-        {title}
-      </span>
-      <span
-        style={{
-          maxWidth: 380,
-          fontFamily: 'var(--font-ui)',
-          fontSize: 13,
-          lineHeight: 1.45,
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {body}
-      </span>
-      {children}
+        >
+          {title}
+        </span>
+        <span
+          style={{
+            maxWidth: 380,
+            fontFamily: 'var(--font-ui)',
+            fontSize: 13,
+            lineHeight: 1.45,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {body}
+        </span>
+        {children}
+      </div>
     </div>
   );
 };

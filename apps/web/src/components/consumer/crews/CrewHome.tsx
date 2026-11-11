@@ -28,6 +28,8 @@ import { InviteSheet } from './InviteSheet';
 import { RenameSheet } from './RenameSheet';
 import { RerollSheet } from './RerollSheet';
 import { LeaveConfirm, type ConfirmKind } from './LeaveConfirm';
+import { MemberDot } from './MemberCluster';
+import { pillGhost, pillPrimary } from './lib/styles';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
@@ -38,14 +40,23 @@ interface CrewHomeProps {
   crew: CrewDetail;
 }
 
-const control: React.CSSProperties = {
-  minHeight: 44,
-  padding: '0 16px',
-  borderRadius: 999,
-  fontFamily: 'var(--font-ui)',
-  fontSize: 13,
-  fontWeight: 700,
-};
+// The empty seats drawn beside a crew of one on desktop: the room the notice
+// is asking you to fill.
+const OPEN_SEATS = 4;
+
+const OpenSeat = () => (
+  <span
+    aria-hidden="true"
+    style={{
+      width: 28,
+      height: 28,
+      borderRadius: 28,
+      flexShrink: 0,
+      border: '1.5px dashed var(--border-strong)',
+      marginLeft: -6,
+    }}
+  />
+);
 
 /**
  * Which tab opens. Coming up when there is something in it, otherwise Been
@@ -194,12 +205,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               type="button"
               onClick={() => setInvite(true)}
               className="cursor-pointer"
-              style={{
-                ...control,
-                background: 'var(--signal)',
-                color: 'var(--fg-on-accent)',
-                border: 'none',
-              }}
+              style={pillPrimary}
             >
               {COPY.detail.invite}
             </button>
@@ -208,12 +214,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               onClick={() => setOptions(true)}
               aria-label={COPY.a11y.options}
               className="cursor-pointer"
-              style={{
-                ...control,
-                background: 'transparent',
-                border: '1px solid var(--border-strong)',
-                color: 'var(--fg)',
-              }}
+              style={pillGhost}
             >
               {COPY.detail.options}
             </button>
@@ -221,28 +222,27 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         }
       />
 
-      {/* A crew of one is quiet, not empty: the hero and both tabs stay. */}
+      {/* A crew of one is quiet, not empty: the hero and both tabs stay. B+
+          draws it as a title and a line, with no eyebrow and no second
+          Invite button: the hero's sits directly above. On desktop the one
+          member sits beside the empty seats the notice is asking you to fill. */}
       {memberCount === 1 && (
         <CrewNotice
-          eyebrow={COPY.empty.crewOfOneEyebrow}
           title={COPY.empty.crewOfOneTitle}
           body={COPY.empty.crewOfOneBody}
-        >
-          <button
-            type="button"
-            onClick={() => setInvite(true)}
-            className="w-fit cursor-pointer"
-            style={{
-              ...control,
-              marginTop: 4,
-              background: 'var(--signal)',
-              color: 'var(--fg-on-accent)',
-              border: 'none',
-            }}
-          >
-            {COPY.detail.invite}
-          </button>
-        </CrewNotice>
+          lead={
+            wide && members[0] !== undefined ? (
+              <span className="flex items-center pl-1.5">
+                <span style={{ marginLeft: -6 }}>
+                  <MemberDot member={members[0]} size={28} />
+                </span>
+                {Array.from({ length: OPEN_SEATS }, (_, i) => (
+                  <OpenSeat key={i} />
+                ))}
+              </span>
+            ) : undefined
+          }
+        />
       )}
 
       <CrewTabs
@@ -271,6 +271,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
             members={members}
             memberCount={memberCount}
             isKeeper={crew.isKeeper}
+            onInvite={() => setInvite(true)}
             onRemove={(member) => {
               setTarget(member);
               setConfirm('remove');

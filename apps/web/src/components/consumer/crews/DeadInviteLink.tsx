@@ -2,6 +2,7 @@ import {
   BrowseInstead,
   DimmedMark,
   InviteBody,
+  InviteCard,
   InviteEyebrow,
   InviteShell,
   InviteTitle,
@@ -23,20 +24,21 @@ export type DeadInviteKind = 'expired' | 'revoked';
  */
 export const DeadInviteLink = ({ kind }: { kind: DeadInviteKind }) => (
   <InviteShell tightGap>
-    <DimmedMark />
-    <div className="flex max-w-[340px] flex-col items-center gap-[9px]">
-      <InviteEyebrow tone="warning">{COPY.linkDead.eyebrow}</InviteEyebrow>
-      <InviteTitle>
-        {kind === 'revoked'
-          ? COPY.linkDead.revokedTitle
-          : COPY.linkDead.expiredTitle}
-      </InviteTitle>
-      <InviteBody>
-        {kind === 'revoked'
-          ? COPY.linkDead.revokedBody
-          : COPY.linkDead.expiredBody}
-      </InviteBody>
-    </div>
-    <BrowseInstead />
+    <InviteCard mark={<DimmedMark />}>
+      <div className="flex max-w-[340px] flex-col items-center gap-[9px]">
+        <InviteEyebrow tone="warning">{COPY.linkDead.eyebrow}</InviteEyebrow>
+        <InviteTitle>
+          {kind === 'revoked'
+            ? COPY.linkDead.revokedTitle
+            : COPY.linkDead.expiredTitle}
+        </InviteTitle>
+        <InviteBody>
+          {kind === 'revoked'
+            ? COPY.linkDead.revokedBody
+            : COPY.linkDead.expiredBody}
+        </InviteBody>
+      </div>
+      <BrowseInstead />
+    </InviteCard>
   </InviteShell>
 );

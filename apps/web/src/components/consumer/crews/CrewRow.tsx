@@ -18,9 +18,12 @@ interface CrewRowProps {
  * tab stop.
  */
 export const CrewRow = ({ crew, wide }: CrewRowProps) => {
+  // A crew of one can still have plans, so B+ says both halves when it does.
   const meta =
     crew.memberCount === 1
-      ? COPY.justYou
+      ? crew.upcomingCount > 0
+        ? COPY.metaPair(COPY.justYou, COPY.upcomingMeta(crew.upcomingCount))
+        : COPY.justYou
       : COPY.upcomingMeta(crew.upcomingCount);
 
   return (
@@ -31,21 +34,19 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
         alignItems: 'center',
         gap: wide ? 15 : 13,
         textDecoration: 'none',
-        padding: wide ? '13px 15px' : '11px 12px',
-        borderRadius: 12,
+        padding: wide ? '14px 18px 14px 15px' : '14px 14px 14px 15px',
+        borderRadius: 16,
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
-        minHeight: 64,
+        minHeight: 72,
       }}
     >
-      {/* Fixed sizes, not wide-scaled: the desktop list is a two-column grid
-          inside a 720px column, so a wide cell (~338px) is barely roomier than
-          a 320px phone. Scaling the patch and cluster up there spent the name's
-          space and truncated it. */}
+      {/* Fixed size, not wide-scaled: the list is one column at every width
+          and the name needs the room more than the patch does. */}
       <CrewPatch
         crewId={crew.id}
         patchSalt={crew.patchSalt}
-        size={48}
+        size={52}
         scale="tile"
       />
       <span
@@ -61,7 +62,7 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
           style={{
             fontFamily: 'var(--font-ui)',
             fontWeight: 800,
-            fontSize: wide ? 16 : 15,
+            fontSize: wide ? 17 : 16,
             letterSpacing: '-0.02em',
             color: 'var(--fg)',
             whiteSpace: 'nowrap',
@@ -78,6 +79,7 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: '0.14em',
+            lineHeight: 1.5,
             color:
               crew.upcomingCount > 0 ? 'var(--signal)' : 'var(--fg-subtle)',
           }}

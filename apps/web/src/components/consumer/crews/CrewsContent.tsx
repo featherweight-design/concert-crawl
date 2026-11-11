@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/consumer/empty-state';
 import { CrewRow } from './CrewRow';
 import { CrewRowSkeleton, ShimmerKeyframes } from './CrewRowSkeleton';
 import { CreateCrewButton } from './CreateCrewButton';
+import { HowCrewsWork } from './HowCrewsWork';
 import { CREWS_COPY } from './definitions/copy';
 
 const COPY = CREWS_COPY;
@@ -33,8 +34,8 @@ const PageHeader = ({
   wide: boolean;
   children?: React.ReactNode;
 }) => (
-  <header className="flex flex-col gap-2">
-    <div className="flex items-center justify-between gap-3">
+  <header className="flex flex-col gap-2.5">
+    <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col gap-1">
         <span
           style={{
@@ -42,7 +43,7 @@ const PageHeader = ({
             fontSize: 9.5,
             fontWeight: 700,
             letterSpacing: '0.18em',
-            color: 'var(--fg-subtle)',
+            color: 'var(--signal)',
           }}
         >
           {COPY.list.eyebrow}
@@ -51,7 +52,7 @@ const PageHeader = ({
           style={{
             margin: 0,
             fontFamily: 'var(--font-ui)',
-            fontSize: wide ? 30 : 26,
+            fontSize: wide ? 44 : 32,
             fontWeight: 900,
             letterSpacing: '-0.035em',
             lineHeight: 1,
@@ -68,13 +69,25 @@ const PageHeader = ({
         margin: 0,
         maxWidth: 460,
         fontFamily: 'var(--font-ui)',
-        fontSize: 13,
+        fontSize: wide ? 14.5 : 15,
         lineHeight: 1.5,
         color: 'var(--fg-muted)',
       }}
     >
       {COPY.list.subtitle}
     </p>
+    {/* B+ closes the desktop header with a hairline in the brand sweep. */}
+    {wide && (
+      <span
+        aria-hidden="true"
+        style={{
+          height: 1,
+          marginTop: 12,
+          background:
+            'linear-gradient(90deg, color-mix(in oklch, var(--signal) 55%, transparent), color-mix(in oklch, var(--accent) 45%, transparent), var(--border))',
+        }}
+      />
+    )}
   </header>
 );
 
@@ -118,7 +131,7 @@ export const CrewsContent = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 pb-10 pt-5">
       {/* Mounted for the life of the page and empty until something happens:
           a live region populated at mount time is not announced. */}
       <span aria-live="polite" className="sr-only">
@@ -157,10 +170,9 @@ export const CrewsContent = ({
             style={{
               // minmax(0,…) not `1fr`: a bare 1fr floors at min-content, so a
               // long nowrap crew name widens the track past the viewport and
-              // the row's own ellipsis can never fire.
-              gridTemplateColumns: wide
-                ? 'minmax(0,1fr) minmax(0,1fr)'
-                : 'minmax(0,1fr)',
+              // the row's own ellipsis can never fire. One column at every
+              // width, as B+ draws the list.
+              gridTemplateColumns: 'minmax(0,1fr)',
             }}
           >
             {[0, 1, 2, 3].map((key) => (
@@ -173,15 +185,18 @@ export const CrewsContent = ({
       {state === 'ready' && (
         <div
           className="grid gap-2.5"
-          style={{
-            gridTemplateColumns: wide
-              ? 'minmax(0,1fr) minmax(0,1fr)'
-              : 'minmax(0,1fr)',
-          }}
+          style={{ gridTemplateColumns: 'minmax(0,1fr)' }}
         >
           {crews.map((crew) => (
             <CrewRow key={crew.id} crew={crew} wide={wide} />
           ))}
+        </div>
+      )}
+
+      {/* Only under a lone crew: a second one makes the point on its own. */}
+      {state === 'ready' && crews.length === 1 && (
+        <div className="pt-4">
+          <HowCrewsWork wide={wide} />
         </div>
       )}
 

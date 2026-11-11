@@ -16,7 +16,9 @@ import {
 import { DeadInviteLink } from './DeadInviteLink';
 import {
   BrowseInstead,
+  INVITE_MARK_SIZE,
   InviteBody,
+  InviteCard,
   InviteEyebrow,
   InviteShell,
   primaryButtonStyle,
@@ -30,33 +32,6 @@ interface InviteLandingProps {
   inviteToken: string;
   invite: PublicCrewInvite;
 }
-
-const Padlock = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 14 14"
-    aria-hidden="true"
-    style={{ marginTop: 2, flexShrink: 0 }}
-  >
-    <rect
-      x="2.5"
-      y="6"
-      width="9"
-      height="6"
-      rx="1.6"
-      stroke="var(--fg-subtle)"
-      strokeWidth="1.4"
-      fill="none"
-    />
-    <path
-      d="M4.6 6V4.4a2.4 2.4 0 0 1 4.8 0V6"
-      stroke="var(--fg-subtle)"
-      strokeWidth="1.4"
-      fill="none"
-    />
-  </svg>
-);
 
 /**
  * The invite landing and the join itself. The crew's identity is already
@@ -144,135 +119,128 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
 
   return (
     <InviteShell>
-      {/* The patch is the crew's identity, so it is drawn at full size and
-          scaled with CSS rather than at a JS breakpoint. */}
-      <span
-        aria-hidden="true"
-        className="[&>svg]:h-[108px] [&>svg]:w-[108px] sm:[&>svg]:h-[132px] sm:[&>svg]:w-[132px]"
+      <InviteCard
+        mark={
+          <CrewPatch
+            crewId={invite.crewId}
+            patchSalt={invite.patchSalt}
+            size={INVITE_MARK_SIZE}
+            scale="hero"
+          />
+        }
       >
-        <CrewPatch
-          crewId={invite.crewId}
-          patchSalt={invite.patchSalt}
-          size={132}
-          scale="hero"
-        />
-      </span>
-
-      <div className="flex max-w-[320px] flex-col items-center gap-2.5 sm:max-w-[520px]">
-        <InviteEyebrow tone="signal">
-          {member ? COPY.landing.memberEyebrow : COPY.landing.eyebrow}
-        </InviteEyebrow>
-        {/* Names the inviter: analytics autocapture skips it. */}
-        <h1
-          className="ph-no-capture text-[27px] sm:text-[38px]"
-          style={{
-            margin: 0,
-            fontWeight: 900,
-            letterSpacing: '-0.035em',
-            lineHeight: 1.08,
-            textWrap: 'balance',
-            color: 'var(--fg)',
-          }}
-        >
-          {member
-            ? COPY.landing.memberTitle(invite.name)
-            : invite.invitedByHandle === null
-              ? COPY.landing.titleNoName(invite.name)
-              : COPY.landing.title(invite.invitedByHandle, invite.name)}
-        </h1>
-        {/* The prototype's avatar cluster is deliberately absent: the payload
-            is identity-lite and carries no member list, and showing a
-            non-member everyone's faces is a privacy call nobody has made. */}
-        {/* The count came from the server render. A 409 proves the crew filled
-            between that render and the tap, so the number is known wrong — and
-            leaving it up puts "4 members" directly above "12 is the cap". A
-            landing that arrived full still shows it, because there it is true. */}
-        {(!full || invite.isFull) && (
-          <InviteEyebrow tone="count">
-            {COPY.list.memberCount(invite.memberCount)}
+        <div className="flex w-full flex-col items-center gap-2.5">
+          <InviteEyebrow tone={member ? 'signal' : 'accent'}>
+            {member ? COPY.landing.memberEyebrow : COPY.landing.eyebrow}
           </InviteEyebrow>
-        )}
-        {/* Both bodies argue for joining, which this viewer has done. The
-            title and the count say everything left to say. */}
-        {!member && (
-          <InviteBody>
-            {full
-              ? COPY.linkDead.fullBody
-              : COPY.landing.body(invite.memberCount)}
-          </InviteBody>
-        )}
-      </div>
-
-      <div className="flex w-full max-w-[340px] flex-col items-center gap-3">
-        {member ? (
-          <button
-            type="button"
-            onClick={() => router.push(`/crews/${invite.crewId}`)}
-            className="w-full cursor-pointer"
-            style={primaryButtonStyle}
-          >
-            {COPY.landing.memberCta(invite.name)}
-          </button>
-        ) : full ? (
-          <BrowseInstead wide />
-        ) : (
-          <button
-            type="button"
-            onClick={() => void onJoin()}
-            disabled={busy}
-            className="w-full cursor-pointer disabled:cursor-default"
-            style={primaryButtonStyle}
-          >
-            {busy ? COPY.landing.joining : COPY.landing.cta(invite.name)}
-          </button>
-        )}
-      </div>
-
-      <span aria-live="polite" className="sr-only">
-        {announcement}
-      </span>
-
-      {failed && (
-        <p
-          role="alert"
-          style={{
-            margin: 0,
-            fontFamily: 'var(--font-ui)',
-            fontSize: 13,
-            color: 'var(--warning)',
-          }}
-        >
-          {COPY.net.joinFailed}
-        </p>
-      )}
-
-      {/* The prototype drops the privacy note at capacity: there is nothing
-          left to explain once there is nothing to join. A member is past the
-          decision it exists to inform, so it goes there too. */}
-      {!full && !member && (
-        <div
-          className="flex max-w-[330px] items-start gap-[9px] text-left sm:max-w-[430px]"
-          style={{
-            padding: '11px 13px',
-            borderRadius: 10,
-            background: 'var(--surface-1)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          <Padlock />
-          <span
+          {/* Names the inviter: analytics autocapture skips it. */}
+          <h1
+            className="ph-no-capture text-[27px] sm:text-[30px]"
             style={{
+              margin: 0,
+              fontWeight: 900,
+              letterSpacing: '-0.035em',
+              lineHeight: 1.08,
+              textWrap: 'balance',
+              color: 'var(--fg)',
+            }}
+          >
+            {member
+              ? COPY.landing.memberTitle(invite.name)
+              : invite.invitedByHandle === null
+                ? COPY.landing.titleNoName(invite.name)
+                : COPY.landing.title(invite.invitedByHandle, invite.name)}
+          </h1>
+          {/* The prototype's avatar cluster is deliberately absent: the payload
+              is identity-lite and carries no member list, and showing a
+              non-member everyone's faces is a privacy call nobody has made. */}
+          {/* The count came from the server render. A 409 proves the crew
+              filled between that render and the tap, so the number is known
+              wrong — and leaving it up puts "4 members" directly above "12 is
+              the cap". A landing that arrived full still shows it, because
+              there it is true. */}
+          {(!full || invite.isFull) && (
+            <InviteEyebrow tone="count">
+              {COPY.list.memberCount(invite.memberCount)}
+            </InviteEyebrow>
+          )}
+          {/* Both bodies argue for joining, which this viewer has done. The
+              title and the count say everything left to say. */}
+          {!member && (
+            <InviteBody>
+              {full
+                ? COPY.linkDead.fullBody
+                : COPY.landing.body(invite.memberCount)}
+            </InviteBody>
+          )}
+        </div>
+
+        {/* The prototype drops the privacy note at capacity: there is nothing
+            left to explain once there is nothing to join. A member is past the
+            decision it exists to inform, so it goes there too. */}
+        {!full && !member && (
+          <p
+            className="w-full"
+            style={{
+              margin: 0,
+              padding: '12px 14px',
+              borderRadius: 14,
+              background: 'var(--surface-2)',
+              border: '1px dashed var(--border-strong)',
               fontFamily: 'var(--font-ui)',
-              fontSize: 11.5,
-              color: 'var(--fg-subtle)',
-              lineHeight: 1.45,
+              fontSize: 12.5,
+              color: 'var(--fg-muted)',
+              lineHeight: 1.5,
               textWrap: 'pretty',
             }}
           >
             {COPY.landing.privacy}
-          </span>
+          </p>
+        )}
+
+        <div className="flex w-full flex-col items-center gap-3">
+          {member ? (
+            <button
+              type="button"
+              onClick={() => router.push(`/crews/${invite.crewId}`)}
+              className="w-full cursor-pointer"
+              style={primaryButtonStyle}
+            >
+              {COPY.landing.memberCta(invite.name)}
+            </button>
+          ) : full ? (
+            <BrowseInstead wide />
+          ) : (
+            <button
+              type="button"
+              onClick={() => void onJoin()}
+              disabled={busy}
+              className="w-full cursor-pointer disabled:cursor-default"
+              style={primaryButtonStyle}
+            >
+              {busy ? COPY.landing.joining : COPY.landing.cta(invite.name)}
+            </button>
+          )}
         </div>
-      )}
+
+        {failed && (
+          <p
+            role="alert"
+            style={{
+              margin: 0,
+              fontFamily: 'var(--font-ui)',
+              fontSize: 13,
+              color: 'var(--warning)',
+            }}
+          >
+            {COPY.net.joinFailed}
+          </p>
+        )}
+      </InviteCard>
+
+      <span aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
     </InviteShell>
   );
 };
