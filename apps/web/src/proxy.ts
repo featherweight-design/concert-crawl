@@ -225,7 +225,7 @@ const SHORT_LINK_CODE_MAX = 32;
  * A poster's QR opens `/I/<CODE>` (uppercase, so the QR can use alphanumeric
  * mode) and people type `concertcrawl.app/i`. Both go to the invite screen with
  * the segment passed along as `?code=`; that screen formats and validates it
- * (`formatCodeInput`) and still waits for its button, so a GET here never
+ * (`formatInviteCodeInput`) and still waits for its button, so a GET here never
  * redeems anything. `/I` and `/i` differ only in case and no app route serves
  * either, so the path is reserved for this link (proxy.test.ts checks `app/`
  * has no `i` route). Runs before Clerk, so a scan never waits on a handshake.

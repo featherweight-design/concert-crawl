@@ -989,7 +989,7 @@ describe('proxy — invite short link', () => {
     );
   });
 
-  // The invite screen formats and validates `?code=` (formatCodeInput) and
+  // The invite screen formats and validates `?code=` (formatInviteCodeInput) and
   // redeems only when its button is pressed, so the link passes the segment on.
   it('passes the segment on whatever its case', async () => {
     expect(await location('/i/beta-ab12-cd34/')).toBe(

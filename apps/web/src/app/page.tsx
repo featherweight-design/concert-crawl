@@ -1,7 +1,12 @@
 import LandingClientShell from './_components/LandingClientShell';
 import { publicApiClient, ApiError } from '@/lib/api';
 import { denverTodayUtcMs } from '@/lib/time';
-import type { EventsListResponse } from '@concert-crawl/types';
+import type { EventsListResponse, VenuePublic } from '@concert-crawl/types';
+import { posterVenues } from '@/lib/poster/poster-rule';
+import type {
+  InviteShow,
+  InviteVenue,
+} from './_components/invite-landing/definitions/types';
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
 
 const MONTHS = [
@@ -99,13 +104,23 @@ function makeFallbackShows(): LandingShow[] {
   ];
 }
 
-async function fetchHeroShows(): Promise<LandingShow[]> {
-  try {
-    const result =
-      await publicApiClient.get<EventsListResponse>('/v1/events?limit=4');
-    if (!result?.data?.length) return makeFallbackShows();
+interface LandingShows {
+  posters: LandingShow[];
+  invite: InviteShow[];
+}
 
-    const mapped = result.data.map((row) => ({
+// One fetch feeds both pages: the public landing's posters take the first
+// four, and the private-beta landing's card fan and ticker take up to ten.
+async function fetchLandingShows(): Promise<LandingShows> {
+  try {
+    const result = await publicApiClient.get<EventsListResponse>(
+      '/v1/events?limit=10',
+    );
+    if (!result?.data?.length)
+      return { posters: makeFallbackShows(), invite: [] };
+
+    const today = futureDateString(0);
+    const posters = result.data.slice(0, 4).map((row) => ({
       id: row.id,
       artist: row.artist,
       venue: row.venue.name,
@@ -117,14 +132,49 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       state: null,
       href: `/events/${row.id}`,
     }));
+    // The ticker is labelled "this week", so it carries only the next seven
+    // days, the same window the see-all count uses.
+    const weekEnd = futureDateString(6);
+    const invite = result.data
+      .filter((row) => row.date <= weekEnd)
+      .map((row) => ({
+        id: row.id,
+        artist: row.artist,
+        venue: row.venue.name,
+        tonight: row.date === today,
+        dateShort: formatDateShort(row.date),
+        showTime: formatShowTime(row.showTime),
+        genre: row.genre?.[0] ?? null,
+        imageUrl: row.imageUrl,
+        artistPhotoUrl: row.artistPhotoUrl ?? null,
+      }));
 
-    return mapped.length >= 2 ? mapped : makeFallbackShows();
+    return {
+      posters: posters.length >= 2 ? posters : makeFallbackShows(),
+      invite,
+    };
   } catch (err) {
     console.error(
       '[landing] failed to fetch hero shows:',
       err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
     );
-    return makeFallbackShows();
+    return { posters: makeFallbackShows(), invite: [] };
+  }
+}
+
+// The venues the private-beta landing shows as icons and counts: the same
+// "has upcoming shows" rule the invite poster uses, so the two never disagree.
+// Null on failure, and the page drops the row rather than show a wrong count.
+async function fetchInviteVenues(): Promise<InviteVenue[] | null> {
+  try {
+    const venues = await publicApiClient.get<VenuePublic[]>('/v1/venues');
+    return posterVenues(venues).map(({ slug, name }) => ({ slug, name }));
+  } catch (err) {
+    console.error(
+      '[landing] failed to fetch venues:',
+      err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
+    );
+    return null;
   }
 }
 
@@ -157,9 +207,17 @@ async function fetchWeekCount(): Promise<number | null> {
 export const revalidate = 300;
 
 export default async function LandingPage() {
-  const [shows, weekCount] = await Promise.all([
-    fetchHeroShows(),
+  const [shows, weekCount, venues] = await Promise.all([
+    fetchLandingShows(),
     fetchWeekCount(),
+    fetchInviteVenues(),
   ]);
-  return <LandingClientShell shows={shows} showCount={weekCount} />;
+  return (
+    <LandingClientShell
+      shows={shows.posters}
+      showCount={weekCount}
+      inviteShows={shows.invite}
+      inviteVenues={venues}
+    />
+  );
 }

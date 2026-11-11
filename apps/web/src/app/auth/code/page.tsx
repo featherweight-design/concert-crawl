@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { validateAndSetInviteCode } from './actions';
 import { WaitlistModal } from '@/components/waitlist/WaitlistModal';
 import { copy } from './definitions/copy';
+import { formatInviteCodeInput, isCompleteInviteCode } from '@/lib/invite-code';
 
 type ErrorKind =
   | 'invalid_format'
@@ -14,18 +15,6 @@ type ErrorKind =
   | 'ratelimit'
   | 'server_error'
   | null;
-
-function formatCodeInput(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-  if (!clean.startsWith('BETA-')) {
-    if ('BETA-'.startsWith(clean)) return clean;
-    if (clean.startsWith('BETA')) return `BETA-${clean.slice(4)}`;
-    return clean;
-  }
-  const rest = clean.slice(5).replace(/-/g, '');
-  if (rest.length <= 4) return `BETA-${rest}`;
-  return `BETA-${rest.slice(0, 4)}-${rest.slice(4, 8)}`;
-}
 
 export default function InviteCodePage() {
   const [code, setCode] = useState('');
@@ -39,14 +28,14 @@ export default function InviteCodePage() {
   // needs no Suspense boundary and the server render matches the first paint.
   useEffect(() => {
     const fromLink = new URLSearchParams(window.location.search).get('code');
-    if (fromLink) setCode(formatCodeInput(fromLink));
+    if (fromLink) setCode(formatInviteCodeInput(fromLink));
   }, []);
 
-  const isComplete = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
+  const isComplete = isCompleteInviteCode(code);
 
   function handleChange(ev: React.ChangeEvent<HTMLInputElement>) {
     setErrorKind(null);
-    setCode(formatCodeInput(ev.target.value));
+    setCode(formatInviteCodeInput(ev.target.value));
   }
 
   function handleSubmit(ev: React.FormEvent) {
