@@ -1348,6 +1348,8 @@ describe('EventDetailPriceBlock pending sold-out report', () => {
     );
     expect(screen.getByText('Withdraw')).toBeTruthy();
     expect(screen.queryByText('Edit')).toBeNull();
+  });
+});
 
 describe('EventDetailPriceBlock price check', () => {
   // The flat fields carry no tier; the card used to print the vendor in the

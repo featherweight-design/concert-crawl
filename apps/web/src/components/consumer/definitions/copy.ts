@@ -1467,9 +1467,9 @@ export const CONSUMER_COPY = {
       tier: string | null,
       vendor: string,
     ) =>
-      `Currently listed: $${floor}–$${ceiling}${tier ? ` ${tier}` : ''} on ${vendor}. Your update goes pending until another fan confirms.`,
+      `Currently listed: $${floor}–$${ceiling} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
     subtitleFloorOnly: (floor: number, tier: string | null, vendor: string) =>
-      `Currently listed: $${floor}${tier ? ` ${tier}` : ''} on ${vendor}. Your update goes pending until another fan confirms.`,
+      `Currently listed: $${floor} on ${vendor}${tier ? ` (${tier})` : ''}. Your update goes pending until another fan confirms.`,
     floorLabel: 'Floor price',
     floorPlaceholder: '35',
     ceilingLabel: 'Ceiling price (optional)',

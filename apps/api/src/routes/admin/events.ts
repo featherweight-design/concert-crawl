@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { validationHook } from '../../lib/validator.js';
+import { isSoldOutSql } from '../../lib/sold-out.js';
 import { z } from 'zod';
 import { httpUrl } from '../../lib/url-schema.js';
 import {
@@ -43,20 +44,6 @@ import {
 import { idSchema } from '../../lib/id-schema.js';
 
 const eventIdSchema = z.object({ id: idSchema });
-
-// Returns the SQL fragment that derives `isSoldOut`: true when an event has a
-// promoted+resolved sold-out event_report. Built lazily inside handlers so the
-// table reference isn't evaluated at module-load time (keeps the unit-test
-// mocks simple — they don't need to export every column accessor).
-function isSoldOutExpr() {
-  return sql<boolean>`EXISTS (
-    SELECT 1 FROM ${eventReports} r
-    WHERE r.event_id = ${events.id}
-      AND r.status = 'sold-out'
-      AND r.resolved_at IS NOT NULL
-      AND r.resolution = 'promoted'
-  )`;
-}
 
 const MISSING_DATA_FLAGS = [
   'no-price',
@@ -384,7 +371,7 @@ eventsAdminRouter.get(
         firstMissingAt: events.firstMissingAt,
         venueId: events.venueId,
         venueName: venues.name,
-        isSoldOut: isSoldOutExpr(),
+        isSoldOut: isSoldOutSql(),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id));
@@ -421,7 +408,7 @@ eventsAdminRouter.get(
         firstMissingAt: events.firstMissingAt,
         venueId: events.venueId,
         venueName: venues.name,
-        isSoldOut: isSoldOutExpr(),
+        isSoldOut: isSoldOutSql(),
         // Live sibling: same show still crawled under another row (headliner
         // containment — mirrors scripts/2026-07-19-missing-event-orphan-cleanup.sql).
         hasLiveSibling: sql<boolean>`EXISTS (
@@ -715,7 +702,7 @@ eventsAdminRouter.get(
         // Admin-editable (#992): the tour kicker is only ever auto-populated
         // by the LLM extractor, so JSON-LD venues need a manual entry path.
         tourName: events.tourName,
-        isSoldOut: isSoldOutExpr(),
+        isSoldOut: isSoldOutSql(),
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))

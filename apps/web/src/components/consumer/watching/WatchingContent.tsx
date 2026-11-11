@@ -25,10 +25,11 @@ export function countChanges(shows: WatchingShow[]): {
   let spikes = 0;
   let soldOut = 0;
   for (const show of shows) {
+    // A cancelled or postponed show's row says that, not "Sold out" or a
+    // price move (resolveRowStatus), so the summary leaves it out entirely.
+    if (show.eventStatus !== 'upcoming') continue;
     if (show.watchStatus === 'soldout') {
-      // A cancelled or postponed show's row says that rather than "Sold out"
-      // (resolveRowStatus), so the summary doesn't count it as sold out.
-      if (show.eventStatus === 'upcoming') soldOut++;
+      soldOut++;
     } else if (
       show.savedPrice !== null &&
       show.currentPrice !== null &&
