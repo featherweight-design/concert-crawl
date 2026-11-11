@@ -48,7 +48,8 @@ export async function sweepStaleEvents(
   const cancelled = await db.transaction(async (tx) => {
     const rows = await tx
       .update(events)
-      .set({ status: 'cancelled', updatedAt: now })
+      // delistedAt marks it No longer listed rather than Cancelled (B+ A5).
+      .set({ status: 'cancelled', delistedAt: now, updatedAt: now })
       .where(
         and(
           eq(events.status, 'upcoming'),

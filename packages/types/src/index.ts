@@ -572,6 +572,12 @@ export interface Event {
   imageUrl: string | null;
   genre: string[] | null;
   status: EventStatus;
+  /**
+   * B+ A5: set when the stale sweep cancelled the show because the venue
+   * stopped listing it. A cancelled show with this set is No longer listed.
+   * Optional because web and API deploy separately.
+   */
+  delistedAt?: string | null;
   confidenceScore: string | null;
   verified: boolean;
   sourceUrl: string | null;
