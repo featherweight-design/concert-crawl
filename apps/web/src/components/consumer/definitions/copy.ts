@@ -1816,6 +1816,35 @@ export const CONSUMER_COPY = {
     emptyBody:
       'Mark yourself going to a show and it lands here once the night has passed.',
     emptyCta: 'Find a show',
+    // ── B+ booklet (B13). Rendered uppercase by CSS where the board is.
+    breadcrumb: 'My shows · Concerts',
+    bookletLabel: 'Passport pages',
+    /** The identity page's short name on a Jump to button: `ID · 1`. */
+    idPageShort: 'ID',
+    /** The start of the code line, `P<CCRAWL<<HUGH<<<<DENVER<<2026<<<4N4V`. */
+    codePrefix: 'P<CCRAWL',
+    pageLabel: (page: number): string => `Page ${page}`,
+    spreadOf: (spread: number, total: number): string =>
+      `Spread ${spread} of ${total}`,
+    nextPageWaiting: 'Next page is waiting',
+    swipeForPage: (page: number): string => `Swipe for page ${page}`,
+    pageNights: (page: number, nights: number): string =>
+      `Page ${page} · ${nights} ${nights === 1 ? 'night' : 'nights'}`,
+    jumpTo: 'Jump to',
+    previousPage: 'Previous page',
+    nextPage: 'Next page',
+    /** The slot the next stamp lands in. */
+    nextSlot: 'Next',
+    upNext: 'Up next',
+    nextStamp: 'Next stamp',
+    inDays: (days: number): string =>
+      days <= 0 ? 'Tonight' : days === 1 ? 'In 1 day' : `In ${days} days`,
+    moreGoing: (count: number): string => `+ ${count} more you're going to`,
+    venuesCollected: 'Venues collected',
+    collectedCount: (collected: number, total: number): string =>
+      `${collected} of ${total}`,
+    /** Read after a venue's name when it has a stamp. */
+    collectedSuffix: 'collected',
   },
 
   // ── ThemeToggle ─────────────────────────────────────────────────

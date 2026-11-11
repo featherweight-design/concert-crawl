@@ -124,8 +124,8 @@ export const PassportActions = ({
   const preparing = file === null && !failed;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="flex flex-col items-stretch gap-2 lg:items-end">
+      <div className="flex items-center gap-2.5">
         {/* Gated on file support, not on the sheet merely existing: this card
             has no URL to fall back to, so a button that cannot carry the image
             has nothing left to do but apologise. */}
@@ -135,8 +135,26 @@ export const PassportActions = ({
             onClick={share}
             disabled={file === null}
             aria-busy={preparing}
-            className="min-h-[44px] rounded-[10px] border border-border-strong bg-surface-3 px-5 text-sm font-bold text-fg disabled:opacity-60"
+            className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-bold text-fg-on-accent disabled:opacity-60 lg:flex-none"
+            style={{
+              background:
+                'linear-gradient(135deg, var(--signal), var(--accent))',
+            }}
           >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="18" cy="5" r="2.6" />
+              <circle cx="6" cy="12" r="2.6" />
+              <circle cx="18" cy="19" r="2.6" />
+              <path d="M8.3 10.8l7.4-4.4M8.3 13.2l7.4 4.4" />
+            </svg>
             {preparing ? COPY.preparingLabel : COPY.shareLabel}
           </button>
         )}
@@ -151,7 +169,7 @@ export const PassportActions = ({
           onClick={() =>
             track('passport_shared', { destination: 'save-image' })
           }
-          className="inline-flex min-h-[44px] items-center rounded-[10px] border border-border px-5 text-sm font-bold text-fg no-underline"
+          className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl border border-border-strong bg-surface-1 px-5 text-[15px] font-bold text-fg no-underline lg:flex-none"
         >
           {COPY.saveLabel}
         </a>

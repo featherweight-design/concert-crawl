@@ -37,6 +37,10 @@ export const glyphStrokeFor = (size: number): number => {
 const inkFor = (accent: string): string =>
   `color-mix(in oklch, ${accent} 55%, var(--fg))`;
 
+/** The ink a show's stamp is drawn in, for text printed around it. */
+export const stampInkFor = (seed: string): string =>
+  inkFor(stampAccentFor(seed));
+
 interface VenueStampProps {
   /** The venue's slug, which picks its glyph. */
   venueSlug: string;

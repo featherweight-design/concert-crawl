@@ -9,9 +9,8 @@ import { PassportPill } from '@/components/consumer/passport/PassportPill';
 import { PassportStamp } from '@/components/consumer/passport/PassportStamp';
 import { PassportStat } from '@/components/consumer/passport/PassportStat';
 import { ShareWordmark } from '@/components/consumer/share/ShareWordmark';
-import { DENVER_TIME_ZONE } from '@/lib/time';
 import { PASSPORT_COPY } from '@/components/consumer/passport/definitions/copy';
-import { passportHandle } from '@/lib/passport/stamp';
+import { passportHandle, sinceLabel } from '@/lib/passport/stamp';
 import { passportStats, type AttendedShow } from '@/lib/passport/stats';
 
 // ── Why this file looks the way it does ────────────────────────────
@@ -33,19 +32,6 @@ export interface PassportCardProps {
   /** Device-pixel multiplier. See `PASSPORT_PRINT_SCALE`. */
   scale?: number;
 }
-
-const SINCE_FORMAT = new Intl.DateTimeFormat('en-US', {
-  timeZone: DENVER_TIME_ZONE,
-  month: 'short',
-  year: 'numeric',
-});
-
-// UTC-noon anchored for the same reason as the stamp punch (#596).
-const sinceLabel = (date: string | undefined): string | null => {
-  if (date === undefined) return null;
-  const at = new Date(`${date}T12:00:00Z`);
-  return Number.isNaN(at.getTime()) ? null : SINCE_FORMAT.format(at);
-};
 
 /**
  * The Concert Passport — a stamp book of nights you were there.
