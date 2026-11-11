@@ -22,7 +22,7 @@ export const LEGAL_COPY = {
     heading: 'Terms of Service',
     // Revised when Concert Crawl went free: §7 no longer describes paid
     // plans, renewals or refunds.
-    effectiveDate: 'Effective date: November 11, 2026',
+    effectiveDate: 'Effective date: November 10, 2026',
 
     acceptance: {
       title: '1. Acceptance',
@@ -115,7 +115,7 @@ export const LEGAL_COPY = {
     heading: 'Privacy Policy',
     // Revised when Concert Crawl went free: Stripe is a former payment
     // processor and no billing email is sent. Set to the day the policy ships.
-    effectiveDate: 'Effective date: November 11, 2026',
+    effectiveDate: 'Effective date: November 10, 2026',
     collect: {
       title: 'What we collect',
       intro: "We collect only what's necessary to run the Service:",
