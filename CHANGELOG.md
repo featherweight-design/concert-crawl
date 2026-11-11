@@ -1,3 +1,17 @@
+# [1.324.0](https://github.com/featherweight-design/concert-crawl/compare/v1.323.0...v1.324.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** refund the rate limit on a repeat report, build the Spotify link from the id ([240ab1a](https://github.com/featherweight-design/concert-crawl/commit/240ab1a9f2594b546594d4e59784fd3ed6c77629))
+* **ci:** install Playwright browsers without apt ([a7b5fed](https://github.com/featherweight-design/concert-crawl/commit/a7b5fed9848f5e8af49e737e99a0fff7885cae81))
+* **ci:** say the crawler pins are for consistency only ([881996e](https://github.com/featherweight-design/concert-crawl/commit/881996e319befe45cef553d9757b97ffaf2c9049))
+
+
+### Features
+
+* **api:** artist report table and fan endpoints ([8e64294](https://github.com/featherweight-design/concert-crawl/commit/8e64294d8911ba6cca618164342559dd7dc26c15))
+
 # [1.323.0](https://github.com/featherweight-design/concert-crawl/compare/v1.322.0...v1.323.0) (2026-11-11)
 
 
