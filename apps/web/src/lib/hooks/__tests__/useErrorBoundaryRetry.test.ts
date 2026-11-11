@@ -87,7 +87,14 @@ describe('useErrorBoundaryRetry', () => {
 
     for (const boundary of boundaries) {
       const source = readFileSync(boundary, 'utf8');
-      expect(source).toContain('useErrorBoundaryRetry');
+      // global-error replaces the root layout, so there is no layout left for
+      // refresh + reset to re-render into: its retry is a full reload, which
+      // refetches everything the hook exists to refetch.
+      if (path.basename(boundary) === 'global-error.tsx') {
+        expect(source).toContain('window.location.reload()');
+      } else {
+        expect(source).toContain('useErrorBoundaryRetry');
+      }
       // Bare `onClick={reset}` is the exact defect — refetch never happens.
       // Whitespace-tolerant so a reformat cannot silently retire the guard.
       expect(source).not.toMatch(/onClick=\s*\{\s*reset\s*\}/);
