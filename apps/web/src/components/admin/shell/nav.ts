@@ -1,5 +1,26 @@
 export type NavKind = 'danger' | 'warning' | 'signal';
 
+/** What the sidebar and bottom bar badge, keyed by the nav item's key. */
+export interface AdminBadgeCounts {
+  crawl: number;
+  review: number;
+  feedback: number;
+  /** Artists with an open wrong-artist report. */
+  artists: number;
+}
+
+export const badgeCountFor = (
+  key: string,
+  counts: AdminBadgeCounts | undefined,
+): number => {
+  if (!counts) return 0;
+  if (key === 'crawl') return counts.crawl;
+  if (key === 'review') return counts.review;
+  if (key === 'artists') return counts.artists;
+  if (key === 'feedback') return counts.feedback;
+  return 0;
+};
+
 export interface NavItem {
   key: string;
   label: string;
@@ -48,6 +69,7 @@ export const NAV_V2: NavItem[] = [
     label: 'Artists',
     href: '/admin/artists',
     iconName: 'Music',
+    badge: { count: 0, kind: 'warning' },
     section: 'operations',
   },
   {

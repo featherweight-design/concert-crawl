@@ -9,13 +9,13 @@ import { AdminTopbar } from './AdminTopbar';
 import { MobileBottomBar } from './MobileBottomBar';
 import { MobileDrawer } from './MobileDrawer';
 import { AppSwitcher } from './AppSwitcher';
-import { NAV_V2 } from './nav';
+import { NAV_V2, type AdminBadgeCounts } from './nav';
 import { PageTitleProvider, usePageTitle } from './PageTitleContext';
 
 const MOBILE_BREAKPOINT = 720;
 
 interface AdminShellClientProps {
-  badgeCounts: { crawl: number; review: number; feedback: number };
+  badgeCounts: AdminBadgeCounts;
   user: { firstName: string | null; email: string };
   children: React.ReactNode;
 }
