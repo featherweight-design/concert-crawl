@@ -101,6 +101,30 @@ describe('CrewsContent states (#1226)', () => {
     expect(screen.queryByText(CREWS_COPY.empty.title)).not.toBeInTheDocument();
   });
 
+  // B+: the three steps sit under a lone crew and go once there are two.
+  it('shows How crews work with exactly one crew, and not with two', () => {
+    const { unmount } = render(
+      <CrewsContent initialCrews={[crew()]} scaRegion={false} />,
+    );
+    expect(
+      screen.getByRole('heading', { name: CREWS_COPY.howItWorks.eyebrow }),
+    ).toBeInTheDocument();
+    for (const step of CREWS_COPY.howItWorks.steps) {
+      expect(screen.getByText(step.title)).toBeInTheDocument();
+    }
+    unmount();
+
+    render(
+      <CrewsContent
+        initialCrews={[crew(), crew({ id: 'c2', name: 'Fridays' })]}
+        scaRegion={false}
+      />,
+    );
+    expect(
+      screen.queryByText(CREWS_COPY.howItWorks.eyebrow),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows the empty state and a gated create affordance when there are none', () => {
     render(<CrewsContent initialCrews={[]} scaRegion={false} />);
     expect(screen.getByText(CREWS_COPY.empty.title)).toBeInTheDocument();

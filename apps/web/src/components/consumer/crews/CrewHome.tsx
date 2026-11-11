@@ -44,6 +44,13 @@ interface CrewHomeProps {
 // is asking you to fill.
 const OPEN_SEATS = 4;
 
+// At phone width the two hero pills share a ~256px row in a 320px card, so
+// they trade padding for room and both labels hold one line.
+const heroPill = (
+  base: React.CSSProperties,
+  wide: boolean,
+): React.CSSProperties => (wide ? base : { ...base, padding: '0 10px' });
+
 const OpenSeat = () => (
   <span
     aria-hidden="true"
@@ -205,7 +212,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               type="button"
               onClick={() => setInvite(true)}
               className="cursor-pointer"
-              style={pillPrimary}
+              style={heroPill(pillPrimary, wide)}
             >
               {COPY.detail.invite}
             </button>
@@ -214,7 +221,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               onClick={() => setOptions(true)}
               aria-label={COPY.a11y.options}
               className="cursor-pointer"
-              style={pillGhost}
+              style={heroPill(pillGhost, wide)}
             >
               {COPY.detail.options}
             </button>

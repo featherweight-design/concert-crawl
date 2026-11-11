@@ -18,8 +18,22 @@ const pillBase: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '-0.005em',
   textDecoration: 'none',
+  whiteSpace: 'nowrap',
   flexShrink: 0,
 };
+
+/**
+ * The crew row's frame, shared by CrewRow and CrewRowSkeleton so the loading
+ * list resolves without a shift.
+ */
+export const CREW_ROW = {
+  minHeight: 72,
+  radius: 16,
+  patch: 52,
+  gap: (wide: boolean) => (wide ? 15 : 13),
+  padding: (wide: boolean) =>
+    wide ? '14px 18px 14px 15px' : '14px 14px 14px 15px',
+} as const;
 
 export const pillPrimary: React.CSSProperties = {
   ...pillBase,
