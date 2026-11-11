@@ -1161,7 +1161,7 @@ export const CONSUMER_COPY = {
       deleteAccountSubtitle:
         'Permanently remove your handle, profile, and Concerts.',
       deleteCardBody:
-        "This is permanent. Your handle, email, and plan are gone. Price submissions stay on the public record, but your name is removed from them. You can't undo deletion.",
+        "This is permanent. Your handle, email, and profile are gone. Price submissions stay on the public record, but your name is removed from them. You can't undo deletion.",
       deleteAccountCta: 'Delete my account',
       deleteSheetTitle: 'Delete account permanently',
       deleteSheetBody:
@@ -1176,7 +1176,7 @@ export const CONSUMER_COPY = {
       confirmCantUndo: "This can't be undone.",
       confirmBodyLead: 'Your handle',
       confirmBodyRest: (submissionCount: number) =>
-        `email, and plan are deleted. ${submissionCount} submitted ${
+        `email, and profile are deleted. ${submissionCount} submitted ${
           submissionCount === 1 ? 'price stays' : 'prices stay'
         } on the public record. Your name is removed from them.`,
       // "Type DELETE to confirm." — split because DELETE is bolded.
