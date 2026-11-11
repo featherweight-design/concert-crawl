@@ -60,6 +60,8 @@ export const HISTORY_COPY = {
   },
 
   empty: {
+    // The B+ empty card's eyebrow (`bp-s-empty_concerts_m`). Uppercased by CSS.
+    eyebrow: 'Concerts',
     headline: 'No nights on the books yet.',
     body: "Tap I'm going! on a show and it lands here, first as a plan, then as a keepsake.",
     cta: "Browse tonight's shows",

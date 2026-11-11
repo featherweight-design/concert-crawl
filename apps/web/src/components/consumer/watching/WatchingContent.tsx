@@ -160,62 +160,65 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
     <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
       <MyShowsTabs active="watching" />
 
-      {/* Headline block */}
-      <div className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
-        <p
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--fg-subtle)',
-            margin: '0 0 4px',
-          }}
-        >
-          {COPY.watchingContent.eyebrow}
-        </p>
-        <div className="flex items-baseline gap-3">
-          <p
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontSize: 36,
-              fontWeight: 900,
-              letterSpacing: '-0.025em',
-              color: 'var(--fg)',
-              margin: 0,
-              lineHeight: 1,
-            }}
-          >
-            {/* B+: the count, alone on this header, takes the gradient. */}
-            <span
-              data-testid="watching-count"
-              style={{
-                backgroundImage: MY_SHOWS_GRADIENT,
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-              }}
-            >
-              {displayedShows.length}
-            </span>{' '}
-            {displayedShows.length !== 1
-              ? COPY.watchingContent.showsPlural
-              : COPY.watchingContent.showsSingular}
-          </p>
+      {/* Headline block. An empty list skips it: the empty card's own eyebrow
+          and headline say it (B+ `bp-s-empty_watching_m`). */}
+      {displayedShows.length > 0 && (
+        <div className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
           <p
             style={{
               fontFamily: 'var(--font-mono)',
-              fontSize: 12,
-              fontWeight: 600,
-              color: drops > 0 ? 'var(--success)' : 'var(--fg-muted)',
-              margin: 0,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--fg-subtle)',
+              margin: '0 0 4px',
             }}
           >
-            {changeSummary()}
+            {COPY.watchingContent.eyebrow}
           </p>
+          <div className="flex items-baseline gap-3">
+            <p
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: 36,
+                fontWeight: 900,
+                letterSpacing: '-0.025em',
+                color: 'var(--fg)',
+                margin: 0,
+                lineHeight: 1,
+              }}
+            >
+              {/* B+: the count, alone on this header, takes the gradient. */}
+              <span
+                data-testid="watching-count"
+                style={{
+                  backgroundImage: MY_SHOWS_GRADIENT,
+                  WebkitBackgroundClip: 'text',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                }}
+              >
+                {displayedShows.length}
+              </span>{' '}
+              {displayedShows.length !== 1
+                ? COPY.watchingContent.showsPlural
+                : COPY.watchingContent.showsSingular}
+            </p>
+            <p
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 12,
+                fontWeight: 600,
+                color: drops > 0 ? 'var(--success)' : 'var(--fg-muted)',
+                margin: 0,
+              }}
+            >
+              {changeSummary()}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Show list */}
       {displayedShows.length === 0 ? (

@@ -17,6 +17,7 @@
 
 import Link from 'next/link';
 import { HISTORY_COPY } from './definitions/copy';
+import { MY_SHOWS_GRADIENT } from './definitions/constants';
 
 const COPY = HISTORY_COPY.tabs;
 
@@ -45,7 +46,9 @@ interface MyShowsTabsProps {
 export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
   <nav
     aria-label={COPY.ariaLabel}
-    className="mb-4 flex gap-1 rounded-[10px] border border-border bg-surface-1 p-[3px] sm:mb-6 sm:gap-2 sm:border-transparent sm:bg-transparent sm:p-0"
+    // B+ (`bp-watching`, `bp-m-*_m`): free-standing tabs on both densities,
+    // no tray; the current one is lifted with the gradient hairline.
+    className="mb-4 flex gap-1 sm:mb-6 sm:gap-2"
   >
     {TABS.map((tab) => {
       const current = tab.key === active;
@@ -64,16 +67,21 @@ export const MyShowsTabs = ({ active, artistCount }: MyShowsTabsProps) => (
           aria-label={
             count === null ? undefined : COPY.tabCountAria(tab.label, count)
           }
-          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-md px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:rounded-[9px] sm:px-4"
+          data-current={current || undefined}
+          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:px-4"
           style={{
             fontFamily: 'var(--font-ui)',
-            fontSize: 12.5,
+            fontSize: 14,
             fontWeight: current ? 700 : 500,
-            letterSpacing: '-0.005em',
+            letterSpacing: '-0.01em',
             textDecoration: 'none',
             color: current ? 'var(--fg)' : 'var(--fg-muted)',
-            background: current ? 'var(--surface-3)' : 'transparent',
-            border: `1px solid ${current ? 'var(--border-strong)' : 'transparent'}`,
+            border: '1px solid transparent',
+            // The fill on the padding box, the gradient on the border box: a
+            // gradient hairline that follows the rounded corners.
+            background: current
+              ? `linear-gradient(var(--surface-3), var(--surface-3)) padding-box, ${MY_SHOWS_GRADIENT} border-box`
+              : 'transparent',
           }}
         >
           {/* No tier chip: a subscriber shouldn't be sold the plan they're on,

@@ -117,3 +117,13 @@ describe('MyShowsTabs', () => {
     ).toBeInTheDocument();
   });
 });
+
+// B+: the current tab carries the gradient hairline; the others stay bare.
+describe('MyShowsTabs B+ styling', () => {
+  it('marks only the current tab', () => {
+    const { container } = render(<MyShowsTabs active="artists" />);
+    const current = container.querySelectorAll('[data-current]');
+    expect(current).toHaveLength(1);
+    expect(current[0]?.getAttribute('href')).toBe('/following');
+  });
+});

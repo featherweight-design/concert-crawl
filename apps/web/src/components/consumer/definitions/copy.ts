@@ -112,6 +112,8 @@ export const CONSUMER_COPY = {
   },
 
   // ── Watching ───────────────────────────────────────────────────────
+  // The B+ empty card's eyebrow (`bp-s-empty_watching_m`). Uppercased by CSS.
+  watchingEmptyEyebrow: 'Watching',
   watchingEmptyTitle: 'No shows, grandpa.',
   watchingEmptyBody:
     'Watch a show and it lands here. We track the price from then on.',
