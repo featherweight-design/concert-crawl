@@ -96,8 +96,9 @@ describe('PassportBooklet', () => {
     const spread = within(view('spread'));
 
     expect(spread.getByText('@hugh')).toBeInTheDocument();
+    // Every fixture night is at Globe Hall, so the code line reads 4 nights, 1 venue.
     expect(
-      spread.getByText('P<CCRAWL<<HUGH<<<<DENVER<<2026<<<4N4V'),
+      spread.getByText('P<CCRAWL<<HUGH<<<<DENVER<<2026<<<4N1V'),
     ).toBeInTheDocument();
     expect(stampsIn('spread')).toBe(4);
     expect(statusOf('spread')).toBe(
