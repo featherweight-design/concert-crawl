@@ -395,12 +395,29 @@ export function OnboardingShell({
       // the grid" says nothing about it. Without this it vanished the moment
       // the suggestions landed — on first load, after a retry, or when the
       // genres changed — and the rail's count fell with it.
+      //
+      // And a slug this render never saw picked is not this run's to judge.
+      // The updater runs against the LATEST selection, but `searchPicks` is
+      // this render's. A click that lands before this effect has flushed (a
+      // default-lane commit leaves its effects queued on the Scheduler) is
+      // applied first, so the stale run would see the new search pick without
+      // its mark and drop it, leaving the mark behind. The next render's run
+      // has both and judges it properly.
       const kept = Array.from(previous).filter(
-        (slug) => visible.has(slug) || searchPicks.has(slug),
+        (slug) =>
+          visible.has(slug) ||
+          searchPicks.has(slug) ||
+          !pickedArtists.has(slug),
       );
       return kept.length === previous.size ? previous : new Set(kept);
     });
-  }, [onArtistsStep, suggestionsLoaded, suggestions, searchPicks]);
+  }, [
+    onArtistsStep,
+    suggestionsLoaded,
+    suggestions,
+    searchPicks,
+    pickedArtists,
+  ]);
 
   const { data: planState } = usePlanState();
   const following = useEntitlement('following');

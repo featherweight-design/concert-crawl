@@ -583,7 +583,23 @@ describe('OnboardingShell — genres then artists', () => {
       );
       const field = screen.getAllByRole('textbox', { hidden: true })[0]!;
       act(() => fireEvent.change(field, { target: { value: 'ghost' } }));
-      await waitFor(() => expect(tile(/ghost/i)).toBeTruthy());
+      // Click the row on the commit that draws it, before React has flushed
+      // that commit's effects. `waitFor` drains a timer first, which on a fast
+      // machine lets the effects run and hides the race; on a loaded CI runner
+      // the timer wins anyway, and the grid's prune, still holding the render
+      // before the pick, dropped the pick while its search mark survived.
+      await new Promise<void>((resolve) => {
+        const hasRow = () =>
+          screen.queryAllByRole('checkbox', { name: /ghost/i, hidden: true })
+            .length > 0;
+        if (hasRow()) return resolve();
+        const observer = new MutationObserver(() => {
+          if (!hasRow()) return;
+          observer.disconnect();
+          resolve();
+        });
+        observer.observe(document.body, { subtree: true, childList: true });
+      });
 
       act(() => fireEvent.click(tile(/ghost/i)));
       act(() =>
@@ -602,9 +618,7 @@ describe('OnboardingShell — genres then artists', () => {
       await waitFor(() => expect(readMark()).toEqual(['ghost']));
 
       // Each click waits for the tile it clicks, not for the mark: the mark is
-      // written on the pick itself, before the grid has redrawn with the
-      // appended tile once the field closes, so a bare lookup straight after
-      // the mark's wait raced that redraw and flaked under CI load.
+      // written on the pick itself, so it says nothing about the grid.
 
       // Unticked from its appended tile: no longer a pick, so no longer marked.
       const appended = await findTile(/ghost/i);
