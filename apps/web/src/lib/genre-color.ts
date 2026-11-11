@@ -11,5 +11,8 @@ export function genreColor(rawGenre: string | null | undefined): string | null {
   return bucket ? `var(--genre-${bucket})` : null;
 }
 
-/** The ring, edge and dot color for a neutral or ungenred show. */
+/**
+ * The ring and edge color for an ungenred show. A chip's dot falls back to
+ * `--fg-subtle` instead: this hairline token would vanish on the chip's fill.
+ */
 export const NEUTRAL_GENRE_COLOR = 'var(--border-strong)';

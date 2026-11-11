@@ -921,17 +921,15 @@ function UserMenuSheet(props: MenuBodyProps) {
       aria-modal="true"
       aria-label={shellLabelOf(props)}
       tabIndex={-1}
+      className="sheet-edge [--sheet-bg:var(--bg-elevated)]"
       style={{
         position: 'fixed',
         left: 0,
         right: 0,
         bottom: 0,
         zIndex: 100,
-        background: 'var(--bg-elevated)',
         borderTopLeftRadius: 22,
         borderTopRightRadius: 22,
-        border: '1px solid var(--border)',
-        borderBottom: 'none',
         boxShadow: '0 -16px 48px rgba(0,0,0,0.45)',
         overflow: 'hidden',
         fontFamily: 'var(--font-ui)',

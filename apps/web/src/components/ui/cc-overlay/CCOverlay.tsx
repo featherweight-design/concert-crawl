@@ -96,7 +96,7 @@ const Sheet = ({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="relative max-h-[78%] overflow-y-auto rounded-t-[18px] border-t border-[var(--border-strong)] bg-[var(--bg-elevated)] px-[18px] pb-[26px] pt-[10px] text-left outline-none"
+        className="relative max-h-[78%] overflow-y-auto sheet-edge rounded-t-[18px] [--sheet-bg:var(--bg-elevated)] px-[18px] pb-[26px] pt-[10px] text-left outline-none"
         style={{ boxShadow: '0 -20px 50px -18px var(--shadow-strong)' }}
       >
         <div

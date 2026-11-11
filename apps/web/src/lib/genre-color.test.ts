@@ -19,12 +19,16 @@ describe('genreColor', () => {
   });
 
   // A bucket added to the taxonomy without a token would render an
-  // uncolored dot and ring, silently.
+  // uncolored dot and ring, silently; one with no Light override would put a
+  // pale dot on a light ground.
+  const [dark = '', light = ''] = css.split(":root[data-theme='light']");
   it.each(BUCKET_LABELS)(
     'defines a dark and a light token for %s',
     (bucket) => {
-      const matches = css.match(new RegExp(`--genre-${bucket}:`, 'g')) ?? [];
-      expect(matches).toHaveLength(2);
+      expect(dark).toContain(`--genre-${bucket}:`);
+      expect(light.slice(0, light.indexOf('}'))).toContain(
+        `--genre-${bucket}:`,
+      );
     },
   );
 });

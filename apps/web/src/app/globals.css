@@ -723,10 +723,10 @@
    corners and fades out down the sides. Drawn with background layers on the
    sheet's own transparent border rather than a pseudo-element, so it stays put
    when a scrolling sheet scrolls its content. A sheet whose fill is not
-   --surface-1 sets --sheet-bg in place of a bg-* class; it is read with a
-   fallback rather than declared here, because this unlayered rule would beat
-   the utility that sets it. */
-.sheet-edge {
+   --surface-1 sets --sheet-bg in place of a bg-* class. A utility rather than a
+   plain class, so a sheet that becomes a centered modal from sm up can scope
+   it with a variant (max-sm:sheet-edge). */
+@utility sheet-edge {
   border: 1.5px solid transparent;
   border-bottom-width: 0;
   background:

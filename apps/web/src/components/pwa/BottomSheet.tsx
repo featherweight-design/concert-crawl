@@ -99,7 +99,7 @@ export const BottomSheet = ({
         // A bottom sheet on mobile, a centered modal from sm up: anchored to the
         // bottom edge of a wide viewport it read as a stray drawer. One media
         // query rather than a second tree, so the focus trap above is shared.
-        className="sheet-edge fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:max-w-md sm:rounded-2xl"
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl p-6 shadow-2xl focus:outline-none max-sm:sheet-edge sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:max-w-md sm:rounded-2xl sm:border sm:border-border sm:bg-surface-1"
       >
         <h2 id={titleId} className="sr-only">
           {title}

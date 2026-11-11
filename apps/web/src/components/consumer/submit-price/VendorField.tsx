@@ -653,11 +653,10 @@ export const VendorField = ({
           <div
             role="group"
             aria-labelledby={sheetTitleId}
+            className="sheet-edge [--sheet-bg:var(--bg-elevated)]"
             style={{
-              background: 'var(--bg-elevated)',
               borderTopLeftRadius: 20,
               borderTopRightRadius: 20,
-              borderTop: '1px solid var(--border-strong)',
               padding: '10px 16px 20px',
               maxHeight: '84%',
               display: 'flex',
