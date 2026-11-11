@@ -136,13 +136,14 @@ const IS_RECASE = sql`
 `;
 
 /**
- * The casing changes the repair refuses. Only a single-case name is ever
- * re-cased: a name that already mixes cases (`Book of Love`, `Rezz`) was cased
- * by someone, and a venue's spelling (`Book Of Love`) is no better evidence
- * than theirs. Of the single-case names, an all-caps one (`CHIEF KEEF`) takes
- * only a mixed-case billing, since venues shout (`REZZ`, `MANÁ`) and sometimes
- * whisper (`ivri`). A lowercase name is the canonical fallback and holds no
- * casing worth keeping, so `j.i.d` still becomes `J.I.D`.
+ * The casing changes the billing fallback refuses. Only a lowercase name is
+ * ever re-cased from a billing: it is the canonical fallback and holds no
+ * casing worth keeping, so `j.i.d` still becomes `J.I.D`. Any other name was
+ * cased by someone. A name that mixes cases (`Book of Love`, `Rezz`) is no
+ * worse evidence than a venue's `Book Of Love`, and an all-caps name
+ * (`SIIXNIGHTS`, `HAM`) is as likely the act's styling as a venue shouting,
+ * so with no Spotify spelling to settle it the caps stay. (This reverses the
+ * earlier rule that let `CHIEF KEEF` take a mixed-case billing.)
  *
  * A pure recase only. A shorten still takes a single-case billing: stripping
  * `Dogstar: ALL IN NOW TOUR` to `DOGSTAR` loses casing but removes the tour
@@ -152,8 +153,6 @@ const REFUSED_RECASE = sql`
   billing.billed_name <> artists.name
   AND lower(billing.billed_name) = lower(artists.name)
   AND artists.name <> lower(artists.name)
-  AND (artists.name <> upper(artists.name)
-    OR billing.billed_name = lower(billing.billed_name))
 `;
 
 /**
@@ -257,7 +256,7 @@ const CANDIDATES = sql`
       id, slug, current_name, repaired_name, kind, source,
       ROW_NUMBER() OVER (
         PARTITION BY id
-        -- A cased spelling outranks a shouted or whispered one, so an all-caps
+        -- A cased spelling outranks a shouted or whispered one, so a lowercase
         -- name the venue mostly shouts is still fixed by a cased billing. On a
         -- Spotify row every candidate shares one casing, so only the counts
         -- and the recase-before-shorten tie-break below matter.
