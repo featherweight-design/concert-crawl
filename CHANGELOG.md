@@ -1,3 +1,12 @@
+## [1.329.2](https://github.com/featherweight-design/concert-crawl/compare/v1.329.1...v1.329.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** a tickets-available report clears only the sold-out it answered ([83253e6](https://github.com/featherweight-design/concert-crawl/commit/83253e63d3e93641f6dae5b94791df6b2629e57f))
+* **api:** close pending tickets-available on clear, best-effort fan-out, review fixes ([dda80af](https://github.com/featherweight-design/concert-crawl/commit/dda80af33b744ade77d0923d1a19ecabd5ffe528))
+* **api:** tickets available reports clear a promoted sold-out, confirm method stored (B+ A3) ([dcb631d](https://github.com/featherweight-design/concert-crawl/commit/dcb631d0fb7e1e1bc82bc48ee264af03ed92cceb))
+
 ## [1.329.1](https://github.com/featherweight-design/concert-crawl/compare/v1.329.0...v1.329.1) (2026-11-11)
 
 
