@@ -1,3 +1,14 @@
+## [1.329.1](https://github.com/featherweight-design/concert-crawl/compare/v1.329.0...v1.329.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **api:** confirmed status on a delisted show keeps it visible, review fixes ([42856d5](https://github.com/featherweight-design/concert-crawl/commit/42856d596fe8ce62c5643b1a7040fa10dd0f46d6))
+* **api:** delisted shows leave the state on confirm; payloads carry delistedAt ([7fb3829](https://github.com/featherweight-design/concert-crawl/commit/7fb3829612d37961bb71676297fdb03b62850f5a))
+* **api:** delisted shows only on watching and detail, review fixes ([585d088](https://github.com/featherweight-design/concert-crawl/commit/585d088f47ef4a1f48a78eb17f758c7d43f04eaf))
+* **api:** swept shows come back as no longer listed instead of vanishing ([65b927a](https://github.com/featherweight-design/concert-crawl/commit/65b927a51d9098487e00007bea672e428fc97fcd))
+* **db:** mark stale-sweep cancellations with delisted_at (B+ A5, wip) ([f34c3ed](https://github.com/featherweight-design/concert-crawl/commit/f34c3edfa8599f92a12841c3fa4432e50ce254ef))
+
 # [1.329.0](https://github.com/featherweight-design/concert-crawl/compare/v1.328.0...v1.329.0) (2026-11-11)
 
 
