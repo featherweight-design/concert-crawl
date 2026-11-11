@@ -55,6 +55,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.58.0-beta',
+    date: 'Nov 12, 2026',
+    headline: null,
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Telling us a sold-out show has tickets again now works: once fans back you up, Sold out comes off and everyone watching hears.',
+      },
+    ],
+  },
+  {
     version: 'v0.57.0-beta',
     date: 'Nov 11, 2026',
     headline: 'Tell us when an artist is the wrong one.',
