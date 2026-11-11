@@ -10,7 +10,10 @@ ALTER TABLE "invite_codes" ADD COLUMN IF NOT EXISTS "use_count" integer DEFAULT 
 --> statement-breakpoint
 ALTER TABLE "invite_codes" ADD COLUMN IF NOT EXISTS "label" text;
 --> statement-breakpoint
-UPDATE "invite_codes" SET "use_count" = 1 WHERE "used_by" IS NOT NULL AND "use_count" = 0;
+-- used_at, not only used_by: account deletion nulls used_by and keeps used_at,
+-- and that code must stay spent.
+UPDATE "invite_codes" SET "use_count" = 1
+WHERE ("used_by" IS NOT NULL OR "used_at" IS NOT NULL) AND "use_count" = 0;
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "invite_code_redemptions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

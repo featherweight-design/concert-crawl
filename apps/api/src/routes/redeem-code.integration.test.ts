@@ -251,10 +251,14 @@ describe('POST /v1/auth/redeem-code — multi-use codes', () => {
     await seedCode(POSTER, 3);
 
     expect((await asUser('user_a')).status).toBe(200);
+    expect((await asUser('user_b')).status).toBe(200);
+    // A later redeemer is not `used_by`, so only the ledger recognises them.
+    expect((await asUser('user_b')).status).toBe(200);
     expect((await asUser('user_a')).status).toBe(200);
 
-    expect(await seats()).toBe(1);
+    expect(await seats()).toBe(2);
     expect(await comps('user_a')).toHaveLength(1);
+    expect(await comps('user_b')).toHaveLength(1);
   });
 
   it('gives the last seat to exactly one of two concurrent redeems', async () => {
