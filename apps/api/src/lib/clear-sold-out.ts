@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, lte } from 'drizzle-orm';
 import {
   db,
   eventReports,
@@ -31,11 +31,25 @@ import { activeSoldOutWhere } from './sold-out.js';
 export async function clearSoldOut(
   eventId: string,
   note: string,
+  options: {
+    /**
+     * A fan report's filing time: only a sold-out already live then is
+     * cleared, so a report can never clear a newer sold-out it never saw.
+     */
+    filedAt?: Date;
+  } = {},
 ): Promise<string[]> {
   const cleared = await db
     .update(eventReports)
     .set({ resolution: 'rejected', adminNote: note })
-    .where(activeSoldOutWhere(eventId))
+    .where(
+      options.filedAt
+        ? and(
+            activeSoldOutWhere(eventId),
+            lte(eventReports.resolvedAt, options.filedAt),
+          )
+        : activeSoldOutWhere(eventId),
+    )
     .returning({ id: eventReports.id });
 
   if (cleared.length === 0) return [];

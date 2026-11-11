@@ -28,6 +28,7 @@ import {
 import { moderateNote } from '../lib/moderate-note.js';
 import { isImminentEvent } from '../lib/time.js';
 import { clearSoldOut } from '../lib/clear-sold-out.js';
+import { apiLogger } from '../lib/logger.js';
 import { activeSoldOutWhere } from '../lib/sold-out.js';
 
 const REPORT_STATUSES = [
@@ -319,9 +320,17 @@ eventReportsRouter.post(
     // Parsed by hand rather than with zValidator('json'): a confirm is an
     // action, and clients have always been free to send no body at all, even
     // with a JSON content type, which the validator would refuse as malformed.
-    const parsedBody = confirmBodySchema.safeParse(
-      await ctx.req.json().catch(() => ({})),
-    );
+    const rawBody = (await ctx.req.text()).trim();
+    let jsonBody: unknown = {};
+    if (rawBody !== '') {
+      try {
+        jsonBody = JSON.parse(rawBody);
+      } catch (err) {
+        apiLogger.warn({ err, reportId }, 'confirm: malformed JSON body');
+        return ctx.json({ success: false, error: 'Malformed JSON' }, 422);
+      }
+    }
+    const parsedBody = confirmBodySchema.safeParse(jsonBody);
     if (!parsedBody.success) {
       return ctx.json(
         {
@@ -342,6 +351,7 @@ eventReportsRouter.post(
         reporterId: eventReports.reporterId,
         status: eventReports.status,
         resolvedAt: eventReports.resolvedAt,
+        createdAt: eventReports.createdAt,
       })
       .from(eventReports)
       .where(eq(eventReports.id, reportId))
@@ -400,16 +410,39 @@ eventReportsRouter.post(
       : ER_POLICY.confirmsRequired;
 
     let resolved = false;
-    if (confirmsCount >= threshold) {
+    if (confirmsCount >= threshold && report.status === 'available') {
+      // Tickets available has no state of its own: it is the sold-out it
+      // clears. clearSoldOut resolves this pending report as promoted along
+      // with the sold-out, and only a sold-out live when it was filed.
+      const cleared = await clearSoldOut(
+        eventId,
+        `cleared by tickets available report ${reportId}`,
+        { filedAt: report.createdAt },
+      );
+      if (cleared.length === 0) {
+        // The sold-out it answered is already gone: close it as moot rather
+        // than record a promotion that changed nothing.
+        await db
+          .update(eventReports)
+          .set({
+            resolvedAt: new Date(),
+            resolution: 'rejected',
+            adminNote: 'no live sold-out to clear',
+          })
+          .where(
+            and(eq(eventReports.id, reportId), isNull(eventReports.resolvedAt)),
+          );
+      }
+      resolved = true;
+    } else if (confirmsCount >= threshold && report.status !== 'available') {
       // Check pre-state to decide whether promotion actually transitions
       // user-visible state. Fan-out only fires on a real transition — a
       // second cancelled/postponed report promoted after the event was
       // already in that status shouldn't spam watchers a second time.
-      // A Tickets available report has no state of its own: its transition
-      // is the sold-out it clears, which clearSoldOut decides below.
-      const isRealTransition =
-        report.status !== 'available' &&
-        (await hasEventStateChanged(eventId, report.status));
+      const isRealTransition = await hasEventStateChanged(
+        eventId,
+        report.status,
+      );
 
       await db
         .update(eventReports)
@@ -418,15 +451,6 @@ eventReportsRouter.post(
           resolution: 'promoted',
         })
         .where(eq(eventReports.id, reportId));
-
-      // Tickets available clears the promoted sold-out and tells watchers
-      // it's back on sale, the same path as the admin action.
-      if (report.status === 'available') {
-        await clearSoldOut(
-          eventId,
-          `cleared by tickets available report ${reportId}`,
-        );
-      }
 
       // events table has a status column — update it
       // Only map report statuses that correspond to event statuses
@@ -440,11 +464,11 @@ eventReportsRouter.post(
 
       // #1064: fan out watch notifications to every user watching this event.
       // Best-effort — the promotion already committed above, so any error
-      // here can't roll back the user-visible state change. Excluding
-      // 'available' (handled above, by clearSoldOut) narrows the status to
-      // the mapping's keys without an `as` cast. Gated on isRealTransition so
-      // duplicate promotions don't re-spam the same watchers.
-      if (isRealTransition && report.status !== 'available') {
+      // here can't roll back the user-visible state change. The branch
+      // above excludes 'available', so the status narrows to the mapping's
+      // keys without an `as` cast. Gated on isRealTransition so duplicate
+      // promotions don't re-spam the same watchers.
+      if (isRealTransition) {
         await fanoutWatchNotification(
           {
             db,

@@ -16,6 +16,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }));
 
 import {
+  auditLog,
   db,
   eventReportConfirms,
   eventReports,
@@ -219,5 +220,99 @@ describe('Tickets available reports', () => {
       },
     );
     expect(res.status).toBe(200);
+  });
+
+  it('never clears a sold-out promoted after the report was filed', async () => {
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+      createdAt: new Date('2099-01-01T00:00:00Z'),
+    });
+    // The only live sold-out came later than the report.
+    await seedEventReport(eventId, 'user_sold_later', {
+      resolution: 'promoted',
+      resolvedAt: new Date('2099-02-01T00:00:00Z'),
+    });
+    for (let idx = 0; idx < ER_POLICY.confirmsRequired; idx++) {
+      setAuth(`user_confirmer_${idx}`);
+      await post(`/v1/events/${eventId}/reports/${report.id}/confirm`, {});
+    }
+    expect(await isSoldOut(eventId)).toBe(true);
+    const [row] = await db
+      .select({ resolution: eventReports.resolution })
+      .from(eventReports)
+      .where(eq(eventReports.id, report.id));
+    expect(row?.resolution).toBe('rejected');
+  });
+
+  it('lets an admin promote it, clearing the sold-out and auditing what it cleared', async () => {
+    const soldOut = await promoteSoldOut();
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+    });
+    authState.current = {
+      userId: 'admin_user',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    const res = await app.request(
+      `/v1/admin/events/reports/${report.id}/resolve`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ resolution: 'promoted' }),
+      },
+    );
+    expect(res.status).toBe(200);
+    expect(await isSoldOut(eventId)).toBe(false);
+    const [audit] = await db
+      .select({ metadata: auditLog.metadata })
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.report.resolve'));
+    expect(audit?.metadata).toMatchObject({
+      clearedSoldOutReportIds: [soldOut.id],
+    });
+  });
+
+  it('refuses an admin promote when nothing is sold out', async () => {
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'available',
+    });
+    authState.current = {
+      userId: 'admin_user',
+      sessionClaims: { metadata: { role: 'admin' } },
+    };
+    const res = await app.request(
+      `/v1/admin/events/reports/${report.id}/resolve`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ resolution: 'promoted' }),
+      },
+    );
+    expect(res.status).toBe(409);
+  });
+
+  it('refuses a malformed confirm body rather than counting it', async () => {
+    const report = await seedEventReport(eventId, 'user_reporter', {
+      status: 'cancelled',
+    });
+    setAuth('user_a');
+    const res = await app.request(
+      `/v1/events/${eventId}/reports/${report.id}/confirm`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer test-token',
+          'Content-Type': 'application/json',
+        },
+        body: '{"method":"own_evidence"',
+      },
+    );
+    expect(res.status).toBe(422);
   });
 });
