@@ -16,7 +16,7 @@ The user-facing visual redesign of Concert Crawl, called **B+** while it was bei
 | `assets/venues/<key>-hero.html` | The 21 venue-page heroes (1200×420): the glyph large in neon over a quiet backdrop. The SVG inside each file is the asset. |
 | `manifest.json` | Every board with its section, title and size. |
 
-The sections are `01-core` (desktop Browse, Event, Venue, Venues, Watching, Concerts, Artists, Account menu), `02-mobile`, `03-themes`, `04-genre-and-vibe`, `05-filters`, `06-states`, `07-more-screens` (Settings, Search, Passport, Crews, Share, What's new), `08-prices-and-status`, `09-artist`, `10-venue-art` and `11-signed-out`.
+The sections are `01-core` (desktop Browse, Event, Venue, Venues, Watching, Concerts, Artists, Account menu), `02-mobile`, `03-themes`, `04-genre-and-vibe`, `05-filters`, `06-states`, `07-more-screens` (Settings, Search, Passport, Crews, Share, What's new), `08-prices-and-status`, `09-artist`, `10-venue-art`, `11-signed-out` and `12-error-page` (the standalone Something went wrong page, added after the first handoff).
 
 The two `▶` boards in `06-states` (`launch_play_m`, `launch_slow_m`) and `wave_board` are live CSS animations, so open them on the live canvas rather than the JPG.
 
@@ -116,6 +116,19 @@ These are the parts to build once and reuse.
   - **Smaller pieces:** price confirm sheets, more tiers and vendors, notifications (with empty, loading and error states), and the Tell us feedback tab.
   - **PWA:** icon, install surfaces, offline notices, launch.
 - **Signed out** (`11-signed-out`): the beta invite page, with the code field inline, a fanned stack of show cards, and the venue-icon proof row.
+- **Something went wrong** (`12-error-page`, canvas page "Something went wrong"): this replaces the simple error board in `06-states` (`bp-s-error_m`). It is a standalone page that has to render even when the app failed.
+  - **The error:** the real CCMark with its trail snapped and the core dark, the live heading and body, **Try again** first, and the error ID in a copyable chip. There is no app header, nav or Tell us tab, just the logo as a plain link home.
+  - **Signed in:** a Tell us card under the error (on desktop, a 440px card on the right) that already asks **What were you doing?** with six chips. One tap is enough, and the note is optional. The card lists what gets attached: the error ID, the page and the device type. Its states are prompt, form open, sending (the button reads Sending…, with no wave), sent (Loud and clear) and failed (Signal lost). On failure the report is saved on the device and sent on the next launch, with **Send again** and **Edit**.
+  - **Signed out:** no card, just Try again, Go home and the error ID.
+  - **Themes:** the page carries its own copy of the 9 themes' tokens, so it follows the person's theme, Light included. Boards `err-t-*` show the prompt state in each.
+  - **Engineering:**
+    - Build one `StandaloneError` used by a new `app/global-error.tsx` (with its own `<html>` and `<body>`) and by the route `error.tsx` files. Its imports are React and a plain copy object only: no Clerk hooks, ThemeProvider, next/font, images or shared CSS.
+    - Styles are inline: one `<style>` with the theme tokens keyed by `data-theme`, plus a pre-paint script that reads the stored theme. The mark and logo are inline SVG.
+    - Signed-in detection uses Clerk's `__client_uat` cookie, and a 401 on send switches to the signed-out layout.
+    - The send is a plain `fetch` (keepalive, about an 8s timeout) to a same-origin route handler, for example `POST /api/error-report`, that checks the session and forwards to `/v1/feedback` as `bug` with `{ errorId, device, build }`.
+    - The error ID is `error.digest`. A client error, which has none, gets a generated ID that is tagged on its Sentry event.
+    - The device is coarse ("iPhone · Safari"), never the full user agent.
+    - The card is a `<form>` and the chips are a real radio group. Sent and failed move focus to their heading.
 
 ## Data-contract gaps engineering needs to know
 

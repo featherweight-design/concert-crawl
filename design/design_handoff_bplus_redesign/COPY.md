@@ -24,6 +24,7 @@ Almost every screen reuses live copy word for word. The strings below are new or
 | Price submitted | Your price | The label on the pending stub on the success screen, which shows your price with its two confirm dots. Same label as the self-locked price card |
 | Beta invite page | GOT AN INVITE?, Redeem, No code yet?, `${venueCount} VENUES · CHECKED EVERY NIGHT`, THIS WEEK IN DENVER | The code placeholder is `BETA-XXXX-XXXX`, the real multi-use format (`2026-11-10-invite-code-posters.md`); the board's `CRAWL-XXXX` was a guess. The venue count is live data, never a hardcoded 21 |
 | Launch screen | DENVER | The only text |
+| Something went wrong (`12-error-page`) | What were you doing?; One tap is enough. We'll send the error ID with it.; the six chips (Browsing shows, Searching, Opening a show, My shows, Submitting a price, Something else); Anything else? (optional); We'll attach these; Error ID; OPTIONAL (rail code); the Failed body (We couldn't send that just now. It's saved on this device, and we'll send it the next time Concert Crawl opens.); Send again; Edit; the signed-out body (An error occurred loading this page. Try again in a moment.); Go home | Added after the 2026-11-11 copy review, so not reviewed yet. The other strings on the page reuse live copy |
 
 ## Vocabulary flags in live copy (not changed by the designs)
 
