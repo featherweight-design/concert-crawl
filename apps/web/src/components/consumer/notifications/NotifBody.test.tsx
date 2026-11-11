@@ -498,7 +498,7 @@ describe('NotifBody — B+ states', () => {
     ).toBeInTheDocument();
   });
 
-  it('gives the error state its Poll failed eyebrow inside the alert', () => {
+  it('gives the error state its eyebrow inside the alert', () => {
     render(<NotifBody state="error" onRetry={vi.fn()} now={NOW} />);
     expect(
       within(screen.getByRole('alert')).getByText(
