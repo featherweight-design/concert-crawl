@@ -7,6 +7,7 @@
 //   --danger    bad news you can't act on      watch.cancelled
 //   --warning   changed on you / closing       watch.postponed · watch.soldout
 //   --success   good news                      watch.backonsale · watch.pricedrop
+//                                              artist.report_fixed
 //   --fg-muted  a neutral verdict              contest.resolved
 //   --signal    a task — you owe a reply       contest.needs_info
 //   --accent    discovery, not your shows      artist.new_show · crew.*
@@ -98,6 +99,14 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
       ink: 'var(--accent)',
       glyph: 'newshow',
       verb: 'New Denver date',
+    },
+    // Good news about a page the viewer reported, so success ink; the label is
+    // shared with artist.new_show because both are the Artists channel.
+    'artist.report_fixed': {
+      label: 'Artists',
+      ink: 'var(--success)',
+      glyph: 'userfixed',
+      verb: 'Artist page fixed',
     },
     'crew.going': {
       label: 'Crew',

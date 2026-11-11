@@ -17,6 +17,7 @@ export type GlyphName =
   | 'resolved'
   | 'needsinfo'
   | 'newshow'
+  | 'userfixed'
   | 'crew'
   | 'bell';
 
@@ -139,6 +140,25 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       />
       <path
         d="M8.4 10.2a5.4 5.4 0 00-1.5-3.8M11.1 11.1A8.2 8.2 0 006.9 3.7M13.6 11.8A10.9 10.9 0 006.8 1.4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  // A person with a cross: the wrong match was taken off. Reads as lucide's
+  // UserX, which is the glyph the wrong-artist report card uses.
+  userfixed: (
+    <>
+      <circle cx="6" cy="5.2" r="2.2" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M1.8 13.5c0-2.4 1.9-4 4.2-4s4.2 1.6 4.2 4"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M11.6 4.4l3 3m0-3l-3 3"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"

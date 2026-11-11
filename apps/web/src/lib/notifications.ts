@@ -35,6 +35,7 @@ export const NOTIFICATION_CATEGORIES = [
   'contest.resolved',
   'contest.needs_info',
   'artist.new_show',
+  'artist.report_fixed',
   'crew.going',
   'crew.joined',
   'crew.left',

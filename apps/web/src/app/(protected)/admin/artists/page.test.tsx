@@ -35,6 +35,7 @@ interface ListRow {
   hidden: boolean;
   autoMatchedAt: string | null;
   isExhausted: boolean;
+  openReportCount: number;
 }
 
 const row = (overrides: Partial<ListRow> = {}): ListRow => ({
@@ -49,10 +50,12 @@ const row = (overrides: Partial<ListRow> = {}): ListRow => ({
   hidden: false,
   autoMatchedAt: null,
   isExhausted: false,
+  openReportCount: 0,
   ...overrides,
 });
 
 const COUNTS = {
+  reported: 2,
   ambiguous: 3,
   unmatched: 0,
   no_match: 1,
@@ -67,7 +70,7 @@ const json = (body: unknown) => ({ ok: true, json: async () => body });
 interface Harness {
   list: ListRow[];
   /** What the next PATCH answers with, minus `isExhausted`. */
-  patched: Omit<ListRow, 'isExhausted'>;
+  patched: Omit<ListRow, 'isExhausted' | 'openReportCount'>;
   /** Held to keep a PATCH in flight while something else lands. */
   patchGate: Promise<void> | null;
 }
@@ -77,6 +80,33 @@ interface Harness {
 const makeFetchMock = () =>
   vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    if (init?.method === 'POST' && url.endsWith('/reports/dismiss')) {
+      return json({ data: { closed: 1 } });
+    }
+    if (url.includes('/reports')) {
+      return json({
+        data: {
+          matched: {
+            name: 'Bingo Night',
+            photoUrl: null,
+            spotifyArtistId: null,
+            genres: null,
+            nextShow: null,
+            followerCount: 3,
+          },
+          reports: [
+            {
+              id: 'report-1',
+              reason: 'different_artist',
+              note: 'Wrong band',
+              suggestedSpotifyArtistId: '4Z8W4fKeB5YxbusRsdQVPb',
+              createdAt: new Date().toISOString(),
+              reporterHandle: 'fan',
+            },
+          ],
+        },
+      });
+    }
     if (init?.method === 'PATCH') {
       if (harness.patchGate !== null) await harness.patchGate;
       return json({ data: harness.patched });
@@ -135,6 +165,61 @@ describe('AdminArtistsPage', () => {
     // round trip. No GET means no blanking.
     expect(getCount()).toBe(getsAfterLoad);
     expect(screen.queryByText('Loading artists…')).toBeNull();
+  });
+
+  it('leads with a Reported chip and badges a reported row', async () => {
+    harness.list = [row({ openReportCount: 2 })];
+    await renderLoaded();
+
+    const chips = screen
+      .getAllByRole('button')
+      .map((button) => button.textContent)
+      .filter((text) => /\(\d+\)$/.test(text ?? ''));
+    expect(chips[0]).toBe('Reported (2)');
+    expect(within(rowFor('Bingo Night')).getByText('2 REPORTS')).toBeDefined();
+  });
+
+  it('closes the reported count when an identity write lands on a reported row', async () => {
+    harness.list = [row({ openReportCount: 1 })];
+    harness.patched = row({ matchStatus: 'not_an_artist' });
+    await renderLoaded();
+
+    fireEvent.click(
+      within(rowFor('Bingo Night')).getByRole('button', {
+        name: 'Not an artist',
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Reported (1)' }),
+      ).toBeDefined(),
+    );
+  });
+
+  it('opens the reports panel and dismisses without touching the match', async () => {
+    harness.list = [row({ openReportCount: 1 })];
+    await renderLoaded();
+
+    fireEvent.click(
+      within(rowFor('Bingo Night')).getByRole('button', { name: 'Reports' }),
+    );
+    expect(await screen.findByText('Wrong band')).toBeDefined();
+    expect(screen.getByText('@fan', { exact: false })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss reports' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Reported (1)' }),
+      ).toBeDefined(),
+    );
+    expect(screen.queryByText('Wrong band')).toBeNull();
+    expect(screen.queryByText('1 REPORT')).toBeNull();
+    const posts = fetchMock.mock.calls.filter(
+      ([, init]) => init?.method === 'POST',
+    );
+    expect(posts).toHaveLength(1);
   });
 
   it('confirms an auto-matched row with its own pick and moves it to Matched', async () => {
