@@ -1,7 +1,13 @@
 'use client';
 
 import { BottomSheet } from './BottomSheet';
+import { CCMark } from '@/components/brand/cc-mark';
 import { INSTALL_COPY } from './definitions/copy';
+import {
+  EYEBROW_STYLE,
+  PWA_GRADIENT,
+  SHEET_PRIMARY_CLASS,
+} from './definitions/styles';
 
 interface IosHowToSheetProps {
   open: boolean;
@@ -81,31 +87,61 @@ const StepIcon = ({ icon }: { icon: string }) => {
   );
 };
 
+const StepTile = ({ icon, num }: { icon: string; num: string }) => (
+  <div className="relative mt-1 shrink-0">
+    <div
+      className="flex h-12 w-12 items-center justify-center rounded-xl border text-signal"
+      style={{
+        borderColor: 'color-mix(in oklab, var(--signal) 45%, transparent)',
+        background: 'color-mix(in oklab, var(--signal) 8%, var(--surface-1))',
+      }}
+    >
+      {icon === 'home' ? <CCMark size={26} /> : <StepIcon icon={icon} />}
+    </div>
+    <span
+      aria-hidden="true"
+      className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-extrabold text-fg-on-accent"
+      style={{ background: PWA_GRADIENT }}
+    >
+      {num}
+    </span>
+  </div>
+);
+
 export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
   <BottomSheet open={open} onClose={onClose} title={INSTALL_COPY.sheet.title}>
     <div className="flex flex-col gap-4">
-      <span
-        className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {INSTALL_COPY.sheet.eyebrow}
-      </span>
-      <h3 className="text-lg font-extrabold text-fg">
-        {INSTALL_COPY.sheet.title}
-      </h3>
-      <p className="text-sm text-fg-muted">{INSTALL_COPY.sheet.sub}</p>
+      <div className="flex items-start gap-4">
+        <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-2xl bg-bg shadow-lg">
+          <CCMark size={40} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <span className="text-signal" style={EYEBROW_STYLE}>
+            {INSTALL_COPY.sheet.eyebrow}
+          </span>
+          <h3 className="text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-fg">
+            {INSTALL_COPY.sheet.title}
+          </h3>
+        </div>
+      </div>
+      <p className="text-[15px] leading-relaxed text-fg-muted">
+        {INSTALL_COPY.sheet.sub}
+      </p>
       <ol className="flex flex-col gap-3">
         {INSTALL_COPY.sheet.steps.map((step) => (
-          <li key={step.num} className="flex items-start gap-3">
-            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-fg">
-              <StepIcon icon={step.icon} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-semibold text-fg">
-                <span className="mr-1 text-fg-subtle">{step.num}.</span>
+          <li
+            key={step.num}
+            className="flex items-start gap-4 rounded-2xl border border-border bg-surface-2 p-4"
+          >
+            <StepTile icon={step.icon} num={step.num} />
+            <div className="flex min-w-0 flex-col gap-1">
+              <span className="text-[16px] font-bold text-fg">
+                <span className="sr-only">{step.num}. </span>
                 {step.label}
               </span>
-              <span className="text-xs text-fg-muted">{step.detail}</span>
+              <span className="text-[14px] leading-snug text-fg-muted">
+                {step.detail}
+              </span>
             </div>
           </li>
         ))}
@@ -113,11 +149,11 @@ export const IosHowToSheet = ({ open, onClose }: IosHowToSheetProps) => (
       <button
         type="button"
         onClick={onClose}
-        className="mt-2 inline-flex min-h-[44px] items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent"
+        className={`mt-1 ${SHEET_PRIMARY_CLASS}`}
+        style={{ background: PWA_GRADIENT }}
       >
         {INSTALL_COPY.sheet.done}
       </button>
-      <p className="text-xs text-fg-subtle">{INSTALL_COPY.dismissNote}</p>
     </div>
   </BottomSheet>
 );

@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, cleanup, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  cleanup,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 
 const isIosSafariMock = vi.fn(() => false);
 const isStandaloneMock = vi.fn(() => false);
@@ -14,6 +20,7 @@ vi.mock('@/lib/pwa/beforeinstallprompt', () => ({
 // Import after mocks are set up.
 import { InstallSlot } from '../InstallSlot';
 import { dismissOnce } from '@/lib/pwa/install-dismissal';
+import { INSTALL_COPY } from '../definitions/copy';
 
 afterEach(() => {
   cleanup();
@@ -46,6 +53,27 @@ describe('InstallSlot', () => {
       name: /install concert crawl/i,
     });
     expect(button).not.toBeNull();
+  });
+
+  it('leaves a status note when the slot is dismissed, then hides', () => {
+    isIosSafariMock.mockReturnValue(true);
+    render(<InstallSlot />);
+    fireEvent.click(
+      screen.getByRole('button', { name: INSTALL_COPY.dismissAria }),
+    );
+    expect(
+      screen.queryByRole('button', { name: /install concert crawl/i }),
+    ).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe(
+      INSTALL_COPY.dismissNote,
+    );
+  });
+
+  it('shows no note when the slot was already dismissed on an earlier visit', () => {
+    isIosSafariMock.mockReturnValue(true);
+    dismissOnce();
+    render(<InstallSlot />);
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('hides after dismissOnce marks a first dismiss (quiet state)', () => {

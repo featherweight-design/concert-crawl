@@ -11,6 +11,11 @@
 
 import { BottomSheet } from './BottomSheet';
 import { POST_WATCH_COPY } from './definitions/copy';
+import {
+  EYEBROW_STYLE,
+  PWA_GRADIENT,
+  SHEET_PRIMARY_CLASS,
+} from './definitions/styles';
 
 interface PostWatchSheetProps {
   open: boolean;
@@ -42,30 +47,6 @@ const BellIcon = () => (
   </svg>
 );
 
-const ShareIcon = () => (
-  <svg
-    width="21"
-    height="21"
-    viewBox="0 0 24 24"
-    fill="none"
-    aria-hidden="true"
-  >
-    <path
-      d="M12 3v11M12 3l-4 4M12 3l4 4"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M6 12v7a1 1 0 001 1h10a1 1 0 001-1v-7"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-
 export const PostWatchSheet = ({
   open,
   onClose,
@@ -81,33 +62,28 @@ export const PostWatchSheet = ({
   return (
     <BottomSheet open={open} onClose={onClose} title={srTitle}>
       <div className="flex flex-col gap-3">
-        <span
-          className="text-[10px] font-bold uppercase tracking-[0.14em] text-accent"
-          style={{ fontFamily: 'var(--font-mono)' }}
+        <div
+          className="mb-1 flex h-14 w-14 items-center justify-center rounded-2xl border text-accent"
+          style={{
+            borderColor: 'color-mix(in oklab, var(--accent) 50%, transparent)',
+            background: 'color-mix(in oklab, var(--accent) 14%, transparent)',
+          }}
         >
+          <BellIcon />
+        </div>
+        <span className="text-accent" style={EYEBROW_STYLE}>
           {copy.eyebrow}
         </span>
-        <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-accent"
-            style={{
-              background: 'color-mix(in oklab, var(--accent) 16%, transparent)',
-            }}
-          >
-            {isIos ? <ShareIcon /> : <BellIcon />}
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-lg font-extrabold leading-snug text-fg">
-              {copy.title}
-            </h3>
-            <p className="text-sm text-fg-muted">{copy.sub}</p>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-col gap-2">
+        <h3 className="text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-fg">
+          {copy.title}
+        </h3>
+        <p className="text-[15px] leading-relaxed text-fg-muted">{copy.sub}</p>
+        <div className="mt-3 flex flex-col gap-1">
           <button
             type="button"
             onClick={() => void onTurnOn()}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-fg-on-accent"
+            className={SHEET_PRIMARY_CLASS}
+            style={{ background: PWA_GRADIENT }}
           >
             {isIos
               ? POST_WATCH_COPY.ios.showMe
@@ -116,7 +92,7 @@ export const PostWatchSheet = ({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-semibold text-fg"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl px-4 text-[15px] font-semibold text-fg-muted hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           >
             {copy.notNow}
           </button>
