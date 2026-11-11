@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { postersHref, readSelection } from '../../posters/posters-href';
+import { postersHref, readSelection } from '@/lib/poster/posters-href';
 
 /**
  * `/admin/invite-codes/[id]/poster`, the old one-code print page. The Posters
