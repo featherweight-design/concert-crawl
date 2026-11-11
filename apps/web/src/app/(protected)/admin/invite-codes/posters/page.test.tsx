@@ -26,6 +26,9 @@ vi.mock('next/navigation', () => ({
     throw new Error('NEXT_NOT_FOUND');
   },
 }));
+vi.mock('@/app/(protected)/admin/invite-codes/actions', () => ({
+  mintInviteCodeWithOptions: vi.fn(),
+}));
 vi.mock('./poster.css', () => ({}));
 
 import InviteCodePostersPage from './page';

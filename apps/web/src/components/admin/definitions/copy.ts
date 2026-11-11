@@ -2046,6 +2046,7 @@ export const ADMIN_COPY = {
       subtitle:
         'One shared code per poster. Pick the code, pick the look, print at Letter.',
       steps: { code: 'Code', look: 'Look', print: 'Print' },
+      newCode: 'New poster code',
       seatsTaken: (taken: number, max: number) =>
         `${taken} of ${max} seats taken`,
       expiresNever: 'Never expires',
@@ -2056,6 +2057,21 @@ export const ADMIN_COPY = {
       // From the mobile board: the one-card picker's count of the rest.
       moreCodes: (more: number, full: number) =>
         `${more} more poster code${more === 1 ? '' : 's'}${full > 0 ? `, ${full} full` : ''}`,
+      form: {
+        label: "Where it's going",
+        labelHint: 'Only admins see this. It helps you tell posters apart.',
+        seats: 'Seats',
+        seatsOther: 'Other',
+        seatsHint: 'How many people this one code lets in. 1 to 500.',
+        expires: 'Expires',
+        never: 'Never',
+        days30: '30 days',
+        days90: '90 days',
+        submit: 'Mint and preview',
+        pending: 'Minting…',
+        cancel: 'Cancel',
+        previewNote: "The preview switches to the new code once it's minted.",
+      },
       look: {
         night: {
           name: 'Night',
@@ -2088,7 +2104,7 @@ export const ADMIN_COPY = {
       },
       notPrintable:
         "That code can't be printed: it's full, expired, revoked or a personal code. Pick another.",
-      noCodes: 'No poster codes yet. Mint one on the Codes tab.',
+      noCodes: 'No poster codes yet. Mint one to print a poster.',
     },
   },
 

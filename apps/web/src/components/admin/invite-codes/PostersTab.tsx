@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Download,
   Info,
+  Plus,
   Printer,
   ScanLine,
   Scissors,
@@ -18,6 +19,7 @@ import type { PosterVenueData } from '@/lib/poster/load-poster-venues';
 import { DENVER_TIME_ZONE } from '@/lib/time';
 import { postersHref, type PosterSelection } from '@/lib/poster/posters-href';
 import { InviteCodesTabs } from './InviteCodesTabs';
+import { NewPosterCodeForm } from './NewPosterCodeForm';
 import { PosterFit } from './PosterFit';
 import { PosterSheet, type PosterLook } from './PosterSheet';
 
@@ -89,10 +91,14 @@ export function PostersTab({
   );
   const [look, setLook] = useState<PosterLook>(initial.look);
   const [tabs, setTabs] = useState(initial.tabs);
+  const [formOpen, setFormOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
 
   const selected = printable.find((card) => card.id === selectedId) ?? null;
-  const refused = selectedId !== null && selected === null;
+  // Only the code the URL asked for is refused: a code just minted is
+  // missing only until the revalidated list arrives.
+  const refused =
+    selectedId !== null && selectedId === initial.code && selected === null;
   const folded = selected !== null && !listOpen;
   const hiddenFull = cards.filter((card) => card.full).length;
 
@@ -124,7 +130,26 @@ export function PostersTab({
             <div className="pt-step-h">
               <span className="pt-n">1</span>
               <b id="pt-step-code">{copy.steps.code}</b>
+              {formOpen ? null : (
+                <button
+                  type="button"
+                  className="pt-link"
+                  onClick={() => setFormOpen(true)}
+                >
+                  <Plus size={14} aria-hidden />
+                  {copy.newCode}
+                </button>
+              )}
             </div>
+            {formOpen ? (
+              <NewPosterCodeForm
+                onCancel={() => setFormOpen(false)}
+                onMinted={(id) => {
+                  pick(id);
+                  setFormOpen(false);
+                }}
+              />
+            ) : null}
             {cards.length === 0 ? (
               <p className="pt-note">{copy.noCodes}</p>
             ) : (
@@ -298,7 +323,7 @@ export function PostersTab({
         </div>
 
         {selected ? (
-          <div className="pt-preview">
+          <div className="pt-preview" data-dim={formOpen}>
             <div className="pt-preview-h">
               <span className="pt-mono">{copy.previewLabel}</span>
               <span className="pt-spec" data-testid="poster-preview-spec">
@@ -320,6 +345,9 @@ export function PostersTab({
                   tabs={tabs}
                 />
               </PosterFit>
+              {formOpen ? (
+                <p className="pt-mat-note">{copy.form.previewNote}</p>
+              ) : null}
             </div>
           </div>
         ) : null}
