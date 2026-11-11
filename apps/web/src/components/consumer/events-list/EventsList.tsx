@@ -6,7 +6,7 @@ import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types';
 import { useEvents } from '@/lib/queries/use-events';
 import { useWatching } from '@/lib/queries/use-watching';
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row';
-import { dateGroupLabel } from '@/components/consumer/definitions/lib';
+import { dateGroupLabel, isToday } from '@/components/consumer/definitions/lib';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 import { DayTile } from './DayTile';
 
@@ -92,7 +92,7 @@ export const EventsList = ({
             return (
               <section key={date} aria-label={label}>
                 <div className="mb-3 flex items-center gap-3">
-                  <DayTile date={date} />
+                  <DayTile date={date} today={isToday(date)} />
                   <h2
                     className="shrink-0 leading-none"
                     style={{

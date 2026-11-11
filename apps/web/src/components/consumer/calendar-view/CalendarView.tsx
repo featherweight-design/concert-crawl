@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type {
   EventsAvailabilityResponse,
@@ -184,24 +184,18 @@ export function CalendarView({
                     {copy.showCount(dateEvents.length)}
                   </span>
                 </div>
-                <div>
-                  {dateEvents.map((event, idx) => (
-                    <Fragment key={event.id}>
-                      {idx > 0 && (
-                        <div
-                          className="h-px bg-border"
-                          style={{ marginLeft: 58 }}
-                        />
-                      )}
-                      <EventRow
-                        show={fromEventWithVenue(event, {
-                          isWatching: watchedSet.has(event.id),
-                        })}
-                        surface="browse"
-                        filterVibe={filterVibe}
-                        className="py-2.5"
-                      />
-                    </Fragment>
+                {/* Browse rows are carded (B+), so a gap replaces the
+                    dividers, as in the list view. */}
+                <div className="flex flex-col gap-2.5">
+                  {dateEvents.map((event) => (
+                    <EventRow
+                      key={event.id}
+                      show={fromEventWithVenue(event, {
+                        isWatching: watchedSet.has(event.id),
+                      })}
+                      surface="browse"
+                      filterVibe={filterVibe}
+                    />
                   ))}
                 </div>
               </section>

@@ -635,6 +635,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           <HeroEventCard
             event={heroEvent}
             isWatching={watchedIds.has(heroEvent.id)}
+            filterVibe={
+              typeof params['filterVibe'] === 'string'
+                ? params['filterVibe']
+                : undefined
+            }
           />
         </div>
       )}

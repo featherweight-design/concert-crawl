@@ -491,4 +491,14 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
       );
     });
   });
+
+  // B+ B5: Browse rows are carded, so they take the genre edge too.
+  it('cards a Browse row with the lead genre edge', () => {
+    const { container } = render(
+      <EventRow show={makeShow({ genres: ['folk'] })} surface="browse" />,
+    );
+    const card = container.firstElementChild;
+    if (!(card instanceof HTMLElement)) throw new Error('no card');
+    expect(card.style.borderLeftColor).toBe('var(--genre-folk)');
+  });
 });
