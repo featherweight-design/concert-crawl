@@ -29,6 +29,7 @@ import {
 } from '@/components/admin/primitives';
 import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock';
 import { VenueExpectedBadge } from '@/components/admin/venue-expected-badge/VenueExpectedBadge';
+import { CrawlPausedBadge } from '@/components/admin/crawl-paused-badge';
 import { deriveVenueStatus } from '@/lib/admin/venue-status';
 import {
   IdentityArt,
@@ -1010,6 +1011,7 @@ export function VenueDetailsClient({
                     {venue.consecutiveFailures} consec. failures
                   </StatusBadge>
                 )}
+                <CrawlPausedBadge crawlPausedAt={venue.crawlPausedAt} />
                 <VenueExpectedBadge venueId={venue.id} />
               </div>
               <h2
