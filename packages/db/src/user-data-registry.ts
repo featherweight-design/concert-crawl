@@ -159,6 +159,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     exportColumns: ['report_id', 'confirmed_at'],
     reason: 'Same reasoning as submission_confirms.',
   },
+  {
+    tableName: 'artist_reports',
+    disposition: 'delete',
+    userIdColumn: 'reporter_id',
+    otherUserIdColumns: ['resolved_by'],
+    exportKey: 'artistReports',
+    exportColumns: ['reason', 'note', 'status', 'created_at'],
+    reason:
+      "The reporter's own flag on an artist page, with their free-text note. " +
+      '`resolved_by` is the admin who closed it and is not a customer, so it ' +
+      'stays as the record of who acted.',
+  },
 
   // ---- Crews ----
   {

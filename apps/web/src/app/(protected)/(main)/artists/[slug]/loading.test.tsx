@@ -54,6 +54,8 @@ const LOADED: ArtistDetailResponse = {
   past: [],
   history: { count: 0, venues: [] },
   following: null,
+  myOpenReport: null,
+  match: null,
 };
 
 describe('artist route skeleton', () => {

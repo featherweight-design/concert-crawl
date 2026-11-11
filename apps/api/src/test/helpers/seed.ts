@@ -10,6 +10,7 @@ import {
   crewMutes,
   crews,
   emailSendLog,
+  artistReports,
   eventReportConfirms,
   eventReports,
   events,
@@ -57,7 +58,7 @@ export async function clearTables(): Promise<void> {
       // a leftover enabled row silently satisfies a later suite's release gate.
       // `rate_limit_buckets` too: limits are durable now (#528), so a bucket
       // spent in one file would otherwise 429 a later file's first request.
-      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, invite_code_redemptions, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags, rate_limit_buckets RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE notifications, artist_reports, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, invite_code_redemptions, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags, rate_limit_buckets RESTART IDENTITY CASCADE`,
     );
   });
   // The loader memoizes for 30s in-process, and integration tests share one
@@ -523,6 +524,13 @@ export const seedUserWithDataEverywhere = async (): Promise<string> => {
   await testDb.insert(inviteCodeRedemptions).values({
     codeId: redeemedCodeId,
     userId,
+  });
+
+  // ---- Artist report (delete, keyed on reporter_id) ----
+  await testDb.insert(artistReports).values({
+    artistId: randomUUID(),
+    reporterId: userId,
+    reason: 'other',
   });
 
   // ---- Self-check ----

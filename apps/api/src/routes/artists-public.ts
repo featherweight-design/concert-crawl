@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import type { SpotifyCandidateSnapshot } from '@concert-crawl/db';
 import {
   db,
   artists,
@@ -29,10 +30,12 @@ import {
 } from '@concert-crawl/types';
 import type {
   ArtistDetailResponse,
+  ArtistMatchSummary,
   ArtistPastShow,
   ArtistShow,
   ArtistSuggestion,
 } from '@concert-crawl/types';
+import { loadOpenReport } from './artist-reports.js';
 import { loadNextShowByCanonical } from '../lib/artist-follows.js';
 import { billsCanonicalName } from '../lib/event-billing.js';
 import {
@@ -43,6 +46,23 @@ import { parsePrice } from '../lib/price.js';
 import { todayInDenver } from '../lib/time.js';
 
 export const artistsPublicRouter = new Hono();
+
+// The compare panel in the report sheet: what the page is matched to. Genres
+// and the link come from the match-time candidate snapshot; `genres` stays
+// null when that snapshot was never genre-hydrated.
+function matchSummary(
+  spotifyArtistId: string | null,
+  candidates: SpotifyCandidateSnapshot[] | null,
+): ArtistMatchSummary | null {
+  if (!spotifyArtistId) return null;
+  const hit = candidates?.find((cand) => cand.id === spotifyArtistId);
+  return {
+    spotifyArtistId,
+    spotifyUrl:
+      hit?.spotifyUrl ?? `https://open.spotify.com/artist/${spotifyArtistId}`,
+    genres: hit?.genres ?? null,
+  };
+}
 
 // Past shows are capped so an artist with a decade of history can't produce an
 // unbounded response. EXTENSION POINT (Item 3): when the page grows a
@@ -274,11 +294,13 @@ artistsPublicRouter.get(
 
     const [artist] = await db
       .select({
+        id: artists.id,
         name: artists.name,
         slug: artists.slug,
         canonicalName: artists.canonicalName,
         spotifyArtistId: artists.spotifyArtistId,
         photoUrl: artists.photoUrl,
+        spotifyCandidates: artists.spotifyCandidates,
       })
       .from(artists)
       // A hidden row (#1342) answers exactly like a slug that never existed —
@@ -460,6 +482,10 @@ artistsPublicRouter.get(
       following = Boolean(followRow);
     }
 
+    const myOpenReport = authInfo?.userId
+      ? await loadOpenReport(artist.id, authInfo.userId)
+      : null;
+
     const data: ArtistDetailResponse = {
       artist: {
         name: artist.name,
@@ -471,6 +497,8 @@ artistsPublicRouter.get(
       past,
       history: { count: past.length, venues: historyVenues },
       following,
+      myOpenReport,
+      match: matchSummary(artist.spotifyArtistId, artist.spotifyCandidates),
     };
 
     return ctx.json({ success: true, data });

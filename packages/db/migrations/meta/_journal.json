@@ -666,6 +666,13 @@
       "when": 1793664000000,
       "tag": "0094_artist_name_locked_at",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1793750400000,
+      "tag": "0095_artist_reports",
+      "breakpoints": true
     }
   ]
 }
