@@ -206,6 +206,17 @@ All names, handles, emails, counts and prices in the boards are example data. Ve
   - Save failed.
   - Loading for all 15 desktop pages, plus one mobile list skeleton and one mobile detail skeleton.
 
+### Added in the self-review (49 boards)
+
+Each sits at the end of its section's folder, under the same names as the canvas captions.
+
+- **02 Needs you:** an answered item with Undo, the Snooze menu, a full-screen item on mobile, and Couldn't load (the error pattern for every page: chrome stays, only the content area changes).
+- **03 Health:** the LLM budget panel, opened from the cost tile.
+- **04 Venues:** the Details tab with its sticky Save bar, the Guide tab and its edit panel, the Hide from site and Delete venue dialogs, Inspect a fetched page, and Runs on mobile.
+- **05 Add a venue:** Basics, Review and Gone live on desktop; Source, Icon and Guide on mobile.
+- **06 Events, Artists, Prices:** Add a show by hand, Merge duplicates, the venue and status filter popovers, Past shows, Edit price on desktop, Artists Matched and Not artists tabs, Reject a submitted price, and Artists, Submitted prices and Price checks on mobile.
+- **07:** the Crawl runs page (desktop, run detail panel, Crawl all dialog, running state, mobile); role change with Undo, Email revealed, the Person ⋯ menu; Edit an invite code and Reactivate; adding a person to a flag and a flag on mobile; the error report and venue suggestion panels and the Done tab; Test email sent; Not found, Signed out and Offline.
+
 ## Engineering needs to build
 
 Each section's canvas card lists these. This is the full list in one place. None is a design task, and some need a schema change. Every migration is expand/contract.
@@ -252,11 +263,18 @@ Each section's canvas card lists these. This is the full list in one place. None
 20. **Sentry error reports grouped** by the number of people affected.
 21. **An Activity log page** over the existing admin audit records, for admins only (fan behavior stays in PostHog). Add audit entries for the admin actions not recorded yet, such as Show email, invite codes and replies, in line with CLAUDE.md's "audit every admin action".
 22. **Remove the Settings page.** The admin theme follows the app theme.
+23. **Shows added by hand** that the next crawl never removes, and **Merge duplicates**: Watchers, prices and reports move to the kept listing and the other redirects.
+24. **Crawl all venues now** from admin (a workflow dispatch that keeps the 3 s pace and robots.txt checks and skips paused and blocked venues), with progress the page can read.
+25. **Hide from site** (keeps everything, stops crawling) and **Delete venue** only for venues with no shows or Watchers.
+26. **A Not artists list** so tours, series and promoters stop reappearing in To check.
+27. **Unsaved edits survive** a signed-out session or going offline, and are sent once the admin is back.
 
 ## Proposals to confirm (Hugh)
 
 - **Send feedback.** Moving it to the account menu and removing the edge tab at launch was proposed in the last round. If Hugh changes it, the fan boards in `07` change with it.
 - **Arena hero accent.** A faint crescent moon and stars over the skyline, because the Arena backdrop is the building seen from outside. A ring of ceiling lights is the alternative if it should read as indoors.
+
+- **Person ⋯ menu.** Message them, Sign them out everywhere and Block are new admin powers. Block (no sign-in, no submissions) is the one to decide on; drop it if moderation stays out of scope for launch.
 
 ## Accessibility notes
 
