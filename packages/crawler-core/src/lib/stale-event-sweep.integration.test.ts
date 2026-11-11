@@ -98,6 +98,28 @@ describe('sweepStaleEvents (#675)', () => {
     expect(await statusOf(stale)).toBe('cancelled');
   });
 
+  // B+ A5: the sweep's cancellation is No longer listed, never Cancelled, and
+  // it tells nobody.
+  it('marks what it cancels as delisted, and notifies nobody', async () => {
+    const venueId = await seedVenue();
+    const stale = await seedEvent(venueId, {
+      missingDaysAgo: STALE_EVENT_CANCEL_DAYS + 1,
+    });
+    const now = new Date();
+
+    await sweepStaleEvents(now);
+
+    const [row] = await db
+      .select({ delistedAt: events.delistedAt })
+      .from(events)
+      .where(eq(events.id, stale));
+    expect(row?.delistedAt?.getTime()).toBe(now.getTime());
+    const sent = await db.execute(
+      sql`SELECT count(*)::int AS n FROM notifications`,
+    );
+    expect(sent[0]?.n).toBe(0);
+  });
+
   it('bumps updatedAt so the cancellation surfaces in recently-changed views', async () => {
     const venueId = await seedVenue();
     const stale = await seedEvent(venueId, {
