@@ -1,8 +1,25 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from '@testing-library/react';
 import { qrPath, qrSvg } from '@/lib/poster/poster-rule';
+
+const { mint } = vi.hoisted(() => ({
+  mint: vi.fn(async () => ({
+    ok: true,
+    id: 'code-new',
+    code: 'BETA-NEW0-0000',
+  })),
+}));
+vi.mock('@/app/(protected)/admin/invite-codes/actions', () => ({
+  mintInviteCodeWithOptions: mint,
+}));
 
 import { PostersTab, type PosterCodeCard } from './PostersTab';
 
@@ -46,6 +63,7 @@ describe('PostersTab', () => {
   });
   afterEach(() => {
     cleanup();
+    mint.mockClear();
     vi.restoreAllMocks();
   });
 
@@ -170,10 +188,63 @@ describe('PostersTab', () => {
     },
   );
 
+  it('validates seats from 1 to 500 before minting', () => {
+    renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /New poster code/ }));
+    expect(
+      screen.getByText(
+        "The preview switches to the new code once it's minted.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'Other' }));
+    const seats = screen.getByRole('textbox', { name: 'Seats' });
+    const submit = screen.getByRole('button', { name: 'Mint and preview' });
+    for (const typed of ['', '0', '501', '12.5']) {
+      fireEvent.change(seats, { target: { value: typed } });
+      expect(submit).toBeDisabled();
+    }
+    fireEvent.change(seats, { target: { value: '500' } });
+    expect(submit).toBeEnabled();
+  });
+
+  it('mints through the audited action and selects the new code', async () => {
+    const view = renderTab();
+    fireEvent.click(screen.getByRole('button', { name: /New poster code/ }));
+    fireEvent.change(
+      screen.getByRole('textbox', { name: /Where it's going/ }),
+      {
+        target: { value: 'Record shop on Colfax' },
+      },
+    );
+    fireEvent.click(screen.getByRole('radio', { name: '100' }));
+    fireEvent.click(screen.getByRole('radio', { name: '90 days' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Mint and preview' }));
+    });
+    expect(mint).toHaveBeenCalledWith({
+      expiresIn: '90d',
+      label: 'Record shop on Colfax',
+      maxUses: 100,
+    });
+    expect(screen.queryByTestId('new-poster-code')).toBeNull();
+    // The revalidated page brings the new code in; it is the one selected.
+    const fresh = { ...card('new'), id: 'code-new' };
+    view.rerender(
+      <PostersTab
+        cards={[fresh, ...CARDS]}
+        typedUrl="concertcrawl.app/i"
+        venues={{ venueCount: 21, venueNames: ['Hi-Dive'], moreVenues: true }}
+        initial={{ code: null, look: 'night', tabs: false }}
+      />,
+    );
+    expect(sheet()).toHaveAttribute('data-url', fresh.url);
+    expect(window.location.search).toBe('?code=code-new');
+  });
+
   it('says so when there is no poster code yet', () => {
     renderTab([]);
     expect(
-      screen.getByText('No poster codes yet. Mint one on the Codes tab.'),
+      screen.getByText('No poster codes yet. Mint one to print a poster.'),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('poster-sheet')).toBeNull();
   });
