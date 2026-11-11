@@ -43,9 +43,9 @@ jobs:
     # secrets: a dispatch from any other branch would run that branch's code
     # with them. `github.ref` here is the caller's ref.
     if: github.ref == 'refs/heads/main'
-    # Pinned with the Playwright smoke jobs, which rely on this image's system
-    # libraries, so the crawler does not move to a new image untested. Move
-    # every `ubuntu-24.04` pin together.
+    # Pinned with the Playwright smoke jobs for consistency only: this job
+    # does not use the runner's system libraries or apt. Moving it to a new
+    # image needs a green crawler image build, nothing more.
     runs-on: ubuntu-24.04
     environment: ${{ inputs.environment }}
     # Triggers: 180 min. A trigger-all queues every venue (20 today, about a

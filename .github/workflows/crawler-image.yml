@@ -31,9 +31,9 @@ permissions: read-all
 jobs:
   build-and-verify:
     name: Build and verify crawler image
-    # Pinned with the Playwright smoke jobs, which rely on this image's system
-    # libraries, so the crawler does not move to a new image untested. Move
-    # every `ubuntu-24.04` pin together.
+    # Pinned with the Playwright smoke jobs for consistency only: this job
+    # does not use the runner's system libraries or apt. Moving it to a new
+    # image needs a green crawler image build, nothing more.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
