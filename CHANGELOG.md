@@ -1,3 +1,13 @@
+## [1.314.1](https://github.com/featherweight-design/concert-crawl/compare/v1.314.0...v1.314.1) (2026-11-11)
+
+
+### Bug Fixes
+
+* **legal:** date Terms and Privacy to the ship day ([232c4a3](https://github.com/featherweight-design/concert-crawl/commit/232c4a3849bd1342a3e1a5f09c8c18b1c166e5a3))
+* **legal:** describe a free app in Terms, Privacy and settings copy ([6fa4aba](https://github.com/featherweight-design/concert-crawl/commit/6fa4aba21e7a49137b10d562c867ec212568cf17))
+* **legal:** drop "plan" from deletion copy; pin no billing promise in tests ([ce9361a](https://github.com/featherweight-design/concert-crawl/commit/ce9361af432a0c9880540ffea52d73221e476095))
+* **legal:** keep Terms and Privacy dated November 10 (Mountain Time) ([287afe4](https://github.com/featherweight-design/concert-crawl/commit/287afe4b0fc9acd9fb30debf6e5a4022c98fdefb))
+
 # [1.314.0](https://github.com/featherweight-design/concert-crawl/compare/v1.313.2...v1.314.0) (2026-11-11)
 
 
