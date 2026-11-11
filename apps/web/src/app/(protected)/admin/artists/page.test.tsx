@@ -330,6 +330,22 @@ describe('AdminArtistsPage', () => {
     ).toBeDefined();
   });
 
+  it('keeps a row reported when restoring its page, which leaves reports open', async () => {
+    harness.list = [row({ hidden: true, openReportCount: 1 })];
+    harness.patched = row({ hidden: false });
+    await renderLoaded();
+
+    fireEvent.click(
+      within(rowFor('Bingo Night')).getByRole('button', { name: 'Restore' }),
+    );
+
+    await waitFor(() =>
+      expect(within(rowFor('Bingo Night')).queryByText('Hidden')).toBeNull(),
+    );
+    expect(within(rowFor('Bingo Night')).getByText('1 REPORT')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Reported (2)' })).toBeDefined();
+  });
+
   it('keeps a given-up row given up when only its visibility changes', async () => {
     harness.list = [row({ isExhausted: true })];
     harness.patched = row({ hidden: true });
