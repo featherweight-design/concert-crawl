@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
-import { artistReports, db, notifications } from '@concert-crawl/db';
+import { artistReports, notifications } from '@concert-crawl/db';
+import type { db } from '@concert-crawl/db';
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
