@@ -22,6 +22,12 @@ export const NOTIFICATIONS_COPY = {
   panelSub: (count: number): string => (count === 1 ? '1 new' : `${count} new`),
   markAll: 'Mark all read',
   markedAll: 'All caught up.',
+  /**
+   * Holds the count's place while the first page is in flight or has failed
+   * (B+ `bp-s-notif_load_m`). A placeholder, never a claim: it is hidden from
+   * assistive tech, and the loading state speaks for itself.
+   */
+  countPending: '…',
   seeAll: (count: number): string =>
     count > 1 ? `See all ${count}` : 'See it',
   menuRow: 'Notifications',
@@ -30,6 +36,8 @@ export const NOTIFICATIONS_COPY = {
   loadMore: 'Older notifications',
   loading: 'Checking what you missed…',
   loadingVisible: 'Catching up…',
+  /** The error state's eyebrow (B+ `bp-s-notif_error_m`). */
+  errorEyebrow: 'Poll failed',
   error: "Couldn't reach the crawl.",
   errorBody: "Poll failed. Nothing's lost: it's all still on the server.",
   errorAction: 'Retry',
@@ -38,6 +46,8 @@ export const NOTIFICATIONS_COPY = {
    * back to where it was and the button reads as if it undid itself.
    */
   actionFailed: "That didn't stick. Nothing changed. Try again.",
+  /** The empty state's eyebrow (B+ `bp-s-notif_empty_m`). */
+  emptyEyebrow: 'All caught up',
   emptyTitle: 'All quiet.',
   emptyBody:
     "Nothing's dropped, moved, or sold out on you yet. We'll make noise when it does.",

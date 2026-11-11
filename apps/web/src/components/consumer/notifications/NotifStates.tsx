@@ -1,95 +1,66 @@
-// The panel's three non-list states (#737): loading, empty, error. Ported from
-// notifications-panel.jsx.
+// The panel's three non-list states (#737, restyled for B+ in B19): loading,
+// empty, error.
 //
-// LOADING is a skeleton that is box-identical to a real R2 row, so nothing
-// jumps when the data lands. The shimmer is decorative and `aria-hidden`; the
-// spoken form is one visually-hidden sentence inside a single
-// role="status"/aria-busy region, not one per skeleton.
+// LOADING is a skeleton that holds a real row's shape (README rule 9) under a
+// "Catching up…" divider (`06-states/bp-s-notif_load_m`), and the rows fade
+// down the panel the way the board draws them. The sweep is the app's one
+// skeleton sweep (`SkeletonBlock`), static under reduced motion. The spoken
+// form is one visually-hidden sentence inside a single role="status"/aria-busy
+// region, not one per skeleton.
 //
-// Both buttons render only when their handler is wired. The props are
-// optional, so an unwired caller would otherwise draw a live-looking control
-// that does nothing — and an inert Retry is a worse error state than one that
-// only explains itself. Same rule as NotifHeader's controls.
-//
-// The Retry and empty CTA buttons keep their DRAWN size (they are ~34px and
-// ~36px tall by design) and gain a 44px hit area from `.notif-hit44`, a
-// transparent pseudo-element in globals.css. Both requirements are satisfied:
-// the design table's "deliberately not raised" refers to the visual box.
+// EMPTY and ERROR are the B+ state card (`bp-s-notif_empty_m`,
+// `bp-s-notif_error_m`). Both actions render only when their handler is wired:
+// the props are optional, so an unwired caller would otherwise draw a
+// live-looking control that does nothing, and an inert Retry is a worse error
+// state than one that only explains itself. Same rule as NotifHeader's
+// controls. The card's action is 44px tall as drawn, so it needs no
+// `.notif-hit44` overlay.
 
+import { SkeletonBlock } from '@/components/consumer/skeleton/SkeletonBlock';
+import { StateCard } from '@/components/consumer/empty-state/StateCard';
 import { NOTIFICATIONS_COPY } from './definitions/copy';
+import { NotifDayDivider } from './NotifDayDivider';
 import { NotifGlyph } from './glyphs';
 
-const SHIMMER = {
-  background:
-    'linear-gradient(90deg,var(--surface-1) 0%,var(--surface-2) 45%,var(--surface-1) 90%)',
-  backgroundSize: '220% 100%',
-  animation: 'notifSweep 1.5s linear infinite',
-};
+/** Each skeleton row fades a step further, so the list trails off. */
+const ROW_FADE = 0.16;
 
-const Bar = ({
-  width,
-  height = 9,
+export const NotifSkeletonRow = ({
+  opacity = 1,
 }: {
-  width: number | string;
-  height?: number;
+  opacity?: number | undefined;
 }) => (
-  <span
-    className="notif-shimmer"
-    style={{
-      display: 'block',
-      width,
-      height,
-      borderRadius: 3,
-      ...SHIMMER,
-    }}
-  />
-);
-
-export const NotifSkeletonRow = () => (
   <div
     aria-hidden="true"
     style={{
       display: 'flex',
-      gap: 10,
+      gap: 12,
       alignItems: 'flex-start',
-      padding: '13px 14px 13px 12px',
+      padding: '14px 16px 14px 14px',
       minHeight: 64,
       borderLeft: '2px solid transparent',
       borderBottom: '1px solid var(--border)',
+      opacity,
     }}
   >
-    <span
-      className="notif-shimmer"
-      style={{
-        width: 28,
-        height: 28,
-        borderRadius: 8,
-        flexShrink: 0,
-        ...SHIMMER,
-      }}
-    />
+    <SkeletonBlock width={30} height={30} radius={10} />
     <div
       style={{
         flex: 1,
         minWidth: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: 7,
+        gap: 8,
       }}
     >
-      <Bar width="100%" height={10} />
-      <Bar width="64%" height={10} />
-      <Bar width="92%" />
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <Bar width={46} height={8} />
-        <span style={{ flex: 1 }} />
-        <Bar width={20} height={8} />
-      </div>
+      <SkeletonBlock width="66%" height={12} radius={6} />
+      <SkeletonBlock width="86%" height={10} radius={5} />
+      <SkeletonBlock width={60} height={8} radius={4} />
     </div>
   </div>
 );
 
-export const NotifLoading = ({ rows = 3 }: { rows?: number | undefined }) => (
+export const NotifLoading = ({ rows = 5 }: { rows?: number | undefined }) => (
   <div role="status" aria-busy="true" aria-live="polite">
     <span
       style={{
@@ -102,8 +73,9 @@ export const NotifLoading = ({ rows = 3 }: { rows?: number | undefined }) => (
     >
       {NOTIFICATIONS_COPY.loading}
     </span>
+    <NotifDayDivider label={NOTIFICATIONS_COPY.loadingVisible} />
     {Array.from({ length: rows }).map((_, i) => (
-      <NotifSkeletonRow key={i} />
+      <NotifSkeletonRow key={i} opacity={Math.max(0.2, 1 - i * ROW_FADE)} />
     ))}
   </div>
 );
@@ -113,88 +85,18 @@ export const NotifEmpty = ({
 }: {
   onAction?: (() => void) | undefined;
 }) => (
-  <div
-    style={{
-      padding: '42px 26px 38px',
-      textAlign: 'center',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 10,
-    }}
-  >
-    <span
-      aria-hidden="true"
-      style={{
-        width: 46,
-        height: 46,
-        borderRadius: 14,
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border)',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--fg-subtle)',
-        marginBottom: 2,
-      }}
-    >
-      <NotifGlyph name="bell" size={22} />
-    </span>
-    <div
-      style={{
-        fontFamily: 'Inter, system-ui',
-        fontSize: 17,
-        fontWeight: 800,
-        color: 'var(--fg)',
-        letterSpacing: '-0.02em',
-      }}
-    >
-      {NOTIFICATIONS_COPY.emptyTitle}
-    </div>
-    <div
-      style={{
-        fontFamily: 'Inter, system-ui',
-        fontSize: 13,
-        lineHeight: 1.5,
-        color: 'var(--fg-muted)',
-        maxWidth: 268,
-        textWrap: 'pretty',
-      }}
-    >
-      {NOTIFICATIONS_COPY.emptyBody}
-    </div>
-    {onAction !== undefined && (
-      <button
-        type="button"
-        className="notif-hit44"
-        onClick={onAction}
-        style={{
-          all: 'unset',
-          // all:unset writes `outline` inline, beating the
-          // `.notif-hit44:focus-visible` rule in every state; `revert`
-          // restores the UA ring.
-          outline: 'revert',
-          // all:unset resets display to inline and position to static; the
-          // latter outranks `.notif-hit44 { position: relative }`.
-          display: 'inline-flex',
-          alignItems: 'center',
-          position: 'relative',
-          cursor: 'pointer',
-          marginTop: 8,
-          padding: '9px 18px',
-          borderRadius: 8,
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border-strong)',
-          fontFamily: 'Inter, system-ui',
-          fontSize: 12.5,
-          fontWeight: 700,
-          color: 'var(--signal)',
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {NOTIFICATIONS_COPY.emptyAction}
-      </button>
-    )}
+  <div style={{ padding: '16px 16px 24px' }}>
+    <StateCard
+      icon={<NotifGlyph name="bell" size={24} />}
+      eyebrow={NOTIFICATIONS_COPY.emptyEyebrow}
+      title={NOTIFICATIONS_COPY.emptyTitle}
+      body={NOTIFICATIONS_COPY.emptyBody}
+      action={
+        onAction === undefined
+          ? undefined
+          : { label: NOTIFICATIONS_COPY.emptyAction, onClick: onAction }
+      }
+    />
   </div>
 );
 
@@ -203,66 +105,20 @@ export const NotifError = ({
 }: {
   onRetry?: (() => void) | undefined;
 }) => (
-  <div
-    role="alert"
-    style={{
-      padding: '34px 26px',
-      textAlign: 'center',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 10,
-    }}
-  >
-    <div
-      style={{
-        fontFamily: 'Inter, system-ui',
-        fontSize: 14,
-        fontWeight: 700,
-        color: 'var(--fg)',
-      }}
-    >
-      {NOTIFICATIONS_COPY.error}
-    </div>
-    <div
-      style={{
-        fontFamily: 'Inter, system-ui',
-        fontSize: 12.5,
-        color: 'var(--fg-muted)',
-      }}
-    >
-      {NOTIFICATIONS_COPY.errorBody}
-    </div>
-    {onRetry !== undefined && (
-      <button
-        type="button"
-        className="notif-hit44"
-        onClick={onRetry}
-        style={{
-          all: 'unset',
-          // all:unset writes `outline` inline, beating the
-          // `.notif-hit44:focus-visible` rule in every state; `revert`
-          // restores the UA ring.
-          outline: 'revert',
-          // all:unset resets display to inline and position to static; the
-          // latter outranks `.notif-hit44 { position: relative }`.
-          display: 'inline-flex',
-          alignItems: 'center',
-          position: 'relative',
-          cursor: 'pointer',
-          marginTop: 4,
-          padding: '8px 16px',
-          borderRadius: 8,
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border-strong)',
-          fontFamily: 'Inter, system-ui',
-          fontSize: 12.5,
-          fontWeight: 700,
-          color: 'var(--signal)',
-        }}
-      >
-        {NOTIFICATIONS_COPY.errorAction}
-      </button>
-    )}
+  <div style={{ padding: '16px 16px 24px' }}>
+    <StateCard
+      role="alert"
+      tone="danger"
+      framed={false}
+      icon={<NotifGlyph name="bell" size={24} />}
+      eyebrow={NOTIFICATIONS_COPY.errorEyebrow}
+      title={NOTIFICATIONS_COPY.error}
+      body={NOTIFICATIONS_COPY.errorBody}
+      action={
+        onRetry === undefined
+          ? undefined
+          : { label: NOTIFICATIONS_COPY.errorAction, onClick: onRetry }
+      }
+    />
   </div>
 );

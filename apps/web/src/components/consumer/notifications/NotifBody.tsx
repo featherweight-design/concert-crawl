@@ -125,7 +125,7 @@ export const NotifBody = ({
             ))}
             <div
               style={{
-                padding: '12px 14px 16px',
+                padding: '8px 16px 16px',
                 display: 'flex',
                 justifyContent: 'center',
               }}
@@ -153,12 +153,12 @@ export const NotifBody = ({
                     cursor: isLoadingMore ? 'progress' : 'pointer',
                     width: '100%',
                     textAlign: 'center',
-                    padding: '9px 0',
+                    // B+ (`bp-s-notif_m`): a plain centered link under the
+                    // list, not a boxed button.
+                    padding: '12px 0',
                     borderRadius: 8,
-                    background: 'var(--surface-1)',
-                    border: '1px solid var(--border-strong)',
                     fontFamily: 'Inter, system-ui',
-                    fontSize: 12.5,
+                    fontSize: 15,
                     fontWeight: 700,
                     color: 'var(--signal)',
                     opacity: isLoadingMore ? 0.7 : 1,

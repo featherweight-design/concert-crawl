@@ -23,7 +23,6 @@ import {
   flattenNotifications,
   unreadCountOf,
 } from '@/lib/queries/use-notifications';
-import { NMono } from './NMono';
 import { NotifBody, type NotifPanelState } from './NotifBody';
 import {
   NOTIFICATIONS_COPY,
@@ -125,16 +124,22 @@ export const NotifMenuPanel = ({
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '10px 14px',
+          gap: 10,
+          padding: '10px 16px 4px',
           minHeight: 44,
           boxSizing: 'border-box',
-          borderBottom: '1px solid var(--border)',
+          // B+ (`bp-s-notif_m`): a quiet back link over the big title, in the
+          // UI face rather than the mono eyebrow.
+          fontFamily: 'Inter, system-ui',
+          fontSize: 15,
+          fontWeight: 600,
+          color: 'var(--fg-muted)',
+          background: 'var(--bg-elevated)',
         }}
       >
         <svg
-          width="11"
-          height="11"
+          width="14"
+          height="14"
           viewBox="0 0 12 12"
           fill="none"
           aria-hidden="true"
@@ -147,7 +152,7 @@ export const NotifMenuPanel = ({
             strokeLinejoin="round"
           />
         </svg>
-        <NMono>{NOTIFICATIONS_COPY.menuBack}</NMono>
+        {NOTIFICATIONS_COPY.menuBack}
       </button>
       <NotifBody
         items={flattenNotifications(query.data)}

@@ -23,8 +23,8 @@ import { itemLabel, isUnread, relTime } from './lib/format-time';
 import { activateOnKey } from './lib/activate-keys';
 import { CREW_CATEGORY_PREFIX, crewRowIdentity } from './lib/crew-meta';
 
-/** Matches NotifTile's default box, so the row's rhythm is unchanged. */
-const CREW_PATCH_SIZE = 28;
+/** Matches the row's 30px category tile (B+), so the row's rhythm holds. */
+const CREW_PATCH_SIZE = 30;
 
 export const NotifItem = ({
   item,
@@ -99,21 +99,40 @@ export const NotifItem = ({
         display: 'flex',
         gap: 10,
         alignItems: 'flex-start',
-        padding: compact ? '11px 14px 11px 12px' : '13px 14px 13px 12px',
+        padding: compact ? '11px 14px 11px 12px' : '14px 16px 14px 14px',
         minHeight: 64,
+        // The tint below sits at z-index -1; isolation keeps it inside this
+        // row, over the row's fill and under its content.
+        position: 'relative',
+        isolation: 'isolate',
         cursor: onOpen === undefined ? 'default' : 'pointer',
         background: unread ? 'var(--surface-1)' : 'transparent',
         borderLeft: `2px solid ${unread ? cat.ink : 'transparent'}`,
         borderBottom: '1px solid var(--border)',
       }}
     >
+      {/* B+ (`bp-s-notif_m`): an unread row washes in from its rail in the
+          category ink. A layer rather than the row's own background, so the
+          row keeps its --surface-1 fill as the solid unread signal. */}
+      {unread && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: -1,
+            pointerEvents: 'none',
+            background: `linear-gradient(90deg, color-mix(in oklch, ${cat.ink} 11%, transparent), transparent 70%)`,
+          }}
+        />
+      )}
       {onOpen !== undefined && namesSomeone && (
         <span id={labelId} hidden className="ph-no-capture">
           {itemLabel(item, now)}
         </span>
       )}
       {crew === null ? (
-        <NotifTile category={item.category} read={!unread} />
+        <NotifTile category={item.category} read={!unread} size={30} />
       ) : (
         <span
           style={{
@@ -145,8 +164,8 @@ export const NotifItem = ({
           className={noCapture}
           style={{
             fontFamily: 'Inter, system-ui',
-            fontSize: 13.5,
-            lineHeight: 1.36,
+            fontSize: 14.5,
+            lineHeight: 1.34,
             fontWeight: unread ? 700 : 600,
             color: unread ? 'var(--fg)' : 'var(--fg-muted)',
             letterSpacing: '-0.01em',
@@ -164,7 +183,7 @@ export const NotifItem = ({
             className={noCapture}
             style={{
               fontFamily: 'Inter, system-ui',
-              fontSize: 12.5,
+              fontSize: 13.5,
               lineHeight: 1.42,
               color: 'var(--fg-muted)',
               display: '-webkit-box',

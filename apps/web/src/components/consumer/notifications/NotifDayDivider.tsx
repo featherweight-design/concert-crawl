@@ -17,11 +17,15 @@ export const NotifDayDivider = ({ label }: { label: string }) => (
       position: 'sticky',
       top: 0,
       zIndex: 2,
-      padding: '7px 14px 6px',
+      // B+ (`bp-s-notif_m`): the label sits low over its hairline, with air
+      // above it, so a day run reads as a section rather than a stripe.
+      padding: '20px 16px 9px',
       background: 'var(--bg-elevated)',
       borderBottom: '1px solid var(--border)',
     }}
   >
-    <NMono>{label}</NMono>
+    <NMono size={10} ls="0.18em">
+      {label}
+    </NMono>
   </div>
 );
