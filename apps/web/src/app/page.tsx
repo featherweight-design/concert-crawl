@@ -3,6 +3,7 @@ import { publicApiClient, ApiError } from '@/lib/api';
 import { denverTodayUtcMs } from '@/lib/time';
 import type { EventsListResponse, VenuePublic } from '@concert-crawl/types';
 import { posterVenues } from '@/lib/poster/poster-rule';
+import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import type {
   InviteShow,
   InviteVenue,
@@ -207,15 +208,19 @@ async function fetchWeekCount(): Promise<number | null> {
 export const revalidate = 300;
 
 export default async function LandingPage() {
+  // Each landing fetches only what it draws: the public one its week count,
+  // the private-beta one its venue row.
+  const launched = isPublicBrowseEnabled();
   const [shows, weekCount, venues] = await Promise.all([
     fetchLandingShows(),
-    fetchWeekCount(),
-    fetchInviteVenues(),
+    launched ? fetchWeekCount() : null,
+    launched ? null : fetchInviteVenues(),
   ]);
-  return (
+  return launched ? (
+    <LandingClientShell shows={shows.posters} showCount={weekCount} />
+  ) : (
     <LandingClientShell
-      shows={shows.posters}
-      showCount={weekCount}
+      shows={[]}
       inviteShows={shows.invite}
       inviteVenues={venues}
     />

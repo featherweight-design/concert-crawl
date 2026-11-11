@@ -10,11 +10,9 @@ import { InviteCodeField } from './InviteCodeField';
 import { ShowFan } from './ShowFan';
 import { WeekTicker } from './WeekTicker';
 import type { InviteShow, InviteVenue } from './definitions/types';
-import { INVITE_GRADIENT, MONO_CAPS } from './definitions/styles';
+import { FOCUS_RING, INVITE_GRADIENT, MONO_CAPS } from './definitions/styles';
 
 const COPY = LANDING_COPY.invite;
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
 
 /** Desktop shows twelve venue icons; the phone board fits eight. */
 const DESKTOP_TILES = 12;

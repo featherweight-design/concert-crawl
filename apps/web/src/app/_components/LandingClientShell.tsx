@@ -9,6 +9,7 @@ import { CCMark } from '@/components/brand/cc-mark';
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster';
 import { isPublicBrowseEnabled } from '@/lib/launch-mode';
 import { LANDING_COPY } from './definitions/copy';
+import { FOCUS_RING } from './invite-landing/definitions/styles';
 import {
   InviteLanding,
   type InviteShow,
@@ -68,9 +69,6 @@ const SECONDARY_CTA_STYLE = {
 // `all: 'unset'` on the CTAs strips the browser's default focus ring along with
 // everything else, so every interactive element on this page restores one
 // explicitly. Matches the ring used across the consumer surfaces.
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal';
-
 export default function LandingClientShell({
   shows,
   showCount = null,

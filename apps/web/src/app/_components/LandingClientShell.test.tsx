@@ -151,11 +151,17 @@ describe('LandingClientShell — private-beta invite landing (#794 launch gate)'
     expect(mockPush).toHaveBeenCalledWith('/auth/code?code=BETA-3F2A-9C1E');
   });
 
-  it('sends a partial code to the empty code screen', () => {
+  it('keeps a partial code for the code screen to finish', () => {
     renderBeta();
     fireEvent.change(screen.getByRole('textbox', { name: /invite code/i }), {
       target: { value: 'BETA-3F' },
     });
+    fireEvent.click(screen.getByRole('button', { name: /redeem/i }));
+    expect(mockPush).toHaveBeenCalledWith('/auth/code?code=BETA-3F');
+  });
+
+  it('opens the empty code screen when nothing was typed', () => {
+    renderBeta();
     fireEvent.click(screen.getByRole('button', { name: /redeem/i }));
     expect(mockPush).toHaveBeenCalledWith('/auth/code');
   });

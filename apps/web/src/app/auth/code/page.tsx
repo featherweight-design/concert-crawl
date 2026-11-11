@@ -133,7 +133,6 @@ export default function InviteCodePage() {
               value={code}
               onChange={handleChange}
               placeholder={copy.input.placeholder}
-              maxLength={14}
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
