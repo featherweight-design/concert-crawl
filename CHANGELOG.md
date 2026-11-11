@@ -1,3 +1,13 @@
+## [1.314.2](https://github.com/featherweight-design/concert-crawl/compare/v1.314.1...v1.314.2) (2026-11-11)
+
+
+### Bug Fixes
+
+* **db:** never lower an all-caps name from a billing alone ([f1da341](https://github.com/featherweight-design/concert-crawl/commit/f1da34129a43513d4e58b893564a613a128507be))
+* **db:** resolve a repeated Spotify id in snapshot order; exercise the matched guard ([68b1924](https://github.com/featherweight-design/concert-crawl/commit/68b1924c2da5c83bfb4d05b4a6ccfc67c515a75d))
+* **db:** respell from Spotify against the stored name; fall back on a mismatch ([24a8e09](https://github.com/featherweight-design/concert-crawl/commit/24a8e097bc4da2dcc5eb999e0655c14caff081ec))
+* **db:** take matched artists' casing from Spotify in the name repair ([8e8bac3](https://github.com/featherweight-design/concert-crawl/commit/8e8bac3b7985cc3d8dc167613debf03e59f7b8c2))
+
 ## [1.314.1](https://github.com/featherweight-design/concert-crawl/compare/v1.314.0...v1.314.1) (2026-11-11)
 
 
