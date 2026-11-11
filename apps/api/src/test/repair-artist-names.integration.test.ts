@@ -83,7 +83,7 @@ describe('repair-artist-names integration', () => {
 
   it('fixes casing the venue billing disagrees with', async () => {
     await seedSingleActBill('Chief Keef', 'chief keef');
-    await seedArtist('CHIEF KEEF', 'chief keef');
+    await seedArtist('chief keef', 'chief keef');
 
     const result = await repairArtistNames(testDb, { dryRun: false });
 
@@ -168,10 +168,12 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('Beyoncé');
   });
 
-  // Only a single-case name is re-cased. A mixed-case name was cased by
-  // someone, and a venue's capitalisation is no better evidence (regression:
-  // "Book of Love" became "Book Of Love"); an all-caps name never takes a
-  // lowercase billing.
+  // Without a Spotify spelling, only a lowercase name is re-cased. A mixed-case
+  // name was cased by someone, and a venue's capitalisation is no better
+  // evidence (regression: "Book of Love" became "Book Of Love"). An all-caps
+  // name may be the act's styling (regression: SIIXNIGHTS became Siixnights,
+  // HAM became Ham), so it keeps its caps. This reverses the earlier rule that
+  // let CHIEF KEEF take a mixed-case billing.
   it.each([
     ['Book of Love', 'book of love', 'Book Of Love'],
     ['Rezz', 'rezz', 'ReZZ'],
@@ -180,6 +182,9 @@ describe('repair-artist-names integration', () => {
     ['Ivri', 'ivri', 'ivri'],
     ['Chief Keef', 'chief keef', 'CHIEF Keef'],
     ['REZZ', 'rezz', 'rezz'],
+    ['CHIEF KEEF', 'chief keef', 'Chief Keef'],
+    ['SIIXNIGHTS', 'siixnights', 'Siixnights'],
+    ['HAM', 'ham', 'Ham'],
   ])('never re-cases %s to %s', async (name, canonical, billed) => {
     await seedSingleActBill(billed, canonical);
     await seedArtist(name, canonical);
@@ -191,10 +196,9 @@ describe('repair-artist-names integration', () => {
   });
 
   it.each([
-    ['CHIEF KEEF', 'chief keef', 'Chief Keef'],
     ['j.i.d', 'j.i.d', 'J.I.D'],
     ['ivri', 'ivri', 'Ivri'],
-  ])('re-cases the single-case %s to %s', async (name, canonical, billed) => {
+  ])('re-cases the lowercase %s to %s', async (name, canonical, billed) => {
     await seedSingleActBill(billed, canonical);
     await seedArtist(name, canonical);
 
@@ -204,8 +208,8 @@ describe('repair-artist-names integration', () => {
   });
 
   // A shorten, because a re-case can never swap back: lowercase may move to
-  // all-caps or mixed case, all-caps only to mixed case, and mixed case never
-  // moves, so a later run can only take it one step further. Only a shorten
+  // all-caps or mixed case, and nothing else moves, so a later run can never
+  // take it back. Only a shorten
   // can meet a rival billing it would trade places with on every run.
   it('settles: the current name votes, so a second run never shortens it again', async () => {
     for (let i = 0; i < 5; i += 1)
@@ -222,10 +226,10 @@ describe('repair-artist-names integration', () => {
     expect((await listArtists())[0]?.name).toBe('Dogstar: ALL IN');
   });
 
-  it('fixes an all-caps name even when the venue mostly shouts it', async () => {
+  it('fixes a lowercase name with a cased billing even when the venue mostly shouts it', async () => {
     for (let i = 0; i < 5; i += 1) await seedSingleActBill('REZZ', 'rezz');
     await seedSingleActBill('Rezz', 'rezz');
-    await seedArtist('REZZ', 'rezz');
+    await seedArtist('rezz', 'rezz');
 
     await repairArtistNames(testDb, { dryRun: false });
 
