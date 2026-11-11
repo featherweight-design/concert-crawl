@@ -8,9 +8,7 @@ interface EmptyStateCta {
   onClick?: () => void;
 }
 
-export interface EmptyStateProps {
-  state?: 'no-data' | 'filtered' | 'error';
-  density?: 'default' | 'dense';
+interface EmptyStateCommonProps {
   /**
    * Omit on a surface whose location is already stated above the empty state,
    * such as a sub-tab bar: the rail's dot and rule still render.
@@ -18,24 +16,40 @@ export interface EmptyStateProps {
   eyebrow?: string;
   title: string;
   body: string;
+  primaryCta?: EmptyStateCta;
+  secondaryCta?: EmptyStateCta;
+  className?: string;
+}
+
+/** The older status-rail layout, kept until every surface moves. */
+export interface EmptyStateRailProps extends EmptyStateCommonProps {
+  layout?: 'rail';
+  state?: 'no-data' | 'filtered' | 'error';
+  density?: 'default' | 'dense';
   /**
    * Overrides the status rail's right-hand label. The default reads "0 / 0",
    * which is a count of events and says nothing on a surface that isn't
    * counting events.
    */
   railLabel?: string;
-  primaryCta?: EmptyStateCta;
-  secondaryCta?: EmptyStateCta;
-  className?: string;
-  /**
-   * `card` is the B+ empty pattern (`06-states/empty_*`): a dashed card with a
-   * dashed medallion, a centered eyebrow and a gradient action. `rail` (the
-   * default) is the older status-rail layout, kept until every surface moves.
-   */
-  layout?: 'rail' | 'card';
-  /** The medallion's glyph in the card layout. */
-  glyph?: EmptyStateGlyph;
+  glyph?: never;
 }
+
+/**
+ * The B+ empty pattern (`06-states/empty_*`): a dashed card with a dashed
+ * medallion, a centered eyebrow and a gradient action. It has no rail, so the
+ * rail's props can't be passed to it.
+ */
+export interface EmptyStateCardProps extends EmptyStateCommonProps {
+  layout: 'card';
+  /** The medallion's glyph. */
+  glyph?: EmptyStateGlyph;
+  state?: never;
+  density?: never;
+  railLabel?: never;
+}
+
+export type EmptyStateProps = EmptyStateRailProps | EmptyStateCardProps;
 
 export type EmptyStateGlyph = 'dots' | 'calendar';
 
@@ -119,7 +133,7 @@ function EmptyStateCard({
   primaryCta,
   secondaryCta,
   className,
-}: Omit<EmptyStateProps, 'layout' | 'state' | 'density' | 'railLabel'>) {
+}: EmptyStateCardProps) {
   return (
     <div
       data-testid="empty-state-card"
@@ -253,32 +267,19 @@ function EmptyStateSecondary({
   );
 }
 
-export function EmptyState({
-  state = 'no-data',
-  density = 'default',
-  eyebrow,
-  title,
-  body,
-  railLabel,
-  primaryCta,
-  secondaryCta,
-  className,
-  layout = 'rail',
-  glyph,
-}: EmptyStateProps) {
-  if (layout === 'card') {
-    return (
-      <EmptyStateCard
-        {...(glyph !== undefined && { glyph })}
-        {...(eyebrow !== undefined && { eyebrow })}
-        title={title}
-        body={body}
-        {...(primaryCta !== undefined && { primaryCta })}
-        {...(secondaryCta !== undefined && { secondaryCta })}
-        {...(className !== undefined && { className })}
-      />
-    );
-  }
+export function EmptyState(props: EmptyStateProps) {
+  if (props.layout === 'card') return <EmptyStateCard {...props} />;
+  const {
+    state = 'no-data',
+    density = 'default',
+    eyebrow,
+    title,
+    body,
+    railLabel,
+    primaryCta,
+    secondaryCta,
+    className,
+  } = props;
   const dense = density === 'dense';
   const accent =
     state === 'error'

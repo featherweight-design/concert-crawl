@@ -116,10 +116,25 @@ export const WeekStripHeader = ({
 }: WeekStripHeaderProps) => {
   const [open, setOpen] = useState(false);
   const cueRef = useRef<HTMLButtonElement>(null);
+  const posRef = useRef<HTMLDivElement>(null);
 
   // Inject the one-off style tag after commit, not during render — a
   // render-time DOM mutation would run on every (possibly aborted) render.
   useEffect(ensureStyles, []);
+
+  // The desktop popover grows from the cue: hand its centre, relative to the
+  // positioner (both sit in this relative wrapper), to the picker's
+  // transform-origin.
+  const openPicker = () => {
+    const cue = cueRef.current;
+    if (cue) {
+      posRef.current?.style.setProperty(
+        '--cjp-origin-x',
+        `${cue.offsetLeft + cue.offsetWidth / 2}px`,
+      );
+    }
+    setOpen(true);
+  };
 
   const close = () => {
     setOpen(false);
@@ -151,7 +166,7 @@ export const WeekStripHeader = ({
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-label={`${monthLabel}. ${CONSUMER_COPY.jumpPickerCueSuffix}`}
-            onClick={() => (open ? close() : setOpen(true))}
+            onClick={() => (open ? close() : openPicker())}
             style={{
               fontFamily: 'Inter, system-ui',
               fontWeight: 700,
@@ -205,7 +220,7 @@ export const WeekStripHeader = ({
       </div>
 
       {open && <div className="cjp-catch" onClick={close} aria-hidden="true" />}
-      <div className="cjp-pos">
+      <div ref={posRef} className="cjp-pos">
         <JumpPicker
           open={open}
           onClose={close}

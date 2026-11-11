@@ -604,7 +604,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           <EmptyState
             layout="card"
             glyph={isFiltered ? 'dots' : 'calendar'}
-            state={isFiltered ? 'filtered' : 'no-data'}
             eyebrow={
               isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
             }

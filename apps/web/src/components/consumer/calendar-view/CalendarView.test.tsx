@@ -256,3 +256,55 @@ describe('CalendarView B+ states', () => {
     expect(dots[0]?.getAttribute('style')).toContain('var(--genre-jazz)');
   });
 });
+
+describe('CalendarView URL handling', () => {
+  beforeEach(() => {
+    push.mockClear();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  it('a cross-week jump drops offset, sets weekOffset and selectedDate, and keeps filters', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/events?filterVibe=rock&venueSlug=hi-dive&offset=20&view=list',
+    );
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Jump to a date/ }));
+    fireEvent.click(screen.getByLabelText('Next month'));
+    fireEvent.click(screen.getByRole('gridcell', { name: /Monday, May 11/ }));
+    const url = new URL(String(push.mock.calls[0]?.[0]), 'http://x');
+    expect(url.pathname).toBe('/events');
+    expect(url.searchParams.has('offset')).toBe(false);
+    expect(url.searchParams.get('view')).toBe('cal');
+    expect(url.searchParams.get('weekOffset')).toBe('2');
+    expect(url.searchParams.get('selectedDate')).toBe('2026-05-11');
+    expect(url.searchParams.get('filterVibe')).toBe('rock');
+    expect(url.searchParams.get('venueSlug')).toBe('hi-dive');
+  });
+
+  it('an in-week day pick replaces the URL without navigating', () => {
+    window.history.replaceState(null, '', '/events?view=cal&filterVibe=rock');
+    const replaceState = vi.spyOn(window.history, 'replaceState');
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Thursday, Apr 30/ }));
+    expect(push).not.toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    const url = new URL(String(replaceState.mock.calls[0]?.[2]));
+    expect(url.searchParams.get('selectedDate')).toBe('2026-04-30');
+    expect(url.searchParams.get('filterVibe')).toBe('rock');
+    replaceState.mockRestore();
+  });
+});

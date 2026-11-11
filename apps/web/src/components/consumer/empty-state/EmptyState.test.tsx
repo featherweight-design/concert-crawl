@@ -149,7 +149,6 @@ describe('EmptyState card layout (B+)', () => {
     render(
       <EmptyState
         layout="card"
-        state="filtered"
         eyebrow="Filtered"
         title="Crickets."
         body="Nothing found with these filters."

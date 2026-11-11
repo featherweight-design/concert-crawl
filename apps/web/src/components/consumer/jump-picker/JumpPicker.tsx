@@ -17,6 +17,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap';
 import {
   addMonths,
   columnOf,
@@ -89,7 +90,9 @@ const STYLE_CONTENT = [
   // popover scales from its cue.
   '.cjp-pop{transition:transform var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}',
   '.cjp-pop.scale{opacity:0;transform:translateY(16px)}',
-  '@media (min-width:640px){.cjp-pop.scale{transform:scale(.95);transform-origin:34px -6px}}',
+  // The popover grows from the jump cue: WeekStripHeader measures the cue's
+  // centre and sets --cjp-origin-x on the positioner when it opens.
+  '@media (min-width:640px){.cjp-pop.scale{transform:scale(.95);transform-origin:var(--cjp-origin-x, 24px) -6px}}',
   '.cjp-pop.cjp-in{transform:none;opacity:1}',
   // Popover width on desktop, full-width sheet under 640px (design §2/§10). CSS
   // media query keeps this SSR-safe — no JS viewport read, no hydration skew.
@@ -174,7 +177,33 @@ export const JumpPicker = ({
   const [mounted, setMounted] = useState(false);
   const [focusIso, setFocusIso] = useState(selectedDate);
   const gridRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef(false);
+  // In a ref, not the effect's deps, so a parent's inline onClose doesn't
+  // re-bind the document listener on every render.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Modal on every width: the phone sheet sits over a scrim and the desktop
+  // popover over a click-catcher, so focus stays inside either way. Declared
+  // before the open-focus effect below, so the trap's container focus runs
+  // first and the selected day takes focus after it.
+  useFocusTrap(dialogRef, open);
+
+  // Escape closes from anywhere, not only from inside the dialog, so the
+  // scrim (aria-hidden, a pointer-only close) has a keyboard path too.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (evt: globalThis.KeyboardEvent) => {
+      if (evt.key !== 'Escape') return;
+      evt.preventDefault();
+      onCloseRef.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   // Inject the one-off style tag after commit, not during render — a
   // render-time DOM mutation would run on every (possibly aborted) render.
@@ -330,18 +359,11 @@ export const JumpPicker = ({
         evt.preventDefault();
         pageMonth(evt.shiftKey ? 12 : 1, true);
         break;
-      // Escape is intentionally not handled here — it bubbles to the dialog
-      // root's onKeyDown, which closes once. Handling it in both places fired
-      // onClose() twice.
+      // Escape is intentionally not handled here — it bubbles to the
+      // document listener, which closes once. Handling it in both places
+      // fired onClose() twice.
       default:
         break;
-    }
-  };
-
-  const onRootKeyDown = (evt: KeyboardEvent<HTMLDivElement>) => {
-    if (evt.key === 'Escape') {
-      evt.preventDefault();
-      onClose();
     }
   };
 
@@ -362,13 +384,14 @@ export const JumpPicker = ({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
-      aria-modal="false"
+      aria-modal="true"
+      tabIndex={-1}
       aria-label={`${CONSUMER_COPY.jumpPickerDialogPrefix} — ${MONTHS[view.m]} ${view.y}`}
       // A bottom sheet with the B+ gradient top edge on the phone (rule 7), a
       // bordered popover from sm up.
-      className={`cjp-pop cjp-w scale ${mounted ? 'cjp-in' : ''} rounded-t-[22px] [--sheet-bg:var(--bg-elevated)] max-sm:sheet-edge sm:rounded-2xl sm:border sm:border-border-strong sm:[background:var(--bg-elevated)]`}
-      onKeyDown={onRootKeyDown}
+      className={`cjp-pop cjp-w scale focus:outline-none ${mounted ? 'cjp-in' : ''} rounded-t-[22px] [--sheet-bg:var(--bg-elevated)] max-sm:sheet-edge sm:rounded-2xl sm:border sm:border-border-strong sm:[background:var(--bg-elevated)]`}
       style={{
         boxShadow: '0 20px 50px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.3)',
         padding: '10px 18px calc(18px + env(safe-area-inset-bottom, 0px))',
@@ -521,6 +544,9 @@ export const JumpPicker = ({
               role="gridcell"
               data-iso={cell.iso}
               data-today={isToday || undefined}
+              // Spill days are drawn blank; keep them (and their ISO keys)
+              // in the DOM but out of the accessibility tree.
+              aria-hidden={!cell.inMonth || undefined}
               className={`cjp-day cjp-hit ${disabled ? 'cjp-dis' : ''}`}
               onClick={disabled ? undefined : () => onPick(cell.iso)}
               tabIndex={cell.iso === focusIso ? 0 : -1}

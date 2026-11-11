@@ -19,6 +19,7 @@ export function dayGenreColors(
   const members = bucketMembersFor(filterVibe);
   const byDay = new Map<string, string[]>();
   for (const event of events) {
+    // Lead genre only, matching EventRow's image ring and left edge.
     const lead = orderGenres(event.genre ?? [], members)[0];
     const color = genreColor(lead);
     if (color === null) continue;
