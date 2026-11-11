@@ -4,6 +4,7 @@ import {
   ymdKey,
   isoOf,
   addMonths,
+  columnOf,
   monthMatrix,
   pickerWindow,
   weekOffsetForDate,
@@ -72,5 +73,25 @@ describe('weekOffsetForDate', () => {
     expect(sunday).toBe(0);
     expect(monday).toBe(1);
     expect(monday).not.toBe(sunday);
+  });
+});
+
+describe('monthMatrix, Monday-first', () => {
+  it('leads each row with a Monday', () => {
+    const cells = monthMatrix(2026, 10, 1); // November 2026
+    expect(cells).toHaveLength(42);
+    // November 1 2026 is a Sunday, so six October days spill in first.
+    expect(cells.at(0)?.dow).toBe(1);
+    expect(cells.at(6)?.dow).toBe(0);
+    expect(cells.at(6)).toMatchObject({ d: 1, inMonth: true });
+    expect(cells.at(7)?.iso).toBe('2026-11-02');
+  });
+});
+
+describe('columnOf', () => {
+  it('maps getDay() onto a Monday-first column', () => {
+    expect(columnOf(1, 1)).toBe(0);
+    expect(columnOf(0, 1)).toBe(6);
+    expect(columnOf(0, 0)).toBe(0);
   });
 });

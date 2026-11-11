@@ -21,23 +21,22 @@ interface WeekStripHeaderProps {
 
 const STYLE_ID = 'cjp-header-styles';
 const STYLE_CONTENT = [
-  '.cjp-cue{transition:background .12s,border-color .12s}',
-  '.cjp-cue:hover{background:var(--overlay-hover)}',
-  '.cjp-car{transition:transform .16s cubic-bezier(.2,.7,.3,1)}',
-  '.cjp-chev{transition:background .12s,opacity .12s}',
+  '.cjp-cue{transition:opacity var(--motion-fast) var(--motion-ease)}',
+  '.cjp-cue:hover{opacity:.8}',
+  '.cjp-chev{transition:background var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}',
   '.cjp-chev:hover:not(:disabled):not([aria-disabled="true"]){background:var(--overlay-hover)}',
   '.cjp-chev:disabled{opacity:.32;cursor:default}',
   // Click-catcher: invisible on desktop (popover model), a blurred scrim on
-  // mobile (sheet model) per design §10. Closing the picker by clicking it is a
-  // specified close path (closing="both").
+  // mobile (sheet model). Closing the picker by clicking it is a specified
+  // close path. On the phone it sits over the bottom nav (z-40), as the sheet
+  // does.
   '.cjp-catch{position:fixed;inset:0;z-index:30;cursor:pointer}',
-  '@media (max-width:639.98px){.cjp-catch{background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
-  // Positioner: left-anchored popover on desktop, centered full-width sheet
-  // dropped from the top on mobile (design §2/§10). CSS media query only, so the
-  // two models stay SSR-safe with no JS viewport branch.
-  '.cjp-pos{position:absolute;top:46px;left:12px;z-index:40}',
-  '@media (max-width:639.98px){.cjp-pos{top:150px;left:12px;right:12px;display:flex;justify-content:center}}',
-  '@media (prefers-reduced-motion: reduce){.cjp-car{transition:none!important}}',
+  '@media (max-width:639.98px){.cjp-catch{z-index:45;background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
+  // Positioner: a left-anchored popover on desktop, a bottom sheet on the
+  // phone (B+ `cal_jump_m`). CSS media query only, so the two models stay
+  // SSR-safe with no JS viewport branch.
+  '.cjp-pos{position:absolute;top:44px;left:0;z-index:40}',
+  '@media (max-width:639.98px){.cjp-pos{position:fixed;top:auto;left:0;right:0;bottom:0;z-index:50}}',
 ].join('\n');
 
 const ensureStyles = (): void => {
@@ -50,15 +49,41 @@ const ensureStyles = (): void => {
 };
 
 const chevStyle: CSSProperties = {
-  width: 34,
-  height: 34,
-  borderRadius: 9,
+  width: 38,
+  height: 38,
+  borderRadius: 10,
   border: '1px solid var(--border-strong)',
   boxSizing: 'border-box',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
 };
+
+const CalendarGlyph = () => (
+  <svg
+    width={15}
+    height={15}
+    viewBox="0 0 16 16"
+    fill="none"
+    aria-hidden="true"
+  >
+    <rect
+      x={2}
+      y={3}
+      width={12}
+      height={11}
+      rx={2}
+      stroke="currentColor"
+      strokeWidth={1.5}
+    />
+    <path
+      d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 const ChevronGlyph = ({ dir }: { dir: 'left' | 'right' }) => (
   <svg
@@ -101,101 +126,81 @@ export const WeekStripHeader = ({
     cueRef.current?.focus();
   };
 
-  const cueStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 7,
-    fontFamily: 'Inter, system-ui',
-    fontWeight: 800,
-    letterSpacing: '-0.02em',
-    color: 'var(--fg)',
-    fontSize: 17,
-    lineHeight: 1,
-    borderRadius: 999,
-    padding: '7px 12px',
-    cursor: 'pointer',
-    background: open ? 'var(--overlay-press)' : 'var(--surface-2)',
-    border: open
-      ? '1px solid var(--border-focus)'
-      : '1px solid var(--border-strong)',
-  };
-
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ padding: '2px 12px 10px' }}>
-        <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        {/* The month is the heading; the jump cue sits beside it and wraps
+            under it at 320px rather than pushing the chevrons off. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <span
+            className="text-[20px] sm:text-[17px]"
+            style={{
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
+              color: 'var(--fg)',
+              lineHeight: 1.1,
+            }}
+          >
+            {monthLabel}
+          </span>
           <button
             type="button"
             ref={cueRef}
-            className="cjp-cue"
+            className="cjp-cue inline-flex cursor-pointer items-center gap-1.5 text-[15px] sm:text-[13px]"
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-label={`${monthLabel}. ${CONSUMER_COPY.jumpPickerCueSuffix}`}
             onClick={() => (open ? close() : setOpen(true))}
-            style={cueStyle}
+            style={{
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 700,
+              color: 'var(--signal)',
+              background: 'transparent',
+              border: 0,
+              padding: '4px 0',
+            }}
           >
-            <span>{monthLabel}</span>
-            <span
-              className="cjp-car"
-              style={{
-                display: 'inline-flex',
-                transform: open ? 'rotate(180deg)' : 'none',
-              }}
-            >
-              <svg
-                width={11}
-                height={7}
-                viewBox="0 0 11 7"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M1 1l4.5 4.5L10 1"
-                  stroke="var(--fg-muted)"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
+            <CalendarGlyph />
+            <span>{CONSUMER_COPY.jumpPickerCueSuffix}</span>
           </button>
+        </div>
 
-          <div className="flex items-center gap-1">
-            {showBackToToday && (
-              <BackToTodayControl
-                todaySpoken={accessibleDayLabelFor(today)}
-                onClick={onBackToToday}
-              />
-            )}
-            {prevWeekHref ? (
-              <Link
-                href={prevWeekHref}
-                scroll={false}
-                aria-label={CONSUMER_COPY.jumpPickerPrevWeek}
-                className="cjp-chev"
-                style={chevStyle}
-              >
-                <ChevronGlyph dir="left" />
-              </Link>
-            ) : (
-              <span
-                className="cjp-chev"
-                aria-disabled="true"
-                style={{ ...chevStyle, opacity: 0.32, cursor: 'default' }}
-              >
-                <ChevronGlyph dir="left" />
-              </span>
-            )}
+        <div className="flex shrink-0 items-center gap-2">
+          {showBackToToday && (
+            <BackToTodayControl
+              todaySpoken={accessibleDayLabelFor(today)}
+              onClick={onBackToToday}
+            />
+          )}
+          {prevWeekHref ? (
             <Link
-              href={nextWeekHref}
+              href={prevWeekHref}
               scroll={false}
-              aria-label={CONSUMER_COPY.jumpPickerNextWeek}
+              aria-label={CONSUMER_COPY.jumpPickerPrevWeek}
               className="cjp-chev"
               style={chevStyle}
             >
-              <ChevronGlyph dir="right" />
+              <ChevronGlyph dir="left" />
             </Link>
-          </div>
+          ) : (
+            <span
+              className="cjp-chev"
+              aria-disabled="true"
+              style={{ ...chevStyle, opacity: 0.32, cursor: 'default' }}
+            >
+              <ChevronGlyph dir="left" />
+            </span>
+          )}
+          <Link
+            href={nextWeekHref}
+            scroll={false}
+            aria-label={CONSUMER_COPY.jumpPickerNextWeek}
+            className="cjp-chev"
+            style={chevStyle}
+          >
+            <ChevronGlyph dir="right" />
+          </Link>
         </div>
       </div>
 

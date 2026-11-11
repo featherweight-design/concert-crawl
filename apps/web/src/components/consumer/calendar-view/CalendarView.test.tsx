@@ -203,3 +203,56 @@ describe('CalendarView jump navigation', () => {
     ).toBeTruthy();
   });
 });
+
+describe('CalendarView B+ states', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  it('shows the card empty state with the calendar glyph on an empty day', () => {
+    setup();
+    expect(screen.getByTestId('empty-state-card')).toBeTruthy();
+    expect(
+      screen.getByTestId('empty-state-medallion').querySelector('rect'),
+    ).not.toBeNull();
+  });
+
+  it("dots each day with its shows' genre colors", () => {
+    render(
+      <CalendarView
+        days={days}
+        events={[
+          makeEvent({ id: 'a', date: '2026-04-28', genre: ['jazz'] }),
+          makeEvent({ id: 'b', date: '2026-04-28', genre: ['country'] }),
+        ]}
+        initialSelectedDate="2026-04-29"
+        today="2026-04-28"
+        watchedIds={[]}
+        prevWeekHref={null}
+        nextWeekHref="/events?view=cal&weekOffset=1"
+        initialAvailability={{
+          data: [{ date: '2026-04-28', count: 2 }],
+          from: '2026-04-01',
+          to: '2027-04-30',
+        }}
+      />,
+      { wrapper },
+    );
+    const tuesday = screen.getByRole('button', { name: /Tuesday, Apr 28/ });
+    const dots = tuesday.querySelectorAll('[data-testid="day-dots"] > span');
+    expect(dots).toHaveLength(2);
+    expect(dots[0]?.getAttribute('style')).toContain('var(--genre-jazz)');
+  });
+});

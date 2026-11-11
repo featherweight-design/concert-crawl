@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { JumpPicker } from './JumpPicker';
+import { JumpPicker, dotsForCount } from './JumpPicker';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 // jsdom + Vitest do not ship the @testing-library/jest-dom matchers in this
@@ -174,5 +174,48 @@ describe('JumpPicker', () => {
     const firstCell = document.querySelector('[data-iso="2026-04-01"]');
     expect(todayCell?.getAttribute('tabindex')).toBe('0');
     expect(firstCell?.getAttribute('tabindex')).toBe('-1');
+  });
+});
+
+describe('JumpPicker B+ grid', () => {
+  it('maps a show count to one, two or three volume dots', () => {
+    expect(dotsForCount(0)).toBe(0);
+    expect(dotsForCount(1)).toBe(1);
+    expect(dotsForCount(2)).toBe(1);
+    expect(dotsForCount(4)).toBe(2);
+    expect(dotsForCount(12)).toBe(3);
+  });
+
+  it('draws the dots in the cell and none on a day without shows', () => {
+    setup();
+    const busy = document.querySelector('[data-iso="2026-04-28"]');
+    const quiet = document.querySelector('[data-iso="2026-04-29"]');
+    expect(
+      busy?.querySelectorAll('[data-testid="jump-dots"] > span'),
+    ).toHaveLength(1);
+    expect(
+      quiet?.querySelectorAll('[data-testid="jump-dots"] > span'),
+    ).toHaveLength(0);
+  });
+
+  it('lays the month out Monday-first, under a visible title', () => {
+    setup();
+    expect(
+      screen.getByRole('heading', {
+        name: CONSUMER_COPY.jumpPickerDialogPrefix,
+      }),
+    ).toBeTruthy();
+    // April 2026 starts on a Wednesday: Mon Mar 30 and Tue Mar 31 lead the
+    // grid, so April 1 is the third cell.
+    const cells = document.querySelectorAll('[role="gridcell"]');
+    expect(cells[0]?.getAttribute('data-iso')).toBe('2026-03-30');
+    expect(cells[2]?.getAttribute('data-iso')).toBe('2026-04-01');
+  });
+
+  it('marks today for the signal outline', () => {
+    setup({ selectedDate: '2026-04-30' });
+    const todayCell = document.querySelector('[data-iso="2026-04-28"]');
+    expect(todayCell?.getAttribute('data-today')).toBe('true');
+    expect(todayCell?.getAttribute('style')).toContain('var(--signal)');
   });
 });

@@ -98,9 +98,26 @@ export function addMonths(ym: YearMonth, delta: number): YearMonth {
   return { y: Math.floor(total / 12), m: ((total % 12) + 12) % 12 };
 }
 
-export function monthMatrix(year: number, month: number): MatrixCell[] {
-  const startDow = new Date(year, month, 1).getDay(); // Sunday-first (0=Sun)
-  const gridStart = new Date(year, month, 1 - startDow);
+/** Which weekday leads a grid row: 0 = Sunday, 1 = Monday. */
+export type WeekStart = 0 | 1;
+
+/** The column (0-6) a `Date.getDay()` value lands in for a week start. */
+export function columnOf(dow: number, weekStart: WeekStart): number {
+  return (dow - weekStart + 7) % 7;
+}
+
+/**
+ * A 6-week grid for the month. Sunday-first by default; B+ Browse passes 1 so
+ * the jump picker lines up with the Monday-to-Sunday week strip above it.
+ * `dow` stays `Date.getDay()` either way, so weekend checks don't change.
+ */
+export function monthMatrix(
+  year: number,
+  month: number,
+  weekStart: WeekStart = 0,
+): MatrixCell[] {
+  const lead = columnOf(new Date(year, month, 1).getDay(), weekStart);
+  const gridStart = new Date(year, month, 1 - lead);
   const cells: MatrixCell[] = [];
   for (let i = 0; i < 42; i += 1) {
     const cur = new Date(

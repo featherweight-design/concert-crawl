@@ -17,9 +17,9 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
-import { RotateCcwGlyph } from './RotateCcwGlyph';
 import {
   addMonths,
+  columnOf,
   isoOf,
   monthMatrix,
   pickerWindow,
@@ -56,7 +56,9 @@ const MON3 = [
   'Nov',
   'Dec',
 ];
-const DOW1 = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// Monday-first, to line up with the week strip above it (B+ `cal_jump_m`).
+const DOW1 = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const MONDAY_FIRST = 1;
 const DOWFULL = [
   'Sunday',
   'Monday',
@@ -67,22 +69,36 @@ const DOWFULL = [
   'Saturday',
 ];
 
-const CELL = 38;
-const GRID_GAP = 2;
+const CELL = 44;
+const GRID_GAP = 4;
+
+/**
+ * The board's dots read as volume, not an exact count: one for a quiet day,
+ * three for a busy one. The count itself is in the cell's aria-label.
+ */
+export const dotsForCount = (count: number): number => {
+  if (count <= 0) return 0;
+  if (count <= 2) return 1;
+  if (count <= 5) return 2;
+  return 3;
+};
 
 const STYLE_ID = 'cjp-styles';
 const STYLE_CONTENT = [
-  '.cjp-pop{transition:transform .13s cubic-bezier(.2,.7,.3,1),opacity .13s ease}',
-  '.cjp-pop.scale{transform:scale(.95);opacity:0;transform-origin:34px -6px}',
+  // Motion tokens only (CLAUDE.md). The phone sheet rises; the desktop
+  // popover scales from its cue.
+  '.cjp-pop{transition:transform var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}',
+  '.cjp-pop.scale{opacity:0;transform:translateY(16px)}',
+  '@media (min-width:640px){.cjp-pop.scale{transform:scale(.95);transform-origin:34px -6px}}',
   '.cjp-pop.cjp-in{transform:none;opacity:1}',
   // Popover width on desktop, full-width sheet under 640px (design §2/§10). CSS
   // media query keeps this SSR-safe — no JS viewport read, no hydration skew.
-  '.cjp-w{width:min(324px, calc(100vw - 24px))}',
+  '.cjp-w{width:min(340px, calc(100vw - 24px))}',
   '@media (max-width:639.98px){.cjp-w{width:100%}}',
-  '.cjp-day{cursor:pointer;transition:background .12s,box-shadow .12s}',
+  '.cjp-day{cursor:pointer;transition:background var(--motion-fast) var(--motion-ease)}',
   '.cjp-day.cjp-dis{cursor:default}',
-  '.cjp-hit:hover:not(.cjp-dis){background:var(--overlay-hover)}',
-  'button.cjp-chev{cursor:pointer;transition:background .12s,opacity .12s}',
+  '.cjp-hit:hover:not(.cjp-dis):not([aria-selected="true"]){background:var(--overlay-hover)}',
+  'button.cjp-chev{cursor:pointer;transition:background var(--motion-fast) var(--motion-ease),opacity var(--motion-fast) var(--motion-ease)}',
   'button.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
   'button.cjp-chev:disabled{opacity:.32;cursor:default}',
   '@media (prefers-reduced-motion: reduce){.cjp-pop{transition:none!important;transform:none!important;opacity:1!important}.cjp-car{transition:none!important}}',
@@ -202,7 +218,7 @@ export const JumpPicker = ({
 
   if (!open) return null;
 
-  const cells = monthMatrix(view.y, view.m);
+  const cells = monthMatrix(view.y, view.m, MONDAY_FIRST);
 
   const isDisabled = (cell: MatrixCell): boolean =>
     !cell.inMonth || ymdKey(cell.y, cell.m, cell.d) < todayKey;
@@ -254,8 +270,8 @@ export const JumpPicker = ({
   const moveToWeekEnd = (toEnd: boolean) => {
     const base = partsOf(focusIso);
     const cursor = new Date(base.y, base.m, base.d);
-    const dow = cursor.getDay();
-    const delta = toEnd ? 6 - dow : -dow;
+    const col = columnOf(cursor.getDay(), MONDAY_FIRST);
+    const delta = toEnd ? 6 - col : -col;
     const target = new Date(
       cursor.getFullYear(),
       cursor.getMonth(),
@@ -331,8 +347,8 @@ export const JumpPicker = ({
 
   const chevBtn: CSSProperties = {
     all: 'unset',
-    width: 30,
-    height: 30,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     display: 'flex',
     alignItems: 'center',
@@ -349,70 +365,48 @@ export const JumpPicker = ({
       role="dialog"
       aria-modal="false"
       aria-label={`${CONSUMER_COPY.jumpPickerDialogPrefix} — ${MONTHS[view.m]} ${view.y}`}
-      className={`cjp-pop cjp-w scale ${mounted ? 'cjp-in' : ''}`}
+      // A bottom sheet with the B+ gradient top edge on the phone (rule 7), a
+      // bordered popover from sm up.
+      className={`cjp-pop cjp-w scale ${mounted ? 'cjp-in' : ''} rounded-t-[22px] [--sheet-bg:var(--bg-elevated)] max-sm:sheet-edge sm:rounded-2xl sm:border sm:border-border-strong sm:[background:var(--bg-elevated)]`}
       onKeyDown={onRootKeyDown}
       style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: 16,
         boxShadow: '0 20px 50px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.3)',
-        padding: 14,
+        padding: '10px 18px calc(18px + env(safe-area-inset-bottom, 0px))',
         boxSizing: 'border-box',
         color: 'var(--fg)',
         fontFamily: 'Inter, system-ui',
       }}
     >
-      {/* pager header */}
+      {/* drag handle: the phone sheet's affordance, decoration only */}
       <div
+        aria-hidden="true"
+        className="mx-auto mb-2 sm:hidden"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          marginBottom: 12,
+          width: 40,
+          height: 4,
+          borderRadius: 4,
+          background: 'var(--border-strong)',
         }}
-      >
-        <button
-          type="button"
-          className="cjp-chev"
-          onClick={() => pageMonth(-1, false)}
-          disabled={atMin}
-          aria-label={CONSUMER_COPY.jumpPickerPrevMonth}
-          style={chevBtn}
-        >
-          <ChevronGlyph dir="left" />
-        </button>
-        <div
-          aria-live="polite"
+      />
+
+      {/* title + close */}
+      <div className="flex items-center justify-between gap-2">
+        <h2
           style={{
-            flex: 1,
-            textAlign: 'center',
-            fontFamily: 'Inter, system-ui',
-            fontWeight: 800,
-            fontSize: 15,
-            letterSpacing: '-0.01em',
+            fontWeight: 900,
+            fontSize: 20,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
           }}
         >
-          {MONTHS[view.m]}{' '}
-          <span style={{ color: 'var(--fg-muted)', fontWeight: 700 }}>
-            {view.y}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="cjp-chev"
-          onClick={() => pageMonth(1, false)}
-          disabled={atMax}
-          aria-label={CONSUMER_COPY.jumpPickerNextMonth}
-          style={chevBtn}
-        >
-          <ChevronGlyph dir="right" />
-        </button>
+          {CONSUMER_COPY.jumpPickerDialogPrefix}
+        </h2>
         <button
           type="button"
           className="cjp-chev"
           onClick={onClose}
           aria-label={CONSUMER_COPY.jumpPickerClose}
-          style={{ ...chevBtn, marginLeft: 2 }}
+          style={chevBtn}
         >
           <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
             <path
@@ -425,13 +419,48 @@ export const JumpPicker = ({
         </button>
       </div>
 
+      {/* month pager: the month on the left, chevrons on the right */}
+      <div className="mb-3 mt-3 flex items-center gap-1">
+        <div
+          aria-live="polite"
+          style={{
+            flex: 1,
+            fontWeight: 800,
+            fontSize: 16,
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {MONTHS[view.m]} {view.y}
+        </div>
+        <button
+          type="button"
+          className="cjp-chev"
+          onClick={() => pageMonth(-1, false)}
+          disabled={atMin}
+          aria-label={CONSUMER_COPY.jumpPickerPrevMonth}
+          style={chevBtn}
+        >
+          <ChevronGlyph dir="left" />
+        </button>
+        <button
+          type="button"
+          className="cjp-chev"
+          onClick={() => pageMonth(1, false)}
+          disabled={atMax}
+          aria-label={CONSUMER_COPY.jumpPickerNextMonth}
+          style={chevBtn}
+        >
+          <ChevronGlyph dir="right" />
+        </button>
+      </div>
+
       {/* weekday header */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
           gap: GRID_GAP,
-          marginBottom: 4,
+          marginBottom: 6,
         }}
       >
         {DOW1.map((label, i) => (
@@ -440,13 +469,11 @@ export const JumpPicker = ({
             aria-hidden="true"
             style={{
               textAlign: 'center',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 9,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
               fontWeight: 700,
               letterSpacing: '0.06em',
-              color:
-                i === 0 || i === 6 ? 'var(--fg-muted)' : 'var(--fg-subtle)',
-              paddingBottom: 2,
+              color: 'var(--fg-subtle)',
             }}
           >
             {label}
@@ -471,29 +498,17 @@ export const JumpPicker = ({
           const sel = cell.iso === selectedDate;
           const isToday = cell.iso === today;
           const disabled = isDisabled(cell);
-          const isWknd = cell.dow === 0 || cell.dow === 6;
-
-          let background = 'transparent';
-          if (sel) {
-            background = 'var(--signal)';
-          } else if (isWknd && cell.inMonth && !disabled) {
-            background =
-              'color-mix(in oklch, var(--surface-2) 60%, transparent)';
-          }
+          const dots = disabled ? 0 : dotsForCount(count);
 
           const numColor = sel
             ? 'var(--fg-on-accent)'
-            : !cell.inMonth
+            : !cell.inMonth || past
               ? 'var(--fg-subtle)'
-              : past
-                ? 'var(--fg-subtle)'
-                : isToday
-                  ? 'var(--accent)'
-                  : 'var(--fg)';
+              : 'var(--fg)';
 
-          const opacity = !cell.inMonth ? 0.4 : past ? 0.45 : 1;
-          const boxShadow =
-            isToday && !sel ? 'inset 0 0 0 1.5px var(--accent)' : 'none';
+          // Spill days from the neighbouring months are left blank, as on the
+          // board; they stay in the DOM so cells keep their ISO keys.
+          const opacity = !cell.inMonth ? 0 : past ? 0.5 : 1;
 
           const countClause =
             count > 0 ? `, ${count} show${count > 1 ? 's' : ''}` : ', no shows';
@@ -505,6 +520,7 @@ export const JumpPicker = ({
               type="button"
               role="gridcell"
               data-iso={cell.iso}
+              data-today={isToday || undefined}
               className={`cjp-day cjp-hit ${disabled ? 'cjp-dis' : ''}`}
               onClick={disabled ? undefined : () => onPick(cell.iso)}
               tabIndex={cell.iso === focusIso ? 0 : -1}
@@ -516,89 +532,89 @@ export const JumpPicker = ({
                 boxSizing: 'border-box',
                 position: 'relative',
                 height: CELL,
-                borderRadius: 9,
+                borderRadius: 10,
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 2,
-                background,
+                gap: 3,
+                background: sel
+                  ? 'linear-gradient(135deg, var(--signal), var(--accent))'
+                  : 'transparent',
                 opacity,
-                boxShadow,
+                boxShadow:
+                  isToday && !sel ? 'inset 0 0 0 1.5px var(--signal)' : 'none',
                 cursor: disabled ? 'default' : 'pointer',
               }}
             >
               <span
                 style={{
-                  fontFamily: 'Inter, system-ui',
-                  fontWeight: sel || isToday ? 800 : 600,
-                  fontSize: 13.5,
+                  fontWeight: sel ? 900 : 700,
+                  fontSize: 15,
                   color: numColor,
                   lineHeight: 1,
                 }}
               >
                 {cell.d}
               </span>
-              {count > 0 && !disabled && (
-                <span
-                  style={{
-                    width: 4,
-                    height: 4,
-                    borderRadius: 4,
-                    background: sel ? 'var(--fg-on-accent)' : 'var(--accent)',
-                  }}
-                />
-              )}
+              <span
+                aria-hidden="true"
+                data-testid="jump-dots"
+                className="flex gap-[3px]"
+                style={{ height: 4 }}
+              >
+                {Array.from({ length: dots }).map((_, dotIdx) => (
+                  <span
+                    key={dotIdx}
+                    style={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: 4,
+                      background: sel ? 'var(--fg-on-accent)' : 'var(--signal)',
+                    }}
+                  />
+                ))}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* footer: today reset + hint / empty-month line */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 8,
-          marginTop: 12,
-          minHeight: 22,
-        }}
-      >
+      {/* footer: the dot legend (or the empty-month line) and the Today reset */}
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <span
+          className="inline-flex items-center gap-2"
+          style={{ fontSize: 13, color: 'var(--fg-muted)' }}
+        >
+          {hasInMonthShows && (
+            <span
+              aria-hidden="true"
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 6,
+                background: 'var(--signal)',
+              }}
+            />
+          )}
+          {footerCopy}
+        </span>
         <button
           type="button"
           onClick={() => onPick(today)}
           style={{
             all: 'unset',
             cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 10px',
+            padding: '8px 16px',
             borderRadius: 999,
             border: '1px solid var(--border-strong)',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 9.5,
             fontWeight: 700,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--fg-muted)',
+            fontSize: 14,
+            color: 'var(--fg)',
           }}
         >
-          <RotateCcwGlyph size={11} /> {CONSUMER_COPY.jumpPickerToday}
+          {CONSUMER_COPY.jumpPickerToday}
         </button>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 9.5,
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          {footerCopy}
-        </span>
       </div>
     </div>
   );

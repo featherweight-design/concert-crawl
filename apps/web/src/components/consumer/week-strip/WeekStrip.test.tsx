@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { WeekStrip, type WeekStripDay } from './WeekStrip';
+import { MAX_DAY_DOTS, WeekStrip, type WeekStripDay } from './WeekStrip';
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy';
 
 // jsdom + Vitest do not ship the @testing-library/jest-dom matchers in this
@@ -61,5 +61,78 @@ describe('WeekStrip accessible day names', () => {
         name: `Monday, Apr 27, ${CONSUMER_COPY.weekStripDayShows}`,
       }),
     ).toBeTruthy();
+  });
+});
+
+describe('WeekStrip genre dots', () => {
+  const week: WeekStripDay[] = [
+    { date: '2026-11-09', label: 'Mon', dayOfMonth: '9', hasEvents: true },
+    { date: '2026-11-10', label: 'Tue', dayOfMonth: '10', hasEvents: true },
+    { date: '2026-11-11', label: 'Wed', dayOfMonth: '11', hasEvents: false },
+  ];
+
+  const dotsOf = (name: RegExp) =>
+    screen
+      .getByRole('button', { name })
+      .querySelectorAll('[data-testid="day-dots"] > span');
+
+  it('draws one dot per genre color, capped at four', () => {
+    const genres = new Map<string, string[]>([
+      [
+        '2026-11-09',
+        [
+          'var(--genre-rock)',
+          'var(--genre-pop)',
+          'var(--genre-folk)',
+          'var(--genre-jazz)',
+          'var(--genre-metal)',
+        ],
+      ],
+    ]);
+    render(
+      <WeekStrip
+        days={week}
+        selectedDate="2026-11-11"
+        today="2026-11-09"
+        dayGenres={genres}
+        onDateSelect={vi.fn()}
+      />,
+    );
+    const dots = dotsOf(/Monday, Nov 9/);
+    expect(dots).toHaveLength(MAX_DAY_DOTS);
+    expect(dots[0]?.getAttribute('style')).toContain('var(--genre-rock)');
+  });
+
+  it('falls back to one signal dot when a day has shows but no genres', () => {
+    render(
+      <WeekStrip
+        days={week}
+        selectedDate="2026-11-11"
+        today="2026-11-09"
+        dayGenres={new Map()}
+        onDateSelect={vi.fn()}
+      />,
+    );
+    const dots = dotsOf(/Tuesday, Nov 10/);
+    expect(dots).toHaveLength(1);
+    expect(dots[0]?.getAttribute('style')).toContain('var(--signal)');
+    expect(dotsOf(/Wednesday, Nov 11/)).toHaveLength(0);
+  });
+
+  it('outlines today and fills the selected day with the gradient', () => {
+    render(
+      <WeekStrip
+        days={week}
+        selectedDate="2026-11-10"
+        today="2026-11-09"
+        onDateSelect={vi.fn()}
+      />,
+    );
+    const today = screen.getByRole('button', { name: /Monday, Nov 9/ });
+    expect(today.getAttribute('data-today')).toBe('true');
+    expect(today.getAttribute('style')).toContain('var(--signal)');
+    const selected = screen.getByRole('button', { name: /Tuesday, Nov 10/ });
+    expect(selected.getAttribute('aria-current')).toBe('date');
+    expect(selected.getAttribute('style')).toContain('linear-gradient');
   });
 });

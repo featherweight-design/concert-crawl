@@ -126,6 +126,9 @@ export const CONSUMER_COPY = {
 
   // ── Shared / misc ──────────────────────────────────────────────────
   loadMore: 'Load more shows',
+  // B+ (COPY.md): next to the pink wave on Browse's first load, and the Load
+  // more button's label while the next page fetches.
+  loadingShows: 'Loading shows',
   ticketsCta: 'Get tickets',
   doorsLabel: 'Doors',
   showLabel: 'Show',
