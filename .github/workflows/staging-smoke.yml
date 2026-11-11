@@ -46,9 +46,10 @@ permissions:
 jobs:
   smoke:
     name: Wait for staging API deploy, smoke staging
-    # Pinned: `playwright install --with-deps` runs apt, which on ubuntu-latest
-    # (26.04) cannot resolve archive.ubuntu.com and hangs. Unpin every
-    # `ubuntu-24.04` pin together once apt works there.
+    # Pinned: browsers install without apt (`install-browsers` has no
+    # `--with-deps`, since the runners' apt mirror DNS hangs), so they rely on
+    # this image's own system libraries. Re-prove a smoke run before moving
+    # every `ubuntu-24.04` pin to a newer image together.
     runs-on: ubuntu-24.04
     # 35 min: up to 20 min deploy wait + ~3 min pnpm/Playwright install
     # (cold cache) + ~10 min smoke worst case.
