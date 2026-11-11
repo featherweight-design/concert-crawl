@@ -483,6 +483,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'admins and are untouched.',
   },
   {
+    tableName: 'invite_code_redemptions',
+    disposition: 'delete',
+    userIdColumn: 'user_id',
+    otherUserIdColumns: [],
+    exportKey: 'inviteCodeRedemptions',
+    exportColumns: ['redeemed_at'],
+    reason:
+      'The ledger only recognises a repeat redeem of a multi-use code. The ' +
+      'seat stays spent through `invite_codes.use_count`, so deleting the row ' +
+      'frees nothing.',
+  },
+  {
     tableName: 'waitlist_entries',
     disposition: 'none',
     userIdColumn: null,
