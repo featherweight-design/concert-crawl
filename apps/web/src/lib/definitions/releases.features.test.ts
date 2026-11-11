@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { KNOWN_TOP_LEVEL_SEGMENTS } from '@/proxy';
 import { FEATURE_CARDS } from './releases';
 
 // B+ B21: What's new is a feature page fed from releases.ts.
@@ -18,9 +19,15 @@ describe('FEATURE_CARDS', () => {
     expect(new Set(ranks).size).toBe(ranks.length);
   });
 
-  it('only links inside the app', () => {
+  it('only links to real routes inside the app', () => {
     for (const card of FEATURE_CARDS) {
-      if (card.cta) expect(card.cta.href.startsWith('/')).toBe(true);
+      if (!card.cta) continue;
+      const { href } = card.cta;
+      // Not protocol-relative (`//host`), which would leave the app.
+      expect(href).toMatch(/^\/(?!\/)/);
+      const segment = href.split('/')[1] ?? '';
+      if (segment !== '')
+        expect(KNOWN_TOP_LEVEL_SEGMENTS.has(segment)).toBe(true);
     }
   });
 });
