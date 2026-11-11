@@ -21,8 +21,10 @@
           "wait": "[data-testid=\"event-row\"]"
         },
         {
-          "settle": 400,
           "scroll": 1400
+        },
+        {
+          "settle": 400
         }
       ]
     },

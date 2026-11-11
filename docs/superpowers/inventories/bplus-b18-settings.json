@@ -7,7 +7,8 @@
       "label": "/me: Settings",
       "steps": [
         {
-          "goto": "/me"
+          "goto": "/me",
+          "wait": ":is(#notifications, main h2):visible"
         }
       ]
     },
@@ -17,7 +18,8 @@
       "fullPage": true,
       "steps": [
         {
-          "goto": "/me"
+          "goto": "/me",
+          "wait": ":is(#notifications, main h2):visible"
         }
       ]
     }

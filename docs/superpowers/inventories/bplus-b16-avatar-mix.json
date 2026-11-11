@@ -7,7 +7,8 @@
       "label": "/me/edit: the Mix two picker",
       "steps": [
         {
-          "goto": "/me/edit"
+          "goto": "/me/edit",
+          "wait": "form#edit-profile-form"
         }
       ]
     },
@@ -16,7 +17,8 @@
       "label": "/me: the profile banner (draws the account's saved theme)",
       "steps": [
         {
-          "goto": "/me"
+          "goto": "/me",
+          "wait": ":is(#notifications, main h2):visible"
         }
       ]
     }

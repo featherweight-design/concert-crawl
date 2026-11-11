@@ -41,7 +41,8 @@
       "label": "/search",
       "steps": [
         {
-          "goto": "/search"
+          "goto": "/search",
+          "wait": "input[placeholder=\"Search artists, venues…\"]"
         }
       ]
     },

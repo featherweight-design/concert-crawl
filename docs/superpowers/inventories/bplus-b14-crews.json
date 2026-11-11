@@ -1,6 +1,6 @@
 {
-  "feature": "B14 · Crews: patch motif, Host rename, invite states, crew-lens empty state",
-  "note": "Plan row B14 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): crews = 07-more-screens/more-r3-crews_m, 07-more-screens/more-r3-crews; crew = 07-more-screens/more-r3-crew_home_m, 07-more-screens/more-r3-crew_home, 07-more-screens/more-r3-crew_who, 07-more-screens/more-r3-crew_been_m; invite = 06-states/bp-s-invite_m, 06-states/bp-s-invite_d, 07-more-screens/more-r3-crew_invite_m, 07-more-screens/more-r3-crew_invite. Walk by hand on staging (no kit verb reaches them yet): invite-states (06-states/bp-s-invite_member_m, 06-states/bp-s-invite_stale_m): a member's token and an expired one; crew-lens-empty (06-states/bp-s-empty_crewlens_m); start (07-more-screens/more-r3-crew_start_m, 07-more-screens/more-r3-crew_start, 07-more-screens/more-r3-crew_options_m, 07-more-screens/more-r3-crew_options): creating a crew writes a row on staging.",
+  "feature": "B14 \u00b7 Crews: patch motif, Host rename, invite states, crew-lens empty state",
+  "note": "Plan row B14 of docs/superpowers/plans/2026-11-11-bplus-redesign.md. Boards (design/design_handoff_bplus_redesign/screens/): crews = 07-more-screens/more-r3-crews_m, 07-more-screens/more-r3-crews; crew = 07-more-screens/more-r3-crew_home_m, 07-more-screens/more-r3-crew_home, 07-more-screens/more-r3-crew_who, 07-more-screens/more-r3-crew_been_m; invite = 06-states/bp-s-invite_m, 06-states/bp-s-invite_d, 07-more-screens/more-r3-crew_invite_m, 07-more-screens/more-r3-crew_invite. Walk by hand on staging (no kit verb reaches them yet): invite-states (06-states/bp-s-invite_member_m, 06-states/bp-s-invite_stale_m): a member's token and an expired one; crew-lens-empty (06-states/bp-s-empty_crewlens_m); start (07-more-screens/more-r3-crew_start_m, 07-more-screens/more-r3-crew_start, 07-more-screens/more-r3-crew_options_m, 07-more-screens/more-r3-crew_options): creating a crew writes a row on staging. The crew invite-join row is walked by hand until the kit redacts expanded env values: its URL carries a live invite token.",
   "rows": [
     {
       "id": "crews",
@@ -18,16 +18,6 @@
       "steps": [
         {
           "goto": "/crews/${CC_CREW_ID}",
-          "wait": "h1"
-        }
-      ]
-    },
-    {
-      "id": "invite",
-      "label": "/crew/join/[token]: invite landing",
-      "steps": [
-        {
-          "goto": "/crew/join/${CC_CREW_INVITE_TOKEN}",
           "wait": "h1"
         }
       ]
