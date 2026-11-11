@@ -1,3 +1,15 @@
+# [1.330.0](https://github.com/featherweight-design/concert-crawl/compare/v1.329.2...v1.330.0) (2026-11-11)
+
+
+### Bug Fixes
+
+* **tooling:** fwd kit 0.1.28 for feature acceptance ([a181f1b](https://github.com/featherweight-design/concert-crawl/commit/a181f1baef42ad032703c19cbf76b22da0315a61))
+
+
+### Features
+
+* **web:** what's new feature cards in releases.ts (B+ B21 data) ([2b3e2a9](https://github.com/featherweight-design/concert-crawl/commit/2b3e2a994dde48882a91e5cda01407fdc920d551))
+
 ## [1.329.2](https://github.com/featherweight-design/concert-crawl/compare/v1.329.1...v1.329.2) (2026-11-11)
 
 
